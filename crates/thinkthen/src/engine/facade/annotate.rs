@@ -6,8 +6,8 @@
 use super::{Chunk, Engine};
 use crate::core::adapters::built_in;
 use crate::core::{
-    AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, AnswerOutcome, FailedValue,
-    ModelName, Plan, QuestionSet, Reply, Usage,
+    AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, AnswerOutcome, Batch,
+    FailedValue, ModelName, Plan, QuestionSet, Reply, Usage,
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
@@ -54,6 +54,61 @@ pub(crate) struct MemberReceipt {
 }
 
 impl Engine {
+    /// Send one packed group slice and return one bounded fragment per input row.
+    pub(crate) fn answer_group_batch(
+        &self,
+        batch: &Batch,
+        places: &[usize],
+        cancel: &Cancel,
+    ) -> Result<Vec<GroupAnswer>, Error> {
+        let members = batch
+            .group_members
+            .as_ref()
+            .ok_or(Error::Defect("an annotate batch has no group members"))?;
+        let answered = self.ask_batch(batch, cancel)?;
+        let mut fragments = Vec::with_capacity(members.len());
+        for (position, member) in members.iter().enumerate() {
+            if member.outcomes.len() != places.len() {
+                return Err(Error::Defect("an annotate batch lost its group slice"));
+            }
+            let outcomes = member
+                .outcomes
+                .iter()
+                .map(|&at| {
+                    answered
+                        .reply
+                        .outcomes()
+                        .get(at)
+                        .cloned()
+                        .ok_or(Error::Defect("an annotate batch lost an answer"))
+                })
+                .collect::<Result<Vec<_>, _>>()?;
+            let reply = Reply::new(
+                answered.reply.model().clone(),
+                outcomes,
+                answered
+                    .reply
+                    .usage()
+                    .map(|usage| usage.share(members.len(), position)),
+            );
+            fragments.push(GroupAnswer {
+                answered: vec![ChunkAnswer {
+                    places: places.to_vec(),
+                    reply,
+                    digest: answered.request.as_str().to_owned(),
+                    requests_sent: crate::core::share(
+                        answered.requests_sent,
+                        members.len(),
+                        position,
+                    ),
+                    replayed: answered.replayed,
+                }],
+                model: Some(answered.reply.model().clone()),
+            });
+        }
+        Ok(fragments)
+    }
+
     /// Split one group's plan under the backend limits and name each chunk's places.
     pub(crate) fn prepare_group(
         &self,

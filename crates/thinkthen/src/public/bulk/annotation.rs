@@ -46,6 +46,16 @@ pub(super) fn annotated(
         .map_err(|_| crate::engine::error::Error::Defect("an annotate group asks nothing"))
     };
     let annotation = engine.annotate(set, plan, cancel)?;
+    rendered(set, engine, annotation, observing)
+}
+
+/// Render a row after all its request-aligned group fragments arrive.
+pub(crate) fn rendered(
+    set: &core::QuestionSet,
+    engine: &facade::Engine,
+    annotation: facade::Annotation,
+    observing: bool,
+) -> Result<Completed<Values, Error>, Error> {
     let observed = if observing {
         let model = annotation
             .model
@@ -85,7 +95,7 @@ pub(super) fn annotated(
 
 /// One record as its groups read it. Only a part group parses the text, once,
 /// as the command reads a whole document, so a root-only set sends it as given.
-fn record(set: &core::QuestionSet, text: &str) -> Result<core::BatchRecord, Error> {
+pub(crate) fn record(set: &core::QuestionSet, text: &str) -> Result<core::BatchRecord, Error> {
     let evidence = evidence(text)?;
     if set.first_part().is_none() {
         let value = core::Json::String(text.to_owned());

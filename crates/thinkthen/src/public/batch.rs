@@ -17,8 +17,10 @@ use crate::public::error::Error;
 use crate::public::options::{Stop, guarded};
 use crate::public::results::Facts;
 
+mod annotation;
 mod planned;
 
+pub(crate) use annotation::start_annotation;
 pub(crate) use planned::start_planned;
 
 /// How often a waiting batch runs the caller's controls, as the engine's poll.

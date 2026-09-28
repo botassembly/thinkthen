@@ -28,7 +28,8 @@ use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
 
 pub(crate) use crate::engine::annotate_schedule::{
-    InputPort as GroupPort, Outcome as GroupOutcome, Prepared,
+    GroupPlanError, GroupPlanner, GroupWork, InputPort as GroupPort, Outcome as GroupOutcome,
+    Prepared,
 };
 pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
@@ -36,7 +37,7 @@ pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
-pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
+pub(crate) use annotate::{Annotation, GroupAnswer, PreparedGroup, assemble, check_model};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 

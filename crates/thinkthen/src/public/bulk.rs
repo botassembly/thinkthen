@@ -5,9 +5,10 @@ use std::sync::Arc;
 mod observation;
 use observation::observe_find;
 mod annotate_observation;
-use annotate_observation::observe_annotated;
+pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
 mod annotation;
 use annotation::annotated;
+pub(crate) use annotation::{record as annotation_record, rendered as render_annotation};
 
 use crate::core::{self, Find, Value, ranking};
 use crate::public::annotated::AnnotatedRecord;
@@ -21,10 +22,10 @@ use crate::public::results::{Answer, Call, Found, ObservedQuestion, Ranked, Row,
 use crate::public::set::QuestionSet;
 
 /// One record's named values and bounded per-member observations.
-struct Values {
-    values: Vec<(String, core::AnnotatedValue)>,
-    json: Written,
-    observed: Vec<(String, ObservedQuestion)>,
+pub(crate) struct Values {
+    pub(crate) values: Vec<(String, core::AnnotatedValue)>,
+    pub(crate) json: Written,
+    pub(crate) observed: Vec<(String, ObservedQuestion)>,
 }
 
 /// One record's answer and its probability of yes.
@@ -401,14 +402,33 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
-        Batch::of(Stop::begin(options).map(|stop| {
+        Batch::of((|| {
+            if options.context_text().is_some() {
+                return Err(Error::usage("annotate does not take a shared context"));
+            }
+            let setting = options
+                .batch_setting()
+                .map(Into::into)
+                .or(self.batch)
+                .unwrap_or(core::Setting::Max);
+            let stop = Stop::begin(options)?;
             let (engine, set, cancel) =
                 (Arc::clone(&self.inner), questions.0.clone(), stop.shared());
+            if engine.profile().is_none() {
+                return batch::start_annotation(
+                    engine,
+                    set,
+                    records.into_iter(),
+                    stop,
+                    self.most,
+                    setting,
+                );
+            }
             let worker = Arc::clone(&engine);
             let observing = stop.observing();
             let answer: Arc<batch::Answer<_>> =
                 Arc::new(move |text: &str| annotated(&worker, &set, text, &cancel, observing));
-            batch::start(
+            Ok(batch::start(
                 engine,
                 records.into_iter(),
                 stop,
@@ -416,8 +436,8 @@ impl Engine {
                 answer,
                 |item, value: Values| Some(AnnotatedRecord::new(item, value.values, value.json)),
                 observe_annotated,
-            )
-        }))
+            ))
+        })())
     }
 
     /// Hold a finite input whole, and refuse it over the request limit.

@@ -6,7 +6,32 @@ use crate::public::error::Error;
 use crate::public::options::Stop;
 use crate::public::results::{ObservedRow, QuestionDetail, RecordObservation};
 
-pub(super) fn observe_annotated(row: &Values, index: usize, stop: &Stop<'_>) -> Result<(), Error> {
+pub(crate) fn observe_annotated(row: &Values, index: usize, stop: &Stop<'_>) -> Result<(), Error> {
+    observe_annotated_questions(row, index, stop)?;
+    if !stop.observing() {
+        return Ok(());
+    }
+    let values: Vec<_> = row
+        .values
+        .iter()
+        .cloned()
+        .map(|(name, value)| NamedAnnotation::of(name, value))
+        .collect();
+    stop.observe(RecordObservation::Row {
+        index,
+        value: ObservedRow::Annotated(&values),
+    });
+    if stop.observer_panicked() {
+        return Err(Error::defect("the annotation observer panicked"));
+    }
+    Ok(())
+}
+
+pub(crate) fn observe_annotated_questions(
+    row: &Values,
+    index: usize,
+    stop: &Stop<'_>,
+) -> Result<(), Error> {
     if !stop.observing() {
         return Ok(());
     }
@@ -21,19 +46,6 @@ pub(super) fn observe_annotated(row: &Values, index: usize, stop: &Stop<'_>) -> 
         if stop.observer_panicked() {
             return Err(Error::defect("the annotation observer panicked"));
         }
-    }
-    let values: Vec<_> = row
-        .values
-        .iter()
-        .cloned()
-        .map(|(name, value)| NamedAnnotation::of(name, value))
-        .collect();
-    stop.observe(RecordObservation::Row {
-        index,
-        value: ObservedRow::Annotated(&values),
-    });
-    if stop.observer_panicked() {
-        return Err(Error::defect("the annotation observer panicked"));
     }
     Ok(())
 }
