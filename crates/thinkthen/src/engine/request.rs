@@ -78,6 +78,36 @@ pub(crate) fn ask_sent<E>(
 where
     E: From<Error>,
 {
+    ask_sent_observed(
+        backend,
+        plan,
+        prepared,
+        recorder,
+        cancel,
+        transport,
+        key,
+        || (),
+    )
+}
+
+/// The same prepared request with one private after-mark attempt receipt.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one prepared request keeps its existing boundary plus a private attempt receipt"
+)]
+pub(crate) fn ask_sent_observed<E>(
+    backend: &Backend,
+    plan: &Plan,
+    prepared: PreparedRequest,
+    recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
+    transport: Transport<'_>,
+    key: impl FnOnce() -> Result<Key, E>,
+    marked: impl Fn() + Sync,
+) -> Result<Answered, E>
+where
+    E: From<Error>,
+{
     ask_prepared(
         backend,
         plan,
@@ -95,11 +125,12 @@ where
                 retry_wait: transport.retry_wait,
             };
             crate::engine::workers::on_worker(cancel, || {
-                transport.client.post_observed_with_retry(
+                transport.client.post_marked_with_retry(
                     &exchange,
                     cancel,
                     transport.usage,
                     |_| (),
+                    &marked,
                 )
             })
             .map_err(E::from)

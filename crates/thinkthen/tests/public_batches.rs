@@ -10,6 +10,9 @@
 #[path = "public_batches/contracts.rs"]
 mod contracts;
 
+#[path = "public_batches/splits.rs"]
+mod splits;
+
 #[path = "../src/test_deadline/wait.rs"]
 #[allow(dead_code, reason = "only the child deadline bounds the churn here")]
 mod wait;

@@ -8,6 +8,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
@@ -283,12 +284,22 @@ impl Engine {
     /// Send one batch's exact body as one request, through the same replay,
     /// retries, recording, cache, and counters as every other request.
     pub(crate) fn ask_batch(&self, batch: &Batch, cancel: &Cancel) -> Result<Answered, Error> {
+        self.ask_batch_with_attempts(batch, cancel, None)
+    }
+
+    /// Attribute actual marked attempts to one prepared batch, including a 413.
+    pub(crate) fn ask_batch_with_attempts(
+        &self,
+        batch: &Batch,
+        cancel: &Cancel,
+        attempts: Option<&AtomicU64>,
+    ) -> Result<Answered, Error> {
         let state = self.state(cancel)?;
         let prepared = PreparedRequest {
             body: batch.body.clone(),
             digest: batch.digest.clone(),
         };
-        request::ask_sent(
+        request::ask_sent_observed(
             &self.backend,
             &batch.plan,
             prepared,
@@ -296,6 +307,11 @@ impl Engine {
             cancel,
             self.transport(&state),
             || (self.key)(),
+            || {
+                if let Some(attempts) = attempts {
+                    attempts.fetch_add(1, Ordering::Relaxed);
+                }
+            },
         )
     }
 
