@@ -53,7 +53,7 @@ const COMMON_OPTIONS = [
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick at most one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
-  ['--jobs N', `How many requests run at once, from ${THROTTLE.range.min} to ${THROTTLE.range.max}. The default is ${THROTTLE.default}. It works on a stream of records. annotate also takes it on one document.`],
+  ['--jobs N', `How many requests run at once, from ${THROTTLE.range.min} to ${THROTTLE.range.max}. The default is ${THROTTLE.default}. It works on a stream of records, annotate on one document, and relate on one entity set.`],
   ...BACKEND_OPTIONS,
 ];
 
@@ -286,17 +286,17 @@ export const FUNCTIONS = [
   {
     name: 'relate',
     goal: 'relate asks the model about named entities, one possible edge per pair and rule.',
-    primitive: 'Yes or no, or a direction, per pair of records',
-    line: 'Find records that clash, repeat, or rely on each other.',
-    lede: 'You give it names, kinds, and the relations you allow. Each edge is the model’s belief about those names, with a probability; standalone relate reads no source text. The sample asks which travel rules contradict each other.',
-    takes: 'a set of records and the relations you allow',
+    primitive: 'Yes or no per allowed entity pair and rule',
+    line: 'Find relationships among named entities.',
+    lede: 'You give it entity names, kinds, and relation rules. Standalone relate reads no source text; each edge reports the model’s belief about those names. The sample asks whether gateway calls billing.',
+    takes: 'one set of named entities and relation rules',
     gives: 'one edge for each related pair, with a probability',
-    requests: 'It reads the whole set at once, up to 255 records. --dry-run prints every request it would send.',
+    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --dry-run prints the requests it would send.',
     args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
     options: [
       ['--either', 'Treats every relation as reading the same both ways.'],
       ['--threshold T', `Keeps edges whose probability reaches this cut. The default is ${cutOn('relate')}.`],
-      ['--kind-field POINTER', 'Reads each record\'s kind from this pointer.'],
+      ['--kind-field POINTER', 'Reads each entity\'s kind from this pointer.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],

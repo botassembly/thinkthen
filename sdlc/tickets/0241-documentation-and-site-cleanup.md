@@ -1,6 +1,6 @@
 # 0241: Documentation and website cleanup
 
-Status: candidate for independent code review. Owner: codex-7 on `ticket/0241-documentation-and-site-cleanup`.
+Status: correcting independent code review findings; candidate awaiting re-review. Owner: codex-7 on `ticket/0241-documentation-and-site-cleanup`.
 
 ## Outcome and scope
 
@@ -50,20 +50,28 @@ the build record. Logs and the exact proof limits are in
 `sdlc/records/0241-site-and-sample-build.md`.
 
 The original-issue inventory has 38 unique IDs: 19 documentation, nine mixed
-runtime, and ten non-documentation. In this candidate, 15 documentation rows
-have evidence for their documentation criterion (three were already fixed on
-main), while four remain partial. The 2026-09-25 site umbrella is one row, not
-one row per numbered criterion. The partial rows are:
+runtime, and ten non-documentation. Its `resolution` field distinguishes 12
+documentation criteria fixed by this candidate from three confirmed fixed
+before ticket 0241; four documentation rows remain partial. The 2026-09-25
+site umbrella is one row, not one row per numbered criterion. The partial
+rows are:
 
-- `2026-09-25-docs-how-tos-and-spec-claims-owed`: the six 0.1 flows are covered;
-  the issue's explicitly later pages 11–17 still need their own demonstration.
+- `2026-09-25-docs-how-tos-and-spec-claims-owed`: the six 0.1 flows are covered.
+  Pages 11–15 still need focused recipes; pages 16–17 need larger replay
+  examples, and item 18 needs backend measurement and a selected profile.
+  These are the issue's explicitly later scope, not 0.1 closure claims.
 - `2026-09-25-site-samples-and-pages-after-the-surfaces-land`: the current site
-  uses recorded CLI samples and current host APIs, but host/SQL runtime
-  execution and the external Beatles Bench source pull are not proved here.
+  uses recorded CLI samples and current host APIs, but items 2–5 still require
+  host and SQL samples executed with captured outputs and source provenance.
+  Compilation, parsing and typechecking do not prove that. This independently
+  actionable proof needs a dedicated next slice. Item 1's status-word
+  criterion waits for verified release channels, and item 6 needs the external
+  Beatles Bench source pull and recorded outputs.
 - `2026-09-27-marketing-audit-diff-wording`: the two copies live in the separate
-  marketing repository and are still its owner's work.
+  marketing repository, outside this worktree. Local marketing ownership does
+  not block a site edit; this row asks for external copies and vocabulary.
 - `2026-09-27-site-and-bench-relate-pair-examples`: the site now replays the
-  pair-question shape; the external bench's score/revision label remains.
+  pair-question shape; the external bench's score method/revision label remains.
 
 The nine mixed records stay open for their runtime, platform, or external
 terms criteria, including strict SQL replay, release packaging, error catalog
@@ -80,3 +88,12 @@ The remaining `recognize --jobs` design under “Settings on the way” has no
 runtime setting yet, so it stays clearly future. The default-backend copy
 links the vendor's terms without inventing an input-retention promise. Release
 install lines stay qualified until their channels pass a clean install.
+
+The read-only review of `673b61f0` found one public contradiction I missed:
+the relate catalog still described travel-rule records while its executable
+sample had named gateway and billing services. A page's title, lede, primitive,
+input count, option summary and sample caption all need the same contract
+read. The corrected catalog says standalone `relate` has no source text,
+accepts at most 255 entities, asks yes/no questions for allowed pairs, and
+permits `--jobs` on that one entity set. This correction changes only site
+copy; the prior host proofs remain valid.

@@ -130,3 +130,19 @@ catalog criterion and register 124's external-terms criterion remain open.
 The final contract read caught an imprecise draft description of answer kinds
 and probability shape on the details route; I corrected it against
 `specification/result.md` before the last site build.
+
+## Code review correction
+
+The independent read-only review of `673b61f0` found the relate catalog still
+described clashing travel-rule records although its example names gateway and
+billing entities. I corrected the lede, primitive, line, input count and
+`--jobs` summary against `specification/relate.md`. The new site build log is
+`target/codex-builds/0241/site-build-review-correction.log`: 95 CLI examples,
+92 pages and Markdown twins, 50 settings rows and 130 linked routes pass.
+Inspection of the built function and reference text finds “gateway calls
+billing” and “up to 255 entities”, and finds neither “travel rules” nor “255
+records”. The host examples and their earlier proof were untouched; CLI
+smoke still skips 94 samples, including the host and SQL examples. The original-ID manifest now
+distinguishes 12 ticket-fixed, three baseline-fixed, four partial, nine mixed
+runtime and ten non-documentation rows. The four partial rows name their exact
+unfinished criteria and disposition.
