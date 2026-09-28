@@ -9,7 +9,7 @@ fn row(name: &str, probability: Option<f64>) -> Judged {
         printed: Some(name.to_owned()),
         outcome: Outcome::Yes,
         replayed: false,
-        probability,
+        order_value: probability,
         partial_failure: false,
         profile_mismatch: None,
     }

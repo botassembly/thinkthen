@@ -53,7 +53,7 @@ pub(crate) struct Judged {
     pub(crate) printed: Option<String>,
     pub(crate) outcome: Outcome,
     pub(crate) replayed: bool,
-    pub(crate) probability: Option<f64>,
+    pub(crate) order_value: Option<f64>,
     pub(crate) partial_failure: bool,
     pub(crate) profile_mismatch: Option<Mismatch>,
 }
@@ -76,7 +76,7 @@ impl fmt::Debug for Judged {
             )
             .field("outcome", &self.outcome)
             .field("replayed", &self.replayed)
-            .field("probability", &self.probability)
+            .field("order_value", &self.order_value)
             .field("partial_failure", &self.partial_failure)
             .field(
                 "profile_warning",
@@ -109,20 +109,20 @@ enum Mode<'a> {
     Ordered {
         held: Vec<Judged>,
         top: Option<usize>,
-        missing_probability: bool,
+        missing_order_value: bool,
         writer: &'a mut dyn Write,
     },
 }
 
 fn keep_top(held: &mut Vec<Judged>, limit: usize, judged: Judged, missing: &mut bool) {
-    let Some(probability) = judged.probability else {
+    let Some(value) = judged.order_value else {
         *missing = true;
         return;
     };
     let place = held.partition_point(|earlier| {
         earlier
-            .probability
-            .is_some_and(|score| score.total_cmp(&probability).is_ge())
+            .order_value
+            .is_some_and(|score| score.total_cmp(&value).is_ge())
     });
     if place >= limit {
         return;
@@ -165,7 +165,7 @@ impl Output<'_> {
             mode: Mode::Ordered {
                 held: Vec::new(),
                 top,
-                missing_probability: false,
+                missing_order_value: false,
                 writer,
             },
             usage,
@@ -203,11 +203,11 @@ impl Output<'_> {
             Mode::Ordered {
                 held,
                 top,
-                missing_probability,
+                missing_order_value,
                 ..
             } => {
                 match top {
-                    Some(limit) => keep_top(held, *limit, judged, missing_probability),
+                    Some(limit) => keep_top(held, *limit, judged, missing_order_value),
                     None => held.push(judged),
                 }
                 Ok(true)
@@ -223,20 +223,20 @@ impl Output<'_> {
         let Mode::Ordered {
             held,
             top,
-            missing_probability,
+            missing_order_value,
             writer,
         } = &mut self.mode
         else {
             return Ok(());
         };
-        if *missing_probability {
+        if *missing_order_value {
             return Err(Failure::Defect("a ranked row carries no probability"));
         }
         let odds = held
             .iter()
             .map(|judged| {
                 judged
-                    .probability
+                    .order_value
                     .ok_or(Failure::Defect("a ranked row carries no probability"))
             })
             .collect::<Result<Vec<f64>, Failure>>()?;

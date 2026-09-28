@@ -1,0 +1,11 @@
+# 0223 design review
+
+Status: **ACCEPT** for the technical design at `aecc15f2b243c0eac02504ea81ae402a831fbd3e`; independent Medium review reported no findings. [Ticket 0223](../tickets/0223-graded-relevance-reranking.md), [ADR 0095](../planning/adr/0095-rank-graded-score-questions.md) and the [preflight](0223-reranking-preflight.md) remain a proposal until Ian decides the outward command shape. No runtime or settled page has changed.
+
+The reviewer independently traced `Distribution::position` and its weighted, twelve-decimal value; the `decide`-only rank file-kind gate; rank and score's shared run path; the ranked row's current `Value::Score` erasure; stable top-N insertion and the bounded pending window; and the result and question-file schemas. The four-row proof and exact score-command request comparison are proportionate. A score-shaped graded detail is truthful, and a private ordering-value name avoids repurposing the public yes-probability getter. The review accepted the stated preservation of ordinary rank and the explicit limits on timed-input speculation, row-count bounds and fixed RSS.
+
+The outward choice remains Ian's. **Recommendation:** add CLI `rank @score-file` with existing described levels and score-shaped details, then prove and document that narrow surface. It solves the issue's immediate reranking example while keeping Rust and host `Ranked::probability()` truthful. **Alternative:** add typed levels and graded Rust/binding rank now; that gives more entry points but requires new result carriers and parity work before a concrete caller asks for them. Ian can also decline graded rank. Optional per-level weights are conditional on demonstrated need; RRF remains a separate list transform. Both remain open, as do typed levels and wider APIs if this first slice lands. The issue is not wholly closed by technical design acceptance.
+
+## What the build taught us
+
+Preparation identified two row changes beyond accepting a file kind: the sink needs the weighted ordering value, and graded details must retain `Value::Score`. The reviewer confirmed that the existing score parser and rank sink support the proposed small implementation, while the public probability contract marks its boundary. This is design evidence, not a build result. ADR 0095 stays proposed pending Ian's outward-facing decision.
