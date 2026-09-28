@@ -18,8 +18,10 @@ use serde_json::{Map, Value, json};
 use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
 mod ceiling;
+mod context;
 mod tiers;
 mod too_large;
+mod warning;
 
 pub(super) const QUESTION: &str = "It names a place.";
 const QUOTED: &str = "Each question quotes the text it asks about.";

@@ -4,6 +4,7 @@
 //! record, and hands both to `asking.rs`, which owns the request and the row.
 
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::ExitCode;
 
 use crate::core::{Json, Pointer, QuestionFileError, Resolved, Setting};
@@ -13,7 +14,7 @@ use crate::args::{
     ScoreArguments, TagArguments,
 };
 use crate::asking::{Asks, fixed, run};
-use crate::cli::asked;
+use crate::cli::asked::{self, FileTier};
 use crate::edge::Environment;
 use crate::failure::Failure;
 use crate::schedule::Output;
@@ -34,9 +35,11 @@ pub(crate) struct Asked<'a> {
 /// `THINKTHEN_BATCH` and `max` settle a batch, by ADR 0048 item 4.
 #[derive(Debug)]
 pub(crate) struct Tiers<'a> {
+    pub(crate) context: Option<&'a Path>,
     pub(crate) flag: Option<&'a str>,
     pub(crate) request_size: Option<&'a str>,
     pub(crate) file: Option<Json>,
+    pub(crate) tuned: bool,
 }
 
 impl Tiers<'_> {
@@ -235,11 +238,13 @@ pub(crate) fn rank(
     )
 }
 
-fn tiers(batching: &Batching, file: Option<Json>) -> Tiers<'_> {
+fn tiers(batching: &Batching, file: FileTier) -> Tiers<'_> {
     Tiers {
+        context: batching.context.as_deref(),
         flag: batching.batch.as_deref(),
         request_size: batching.max_request_bytes.as_deref(),
-        file,
+        file: file.batch,
+        tuned: file.tuned,
     }
 }
 

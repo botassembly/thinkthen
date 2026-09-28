@@ -14,6 +14,7 @@ use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;
 
 mod after_signal;
+pub(crate) mod context;
 mod convert;
 pub(crate) mod facts;
 pub(crate) mod recognize;
@@ -40,6 +41,8 @@ pub(crate) enum Failure {
         error: ProfileError,
     },
     ProfileLimit(ProfileLimit),
+    /// A shared context file or its batch could not be used.
+    Context(context::Error),
     Relate(relate::Error),
     Recognize(recognize::Error),
     QuietWithDetails,
@@ -348,7 +351,7 @@ fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
 }
 
 fn special_failure(failure: &Failure) -> Option<(u8, String)> {
-    if let Some(message) = relate::message(failure) {
+    if let Some(message) = relate::message(failure).or_else(|| context::message(failure)) {
         return Some(message);
     }
     Some(match failure {
