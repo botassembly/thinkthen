@@ -120,6 +120,20 @@ impl Recorder {
         self.folder.is_some() && !self.private_default
     }
 
+    /// A read-only admission observation. `gate` remains the binding authority.
+    pub(crate) fn unbound_empty(&self) -> Result<bool, Error> {
+        let Some(folder) = self.folder.as_deref() else {
+            return Ok(false);
+        };
+        if !self.recording {
+            return Ok(false);
+        }
+        if self.private_default && folder.exists() {
+            identity::require_private(folder)?;
+        }
+        identity::unbound_empty(folder)
+    }
+
     /// Open the shared folder gate one operation holds, checking the
     /// folder's backend identity the first time.
     fn gate(
