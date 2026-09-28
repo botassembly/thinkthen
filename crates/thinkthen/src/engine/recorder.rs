@@ -307,6 +307,17 @@ impl Recorder {
     }
 }
 
+/// Compare a validated existing marker with this selected endpoint without binding it.
+pub(crate) fn binding_matches(
+    folder: &Path,
+    backend: &crate::core::Backend,
+) -> Result<Option<bool>, Error> {
+    identity::matches(
+        folder,
+        &crate::core::recording_identity::BackendIdentity::new(backend.url()),
+    )
+}
+
 impl WritePermit {
     fn under(mut self, gate: Option<FolderGate>) -> Self {
         self._gate = gate;

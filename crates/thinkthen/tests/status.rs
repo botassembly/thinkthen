@@ -40,7 +40,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
             "version": env!("CARGO_PKG_VERSION"),
             "configuration": {"path": home.join(".config/thinkthen/config.json"), "present": false},
             "backend": {"url": "https://api.typesafe.ai/v1/systemone", "url_source": "built_in", "model": "jev-1.13.0", "model_source": "built_in", "api_key_set": false},
-            "cache": {"enabled": true, "enabled_source": "built_in", "path": home.join(".cache/thinkthen"), "path_source": "platform", "entries": 0, "bytes": 0, "bad_entries": 0, "temporary_entries": 0, "temporary_bytes": 0, "prune_target_bytes": 100000000, "prune_target_source": "built_in"},
+            "cache": {"enabled": true, "enabled_source": "built_in", "path": home.join(".cache/thinkthen"), "path_source": "platform", "binding": "missing", "entries": 0, "bytes": 0, "bad_entries": 0, "temporary_entries": 0, "temporary_bytes": 0, "prune_target_bytes": 100000000, "prune_target_source": "built_in"},
             "usage": {"path": home.join(".cache/thinkthen-usage"), "month": month, "this_month": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}, "total": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}}
         })
     );
@@ -50,7 +50,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
     let human = run::output(command(&home).arg("status")).expect("human status");
     assert!(human.status.success());
     let expected = format!(
-        "version {}\nconfiguration_path {}\nconfiguration_present false\nurl https://api.typesafe.ai/v1/systemone\nurl_source built_in\nmodel jev-1.13.0\nmodel_source built_in\napi_key_set false\ncache_enabled true\ncache_enabled_source built_in\ncache_path {}\ncache_path_source platform\ncache_entries 0\ncache_bytes 0\ncache_bad_entries 0\ncache_temporary_entries 0\ncache_temporary_bytes 0\ncache_prune_target_bytes 100000000\ncache_prune_target_source built_in\nusage_path {}\nusage_month {}\nmonth_requests_sent 0\nmonth_retries 0\nmonth_input_tokens 0\nmonth_output_tokens 0\nmonth_cache_answers 0\ntotal_requests_sent 0\ntotal_retries 0\ntotal_input_tokens 0\ntotal_output_tokens 0\ntotal_cache_answers 0\n",
+        "version {}\nconfiguration_path {}\nconfiguration_present false\nurl https://api.typesafe.ai/v1/systemone\nurl_source built_in\nmodel jev-1.13.0\nmodel_source built_in\napi_key_set false\ncache_enabled true\ncache_enabled_source built_in\ncache_path {}\ncache_path_source platform\ncache_binding missing\ncache_entries 0\ncache_bytes 0\ncache_bad_entries 0\ncache_temporary_entries 0\ncache_temporary_bytes 0\ncache_prune_target_bytes 100000000\ncache_prune_target_source built_in\nusage_path {}\nusage_month {}\nmonth_requests_sent 0\nmonth_retries 0\nmonth_input_tokens 0\nmonth_output_tokens 0\nmonth_cache_answers 0\ntotal_requests_sent 0\ntotal_retries 0\ntotal_input_tokens 0\ntotal_output_tokens 0\ntotal_cache_answers 0\n",
         env!("CARGO_PKG_VERSION"),
         home.join(".config/thinkthen/config.json").display(),
         home.join(".cache/thinkthen").display(),
@@ -75,6 +75,7 @@ fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("status JSON");
     assert_eq!(value["configuration"]["path"], serde_json::Value::Null);
     assert_eq!(value["cache"]["path"], serde_json::Value::Null);
+    assert_eq!(value["cache"]["binding"], "unavailable");
     assert_eq!(value["cache"]["entries"], serde_json::Value::Null);
     assert_eq!(value["cache"]["bad_entries"], serde_json::Value::Null);
     assert_eq!(value["cache"]["temporary_entries"], serde_json::Value::Null);
@@ -88,6 +89,87 @@ fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
     assert!(String::from_utf8_lossy(&human.stdout).contains("cache_bad_entries unavailable\n"));
     assert!(
         String::from_utf8_lossy(&human.stdout).contains("cache_temporary_entries unavailable\n")
+    );
+}
+
+#[cfg(unix)]
+fn private_binding_cache(label: &str) -> std::io::Result<(std::path::PathBuf, std::path::PathBuf)> {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let home = std::env::temp_dir().join(format!(
+        "thinkthen-status-binding-{}-{label}",
+        std::process::id()
+    ));
+    let _absent = fs::remove_dir_all(&home);
+    let cache = home.join(".cache/thinkthen");
+    fs::create_dir_all(&cache)?;
+    fs::set_permissions(&cache, fs::Permissions::from_mode(0o700))?;
+    Ok((home, cache))
+}
+
+#[cfg(unix)]
+#[test]
+fn cache_binding_distinguishes_unbound_from_legacy_without_writes() {
+    let (home, cache) = private_binding_cache("unbound-legacy").expect("private cache");
+    let inspect = || {
+        let output =
+            run::output(command(&home).args(["status", "--json"])).expect("read-only status");
+        (output.status.code(), output.stdout, output.stderr)
+    };
+    let (code, stdout, stderr) = inspect();
+    assert_eq!(code, Some(0));
+    assert!(stderr.is_empty());
+    let value: serde_json::Value = serde_json::from_slice(&stdout).expect("status JSON");
+    assert_eq!(value["cache"]["binding"], "unbound");
+    assert_eq!(value["cache"]["entries"], 0);
+    assert_eq!(
+        fs::read_dir(&cache).expect("unchanged empty cache").count(),
+        0
+    );
+
+    let legacy = cache.join(format!("{}.json", "a".repeat(64)));
+    let old = b"not a valid entry";
+    fs::write(&legacy, old).expect("legacy entry");
+    let (code, stdout, stderr) = inspect();
+    assert_eq!(code, Some(0));
+    assert!(stderr.is_empty());
+    let value: serde_json::Value = serde_json::from_slice(&stdout).expect("status JSON");
+    assert_eq!(value["cache"]["binding"], "legacy");
+    assert_eq!(value["cache"]["bad_entries"], 1);
+    assert_eq!(fs::read(&legacy).expect("unchanged legacy entry"), old);
+}
+
+#[cfg(unix)]
+#[test]
+fn invalid_marker_refuses_and_disabled_cache_skips_its_binding() {
+    let (home, cache) = private_binding_cache("invalid-disabled").expect("private cache");
+    let inspect = || {
+        let output =
+            run::output(command(&home).args(["status", "--json"])).expect("read-only status");
+        (output.status.code(), output.stdout, output.stderr)
+    };
+    let marker = cache.join(".thinkthen-backend.json");
+    let invalid = b"private invalid marker";
+    fs::write(&marker, invalid).expect("invalid marker");
+    let (code, stdout, stderr) = inspect();
+    assert_eq!(code, Some(5));
+    assert!(stdout.is_empty());
+    assert_eq!(stderr, b"thinkthen: status could not read the local cache or usage state; check its permissions and contents\n");
+    assert_eq!(fs::read(&marker).expect("unchanged marker"), invalid);
+
+    let config = home.join(".config/thinkthen/config.json");
+    fs::create_dir_all(config.parent().expect("config parent")).expect("config folder");
+    fs::write(&config, br#"{"schema":"thinkthen.config/1","cache":false}"#)
+        .expect("disabled cache setting");
+    let (code, stdout, stderr) = inspect();
+    assert_eq!(code, Some(0));
+    assert!(stderr.is_empty());
+    let value: serde_json::Value = serde_json::from_slice(&stdout).expect("status JSON");
+    assert_eq!(value["cache"]["enabled"], false);
+    assert_eq!(value["cache"]["binding"], "disabled");
+    assert_eq!(
+        fs::read(&marker).expect("unchanged disabled marker"),
+        invalid
     );
 }
 
@@ -132,6 +214,7 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
     assert_eq!(value["backend"]["model_source"], "configuration");
     assert_eq!(value["backend"]["api_key_set"], true);
     assert_eq!(value["cache"]["enabled"], true);
+    assert_eq!(value["cache"]["binding"], "missing");
     assert_eq!(value["cache"]["enabled_source"], "environment");
     assert_eq!(
         value["cache"]["path"],

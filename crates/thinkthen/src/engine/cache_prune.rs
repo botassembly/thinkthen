@@ -9,6 +9,7 @@ use std::time::{Duration, SystemTime};
 use crate::engine::cache_lock;
 use crate::engine::error::Error;
 
+pub(crate) mod binding;
 mod scan;
 #[cfg(test)]
 use scan::allocated;
@@ -45,6 +46,7 @@ pub(crate) struct Pruned {
 
 #[derive(Debug)]
 pub(crate) struct Inspected {
+    pub(crate) binding: binding::Binding,
     pub(crate) entries: u64,
     pub(crate) bytes: u64,
     pub(crate) bad_entries: u64,
@@ -52,10 +54,15 @@ pub(crate) struct Inspected {
     pub(crate) temporary_bytes: u64,
 }
 
-pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> {
+pub(crate) fn inspect(
+    folder: &Path,
+    private: bool,
+    selected: Option<&crate::core::Backend>,
+) -> Result<Inspected, Error> {
     let metadata = match fs::symlink_metadata(folder) {
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
             return Ok(Inspected {
+                binding: selected.map_or(binding::Binding::Disabled, |_| binding::Binding::Missing),
                 entries: 0,
                 bytes: 0,
                 bad_entries: 0,
@@ -83,6 +90,11 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
         return Err(Error::CacheEntry);
     }
     let found = scan_final(folder)?;
+    let binding = binding::inspect(
+        folder,
+        selected,
+        !found.good.is_empty() || !found.bad.is_empty(),
+    )?;
     let entries = u64::try_from(found.good.len()).map_err(|_| Error::RecordingStorage)?;
     let bytes = found
         .good
@@ -97,6 +109,7 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
         .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
         .ok_or(Error::RecordingStorage)?;
     Ok(Inspected {
+        binding,
         entries,
         bytes,
         bad_entries,

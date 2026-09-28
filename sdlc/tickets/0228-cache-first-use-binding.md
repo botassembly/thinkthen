@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/recorder.rs crates/thinkthen/src/engine/recor
 
 # 0228: Keep a missing key from binding a new cache folder
 
-Status: complete after fresh independent High code review accepted `10ae3238`. Fresh Medium review accepted the technical design at `be0a2336`; Ian approved the narrow before-key exception in the work plan. Source base `76a3bc7c`. Register 10 in experiment 284 and `sdlc/issues/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md` name the broader problem. [The five-finding survey](../records/2026-09-28-cache-followup-preparation.md) separates it from model-version identity. Ian may overturn the accepted admission rule. The coordinator opened an independent build lane after 0212 landed.
+Status: complete after fresh independent High code review accepted `10ae3238`. Fresh Medium review accepted the technical design at `be0a2336`; Ian approved the narrow before-key exception in the work plan. Source base `76a3bc7c`. Register 10 in experiment 284 and `sdlc/issues/closed/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md` name the broader problem. [The five-finding survey](../records/2026-09-28-cache-followup-preparation.md) separates it from model-version identity. Ian may overturn the accepted admission rule. The coordinator opened an independent build lane after 0212 landed.
 
 ## Outcome and exact limit
 
