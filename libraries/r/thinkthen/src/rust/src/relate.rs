@@ -87,6 +87,7 @@ pub(crate) fn recognize(
         deadline,
         pending,
         receipt,
+        None,
         move |engine, options, account| {
             if texts.is_empty() {
                 account.no_work();
@@ -136,6 +137,7 @@ pub(crate) fn relate(
         deadline,
         pending,
         receipt,
+        None,
         move |engine, options, account| {
             let edges = match engine.relate_with(&ask, entities, options) {
                 Ok(value) => value,

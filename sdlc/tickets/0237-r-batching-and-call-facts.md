@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-batching-design.md sdlc/issues/2026-09-26-every-su
 
 # 0237: Batch R calls and return their call facts
 
-Status: the same independent High reviewer accepted corrected design `e24f2c29`, and the coordinator approved implementation within B12f/J6. The implementation has a source-installed, focused offline candidate proof from merged main `930dbbf7`; it awaits fresh independent High code review and landing. Owner: Codex. The [preflight](../records/0237-r-batching-preflight.md) names the native path and consumers, the [design review](../records/0237-design-review.md) records acceptance, and the [build record](../records/0237-r-batching-build.md) names the actual proof and its limits.
+Status: the same independent High reviewer accepted corrected design `e24f2c29`, and the coordinator approved implementation within B12f/J6. Fresh High code review of `aeef39c3` found one original-index defect in errors and completion receipts; this branch carries its focused correction for the same reviewer. It has source-installed offline proof but is not landed. Owner: Codex. The [preflight](../records/0237-r-batching-preflight.md) names the native path and consumers, the [design review](../records/0237-design-review.md) records acceptance, and the [build record](../records/0237-r-batching-build.md) names the actual proof and its limits.
 
 ## Outcome and retained behavior
 

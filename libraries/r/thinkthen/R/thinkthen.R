@@ -317,10 +317,10 @@ tt_decide <- function(question, evidence, threshold = NULL, deadline = NULL,
     evidence <- as.character(evidence)
     code <- rep(NA_integer_, length(evidence))
     live <- !is.na(evidence)
-    native <- .tt_call(tt_decide_column(question$json, evidence[live], deadline,
+    native <- .tt_call(tt_decide_column(question$json, evidence[live],
+                                        as.integer(which(live) - 1L), deadline,
                                         batch, context, completion))
     code[live] <- native$value$answer
-    native$details <- .tt_original_indexes(native$details, which(live))
     .tt_result(ifelse(code < 0L, NA, code == 1L), native)
   })
 }
@@ -331,19 +331,11 @@ tt_decide <- function(question, evidence, threshold = NULL, deadline = NULL,
   evidence <- as.character(evidence)
   cells <- rep(list(empty), length(evidence))
   live <- !is.na(evidence)
-  native <- .tt_call(tt_column(question$json, evidence[live], deadline,
+  native <- .tt_call(tt_column(question$json, evidence[live],
+                                as.integer(which(live) - 1L), deadline,
                                 batch, context, completion))
   cells[live] <- native$value
-  native$details <- .tt_original_indexes(native$details, which(live))
   .tt_result(cells, native)
-}
-
-.tt_original_indexes <- function(details, live) {
-  lapply(details, function(one) {
-    at <- as.integer(one$index) + 1L
-    if (at > 0L && at <= length(live)) one$index <- as.double(live[[at]] - 1L)
-    one
-  })
 }
 
 tt_choose <- function(question, evidence, options = NULL, threshold = NULL, deadline = NULL,

@@ -58,6 +58,7 @@ pub(crate) fn call_owned<T: Send + 'static>(
     deadline: Option<f64>,
     pending: Pending<'_>,
     receipt: Option<Arc<Receipt>>,
+    positions: Option<Vec<usize>>,
     work: impl FnOnce(&Engine, CallOptions<'_>, &Account) -> Result<T, String> + Send + 'static,
 ) -> Crossed<Completed<T>> {
     call_with_receipt(
@@ -65,7 +66,7 @@ pub(crate) fn call_owned<T: Send + 'static>(
         pending,
         receipt.clone(),
         move |engine, options| {
-            let account = Account::new();
+            let account = Account::new(positions);
             let observer = |event: thinkthen::RecordObservation<'_>| account.observe(event, None);
             let result = work(engine, options.observe(&observer), &account);
             let snapshot = account.finish(false);

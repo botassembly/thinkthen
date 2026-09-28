@@ -17,9 +17,9 @@ NULL
 #' Check a question file and name its kind.
 tt_question_check <- function(body) .Call(wrap__tt_question_check, body)
 
-tt_decide_column <- function(question, records, deadline, batch, context, completion) .Call(wrap__tt_decide_column, question, records, deadline, batch, context, completion)
+tt_decide_column <- function(question, records, positions, deadline, batch, context, completion) .Call(wrap__tt_decide_column, question, records, positions, deadline, batch, context, completion)
 
-tt_column <- function(question, records, deadline, batch, context, completion) .Call(wrap__tt_column, question, records, deadline, batch, context, completion)
+tt_column <- function(question, records, positions, deadline, batch, context, completion) .Call(wrap__tt_column, question, records, positions, deadline, batch, context, completion)
 
 tt_filter_places <- function(question, records, deadline, batch, context, completion) .Call(wrap__tt_filter_places, question, records, deadline, batch, context, completion)
 

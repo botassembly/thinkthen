@@ -122,14 +122,15 @@ fn texts_of(value: &Robj, what: &str) -> Crossed<Vec<String>> {
 
 fn positions_of(value: &Robj, count: usize) -> Crossed<Vec<usize>> {
     if value.rtype() != Rtype::Integers || value.len() != count {
-        return Err(usage("recognize positions must match the live evidence"));
+        return Err(usage("observation positions must match the live evidence"));
     }
     (0..count)
         .map(|at| {
-            let at = isize::try_from(at).map_err(|_| usage("recognize positions are too long"))?;
+            let at =
+                isize::try_from(at).map_err(|_| usage("observation positions are too long"))?;
             // SAFETY: at is inside the integer vector R handed this call.
             let held = unsafe { INTEGER_ELT(value.get(), at) };
-            usize::try_from(held).map_err(|_| usage("recognize positions must be nonnegative"))
+            usize::try_from(held).map_err(|_| usage("observation positions must be nonnegative"))
         })
         .collect()
 }
@@ -224,15 +225,21 @@ fn tt_question_check(body: Robj) -> Crossed<String> {
 }
 
 #[extendr]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R's column binding passes its public controls and original positions explicitly"
+)]
 fn tt_decide_column(
     question: Robj,
     records: Robj,
+    positions: Robj,
     deadline: Robj,
     batch: Robj,
     context: Robj,
     completion: Robj,
 ) -> Crossed<List> {
     let (json, texts) = asked(&question, &records, "the evidence")?;
+    let positions = positions_of(&positions, texts.len())?;
     calls::decide(
         &json,
         texts,
@@ -241,19 +248,26 @@ fn tt_decide_column(
         context_of(&context)?,
         &interrupt_pending,
         completion_of(&completion)?,
+        positions,
     )
 }
 
 #[extendr]
+#[expect(
+    clippy::too_many_arguments,
+    reason = "R's column binding passes its public controls and original positions explicitly"
+)]
 fn tt_column(
     question: Robj,
     records: Robj,
+    positions: Robj,
     deadline: Robj,
     batch: Robj,
     context: Robj,
     completion: Robj,
 ) -> Crossed<List> {
     let (json, texts) = asked(&question, &records, "the evidence")?;
+    let positions = positions_of(&positions, texts.len())?;
     calls::column(
         &json,
         texts,
@@ -262,6 +276,7 @@ fn tt_column(
         context_of(&context)?,
         &interrupt_pending,
         completion_of(&completion)?,
+        positions,
     )
 }
 

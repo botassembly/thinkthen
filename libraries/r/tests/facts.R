@@ -29,7 +29,8 @@ digest <- function(url, body) {
 
 url <- arm("arm/full/capture/v1/systemone")
 tt_engine(base_url = arm("arm/full/capture/v1"), cache = FALSE)
-packed <- tt_decide("Q?", c("alpha", NA_character_, "beta"))
+packed_receipt <- tt_completion()
+packed <- tt_decide("Q?", c("alpha", NA_character_, "beta"), completion = packed_receipt)
 expected <- paste0('{"state":"Each question quotes the text it asks about.",',
   '"model":"jev-1.13.0","questions":{',
   '"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Q?"},',
@@ -45,6 +46,9 @@ check("one packed send has full call facts and original R indexes",
       identical(packed$facts$input_tokens, 1) && identical(packed$facts$output_tokens, 1) &&
       identical(vapply(packed$details, `[[`, 0, "index"), c(0, 2)) &&
       identical(vapply(packed$details, `[[`, 0, "requests_sent"), c(1, 0)))
+check("a completed receipt uses the same original R indexes as the returned call",
+      identical(vapply(tt_completion_read(packed_receipt)$details, `[[`, 0, "index"), c(0, 2)) &&
+      identical(tt_completion_read(packed_receipt)$facts$requests_sent, packed$facts$requests_sent))
 
 # A structured question is deliberately sent as one record per request by
 # the core planner. Its nested array/object and explicit null must survive.
@@ -109,4 +113,26 @@ check("host operations and invalid controls fail as named usage before a send",
       identical(kind_of(tt_decide("Q?", "x", context = bad_bytes)), "usage") &&
       identical(kind_of(tt_completion_read("not a handle")), "usage"))
 
-finish("facts", 6L)
+limited_sends <- sent_by(limited <- child(c(
+  sprintf('tt_engine(base_url = "%s", cache = FALSE, max_requests = 1L, batch = 1L)', arm("arm/full/v1")),
+  'receipt <- tt_completion()',
+  'error <- tryCatch(tt_decide("Q?", c(NA_character_, "first", "second"), completion = receipt), thinkthen_error = function(e) e)',
+  'final <- tt_completion_read(receipt)',
+  'cat(inherits(error, "thinkthen_usage"), identical(error$facts$requests_sent, 1),',
+  '    identical(vapply(error$details, `[[`, 0, "index"), 1), identical(final$kind, "usage"),',
+  '    identical(vapply(final$details, `[[`, 0, "index"), 1), "\\n")'
+)))
+check("accounted batch refusal keeps original indexes in error and receipt",
+      limited$status == 0L && identical(trimws(limited$text), "TRUE TRUE TRUE TRUE TRUE") && limited_sends == 1L)
+
+choice_sends <- sent_by(choice <- child(c(
+  sprintf('tt_engine(base_url = "%s", cache = FALSE)', arm("generic/v1")),
+  'receipt <- tt_completion()',
+  'answer <- tt_choose("Which?", c("a", NA_character_, "b"), c("billing", "shipping"), completion = receipt)',
+  'cat(identical(vapply(answer$details, `[[`, 0, "index"), c(0, 2)),',
+  '    identical(vapply(tt_completion_read(receipt)$details, `[[`, 0, "index"), c(0, 2)), "\\n")'
+)))
+check("dynamic-label columns share the original-position receipt boundary",
+      choice$status == 0L && identical(trimws(choice$text), "TRUE TRUE") && choice_sends == 1L)
+
+finish("facts", 8L)

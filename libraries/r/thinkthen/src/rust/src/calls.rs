@@ -98,12 +98,14 @@ pub(crate) fn decide(
     context: Option<String>,
     pending: Pending<'_>,
     receipt: Option<Arc<Receipt>>,
+    positions: Vec<usize>,
 ) -> Crossed<List> {
     let asked = question(json)?;
     let completed = call_owned(
         deadline,
         pending,
         receipt,
+        Some(positions),
         move |engine, options, account| {
             let options = batch.map_or(options, |value| options.batch(value));
             let options = context
@@ -141,6 +143,7 @@ pub(crate) fn filter(
         deadline,
         pending,
         receipt,
+        None,
         move |engine, options, account| {
             let empty = texts.is_empty();
             let options = batch.map_or(options, |value| options.batch(value));
@@ -177,6 +180,7 @@ pub(crate) fn rank(
         deadline,
         pending,
         receipt,
+        None,
         move |engine, options, account| {
             let options = batch.map_or(options, |value| options.batch(value));
             let options = context
@@ -221,6 +225,7 @@ pub(crate) fn find(
         deadline,
         pending,
         receipt,
+        None,
         move |engine, options, account| {
             let found = match engine.find_with(&asked, placed(texts), options) {
                 Ok(value) => value,
@@ -310,6 +315,7 @@ pub(crate) fn annotate(
         deadline,
         pending,
         receipt,
+        None,
         move |engine, options, account| {
             let options = batch.map_or(options, |value| options.batch(value));
             let mut rows = engine.annotate_with(&set, texts.iter().map(String::as_str), options);
@@ -364,6 +370,7 @@ pub(crate) fn column(
     context: Option<String>,
     pending: Pending<'_>,
     receipt: Option<Arc<Receipt>>,
+    positions: Vec<usize>,
 ) -> Crossed<List> {
     let LoadedQuestion::Question(asked) = question(json)? else {
         return Err(usage("only a decide question takes a band"));
@@ -372,6 +379,7 @@ pub(crate) fn column(
         deadline,
         pending,
         receipt,
+        Some(positions),
         move |engine, options, account| {
             let options = batch.map_or(options, |value| options.batch(value));
             let options = context
@@ -415,6 +423,7 @@ pub(crate) fn details(
         deadline,
         pending,
         receipt,
+        None,
         move |engine, options, account| {
             let held = match &asked {
                 LoadedQuestion::Question(held) => engine.details_with(held, &text, options),

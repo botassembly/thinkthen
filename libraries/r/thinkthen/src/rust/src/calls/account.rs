@@ -76,20 +76,29 @@ pub(crate) struct Counts {
 #[derive(Debug)]
 pub(crate) struct Account {
     started: Instant,
+    positions: Option<Vec<usize>>,
     counts: Mutex<Option<Counts>>,
     details: Mutex<Vec<Detail>>,
 }
 
 impl Account {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(positions: Option<Vec<usize>>) -> Self {
         Self {
             started: Instant::now(),
+            positions,
             counts: Mutex::new(None),
             details: Mutex::new(Vec::new()),
         }
     }
 
     pub(crate) fn observe(&self, event: RecordObservation<'_>, original: Option<usize>) {
+        let original = original.or_else(|| match &event {
+            RecordObservation::Question { index, .. } => self
+                .positions
+                .as_ref()
+                .and_then(|positions| positions.get(*index).copied()),
+            _ => None,
+        });
         if let Some(detail) = Detail::copy(event, original) {
             self.details
                 .lock()
