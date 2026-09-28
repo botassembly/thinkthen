@@ -1,6 +1,6 @@
 # 0227 native macOS ARM64 R source-package proof
 
-Status: candidate for independent package/evidence review. This supplements the accepted [0227 R panic source child and historical Linux tarball](0227-language-panic-build.md). It proves one installed normal-error lifecycle, not a caught panic in the installed library or a vendored redistributable archive.
+Status: accepted after fresh independent High package/evidence review of `554ef70a7ea58775f73b7eefd390ecb76fd77764`. This supplements the accepted [0227 R panic source child and historical Linux tarball](0227-language-panic-build.md). It proves one installed normal-error lifecycle, not a caught panic in the installed library or a vendored redistributable archive.
 
 M5 was native Apple Silicon on macOS 26.4 with R 4.6.1 arm64 and `jsonlite` 2.0.0. The exact source was `ca6e6625244254c429d503bad457d2440042ab91`; `git diff --name-only` from it to main `a1ac7b0f` showed no R or core source changes. A fresh `git archive` copy under `/tmp/thinkthen-0227-r-m5-source` fed `R CMD INSTALL` into `/tmp/thinkthen-0227-r-m5-lib`. Official Rust 1.95.0 `aarch64-apple-darwin` and a dedicated Cargo home `/tmp/thinkthen-0227-r-m5-cargo` isolated the build. This was the repository-shaped source package. `libraries/r/tools/make-tarball.sh` and a vendored tarball were not run.
 
@@ -10,4 +10,8 @@ The installed `/tmp/thinkthen-0227-r-m5-lib/thinkthen/libs/thinkthen.so` has SHA
 
 With `R_LIBS` pointing only at that fresh install and `THINKTHEN_API_KEY` unset, stock `Rscript --vanilla` loaded the package. `tt_engine(base_url = "http://127.0.0.1:9/v1", cache = FALSE)` followed by `tt_decide("Is it urgent?", "text", deadline = 0)` returned `thinkthen_deadline`, kind `deadline`, `retryable=FALSE`, and final `requests_sent=0`. Two later `tt_usage()` values were identical with zero sends. `getLoadedDLLs()` resolved `thinkthen.so` inside the installed library after canonicalizing `/tmp` to `/private/tmp`. The focused script returned `SMOKE_STATUS=0`; `/tmp/thinkthen-0227-r-m5-smoke.log` contains only the concise result.
 
-The accepted 0227 R source child remains the synthetic panic, fixed Defect, payload-secrecy, prior-hook and later-success proof. This installed call exercises package load and ordinary no-send error handling. It does not test a real caught panic in the shipped package, a vendored source tarball, macOS 15 execution, native Intel hardware or a release runner. The installed artifact needs independent review before its local host result is accepted.
+The accepted 0227 R source child remains the synthetic panic, fixed Defect, payload-secrecy, prior-hook and later-success proof. This installed call exercises package load and ordinary no-send error handling. It does not test a real caught panic in the shipped package, a vendored source tarball, macOS 15 execution, native Intel hardware or a release runner. Fresh review accepted this local host result with the stated limits.
+
+## Independent review
+
+The reviewer verified all 6,903 archived source files against the pinned commit, the unchanged R/core diff, exact toolchains, failed and passing setup logs, the isolated launcher, installed library hash/linkage and the smoke assertions and output. The linker also warned that bundled ring objects target macOS 26.5. The observed call succeeds on macOS 26.4, but this local artifact makes no portable deployment or minimum-OS claim. No broad test or rebuild was required for review.
