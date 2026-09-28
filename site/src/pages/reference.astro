@@ -92,6 +92,8 @@ const COUNTS = [
   ['rank', 'none', 'None. A threshold is refused in both homes.', noCut('rank')],
   ['find', '2 to 255 units, or 2 to 254 with --none', 'None.', 'n/a'],
   ['annotate', 'a question set file', 'Each question carries its own. A top-level threshold applies to every decide question that names none.', 'per question'],
+  ['recognize', 'optional kinds', 'A cut on printed name strength; a separate relation cut applies to edges.', cutOn('recognize')],
+  ['relate', 'relation rules', 'A cut on each edge’s probability of yes.', cutOn('relate')],
 ];
 ---
 <Base title="Reference" description="Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.">
@@ -112,7 +114,7 @@ const COUNTS = [
   </table>
 
   <h2>Arguments and thresholds</h2>
-  <p>A threshold is your bar on a probability. You set it. The tool never reports one, and a threshold never changes the probability. A cut is one number. A band is two, written <code>LOW:HIGH</code>.</p>
+  <p>A threshold is a cut on the quantity each function names. You set it; the tool never reports one. A cut is one number. Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A recognized name’s printed strength is a computed product, not a probability.</p>
   <table>
     <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
     {COUNTS.map(([fn, args, rule, dflt]) => (
@@ -127,7 +129,7 @@ const COUNTS = [
     <tr><td><code>--threshold LOW:HIGH</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
   </table>
   <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A cut of 0 is refused. A band low of 0 is accepted. <code>--threshold {cutOn('decide')}</code> and no threshold name the same rule. A percent such as <code>90</code>, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.</p>
-  <p>The cut applies to the probability of yes on <code>decide</code> and on each record under <code>filter</code>, to the winning option's probability on <code>choose</code>, and to each label on its own under <code>tag</code>.</p>
+  <p>The cut applies to the probability of yes on <code>decide</code> and each record under <code>filter</code>, the winning option’s probability on <code>choose</code>, each label’s independent yes probability under <code>tag</code>, each name’s printed strength under <code>recognize</code>, and each relation edge’s yes probability under <code>recognize</code> or <code>relate</code>. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/threshold.md">threshold contract</a> defines every boundary.</p>
 
   <h2>Global flags</h2>
   <p>Every function accepts all of these. The <a href="/install/settings/">settings page</a> lists every setting on every surface, with its default.</p>

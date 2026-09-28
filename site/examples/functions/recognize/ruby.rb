@@ -15,7 +15,7 @@ raise unless names == [
   ["Chicago", "place"]
 ]
 links = facts.relations.map do |one|
-  [one.relation, one.source.name, one.target.name]
+  [one.relation, one.source.text, one.target.text]
 end
 raise unless links == [
   ["works_for", "Maria Chen", "Northwind Freight"],

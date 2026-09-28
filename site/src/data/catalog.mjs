@@ -285,10 +285,10 @@ export const FUNCTIONS = [
   },
   {
     name: 'relate',
-    goal: 'relate links records that clash, repeat, or rely on each other, one edge per pair with a probability.',
+    goal: 'relate asks the model about named entities, one possible edge per pair and rule.',
     primitive: 'Yes or no, or a direction, per pair of records',
     line: 'Find records that clash, repeat, or rely on each other.',
-    lede: 'You give it a set of records and the relations you allow. You get back one edge for each related pair, with a probability. An edge links two records. The samples below find the rules in a travel policy that contradict each other.',
+    lede: 'You give it names, kinds, and the relations you allow. Each edge is the model’s belief about those names, with a probability; standalone relate reads no source text. The sample asks which travel rules contradict each other.',
     takes: 'a set of records and the relations you allow',
     gives: 'one edge for each related pair, with a probability',
     requests: 'It reads the whole set at once, up to 255 records. --dry-run prints every request it would send.',

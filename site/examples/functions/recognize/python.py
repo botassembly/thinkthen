@@ -14,14 +14,14 @@ facts = tt.recognize(
     kinds=kinds,
     relations=relations,
 ).value
-names = [(one.name, one.kind) for one in facts.entities]
+names = [(one.text, one.kind) for one in facts.entities]
 assert names == [
     ("Maria Chen", "person"),
     ("Northwind Freight", "organization"),
     ("Chicago", "place"),
 ]
 links = [
-    (one.relation, one.source.name, one.target.name)
+    (one.relation, one.source.text, one.target.text)
     for one in facts.relations
 ]
 assert links == [

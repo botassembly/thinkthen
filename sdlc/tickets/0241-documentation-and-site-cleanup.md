@@ -1,6 +1,6 @@
 # 0241: Documentation and website cleanup
 
-Status: in progress. Owner: codex-7 on `ticket/0241-documentation-and-site-cleanup`.
+Status: candidate for independent code review. Owner: codex-7 on `ticket/0241-documentation-and-site-cleanup`.
 
 ## Outcome and scope
 
@@ -27,4 +27,54 @@ The tracked [issue inventory](../records/0241-documentation-issue-inventory.json
 
 ## What the build taught us
 
-Pending implementation and fresh review.
+The initial site replay check could pass while code tabs were wrong: it runs
+the CLI and skips host and SQL. I listed all 54 changed host/SQL sample files
+with their source and proof under `target/codex-builds/0241/sample-provenance.json`,
+then compiled C and Rust snippets, parsed Python/Ruby/R, and typechecked
+TypeScript against the current declarations. That last check found stale
+recognized-entity `name` accessors, a nullable relation list, and arrays
+where tuple pairs were required. The remaining host/SQL runtime-execution
+limit is stated in the build record instead of calling those tabs verified by
+the CLI smoke.
+
+The sample and HTML checks earned their place: the replay check caught a
+default-model recording mismatch; the generated-HTML guard failed on a planted
+stray code tag and passed when it was restored. No functional tests were
+deleted or consolidated. The site build runs these focused checks on every
+site build. The final offline build after the mainline merge replayed 95 CLI
+examples, built 92 pages and Markdown twins, checked 50 settings, and linked
+130 routes. Logs and the exact proof limits are in
+`target/codex-builds/0241/` and
+`sdlc/records/0241-site-and-sample-build.md`.
+
+The original-issue inventory has 38 unique IDs: 19 documentation, nine mixed
+runtime, and ten non-documentation. In this candidate, 15 documentation rows
+have evidence for their documentation criterion (three were already fixed on
+main), while four remain partial. The 2026-09-25 site umbrella is one row, not
+one row per numbered criterion. The partial rows are:
+
+- `2026-09-25-docs-how-tos-and-spec-claims-owed`: the six 0.1 flows are covered;
+  the issue's explicitly later pages 11–17 still need their own demonstration.
+- `2026-09-25-site-samples-and-pages-after-the-surfaces-land`: the current site
+  uses recorded CLI samples and current host APIs, but host/SQL runtime
+  execution and the external Beatles Bench source pull are not proved here.
+- `2026-09-27-marketing-audit-diff-wording`: the two copies live in the separate
+  marketing repository and are still its owner's work.
+- `2026-09-27-site-and-bench-relate-pair-examples`: the site now replays the
+  pair-question shape; the external bench's score/revision label remains.
+
+The nine mixed records stay open for their runtime, platform, or external
+terms criteria, including strict SQL replay, release packaging, error catalog
+register 117, and terms register 124. The ten separate consumer-proof issues
+remain non-documentation work. The full
+per-original-ID evidence and action are in
+`sdlc/records/0241-documentation-issue-inventory.json`. This mapping does not
+change the root team's global issue counts or claim that an unlanded candidate
+has closed an issue.
+
+The settings table now drives the site's default values and source links;
+splitting Audit bar into five rows removed a fragile parser exception.
+The remaining `recognize --jobs` design under “Settings on the way” has no
+runtime setting yet, so it stays clearly future. The default-backend copy
+links the vendor's terms without inventing an input-retention promise. Release
+install lines stay qualified until their channels pass a clean install.

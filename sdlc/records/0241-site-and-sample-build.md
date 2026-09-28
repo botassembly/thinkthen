@@ -1,6 +1,6 @@
 # Ticket 0241: site and sample build record
 
-This is the first implementation slice. The documentation issue inventory is
+This record covers the candidate through main `565a6090`. The documentation issue inventory is
 `sdlc/records/0241-documentation-issue-inventory.json`; mixed runtime items
 stay open until their runtime criteria land. The batch ticket carries the final
 closure map.
@@ -91,3 +91,32 @@ catches a stray `<code>` tag after a table. I planted that exact fault in a
 generated page and observed exit 1 with the page path, then restored the page
 and observed the 130-page link check pass. The red log is under
 `target/codex-builds/0241/stray-code-red.log`.
+
+## Final candidate proof and limits
+
+After merging main `565a6090`, I rebuilt the isolated release binary and ran
+the offline site build again with Node 22. The final log is
+`target/codex-builds/0241/site-build-final.log`: 95 CLI examples replayed,
+92 Astro pages and 92 Markdown twins built, the 50-row settings check passed,
+and all 130 internal routes linked. `sdlc/scripts/settings --self-test` kept
+its 10 planted failures. The HTML guard's planted failure and recovery are
+recorded above. The site smoke intentionally does not execute host or SQL
+samples.
+
+`target/codex-builds/0241/sample-provenance.json` lists each of the 54 changed
+library or SQL sample files, the current source example or API document used
+to check it, the proof applied, and the explicit `host_runtime_executed: false`
+limit. Python parsed 13 examples; Ruby and R parsed 10 each. C compiled 10
+snippets against the current header and Rust compiled 11 against the current
+release rlib. A TypeScript `noEmit` check over every site `.ts` sample against
+the current `index.d.ts` caught and corrected recognized-entity `text`
+accessors, optional relations, and tuple types. That is stronger than the
+earlier transpile-only check, but no host package or SQL extension was invoked
+by the site smoke. All CLI examples use replay, with no provider call.
+
+The default-backend notices in README and the site link the vendor's published
+customer agreement, data processing addendum, and privacy policy. The policy
+does not promise a fixed API-input retention period, so the copy gives none.
+The six public error kinds are linked to the normative type contract; advice
+messages are not presented as stable identifiers. Register 117's runtime
+catalog criterion and register 124's external-terms criterion remain open.

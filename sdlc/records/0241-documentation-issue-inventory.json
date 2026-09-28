@@ -5,268 +5,345 @@
     {
       "id": "2026-09-24-duckdb-site-examples-draw-the-tag-shapes",
       "classification": "doc-open",
-      "current_status": "Open",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-24-duckdb-site-examples-draw-the-tag-shapes.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-24-duckdb-site-examples-draw-the-tag-shapes.md",
+      "original_status": "Open",
+      "resolution_evidence": "site/examples/functions/recognize/duckdb.sql; site/examples/functions/relate/duckdb.sql"
     },
     {
       "id": "2026-09-25-docs-how-tos-and-spec-claims-owed",
       "classification": "doc-open",
-      "current_status": "Open. Quick Fix qf-h1-h3-h6 settles claims 5 and 6, page 19, and the decision half of page 10.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md"
+      "current_status": "partially fixed; original issue remains open",
+      "action": "keep remaining criteria with their current owner; do not count closed",
+      "source_evidence": "sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md",
+      "original_status": "Open. Quick Fix qf-h1-h3-h6 settles claims 5 and 6, page 19, and the decision half of page 10.",
+      "resolution_evidence": "site/examples/how-tos/bash/guard-tool-call, long-lived-loop, paragraphs, skip-bad-records; later-page items 11\u201317 remain in original issue"
     },
     {
       "id": "2026-09-25-site-samples-and-pages-after-the-surfaces-land",
       "classification": "doc-open",
-      "current_status": "Open.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-25-site-samples-and-pages-after-the-surfaces-land.md"
+      "current_status": "partially fixed; original issue remains open",
+      "action": "keep remaining criteria with their current owner; do not count closed",
+      "source_evidence": "sdlc/issues/2026-09-25-site-samples-and-pages-after-the-surfaces-land.md",
+      "original_status": "Open.",
+      "resolution_evidence": "site/examples/functions; site/src/pages/functions/[name]/index.astro; site/src/pages/reference/details/index.astro; host/SQL sample execution provenance and external bench pull criterion remain"
     },
     {
       "id": "2026-09-26-settings-table-cells-the-site-still-types",
       "classification": "doc-open",
-      "current_status": "open. Filed 2026-09-26 by the marketing lead after site commit 88580fbb.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-26-settings-table-cells-the-site-still-types.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-settings-table-cells-the-site-still-types.md",
+      "original_status": "open. Filed 2026-09-26 by the marketing lead after site commit 88580fbb.",
+      "resolution_evidence": "specification/settings.md; site/src/lib/settings-table.mjs; sdlc/scripts/settings"
     },
     {
       "id": "2026-09-26-settings-table-gaps-a-site-reader-hits",
       "classification": "doc-open",
-      "current_status": "open. Filed 2026-09-26 by the marketing lead. Item 8 added 2026-09-26 by the queue owner from local experiment 273, reports 06 (I-5) and 08 (4), for backlog ticket H4.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-26-settings-table-gaps-a-site-reader-hits.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-settings-table-gaps-a-site-reader-hits.md",
+      "original_status": "open. Filed 2026-09-26 by the marketing lead. Item 8 added 2026-09-26 by the queue owner from local experiment 273, reports 06 (I-5) and 08 (4), for backlog ticket H4.",
+      "resolution_evidence": "specification/settings.md; site/src/pages/install/settings.astro; sdlc/scripts/settings"
     },
     {
       "id": "2026-09-26-site-recordings-rekey-for-the-default-model-pin",
       "classification": "doc-open",
-      "current_status": "Open. Filed 2026-09-26 by the queue owner for the marketing lead, from ticket 0159. Owner: the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`).",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-26-site-recordings-rekey-for-the-default-model-pin.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-site-recordings-rekey-for-the-default-model-pin.md",
+      "original_status": "Open. Filed 2026-09-26 by the queue owner for the marketing lead, from ticket 0159. Owner: the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`).",
+      "resolution_evidence": "target/codex-builds/0241/rekey-model.log; site/recordings; site/examples/beatles"
     },
     {
       "id": "2026-09-26-site-run-facts-after-0151",
       "classification": "doc-open",
-      "current_status": "Open. Filed 2026-09-26 by the coordinator for the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`). Ticket 0151 decision 9 hands over the site part of ask 6 in `2026-09-26-every-surface-should-give-back-run-facts.md`.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-26-site-run-facts-after-0151.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-site-run-facts-after-0151.md",
+      "original_status": "Open. Filed 2026-09-26 by the coordinator for the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`). Ticket 0151 decision 9 hands over the site part of ask 6 in `2026-09-26-every-surface-should-give-back-run-facts.md`.",
+      "resolution_evidence": "site/src/data/catalog.mjs; site/src/pages/[surface]/index.astro"
     },
     {
       "id": "2026-09-26-the-sites-recognize-accuracy-claim-overstates-the-shipped-build",
       "classification": "doc-open",
-      "current_status": "Open. Filed 2026-09-26 by the queue owner for the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`), from local experiment 273, report 10, finding 6. Blocks 0.1 under goal 4, because it is a public accuracy claim. Ian can overturn this placement.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-26-the-sites-recognize-accuracy-claim-overstates-the-shipped-build.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-the-sites-recognize-accuracy-claim-overstates-the-shipped-build.md",
+      "original_status": "Open. Filed 2026-09-26 by the queue owner for the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`), from local experiment 273, report 10, finding 6. Blocks 0.1 under goal 4, because it is a public accuracy claim. Ian can overturn this placement.",
+      "resolution_evidence": "site/src/data/beatles.mjs, what-jev-knows 3-table; sdlc/issues/2026-09-26-the-sites-recognize-accuracy-claim-overstates-the-shipped-build.md"
     },
     {
       "id": "2026-09-27-marketing-audit-diff-wording",
       "classification": "doc-open",
-      "current_status": "open. Owner: coordinator for the marketing follow-up. Ticket 0152 Part B changes the command's machine word to `unsure` and its prose count to \"not sure\"; this repository does not own the marketing copies.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-27-marketing-audit-diff-wording.md"
+      "current_status": "partially fixed; original issue remains open",
+      "action": "keep remaining criteria with their current owner; do not count closed",
+      "source_evidence": "sdlc/issues/2026-09-27-marketing-audit-diff-wording.md",
+      "original_status": "open. Owner: coordinator for the marketing follow-up. Ticket 0152 Part B changes the command's machine word to `unsure` and its prose count to \"not sure\"; this repository does not own the marketing copies.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-marketing-audit-diff-wording.md; external marketing repository owns two copies"
     },
     {
       "id": "2026-09-27-site-and-bench-relate-pair-examples",
       "classification": "doc-open",
-      "current_status": "open. Filed from ticket 0167 for the marketing lead, who owns `site/`. No external message has been sent.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-27-site-and-bench-relate-pair-examples.md"
+      "current_status": "partially fixed; original issue remains open",
+      "action": "keep remaining criteria with their current owner; do not count closed",
+      "source_evidence": "sdlc/issues/2026-09-27-site-and-bench-relate-pair-examples.md",
+      "original_status": "open. Filed from ticket 0167 for the marketing lead, who owns `site/`. No external message has been sent.",
+      "resolution_evidence": "site/examples/functions/relate; site/examples/beatles/relate; external bench score/revision criterion remains"
     },
     {
       "id": "2026-09-27-site-recognize-samples-after-the-three-steps",
       "classification": "doc-open",
-      "current_status": "Open. Filed 2026-09-27 by the queue owner for the marketing lead, from ticket 0147. Owner: the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`).",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-27-site-recognize-samples-after-the-three-steps.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-27-site-recognize-samples-after-the-three-steps.md",
+      "original_status": "Open. Filed 2026-09-27 by the queue owner for the marketing lead, from ticket 0147. Owner: the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`).",
+      "resolution_evidence": "site/examples/functions/recognize; site/examples/beatles/recognize; site/src/data/catalog.mjs"
     },
     {
       "id": "2026-09-27-site-relate-samples-after-the-three-steps",
       "classification": "doc-open",
-      "current_status": "Open. Filed 2026-09-27 by the queue owner for the marketing lead, from ticket 0147. Owner: the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`).",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-27-site-relate-samples-after-the-three-steps.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-27-site-relate-samples-after-the-three-steps.md",
+      "original_status": "Open. Filed 2026-09-27 by the queue owner for the marketing lead, from ticket 0147. Owner: the marketing lead, who owns `site/` (`sdlc/planning/ownership.md`).",
+      "resolution_evidence": "site/examples/functions/relate; site/src/data/catalog.mjs"
     },
     {
       "id": "2026-09-28-site-benchmark-pin-collides-on-case-insensitive-filesystems",
       "classification": "doc-open",
-      "current_status": "open. Owner: the marketing lead under `sdlc/planning/ownership.md`. Found during authorized native M5 package verification at main `10f85fa7`. This is a public 0.1 checkout portability gap.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-28-site-benchmark-pin-collides-on-case-insensitive-filesystems.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-28-site-benchmark-pin-collides-on-case-insensitive-filesystems.md",
+      "original_status": "open. Owner: the marketing lead under `sdlc/planning/ownership.md`. Found during authorized native M5 package verification at main `10f85fa7`. This is a public 0.1 checkout portability gap.",
+      "resolution_evidence": "site/examples/beatles/bench-pin; site/scripts/check-slides.mjs"
     },
     {
       "id": "2026-09-28-site-c-examples-need-json-value-wrapper",
       "classification": "doc-open",
-      "current_status": "open, required before public 0.1. Owner: the marketing lead under `sdlc/planning/ownership.md`. Fresh High review of ticket 0230 source `360f4e7a`, integrated candidate `6ff22a8e`, found this migration gap. The candidate is not landed when this issue is filed. Ian approved the C JSON success contract; the site examples must migrate with that contract before release.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-28-site-c-examples-need-json-value-wrapper.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-28-site-c-examples-need-json-value-wrapper.md",
+      "original_status": "open, required before public 0.1. Owner: the marketing lead under `sdlc/planning/ownership.md`. Fresh High review of ticket 0230 source `360f4e7a`, integrated candidate `6ff22a8e`, found this migration gap. The candidate is not landed when this issue is filed. Ian approved the C JSON success contract; the site examples must migrate with that contract before release.",
+      "resolution_evidence": "site/examples/functions/*/c.c; target/codex-builds/0241 C compile proof"
     },
     {
       "id": "2026-09-28-site-python-examples-need-call-values",
       "classification": "doc-open",
-      "current_status": "open, required before public 0.1. Owner: the marketing lead under sdlc/planning/ownership.md. Ticket 0214's approved result contract landed at `1ab24371` after High acceptance of integrated source `dfc1b5fb`. This issue records the required consumer migration before public release.",
-      "action": "implement and verify documentation/site criteria in 0241",
-      "source_evidence": "sdlc/issues/2026-09-28-site-python-examples-need-call-values.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-28-site-python-examples-need-call-values.md",
+      "original_status": "open, required before public 0.1. Owner: the marketing lead under sdlc/planning/ownership.md. Ticket 0214's approved result contract landed at `1ab24371` after High acceptance of integrated source `dfc1b5fb`. This issue records the required consumer migration before public release.",
+      "resolution_evidence": "site/examples/functions/*/python.py; target/codex-builds/0241 Python parse proof"
     },
     {
       "id": "2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lock",
       "classification": "doc-fixed",
-      "current_status": "closed on 2026-09-27. Ticket 0163 states the exit wait in recording.md. The runtime wait remains open as register 31 in the work plan. Reviewed source: `0292cba2`; proof: `sdlc/records/0163-code-review.md`.",
-      "action": "retain landed evidence; check copy consistency",
-      "source_evidence": "sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lock.md"
+      "current_status": "confirmed fixed on baseline or current main",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lock.md",
+      "original_status": "closed on 2026-09-27. Ticket 0163 states the exit wait in recording.md. The runtime wait remains open as register 31 in the work plan. Reviewed source: `0292cba2`; proof: `sdlc/records/0163-code-review.md`.",
+      "resolution_evidence": "specification/recording.md, usage-lock wait paragraph (already fixed on baseline)"
     },
     {
       "id": "2026-09-26-the-spec-understates-answer-drift",
       "classification": "doc-fixed",
-      "current_status": "closed on 2026-09-27. Ticket 0163 records the three-set offline measurement and corrects the drift pages and ADR. Reviewed source: `0292cba2`; proof: `sdlc/records/0163-code-review.md`.",
-      "action": "retain landed evidence; check copy consistency",
-      "source_evidence": "sdlc/issues/2026-09-26-the-spec-understates-answer-drift.md"
+      "current_status": "confirmed fixed on baseline or current main",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-the-spec-understates-answer-drift.md",
+      "original_status": "closed on 2026-09-27. Ticket 0163 records the three-set offline measurement and corrects the drift pages and ADR. Reviewed source: `0292cba2`; proof: `sdlc/records/0163-code-review.md`.",
+      "resolution_evidence": "specification/recording.md; sdlc/records/0163-answer-drift.md (already fixed on baseline)"
     },
     {
       "id": "2026-09-20-new-user-stumble-register",
       "classification": "mixed-runtime",
-      "current_status": "Open. This page stays open until launch. Add a row when a stumble is seen. Close a row when its fix lands, and name the commit.",
-      "action": "implement documentation criteria; retain runtime or release criteria with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-20-new-user-stumble-register.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/issues/2026-09-20-new-user-stumble-register.md",
+      "original_status": "Open. This page stays open until launch. Add a row when a stumble is seen. Close a row when its fix lands, and name the commit.",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-20-new-user-stumble-register.md"
     },
     {
       "id": "2026-09-25-release-and-install-for-0-1",
       "classification": "mixed-runtime",
-      "current_status": "Open.",
-      "action": "implement documentation criteria; retain runtime or release criteria with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-25-release-and-install-for-0-1.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/issues/2026-09-25-release-and-install-for-0-1.md",
+      "original_status": "Open.",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-25-release-and-install-for-0-1.md"
     },
     {
       "id": "2026-09-26-folder-writers-decide-the-answers",
       "classification": "mixed-runtime",
-      "current_status": "open. Ticket 0163 source `0292cba2` completes the documentation half in recording.md and SECURITY.md. Writable-folder warning and entry-integrity work remain open; no code protection is claimed by that sentence.",
-      "action": "implement documentation criteria; retain runtime or release criteria with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md",
+      "original_status": "open. Ticket 0163 source `0292cba2` completes the documentation half in recording.md and SECURITY.md. Writable-folder warning and entry-integrity work remain open; no code protection is claimed by that sentence.",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md"
     },
     {
       "id": "2026-09-26-libraries-cannot-replay-a-recording-strictly",
       "classification": "mixed-runtime",
-      "current_status": "Open. Filed 2026-09-26 by the marketing session while building smoke tests for the website's code examples.",
-      "action": "implement documentation criteria; retain runtime or release criteria with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-26-libraries-cannot-replay-a-recording-strictly.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/issues/2026-09-26-libraries-cannot-replay-a-recording-strictly.md",
+      "original_status": "Open. Filed 2026-09-26 by the marketing session while building smoke tests for the website's code examples.",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-26-libraries-cannot-replay-a-recording-strictly.md"
     },
     {
       "id": "2026-09-26-settings-some-surfaces-cannot-reach",
       "classification": "mixed-runtime",
-      "current_status": "open. Filed 2026-09-26 by ticket 0140 while it wrote `specification/settings.md`. No ticket owns it yet.",
-      "action": "implement documentation criteria; retain runtime or release criteria with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-26-settings-some-surfaces-cannot-reach.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/issues/2026-09-26-settings-some-surfaces-cannot-reach.md",
+      "original_status": "open. Filed 2026-09-26 by ticket 0140 while it wrote `specification/settings.md`. No ticket owns it yet.",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-26-settings-some-surfaces-cannot-reach.md"
     },
     {
       "id": "2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so",
       "classification": "mixed-runtime",
-      "current_status": "open. The disclosure and off/move instructions landed with reviewed 0163 source `0292cba2`. SQL cache defaults and expiry decisions remain open; SQL off switches belong to 0149.",
-      "action": "implement documentation criteria; retain runtime or release criteria with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md",
+      "original_status": "open. The disclosure and off/move instructions landed with reviewed 0163 source `0292cba2`. SQL cache defaults and expiry decisions remain open; SQL off switches belong to 0149.",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-26-surfaces-write-judged-text-to-disk-without-saying-so.md"
     },
     {
       "id": "2026-09-27-one-type-contract-for-every-surface",
       "classification": "mixed-runtime",
-      "current_status": "Open. The queue owner places batch J in the work plan. Ian can overturn any rule in section 4.",
-      "action": "implement documentation criteria; retain runtime or release criteria with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-one-type-contract-for-every-surface.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/issues/2026-09-27-one-type-contract-for-every-surface.md",
+      "original_status": "Open. The queue owner places batch J in the work plan. Ian can overturn any rule in section 4.",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-27-one-type-contract-for-every-surface.md"
     },
     {
       "id": "2026-09-26-zig-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the product integration ticket and release. Ian authorized the expanded Linux engineering and testing, not publication. He can overturn the thin wrapper and explicit native-archive recommendation.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the product integration ticket and release. Ian authorized the expanded Linux engineering and testing, not publication. He can overturn the thin wrapper and explicit native-archive recommendation.",
+      "resolution_evidence": "sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-ada-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment (local experiment 293) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment (local experiment 293) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-cobol-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment (local experiment 292) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment (local experiment 292) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-csharp-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment (local experiment 290) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment (local experiment 290) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-go-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local Go package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing, not publication. He can overturn the thread-pinning choice and the explicit native-archive route.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local Go package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing, not publication. He can overturn the thread-pinning choice and the explicit native-archive route.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-jvm-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local JVM package experiment is complete, and ticket 0166 fixed the native cancellation blocker it exposed. A post-fix re-verification on main 22f36d00 passed every case, including strict held-scalar cancellation through Java, Kotlin, and Scala. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing and the toolchain downloads, not publication. He can overturn the FFM-over-JNI choice, the join-first close contract, and the one-MiB refusal bound.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local JVM package experiment is complete, and ticket 0166 fixed the native cancellation blocker it exposed. A post-fix re-verification on main 22f36d00 passed every case, including strict held-scalar cancellation through Java, Kotlin, and Scala. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing and the toolchain downloads, not publication. He can overturn the FFM-over-JNI choice, the join-first close contract, and the one-MiB refusal bound.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-objective-c-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment (local experiment 295) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment (local experiment 295) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-php-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment (local experiment 291) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment (local experiment 291) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-27-swift-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment (local experiment 294) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment (local experiment 294) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
+      "resolution_evidence": "sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "2026-09-28-dart-consumer-proof-needs-a-supported-package",
       "classification": "non-doc",
-      "current_status": "the local package experiment (local experiment 300) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized Dart on 2026-09-28; the team uses it with Flutter.",
-      "action": "truthful site claim only; retain package integration and release with existing owner",
-      "source_evidence": "sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md"
+      "current_status": "runtime/package criterion remains open",
+      "action": "no documentation closure claim; existing owner retains it",
+      "source_evidence": "sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md",
+      "original_status": "the local package experiment (local experiment 300) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized Dart on 2026-09-28; the team uses it with Flutter.",
+      "resolution_evidence": "sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md"
     },
     {
       "id": "register-83",
       "classification": "doc-open",
-      "current_status": "todo in work plan",
-      "action": "correct site threshold reference from settled specification",
-      "source_evidence": "sdlc/planning/work-plan-2026-09-27.md"
+      "current_status": "fixed in ticket 0241 candidate",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/planning/work-plan-2026-09-27.md",
+      "original_status": "todo in work plan",
+      "resolution_evidence": "site/src/pages/reference.astro threshold table; specification/threshold.md"
     },
     {
       "id": "register-117",
       "classification": "mixed-runtime",
-      "current_status": "todo in work plan",
-      "action": "catalog current error classes without inventing stable runtime IDs",
-      "source_evidence": "sdlc/planning/work-plan-2026-09-27.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/planning/work-plan-2026-09-27.md",
+      "original_status": "todo in work plan",
+      "resolution_evidence": "specification/types.md; README.md; site/src/pages/install/backends.astro"
     },
     {
       "id": "register-124",
       "classification": "mixed-runtime",
-      "current_status": "todo in work plan",
-      "action": "state known retention facts; external terms remain with release owner",
-      "source_evidence": "sdlc/planning/work-plan-2026-09-27.md"
+      "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
+      "action": "keep original issue open; hand unresolved criterion to its existing owner",
+      "source_evidence": "sdlc/planning/work-plan-2026-09-27.md",
+      "original_status": "todo in work plan",
+      "resolution_evidence": "specification/types.md; README.md; site/src/pages/install/backends.astro"
     },
     {
       "id": "2026-09-26-relate-should-say-its-edges-come-from-the-models-knowledge",
       "classification": "doc-open",
-      "current_status": "Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 10, finding 5. Ticket 0167 carries the sentence. Owner: backlog ticket R8, the recognize manual, or H3 if H3 lands first. Blocks 0.1 under goal 4, honest docs. The `recognize` half is tracked by recognize design section 5 and ticket R5.",
-      "action": "verify landed 0167 wording, repair any stale copy and record closure evidence",
-      "source_evidence": "sdlc/issues/2026-09-26-relate-should-say-its-edges-come-from-the-models-knowledge.md"
+      "current_status": "confirmed fixed on baseline or current main",
+      "action": "close documentation criterion after independent code review and merge",
+      "source_evidence": "sdlc/issues/2026-09-26-relate-should-say-its-edges-come-from-the-models-knowledge.md",
+      "original_status": "Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 10, finding 5. Ticket 0167 carries the sentence. Owner: backlog ticket R8, the recognize manual, or H3 if H3 lands first. Blocks 0.1 under goal 4, honest docs. The `recognize` half is tracked by recognize design section 5 and ticket R5.",
+      "resolution_evidence": "specification/relate.md (baseline); site/src/data/catalog.mjs"
     }
-  ]
+  ],
+  "reconciled_at": "ticket 0241 candidate after merge of origin/main 565a6090; statuses are candidate evidence, not landed closure"
 }
