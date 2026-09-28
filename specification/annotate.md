@@ -12,6 +12,8 @@ thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--detai
 
 `FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `@FILE` names the same file, as a question file does on the other verbs. `annotate` reads one document on standard input by default, and it reads records under `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
 
+With no record framing flag and no `--field`, `annotate` tries to parse the whole document as JSON. Valid JSON becomes a JSON value, including an object, array, string, number, boolean, or `null`; input that fails JSON syntax stays text. Other JSON validation errors are refused. A JSON object can gain named answer fields in the output. To choose record framing explicitly, use `--lines` for separate text lines or `--jsonl` for separate JSON values; CSV and TSV have their own flags. `--lines` makes each nonblank line a separate record, so it cannot preserve a multi-line text document as one record. There is no flag that forces a JSON-looking whole document to be treated as text.
+
 ## The question set
 
 ```json
@@ -76,6 +78,8 @@ A not sure answer is `null`. A failed question is a failure marker and never `nu
 0 when the run finished with every question answered, 6 when it finished after one or more logical questions failed, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record, at exit 2, before any request for it. An unreadable or invalid file is exit 5. A later whole-run failure keeps its own code and stop boundary.
 
 ## Examples
+
+The first and third examples use the one-document rule on a JSON object. The second selects JSONL records explicitly.
 
 ```sh
 thinkthen annotate triage.json < issue.json

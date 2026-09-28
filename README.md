@@ -41,7 +41,7 @@ The answer cache is on by default. Cache entries contain the complete request an
 
 ## What it is not for
 
-- **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. Record mode through a `coproc` serves a steady loop from one long-lived process, and that is the ceiling.
+- **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. For a `coproc` loop that sends one line and waits for one reply, use `decide --lines --batch 1`: it prints one result per nonblank input line and flushes it. `filter` prints only kept records, so a dropped line gives the loop no reply. `rank` waits for the complete input before it prints an order. Record mode keeps one process alive for the loop, but each decision still waits on the model.
 - **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.

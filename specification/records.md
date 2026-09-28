@@ -16,7 +16,7 @@ The default input is one text document. A record stream turns a command into a m
 | `--csv` | The first logical row is a header. Each later row becomes one JSON object of string cells |
 | `--tsv` | The CSV rules with a tab delimiter |
 
-The four flags are mutually exclusive. The tool never guesses the framing from a filename. It never repairs invalid JSON, never truncates a record, and never opens a file because a string looks like a path.
+The four flags are mutually exclusive. The tool never guesses the framing from a filename. It never repairs invalid JSON, never truncates a record, and never opens a file because a string looks like a path. In its default one-document mode, `annotate` alone parses valid JSON content as a JSON value and treats a JSON syntax failure as text; [annotate.md](annotate.md) gives the rule and the limits of choosing record framing explicitly.
 
 Under `--lines` and under `--jsonl` a carriage return before the line feed is stripped with it, and a carriage return anywhere else in the line is kept.
 
