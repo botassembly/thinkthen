@@ -6,7 +6,7 @@ opens: sdlc/tickets/0217-postgresql-record-batching.md sdlc/records/0217-postgre
 
 # 0217: Batch PostgreSQL records and expose context
 
-Status: B13d implementation and focused installed Linux proof are complete on the candidate branch; fresh High code review and landing remain. Design `3e8dde23` was accepted independently within B0/B13d. Owner: Codex. The [preflight](../records/0217-postgresql-batching-preflight.md) preserves historical design sources and refreshes landed APIs; the [build record](../records/0217-postgresql-batching-build.md) names the actual installed artifact and focused proof. Register 73, full surface gates and paid work remain separate.
+Status: B13d implementation and focused installed Linux proof are complete on the candidate branch; fresh High code review and landing remain. Design `3e8dde23` was accepted independently within B0/B13d. Owner: Codex. The [preflight](../records/0217-postgresql-batching-preflight.md) preserves historical design sources and refreshes landed APIs; the [build record](../records/0217-postgresql-batching-build.md) names the actual installed artifact, focused proof, and the High review's settings-row correction. Register 73, full surface gates and paid work remain separate.
 
 ## Accepted outcome and retained behavior
 
