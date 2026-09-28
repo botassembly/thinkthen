@@ -106,6 +106,18 @@ impl Engine {
         threshold: f64,
         cancel: &Cancel,
     ) -> Result<Execution, Error> {
+        self.relate_observed(prepared, entities, threshold, cancel, |_, _| Ok(()))
+    }
+
+    /// The same ordered relation execution with its actual request plans.
+    pub(crate) fn relate_observed(
+        &self,
+        prepared: PreparedRelations,
+        entities: &[RelationEntity],
+        threshold: f64,
+        cancel: &Cancel,
+        mut observe: impl FnMut(&crate::core::Plan, &Answered) -> Result<(), Error>,
+    ) -> Result<Execution, Error> {
         let mut execution = Execution {
             replayed: true,
             ..Execution::default()
@@ -114,7 +126,8 @@ impl Engine {
             return Ok(execution);
         }
         let mut pairs = prepared.pairs.into_iter();
-        self.ask_chunks(prepared.chunks, cancel, |answered| {
+        self.ask_chunks_with_plan(prepared.chunks, cancel, |plan, answered| {
+            observe(plan, &answered)?;
             add_meta(&mut execution, &answered)?;
             for outcome in answered.reply.outcomes() {
                 let pair = pairs

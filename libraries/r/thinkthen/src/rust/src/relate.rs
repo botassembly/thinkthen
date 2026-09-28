@@ -78,7 +78,7 @@ pub(crate) fn recognize(
     let found = call(deadline, pending, move |engine, options| {
         texts
             .iter()
-            .map(|text| engine.recognize_with(&ask, text, options))
+            .map(|text| engine.recognize_with(&ask, text, options).map(thinkthen::Call::into_value))
             .collect::<Result<Vec<_>, _>>()
     })?;
     Ok(List::from_values(found.iter().map(names)))
@@ -102,7 +102,8 @@ pub(crate) fn relate(
         .map_err(|error| carry(&error))?;
     let edges = call(deadline, pending, move |engine, options| {
         engine.relate_with(&ask, entities, options)
-    })?;
+    })?
+    .into_value();
     Ok(list!(
         source = each(&edges, |edge| edge.source().name()),
         target = each(&edges, |edge| edge.target().name()),

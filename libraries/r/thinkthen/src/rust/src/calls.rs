@@ -222,7 +222,8 @@ pub(crate) fn rank(
     let asked = Question::rank(text).map_err(|error| carry(&error))?;
     let ranked = call(deadline, pending, move |engine, options| {
         engine.rank_with(&asked, placed(texts), options)
-    })?;
+    })?
+    .into_value();
     let places: Vec<i32> = ranked.iter().map(|row| row.input().place).collect();
     let probabilities: Vec<f64> = ranked.iter().map(thinkthen::Ranked::probability).collect();
     Ok(list!(place = places, probability = probabilities))
@@ -247,7 +248,8 @@ pub(crate) fn find(
         .map_err(|error| carry(&error))?;
     let found = call(deadline, pending, move |engine, options| {
         engine.find_with(&asked, placed(texts), options)
-    })?;
+    })?
+    .into_value();
     let selected = found.candidates().iter().find(|held| {
         held.input()
             .zip(found.selected())
@@ -395,7 +397,7 @@ fn one_by_one(
             .map(|text| {
                 engine
                     .details_with(&asked, text, options)
-                    .map(|held| held.value().clone())
+                    .map(|held| held.value().value().clone())
             })
             .collect::<Result<Vec<_>, _>>()
     })?;
@@ -422,7 +424,7 @@ pub(crate) fn details(
             LoadedQuestion::Question(held) => engine.details_with(held, &text, options),
             LoadedQuestion::Banded(held) => engine.details_with(held, &text, options),
         }
-        .map(|held| held.to_json())
+        .map(|held| held.value().to_json())
     })
 }
 

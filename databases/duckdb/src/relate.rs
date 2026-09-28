@@ -223,7 +223,8 @@ pub(crate) fn rows(bound: &Bound) -> Result<Vec<Row>, String> {
             None => options,
         };
         engine.relate_with(&ask, entities, options)
-    })?;
+    })?
+    .into_value();
     let key = |entity: &Entity| (entity.name().to_owned(), entity.kind().to_owned());
     let mut rows = Vec::new();
     for edge in edges {

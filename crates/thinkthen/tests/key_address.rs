@@ -120,8 +120,8 @@ fn safe_gateway_url_keeps_result_identity_but_not_debug_text() {
         .details(&question, "benign evidence")
         .expect("details");
     let posting = format!("{base}/systemone");
-    assert_eq!(details.url(), posting);
-    assert!(details.to_json().contains(&posting));
+    assert_eq!(details.value().url(), posting);
+    assert!(details.value().to_json().contains(&posting));
     let debug = format!("{details:?}");
     assert!(debug.contains("url: \"<withheld>\""), "{debug}");
     assert!(!debug.contains("gateway-marker-0210"), "{debug}");
