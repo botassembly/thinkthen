@@ -25,9 +25,9 @@ Each cell holds yes, no, partial, or n/a for not applicable. A bracketed tag nam
 | Capability | Command | Rust | Rust Polars | C | Python | Python frames | TypeScript | Ruby | R | DuckDB | SQLite | PostgreSQL |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `decide` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
-| `choose` | yes | partial [F1] | yes | partial [F1] | partial [F1] | yes | partial [F1] | partial [F1] | yes | yes | yes | yes |
-| `tag` | yes | partial [F1] | yes | partial [F1] | partial [F1] | yes | partial [F1] | partial [F1] | yes | yes | yes | yes |
-| `score` | yes | partial [F1] | yes | partial [F1] | partial [F1] | yes | partial [F1] | partial [F1] | yes | yes | yes | yes |
+| `choose` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| `tag` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| `score` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
 | `rank` | yes | yes | no [F2] | yes | yes | n/a | yes | yes | partial [F3] | yes | no [F4] | partial [F5] |
 | `filter` | yes | yes | n/a | yes | yes | n/a | yes | yes | yes | yes | yes | partial [F5] |
 | `find` | yes | partial [F6] | n/a | partial [F6] | partial [F6] | n/a | partial [F6] | partial [F6] | partial [F6] | no [F7] | no [F7] | no [F7] |
@@ -59,12 +59,7 @@ Each cell holds yes, no, partial, or n/a for not applicable. A bracketed tag nam
 
 **Functions**
 
-- **F1.** These surfaces ask `choose`, `tag` and `score` of one text at a time. Over many records they must go through `annotate` with a one-question set. The Rust library has no many-record call for these three: `crates/thinkthen/src/public/bulk.rs` holds only `filter`, `decide_many`, `rank`, `find` and `annotate`.
-  - C: the typed door takes decide questions only (`libraries/c/src/door.rs:61-63`), and the JSON door asks them over one text (`src/call.rs:117-129`).
-  - Python: `text()` accepts only a `str` (`libraries/python/src/input.rs:102-108`). A list is refused, and only a column reaches the many-record path (`src/engine.rs:319-321`).
-  - TypeScript: single-text verbs only (`libraries/typescript/index.d.ts:220-225`).
-  - Ruby: only `decide_many` and `filter` take many records with a question (`libraries/ruby/src/call.rs:324-335`).
-  - R, DuckDB and the Polars doors already build the one-question set themselves: R at `thinkthen/src/rust/src/calls.rs:355-377`, DuckDB at `src/scalars.rs:238-265`, Rust Polars at `crates/thinkthen/src/public/frame.rs:196-218`, and Python frames at `src/frame.rs:120-142`. SQLite and PostgreSQL answer one row per scalar call, which counts as yes for equivalence. Section 4 covers its cost.
+- **F1, closed 2026-09-28.** Rust, Python, TypeScript and Ruby now expose `choose_many`, `score_many` and `tag_many`; C's JSON door accepts ordered `records` for all four judgments; R's existing verbs accept columns. Frames retain their series/column forms. The independent [register 78 closure review](../records/2026-09-28-library-sql-completion-reconciliation.md) maps each public route to its accepted functional proof. SQL scalar throughput remains a separate model; this closure adds no typed C symbol or new SQL scheduler.
 - **F2.** The Rust Polars door has five methods: four series verbs and `annotate_frame` (`crates/thinkthen/src/public/frame.rs:42-110`). `decide_series` returns a Boolean with no probability, so a frame cannot sort by it. No recognize method exists.
 - **F3.** `tt_rank` and `tt_find` read a built question through `.tt_text`, which drops its model and threshold without a word (`libraries/r/thinkthen/R/thinkthen.R:152-154`, `:205`, `:213`).
 - **F4.** SQLite registers no rank function and no probability scalar (`databases/sqlite/src/scalars.rs:372-405`). Its conformance runner lists rank as not run (`tests/conformance.py:26-27`).
@@ -186,7 +181,7 @@ Closes S1, S3 to S7 and C2, the settings issue, and the strict-replay issue.
 
 ### E2. Many-record calls for every function. Shared, medium.
 
-Closes F1, F9 and F10, and the serial loops in section 4.
+F1 is complete through the landed batching tickets and the independently reviewed register 78 closure. The original proposal below also covers F9, F10 and serial loops in section 4; their remaining criteria are separate from F1.
 
 - Add `choose_many`, `score_many` and `tag_many` to the public API as thin calls over a one-question set, as `crates/thinkthen/src/public/frame.rs:196-218` already does.
 - Add a `recognize_many` that runs texts under the engine's throttle. Batching tickets R7 and B12 then build on one call per surface.
