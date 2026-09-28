@@ -14,6 +14,15 @@ Linux:x86_64)
 	older_zip_hash=$DUCKDB_OLDER_CLI_ZIP_SHA256 older_hash=$DUCKDB_OLDER_CLI_SHA256
 	manifest=archive-sha256.txt
 	;;
+Linux:aarch64)
+	target=aarch64-unknown-linux-gnu platform=linux_arm64
+	cli_asset=duckdb_cli-linux-arm64.zip
+	cli_zip_hash=$DUCKDB_LINUX_ARM64_CLI_ZIP_SHA256 cli_hash=$DUCKDB_LINUX_ARM64_CLI_SHA256
+	static_asset=static-libs-linux-arm64.zip static_hash=$DUCKDB_LINUX_ARM64_STATIC_ZIP_SHA256
+	older_asset=duckdb_cli-linux-arm64.zip
+	older_zip_hash=$DUCKDB_LINUX_ARM64_OLDER_CLI_ZIP_SHA256 older_hash=$DUCKDB_LINUX_ARM64_OLDER_CLI_SHA256
+	manifest=archive-sha256-linux-arm64.txt
+	;;
 Darwin:arm64)
 	target=aarch64-apple-darwin platform=osx_arm64
 	cli_asset=duckdb_cli-osx-arm64.zip

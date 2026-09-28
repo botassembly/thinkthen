@@ -106,10 +106,10 @@ part_sqlite() {
 # DuckDB reads its footer: the platform, the DuckDB version, and the extension's version.
 part_duckdb() {
 	case $TARGET in
-	x86_64-unknown-linux-gnu | aarch64-apple-darwin) ;;
+	x86_64-unknown-linux-gnu | aarch64-unknown-linux-gnu | aarch64-apple-darwin) ;;
 	*)
-		# Keep the existing C API package on Linux ARM64 and Intel macOS until
-		# their C++ input and native host proofs are reviewed.
+		# Keep the existing C API package on Intel macOS until its C++ input
+		# and native host proof are reviewed.
 		if [ -z "$reuse" ]; then
 			(cd databases/duckdb && cargo build --locked --quiet --release)
 			. databases/duckdb/tools/version.env
@@ -136,6 +136,10 @@ part_duckdb() {
 	fi
 	extension="databases/duckdb/build/artifacts/cpp/$TARGET/thinkthen.duckdb_extension"
 	[ -f "$extension" ] || { echo "release-pack: $extension is missing; build it first" >&2; exit 1; }
+	if [ "$TARGET" = aarch64-unknown-linux-gnu ]; then
+		machine=$(readelf -h "$extension" | sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p')
+		[ "$machine" = AArch64 ] || { echo "release-pack: DuckDB extension is $machine, not AArch64" >&2; exit 1; }
+	fi
 	if [ "$TARGET" = aarch64-apple-darwin ]; then
 		[ "$(lipo -archs "$extension")" = arm64 ] || { echo "release-pack: $extension is not a single arm64 Mach-O" >&2; exit 1; }
 	fi

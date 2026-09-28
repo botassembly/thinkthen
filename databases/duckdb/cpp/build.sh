@@ -54,6 +54,10 @@ if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then set -- "$@" -DCMAKE_OSX_DEPLO
 	-DTHINKTHEN_RUST_STATICLIB="$CARGO_OUT/release/libthinkthen_duckdb_bridge.a" \
 	-DTHINKTHEN_DUCKDB_STATIC_DIR="$STATIC"
 "$CMAKE" --build "$BUILD" --target thinkthen_loadable_extension -j 2
+if [ "$HOST_TARGET" = aarch64-unknown-linux-gnu ]; then
+	machine=$(readelf -h "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" | sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p')
+	[ "$machine" = AArch64 ] || { echo "duckdb: built extension is $machine, not AArch64" >&2; exit 1; }
+fi
 mkdir -p "$ROOT/build/artifacts/cpp/$HOST_TARGET"
 if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then
 	python3 "$HERE/strip_macos.py" "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
