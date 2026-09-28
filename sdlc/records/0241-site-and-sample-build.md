@@ -146,3 +146,20 @@ smoke still skips 94 samples, including the host and SQL examples. The original-
 distinguishes 12 ticket-fixed, three baseline-fixed, four partial, nine mixed
 runtime and ten non-documentation rows. The four partial rows name their exact
 unfinished criteria and disposition.
+
+After that correction, main landed reviewed 0243 Rust choice descriptions,
+0229's read-only unused-entry report, and PostgreSQL ordered find. I merged
+them without editing their runtime or test files. The 18-column settings table
+retains its Source column, adds 0229's Unused entry report row and carries
+PostgreSQL find's None option and Framing cells. With the rebuilt isolated CLI,
+`sdlc/scripts/settings --self-test` passed 10/10 and the live table check
+reported 51 rows, 56 flags, six environment names, 15 question-file keys and
+zero failures. The final site log is
+`target/codex-builds/0241/site-build-after-postgresql.log`: 95 replayed CLI
+examples, 92 pages and Markdown twins, 51 settings and 130 linked routes pass.
+The new PostgreSQL find site sample follows its accepted ordered-array result
+shape; it is the 56th changed host/SQL file in the local provenance manifest.
+The site check did not execute that SQL extension.
+The merged-tree policy check also passed: 189 resolved packages, with accepted
+tables, ban lists and dependencies matching. Its log is
+`target/codex-builds/0241/policy-after-0229.log`.

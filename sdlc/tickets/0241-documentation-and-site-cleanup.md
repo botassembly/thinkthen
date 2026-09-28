@@ -28,7 +28,7 @@ The tracked [issue inventory](../records/0241-documentation-issue-inventory.json
 ## What the build taught us
 
 The initial site replay check could pass while code tabs were wrong: it runs
-the CLI and skips host and SQL. I listed all 55 changed host/SQL sample files
+the CLI and skips host and SQL. I listed all 56 changed host/SQL sample files
 with their source and proof under `target/codex-builds/0241/sample-provenance.json`,
 then compiled C and Rust snippets, parsed Python/Ruby/R, and typechecked
 TypeScript against the current declarations. That last check found stale
@@ -41,11 +41,14 @@ The sample and HTML checks earned their place: the replay check caught a
 default-model recording mismatch; the generated-HTML guard failed on a planted
 stray code tag and passed when it was restored. No functional tests were
 deleted or consolidated. The site build runs these focused checks on every
-site build. The final offline build after the mainline merge replayed 95 CLI
-examples, built 92 pages and Markdown twins, checked 50 settings, and linked
+site build. The latest offline build after the mainline merges replayed 95 CLI
+examples, built 92 pages and Markdown twins, checked 51 settings, and linked
 130 routes. The last mainline merge added SQLite `thinkthen_find`; its site
-sample now reads the selected value, with its no-execution limit stated in
-the build record. Logs and the exact proof limits are in
+sample now reads the selected value. PostgreSQL `find` landed during the
+review correction; its site sample reads the ordered-array result's value.
+Neither SQL extension was executed by the site build. The merged 0229
+settings row and PostgreSQL find cells retain the Source column and pass the
+51-row check. Logs and the exact proof limits are in
 `target/codex-builds/0241/` and
 `sdlc/records/0241-site-and-sample-build.md`.
 
