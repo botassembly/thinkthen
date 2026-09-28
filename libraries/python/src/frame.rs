@@ -6,13 +6,13 @@
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::time::Instant;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use serde_json::value::RawValue;
 use thinkthen::{
-    Annotated, Answer, BatchSetting, CallOptions, Error, QuestionKind, QuestionSet,
-    RecognizedEntity,
+    Annotated, Answer, BatchSetting, CallOptions, QuestionKind, QuestionSet, RecognizedEntity,
 };
 
 use crate::arrow::{self, Arrow, Cells, Imported, Readable};
@@ -20,101 +20,15 @@ use crate::asked::{Asked, Recognize};
 use crate::engine::{Arg, Engine, Held, annotated, answer, batch, collected};
 use crate::input::{Pandas, controls, listed, polars_frame, top};
 use crate::result::{self, Completed, OwnedFacts};
-use crate::worker::{Controls, WorkerError, run_observed};
+use crate::worker::{Controls, run_observed};
 use crate::{guard, raised, usage};
 
 mod names;
 mod recognition;
+mod stop;
 use names::names;
 use recognition::{due, each_named};
-
-/// Why a worker's job stopped: the engine's error, or a refusal sentence.
-#[derive(Debug)]
-enum Stop {
-    Engine(Error),
-    Accounted(Box<AccountedFailure>),
-    Said(String, Option<OwnedFacts>),
-}
-
-#[derive(Debug)]
-struct AccountedFailure {
-    error: Error,
-    facts: OwnedFacts,
-    details: Vec<serde_json::Value>,
-}
-
-impl Stop {
-    fn after(sentence: impl Into<String>, facts: OwnedFacts) -> Self {
-        Self::Said(sentence.into(), Some(facts))
-    }
-
-    fn with_facts(self, facts: OwnedFacts) -> Self {
-        match self {
-            Self::Said(sentence, _) => Self::Said(sentence, Some(facts)),
-            other => other,
-        }
-    }
-}
-
-impl WorkerError for Stop {
-    fn facts(&self) -> Option<OwnedFacts> {
-        match self {
-            Self::Engine(error) => error.facts().map(OwnedFacts::from),
-            Self::Accounted(account) => Some(account.facts.clone()),
-            Self::Said(_, facts) => facts.clone(),
-        }
-    }
-
-    fn raised(&self, py: Python<'_>) -> PyErr {
-        match self {
-            Self::Engine(error) => raised(py, error),
-            Self::Accounted(account) => {
-                let raised = raised(py, &account.error);
-                if let Ok(value) = result::python_owned_facts(py, &account.facts) {
-                    let _set = raised.value(py).setattr("facts", value);
-                }
-                if let Ok(value) = result::python_details(py, &account.details) {
-                    let _set = raised.value(py).setattr("details", value);
-                }
-                raised
-            }
-            Self::Said(sentence, facts) => {
-                let error = usage(py, sentence);
-                if let Some(facts) = facts
-                    && let Ok(value) = result::python_owned_facts(py, facts)
-                {
-                    let _set = error.value(py).setattr("facts", value);
-                }
-                error
-            }
-        }
-    }
-
-    fn details(&self) -> Option<Vec<serde_json::Value>> {
-        match self {
-            Self::Accounted(account) => Some(account.details.clone()),
-            _ => None,
-        }
-    }
-}
-
-impl From<Error> for Stop {
-    fn from(error: Error) -> Self {
-        Self::Engine(error)
-    }
-}
-
-impl From<String> for Stop {
-    fn from(sentence: String) -> Self {
-        Self::Said(sentence, None)
-    }
-}
-
-impl From<&'static str> for Stop {
-    fn from(sentence: &'static str) -> Self {
-        Self::Said(sentence.to_owned(), None)
-    }
-}
+use stop::{AccountedFailure, Stop};
 
 /// Run `job` on the worker, which owns `held` and drops it before it answers.
 fn on_worker<H, T, F>(py: Python<'_>, controls: Controls, held: H, job: F) -> PyResult<Completed<T>>
@@ -123,7 +37,17 @@ where
     T: Send + 'static,
     F: FnOnce(H, CallOptions<'_>) -> Result<Completed<T>, Stop> + Send + 'static,
 {
-    run_observed(py, controls, move |options| job(held, options))
+    run_observed(py, controls, move |options| {
+        let began = Instant::now();
+        job(held, options).map_err(|stop| match stop {
+            Stop::Said(message, None) => {
+                let mut facts = OwnedFacts::empty();
+                facts.seconds = began.elapsed().as_secs_f64();
+                Stop::Said(message, Some(facts))
+            }
+            other => other,
+        })
+    })
 }
 
 /// Where a column's texts come from: the Arrow door, or a pandas Series the

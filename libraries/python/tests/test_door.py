@@ -71,7 +71,14 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     said(lambda: engine.relate(pl.Series(texts), relations={"r": ("a", "b")}).value)
     said(lambda: engine.details(late, pl.Series(texts)).value)
     said(lambda: engine.decide(late, pl.Series(["a", None])).value)
-    said(lambda: engine.decide(late, pl.Series([1, 2])).value)
+    try:
+        engine.decide(late, pl.Series([1, 2])).value
+    except tt.UsageError as error:
+        assert (error.facts.records, error.facts.requests_sent) == (0, 0)
+        assert error.details == ()
+        print(type(error).__name__, error)
+    else:
+        raise AssertionError("a number column was accepted")
     said(lambda: engine.decide(late, frame).value)
     said(lambda: engine.annotate(form, frame, on="missing").value)
     clash = pl.DataFrame({"body": texts, "late": texts})

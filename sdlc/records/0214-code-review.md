@@ -1,0 +1,9 @@
+# 0214 High code review and correction
+
+Status: The retained High reviewer returned three required findings on integrated candidate `c9579b02`. This record describes the correction candidate for the **same reviewer's follow-up**; it does not claim acceptance or landing. Full first report: `/home/ian/workspace/worktrees/thinkthen-codex-4/target/codex-builds/0214/code-review/result.txt`.
+
+1. Worker-side Arrow `Series` validation returned a zero-send `UsageError` without final facts/details. The existing numeric-column refusal case now checks final zero-send facts, empty detail and zero loopback sends. `frame::on_worker` supplies the account only after the worker starts and returns `Stop::Said`; a pre-worker refusal and caught panic still carry no invented account.
+2. The completion receipt dropped the returned error's six-kind identity. `WorkerError` now transfers safe kind, message and retryable metadata into the one terminal receipt. The held returned-error case checks exact `cancelled`, `the call was cancelled`, `False` after the single worker releases.
+3. The first listener case did not cover suppressed `filter` rows or exact batch-one identity. One local listener captures actual bodies for a packed call and three batch-one sends, including a duplicate suppressed row. The test compares singleton bodies byte for byte and digests against captured bodies, checks ordered detail for all three inputs and sums token shares to the call account.
+
+Relevant strict lint, the affected tests, format and exact counters are recorded in `0214-build.md`. The reviewer accepted the original 6,278/2,810 ceilings and child layout; this correction measures 6,342/2,894 and extracts `frame/stop.rs` to keep the file limit. No dependency, shared Rust runtime or site file changed. The marketing-owned [site Python migration issue](../issues/2026-09-28-site-python-examples-need-call-values.md) remains required before public release.

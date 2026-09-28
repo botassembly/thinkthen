@@ -82,6 +82,7 @@ type Outcome<T, E = Error> = Option<Result<T, E>>;
 pub(crate) trait WorkerError: From<Error> + Send + 'static {
     fn facts(&self) -> Option<OwnedFacts>;
     fn raised(&self, py: Python<'_>) -> PyErr;
+    fn failure(&self) -> Failure;
     fn details(&self) -> Option<Vec<Value>> {
         None
     }
@@ -94,6 +95,20 @@ impl WorkerError for Error {
     fn raised(&self, py: Python<'_>) -> PyErr {
         raised(py, self)
     }
+    fn failure(&self) -> Failure {
+        Failure {
+            kind: self.kind().name(),
+            message: self.to_string(),
+            retryable: self.retryable(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct Failure {
+    pub(crate) kind: &'static str,
+    pub(crate) message: String,
+    pub(crate) retryable: bool,
 }
 
 #[derive(Clone)]
@@ -101,6 +116,7 @@ struct Terminal {
     outcome: &'static str,
     facts: Option<OwnedFacts>,
     details: Option<Vec<Value>>,
+    failure: Option<Failure>,
 }
 
 #[derive(Default)]
@@ -127,6 +143,12 @@ pub(crate) struct Completion {
     facts: Option<Py<PyAny>>,
     #[pyo3(get)]
     details: Option<Py<PyAny>>,
+    #[pyo3(get)]
+    kind: Option<&'static str>,
+    #[pyo3(get)]
+    message: Option<String>,
+    #[pyo3(get)]
+    retryable: Option<bool>,
 }
 
 #[pymethods]
@@ -187,6 +209,12 @@ impl Receipt {
                             .as_ref()
                             .map(|details| python_details(py, details))
                             .transpose()?,
+                        kind: finished.failure.as_ref().map(|failure| failure.kind),
+                        message: finished
+                            .failure
+                            .as_ref()
+                            .map(|failure| failure.message.clone()),
+                        retryable: finished.failure.as_ref().map(|failure| failure.retryable),
                     },
                 );
             }
@@ -298,16 +326,19 @@ where
                     } else {
                         done.details.clone()
                     }),
+                    failure: None,
                 },
                 Some(Err(error)) => Terminal {
                     outcome: "failed",
                     facts: error.facts(),
                     details: error.facts().map(|_| error.details().unwrap_or(details)),
+                    failure: Some(error.failure()),
                 },
                 None => Terminal {
                     outcome: "panicked",
                     facts: None,
                     details: None,
+                    failure: None,
                 },
             };
             final_state.finish(terminal);

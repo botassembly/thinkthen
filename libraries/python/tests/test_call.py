@@ -5,10 +5,54 @@ The old answer tests inspect bare values and cannot see missing accounts or
 one request per row. No test-only export or provider call is needed.
 """
 
+import hashlib
+import json
 import os
 import signal
+from contextlib import contextmanager
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 
 from conftest import child_env, run, start
+
+
+@contextmanager
+def capturing_filter_listener():
+    """Keep the actual wire bodies while one listener answers both filter calls."""
+    bodies = []
+
+    class Handler(BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.1"
+
+        def do_POST(self):
+            body = self.rfile.read(int(self.headers["Content-Length"]))
+            bodies.append(body)
+            request = json.loads(body)
+            answers = {}
+            for name, question in request["questions"].items():
+                first = request["state"] == "one" or 'The text is "one"' in question["instructions"]
+                answers[name] = {"type": "noul", "noul": 0.1 if first else 0.9}
+            reply = json.dumps({"model": "jev-latest", "answers": answers,
+                                "usage": {"input_tokens": 6, "output_tokens": 3}},
+                               separators=(",", ":")).encode()
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(reply)))
+            self.end_headers()
+            self.wfile.write(reply)
+
+        def log_message(self, *_):
+            pass
+
+    listener = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = Thread(target=listener.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield f"http://127.0.0.1:{listener.server_port}/v1/systemone", bodies
+    finally:
+        listener.shutdown()
+        listener.server_close()
+        thread.join(timeout=5)
 
 
 def test_batches_labels_and_owned_details(backend, tmp_path):
@@ -59,6 +103,44 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
     """, child_env(backend, tmp_path))
     assert printed.strip() == "calls 1 3 1 1 1"
     assert backend.count() == 10
+
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import json, thinkthen as tt
+        engine = tt.Engine(model="jev-latest", throttle=1, cache=False)
+        question = tt.question(decide="Is it late?")
+        rows = ["one", "two", "one"]
+        calls = [engine.filter(question, rows), engine.filter(question, rows, batch=1)]
+        for call in calls:
+            print(json.dumps({"value": call.value,
+                              "url": call.details[0]["url"],
+                              "facts": [call.facts.records, call.facts.requests_sent,
+                                        call.facts.input_tokens, call.facts.output_tokens],
+                              "details": [[row["index"], row["answer"],
+                                           list(row["request_digests"]),
+                                           dict(row["usage"])] for row in call.details]}))
+        """, env)
+        packed, separate = map(json.loads, printed.splitlines())
+        assert [packed["value"], separate["value"]] == [["two"]] * 2
+        assert [packed["facts"], separate["facts"]] == [[3, 1, 6, 3], [3, 3, 18, 9]]
+        assert packed["url"] == url, (packed["url"], url)
+        assert len(bodies) == 4
+        one = (b'{"state":"one","model":"jev-latest","questions":{"q1":{"type":"noul",'
+               b'"instructions":"Is it late?"}}}')
+        two = (b'{"state":"two","model":"jev-latest","questions":{"q1":{"type":"noul",'
+               b'"instructions":"Is it late?"}}}')
+        assert bodies[1:] == [one, two, one]
+        digest = lambda body: hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
+        assert [row[:3] for row in packed["details"]] == [
+            [index, index == 1, [digest(bodies[0])]] for index in range(3)]
+        assert [row[:3] for row in separate["details"]] == [
+            [index, index == 1, [digest(body)]] for index, body in enumerate(bodies[1:])]
+        assert separate["details"][0][2] == separate["details"][2][2]
+        for call in (packed, separate):
+            assert sum(row[3]["input_tokens"] for row in call["details"]) == call["facts"][2]
+            assert sum(row[3]["output_tokens"] for row in call["details"]) == call["facts"][3]
 
 
 def test_returned_failure_keeps_its_final_account(backend, tmp_path):
@@ -130,6 +212,8 @@ def test_held_stop_has_a_retryable_final_receipt(backend, tmp_path):
         assert final.outcome == "failed"
         assert (final.facts.records, final.facts.requests_sent) == (0, 1)
         assert receipt.done and final.details is not None
+        assert (final.kind, final.message, final.retryable) == (
+            "cancelled", "the call was cancelled", False)
         print("final", final.facts.requests_sent, flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1

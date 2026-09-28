@@ -46,7 +46,7 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 Every verb takes `deadline`, in seconds from the call, and `token`, a `CancelToken` any thread can set. No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041). Zero is a spent deadline: the call sends nothing and raises `DeadlineError`. Any other negative, a bool, and a non-number raise `UsageError`.
 
-Every call runs on its own worker thread. Ctrl-C or the caller's token stops the wait within 50 ms and raises `Cancelled`, a subclass of both `KeyboardInterrupt` and `ThinkThenError`. No new request starts after a stop, and a request already sent ends on its own. After a worker starts, `Cancelled.completion` gives a receipt: `completion.done` is a nonblocking check, and `completion.result(timeout=0)` polls or raises `TimeoutError`. A later `result()` returns final facts and details without a value. A signal handler's `SystemExit` keeps its type and exit code and has the same completion receipt.
+Every call runs on its own worker thread. Ctrl-C or the caller's token stops the wait within 50 ms and raises `Cancelled`, a subclass of both `KeyboardInterrupt` and `ThinkThenError`. No new request starts after a stop, and a request already sent ends on its own. After a worker starts, `Cancelled.completion` gives a receipt: `completion.done` is a nonblocking check, and `completion.result(timeout=0)` polls or raises `TimeoutError`. A later `result()` returns final facts and details without a value. A failed completion also has `kind`, `message`, and `retryable`; these are `None` for success or an unaccounted panic. A signal handler's `SystemExit` keeps its type and exit code and has the same completion receipt.
 
 ## Run facts
 
