@@ -1,6 +1,6 @@
 # Quick Fix: parse annotate streams and detailed answers
 
-Status: candidate for fresh independent review. Branch: `ticket/qf-structured-output-parsing`, based on `origin/main` at `8cb674ae`. Scope: experiment 284 register 67 and 84. No runtime, schema, or site source changed.
+Status: accepted and landed on main at `374f8396`. Branch: `ticket/qf-structured-output-parsing`, based on `origin/main` at `8cb674ae`. Scope: experiment 284 register 67 and 84. No runtime, schema, or site source changed.
 
 ## Findings on current main
 
