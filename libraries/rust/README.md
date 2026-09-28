@@ -23,6 +23,8 @@ Each eager engine call returns `Call<T>`. Read its answer with `value()` or take
 
 `decide_many`, `filter`, `rank`, `choose_many`, `score_many`, `tag_many`, and `annotate` use the shared batch planner. `EngineBuilder::batch` selects the default; `CallOptions::batch` overrides it for one call. `EngineBuilder::from_env` reads `THINKTHEN_BATCH`; a bare builder does not. A parsed question file's batch is the lower tier. `CallOptions::context` borrows shared text for an eligible many-record call. Single-document calls, find, annotate, recognize and relate refuse that option before sending. Lazy `Batch<T>::facts()` becomes available after exhaustion or its terminal error. An observation callback can inspect borrowed question and row events in order, including a row omitted by `filter`; copying a field inside the callback retains it. A callback panic resumes on the caller after workers join.
 
+For a caller-owned synchronous iterator, `Max` waits for a content cut, size or profile limit, 4,096 records, exhaustion or local refusal. It has no 50 ms idle timer while the iterator blocks in `next()`. An interactive caller should select `BatchSetting::Records(1)`; each answer then returns before the library asks for the next input. Command input retains its 50 ms live pause.
+
 `Engine::usage()` returns this engine's running totals of requests sent, retries, cache answers, input tokens and output tokens. Retries are a subset of requests sent.
 
 ## Width is per loaded copy

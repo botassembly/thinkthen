@@ -44,6 +44,8 @@ struct Stream<'a, I: Iterator, T> {
     fed: usize,
     completed: usize,
     most: Option<usize>,
+    interactive: bool,
+    deferred_ask: bool,
     refusal: Option<Error>,
     exhausted: bool,
     scheduler: Option<JoinHandle<()>>,
@@ -79,6 +81,7 @@ where
         context.clone(),
     )
     .map_err(Error::refused)?;
+    let interactive = matches!(setting, core::Setting::Records(most) if most.get() == 1);
     let (sender, events) = channel();
     let cancel = stop.shared();
     let observing = stop.observing();
@@ -117,6 +120,8 @@ where
             fed: 0,
             completed: 0,
             most,
+            interactive,
+            deferred_ask: false,
             refusal: None,
             exhausted: false,
             scheduler: Some(scheduler),
@@ -133,6 +138,10 @@ where
     I::Item: crate::public::Evidence,
 {
     fn pull(&mut self) -> Option<Result<T, Error>> {
+        if self.deferred_ask {
+            self.deferred_ask = false;
+            self.feed();
+        }
         loop {
             if let Some(row) = self.ready.pop_front() {
                 return Some(row);
@@ -151,6 +160,10 @@ where
             if let Some(pulled) = self.take(event) {
                 return pulled;
             }
+            if self.deferred_ask && self.ready.is_empty() && self.fed == self.completed {
+                self.deferred_ask = false;
+                self.feed();
+            }
         }
     }
 
@@ -167,6 +180,9 @@ where
     fn take(&mut self, event: Event<Work, Vec<Packet>>) -> Option<Option<Result<T, Error>>> {
         match event {
             Event::Port(port) => self.port = Some(port),
+            Event::Ask if self.interactive && self.fed > self.completed => {
+                self.deferred_ask = true;
+            }
             Event::Ask => self.feed(),
             Event::Row(rows) => self.take_rows(rows),
             Event::End(ended) => {

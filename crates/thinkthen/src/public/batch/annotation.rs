@@ -55,6 +55,7 @@ struct Stream<'a, I: Iterator> {
     fed: usize,
     completed: usize,
     most: Option<usize>,
+    interactive: bool,
     refusal: Option<Error>,
     exhausted: bool,
     pending_asks: usize,
@@ -75,6 +76,7 @@ where
     I::Item: Evidence,
 {
     let planner = GroupPlanner::new(&engine, &set, setting).map_err(plan_error)?;
+    let interactive = matches!(setting, core::Setting::Records(most) if most.get() == 1);
     let (sender, events) = channel();
     let cancel = stop.shared();
     let worker = Arc::clone(&engine);
@@ -125,6 +127,7 @@ where
             fed: 0,
             completed: 0,
             most,
+            interactive,
             refusal: None,
             exhausted: false,
             pending_asks: 0,
@@ -139,6 +142,9 @@ where
     I::Item: Evidence,
 {
     fn pull(&mut self) -> Option<Result<AnnotatedRecord<I::Item>, Error>> {
+        if self.interactive && self.ready.is_empty() {
+            self.feed();
+        }
         loop {
             if let Some(row) = self.ready.pop_front() {
                 return Some(row);
@@ -187,11 +193,15 @@ where
     }
 
     fn feed(&mut self) {
+        if self.interactive && !self.ready.is_empty() {
+            return;
+        }
         while self.pending_asks > 0 && self.scheduler.is_some() {
             while !self.planner.ready()
                 && self.refusal.is_none()
                 && !self.exhausted
                 && self.fed.saturating_sub(self.completed) < 4_096
+                && (!self.interactive || self.fed == self.completed)
             {
                 self.advance();
             }
