@@ -1,6 +1,6 @@
 # ADR 0099: Inspect a key before an empty folder's first binding
 
-Status: **Proposed**, pending fresh Medium design review and coordinator decision. [Ticket 0228](../../tickets/0228-cache-first-use-binding.md) and its [preflight](../../records/0228-cache-binding-preflight.md) give the source proof at `76a3bc7c`. This ADR changes no settled contract until accepted. Ian may overturn the admission policy.
+Status: **Proposed**. Fresh Medium review accepted technical design candidate `be0a2336`; Ian's before-key admission-policy choice remains pending. [Ticket 0228](../../tickets/0228-cache-first-use-binding.md) and its [preflight](../../records/0228-cache-binding-preflight.md) give the source proof at `76a3bc7c`. This ADR changes no settled contract until accepted. Ian may overturn the admission policy.
 
 ## Problem and existing ruling
 

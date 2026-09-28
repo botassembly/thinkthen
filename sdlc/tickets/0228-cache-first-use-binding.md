@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/recorder.rs crates/thinkthen/src/engine/recor
 
 # 0228: Keep a missing key from binding a new cache folder
 
-Status: proposed for fresh Medium design review. Source base `76a3bc7c`. Register 10 in experiment 284 and `sdlc/issues/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md` name the broader problem. [The five-finding survey](../records/2026-09-28-cache-followup-preparation.md) separates it from model-version identity. Ian may overturn the proposed admission rule. This ticket does not authorize code before review and coordinator acceptance.
+Status: technical design accepted by fresh Medium review of `be0a2336`; Ian's before-key admission-policy choice is pending. Source base `76a3bc7c`. Register 10 in experiment 284 and `sdlc/issues/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md` name the broader problem. [The five-finding survey](../records/2026-09-28-cache-followup-preparation.md) separates it from model-version identity. Ian may overturn the proposed admission rule. This ticket does not authorize code until the policy choice and coordinator acceptance.
 
 ## Outcome and exact limit
 
