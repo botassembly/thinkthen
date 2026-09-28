@@ -28,7 +28,7 @@ The tracked [issue inventory](../records/0241-documentation-issue-inventory.json
 ## What the build taught us
 
 The initial site replay check could pass while code tabs were wrong: it runs
-the CLI and skips host and SQL. I listed all 54 changed host/SQL sample files
+the CLI and skips host and SQL. I listed all 55 changed host/SQL sample files
 with their source and proof under `target/codex-builds/0241/sample-provenance.json`,
 then compiled C and Rust snippets, parsed Python/Ruby/R, and typechecked
 TypeScript against the current declarations. That last check found stale
@@ -43,7 +43,9 @@ stray code tag and passed when it was restored. No functional tests were
 deleted or consolidated. The site build runs these focused checks on every
 site build. The final offline build after the mainline merge replayed 95 CLI
 examples, built 92 pages and Markdown twins, checked 50 settings, and linked
-130 routes. Logs and the exact proof limits are in
+130 routes. The last mainline merge added SQLite `thinkthen_find`; its site
+sample now reads the selected value, with its no-execution limit stated in
+the build record. Logs and the exact proof limits are in
 `target/codex-builds/0241/` and
 `sdlc/records/0241-site-and-sample-build.md`.
 

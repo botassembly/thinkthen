@@ -94,16 +94,19 @@ and observed the 130-page link check pass. The red log is under
 
 ## Final candidate proof and limits
 
-After merging main `565a6090`, I rebuilt the isolated release binary and ran
+After merging main `2f274076`, I rebuilt the isolated release binary and ran
 the offline site build again with Node 22. The final log is
-`target/codex-builds/0241/site-build-final.log`: 95 CLI examples replayed,
+`target/codex-builds/0241/site-build-latest-main.log`: 95 CLI examples replayed,
 92 Astro pages and 92 Markdown twins built, the 50-row settings check passed,
 and all 130 internal routes linked. `sdlc/scripts/settings --self-test` kept
 its 10 planted failures. The HTML guard's planted failure and recovery are
 recorded above. The site smoke intentionally does not execute host or SQL
 samples.
+The repository policy check passed on this merged tree: 189 resolved packages,
+with accepted tables, ban lists and dependencies matching. Its log is
+`target/codex-builds/0241/policy-latest-main.log`.
 
-`target/codex-builds/0241/sample-provenance.json` lists each of the 54 changed
+`target/codex-builds/0241/sample-provenance.json` lists each of the 55 changed
 library or SQL sample files, the current source example or API document used
 to check it, the proof applied, and the explicit `host_runtime_executed: false`
 limit. Python parsed 13 examples; Ruby and R parsed 10 each. C compiled 10
@@ -112,7 +115,11 @@ release rlib. A TypeScript `noEmit` check over every site `.ts` sample against
 the current `index.d.ts` caught and corrected recognized-entity `text`
 accessors, optional relations, and tuple types. That is stronger than the
 earlier transpile-only check, but no host package or SQL extension was invoked
-by the site smoke. All CLI examples use replay, with no provider call.
+by the site smoke. The newly landed SQLite `thinkthen_find` sample reads the
+selected value from its JSON result. It follows the accepted function shape
+in `databases/sqlite/README.md` and `databases/sqlite/tests/test_values.py`,
+but this site build did not execute it. All CLI examples use replay, with no
+provider call.
 
 The default-backend notices in README and the site link the vendor's published
 customer agreement, data processing addendum, and privacy policy. The policy
