@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `choose`
 
-Use this when a script works through a job one step at a time and the actions on offer differ at every step. No command line can name a list that changes, so each record carries its own. `--options POINTER` reads that list out of the record and asks that record its own question.
+Use this when each step in a scripted job offers different actions. Each record carries its own list. `--options POINTER` reads the list and asks the question for that record.
 
 ```bash
 set -eu
