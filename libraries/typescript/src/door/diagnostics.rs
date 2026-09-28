@@ -62,27 +62,27 @@ mod tests {
     fn a_caught_panic_stays_out_of_node_diagnostics() {
         if std::env::var_os(CHILD).is_some() {
             child();
-            return;
+        } else {
+            let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+                .args([
+                    "--exact",
+                    "door::diagnostics::tests::a_caught_panic_stays_out_of_node_diagnostics",
+                    "--nocapture",
+                ])
+                .env(CHILD, "1")
+                .output()
+                .expect("isolated Node proof");
+            assert!(output.status.success());
+            for stream in [&output.stdout, &output.stderr] {
+                let text = String::from_utf8_lossy(stream);
+                assert!(!text.contains(STRING), "{text}");
+                assert!(!text.contains(DROP), "{text}");
+            }
+            assert_eq!(
+                String::from_utf8_lossy(&output.stderr),
+                "host-thread-marker\n"
+            );
         }
-        let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
-            .args([
-                "--exact",
-                "door::diagnostics::tests::a_caught_panic_stays_out_of_node_diagnostics",
-                "--nocapture",
-            ])
-            .env(CHILD, "1")
-            .output()
-            .expect("isolated Node proof");
-        assert!(output.status.success());
-        for stream in [&output.stdout, &output.stderr] {
-            let text = String::from_utf8_lossy(stream);
-            assert!(!text.contains(STRING), "{text}");
-            assert!(!text.contains(DROP), "{text}");
-        }
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            "host-thread-marker\n"
-        );
     }
 
     fn child() {
