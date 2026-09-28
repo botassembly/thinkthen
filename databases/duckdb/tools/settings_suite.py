@@ -140,14 +140,24 @@ def request_limit_range():
 
 @case
 def the_process_request_total_holds_across_calls():
-    """Ian's ruling of 2026-09-25: a total per process, checked before each call."""
+    """A concurrent row failure stays below the total; separate calls spend it exactly."""
     with Backend() as backend:
         ten = "SELECT thinkthen_decide('Is it a refund?', 'refund ' || i) FROM range(10) t(i)"
         got = run(["SET thinkthen_max_requests_total = 3", ten, ASK], backend.base())
         expect(said(got[1]), SPENT, "ten rows under a total of 3")
-        expect(backend.count(), 3, "counted sends")
+        sends = backend.count()
+        expect(0 < sends <= 3, True, "a failing concurrent row batch stays within the total")
         expect(said(got[2]), SPENT, "the next call")
-        expect(backend.count(), 3, "counted sends after the refusal")
+        expect(backend.count(), sends, "the refused next call sends nothing")
+    with Backend() as backend:
+        statements = ["SET thinkthen_max_requests_total = 3"] + [
+            f"SELECT thinkthen_decide('Is it a refund?', 'refund {number}')" for number in range(4)
+        ]
+        got = run(statements, backend.base())
+        for result in got[1:4]:
+            expect(rows(result), [[True]], "an available request slot answers")
+        expect(said(got[4]), SPENT, "the fourth separate call is refused")
+        expect(backend.count(), 3, "three separate calls send exactly three requests")
 
 
 @case
