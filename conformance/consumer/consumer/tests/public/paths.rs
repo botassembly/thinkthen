@@ -46,16 +46,20 @@ fn the_convenience_path_equals_the_explicit_engine() {
     let said = String::from_utf8_lossy(&output.stdout);
     assert!(output.status.success(), "{said}");
     assert!(said.contains("1 passed"), "the child ran its test: {said}");
-    assert!(
-        backend.count() >= 20,
-        "both paths sent, {}",
-        backend.count()
+    assert_eq!(
+        backend.count(),
+        12,
+        "both paths' six distinct first-round requests sent"
     );
 }
 
 /// The child half. It does nothing unless the parent named a base.
 #[test]
 #[ignore = "the child half; its parent runs it with --ignored"]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one child compares both engine paths and their cached second round"
+)]
 fn convenience_child() {
     let Ok(base) = std::env::var(CHILD) else {
         return;
@@ -79,24 +83,35 @@ fn convenience_child() {
     // Twice, so the second round comes from each path's own cache.
     for _ in 0..2 {
         assert_eq!(
-            explicit.decide(&decide, "a note").ok().map(thinkthen::Call::into_value),
+            explicit
+                .decide(&decide, "a note")
+                .ok()
+                .map(thinkthen::Call::into_value),
             Some(thinkthen::Answer::Yes)
         );
         assert_eq!(
-            thinkthen::decide(&decide, "a note").ok().map(thinkthen::Call::into_value),
+            thinkthen::decide(&decide, "a note")
+                .ok()
+                .map(thinkthen::Call::into_value),
             Some(thinkthen::Answer::Yes)
         );
         assert_eq!(
             explicit
                 .details(&score, "a note")
-                .expect("the engine detailss").into_value(),
-            thinkthen::details(&score, "a note").expect("the convenience detailss").into_value()
+                .expect("the engine detailss")
+                .into_value(),
+            thinkthen::details(&score, "a note")
+                .expect("the convenience detailss")
+                .into_value()
         );
         assert_eq!(
             explicit
                 .choose(&team, "a note")
-                .expect("the engine chooses").into_value(),
-            thinkthen::choose(&team, "a note").expect("the convenience chooses").into_value()
+                .expect("the engine chooses")
+                .into_value(),
+            thinkthen::choose(&team, "a note")
+                .expect("the convenience chooses")
+                .into_value()
         );
         assert_eq!(
             rows(explicit.filter(&decide, records), |kept| kept),
@@ -108,8 +123,13 @@ fn convenience_child() {
             rows(thinkthen::decide_many(&decide, records), parts)
         );
         assert_eq!(
-            explicit.rank(&rank, records).expect("the engine ranks").into_value(),
-            thinkthen::rank(&rank, records).expect("the convenience ranks").into_value()
+            explicit
+                .rank(&rank, records)
+                .expect("the engine ranks")
+                .into_value(),
+            thinkthen::rank(&rank, records)
+                .expect("the convenience ranks")
+                .into_value()
         );
         let values = |record: thinkthen::AnnotatedRecord<&str>| record.values().to_vec();
         assert_eq!(
@@ -136,6 +156,11 @@ fn convenience_child() {
     assert_eq!(
         explicit.usage(),
         thinkthen::usage().expect("the process engine")
+    );
+    assert_eq!(
+        explicit.usage().requests_sent(),
+        6,
+        "six distinct requests per path"
     );
     assert!(
         explicit.usage().cache_answers() > 0,

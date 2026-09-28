@@ -35,7 +35,7 @@ cargo test --locked --offline -p thinkthen --test settings_cases
 cargo test --locked --offline -p thinkthen --test public_controls
 cargo test --locked --offline -p thinkthen --test public_members
 
-for filter in core::pointer::tests core::question_file::tests engine::recorder::identity::tests public::options::tests::a_panic_below_the_door_is_a_defect_and_the_next_call_runs; do
+for filter in core::pointer::tests core::question_file::tests engine::recorder::identity::tests public::options::tests::engine_diagnostics_hide_worker_payloads_and_preserve_host_hook; do
     cargo test --locked --offline -p thinkthen --lib "$filter" -- --list |
         grep -F "$filter" >/dev/null || {
             echo "test: the library has no $filter" >&2

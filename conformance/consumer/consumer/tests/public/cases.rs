@@ -9,6 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
 use std::io::Write;
+use std::num::NonZeroUsize;
 
 use conformance_backend::Backend;
 use serde::Deserialize;
@@ -16,14 +17,19 @@ use serde::de::{MapAccess, Visitor};
 use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use thinkthen::{
-    Annotated, Choice, Description, Details, Engine, Entity, Error, FailureCause, Judgment, Kind,
-    LoadedQuestion, Probabilities, Question, QuestionSet, Recognize, Recognized, Relate,
-    RelationRule,
+    Annotated, BatchSetting, CallOptions, Choice, Description, Details, Engine, Entity, Error,
+    FailureCause, Judgment, Kind, LoadedQuestion, Probabilities, Question, QuestionSet, Recognize,
+    Recognized, Relate, RelationRule,
 };
 
 const CASES: &str = include_str!("../../../../cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
 const SKIPPED: [&str; 1] = ["25-defect-fault"];
+
+/// The saved filter/rank exchanges contain one request body per record.
+fn singleton_requests<'a>() -> CallOptions<'a> {
+    CallOptions::new().batch(BatchSetting::Records(NonZeroUsize::MIN))
+}
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
 pub(crate) use crate::values::same;
@@ -201,7 +207,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
         ("rank", _) => {
             let asked = Question::rank(case["question"]["decide"].as_str().unwrap_or_default());
             let ranked = engine
-                .rank(&asked.map_err(said)?, texts.clone())
+                .rank_with(&asked.map_err(said)?, texts.clone(), singleton_requests())
                 .map_err(said)?;
             let rows = ranked.value().iter().map(
                 |row| json!({"index": at(&texts, row.input()), "probability": row.probability()}),
@@ -233,7 +239,9 @@ fn loaded(
     };
     match kind {
         Some("filter") => {
-            let kept: Result<Vec<_>, _> = engine.filter(&asked, texts.to_vec()).collect();
+            let kept: Result<Vec<_>, _> = engine
+                .filter_with(&asked, texts.to_vec(), singleton_requests())
+                .collect();
             let kept = kept
                 .map_err(said)?
                 .iter()
@@ -260,10 +268,16 @@ fn loaded(
 fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: &str) -> Checked {
     let expected = &success["answers"][0];
     let details = engine.details(asked, text).map_err(said)?;
-    same("bare", &judgment(details.value().value()), &expected["bare"])?;
+    same(
+        "bare",
+        &judgment(details.value().value()),
+        &expected["bare"],
+    )?;
     detailed(details.value(), expected, base)?;
     let typed = match details.value().value() {
-        Judgment::Decision(_) => json!(decision(engine.decide(asked, text).map_err(said)?.into_value())),
+        Judgment::Decision(_) => json!(decision(
+            engine.decide(asked, text).map_err(said)?.into_value()
+        )),
         Judgment::Score(_) => json!(engine.score(asked, text).map_err(said)?.into_value()),
         Judgment::Choice(_) => {
             let typed = asked.clone().into_choose::<Team>().map_err(said)?;
