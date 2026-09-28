@@ -29,6 +29,19 @@ pub struct NamedAnnotation {
 }
 
 impl NamedAnnotation {
+    pub(crate) fn of(name: String, value: AnnotatedValue) -> Self {
+        let value = match value {
+            AnnotatedValue::Answered(Value::YesNo(held)) => {
+                Annotated::Decision(answer(&Value::YesNo(held)))
+            }
+            AnnotatedValue::Answered(Value::Choice(label)) => Annotated::Choice(label),
+            AnnotatedValue::Answered(Value::Score(position)) => Annotated::Score(position),
+            AnnotatedValue::Answered(Value::Tag(labels)) => Annotated::Tags(labels),
+            AnnotatedValue::Failed(failed) => Annotated::Failed(Failed(cause(failed.cause()))),
+        };
+        Self { name, value }
+    }
+
     /// The member name.
     #[must_use]
     pub fn name(&self) -> &str {
@@ -56,20 +69,7 @@ impl<T> AnnotatedRecord<T> {
     pub(crate) fn new(input: T, values: Vec<(String, AnnotatedValue)>, json: Written) -> Self {
         let values = values
             .into_iter()
-            .map(|(name, value)| NamedAnnotation {
-                name,
-                value: match value {
-                    AnnotatedValue::Answered(Value::YesNo(held)) => {
-                        Annotated::Decision(answer(&Value::YesNo(held)))
-                    }
-                    AnnotatedValue::Answered(Value::Choice(label)) => Annotated::Choice(label),
-                    AnnotatedValue::Answered(Value::Score(position)) => Annotated::Score(position),
-                    AnnotatedValue::Answered(Value::Tag(labels)) => Annotated::Tags(labels),
-                    AnnotatedValue::Failed(failed) => {
-                        Annotated::Failed(Failed(cause(failed.cause())))
-                    }
-                },
-            })
+            .map(|(name, value)| NamedAnnotation::of(name, value))
             .collect();
         Self {
             input,
@@ -138,7 +138,7 @@ pub enum FailureCause {
     UnexpectedProbability,
 }
 
-const fn cause(cause: BackendFailureCause) -> FailureCause {
+pub(crate) const fn cause(cause: BackendFailureCause) -> FailureCause {
     match cause {
         BackendFailureCause::MissingAnswer => FailureCause::MissingAnswer,
         BackendFailureCause::WrongKind => FailureCause::WrongKind,

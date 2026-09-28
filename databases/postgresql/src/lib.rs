@@ -54,6 +54,7 @@ fn decide(
         LoadedQuestion::Question(held) => engine.decide_with(held, evidence, options),
         LoadedQuestion::Banded(held) => engine.decide_with(held, evidence, options),
     }
+    .map(thinkthen::Call::into_value)
 }
 
 fn details(
@@ -66,6 +67,7 @@ fn details(
         LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
         LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
     }
+    .map(thinkthen::Call::into_value)
 }
 
 /// One judgment's details, run on the worker.
@@ -221,7 +223,7 @@ type Names = Vec<(String, i32, i32, i32, String, f64)>;
 fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognized> {
     let body = body?.to_owned();
     Some(call::run(call::read(), move |engine, options| {
-        engine.recognize_with(&ask, &body, options)
+        engine.recognize_with(&ask, &body, options).map(thinkthen::Call::into_value)
     }))
 }
 

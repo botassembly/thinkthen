@@ -224,6 +224,33 @@ pub(crate) enum AnnotatedEntry {
     Failed(AnnotatedFailure),
 }
 
+impl AnnotatedEntry {
+    /// Borrow the complete question and answer without changing the written shape.
+    #[must_use]
+    pub(crate) const fn answered(&self) -> Option<AnnotatedAnswered<'_>> {
+        match self {
+            Self::Answered(entry) => Some((
+                &entry.question,
+                &entry.answer,
+                entry.threshold,
+                entry.request.as_str(),
+            )),
+            Self::Failed(_) => None,
+        }
+    }
+
+    /// Borrow a failed question and its typed backend cause.
+    #[must_use]
+    pub(crate) const fn failed(&self) -> Option<(&Question, BackendFailure, &str)> {
+        match self {
+            Self::Answered(_) => None,
+            Self::Failed(entry) => Some((&entry.question, entry.failure, entry.request.as_str())),
+        }
+    }
+}
+
+type AnnotatedAnswered<'a> = (&'a Question, &'a Answer, Option<Threshold>, &'a str);
+
 /// A successful or failed named value in bare `annotate` output.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]

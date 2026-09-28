@@ -94,7 +94,7 @@ The throttle holds per loaded copy of the engine. A process that also loads anot
 
 Answers go to the engine's disk cache and outlive the process. A warm pass fills the cache, and the queries after it read it. With `thinkthen_cache(NULL)` a warm pass still judges every row, and the queries after it send again.
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_cache(NULL)`.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_cache(NULL)`.
 
 ## Authority: who may do what
 

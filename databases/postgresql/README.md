@@ -77,7 +77,7 @@ The details digest includes a question's saved calibration `profile`. A differen
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Set `thinkthen.cache = 'off'` to disable it. An empty value keeps `THINKTHEN_CACHE` or the platform folder.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Set `thinkthen.cache = 'off'` to disable it. An empty value keeps `THINKTHEN_CACHE` or the platform folder.
 
 The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
 

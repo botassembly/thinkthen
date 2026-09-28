@@ -63,7 +63,8 @@ pub(crate) fn decide(
         }
         LoadedQuestion::Question(asked) => engine.details_with(asked, text, options)?,
         LoadedQuestion::Banded(asked) => engine.details_with(asked, text, options)?,
-    };
+    }
+    .into_value();
     match (details.value(), details.probabilities()) {
         (Judgment::Decision(answer), Probabilities::YesNo { yes }) => Ok(reply(*answer, *yes)),
         _ => Err(Failure::defect(
@@ -107,7 +108,7 @@ pub(crate) fn recognize(
     options: CallOptions<'_>,
 ) -> Result<String, Failure> {
     let ask = Recognize::from_json(spec)?;
-    Ok(engine.recognize_with(&ask, text, options)?.to_json())
+    Ok(engine.recognize_with(&ask, text, options)?.into_value().to_json())
 }
 
 /// Refuse a relate call past [`MOST_RELATED`] records.
@@ -147,7 +148,7 @@ pub(crate) fn relate(
     options: CallOptions<'_>,
 ) -> Result<String, Failure> {
     let ask = Relate::from_json(spec)?;
-    let edges = engine.relate_with(&ask, entities, options)?;
+    let edges = engine.relate_with(&ask, entities, options)?.into_value();
     let edges: Vec<String> = edges.iter().map(thinkthen::Edge::to_json).collect();
     Ok(format!("{{\"edges\":[{}]}}", edges.join(",")))
 }

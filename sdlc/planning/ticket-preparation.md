@@ -107,3 +107,15 @@ For interpreter boundaries, inventory host callbacks separately on the caller, w
 
 
 For Python host scopes, include ownership and release of returned iterator, item and exception references. Their final reference release can invoke user cleanup after the explicit method call ends. For isolated package validation, carry the pinned host and compiler into installation and execution as well as the build wrapper; system Node or Rust outside the repository may differ from the required toolchain.
+
+
+For a new command, identify the executable user workflow before proposing its syntax. An outside-in test proves behavior but does not replace the repository's requirement that a demo needs the command. For fixture maintenance, distinguish result retention from request use: filtered rows and bare output cannot supply a complete access manifest. Name the exact complete route being proved and keep broader harness integration open.
+
+
+For a foreign-language batch, inspect the Rust method's type bounds. A method with the right verb name may require compile-time labels and cannot accept a host's runtime label set. Map every accepted input combination, including records with detailed output, to a real route. Trace serialized fields through their constructor even when no observer is installed. A carrier named `Details` does not by itself promise the record metadata or context required by that host's contract. Preserve each host's stopping and recoverable-error policy when sharing the route.
+
+
+For a shared batch coordinator, choose one proof whose evidence groups close at different profile limits; equal close points cannot expose a missing oldest-row frontier. For each new call option, classify every public entry point as consuming or rejecting it before handing the setting to wrappers. Trace callback termination after a caught panic, including the next event on the same eager path. When a public error gains private state, run the relevant consumer lint as well as compilation; unchanged caller source can still expose a newly oversized error.
+
+
+Map changed consumers to Cargo `required-features` before naming compilation complete: no-default tests omit Polars targets even when their source changed. For a scheduling regression, ensure the input crosses the failing boundary before end-of-input flushes pending work. A controlled request witness must distinguish scheduler admission from concurrent socket arrival. When a new regression case could also pass the old behavior, use one focused counterfactual against the known bad source, then restore the correction; this is not a broad mutation campaign. Pin the expected error kind and sentence so another refusal cannot satisfy the test accidentally.

@@ -233,7 +233,7 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
         .map(|one| {
             slice
                 .details(&answered, one)
-                .map(|found| judgment(found.value()))
+                .map(|found| judgment(found.value().value()))
         })
         .collect::<Result<_, _>>()
         .expect("the one-text form");
