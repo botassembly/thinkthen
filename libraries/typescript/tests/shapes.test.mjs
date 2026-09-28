@@ -22,16 +22,16 @@ test('details equals the command --details document for the same question and te
       encoding: 'utf8',
     });
     assert.equal(command.status, 0, command.stderr);
-    assert.deepEqual(value, JSON.parse(command.stdout));
+    assert.deepEqual(value.value, JSON.parse(command.stdout));
   }
 });
 
-test('index.js, index.mjs, and index.d.ts export the same sixteen names', () => {
+test('index.js, index.mjs, and index.d.ts export the same nineteen names', () => {
   const cjs = Object.keys(createRequire(import.meta.url)('../index.js')).sort();
   const mjs = Object.keys(esm).filter((name) => name !== 'default').sort();
   const types = readFileSync(new URL('../index.d.ts', import.meta.url), 'utf8');
   const declared = [...types.matchAll(/^export (?:class|function|const) (\w+)/gm)].map((match) => match[1]);
-  assert.equal(cjs.length, 16);
+  assert.equal(cjs.length, 19);
   assert.deepEqual(mjs, cjs);
   assert.deepEqual([...new Set(declared)].sort(), cjs);
 });

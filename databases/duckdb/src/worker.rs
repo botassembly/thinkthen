@@ -12,7 +12,7 @@ use std::time::Duration;
 
 use thinkthen::{CancelToken, Error};
 
-use crate::errors::RowError;
+use crate::errors::{RowError, guarded};
 use crate::signal::Invoke;
 
 /// How often the waiting thread reads the interrupt predicate.
@@ -39,7 +39,10 @@ pub(crate) fn run_typed<T: Send + 'static>(
     thread::Builder::new()
         .name("thinkthen-duckdb-call".to_owned())
         .spawn(move || {
-            let _ = answer.send(work(&owned));
+            let caught = guarded("engine worker", || Ok(work(&owned)))
+                .map_err(RowError::caught_defect)
+                .and_then(|result| result.map_err(Into::into));
+            let _ = answer.send(caught);
         })
         .map_err(|_| RowError::defect("the engine worker could not start"))?;
     wait_typed(|| answered.recv_timeout(TICK), || invoke.stopped(), &token)
@@ -52,11 +55,16 @@ fn wait<T>(
     stopped: impl Fn() -> bool,
     token: &CancelToken,
 ) -> Result<T, String> {
-    wait_typed(&mut next, stopped, token).map_err(|error| error.text)
+    wait_typed(
+        || next().map(|answer| answer.map_err(Into::into)),
+        stopped,
+        token,
+    )
+    .map_err(|error| error.text)
 }
 
 fn wait_typed<T>(
-    mut next: impl FnMut() -> Result<Result<T, Error>, RecvTimeoutError>,
+    mut next: impl FnMut() -> Result<Result<T, RowError>, RecvTimeoutError>,
     stopped: impl Fn() -> bool,
     token: &CancelToken,
 ) -> Result<T, RowError> {
@@ -66,7 +74,7 @@ fn wait_typed<T>(
             return Err(RowError::of(thinkthen::ErrorKind::Cancelled, CANCELLED));
         }
         match next() {
-            Ok(answer) => return answer.map_err(Into::into),
+            Ok(answer) => return answer,
             Err(RecvTimeoutError::Timeout) => {}
             Err(RecvTimeoutError::Disconnected) => {
                 return Err(RowError::defect("the engine worker ended with no answer"));

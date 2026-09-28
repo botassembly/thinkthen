@@ -20,6 +20,7 @@ use crate::edge;
 use crate::engine::facade::{Answered, Completed, Input, InputPort, Judgment};
 use crate::failure::Failure;
 use crate::failure::context::Limits;
+use crate::judge::Keeping;
 use crate::schedule::{self, Judged, Output, Placed};
 use crate::table::Rows as TableRows;
 
@@ -115,6 +116,9 @@ pub(super) fn run(
     };
     if configuration.common.dry_run {
         return planned(former, records, &configuration, output);
+    }
+    if matches!(configuration.keeping, Keeping::Passing | Keeping::Ordered) {
+        output.guard_models();
     }
     let judging = Judging::new(configuration)?;
     let recording = judging.engine.recording();
@@ -497,7 +501,7 @@ fn failed(cause: Failure, first: usize, last: usize) -> Failure {
         | Failure::Status(_)
         | Failure::TokenLimit
         | Failure::Reply(_)
-        | Failure::ReplayMiss(_)
+        | Failure::ReplayMiss { .. }
             if last > first =>
         {
             Failure::BatchFailed {

@@ -12,15 +12,17 @@
 // reads sit in examples/<page>/files/ and are copied into a fresh folder for
 // each page. The scripts of a page run in name order in that one folder. A
 // Beatles Bench page runs in a copy of examples/beatles/bench/, in the folder
-// examples/beatles/folders.json names for it.
+// examples/beatles/folders.json names for it. A Beatles page with no bench
+// folder runs from its own files/, as any other page does. Its recordings
+// come from the talk's deck.
 //
 // THINKTHEN_BIN names the command. The default is the build of this
 // repository, ../target/release/thinkthen. A `thinkthen` call that names no
 // --replay folder answers from recordings/. A line that starts with `test` is
 // an assert: when it fails, the example fails.
 //
-// A library or database sample cannot replay yet. examples/SKIP lists each
-// kind with the reason, and the run counts them.
+// The CLI runner does not invoke installed host libraries or SQL extensions.
+// examples/SKIP lists each kind with the reason, and the run counts them.
 
 import fs from 'node:fs';
 import os from 'node:os';
@@ -30,7 +32,6 @@ import { spawnSync } from 'node:child_process';
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const root = path.join(site, 'examples');
 const bench = path.join(root, 'beatles', 'bench');
-const recordings = path.join(site, 'recordings');
 const update = process.argv.includes('--update');
 const only = process.argv.slice(2).filter((a) => !a.startsWith('--'));
 
@@ -56,7 +57,7 @@ const all = walk(root).map((p) => path.relative(root, p)).sort();
 const scripts = all.filter((p) => p.endsWith('.sh'));
 const stem = (p) => p.replace(/\.(out|exit)$/, '');
 const results = new Set(all.filter((p) => /\.(out|exit)$/.test(p) && all.includes(`${stem(p)}.sh`)));
-const kept = new Set(['SKIP', 'beatles/folders.json', 'beatles/BENCH']);
+const kept = new Set(['SKIP', 'beatles/folders.json', 'beatles/bench-pin']);
 
 // examples/SKIP: a glob, then the reason, on each line.
 const skips = fs.readFileSync(path.join(root, 'SKIP'), 'utf8').split('\n')
@@ -79,6 +80,24 @@ if (orphans.length) {
 
 const folders = JSON.parse(fs.readFileSync(path.join(root, 'beatles', 'folders.json'), 'utf8'));
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkthen-smoke-'));
+
+// A checkout made under umask 002 leaves its folders writable by the group,
+// and thinkthen then warns that another user may change a recording folder.
+// The copy a page runs in keeps only its owner's write bits, as a checkout
+// made under umask 022 does.
+function ownerWrites(dir) {
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    fs.chmodSync(p, fs.statSync(p).mode & ~0o022);
+    if (e.isDirectory()) ownerWrites(p);
+  }
+}
+
+// The site's recordings, copied so the copy can drop the group write bit.
+const recordings = path.join(tmp, 'recordings');
+fs.cpSync(path.join(site, 'recordings'), recordings, { recursive: true });
+fs.chmodSync(recordings, 0o755);
+ownerWrites(recordings);
 
 // The command every example calls. A function call that names no replay
 // folder of its own answers from the site's recordings. A dry run sends
@@ -117,14 +136,14 @@ for (const rel of scripts) {
 for (const [page, list] of pages) {
   const work = fs.mkdtempSync(path.join(tmp, 'run-'));
   let cwd = work;
-  if (page.startsWith('beatles/')) {
-    const folder = folders[page.split('/')[1]];
-    if (!folder) { failed.push(`${page}: examples/beatles/folders.json names no folder for this page`); continue; }
+  const folder = page.startsWith('beatles/') && folders[page.split('/')[1]];
+  if (folder) {
     fs.cpSync(bench, work, { recursive: true });
     cwd = path.join(work, folder);
   } else if (fs.existsSync(path.join(root, page, 'files'))) {
     fs.cpSync(path.join(root, page, 'files'), work, { recursive: true });
   }
+  ownerWrites(work);
   for (const rel of list) {
     const file = path.join(root, rel);
     const text = fs.readFileSync(file, 'utf8');

@@ -7,5 +7,5 @@ reviews <- c(
   "Does this come in blue?",
   "The strap snapped on day two."
 )
-complaints <- tt_filter(question, reviews)
+complaints <- tt_filter(question, reviews)$value
 stopifnot(identical(complaints, reviews[c(2, 4)]))

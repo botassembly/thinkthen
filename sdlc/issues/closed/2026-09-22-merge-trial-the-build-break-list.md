@@ -10,7 +10,7 @@ Date: 2026-09-22. Source: the library-team lane ran the trial merge in a throwaw
 - Main side: `b154f27`, fetched fresh from GitHub (`git ls-remote` confirmed `b154f27` = local `origin/main`), 213 commits ahead of the merge base `b11a2b0`.
 - `git merge --no-ff origin/main` reported **two text conflicts**, both in issue files, both additive sections of the same documents:
   - `sdlc/issues/closed/2026-09-21-rulings-on-the-surfaces-and-the-next-experiment-brief.md` (branch's "Phase A landed" section against main's Polars ruling and experiment close-out);
-  - `sdlc/issues/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md` (branch's "Lane B item 8" section against main's "Sharpened by external comparison" section).
+  - `sdlc/issues/closed/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md` (branch's "Lane B item 8" section against main's "Sharpened by external comparison" section).
   - Resolution used: the union, keeping both sides' sections in file order; only the six conflict marker lines were removed. Main's copies do not carry the branch sections and the branch copies do not carry main's, so nothing was duplicated and nothing was dropped.
 - Everything else auto-merged. Surfaces changed nothing under `crates/` or the root `Cargo.toml` since the fork (verified: `git diff --stat b11a2b0..6a829b8 -- crates Cargo.toml` is empty), so main's fold — `5e1dafd` deleted `crates/thinkthen-core` into `crates/thinkthen` — applies wholesale and silently. That is exactly why the text view looked harmless and the build does not.
 

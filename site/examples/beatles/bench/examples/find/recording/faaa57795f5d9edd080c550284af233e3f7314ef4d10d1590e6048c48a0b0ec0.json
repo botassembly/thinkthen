@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"[{\"id\":\"u001\",\"evidence\":\"She Loves You\"},{\"id\":\"u002\",\"evidence\":\"I Saw Her Standing There\"},{\"id\":\"u003\",\"evidence\":\"From Me to You\"},{\"id\":\"u004\",\"evidence\":\"All My Loving\"},{\"id\":\"u005\",\"evidence\":\"Love Me Do\"},{\"id\":\"u006\",\"evidence\":\"I Want to Hold Your Hand\"},{\"id\":\"u007\",\"evidence\":\"Please Please Me\"},{\"id\":\"u008\",\"evidence\":\"Can't Buy Me Love\"},{\"id\":\"u009\",\"evidence\":\"A Hard Day's Night\"},{\"id\":\"u010\",\"evidence\":\"I Feel Fine\"}]","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"These are songs by the Beatles. Which one did they release first?","criteria":{"u001":null,"u002":null,"u003":null,"u004":null,"u005":null,"u006":null,"u007":null,"u008":null,"u009":null,"u010":null}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"u005","confidence":0.59,"probabilities":{"u005":0.63,"u009":0.0,"u001":0.01,"u004":0.0,"u002":0.01,"u010":0.0,"u008":0.0,"u006":0.0,"u007":0.27,"u003":0.08}}},"usage":{"input_tokens":537,"output_tokens":121}}
-}

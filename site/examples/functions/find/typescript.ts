@@ -8,5 +8,7 @@ const policy = [
   "Shipping is free on orders over $50.",
   "Gift cards cannot be exchanged for cash.",
 ];
-const refundDeadline = await tt.find(question, policy);
+const refundDeadline = (await tt.find(
+  question, policy,
+)).value;
 assert.equal(refundDeadline?.unit, policy[1]);

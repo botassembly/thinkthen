@@ -57,6 +57,32 @@ set -e
 	fail "a missing CLI read exit $code: $said"
 echo "ok   check.sh sets up from three folders and reports not run without its CLI"
 
+# These expectations are independent of setup.sh's selector and its version.env.
+mkdir -p "$work/shim"
+cat >"$work/shim/uname" <<'SH'
+#!/bin/sh
+case $1 in -s) echo "$MOCK_KERNEL" ;; -m) echo "$MOCK_CHIP" ;; *) exit 2 ;; esac
+SH
+chmod +x "$work/shim/uname"
+selected() { PATH="$work/shim:$PATH" MOCK_KERNEL=$1 MOCK_CHIP=$2 sh "$ROOT/tools/setup.sh" --inputs; }
+linux='x86_64-unknown-linux-gnu linux_amd64 duckdb_cli-linux-amd64.zip 08c0ca117111fcede14239d0093792352befdc174218c344d232c13279643d05 static-libs-linux-amd64.zip deb47c5300f3c99725e84cdb14d214c3b12bbd748b613b1698b938c894cb68eb archive-sha256.txt'
+linux_arm64='aarch64-unknown-linux-gnu linux_arm64 duckdb_cli-linux-arm64.zip 02163197027a42149147364d31fa67cac82108517a4be43304a1cc226eaef07a static-libs-linux-arm64.zip ea6a34cb49ec2db5ed23d9e8311237c53c32abf9cdbf5dd608c4176c3dd8bfeb archive-sha256-linux-arm64.txt'
+mac='aarch64-apple-darwin osx_arm64 duckdb_cli-osx-arm64.zip da5177b8869c4ed8c65d514fb47a8ed0f6fa7427f103304932d5e83851e46abd static-libs-osx-arm64.zip d79ec66b8a4054b866faada82e9e31f859a713c555b3f1c4b71c4a43d3273e9c archive-sha256-osx-arm64.txt'
+mac_intel='x86_64-apple-darwin osx_amd64 duckdb_cli-osx-amd64.zip 47cbda17c5d4643a58833617dfae649a6a8722d7e54435a08161b98ac1c4e832 static-libs-osx-amd64.zip a27d36fa1247a3ffa1692e7aa0bf4ea4d1e0ee51da7c4df7a5db5217357b1b4d archive-sha256-osx-amd64.txt'
+[ "$(selected Linux x86_64)" = "$linux" ] || fail 'Linux x86-64 selected different pinned inputs'
+[ "$(selected Linux aarch64)" = "$linux_arm64" ] || fail 'Linux ARM64 selected different pinned inputs'
+[ "$(selected Darwin arm64)" = "$mac" ] || fail 'macOS ARM64 selected different pinned inputs'
+[ "$(selected Darwin x86_64)" = "$mac_intel" ] || fail 'macOS Intel selected different pinned inputs'
+for pair in 'Linux arm64' 'Darwin amd64' 'Darwin aarch64' 'Windows arm64'; do
+	set -- $pair
+	set +e
+	selected "$1" "$2" >"$work/selection" 2>&1
+	code=$?
+	set -e
+	[ "$code" -eq 77 ] || fail "$pair selected an unproved C++ target (exit $code)"
+done
+echo 'ok   the pinned target selector keeps four hosts and refuses unproved hosts'
+
 for env in '{"THINKTHEN_BASE_URL": "http://example.com/v1", "XDG_CACHE_HOME": "/tmp/a", "XDG_CONFIG_HOME": "/tmp/b"}' \
 	'{"THINKTHEN_BASE_URL": "http://127.0.0.1:1/v1", "XDG_CONFIG_HOME": "/tmp/b"}'; do
 	set +e

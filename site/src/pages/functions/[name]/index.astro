@@ -1,6 +1,5 @@
 ---
-// Goal: show what one function takes and gives, with its simplest real run
-// first, ahead of any prose. Each function's own goal sits in catalog.mjs.
+// Goal: show one function's command, value, and exit code first.
 import Base from '../../../layouts/Base.astro';
 import Terminal from '../../../components/Terminal.astro';
 import Code from '../../../components/Code.astro';
@@ -8,6 +7,7 @@ import CrossView from '../../../components/CrossView.astro';
 import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
 import { captioned, files } from '../../../data/samples.mjs';
 import { beatlesPageFor } from '../../../data/beatles.mjs';
+import { slideCard } from '../../../data/cards.mjs';
 
 export function getStaticPaths() {
   return FUNCTIONS.map((fn) => ({ params: { name: fn.name }, props: { fn } }));
@@ -17,21 +17,16 @@ const { fn } = Astro.props;
 if (!fn.goal) throw new Error(`functions: ${fn.name} has no goal`);
 const page = `functions/${fn.name}`;
 const all = captioned(page, fn.see, true);
-// A function that explains how it works shows one of its scripts there.
-const how = fn.how && all.find((r) => r.name === fn.how.script);
-if (fn.how && !how) throw new Error(`functions: ${fn.name} explains itself with ${fn.how.script}, and no script has that name`);
-const runs = all.filter((r) => r !== how);
 const inputs = files(page);
-const first = runs[0];
-const rest = runs.slice(1);
-const ticks = (text) => text.split('`').map((part, i) => (i % 2 ? `<code>${part}</code>` : part)).join('');
+const first = all[0];
 const howtos = HOWTOS.filter((h) => fn.howtos.includes(h.slug));
 const title = fn.title || fn.name;
 const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
 // The same function on Beatles Bench, where every answer is known.
 const bench = beatlesPageFor(fn.name);
+const card = slideCard(fn.name);
 ---
-<Base title={title} description={fn.line}>
+<Base title={title} description={fn.line} image={card?.image} imageAlt={card?.alt}>
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
   <h1><code>{title}</code>: {line}</h1>
   {inputs.map((file) => <Code code={file.text} caption={`${file.name}, a file the examples read`} />)}
@@ -39,19 +34,11 @@ const bench = beatlesPageFor(fn.name);
   {fn.lede ? (
     <p class="lede" set:html={fn.lede} />
   ) : (
-    <p class="lede">You give it {fn.takes}. You get back {fn.gives}.{!fn.notAFunction && fn.name !== 'recognize' && <> Every answer carries a probability, and <code>--details</code> prints it.</>}</p>
+    <p class="lede">You give it {fn.takes}. You get back {fn.gives}.</p>
   )}
   {!first && bench && <p>See <code>{fn.name}</code> run on Beatles Bench: <a href={bench.route}>{bench.title}</a></p>}
 
-  {how && (
-    <>
-      <h2>How it works</h2>
-      {fn.how.steps.map((step) => <p set:html={ticks(step)} />)}
-      <Terminal run={how} caption={how.see} />
-    </>
-  )}
-
-  <h2>When it is not sure, and when it fails</h2>
+  <h2>Read the answer</h2>
   <p>{fn.unsure}</p>
   {fn.exits.length > 0 && (
     <table>
@@ -66,21 +53,7 @@ const bench = beatlesPageFor(fn.name);
   <h2>Call it from your language</h2>
   <CrossView fn={fn.name} above={Boolean(first)} />
 
-  <h2>The options</h2>
-  <p>It takes <code>{fn.args}</code>{fn.args.endsWith('.') ? '' : '.'}</p>
-  <table>
-    <tr><th>Option</th><th>What it does</th></tr>
-    {fn.options.map(([opt, what]) => (
-      <tr><td><code>{opt}</code></td><td>{what}</td></tr>
-    ))}
-  </table>
-
-  {rest.length > 0 && (
-    <>
-      <h3>The options at work</h3>
-      {rest.map((run) => <Terminal run={run} caption={run.see} />)}
-    </>
-  )}
+  <p class="pagelinks"><a href={`/reference/functions/${fn.name}/`}>Arguments, options, and more examples</a></p>
 
   {howtos.length > 0 && (
     <>

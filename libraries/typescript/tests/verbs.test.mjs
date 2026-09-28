@@ -3,25 +3,171 @@
 // gives the first option, level, or yes 0.9 and shares the rest.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { createServer } from 'node:http';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { FAKE_KEY, ask, startBackend } from './backend.mjs';
+const recordingDigest = (base, body) => createHash('sha256').update(`systemone\n${base}/systemone\n${body}`).digest('hex');
+
+test('a named rich question preserves source order and its captured request', async (t) => {
+  const backend = await captured(t);
+  const source = '{"choose":"Which?","options":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}';
+  const file = join(backend.folder, 'rich-question.json');
+  writeFileSync(file, source);
+  const { value, error } = await ask(backend, `
+    const loaded = tt.questionFile(${JSON.stringify(file)});
+    const result = await tt.choose(loaded, 'first');
+    return { source: loaded.__spec, answer: result.value, request: result.details[0].requests[0] };`);
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.equal(value.source, source);
+  const body = '{"state":"first","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which?","criteria":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}}}';
+  assert.deepEqual(backend.bodies, [body]);
+  assert.equal(value.request, recordingDigest(backend.base(), body));
+});
+
+test('named question files refuse bounded local failures before any send', async (t) => {
+  const backend = await captured(t);
+  const marker = 'SYNTHETIC_PRIVATE_MARKER_0244';
+  const files = ['missing.json', 'blank.json', 'large.json', 'utf8.json', 'unknown.json', 'choose.json'].map((name) => join(backend.folder, name));
+  writeFileSync(files[1], '{"decide":"   "}');
+  writeFileSync(files[2], Buffer.alloc(1_048_577, 120));
+  writeFileSync(files[3], Buffer.from([0xff]));
+  writeFileSync(files[4], JSON.stringify({ decide: 'Question?', [marker]: 1 }));
+  writeFileSync(files[5], '{"choose":"Which?","options":["a","b"]}');
+  const { value, error } = await ask(backend, `
+    const files = ${JSON.stringify(files)};
+    const observed = [];
+    for (const file of files.slice(0, 5)) {
+      try { tt.questionFile(file); observed.push('accepted'); }
+      catch (failure) { observed.push([failure.kind, failure.retryable, failure.message.includes(file) || failure.message.includes(${JSON.stringify(marker)})]); }
+    }
+    try { tt.questionFile(42); observed.push('accepted'); }
+    catch (failure) { observed.push([failure.kind, failure.retryable]); }
+    try { await tt.decide(tt.questionFile(files[5]), 'text'); observed.push('accepted'); }
+    catch (failure) { observed.push([failure.kind, failure.retryable]); }
+    try { await tt.decide(tt.question({ decide: '   ' }), 'text'); observed.push('accepted'); }
+    catch (failure) { observed.push([failure.kind, failure.retryable]); }
+    return observed;`);
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.deepEqual(value, [
+    ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false],
+    ['usage', false], ['usage', false], ['usage', false],
+  ]);
+  assert.deepEqual(backend.bodies, []);
+});
+
+// Capture the listener's exact body bytes while answering by the generic rule.
+async function captured(t) {
+  const bodies = [];
+  const server = createServer(async (request, reply) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const body = Buffer.concat(chunks).toString('utf8');
+    bodies.push(body);
+    const asked = JSON.parse(body);
+    const answers = Object.fromEntries(Object.entries(asked.questions).map(([name, question]) => {
+      if (question.type === 'noul') return [name, { type: 'noul', noul: 0.9 }];
+      const keys = Array.isArray(question.criteria) ? question.criteria.map((_, at) => String(at)) : Object.keys(question.criteria);
+      const probabilities = Object.fromEntries(keys.map((key, at) => [key, at === 0 ? 0.9 : 0.1 / (keys.length - 1)]));
+      return [name, { type: question.type, probabilities }];
+    }));
+    reply.writeHead(200, { 'content-type': 'application/json' });
+    reply.end(JSON.stringify({ model: asked.model, answers, usage: { input_tokens: 3, output_tokens: 2 } }));
+  });
+  await new Promise((done) => server.listen(0, '127.0.0.1', done));
+  const folder = mkdtempSync(join(tmpdir(), 'thinkthen-ts-capture-'));
+  t.after(() => { server.closeAllConnections(); server.close(); rmSync(folder, { recursive: true, force: true }); });
+  return { bodies, port: server.address().port, folder, base: () => `http://127.0.0.1:${server.address().port}/v1` };
+}
+
+test('packed and batch-one calls expose exact bodies, ordered details, and final facts', async (t) => {
+  const backend = await captured(t);
+  const { value, error } = await ask(backend, `
+    const engine = new tt.Engine({ cache: false });
+    const records = ['first', 'first', 'third'];
+    const packed = await engine.decide_many('Refund?', records);
+    const frozen = [Object.isFrozen(packed), Object.isFrozen(packed.facts), Object.isFrozen(packed.details), Object.isFrozen(packed.details[0]), Object.isFrozen(packed.details[0].requests)];
+    const singles = await engine.decide_many('Refund?', records, { batch: 1 });
+    const contextual = await engine.decide_many('Refund?', records, { context: 'Shared note.' });
+    const ranked = await engine.rank('Refund?', records, { top: 1 });
+    return { packed, singles, contextual, ranked, frozen };`);
+  assert.equal(error, undefined, JSON.stringify({ error, bodies: backend.bodies }));
+  assert.deepEqual(value.packed.value, [true, true, true]);
+  assert.equal(value.packed.facts.records, 3);
+  assert.equal(value.packed.facts.requests_sent, 1);
+  assert.equal(value.packed.facts.input_tokens, 3);
+  assert.deepEqual(value.frozen, [true, true, true, true, true]);
+  assert.equal(value.packed.details.length, 3);
+  assert.equal(value.singles.facts.requests_sent, 3);
+  assert.deepEqual(value.singles.value, value.packed.value);
+  assert.equal(value.contextual.facts.requests_sent, 1);
+  assert.equal(value.ranked.value.length, 1);
+  assert.equal(value.ranked.facts.records, 3);
+  assert.equal(value.ranked.details.length, 3);
+  assert.equal(backend.bodies.length, 6);
+  assert.equal(Object.keys(JSON.parse(backend.bodies[0]).questions).length, 2, 'the duplicate record shares one packed question');
+  for (const body of backend.bodies.slice(1, 4)) assert.equal(Object.keys(JSON.parse(body).questions).length, 1);
+  assert.notEqual(backend.bodies[0], backend.bodies[4]);
+  const digest = recordingDigest(backend.base(), backend.bodies[0]);
+  assert.deepEqual(value.packed.details.map((row) => row.requests), [[digest], [digest], [digest]]);
+  assert.deepEqual(value.packed.details.map((row) => row.index), [0, 1, 2]);
+});
+
+test('runtime-label many calls preserve ordered descriptions and bare versus null score levels', async (t) => {
+  const backend = await captured(t);
+  const { value, error } = await ask(backend, `
+    const records = ['first', 'second'];
+    const choices = await tt.choose_many('Which?', records, { options: { 2: ['nested', { flag: true }], 1: { what: 'first' }, other: null } });
+    const scoresBare = await tt.score_many('How?', records, { levels: ['low', 'high'] });
+    const scoresNull = await tt.score_many('How?', records, { levels: { low: null, high: 'High.' } });
+    const tags = await tt.tag_many('Which?', records, { labels: { red: { nested: [1, false] }, blue: ['list', null] } });
+    const meaning = await tt.decide(tt.question({ decide: 'Refund?', true: null, false: { nested: ['no', true] } }), 'first');
+    const nullChoices = await tt.choose_many({ choose: 'Which?', options: ['a', 'b'], threshold: 0.95 }, records);
+    const emptyTags = await tt.tag_many({ tag: 'Which?', labels: ['red', 'blue'], threshold: 0.95 }, records);
+    const recognized = await tt.recognize('Maria', { kinds: { person: { what: 'A person', other: [true, 2] } } });
+    return { choices, scoresBare, scoresNull, tags, meaning, nullChoices, emptyTags, recognized };`);
+  assert.equal(error, undefined, JSON.stringify({ error, bodies: backend.bodies }));
+  assert.deepEqual(value.choices.value, ['1', '1']);
+  assert.deepEqual(value.scoresBare.value, [0.1, 0.1]);
+  assert.deepEqual(value.scoresNull.value, [0.1, 0.1]);
+  assert.deepEqual(value.tags.value, [['red', 'blue'], ['red', 'blue']]);
+  assert.equal(value.meaning.value, true);
+  assert.deepEqual(value.nullChoices.value, [null, null]);
+  assert.deepEqual(value.emptyTags.value, [[], []]);
+  assert.equal(value.choices.facts.records, 2);
+  assert.equal(value.choices.facts.requests_sent, 1);
+  const [choices, bare, described, tags, meaning] = backend.bodies.map((body) => JSON.parse(body));
+  assert.deepEqual(Object.keys(Object.values(choices.questions)[0].criteria), ['1', '2', 'other']);
+  assert.deepEqual(Object.values(choices.questions)[0].criteria['2'], ['nested', { flag: true }]);
+  assert.ok(Array.isArray(Object.values(bare.questions)[0].criteria));
+  assert.deepEqual(Object.values(described.questions)[0].criteria, [{}, 'High.']);
+  assert.match(backend.bodies[3], /nested/);
+  assert.equal(Object.values(meaning.questions)[0].criteria.true, null);
+  assert.deepEqual(Object.values(meaning.questions)[0].criteria.false, { nested: ['no', true] });
+  assert.deepEqual(value.choices.details.map((row) => row.requests), [[recordingDigest(backend.base(), backend.bodies[0])], [recordingDigest(backend.base(), backend.bodies[0])]]);
+  assert.equal(Object.values(JSON.parse(backend.bodies[7]).questions)[0].type, 'choice');
+  assert.ok(value.recognized.details.some((row) => row.requests.includes(recordingDigest(backend.base(), backend.bodies[7]))));
+});
 
 test('each verb resolves its host shape, on the module and on an engine', async (t) => {
   const backend = await startBackend(t);
   const { value } = await ask(backend, `
     const band = tt.question({ decide: 'Does it ask for a refund?', threshold: [0.2, 0.8] });
-    const shapes = (on) => Promise.all([
+    const shapes = async (on) => (await Promise.all([
       on.decide('Does it ask for a refund?', 'I want a refund'),
       on.decide(band, 'I want a refund'),
-      on.decide_many(band, ['one', 'two']),
+      on.decide_many(band, ['one', 'two'], { batch: 1 }),
       on.choose('Which team?', 'text', { options: ['billing', 'other'] }),
       on.score('How urgent?', 'text', { levels: ['low', 'mid', 'high'] }),
       on.tag({ tag: 'Which topics?', labels: ['billing', 'urgent'] }, 'text'),
-      on.filter('Is it a complaint?', ['one', 'two']),
-      on.rank('Is it urgent?', ['one', 'two', 'three'], { top: 2 }),
+      on.filter('Is it a complaint?', ['one', 'two'], { batch: 1 }),
+      on.rank('Is it urgent?', ['one', 'two', 'three'], { top: 2, batch: 1 }),
       on.find('Which line answers?', ['one', 'two']),
-      on.annotate({ version: 1, questions: { refund: { decide: 'Refund?' }, team: { choose: 'Team?', options: ['a', 'b'] } } }, ['one']),
-    ]);
+      on.annotate({ version: 1, questions: { refund: { decide: 'Refund?' }, team: { choose: 'Team?', options: ['a', 'b'] } } }, ['one'], { batch: 1 }),
+    ])).map((call) => call.value);
     return { module: await shapes(tt), engine: await shapes(new tt.Engine({ cache: false })) };`);
   const expected = [
     true,
@@ -48,11 +194,11 @@ test('relate reads what recognize found', async (t) => {
   const backend = await startBackend(t);
   const { value } = await ask(backend, `
     const relations = ['knows=person:person'];
-    const found = (await tt.recognize('Maria Chen arrived.', { kinds: ['person'] })).entities;
+    const found = (await tt.recognize('Maria Chen arrived.', { kinds: ['person'] })).value.entities;
     const forms = [found, found.map((one) => ({ name: one.text, text: 'not this', kind: one.kind })),
       [['Maria Chen', 'person'], ['arrived.', 'person']]];
     const edges = await Promise.all(forms.map((form) => tt.relate(form, { relations })));
-    return edges.map((each) => each.map((edge) => [edge.source.name, edge.target.name]));`);
+    return edges.map((each) => each.value.map((edge) => [edge.source.name, edge.target.name]));`);
   const both = [['Maria Chen', 'arrived.'], ['arrived.', 'Maria Chen']];
   assert.deepEqual(value, [both, both, both]);
 });
@@ -69,7 +215,7 @@ test('the slide sample runs as drawn', async (t) => {
     const topics = await tt.tag("Which topics?", message, { labels });
     const stop = new AbortController();
     const urgent = await tt.rank("Is this urgent?", inbox, { top: 5, signal: stop.signal });
-    return { team, topics, urgent: urgent.length, first: urgent[0].record };`);
+    return { team: team.value, topics: topics.value, urgent: urgent.value.length, first: urgent.value[0].record };`);
   // The generic arm says yes to every label; the deck's comment quotes a real backend.
   assert.deepEqual(value, {
     team: 'billing',
@@ -85,6 +231,25 @@ const REFUSALS = [
   ["tt.choose('Which team?', 'x')", 'choose takes its options in the last object: { options }'],
   ["tt.tag('Which topics?', 'x')", 'tag takes its labels in the last object: { labels }'],
   ["tt.decide('Refund?', 'x', { urgent: true })", 'options.urgent is not a decide key'],
+  ["tt.decide('Refund?', 'x', { batch: null })", 'options.batch is not a decide key'],
+  ["tt.choose('Which?', 'x', { options: ['a'], context: null })", 'options.context is not a choose key'],
+  ["tt.score('How?', 'x', { levels: ['a'], batch: 1 })", 'options.batch is not a score key'],
+  ["tt.tag('Which?', 'x', { labels: ['a'], context: 'note' })", 'options.context is not a tag key'],
+  ["tt.details('Refund?', 'x', { batch: 'max' })", 'options.batch is not a details key'],
+  ["tt.find('Which?', ['a'], { batch: 1 })", 'options.batch is not a find key'],
+  ["tt.recognize('x', { context: 'note' })", 'options.context is not a recognize key'],
+  ["tt.relate([], { batch: 1 })", 'options.batch is not a relate key'],
+  ["tt.annotate({ version: 1, questions: { a: { decide: 'Refund?' } } }, ['x'], { context: null })", 'options.context is not a annotate key'],
+  ["tt.decide_many('Refund?', ['x'], { batch: null })", 'options.batch is max or a positive whole number'],
+  ["tt.decide_many('Refund?', ['x'], { batch: undefined })", 'options.batch is max or a positive whole number'],
+  ["tt.filter('Refund?', ['x'], { context: null })", 'options.context is nonblank text'],
+  ["tt.filter('Refund?', ['x'], { context: undefined })", 'options.context is nonblank text'],
+  ["new tt.Engine({ batch: null })", 'options.batch is max or a positive whole number'],
+  ["tt.question({ decide: 'Refund?', true: { nested: undefined } })", 'the question is JSON'],
+  ["tt.question({ decide: 'Refund?', true: [undefined] })", 'the question is JSON'],
+  ["tt.question({ decide: 'Refund?', true: { nested: 1n } })", 'the question is JSON'],
+  ["tt.question({ decide: 'Refund?', true: new Map([['x', 'y']]) })", 'the question is JSON'],
+  ["tt.question({ decide: 'Refund?', true: (() => { const x = {}; x.self = x; return x; })() })", 'the question is JSON without a cycle'],
   ["tt.choose('Which team?', 'x', { labels: ['a'] })", 'options.labels is not a choose key'],
   ["tt.rank('Urgent?', ['a', 'b'], { top: 0 })", 'options.top is a positive whole number'],
   ["tt.find('Which?', ['a', 'b'], { none: 'yes' })", 'options.none is true or false'],
@@ -118,12 +283,22 @@ test('usage refusals name their fault and send nothing', async (t) => {
 
 test('a refused request and a dead address are backend failures that do not retry', async (t) => {
   const backend = await startBackend(t);
+  const unreported = await ask(backend, "return (await tt.decide('Refund?', 'plain')).facts;");
+  assert.equal(unreported.value.input_tokens, undefined, 'missing provider usage stays absent');
+  assert.equal(unreported.value.output_tokens, undefined);
   const refused = await ask(backend, "return tt.decide('Refund?', 'x');", { arm: 'arm/refuse' });
   assert.deepEqual(refused.error.kind, 'backend');
   assert.equal(refused.error.retryable, false);
   assert.match(refused.error.message, /^the backend answered with status 422/);
+  assert.equal(refused.error.facts.requests_sent, 1);
+  assert.equal(refused.error.facts.records, 0);
+  assert.deepEqual(refused.error.details, []);
   const dead = await ask(backend, "return tt.decide('Refund?', 'x');", { env: { THINKTHEN_BASE_URL: 'http://127.0.0.1:1/v1' } });
   assert.deepEqual([dead.error.kind, dead.error.retryable, dead.error.message], ['backend', false, 'the backend refused the connection']);
+  assert.equal(dead.error.facts.requests_sent, 1);
+  const unstarted = await ask(backend, "return tt.decide('   ', 'x');");
+  assert.equal(unstarted.error.kind, 'usage');
+  assert.equal(unstarted.error.facts, undefined, 'a worker start does not imply account start');
 });
 
 test('no rejection repeats the key or the address credentials', async (t) => {

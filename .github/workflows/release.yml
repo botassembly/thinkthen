@@ -1,0 +1,287 @@
+# Deliberate 0.1 release only. A dispatch never publishes without the release
+# environment, RELEASE_ARMED, and a separate approval for each outward job.
+name: release
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Build a rehearsal draft or release the selected v* tag
+        type: choice
+        required: true
+        options: [rehearse, release]
+
+permissions: {}
+
+jobs:
+  resolve:
+    runs-on: ubuntu-24.04
+    permissions: {contents: read}
+    outputs:
+      sha: ${{ steps.source.outputs.sha }}
+      version: ${{ steps.source.outputs.version }}
+      name: ${{ steps.source.outputs.name }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ github.sha }}", persist-credentials: false}
+      - id: source
+        env:
+          MODE: ${{ inputs.mode }}
+          REF: ${{ github.ref }}
+        run: sdlc/scripts/release-workflow resolve "$MODE" "$REF" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: resolve
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm}
+          - {target: aarch64-apple-darwin, runner: macos-15}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel}
+    runs-on: ${{ matrix.runner }}
+    permissions: {contents: read}
+    env:
+      MACOSX_DEPLOYMENT_TARGET: '15.0'
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        if: runner.os == 'macOS'
+        with: {python-version: '3.13'}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.10'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: {node-version: '22.22.3'}
+      - name: Install and check the pinned host tools
+        env: {TARGET: "${{ matrix.target }}"}
+        run: sdlc/scripts/release-workflow host-setup "$TARGET"
+      - name: Build and pack the target
+        env: {TARGET: "${{ matrix.target }}"}
+        run: |
+          set -eu
+          mkdir -p release-files
+          if [ "$(uname -s)" = Linux ]; then
+            export RELEASE_CARGO_REGISTRY="$HOME/.cargo/registry"
+            sdlc/scripts/release-container "$RUNNER_TEMP/thinkthen-container" release-files
+            sdlc/scripts/release-pack "$TARGET" release-files command first-run
+          else
+            RUBY="$HOME/.cache/thinkthen-toolchains/ruby/3.4.11-$(uname -m)-darwin/bin/ruby"
+            PG_CONFIG="$(brew --prefix postgresql@16)/bin/pg_config"
+            export RUBY PG_CONFIG
+            sdlc/scripts/release-pack "$TARGET" release-files
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: platform-${{ matrix.target }}
+          path: release-files/
+          if-no-files-found: error
+          retention-days: 7
+
+  wheels:
+    needs: [resolve, build]
+    runs-on: ubuntu-24.04
+    permissions: {actions: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - run: sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.whl' 4
+
+  gems:
+    needs: [resolve, build]
+    runs-on: ubuntu-24.04
+    permissions: {actions: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - run: sdlc/scripts/release-workflow verify-family platform 'thinkthen-*.gem' 4
+
+  npm-pack:
+    needs: [resolve, build]
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, actions: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: {node-version: '22.22.3'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - run: sdlc/scripts/release-workflow npm-assemble platform npm-dist
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: {name: npm-package, path: npm-dist/, if-no-files-found: error, retention-days: 7}
+
+  crate:
+    needs: resolve
+    runs-on: ubuntu-24.04
+    permissions: {contents: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - run: |
+          rustup toolchain install 1.95.0 --profile minimal
+          cargo package --locked --package thinkthen
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error, retention-days: 7}
+
+  smoke:
+    needs: [resolve, build, wheels, npm-pack, gems, crate]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {target: x86_64-unknown-linux-gnu, runner: ubuntu-24.04}
+          - {target: aarch64-unknown-linux-gnu, runner: ubuntu-24.04-arm}
+          - {target: aarch64-apple-darwin, runner: macos-15}
+          - {target: x86_64-apple-darwin, runner: macos-15-intel}
+    runs-on: ${{ matrix.runner }}
+    permissions: {contents: read, actions: read}
+    env: {MACOSX_DEPLOYMENT_TARGET: '15.0'}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.13'}
+      - uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c # v6.0.0
+        with: {python-version: '3.12'}
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: {node-version: '22.22.3'}
+      - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1'}
+        run: sdlc/scripts/release-workflow host-setup "$TARGET"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: 'platform-${{ matrix.target }}', path: platform}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: npm-package, path: npm-dist}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: crate-package, path: crate-dist}
+      - env: {TARGET: "${{ matrix.target }}"}
+        run: |
+          sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
+          sdlc/scripts/release-smoke smoke-files
+          sdlc/scripts/installer-test
+          sdlc/scripts/release-workflow installer-smoke smoke-files
+          sdlc/scripts/release-workflow crate-smoke crate-dist smoke-files
+
+  draft:
+    needs: [resolve, smoke]
+    runs-on: ubuntu-24.04
+    permissions: {contents: write, actions: read}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: npm-package, path: npm-dist}
+      - env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MODE: ${{ inputs.mode }}
+          NAME: ${{ needs.resolve.outputs.name }}
+          SHA: ${{ needs.resolve.outputs.sha }}
+        run: |
+          sdlc/scripts/release-workflow collect platform npm-dist all-files
+          sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
+
+  crates:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, id-token: write}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: rust-lang/crates-io-auth-action@63a7064947ceca9989005e118db3a5fecdc9259f # v1.0.0
+        id: auth
+      - env: {CARGO_REGISTRY_TOKEN: "${{ steps.auth.outputs.token }}"}
+        run: cargo publish --locked --package thinkthen
+
+  pypi:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {actions: read, id-token: write}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - run: |
+          mkdir dist
+          cp platform/*/thinkthen-*.whl dist/
+          [ "$(find dist -name '*.whl' | wc -l)" -eq 4 ]
+      - uses: pypa/gh-action-pypi-publish@106e0b0b7c337fa67ed433972f777c6357f78598 # v1.13.0
+
+  npm:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {actions: read, id-token: write}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with: {node-version: '22.22.3', registry-url: 'https://registry.npmjs.org'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: npm-package, path: npm-dist}
+      - run: |
+          npm install --global npm@11.6.4
+          npm publish npm-dist/*.tgz --provenance --access public
+
+  rubygems:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {actions: read, id-token: write}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: ruby/setup-ruby@14594264cd68ce8a2345dd349bc3d138a4ef85c8 # v1.327.0
+        with: {ruby-version: '3.4.11'}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - uses: rubygems/configure-rubygems-credentials@bc6dd217f8a4f919d6835fcfefd470ef821f5c44 # v1.0.0
+      - run: |
+          [ "$(gem --version)" = 3.6.9 ]
+          [ "$(find platform -name 'thinkthen-*.gem' | wc -l)" -eq 4 ]
+          for gem in platform/*/thinkthen-*.gem; do gem push "$gem"; done
+
+  tap:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {contents: read, actions: read}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {pattern: 'platform-*', path: platform}
+      - env: {TAP_DEPLOY_KEY: "${{ secrets.TAP_DEPLOY_KEY }}", VERSION: "${{ needs.resolve.outputs.version }}"}
+        run: sdlc/scripts/release-workflow tap "$VERSION" platform
+
+  publish:
+    needs: [resolve, draft, crates, pypi, npm, rubygems, tap]
+    if: inputs.mode == 'release'
+    environment: release
+    runs-on: ubuntu-24.04
+    permissions: {contents: write}
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
+      - env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", NAME: "${{ needs.resolve.outputs.name }}", SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: sdlc/scripts/release-workflow publish "$NAME" "$SHA"

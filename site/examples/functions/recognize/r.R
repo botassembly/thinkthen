@@ -9,9 +9,11 @@ rules <- c(
   "works_for=person:organization",
   "based_in=organization:place"
 )
-facts <- tt_recognize(text, kinds, relations = rules)[[1]]
+facts <- tt_recognize(
+  text, kinds, relations = rules
+)$value[[1]]
 stopifnot(identical(
-  facts$name,
+  facts$text,
   c("Maria Chen", "Northwind Freight", "Chicago")
 ))
 stopifnot(identical(facts$kind, kinds))

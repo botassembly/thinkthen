@@ -29,8 +29,7 @@ unreachable <- c(
   "20-usage-fault" = "an injection point inside the engine, which no R call reaches",
   "22-local-fault" = "an injection point inside the engine, which no R call reaches",
   "23-cancelled-fault" = "R raises its own interrupt; tests/interrupt.R proves the batch stop",
-  "25-defect-fault" = "an injection point inside the engine, which no R call reaches",
-  "30-local-question-file" = "the R verbs take no decide question file"
+  "25-defect-fault" = "an injection point inside the engine, which no R call reaches"
 )
 
 sha <- function(url, request) {
@@ -61,6 +60,11 @@ bare <- function(value) if (length(value) == 1L && is.na(value)) NULL else value
 
 # One case in this child: the checks, then its send count.
 run_case <- function(case, served) {
+  legacy_batch_one <- case$id %in% c("13-filter-records", "14-filter-none",
+    "15-rank-records", "16-rank-stable-tie", "27-decide-many",
+    "28-decide-many-repeated-texts", "34-annotate-repeated-texts",
+    "35-annotate-score-repeated-texts")
+  tt_engine(batch = if (legacy_batch_one) 1L else "max")
   exchanges <- case$exchanges
   renamed <- list()
   for (exchange in exchanges) renamed[[sha(canonical, exchange$request)]] <- sha(served, exchange$request)
@@ -82,7 +86,7 @@ run_case <- function(case, served) {
   }
   detailed <- function(question) {
     for (want in answers) {
-      row <- tt_details(question, evidence[[want$exchange + 1L]])
+      row <- tt_details(question, evidence[[want$exchange + 1L]])$value
       same("answer", row$answer, want$details$answer)
       same("value", row$value, want$bare)
       meta(row, want)
@@ -91,22 +95,22 @@ run_case <- function(case, served) {
   file <- tempfile(fileext = ".json")
   asked <- case$question %||% case$question_set
   writeLines(jsonlite::toJSON(asked, auto_unbox = TRUE, digits = NA), file)
-  if (!is.null(case$expect$error)) return(refused(case))
+  if (!is.null(case$expect$error)) return(refused(case, file))
   switch(case$verb,
     decide = , choose = , score = , tag = {
       question <- thinkthen:::.tt_built(asked)
       detailed(question)
-      got <- switch(case$verb, decide = tt_decide(question, evidence), choose = tt_choose(question, evidence),
-                    score = tt_score(question, evidence), tag = tt_tag(question, evidence))
+      got <- switch(case$verb, decide = tt_decide(question, evidence)$value, choose = tt_choose(question, evidence)$value,
+                    score = tt_score(question, evidence)$value, tag = tt_tag(question, evidence)$value)
       for (want in answers) same("bare", bare(got[[want$exchange + 1L]]), want$bare)
       counters <- case$expect$success$counters
       if (!is.null(counters)) {
         carried <<- tt_usage()$requests_sent
         folder <- tempfile("counters")
         dir.create(folder)
-        tt_engine(cache = folder)
+        tt_engine(cache = folder, batch = if (legacy_batch_one) 1L else "max")
         before <- tt_usage()
-        for (i in seq_len(counters$calls)) tt_decide(question, evidence)
+        for (i in seq_len(counters$calls)) tt_decide(question, evidence)$value
         after <- tt_usage()
         same("requests", after$requests_sent - before$requests_sent, counters$requests)
         same("cache answers", after$cache_answers - before$cache_answers, counters$cache_answers)
@@ -115,18 +119,18 @@ run_case <- function(case, served) {
     filter = {
       question <- thinkthen:::.tt_built(asked)
       kept <- unlist(case$expect$success$operation$indexes) + 1L
-      same("kept", tt_filter(question, evidence), evidence[kept])
+      same("kept", tt_filter(question, evidence)$value, evidence[kept])
       if (length(answers)) detailed(question)
     },
     rank = {
       ranking <- case$expect$success$operation$ranking
-      ranked <- tt_rank(asked$decide, evidence)
+      ranked <- tt_rank(asked$decide, evidence)$value
       same("places", ranked$place, vapply(ranking, function(at) at$index + 1L, integer(1)))
       same("probabilities", ranked$probability, vapply(ranking, function(at) at$probability, numeric(1)))
     },
     find = {
       operation <- case$expect$success$operation
-      found <- tt_find(asked$find, unlist(asked$units), none = asked$none)
+      found <- tt_find(asked$find, unlist(asked$units), none = asked$none)$value
       picked <- Filter(function(row) identical(row$index, operation$selected), operation$probabilities)
       same("found", found, if (is.null(operation$selected)) list(place = NA_integer_, unit = NA_character_, probability = NA_real_)
            else list(place = operation$selected + 1L, unit = asked$units[[operation$selected + 1L]], probability = picked[[1]]$probability))
@@ -134,14 +138,14 @@ run_case <- function(case, served) {
     annotate = {
       records <- if (is.null(case$record)) evidence else as.character(jsonlite::toJSON(case$record, auto_unbox = TRUE))
       frame <- data.frame(input = records, stringsAsFactors = FALSE)
-      got <- tt_annotate(file, frame, on = "input")
+      got <- tt_annotate(file, frame, on = "input")$value
       for (want in answers) {
         cell <- got[[want$name]][[if (is.null(case$record)) want$exchange + 1L else 1L]]
         same(want$name, if (is.list(cell)) cell else bare(cell), want$bare)
       }
     },
     recognize = {
-      found <- tt_recognize(case$text, paste0("@", file))[[1]]
+      found <- tt_recognize(case$text, paste0("@", file))$value[[1]]
       want <- answers[[1]]$bare
       same("texts", found$text, vapply(want$entities, `[[`, "", "text"))
       same("starts", found$start, vapply(want$entities, function(one) one$start + 1, 0))
@@ -161,7 +165,7 @@ run_case <- function(case, served) {
     relate = {
       entities <- data.frame(name = vapply(case$entities, `[[`, "", "name"),
                              kind = vapply(case$entities, `[[`, "", "kind"), stringsAsFactors = FALSE)
-      edges <- tt_relate(entities, relations = paste0("@", file))
+      edges <- tt_relate(entities, relations = paste0("@", file))$value
       want <- answers[[1]]$bare
       key <- function(relation, source, target) paste(relation, source, target, sep = "|")
       got <- stats::setNames(edges$probability, key(edges$relation, edges$source, edges$target))
@@ -173,13 +177,21 @@ run_case <- function(case, served) {
 }
 
 # An error case: the kind the R call raises.
-refused <- function(case) {
+refused <- function(case, file) {
   question <- function() thinkthen:::.tt_built(case$question)
   kind <- switch(case$id,
-    "21-backend-fault" = kind_of(tt_decide(question(), "any text")),
-    "24-deadline-fault" = kind_of(tt_decide(question(), "any text", deadline = 0)),
-    "29-usage-json-text" = kind_of(tt_decide(question(), case$evidence)),
-    "31-usage-rank-blank-question" = kind_of(tt_rank(case$question$decide, strsplit(case$evidence, "\n")[[1]])),
+    "21-backend-fault" = kind_of(tt_decide(question(), "any text")$value),
+    "24-deadline-fault" = kind_of(tt_decide(question(), "any text", deadline = 0)$value),
+    "29-usage-json-text" = kind_of(tt_decide(question(), case$evidence)$value),
+    "30-local-question-file" = {
+      before <- tt_usage()$requests_sent
+      error <- tryCatch(tt_question(file = file), thinkthen_error = function(e) e)
+      check("a bad named question is a non-retryable local error",
+            inherits(error, "thinkthen_local") && isFALSE(error$retryable))
+      same("question-file sends", tt_usage()$requests_sent - before, 0L)
+      error$kind
+    },
+    "31-usage-rank-blank-question" = kind_of(tt_rank(case$question$decide, strsplit(case$evidence, "\n")[[1]])$value),
     stop("no R call for this error case", call. = FALSE))
   same("kind", kind, case$expect$error$kind)
 }

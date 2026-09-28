@@ -13,6 +13,10 @@ use crate::public::options::{CallOptions, Stop};
 use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
+mod observation;
+use crate::public::results::observe_chunk;
+use observation::observe_row;
+
 /// The most entities one `relate` call takes.
 const MOST_ENTITIES: usize = 255;
 
@@ -235,7 +239,11 @@ impl Engine {
     ///
     /// Returns [`Error::Usage`] for a repeated entity or more than 255, before
     /// any send, and [`Error::Backend`] when the backend fails any question.
-    pub fn relate<I>(&self, ask: &Relate, entities: I) -> Result<Vec<Edge>, Error>
+    pub fn relate<I>(
+        &self,
+        ask: &Relate,
+        entities: I,
+    ) -> Result<crate::public::Call<Vec<Edge>>, Error>
     where
         I: IntoIterator<Item = Entity>,
     {
@@ -252,51 +260,69 @@ impl Engine {
         ask: &Relate,
         entities: I,
         options: CallOptions<'_>,
-    ) -> Result<Vec<Edge>, Error>
+    ) -> Result<crate::public::Call<Vec<Edge>>, Error>
     where
         I: IntoIterator<Item = Entity>,
     {
+        options.without_context("relate")?;
         let pairs: Vec<(String, String)> = entities
             .into_iter()
             .take(MOST_ENTITIES + 1)
             .map(|entity| (entity.name, entity.kind))
             .collect();
         let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
-        let stop = Stop::begin(options)?;
         if admitted.is_empty() {
-            return Ok(Vec::new());
+            let stop = Stop::begin(options)?;
+            return stop.run_call(0, |_| {
+                let edges = Vec::new();
+                observe_row(&stop, &edges);
+                Ok(edges)
+            });
         }
         let engine = self.for_model(ask.0.model.as_ref())?;
         let prepared =
             facade::relations(&admitted, &ask.0, engine.backend(), self.profile.as_ref())?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
-        let execution = stop.run(|cancel| {
-            engine
-                .relate(prepared, &admitted, threshold, cancel)
-                .map_err(Error::from)
-        })?;
-        if execution.failed > 0 {
-            return Err(Error::of(
-                ErrorKind::Backend,
-                format!(
-                    "the backend failed {} of {} relation questions",
-                    execution.failed,
-                    execution.logical.len()
-                ),
-            ));
-        }
-        execution
-            .edges
-            .into_iter()
-            .map(|edge| {
-                Ok(Edge {
-                    json: Written::of(&edge)?,
-                    source: Entity::of(&edge.source),
-                    target: Entity::of(&edge.target),
-                    probability: edge.probability,
-                    relation: edge.relation,
+        let stop = Stop::begin(options)?;
+        stop.run_call(1, |cancel| {
+            let mut positions = [0; 4];
+            let execution = engine
+                .relate_observed(prepared, &admitted, threshold, cancel, |plan, answered| {
+                    observe_chunk(
+                        &stop,
+                        engine.backend(),
+                        plan,
+                        answered,
+                        std::iter::repeat_n("relation", plan.questions().len()),
+                        &mut positions,
+                    )
                 })
-            })
-            .collect()
+                .map_err(Error::from)?;
+            if execution.failed > 0 {
+                return Err(Error::of(
+                    ErrorKind::Backend,
+                    format!(
+                        "the backend failed {} of {} relation questions",
+                        execution.failed,
+                        execution.logical.len()
+                    ),
+                ));
+            }
+            let edges = execution
+                .edges
+                .into_iter()
+                .map(|edge| {
+                    Ok(Edge {
+                        json: Written::of(&edge)?,
+                        source: Entity::of(&edge.source),
+                        target: Entity::of(&edge.target),
+                        probability: edge.probability,
+                        relation: edge.relation,
+                    })
+                })
+                .collect::<Result<Vec<_>, Error>>()?;
+            observe_row(&stop, &edges);
+            Ok(edges)
+        })
     }
 }

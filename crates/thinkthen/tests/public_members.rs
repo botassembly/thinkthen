@@ -18,6 +18,9 @@ use thinkthen::{
 
 const CASES: &str = include_str!("../../../conformance/cases.json");
 
+#[path = "public_members/choice_descriptions.rs"]
+mod choice_descriptions;
+
 thinkthen::choices! {
     /// The teams the runtime labels name.
     enum Team { Billing => "billing", Outage => "outage" }
@@ -38,6 +41,72 @@ fn loaded(text: &str) -> Question {
         LoadedQuestion::Banded(_) => None,
     }
     .expect("a file with no band")
+}
+
+#[test]
+fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
+    let case: serde_json::Value =
+        serde_json::from_str(include_str!("../../../conformance/calibration.json"))
+            .expect("shared calibration case");
+    const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
+    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
+    let question = loaded(&case["question"].to_string());
+    let refused = QuestionSet::builder()
+        .question("answer", question.clone())
+        .expect_err("a member cannot silently lose its saved profile");
+    assert_eq!(refused.kind(), ErrorKind::Usage);
+    assert_eq!(
+        refused.to_string(),
+        "a question set member takes no profile; name it on the set"
+    );
+    assert_eq!(listener.count(), 0);
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-profile-local")
+        .expect("key")
+        .profile_json(&case["runtime_profile"].to_string())
+        .expect("running profile")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let details = engine
+        .details(&question, case["evidence"].as_str().expect("evidence"))
+        .expect("details");
+    assert_eq!(listener.count(), 1);
+    assert_eq!(details.value().question_sha256(), case["question_sha256"]);
+    assert_eq!(details.value().profile_warning(), Some(("old", "new")));
+    let row: serde_json::Value =
+        serde_json::from_str(&details.value().to_json()).expect("result JSON");
+    assert_eq!(row["meta"]["question_sha256"], case["question_sha256"]);
+    assert_eq!(row["meta"]["profile_warning"], case["warning"]);
+    assert_eq!(row["meta"]["model"], case["model"]);
+}
+
+#[test]
+fn a_runtime_profile_limit_refuses_the_saved_question_before_sending() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
+    let question = loaded(r#"{"decide":"Is this a request?","profile":"old"}"#);
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-profile-local")
+        .expect("key")
+        .profile_json(
+            r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1}"#,
+        )
+        .expect("running profile")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let error = engine.details(&question, "two").expect_err("profile limit");
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert!(
+        error
+            .to_string()
+            .contains("allows at most 1 evidence bytes")
+    );
+    assert_eq!(listener.count(), 0);
 }
 
 fn message<T: std::fmt::Debug>(result: Result<T, thinkthen::Error>) -> (ErrorKind, String) {
@@ -97,19 +166,19 @@ fn details_over_runtime_labels_is_the_typed_call_with_one_send_each() {
         .details(&runtime, "The invoice is wrong.")
         .expect("details");
     assert_eq!(
-        details.value(),
+        details.value().value(),
         &Judgment::Choice(Some("billing".to_owned()))
     );
     assert_eq!(backend.count(), 1);
     let picked = engine
         .choose(&typed, "The invoice is wrong.")
         .expect("typed");
-    assert_eq!(picked, Some(Team::Billing));
+    assert_eq!(picked.into_value(), Some(Team::Billing));
     assert_eq!(backend.count(), 2);
     let bound = engine
         .details(&typed, "The invoice is wrong.")
         .expect("typed details");
-    assert_eq!(bound.requests(), details.requests());
+    assert_eq!(bound.value().requests(), details.value().requests());
 }
 
 #[test]
@@ -228,7 +297,7 @@ fn a_bulk_row_carries_the_yes_probability_details_reads() {
     assert_eq!(read, [0.3, 0.8]);
     for row in &rows {
         let details = engine.details(&question, row.input()).expect("details");
-        let Probabilities::YesNo { yes } = details.probabilities() else {
+        let Probabilities::YesNo { yes } = details.value().probabilities() else {
             panic!("a yes or no answer");
         };
         assert_eq!(*yes, row.probability());

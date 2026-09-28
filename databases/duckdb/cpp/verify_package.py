@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import platform
 import subprocess
 import sys
 import tempfile
@@ -12,9 +13,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "tools"))
 from harness import child_env  # noqa: E402  shared isolated host environment
 
+OLDER_KEYS = {
+    ("Darwin", "arm64"): "DUCKDB_OSX_ARM64_OLDER_CLI_SHA256=",
+    ("Darwin", "x86_64"): "DUCKDB_OSX_AMD64_OLDER_CLI_SHA256=",
+    ("Linux", "aarch64"): "DUCKDB_LINUX_ARM64_OLDER_CLI_SHA256=",
+}
+OLDER_KEY = OLDER_KEYS.get((platform.system(), platform.machine()), "DUCKDB_OLDER_CLI_SHA256=")
 OLDER_SHA256 = next(
     line.split("=", 1)[1] for line in (Path(__file__).resolve().parents[1] / "tools" / "version.env").read_text().splitlines()
-    if line.startswith("DUCKDB_OLDER_CLI_SHA256=")
+    if line.startswith(OLDER_KEY)
 )
 
 

@@ -14,25 +14,25 @@ The idea borrows from retrieval-augmented generation, or RAG. RAG finds the righ
 
 ## What Jev knows from memory
 
-We built Beatles Bench to find out what Jev knows. Jev is TypeSafe's model. A script set every right answer on the bench from Wikipedia and Wikidata. From memory, Jev gets 67% of the 1,313 Beatles questions right. The best vector search gets 38%. GLM-5.3 Flash, a large chat model, gets 96%. Its median answer takes 8.24 seconds, and Jev's takes 0.21. The [full results](https://github.com/botassembly/beatles-bench/blob/main/reports/results.md) give each run.
+We built Beatles Bench to find out what Jev knows. Jev is TypeSafe's model. A script set every right answer on the bench from Wikipedia and Wikidata. The [full results](https://github.com/botassembly/beatles-bench/blob/main/reports/results.md) give each run.
 
-Jev knows the famous facts. It misses the fine ones: a year, a first album, which of two songs runs longer. Ask it whether A Day in the Life is on Abbey Road. Jev says yes at 0.94. That is wrong.
+Jev knows the famous facts. It misses the fine ones: a year, a first album, which of two songs runs longer. Ask it whether A Day in the Life is on Abbey Road. With a band of 0.1 to 0.9, Jev still says yes. That is wrong.
 
 <!-- example: beatles/rad/1-memory -->
 
 ## What the facts fix
 
-Put the song's catalog entry in front of the question and ask again. The entry names Sgt. Pepper's Lonely Hearts Club Band as the first album. Jev now says no at 0.04.
+Put the song's catalog entry in front of the question and ask again. The entry names Sgt. Pepper's Lonely Hearts Club Band as the first album. Under the same band, Jev now says no.
 
 <!-- example: beatles/rad/2-context -->
 
-The bench asked the same way at scale. It drew 196 questions, mostly from Jev's misses, and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. From memory, Jev got 68 right. With the catalog, it got 184, in the [run of 2026-09-26](https://github.com/botassembly/beatles-bench#results).
+The bench asked the same way at scale. It drew 196 questions, mostly from Jev's misses, and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. From memory, Jev got 68 of 196 right. With the catalog, it got 184 of 196, in the [run of 2026-09-26](https://github.com/botassembly/beatles-bench#results). That sample leans on misses. The first run, of 2026-09-23, measured Jev at 68% from memory on all 1,075 questions the catalog covers. The [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md) weights that run back to the whole set and estimates about 97% with the catalog.
 
 The catalog broke an answer on "The Ballad of John and Yoko". Asked whether two Beatles share the lead, Jev said no from memory, and that is right. With the catalog, it said yes at 0.82, in the [open-book run](https://github.com/botassembly/beatles-bench/tree/main/results/runs/2026-09-26-thinkthen-jev-open-book). The line says Lennon. The title names two people. That may have fooled it.
 
 ## What it costs
 
-Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. In the [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md), the whole catalog of 306 songs took a median of 12,214 input tokens a call. Send the one entry the question is about.
+Context costs input tokens. In the [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md), the whole catalog of 306 songs took a median of 12,214 input tokens a call. Send the one entry the question is about.
 
 ## What I don't know
 

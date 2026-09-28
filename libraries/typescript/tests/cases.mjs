@@ -11,7 +11,6 @@ const CANONICAL = 'https://api.typesafe.ai/v1/systemone';
 /** Cases this surface cannot express, each with its reason. */
 const NOT_RUN = {
   '25-defect-fault': 'no input makes the engine panic; the Rust unit test covers the binding guard',
-  '30-local-question-file': 'this surface reads a question file only as an annotate set',
 };
 
 const digest = (url, request) => createHash('sha256').update(`systemone\n${url}\n${request}`).digest('hex');
@@ -43,6 +42,11 @@ function fault(tt, one, engine, folder) {
     case '23-cancelled-fault': return engine.decide(question, 'any text', { signal: AbortSignal.abort() });
     case '24-deadline-fault': return engine.decide(question, 'any text', { deadlineMs: 0 });
     case '29-usage-json-text': return engine.decide(question, one.evidence);
+    case '30-local-question-file': {
+      const file = join(folder, 'question.json');
+      writeFileSync(file, JSON.stringify(question));
+      return engine.decide(tt.questionFile(file), one.evidence);
+    }
     case '31-usage-rank-blank-question': return engine.rank(question.decide, one.evidence.split('\n').filter(Boolean));
     default: throw new Error(`no fault form for ${one.id}`);
   }
@@ -53,7 +57,15 @@ async function check(tt, one, origin, folder) {
   const engine = new tt.Engine({ baseUrl: base, cache: false });
   engine.base = base;
   if (one.expect.error) {
-    const kind = await Promise.resolve().then(() => fault(tt, one, engine, folder)).then(() => 'resolved', (error) => error.kind);
+    let retryable;
+    const kind = await Promise.resolve().then(() => fault(tt, one, engine, folder)).then(() => 'resolved', (error) => {
+      retryable = error.retryable;
+      return error.kind;
+    });
+    if (one.id === '30-local-question-file') {
+      same('named-file retryable', retryable, false);
+      same('named-file sends', engine.usage().requests_sent, 0);
+    }
     return same('kind', kind, one.expect.error.kind);
   }
   const success = one.expect.success;
@@ -63,8 +75,8 @@ async function check(tt, one, origin, folder) {
   const want = (at) => success.answers.find((answer) => answer.exchange === at);
   switch (success.kind) {
     case 'single': {
-      same('value', await engine[one.verb](one.question, texts[0]), success.answers[0].bare);
-      const details = await engine.details(one.question, texts[0]);
+      same('value', (await engine[one.verb](one.question, texts[0])).value, success.answers[0].bare);
+      const details = (await engine.details(one.question, texts[0])).value;
       const expected = success.answers[0].details;
       same('answer', details.answer, expected.answer);
       same('question_sha256', details.meta.question_sha256, expected.question_sha256);
@@ -72,6 +84,15 @@ async function check(tt, one, origin, folder) {
       same('requests', details.meta.requests, expected.requests.map((held) => renamed.get(held)));
       for (const name of ['usage', 'requests_sent', 'cached']) same(name, details.meta[name], expected[name]);
       same('url', details.meta.url, served);
+      if (one.id === '01-decide-yes-captured') {
+        const file = join(folder, 'captured-question.json');
+        writeFileSync(file, JSON.stringify(one.question));
+        const before = engine.usage().requests_sent;
+        const loaded = await engine.details(tt.questionFile(file), texts[0]);
+        same('named-file answer', loaded.value.answer, expected.answer);
+        same('named-file digest', loaded.value.meta.requests, expected.requests.map((held) => renamed.get(held)));
+        same('named-file sends', engine.usage().requests_sent - before, 1);
+      }
       if (success.counters) {
         const cached = new tt.Engine({ baseUrl: base, cache: join(folder, one.id) });
         for (let call = 0; call < success.counters.calls; call += 1) await cached.decide(one.question, texts[0]);
@@ -81,23 +102,27 @@ async function check(tt, one, origin, folder) {
       return undefined;
     }
     case 'decide_many':
-      return same('values', await engine.decide_many(one.question, texts), texts.map((_, at) => want(at).bare));
+      return same('values', (await engine.decide_many(one.question, texts, { batch: 1 })).value, texts.map((_, at) => want(at).bare));
     case 'filter':
-      return same('kept', await engine.filter(one.question, texts), success.operation.indexes.map((at) => texts[at]));
+      return same('kept', (await engine.filter(one.question, texts, { batch: 1 })).value, success.operation.indexes.map((at) => texts[at]));
     case 'rank': {
-      const ranked = await engine.rank(one.question, texts);
+      const ranked = (await engine.rank(one.question, texts, { batch: 1 })).value;
       return same('ranking', ranked.map(({ index, probability }) => ({ index, probability })), success.operation.ranking);
     }
     case 'annotate': {
       const records = one.record ? [JSON.stringify(one.record)] : texts;
-      const rows = await engine.annotate(one.question_set, records);
+      const call = await engine.annotate(one.question_set, records, { batch: 1 });
+      const rows = call.value;
+      if (one.id === '17-annotate-partial' && !call.details.some((row) => row.member && row.failed)) {
+        throw new Error('the failed annotate member has no distinct call detail');
+      }
       const expected = records.map(() => ({}));
       for (const answer of success.answers) expected[one.record ? 0 : answer.exchange][answer.name] = answer.bare;
       return same('rows', rows, expected);
     }
     case 'find': {
       const { find, none, units: listed } = one.question;
-      const found = await engine.find(find, listed, { none });
+      const found = (await engine.find(find, listed, { none })).value;
       const { selected, probabilities } = success.operation;
       const picked = probabilities.find((row) => row.index === selected);
       return same('found', found, selected === null ? null : { index: selected, unit: listed[selected], probability: picked.probability });
@@ -105,7 +130,7 @@ async function check(tt, one, origin, folder) {
     case 'recognize': {
       const { kinds, relations } = one.question.recognize;
       const asked = { kinds, threshold: one.question.threshold, relationThreshold: one.question.relation_threshold };
-      const found = await engine.recognize(one.text, relations ? { ...asked, relations } : asked);
+      const found = (await engine.recognize(one.text, relations ? { ...asked, relations } : asked)).value;
       const bare = success.answers[0].bare;
       const shaped = { entities: bare.entities.map((held) => units(one.text, held)) };
       if (bare.relations) shaped.relations = bare.relations.map((held) => ({ ...held, source: units(one.text, held.source), target: units(one.text, held.target) }));
@@ -114,11 +139,11 @@ async function check(tt, one, origin, folder) {
     }
     case 'relate': {
       const rules = one.question.relate.relations;
-      const edges = await engine.relate(one.entities, {
+      const edges = (await engine.relate(one.entities, {
         relations: rules.map(({ name, source, target }) => `${name}=${source}:${target}`),
         either: rules.filter((rule) => rule.either).map((rule) => rule.name),
         threshold: one.question.threshold,
-      });
+      })).value;
       return same('edges', edges, success.answers[0].bare);
     }
     default:

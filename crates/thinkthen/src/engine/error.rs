@@ -83,10 +83,22 @@ pub(crate) enum Error {
         bytes: usize,
         limit: usize,
     },
+    /// A nonempty recognition relation plan admitted too many distinct names.
+    RecognizeRelationNames {
+        count: usize,
+        limit: usize,
+    },
+    /// A nonempty recognition relation plan would ask too many pair questions.
+    /// `None` means the checked total overflowed.
+    RecognizeRelationQuestions {
+        names: usize,
+        count: Option<usize>,
+        limit: usize,
+    },
 }
 
 /// The statuses a backend is asked again after.
-const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
+const RETRIED: [u16; 11] = [429, 500, 502, 503, 504, 520, 521, 522, 523, 524, 529];
 
 pub(crate) fn retried_status(status: u16) -> bool {
     RETRIED.contains(&status)
@@ -148,7 +160,9 @@ impl Error {
             | Self::NoKey(_)
             | Self::WidthActive(_)
             | Self::RecognizeKinds
-            | Self::TextTooLong { .. } => Kind::Usage,
+            | Self::TextTooLong { .. }
+            | Self::RecognizeRelationNames { .. }
+            | Self::RecognizeRelationQuestions { .. } => Kind::Usage,
             Self::Cancelled => Kind::Cancelled,
             Self::Deadline(_) => Kind::Deadline,
         }
@@ -160,6 +174,27 @@ impl Error {
     pub(crate) fn retryable(&self) -> bool {
         matches!(self, Self::Status(status) if retried_status(*status))
     }
+}
+
+/// Numeric relation refusals shared by command and public error envelopes.
+pub(crate) fn relation_names_message(count: usize, limit: usize) -> String {
+    format!(
+        "{count} distinct relation-eligible names exceed the limit of {limit}; reduce names or split the input"
+    )
+}
+
+pub(crate) fn relation_questions_message(
+    names: usize,
+    count: Option<usize>,
+    limit: usize,
+) -> String {
+    let asked = count.map_or_else(
+        || format!("at least {}", limit + 1),
+        |count| count.to_string(),
+    );
+    format!(
+        "{names} distinct relation-eligible names would ask {asked} relation questions, over the limit of {limit}; reduce names or relation rules, or split the input"
+    )
 }
 
 #[allow(

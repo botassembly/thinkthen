@@ -212,6 +212,18 @@ pub unsafe extern "C" fn thinkthen_error_message(engine: *const Door) -> *const 
     guard(held, NO_MESSAGE.as_ptr(), || failures::message(held))
 }
 
+/// Borrow the last failure's call facts on this thread and engine, or null.
+///
+/// # Safety
+///
+/// `engine` is null or a live engine.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_error_facts_json(engine: *const Door) -> *const c_char {
+    // SAFETY: the caller passes null or a live engine.
+    let held = unsafe { held(engine) };
+    guard(held, std::ptr::null(), || failures::facts(held))
+}
+
 /// 1 when the calling thread's last failure here could pass later.
 ///
 /// # Safety
@@ -278,6 +290,35 @@ pub unsafe extern "C" fn thinkthen_cancel_token_free(token: *mut CancelToken) {
 plain!(thinkthen_decide => thinkthen_decide_opts(
     engine: *const Door, question_json: *const c_char, text: *const c_char, text_len: usize;
     out: *mut Judgment) -> i32);
+
+/// Read one named question into an owned validated JSON string.
+///
+/// # Safety
+///
+/// Every pointer follows the header's argument and lifetime rules.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_question_file(
+    engine: *const Door,
+    path: *const c_char,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+) -> i32 {
+    // SAFETY: checked pointers are read or written only under the header rules.
+    unsafe {
+        typed(
+            engine,
+            |_| {
+                door::outs(out, out_len)?;
+                let path = string(path, "question file path")?;
+                if path.is_empty() {
+                    return Err(Failure::usage("an empty question file path"));
+                }
+                door::question_file(path)
+            },
+            |held, json| hand_over(held, json, out, out_len),
+        )
+    }
+}
 
 /// One yes-or-no question over one text; the judgment lands in `out`.
 ///
@@ -429,7 +470,7 @@ pub unsafe extern "C" fn thinkthen_recognize_opts(
                 let evidence = self::text(text, text_len)?;
                 door::recognize(&held.engine, spec, evidence, options)
             },
-            |held, json| hand_over(held, json, out, out_len),
+            |held, (json, _facts)| hand_over(held, json, out, out_len),
         )
     }
 }
@@ -468,7 +509,7 @@ pub unsafe extern "C" fn thinkthen_relate_opts(
                 let entities = door::entities(&self::texts(texts, lengths, count)?)?;
                 door::relate(&held.engine, spec, entities, options)
             },
-            |held, json| hand_over(held, json, out, out_len),
+            |held, (json, _facts)| hand_over(held, json, out, out_len),
         )
     }
 }

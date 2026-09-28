@@ -26,12 +26,18 @@ Zero is a spent deadline: the call sends nothing and raises
 
 import json
 import os
+from typing import Annotated as _Annotated, get_origin as _get_origin
 
 from . import _thinkthen
+from ._labels import normalize as _labels
 from ._thinkthen import (
     BackendError,
     Cancelled,
     CancelToken,
+    Call,
+    Completion,
+    CompletionReceipt,
+    Facts,
     DeadlineError,
     DefectError,
     Edge,
@@ -47,10 +53,10 @@ from ._thinkthen import (
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
-    "Edge", "Engine", "Entity", "LocalError", "Question", "Recognized",
+    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Facts", "LocalError", "Question", "Recognized",
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
-    "annotate", "choose", "decide", "decide_many", "details", "filter",
-    "find", "question", "rank", "recognize", "relate", "score", "tag",
+    "annotate", "choose", "choose_many", "decide", "decide_many", "details", "filter",
+    "find", "question", "rank", "recognize", "relate", "score", "score_many", "tag", "tag_many",
     "usage",
 ]
 
@@ -61,7 +67,7 @@ _PARTS = {"threshold": "threshold", "options": "options", "labels": "labels",
 
 def question(*, decide=None, choose=None, score=None, tag=None, threshold=None,
              options=None, labels=None, levels=None, true_=None, false_=None,
-             model=None, file=None):
+             model=None, file=None, descriptions=None):
     """Build one question from its parts, or read it from ``file``.
 
     Give exactly one of ``decide``, ``choose``, ``score``, or ``tag``. A cut
@@ -78,14 +84,19 @@ def question(*, decide=None, choose=None, score=None, tag=None, threshold=None,
         threshold=threshold, options=options, labels=labels, levels=levels,
         true_=true_, false_=false_, model=model).items() if value is not None}
     if file is not None:
-        if verbs or given:
+        if verbs or given or descriptions is not None:
             raise TypeError("question(file=...) takes nothing beside the file")
         return Question._load(os.fspath(file))
     if not verbs:
         raise TypeError("question() takes one of decide, choose, score, or tag")
     body = {verbs[0][0]: verbs[0][1]}
     for key, value in given.items():
-        body[_PARTS[key]] = _threshold(value) if key == "threshold" else value
+        body[_PARTS[key]] = (_threshold(value) if key == "threshold" else
+                             _labels(value, descriptions, bare_level_names=key == "levels")
+                             if key in ("options", "labels", "levels") else
+                             value)
+    if descriptions is not None and not any(key in given for key in ("options", "labels", "levels")):
+        raise UsageError("descriptions= needs a label set")
     return Question._from_json(json.dumps(body))
 
 
@@ -113,6 +124,17 @@ def _rebuilt(value, answer):
     if isinstance(answer, _thinkthen._Arrow):
         return type(value)(answer)
     return answer
+
+
+def _mapped(call, convert):
+    """Rebuild an old value inside its completed account."""
+    try:
+        return call._with_value(convert(call.value))
+    except Exception as source:
+        error = LocalError("the completed result could not be rebuilt")
+        error.kind, error.retryable = "local", False
+        error.facts, error.details = call.facts, call.details
+        raise error from source
 
 
 _NULLS = "the column holds nulls; the engine needs text, so drop or fill them first"
@@ -166,9 +188,11 @@ def _column(call, verb, asked, value, deadline, token):
     index and name, through its own class (decision 3)."""
     kind = _pandas(value)
     if kind is None:
-        return _rebuilt(value, call(verb, asked, value, deadline, token))
-    values, dtype = call(verb, asked, _marked(value, kind), deadline, token)
-    return type(value)(values, index=value.index, name=value.name, dtype=dtype)
+        return _mapped(call(verb, asked, value, deadline, token),
+                       lambda answer: _rebuilt(value, answer))
+    result = call(verb, asked, _marked(value, kind), deadline, token)
+    return _mapped(result, lambda answer: type(value)(answer[0], index=value.index,
+                                                       name=value.name, dtype=answer[1]))
 
 
 def _on(frame, on, new):
@@ -207,6 +231,15 @@ def _ordering(value, verb):
 
 
 def _spec(maker, ask):
+    if maker is _thinkthen._QuestionSet and _get_origin(ask) is _Annotated:
+        raise UsageError("a question-set model takes no root Field description")
+    if not isinstance(ask, type) and any(base.__module__.startswith("pydantic.")
+                                         for base in type(ask).__mro__):
+        raise UsageError("a question set takes a Pydantic model class, not an instance")
+    if maker is _thinkthen._QuestionSet and isinstance(ask, type) and any(
+            base.__module__.startswith("pydantic.") for base in ask.__mro__):
+        from . import pydantic as adapter
+        ask = adapter.question_set(ask)
     if isinstance(ask, dict):
         return maker._from_json(json.dumps(ask))
     return maker._load(os.fspath(ask))
@@ -222,7 +255,7 @@ def _rules(relations, either):
 class Engine:
     """An engine with its own settings, each keyword-only.
 
-    ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight),
+    ``base_url``, ``model``, ``throttle`` (1 to 32 requests in flight), ``batch``,
     ``max_requests``, ``max_request_bytes``, ``cache`` (a folder, ``False`` for none, or ``True``
     for the default folder), ``timeout``, ``max_retries``, ``record``, ``replay``, and ``profile``. An omitted setting comes
     from the environment. The throttle is one per loaded copy of this
@@ -236,10 +269,12 @@ class Engine:
     __slots__ = ("_engine",)
 
     def __init__(self, *, base_url=None, model=None, throttle=None,
+                 batch=None,
                  max_requests=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None,
                  record=None, replay=None, profile=None):
         self._engine = _thinkthen._Engine(
             base_url=base_url, model=model, throttle=throttle,
+            batch=batch,
             max_requests=max_requests, max_request_bytes=max_request_bytes,
             cache=cache, timeout=timeout,
             max_retries=max_retries, record=record, replay=replay, profile=profile)
@@ -247,49 +282,83 @@ class Engine:
     def __repr__(self):
         return "Engine()"
 
-    def decide(self, question, text, *, deadline=None, token=None):
+    def decide(self, question, text, *, batch=None, context=None, deadline=None, token=None):
         """``True``, ``False``, or ``None`` when the rule says "not sure"."""
-        return _column(self._engine.ask, "decide", _asked(question, "decide"), text,
+        return _column(lambda verb, asked, value, due, held:
+                       self._engine.ask(verb, asked, value, due, held, batch, context),
+                       "decide", _asked(question, "decide"), text,
                        deadline, token)
 
-    def decide_many(self, question, records, *, deadline=None, token=None):
+    def decide_many(self, question, records, *, batch=None, context=None,
+                    deadline=None, token=None):
         """One ``decide`` answer per record, in input order."""
-        return _column(self._engine.many, "decide_many", _asked(question, "decide_many"),
-                       records, deadline, token)
+        asked = _asked(question, "decide_many")
+        if _pandas(records) == "Series" or hasattr(records, "__arrow_c_stream__"):
+            return _column(lambda verb, ask, value, due, held:
+                           self._engine.many(verb, ask, value, batch, context, due, held),
+                           "decide_many", asked, records, deadline, token)
+        return self._engine.many("decide_many", asked, records, batch, context, deadline, token)
 
-    def choose(self, question, text, *, options=None, deadline=None, token=None):
+    def choose(self, question, text, *, options=None, descriptions=None, batch=None, context=None,
+               deadline=None, token=None):
         """The option picked, or ``None`` when the rule says "not sure"."""
-        return _column(self._engine.ask, "choose", _asked(question, "choose", options=options),
+        return _column(lambda verb, asked, value, due, held:
+                       self._engine.ask(verb, asked, value, due, held, batch, context),
+                       "choose", _asked(question, "choose", options=options, descriptions=descriptions),
                        text, deadline, token)
 
-    def score(self, question, text, *, levels=None, deadline=None, token=None):
+    def score(self, question, text, *, levels=None, descriptions=None, batch=None, context=None,
+              deadline=None, token=None):
         """The position on the question's levels, from 0 to K-1."""
-        return _column(self._engine.ask, "score", _asked(question, "score", levels=levels),
+        return _column(lambda verb, asked, value, due, held:
+                       self._engine.ask(verb, asked, value, due, held, batch, context),
+                       "score", _asked(question, "score", levels=levels, descriptions=descriptions),
                        text, deadline, token)
 
-    def tag(self, question, text, *, labels=None, deadline=None, token=None):
+    def tag(self, question, text, *, labels=None, descriptions=None, batch=None, context=None,
+            deadline=None, token=None):
         """The labels that reach the cut."""
-        return _column(self._engine.ask, "tag", _asked(question, "tag", labels=labels),
+        return _column(lambda verb, asked, value, due, held:
+                       self._engine.ask(verb, asked, value, due, held, batch, context),
+                       "tag", _asked(question, "tag", labels=labels, descriptions=descriptions),
                        text, deadline, token)
+
+    def choose_many(self, question, records, *, options=None, descriptions=None, batch=None, context=None,
+                    deadline=None, token=None):
+        return self._engine.label_many("choose", _asked(question, "choose", options=options, descriptions=descriptions),
+                                       records, batch, context, deadline, token)
+
+    def score_many(self, question, records, *, levels=None, descriptions=None, batch=None, context=None,
+                   deadline=None, token=None):
+        return self._engine.label_many("score", _asked(question, "score", levels=levels, descriptions=descriptions),
+                                       records, batch, context, deadline, token)
+
+    def tag_many(self, question, records, *, labels=None, descriptions=None, batch=None, context=None,
+                 deadline=None, token=None):
+        return self._engine.label_many("tag", _asked(question, "tag", labels=labels, descriptions=descriptions),
+                                       records, batch, context, deadline, token)
 
     def details(self, question, text, *, deadline=None, token=None):
         """The command's ``--details`` document, as a ``dict``."""
-        return json.loads(self._engine.ask("details", _asked(question, "details"), text,
-                                            deadline, token))
+        return _mapped(self._engine.ask("details", _asked(question, "details"), text,
+                                        deadline, token), json.loads)
 
-    def filter(self, question, records, *, deadline=None, token=None):
+    def filter(self, question, records, *, batch=None, context=None, deadline=None, token=None):
         """The records the ``decide`` question passes, in input order."""
-        return self._engine.many("filter", _asked(question, "filter"), records, deadline, token)
+        return self._engine.many("filter", _asked(question, "filter"), records,
+                                 batch, context, deadline, token)
 
-    def rank(self, question, records, *, top=None, deadline=None, token=None):
+    def rank(self, question, records, *, top=None, batch=None, context=None,
+             deadline=None, token=None):
         """Records most likely first, as ``{"index", "record", "probability"}``.
 
         ``question`` is the question text. ``top`` keeps the first entries.
         """
-        ranked = self._engine.order("rank", _ordering(question, "rank"), records, deadline, token)
-        ordered = [{"index": index, "record": record, "probability": probability}
-                   for index, record, probability in ranked]
-        return ordered if top is None else ordered[:top]
+        ranked = self._engine.order("rank", _ordering(question, "rank"), records,
+                                     batch, context, deadline, token)
+        return _mapped(ranked, lambda rows: [{"index": index, "record": record,
+                                               "probability": probability}
+                                              for index, record, probability in rows][:top])
 
     def find(self, question, units, *, none=False, deadline=None, token=None):
         """The unit that answers the question best, as ``{"index", "unit",
@@ -300,13 +369,16 @@ class Engine:
         asked = _ordering(question, "find")
         if none:
             asked = asked._offering_none()
-        found = self._engine.order("find", asked, units, deadline, token)
-        if not found:
-            return None
-        [(index, unit, probability)] = found
-        return {"index": index, "unit": unit, "probability": probability}
+        found = self._engine.order("find", asked, units, None, None, deadline, token)
+        def picked(rows):
+            if not rows:
+                return None
+            [(index, unit, probability)] = rows
+            return {"index": index, "unit": unit, "probability": probability}
+        return _mapped(found, picked)
 
-    def annotate(self, questions, records, *, on=None, deadline=None, token=None):
+    def annotate(self, questions, records, *, on=None, batch=None, context=None,
+                 deadline=None, token=None):
         """Ask every question in a named set of every record.
 
         ``questions`` is a question-set file path or the file's ``dict``.
@@ -318,24 +390,30 @@ class Engine:
         holds a question-to-failure map for partial rows and null otherwise.
         A pandas frame keeps its index. A question named as a column is refused first.
         """
+        if context is not None:
+            raise UsageError("annotate does not take a shared context")
         asked = _spec(_thinkthen._QuestionSet, questions)
         if on is None:
-            return self._engine.annotate(asked, records, deadline, token)
+            return self._engine.annotate(asked, records, batch, deadline, token)
         if "failed" in asked._names():
             raise UsageError("the question name failed is reserved for frame failures")
         if _pandas(records) == "DataFrame":
             column = _on(records, on, (*asked._names(), "failed"))
             answers = _thinkthen._annotate_column(self._engine, asked, _marked(column, "Series"),
-                                                  deadline, token)
-            out = records.assign()
-            for name, (values, dtype) in answers.items():
-                out[name] = type(column)(values, index=records.index, dtype=dtype)
-            return out
-        return type(records)(_Stream(_thinkthen._annotate_frame(self._engine, asked, records,
-                                                                on, deadline, token)))
+                                                  batch, deadline, token)
+            def rebuild(columns):
+                out = records.assign()
+                for name, (values, dtype) in columns.items():
+                    out[name] = type(column)(values, index=records.index, dtype=dtype)
+                return out
+            return _mapped(answers, rebuild)
+        result = _thinkthen._annotate_frame(self._engine, asked, records, on,
+                                            batch, deadline, token)
+        return _mapped(result, lambda value: type(records)(_Stream(value)))
 
     def recognize(self, text, ask=None, *, kinds=None, relations=None, either=None,
-                  threshold=None, relation_threshold=None, on=None, deadline=None, token=None):
+                  threshold=None, relation_threshold=None, on=None, deadline=None, token=None,
+                  descriptions=None):
         """Find every name in a text and say what kind it is.
 
         ``kinds`` lists kind words, or maps each to a description.
@@ -354,19 +432,33 @@ class Engine:
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
         if ask is not None:
+            if descriptions is not None:
+                raise UsageError("descriptions= takes kinds=, not a recognize ask")
             spec = _spec(_thinkthen._Recognize, ask)
         else:
-            named = kinds.items() if isinstance(kinds, dict) else [(k, None) for k in kinds or ()]
-            spec = _thinkthen._Recognize._build(list(named), _rules(relations, either),
-                                               threshold, relation_threshold)
+            named = _labels(kinds or [], descriptions)
+            if not isinstance(named, dict):
+                named = {name: None for name in named}
+            body = {"version": 1, "recognize": {"kinds": named}}
+            rules = _rules(relations, either)
+            if rules:
+                body["recognize"]["relations"] = [
+                    {"name": name, "source": source, "target": target, "either": both}
+                    for name, source, target, both in rules]
+            if threshold is not None:
+                body["threshold"] = threshold
+            if relation_threshold is not None:
+                body["relation_threshold"] = relation_threshold
+            spec = _thinkthen._Recognize._from_json(json.dumps(body))
         if on is not None and _pandas(text) == "DataFrame":
             column = _on(text, on, ["names"])
             found = _thinkthen._recognize_column(self._engine, spec, _marked(column, "Series"),
                                                  deadline, token)
-            return text.assign(names=type(column)(found, index=text.index, dtype="object"))
+            return _mapped(found, lambda value: text.assign(
+                names=type(column)(value, index=text.index, dtype="object")))
         if on is not None:
-            return type(text)(_Stream(_thinkthen._recognize_frame(self._engine, spec, text, on,
-                                                                  deadline, token)))
+            result = _thinkthen._recognize_frame(self._engine, spec, text, on, deadline, token)
+            return _mapped(result, lambda value: type(text)(_Stream(value)))
         return self._engine.recognize(spec, text, deadline, token)
 
     def relate(self, entities, ask=None, *, relations=None, either=None, threshold=None,
@@ -402,51 +494,80 @@ def _engine():
     return _process
 
 
-def decide(question, text, *, deadline=None, token=None):
-    return _engine().decide(question, text, deadline=deadline, token=token)
+def decide(question, text, *, batch=None, context=None, deadline=None, token=None):
+    return _engine().decide(question, text, batch=batch, context=context,
+                            deadline=deadline, token=token)
 
 
-def decide_many(question, records, *, deadline=None, token=None):
-    return _engine().decide_many(question, records, deadline=deadline, token=token)
+def decide_many(question, records, *, batch=None, context=None, deadline=None, token=None):
+    return _engine().decide_many(question, records, batch=batch, context=context,
+                                  deadline=deadline, token=token)
 
 
-def choose(question, text, *, options=None, deadline=None, token=None):
-    return _engine().choose(question, text, options=options, deadline=deadline, token=token)
+def choose_many(question, records, *, options=None, descriptions=None, batch=None, context=None,
+                deadline=None, token=None):
+    return _engine().choose_many(question, records, options=options, descriptions=descriptions, batch=batch,
+                                  context=context, deadline=deadline, token=token)
 
 
-def score(question, text, *, levels=None, deadline=None, token=None):
-    return _engine().score(question, text, levels=levels, deadline=deadline, token=token)
+def score_many(question, records, *, levels=None, descriptions=None, batch=None, context=None,
+               deadline=None, token=None):
+    return _engine().score_many(question, records, levels=levels, descriptions=descriptions, batch=batch,
+                                 context=context, deadline=deadline, token=token)
 
 
-def tag(question, text, *, labels=None, deadline=None, token=None):
-    return _engine().tag(question, text, labels=labels, deadline=deadline, token=token)
+def tag_many(question, records, *, labels=None, descriptions=None, batch=None, context=None,
+             deadline=None, token=None):
+    return _engine().tag_many(question, records, labels=labels, descriptions=descriptions, batch=batch,
+                               context=context, deadline=deadline, token=token)
+
+
+def choose(question, text, *, options=None, descriptions=None, batch=None, context=None, deadline=None, token=None):
+    return _engine().choose(question, text, options=options, descriptions=descriptions, batch=batch, context=context,
+                            deadline=deadline, token=token)
+
+
+def score(question, text, *, levels=None, descriptions=None, batch=None, context=None, deadline=None, token=None):
+    return _engine().score(question, text, levels=levels, descriptions=descriptions, batch=batch, context=context,
+                           deadline=deadline, token=token)
+
+
+def tag(question, text, *, labels=None, descriptions=None, batch=None, context=None, deadline=None, token=None):
+    return _engine().tag(question, text, labels=labels, descriptions=descriptions, batch=batch, context=context,
+                         deadline=deadline, token=token)
 
 
 def details(question, text, *, deadline=None, token=None):
     return _engine().details(question, text, deadline=deadline, token=token)
 
 
-def filter(question, records, *, deadline=None, token=None):
-    return _engine().filter(question, records, deadline=deadline, token=token)
+def filter(question, records, *, batch=None, context=None, deadline=None, token=None):
+    return _engine().filter(question, records, batch=batch, context=context,
+                            deadline=deadline, token=token)
 
 
-def rank(question, records, *, top=None, deadline=None, token=None):
-    return _engine().rank(question, records, top=top, deadline=deadline, token=token)
+def rank(question, records, *, top=None, batch=None, context=None, deadline=None, token=None):
+    return _engine().rank(question, records, top=top, batch=batch, context=context,
+                          deadline=deadline, token=token)
 
 
 def find(question, units, *, none=False, deadline=None, token=None):
     return _engine().find(question, units, none=none, deadline=deadline, token=token)
 
 
-def annotate(questions, records, *, on=None, deadline=None, token=None):
-    return _engine().annotate(questions, records, on=on, deadline=deadline, token=token)
+def annotate(questions, records, *, on=None, batch=None, context=None,
+             deadline=None, token=None):
+    return _engine().annotate(questions, records, on=on, batch=batch, context=context,
+                              deadline=deadline, token=token)
 
 
 def recognize(text, ask=None, *, kinds=None, relations=None, either=None, threshold=None,
-              relation_threshold=None, on=None, deadline=None, token=None):
+              relation_threshold=None, on=None, deadline=None, token=None,
+              descriptions=None):
     return _engine().recognize(text, ask, kinds=kinds, relations=relations, either=either,
                                threshold=threshold, relation_threshold=relation_threshold,
-                               on=on, deadline=deadline, token=token)
+                               on=on, deadline=deadline, token=token,
+                               descriptions=descriptions)
 
 
 def relate(entities, ask=None, *, relations=None, either=None, threshold=None,
@@ -460,7 +581,8 @@ def usage():
     return _engine().usage()
 
 
-for _name in ("decide", "decide_many", "choose", "score", "tag", "details", "filter",
+for _name in ("decide", "decide_many", "choose", "choose_many", "score", "score_many",
+              "tag", "tag_many", "details", "filter",
               "rank", "find", "annotate", "recognize", "relate"):
     globals()[_name].__doc__ = getattr(Engine, _name).__doc__
 del _name

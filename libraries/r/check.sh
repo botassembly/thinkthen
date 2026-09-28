@@ -52,7 +52,7 @@ held=$(awk '/^ *\/\//{ next } /fn [a-z_]+\(/ { match($0, /fn [a-z_]+/); f = subs
   END { print n + 0, (at == run) }' $rust/src/*.rs)
 [ "$held" = "1 1" ] || { echo "R1-13: expected one R_CheckUserInterrupt() call, inside the R_ToplevelExec callback ($held)" >&2; exit 1; }
 # R1-31: one panic guard.
-[ "$(grep -c 'catch_unwind(' $rust/src/*.rs | awk -F: '{ n += $2 } END { print n }')" = 1 ] ||
+[ "$(rg -n 'catch_unwind\(' "$rust/src" --glob '*.rs' | wc -l)" = 1 ] ||
   { echo "R1-31: expected exactly one catch_unwind site" >&2; exit 1; }
 
 echo "== r: the Rust half"
@@ -89,7 +89,7 @@ RUSTUP_TOOLCHAIN=$pinned CARGO_HOME="$scratch/cargo" CARGO_NET_OFFLINE=true R CM
   { cat "$scratch/tarball.log" >&2; exit 1; }
 cat >"$scratch/answer.R" <<'EOF'
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
-check("the tarball install answers", isTRUE(tt_decide("Is this a complaint?", "I want a refund")))
+check("the tarball install answers", isTRUE(tt_decide("Is this a complaint?", "I want a refund")$value))
 finish("tarball", 1L)
 EOF
 R_LIBS="$scratch/lib:$libs" bash tests/with-backend.sh "$backend" "$scratch/answer.R"

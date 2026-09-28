@@ -3,6 +3,17 @@
 # reports "not run" with the fetch command and exits 77 (R6-2).
 
 TOOLCHAIN=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/postgresql
+PG_HOST=$(uname -s)
+if [ "$PG_HOST" = Darwin ]; then
+	. ./runtime-darwin.env
+	if command -v brew >/dev/null; then
+		PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@16)/bin/pg_config}
+		PATH=${PG_CONFIG%/pg_config}:$PATH
+		export PATH
+	else
+		PG_CONFIG=${PG_CONFIG:-/nonexistent/pg_config}
+	fi
+fi
 PINNED=$(cut -d' ' -f1 runtime.sha256)
 PACKAGE=$TOOLCHAIN/$(awk '{print $2}' runtime.sha256)
 VERSION=16.15-0ubuntu0.24.04.1
@@ -11,12 +22,39 @@ FAKE_KEY=tt-loopback-fake
 
 not_run() {
 	echo "not run: $1"
-	echo "fetch: mkdir -p $TOOLCHAIN && cd $TOOLCHAIN && curl -fLO $(cat runtime.url)"
+	if [ "$PG_HOST" = Darwin ]; then
+		echo "setup: install the pinned Homebrew postgresql@16 bottle named in runtime-darwin.env"
+	else
+		echo "fetch: mkdir -p $TOOLCHAIN && cd $TOOLCHAIN && curl -fLO $(cat runtime.url)"
+	fi
 	exit 77
 }
 
 # Check the pinned package, extract it once, and match the headers' version.
 runtime_ready() {
+	if [ "$PG_HOST" = Darwin ]; then
+		for tool in brew cargo-pgrx psql python3 shasum; do
+			command -v "$tool" >/dev/null || not_run "$tool is missing"
+		done
+		[ -x "$PG_CONFIG" ] || not_run "the pinned pg_config at $PG_CONFIG is missing"
+		[ "$("$PG_CONFIG" --version)" = "PostgreSQL $PG_DARWIN_VERSION" ] || not_run "pg_config is not PostgreSQL $PG_DARWIN_VERSION"
+		[ "$(brew list --versions postgresql@16 | awk '{print $2}')" = "$PG_DARWIN_VERSION" ] || not_run "the Homebrew server is not $PG_DARWIN_VERSION"
+		case $(uname -m) in arm64) tag=arm64_sequoia; bottle=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; bottle=$PG_BOTTLE_X86_64_SONOMA ;; *) not_run "no PostgreSQL bottle for $(uname -m)" ;; esac
+		actual=$(brew info --json=v2 postgresql@16 | python3 -c 'import json,sys; p=json.load(sys.stdin)["formulae"][0]["bottle"]["stable"]["files"][sys.argv[1]]["sha256"]; print(p)' "$tag")
+		[ "$actual" = "$bottle" ] || not_run "the Homebrew bottle pin changed: $actual"
+		archive=$(brew --cache --bottle-tag="$tag" postgresql@16)
+		[ -f "$archive" ] || not_run "the $tag bottle is not cached; brew fetch --bottle-tag=$tag postgresql@16"
+		[ "$(shasum -a 256 "$archive" | awk '{print $1}')" = "$bottle" ] || not_run "the cached $tag bottle differs from its pin"
+		[ "$(cargo pgrx --version)" = 'cargo-pgrx 0.17.0' ] || not_run 'cargo-pgrx is not 0.17.0'
+		clang=$(xcrun --find clang 2>/dev/null) || not_run 'the Xcode clang is missing'
+		LIBCLANG_PATH=${clang%/bin/clang}/lib
+		[ -f "$LIBCLANG_PATH/libclang.dylib" ] || not_run "libclang.dylib is missing from $LIBCLANG_PATH"
+		export LIBCLANG_PATH
+		EXTRACTED=$(brew --prefix postgresql@16)
+		BIN=$EXTRACTED/bin
+		RUNTIME_EXTENSION_DIR=$("$PG_CONFIG" --sharedir)/extension
+		return
+	fi
 	for tool in dpkg-deb cargo-pgrx psql python3; do
 		command -v "$tool" >/dev/null || not_run "$tool is missing"
 	done
@@ -57,10 +95,21 @@ BIN=.runtime/tree/usr/lib/postgresql/16/bin
 # Copy the extracted tree, install the module from $1 and the extension files from $2,
 # and make a cluster.
 runtime_install() {
+	if [ "$PG_HOST" = Darwin ]; then
+		RUNTIME_LIBRARY_DIR=$("$PG_CONFIG" --pkglibdir)
+		[ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.so" ] && [ ! -e "$RUNTIME_LIBRARY_DIR/thinkthen.dylib" ] && [ ! -e "$RUNTIME_EXTENSION_DIR/thinkthen.control" ] || {
+			echo 'runtime.sh: a thinkthen extension already occupies the Homebrew PostgreSQL keg' >&2; return 1;
+		}
+		cp "$2"/thinkthen* "$RUNTIME_EXTENSION_DIR/"
+		cp "$1"/thinkthen.* "$RUNTIME_LIBRARY_DIR/"
+		BIN=$EXTRACTED/bin
+	else
 	rm -rf .runtime/tree && mkdir -p .runtime/tree && cp -a "$EXTRACTED/." .runtime/tree/
 	cp "$2"/thinkthen* .runtime/tree/usr/share/postgresql/16/extension/
 	cp "$1"/thinkthen.* .runtime/tree/usr/lib/postgresql/16/lib/
 	BIN=$(pwd)/.runtime/tree/usr/lib/postgresql/16/bin
+	RUNTIME_EXTENSION_DIR=$(pwd)/.runtime/tree/usr/share/postgresql/16/extension
+	fi
 	sh "$LIMIT" 60 "$BIN/initdb" -D "$DATA" --auth=trust -U postgres >"$RUN/initdb.log" 2>&1
 	printf "listen_addresses = ''\nunix_socket_directories = '%s'\n" "$SOCK" >>"$DATA/postgresql.conf"
 	cp "$DATA/postgresql.conf" "$RUN/postgresql.conf.base"
@@ -84,8 +133,14 @@ pg_start() {
 	env -u THINKTHEN_API_KEY THINKTHEN_API_KEY=$FAKE_KEY THINKTHEN_BASE_URL="$url" THINKTHEN_CACHE="$cache" \
 		HOME="$SCRATCH" XDG_CACHE_HOME="$SCRATCH/.cache" XDG_CONFIG_HOME="$SCRATCH/.config" \
 		sh "$LIMIT" 30 "$BIN/pg_ctl" -D "$DATA" -l "$LOG" -w -t 10 start >/dev/null || return 1
-	key=$(tr '\0' '\n' <"/proc/$(head -1 "$DATA/postmaster.pid")/environ" | sed -n 's/^THINKTHEN_API_KEY=//p')
-	[ "$key" = "$FAKE_KEY" ] || { echo "the postmaster's key is not the loopback fake" >&2; return 1; }
+	if [ "$PG_HOST" = Darwin ]; then
+		ps eww -p "$(head -1 "$DATA/postmaster.pid")" -o command= | grep -Fq "THINKTHEN_API_KEY=$FAKE_KEY" || {
+			echo "the postmaster's key is not the loopback fake" >&2; return 1;
+		}
+	else
+		key=$(tr '\0' '\n' <"/proc/$(head -1 "$DATA/postmaster.pid")/environ" | sed -n 's/^THINKTHEN_API_KEY=//p')
+		[ "$key" = "$FAKE_KEY" ] || { echo "the postmaster's key is not the loopback fake" >&2; return 1; }
+	fi
 }
 
 pg_stop() {
@@ -120,6 +175,14 @@ backend_start() {
 bcount() {
 	lines=$(wc -l <"$RUN/b.out")
 	echo count >&7
+	for _ in $(seq 200); do [ "$(wc -l <"$RUN/b.out")" -gt "$lines" ] && break; sleep 0.01; done
+	tail -1 "$RUN/b.out"
+}
+
+# The bounded complete request bodies the selected backend arm captured.
+bcapture() {
+	lines=$(wc -l <"$RUN/b.out")
+	echo capture >&7
 	for _ in $(seq 200); do [ "$(wc -l <"$RUN/b.out")" -gt "$lines" ] && break; sleep 0.01; done
 	tail -1 "$RUN/b.out"
 }

@@ -7,11 +7,11 @@ const message =
   "Love the new dashboard, " +
   "but export crashes the app, " +
   "and I was charged twice.";
-const fittingLabels = await tt.tag(
+const fittingLabels = (await tt.tag(
   question,
   message,
   { labels },
-);
+)).value;
 assert.deepEqual(fittingLabels, [
   "praise",
   "bug",

@@ -7,6 +7,7 @@ Each case starts its own backend and runs its SQL in a fresh child.
 from __future__ import annotations
 
 import json
+import hashlib
 import sys
 import tempfile
 from pathlib import Path
@@ -15,9 +16,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests")
 from conditional_backend import ConditionalBackend
 
 from harness import Backend, case, expect, main, rows, run, said
+from verbs_budget import PACKED_PAIR_BODIES, PackedReplies
+from verbs_complete import complete_question_files_keep_identity, complete_question_refusals_and_nulls, complete_question_rechecks_prepared_authority
 
 REFUND = "Does the writer ask for a refund?"
 SHUFFLED = "(VALUES (1, 'good morning'), (2, NULL), (3, 'refund now'), (4, 'good morning'), (5, NULL), (6, 'refund now')) t(i, x)"
+
+case(complete_question_files_keep_identity)
+case(complete_question_refusals_and_nulls)
+case(complete_question_rechecks_prepared_authority)
 
 
 def column(result: dict) -> list:
@@ -29,13 +36,14 @@ def r1_1_answers_map_back_by_text():
     with Backend() as backend:
         got = run(
             [
+                "SET thinkthen_batch = '1'",
                 f"SELECT thinkthen_decide('{REFUND}', x) FROM {SHUFFLED} ORDER BY i",
                 f"SELECT thinkthen_probability('{REFUND}', x) FROM {SHUFFLED} ORDER BY i",
             ],
             backend.base("case/28-decide-many-repeated-texts"),
         )
-        expect(column(got[0]), [False, None, True, False, None, True], "decide rows")
-        expect(column(got[1]), [0.03, None, 0.97, 0.03, None, 0.97], "probability rows")
+        expect(column(got[1]), [False, None, True, False, None, True], "decide rows")
+        expect(column(got[2]), [0.03, None, 0.97, 0.03, None, 0.97], "probability rows")
         expect(backend.count(), 2, "counted sends for two distinct texts")
 
 
@@ -108,7 +116,7 @@ def try_details_keeps_later_good_rows():
         for value in values[1:3]:
             for private in ("private evidence", "private-missing.json"):
                 expect(private in json.dumps(value), False, "no private text in a failed value")
-        expect(backend.count(), 2, "later good row sent")
+        expect(backend.count(), 1, "compatible good rows share one request")
 
 
 @case
@@ -118,8 +126,8 @@ def try_details_keeps_a_good_row_after_a_backend_failure():
             (1, 'Is it a refund?', 'first'),
             (2, 'Is it a refund?', 'private evidence'),
             (3, 'Is it a refund?', 'last')) t(i,q,e) ORDER BY i"""
-        got = run([sql], proxy.base)
-        values = [json.loads(value) for value in column(got[0])]
+        got = run(["SET thinkthen_batch = '1'", sql], proxy.base)
+        values = [json.loads(value) for value in column(got[1])]
         expect([value["status"] for value in values], ["answered", "failed", "answered"], "good rows after backend failure")
         expect(values[1]["error"], {"kind": "backend", "message": "the backend did not answer; retry if allowed", "retryable": False}, "typed backend failure")
         expect("private evidence" in json.dumps(values[1]), False, "failed value hides evidence")
@@ -226,7 +234,7 @@ def r2_22_warm_takes_the_banded_file_decide_uses():
         got = run([f"SELECT thinkthen_warm('@{banded}', x) FROM {texts}", f"SELECT thinkthen_decide('@{banded}', x) FROM {texts}"], backend.base())
         expect(column(got[0]), [2], "warm counts distinct texts")
         expect(column(got[1]), [None, None, None], "decide reads unsure under the band")
-        expect(backend.count(), 2, "counted sends: decide reads what warm filled")
+        expect(backend.count(), 1, "one packed warm send fills decide's cache")
 
 
 @case
@@ -320,6 +328,161 @@ def atfile_reads_through_the_callers_file_system():
         expect(column(got[0]), [True], "a file question")
         expect(said(got[1]), f"thinkthen local: the question file {folder}/missing.json was not read: it does not exist or could not be opened", "a missing file")
         expect(said(got[3]), f"thinkthen local: the question file {path} was not read: this database's file settings refuse it", "a refused file")
+
+
+@case
+def b13c_try_details_members():
+    """One reply has good/failed/good, followed by an independent good request."""
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '3'",
+                   "SELECT thinkthen_try_details('Is it a refund?', x) FROM "
+                   "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i"], backend.base)
+        values = [json.loads(value) for value in column(got[2])]
+        expect([value["status"] for value in values], ["answered", "failed", "answered", "answered"], "packed row outcomes")
+        expect(values[1]["error"], {"kind": "backend", "message": "the backend did not answer; retry if allowed",
+                                      "retryable": False}, "one safe failed member")
+        expect(len(backend.bodies), 2, "one packed and one independent attempt")
+        expected = [
+            b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}',
+            b'{"state":"delta","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
+        ]
+        expect(set(backend.bodies), set(expected), "full first-seen request bodies")
+        digests = [hashlib.sha256(b"systemone\n" + backend.base.encode() + b"/systemone\n" + body).hexdigest()
+                   for body in expected]
+        for place, request in [(0, 0), (2, 0), (3, 1)]:
+            expect(values[place]["details"]["meta"]["requests"], [digests[request]], "member request identity")
+
+
+@case
+def b13c_try_details_prepared():
+    """An invalid foldable prepared question stays a safe value beside a good answer."""
+    with Backend() as backend:
+        got = run(["PREPARE b13c AS SELECT thinkthen_try_details('', 'private evidence') AS value "
+                   "UNION ALL SELECT thinkthen_try_details('Is it a refund?', 'refund now')",
+                   "EXECUTE b13c"], backend.base())
+        expect(rows(got[0]), [], "prepared statement")
+        values = [json.loads(value) for value, in rows(got[1])]
+        expect([value["status"] for value in values], ["failed", "answered"], "prepared safe and good rows")
+        expect(values[0]["error"]["kind"], "usage", "invalid foldable question kind")
+        expect(backend.count(), 1, "good prepared sibling alone sends")
+
+
+@case
+def b13c_try_details_blank_context_keeps_good_siblings():
+    """A bad literal context is one safe Usage row without a transport attempt."""
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1",
+                   "SELECT thinkthen_try_details('Is it a refund?', x, -1, c) FROM "
+                   "(VALUES (1,'alpha','shared'),(2,'private evidence','   '),"
+                   "(3,'gamma','shared'),(4,NULL,'   ')) t(i,x,c) ORDER BY i",
+                   "SELECT thinkthen_details('Is it a refund?', 'ordinary', -1, '   ')"], backend.base)
+        values = [json.loads(value) if value else None for value in column(got[1])]
+        expect([value["status"] if value else None for value in values],
+               ["answered", "failed", "answered", None], "context row outcomes and NULL skip")
+        expect(values[1]["error"], {"kind": "usage", "message":
+               "check the row's question and arguments, or raise the process request total when it is spent",
+               "retryable": False}, "safe context Usage")
+        expect("private evidence" in json.dumps(values[1]), False, "failed context row hides evidence")
+        expect(said(got[2]), "thinkthen usage: context is text, not white space", "ordinary scalar still throws")
+        expect(backend.bodies, [b'{"state":"shared","model":"jev-1.13.0","questions":'
+                              b'{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},'
+                              b'"q2":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}'],
+               "only the good siblings share one exact attempt")
+
+
+@case
+def b13c_try_details_whole_request_failure():
+    """A refused packed request fails only its own members and admits the next batch."""
+    with PackedReplies(fail_first_pair=True) as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
+                   "SET thinkthen_max_retries = 0",
+                   "SELECT thinkthen_try_details('Is it a refund?', x) FROM "
+                   "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i"], backend.base)
+        values = [json.loads(value) for value in column(got[3])]
+        expect([value["status"] for value in values], ["failed", "failed", "answered", "answered"],
+               "recoverable request leaves later batch alive")
+        for value in values[:2]:
+            expect(value["error"], {"kind": "backend", "message": "the backend did not answer; retry if allowed",
+                                    "retryable": True}, "safe whole-request 503")
+        expect(len(backend.bodies), 2, "no member isolation resend")
+
+
+@case
+def b13c_context_and_batch_one_wire_identity():
+    """The final literal context packs two members; batch one retains bare legacy bodies."""
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = 'max'",
+                   "SELECT thinkthen_details('Is it a refund?', x, -1, 'shared') "
+                   "FROM (VALUES (1,'alpha'),(2,'beta')) t(i,x) ORDER BY i",
+                   "SET thinkthen_batch = '1'",
+                   "SELECT thinkthen_details('Is it a refund?', x) "
+                   "FROM (VALUES (1,'gamma'),(2,'delta')) t(i,x) ORDER BY i"], backend.base)
+        expect(len(column(got[2])), 2, "context vector rows")
+        expect(len(column(got[4])), 2, "batch-one vector rows")
+        expect(len(backend.bodies), 3, "one packed and two bare requests")
+        expected = {
+            b'{"state":"shared","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
+            b'{"state":"gamma","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
+            b'{"state":"delta","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
+        }
+        expect(set(backend.bodies), expected, "context and batch-one full request bytes")
+        details = [json.loads(value) for value in column(got[2])]
+        expect(["input" in value for value in details], [False, False], "scalar details omit record input")
+        expect(len({value["meta"]["context_sha256"] for value in details}), 1, "one context identity")
+
+
+@case
+def b13c_warm_first_seen_context():
+    """One warm group sends its distinct texts in first-seen order with its literal context."""
+    with PackedReplies(missing_second=False) as backend:
+        got = run(["SET threads = 1",
+                   "SELECT thinkthen_warm('Is it a refund?', x, 'shared') "
+                   "FROM (VALUES (1,'zeta'),(2,'alpha'),(3,'zeta'),(4,'beta')) t(i,x)"], backend.base)
+        expect(column(got[1]), [3], "warm distinct count")
+        expect(len(backend.bodies), 1, "one warm request")
+        expected = b'{"state":"shared","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"zeta\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}'
+        expect(backend.bodies[0], expected, "first-seen warm body")
+
+
+@case
+def b13c_packed_total_admits_one_attempt():
+    """The process total counts packed sends, independent of SQL row count or arrival order."""
+    query = ("SELECT thinkthen_decide('Is it a refund?', x) FROM "
+             "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i")
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'", query], backend.base)
+        expect(column(got[2]), [True, True, True, True], "four packed answers")
+        expect(set(backend.bodies), PACKED_PAIR_BODIES, "both independently pinned packed bodies")
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
+                   "SET thinkthen_max_requests_total = 1", query], backend.base)
+        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it", "spent total")
+        expect(len(backend.bodies), 1, "only one actual attempt is admitted")
+        expect(backend.bodies[0] in PACKED_PAIR_BODIES, True, "either packed request may arrive first")
+
+
+@case
+def b13c_try_details_total_one_preserves_answered_rows():
+    """A spent total retains the packed answer at its original SQL positions."""
+    query = ("SELECT thinkthen_try_details('Is it a refund?', x) FROM "
+             "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta'),(5,NULL)) t(i,x) ORDER BY i")
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
+                   "SET thinkthen_max_requests_total = 1", query], backend.base)
+        expect(len(backend.bodies), 1, "one real request was admitted")
+        expect(backend.bodies[0] in PACKED_PAIR_BODIES, True, "the sole send is a complete packed request")
+        values = [json.loads(value) if value is not None else None for value in column(got[3])]
+        answered = [0, 1] if b'alpha' in backend.bodies[0] else [2, 3]
+        failed = [place for place in range(4) if place not in answered]
+        expect(values[4], None, "NULL text remains SQL NULL")
+        digest = hashlib.sha256(b"systemone\n" + backend.base.encode() + b"/systemone\n" + backend.bodies[0]).hexdigest()
+        for place in answered:
+            expect(values[place]["status"], "answered", f"answered SQL slot {place}")
+            expect(values[place]["details"]["meta"]["requests"], [digest], f"answer identity {place}")
+        for place in failed:
+            expect(values[place], {"status": "failed", "error": {"kind": "usage", "message":
+                   "check the row's question and arguments, or raise the process request total when it is spent",
+                   "retryable": False}}, f"safe denied SQL slot {place}")
 
 
 if __name__ == "__main__":

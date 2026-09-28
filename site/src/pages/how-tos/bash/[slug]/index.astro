@@ -22,6 +22,7 @@ const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text
   <div class="eyebrow">Bash · {page.group}</div>
   <h1>{page.title}</h1>
   <p class="lede">{parts(page.said).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+  {page.source && <p>Host contract: <a href={page.source[1]}>{page.source[0]}</a>.</p>}
   {inputs.map((file) => <Code code={file.text} caption={`${file.name}, a file the script reads`} />)}
   {runs.map((run) => <Terminal run={run} caption={run.see} />)}
 </SidePage>

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The PostgreSQL surface's check (ticket 0111). Linux only: it builds the
-# extension against /usr/bin/pg_config, runs a local PostgreSQL 16.15 from
+# The PostgreSQL surface's check (ticket 0111). It builds the
+# extension against pinned PostgreSQL 16.15 headers and runs a local server from
 # the pinned package as this user on a socket with no TCP port, and restarts
 # it for each test with that test's own loopback backend (ticket 0117) and
 # answer cache. No test reaches a paid backend: the server gets a fake key
@@ -9,11 +9,14 @@
 [ -n "${BASH_VERSION:-}" ] || exec bash "$0" "$@"
 set -euo pipefail
 unset THINKTHEN_API_KEY RUSTFLAGS CARGO_ENCODED_RUSTFLAGS
+# Retained one-record listener fixtures keep their historical wire identity.
+# Packing cases explicitly select the new default with `SET thinkthen.batch`.
+export THINKTHEN_BATCH=1
 cd "$(dirname "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
-[ "$(uname -s)" = Linux ] || { echo "not run: check.sh runs on Linux only (uname: $(uname -s))"; exit 77; }
+case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 77 ;; esac
 . ../../sdlc/scripts/scratch.sh
 . ./runtime.sh
 runtime_ready
@@ -33,7 +36,7 @@ BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
 # package.sh reads the same pg_config and target folder (ticket 0128).
-PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
+PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo /usr/bin/pg_config; fi)}
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
 SHIPPED=$EXT-shipped
@@ -41,6 +44,9 @@ SHIPPED=$EXT-shipped
 runtime_open
 cleanup() {
 	[ ! -f "$DATA/postmaster.pid" ] || "$BIN/pg_ctl" -D "$DATA" -m immediate stop >/dev/null 2>&1 || true
+	if [ "$PG_HOST" = Darwin ] && [ -n "${RUNTIME_LIBRARY_DIR:-}" ]; then
+		rm -f -- "$RUNTIME_LIBRARY_DIR"/thinkthen.so "$RUNTIME_LIBRARY_DIR"/thinkthen.dylib "$RUNTIME_EXTENSION_DIR"/thinkthen.control "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql
+	fi
 	[ -z "${BPID:-}" ] || backend_stop
 	scratch_clean
 	rm -f .runtime/last-run
@@ -100,7 +106,7 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample recognize_and_relate_as_drawn conformance the_fake_key_stays_in_the_environment}
+	STEPS=${STEPS:-examples slide_sample recognize_and_relate_as_drawn conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -117,7 +123,7 @@ shipped_lacks_probe() {
 	same "$(grep -c thinkthen_panic_probe "$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql" || true)" 0
 }
 check shipped_lacks_probe
-no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED$("$PG_CONFIG" --pkglibdir)/thinkthen.so" || true)" 0; }
+no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED$("$PG_CONFIG" --pkglibdir)"/thinkthen.* || true)" 0; }
 check no_home_in_library
 no_catch_unwind() { same "$(grep -rc catch_unwind src | awk -F: '{s += $2} END {print s}')" 0; }
 check no_catch_unwind
@@ -135,20 +141,20 @@ start_refuses_other_hosts() {
 	done
 }
 check start_refuses_other_hosts
-darwin_reports_not_run() {
+darwin_runs() {
 	mkdir -p "$RUN/shim"
 	printf '#!/bin/sh\necho Darwin\n' >"$RUN/shim/uname"
 	chmod +x "$RUN/shim/uname"
 	set +e
 	# A missing toolchain folder stops a run that passes the kernel check
 	# at "not run", before it builds, sweeps, or starts a server.
-	out=$(PATH="$RUN/shim:$PATH" THINKTHEN_TOOLCHAINS="$RUN/none" sh "$LIMIT" 60 bash ./check.sh 2>&1)
+	out=$(PATH="$RUN/shim:$PATH" PG_CONFIG="$RUN/none/pg_config" sh "$LIMIT" 60 bash ./check.sh 2>&1)
 	code=$?
 	set -e
 	same "$code" 77
-	has "$out" "not run: check.sh runs on Linux only (uname: Darwin)"
+	case $out in *"not run: brew is missing"*|*"the pinned pg_config at $RUN/none/pg_config is missing"*) ;; *) echo "$out" >&2; return 1 ;; esac
 }
-check darwin_reports_not_run
+check darwin_runs
 
 echo "== the drawn SQL and the examples"
 examples() { python3 tests/examples.py "$SOCK"; }
@@ -200,6 +206,22 @@ public_holds_nothing() {
 	same "$(bcount)" 0
 }
 check public_holds_nothing
+batch_signatures_are_extension_owned_and_private() {
+	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_decide(text,text,text)', 'thinkthen_decide(text,text[],text)', 'thinkthen_probability(text,text,text)', 'thinkthen_choose(text,text,text[],text)', 'thinkthen_score(text,text,text[],text)', 'thinkthen_tag(text,text,text[],text)', 'thinkthen_details(text,text,text)', 'thinkthen_try_details(text,text,text)', 'thinkthen_warm(text,text,text)']) AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 9
+	same "$(q -c "SELECT prokind FROM pg_proc WHERE oid = 'thinkthen_warm(text,text,text)'::regprocedure")" a
+}
+check batch_signatures_are_extension_owned_and_private
+find_signatures_are_owned_and_private() {
+	fresh generic
+	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_find(text,text[])', 'thinkthen_find(text,text[],boolean)']) AND p.provolatile = 'v' AND p.proparallel = 'r' AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 2
+	grep -q 'thinkthen_find' "$RUNTIME_EXTENSION_DIR/thinkthen--$EXT_VERSION.sql"
+	q -c "CREATE ROLE tt_find_app LOGIN" >/dev/null
+	has "$(PGUSER_AS=tt_find_app q -c "SELECT thinkthen_find('Which?', ARRAY[]::text[])")" 'permission denied for function thinkthen_find'
+	q -c "GRANT EXECUTE ON FUNCTION thinkthen_find(text,text[]) TO tt_find_app" >/dev/null
+	same "$(PGUSER_AS=tt_find_app q -c "SELECT thinkthen_find('Which?', ARRAY[]::text[]) IS NULL")" t
+	same "$(bcount)" 0
+}
+check find_signatures_are_owned_and_private
 readme_grant_is_the_fixture() {
 	awk '/^The narrowed grant, byte for byte/ {on = 1; next} on && /^```/ {if (++fence == 2) exit; next} on && fence == 1' README.md |
 		cmp -s - fixtures/grant.sql
@@ -312,6 +334,17 @@ single_cancel() {
 	same "$(bcount)" 1
 }
 check single_cancel
+find_cancel() {
+	fresh arm/held
+	held "SELECT thinkthen_find('Which?', ARRAY['one','two'])"
+	bwait 1
+	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
+	wait "$HELD" || true
+	has "$(cat "$RUN/held.out")" "canceling statement due to user request"
+	brelease
+	same "$(bcount)" 1
+}
+check find_cancel
 single_statement_timeout() {
 	fresh arm/held
 	start=$(now_ms)
@@ -340,7 +373,7 @@ check single_deadline
 batch_deadline() {
 	fresh arm/held "thinkthen.throttle = 8"
 	start=$(now_ms)
-	held "SET thinkthen.deadline_ms = 1000; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	held "SET thinkthen.batch = '2'; SET thinkthen.deadline_ms = 1000; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
 	wait "$HELD" || true
 	within $(($(now_ms) - start)) 1500
 	has "$(cat "$RUN/held.out")" "thinkthen deadline"
@@ -350,7 +383,7 @@ batch_deadline() {
 check batch_deadline
 batch_cancel() {
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
 	bwait 8
 	start=$(now_ms)
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
@@ -366,19 +399,19 @@ batch_cancel() {
 check batch_cancel
 benign_interrupt_finishes() {
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
 	bwait 8
 	q -c "SELECT pg_log_backend_memory_contexts($(victim))" >/dev/null
 	sleep 0.3
 	brelease
 	wait "$HELD"
 	same "$(cat "$RUN/held.out")" 200
-	same "$(bcount)" 200
+	same "$(bcount)" 100
 }
 check benign_interrupt_finishes
 a_timed_out_batch_leaves_the_session_working() {
 	fresh arm/held "thinkthen.throttle = 8"
-	out=$(q -c "SET statement_timeout = '500ms'" -c "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))" \
+	out=$(q -c "SET statement_timeout = '500ms'" -c "SET thinkthen.batch = '2'" -c "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))" \
 		-c "\\! echo release > $RUN/b.in" -c "RESET statement_timeout" -c "SELECT thinkthen_decide('$Q', 'after')")
 	has "$out" "canceling statement due to statement timeout"
 	same "$(tail -n1 <<<"$out")" t
@@ -386,7 +419,7 @@ a_timed_out_batch_leaves_the_session_working() {
 }
 check a_timed_out_batch_leaves_the_session_working
 a_small_batch_answers_at_once() {
-	fresh generic
+	fresh generic "thinkthen.batch = '2'"
 	q -c "SELECT thinkthen_decide('$Q', 'warm up')" >/dev/null
 	ms=$(timed "SELECT count(*) INTO n FROM thinkthen_decide('$Q', ARRAY['a', 'b'])")
 	within "$ms" 90
@@ -471,7 +504,7 @@ check the_cache_setting_names_the_folder
 echo "== engine settings"
 throttle_setting_holds_eight() {
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
 	bwait 8
 	sleep 0.3
 	same "$(bcount)" 8
@@ -613,14 +646,116 @@ the_total_holds_across_rows() {
 		-c "SELECT thinkthen_decide('$Q', 'after')")
 	same "$(grep -oF "thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent (retryable: no)" <<<"$out" | wc -l)" 2
 	same "$(bcount)" 3
-	out=$(q -c "SELECT thinkthen_decide('$Q', 'row 1')" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c', 'd'])")
-	# A new backend starts from zero: a cached answer sends nothing, and a
-	# four-record batch sends the three the total leaves, then refuses.
-	same "$out" "t
-ERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this backend, and they are spent (retryable: no)"
-	same "$(bcount)" 6
+	fresh generic "thinkthen.max_requests_total = 1"
+	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
+		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'c', 'd'])")
+	has "$out" "thinkthen usage: thinkthen.max_requests_total allows 1 requests in this backend, and they are spent (retryable: no)"
+	same "$(bcount)" 1
 }
 check the_total_holds_across_rows
+
+packed_array_preserves_first_occurrence_and_attempts() {
+	fresh generic
+	out=$(q -c "SET thinkthen.batch = '1'" -c "SET thinkthen.cache = 'off'" \
+		-c "SET thinkthen.record = '$RUN/singleton'" \
+		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'b', NULL, 'c', 'd'])")
+	same "$out" 6
+	same "$(bcount)" 4
+	same "$(python3 tests/batching_cases.py singleton "$RUN/singleton")" 'pass singleton'
+	fresh generic
+	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
+		-c "SET thinkthen.record = '$RUN/packed'" \
+		-c "SELECT i::text || ':' || coalesce(decided::text, 'null') FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'b', NULL, 'c', 'd']) ORDER BY i")
+	same "$out" $'0:true\n1:true\n2:true\n3:null\n4:true\n5:true'
+	same "$(bcount)" 2
+	same "$(python3 tests/batching_cases.py packed "$RUN/packed")" 'pass packed'
+	fresh generic
+	out=$(q -c "SET thinkthen.batch = 'max'" -c "SET thinkthen.cache = 'off'" \
+		-c "SET thinkthen.record = '$RUN/max-packed'" \
+		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'b', NULL, 'c', 'd'])")
+	same "$out" 6
+	same "$(bcount)" 1
+	same "$(python3 tests/batching_cases.py max "$RUN/max-packed")" 'pass max'
+	fresh generic "thinkthen.max_requests_total = 1"
+	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.max_retries = 0" \
+		-c "SET thinkthen.cache = 'off'" -c "SET thinkthen.record = '$RUN/one-packed'" \
+		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'c', 'd'])")
+	has "$out" "thinkthen usage: thinkthen.max_requests_total allows 1 requests in this backend, and they are spent (retryable: no)"
+	same "$(bcount)" 1
+	same "$(python3 tests/batching_cases.py one_of_packed "$RUN/one-packed")" 'pass one_of_packed'
+}
+check packed_array_preserves_first_occurrence_and_attempts
+
+context_overloads_keep_scalar_shapes_and_null_rules() {
+	fresh generic
+	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
+		-c "SET thinkthen.record = '$RUN/context-packed'" \
+		-c "SELECT i::text || ':' || coalesce(decided::text, 'null') FROM thinkthen_decide('$Q', ARRAY['b', 'a'], 'shared reference') ORDER BY i")
+	same "$out" $'0:true\n1:true'
+	same "$(bcount)" 1
+	same "$(python3 tests/batching_cases.py context "$RUN/context-packed")" 'pass context'
+	fresh generic
+	out=$(q -c "SELECT thinkthen_decide('$Q', 'one', 'shared reference')" \
+		-c "SELECT thinkthen_probability('$Q', 'one', 'shared reference')" \
+		-c "SELECT thinkthen_choose('{\"choose\":\"Which?\",\"options\":[\"first\",\"last\"]}', 'one', NULL, 'shared reference')" \
+		-c "SELECT thinkthen_score('{\"score\":\"Which?\",\"levels\":[\"low\",\"high\"]}', 'one', NULL, 'shared reference')" \
+		-c "SELECT array_length(thinkthen_tag('{\"tag\":\"Which?\",\"labels\":[\"first\",\"last\"]}', 'one', NULL, 'shared reference'), 1)" \
+		-c "SELECT (thinkthen_details('$Q', 'one', 'shared reference') ? 'input')::text" \
+		-c "SELECT thinkthen_try_details('$Q', 'one', 'shared reference')->>'status'")
+	same "$out" $'t\n0.9\nfirst\n0.1\n2\nfalse\nanswered'
+	same "$(bcount)" 4
+	fresh generic
+	same "$(q -c "SELECT thinkthen_try_details(NULL, 'one', '   ') IS NULL")" t
+	same "$(q -c "SELECT count(*) FROM thinkthen_decide('$Q', NULL::text[])" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY[]::text[])")" $'0\n0'
+	has "$(q -c "SELECT thinkthen_try_details('$Q', 'one', '   ')->'error'->>'kind'")" usage
+	has "$(q -c "SELECT thinkthen_decide('$Q', 'one', '   ')")" 'context must not be blank'
+	same "$(bcount)" 0
+	fresh generic
+	same "$(q -c "SELECT thinkthen_decide('$Q', 'same')" -c "SELECT thinkthen_decide('$Q', 'same', NULL)")" $'t\nt'
+	same "$(bcount)" 1
+}
+check context_overloads_keep_scalar_shapes_and_null_rules
+
+warm_groups_context_without_projecting_packed_cache() {
+	fresh generic
+	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.record = '$RUN/warm-packed'" \
+		-c "SELECT thinkthen_warm('$Q', e, c ORDER BY i) FROM (VALUES (1, 'b', 'first'), (2, 'a', 'first'), (3, 'b', 'first'), (4, 'c', 'second'), (5, 'd', 'second')) v(i,e,c)")
+	same "$out" 4
+	same "$(bcount)" 2
+	same "$(python3 tests/batching_cases.py warm "$RUN/warm-packed")" 'pass warm'
+	# A packed warm entry covers its complete cohort, not a projected singleton.
+	same "$(q -c "SELECT thinkthen_decide('$Q', 'b', 'first')")" t
+	same "$(bcount)" 3
+	fresh generic
+	has "$(q -c "SELECT thinkthen_warm('$Q', e, c ORDER BY i) FROM (VALUES (1, 'ok', 'first'), (2, 'bad', '   ')) v(i,e,c)")" 'context must not be blank'
+	same "$(bcount)" 0
+}
+check warm_groups_context_without_projecting_packed_cache
+
+batch_setting_and_replay_context_validate_before_send() {
+	fresh generic
+	for setting in 0 +1 -1 1.5 MAX no; do
+		has "$(q -c "SET thinkthen.batch = '$setting'" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['one', 'two'])")" \
+			'thinkthen.batch is max or a whole number of 1 or more'
+	done
+	same "$(bcount)" 0
+	fresh generic
+	out=$(q -c "SET thinkthen.record = '$RUN/context-replay'" -c "SELECT thinkthen_decide('$Q', 'one', 'alpha')" \
+		-c "SET thinkthen.record = ''" -c "SET thinkthen.replay = '$RUN/context-replay'" \
+		-c "SELECT thinkthen_decide('$Q', 'one', 'beta')")
+	has "$out" 'thinkthen local: the replay folder holds no reply for this request'
+	same "$(bcount)" 1
+}
+check batch_setting_and_replay_context_validate_before_send
+
+warm_keeps_one_deadline_across_question_groups() {
+	fresh arm/delay/250 "thinkthen.throttle = 1"
+	out=$(q -c "SET thinkthen.batch = '1'" -c "SET thinkthen.deadline_ms = 350" \
+		-c "SELECT thinkthen_warm(q, e ORDER BY i) FROM (VALUES (1, '$Q', 'first'), (2, '{\"decide\":\"Is it red?\"}', 'second')) v(i,q,e)")
+	has "$out" 'thinkthen deadline:'
+	same "$(bcount)" 2
+}
+check warm_keeps_one_deadline_across_question_groups
 sql_settings_and_retry_total() {
 	fresh arm/503
 	out=$(q -c "SET thinkthen.max_requests_total = 1" -c "SET thinkthen.max_retries = 1" \
@@ -674,6 +809,13 @@ shared_settings_cases() {
 	done <"$RUN/settings.plan"
 }
 check shared_settings_cases
+calibration_saved_profile() {
+	fresh generic
+	line=$(python3 tests/settings_cases.py calibration "$SOCK")
+	same "$line" 'pass calibration'
+	same "$(bcount)" 1
+}
+check calibration_saved_profile
 a_cancelled_send_counts_toward_the_total() {
 	fresh arm/held "thinkthen.max_requests_total = 1"
 	q -c "SELECT thinkthen_decide('$Q', 'held')" -c "SELECT thinkthen_decide('$Q', 'next')" >"$RUN/held.out" 2>&1 &
@@ -724,13 +866,13 @@ signal_masks() {
 	brelease
 	wait "$HELD"
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
 	bwait 8
 	masks_hold
 	brelease
 	wait "$HELD"
 }
-check signal_masks
+[ "$PG_HOST" != Linux ] || check signal_masks
 preload_forks_cleanly() {
 	fresh generic "shared_preload_libraries = 'thinkthen'"
 	same "$(q -c "SELECT thinkthen_decide('$Q', 'first')")" t
@@ -747,10 +889,41 @@ a_panic_is_an_error() {
 }
 check a_panic_is_an_error
 
+find_inputs() {
+	fresh generic
+	python3 tests/find_cases.py invalid "$SOCK"
+	same "$(bcount)" 0
+}
+check find_inputs
+find_proxy_cases() {
+	for mode in duplicate real_tie none_tie max_units max_none; do
+		fresh generic
+		pg_stop
+		rm -f "$RUN/find-proxy.in"
+		mkfifo "$RUN/find-proxy.in"
+		python3 tests/find_cases.py proxy "http://127.0.0.1:$BPORT/generic/v1" "$mode" \
+			<"$RUN/find-proxy.in" >"$RUN/find-proxy.out" 2>"$RUN/find-proxy.err" &
+		PROXYPID=$!
+		exec {PROXYFD}>"$RUN/find-proxy.in"
+		trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
+		for _ in $(seq 100); do [ -s "$RUN/find-proxy.out" ] && break; sleep 0.05; done
+		proxyport=$(head -1 "$RUN/find-proxy.out")
+		[ -n "$proxyport" ]
+		pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+		python3 tests/find_cases.py verify "$SOCK" "$mode"
+		printf 'quit\n' >&"$PROXYFD"
+		wait "$PROXYPID"
+		PROXYPID=
+		exec {PROXYFD}>&-
+		same "$(tail -1 "$RUN/find-proxy.out")" 1
+	done
+}
+check find_proxy_cases
+
 echo "== the update path"
 an_update_cannot_grant_public() {
 	printf 'CREATE FUNCTION thinkthen_rehearsal_probe(x integer) RETURNS integer LANGUAGE sql AS %s;\n' "'SELECT \$1'" \
-		>.runtime/tree/usr/share/postgresql/16/extension/thinkthen--$EXT_VERSION--$EXT_VERSION-probe.sql
+		>"$RUNTIME_EXTENSION_DIR/thinkthen--$EXT_VERSION--$EXT_VERSION-probe.sql"
 	fresh generic
 	q -c "ALTER EXTENSION thinkthen UPDATE TO '$EXT_VERSION-probe'" >/dev/null
 	same "$(q -c "SELECT has_function_privilege('public', 'thinkthen_rehearsal_probe(integer)', 'EXECUTE')")" f
@@ -772,12 +945,17 @@ conformance() {
 			fresh "$arm" ${setting:+"${setting//@SCRATCH@/$SCRATCH}"}
 		fi
 		line=$(BPORT=${BPORT:-} SCRATCH=$SCRATCH python3 tests/runner.py "$SOCK" "$id")
+		if [ "$line" = "pass $id" ] && { [ "$id" = 18-find-second ] || [ "$id" = 19-find-none ]; }; then
+			bcapture >"$RUN/$id.capture.json"
+			line=$(BPORT=$BPORT python3 tests/runner.py capture "$id" "$RUN/$id.capture.json")
+		fi
 		echo "         $line"
 		case $line in
 		"pass $id")
 			case $id in
 			13-filter-records|15-rank-records|16-rank-stable-tie) same "$(bcount)" 3 ;;
 			14-filter-none) same "$(bcount)" 2 ;;
+			18-find-second|19-find-none) same "$(bcount)" 1 ;;
 			26-filter-empty-list|31-usage-rank-blank-question) same "$(bcount)" 0 ;;
 			esac
 			pass=$((pass + 1)) ;;

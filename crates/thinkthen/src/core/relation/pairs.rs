@@ -5,6 +5,7 @@ use super::{
     state_evidence,
 };
 use crate::core::{Answer, Evidence, Question, QuestionText};
+use std::collections::HashSet;
 
 /// The evidence and ordered pair questions shared by one entity set.
 #[derive(Clone, Debug, PartialEq)]
@@ -25,6 +26,62 @@ pub(crate) struct Pair {
 /// Whether a rule side, `*` or one kind, admits `kind`.
 fn admits(side: &str, kind: &str) -> bool {
     side == "*" || side == kind
+}
+
+/// Keep the first mention of each admitted name and kind, in input order.
+fn asked_names<E: RelationEntityView>(names: &[E], rules: &[RelationRule]) -> Vec<usize> {
+    let mut seen = HashSet::new();
+    names
+        .iter()
+        .enumerate()
+        .filter_map(|(place, name)| {
+            let eligible = rules
+                .iter()
+                .any(|rule| admits(&rule.source, name.kind()) || admits(&rule.target, name.kind()));
+            (eligible && seen.insert((name.name(), name.kind()))).then_some(place)
+        })
+        .collect()
+}
+
+/// The size of the full plan before any question or pair is materialized.
+/// `None` for questions means checked arithmetic overflowed.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct PairCount {
+    pub(crate) admitted: usize,
+    pub(crate) questions: Option<usize>,
+}
+
+pub(crate) fn count_pairs<E: RelationEntityView>(names: &[E], rules: &[RelationRule]) -> PairCount {
+    let asked = asked_names(names, rules);
+    let mut questions = Some(0_usize);
+    for rule in rules {
+        let mut source = 0_usize;
+        let mut target = 0_usize;
+        let mut both = 0_usize;
+        for place in &asked {
+            let kind = names.get(*place).map_or("", |name| name.kind());
+            let from = admits(&rule.source, kind);
+            let to = admits(&rule.target, kind);
+            source += usize::from(from);
+            target += usize::from(to);
+            both += usize::from(from && to);
+        }
+        let rule_questions = source.checked_mul(target).and_then(|total| {
+            let total = total.checked_sub(both)?;
+            if rule.either {
+                let repeats = both.checked_mul(both.saturating_sub(1))?.checked_div(2)?;
+                total.checked_sub(repeats)
+            } else {
+                Some(total)
+            }
+        });
+        questions =
+            questions.and_then(|total| rule_questions.and_then(|more| total.checked_add(more)));
+    }
+    PairCount {
+        admitted: asked.len(),
+        questions,
+    }
 }
 
 /// Whether `rule` asks about the pair of asked names at `left` and `right`,
@@ -67,20 +124,7 @@ pub(crate) fn plan_pairs<E: RelationEntityView>(
     rules: &[RelationRule],
     lead: Lead,
 ) -> Result<Option<PairPlan>, RelationPlanError> {
-    let mut asked: Vec<usize> = Vec::new();
-    for (place, name) in names.iter().enumerate() {
-        let repeated = asked.iter().any(|held| {
-            names
-                .get(*held)
-                .is_some_and(|other| other.name() == name.name() && other.kind() == name.kind())
-        });
-        let named = rules
-            .iter()
-            .any(|rule| admits(&rule.source, name.kind()) || admits(&rule.target, name.kind()));
-        if !repeated && named {
-            asked.push(place);
-        }
-    }
+    let asked = asked_names(names, rules);
     let kind = |at: usize| names.get(at).map_or("", |name| name.kind());
     let mut questions = Vec::new();
     let mut pairs = Vec::new();
@@ -143,4 +187,113 @@ pub(crate) fn pair_edges<E: RelationEntityView>(
         }
     }
     edges
+}
+
+#[cfg(test)]
+mod count_tests {
+    use super::{Lead, PairCount, RelationRule, count_pairs, plan_pairs};
+    use crate::core::relation::RelationEntity;
+
+    #[test]
+    fn counted_questions_match_the_small_real_plans() {
+        let names = [
+            ("Ada", "person"),
+            ("Ada", "person"),
+            ("Ada", "place"),
+            ("Grace", "person"),
+            ("Rome", "place"),
+            ("Other", "irrelevant"),
+        ]
+        .map(|(name, kind)| RelationEntity::new(name, kind).expect("entity"));
+        let check = |rules: Vec<RelationRule>| {
+            let counted = count_pairs(&names, &rules);
+            let planned = plan_pairs(None, &names, &rules, Lead::Known).expect("plan");
+            assert_eq!(
+                counted.questions,
+                Some(planned.map_or(0, |plan| plan.questions.len()))
+            );
+        };
+        for (source, target) in [
+            ("person", "person"),
+            ("person", "place"),
+            ("*", "place"),
+            ("*", "*"),
+        ] {
+            for either in [false, true] {
+                let rule = RelationRule {
+                    name: "near".into(),
+                    source: source.into(),
+                    target: target.into(),
+                    reads: "is near".into(),
+                    either,
+                };
+                check(vec![rule.clone()]);
+                check(vec![rule.clone(), rule]);
+            }
+        }
+    }
+
+    #[test]
+    fn count_preserves_zero_work_with_many_admitted_names() {
+        let names = (0..256)
+            .map(|place| RelationEntity::new(&format!("P{place}"), "person").expect("entity"))
+            .collect::<Vec<_>>();
+        let rule = RelationRule {
+            name: "works".into(),
+            source: "person".into(),
+            target: "place".into(),
+            reads: "works in".into(),
+            either: false,
+        };
+        assert_eq!(
+            count_pairs(&names, std::slice::from_ref(&rule)),
+            PairCount {
+                admitted: 256,
+                questions: Some(0)
+            }
+        );
+        assert_eq!(
+            count_pairs(&names, &[]),
+            PairCount {
+                admitted: 0,
+                questions: Some(0)
+            }
+        );
+        let irrelevant = (0..256)
+            .map(|place| RelationEntity::new(&format!("O{place}"), "other").expect("entity"))
+            .collect::<Vec<_>>();
+        assert_eq!(
+            count_pairs(&irrelevant, &[rule]),
+            PairCount {
+                admitted: 0,
+                questions: Some(0)
+            }
+        );
+    }
+
+    #[test]
+    fn wildcard_pair_count_crosses_the_bound_between_63_and_64_names() {
+        let names = (0..64)
+            .map(|place| RelationEntity::new(&format!("P{place}"), "person").expect("entity"))
+            .collect::<Vec<_>>();
+        let rule = RelationRule {
+            name: "near".into(),
+            source: "*".into(),
+            target: "*".into(),
+            reads: "near".into(),
+            either: false,
+        };
+        assert_eq!(
+            count_pairs(&names[..63], std::slice::from_ref(&rule)).questions,
+            Some(3_906)
+        );
+        assert_eq!(
+            count_pairs(&names, std::slice::from_ref(&rule)).questions,
+            Some(4_032)
+        );
+        assert_eq!(
+            count_pairs(&names, &[rule.clone(), rule]).questions,
+            Some(8_064)
+        );
+    }
 }

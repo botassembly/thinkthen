@@ -9,15 +9,15 @@ import { PAGES } from '../data/beatles.mjs';
 
 const lines = run('functions/decide', '1-lines');
 const auditPage = PAGES.find((p) => p.slug === 'audit');
-const audit = run('beatles/audit', '1-default');
+const audit = run('beatles/audit', '2-default');
 ---
 <Base title="Trust" description="Check ThinkThen against your own labeled records before you rely on it.">
   <h1>Test it before you trust it</h1>
   <p class="lede">Every answer comes with the model's probability. You set the bar, and you count the misses on your own records.</p>
 
   <h2>Grade it on your own records</h2>
-  <p>Take records you have already labeled. Run the question over them with <code>--details</code> and save the answers. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades the saved answers against the key.</p>
-  <Terminal run={audit} caption={`Jev was asked whether each song is on Abbey Road. ${auditPage.see['1-default']}`} />
+  <p>Take records you have already labeled. Put your labels in a key file, one per record. <code>thinkthen audit</code> grades ThinkThen's saved answers against the key. <code>thinkthen audit --help</code> shows how to save them.</p>
+  <Terminal run={audit} caption={`Jev was asked whether each song is on Abbey Road. ${auditPage.see['2-default']}`} />
   <p>The <a href={auditPage.route}>audit page</a> runs the same records at the suggested bar.</p>
 
   <h2>The threshold is yours</h2>
@@ -40,13 +40,13 @@ const audit = run('beatles/audit', '1-default');
   <table>
     <tr><th>Word</th><th>What it is</th></tr>
     <tr><td>probability</td><td>A number the model reported, passed through unchanged. For yes or no, the chance the answer is yes. For pick one and place on a scale, the share given to each option or level.</td></tr>
-    <tr><td>probabilities</td><td>The model's full list, one number per option or level, adding to 1. It shows under <code>--details</code>.</td></tr>
+    <tr><td>probabilities</td><td>The model's full list, one number per option or level, adding to 1.</td></tr>
     <tr><td>threshold</td><td>Your bar on a probability. An input.</td></tr>
     <tr><td>band</td><td>A low bar and a high bar. The middle goes to a person.</td></tr>
     <tr><td>position</td><td>The number <code>score</code> prints: where the evidence lands along your levels. ThinkThen computes it as the average of the level probabilities.</td></tr>
     <tr><td>strength</td><td>The number on a recognized name. ThinkThen computes it. It is not a probability.</td></tr>
   </table>
-  <p>ThinkThen prints no confidence of its own. The field named <code>confidence</code> under <code>--details</code> is the vendor's number for how lopsided the probabilities are. Set your bar on the probability. Do not gate on <code>confidence</code>.</p>
+  <p>ThinkThen prints no confidence of its own. Set your bar on the probability.</p>
 
   <h2>What leaves the machine</h2>
   <ul>

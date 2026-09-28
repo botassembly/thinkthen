@@ -7,8 +7,10 @@ broken rule prints one line. The rules sit beside the code that checks them, and
 ticket 0128's "The workflow check" table lists them. Usage: workflows [--self-test]
 """
 
+import os
 import pathlib
 import re
+import subprocess
 import sys
 import tempfile
 
@@ -25,6 +27,8 @@ UNPINNED = [
     (re.compile(r"gem install[^\n]*\brubygems-update\b(?! -v)"), "installs gem with no version"),
 ]
 RESOLVED = "${{ needs.resolve.outputs.sha }}"
+ARMED_STEP = {"env": {"RELEASE_ARMED": "${{ vars.RELEASE_ARMED }}"},
+              "run": '[ "$RELEASE_ARMED" = true ]'}
 
 
 def steps(doc):
@@ -77,6 +81,54 @@ def release(name, doc):
     out = []
     if doc.get("permissions") != {}:
         out.append(f"{name}: top-level permissions must be {{}}")
+    trigger = doc.get("on", doc.get(True)) or {}
+    dispatch = trigger.get("workflow_dispatch", {}) if isinstance(trigger, dict) else {}
+    inputs = dispatch.get("inputs", {}) if isinstance(dispatch, dict) else {}
+    if set(inputs) != {"mode"} or inputs["mode"].get("options") != ["rehearse", "release"]:
+        out.append(f"{name}: dispatch must have only mode with rehearse and release choices")
+    jobs = doc.get("jobs") or {}
+    required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "smoke", "draft",
+                "crates", "pypi", "npm", "rubygems", "tap", "publish"}
+    if set(jobs) != required:
+        out.append(f"{name}: release job graph differs from the accepted jobs")
+    dependencies = {"build": {"resolve"}, "wheels": {"resolve", "build"},
+                    "npm-pack": {"resolve", "build"}, "gems": {"resolve", "build"},
+                    "crate": {"resolve"}, "smoke": {"resolve", "build", "wheels", "npm-pack", "gems", "crate"},
+                    "draft": {"resolve", "smoke"}, "publish": {"resolve", "draft", "crates", "pypi", "npm", "rubygems", "tap"}}
+    for job in ("crates", "pypi", "npm", "rubygems", "tap"):
+        dependencies[job] = {"resolve", "draft"}
+    for job, need in dependencies.items():
+        value = jobs.get(job, {}).get("needs", [])
+        if isinstance(value, str):
+            value = [value]
+        if set(value) != need:
+            out.append(f"{name}: job {job} must need {', '.join(sorted(need))}")
+    for job, active_version, condition in (("build", "3.10", "runner.os == 'macOS'"),
+                                           ("smoke", "3.12", None)):
+        job_steps = jobs.get(job, {}).get("steps") or []
+        host = next((i for i, step in enumerate(job_steps)
+                     if "release-workflow host-setup" in (step.get("run") or "")), None)
+        if host is None:  # The minimal graph fixture has no host operation.
+            continue
+        configured = [(i, step) for i, step in enumerate(job_steps[:host])
+                      if (step.get("uses") or "").startswith("actions/setup-python@")]
+        py313 = next(((i, step) for i, step in configured
+                      if (step.get("with") or {}).get("python-version") == "3.13"), None)
+        active = next(((i, step) for i, step in configured
+                       if (step.get("with") or {}).get("python-version") == active_version), None)
+        if (py313 is None or active is None or py313[0] >= active[0]
+                or py313[1].get("if") != condition or active[1].get("if") is not None
+                or py313[1].get("uses") != active[1].get("uses")
+                or (py313[1].get("with") or {}).get("update-environment") in (False, "false")):
+            out.append(f"{name}: job {job} must set up Python 3.13 before retaining Python {active_version} for host-setup")
+    outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
+    for job in outward:
+        spec = jobs.get(job, {})
+        if spec.get("if") != "inputs.mode == 'release'":
+            out.append(f"{name}: job {job} must require release mode")
+        first = (spec.get("steps") or [None])[0]
+        if first != ARMED_STEP:
+            out.append(f"{name}: job {job} must check environment RELEASE_ARMED before any outward step")
     for job, spec in (doc.get("jobs") or {}).items():
         permissions = spec.get("permissions") or {}
         text = yaml.safe_dump(spec)
@@ -87,8 +139,8 @@ def release(name, doc):
         environment = environment.get("name") if isinstance(environment, dict) else environment
         if (permissions.get("id-token") == "write" or secret) and environment != "release":
             out.append(f"{name}: job {job} holds id-token or a secret outside environment release")
-        if environment == "release" and "vars.RELEASE_ARMED == 'true'" not in str(spec.get("if", "")):
-            out.append(f"{name}: job {job} runs in environment release without the RELEASE_ARMED condition")
+        if job in outward and environment != "release":
+            out.append(f"{name}: job {job} must use environment release")
     for job, spec, step in steps(doc):
         uses = step.get("uses") or ""
         if "cache" in uses or "cache" in (step.get("with") or {}):
@@ -112,6 +164,63 @@ def check(folder):
         if path.name == "release.yml":
             out += release(path.name, doc)
     return out
+
+
+def host_setup_calls(target, smoke):
+    """Run the real setup branch while a temporary PATH records its host calls."""
+    with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
+        root = pathlib.Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir()
+        route = bin_dir / "route"
+        route.write_text("""#!/bin/sh
+case ${0##*/} in
+rustc) case $1 in
+  -vV) printf 'host: %s\\n' "$FAKE_TARGET" ;;
+  --version) echo 'rustc 1.95.0 (59807616e 2026-04-14)' ;;
+  --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
+  esac ;;
+cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
+maturin) echo 'maturin 1.15.0' ;;
+python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac ;;
+python3.13) [ "$1" != --version ] || {
+  touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
+} ;;
+uv) [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
+  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo 'uv 0.9.17'; } ;;
+uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
+  -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
+xcrun) echo "$FAKE_ROOT/sdk" ;;
+brew) case $1 in --cache) echo "$FAKE_ROOT/bottle" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
+shasum) . databases/postgresql/runtime-darwin.env
+  case $FAKE_TARGET in aarch64*) pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
+    *) pin=$PG_BOTTLE_X86_64_SONOMA ;; esac
+  printf '%s  %s\\n' "$pin" "$3" ;;
+sh) case $1 in databases/duckdb/tools/setup.sh)
+      [ -f "$FAKE_UV_READY" ] && [ -f "$FAKE_PY313_READY" ] || {
+        echo 'DuckDB setup preceded uv or Python 3.13 readiness' >&2; exit 92;
+      } ;;
+    esac
+    printf '%s %s\\n' "$1" "$2" >> "$FAKE_LOG" ;;
+esac
+""")
+        route.chmod(0o755)
+        openssl = root / "openssl3/bin/openssl"
+        openssl.parent.mkdir(parents=True)
+        openssl.write_text("#!/bin/sh\necho 'OpenSSL 3.6.4 11 Feb 2026'\n")
+        openssl.chmod(0o755)
+        for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "xcrun", "brew", "shasum",
+                     "python3", "python3.12", "python3.13"):
+            (bin_dir / name).symlink_to(route.name)
+        log = root / "calls"
+        env = os.environ.copy()
+        env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
+                   TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
+                   FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
+                   RELEASE_SMOKE="1" if smoke else "0")
+        result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
+                                env=env, capture_output=True, text=True, timeout=20, check=False)
+        return result, log.read_text().splitlines() if log.exists() else []
 
 
 # A release workflow that keeps every rule. Each self-test case breaks one.
@@ -142,21 +251,63 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with: {ref: "${{ needs.resolve.outputs.sha }}"}
       - run: python3 -m pip install maturin==1.9.6
+  wheels: {needs: [resolve, build]}
+  npm-pack: {needs: [resolve, build]}
+  gems: {needs: [resolve, build]}
+  crate: {needs: resolve}
+  smoke: {needs: [resolve, build, wheels, npm-pack, gems, crate]}
   draft:
-    needs: build
+    needs: [resolve, smoke]
     runs-on: ubuntu-24.04
     permissions: {contents: write}
     steps:
       - run: gh release create "$TAG" --draft
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
   pypi:
-    needs: draft
-    if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
     runs-on: ubuntu-24.04
     environment: release
     permissions: {id-token: write}
     steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
       - run: echo publish
+  crates:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  npm:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  rubygems:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  tap:
+    needs: [resolve, draft]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
+  publish:
+    needs: [resolve, draft, crates, pypi, npm, rubygems, tap]
+    if: inputs.mode == 'release'
+    environment: release
+    steps:
+      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}
+        run: '[ "$RELEASE_ARMED" = true ]'
 """
 
 
@@ -182,14 +333,23 @@ def self_test():
         ("write", "release.yml", lambda t: t.replace("    permissions: {contents: read}\n    container",
                                                       "    permissions: {contents: write}\n    container"),
          ["release.yml: job build holds contents: write; only draft and publish may"]),
-        ("environment", "release.yml", lambda t: t.replace("    environment: release\n", ""),
-         ["release.yml: job pypi holds id-token or a secret outside environment release"]),
-        ("armed", "release.yml", lambda t: t.replace(" && vars.RELEASE_ARMED == 'true'", ""),
-         ["release.yml: job pypi runs in environment release without the RELEASE_ARMED condition"]),
+        ("environment", "release.yml", lambda t: t.replace("    environment: release\n", "", 1),
+         ["release.yml: job pypi holds id-token or a secret outside environment release",
+          "release.yml: job pypi must use environment release"]),
+        ("armed", "release.yml", lambda t: t.replace('run: \'[ "$RELEASE_ARMED" = true ]\'', 'run: echo unarmed', 1),
+         ["release.yml: job pypi must check environment RELEASE_ARMED before any outward step"]),
+        ("armed-order", "release.yml", lambda t: t.replace('      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}',
+                                                            '      - run: echo early\n'
+                                                            '      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}', 1),
+         ["release.yml: job pypi must check environment RELEASE_ARMED before any outward step"]),
         ("checkout", "release.yml", lambda t: t.replace('{ref: "${{ needs.resolve.outputs.sha }}"}', '{ref: main}'),
          ["release.yml: job build checks out main, not the resolved SHA"]),
         ("top", "release.yml", lambda t: t.replace("permissions: {}\n", "permissions: {contents: read}\n"),
          ["release.yml: top-level permissions must be {}"]),
+        ("mode", "release.yml", lambda t: t.replace("options: [rehearse, release]", "options: [rehearse, deploy]"),
+         ["release.yml: dispatch must have only mode with rehearse and release choices"]),
+        ("draft-order", "release.yml", lambda t: t.replace("needs: [resolve, smoke]", "needs: [resolve, build]"),
+         ["release.yml: job draft must need resolve, smoke"]),
         ("maturin", "release.yml", lambda t: t.replace("maturin==1.9.6", "maturin"),
          ["release.yml: job build installs maturin with no version"]),
     ]
@@ -202,13 +362,45 @@ def self_test():
                 folder = pathlib.Path(tmp)
                 for path in (REPO / ".github/workflows").glob("*.y*ml"):
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-                source = RELEASE if file == "release.yml" and not (folder / file).exists() else (folder / file).read_text()
+                # Keep each planted rule independent after the real release.yml lands.
+                source = RELEASE if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:
             bad += 1
             print(f"workflows self-test {name}: expected {expected}, got {got}", file=sys.stderr)
-    print(f"workflows self-test: {len(cases) - bad}/{len(cases)} cases hold")
+    host_cases = [(target, smoke) for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
+                                                 "aarch64-apple-darwin", "x86_64-apple-darwin")
+                  for smoke in (False, True)]
+    for target, smoke in host_cases:
+        result, calls = host_setup_calls(target, smoke)
+        if "apple" in target:
+            wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
+                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch"]
+        else:
+            wanted = ["libraries/ruby/setup-ruby.sh "]
+        if smoke and "apple" not in target:
+            wanted = ["py313-ready", "uv-install", "uv-check", *wanted,
+                      "databases/duckdb/tools/setup.sh --fetch"]
+        if result.returncode != 0 or calls != wanted:
+            bad += 1
+            print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "
+                  f"wanted {wanted}, got {calls}; stderr {result.stderr}", file=sys.stderr)
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = pathlib.Path(tmp)
+        for path in (REPO / ".github/workflows").glob("*.y*ml"):
+            text = path.read_text(encoding="utf-8")
+            if path.name == "release.yml":
+                text = text.replace("with: {python-version: '3.13'}", "with: {python-version: '3.11'}")
+            (folder / path.name).write_text(text, encoding="utf-8")
+        wanted = ["release.yml: job build must set up Python 3.13 before retaining Python 3.10 for host-setup",
+                  "release.yml: job smoke must set up Python 3.13 before retaining Python 3.12 for host-setup"]
+        got = check(folder)
+        if got != wanted:
+            bad += 1
+            print(f"workflows self-test host Python: wanted {wanted}, got {got}", file=sys.stderr)
+    total = len(cases) + len(host_cases) + 1
+    print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 
 

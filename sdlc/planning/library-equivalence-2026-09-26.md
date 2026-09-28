@@ -25,9 +25,9 @@ Each cell holds yes, no, partial, or n/a for not applicable. A bracketed tag nam
 | Capability | Command | Rust | Rust Polars | C | Python | Python frames | TypeScript | Ruby | R | DuckDB | SQLite | PostgreSQL |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | `decide` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
-| `choose` | yes | partial [F1] | yes | partial [F1] | partial [F1] | yes | partial [F1] | partial [F1] | yes | yes | yes | yes |
-| `tag` | yes | partial [F1] | yes | partial [F1] | partial [F1] | yes | partial [F1] | partial [F1] | yes | yes | yes | yes |
-| `score` | yes | partial [F1] | yes | partial [F1] | partial [F1] | yes | partial [F1] | partial [F1] | yes | yes | yes | yes |
+| `choose` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| `tag` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
+| `score` | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes | yes |
 | `rank` | yes | yes | no [F2] | yes | yes | n/a | yes | yes | partial [F3] | yes | no [F4] | partial [F5] |
 | `filter` | yes | yes | n/a | yes | yes | n/a | yes | yes | yes | yes | yes | partial [F5] |
 | `find` | yes | partial [F6] | n/a | partial [F6] | partial [F6] | n/a | partial [F6] | partial [F6] | partial [F6] | no [F7] | no [F7] | no [F7] |
@@ -59,12 +59,7 @@ Each cell holds yes, no, partial, or n/a for not applicable. A bracketed tag nam
 
 **Functions**
 
-- **F1.** These surfaces ask `choose`, `tag` and `score` of one text at a time. Over many records they must go through `annotate` with a one-question set. The Rust library has no many-record call for these three: `crates/thinkthen/src/public/bulk.rs` holds only `filter`, `decide_many`, `rank`, `find` and `annotate`.
-  - C: the typed door takes decide questions only (`libraries/c/src/door.rs:61-63`), and the JSON door asks them over one text (`src/call.rs:117-129`).
-  - Python: `text()` accepts only a `str` (`libraries/python/src/input.rs:102-108`). A list is refused, and only a column reaches the many-record path (`src/engine.rs:319-321`).
-  - TypeScript: single-text verbs only (`libraries/typescript/index.d.ts:220-225`).
-  - Ruby: only `decide_many` and `filter` take many records with a question (`libraries/ruby/src/call.rs:324-335`).
-  - R, DuckDB and the Polars doors already build the one-question set themselves: R at `thinkthen/src/rust/src/calls.rs:355-377`, DuckDB at `src/scalars.rs:238-265`, Rust Polars at `crates/thinkthen/src/public/frame.rs:196-218`, and Python frames at `src/frame.rs:120-142`. SQLite and PostgreSQL answer one row per scalar call, which counts as yes for equivalence. Section 4 covers its cost.
+- **F1, closed 2026-09-28.** Rust, Python, TypeScript and Ruby now expose `choose_many`, `score_many` and `tag_many`; C's JSON door accepts ordered `records` for all four judgments; R's existing verbs accept columns. Frames retain their series/column forms. The independent [register 78 closure review](../records/2026-09-28-library-sql-completion-reconciliation.md) maps each public route to its accepted functional proof. SQL scalar throughput remains a separate model; this closure adds no typed C symbol or new SQL scheduler.
 - **F2.** The Rust Polars door has five methods: four series verbs and `annotate_frame` (`crates/thinkthen/src/public/frame.rs:42-110`). `decide_series` returns a Boolean with no probability, so a frame cannot sort by it. No recognize method exists.
 - **F3.** `tt_rank` and `tt_find` read a built question through `.tt_text`, which drops its model and threshold without a word (`libraries/r/thinkthen/R/thinkthen.R:152-154`, `:205`, `:213`).
 - **F4.** SQLite registers no rank function and no probability scalar (`databases/sqlite/src/scalars.rs:372-405`). Its conformance runner lists rank as not run (`tests/conformance.py:26-27`).
@@ -186,7 +181,7 @@ Closes S1, S3 to S7 and C2, the settings issue, and the strict-replay issue.
 
 ### E2. Many-record calls for every function. Shared, medium.
 
-Closes F1, F9 and F10, and the serial loops in section 4.
+F1 is complete through the landed batching tickets and the independently reviewed register 78 closure. The original proposal below also covers F9, F10 and serial loops in section 4; their remaining criteria are separate from F1.
 
 - Add `choose_many`, `score_many` and `tag_many` to the public API as thin calls over a one-question set, as `crates/thinkthen/src/public/frame.rs:196-218` already does.
 - Add a `recognize_many` that runs texts under the engine's throttle. Batching tickets R7 and B12 then build on one call per surface.
@@ -238,7 +233,7 @@ Closes R1 to R6. B5 and B12a to B12f already hold this work, and B0 set the fiel
 
 ### E7. Batching on every surface. Existing tickets B12a to B13e, large.
 
-Amend the SQL tickets for three findings of this audit before they start.
+This was the pre-build proposal. B13d/0217 and B13e/0219 have now landed; their accepted packed warm paths and the numeric model in section4 close original register73. The three historical suggestions below do not add new mandatory scalar work or supersede the accepted ticket contracts.
 
 - SQLite and PostgreSQL batch only decide, through warm (`databases/sqlite/src/scalars.rs:317-327`, `databases/postgresql/src/warm.rs:148-153`). B13d and B13e should widen warm, or add an aggregate, to every kind.
 - PostgreSQL's warm and SQLite's finalize run question groups one after another (`databases/postgresql/src/warm.rs:144-156`, `databases/sqlite/src/scalars.rs:363-365`). They should run the groups together.
@@ -305,7 +300,7 @@ The tests section 4 and section 5 name. Land E11 before E7, so batching starts f
 - **DuckDB's stable C API limits errors and cancel.**
   - A scalar can set only an error message, so the kind cannot become a host class. The message prefix is the contract.
   - A scalar cannot see the query's interrupt, so `con.interrupt()` never reaches it (`databases/duckdb/README.md:68`).
-  - Scalar bind is unusable (`sdlc/issues/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md`).
+  - Scalar bind is unusable (`sdlc/issues/closed/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md`).
   - An aggregate has no client context and cannot read `SET` values. That is why warm skips the request total (`src/tables.rs:69-93`).
   - A table function cannot run SQL on the caller's connection.
   - What would change the answer: DuckDB adding these to its stable C API, or a move to the C++ extension API, which ties each build to one DuckDB version.
@@ -322,7 +317,7 @@ The tests section 4 and section 5 name. Land E11 before E7, so batching starts f
 
 ### Does each surface reach the engine's concurrency?
 
-The engine gives each loaded copy one throttle, 1 to 32, and one pool that ticket 0142 keeps at the job count. A many-record call streams through `batch.rs` under that throttle. B4 is not built, so no surface batches yet.
+The engine gives each loaded copy one request throttle, 1 to 32. Landed batching routes pack the records supplied by one call under that throttle. SQLite and PostgreSQL ordinary scalar expressions remain serial; warm paths and PostgreSQL array calls submit several records through the shared bulk engine. The dated register73 closure below distinguishes the model from measured cases.
 
 | Surface | Many-record calls reach the throttle | Where it serializes, copies, or blocks |
 | --- | --- | --- |
@@ -335,10 +330,10 @@ The engine gives each loaded copy one throttle, 1 to 32, and one pool that ticke
 | Ruby | Yes. The GVL is released (`src/ffi.rs:161-169`) | One OS thread a call (`src/lib.rs:171-177`). Three copies of the input (`lib/thinkthen.rb:116-121`, `src/ffi.rs:198`) |
 | R | Yes, for vector calls (`src/rust/src/calls.rs:171-199`) | The R thread blocks. Recognize is serial per text (`src/rust/src/relate.rs:76-80`), and so is the named-model fallback (`calls.rs:381-405`) |
 | DuckDB | Yes, within one chunk group, and all threads share one engine (`src/engines.rs:55-99`) | Groups in a chunk run serially (`src/scalars.rs:180-189`). Details, recognize and relations run one text at a time (`src/scalars/calls.rs:91-111`, `:160-178`). Duplicates are removed within a chunk only |
-| SQLite | Only in warm, relate, and one record's annotate questions | Every scalar row holds one request in flight and starts one OS thread, even for a cached answer (`src/worker.rs:30-62`). Warm stalls the scan in `step` (`src/scalars.rs:347-349`) |
-| PostgreSQL | Only in the array form and warm (`src/lib.rs:315-340`) | Scalar rows are serial, about 41 ms each on loopback (`NOTES.md:18`). Warm runs groups one after another (`src/warm.rs:144-156`). Warm state copies grow with the square of the row count, up to its caps (`src/warm.rs:65-75`) |
+| SQLite | Warm uses the configured request throttle, 1–32, within a packed question group; its held test observes 8 at throttle 8 | Ordinary scalar rows remain one call at a time. `src/scalars/warm.rs` packs warm input through `decide_many_with`; accepted0219 proves the installed path |
+| PostgreSQL | Array and warm calls use the configured request throttle, 1–32, within a packed group | Ordinary scalar rows remain serial. `src/warm.rs` submits each group through `decide_many_with` under one deadline. Accepted0217 proves warm request bodies; its held-eight measurement is for arrays |
 
-Once B4 lands, batching reaches every surface that already makes one engine call over many records, with no door change. It does not reach the serial loops above, or the SQL scalar rows. E2 and the amended B13 tickets fix those first.
+Register73's original numeric-documentation and warm-path criteria are complete after B13d/B13e and independent closure review. This does not change the scalar executor contracts described in section3. Other historical rows in this study need their own outcome checks before being treated as current limitations.
 
 ### Tests that prove concurrency today
 

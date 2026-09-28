@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"How DuckDB reads Parquet so fast","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this need action today?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.17}},"usage":{"input_tokens":281,"output_tokens":21}}
-}

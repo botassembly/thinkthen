@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"I was charged twice. Can you fix this?\n","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does the customer ask for a refund?","criteria":{"true":"The customer asks for money back.","false":"Anything else, such as a question or a complaint."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.63}},"usage":{"input_tokens":318,"output_tokens":21}}
-}

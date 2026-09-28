@@ -4,6 +4,7 @@ cat <<'EOF' |
 {"id": "R-3", "text": "New here on the free plan. How do I reset my password?"}
 EOF
 thinkthen annotate form.json \
+  --batch 1 \
   --jsonl \
   --field /text |
 jq 'del(.text)'

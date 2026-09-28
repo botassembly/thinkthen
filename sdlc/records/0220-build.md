@@ -1,6 +1,6 @@
 # 0220 bounded rank top build
 
-Status: fresh independent code review **ACCEPTED** exact source `a8fb831ddf2d214d6e9d25bb9d0f92f2feb3be91` with no findings; the complete branch awaits integration. Fresh design review accepted `52f0864b` and ADR 0093. The first runtime slice is `365709062b0dbbb71973ed9483c4cc2b309c8a54`.
+Status: fresh independent code review **ACCEPTED** exact source `a8fb831ddf2d214d6e9d25bb9d0f92f2feb3be91` with no findings; the complete change landed at `81b145ed` and closed its issue. Fresh design review accepted `52f0864b` and ADR 0093. The first runtime slice is `365709062b0dbbb71973ed9483c4cc2b309c8a54`.
 
 `cli/schedule.rs::keep_top` retains at most N `Judged` payloads after every ordered callback, inserts exact later ties behind earlier ones, and counts every completed row. A missing probability, even on a discarded row, remains a defect at successful end before printing. The existing `core/order.rs::ranking` still writes the final at-most-N selection. `engine/schedule.rs::RecordFlow` keeps streaming and uncut rank modes, and makes top rank windowed by `dispatched - next < jobs` while preserving `Outcome::Stopped.held=true`. Both ordinary and batched command routes select that mode through `Output::flow`; public batch, conformance and private test adapters explicitly retain streaming. The 64-record feed, 4,096-member batch cap and worker pool are unchanged.
 

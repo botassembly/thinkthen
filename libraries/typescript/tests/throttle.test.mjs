@@ -19,7 +19,7 @@ test('five calls under throttle 4 hold four requests and leave the libuv pool fr
   assert.deepEqual(run.lines.map((held) => held.value), ['read'], 'a file read resolves during the hold');
   backend.release();
   await run.exited;
-  assert.deepEqual(run.lines.at(-1).value, { value: [true, true, true, true, true] });
+  assert.deepEqual(run.lines.at(-1).value.value.map((call) => call.value), [true, true, true, true, true]);
   assert.equal(await backend.count(), 5);
 });
 
@@ -32,7 +32,7 @@ test('a running batch leaves the event loop free', async (t) => {
     const batch = tt.decide_many('Refund?', records);
     for (let tick = 0; tick < 30; tick += 1) await new Promise((done) => setTimeout(done, 10));
     const drift = performance.now() - began - 300;
-    return { drift, answers: (await batch).length };`, { arm: 'arm/delay/100' });
+    return { drift, answers: (await batch).value.length };`, { arm: 'arm/delay/100' });
   await run.exited;
   const { value } = run.lines.at(-1).value;
   assert.equal(value.answers, 96);

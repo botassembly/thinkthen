@@ -32,6 +32,8 @@ mod cache_locking;
 mod cache_partial;
 #[cfg(target_os = "linux")]
 mod cache_prune_locking;
+#[cfg(unix)]
+mod cache_trust;
 #[allow(
     clippy::expect_used,
     reason = "a helper that cannot run the check or read its files should stop the test"

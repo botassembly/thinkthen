@@ -5,12 +5,16 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::core::{self, BackendProfile, Value};
+use crate::engine::facade::Roots;
 use crate::engine::facade::{self, Settings};
 use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop, guarded};
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
-use crate::public::results::{self, Answer, Counters, Details};
+use crate::public::results::{
+    self, Answer, Call, Counters, Details, ObservedQuestion, ObservedRow, QuestionDetail,
+    RecordObservation,
+};
 use crate::public::settings::EngineBuilder;
 
 /// One engine: its settings, its connection pool, its cache, and its counters.
@@ -22,6 +26,7 @@ pub struct Engine {
     pub(crate) inner: Arc<facade::Engine>,
     pub(super) most: Option<usize>,
     pub(crate) profile: Option<BackendProfile>,
+    pub(crate) batch: Option<core::Setting>,
 }
 
 impl fmt::Debug for Engine {
@@ -132,12 +137,15 @@ impl Engine {
         settings: Settings,
         most: Option<usize>,
         profile: Option<BackendProfile>,
+        roots: Option<Roots>,
+        batch: Option<core::Setting>,
     ) -> Result<Self, Error> {
-        let inner = guarded(|| facade::Engine::new(settings).map_err(Error::from))?;
+        let inner = guarded(|| facade::Engine::with_roots(settings, roots).map_err(Error::from))?;
         Ok(Self {
             inner: Arc::new(inner),
             most,
             profile,
+            batch,
         })
     }
 
@@ -157,7 +165,7 @@ impl Engine {
         &self,
         question: &Q,
         evidence: &str,
-    ) -> Result<Answer, Error> {
+    ) -> Result<Call<Answer>, Error> {
         self.decide_with(question, evidence, CallOptions::new())
     }
 
@@ -171,12 +179,12 @@ impl Engine {
         question: &Q,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Answer, Error> {
+    ) -> Result<Call<Answer>, Error> {
         let question = question.question();
         only(question, DECISIONS, "decide")?;
-        Ok(results::answer(
-            &self.judge(question, evidence, options)?.value,
-        ))
+        Ok(self
+            .judge(question, evidence, options)?
+            .map(|judged| results::answer(&judged.value)))
     }
 
     /// Pick one option of `C`, or `None` when the answer is not sure.
@@ -188,7 +196,7 @@ impl Engine {
         &self,
         question: &ChooseQuestion<C>,
         evidence: &str,
-    ) -> Result<Option<C>, Error> {
+    ) -> Result<Call<Option<C>>, Error> {
         self.choose_with(question, evidence, CallOptions::new())
     }
 
@@ -202,12 +210,13 @@ impl Engine {
         question: &ChooseQuestion<C>,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Option<C>, Error> {
-        match self.judge(&question.0, evidence, options)?.value {
-            Value::Choice(Some(label)) => C::from_label(&label).map(Some).ok_or_else(unbound),
-            Value::Choice(None) => Ok(None),
-            _ => Err(Error::defect("a choose answer held no choice")),
-        }
+    ) -> Result<Call<Option<C>>, Error> {
+        self.judge(&question.0, evidence, options)?
+            .try_map(|judged| match judged.value {
+                Value::Choice(Some(label)) => C::from_label(&label).map(Some).ok_or_else(unbound),
+                Value::Choice(None) => Ok(None),
+                _ => Err(Error::defect("a choose answer held no choice")),
+            })
     }
 
     /// Place the evidence on the question's levels: 0 at the lowest, 1 at the highest.
@@ -215,7 +224,7 @@ impl Engine {
     /// # Errors
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of question.
-    pub fn score(&self, question: &Question, evidence: &str) -> Result<f64, Error> {
+    pub fn score(&self, question: &Question, evidence: &str) -> Result<Call<f64>, Error> {
         self.score_with(question, evidence, CallOptions::new())
     }
 
@@ -229,12 +238,13 @@ impl Engine {
         question: &Question,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<f64, Error> {
+    ) -> Result<Call<f64>, Error> {
         only(question, &[Kind::Score], "score")?;
-        match self.judge(question, evidence, options)?.value {
-            Value::Score(position) => Ok(position),
-            _ => Err(Error::defect("a score answer held no position")),
-        }
+        self.judge(question, evidence, options)?
+            .try_map(|judged| match judged.value {
+                Value::Score(position) => Ok(position),
+                _ => Err(Error::defect("a score answer held no position")),
+            })
     }
 
     /// Every label of `C` that reached the cut, in declared order.
@@ -246,7 +256,7 @@ impl Engine {
         &self,
         question: &TagQuestion<C>,
         evidence: &str,
-    ) -> Result<Vec<C>, Error> {
+    ) -> Result<Call<Vec<C>>, Error> {
         self.tag_with(question, evidence, CallOptions::new())
     }
 
@@ -260,14 +270,15 @@ impl Engine {
         question: &TagQuestion<C>,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Vec<C>, Error> {
-        match self.judge(&question.0, evidence, options)?.value {
-            Value::Tag(labels) => labels
-                .iter()
-                .map(|label| C::from_label(label).ok_or_else(unbound))
-                .collect(),
-            _ => Err(Error::defect("a tag answer held no labels")),
-        }
+    ) -> Result<Call<Vec<C>>, Error> {
+        self.judge(&question.0, evidence, options)?
+            .try_map(|judged| match judged.value {
+                Value::Tag(labels) => labels
+                    .iter()
+                    .map(|label| C::from_label(label).ok_or_else(unbound))
+                    .collect(),
+                _ => Err(Error::defect("a tag answer held no labels")),
+            })
     }
 
     /// One judgment with its probabilities and request facts.
@@ -279,7 +290,7 @@ impl Engine {
         &self,
         question: &Q,
         evidence: &str,
-    ) -> Result<Details, Error> {
+    ) -> Result<Call<Details>, Error> {
         self.details_with(question, evidence, CallOptions::new())
     }
 
@@ -293,7 +304,7 @@ impl Engine {
         question: &Q,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Details, Error> {
+    ) -> Result<Call<Details>, Error> {
         let question = question.question();
         only(
             question,
@@ -306,13 +317,14 @@ impl Engine {
             ],
             "details",
         )?;
-        let judged = self.judge(question, evidence, options)?;
-        Details::of(
-            &judged,
-            &question.core,
-            question.threshold,
-            self.inner.backend(),
-        )
+        self.judge(question, evidence, options)?.try_map(|judged| {
+            Details::of(
+                &judged,
+                question,
+                self.inner.backend(),
+                self.profile.as_ref(),
+            )
+        })
     }
 
     /// The facade engine that asks this question's model.
@@ -338,14 +350,31 @@ impl Engine {
         question: &Question,
         text: &str,
         options: CallOptions<'_>,
-    ) -> Result<facade::Judgment, Error> {
+    ) -> Result<Call<facade::Judgment>, Error> {
+        options.without_context("a single-document call")?;
         let evidence = evidence(text)?;
         let engine = self.asking(question)?;
         let stop = Stop::begin(options)?;
-        stop.run(|cancel| {
-            engine
+        stop.run_call(1, |cancel| {
+            let judged = engine
                 .judge(&question.core, question.threshold, evidence, cancel)
-                .map_err(Error::from)
+                .map_err(Error::from)?;
+            if stop.observing() {
+                let details = Details::of(&judged, question, engine.backend(), engine.profile())?;
+                let observed = ObservedQuestion::from_details(&details);
+                stop.observe(RecordObservation::Question {
+                    index: 0,
+                    member: None,
+                    stage: None,
+                    position: 0,
+                    detail: QuestionDetail::of(&observed),
+                });
+                stop.observe(RecordObservation::Row {
+                    index: 0,
+                    value: ObservedRow::Judgment(details.value()),
+                });
+            }
+            Ok(judged)
         })
     }
 }

@@ -11,7 +11,12 @@
 # without its default features, which reach OpenSSL, a library the image lacks.
 set -eu
 [ $# -eq 2 ] || { echo 'usage: release-container WORK OUT' >&2; exit 2; }
-IMAGE=quay.io/pypa/manylinux_2_28_x86_64@sha256:407f771c51a2c3e83ebe5a7970b4289ead3a6db21d9b9c089168775cad11d328
+TARGET=$(rustc -vV | sed -n 's/^host: //p')
+case $TARGET in
+x86_64-unknown-linux-gnu) IMAGE=quay.io/pypa/manylinux_2_28_x86_64@sha256:407f771c51a2c3e83ebe5a7970b4289ead3a6db21d9b9c089168775cad11d328; ARCH=x86_64; NODE_ARCH=x64 ;;
+aarch64-unknown-linux-gnu) IMAGE=quay.io/pypa/manylinux_2_28_aarch64@sha256:c22ffd129ac99a8a42d1f2c2f4e88a9089288dd9ee987a7092da1c7dc48f27a9; ARCH=aarch64; NODE_ARCH=arm64 ;;
+*) echo "release-container: no image for $TARGET" >&2; exit 77 ;;
+esac
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 mkdir -p -- "$1/cache" "$2"
 WORK=$(CDPATH='' cd -- "$1" && pwd) OUT=$(CDPATH='' cd -- "$2" && pwd)
@@ -20,31 +25,46 @@ WORK=$(CDPATH='' cd -- "$1" && pwd) OUT=$(CDPATH='' cd -- "$2" && pwd)
 scratch_dir RUN "$WORK/run.XXXXXX"
 mkdir -p "$RUN/src" "$RUN/out" "$RUN/home/.cargo/registry" "$RUN/cache"
 git -C "$REPO" archive HEAD | tar -x -C "$RUN/src"
-set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home
+set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
 	set -- "$@" -v "$RELEASE_CARGO_REGISTRY:/work/home/.cargo/registry" -e CARGO_NET_OFFLINE=true
 fi
 docker run "$@" "$IMAGE" sh -euc '
 	cache=/work/cache
 	fetch() { [ -f "$cache/$1" ] || curl -fsSL -o "$cache/$1" "$2"; echo "$3  $cache/$1" | sha256sum -c --quiet; }
-	fetch rustup-init https://static.rust-lang.org/rustup/archive/1.28.2/x86_64-unknown-linux-gnu/rustup-init \
-		20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c
-	maturin=maturin-1.15.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl
-	fetch "$maturin" "https://files.pythonhosted.org/packages/py3/m/maturin/$maturin" \
-		653020a63525bb224e5ab0adf02e17a2e08bc86dbea7fc1399c9a56d7529b99e
-	node=node-v22.22.3-linux-x64
-	fetch "$node.tar.xz" "https://nodejs.org/dist/v22.22.3/$node.tar.xz" \
-		"$(cut -d" " -f1 /work/src/libraries/typescript/node.sha256)"
-	libclang=libclang-18.1.1-py2.py3-none-manylinux2010_x86_64.whl
-	fetch "$libclang" "https://files.pythonhosted.org/packages/py2.py3/l/libclang/$libclang" \
-		c533091d8a3bbf7460a00cb6c1a71da93bffe148f172c7d03b1c31fbf8aa2a0b
+	if [ "$ARCH" = x86_64 ]; then
+		rustup_hash=20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c
+		maturin=maturin-1.15.0-py3-none-manylinux_2_12_x86_64.manylinux2010_x86_64.musllinux_1_1_x86_64.whl
+		maturin_url=https://files.pythonhosted.org/packages/py3/m/maturin/$maturin
+		maturin_hash=653020a63525bb224e5ab0adf02e17a2e08bc86dbea7fc1399c9a56d7529b99e
+		libclang=libclang-18.1.1-py2.py3-none-manylinux2010_x86_64.whl
+		libclang_url=https://files.pythonhosted.org/packages/py2.py3/l/libclang/$libclang
+		libclang_hash=c533091d8a3bbf7460a00cb6c1a71da93bffe148f172c7d03b1c31fbf8aa2a0b
+		node_hash=$(cut -d" " -f1 /work/src/libraries/typescript/node.sha256)
+	else
+		rustup_hash=e3853c5a252fca15252d07cb23a1bdd9377a8c6f3efa01531109281ae47f841c
+		maturin=maturin-1.15.0-py3-none-manylinux_2_17_aarch64.manylinux2014_aarch64.musllinux_1_1_aarch64.whl
+		maturin_url=https://files.pythonhosted.org/packages/5d/2b/2abff58037188d852b124871b1f0d720e1c2bfb3d4f1b03d87c52cd66488/$maturin
+		maturin_hash=0ebf9767892725083138e671c34482c660317a2f3d6a29fc0e0f34e9d8c99136
+		libclang=libclang-18.1.1-py2.py3-none-manylinux2014_aarch64.whl
+		libclang_url=https://files.pythonhosted.org/packages/3c/3d/f0ac1150280d8d20d059608cf2d5ff61b7c3b7f7bcf9c0f425ab92df769a/$libclang
+		libclang_hash=54dda940a4a0491a9d1532bf071ea3ef26e6dbaf03b5000ed94dd7174e8f9592
+		node_hash=1c4a9933a5e45bc88f54f70b5f91232c127ec49f1a5989d23fb85824c7adf9b7
+	fi
+	fetch rustup-init "https://static.rust-lang.org/rustup/archive/1.28.2/$TARGET/rustup-init" "$rustup_hash"
+	fetch "$maturin" "$maturin_url" "$maturin_hash"
+	node=node-v22.22.3-linux-$NODE_ARCH
+	fetch "$node.tar.xz" "https://nodejs.org/dist/v22.22.3/$node.tar.xz" "$node_hash"
+	fetch "$libclang" "$libclang_url" "$libclang_hash"
 	mkdir -p /work/home/pg
-	for rpm in 299c44fbae190bcf462bc98ceaca719771af2f03bf4822a188c9f39065712674:postgresql16 \
-		85414ad9e7cf7dc50e6d7b1fefb706351166164de3bf6f102fae6796b973692b:postgresql16-libs \
-		13df7b9f5373777bf7d0d30b7bcd8cdee2c50fe2a128be42a802a64fa7eeabf4:postgresql16-devel \
-		6f68ccd50fdfe92e636bd45bd798b62750a633adfb1cc2a251d133573a67bafc:postgresql16-server; do
-		file=${rpm#*:}-16.15-1PGDG.rhel8.10.x86_64.rpm
-		fetch "$file" "https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-8-x86_64/$file" "${rpm%%:*}"
+	if [ "$ARCH" = x86_64 ]; then
+		rpms="299c44fbae190bcf462bc98ceaca719771af2f03bf4822a188c9f39065712674:postgresql16 85414ad9e7cf7dc50e6d7b1fefb706351166164de3bf6f102fae6796b973692b:postgresql16-libs 13df7b9f5373777bf7d0d30b7bcd8cdee2c50fe2a128be42a802a64fa7eeabf4:postgresql16-devel 6f68ccd50fdfe92e636bd45bd798b62750a633adfb1cc2a251d133573a67bafc:postgresql16-server"
+	else
+		rpms="1e059adae2e983b300a095cec1aa9e56758781b6208c58d8f89fa5818f0d9550:postgresql16 2dff825e1754b2522b4de8d0914436a5a43bbb85520829852d9b5ad4037f83d1:postgresql16-libs 3e4271348d9f24303376428416ee26b055f35903b4db190e908ac93781396cc6:postgresql16-devel 8162bff1a024464d281b36aa7e2a20ca6e328d0d15cd4ac670d6593584d81a03:postgresql16-server"
+	fi
+	for rpm in $rpms; do
+		file=${rpm#*:}-16.15-1PGDG.rhel8.10.$ARCH.rpm
+		fetch "$file" "https://download.postgresql.org/pub/repos/yum/16/redhat/rhel-8-$ARCH/$file" "${rpm%%:*}"
 		cp "$cache/$file" /work/home/ && (cd /work/home && rpm2archive "$file" && tar -xzf "$file.tgz" -C pg)
 	done
 	chmod +x "$cache/rustup-init"
@@ -64,23 +84,55 @@ docker run "$@" "$IMAGE" sh -euc '
 	mkdir -p /work/home/.pgrx && printf "[configs]\npg16 = \"%s\"\n" "$PG_CONFIG" >/work/home/.pgrx/config.toml
 	export PATH LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS PG_CONFIG
 	. databases/duckdb/tools/version.env
+	if [ "$ARCH" = x86_64 ]; then
+		duckdb_asset=static-libs-linux-amd64.zip
+		duckdb_hash=$DUCKDB_STATIC_ZIP_SHA256
+		duckdb_manifest=archive-sha256.txt
+		duckdb_static=/work/cache/duckdb-static-libs
+	else
+		duckdb_asset=static-libs-linux-arm64.zip
+		duckdb_hash=$DUCKDB_LINUX_ARM64_STATIC_ZIP_SHA256
+		duckdb_manifest=archive-sha256-linux-arm64.txt
+		duckdb_static=/work/cache/duckdb-static-libs-aarch64
+	fi
 	duckdb_source=/work/cache/duckdb-source
-	duckdb_static=/work/cache/duckdb-static-libs
 	if [ ! -d "$duckdb_source" ]; then
 		git clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$duckdb_source"
 	fi
 	[ "$(git -C "$duckdb_source" rev-parse HEAD)" = "$DUCKDB_CPP_SOURCE_COMMIT" ] || {
 		echo "release-container: DuckDB C++ source differs from its pinned commit" >&2; exit 1;
 	}
-	fetch static-libs-linux-amd64.zip \
-		"https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/static-libs-linux-amd64.zip" \
-		"$DUCKDB_STATIC_ZIP_SHA256"
+	fetch "$duckdb_asset" \
+		"https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$duckdb_asset" \
+		"$duckdb_hash"
 	mkdir -p "$duckdb_static"
-	python3 -m zipfile -e "$cache/static-libs-linux-amd64.zip" "$duckdb_static"
-	(cd "$duckdb_static" && sha256sum -c --quiet /work/src/databases/duckdb/cpp/archive-sha256.txt)
+	python3 -m zipfile -e "$cache/$duckdb_asset" "$duckdb_static"
+	(cd "$duckdb_static" && sha256sum -c --quiet "/work/src/databases/duckdb/cpp/$duckdb_manifest")
 	THINKTHEN_DUCKDB_CPP_SOURCE=$duckdb_source
 	THINKTHEN_DUCKDB_CPP_STATIC_DIR=$duckdb_static
 	export THINKTHEN_DUCKDB_CPP_SOURCE THINKTHEN_DUCKDB_CPP_STATIC_DIR
-	sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu /work/out c sqlite duckdb postgresql python typescript
+	# The image carries OpenSSL 1.1.1k runtime libraries but no headers. Its
+	# matching AlmaLinux development RPM supplies the build-only headers and
+	# linker names without changing the pinned image or installed runtime.
+	[ "$(rpm -q openssl-libs)" = "openssl-libs-1.1.1k-17.el8_6.$ARCH" ] || {
+		echo "release-container: image OpenSSL runtime differs from pinned headers" >&2; exit 1;
+	}
+	if [ "$ARCH" = x86_64 ]; then
+		openssl_devel_hash=f1fa1c41a0acba5e31de12a3d2d346d1bbe7a1932004ffdfce6efb13e89e8f22
+	else
+		openssl_devel_hash=2d7c8ba80de00d1ee0916cc941036ffa19b1b9292e4fba3e014631ff29554308
+	fi
+	openssl_devel=openssl-devel-1.1.1k-17.el8_6.$ARCH.rpm
+	fetch "$openssl_devel" "https://repo.almalinux.org/almalinux/8.10/BaseOS/$ARCH/os/Packages/$openssl_devel" "$openssl_devel_hash"
+	mkdir -p /work/home/openssl
+	(cd /work/home/openssl && cp "$cache/$openssl_devel" . && rpm2archive "$openssl_devel" && tar -xzf "$openssl_devel.tgz")
+	ln -s /usr/lib64/libssl.so.1.1.1k /work/home/openssl/usr/lib64/libssl.so.1.1.1k
+	ln -s /usr/lib64/libcrypto.so.1.1.1k /work/home/openssl/usr/lib64/libcrypto.so.1.1.1k
+	THINKTHEN_RUBY_OPENSSL=/work/home/openssl/usr
+	export THINKTHEN_RUBY_OPENSSL
+	sh libraries/ruby/setup-ruby.sh
+	RUBY=/work/home/.cache/thinkthen-toolchains/ruby/3.4.11/bin/ruby
+	export RUBY
+	sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby
 '
 cp -- "$RUN"/out/* "$OUT/"

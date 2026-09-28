@@ -18,7 +18,7 @@ test('each deadline spelling runs, is spent, or is refused before a send', async
       tiny: 1e-7, yes: true, no: false, five: '5', list: [] };
     for (const [name, deadlineMs] of Object.entries(spellings)) {
       const options = deadlineMs === undefined ? {} : { deadlineMs };
-      try { out[name] = await tt.decide('Refund?', name, options); }
+      try { out[name] = (await tt.decide('Refund?', name, options)).value; }
       catch (error) { out[name] = [error.name, error.kind, error.message]; }
     }
     return out;`);

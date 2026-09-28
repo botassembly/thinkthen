@@ -8,6 +8,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
@@ -27,14 +28,18 @@ use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
 
 pub(crate) use crate::engine::annotate_schedule::{
-    InputPort as GroupPort, Outcome as GroupOutcome, Prepared,
+    GroupPlanError, GroupPlanner, GroupRequest, GroupWork, InputPort as GroupPort,
+    Outcome as GroupOutcome, Prepared,
 };
-pub(crate) use crate::engine::http::Key;
+pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
+pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
-pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
+pub(crate) use annotate::{
+    Annotation, GroupAnswer, GroupBatchFailure, PreparedGroup, assemble, check_model,
+};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
@@ -42,8 +47,11 @@ mod annotate;
 #[cfg(test)]
 #[cfg(feature = "cli")]
 mod fork_tests;
+mod native_batch;
 mod recognize;
 mod relate;
+mod split;
+pub(crate) use split::{OneSplit, SplitDecision, SplitParent};
 
 /// The folders replies are replayed from and recorded to.
 #[derive(Clone, Debug, Default)]
@@ -52,6 +60,7 @@ pub(crate) struct Storage {
     pub(crate) replay: Option<PathBuf>,
     pub(crate) private_default: bool,
     pub(crate) cache_answers: bool,
+    pub(crate) refresh_cache: bool,
 }
 
 /// Where a live attempt's key comes from: the command's variable, read at
@@ -89,6 +98,7 @@ pub(crate) struct Engine {
     /// The explicit width or `None`, applied again in each process.
     width: Option<Width>,
     storage: Storage,
+    roots: Option<Roots>,
     usage_path: Option<PathBuf>,
     recording: bool,
     state: Arc<Guarded<State>>,
@@ -126,8 +136,20 @@ impl Engine {
         Self::built_by(settings, std::process::id())
     }
 
+    /// The same engine with parsed replacement trust roots.
+    pub(crate) fn with_roots(settings: Settings, roots: Option<Roots>) -> Result<Self, Error> {
+        match roots {
+            Some(roots) => Self::built_with_roots(settings, std::process::id(), Some(roots)),
+            None => Self::new(settings),
+        }
+    }
+
     /// Build this engine's state as process `pid`, which then owns it.
     fn built_by(settings: Settings, pid: u32) -> Result<Self, Error> {
+        Self::built_with_roots(settings, pid, None)
+    }
+
+    fn built_with_roots(settings: Settings, pid: u32, roots: Option<Roots>) -> Result<Self, Error> {
         let mut engine = Self {
             usage_path: settings.usage.path().map(PathBuf::from),
             backend: settings.backend,
@@ -138,6 +160,7 @@ impl Engine {
             key: settings.key,
             width: settings.width,
             storage: settings.storage,
+            roots,
             recording: false,
             state: Arc::new(Guarded::empty()),
         };
@@ -159,11 +182,17 @@ impl Engine {
             storage.replay.as_deref(),
             storage.private_default,
             storage.cache_answers,
-        )?;
+        )?
+        .with_refresh(storage.refresh_cache);
         let widths = crate::engine::process_width_of(pid, cancel)?;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
         Ok(State {
-            client: Client::new(self.timeout, self.backend.is_secure(), widths),
+            client: match self.roots.as_ref() {
+                Some(roots) => {
+                    Client::with_roots(self.timeout, self.backend.is_secure(), widths, Some(roots))
+                }
+                None => Client::new(self.timeout, self.backend.is_secure(), widths),
+            },
             recorder,
             usage,
             width,
@@ -263,12 +292,22 @@ impl Engine {
     /// Send one batch's exact body as one request, through the same replay,
     /// retries, recording, cache, and counters as every other request.
     pub(crate) fn ask_batch(&self, batch: &Batch, cancel: &Cancel) -> Result<Answered, Error> {
+        self.ask_batch_with_attempts(batch, cancel, None)
+    }
+
+    /// Attribute actual marked attempts to one prepared batch, including a 413.
+    pub(crate) fn ask_batch_with_attempts(
+        &self,
+        batch: &Batch,
+        cancel: &Cancel,
+        attempts: Option<&AtomicU64>,
+    ) -> Result<Answered, Error> {
         let state = self.state(cancel)?;
         let prepared = PreparedRequest {
             body: batch.body.clone(),
             digest: batch.digest.clone(),
         };
-        request::ask_sent(
+        request::ask_sent_observed(
             &self.backend,
             &batch.plan,
             prepared,
@@ -276,7 +315,23 @@ impl Engine {
             cancel,
             self.transport(&state),
             || (self.key)(),
+            || {
+                if let Some(attempts) = attempts {
+                    attempts.fetch_add(1, Ordering::Relaxed);
+                }
+            },
         )
+    }
+
+    pub(crate) fn ask_record_batch_with_one_split(
+        &self,
+        batch: &Batch,
+        records: impl FnOnce() -> Result<Vec<(crate::core::BatchRecord, Question)>, Error>,
+        context: Option<&crate::core::Evidence>,
+        cancel: &Cancel,
+        after_left: impl FnOnce(&Batch, &Result<Answered, Error>) -> SplitDecision,
+    ) -> Result<OneSplit, Error> {
+        split::ask(self, batch, records, context, cancel, after_left)
     }
 
     /// Ask one aggregate question over a bounded set and select one unit.
@@ -301,9 +356,20 @@ impl Engine {
         cancel: &Cancel,
         mut each: impl FnMut(Answered) -> Result<(), E>,
     ) -> Result<(), E> {
+        self.ask_chunks_with_plan(chunks, cancel, |_, answered| each(answered))
+    }
+
+    /// Retain each already prepared plan beside its ordered reply for a
+    /// caller that must name the actual logical questions it answered.
+    pub(crate) fn ask_chunks_with_plan<E: From<Error>>(
+        &self,
+        chunks: Vec<Chunk>,
+        cancel: &Cancel,
+        mut each: impl FnMut(&Plan, Answered) -> Result<(), E>,
+    ) -> Result<(), E> {
         let state = self.state(cancel)?;
         let send = |chunk: Chunk| {
-            request::ask_sent(
+            let answered = request::ask_sent(
                 &self.backend,
                 &chunk.plan,
                 chunk.request,
@@ -311,16 +377,20 @@ impl Engine {
                 cancel,
                 self.transport(&state),
                 || self.key(),
-            )
+            )?;
+            Ok::<_, Error>((chunk.plan, answered))
         };
         let jobs = state.width.min(chunks.len());
         if jobs < 2 {
             for chunk in chunks {
-                each(send(chunk)?)?;
+                let (plan, answered) = send(chunk)?;
+                each(&plan, answered)?;
             }
             return Ok(());
         }
-        crate::engine::workers::ordered(jobs, chunks, cancel, &send, each)
+        crate::engine::workers::ordered(jobs, chunks, cancel, &send, |(plan, answered)| {
+            each(&plan, answered)
+        })
     }
 
     /// Answer framed inputs over this engine's width and emit them in input order.

@@ -6,9 +6,9 @@ opens: install.sh site/public/install.sh site/src/data/catalog.mjs site/src/page
 
 # 0128: Release and install for 0.1
 
-Status: Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`), with its Rust test version edits held until ticket 0119 lands. Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`) after two code reviews. Phases 3 and 4 are open, and each starts on the coordinator's go-ahead. Owner: Claude. Four phases, each its own build, review, and landing.
+Status: Phase 1 landed 2026-09-25 (`sdlc/records/0128-phase-1-build.md`), with its Rust test version edits held until ticket 0119 lands. Phase 2 landed 2026-09-26 (`sdlc/records/0128-phase-2-build.md`) after two code reviews. Phase3a landed after independent High ACCEPT at `3b540d19`; the Ian-dispatched four-runner rehearsal in Phase 3b and Phase 4 remain open. Owner: the Codex release lane under the coordinator's 2026-09-28 go-ahead. Four phases, each its own build, review, and landing.
 
-Review route: a fresh read-only Claude session reviews this design and each phase's final diff. Codex does not review this ticket unless Ian routes it.
+Current review route: a fresh read-only Codex High release-safety reviewer accepted Phase3a's final diff at `3b540d19`. The earlier Claude design and Phase 1/2 reviews remain the historical review record. Ian explicitly handed the queue and review route to Codex on 2026-09-28.
 
 ## Outcome and authority
 
@@ -22,7 +22,11 @@ The ask is `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`, all fifteen 
 
 Earlier rulings still hold. The first release is 0.1 on every surface. One crate is named `thinkthen`. One Homebrew line and one download script ship. Package names, the tap, DNS, the site, and papers are Ian's. The release checklist counts a surface check that reports "not run" as a failure (ticket 0111, and queue item 6 of `sdlc/planning/one-line-plan-2026-09-24.md`).
 
-The coordinator's rulings of 2026-09-25 on the first review also govern it. The work runs as four phases inside this ticket. GitHub's macOS runners give the macOS proof of record, and no Rust build runs on the M5. Release mode is dispatched from the tag.
+The coordinator's rulings of 2026-09-25 on the first review also govern it. The work runs as four phases inside this ticket. GitHub's macOS runners give the macOS proof of record. Ian's later 2026-09-28 authorization allows native M5 build checks; it supersedes the former no-M5 restriction without replacing the runner proof of record. Release mode is dispatched from the tag.
+
+## Retained history step
+
+The tracked-tree private-name cleanup passed fresh review at `dfd6130c`; the external 30-entry guard found no tracked-path or tracked-file hit. The original issue is closed for that cleanup. Ian's 2026-09-26 ruling still requires a fresh one-commit history before public release, after the configured guard passes and Ian names the go-live commit. This unperformed step belongs to Phase 4. Closing the cleanup issue does not authorize the reset or public release.
 
 ## The one rule on outward steps
 
@@ -111,14 +115,14 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
     | Node headers | The `nodejs.org` tarball for Node 22 at a pinned version, checked by sha256 |
     | C, SQLite, DuckDB | The image's `gcc`. The SQLite amalgamation from `databases/sqlite/amalgamation.sha256`. The DuckDB C API headers from `databases/duckdb/vendor` |
     | PostgreSQL 16 | The PGDG EL8 `postgresql16`, `postgresql16-libs`, `postgresql16-devel`, and `postgresql16-server` RPMs, pinned by sha256 and unpacked with `rpm2archive` as the calling user. `pg_config` sits in `postgresql16`. `cargo-pgrx` 0.17.0 with `--locked`. bindgen's libclang from PyPI's `libclang` 18.1.1 wheel, pinned by sha256, with the image gcc's own headers |
-    | Ruby | Not this container. The Ruby gem builds in the `rb-sys-dock` image for rb-sys 0.9.130, pinned by digest, with Ruby 3.4 |
+    | Ruby | Phase 3a correction after inspecting `rbsys/x86_64-linux:0.9.130`: that official image has Ruby 3.1.7 and 4.0.2 but no 3.4, and glibc 2.31. The Linux gems instead build from `toolchain.env`'s SHA-pinned Ruby 3.4.11 sources inside each pinned `manylinux_2_28` target image. Those images have OpenSSL runtime libraries but no headers, so `release-container` unpacks the matching SHA-pinned AlmaLinux `openssl-devel` RPM for the build only. The native runner still installs and smokes each platform gem. The earlier `rb-sys-dock` plan remains in the Phase 2 record as history. |
 
    R needs no container, because R-universe builds it. The `aarch64` half of the container proof runs first in the Phase 3 rehearsal.
 
 ## Phase 3: macOS and the release workflow
 
 1. **The macOS paths.** `databases/duckdb/check.sh`, `databases/postgresql/check.sh`, and `libraries/ruby/check.sh` each exit 77 on macOS today. Each loses that guard and gains a macOS path. The PostgreSQL self-test `darwin_reports_not_run`, at lines 103 to 116 of `check.sh`, becomes `darwin_runs`. It pins the new behavior: with `uname` reporting Darwin and no toolchain folder, the check reports "not run" for the missing toolchain, not for the kernel. PostgreSQL on macOS builds against Homebrew's `postgresql@16`, pinned by its bottle's sha256. `libraries/ruby/setup-ruby.sh` and `toolchain.env` gain the macOS Ruby 3.4 build for both chips, pinned by sha256, under `~/.cache/thinkthen-toolchains/`.
-2. **`release.yml`.** New. GitHub dispatches only a workflow that is on the default branch, so Phase 3 lands in two steps. Phase 3a lands `release.yml` on main, dispatch only, through this worktree. Phase 3b is Ian's first dispatch of `rehearse`, in item 4. Between the two, nothing can publish. Release mode needs a `v*` tag, which only Ian can create. Every job in environment `release` also requires the environment variable `RELEASE_ARMED` to equal `true`, and Ian sets it only after he finishes his setup items. GitHub creates a referenced environment with no protection, so this guard holds even before Ian configures `release`. The workflow check pins that condition on every such job. The workflow starts only from `workflow_dispatch` with one input, `mode`, set to `rehearse` or `release`. `rehearse` builds the commit it is dispatched from. `release` must be dispatched from a `v*` tag, and the `resolve` job fails on any other ref. There is no `ref` input. Top-level permissions are `{}`, and no job uses a cache. The runners are `ubuntu-24.04` for `x86_64` Linux, `ubuntu-24.04-arm` for `aarch64` Linux, `macos-15` for `arm64` macOS, and `macos-15-intel` for `x86_64` macOS. The jobs run in this order:
+2. **`release.yml`.** New. GitHub dispatches only a workflow that is on the default branch, so Phase 3 lands in two steps. Phase 3a lands `release.yml` on main, dispatch only, through this worktree. Phase 3b is Ian's first dispatch of `rehearse`, in item 4. Between the two, nothing can publish. Release mode needs a `v*` tag, which only Ian can create. Each outward job requires release mode, enters environment `release`, and checks that environment's `RELEASE_ARMED` variable as its first step before checkout, download, or publish. Ian sets the variable only after his setup items. An environment variable is unavailable to a job-level `if` before the job starts, so the first-step check must stay inside the environment job. GitHub creates a referenced environment with no protection, so this guard holds even before Ian configures `release`. The workflow check pins the placement on every outward job. The workflow starts only from `workflow_dispatch` with one input, `mode`, set to `rehearse` or `release`. `rehearse` builds the commit it is dispatched from. `release` must be dispatched from a `v*` tag, and the `resolve` job fails on any other ref. There is no `ref` input. Top-level permissions are `{}`, and no job uses a cache. The runners are `ubuntu-24.04` for `x86_64` Linux, `ubuntu-24.04-arm` for `aarch64` Linux, `macos-15` for `arm64` macOS, and `macos-15-intel` for `x86_64` macOS. The jobs run in this order:
     - `resolve`: output the one commit SHA and run `sdlc/scripts/versions`. In `release` mode it adds `--tag` with the tag name.
     - `build`: one job per target runs `release-pack`. Linux command builds are static `musl`. Linux loadable libraries build in the containers of Phase 2 item 5. macOS builds run on the native runner for each chip.
     - `wheels`, `npm-pack`, `gems`, `crate`: build the Python abi3 wheels, one npm package, one platform gem per target, and `cargo package --package thinkthen`.
@@ -223,7 +227,7 @@ Each is the agent's decision unless marked the coordinator's. Ian can overturn a
 | `release.yml` with a cache step | Exit 1 naming the step |
 | `contents: write` on a job other than `draft` or `publish` | Exit 1 naming the job |
 | A job with `id-token: write` or a secret and no `environment: release` | Exit 1 naming the job |
-| A job in environment `release` without the `RELEASE_ARMED` condition | Exit 1 naming the job |
+| An outward job without `environment: release` or a first-step check of its environment `RELEASE_ARMED` variable before outward work | Exit 1 naming the job |
 | A checkout of a branch or a ref in place of the resolved SHA | Exit 1 naming the job |
 | Top-level permissions other than `{}` in `release.yml` | Exit 1 |
 | An unpinned `pip install maturin`, `npm install -g npm`, or `gem update --system` | Exit 1 naming the step |
@@ -316,6 +320,20 @@ Excluded: Windows builds. `cargo-dist`. The Rust Polars feature move, which tick
 
 ## Dependencies and order
 
+### Current Phase 3 preparation, 2026-09-28
+
+The [release preparation record](../records/0128-release-preparation.md) compares its then-current main `69296bba` with this accepted phase plan and the active 0231/0232 branches. It is a factual build handoff, not a change to the four-phase outcome. Phase 1 and Linux x86-64 Phase 2 are landed. Phase 3a now implements the dispatch-only `.github/workflows/release.yml`, Linux ARM container inputs, and macOS PostgreSQL/Ruby host routes in a separate lane. The [Phase 3a build record](../records/0128-phase-3a-build.md) states its exact proof and gaps. Ian's repository/environment/tag setup and manual dispatch are prerequisites for Phase 3b execution, not for writing and reviewing Phase 3a. Native M5 checks are authorized, while the four release runners remain the proof of record and the Phase 4 public checks remain his release run.
+
+The native Ruby rehearsal found that `build.sh`'s exported path-remapping `RUSTFLAGS` replaced Cargo's Darwin target linker flags. Phase 3a restores dynamic Ruby symbol lookup while retaining source-path remapping, then gives the copied Mach-O extension a relative install name. A source compile alone did not prove the gem: the focused M5 check installed the new platform gem into a fresh folder, loaded its native extension there, inspected its minimum OS and dependencies, and scanned its raw bytes for builder paths. That current-OS check does not close the macOS 15 runner or four-target release smoke.
+
+Ticket 0231 owns conversion of the retained DuckDB C API package targets to the accepted C++ path and their distinct native installed checks. Its reviewed Apple Silicon slice landed at `f21e3451`; Linux ARM64 and macOS Intel still select the old C API fallback. Put the remaining 0201/0149/0157 and registers 51/72 **platform** criteria in that owner's package proof; do not discard their SQL acceptance. Phase 3a's `smoke-bundle` refuses an old C API archive before the release smoke, using the distinct C++ package license/notice/dependency files. Ticket 0232 owns the SQLite macOS ARM64 checker and genuine 3.49.0/3.50.0 load boundary; its selected M5 installed checks and independent code review passed at landing `1d6b71f4`; a macOS15 runner result remains. The 0226 C/SQLite and 0227 language-package proof from Linux or the M5 does not transfer to another target or to final release artifacts. Keep all four-target smoke, version, checksum, import-path and zero-not-run checks in 0128. An old C API DuckDB archive must not count as the new C++ package.
+
+Fresh 0232 code review found its first macOS hash correction required `shasum` on Linux, regressing hosts that previously needed only `sha256sum`. Its owner is correcting the existing SQLite setup/check and release-smoke routes. Before integrating, select a working checksum-verification capability on each host and retain one small Linux `sha256sum`-only and macOS `shasum` witness. No new checker framework is needed.
+
+Build Phase 3a's workflow and the independent PostgreSQL/Ruby macOS routes while 0231/0232 finish their claimed files. Have the workflow select one resolved SHA, exact native target/toolchain, a changed installed archive and `release-smoke` on each runner. Use the existing `sdlc/scripts/workflows --self-test` and focused shell/static checks before landing; only a later Ian-dispatched rehearsal can establish native runner results. The macOS build must distinguish SDK headers, `MACOSX_DEPLOYMENT_TARGET`, CMake deployment setting and the Rust standard-library sysroot. The active 0231 investigation found Homebrew Rust 1.95's standard library advertises macOS 26 while official isolated rustup 1.95's advertises macOS 11; verify the selected toolchain and final artifact on the intended macOS 15 runner. An empty quiet-build log establishes neither command nor exit code; retain the invocation and status separately, with hashes for artifact identity. Compilation, a Mach-O metadata check, and load on a newer M5 each prove different boundaries.
+
+The two older DuckDB `cpp/verify_decide.py` and `cpp/verify_tables.py` scripts are not invoked by current `check.sh`. Their fixed row-to-send counts and warm-ignores-total assertion conflict with maximal batching and the landed warm total. The preparation record identifies the retained row, vector-boundary and prepared-error assertions that an owner must move to an invoked suite before retiring those scripts and their README advice. This is a test disposition for 0222/0231, not permission to weaken release smoke.
+
 Phase 1 builds after ticket 0119 lands, or beside it with item 4 held back, as item 4 says. Each phase lands through this worktree on `ticket/0128-release-and-install` before the next starts. `site/src/data/catalog.mjs` and `install.astro` are also named by `2026-09-25-site-samples-and-pages-after-the-surfaces-land.md`. If a ticket for that issue is in flight, the builder merges its site changes first and touches only the two install lines. These files overlap other tickets. Whichever lands second merges the other's changes, and 0128's phase always merges `origin/main` before its final run:
 
 | File or folder | Other tickets | Order |
@@ -337,7 +355,7 @@ One-time setup, in the order the phases need it:
 2. Create the GitHub environment `release` with himself as the one required reviewer, allowing `v*` tags only.
 3. The tag rule: add a tag ruleset on `v*` so only he can create, move, or delete a release tag.
 4. Turn on private vulnerability reporting in the repository settings, since `SECURITY.md` points there.
-5. The trusted publishers: add `botassembly/thinkthen`, workflow `release.yml`, and environment `release` as a trusted publisher on crates.io, PyPI, npm, and RubyGems. Each registry's owner page holds this setting.
+5. The trusted publishers: add `botassembly/thinkthen`, workflow `release.yml`, and environment `release` as a trusted publisher on crates.io, PyPI, npm, and RubyGems. Each registry's owner page holds this setting. The [official crates.io API](https://crates.io/api/v1/crates/thinkthen) and [sparse index entry](https://index.crates.io/th/in/thinkthen) showed an existing `thinkthen` 0.0.1 release on 2026-09-28. Verify Ian's ownership and attach the publisher to that existing crate; no first-publish bootstrap is needed. The local `publish = false` flag does not establish registry state. The [crates.io trusted-publishing RFC](https://github.com/rust-lang/rfcs/blob/master/text/3691-trusted-publishing-cratesio.md) explains why a genuinely uncreated crate would require an initial owner publish before this publisher could be configured.
 6. The tap key: create the public repository `botassembly/homebrew-thinkthen`. Add a write deploy key to it and store the private half as the `release` environment secret `TAP_DEPLOY_KEY`.
 7. R-universe: create `botassembly/botassembly.r-universe.dev` with a `packages.json` that names `thinkthen` at subfolder `libraries/r/thinkthen`, tracking the latest release. Install the R-universe GitHub app on it.
 8. The arming switch: set the `release` environment variable `RELEASE_ARMED` to `true`, last, after items 5 to 7.
@@ -352,7 +370,7 @@ His steps during the release run, in Phase 4:
 
 ## What needs a Mac
 
-- No Mac of ours builds anything. `macos-15` and `macos-15-intel` build and smoke both chips in every rehearsal and release, and the first rehearsal is the proof of record.
+- Ian authorized focused M5 native builds on 2026-09-28. They expose host-toolchain and artifact errors before dispatch. `macos-15` and `macos-15-intel` still build and smoke both chips in every rehearsal and release, and the first rehearsal is the proof of record.
 - The M5 runs three light commands after publish, in Phase 4 step 8: `brew install botassembly/thinkthen/thinkthen`, `thinkthen --version`, and the README's first-run block under `--replay`. It starts no backend and runs no cargo. It uninstalls afterward.
 
 ## Complexity
@@ -374,6 +392,10 @@ On landing Phase 4: `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`. Stu
 ## What Ian can overturn
 
 Every decision above. The ones most worth his look: no PyPI source distribution (7), the sample as its own release file (8), R against the published crate (10), and leaving the Rust Polars move to ticket 0130 (15). `SECURITY.md` keeps GitHub's private vulnerability reporting, which stays on GitHub.
+
+## What the build taught us
+
+The Phase 3a Linux jobs build library packages in pinned containers but run installed smoke on separate native runners. Their shared `host-setup` originally fetched pinned DuckDB tools only on Darwin, leaving both Linux smoke runners dependent on incidental host state. The [Linux DuckDB setup Quick Fix](../records/qf-linux-duckdb-release-setup.md) places that fetch only in native Linux smoke. Its first fake-command witness counted the call but silently supplied `uv` and Python 3.13 before the code did; fresh review caught the missing transitive prerequisites. The corrected witness enforces their order, and the workflow establishes Python 3.13 while retaining the active 3.10 build and 3.12 smoke interpreters. This is local proof of routing and provisioning, not an actual runner result; the first four-target rehearsal and separate ARM64 package integration remain open.
 
 ## Review
 

@@ -4,11 +4,14 @@
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
+mod batching;
 mod common;
 
 use conformance_backend::Backend;
 use thinkthen::polars::prelude::{DataFrame, DataType, IntoColumn, NamedFrom, Series};
-use thinkthen::{CallOptions, Error, ErrorKind, PolarsEngine, Question, QuestionSet};
+use thinkthen::{
+    CallOptions, Error, ErrorKind, LoadedQuestion, PolarsEngine, Question, QuestionSet,
+};
 
 fn decide() -> Question {
     Question::decide("Does this ask for a refund?")
@@ -31,6 +34,39 @@ fn frame(columns: Vec<Series>) -> DataFrame {
         columns.into_iter().map(IntoColumn::into_column).collect(),
     )
     .expect("a frame")
+}
+
+#[test]
+fn a_profiled_question_keeps_its_identity_through_a_series() {
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../conformance/calibration.json"))
+            .expect("shared calibration fixture");
+    let question = match Question::from_json(&fixture["question"].to_string()).expect("question") {
+        LoadedQuestion::Question(question) => Some(question),
+        LoadedQuestion::Banded(_) => None,
+    }
+    .expect("the fixture is one decide question");
+    let backend = Backend::start().expect("backend");
+    let engine = common::builder(&format!("{}/generic/v1", backend.origin()))
+        .profile_json(&fixture["runtime_profile"].to_string())
+        .expect("runtime profile")
+        .build()
+        .expect("engine");
+    let evidence = fixture["evidence"].as_str().expect("evidence");
+    let answered = engine
+        .decide_series(&question, &common::column(&[evidence]), CallOptions::new())
+        .expect("series");
+    assert_eq!(
+        answered.value().bool().expect("boolean series").get(0),
+        Some(true)
+    );
+    let details = engine.details(&question, evidence).expect("details");
+    assert_eq!(
+        details.value().question_sha256(),
+        fixture["question_sha256"]
+    );
+    assert_eq!(details.value().profile_warning(), Some(("old", "new")));
+    assert_eq!(backend.count(), 1);
 }
 
 /// Each refusal names its cause whole, in `Display` and `Debug`, and sends nothing.
@@ -119,7 +155,9 @@ fn every_refusal_is_pinned_and_sends_nothing() {
         assert_eq!(error.to_string(), sentence);
         assert_eq!(
             format!("{error:?}"),
-            format!("Usage(ErrorDetail {{ message: {sentence:?}, retryable: false }})")
+            format!(
+                "Usage(ErrorDetail {{ message: {sentence:?}, retryable: false, send_budget_denial: None, facts: None }})"
+            )
         );
     }
     assert_eq!(backend.count(), 0, "a refusal reached the backend");
@@ -145,19 +183,20 @@ fn a_failed_question_keeps_typed_columns_and_a_marker() {
     let out = engine
         .annotate_frame(&set, &texts, "body", CallOptions::new())
         .expect("the frame");
-    let team = out.column("team").expect("team");
+    let team = out.value().column("team").expect("team");
     assert_eq!(team.dtype(), &DataType::String);
     assert_eq!(team.null_count(), 1);
-    let refund = out.column("refund").expect("refund");
+    let refund = out.value().column("refund").expect("refund");
     assert_eq!(refund.dtype(), &DataType::Boolean);
     assert_eq!(refund.null_count(), 1, "not sure reads null");
-    let severity = out.column("severity").expect("severity");
+    let severity = out.value().column("severity").expect("severity");
     assert_eq!(severity.f64().expect("Float64").get(0), Some(1.2));
     assert!(matches!(
-        out.column("topics").expect("topics").dtype(),
+        out.value().column("topics").expect("topics").dtype(),
         DataType::List(_)
     ));
     let failed = out
+        .value()
         .column("failed")
         .expect("failed")
         .struct_()
@@ -210,9 +249,12 @@ fn a_failed_row_ends_a_series_call() {
         .expect_err("a failed row ends the call");
     assert_eq!(error.kind(), ErrorKind::Backend);
     assert_eq!(
-        error.to_string(),
-        "the reply was refused: the answer to question `q1` holds a probability outside zero to one"
+        error
+            .facts()
+            .map(|facts| (facts.records(), facts.requests_sent())),
+        Some((1, 1))
     );
+    assert_eq!(error.to_string(), "a backend question failed in a batch");
     // A one-question reply whose only answer failed is refused whole by the
     // engine's reply reader, so a failed row ends a score column the way it
     // ends a decide column. No cell can hold the marker there.
@@ -228,10 +270,7 @@ fn a_failed_row_ends_a_series_call() {
         )
         .expect_err("a failed row ends the call");
     assert_eq!(error.kind(), ErrorKind::Backend);
-    assert_eq!(
-        error.to_string(),
-        "the reply was refused: the answer to question `q1` leaves an option or a level without a probability"
-    );
+    assert_eq!(error.to_string(), "a backend question failed in a batch");
 }
 
 /// A three-chunk column sliced at offset 5 gives each row its own answer
@@ -253,14 +292,20 @@ fn a_chunked_and_sliced_column_answers_each_row() {
     assert_eq!(chunked.n_chunks(), 3);
     let sliced = chunked.slice(5, 5);
     let answered = engine
-        .decide_series(&question, &sliced, CallOptions::new())
+        .decide_series(
+            &question,
+            &sliced,
+            CallOptions::new().batch(thinkthen::BatchSetting::Records(
+                std::num::NonZeroUsize::MIN,
+            )),
+        )
         .expect("the answers");
-    let answers: Vec<Option<bool>> = answered.bool().expect("Boolean").iter().collect();
+    let answers: Vec<Option<bool>> = answered.value().bool().expect("Boolean").iter().collect();
     assert_eq!(
         answers,
         [Some(true), Some(false), Some(true), Some(true), Some(false)]
     );
-    assert_eq!(answered.name().as_str(), "body");
+    assert_eq!(answered.value().name().as_str(), "body");
 }
 
 /// The caller's number, Boolean, and list columns come back with their
@@ -292,7 +337,10 @@ fn the_callers_columns_come_back_unchanged() {
         .annotate_frame(&set, &frame(theirs.clone()), "body", CallOptions::new())
         .expect("the frame");
     for series in &theirs {
-        let back = out.column(series.name()).expect("the caller's column");
+        let back = out
+            .value()
+            .column(series.name())
+            .expect("the caller's column");
         assert_eq!(back.dtype(), series.dtype(), "{}", series.name());
         assert!(
             back.as_materialized_series().equals_missing(series),
@@ -300,10 +348,13 @@ fn the_callers_columns_come_back_unchanged() {
             series.name()
         );
     }
-    assert_eq!(out.width(), theirs.len() + 2);
+    assert_eq!(out.value().width(), theirs.len() + 2);
     assert_eq!(
-        out.column("failed").expect("failure column").null_count(),
-        out.height()
+        out.value()
+            .column("failed")
+            .expect("failure column")
+            .null_count(),
+        out.value().height()
     );
 }
 
@@ -343,7 +394,11 @@ fn an_empty_column_answers_empty() {
     ];
     for (series, dtype) in answered {
         let series = series.expect("an empty answer");
-        assert_eq!((series.len(), series.dtype()), (0, &dtype));
+        assert_eq!((series.value().len(), series.value().dtype()), (0, &dtype));
+        assert_eq!(
+            (series.facts().records(), series.facts().requests_sent()),
+            (0, 0)
+        );
     }
     let set = QuestionSet::from_json(
         r#"{"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
@@ -352,13 +407,21 @@ fn an_empty_column_answers_empty() {
     let output = engine
         .annotate_frame(&set, &frame(vec![empty]), "body", options())
         .expect("empty frame");
-    assert_eq!(output.height(), 0);
     assert_eq!(
-        output.column("refund").expect("answer").dtype(),
+        (output.facts().records(), output.facts().requests_sent()),
+        (0, 0)
+    );
+    assert_eq!(output.value().height(), 0);
+    assert_eq!(
+        output.value().column("refund").expect("answer").dtype(),
         &DataType::Boolean
     );
     assert!(matches!(
-        output.column("failed").expect("failure column").dtype(),
+        output
+            .value()
+            .column("failed")
+            .expect("failure column")
+            .dtype(),
         DataType::Struct(_)
     ));
     assert_eq!(backend.count(), 0);

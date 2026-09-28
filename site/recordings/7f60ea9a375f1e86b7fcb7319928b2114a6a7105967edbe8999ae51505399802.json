@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Our checkout page is down and customers cannot pay","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this need an answer today?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.94}},"usage":{"input_tokens":282,"output_tokens":21}}
+}

@@ -1,85 +1,97 @@
 # thinkthen
 
-`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a level on a scale. A command names the job, asks the question, and reads the evidence on standard input.
+ThinkThen answers typed questions about text. Use the command in a shell script or a binding inside a program. The model returns structured judgments, not generated prose. A failed call stays separate from an answer.
+
+## The ten functions
+
+| Function | It asks | It prints |
+| --- | --- | --- |
+| `decide` | one yes/no question about one text | `true`, `false`, or `null` |
+| `choose` | which one option fits best | a label, or `null` when none wins |
+| `tag` | which labels apply | a JSON array of labels |
+| `score` | where the text falls on a scale | a number on that scale |
+| `filter` | the same yes/no of each record in a stream | the records that pass, byte for byte, in input order |
+| `rank` | the same question of each record | the records, best fit first |
+| `find` | which unit best answers the question | that unit, or no output (exit 3) when `--none` wins or ties |
+| `annotate` | a saved set of named questions of each record | records with named answers or failure markers |
+| `recognize` | which words name a thing, and what kind | names, kinds, offsets, and optional relations |
+| `relate` | which relations hold between named entities | the edges that pass the rule |
+
+Some functions use a threshold; others rank or select without one. A `null` value is a valid outcome where the function allows it, never a failed call. The [type contract](specification/types.md) names the answers and failures; the [result contract](specification/result.md) gives their full fields.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
-thinkthen choose 'Which kind of request is this?' bug feature question other < issue.txt
-thinkthen tag 'Which topics?' billing urgent < message.txt
 thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --field /body < issues.jsonl
-thinkthen find 'Which line answers the question?' --lines < handbook.txt
+thinkthen annotate triage.json --jsonl < issues.jsonl
 ```
 
-The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. `--details` adds the probabilities behind any answer.
+A command names the job, asks the question, and reads text on standard input.
 
-Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
+## Install the command
 
-## First run
-
-The sample needs no key. It holds one bug report and the recorded answer to one question about it, and `--replay` reads that answer with no network.
+Build it from a checkout and put it on your `PATH`:
 
 ```sh
-curl -fsSLO https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz
-tar -xzf thinkthen-first-run.tar.gz
+cargo build --locked --release -p thinkthen --bin thinkthen
+mkdir -p "$HOME/.local/bin"
+install -m 755 target/release/thinkthen "$HOME/.local/bin/thinkthen"
+export PATH="$HOME/.local/bin:$PATH"
+```
+
+Then check it on a recorded answer. This sample needs no key and no network; `--replay` reads the answer from disk.
+
+```sh
+cd demos/27-test-with-no-network
 thinkthen decide 'Does this report say what the person did before the problem appeared?' \
-  --replay thinkthen-first-run/recording < thinkthen-first-run/report.txt
+  --replay recording < report.txt
 ```
 
 It prints `true`. `demos/27-test-with-no-network` shows how a test replays a recording.
 
-## What it will and will not do
+## Languages and bindings
+
+The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R each have a native Rust adapter. C exposes a separate C API. The database extensions call the engine inside their hosts. Each linked README shows how to use that binding from source.
+
+| Language or surface | What it is | README |
+| --- | --- | --- |
+| Rust | the crate; the command is one consumer of it | [libraries/rust](libraries/rust/README.md) |
+| Python | the package, with pandas and Polars doors | [libraries/python](libraries/python/README.md) |
+| TypeScript | a Node binding with a native addon | [libraries/typescript](libraries/typescript/README.md) |
+| Ruby | a Ruby binding with a native extension | [libraries/ruby](libraries/ruby/README.md) |
+| R | the package | [libraries/r](libraries/r/README.md) |
+| C | a header and a library for C callers | [libraries/c](libraries/c/README.md) |
+| Polars | the Rust feature | [libraries/polars](libraries/polars/README.md) |
+| DuckDB | the extension | [databases/duckdb](databases/duckdb/README.md) |
+| SQLite | the extension | [databases/sqlite](databases/sqlite/README.md) |
+| PostgreSQL | the extension | [databases/postgresql](databases/postgresql/README.md) |
+
+## How it works
 
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the question, the options, and the evidence.
-- A yes, a no, a not sure answer, and a broken run stay four different outcomes in the output and in the exit code.
+- Eligible record commands can send many records in one request. `--batch max` is their default; `--batch 1` sends one record per request. Records sharing a request can affect each other's answers, and a threshold tuned at one setting warns when it runs at another.
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first System One model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
+- The default address sends the question and evidence to TypeSafe. Its [customer agreement](https://typesafe.ai/legal/mca), [data processing addendum](https://typesafe.ai/legal/data-processing), and [privacy policy](https://typesafe.ai/legal/privacy-policy) describe data handling. The published privacy policy, checked 2026-09-28, gives no fixed API-input retention period. Check the terms governing your account before sending sensitive text.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
 
-The answer cache is on by default. Cache entries contain the complete request and response, including the evidence being judged. Filesystem access and backups can copy that evidence. A platform-default cache is created for its owner alone and an existing Unix folder must already have mode `0700`; an explicitly named `--cache` folder keeps its user-owned mode. The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells the user to restore the old settings or choose another folder. No key enters an entry. Use `--no-cache` for a run that must neither read nor write cached answers.
+For a long-lived shell loop, `decide --lines --batch 1` prints and flushes one answer per nonblank input line. `filter` prints only kept records; `rank` waits for the complete input before printing an order. A separate command process for every item adds startup time. Inside a program, use its language binding above.
 
-`thinkthen status` reports the resolved configuration, cache size, and local request, token, and cache-answer counts for the current UTC month and in total. It counts only what the command sends. A library, SQL extension, or data frame keeps its counts in memory for its own process, and `status` never sees them. The count-only usage files live beside the platform cache and contain no judged evidence or key. They are local conservative statistics rather than an account bill.
+## The answer cache
 
-## What it is not for
+The cache is on by default.
 
-- **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. For a `coproc` loop that sends one line and waits for one reply, use `decide --lines --batch 1`: it prints one result per nonblank input line and flushes it. `filter` prints only kept records, so a dropped line gives the loop no reply. `rank` waits for the complete input before it prints an order. Record mode keeps one process alive for the loop, but each decision still waits on the model.
-- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`.
+- An entry holds the complete request and response, the judged evidence included. Filesystem access and backups can copy that evidence. No key enters an entry.
+- Whoever can write the cache or recording folder controls the answers read from it, so keep that folder private to people whose answers you trust. A platform-default cache is created for its owner alone, and an existing Unix folder must already have mode `0700`. An explicitly named `--cache` folder keeps its user-owned mode.
+- The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells you to restore the old settings or choose another folder.
+- `--no-cache` runs a job that neither reads nor writes cached answers. `cache prune` is the only thing that removes entries.
 
-`sdlc/planning/ten-use-cases.md` measured both against ten real uses.
+## Usage counts
 
-## Use it from Rust
+`thinkthen status` reports the resolved configuration, cache size, and request, retry, token, and cache-answer counts for the current UTC month and in total. It counts only what the command sends; a library, SQL extension, or data frame keeps its own process counts. The usage files hold no judged evidence and no key. They are local conservative statistics, not an account bill.
 
-The same crate is a library. A dependency on `thinkthen` with `default-features = false` leaves out the command and its argument parser. Every call blocks and returns `Result<_, thinkthen::Error>`. The error has six kinds, and `retryable()` says whether the same call may succeed later.
+## How-tos
 
-```rust
-let engine = thinkthen::Engine::from_env()?;
-let question = thinkthen::Question::decide("Asks for money back.")?.cut_at(0.9)?;
-for row in engine.filter(&question, ["Please refund my order.", "Where is my parcel?"]) {
-    println!("{}", row?);
-}
-```
-
-`Engine::from_env` reads the same variables and configuration file as the command, including `cache: false`. A bare `Engine::builder()` starts with library defaults and does not read that file. Call its `no_cache()` setter to turn the cache off. `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
-
-## Four names
-
-These four words name the four things a user writes or runs. ADR 0015 fixed them, and every other page links here.
-
-| Thing | Name | What it is | What runs it |
-| --- | --- | --- | --- |
-| What to ask, with its options, levels, and cuts | question file | JSON | `thinkthen` |
-| `jq` that reads saved rows | transform | One `.jq` file | `jq` |
-| A whole worked example that can be run again | how-to | A folder under `demos/`: the page, the inputs, the question, the transform, the recording | The spec rung |
-| A user's own job over the user's own input | pipeline | A Bash script | Bash |
-
-A transform is one of two kinds. A metric reads a whole run and prints numbers. A policy reads one row and names an action.
-
-A question file holds one question. A question set holds several named questions, and each entry has the shape of a question file. `annotate` reads a question set.
-
-## Where to read
-
-The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each green one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.
-
-The flagship leads these seven pages. The remaining pages move from the simplest command to its supporting details. ADR 0018 chose the original twenty, and accepted ticket 0088 added the `relate` how-to as page 45.
+[`demos/README.md`](demos/README.md) lists every how-to, and each green one is a real shell job that the gate runs. Seven lead the list.
 
 | How to | The job | |
 | --- | --- | --- |
@@ -95,12 +107,24 @@ The how-to list also has a section on evals: grading answers against a written r
 
 - [`demos/`](demos/README.md): the how-tos. Small real shell jobs as executable pages. They drive the design.
 - `specification/`: the contract. Channels and exit codes, the threshold, the result, backends, and one page per command.
-- `sdlc/planning/design-study.md`: what the tool is, what version one holds, how it fits with botassembly, and the questions waiting on Ian.
+
+## Contributing
+
+These four words name the four things a user writes or runs. ADR 0015 fixed them, and every other page links here.
+
+| Thing | Name | What it is | What runs it |
+| --- | --- | --- | --- |
+| What to ask, with its options, levels, and cuts | question file | JSON | `thinkthen` |
+| `jq` that reads saved rows | transform | One `.jq` file | `jq` |
+| A whole worked example that can be run again | how-to | A folder under `demos/`: the page, the inputs, the question, the transform, the recording | The spec rung |
+| A user's own job over the user's own input | pipeline | A Bash script | Bash |
+
+A transform is one of two kinds. A metric reads a whole run and prints numbers. A policy reads one row and names an action. A question file holds one question. A question set holds several named questions, and `annotate` reads one.
+
+- `sdlc/planning/design-study.md`: what the tool is, what version one holds, and how it fits with botassembly.
 - `sdlc/planning/rust-standards.md`: how the code is judged. Every rule names the tool that enforces it.
 - `sdlc/planning/plan.md`: the build order and its state.
 - `sdlc/planning/adr/`: decisions made.
-
-## Gates
 
 ```sh
 sdlc/scripts/install
@@ -110,7 +134,7 @@ sdlc/scripts/spec
 sdlc/scripts/surfaces
 ```
 
-Cheapest rung first. No gate touches the network. `.github/workflows/gate.yml` runs the first four rungs on every push and every pull request.
+Cheapest rung first. No gate touches the network. Run the first four rungs in GitHub Actions by starting `.github/workflows/gate.yml` manually.
 
 ## License
 

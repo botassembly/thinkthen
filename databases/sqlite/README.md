@@ -4,26 +4,28 @@ A loadable SQLite extension over the public `thinkthen` Rust API. It is the unpu
 
 ```sql
 .load ./thinkthen
+SELECT thinkthen_batch(1); -- retain the original warm-to-scalar cache identity
 SELECT thinkthen_warm('Is this a complaint?', body) FROM reviews;
 SELECT id, body FROM (
   SELECT id, body, thinkthen_decide('Is this a complaint?', body) AS is_complaint FROM reviews
 ) WHERE is_complaint;
 ```
 
-The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a database file from somewhere else can reach a volatile function, so the load refuses and names the host's version.
+The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a database file from somewhere else can reach a volatile function, so the load refuses and names the host's version. The recipe selects batch one before the first engine call because its later scalar calls must reuse the same one-record request keys. Without that setting, warm packs by default and later singleton scalar calls are different requests.
 
 ## The functions
 
 | Function | Answers |
 |---|---|
-| `thinkthen_decide(question, text[, deadline])` | 1, 0, or NULL for unsure |
-| `thinkthen_choose(question, text[, deadline])` | the chosen label, or NULL |
-| `thinkthen_score(question, text[, deadline])` | the position from 0 to K−1, as REAL |
-| `thinkthen_tag(question, text[, deadline])` | a JSON array of labels |
-| `thinkthen_details(question, text[, deadline])` | the command's `--details` JSON document |
-| `thinkthen_try_details(question, text[, deadline])` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
+| `thinkthen_decide(question, text[, deadline[, context]])` | 1, 0, or NULL for unsure |
+| `thinkthen_choose(question, text[, deadline[, context]])` | the chosen label, or NULL |
+| `thinkthen_score(question, text[, deadline[, context]])` | the position from 0 to K−1, as REAL |
+| `thinkthen_tag(question, text[, deadline[, context]])` | a JSON array of labels |
+| `thinkthen_details(question, text[, deadline[, context]])` | the command's `--details` JSON document |
+| `thinkthen_try_details(question, text[, deadline[, context]])` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
 | `thinkthen_annotate(questions, text[, deadline])` | a JSON object keyed by question name |
-| `thinkthen_warm(question, text[, deadline])` | an aggregate: judges each distinct pair and returns the count |
+| `thinkthen_warm(question, text[, deadline[, context]])` | an aggregate: judges each distinct question, context and text triple and returns the count |
+| `thinkthen_find(question, units_json[, none[, deadline_ms]])` | JSON with the selected original index/value/probability and each candidate probability |
 | `thinkthen_usage()` | JSON totals: `requests_sent`, `cache_answers`, `input_tokens`, `output_tokens` |
 | `thinkthen_recognize(text, kinds[, deadline])` | a table of `text, start, end, length, kind, strength` |
 | `thinkthen_recognize_document(text, spec)` | complete recognize JSON with entities and any relation edges |
@@ -31,9 +33,13 @@ The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a
 
 A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_details`, and `thinkthen_warm` only. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question.
 
+`thinkthen_find` instead takes a **plain** question and one ordered JSON array of text units. For a table with an explicit `ordinal`, use `SELECT thinkthen_find('Which passage answers?', json_group_array(passage ORDER BY ordinal), 1) FROM passages`. Its `none` flag is integer `0` or `1` (default `0`); the fourth slot is the usual deadline. An empty array or top-level SQL NULL returns SQL NULL without sending. At least two units are required otherwise, with at most 255 (254 when offering none). Each duplicate retains its own zero-based index. A selected none returns a non-null JSON object with null `index` and `value`. The complete ordered group is one request and has its own cache identity; the function is direct-only and volatile.
+
 A NULL text answers NULL and sends nothing. A BLOB, a number, text holding a NUL byte, or text that is not UTF-8 raises `usage` before any send.
 
 The deadline is milliseconds under ADR 0041. `-1` means none. `0` is already spent and sends nothing. A REAL is accepted when it is finite and whole. Any other value raises `usage` and names the value.
+
+Context is the fourth argument of eligible judgments and warm; the third remains the deadline. Pass `-1` for no deadline when supplying context. A SQL `NULL` context keeps the no-context request identity; nonblank context is literal text sent once per packed request. It changes the request digest but not the question digest. A packed request with context still differs from a later one-record scalar request with the same context.
 
 `thinkthen_recognize` takes its kinds as a comma list, a JSON recognize section, or `'@name'`. A spec with relations raises `usage`, because relations come from `thinkthen_relate`. `start`, `end`, and `length` count Unicode characters, as SQLite's `substr` does, so `substr(text, start + 1, length)` returns the name. With no kinds, every name has the kind `ENTITY`.
 
@@ -65,6 +71,8 @@ The check rejects another non-`NULL` label. A stored `NULL` can represent a choi
 
 `thinkthen_details(question, text)` returns the command's `--details` line for one text, schema `thinkthen.result/1`. Read a member with `json_extract`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
+The details digest includes a question's saved calibration `profile`. When `thinkthen_profile(json)` selects a different runtime name, `meta.profile_warning` names both values. The selected runtime profile checks limits before sending.
+
 `thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
 ## The engine and its settings
@@ -77,8 +85,9 @@ Twelve setting functions change the engine before it builds. Each returns its ar
 
 - `thinkthen_throttle(n)`: requests in flight at once, from 1 through 32. The default is 4.
 - `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows, so this limit does not cap a statement's spending. Use the total below for that.
-- `thinkthen_max_request_bytes(n)`: a positive request-byte ceiling for relation plans. `NULL` keeps the environment value. Set it before the first engine call.
-- `thinkthen_max_requests_total(n)`: the most live requests this process may attempt across calls and retries. It is unset by default, and `NULL` unsets it. An atomic reservation checks every attempt before sending, including retries and requests within recognize or relate. Concurrent calls cannot exceed the total. The existing before-call check still refuses a spent total, even for a cache answer. A warm pass cuts its rows to what remains and reports its partial result as before. A forked child starts a new count. `thinkthen status` counts only command sends.
+- `thinkthen_batch(value)`: `max` (the default) or a positive whole number of records per request. `NULL` clears the explicit choice back to the environment or question-file setting. Select `1` before the first engine call for the old warm-then-scalar cache recipe.
+- `thinkthen_max_request_bytes(n)`: a positive request-byte ceiling for request plans. `NULL` keeps the environment value. Set it before the first engine call.
+- `thinkthen_max_requests_total(n)`: the most live requests this process may attempt across calls and retries. It is unset by default, and `NULL` unsets it. An atomic reservation checks every actual attempt before sending, including packed warm requests, retries and requests within recognize or relate. Concurrent calls cannot exceed the total. An ordinary scalar still refuses a spent total before its call, even for a cache answer. A warm pass can send earlier requests before a later attempt is denied; its aggregate then returns an error, no partial count. A forked child starts a new count. `thinkthen status` counts only command sends.
 - `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
 - `thinkthen_model(text)`: the backend model; `NULL` keeps the environment value.
 - `thinkthen_timeout(n)`: a positive whole number of seconds for an attempt; `NULL` keeps the environment value.
@@ -90,9 +99,9 @@ The throttle holds per loaded copy of the engine. A process that also loads anot
 
 ## The cache
 
-Answers go to the engine's disk cache and outlive the process. A warm pass fills the cache, and the queries after it read it. With `thinkthen_cache(NULL)` a warm pass still judges every row, and the queries after it send again.
+Answers go to the engine's disk cache and outlive the process. The cache key is the complete request digest. Repeating the same ordered packed warm cohort under the same settings can reuse its cached request. A later singleton scalar has a different request key and may send. The batch-one recipe above makes warm and scalar requests identical, so the later scalar reads the cache. With `thinkthen_cache(NULL)`, repeated requests send again.
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_cache(NULL)`.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_cache(NULL)`.
 
 ## Authority: who may do what
 

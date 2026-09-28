@@ -16,13 +16,9 @@ Here's a support ticket, and here's the whole idea:
 
 <!-- example: functions/decide/3-one -->
 
-The command returns exit code 0. The word "refund" appears in that ticket, and `grep` would have caught this one. Now ask the same question and show the whole result:
+The command returns exit code 0. The word "refund" appears in that ticket, and `grep` would have caught this one.
 
-<!-- example: functions/decide/4-details -->
-
-ThinkThen passes the model's 0.99 through untouched.
-
-Be careful what you read into that number. The probability describes the evidence you handed over. It doesn't measure how often the model is right. Run the question against cases you have labeled. That run tells you what a probability means for your question. Measure first, then pick a threshold.
+Be careful what you read into the probability behind that answer. The probability describes the evidence you handed over. It doesn't measure how often the model is right. Run the question against cases you have labeled. That run tells you what a probability means for your question. Measure first, then pick a threshold.
 
 ## The threshold and the middle
 
@@ -68,7 +64,7 @@ Here's what I'd want to know before I trusted it.
 
 **Planted facts move the answer.** A live run judged twenty made-up messages, once clean and once with hostile text added. On that one question and one model, a command aimed at the model moved the probability of yes by 0.04 or less, in seventeen wordings. A false claim planted about the case moved it by as much as 0.57. The [decide specification](https://github.com/botassembly/thinkthen/blob/main/specification/decide.md) records the run. A [later review](https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-26-architect-review-12-security-and-data-boundary.md) asked other questions. On a security question, a command raised the probability of yes from 0.01 to between 0.16 and 0.18, and a planted claim raised it to 0.64. The command itself may read as a sign of an incident. A planted claim moved a `choose` answer from shipping to billing. The tool reads a planted claim and a true one the same way. Both look like evidence to it. At the default cut of 0.5, a planted claim can flip an answer. Use a band and send the middle to a person.
 
-**`tag` has the lowest strict score on Beatles Bench.** A song can have two lead singers, and `tag` must name every one to score. It names the whole set on 0.29 of songs. Its top label is a true lead on 0.75. The [bench page](/learn/beatles-bench/what-jev-knows/) shows the table of every function. Use `tag` for a queue a person reads. Don't use it as a gate.
+**`tag` has the lowest strict score on Beatles Bench.** A song can have two lead singers, and `tag` must name every one to score. It names the whole set on 0.29 of songs. Its top label is a true lead on 0.75. The bench's [function table](https://github.com/botassembly/beatles-bench/blob/main/results/tables/functions.tsv) scores every function. Use `tag` for a queue a person reads. Don't use it as a gate.
 
 **The tool speaks one interface.** It sends TypeSafe's System One requests. Any server with that interface can answer at another address, and some of its answers will differ. A threshold tuned on one model doesn't carry to another.
 

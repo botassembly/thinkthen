@@ -17,7 +17,7 @@ contradictions = ThinkThen.relate(
   relations: ["contradicts"],
   either: ["contradicts"],
   threshold: 0.5
-)
+).value
 pairs = contradictions.map do |edge|
   [edge.source.name, edge.target.name, edge.probability]
 end

@@ -13,4 +13,5 @@ for (name in names(examples)) {
   got <- child(c(sprintf("setwd('%s')", folder), example$r))$text
   check(paste0(name, ": want ", example$expected, ", got ", got), identical(trimws(got), example$expected))
 }
-finish("examples", 13L)
+# These examples use the public default Max; their record calls share sends.
+finish("examples", 11L)

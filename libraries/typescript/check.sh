@@ -19,8 +19,16 @@ fail() { echo "typescript: $*" >&2; exit 1; }
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     # The installed-file mode (ticket 0128): the tarball in a fresh project, and the shared
     # cases and examples from a copy of tests/, which import the package by its name.
-    [ -x "$node_home/bin/node" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
-    PATH=$node_home/bin:$PATH
+    case $(uname -s):$(uname -m) in
+        Linux:x86_64) expected=linux-x64; [ ! -x "$node_home/bin/node" ] || PATH=$node_home/bin:$PATH ;;
+        Linux:aarch64) expected=linux-arm64 ;;
+        Darwin:x86_64) expected=darwin-x64 ;;
+        Darwin:arm64) expected=darwin-arm64 ;;
+        *) echo 'typescript: not run; no native Node target for this host'; exit 77 ;;
+    esac
+    command -v node >/dev/null 2>&1 || { echo 'typescript: not run; no native Node 22.22.3'; exit 77; }
+    [ "$(node --version)" = v22.22.3 ] || fail "node is $(node --version), not v22.22.3"
+    [ "$(node -p 'process.platform + "-" + process.arch')" = "$expected" ] || fail "Node is not native $expected"
     . "$repo/sdlc/scripts/installed.sh"
     installed_tests "$repo" libraries/typescript
     project=$scratch/libraries/typescript

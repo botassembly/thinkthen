@@ -4,7 +4,10 @@
 //
 //   - No line over 60 characters, apart from the exempt lines below.
 //   - A library sample asserts. It never prints.
-//   - A script that asks for --details shows it whole: it ends in jq .
+//   - No example, page, or article shows --details. The docs leave it out
+//     for now (Ian, 2026-09-28).
+//   - Each function page opens with one command example of 10 to 25
+//     lines, script and output together (Ian, 2026-09-28).
 //   - Code carries no comments.
 //   - Every page and article starts with its goal: a `// Goal:` line in
 //     an Astro page, and a `goal:` field or a `<!-- Goal: -->` comment in
@@ -20,12 +23,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { namedAnswerProblems } from './named-answers.mjs';
+import { CODE_FUNCTIONS } from '../src/data/catalog.mjs';
 
 const here = fileURLToPath(import.meta.url);
 const site = path.resolve(path.dirname(here), '..');
 const root = path.join(site, 'examples');
 const bench = path.join(root, 'beatles', 'bench');
 const WIDTH = 60;
+// The lines a function page's example may show, script and output together.
+const EXAMPLE_LINES = { min: 10, max: 25 };
 
 // Each exempt entry names a kind of line that cannot break, and says why.
 const EXEMPT = [
@@ -74,7 +80,7 @@ const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c']);
 // does not accept. That throw fails the build, so a mistyped fence tag or
 // a new kind of file never passes unread.
 export const NO_CALL = new Set([
-  '.json', '.out', '.txt', '.exit', '.diff', '.jq',
+  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq',
   'text', 'json', 'console', 'output',
 ]);
 const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.sql': 'sql' };
@@ -93,7 +99,9 @@ function namedAnswers(label, text, kind, language, offset = 0) {
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) return p === bench ? [] : walk(p);
+    // Recorded wire bodies are machine data checked by the replay smoke run,
+    // not a code block a reader copies from the page.
+    if (e.isDirectory()) return p === bench || ['recording', 'proposed'].includes(e.name) ? [] : walk(p);
     return [p];
   });
 }
@@ -145,15 +153,32 @@ function main() {
   const problems = [];
   for (const file of walk(root)) {
     const rel = path.relative(root, file);
-    if (['SKIP', 'beatles/BENCH', 'beatles/folders.json'].includes(rel)) continue;
+    if (['SKIP', 'beatles/bench-pin', 'beatles/folders.json'].includes(rel)) continue;
     const ext = path.extname(file);
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
-    if (ext === '.sh' && /--details\b/.test(text)) {
-      const last = text.split('\n').at(-1).trim();
-      if (last !== 'jq .') problems.push(`examples/${rel}: asks for --details and does not end in jq . Show the details whole.`);
-    }
+    if (ext === '.sh' && /--details\b/.test(text)) problems.push(`examples/${rel}: asks for --details. The docs leave it out for now.`);
+  }
+
+  const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);
+  for (const fn of CODE_FUNCTIONS) {
+    const dir = path.join(root, 'functions', fn.name);
+    const first = fs.readdirSync(dir).filter((n) => n.endsWith('.sh')).sort()[0];
+    if (!first) { problems.push(`examples/functions/${fn.name}: no command example. Every function page opens with one.`); continue; }
+    const script = path.join(dir, first);
+    const shown = lineCount(script) + lineCount(script.replace(/\.sh$/, '.out'));
+    if (shown < EXAMPLE_LINES.min || shown > EXAMPLE_LINES.max) problems.push(`examples/functions/${fn.name}/${first}: the page's example shows ${shown} lines of script and output. Keep it from ${EXAMPLE_LINES.min} to ${EXAMPLE_LINES.max}.`);
+  }
+
+  function sources(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = path.join(dir, e.name);
+      return e.isDirectory() ? sources(p) : /\.(astro|mjs|md)$/.test(p) ? [p] : [];
+    });
+  }
+  for (const file of sources(path.join(site, 'src'))) {
+    if (/--details\b/.test(fs.readFileSync(file, 'utf8'))) problems.push(`${path.relative(site, file)}: names --details. The docs leave it out for now.`);
   }
 
   const articles = path.join(site, 'src', 'articles');

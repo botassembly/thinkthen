@@ -26,7 +26,6 @@ pub(super) enum StorageStage {
     Install,
     DirectorySync,
     Cleanup,
-    LockRemove,
     FinalRead,
 }
 
@@ -43,7 +42,6 @@ pub(super) enum StorageStageName {
     Install,
     DirectorySync,
     Cleanup,
-    LockRemove,
     FinalRead,
 }
 
@@ -71,7 +69,6 @@ pub(super) fn maybe_fail_io(stage: StorageStageName) -> io::Result<()> {
         StorageStageName::Install => StorageStage::Install,
         StorageStageName::DirectorySync => StorageStage::DirectorySync,
         StorageStageName::Cleanup => StorageStage::Cleanup,
-        StorageStageName::LockRemove => StorageStage::LockRemove,
         StorageStageName::FinalRead => StorageStage::FinalRead,
     };
     STORAGE_FAULT.with(|fault| {
@@ -168,9 +165,8 @@ mod tests {
             (StorageStage::Write, false, true, false),
             (StorageStage::FileSync, false, true, false),
             (StorageStage::Install, false, true, false),
-            (StorageStage::DirectorySync, true, false, false),
-            (StorageStage::Cleanup, true, false, true),
-            (StorageStage::LockRemove, true, true, false),
+            (StorageStage::DirectorySync, true, true, false),
+            (StorageStage::Cleanup, true, true, true),
             (StorageStage::FinalRead, true, true, false),
         ];
         for (stage, final_exists, lock_exists, partial_exists) in cases {
@@ -223,7 +219,6 @@ mod tests {
             (StorageStage::Install, false, false),
             (StorageStage::DirectorySync, true, false),
             (StorageStage::Cleanup, true, false),
-            (StorageStage::LockRemove, true, true),
             (StorageStage::FinalRead, true, true),
         ];
         for (number, (stage, same_answer, plant_after_lock)) in cases.into_iter().enumerate() {

@@ -21,6 +21,11 @@ printf '%s -f -r -- "$x"\n' rm >"$planted/check.sh"
 # case. No variable holds a name, so `sh -x` never prints one. A path hit
 # prints only its number in `git ls-files`. With no path hit, a file hit
 # prints its path and line number.
+# Use the existing user configuration when a shell omitted the override.
+# The external list stays out of the repository and retains explicit precedence.
+if [ -z "${THINKTHEN_PRIVATE_NAMES:-}" ] && [ -n "${HOME:-}" ] && [ -f "$HOME/.config/thinkthen/private-names.txt" ]; then
+    THINKTHEN_PRIVATE_NAMES="$HOME/.config/thinkthen/private-names.txt"
+fi
 if [ -z "${THINKTHEN_PRIVATE_NAMES:-}" ]; then
     echo "private names: skipped, THINKTHEN_PRIVATE_NAMES is unset"
 else

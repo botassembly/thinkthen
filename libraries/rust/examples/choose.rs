@@ -4,7 +4,13 @@ use std::io::Write;
 
 use thinkthen::{Engine, Question};
 
-thinkthen::choices! { enum Team { Billing => "billing", Shipping => "shipping", Account => "account" } }
+thinkthen::choices! {
+    enum Team {
+        Billing => "billing": "Charges and refunds",
+        Shipping => "shipping": { thinkthen::Description::builder().what("Delivery questions")?.example("The parcel is late")?.build() },
+        Account => "account",
+    }
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tt = Engine::from_env()?;
@@ -20,7 +26,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "I cannot reset my password.",
     ] {
         // The compiler makes you handle "not sure".
-        match tt.choose(&owner, text)? {
+        match tt.choose(&owner, text)?.into_value() {
             Some(team) => writeln!(out, "{}: {text}", team.label())?,
             None => writeln!(out, "a person: {text}")?,
         }

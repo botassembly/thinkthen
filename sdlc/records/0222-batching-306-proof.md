@@ -1,0 +1,21 @@
+# B13c: one request for 306 ordered rows
+
+Status: one bounded, local installed-artifact witness passed on 2026-09-28. This record supplies the specific 306-row, `SET threads = 1`, one-request observation required by `sdlc/issues/2026-09-26-batching-design.md` line 399. It does not by itself close ticket 0222's separate native Intel target remainder or ticket 0128's release-runner gate.
+
+## Inputs and method
+
+The source was main `0f3280cad4f97baf45aaf89005259231db74e7b4`; no product or harness source changed. The installed Linux x86-64 C++ extension is the exact `databases/duckdb/build/0247-policy-installed/thinkthen.duckdb_extension` artifact accepted in `0247-duckdb-complete-question-forms-build.md`, built from `dc5b428b9f11cb5fddd9456b62e9ab07bbb070e3`. Its SHA-256 is `471c92a8766c9c9947f9cf4451377a27cf81a6fbd6eeca17adfb82f0843322da`. The retained `target/debug/conformance-backend` SHA-256 is `f35a40ad660da430b25a2c4ae61053ce4521353ff067c247dae7831543e313fa`. The stock DuckDB Python host reports version 1.5.5.
+
+The input is the original 306-title list from workspace experiment 268, SHA-256 `3250fed3858ab12481d7e42b70d5eeeb18292db8a7580ec397a91bcd89bcdffd`; the witness does not commit the titles. An ignored script at `databases/duckdb/build/0222-306-proof/witness.py` has SHA-256 `addd75286d26edf23b2077b0b43f7364ba73a674c81aae9b541daca558488975`. Its ignored summary and captured request have SHA-256 `33e367b81ef3c96ccc018744005ef13fc4972ba4668566a445cc0882e357cb58` and `8e1aa82a57c25f9387b6417c5d5167a17a3fdedf440aa0676276d08af5036ff1`. They remain local review artifacts and are not pushed.
+
+One child loaded that installed extension in stock DuckDB. A fresh temporary HOME, XDG cache and XDG configuration folder, fake key, and `127.0.0.1` backend kept this run separate from user state and providers. It executed, in one connection, `SET threads = 1`, `SET thinkthen_batch = 'max'`, `SET thinkthen_max_retries = 0`, `SET thinkthen_max_requests_total = 1`, then one ordered `VALUES` query over all 306 distinct titles using `thinkthen_decide('Is this a Beatles song?', x)`. The query SQL SHA-256 is `6d9cc0219b8be6d709b81c1c65a03ee281900752c507a81516a92cebc6f25d8c`. It used no optional context argument; ticket 0222's separate accepted `b13c_context_and_batch_one_wire_identity` and `b13c_warm_first_seen_context` cases cover that API boundary.
+
+## Observed result and limit
+
+The child exit status was **0**, all five statements completed without an error, and the final result contained **306 rows**. Every row kept its input index and title in order and held the fixed loopback answer `true`. The listener counted **one actual HTTP request**, independent of the SQL result. Its captured UTF-8 body was **30,352 bytes**, SHA-256 `8e1aa82a57c25f9387b6417c5d5167a17a3fdedf440aa0676276d08af5036ff1`, with exactly `state`, `model`, `questions` at top level, model `jev-1.13.0`, and ordered keys `q1` through `q306`. Each question had type `noul` and contained the corresponding title in its instructions; the one response answered all 306. The one-request total setting would have refused any additional send, and the listener count supplies the direct observation.
+
+This is a functional packing and row-mapping witness with fixed loopback answers. It measures no provider accuracy, cost, speed, concurrency saturation or release target outside Linux x86-64. It reuses the accepted 0222 context, split, budget and conformance proofs rather than rerunning them. No extension, backend, dependency or toolchain was rebuilt.
+
+## Independent review
+
+Fresh Medium review accepted `83b940f7cb62fbd70a71e6000fdbed3c37a52df4`. The reviewer matched the original criterion, source/artifact/input hashes and retained raw proof, then reran only this stock-host loopback witness. All 306 ordered answers, one actual request, the exact request and summary hashes, and child exit 0 held. The private-name guard and diff check passed. B13c retains the native Intel target requirement under 0231; this proof adds no broader platform claim.

@@ -5,7 +5,7 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 ## Shape
 
 - The crate `thinkthen-r` lives at `thinkthen/src/rust`, its own workspace with its own lock. It depends on `thinkthen` by path with default features off, and on `extendr-api` 0.8.2.
-- `lib.rs` holds the kind table, `carry`, and the engine slot. `calls.rs` holds the worker, the wait, and the verbs. `relate.rs` holds recognize and relate. `ffi.rs` holds every R API call and every `unsafe`.
+- `lib.rs` holds the kind table, `carry`, and the engine slot. `calls.rs` holds the verbs; its private `worker`, `account`, `receipt`, and `render` children keep the prompt wait, checked facts, Rust-owned completion, and main-thread R conversion separate. `relate.rs` holds recognize and relate. `ffi.rs` holds every R API call and every `unsafe`.
 - The ticket planned a child file `ffi/text.rs`. It merged into `ffi.rs`, because `policy.py` allows `unsafe` only in a file named `ffi.rs`.
 - The crate uses edition 2024, the root edition, as ADR 0047 item 2 says. The ticket's "2021" came from the tag.
 - Questions cross as question-file JSON. The R half builds it with jsonlite, and Rust parses it with `Question::from_json` on each call.
@@ -14,7 +14,8 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 
 - Every call runs on a worker thread. The main thread waits in 100 ms ticks and checks R's interrupt flag only inside `R_ToplevelExec`. A drop guard cancels the call's token, so a detached batch stops sending.
 - `.tt_call` checks before it forces the call and after the call returns. The Rust half checks before it spawns the worker and at each tick.
-- One `catch_unwind` turns a worker panic into `defect`. A worker whose caller left ignores the failed send.
+- One `catch_unwind` turns a worker panic into `defect` and settles a supplied completion with unavailable facts. A worker whose caller left ignores the failed send.
+- The optional `tt_completion()` handle claims before R question evaluation, then becomes running after spawn. The original worker publishes one owned terminal account after core work stops. `tt_completion_read()` converts copies on R's main thread. A prompt Ctrl-C keeps R's own interrupt while the worker retains only an `Arc`, so collecting the R handle cannot run a finalizer on that worker.
 - `tests/interrupt.R` measures signal to `CAUGHT`. The single call and the batch each answer within one tick. The record holds ten runs.
 - The retired pieces: `ACTIVE`, `tt_cancel_active`, and `.tt_cleanup`. The drop guard does their work.
 
@@ -22,8 +23,8 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 
 - **`I()` over a number.** `deadline = I(5)` is 5 seconds. A classed deadline such as `factor` or `difftime` is `usage`, because R's own coercion reads a factor's code.
 - **Deadline numbers.** `NULL`, `-1`, and `-1L` mean no deadline. `0` is spent and raises `deadline` with no request. `NA`, `-2`, `Inf`, `NaN`, `1e300`, and `4294967296` are `usage`.
-- **Bulk choose, score, and tag.** A column crosses as one `annotate` of a one-question set (0095). This closes R2-23. At throttle 8 each verb holds 8 requests on the wire at once.
-- **A failed cell in those three verbs** cannot happen. The engine refuses a one-question request whose answer is broken as a whole call, and R raises that call's kind. An unexpected failed cell raises `thinkthen_defect`.
+- **Bulk choose, score, and tag.** A column crosses as one `details_many_with` call on the loaded question. This preserves runtime labels, structured descriptions and saved profiles. The batch selector reaches the core; `batch = 2L` with enough records fills eight held request slots under throttle 8. A structured question text intentionally remains one record per request in the core planner.
+- **A failed cell in those three verbs** cannot become `NA`. The engine refuses a broken one-question answer as a whole call, and R raises that call's kind. `tt_annotate` still carries a per-member failed marker beside valid cells.
 - **jsonlite stays.** It is the one import. Version 2.0.0 is the tested one. Its archive is pinned in `tools/pins.sha256`.
 - **relate takes a frame.** `tt_relate` takes `name` and `kind` columns and dedupes them in first-seen order (ADR 0047 item 9). The engine's 255 cap counts unique pairs.
 - **The ratchets.** `ratchet.json` counts the crate's Rust, and `ratchet.R.json` counts every `.R` file in this folder.
@@ -36,14 +37,16 @@ Ticket 0108 ported the R surface from tag `surfaces-wave7-frozen-2026-09-24b` on
 - **A throttle after a default-engine verb** is accepted. The default engine selects no throttle, so 0077's rule allows a first explicit one.
 - **find.** `tt_find(question, units, none = FALSE)` adds a none candidate when `none` is `TRUE`, through `Question::offering_none` (ticket 0150). A `none` other than one `TRUE` or `FALSE` raises `thinkthen_usage` before any request. When nothing is selected, `place` and `unit` are `NA` and `probability` is `NA`.
 - **Record parts.** A question set member with an `on` pointer reads that part of each `tt_annotate` cell, which holds the record as JSON text (ticket 0150).
-- **A question that names a model** cannot join a question set. `tt_choose`, `tt_score`, and `tt_tag` then ask it one row at a time through `details_with`, under the one deadline. `tests/verbs.R` proves a named-model choose answers. The fallback makes one engine call per row, so `max_requests` never refuses a named-model choose, score, or tag column. The rows go one at a time, not throttle-wide, and the "throttle 8 holds 8 on the wire" line does not apply on this path.
+- **A question that names a model** cannot join a question set, but the dynamic-label many path keeps its model and call controls. `tests/profile.R` uses explicit batch one to retain its older two-send assertion; default Max can pack compatible plain text.
 - **One deadline a call.** The Rust half fixes the deadline as one instant before the call starts, and every engine call a verb makes shares it. `tt_recognize` over three texts at 600 ms each under `deadline = 1` raises `thinkthen_deadline` after two sends.
 - **Interrupt parents** are R files run by `tests/with-backend.sh`, where the ticket planned bash `coproc` parents. R reads the backend's count through the same fifo, and one harness serves every test.
 - **Forked children** count from zero. A child forked after the parent's first call answers, reports one send, and the parent's counters stay where they were.
 
 ## Conformance
 
-`tests/conformance.R` runs every case of `conformance/cases.json` in its own child on the 0092 case arm. It recomputes each request digest for the URL the backend served. Five cases report not run with their reason: three engine injection points (cases 20, 22, and 25), case 23 (R raises its own interrupt, and `tests/interrupt.R` proves the batch stop), and case 30 (no decide question file in R).
+`tests/conformance.R` selects from all 54 cases of `conformance/cases.json` and runs each selected case in its own child on the 0092 case arm. It recomputes each request digest for the URL the backend served. Four cases retain explicit not-run reasons: three engine injection points (20, 22, and 25) and R's own interrupt (23), whose held batch stop `tests/interrupt.R` proves. On 2026-09-28, selected case `30-local-question-file` passed through public `tt_question(file=)` with a non-retryable Local error and zero loopback sends. The [Quick Fix record](../../sdlc/records/qf-r-question-file-conformance.md) names the installed artifact and focused check. Its four full-corpus not-run cases are a source-derived count; the historical full run was not repeated.
+
+Cases 13–16, 27–28, and 34–35 select batch one in their own children to keep the frozen per-record bodies and digests. `tests/facts.R` separately captures a default-Max packed body and derives its digest from the expected bytes and actual loopback URL. The same case checks original R indexes, nested description values, explicit JSON null, and host no-work facts. `tests/recognize.R` proves that a later oversized text preserves the earlier subcall's counted prefix. `tests/interrupt.R` holds eight two-record requests and reads final cancellation facts after R's prompt interrupt; it also collects a handle while a send is held.
 
 ## Engine findings
 

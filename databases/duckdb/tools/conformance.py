@@ -19,7 +19,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from harness import ROOT, Backend, rows, run, said
+from harness import ROOT, Backend, expect, rows, run, said
 from signal_suite import CANCELLED, held_cancel
 
 CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / "conformance" / "cases.json"))
@@ -27,7 +27,6 @@ CANONICAL_CASES = ROOT.parent.parent / "conformance" / "cases.json"
 
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
-    "find": "no SQL find function yet",
     "internal_invariant_failure": "the private shared panic-boundary proof replaces the retired C API test hook",
 }
 
@@ -104,8 +103,34 @@ def single_wanted(case: dict, base: str) -> list:
 
 
 def decide(case: dict, base: str) -> list:
-    got = run([f"SELECT thinkthen_decide({quoted(json.dumps(case['question']))}, x) FROM {values(evidence(case))} ORDER BY i"], base)
+    # The saved 27/28 fixtures pin per-record request identity. The library's
+    # later default maximal batching has its own installed witness below.
+    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in {"27-decide-many", "28-decide-many-repeated-texts"} else None
+    got = run([f"SELECT thinkthen_decide({quoted(json.dumps(case['question']))}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=extra)
     return [value for (value,) in rows(got[0])]
+
+
+def packed_default() -> None:
+    """The installed default sends one exact three-record request."""
+    question = quoted('{"decide":"Does the writer ask for a refund?","threshold":0.5}')
+    query = (f"SELECT thinkthen_decide({question}, x) FROM "
+             "(VALUES (0, 'refund now'), (1, 'good morning'), (2, 'maybe so')) t(i,x) ORDER BY i")
+    expected = (
+        '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0",'
+        '"questions":{"q1":{"type":"noul","instructions":"The text is \\"refund now\\". Does the writer ask for a refund?"},'
+        '"q2":{"type":"noul","instructions":"The text is \\"good morning\\". Does the writer ask for a refund?"},'
+        '"q3":{"type":"noul","instructions":"The text is \\"maybe so\\". Does the writer ask for a refund?"}}}'
+    )
+    with Backend() as backend:
+        expect(rows(run([query], backend.base())[0]), [[True], [True], [True]], "default packed answers")
+        expect(backend.count(), 1, "default packed send count")
+    with Backend() as backend:
+        refused = run(["SET thinkthen_max_retries = 0", query],
+                      backend.base("case/42-recognize-C01-relations/capture"))
+        expect("status 500" in said(refused[1]), True, "the capture arm intentionally refuses")
+        expect(backend.count(), 1, "one captured packed request")
+        backend._say("capture")
+        expect(json.loads(backend._line()), {"bodies": [expected]}, "exact default packed request")
 
 
 def filtered(case: dict, base: str) -> list:
@@ -184,6 +209,35 @@ def related(case: dict, base: str) -> list:
     ]
 
 
+FIND_RESULTS = {
+    "18-find-second": {
+        "index": 1, "value": "Second passage.", "probability": 0.8,
+        "candidates": [{"index": 0, "probability": 0.1}, {"index": 1, "probability": 0.8},
+                       {"index": 2, "probability": 0.05}, {"index": None, "probability": 0.05}],
+    },
+    "19-find-none": {
+        "index": None, "value": None, "probability": 0.7,
+        "candidates": [{"index": 0, "probability": 0.1}, {"index": 1, "probability": 0.2},
+                       {"index": None, "probability": 0.7}],
+    },
+}
+
+
+def find(case: dict, base: str, backend: Backend) -> dict:
+    question = case["question"]
+    sql = (f"SELECT thinkthen_find({quoted(question['find'])}, list(x ORDER BY i), "
+           f"{str(question.get('none', False)).upper()}) FROM {values(question['units'])}")
+    result = rows(run([sql], base)[0])[0][0]
+    observed = backend.capture()
+    expect(len(observed), 1, "one captured find body")
+    pinned = case["exchanges"][0]["request"]
+    expect(observed[0], pinned, "complete sent find body")
+    served = base + "/systemone"
+    expect(digest(served, observed[0]), digest(served, pinned), "served find request digest")
+    expect(backend.count(), 1, "one find attempt")
+    return result
+
+
 def counters(case: dict, base: str) -> dict:
     question, text = quoted(json.dumps(case["question"])), quoted(evidence(case)[0])
     with tempfile.TemporaryDirectory() as cache:
@@ -231,10 +285,13 @@ def check(case: dict) -> str | None:
         if "error" in case["expect"]:
             wanted, got = case["expect"]["error"]["kind"], fault(case, backend)
             return None if got == wanted else f"wanted {wanted}, got {got}"
-        base = backend.base(f"case/{case['id']}")
+        arm = f"case/{case['id']}" + ("/capture" if case["verb"] == "find" else "")
+        base = backend.base(arm)
         success = case["expect"]["success"]
         kind = success["kind"]
-        if kind == "relate":
+        if kind == "find":
+            got, wanted = find(case, base, backend), FIND_RESULTS[case["id"]]
+        elif kind == "relate":
             got, wanted = related(case, base), expected(case)[0]
         elif kind == "recognize":
             got, wanted = relations(case, base), relations_wanted(case)
@@ -246,6 +303,8 @@ def check(case: dict) -> str | None:
             got, wanted = annotated(case, base), expected(case)
         elif kind == "decide_many":
             got, wanted = decide(case, base), expected(case)
+            if got == wanted and case["id"] == "27-decide-many":
+                packed_default()
         elif kind == "single":
             pairs = zip(single(case, base), single_wanted(case, base), strict=True)
             why = next((f"{name}: wanted {one[name]!r}, got {other[name]!r}" for other, one in pairs for name in one if one[name] != other[name]), None)

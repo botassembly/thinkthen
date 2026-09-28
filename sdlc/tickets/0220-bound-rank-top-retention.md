@@ -6,7 +6,7 @@ opens: sdlc/tickets/0220-bound-rank-top-retention.md sdlc/records/0220-rank-top-
 
 # 0220: Bound rank top retention
 
-Status: design accepted at `52f0864b`; fresh independent code review accepted source `a8fb831d` with no findings. The complete branch awaits integration and plan closure. Owner: Codex. The [preflight](../records/0220-rank-top-preflight.md) traces the two retention layers, and accepted [ADR 0093](../planning/adr/0093-bound-rank-top-retention.md) amends settled reference wording. The [build record](../records/0220-build.md) gives the focused proof. Ian may overturn the memory outcome in [the issue](../issues/closed/2026-09-26-rank-top-holds-every-record.md); no new command choice is proposed.
+Status: design accepted at `52f0864b`; fresh independent code review accepted source `a8fb831d` with no findings. The complete change landed at `81b145ed`, with its issue and item row closed. Owner: Codex. The [preflight](../records/0220-rank-top-preflight.md) traces the two retention layers, and accepted [ADR 0093](../planning/adr/0093-bound-rank-top-retention.md) amends settled reference wording. The [build record](../records/0220-build.md) gives the focused proof. Ian may overturn the memory outcome in [the issue](../issues/closed/2026-09-26-rank-top-holds-every-record.md); no new command choice is proposed.
 
 ## Outcome and retained contract
 

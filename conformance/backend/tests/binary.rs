@@ -238,6 +238,41 @@ fn the_first_line_is_the_port_and_count_lines_count_until_the_input_closes() -> 
 }
 
 #[test]
+fn full_and_find_case_capture_keep_only_opted_in_bodies() -> Tested {
+    let mut backend = start()?;
+    let cases: serde_json::Value = serde_json::from_str(include_str!("../../cases.json"))?;
+    let find = cases
+        .get("cases")
+        .ok_or("no shared cases")?
+        .as_array()
+        .ok_or("no shared cases")?
+        .iter()
+        .find(|case| case.get("id") == Some(&serde_json::json!("18-find-second")))
+        .ok_or("no find case")?
+        .get("exchanges")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|exchanges| exchanges.first())
+        .and_then(|exchange| exchange.get("request"))
+        .ok_or("no find request")?
+        .as_str()
+        .ok_or("no find request")?;
+    let (status, body) = post(backend.3, "/arm/full/capture/v1/systemone", DECIDE)?;
+    assert_eq!(status, "HTTP/1.1 200 X");
+    assert!(body.contains(r#""usage":{"input_tokens":1,"output_tokens":1}"#));
+    let (status, _) = post(backend.3, "/case/18-find-second/capture/v1/systemone", find)?;
+    assert_eq!(status, "HTTP/1.1 200 X");
+    post(backend.3, "/arm/full/v1/systemone", DECIDE)?;
+    post(backend.3, "/generic/v1/systemone", DECIDE)?;
+    let captured: serde_json::Value = serde_json::from_str(&ask(&mut backend, "capture")?)?;
+    assert_eq!(
+        captured.get("bodies"),
+        Some(&serde_json::json!([DECIDE, find]))
+    );
+    assert_eq!(last(backend)?, "4");
+    Ok(())
+}
+
+#[test]
 fn a_held_reply_waits_for_a_release_line() -> Tested {
     let mut backend = start()?;
     let answer = posting(backend.3, HELD);

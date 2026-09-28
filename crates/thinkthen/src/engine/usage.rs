@@ -1,12 +1,12 @@
 //! Private process counters and durable count-only monthly aggregates.
 
 use std::fs::{self, File, OpenOptions};
-use std::io::{self, Read as _, Seek as _, SeekFrom, Write as _};
+use std::io;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::core::Usage;
 
@@ -15,8 +15,10 @@ pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
 pub(crate) use facts::Snapshot as RunSnapshot;
-
-const SCHEMA: &str = "thinkthen.usage/1";
+mod lock;
+mod storage;
+pub(crate) use storage::read;
+use storage::{ReadFailure, update};
 
 #[derive(Debug, Default)]
 pub(crate) struct Counters {
@@ -41,7 +43,10 @@ struct Queue {
     writing: bool,
     /// Set by the first failure. Nothing is written after it.
     failed: bool,
+    failed_file: Option<(String, &'static str)>,
     closing: bool,
+    /// One deadline for every lock acquisition left after finalization starts.
+    finish_deadline: Option<Instant>,
     writer: Option<JoinHandle<()>>,
 }
 
@@ -88,15 +93,23 @@ impl Counters {
         });
     }
 
-    /// Wait until every delta counted so far is written, then say whether
-    /// persistence failed. Waits as long as another process holds the lock.
+    /// Wait for the writer, giving all remaining usage-lock acquisitions one
+    /// finalization deadline. Other filesystem operations remain unbounded.
     pub(crate) fn finish(&self) -> bool {
         let busy = |queue: &mut Queue| {
             queue.writer.is_some() && (queue.writing || !queue.pending.is_empty())
         };
-        let queue = self.shared.queue.lock();
-        let settled = queue.and_then(|queue| self.shared.changed.wait_while(queue, busy));
+        let settled = self.shared.queue.lock().and_then(|mut queue| {
+            queue.finish_deadline.get_or_insert_with(lock::deadline);
+            self.shared.changed.notify_all();
+            self.shared.changed.wait_while(queue, busy)
+        });
         settled.map_or(true, |queue| queue.failed)
+    }
+
+    /// Only generated usage filenames and fixed categories may reach diagnostics.
+    pub(crate) fn failed_file(&self) -> Option<(String, &'static str)> {
+        self.shared.queue.lock().ok()?.failed_file.clone()
     }
 
     /// The process totals so far. Reading them sends and writes nothing.
@@ -142,6 +155,7 @@ impl Drop for Counters {
     fn drop(&mut self) {
         let writer = self.shared.queue.lock().ok().and_then(|mut queue| {
             queue.closing = true;
+            queue.finish_deadline.get_or_insert_with(lock::deadline);
             queue.writer.take()
         });
         self.shared.changed.notify_all();
@@ -156,7 +170,7 @@ fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
     carried();
     let mut queue = shared.queue.lock();
     let idle = |held: &mut Queue| held.pending.is_empty() && !held.closing;
-    let write = |(month, sum): &(String, Counts)| update(path, month, *sum).is_ok();
+    let write = |(month, sum): &(String, Counts)| update(path, month, *sum, shared);
     while let Ok(mut held) = queue {
         held = match shared.changed.wait_while(held, idle) {
             Ok(held) if !held.pending.is_empty() => held,
@@ -166,10 +180,21 @@ fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
         held.writing = true;
         drop(held);
         // A write that unwinds counts as failed, so `finish()` never waits on it.
-        let written = catch_unwind(AssertUnwindSafe(|| taken.iter().all(write))).unwrap_or(false);
+        let result = catch_unwind(AssertUnwindSafe(|| taken.iter().try_for_each(write)));
+        let failed_file = match &result {
+            Ok(Err(error)) => error
+                .get_ref()
+                .and_then(|source| source.downcast_ref::<ReadFailure>())
+                .map(|failure| (failure.name.clone(), failure.category())),
+            _ => None,
+        };
+        let written = matches!(result, Ok(Ok(())));
         queue = shared.queue.lock().map(|mut held| {
             held.writing = false;
             held.failed |= !written;
+            if held.failed_file.is_none() {
+                held.failed_file = failed_file;
+            }
             if held.failed {
                 held.pending.clear();
             }
@@ -179,103 +204,13 @@ fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
     }
 }
 
-#[derive(Debug)]
-pub(crate) struct Totals {
-    pub(crate) month: Counts,
-    pub(crate) total: Counts,
-}
-
-pub(crate) fn read(path: &Path, month: &str) -> io::Result<Totals> {
-    match fs::symlink_metadata(path) {
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            return Ok(Totals {
-                month: Counts::default(),
-                total: Counts::default(),
-            });
-        }
-        Err(error) => return Err(error),
-        Ok(metadata) => validate_directory(&metadata)?,
-    }
-    let directory = open_verified(path, true, 0o700)?;
-    let lock_path = path.join(".lock");
-    let lock = open_verified(&lock_path, false, 0o600)?;
-    File::lock_shared(&lock)?;
-    verify_identity(path, &directory, true)?;
-    verify_identity(&lock_path, &lock, false)?;
-    let mut current = Counts::default();
-    let mut total = Counts::default();
-    for item in fs::read_dir(path)? {
-        let item = item?;
-        let name = item.file_name().to_string_lossy().into_owned();
-        if !recognized_month(&name) {
-            continue;
-        }
-        let mut file = open_verified(&item.path(), false, 0o600)?;
-        let counts = read_counts(&mut file)?;
-        verify_identity(&item.path(), &file, false)?;
-        total = total.checked_add(counts).ok_or_else(overflow)?;
-        if name == format!("{month}.json") {
-            current = counts;
-        }
-    }
-    Ok(Totals {
-        month: current,
-        total,
-    })
-}
-
-fn update(path: &Path, month: &str, delta: Counts) -> io::Result<()> {
-    maybe_fail(Stage::Setup)?;
-    make_private_directory(path)?;
-    let directory = open_verified(path, true, 0o700)?;
-    let lock_path = path.join(".lock");
-    let (lock, created) = open_stable_lock(&lock_path)?;
-    pause_after_creation(created);
-    maybe_fail(Stage::Lock)?;
-    File::lock(&lock)?;
-    verify_identity(path, &directory, true)?;
-    verify_identity(&lock_path, &lock, false)?;
-    let monthly = path.join(format!("{month}.json"));
-    let old = match fs::symlink_metadata(&monthly) {
-        Err(error) if error.kind() == io::ErrorKind::NotFound => {
-            lock.sync_all()?;
-            directory.sync_all()?;
-            note_initial_sync();
-            Counts::default()
-        }
-        Err(error) => return Err(error),
-        Ok(_) => {
-            maybe_fail(Stage::Validation)?;
-            let mut file = open_verified(&monthly, false, 0o600)?;
-            let value = read_counts(&mut file)?;
-            verify_identity(&monthly, &file, false)?;
-            value
-        }
-    };
-    let next = old.checked_add(delta).ok_or_else(overflow)?;
-    let temporary = path.join(".update.tmp");
-    let mut file = open_private(&temporary, true)?;
-    file.set_len(0)?;
-    file.seek(SeekFrom::Start(0))?;
-    maybe_fail(Stage::Write)?;
-    serde_json::to_writer(&mut file, &next).map_err(io::Error::other)?;
-    file.write_all(b"\n")?;
-    maybe_fail(Stage::FileSync)?;
-    file.sync_all()?;
-    verify_identity(&temporary, &file, false)?;
-    drop(file);
-    maybe_fail(Stage::Rename)?;
-    fs::rename(&temporary, &monthly)?;
-    maybe_fail(Stage::DirectorySync)?;
-    directory.sync_all()
-}
-
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum Stage {
     Setup,
     Lock,
     Validation,
     Write,
+    RetryWrite,
     FileSync,
     Rename,
     DirectorySync,
@@ -349,16 +284,6 @@ fn note_initial_sync() {
 
 #[cfg(not(test))]
 const fn note_initial_sync() {}
-
-fn read_counts(file: &mut File) -> io::Result<Counts> {
-    let mut bytes = Vec::new();
-    file.read_to_end(&mut bytes)?;
-    let value: serde_json::Value = serde_json::from_slice(&bytes).map_err(io::Error::other)?;
-    if value.get("schema").and_then(serde_json::Value::as_str) != Some(SCHEMA) {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "usage schema"));
-    }
-    serde_json::from_value(value).map_err(io::Error::other)
-}
 
 fn make_private_directory(path: &Path) -> io::Result<()> {
     #[cfg(unix)]

@@ -24,7 +24,6 @@ from helper import ROOT, Backend, child, environment
 
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
-    "find": "no SQL find function yet",
     "defect": "no SQL form: no outside boundary reaches an internal invariant failure",
 }
 TYPED = {"decide": "thinkthen_decide", "choose": "thinkthen_choose", "tag": "thinkthen_tag", "score": "thinkthen_score"}
@@ -34,8 +33,6 @@ SENDING_ERRORS = {"21-backend-fault": 1, "23-cancelled-fault": 1}
 
 def form(case: dict) -> str | None:
     """The NOT_RUN key for a case with no SQL spelling, or None."""
-    if case["verb"] == "find":
-        return case["verb"]
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "defect"
     return None
@@ -144,7 +141,7 @@ def check(case: dict, backend: Backend) -> None:
     if "error" in case["expect"]:
         return refused(case, backend)
     relations = "relations" in case.get("question", {}).get("recognize", {})
-    arm = f"case/{case['id']}" + ("/capture" if relations else "")
+    arm = f"case/{case['id']}" + ("/capture" if relations or case["verb"] == "find" else "")
     served = backend.base(arm) + "/systemone"
     exchanges = case.get("exchanges", [])
     renamed = {digest(CANONICAL, one["request"]): digest(served, one["request"]) for one in exchanges}
@@ -153,7 +150,26 @@ def check(case: dict, backend: Backend) -> None:
     env = environment(backend, arm)
     question = json.dumps(case.get("question"))
     kind, answers = success["kind"], success.get("answers", [])
-    if kind == "single":
+    if kind == "find":
+        units = case["question"]["units"]
+        rows = asked([["SELECT thinkthen_find(?, ?, ?)",
+                       [case["question"]["find"], json.dumps(units), int(case["question"].get("none", False))]]], env)[0]
+        if isinstance(rows, str):
+            raise AssertionError(f"SQL find failed: {rows}")
+        result = json.loads(rows[0][0])
+        operation = success["operation"]
+        selected = operation["selected"]
+        wanted = {"index": selected, "value": units[selected] if selected is not None else None,
+                  "probability": next(one["probability"] for one in operation["probabilities"]
+                                      if one["index"] == selected),
+                  "candidates": operation["probabilities"]}
+        same("find result", result, wanted)
+        observed = backend.capture()
+        same("captured body count", len(observed), 1)
+        same("captured request", observed[0], exchanges[0]["request"])
+        same("captured digest", digest(served, observed[0]), digest(served, exchanges[0]["request"]))
+        same("request count", backend.count(), 1)
+    elif kind == "single":
         calls = success.get("counters", {}).get("calls", 1)
         verb = next(name for name in TYPED if name in case["question"])
         steps = [["SELECT thinkthen_usage()", []]] + [["SELECT thinkthen_details(?, ?)", [question, texts[0]]]] * calls
@@ -184,6 +200,7 @@ def check(case: dict, backend: Backend) -> None:
         same("ranking", [{"index": row[0], "probability": row[1]} for row in rows], success["operation"]["ranking"])
         same("judgments sent", backend.count(), len(texts))
     elif kind == "decide_many":
+        env = env | {"THINKTHEN_BATCH": "1"}  # legacy exact one-record exchanges
         steps = [["SELECT thinkthen_warm(?, t) FROM r", [question]], ["SELECT thinkthen_decide(?, t) FROM r ORDER BY i", [question]]]
         results = asked(steps, env, rows_table(texts))
         same("bare", [{1: True, 0: False}.get(row[0]) for row in results[1]], [one["bare"] for one in answers])

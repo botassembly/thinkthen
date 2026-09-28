@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Meals with a client: up to $75 a head.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Does this rule allow: Client dinner, $60 a head"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.96}},"usage":{"input_tokens":293,"output_tokens":21}}
-}

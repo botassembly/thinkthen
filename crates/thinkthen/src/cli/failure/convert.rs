@@ -66,7 +66,10 @@ impl From<EngineError> for Failure {
             EngineError::TokenLimit => Self::TokenLimit,
             EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
             EngineError::Reply(error) => Self::Reply(error),
-            EngineError::ReplayMiss(name) => Self::ReplayMiss(name),
+            EngineError::ReplayMiss(name) => Self::ReplayMiss {
+                name,
+                context: None,
+            },
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::RecordingStorage => Self::RecordingStorage,
@@ -96,6 +99,18 @@ impl From<EngineError> for Failure {
             EngineError::TextTooLong { bytes, limit } => {
                 Self::Recognize(super::recognize::Error::TextTooLong { bytes, limit })
             }
+            EngineError::RecognizeRelationNames { count, limit } => {
+                Self::Recognize(super::recognize::Error::RelationLimit(
+                    crate::engine::error::relation_names_message(count, limit),
+                ))
+            }
+            EngineError::RecognizeRelationQuestions {
+                names,
+                count,
+                limit,
+            } => Self::Recognize(super::recognize::Error::RelationLimit(
+                crate::engine::error::relation_questions_message(names, count, limit),
+            )),
         }
     }
 }

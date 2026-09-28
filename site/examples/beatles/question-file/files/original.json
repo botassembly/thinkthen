@@ -1,0 +1,7 @@
+{
+  "decide": "Did a Beatle write this song?",
+  "true": "John, Paul, George, or Ringo wrote it.",
+  "false": "Someone else wrote it. It is a cover.",
+  "threshold": "0.2:0.8",
+  "on": ["/title", "/album"]
+}

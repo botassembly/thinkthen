@@ -42,13 +42,14 @@ mod threshold;
 
 pub(crate) use crate::core::adapters::built_in::DEFAULT_MODEL;
 pub(crate) use crate::core::answer::{Answer, Value};
-pub(crate) use crate::core::backend::{Backend, BackendError, KEY_VAR};
+pub(crate) use crate::core::backend::{Backend, BackendError, KEY_IN_ADDRESS, KEY_VAR};
 #[cfg(any(test, feature = "cli"))]
 pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
 };
 pub(crate) use crate::core::batch::{Batch, BatchError, BatchRecord, Batcher, Setting};
+pub(crate) use crate::core::batch::{GroupBatcher, group_halves};
 pub(crate) use crate::core::digest::bytes_sha256;
 #[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
@@ -91,9 +92,9 @@ pub(crate) use crate::core::reply::{
 };
 pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::{
-    AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, BatchMeta, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues,
-    ProfileWarning, RecordValue, RequestMeta, Usage, share,
+    AnnotateBatchMeta, AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry,
+    AnnotatedFailure, AnnotatedValue, BatchMeta, BatchSetting, BatchWarning, DecisionResult, Meta,
+    NamedValues, ProfileWarning, RecordValue, RequestMeta, Usage, share,
 };
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,

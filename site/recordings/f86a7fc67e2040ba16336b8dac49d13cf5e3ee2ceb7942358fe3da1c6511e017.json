@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Steps: click Export. It is very slow.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the report give steps to reproduce?"},"q2":{"type":"choice","instructions":"Which part of the app is this?","criteria":{"export":null,"login":null,"billing":null}},"q3":{"type":"score","instructions":"How much does this block the user?","criteria":["None.","Slows them.","Blocks work."]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.78},"q2":{"type":"choice","choice":"export","confidence":1.0,"probabilities":{"login":0.0,"export":1.0,"billing":0.0}},"q3":{"type":"score","score":1.04,"confidence":0.93,"legend":{"0":"None.","1":"Slows them.","2":"Blocks work."},"probabilities":{"0":0.0,"1":0.96,"2":0.04}}},"usage":{"input_tokens":366,"output_tokens":71}}
+}

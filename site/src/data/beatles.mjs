@@ -1,19 +1,25 @@
 // The Beatles Bench pages under /learn/beatles-bench/, in the order of the
-// talk. Each page is a short article: the slide, the idea, one example, the
-// same example at another bar, and the lesson. `goal` says what the page
-// must communicate. `lesson` says what the runs showed, and `takeaway` is the
-// one line a reader keeps. `files` names the question files the page shows,
-// from the page's bench folder.
+// talk "Jev, ThinkThen, and Beatles Bench". Each page is a short article: the
+// slide, the idea, one example, the same example at another bar, and the
+// lesson. A page with no example shows the slide and the idea. `goal` says
+// what the page must communicate. `lesson` says what the runs showed, and
+// `takeaway` is the one line a reader keeps. `files` maps each file the page
+// shows to its caption. `blocks` holds code a reader types and the site does
+// not run, such as a clone.
 //
 // The examples live in examples/beatles/<slug>/. Each runs in the Beatles
 // Bench folder examples/beatles/folders.json names for its page, and answers
-// from a saved recording. `see` gives the caption for each example and
-// `headings` the heading above it. `source` links the bench record behind a
-// number in the prose. Prose marks code with backticks.
+// from a saved recording. A page with no bench folder runs from its own
+// files/, and its recordings come from the talk's deck. `see` gives the
+// caption for each example and `headings` the heading above it. `source`
+// links the bench record behind a number in the prose. Prose marks code with
+// backticks and a link as [text](/route/).
 //
 // Links into the bench use paths on bench main. The bench history may be
 // squashed at launch, and a pinned commit would then stop resolving
 // (sdlc/issues/2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md).
+
+import { BINDINGS, COUNTS } from './catalog.mjs';
 
 export const REPO = 'https://github.com/botassembly/beatles-bench';
 const tree = (name) => `${REPO}/tree/main/examples/${name}`;
@@ -21,14 +27,17 @@ const tree = (name) => `${REPO}/tree/main/examples/${name}`;
 const record = (name) => ({ text: `the bench's record for this slide`, href: tree(name) });
 
 export const GROUPS = [
-  ['Start', ['strings', 'jev']],
-  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']],
+  ['Start', ['strings', 'jev', 'runs-in']],
+  ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']],
+  ['Scripts', ['question-file', 'bash']],
+  ['Bindings', ['languages', 'data']],
+  ['What Jev knows', ['blind-spots', 'rad']],
   ['Tune your bar', ['audit', 'diff']],
-  ['What Jev knows', ['what-jev-knows', 'blind-spots', 'rad']],
-  ['Backends', ['backends']],
+  ['Agents', ['use-cases', 'retrieval']],
+  ['Run it', ['bench-run', 'backends']],
 ];
 
-// The choose, relate, and Jev slides show four faces cropped from one photo.
+// The choose and Jev slides show four faces cropped from one photo.
 const FACES = "The four faces: United Press International photo of the Beatles in New York, 7 February 1964, via the Library of Congress and Wikimedia Commons. Public domain in the US.";
 
 const ARTICLES = {
@@ -63,13 +72,30 @@ const ARTICLES = {
     credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
     source: record('jev'),
     see: {
-      '1-choose': "Jev gives Ringo 0.84.",
-      '2-bar': "A bar of 0.9 asks for more than 0.84. The answer is not sure.",
+      '1-choose': "At a bar of 0.8, Jev picks Ringo.",
+      '2-bar': "A bar of 0.9 asks for more. The answer is not sure.",
     },
     headings: { '2-bar': "Change the bar" },
-    lesson: "Ringo is right at 0.84. A bar of 0.9 asks for more than Jev gives.",
+    lesson: "Ringo is right. Jev's probability for Ringo clears 0.8 and falls short of 0.9. A bar of 0.9 asks for more than Jev gives.",
     takeaway: "Jev answers with a probability, and your bar decides what counts.",
     link: tree('choose'),
+  },
+
+  "runs-in": {
+    title: `${COUNTS.functions}, ${COUNTS.cli}, ${COUNTS.bindings}.`,
+    label: "Functions and bindings",
+    goal: "ThinkThen is one command with ten functions, and its bindings bring the same functions to languages and databases.",
+    idea: [
+      "ThinkThen is one command-line tool, `thinkthen`. It runs from the command line in [Bash](/install/shell/). It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
+      `Bindings bring the same ten functions to ${BINDINGS.length} programming languages and databases: ${BINDINGS.map((b, i) => `${i === BINDINGS.length - 1 ? 'and ' : ''}[${b.name}](${b.route})`).join(', ')}.`,
+      "To set one up, start at [Install](/install/).",
+    ],
+    see: {
+      '1-help': "The first ten names are the functions. `help` and the six tools follow.",
+    },
+    lesson: "Each function asks Jev a question. `audit` and `diff` work on answers you already saved. They grade the answers and compare two runs.",
+    takeaway: "One command, ten functions, and a binding for your language.",
+    link: REPO,
   },
 
   decide: {
@@ -80,11 +106,11 @@ const ARTICLES = {
     ],
     see: {
       '1-lines': "At the default bar of 0.5, three songs are love songs.",
-      '2-details': "The details put Yesterday at 0.56.",
+      '2-bar': "At a bar of 0.6, Yesterday turns to no.",
       '3-band': "Inside the band 0.3:0.7, Yesterday is not sure.",
     },
-    headings: { '3-band': "Change the bar" },
-    lesson: "Yesterday sits at 0.56. The single bar calls it yes. The band calls it not sure. The bench has no answer key for this question.",
+    headings: { '2-bar': "Change the bar", '3-band': "Set a band" },
+    lesson: "Yesterday sits between 0.5 and 0.6. A bar of 0.5 calls it yes, and a bar of 0.6 calls it no. The band calls it not sure. The bench has no answer key for this question.",
     takeaway: "You decide how sure a yes must be.",
     link: tree('decide'),
   },
@@ -123,10 +149,10 @@ const ARTICLES = {
   },
 
   score: {
-    title: "score rates using your scale.",
+    title: "score can rate on a linear scale you define.",
     goal: "score gives a position on your scale, and your code draws the line.",
     idea: [
-      "`score` places a text on a scale you name, lowest level first. It returns a number along that scale. Here the scale runs from about 0 minutes to about 9 minutes.",
+      "`score` places a text on a scale you name, lowest level first. It returns a number along that scale. Here the scale runs from about 0 minutes to about 9 minutes, in even steps.",
     ],
     see: {
       '1-lines': "Each song gets a length in minutes.",
@@ -136,6 +162,24 @@ const ARTICLES = {
     lesson: "`score` has no threshold. A Day in the Life runs over five minutes. Jev scores it 4.868686868687, and a bar of 5 leaves it out.",
     takeaway: "A score is a position. Your code draws the line.",
     link: tree('score'),
+  },
+
+  "score-bands": {
+    title: "score can rate on a non-linear scale you define.",
+    label: "score bands",
+    command: true,
+    goal: "Each level of a score scale can carry its own range, so the steps can be uneven.",
+    idea: [
+      "The steps of a scale need not be even. Here `score` places Beatles songs on five levels of length, from very short to very long. Each level carries its name and its range. The ranges grow wider as the songs grow longer.",
+      "The value runs from 0 for very short to 4 for very long.",
+    ],
+    files: { 'question.json': "question.json, the question and its five levels" },
+    see: {
+      '1-bands': "Every timed song goes in. `jq` keeps three of them.",
+    },
+    lesson: "Her Majesty is the shortest Beatles song. It scores 0.23, very short. Revolution 9 is the longest. It scores 3.31, nearest long, one level short of the truth. Yesterday runs 2:05, right on the line between short and average. It scores 1.73, nearest average.",
+    takeaway: "Give each level a range, and the steps can be as uneven as your data.",
+    link: REPO,
   },
 
   filter: {
@@ -172,17 +216,15 @@ const ARTICLES = {
 
   find: {
     title: "find picks one from many.",
-    goal: "Without `--none`, find names one line, and its probability says how much to trust the pick.",
+    goal: "Without `--none`, find always names one line.",
     idea: [
       "`find` reads every line together and picks the one that answers the question. Each line sees the others. An answer can depend on the whole set.",
     ],
     see: {
       '1-find': "`find` picks Love Me Do.",
-      '2-details': "Each line has a probability. u005 is the fifth line.",
     },
-    headings: { '2-details': "Read the number" },
-    lesson: "Love Me Do came out first, and the pick is right at 0.63. Please Please Me comes next at 0.27.",
-    takeaway: "Without `--none`, find names a line. Read its probability before you trust it.",
+    lesson: "Love Me Do came out first, and the pick is right.",
+    takeaway: "Without `--none`, find always names a line. Check its picks on records you know before you trust it.",
     link: tree('find'),
   },
 
@@ -192,7 +234,7 @@ const ARTICLES = {
     idea: [
       "`annotate` answers a saved set of questions about each record. Each question in the set carries its own threshold. This set asks for the lead singer, the first album, and the year, each at 0.8.",
     ],
-    files: ["annotate-cold-card.json"],
+    files: { 'annotate-cold-card.json': "annotate-cold-card.json, the question set" },
     see: {
       '1-card': "At 0.8, Octopus's Garden leaves the album and the year not sure.",
       '2-bar': "`jq` sets every bar to 0.5. At 0.5, every field fills.",
@@ -205,90 +247,143 @@ const ARTICLES = {
 
   recognize: {
     title: "recognize labels things it finds.",
-    goal: "The recognize bar picks which names you keep and never changes a strength.",
+    goal: "recognize works in three steps: it finds the names, labels each one, and relates the pairs your rules allow.",
     idea: [
-      "`recognize` finds every name in a text and gives each one a kind from your list. Each name carries a strength.",
+      "`recognize` finds every name in a text and gives each one a kind from your list. It works in three steps.",
+      "First it finds the names. It splits the text into pieces and asks one question about each piece. Does the piece begin a name, sit inside one, end one, stand alone as a name, or sit outside every name? Then it labels each name with one of your kinds. Last it relates the names. Each rule names a relation, a subject kind, and an object kind. `recognize` asks one yes or no question for each pair a rule allows.",
     ],
     see: {
-      '1-low': "At 0.01, all five names come back.",
-      '2-high': "At 0.98, three names are left.",
+      '1-find': "A dry run shows the find step's plan: 28 pieces in one request.",
+      '2-label': "The label step gives each name one of the four kinds.",
+      '3-relate': "The relate step keeps the edges at 0.5 or more.",
     },
-    headings: { '2-high': "Change the bar" },
-    lesson: "All five names are right. The bar of 0.98 drops Abbey Road Studios and the album Abbey Road. Their strengths did not change.",
-    takeaway: "The bar picks which names you keep. It never changes a strength.",
+    headings: { '1-find': "Step 1: find", '2-label': "Step 2: label", '3-relate': "Step 3: relate" },
+    lesson: "All five names and their kinds are right. The sentence says Ringo Starr wrote Octopus's Garden, and that edge reads 0.99. The rules also let `recognize` ask whether Octopus's Garden was recorded at Sardinia. That answer falls under 0.5. No edge comes out for it.",
+    takeaway: "Find the names, label them, then link them.",
     link: tree('recognize'),
   },
 
   relate: {
-    title: "relate links names into a graph.",
-    credit: FACES,
-    goal: "relate returns each link with a probability, and a higher bar removes wrong and right links alike.",
+    title: "relate asks what Jev knows about each pair.",
+    goal: "relate asks Jev about each pair of names your rules allow, and a higher bar removes wrong and right edges alike.",
     idea: [
-      "`relate` takes a set of names and the relations you care about, and finds each link. Here the names are songs, singers, and albums. The file names two relations: sung by and appears on. Each output line is one edge with its probability.",
+      "`relate` gets a list of names and their kinds, and no text. Jev answers from what it knows.",
+      "Here four people, five songs, and three albums go in. The rules file names two relations. `sings` runs from a person to a song. `on_album` runs from a song to an album. `relate` asks one yes or no question for each pair a rule allows. Every answer at 0.5 or more comes out as an edge.",
     ],
-    files: ["relate.json"],
-    see: {
-      '1-low': "At 0.5, fourteen edges.",
-      '2-high': "At 0.8, twelve edges.",
+    files: {
+      'names.jsonl': "names.jsonl, the names in",
+      'rules.json': "rules.json, the two rules",
     },
-    headings: { '2-high': "Change the bar" },
-    lesson: "Octopus's Garden first came out on Abbey Road. Jev links it to Revolver at 0.73, and the bar of 0.8 removes that wrong edge. The same bar removes Yesterday on Help! at 0.56, and that edge is right.",
+    see: {
+      '1-edges': "Twelve edges come out at the default bar of 0.5.",
+      '2-bar': "At 0.8, seven edges stay.",
+    },
+    headings: { '2-bar': "Change the bar" },
+    lesson: "Three of the twelve edges are wrong. Jev puts Yesterday, Something, and Octopus's Garden on Revolver. Each of the three songs also gets its right album. No edge says who sings Taxman. George sings it, and Jev's answer fell under the bar. At 0.8, two wrong edges drop out, and Octopus's Garden on Revolver stays at 0.9. Three right edges drop out as well.",
     takeaway: "A higher bar removes wrong edges and right ones alike.",
     link: tree('relate'),
   },
 
+  "question-file": {
+    title: "A question file is a recipe.",
+    label: "Question files",
+    goal: "A question file says what yes and no mean, when to answer not sure, and which fields to read, and decide runs it on one song.",
+    idea: [
+      "A [question file](/functions/question-file/) is a small recipe. `decide` holds the question. `true` and `false` say what yes and no mean. `threshold` sets the band 0.2:0.8. An answer of 0.8 or more is yes, and an answer under 0.2 is no. `on` picks the title and the album from each record. The request sends only those two fields.",
+      "Here a band plays only songs the Beatles wrote. The file asks whether a Beatle wrote a song. `decide @original.json` runs the recipe on one song.",
+    ],
+    files: {
+      'original.json': "original.json, the question file",
+    },
+    see: {
+      '1-something': "`decide` prints `true` for Something and exits 0.",
+    },
+    source: { text: "the bench's songwriter list", href: `${REPO}/blob/main/data/songs.tsv` },
+    lesson: "George Harrison wrote Something. The answer is right. The exit code carries the answer too: 0 for yes, 1 for no, and 3 for not sure. The next page puts that code to work in a script.",
+    takeaway: "Write the question once in a file, and every run asks it the same way.",
+    link: REPO,
+  },
+
+  bash: {
+    title: "Answers drive a Bash script.",
+    label: "Bash scripts",
+    goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
+    idea: [
+      "The script reads one song per line from `setlist.jsonl`. It asks `original.json` from the last page about each song. The script plays a yes, skips a no, and hands a not sure to a person. The [question file page](/functions/question-file/) lists every key a file can hold.",
+      "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means, and `if` reads it directly. `code=$?` names the code, and `case` tells a no from a not sure. Any other code is a failure, and the script stops. [Handle not sure](/how-tos/bash/not-sure/) teaches the same form.",
+    ],
+    files: {
+      'setlist.jsonl': "setlist.jsonl, the songs the script reads",
+    },
+    see: {
+      '1-setlist': "Four songs play, two are skipped, and one goes to a person.",
+    },
+    source: { text: "the bench's songwriter list", href: `${REPO}/blob/main/data/songs.tsv` },
+    lesson: "Five of the six sure answers are right. Jev says a Beatle wrote Words of Love. Buddy Holly wrote it. Mr. Moonlight falls inside the band, and a person checks it. Roy Lee Johnson wrote it.",
+    takeaway: "The exit code is the answer, and an ordinary `if` and `case` act on it.",
+    link: REPO,
+  },
+
+  languages: {
+    title: "Scripting and systems languages",
+    label: "Languages",
+    goal: "Each language binding asks the same question the command asks.",
+    idea: [
+      "On the slide, Python and C ask Jev the same `decide` question: does Ringo Starr sing the lead vocal on Octopus's Garden? Each stores the answer in `is_ringo` and asserts it. Both get yes.",
+      "Python sits over the scripting languages, and C sits over the systems languages.",
+      "Each binding calls the same engine as the command. To set one up, start at [Install](/install/).",
+    ],
+    takeaway: "Pick your language. The question stays the same.",
+    link: REPO,
+  },
+
+  data: {
+    title: "Database tables and data frames",
+    label: "Tables and frames",
+    goal: "One question adds an answer column to a database table or a data frame.",
+    idea: [
+      "One SQL query adds an answer column to a table of songs. It asks one `decide` question of each title and names the column `on_abbey_road`. The question and the band 0.3:0.7 go in as JSON.",
+      "SQLite runs this query and prints 1, 0, or NULL. The slide draws each as a mark for yes, no, or not sure. Jev says yes to A Day in the Life. That answer is wrong. The song first came out on Sgt. Pepper's Lonely Hearts Club Band.",
+      "DuckDB and PostgreSQL ask questions inside SQL too. Polars, pandas, and R take a column and give a column back.",
+      "To set one up, start at [Install](/install/).",
+    ],
+    takeaway: "Ask the question where your data already lives.",
+    link: REPO,
+  },
+
   audit: {
-    title: "audit finds your bar.",
+    title: "audit grades a run.",
     goal: "audit grades saved answers against answers you already know and suggests the bar that gets the most right.",
     idea: [
-      "You already know the right answer for some of your records. `audit` grades saved answers against those answers at every bar and suggests the bar that gets the most right. It sends no request.",
-      "Here Jev was asked of 70 songs whether each is on Abbey Road.",
+      "You already know the right answer for some of your records. `audit` grades saved answers against those answers and suggests the bar that gets the most right. It sends no request.",
+      "Here Jev was asked of 70 songs whether each is on Abbey Road, from the title alone. The slide shows 12 of them at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The [diff page](/learn/beatles-bench/diff/) asks about the same 12 songs again with context.",
     ],
     see: {
-      '1-default': "At the default bar of 0.5, 50 are right. audit suggests 0.78.",
-      '2-bar': "At 0.78, 66 are right.",
+      '1-band': "At the band 0.2:0.8, 20 are right, 3 are wrong, and 47 are not sure.",
+      '2-default': "At the default bar of 0.5, 50 are right. audit suggests 0.78.",
+      '3-bar': "At 0.78, 66 are right.",
     },
-    headings: { '2-bar': "Change the bar" },
-    lesson: "At 0.5, Jev says yes to 20 songs from other albums. At 0.78, four remain, and no Abbey Road song is lost.",
+    headings: { '2-default': "Find the bar", '3-bar': "Change the bar" },
+    lesson: "From the title alone, most answers fall inside the band. At 0.5, Jev says yes to 20 songs from other albums. At 0.78, four remain, and no Abbey Road song is lost.",
     takeaway: "The answers you already know find your bar, at no cost.",
     link: tree('audit'),
   },
 
   diff: {
     title: "diff shows what changed.",
-    goal: "diff counts the answers that changed between two runs, and how many turned right or wrong.",
+    goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
-      "Ask the same question twice and `diff` lists every answer that changed. With an answer key, it says whether each change fixed a mistake or made one.",
-      "Here the first run asks about 70 song titles from memory. The second gives Jev each song's catalog entry too. The `jq` lines key both runs by song title. The warning is right: the two runs asked different questions.",
+      "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
+      "Here the page reads two saved runs for the 12 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The warning is right. The two runs asked different questions.",
     ],
     see: {
-      '1-bar': "At 0.5, 20 answers changed, and every one became right.",
-      '2-band': "Inside the band 0.2:0.8, 48 changed.",
+      '1-band': "At the band 0.2:0.8, 9 of the 12 answers changed, and all 12 end right.",
+      '2-bar': "At a bar of 0.5, 7 changed. Each was a wrong yes that turned right.",
     },
-    headings: { '2-band': "Change the bar" },
-    lesson: "The band reads the middle as not sure. From memory, only 20 answers clear it and are right. With context, 68 do, and none went wrong.",
-    takeaway: "diff counts what a change fixed and what it broke.",
-    link: tree('diff'),
-  },
-
-  "what-jev-knows": {
-    title: "Jev knows more than search.",
-    label: "What Jev knows",
-    goal: "Jev knows facts that no word in the text gives away, and search has nothing to match.",
-    idea: [
-      "Search matches words. Jev knows facts. On the bench's 1,313 Beatles questions, Jev gets 67% right from memory. The best vector search gets 38%, and a random guess gets 31%. GLM-5.3 Flash, a large chat model, gets 96%.",
-      "No song title below holds the name Paul McCartney. Search has nothing to match.",
-    ],
-    source: [record('what-jev-knows'), { text: 'the recognize suite', href: 'https://github.com/botassembly/beatles-bench/blob/main/sdlc/records/0014-shipped-recognize-and-relate.md' }, { text: 'the recognize measure on harder sentences', href: 'https://github.com/botassembly/thinkthen/blob/main/sdlc/records/2026-09-26-batching-and-recognize-evidence.md' }],
-    see: {
-      '1-choose': "Jev picks d, I've Just Seen a Face, at 0.6.",
-      '2-bar': "A bar of 0.7 turns the pick into not sure.",
-      '3-table': "The table shows the first measure for each function, highest first. `recognize` tops it with 0.96 song precision, on 48 short sentences asked one at a time. On 100 harder hand-written sentences, the shipped `recognize` found 70.8% of the names, and 76.3% of the names it gave were right. The lowest is `tag` at 0.29, and its top pick scores 0.75.",
-    },
-    headings: { '2-bar': "Change the bar", '3-table': "Score every function" },
-    lesson: "Paul sings I've Just Seen a Face alone. The pick is right. Jev knew it from memory at 0.6. A bar of 0.7 asks for more than Jev knows. Strict scores understate Jev where a question has more than one right answer. A song can have two lead singers. On `tag`, Jev names the whole set on 0.29 of songs, and its top pick is a true lead on 0.75.",
-    takeaway: "Jev answers from what it knows. The words in the text need not match.",
-    link: REPO,
+    headings: { '2-bar': "Change the bar" },
+    lesson: "`gained` marks a wrong answer that turned right. `resolved` marks a not-sure answer that turned right. `lost` counts right answers that turned wrong, and none did. At the band 0.2:0.8, Come Together, Here Comes the Sun, and Octopus's Garden kept their answers. `diff` leaves them out.",
+    takeaway: "diff shows what a change fixed and what it broke.",
+    link: tree('audit'),
   },
 
   "blind-spots": {
@@ -297,11 +392,11 @@ const ARTICLES = {
     goal: "Jev misses obscure facts, and a low probability is how it says so.",
     idea: [
       "Jev's memory fades on obscure facts. It gets 73% of the questions about the most viewed quarter of songs on Wikipedia right, and 49% about the least viewed. Tricky wording trips it. It gets 70% of the plain control questions and 50% of the word traps. Two hops are hard. One kind of question asks whether a song came out the same month as another event. On 26 of them, Jev knew both facts on their own. It got the chained question right on only 13.",
-      "Nothin' Shakin' is an obscure song, and George sings it. Jev puts John at 0.34.",
+      "Nothin' Shakin' is an obscure song, and George sings it.",
     ],
     source: record('catches'),
     see: {
-      '1-choose': "Jev leans to John at 0.34. Ringo is close at 0.32. George gets 0.14.",
+      '1-choose': "With no bar, Jev picks `john`.",
       '2-bar': "Under a bar of 0.5, the wrong pick becomes not sure.",
     },
     headings: { '2-bar': "Change the bar" },
@@ -315,18 +410,60 @@ const ARTICLES = {
     label: "RAD",
     goal: "Putting the facts in the text fixes a sure miss that no bar can fix.",
     idea: [
-      "Give Jev the facts in the text. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions.",
-      "The bench drew 196 questions, mostly from Jev's misses. From memory, Jev got 68 right. With the song catalog in the text, it got 184. Context costs input tokens. Here the call reads 291 input tokens from memory and 368 with the entry.",
+      "Giving Jev context improves accuracy. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions. Jev calls this context state.",
+      "The song catalog covers 1,075 of the bench's questions. From memory, Jev gets 68% of them right. With the catalog in the text, the bench's report estimates about 97%. Context costs input tokens.",
     ],
     source: record('open-book'),
     see: {
-      '1-memory': "From memory, Jev is sure A Day in the Life is on Abbey Road.",
-      '2-context': "With the catalog entry, the answer is no at 0.04.",
+      '1-memory': "From memory, with the band 0.1:0.9, Jev still says yes. A Day in the Life is not on Abbey Road.",
+      '2-context': "With the catalog entry, the same band gives no.",
     },
     headings: { '2-context': "Add context" },
-    lesson: "No sensible bar fixes a miss at 0.94. With the catalog entry, the answer turns right at 0.04.",
+    lesson: "No sensible bar fixes a miss this sure. With the catalog entry, the answer turns right.",
     takeaway: "When memory fails, put the facts in the text.",
     link: tree('decide'),
+  },
+
+  "use-cases": {
+    title: "Agent use cases.",
+    label: "Agent use cases",
+    goal: "Agents use the ten functions to route work, check it, pull facts out of text, and find records.",
+    idea: [
+      "Routing: `decide` picks an easy or a hard model. `choose` picks the agent for each part of a task. `decide` says loop or stop.",
+      "Evaluation: `decide`, `score`, and `rank` ask whether the work is done, whether it is right, and which prompt wins.",
+      "Extraction: `tag`, `annotate`, `recognize`, and `relate` pull out tags, names, and relations. Their edges can feed a knowledge graph.",
+      "Retrieval: `filter`, `rank`, and `find` keep, order, and find the records that answer a question.",
+    ],
+    takeaway: "Each agent job maps to a function.",
+    link: REPO,
+  },
+
+  retrieval: {
+    title: "Four ways to retrieve.",
+    label: "Retrieval",
+    goal: "Classification asks Jev your question about each record, and it adds a fourth way to retrieve.",
+    idea: [
+      "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings and cosine similarity work this way. Hybrid search blends the two.",
+      "Classification asks Jev a question about each record: keep or drop, how well it fits, which tags apply. `decide`, `score`, and `tag` answer, and each answer carries a probability. `filter` and `rank` keep and order the records on those answers. Classification can also ask about the names that `recognize` pulls out.",
+    ],
+    takeaway: "Search finds text like your question. Classification answers it.",
+    link: REPO,
+  },
+
+  "bench-run": {
+    title: "Run the Beatles Bench.",
+    label: "Run the bench",
+    goal: "Anyone can replay the bench for free and rerun it on Jev or on another backend.",
+    idea: [
+      "The bench is open source. The repository holds the songs, the questions and their right answers, and a saved recording of every answer. Each function has its own folder with a script to run it. The data is CC BY-SA 4.0.",
+    ],
+    blocks: [
+      { caption: "Get the bench.", code: `git clone ${REPO}\ncd beatles-bench` },
+      { caption: "Replay the Jev run. It is free and needs no key.", code: "./run.sh" },
+      { caption: "Rerun it all fresh, on Jev or on your own backend.", code: "export THINKTHEN_BASE_URL=https://your-server/v1\nexport THINKTHEN_API_KEY=...\n./run.sh my-rerun" },
+    ],
+    takeaway: "Replay every answer for free. Rerun it on the model you want to test.",
+    link: REPO,
   },
 
   backends: {
@@ -359,7 +496,7 @@ export const PAGES = [FIRST, ...GROUPS.flatMap(([group, slugs]) => slugs.map((sl
     slug,
     group,
     label: a.label || slug,
-    command: !a.label,
+    command: a.command ?? !a.label,
     route: `/learn/beatles-bench/${slug}/`,
     slide: `/learn/beatles-bench/${slug}.webp`,
   };

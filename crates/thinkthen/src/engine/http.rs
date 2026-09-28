@@ -5,12 +5,15 @@
 
 use std::fmt;
 use std::io;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use ureq::Agent;
+use ureq::tls::{PemItem, RootCerts};
 
 use crate::core::{Json, Withheld};
 use crate::engine::error::{Error, TransportKind};
+use crate::engine::roots::{self, Error as RootsError};
 use crate::engine::usage::Counters;
 use crate::engine::{Permit, Width, Widths, backoff};
 
@@ -26,6 +29,14 @@ impl Key {
         &self.0
     }
 
+    pub(crate) fn check_line_break(&self) -> Result<(), Error> {
+        if self.0.bytes().any(|byte| byte == b'\n' || byte == b'\r') {
+            Err(Error::Usage("the API key contains a line break"))
+        } else {
+            Ok(())
+        }
+    }
+
     #[cfg(test)]
     pub(crate) fn of(value: &str) -> Self {
         Self(value.to_owned())
@@ -35,6 +46,35 @@ impl Key {
 impl fmt::Debug for Key {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("Key(<withheld>)")
+    }
+}
+
+/// Parsed replacement trust roots, retained without their source file.
+#[derive(Clone)]
+pub(crate) struct Roots(RootCerts);
+
+impl Roots {
+    pub(crate) fn load(path: &Path) -> Result<Self, RootsError> {
+        let bundle = roots::read(path)?;
+        let mut certs = Vec::with_capacity(bundle.count);
+        for item in ureq::tls::parse_pem(&bundle.bytes) {
+            let Ok(PemItem::Certificate(cert)) = item else {
+                return Err(RootsError::Usage(
+                    "THINKTHEN_CA_BUNDLE has a malformed PEM certificate",
+                ));
+            };
+            certs.push(cert);
+        }
+        if certs.len() != bundle.count {
+            return Err(RootsError::Usage(
+                "THINKTHEN_CA_BUNDLE has a malformed PEM certificate",
+            ));
+        }
+        Ok(Self(RootCerts::new_with_certs(&certs)))
+    }
+
+    pub(crate) fn configured(&self) -> RootCerts {
+        self.0.clone()
     }
 }
 
@@ -92,12 +132,29 @@ impl Client {
     /// clear text. `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and
     /// `NO_PROXY` on its own, and `proxy(None)` cancels all four.
     pub(crate) fn new(timeout: Duration, secure: bool, widths: &'static Widths) -> Self {
+        Self::with_roots(timeout, secure, widths, None)
+    }
+
+    /// Build a pool with one parsed replacement trust snapshot when selected.
+    pub(crate) fn with_roots(
+        timeout: Duration,
+        secure: bool,
+        widths: &'static Widths,
+        roots: Option<&Roots>,
+    ) -> Self {
         let mut config = Agent::config_builder()
             .timeout_global(Some(timeout))
             .http_status_as_error(false)
             .max_redirects(0)
             .max_idle_connections(Width::MOST.get())
             .max_idle_connections_per_host(Width::MOST.get());
+        if let Some(roots) = roots {
+            config = config.tls_config(
+                ureq::tls::TlsConfig::builder()
+                    .root_certs(roots.configured())
+                    .build(),
+            );
+        }
         if !secure {
             config = config.proxy(None);
         }
@@ -137,6 +194,7 @@ impl Client {
         self.post_observed_with_retry(exchange, cancel, &usage, |_| before_attempt())
     }
 
+    #[cfg(test)]
     pub(crate) fn post_observed_with_retry(
         &self,
         exchange: &Exchange<'_>,
@@ -144,14 +202,19 @@ impl Client {
         usage: &Counters,
         before_attempt: impl Fn(bool),
     ) -> Result<HttpAnswer, Error> {
-        if exchange
-            .key
-            .as_str()
-            .bytes()
-            .any(|byte| byte == b'\n' || byte == b'\r')
-        {
-            return Err(Error::Usage("the API key contains a line break"));
-        }
+        self.post_marked_with_retry(exchange, cancel, usage, before_attempt, || ())
+    }
+
+    /// Also report each actual transport start to one private request owner.
+    pub(crate) fn post_marked_with_retry(
+        &self,
+        exchange: &Exchange<'_>,
+        cancel: &crate::engine::Cancel,
+        usage: &Counters,
+        before_attempt: impl Fn(bool),
+        marked: impl Fn(),
+    ) -> Result<HttpAnswer, Error> {
+        exchange.key.check_line_break()?;
         let gates = backoff::process_gates(cancel)?;
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
@@ -174,6 +237,8 @@ impl Client {
             if let Some(reservation) = reservation {
                 reservation.commit();
             }
+            cancel.sent();
+            marked();
             let sending = cancel.sending();
             let sent = send(&self.agent, exchange, limit);
             drop(sending);
@@ -238,11 +303,11 @@ pub(crate) struct Exchange<'a> {
 }
 
 impl fmt::Debug for Exchange<'_> {
-    /// Show what an exchange does and never the evidence or the key it carries.
+    /// Name the exchange and withhold its address, evidence, and key.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Exchange")
-            .field("url", &self.url)
+            .field("url", &"<withheld>")
             .field("body", &Withheld(self.body.len()))
             .field("key", &self.key)
             .field("max_retries", &self.max_retries)

@@ -2,15 +2,15 @@
 //! the recording thread, and the panic guard every exported symbol runs
 //! behind.
 
-use std::cell::RefCell;
+use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::{Arc, Mutex, PoisonError, Weak};
+use std::sync::{Arc, Mutex, Once, PoisonError, Weak};
 use std::thread::ThreadId;
 
-use thinkthen::{Engine, ErrorKind};
+use thinkthen::{Engine, ErrorKind, Facts};
 
 /// The header's success code.
 pub(crate) const OK: i32 = 0;
@@ -38,6 +38,29 @@ pub(crate) struct Failure {
     code: i32,
     retryable: bool,
     message: String,
+    facts: Option<String>,
+}
+
+/// The count-only report for one completed asking call.
+pub(crate) fn facts_json(facts: &Facts) -> String {
+    let mut value = serde_json::json!({
+        "records": facts.records(),
+        "requests_sent": facts.requests_sent(),
+        "cache_answers": facts.cache_answers(),
+        "seconds": facts.seconds(),
+    });
+    if let Some(object) = value.as_object_mut() {
+        if let Some(input) = facts.input_tokens() {
+            object.insert("input_tokens".to_owned(), serde_json::json!(input));
+        }
+        if let Some(output) = facts.output_tokens() {
+            object.insert("output_tokens".to_owned(), serde_json::json!(output));
+        }
+        if let Some(model) = facts.model() {
+            object.insert("model".to_owned(), serde_json::json!(model));
+        }
+    }
+    value.to_string()
 }
 
 impl Failure {
@@ -47,6 +70,17 @@ impl Failure {
             code: USAGE,
             retryable: false,
             message: message.into(),
+            facts: None,
+        }
+    }
+
+    /// A named local question file could not supply a valid question.
+    pub(crate) fn local(message: impl Into<String>) -> Self {
+        Self {
+            code: code_of(ErrorKind::Local),
+            retryable: false,
+            message: message.into(),
+            facts: None,
         }
     }
 
@@ -56,6 +90,7 @@ impl Failure {
             code: DEFECT,
             retryable: false,
             message: format!("defect: {message}"),
+            facts: None,
         }
     }
 }
@@ -66,6 +101,7 @@ impl From<thinkthen::Error> for Failure {
             code: code_of(error.kind()),
             retryable: error.retryable(),
             message: error.to_string(),
+            facts: error.facts().map(facts_json),
         }
     }
 }
@@ -75,6 +111,7 @@ pub(crate) struct Last {
     code: i32,
     retryable: bool,
     message: CString,
+    facts: Option<CString>,
 }
 
 impl Last {
@@ -85,6 +122,7 @@ impl Last {
             code: failure.code,
             retryable: failure.retryable,
             message,
+            facts: failure.facts.and_then(|facts| CString::new(facts).ok()),
         }
     }
 }
@@ -129,19 +167,61 @@ thread_local! {
     /// The calling thread's last failed `thinkthen_engine_new`, which the
     /// error functions report for a null engine. A built engine clears it.
     static UNBUILT: RefCell<Option<Last>> = const { RefCell::new(None) };
+    /// Suppress the previous panic hook only while this binding owns the thread.
+    static DOOR_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+static DOOR_HOOK: Once = Once::new();
+
+fn install_hook() {
+    DOOR_HOOK.call_once(|| {
+        let previous = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if !DOOR_DEPTH
+                .try_with(|depth| depth.get() != 0)
+                .unwrap_or(false)
+            {
+                previous(info);
+            }
+        }));
+    });
+}
+
+struct DoorDepth(usize);
+
+impl Drop for DoorDepth {
+    fn drop(&mut self) {
+        DOOR_DEPTH.with(|depth| depth.set(self.0));
+    }
+}
+
+fn in_door<T>(body: impl FnOnce() -> T) -> T {
+    install_hook();
+    let prior = DOOR_DEPTH.with(|depth| {
+        let prior = depth.get();
+        depth.set(prior.saturating_add(1));
+        prior
+    });
+    let _restore = DoorDepth(prior);
+    body()
 }
 
 /// Build an engine and keep it, or record why none came for the calling
 /// thread; a panic while building records the defect kind.
 pub(crate) fn built<E: Into<Failure>>(build: impl FnOnce() -> Result<Engine, E>) -> Option<Engine> {
-    let (engine, last) = match catch_unwind(AssertUnwindSafe(build)) {
-        Ok(Ok(engine)) => (Some(engine), None),
-        Ok(Err(error)) => (None, Some(error.into())),
-        Err(_) => (None, Some(Failure::defect("a panic built no engine"))),
-    };
-    // After teardown the slot is gone, and a null engine reads no failure.
-    let _ = UNBUILT.try_with(|slot| slot.replace(last.map(Last::of)));
-    engine
+    in_door(|| {
+        let (engine, last) = match catch_unwind(AssertUnwindSafe(build)) {
+            Ok(Ok(engine)) => (Some(engine), None),
+            Ok(Err(error)) => (None, Some(error.into())),
+            Err(payload) => {
+                std::mem::forget(payload);
+                (None, Some(Failure::defect("a panic built no engine")))
+            }
+        };
+        // After teardown the slot is gone, and a null engine reads no failure.
+        let _ = UNBUILT.try_with(|slot| slot.replace(last.map(Last::of)));
+        engine
+    })
 }
 
 /// Read the calling thread's last failed build, if one is held.
@@ -228,24 +308,27 @@ pub(crate) fn message(held: Option<&Held>) -> *const std::ffi::c_char {
     })
 }
 
+/// Borrow the calling thread's last started-failure facts, if present.
+pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
+    last(held, |last| last.facts.as_ref().map(|facts| facts.as_ptr()))
+        .flatten()
+        .unwrap_or(std::ptr::null())
+}
+
 /// Run one door body so no panic unwinds into the host. A panic records the
 /// defect kind on the engine at hand for the calling thread and returns
 /// `fallback`. The error path reaches thread-local storage only through
 /// `try_with`, so a call after thread-local teardown, such as a free from
 /// an `atexit` handler, exits clean (R2-7).
 pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> T) -> T {
-    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|payload| {
-        if let Some(held) = held {
-            let said = payload
-                .downcast_ref::<&str>()
-                .map(|text| (*text).to_owned())
-                .or_else(|| payload.downcast_ref::<String>().cloned())
-                .unwrap_or_default();
-            held.fail(Failure::defect(&format!(
-                "a panic crossed the C door: {said}"
-            )));
-        }
-        fallback
+    in_door(|| {
+        catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|payload| {
+            std::mem::forget(payload);
+            if let Some(held) = held {
+                held.fail(Failure::defect("a panic crossed the C door"));
+            }
+            fallback
+        })
     })
 }
 
@@ -255,69 +338,4 @@ pub(crate) const NO_ENGINE: &CStr = c"no engine came, so no failure is named";
 pub(crate) const NO_MESSAGE: &CStr = c"the door panicked, so no message came";
 
 #[cfg(test)]
-mod tests {
-    use super::{DEFECT, Failure, Held, USAGE, guard, lock};
-
-    fn held() -> Held {
-        let engine = thinkthen::Engine::builder()
-            .base_url("http://127.0.0.1:9/v1")
-            .map(thinkthen::EngineBuilder::no_cache)
-            .and_then(thinkthen::EngineBuilder::build)
-            .expect("an engine that sends nothing");
-        Held::new(engine)
-    }
-
-    /// R3-24: 200,000 failing threads once grew a table to 36 MB. Each
-    /// thread's entry leaves with the thread.
-    #[test]
-    fn a_threads_failure_leaves_the_table_when_the_thread_exits() {
-        let engine = std::sync::Arc::new(held());
-        for _ in 0..200 {
-            let shared = std::sync::Arc::clone(&engine);
-            // A plain join waits for the thread's exit hooks.
-            let _ =
-                std::thread::spawn(move || shared.fail(Failure::usage("a short thread"))).join();
-        }
-        assert_eq!(
-            lock(&engine.failures).len(),
-            0,
-            "every exited thread's entry left"
-        );
-        engine.fail(Failure::usage("this thread"));
-        assert_eq!(
-            lock(&engine.failures).len(),
-            1,
-            "a live thread keeps its entry"
-        );
-    }
-
-    /// A panic below the door is the defect code with its own text, and it
-    /// is never retryable.
-    #[test]
-    fn a_panic_behind_the_door_is_the_defect_kind() {
-        let engine = held();
-        let code = guard(Some(&engine), DEFECT, || -> i32 {
-            panic!("the probe panic")
-        });
-        assert_eq!(
-            (
-                code,
-                super::code(Some(&engine)),
-                super::retryable(Some(&engine))
-            ),
-            (DEFECT, DEFECT, 0)
-        );
-        let message = message_of(&engine);
-        assert_eq!(
-            message,
-            "defect: a panic crossed the C door: the probe panic"
-        );
-        assert_eq!(guard(Some(&engine), DEFECT, || USAGE), USAGE);
-    }
-
-    fn message_of(engine: &Held) -> String {
-        engine
-            .read(|last| last.message.to_string_lossy().into_owned())
-            .unwrap_or_default()
-    }
-}
+mod tests;

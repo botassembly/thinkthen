@@ -27,8 +27,8 @@ mkdir -p "$PROOF_BUILD/rust"
 flock -o "$THINKTHEN_HEAVY_LOCK" rustc --edition 2024 -O --crate-type staticlib databases/duckdb/proof/0201/src/ffi.rs -o "$PROOF_BUILD/rust/libthinkthen_probe.a"
 flock -o "$THINKTHEN_HEAVY_LOCK" cmake -S "$DUCKDB_SOURCE" -B "$PROOF_BUILD/cmake_make" -G 'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release -DBUILD_UNITTESTS=OFF -DBUILD_SHELL=OFF -DEXTENSION_STATIC_BUILD=OFF -DDUCKDB_EXTENSION_CONFIGS="$PWD/databases/duckdb/proof/0201/extension_config.cmake" -DTHINKTHEN_PROBE_RUST_STATICLIB="$PROOF_BUILD/rust/libthinkthen_probe.a" -DTHINKTHEN_PROBE_DUCKDB_STATIC_DIR="$DUCKDB_STATIC"
 flock -o "$THINKTHEN_HEAVY_LOCK" cmake --build "$PROOF_BUILD/cmake_make" --target thinkthen_probe_loadable_extension -j 2
-/home/ian/.cache/thinkthen-toolchains/duckdb/v1.5.5/venv/bin/python databases/duckdb/proof/0201/verify.py --cli /home/ian/.cache/thinkthen-toolchains/duckdb/v1.5.5/duckdb --extension "$PROOF_BUILD/cmake_make/extension/thinkthen_probe/thinkthen_probe.duckdb_extension"
-env -u THINKTHEN_API_KEY /home/ian/.cache/thinkthen-toolchains/duckdb/v1.5.5/venv/bin/python databases/duckdb/proof/0201/verify_bind_owner.py --extension "$PROOF_BUILD/cmake_make/extension/thinkthen_probe/thinkthen_probe.duckdb_extension"
+"$HOME/.cache/thinkthen-toolchains/duckdb/v1.5.5/venv/bin/python" databases/duckdb/proof/0201/verify.py --cli "$HOME/.cache/thinkthen-toolchains/duckdb/v1.5.5/duckdb" --extension "$PROOF_BUILD/cmake_make/extension/thinkthen_probe/thinkthen_probe.duckdb_extension"
+env -u THINKTHEN_API_KEY "$HOME/.cache/thinkthen-toolchains/duckdb/v1.5.5/venv/bin/python" databases/duckdb/proof/0201/verify_bind_owner.py --extension "$PROOF_BUILD/cmake_make/extension/thinkthen_probe/thinkthen_probe.duckdb_extension"
 ```
 
 ## Observed result and limit

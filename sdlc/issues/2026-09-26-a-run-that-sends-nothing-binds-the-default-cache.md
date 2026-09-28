@@ -28,3 +28,7 @@ Binding at the first written entry, or one default cache per address, changes ru
 ## Done when
 
 A user whose default cache was bound by a run that sent nothing can see the binding in `status` and learns from the refusal how to clear it.
+
+## Current reconciliation
+
+The original no-key reproduction is fixed by 0228; 0246 and 0250 fix two further deterministic pre-admission refusals. Register 10's universal no-touch and recoverable bound-address demands were explicitly declined after High review of 0327a13d. This issue remains open for its different Done when: a status binding indicator and a safe existing-binding recovery instruction. Current status has no marker comparison, and existing refusal advice names workarounds rather than clearing the marker. Fresh High source reconciliation confirmed this distinction. The work plan now gives this issue its own row; no status or unbind feature is claimed.

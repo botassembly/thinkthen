@@ -8,9 +8,7 @@ import { setting } from '../lib/settings-table.mjs';
 // Every row on this page comes from specification/. Nothing
 // here is an example. The runs live on the function pages and the tutorial.
 // Every default, range and allowed value comes from
-// specification/settings.md through setting(). The address stays typed:
-// the table gives its default only as "the built-in address", and its
-// allowed values name "the backend rule", which a reader cannot follow.
+// specification/settings.md through setting().
 const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 const takes = (name) => lower(setting(name).allowed);
 const dflt = (name) => lower(setting(name).default);
@@ -25,11 +23,10 @@ const PRUNE = setting('Prune target');
 const pruneKey = PRUNE.surface('Configuration file');
 
 const GLOBAL = [
-  ['--details', 'none', 'Prints the whole result object in place of the bare value.', dflt('Details')],
   ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', dflt('Dry run')],
-  ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', 'https://api.typesafe.ai/v1'],
+  ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
   ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
-  ['--timeout SECONDS', takes('Timeout'), 'Covers one attempt, connect to last byte. 0 is a usage error.', setting('Timeout').number],
+  ['--timeout SECONDS', takes('Timeout').split(';')[0].replace(/^command: /, ''), 'Covers one attempt from connect to last byte. Other values exit 2.', setting('Timeout').number],
   ['--max-retries N', takes('Retries'), 'How many times a retried status is sent again. A transport failure is never sent again.', setting('Retries').default],
   ['--record DIR', takes('Recording'), 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', dflt('Recording')],
   ['--replay DIR', takes('Recording'), 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', dflt('Recording')],
@@ -66,33 +63,12 @@ const EXITS = [
 
 const ENVS = [
   ['THINKTHEN_API_KEY', 'The key. No option names another variable. Absent or empty is exit 4, and an empty variable counts as absent.', dflt('Key')],
-  ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', 'https://api.typesafe.ai/v1'],
+  ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', dflt('Address')],
   ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', dflt('Answer cache')],
   ['XDG_CACHE_HOME', 'The root for the cache and the usage folder. It counts only when absolute.', '$HOME/.cache on Linux'],
   ['XDG_CONFIG_HOME', 'The root for config.json. It counts only when absolute.', '$HOME/.config on Linux'],
   ['HOME', 'The fallback root for the cache, the usage totals, and the configuration. It counts only when absolute.', 'none'],
   ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and in lower case. Under https:// the named proxy carries the request and sees only the host. Under http:// every one of them is cancelled.', 'none'],
-];
-
-const ANSWERS = [
-  ['yes_no', 'decide, filter, rank', '{"kind":"yes_no","probability":FLOAT}', 'The probability of yes, and nothing else. There is no confidence field on this kind.'],
-  ['choice', 'choose', '{"kind":"choice","pick":STRING,"probabilities":{LABEL:FLOAT},"confidence":FLOAT}', 'pick is the highest option before any threshold. probabilities holds one entry per option, in send order. confidence is the vendor’s number and shows only when the backend sends it.'],
-  ['tag', 'tag', '{"kind":"tag","probabilities":{LABEL:FLOAT}}', 'One entry per label, in send order.'],
-  ['score', 'score', '{"kind":"score","level":STRING,"probabilities":{LEVEL:FLOAT}}', 'level is the highest level. probabilities follows your level order, lowest first.'],
-  ['find', 'find', '{"kind":"find","pick":STRING,"probabilities":{UNIT:FLOAT,"none":FLOAT}}', 'probabilities follows unit order and puts none last.'],
-];
-
-const META = [
-  ['tool', 'The name and version of the binary.'],
-  ['question_sha256', 'The digest of the exact question this row answers. On annotate it is questions_sha256.'],
-  ['url', 'The address that answered.'],
-  ['model', 'The model that answered, as the backend reported it.'],
-  ['usage', '{"input_tokens":INT,"output_tokens":INT}. Absent when the backend reports none.'],
-  ['requests_sent', 'The HTTP attempts behind this result. A saved answer reports zero. Each retry adds one.'],
-  ['cached', 'true when a saved answer served the row, from the cache or from --replay.'],
-  ['requests', 'The digests of the logical requests, in the order they were built.'],
-  ['failed_questions', 'How many logical questions failed. Always present, including zero.'],
-  ['profile_warning', '{"tuned_for":NAME,"running":NAME}. The first name is the profile saved in the question file with its threshold. The second is the profile this run named with --profile. Absent unless both exist and differ.'],
 ];
 
 const BARE = [
@@ -115,6 +91,8 @@ const COUNTS = [
   ['rank', 'none', 'None. A threshold is refused in both homes.', noCut('rank')],
   ['find', '2 to 255 units, or 2 to 254 with --none', 'None.', 'n/a'],
   ['annotate', 'a question set file', 'Each question carries its own. A top-level threshold applies to every decide question that names none.', 'per question'],
+  ['recognize', 'optional kinds', 'A cut on printed name strength; a separate relation cut applies to edges.', cutOn('recognize')],
+  ['relate', 'relation rules', 'A cut on each edge’s probability of yes.', cutOn('relate')],
 ];
 ---
 <Base title="Reference" description="Every function, every flag, the result shape, every exit code, the environment, the cache, and the configuration file.">
@@ -135,7 +113,7 @@ const COUNTS = [
   </table>
 
   <h2>Arguments and thresholds</h2>
-  <p>A threshold is your bar on a probability. You set it. The tool never reports one, and a threshold never changes the probability. A cut is one number. A band is two, written <code>LOW:HIGH</code>.</p>
+  <p>A threshold is a cut on the quantity each function names. You set it; the tool never reports one. A cut is one number. Only <code>decide</code> takes a band, written <code>LOW:HIGH</code>. A recognized name’s printed strength is a computed product, not a probability.</p>
   <table>
     <tr><th>Function</th><th>Positional arguments</th><th>Threshold</th><th>Default</th></tr>
     {COUNTS.map(([fn, args, rule, dflt]) => (
@@ -150,7 +128,7 @@ const COUNTS = [
     <tr><td><code>--threshold LOW:HIGH</code></td><td>{CUT.above} ≤ LOW &lt; HIGH ≤ {CUT.atMost}</td><td>p ≥ HIGH</td><td>p &lt; LOW</td><td>LOW ≤ p &lt; HIGH</td></tr>
   </table>
   <p>The high side is inclusive. A probability exactly at <code>LOW</code> is not sure. A cut of 0 is refused. A band low of 0 is accepted. <code>--threshold {cutOn('decide')}</code> and no threshold name the same rule. A percent such as <code>90</code>, a reversed band, an empty side, and a number that is not finite are all usage errors before any request.</p>
-  <p>The cut applies to the probability of yes on <code>decide</code> and on each record under <code>filter</code>, to the winning option's probability on <code>choose</code>, and to each label on its own under <code>tag</code>.</p>
+  <p>The cut applies to the probability of yes on <code>decide</code> and each record under <code>filter</code>, the winning option’s probability on <code>choose</code>, each label’s independent yes probability under <code>tag</code>, each name’s printed strength under <code>recognize</code>, and each relation edge’s yes probability under <code>recognize</code> or <code>relate</code>. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/threshold.md">threshold contract</a> defines every boundary.</p>
 
   <h2>Global flags</h2>
   <p>Every function accepts all of these. The <a href="/install/settings/">settings page</a> lists every setting on every surface, with its default.</p>
@@ -162,7 +140,7 @@ const COUNTS = [
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
   <p>The vendor documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to the vendor. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Lower <code>--jobs</code> when replies come back fast.</p>
-  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
+  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
   <p>The four framing flags are mutually exclusive. The tool never guesses a framing from a filename.</p>
@@ -176,7 +154,7 @@ const COUNTS = [
   </table>
 
   <h3><code>--field POINTER</code></h3>
-  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees. Only the pointed value leaves the machine. Under <code>--details</code> the whole record still comes back in <code>input</code>.</p>
+  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees. Only the pointed value leaves the machine.</p>
   <ul>
     <li>Under <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> it reads the pointer in each record.</li>
     <li>With no framing flag it reads the whole input as one JSON value and takes the pointer inside it. There is no separate JSON framing flag.</li>
@@ -197,45 +175,12 @@ const COUNTS = [
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
-  <h3>Without <code>--details</code></h3>
   <table>
     <tr><th>Function</th><th>Standard output</th></tr>
     {BARE.map(([fn, out]) => (<tr><td><code>{fn}</code></td><td>{out}</td></tr>))}
   </table>
   <p>In record mode, a <code>decide</code>, <code>choose</code>, <code>tag</code>, or <code>score</code> row is <code>{'{"input":RECORD,"value":ANSWER}'}</code>, in that key order. <code>filter</code>, <code>rank</code>, and <code>find</code> keep returning records. Every result is compact and sits on one line.</p>
   <p><code>annotate</code> in record mode adds one top-level field per question to an object record. A line, a JSON scalar, or a JSON array keeps its parsed record under <code>input</code> and its named answers under <code>value</code>. CSV and TSV rows are objects, and they stay flat.</p>
-
-  <h3>With <code>--details</code></h3>
-  <p>One JSON object per row, with its fields in this order.</p>
-  <table>
-    <tr><th>Field</th><th>Holds</th></tr>
-    <tr><td><code>schema</code></td><td>Always <code>"thinkthen.result/1"</code>.</td></tr>
-    <tr><td><code>value</code></td><td>The bare judgment. Under <code>filter</code> it is the cut's boolean. Under <code>rank</code> it is <code>null</code>.</td></tr>
-    <tr><td><code>input</code></td><td>Record mode only, between <code>value</code> and <code>question</code>. The whole original record, including the parts never sent.</td></tr>
-    <tr><td><code>question</code></td><td><code>verb</code> and <code>text</code>, then <code>options</code>, <code>labels</code>, <code>levels</code>, or <code>none</code>, by the kind. <code>filter</code> and <code>rank</code> ask a <code>decide</code> question. Their <code>question.verb</code> is <code>"decide"</code>.</td></tr>
-    <tr><td><code>answer</code></td><td>One of the five answer kinds below. No vendor field name appears in it.</td></tr>
-    <tr><td><code>threshold</code></td><td>A number for a cut, the string <code>"LOW:HIGH"</code> for a band, and <code>null</code> when none applies. <code>decide</code> never prints <code>null</code> here.</td></tr>
-    <tr><td><code>meta</code></td><td>The run, below.</td></tr>
-  </table>
-
-  <h3>The five answer kinds</h3>
-  <table>
-    <tr><th>Kind</th><th>From</th><th>Shape</th><th>Notes</th></tr>
-    {ANSWERS.map(([kind, from, shape, note]) => (
-      <tr><td><code>{kind}</code></td><td><code>{from}</code></td><td><code>{shape}</code></td><td>{note}</td></tr>
-    ))}
-  </table>
-  <p>Every number in <code>probabilities</code> is the model's own, passed through unchanged. The tool computes one number only: the position <code>score</code> prints. It is the average of the level probabilities.</p>
-
-  <h3><code>meta</code></h3>
-  <table>
-    <tr><th>Field</th><th>Holds</th></tr>
-    {META.map(([field, holds]) => (<tr><td><code>{field}</code></td><td>{holds}</td></tr>))}
-  </table>
-
-  <h3><code>annotate --details</code></h3>
-  <p>The top level is <code>schema</code>, <code>input</code>, <code>value</code>, <code>answers</code>, <code>meta</code>. <code>value</code> holds the named answers. Each entry under <code>answers</code> that succeeded carries <code>value</code>, <code>question</code>, <code>answer</code>, <code>threshold</code>, and <code>request</code>.</p>
-  <p>A failed question is never turned into <code>null</code>. Its bare value is <code>{'{"failed":{"kind":"backend","cause":CAUSE}}'}</code>, and its detailed entry carries <code>question</code>, <code>failure</code>, and <code>request</code> and leaves out <code>value</code>, <code>answer</code>, and <code>threshold</code>. The causes are a closed list: <code>missing_answer</code>, <code>wrong_kind</code>, <code>missing_probability</code>, <code>invalid_probability</code>, <code>invalid_distribution</code>, <code>unexpected_probability</code>. <code>meta.usage</code> is the sum over the record's requests.</p>
 
   <h2>Exit codes</h2>
   <table>
@@ -264,7 +209,7 @@ const COUNTS = [
     <li>An entry holds the evidence. A folder the tool creates is mode 0700 and each entry is 0600, whatever the umask says.</li>
     <li>The first write binds a folder to one backend through a private marker. Reusing that folder against another address fails at exit 5, before the key is read and before any request. The message names the address this run asked for, and for the default cache it names <code>--no-cache</code> and <code>THINKTHEN_CACHE</code>.</li>
     <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
-    <li><code>thinkthen cache prune DIR</code> is the only way entries are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> and deletes nothing.</li>
+    <li><code>thinkthen cache prune DIR</code> is the only way entries are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> or a model no reply in the folder names, and deletes nothing. An empty folder accepts any model name.</li>
     <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>cache prune</code>.</li>
   </ul>
   <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They count what this machine saw. Your provider’s bill is the real cost.</p>

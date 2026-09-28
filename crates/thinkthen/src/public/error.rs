@@ -2,6 +2,7 @@
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
 use crate::public::SendBudgetDenial;
+use crate::public::results::Facts;
 
 /// What stopped a call, as one of six stable kinds.
 ///
@@ -68,6 +69,7 @@ pub struct ErrorDetail {
     message: String,
     retryable: bool,
     send_budget_denial: Option<SendBudgetDenial>,
+    facts: Option<Box<Facts>>,
 }
 
 impl ErrorDetail {
@@ -119,11 +121,30 @@ impl Error {
         self.detail().send_budget_denial
     }
 
+    /// Final facts for a started call, including one that sent nothing.
+    #[must_use]
+    pub fn facts(&self) -> Option<&Facts> {
+        self.detail().facts.as_deref()
+    }
+
+    pub(crate) fn with_facts(mut self, facts: Facts) -> Self {
+        match &mut self {
+            Self::Usage(detail)
+            | Self::Backend(detail)
+            | Self::Local(detail)
+            | Self::Cancelled(detail)
+            | Self::Deadline(detail)
+            | Self::Defect(detail) => detail.facts = Some(Box::new(facts)),
+        }
+        self
+    }
+
     pub(crate) fn of(kind: ErrorKind, message: impl Into<String>) -> Self {
         let detail = ErrorDetail {
             message: message.into(),
             retryable: false,
             send_budget_denial: None,
+            facts: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),
@@ -219,7 +240,7 @@ fn message(error: &EngineError) -> String {
         EngineError::RecordingStorage => "the recording folder could not be written",
         EngineError::RecordingPathIsFile => "the recording folder names a file",
         EngineError::RecordingBackendMismatch(..) => {
-            "the recording folder belongs to another backend address"
+            "the recording folder belongs to another backend address; restore its backend settings or choose another folder"
         }
         EngineError::RecordingFolderLegacy => {
             "the recording folder predates backend binding; replay it read-only or choose a new folder"
@@ -249,6 +270,16 @@ fn message(error: &EngineError) -> String {
         }
         EngineError::UsageOverflow => "the backend reported token counts whose total is too large",
         EngineError::RecognizeKinds => "recognize takes 0 to 20 distinct, nonblank kinds",
+        EngineError::RecognizeRelationNames { count, limit } => {
+            return crate::engine::error::relation_names_message(*count, *limit);
+        }
+        EngineError::RecognizeRelationQuestions {
+            names,
+            count,
+            limit,
+        } => {
+            return crate::engine::error::relation_questions_message(*names, *count, *limit);
+        }
         EngineError::TextTooLong { bytes, limit } => {
             return format!("the text is {bytes} bytes, over recognize's limit of {limit}");
         }

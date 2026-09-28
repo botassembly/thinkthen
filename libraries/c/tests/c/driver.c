@@ -11,6 +11,8 @@
  *   settings BASE JSON                -> build with the JSON settings object
  *   call BASE REQUEST                 -> thinkthen_call
  *   decide BASE QUESTION TEXT         -> thinkthen_decide
+ *   file BASE PATH TEXT               -> load one named question, then decide
+ *   file_probe BASE PATH              -> loader failure leaves both outputs
  *   expired BASE QUESTION TEXT        -> thinkthen_decide_opts, budget 0
  *   cancelled BASE QUESTION TEXT      -> thinkthen_decide_opts, fired token
  *   retryable BASE QUESTION TEXT      -> thinkthen_decide, then the code and
@@ -80,10 +82,48 @@ static void answer(thinkthen_engine *tt, const char *verb, size_t count) {
     if (strcmp(verb, "call") == 0) {
         out = thinkthen_call(tt, fields[1]);
         rc = out == NULL ? thinkthen_error_code(tt) : THINKTHEN_OK;
+    } else if (strcmp(verb, "facts") == 0) {
+        const char *facts = thinkthen_error_facts_json(tt);
+        said(THINKTHEN_OK, facts == NULL ? "null" : facts, facts == NULL ? 4 : strlen(facts));
+        return;
     } else if (strcmp(verb, "recognize") == 0) {
         rc = thinkthen_recognize(tt, fields[1], fields[2], lengths[2], &out, &out_len);
     } else if (strcmp(verb, "relate") == 0) {
         rc = thinkthen_relate(tt, fields[1], rest, &lengths[2], count - 2, &out, &out_len);
+    } else if (strcmp(verb, "file") == 0) {
+        rc = thinkthen_question_file(tt, fields[1], &out, &out_len);
+        if (rc == THINKTHEN_OK) {
+            thinkthen_answer one;
+            rc = thinkthen_decide(tt, out, fields[2], lengths[2], &one);
+            thinkthen_free_string(out);
+            if (rc == THINKTHEN_OK) {
+                judged(&one, 1);
+                return;
+            }
+        }
+        if (rc != THINKTHEN_OK) {
+            char line[512];
+            int used = snprintf(line, sizeof line, "%d %s", thinkthen_error_retryable(tt), thinkthen_error_message(tt));
+            if (used < 0) fail("a file failure message could not be printed");
+            said(rc, line, (size_t)used >= sizeof line ? sizeof line - 1 : (size_t)used);
+            return;
+        }
+    } else if (strcmp(verb, "file_probe") == 0) {
+        char *held = (char *)"unchanged";
+        size_t held_len = 777;
+        rc = thinkthen_question_file(tt, fields[1], &held, &held_len);
+        if (rc == THINKTHEN_OK) {
+            thinkthen_free_string(held);
+            fail("a file probe unexpectedly succeeded");
+        }
+        if (strcmp(held, "unchanged") != 0 || held_len != 777) {
+            fail("a failed file load changed an output");
+        }
+        char line[512];
+        int used = snprintf(line, sizeof line, "%d %s", thinkthen_error_retryable(tt), thinkthen_error_message(tt));
+        if (used < 0) fail("a file failure message could not be printed");
+        said(rc, line, (size_t)used >= sizeof line ? sizeof line - 1 : (size_t)used);
+        return;
     } else if (strcmp(verb, "decide") == 0 || strcmp(verb, "expired") == 0 ||
                strcmp(verb, "cancelled") == 0) {
         thinkthen_answer one;

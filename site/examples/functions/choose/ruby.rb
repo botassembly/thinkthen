@@ -20,7 +20,7 @@ texts = [
     "I cannot log in to track it."
 ]
 owners = texts.map do |text|
-  ThinkThen.choose(team_question, text)
+  ThinkThen.choose(team_question, text).value
 end
 raise unless owners == [
   "billing",

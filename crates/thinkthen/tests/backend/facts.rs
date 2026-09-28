@@ -9,6 +9,9 @@ use serde_json::{Map, Value, json};
 use crate::batching::{self, KEY, QUESTION};
 use crate::harness::{Canned, Listener, spawn};
 
+#[cfg(unix)]
+mod usage_lock;
+
 fn answered(body: &[u8]) -> Canned {
     let answers: Map<String, Value> = batching::places(body)
         .into_iter()
@@ -318,6 +321,36 @@ fn a_stopped_run_names_the_cause_after_the_human_line() {
 #[test]
 fn retried_permanent_and_too_large_statuses_name_their_causes() {
     let cases = [
+        (
+            429,
+            2,
+            json!({"at":1,"cause":"status","status":429,"retryable":true}),
+        ),
+        (
+            520,
+            2,
+            json!({"at":1,"cause":"status","status":520,"retryable":true}),
+        ),
+        (
+            521,
+            2,
+            json!({"at":1,"cause":"status","status":521,"retryable":true}),
+        ),
+        (
+            522,
+            2,
+            json!({"at":1,"cause":"status","status":522,"retryable":true}),
+        ),
+        (
+            523,
+            2,
+            json!({"at":1,"cause":"status","status":523,"retryable":true}),
+        ),
+        (
+            524,
+            2,
+            json!({"at":1,"cause":"status","status":524,"retryable":true}),
+        ),
         (
             503,
             2,

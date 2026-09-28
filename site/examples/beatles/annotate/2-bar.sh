@@ -6,6 +6,7 @@ Blackbird
 Octopus's Garden
 EOF
 thinkthen annotate card-0.5.json \
+  --batch 1 \
   --lines \
   --replay recording |
 jq .

@@ -7,13 +7,16 @@ use pgrx::datum::{Array, JsonB};
 use pgrx::prelude::*;
 use thinkthen::{Details, Engine, Error, Judgment, LoadedQuestion, Probabilities, Recognize};
 
+mod array;
 mod call;
+mod context;
 #[allow(
     unsafe_code,
     reason = "the one FFI module: interrupt flags, the signal mask, and descriptor opens"
 )]
 mod ffi;
 mod files;
+mod find;
 mod relate;
 mod warm;
 
@@ -44,6 +47,19 @@ fn question_result(arg: Option<&str>) -> Result<LoadedQuestion, Refusal> {
     given_result(arg, "question")?.parse(thinkthen::Question::from_json)
 }
 
+/// A SQL context is literal text. `NULL` keeps the historical request.
+fn context(arg: Option<&str>) -> Option<String> {
+    context_result(arg).or_raise()
+}
+
+fn context_result(arg: Option<&str>) -> Result<Option<String>, Refusal> {
+    let Some(text) = arg else { return Ok(None) };
+    if text.trim().is_empty() {
+        return Err(Refusal::usage("context must not be blank"));
+    }
+    Ok(Some(text.to_owned()))
+}
+
 fn decide(
     engine: &Engine,
     question: &LoadedQuestion,
@@ -54,6 +70,7 @@ fn decide(
         LoadedQuestion::Question(held) => engine.decide_with(held, evidence, options),
         LoadedQuestion::Banded(held) => engine.decide_with(held, evidence, options),
     }
+    .map(thinkthen::Call::into_value)
 }
 
 fn details(
@@ -66,13 +83,33 @@ fn details(
         LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
         LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
     }
+    .map(thinkthen::Call::into_value)
 }
 
 /// One judgment's details, run on the worker.
-fn judged(question: LoadedQuestion, evidence: &str) -> Details {
+fn judged(question: LoadedQuestion, evidence: &str, context: Option<String>) -> Details {
     let evidence = evidence.to_owned();
     call::run(call::read(), move |engine, options| {
-        details(engine, &question, &evidence, options)
+        if let Some(text) = context.as_deref() {
+            let options = options.context(text);
+            let rows = match &question {
+                LoadedQuestion::Question(held) => engine
+                    .details_many_with(held, [evidence.as_str()], options)
+                    .collect::<Result<Vec<_>, _>>(),
+                LoadedQuestion::Banded(held) => engine
+                    .details_many_with(held, [evidence.as_str()], options)
+                    .collect::<Result<Vec<_>, _>>(),
+            }?;
+            Ok(rows.into_iter().next().map(|row| row.into_parts().1))
+        } else {
+            details(engine, &question, &evidence, options).map(Some)
+        }
+    })
+    .unwrap_or_else(|| {
+        call::raise(Refusal::of(
+            thinkthen::ErrorKind::Defect,
+            "one record yielded no detail",
+        ))
     })
 }
 
@@ -104,7 +141,7 @@ fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bo
 #[pg_extern(parallel_restricted)]
 fn thinkthen_probability(question: Option<&str>, evidence: Option<&str>) -> Option<f64> {
     let question = self::question(question, "", None);
-    match judged(question, evidence?).probabilities() {
+    match judged(question, evidence?, None).probabilities() {
         Probabilities::YesNo { yes } => Some(*yes),
         Probabilities::Named(_) => call::raise(Refusal::usage(
             "thinkthen_probability takes a decide question",
@@ -119,7 +156,7 @@ fn thinkthen_choose(
     options: Option<Array<'_, &str>>,
 ) -> Option<String> {
     let question = self::question(question, "options", options);
-    match judged(question, evidence?).value() {
+    match judged(question, evidence?, None).value() {
         Judgment::Choice(pick) => pick.clone(),
         _ => call::raise(Refusal::usage("thinkthen_choose takes a choose question")),
     }
@@ -132,7 +169,7 @@ fn thinkthen_score(
     levels: Option<Array<'_, &str>>,
 ) -> Option<f64> {
     let question = self::question(question, "levels", levels);
-    match judged(question, evidence?).value() {
+    match judged(question, evidence?, None).value() {
         Judgment::Score(position) => Some(*position),
         _ => call::raise(Refusal::usage("thinkthen_score takes a score question")),
     }
@@ -145,7 +182,7 @@ fn thinkthen_tag(
     labels: Option<Array<'_, &str>>,
 ) -> Option<Vec<String>> {
     let question = self::question(question, "labels", labels);
-    match judged(question, evidence?).value() {
+    match judged(question, evidence?, None).value() {
         Judgment::Tags(held) => Some(held.clone()),
         _ => call::raise(Refusal::usage("thinkthen_tag takes a tag question")),
     }
@@ -170,7 +207,7 @@ fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB
 #[pg_extern(parallel_restricted)]
 fn thinkthen_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
     let question = self::question(question, "", None);
-    Some(jsonb(&judged(question, evidence?).to_json()))
+    Some(jsonb(&judged(question, evidence?, None).to_json()))
 }
 
 /// Return recoverable row failures as safe JSON so a statement can continue.
@@ -221,7 +258,9 @@ type Names = Vec<(String, i32, i32, i32, String, f64)>;
 fn recognized(body: Option<&str>, ask: Recognize) -> Option<thinkthen::Recognized> {
     let body = body?.to_owned();
     Some(call::run(call::read(), move |engine, options| {
-        engine.recognize_with(&ask, &body, options)
+        engine
+            .recognize_with(&ask, &body, options)
+            .map(thinkthen::Call::into_value)
     }))
 }
 
@@ -348,64 +387,13 @@ fn thinkthen_relations(
     TableIterator::new(rows)
 }
 
-/// Decide each distinct text once, on one worker. A batch over the total's
-/// remaining requests sends only those, then refuses.
-fn decide_distinct(question: LoadedQuestion, mut distinct: Vec<String>) -> Vec<Option<bool>> {
-    let call = call::read();
-    let short = call.within(distinct.len()).map(|left| {
-        distinct.truncate(left);
-        call.spent()
-    });
-    let decided = call::run(call, move |engine, options| {
-        let rows = match &question {
-            LoadedQuestion::Question(held) => engine
-                .decide_many_with(held, distinct.iter().map(String::as_str), options)
-                .collect::<Result<Vec<_>, _>>(),
-            LoadedQuestion::Banded(held) => engine
-                .decide_many_with(held, distinct.iter().map(String::as_str), options)
-                .collect::<Result<Vec<_>, _>>(),
-        };
-        rows.map(|rows| {
-            rows.into_iter()
-                .map(|row| answer_value(*row.value()))
-                .collect()
-        })
-    });
-    if let Some(refusal) = short {
-        call::raise(refusal);
-    }
-    decided
-}
-
 /// The array form: one row per element, its place from 0, one worker.
 #[pg_extern(name = "thinkthen_decide", parallel_restricted)]
 fn thinkthen_decide_array(
     question: Option<&str>,
     evidences: Option<Array<'_, &str>>,
 ) -> TableIterator<'static, (name!(i, i32), name!(decided, Option<bool>))> {
-    let question = self::question(question, "", None);
-    let rows: Vec<Option<String>> = evidences
-        .iter()
-        .flat_map(|held| held.iter().map(|text| text.map(str::to_owned)))
-        .collect();
-    let mut distinct: Vec<String> = rows.iter().flatten().cloned().collect();
-    distinct.sort_unstable();
-    distinct.dedup();
-    let found = |text: &String| distinct.binary_search(text).ok();
-    let at: Vec<Option<usize>> = rows
-        .iter()
-        .map(|text| text.as_ref().and_then(found))
-        .collect();
-    let decided = decide_distinct(question, distinct);
-    let out: Vec<_> = at
-        .iter()
-        .enumerate()
-        .map(|(place, at)| {
-            let value = at.and_then(|at| decided.get(at).copied().flatten());
-            (i32::try_from(place).unwrap_or(i32::MAX), value)
-        })
-        .collect();
-    TableIterator::new(out)
+    array::decide_array(question, evidences, None)
 }
 
 /// R1-10: a test build's panic becomes XX000, and the session lives.

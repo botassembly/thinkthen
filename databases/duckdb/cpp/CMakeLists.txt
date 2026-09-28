@@ -19,7 +19,18 @@ if(NOT DUCKDB_SOURCE_STATUS EQUAL 0 OR
   message(FATAL_ERROR "DuckDB C++ source must be the pinned v1.5.5 commit")
 endif()
 
-file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/archive-sha256.txt" ARCHIVE_MANIFEST)
+if(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+  set(THINKTHEN_ARCHIVE_MANIFEST archive-sha256-osx-arm64.txt)
+elseif(APPLE AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+  set(THINKTHEN_ARCHIVE_MANIFEST archive-sha256-osx-amd64.txt)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+  set(THINKTHEN_ARCHIVE_MANIFEST archive-sha256.txt)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_SYSTEM_PROCESSOR STREQUAL "aarch64")
+  set(THINKTHEN_ARCHIVE_MANIFEST archive-sha256-linux-arm64.txt)
+else()
+  message(FATAL_ERROR "No pinned DuckDB C++ static inputs for ${CMAKE_SYSTEM_NAME}/${CMAKE_SYSTEM_PROCESSOR}")
+endif()
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/${THINKTHEN_ARCHIVE_MANIFEST}" ARCHIVE_MANIFEST)
 file(GLOB ARCHIVE_FILES "${THINKTHEN_DUCKDB_STATIC_DIR}/lib*.a")
 list(LENGTH ARCHIVE_FILES ARCHIVE_FILE_COUNT)
 list(LENGTH ARCHIVE_MANIFEST ARCHIVE_MANIFEST_COUNT)
@@ -46,11 +57,15 @@ foreach(LINE IN LISTS ARCHIVE_MANIFEST)
   list(APPEND DUCKDB_ARCHIVES "${ARCHIVE}")
 endforeach()
 
-build_loadable_extension(thinkthen " " src/thinkthen.cpp src/scalar_owner.cpp src/scalar_settings.cpp
-  src/listed_result.cpp src/nested.cpp src/nested_result.cpp src/usage.cpp src/warm.cpp
+build_loadable_extension(thinkthen " " src/thinkthen.cpp src/find.cpp src/scalar_owner.cpp src/scalar_settings.cpp
+  src/listed_result.cpp src/listed_complete.cpp src/nested.cpp src/nested_result.cpp src/usage.cpp src/warm.cpp
   src/relate.cpp src/relate_query.cpp)
 target_link_libraries(thinkthen_loadable_extension "${THINKTHEN_RUST_STATICLIB}")
-target_link_libraries(thinkthen_loadable_extension
-  -Wl,--start-group ${DUCKDB_ARCHIVES} -Wl,--end-group dl pthread)
-target_link_options(thinkthen_loadable_extension PRIVATE
-  -Wl,--gc-sections -Wl,--exclude-libs,ALL)
+if(APPLE)
+  target_link_libraries(thinkthen_loadable_extension ${DUCKDB_ARCHIVES})
+else()
+  target_link_libraries(thinkthen_loadable_extension
+    -Wl,--start-group ${DUCKDB_ARCHIVES} -Wl,--end-group dl pthread)
+  target_link_options(thinkthen_loadable_extension PRIVATE
+    -Wl,--gc-sections -Wl,--exclude-libs,ALL)
+endif()

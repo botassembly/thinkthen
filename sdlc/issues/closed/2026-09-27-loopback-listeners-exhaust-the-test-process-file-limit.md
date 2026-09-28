@@ -12,7 +12,7 @@ A second full test rung passed with a child-only soft limit of 4,096. Sampling t
 
 ## Retained behavior
 
-Ticket 0127 deliberately kept scripted ports open so a late connection could not consume another test's reply. It also retained extra-connection diagnostics. [The earlier harness issue](../2026-09-25-test-harness-and-review-leftovers.md), section 4, records that evidence. A fix must preserve isolation between tests and those diagnostics; simply closing a port when its response script ends would undo that correction.
+Ticket 0127 deliberately kept scripted ports open so a late connection could not consume another test's reply. It also retained extra-connection diagnostics. [The earlier harness issue](2026-09-25-test-harness-and-review-leftovers.md), section 4, records that evidence. A fix must preserve isolation between tests and those diagnostics; simply closing a port when its response script ends would undo that correction.
 
 ## Outcome and proof
 

@@ -186,9 +186,12 @@ fn replay_of_a_missing_directory_is_a_miss_and_creates_nothing() {
     )
     .expect("replay refusal");
     assert_eq!(output.status.code(), Some(5));
+    let message = String::from_utf8_lossy(&output.stderr);
+    assert!(message.starts_with(
+        "thinkthen: the decide request for one document: the replay folder holds no entry named `"
+    ));
     assert!(
-        String::from_utf8_lossy(&output.stderr)
-            .starts_with("thinkthen: the replay folder holds no entry named `")
+        message.ends_with("`; the entry name covers the backend interface, address, and request\n")
     );
     assert!(!missing.exists());
 }
@@ -196,6 +199,10 @@ fn replay_of_a_missing_directory_is_a_miss_and_creates_nothing() {
 #[cfg(unix)]
 #[path = "default_cache/prune.rs"]
 mod prune;
+
+#[cfg(unix)]
+#[path = "default_cache/unused.rs"]
+mod unused;
 
 #[cfg(unix)]
 #[test]

@@ -8,6 +8,11 @@
       "sql": "SELECT thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
       "expected": "t"
     },
+    "batch_context": {
+      "setup": ["SET thinkthen.batch = '2'"],
+      "sql": "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', ARRAY['refund one', 'refund two'], 'Use this policy note.');",
+      "expected": "2"
+    },
     "probability": {
       "sql": "SELECT thinkthen_probability('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
       "expected": "0.9"
@@ -23,6 +28,10 @@
     "tag": {
       "sql": "SELECT array_to_string(thinkthen_tag('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', 'the refund and the shipping', NULL), ',');",
       "expected": "refund,shipping"
+    },
+    "find_empty": {
+      "sql": "SELECT thinkthen_find('Which passage answers?', ARRAY[]::text[]) IS NULL;",
+      "expected": "t"
     },
     "annotate": {
       "sql": "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",

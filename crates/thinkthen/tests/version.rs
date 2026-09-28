@@ -203,6 +203,19 @@ fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
 
 #[test]
 fn no_page_or_transform_says_unresolved() {
+    let has_retired_word = |text: &str| {
+        let lower = text.to_lowercase();
+        lower.match_indices("unresolved").any(|(start, word)| {
+            let before = lower[..start].chars().next_back();
+            let after = lower[start + word.len()..].chars().next();
+            let identifier = |character: char| character.is_alphanumeric() || character == '_';
+            !before.is_some_and(identifier) && !after.is_some_and(identifier)
+        })
+    };
+    assert!(has_retired_word("an unresolved choice"));
+    assert!(has_retired_word("\"unresolved\""));
+    assert!(!has_retired_word("a_tie_is_unresolved"));
+    assert!(!has_retired_word("unresolved_result"));
     const DEFINITION: &str = "`unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms.";
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut defined = Vec::new();
@@ -228,12 +241,12 @@ fn no_page_or_transform_says_unresolved() {
                     .into_owned(),
             );
         }
-        let lower = text.to_lowercase();
         assert!(
-            !lower.contains("unresolved"),
+            !has_retired_word(&text),
             "{} says the old word",
             page.display()
         );
+        let lower = text.to_lowercase();
         for banned in ["decider model", "decision model"] {
             assert!(!lower.contains(banned), "{} says {banned}", page.display());
         }
@@ -259,11 +272,11 @@ fn the_long_help_names_connections_conflicts_paid_requests_and_models() {
         ),
         (
             "decide",
-            " A folder that already holds an answer stops at exit 5 when the backend answers that request differently.\n",
+            " A different fresh answer exits 5 without printing it; the old entry stays.",
         ),
         (
             "recognize",
-            "\n\nEach record makes paid requests: a detection question for every word, a kind question for every word when two or more kinds are given, and relation questions when rules are given. --dry-run prints the exact requests for the first record.\n\n",
+            "\n\nEach record can make paid requests in three steps: one boundary question per text piece; one kind question per found name when kinds are given, plus an edge question when its span can change; then questions for the relation pairs allowed by rules. --dry-run prints the first record's exact boundary requests and upper bounds for later requests.\n\n",
         ),
         (
             "check",

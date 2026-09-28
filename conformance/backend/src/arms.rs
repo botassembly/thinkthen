@@ -30,7 +30,7 @@ const MOST_DELAY: u64 = 10_000;
 /// How long a `wait` line waits for its count.
 const WAIT_BOUND: Duration = Duration::from_secs(5);
 
-/// Only the three dependent requests of one opted-in relation case are retained.
+/// Only three requests from an opted-in relation case or full-answer arm are retained.
 const CAPTURE_BODIES: usize = 3;
 const CAPTURE_BYTES: usize = 96_000;
 
@@ -116,17 +116,18 @@ impl Capture {
     }
 }
 
-/// The dedicated case path opts in; ordinary case and generic traffic do not.
+/// The dedicated find/relation case path or full-answer arm opts in.
 fn capturing(request: &Recorded) -> bool {
     let path = request.line.split(' ').nth(1).unwrap_or_default();
     let mut parts = path.trim_start_matches('/').split('/');
-    let (Some("case"), Some(id), Some("capture")) = (parts.next(), parts.next(), parts.next())
-    else {
-        return false;
-    };
-    id.split_once('-')
-        .and_then(|(number, _)| number.parse::<u8>().ok())
-        .is_some_and(|number| (42..=50).contains(&number))
+    match (parts.next(), parts.next(), parts.next()) {
+        (Some("arm"), Some("full"), Some("capture")) => true,
+        (Some("case"), Some(id), Some("capture")) => id
+            .split_once('-')
+            .and_then(|(number, _)| number.parse::<u8>().ok())
+            .is_some_and(|number| matches!(number, 18 | 19 | 42..=50)),
+        _ => false,
+    }
 }
 
 /// The conformance backend: one loopback listener and the gate its held arm waits on.

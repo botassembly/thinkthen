@@ -191,10 +191,11 @@ pub(crate) enum Command {
     /// Relations are beta. `--threshold` gates computed name strength;
     /// `--relation-threshold` gates a relation's model probability.
     ///
-    /// Each record makes paid requests: a detection question for every word, a
-    /// kind question for every word when two or more kinds are given, and
-    /// relation questions when rules are given. --dry-run prints the exact
-    /// requests for the first record.
+    /// Each record can make paid requests in three steps: one boundary question
+    /// per text piece; one kind question per found name when kinds are given,
+    /// plus an edge question when its span can change; then questions for the
+    /// relation pairs allowed by rules. --dry-run prints the first record's
+    /// exact boundary requests and upper bounds for later requests.
     ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
@@ -284,6 +285,17 @@ pub(crate) struct CacheArguments {
 pub(crate) enum CacheCommand {
     /// Remove selected entries, then the oldest entries until the folder fits the size target.
     Prune(PruneArguments),
+    /// Report valid entries absent from a complete caller-supplied digest list.
+    Unused(UnusedArguments),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct UnusedArguments {
+    /// The existing cache or recording folder to inspect.
+    pub(crate) directory: PathBuf,
+    /// A UTF-8 file with one lowercase request digest per line.
+    #[arg(long, value_name = "DIGESTS")]
+    pub(crate) used: PathBuf,
 }
 
 #[derive(Args, Debug)]
@@ -404,7 +416,7 @@ pub(crate) struct StatusArguments {
     pub(crate) json: bool,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct CheckArguments {
     /// The base the requests are posted under, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
@@ -415,7 +427,20 @@ pub(crate) struct CheckArguments {
     /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
-    /// Print the four request bodies and stop. No key is read and nothing is sent.
+    /// Print the four request bodies and stop. An optional key is checked
+    /// against the address; no key is required and nothing is sent.
     #[arg(long)]
     pub(crate) dry_run: bool,
+}
+
+impl std::fmt::Debug for CheckArguments {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("CheckArguments")
+            .field("url", &self.url.as_ref().map(|_| "<withheld>"))
+            .field("model", &self.model)
+            .field("timeout", &self.timeout)
+            .field("dry_run", &self.dry_run)
+            .finish()
+    }
 }

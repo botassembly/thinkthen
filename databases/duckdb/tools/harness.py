@@ -57,6 +57,14 @@ class Backend:
         self._say("count")
         return int(self._line())
 
+    def capture(self) -> list[str]:
+        """Bodies retained by the shared backend's bounded opt-in case arm."""
+        self._say("capture")
+        held = json.loads(self._line())
+        if "error" in held:
+            raise AssertionError(held["error"])
+        return held["bodies"]
+
     def wait(self, least: int) -> int:
         self._say(f"wait {least}")
         while True:
@@ -195,6 +203,10 @@ def case(function):
 def main() -> int:
     """Run every registered case, or the ones named on the command line."""
     named = set(sys.argv[1:])
+    absent = named - {function.__name__ for function in CASES}
+    if absent:
+        print(f"FAIL unknown selected case: {sorted(absent)[0]}")
+        return 2
     failed = 0
     for function in CASES:
         if named and function.__name__ not in named:

@@ -4,12 +4,14 @@ import Base from '../../layouts/Base.astro';
 import Terminal from '../../components/Terminal.astro';
 import { REPO, SETTINGS_SEE } from '../../data/catalog.mjs';
 import { captioned } from '../../data/samples.mjs';
-import { parseSettings, inlineHtml, blocksHtml, plain, SURFACE_GROUPS, SURFACES, ABSENT } from '../../lib/settings-table.mjs';
+import { parseSettings, inlineHtml, blocksHtml, plain, SURFACE_GROUPS, SURFACES, ABSENT, LEFT_OUT } from '../../lib/settings-table.mjs';
 import table from '../../../../specification/settings.md?raw';
 
 // Every row, default, and surface below comes from specification/settings.md
 // at build time. scripts/check-settings.mjs reads the built page against it.
-const { whatCounts, precedence, howToRead, rows } = parseSettings(table);
+const parsed = parseSettings(table);
+const { whatCounts, precedence, howToRead } = parsed;
+const rows = parsed.rows.filter((r) => !LEFT_OUT.has(r.name));
 const examples = captioned('install/settings', SETTINGS_SEE);
 const specUrl = `${REPO}/blob/main/specification/settings.md`;
 

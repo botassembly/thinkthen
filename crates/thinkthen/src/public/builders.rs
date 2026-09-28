@@ -125,6 +125,10 @@ impl Listing {
                 place + 1
             )));
         }
+        let description = match description {
+            Some(explicit) => Some(explicit),
+            None => value.description()?,
+        };
         self.push(value.label(), description)
     }
 
@@ -164,6 +168,8 @@ impl Listing {
             core,
             threshold,
             model: self.model,
+            profile: None,
+            batch: None,
             kind,
         })
     }
@@ -382,6 +388,8 @@ impl ScoreBuilder {
             },
             threshold: None,
             model: self.0.model,
+            profile: None,
+            batch: None,
             kind: Kind::Score,
         })
     }

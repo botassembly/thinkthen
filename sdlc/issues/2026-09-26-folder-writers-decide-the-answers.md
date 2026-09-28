@@ -1,6 +1,6 @@
 # Whoever can write a named cache or recording folder decides the answers
 
-Status: open. Ticket 0163 source `0292cba2` completes the documentation half in recording.md and SECURITY.md. Writable-folder warning and entry-integrity work remain open; no code protection is claimed by that sentence.
+Status: closed by ticket 0242, code accepted at `2e3e32c6`. Ticket 0163 supplied the writer-authority pages; 0242 implements the selected named-folder warning and documents its limits. The check is advisory and does not authenticate entries.
 
 ## What happens
 
@@ -23,3 +23,9 @@ Report 12, finding 3.3, raises the same point for the configuration file. The se
 ## Done when
 
 Both pages state the trust rule, and the queue owner has decided the writable-folder check.
+
+## Closure evidence and limits
+
+Fresh independent code review accepted `2e3e32c6263f27b35e2dbce33b2e7a232eaf842d` and reran the three compiled warning boundary cases. The command warns before it trusts an existing named Unix folder with another owner or group/other directory write permission. Private folders and keyless replay retain their behavior. The recording and security pages state the warning and its limits.
+
+The original done criterion above is met. A later status sentence had accidentally promoted the optional keyed check into required entry-integrity work. The original issue says only to consider it later, and experiment 283 finding 40 calls it optional hardening. The independent reviewer confirmed this distinction. Signing, library advisories, ACL and ancestor checks, non-Unix permission classification and concurrent permission changes remain explicit limits or future ideas; closing this issue claims no authentication guarantee.

@@ -121,6 +121,48 @@ fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
 }
 
 #[test]
+fn a_saved_relate_name_reaches_details_identity_and_warning() {
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-calibration");
+    fs::create_dir_all(&folder).expect("folder");
+    let question = folder.join("question.json");
+    fs::write(&question, r#"{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]},"profile":"old"}"#)
+        .expect("question file");
+    let running = folder.join("runtime.json");
+    fs::write(
+        &running,
+        r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1000}"#,
+    )
+    .expect("runtime profile");
+    let listener = Listener::answering(answered).expect("listener");
+    let output = run(
+        &listener,
+        &[
+            &format!("@{}", question.display()),
+            "--details",
+            "--profile",
+            &running.to_string_lossy(),
+        ],
+        br#"[{"name":"Ada","kind":"person"},{"name":"Acme","kind":"organization"}]"#,
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let row: Value = serde_json::from_slice(&output.stdout).expect("details");
+    assert_eq!(
+        row["meta"]["question_sha256"],
+        "29399c0b883118fca36e97855e1edb34877efbb3348925b5dfce2582f3472774"
+    );
+    assert_eq!(
+        row["meta"]["profile_warning"],
+        serde_json::json!({"tuned_for":"old","running":"new"})
+    );
+    assert_eq!(listener.connections(), 1);
+}
+
+#[test]
 fn a_wildcard_rule_expands_to_concrete_kinds_in_first_seen_order() {
     let listener = Listener::answering(answered).expect("listener");
     let output = run(

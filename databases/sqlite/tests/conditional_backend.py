@@ -17,12 +17,13 @@ from urllib.parse import urlsplit
 
 
 class ConditionalBackend:
-    def __init__(self, generic_base: str, sentinel: str = "private evidence") -> None:
+    def __init__(self, generic_base: str, sentinel: str = "private evidence", reply: bytes | None = None) -> None:
         parsed = urlsplit(generic_base)
         if parsed.scheme != "http" or parsed.hostname != "127.0.0.1" or not parsed.path.endswith("/v1"):
             raise ValueError("the generic backend must be a loopback /v1 address")
         self.generic_base = generic_base.rstrip("/")
         self.sentinel = sentinel.encode()
+        self.reply = reply
         self._count = 0
         self._lock = threading.Lock()
         owner = self
@@ -38,6 +39,8 @@ class ConditionalBackend:
                     owner._count += 1
                 if owner.sentinel in body:
                     status, reply = 422, b'{"error":{"message":"test refusal"}}'
+                elif owner.reply is not None:
+                    status, reply = 200, owner.reply
                 else:
                     target = owner.generic_base + self.path[len("/v1"):]
                     request = urllib.request.Request(

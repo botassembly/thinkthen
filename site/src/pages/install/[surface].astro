@@ -21,6 +21,19 @@ const headline = shell
   : `${surface.name} functions that answer questions about text`;
 // Copy marks code with backticks.
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
+const runFacts = {
+  shell: '`--facts` prints one line of run facts on standard error, after the answers.',
+  python: '`Call.facts` counts this call.',
+  polars: '`Call.facts` counts this frame call outside its columns.',
+  typescript: '`Call.facts` counts this call.',
+  ruby: '`Call#facts` counts this call.',
+  r: '`$facts` counts this call.',
+  rust: '`Call::facts()` counts this call.',
+  c: 'A JSON call returns `{"value":...,"facts":...}`.',
+  duckdb: '`thinkthen_usage()` gives the totals for the process.',
+  sqlite: '`thinkthen_usage()` gives the totals for the process.',
+  postgresql: '`thinkthen_usage()` gives the totals for the process.',
+};
 ---
 <Base title={surface.name} description={surface.blurb.replace(/`/g, '')}>
   <div class="eyebrow"><a href="/install/">Install</a></div>
@@ -46,6 +59,9 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
     <Terminal run={decideOne} caption={decideOne.see} />
   )}
   <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person. Each <a href="/functions/">function page</a> shows its {surface.name} call.</p>
+
+  <h2>Run facts</h2>
+  <p>{parts(runFacts[surface.slug]).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
 
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>

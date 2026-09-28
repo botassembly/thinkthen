@@ -104,7 +104,7 @@ pub(super) fn detailed(
                 }
                 LoadedQuestion::Banded(question) => engine.details_with(question, text, options)?,
             };
-            Ok(Value::Text(details.to_json()))
+            Ok(Value::Text(details.value().to_json()))
         })
         .collect()
 }
@@ -130,11 +130,11 @@ pub(super) fn recognized(
     texts
         .iter()
         .map(|text| {
-            Ok(read(&engine.recognize_with(
-                ask,
-                text,
-                options(token, due)?,
-            )?))
+            Ok(read(
+                engine
+                    .recognize_with(ask, text, options(token, due)?)?
+                    .value(),
+            ))
         })
         .collect()
 }

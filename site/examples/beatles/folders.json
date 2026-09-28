@@ -9,11 +9,7 @@
   "rank": "examples/rank",
   "find": "examples/find",
   "annotate": "examples/annotate",
-  "recognize": "examples/recognize",
-  "relate": "examples/relate",
   "audit": "examples/audit",
-  "diff": "examples/audit",
-  "what-jev-knows": "results/runs/2026-09-26-thinkthen-jev",
   "blind-spots": "results/runs/2026-09-26-thinkthen-jev",
   "rad": "examples/decide",
   "backends": "examples/decide"

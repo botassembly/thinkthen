@@ -1,6 +1,6 @@
 # Quick Fix qf-private-names: remove private names from the current text
 
-Status: prepared on `ticket/qf-private-names` from main `5f43013e`. It carries out `sdlc/issues/2026-09-25-sdlc-history-names-private-repositories.md` outside `site/`. The issue stays open for four lines in `site/`, which the website agent owns. Ian can overturn the wording of any replacement and the guard.
+Status: prepared on `ticket/qf-private-names` from main `5f43013e`. It carries out `sdlc/issues/closed/2026-09-25-sdlc-history-names-private-repositories.md` outside `site/`. The issue stays open for four lines in `site/`, which the website agent owns. Ian can overturn the wording of any replacement and the guard.
 
 ## Why
 

@@ -14,14 +14,24 @@ LIMIT=$HERE/../../sdlc/scripts/time-limit
 TOOLS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 CLI=${THINKTHEN_DUCKDB_CLI:-$TOOLS/duckdb}
 PY=$TOOLS/venv/bin/python
-if [ "$(uname -s)" != Linux ]; then
-	echo "not run: databases/duckdb checks on Linux only"
-	exit 77
-fi
+case $(uname -s):$(uname -m) in
+Linux:x86_64 | Linux:aarch64 | Darwin:arm64 | Darwin:x86_64) ;;
+*) echo "not run: no pinned DuckDB C++ host for $(uname -s):$(uname -m)"; exit 77 ;;
+esac
 if [ ! -x "$CLI" ] || [ ! -x "$PY" ] || [ ! -f "$TOOLS/platform.txt" ]; then
 	echo "not run: the DuckDB $DUCKDB_VERSION toolchain is missing; run databases/duckdb/tools/setup.sh --fetch"
 	exit 77
 fi
+case $(uname -s):$(uname -m) in
+Linux:x86_64) expected_platform=linux_amd64 ;;
+Linux:aarch64) expected_platform=linux_arm64 ;;
+Darwin:arm64) expected_platform=osx_arm64 ;;
+Darwin:x86_64) expected_platform=osx_amd64 ;;
+esac
+[ "$(cat "$TOOLS/platform.txt")" = "$expected_platform" ] || {
+	echo "check: the stock DuckDB platform differs from $expected_platform" >&2
+	exit 1
+}
 if [ -n "${CHECK_SETUP_ONLY:-}" ]; then
 	echo "setup ok"
 	exit 0
@@ -58,6 +68,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --different-host "$TOOLS/older-host/duckdb"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
+	sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send held_find_and_spent_statement_budget
+	sh "$LIMIT" 900 "$PY" tools/verbs_suite.py b13c_try_details_members b13c_try_details_prepared b13c_try_details_blank_context_keeps_good_siblings b13c_try_details_whole_request_failure b13c_context_and_batch_one_wire_identity b13c_warm_first_seen_context b13c_packed_total_admits_one_attempt b13c_try_details_total_one_preserves_answered_rows b13c_try_details_total_zero_sends_nothing b13c_try_details_split_denials b13c_try_details_denied_retry_keeps_later_answer
+	sh "$LIMIT" 900 "$PY" tools/settings_suite.py b13c_warm_zero_budget the_process_request_total_holds_across_calls
 	echo "check: databases/duckdb passes, installed"
 	exit 0
 fi
@@ -89,6 +102,7 @@ echo "== suites"
 for suite in verbs_suite settings_suite signal_suite relate_suite databases_suite conformance; do
 	sh "$LIMIT" 900 "$PY" "tools/$suite.py"
 done
+sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send held_find_and_spent_statement_budget
 THINKTHEN_DUCKDB_CLI_PATH="$CLI" sh "$LIMIT" 900 "$PY" tools/site_examples.py
 sh tools/selftests.sh "$PY"
 echo "check: databases/duckdb passes"

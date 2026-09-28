@@ -2,9 +2,10 @@
 //! and borrowed, and every answer leaves as a value the FFI edge writes.
 
 use serde_json::Value;
+use std::io::Read;
 use thinkthen::{
-    Answer, CallOptions, CancelToken, Engine, Entity, Judgment, LoadedQuestion, Probabilities,
-    Question, Recognize, Relate,
+    Answer, CallOptions, CancelToken, Engine, Entity, Facts, Judgment, LoadedQuestion,
+    Probabilities, Question, Recognize, Relate,
 };
 
 use crate::Judgment as Reply;
@@ -50,6 +51,25 @@ pub(crate) fn question(text: &str) -> Result<LoadedQuestion, Failure> {
     Ok(LoadedQuestion::Question(Question::decide(trimmed)?.cut()))
 }
 
+/// Validate one named question and retain its source JSON for the C caller.
+pub(crate) fn question_file(path: &str) -> Result<String, Failure> {
+    const LIMIT: u64 = 1_048_576;
+    let file = std::fs::File::open(path)
+        .map_err(|_| Failure::local("the question file could not be read"))?;
+    let mut bytes = Vec::new();
+    file.take(LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| Failure::local("the question file could not be read"))?;
+    if bytes.len() as u64 > LIMIT {
+        return Err(Failure::local("the question file is too large"));
+    }
+    let source =
+        String::from_utf8(bytes).map_err(|_| Failure::local("the question file is not UTF-8"))?;
+    Question::from_json(&source)
+        .map_err(|_| Failure::local("the question file has invalid question content"))?;
+    Ok(source)
+}
+
 /// One judgment with its probability of yes.
 pub(crate) fn decide(
     engine: &Engine,
@@ -63,7 +83,8 @@ pub(crate) fn decide(
         }
         LoadedQuestion::Question(asked) => engine.details_with(asked, text, options)?,
         LoadedQuestion::Banded(asked) => engine.details_with(asked, text, options)?,
-    };
+    }
+    .into_value();
     match (details.value(), details.probabilities()) {
         (Judgment::Decision(answer), Probabilities::YesNo { yes }) => Ok(reply(*answer, *yes)),
         _ => Err(Failure::defect(
@@ -105,9 +126,10 @@ pub(crate) fn recognize(
     spec: &str,
     text: &str,
     options: CallOptions<'_>,
-) -> Result<String, Failure> {
+) -> Result<(String, Facts), Failure> {
     let ask = Recognize::from_json(spec)?;
-    Ok(engine.recognize_with(&ask, text, options)?.to_json())
+    let call = engine.recognize_with(&ask, text, options)?;
+    Ok((call.value().to_json(), call.facts().clone()))
 }
 
 /// Refuse a relate call past [`MOST_RELATED`] records.
@@ -145,11 +167,14 @@ pub(crate) fn relate(
     spec: &str,
     entities: Vec<Entity>,
     options: CallOptions<'_>,
-) -> Result<String, Failure> {
+) -> Result<(String, Facts), Failure> {
     let ask = Relate::from_json(spec)?;
-    let edges = engine.relate_with(&ask, entities, options)?;
-    let edges: Vec<String> = edges.iter().map(thinkthen::Edge::to_json).collect();
-    Ok(format!("{{\"edges\":[{}]}}", edges.join(",")))
+    let call = engine.relate_with(&ask, entities, options)?;
+    let edges: Vec<String> = call.value().iter().map(thinkthen::Edge::to_json).collect();
+    Ok((
+        format!("{{\"edges\":[{}]}}", edges.join(",")),
+        call.facts().clone(),
+    ))
 }
 
 /// Refuse a null `out` or `out_len`, which success always writes.

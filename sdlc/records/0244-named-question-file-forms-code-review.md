@@ -1,0 +1,9 @@
+# Ticket 0244 code review
+
+Verdict: **ACCEPT** at `5b44500485ba967e1fbaca7ff0151c30815e9050`. A fresh High reviewer checked the public file and FFI boundary, then rechecked the retained author's correction. The integration adds only completion and review records to the accepted source plus unrelated main planning changes.
+
+The first review of `1d0d8dbb` found that the three file parsers exposed file-supplied unknown keys in Local diagnostics, and that Ruby accepted binary-encoded invalid UTF-8 paths until a raw EncodingError escaped. Source correction `a9879833` uses fixed file-origin diagnostic categories and validates path bytes before native conversion. Inline Usage diagnostics retain their previous detail. The reviewer independently reproduced both corrected boundaries and found no remaining finding in this bounded review.
+
+The reviewer independently passed selected shared cases 01 and 30 through C, TypeScript and Ruby, two cases per host. The focused C file boundary, TypeScript named rich-question/request and refusal tests, and Ruby refusal table passed. These check actual captured requests or stored request digests, Local versus Usage, no path or planted file-key bytes, zero sends on refusal, and Ruby path encoding. Prior C owned-buffer, untouched-output and symbol proof remains valid. The C FFI source remains at 497 nonblank lines. The reviewer verified a clean worktree and diff check. No full conformance run or provider request was made.
+
+The accepted [build record](0244-named-question-file-forms-build.md) carries exact commands and initial proof. The shared conformance issue remains open for DuckDB member-question Q5, broader recognize/relate mapping and final coverage reconciliation. Completing this ticket does not close that umbrella row or change the global item count.

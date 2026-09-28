@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import json
+import platform
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[2] / "conformance" / "children"))
+from children import CARGO, child_env  # noqa: E402
+
 BRIDGE = HERE.parent / "bridge" / "Cargo.toml"
 LEGAL = ("license", "notice", "copying", "authors", "copyright", "patents")
 
@@ -33,8 +37,17 @@ def main() -> None:
     metadata = json.loads(subprocess.check_output([
         "cargo", "metadata", "--format-version", "1", "--locked", "--offline",
         "--manifest-path", str(BRIDGE),
-    ]))
-    archives = [line.split(maxsplit=1)[1] for line in (HERE / "archive-sha256.txt").read_text().splitlines()]
+    ], env=child_env(CARGO)))
+    manifests = {
+        ("Linux", "x86_64"): "archive-sha256.txt",
+        ("Linux", "aarch64"): "archive-sha256-linux-arm64.txt",
+        ("Darwin", "arm64"): "archive-sha256-osx-arm64.txt",
+        ("Darwin", "x86_64"): "archive-sha256-osx-amd64.txt",
+    }
+    host = (platform.system(), platform.machine())
+    if host not in manifests:
+        raise SystemExit(f"no pinned DuckDB archive inventory for {host[0]}/{host[1]}")
+    archives = [line.split(maxsplit=1)[1] for line in (HERE / manifests[host]).read_text().splitlines()]
     inventory = ["Pinned DuckDB static archives:", *archives, "", "Bundled Rust crates (name version | declared license):"]
     for package in sorted(metadata["packages"], key=lambda value: (value["name"], value["version"])):
         folder = Path(package["manifest_path"]).parent
