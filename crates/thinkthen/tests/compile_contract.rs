@@ -41,31 +41,65 @@ fn main() {}
 
 const TABLE: &[(&str, Expected, &str)] = &[
     (
+        "described_choice_macro",
+        None,
+        r#"
+mod downstream {
+    thinkthen::choices! {
+        pub enum Route {
+            Billing => "billing": "Charges and refunds",
+            Outage => "outage": { thinkthen::Description::builder().what("A service outage")?.example("Service down")?.build() },
+            Other => "other",
+        }
+    }
+}
+#[derive(Clone, Eq, PartialEq)]
+enum Manual { One }
+impl Choice for Manual {
+    fn label(&self) -> &'static str { "one" }
+    fn labels() -> &'static [&'static str] { &["one"] }
+    fn from_label(value: &str) -> Option<Self> { (value == "one").then_some(Self::One) }
+}
+fn described() -> Result<(), Error> {
+    use downstream::Route;
+    let _: Option<Description> = Route::Billing.description()?;
+    let _: Option<Description> = Manual::One.description()?;
+    let _: ChooseQuestion<Route> = Question::choose::<Route>("Where?")?
+        .option(Route::Billing, None)?.option(Route::Outage, None)?.option(Route::Other, None)?.build()?;
+    let _: TagQuestion<Route> = Question::tag::<Route>("Which?")?
+        .label(Route::Billing, None)?.label(Route::Outage, None)?.label(Route::Other, None)?.cut()?;
+    let _: Option<Route> = Route::from_label("billing");
+    let _: Vec<Route> = vec![Route::Other];
+    Ok(())
+}
+"#,
+    ),
+    (
         "every_method_and_convenience",
         None,
         r#"
 fn methods(e: &Engine, o: CallOptions<'_>) -> Result<(), Error> {
     let (q, b, texts) = (yes_no(), banded(), vec!["a".to_owned(), "b".to_owned()]);
-    let _: Answer = e.decide(&q, "text")?;
-    let _: Answer = e.decide_with(&b, "text", o)?;
-    let _: Option<Desk> = e.choose(&desk(), "text")?;
-    let _: Option<Desk> = e.choose_with(&desk(), "text", o)?;
-    let _: f64 = e.score(&Question::score("how urgent").unwrap().level("low", None)?.level("high", None)?.build()?, "t")?;
-    let _: Vec<Desk> = e.tag(&desks(), "text")?;
-    let _: Vec<Desk> = e.tag_with(&desks(), "text", o)?;
+    let _: Call<Answer> = e.decide(&q, "text")?;
+    let _: Call<Answer> = e.decide_with(&b, "text", o)?;
+    let _: Call<Option<Desk>> = e.choose(&desk(), "text")?;
+    let _: Call<Option<Desk>> = e.choose_with(&desk(), "text", o)?;
+    let _: Call<f64> = e.score(&Question::score("how urgent").unwrap().level("low", None)?.level("high", None)?.build()?, "t")?;
+    let _: Call<Vec<Desk>> = e.tag(&desks(), "text")?;
+    let _: Call<Vec<Desk>> = e.tag_with(&desks(), "text", o)?;
     let _: Vec<Result<String, Error>> = e.filter(&q, texts.clone()).collect();
     let _: Vec<Result<&str, Error>> = e.filter_with(&q, ["a", "b"], o).collect();
-    let _: Vec<Ranked<&str>> = e.rank(&Question::rank("most urgent")?, ["a", "b"])?;
-    let _: Found<String> = e.find_with(&Question::find("the refund")?, texts.clone(), o)?;
+    let _: Call<Vec<Ranked<&str>>> = e.rank(&Question::rank("most urgent")?, ["a", "b"])?;
+    let _: Call<Found<String>> = e.find_with(&Question::find("the refund")?, texts.clone(), o)?;
     let set = QuestionSet::builder().question("refund", q.clone())?.banded("b", b.clone())?
         .choose("desk", desk())?.tag("desks", desks())?.build()?;
     let _: Vec<Result<AnnotatedRecord<&str>, Error>> = e.annotate(&set, ["a"]).collect();
     let rec = Recognize::builder().kind(Kind::new("drug", Some(Description::text("a medicine")?))?)?.build()?;
-    let _: Recognized = e.recognize_with(&rec, "text", o)?;
+    let _: Call<Recognized> = e.recognize_with(&rec, "text", o)?;
     let rel = Relate::builder().relation(RelationRule::one_way("treats", "drug", "disease")?)?.build()?;
-    let _: Vec<Edge> = e.relate(&rel, [Entity::new("a", "drug")?, Entity::new("b", "disease")?])?;
+    let _: Call<Vec<Edge>> = e.relate(&rel, [Entity::new("a", "drug")?, Entity::new("b", "disease")?])?;
     let _: Vec<Result<Row<&str, Answer>, Error>> = e.decide_many(&b, ["a"]).collect();
-    let _: Details = e.details(&desk(), "text")?;
+    let _: Call<Details> = e.details(&desk(), "text")?;
     let _: Counters = e.usage();
     Ok(())
 }
@@ -73,10 +107,10 @@ fn conveniences(o: CallOptions<'_>) -> Result<(), Error> {
     let (q, token) = (yes_no(), CancelToken::new());
     let o = o.cancel(&token).deadline_after(std::time::Duration::from_secs(1))?;
     let _: &'static Engine = default_engine()?;
-    let _: Answer = decide(&q, "t")?;
-    let _: Option<Desk> = choose(&desk(), "t")?;
-    let _: Vec<Desk> = tag_with(&desks(), "t", o)?;
-    let _: f64 = score_with(&q, "t", o)?;
+    let _: Call<Answer> = decide(&q, "t")?;
+    let _: Call<Option<Desk>> = choose(&desk(), "t")?;
+    let _: Call<Vec<Desk>> = tag_with(&desks(), "t", o)?;
+    let _: Call<f64> = score_with(&q, "t", o)?;
     let _ = filter(&q, ["a"]).count();
     let _ = decide_many_with(&q, ["a"], o).count();
     let _ = rank_with(&q, ["a"], o)?;
@@ -84,7 +118,7 @@ fn conveniences(o: CallOptions<'_>) -> Result<(), Error> {
     let _ = annotate_with(&QuestionSet::from_json("{}")?, ["a"], o).count();
     let _ = recognize(&Recognize::builder().build()?, "t")?;
     let _ = relate_with(&Relate::builder().build()?, Vec::new(), o)?;
-    let _: Details = details_with(&banded(), "t", o)?;
+    let _: Call<Details> = details_with(&banded(), "t", o)?;
     let _: Counters = usage()?;
     Ok(())
 }

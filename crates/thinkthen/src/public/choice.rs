@@ -8,9 +8,20 @@ pub trait Choice: Clone + Eq + Send + Sync + 'static {
     fn labels() -> &'static [&'static str];
     /// The value a label names.
     fn from_label(value: &str) -> Option<Self>;
+    /// This value's default description, if its declaration has one.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error`](crate::Error) when selected metadata is invalid.
+    fn description(&self) -> Result<Option<crate::Description>, crate::Error> {
+        Ok(None)
+    }
 }
 
 /// Declare an enum of labels and its [`Choice`] implementation.
+/// A variant may add `: "text"` or a block returning
+/// `Result<Description, Error>` from [`Description::builder`](crate::Description::builder).
+/// A bare variant retains no default description.
 ///
 /// ```
 /// thinkthen::choices! {
@@ -21,7 +32,7 @@ pub trait Choice: Clone + Eq + Send + Sync + 'static {
 /// ```
 #[macro_export]
 macro_rules! choices {
-    ($(#[$meta:meta])* $vis:vis enum $name:ident { $($variant:ident => $label:literal),+ $(,)? }) => {
+    ($(#[$meta:meta])* $vis:vis enum $name:ident { $($variant:ident => $label:literal $( : $description:tt )?),+ $(,)? }) => {
         $(#[$meta])*
         #[derive(Clone, Copy, Debug, Eq, PartialEq)]
         $vis enum $name { $(#[doc = $label] $variant),+ }
@@ -82,6 +93,14 @@ macro_rules! choices {
             fn from_label(value: &str) -> ::core::option::Option<Self> {
                 $name::from_label(value)
             }
+            fn description(&self) -> ::core::result::Result<::core::option::Option<$crate::Description>, $crate::Error> {
+                match self {
+                    $(Self::$variant => $crate::choices!(@description $($description)?)),+
+                }
+            }
         }
     };
+    (@description) => { ::core::result::Result::Ok(::core::option::Option::None) };
+    (@description $value:literal) => { $crate::Description::text($value).map(::core::option::Option::Some) };
+    (@description { $($body:tt)* }) => { { $($body)* }.map(::core::option::Option::Some) };
 }

@@ -6,7 +6,7 @@ opens: sdlc/tickets/0243-rust-choice-descriptions.md sdlc/records/0243-rust-choi
 
 # 0243: Describe typed Rust choices
 
-Status: **Design accepted at `7d866431`; coordinator approved implementation and the exact runtime claims in the main Lanes table.** This is the existing J4 row, not another type-contract outcome. ADR 0082 and [the type-contract issue](../issues/2026-09-27-one-type-contract-for-every-surface.md) already approve descriptions on `choices!` variants. The [fresh Sol Medium design review](../records/0243-design-review.md) accepted the proposed routine spelling; the coordinator owns implementation authorization and J4 closure.
+Status: **Complete after fresh code/API ACCEPT at `3d58af1f`.** Design was accepted at `7d866431`, and the coordinator approved the exact runtime claims in the main Lanes table. This is the existing J4 row, not another type-contract outcome. ADR 0082 and [the type-contract issue](../issues/2026-09-27-one-type-contract-for-every-surface.md) already approve descriptions on `choices!` variants. The [fresh Sol Medium design review](../records/0243-design-review.md) accepted the spelling; the coordinator owns J4 closure.
 
 ## Starts from
 
@@ -44,4 +44,6 @@ Other language J rows, any new map-merge API, score/recognize metadata, site exa
 
 ## What the build taught us
 
-Preparation only. Fill this after implementation and fresh code review; do not count the design as J4 closure.
+- The prechange bare `Team` choice sent the exact body and digest now pinned in the listener child; `Choice` and the listing path were unchanged between design base `681a1d59` and runtime base `e1bc785e`. The new selection stays in `Listing::next`, so loaded JSON questions are only bound, not rewritten. [Build evidence](../records/0243-build.md) names the captured bytes, commands and counters.
+- The outside-crate compile fixture exposed inherited bare-result declarations after the already landed `Call<T>` change. Correcting those declarations restored its existing public contract proof while adding mixed macro syntax, downstream privacy/hygiene and manual `Choice` compatibility. The selected blank metadata, explicit override and unknown loaded label now have one bounded zero-send listener proof; no test-only hook or duplicate parser was needed.
+- The new listener case would have exceeded the parent file's 500-line cap. A coherent private child keeps the parent at 336 nonblank lines and the child at 196. The root Rust total rose to 94,818 and the Rust examples total to 267; the build record names the reused code and footprint. No existing test was deleted or consolidated. Fresh code/API review accepted the candidate at `3d58af1f`; the coordinator records J4 closure with landing. Site work stays with its separate owner.

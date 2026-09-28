@@ -4,7 +4,7 @@ use std::io::Write;
 
 use thinkthen::{Engine, Question};
 
-thinkthen::choices! { enum Label { Praise => "praise", Bug => "bug", Billing => "billing" } }
+thinkthen::choices! { enum Label { Praise => "praise": "A positive comment", Bug => "bug", Billing => "billing" } }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let tt = Engine::from_env()?;
