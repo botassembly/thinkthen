@@ -25,7 +25,10 @@ const PHRASES: [(u16, &str); 14] = [
         422,
         "the backend refused the request as malformed or too large",
     ),
-    (429, "the backend's rate limit was reached"),
+    (
+        429,
+        "the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries",
+    ),
     (500, RETRIED_OUT),
     (502, RETRIED_OUT),
     (503, RETRIED_OUT),

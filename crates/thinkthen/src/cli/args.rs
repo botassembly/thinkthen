@@ -6,9 +6,11 @@ use std::path::PathBuf;
 use crate::core::{DEFAULT_MODEL, Framing};
 use clap::{Args, Parser};
 
+mod batching;
 mod command;
 mod find;
 mod relate;
+pub(crate) use batching::Batching;
 pub(crate) use command::{CacheCommand, CheckArguments, Command, PruneArguments, StatusArguments};
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;
@@ -117,11 +119,13 @@ pub(crate) struct Common {
     )]
     pub(crate) model: Option<String>,
 
-    /// Call the backend, then write the exchange into DIR. DIR is created when absent.
+    /// Call the backend for every request, then write its exchange into DIR.
     ///
-    /// An explicit recording folder suppresses the platform default cache. A
-    /// folder that already holds an answer stops at exit 5 when the backend
-    /// answers that request differently.
+    /// DIR is created when absent. A held request is sent again and may be
+    /// billed again. A different fresh answer exits 5 without printing it;
+    /// the old entry stays. Use --cache DIR to reuse held answers, or record
+    /// into a new empty folder for a deliberate fresh run. An explicit
+    /// recording folder suppresses the platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
 
@@ -233,31 +237,6 @@ pub(crate) struct DecideArguments {
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
-}
-
-/// The batch size of `decide`, `filter` and `rank` over a stream.
-#[derive(Args, Debug)]
-pub(crate) struct Batching {
-    /// Share the exact UTF-8 contents of FILE as evidence for every batch.
-    #[arg(long, value_name = "FILE", hide_short_help = true)]
-    pub(crate) context: Option<PathBuf>,
-
-    /// Send at most N records of a stream in one request, or `max`. [default: max]
-    ///
-    /// `max` fills each request to the backend's limits. `--batch 1` asks one
-    /// record a request, as before batching. It beats `THINKTHEN_BATCH`, which
-    /// beats a question file's `batch`.
-    #[arg(long, value_name = "N|max", hide_short_help = true)]
-    pub(crate) batch: Option<String>,
-
-    /// Close a batch before its request exceeds N bytes. [default: 96000]
-    #[arg(
-        long,
-        value_name = "N",
-        hide_short_help = true,
-        allow_negative_numbers = true
-    )]
-    pub(crate) max_request_bytes: Option<String>,
 }
 
 /// The two texts that say what a yes and a no mean, which every yes/no verb takes.
@@ -442,6 +421,10 @@ pub(crate) struct TagArguments {
     #[arg(long, hide = true)]
     pub(crate) quiet: bool,
 
+    /// The record-batch size, context, and request-size limit.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
@@ -470,6 +453,10 @@ pub(crate) struct ScoreArguments {
     /// Taken so the command can name the command that prints a raw label.
     #[arg(long, hide = true)]
     pub(crate) raw: bool,
+
+    /// The record-batch size, context, and request-size limit.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
 
     /// The options every judging verb takes.
     #[command(flatten)]
