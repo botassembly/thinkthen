@@ -113,3 +113,6 @@ For a new command, identify the executable user workflow before proposing its sy
 
 
 For a foreign-language batch, inspect the Rust method's type bounds. A method with the right verb name may require compile-time labels and cannot accept a host's runtime label set. Map every accepted input combination, including records with detailed output, to a real route. Trace serialized fields through their constructor even when no observer is installed. A carrier named `Details` does not by itself promise the record metadata or context required by that host's contract. Preserve each host's stopping and recoverable-error policy when sharing the route.
+
+
+For a shared batch coordinator, choose one proof whose evidence groups close at different profile limits; equal close points cannot expose a missing oldest-row frontier. For each new call option, classify every public entry point as consuming or rejecting it before handing the setting to wrappers. Trace callback termination after a caught panic, including the next event on the same eager path. When a public error gains private state, run the relevant consumer lint as well as compilation; unchanged caller source can still expose a newly oversized error.
