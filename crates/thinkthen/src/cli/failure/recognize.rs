@@ -16,6 +16,7 @@ pub(crate) enum Error {
         bytes: usize,
         limit: usize,
     },
+    RelationLimit(String),
 }
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
@@ -38,6 +39,7 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
                 "recognize: the text is {bytes} bytes, over the limit of {limit}; raise it with --max-text-bytes"
             ),
         ),
+        Failure::Recognize(Error::RelationLimit(message)) => (2, format!("recognize: {message}")),
         _ => return None,
     })
 }

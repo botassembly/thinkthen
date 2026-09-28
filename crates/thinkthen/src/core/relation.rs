@@ -168,7 +168,7 @@ fn entity_id(place: usize) -> String {
 
 #[path = "relation/pairs.rs"]
 mod pairs;
-pub(crate) use pairs::{Lead, Pair, PairPlan, pair_edges, plan_pairs};
+pub(crate) use pairs::{Lead, Pair, PairPlan, count_pairs, pair_edges, plan_pairs};
 
 #[cfg(test)]
 #[path = "relation/tests.rs"]
