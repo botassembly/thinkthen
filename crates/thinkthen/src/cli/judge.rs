@@ -16,7 +16,7 @@ use crate::args::{
 use crate::asking::{Asks, fixed, run};
 use crate::cli::asked::{self, FileTier};
 use crate::edge::Environment;
-use crate::failure::Failure;
+use crate::failure::{Failure, ReplayContext};
 use crate::schedule::Output;
 
 /// One question, its rule, and the view its answer prints in.
@@ -156,6 +156,7 @@ pub(crate) fn decide(
         details: arguments.common.details,
     };
     judging(
+        ReplayContext::Decide,
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,
@@ -282,6 +283,11 @@ fn over_kept(
         Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
         _ => Output::streaming(writer, environment.usage()),
     };
+    let context = match keeping {
+        Keeping::Passing => ReplayContext::Filter,
+        Keeping::Ordered => ReplayContext::Rank,
+        Keeping::Answers => ReplayContext::Decide,
+    };
     run(
         Asked {
             common,
@@ -299,10 +305,12 @@ fn over_kept(
         input,
         &mut output,
     )
+    .map_err(|error| error.with_replay_context(context))
 }
 
 /// Run one judging verb, whose rows print as their places come.
 fn judging(
+    context: ReplayContext,
     asked: Asked<'_>,
     environment: &Environment,
     input: impl Read + Send + 'static,
@@ -315,6 +323,7 @@ fn judging(
         input,
         &mut Output::streaming(writer, environment.usage()),
     )
+    .map_err(|error| error.with_replay_context(context))
 }
 
 /// Pick one label from the options, and set the exit code from the answer.
@@ -352,6 +361,7 @@ pub(crate) fn choose(
         details: arguments.common.details,
     };
     judging(
+        ReplayContext::Choose,
         Asked {
             common: &arguments.common,
             asks,
@@ -381,6 +391,7 @@ pub(crate) fn tag(
     }
     let (settled, file) = asked::tag(arguments)?;
     judging(
+        ReplayContext::Tag,
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,
@@ -429,6 +440,7 @@ pub(crate) fn score(
         details: arguments.common.details,
     };
     judging(
+        ReplayContext::Score,
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,

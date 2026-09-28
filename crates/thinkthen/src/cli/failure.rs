@@ -19,6 +19,7 @@ mod convert;
 pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
+pub(crate) use recording::ReplayContext;
 pub(crate) mod relate;
 mod status;
 mod stopped;
@@ -163,7 +164,10 @@ pub(crate) enum Failure {
     TopIsZero,
     QuietOverKept(&'static str),
     RawOverKept(&'static str),
-    ReplayMiss(String),
+    ReplayMiss {
+        name: String,
+        context: Option<ReplayContext>,
+    },
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
@@ -251,7 +255,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
-        Failure::ReplayMiss(_)
+        Failure::ReplayMiss { .. }
         | Failure::Entry(_, _)
         | Failure::RecordingConflict(_)
         | Failure::RecordingStorage

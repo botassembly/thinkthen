@@ -12,7 +12,7 @@ use crate::args::{Common, FindArguments};
 use crate::asking::{self, Folders};
 use crate::edge::{self, Environment};
 use crate::engine::facade::{self, Found};
-use crate::failure::Failure;
+use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 
 /// Read one bounded set, ask once, and print its selected original unit.
@@ -97,7 +97,9 @@ pub(crate) fn run(
         return Ok(ExitCode::SUCCESS);
     }
     let engine = engine.ok_or(Failure::Defect("a live find run has no engine"))?;
-    let found = engine.find(&find, environment.cancel())?;
+    let found = engine.find(&find, environment.cancel()).map_err(|error| {
+        Failure::from(error).with_replay_context(ReplayContext::FindSet(units.len()))
+    })?;
     let (line, resolved) = rendered(common, &find, &backend, &reading, &units, found)?;
     if let Some(line) = line {
         edge::write_line(writer, &line)?;

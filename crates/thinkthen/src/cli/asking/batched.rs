@@ -497,7 +497,7 @@ fn failed(cause: Failure, first: usize, last: usize) -> Failure {
         | Failure::Status(_)
         | Failure::TokenLimit
         | Failure::Reply(_)
-        | Failure::ReplayMiss(_)
+        | Failure::ReplayMiss { .. }
             if last > first =>
         {
             Failure::BatchFailed {
