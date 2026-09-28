@@ -55,6 +55,13 @@ pub(crate) fn engine(
 ) -> Result<Engine, Failure> {
     let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
     let roots = environment.roots()?;
+    if !common.dry_run && folders.writable_by_another() {
+        writeln!(
+            io::stderr().lock(),
+            "thinkthen: warning: another user may change this named cache or recording folder; its writers decide the answers read from it"
+        )
+        .map_err(Failure::Output)?;
+    }
     if folders.record.is_some()
         && folders.replay.is_some()
         && (folders.refresh_cache
