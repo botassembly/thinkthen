@@ -18,18 +18,22 @@ use crate::public::SendBudget;
 fn request() -> (Backend, Plan, PreparedRequest) {
     let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "jev-latest")
         .expect("backend");
-    let plan = Plan::new(
+    let plan = question_plan("jev-latest");
+    let prepared = PreparedRequest::new(&backend, &plan).expect("request");
+    (backend, plan, prepared)
+}
+
+fn question_plan(model: &str) -> Plan {
+    Plan::new(
         Evidence::new("evidence").expect("evidence"),
-        ModelName::new("jev-latest").expect("model"),
+        ModelName::new(model).expect("model"),
         vec![Question::Decide {
             text: QuestionText::new("Is this relevant?").expect("question"),
             yes: None,
             no: None,
         }],
     )
-    .expect("plan");
-    let prepared = PreparedRequest::new(&backend, &plan).expect("request");
-    (backend, plan, prepared)
+    .expect("plan")
 }
 
 type Counts = (Arc<AtomicUsize>, Arc<AtomicUsize>);
@@ -110,16 +114,7 @@ fn a_writer_seen_after_an_early_key_refusal_keeps_hit_or_mismatch() {
         let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "local-1")
             .expect("outer backend");
         let winner = Backend::resolve(Some(winner_url), None, "local-1").expect("winner backend");
-        let plan = Plan::new(
-            Evidence::new("evidence").expect("evidence"),
-            ModelName::new("local-1").expect("model"),
-            vec![Question::Decide {
-                text: QuestionText::new("Is this relevant?").expect("question"),
-                yes: None,
-                no: None,
-            }],
-        )
-        .expect("plan");
+        let plan = question_plan("local-1");
         let prepared = PreparedRequest::new(&backend, &plan).expect("outer request");
         let recorder = Recorder::of(Some(&path), Some(&path)).expect("outer cache");
         let budget = SendBudget::new();
