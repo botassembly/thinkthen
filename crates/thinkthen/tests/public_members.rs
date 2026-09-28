@@ -276,16 +276,13 @@ fn spec_readers_keep_the_parsers_rules_and_split_usage_from_local() {
 
 #[test]
 fn a_bulk_row_carries_the_yes_probability_details_reads() {
-    let listener = Listener::answering(|body| {
-        let yes = if String::from_utf8_lossy(body).contains("low") {
-            "0.3"
-        } else {
-            "0.8"
-        };
-        Canned::ok(&format!(
-            r#"{{"model":"jev-latest","answers":{{"q1":{{"type":"noul","noul":{yes}}}}}}}"#
-        ))
-    })
+    let listener = Listener::serving(vec![
+        Canned::ok(
+            r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.3},"q2":{"type":"noul","noul":0.8}}}"#,
+        ),
+        Canned::ok(r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.3}}}"#),
+        Canned::ok(r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.8}}}"#),
+    ])
     .expect("listener");
     let engine = engine(listener.base());
     let question = Question::decide("Refund?").expect("question").cut();
@@ -302,6 +299,20 @@ fn a_bulk_row_carries_the_yes_probability_details_reads() {
         };
         assert_eq!(*yes, row.probability());
     }
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 3, "one packed call and two details calls");
+    let bodies: Vec<_> = requests
+        .iter()
+        .map(|request| std::str::from_utf8(&request.body).expect("request body"))
+        .collect();
+    assert_eq!(
+        bodies,
+        [
+            r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"a low one\". Refund?"},"q2":{"type":"noul","instructions":"The text is \"a high one\". Refund?"}}}"#,
+            r#"{"state":"a low one","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Refund?"}}}"#,
+            r#"{"state":"a high one","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Refund?"}}}"#,
+        ]
+    );
 }
 
 #[test]
