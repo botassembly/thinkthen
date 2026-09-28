@@ -244,8 +244,37 @@ impl GroupPlanner {
         Ok(())
     }
 
-    pub(crate) fn pop(&mut self) -> Option<GroupWork> {
-        self.ready.pop_first().map(|(_, work)| work)
+    /// Close older open group fragments before dispatching work starting at a later row.
+    pub(crate) fn pop_at_frontier(
+        &mut self,
+        oldest: usize,
+    ) -> Result<Option<GroupWork>, GroupPlanError> {
+        if self
+            .ready
+            .first_key_value()
+            .is_some_and(|((first, _, _), _)| *first > oldest)
+        {
+            self.close_oldest(oldest)?;
+        }
+        Ok(self.ready.pop_first().map(|(_, work)| work))
+    }
+
+    fn close_oldest(&mut self, oldest: usize) -> Result<(), GroupPlanError> {
+        for group in 0..self.groups.len() {
+            let held = self
+                .groups
+                .get_mut(group)
+                .ok_or(GroupPlanError::Defect("an annotate group disappeared"))?;
+            let closed = if held.pending.front().is_some_and(|(row, _)| *row <= oldest) {
+                held.planner.finish().map_err(GroupPlanError::Batch)?
+            } else {
+                None
+            };
+            if let Some(batch) = closed {
+                self.queue(group, batch).map_err(GroupPlanError::Defect)?;
+            }
+        }
+        Ok(())
     }
 
     pub(crate) fn ready(&self) -> bool {

@@ -264,6 +264,7 @@ impl Engine {
     where
         I: IntoIterator<Item = Entity>,
     {
+        options.without_context("relate")?;
         let pairs: Vec<(String, String)> = entities
             .into_iter()
             .take(MOST_ENTITIES + 1)

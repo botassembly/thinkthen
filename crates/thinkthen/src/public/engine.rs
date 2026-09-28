@@ -351,6 +351,7 @@ impl Engine {
         text: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<facade::Judgment>, Error> {
+        options.without_context("a single-document call")?;
         let evidence = evidence(text)?;
         let engine = self.asking(question)?;
         let stop = Stop::begin(options)?;

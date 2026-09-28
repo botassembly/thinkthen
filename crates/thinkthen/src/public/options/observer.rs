@@ -22,6 +22,9 @@ impl Stop<'_> {
         let Some(observer) = self.observer else {
             return;
         };
+        if self.observer_panicked() {
+            return;
+        }
         if let Err(payload) = workers::with_host_diagnostics(|| {
             catch_unwind(AssertUnwindSafe(|| observer(observation)))
         }) {

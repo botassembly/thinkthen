@@ -244,3 +244,7 @@ The throttle is the most requests in flight at once, per loaded copy of the libr
 ## Amendment, 2026-09-27, by ticket 0148
 
 Section 5 now gives every library engine a timeout, retry count, backend profile, recording folder, and strict replay folder. `cache_bytes` leaves the library and SQL settings because it did not prune; the configuration file's `cache_bytes` remains the command's prune target. SQL gains the five settings in ticket 0149. The key stays in `THINKTHEN_API_KEY` on every surface except Rust. Ian can overturn the scope of these settings.
+
+## Amendment, 2026-09-28, by ticket 0212
+
+The Rust library's current public return and many-record contract is [ADR 0089](0089-rust-calls-carry-facts.md) and [ticket 0212](../../tickets/0212-rust-library-batching.md). Eager answers carry `Call<T>` and per-call `Facts`; lazy batches expose final facts at their terminal boundary. Eligible many-record calls use the shared batch planner and borrowed question and row observations. The earlier public-function inventory in section 8 is historical. This pointer does not extend native or SQL batching, and the default-Max iterator-pause proposal remains pending Ian's choice.

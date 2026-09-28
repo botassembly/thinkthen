@@ -346,6 +346,7 @@ impl Engine {
         I: IntoIterator,
         I::Item: Evidence,
     {
+        options.without_context("find")?;
         only(question, &[Kind::Find, Kind::FindNone], "find")?;
         let none = question.kind == Kind::FindNone;
         let units: Vec<I::Item> = self.within_limit(units)?.collect();
@@ -402,9 +403,7 @@ impl Engine {
         I::Item: Evidence,
     {
         Batch::of((|| {
-            if options.context_text().is_some() {
-                return Err(Error::usage("annotate does not take a shared context"));
-            }
+            options.without_context("annotate")?;
             let setting = options
                 .batch_setting()
                 .map(Into::into)

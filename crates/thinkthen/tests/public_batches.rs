@@ -16,6 +16,9 @@ mod splits;
 #[path = "public_batches/recognition.rs"]
 mod recognition;
 
+#[path = "public_batches/identity.rs"]
+mod identity;
+
 #[path = "../src/test_deadline/wait.rs"]
 #[allow(dead_code, reason = "only the child deadline bounds the churn here")]
 mod wait;

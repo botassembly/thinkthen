@@ -303,24 +303,7 @@ fn run(case: &str, argument: &str) -> Vec<String> {
             shown(seed().build()),
             shown(Engine::from_env()),
         ],
-        "secrecy" => {
-            let seeded = seed();
-            let mut lines = vec![format!("{seeded:?}"), format!("{seeded:#?}")];
-            let builder = seeded.api_key(argument).unwrap();
-            lines.extend([format!("{builder:?}"), format!("{builder:#?}")]);
-            let engine = builder.no_cache().build().unwrap();
-            lines.extend([format!("{engine:?}"), format!("{engine:#?}")]);
-            let question = Question::decide("asks for a refund").unwrap().cut();
-            let error = engine
-                .decide(&question, EVIDENCE)
-                .expect_err("the backend refuses");
-            lines.extend([
-                format!("{error}"),
-                format!("{error:?}"),
-                format!("{error:#?}"),
-            ]);
-            lines
-        }
+        "secrecy" => secrecy(argument),
         "effects" => {
             let builder = seed();
             let seeded = entries(Path::new(argument));
@@ -332,6 +315,25 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         }
         _ => panic!("no child case {case}"),
     }
+}
+
+fn secrecy(argument: &str) -> Vec<String> {
+    let seeded = EngineBuilder::from_env().expect("a seed");
+    let mut lines = vec![format!("{seeded:?}"), format!("{seeded:#?}")];
+    let builder = seeded.api_key(argument).unwrap();
+    lines.extend([format!("{builder:?}"), format!("{builder:#?}")]);
+    let engine = builder.no_cache().build().unwrap();
+    lines.extend([format!("{engine:?}"), format!("{engine:#?}")]);
+    let question = Question::decide("asks for a refund").unwrap().cut();
+    let error = engine
+        .decide(&question, EVIDENCE)
+        .expect_err("the backend refuses");
+    lines.extend([
+        format!("{error}"),
+        format!("{error:?}"),
+        format!("{error:#?}"),
+    ]);
+    lines
 }
 
 /// Each setting after the seed, observed through a call.

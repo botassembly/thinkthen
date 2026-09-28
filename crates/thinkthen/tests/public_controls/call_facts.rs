@@ -137,3 +137,91 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
         Answer::Yes
     );
 }
+
+#[test]
+fn a_failed_eager_rank_carries_its_started_call_facts() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::status(503, "busy")).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .max_retries(0)
+        .no_cache()
+        .build()
+        .expect("engine");
+    let asked = Question::rank("Which asks for a refund?").expect("rank");
+    let error = engine
+        .rank(&asked, ["alpha", "beta"])
+        .expect_err("backend refusal");
+    assert_eq!(error.kind(), ErrorKind::Backend);
+    let facts = error.facts().expect("started eager facts");
+    assert_eq!(
+        (facts.records(), facts.requests_sent(), facts.input_tokens()),
+        (0, 1, None)
+    );
+    assert_eq!(listener.count(), 1);
+}
+
+#[test]
+fn ineligible_calls_refuse_shared_context_before_a_send() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let one = question();
+    let find = Question::find("Which asks for a refund?").expect("find");
+    let recognize = thinkthen::Recognize::builder()
+        .kind(thinkthen::Kind::new("person", None).expect("kind"))
+        .and_then(thinkthen::RecognizeBuilder::build)
+        .expect("recognize");
+    let relate = Relate::builder()
+        .relation(
+            thinkthen::RelationRule::one_way("works_with", "person", "organization").expect("rule"),
+        )
+        .and_then(thinkthen::RelateBuilder::build)
+        .expect("relate");
+    let options = CallOptions::new().context("shared evidence");
+    let denied = [
+        (
+            "decide",
+            engine.decide_with(&one, "Ada", options).map(|_| ()),
+        ),
+        (
+            "details",
+            engine.details_with(&one, "Ada", options).map(|_| ()),
+        ),
+        (
+            "find",
+            engine
+                .find_with(&find, ["Ada", "Acme"], options)
+                .map(|_| ()),
+        ),
+        (
+            "recognize",
+            engine
+                .recognize_with(&recognize, "Ada", options)
+                .map(|_| ()),
+        ),
+        (
+            "relate",
+            engine
+                .relate_with(
+                    &relate,
+                    [
+                        Entity::new("Ada", "person").expect("entity"),
+                        Entity::new("Acme", "organization").expect("entity"),
+                    ],
+                    options,
+                )
+                .map(|_| ()),
+        ),
+    ];
+    for (name, result) in denied {
+        let error = result.expect_err(name);
+        assert_eq!(error.kind(), ErrorKind::Usage, "{name}");
+        assert!(error.to_string().contains("context"), "{name}");
+        assert!(error.facts().is_none(), "{name} never started");
+    }
+    assert_eq!(listener.count(), 0);
+}

@@ -69,7 +69,7 @@ pub struct ErrorDetail {
     message: String,
     retryable: bool,
     send_budget_denial: Option<SendBudgetDenial>,
-    facts: Option<Facts>,
+    facts: Option<Box<Facts>>,
 }
 
 impl ErrorDetail {
@@ -123,8 +123,8 @@ impl Error {
 
     /// Final facts for a started call, including one that sent nothing.
     #[must_use]
-    pub const fn facts(&self) -> Option<&Facts> {
-        self.detail().facts.as_ref()
+    pub fn facts(&self) -> Option<&Facts> {
+        self.detail().facts.as_deref()
     }
 
     pub(crate) fn with_facts(mut self, facts: Facts) -> Self {
@@ -134,7 +134,7 @@ impl Error {
             | Self::Local(detail)
             | Self::Cancelled(detail)
             | Self::Deadline(detail)
-            | Self::Defect(detail) => detail.facts = Some(facts),
+            | Self::Defect(detail) => detail.facts = Some(Box::new(facts)),
         }
         self
     }

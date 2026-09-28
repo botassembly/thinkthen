@@ -2,6 +2,27 @@
 
 use super::*;
 
+fn offered_label<'a>(
+    labels: &'a serde_json::Map<String, serde_json::Value>,
+    words: &str,
+) -> &'a str {
+    if labels.contains_key("SINGLE") {
+        return if words.contains("[[Ada]]") || words.contains("[[Acme]]") {
+            "SINGLE"
+        } else {
+            "OUT"
+        };
+    }
+    if labels.contains_key("none of these") {
+        return if words.contains("[[Acme]]") {
+            "organization"
+        } else {
+            "person"
+        };
+    }
+    labels.keys().next().expect("edge option")
+}
+
 #[test]
 fn recognition_observes_edge_and_stated_relation_in_order() {
     let _serial = serial();
@@ -15,21 +36,7 @@ fn recognition_observes_edge_and_stated_relation_in_order() {
             }
             let labels = question["criteria"].as_object().expect("labels");
             let words = question["instructions"].as_str().expect("instructions");
-            let picked = if labels.contains_key("SINGLE") {
-                if words.contains("[[Ada]]") || words.contains("[[Acme]]") {
-                    "SINGLE"
-                } else {
-                    "OUT"
-                }
-            } else if labels.contains_key("none of these") {
-                if words.contains("[[Acme]]") {
-                    "organization"
-                } else {
-                    "person"
-                }
-            } else {
-                labels.keys().next().expect("edge option")
-            };
+            let picked = offered_label(labels, words);
             assert!(labels.contains_key(picked), "fixture choice {picked}");
             let probabilities = labels
                 .keys()

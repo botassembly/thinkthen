@@ -188,6 +188,14 @@ impl<'a> CallOptions<'a> {
         self.context
     }
 
+    pub(crate) fn without_context(&self, call: &str) -> Result<(), Error> {
+        self.context.map_or(Ok(()), |_| {
+            Err(Error::usage(format!(
+                "{call} does not take a shared context"
+            )))
+        })
+    }
+
     /// Stop the call at this instant. A past instant sends nothing.
     #[must_use]
     pub fn deadline_at(mut self, value: Instant) -> Self {

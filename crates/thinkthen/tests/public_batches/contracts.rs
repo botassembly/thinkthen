@@ -285,8 +285,11 @@ fn eager_observer_panic_returns_its_payload_after_the_call() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let engine = engine(listener.base());
-    let observe =
-        |_: RecordObservation<'_>| std::panic::resume_unwind(Box::new("observer payload"));
+    let calls = AtomicUsize::new(0);
+    let observe = |_: RecordObservation<'_>| {
+        calls.fetch_add(1, Ordering::SeqCst);
+        std::panic::resume_unwind(Box::new("observer payload"));
+    };
     let caught = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         engine.decide_with(&question(), "alpha", CallOptions::new().observe(&observe))
     }));
@@ -294,6 +297,11 @@ fn eager_observer_panic_returns_its_payload_after_the_call() {
         panic!("observer panic did not reach its caller");
     };
     assert_eq!(payload.downcast_ref::<&str>(), Some(&"observer payload"));
+    assert_eq!(
+        calls.load(Ordering::SeqCst),
+        1,
+        "no Row callback after Question panic"
+    );
     assert_eq!(listener.count(), 1);
     assert_eq!(
         engine

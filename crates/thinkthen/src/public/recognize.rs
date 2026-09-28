@@ -420,6 +420,7 @@ impl Engine {
         evidence: &str,
         options: CallOptions<'_>,
     ) -> Result<crate::public::Call<Recognized>, Error> {
+        options.without_context("recognize")?;
         let engine = self.for_model(ask.0.model.as_ref())?;
         let stop = Stop::begin(options)?;
         stop.run_call(1, |cancel| {

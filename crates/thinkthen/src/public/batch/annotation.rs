@@ -195,14 +195,14 @@ where
             {
                 self.advance();
             }
-            let input = if let Some(work) = self.planner.pop() {
-                Input::Item(work)
-            } else if let Some(error) = self.refusal.take() {
-                Input::Failed(error)
-            } else if self.exhausted {
-                Input::End
-            } else {
-                return;
+            let input = match self.planner.pop_at_frontier(self.completed) {
+                Ok(Some(work)) => Input::Item(work),
+                Err(error) => Input::Failed(plan_error(error)),
+                Ok(None) => match self.refusal.take() {
+                    Some(error) => Input::Failed(error),
+                    None if self.exhausted => Input::End,
+                    None => return,
+                },
             };
             if let Some(port) = &self.port {
                 let _sent = port.send(input);
