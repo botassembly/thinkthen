@@ -18,17 +18,17 @@ SETTINGS = """
 """
 
 
-def test_throttle_eight_holds_exactly_eight_in_flight(backend, tmp_path):
-    """Change 11: the ``throttle`` keyword reaches the builder. Without it
-    the process runs at the fallback of 4."""
+def test_held_request_does_not_pull_ahead(backend, tmp_path):
+    """A held reply keeps the planner from pulling the next request;
+    release still lets all 20 records finish."""
     child = start("""
         import thinkthen as tt
-        tt.Engine(throttle=8, cache=False).decide_many(
-            tt.question(decide="Is it late?"), [f"note {n}" for n in range(20)])
+        tt.Engine(throttle=8, batch=1, cache=False).decide_many(
+            tt.question(decide="Is it late?"), [f"note {n}" for n in range(20)]).value
     """, child_env(backend, tmp_path, "arm/held"))
-    assert backend.wait(8) == 8
+    assert backend.wait(1) == 1
     time.sleep(0.3)
-    assert backend.count() == 8
+    assert backend.count() == 1
     backend.release()
     assert child.wait(timeout=10) == 0, child.stderr.read()
     assert backend.count() == 20
@@ -79,7 +79,7 @@ def test_the_cache_keyword_names_the_only_folder_written(backend, tmp_path):
     """Change 11: ``cache=`` writes only in its named folder."""
     printed = run(SETTINGS + """
     named = tt.Engine(cache=os.environ["NAMED"])
-    named.decide(late, "one"), named.decide(late, "one")
+    named.decide(late, "one").value, named.decide(late, "one").value
     print(named.usage()["cache_answers"])
     """, child_env(backend, tmp_path, NAMED=str(tmp_path / "named")))
     assert printed.split() == ["1"]
@@ -92,8 +92,8 @@ def test_replay_accepts_a_pathlike_folder(backend, tmp_path):
     printed = run(SETTINGS + """
     from pathlib import Path
     folder = Path(os.environ["NAMED"])
-    assert tt.Engine(cache=folder).decide(late, "saved") is True
-    print(tt.Engine(replay=folder).decide(late, "saved"))
+    assert tt.Engine(cache=folder).decide(late, "saved").value is True
+    print(tt.Engine(replay=folder).decide(late, "saved").value)
     """, child_env(backend, tmp_path, NAMED=str(tmp_path / "named")))
     assert printed.strip() == "True"
     assert backend.count() == 1
@@ -105,7 +105,7 @@ def test_the_base_url_keyword_wins_over_the_environment(backend, tmp_path):
     other = Backend()
     try:
         run(SETTINGS + f"""
-    tt.Engine(base_url="{other.base()}", cache=False).decide(late, "one")
+    tt.Engine(base_url="{other.base()}", cache=False).decide(late, "one").value
         """, child_env(backend, tmp_path))
         assert (other.count(), backend.count()) == (1, 0)
     finally:
@@ -119,7 +119,7 @@ def test_the_environment_seeds_every_unset_setting(backend, tmp_path):
     scratch = tmp_path / "home"
     run(SETTINGS + f"""
     engine = tt.Engine(throttle=8, base_url="{backend.base()}")
-    engine.decide(late, "one"), engine.decide(late, "one")
+    engine.decide(late, "one").value, engine.decide(late, "one").value
     """, child_env(backend, tmp_path, HOME=str(scratch), XDG_CACHE_HOME=str(scratch)))
     assert backend.count() == 1
     assert any((tmp_path / "cache").rglob("*"))

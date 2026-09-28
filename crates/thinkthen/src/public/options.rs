@@ -10,9 +10,8 @@ use std::any::Any;
 use std::fmt;
 use std::num::NonZeroUsize;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
-use std::sync::Arc;
-use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::engine::{CallFacts, Cancel, Deadline, workers};
@@ -528,6 +527,7 @@ mod tests {
     #[test]
     fn engine_diagnostics_hide_worker_payloads_and_preserve_host_hook() {
         let output = Command::new(std::env::current_exe().expect("test binary"))
+            .env_clear()
             .args([
                 "--exact",
                 "public::options::tests::diagnostic_boundary_child",

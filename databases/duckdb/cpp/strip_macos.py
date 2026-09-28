@@ -8,6 +8,9 @@ import sys
 import tempfile
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance" / "children"))
+from children import child_env  # noqa: E402
+
 
 def main(source: Path, destination: Path) -> None:
     # DuckDB appends this unsigned 534-byte metadata block after the Mach-O.
@@ -24,7 +27,7 @@ def main(source: Path, destination: Path) -> None:
     with tempfile.TemporaryDirectory(dir=destination.parent) as folder:
         raw = Path(folder) / "thinkthen.dylib"
         raw.write_bytes(data[:-len(footer)])
-        subprocess.run(["strip", "-S", "-x", str(raw)], check=True)
+        subprocess.run(["strip", "-S", "-x", str(raw)], check=True, env=child_env())
         stripped = raw.read_bytes()
         if str(Path.home()).encode() in stripped:
             raise SystemExit("duckdb: builder-home path remains in stripped Mach-O")

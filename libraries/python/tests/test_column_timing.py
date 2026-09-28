@@ -10,7 +10,7 @@ from conftest import Backend, child_env, run, start
 
 SETUP = """
     import sys, threading, time, polars as pl, thinkthen as tt
-    engine = tt.Engine(throttle=8, cache=False)
+    engine = tt.Engine(throttle=8, batch=1, cache=False)
     late = tt.question(decide="Is it late?")
     urgent = tt.question(score="How urgent?", levels=["Routine.", "Soon.", "Now."])
     texts = [f"note {n}" for n in range(200)]
@@ -21,13 +21,13 @@ def test_a_short_column_shares_one_deadline_and_token(backend, tmp_path):
     """A bounded column stops under each public call-wide control."""
     printed = run(SETUP + """
     try:
-        engine.score(urgent, pl.Series(texts[:12]), deadline=0.05)
+        engine.score(urgent, pl.Series(texts[:12]), deadline=0.05).value
     except tt.DeadlineError:
         print("deadline")
     token = tt.CancelToken()
     threading.Timer(0.05, token.cancel).start()
     try:
-        engine.score(urgent, pl.Series(texts[12:24]), token=token)
+        engine.score(urgent, pl.Series(texts[12:24]), token=token).value
     except tt.Cancelled:
         print("cancelled")
     """, child_env(backend, tmp_path, "arm/delay/100"))
@@ -44,7 +44,7 @@ def test_one_deadline_and_one_token_cover_a_column(backend, tmp_path):
     child = start(SETUP + """
     began = time.monotonic()
     try:
-        engine.score(urgent, pl.Series(texts), deadline=1.0)
+        engine.score(urgent, pl.Series(texts), deadline=1.0).value
     except tt.DeadlineError:
         print("deadline", time.monotonic() - began, flush=True)
     else:
@@ -53,7 +53,7 @@ def test_one_deadline_and_one_token_cover_a_column(backend, tmp_path):
     token = tt.CancelToken()
     threading.Timer(0.5, lambda: (print("stop", flush=True), token.cancel())).start()
     try:
-        engine.score(urgent, pl.Series([f"other {n}" for n in range(200)]), token=token)
+        engine.score(urgent, pl.Series([f"other {n}" for n in range(200)]), token=token).value
     except tt.Cancelled:
         print("cancelled", flush=True)
     """, child_env(backend, tmp_path, "arm/delay/100"))
@@ -82,7 +82,7 @@ def test_a_column_runs_at_the_lists_throttle(backend, tmp_path):
     printed = run(SETUP + """
     def timed(records):
         began = time.monotonic()
-        answers = engine.decide_many(late, records)
+        answers = engine.decide_many(late, records).value
         return time.monotonic() - began, list(answers)
     listed, series = timed(texts), timed(pl.Series(texts))
     print(listed[0], series[0], listed[1] == series[1])
@@ -100,7 +100,7 @@ def test_a_column_holds_the_throttle_in_flight(tmp_path):
     for records in ("texts", "pl.Series(texts)"):
         backend = Backend()
         try:
-            child = start(SETUP + f"    engine.decide_many(late, {records}[:20])\n",
+            child = start(SETUP + f"    engine.decide_many(late, {records}[:20]).value\n",
                           child_env(backend, tmp_path, "arm/held"))
             assert backend.wait(8) == 8
             time.sleep(0.3)
@@ -119,7 +119,7 @@ def test_recognize_on_a_frame_spends_one_deadline(backend, tmp_path):
     printed = run(SETUP + """
     frame = pl.DataFrame({"body": ["one note", "two notes", "three notes"]})
     try:
-        engine.recognize(frame, kinds=["note"], on="body", deadline=1)
+        engine.recognize(frame, kinds=["note"], on="body", deadline=1).value
         print("answered")
     except tt.DeadlineError as error:
         print(type(error).__name__)

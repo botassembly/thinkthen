@@ -41,14 +41,14 @@ def test_a_column_answers_as_its_list_does(backend, tmp_path):
     printed = run(SETUP + """
     series = pl.Series("body", texts)
     for verb, asked in (("decide", late), ("choose", team), ("score", urgent), ("tag", kinds)):
-        listed = [getattr(engine, verb)(asked, text) for text in texts]
-        column = getattr(engine, verb)(asked, series)
+        listed = [getattr(engine, verb)(asked, text).value for text in texts]
+        column = getattr(engine, verb)(asked, series).value
         print(verb, type(column).__name__, column.to_list() == listed,
-              getattr(engine, verb)(asked, pa.chunked_array([texts[:1], texts[1:]])) == listed)
-    many = engine.decide_many(late, series)
-    print("decide_many", many.to_list() == engine.decide_many(late, texts))
+              getattr(engine, verb)(asked, pa.chunked_array([texts[:1], texts[1:]])).value == listed)
+    many = engine.decide_many(late, series, batch=1).value
+    print("decide_many", many.to_list() == engine.decide_many(late, texts, batch=1).value)
     before = engine.usage()["requests_sent"]
-    engine.decide_many(late, pa.chunked_array([texts[:1], texts[1:]]))
+    engine.decide_many(late, pa.chunked_array([texts[:1], texts[1:]]), batch=1).value
     print("sent", engine.usage()["requests_sent"] - before)
     """, child_env(backend, tmp_path))
     # The backend answers every text alike. The send count shows every
@@ -65,25 +65,32 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     column nested past 64 levels are refused too. Nothing reaches the backend."""
     printed = run(SETUP + """
     frame = pl.DataFrame({"body": texts})
-    said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body"))
-    said(lambda: engine.annotate(form, texts, on="body"))
-    said(lambda: engine.filter(late, pl.Series(texts)))
-    said(lambda: engine.relate(pl.Series(texts), relations={"r": ("a", "b")}))
-    said(lambda: engine.details(late, pl.Series(texts)))
-    said(lambda: engine.decide(late, pl.Series(["a", None])))
-    said(lambda: engine.decide(late, pl.Series([1, 2])))
-    said(lambda: engine.decide(late, frame))
-    said(lambda: engine.annotate(form, frame, on="missing"))
+    said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body").value)
+    said(lambda: engine.annotate(form, texts, on="body").value)
+    said(lambda: engine.filter(late, pl.Series(texts)).value)
+    said(lambda: engine.relate(pl.Series(texts), relations={"r": ("a", "b")}).value)
+    said(lambda: engine.details(late, pl.Series(texts)).value)
+    said(lambda: engine.decide(late, pl.Series(["a", None])).value)
+    try:
+        engine.decide(late, pl.Series([1, 2])).value
+    except tt.UsageError as error:
+        assert (error.facts.records, error.facts.requests_sent) == (0, 0)
+        assert error.details == ()
+        print(type(error).__name__, error)
+    else:
+        raise AssertionError("a number column was accepted")
+    said(lambda: engine.decide(late, frame).value)
+    said(lambda: engine.annotate(form, frame, on="missing").value)
     clash = pl.DataFrame({"body": texts, "late": texts})
-    said(lambda: engine.annotate(form, clash, on="body"))
-    said(lambda: engine.annotate(form, frame.with_columns(pl.lit(1).alias("failed")), on="body"))
-    said(lambda: engine.annotate({"version": 1, "questions": {"failed": {"decide": "Late?"}}}, frame, on="body"))
-    said(lambda: engine.annotate(form, clash, on="missing"))
+    said(lambda: engine.annotate(form, clash, on="body").value)
+    said(lambda: engine.annotate(form, frame.with_columns(pl.lit(1).alias("failed")), on="body").value)
+    said(lambda: engine.annotate({"version": 1, "questions": {"failed": {"decide": "Late?"}}}, frame, on="body").value)
+    said(lambda: engine.annotate(form, clash, on="missing").value)
     deep = pl.Series("deep", [1])
     for _ in range(70):
         deep = deep.implode()
-    said(lambda: engine.annotate(form, pl.DataFrame({"body": texts[:1], "deep": deep}), on="body"))
-    said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body"))
+    said(lambda: engine.annotate(form, pl.DataFrame({"body": texts[:1], "deep": deep}), on="body").value)
+    said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body").value)
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         FRAMES,
@@ -123,11 +130,11 @@ def test_annotate_on_a_frame_keeps_every_row_and_column(backend, tmp_path):
     chunked = pl.concat([frame(rows[:4]), frame(rows[4:9]), frame(rows[9:])], rechunk=False)
     whole = frame(["the same", "the same"] + rows[:5])
     print(chunked.n_chunks())
-    cached = tt.Engine(cache=os.environ["THINKTHEN_CACHE"])
-    wanted = cached.annotate(form, rows)
+    cached = tt.Engine(batch=1, cache=os.environ["THINKTHEN_CACHE"])
+    wanted = cached.annotate(form, rows).value
     for given, expected in ((chunked, wanted), (whole.slice(2, 5), wanted[:5])):
         before = cached.usage()["requests_sent"]
-        got = cached.annotate(form, given, on="body")
+        got = cached.annotate(form, given, on="body").value
         print(got.columns, got.schema == {**given.schema, "late": pl.Boolean, "team": pl.String,
                                           "failed": got.schema["failed"]},
               got.schema["failed"].base_type() == pl.Struct, got["failed"].is_null().all(),
@@ -172,11 +179,11 @@ def test_a_frame_keeps_types_and_nested_failures():
     form = {"version": 1, "questions": {"late": {"decide": "Late?"},
             "urgent": {"score": "How urgent?", "levels": ["Routine.", "Soon.", "Now."]},
             "kinds": {"tag": "Which kinds?", "labels": ["bill", "ship"]}}}
-    got = engine.annotate(form, pl.DataFrame({"body": ["a", "b"]}), on="body")
+    got = engine.annotate(form, pl.DataFrame({"body": ["a", "b"]}), on="body").value
     print(got.schema["urgent"] == pl.Float64, got.schema["kinds"] == pl.List(pl.String),
           got.schema["failed"].base_type() == pl.Struct, got["urgent"].to_list(),
           got["kinds"].to_list(), got["failed"].to_list(), len(seen), sep="\\n")
-    empty = engine.annotate(form, pl.DataFrame({"body": []}, schema={"body": pl.String}), on="body")
+    empty = engine.annotate(form, pl.DataFrame({"body": []}, schema={"body": pl.String}), on="body").value
     print(empty.schema == got.schema, empty.height, len(seen))
     """, clean_env(THINKTHEN_API_KEY=FAKE))
     assert printed.splitlines() == [
@@ -191,10 +198,10 @@ def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):
     equal to ``recognize`` of each text."""
     printed = run(SETUP + """
     frame = pl.DataFrame({"body": texts})
-    got = engine.recognize(frame, kinds=["bill", "ship"], on="body")
+    got = engine.recognize(frame, kinds=["bill", "ship"], on="body").value
     alone = [(row, one.text, one.start, one.end, one.length, one.kind, one.strength)
              for row, text in enumerate(texts, 1)
-             for one in engine.recognize(text, kinds=["bill", "ship"]).entities]
+             for one in engine.recognize(text, kinds=["bill", "ship"]).value.entities]
     print(got.columns, got.rows() == alone, len(alone) > 0)
     """, child_env(backend, tmp_path))
     assert printed.split("]")[1].split() == ["True", "True"]
@@ -213,13 +220,13 @@ def test_importing_the_package_leaves_polars_and_pandas_out(backend, tmp_path):
     sys.modules["pandas"] = None
     import polars as pl, thinkthen as tt
     late = tt.question(decide="Is it late?")
-    print(tt.decide_many(late, ["a", "b"]), tt.decide_many(late, pl.Series(["a"])).to_list())
+    print(tt.decide_many(late, ["a", "b"]).value, tt.decide_many(late, pl.Series(["a"])).value.to_list())
     """, child_env(backend, tmp_path))
     assert printed.strip() == "[True, True] [True]"
 
 
 def test_the_slide_sample_runs_as_drawn(backend, tmp_path):
-    """The slide's ``tt.annotate("form.json", df, on="body")`` on a Polars
+    """The slide's ``tt.annotate("form.json", df, on="body").value`` on a Polars
     frame adds one column per question to the frame the slide drew."""
     (tmp_path / "form.json").write_text(
         '{"version":1,"questions":{"wants_refund":{"decide":"Does the customer ask for a '
@@ -230,7 +237,7 @@ def test_the_slide_sample_runs_as_drawn(backend, tmp_path):
     import os, polars, thinkthen as tt
     os.chdir({str(tmp_path)!r})
     df = polars.DataFrame({{"body": ["I was charged twice. Please refund the duplicate."]}})
-    df = tt.annotate("form.json", df, on="body")
+    df = tt.annotate("form.json", df, on="body").value
     print(df.columns, df.dtypes)
     """, child_env(backend, tmp_path))
     assert printed.strip() == ("['body', 'wants_refund', 'team', 'urgency'] "
