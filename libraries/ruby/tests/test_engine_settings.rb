@@ -30,7 +30,7 @@ class TestEngineSettings < Minitest::Test
 
   def test_the_throttle_holds_exactly_that_many_requests_in_flight
     TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
-      say T::Engine.new(throttle: 8).decide_many("Is it urgent?", (1..20).map { |n| "record \#{n}" }).size
+      say T::Engine.new(throttle: 8, batch: 2).decide_many("Is it urgent?", (1..20).map { |n| "record \#{n}" }).value.size
     RUBY
       assert_equal 8, backend.wait(8)
       sleep 0.3
