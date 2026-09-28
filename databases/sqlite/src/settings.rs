@@ -1,13 +1,12 @@
-//! The process engine and the four settings SQL gives it before it is
-//! built: `thinkthen_throttle`, `thinkthen_max_requests`, `thinkthen_cache`,
-//! and the process request total `thinkthen_max_requests_total` (decision 17).
+//! The process engine and SQL settings fixed before its first build.
 
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
+use std::time::Duration;
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
-use thinkthen::{Engine, EngineBuilder};
+use thinkthen::{Engine, EngineBuilder, SendBudget};
 
 use crate::question::shown;
 use crate::{Failure, guard};
@@ -19,6 +18,12 @@ struct Stored {
     max_requests: Option<Option<usize>>,
     cache: Option<Option<PathBuf>>,
     total: Option<u64>,
+    model: Option<String>,
+    timeout: Option<Duration>,
+    max_retries: Option<u32>,
+    profile: Option<String>,
+    record: Option<PathBuf>,
+    replay: Option<PathBuf>,
 }
 
 impl Stored {
@@ -34,6 +39,24 @@ impl Stored {
             Some(None) => builder = builder.no_cache(),
             None => {}
         }
+        if let Some(value) = &self.model {
+            builder = builder.model(value)?;
+        }
+        if let Some(value) = self.timeout {
+            builder = builder.timeout(value)?;
+        }
+        if let Some(value) = self.max_retries {
+            builder = builder.max_retries(value);
+        }
+        if let Some(value) = &self.profile {
+            builder = builder.profile_json(value)?;
+        }
+        if let Some(value) = &self.record {
+            builder = builder.record(value)?;
+        }
+        if let Some(value) = &self.replay {
+            builder = builder.replay(value)?;
+        }
         Ok(builder)
     }
 }
@@ -43,9 +66,21 @@ static STORED: Mutex<Stored> = Mutex::new(Stored {
     max_requests: None,
     cache: None,
     total: None,
+    model: None,
+    timeout: None,
+    max_retries: None,
+    profile: None,
+    record: None,
+    replay: None,
 });
 
 static ENGINE: OnceLock<Engine> = OnceLock::new();
+static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
+
+/// Keep one count across every engine and every call in this process.
+pub(crate) fn send_budget() -> (&'static SendBudget, Option<u64>) {
+    (SEND_BUDGET.get_or_init(SendBudget::new), stored().total)
+}
 
 fn stored() -> MutexGuard<'static, Stored> {
     STORED.lock().unwrap_or_else(PoisonError::into_inner)
@@ -84,7 +119,7 @@ pub(crate) fn remaining() -> Result<Option<usize>, Failure> {
 }
 
 /// The refusal once the process request total is spent.
-fn spent(total: u64) -> Failure {
+pub(crate) fn spent(total: u64) -> Failure {
     Failure::usage(format!(
         "this process has sent its total of {total} requests (thinkthen_max_requests_total)"
     ))
@@ -115,6 +150,82 @@ fn whole(context: &Context<'_>, name: &str) -> Result<Option<i64>, Failure> {
             shown(other)
         ))),
     }
+}
+
+fn text(context: &Context<'_>, name: &str) -> Result<Option<String>, Failure> {
+    match context.get_raw(0) {
+        ValueRef::Null => Ok(None),
+        ValueRef::Text(bytes) => String::from_utf8(bytes.to_vec())
+            .map(Some)
+            .map_err(|_| Failure::usage(format!("{name} takes UTF-8 text"))),
+        other => Err(Failure::usage(format!(
+            "{name} takes text or NULL, not {}",
+            shown(other)
+        ))),
+    }
+}
+
+pub(crate) fn model(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
+    Ok(guard("thinkthen_model", || {
+        let value = text(context, "thinkthen_model")?;
+        set(|held| held.model = value.clone())?;
+        Ok(value)
+    })?)
+}
+
+pub(crate) fn timeout(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
+    Ok(guard("thinkthen_timeout", || {
+        let value = whole(context, "thinkthen_timeout")?;
+        let seconds = value
+            .map(|value| {
+                u64::try_from(value)
+                    .ok()
+                    .filter(|value| *value > 0)
+                    .map(Duration::from_secs)
+                    .ok_or_else(|| Failure::usage("a timeout is a whole number of seconds above zero"))
+            })
+            .transpose()?;
+        set(|held| held.timeout = seconds)?;
+        Ok(value)
+    })?)
+}
+
+pub(crate) fn max_retries(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
+    Ok(guard("thinkthen_max_retries", || {
+        let value = whole(context, "thinkthen_max_retries")?;
+        let retries = value
+            .map(|value| {
+                u32::try_from(value)
+                    .map_err(|_| Failure::usage("a retry count is a whole number from 0 through 4294967295"))
+            })
+            .transpose()?;
+        set(|held| held.max_retries = retries)?;
+        Ok(value)
+    })?)
+}
+
+pub(crate) fn profile(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
+    Ok(guard("thinkthen_profile", || {
+        let value = text(context, "thinkthen_profile")?;
+        set(|held| held.profile = value.clone())?;
+        Ok(value)
+    })?)
+}
+
+pub(crate) fn record(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
+    Ok(guard("thinkthen_record", || {
+        let value = text(context, "thinkthen_record")?;
+        set(|held| held.record = value.clone().map(PathBuf::from))?;
+        Ok(value)
+    })?)
+}
+
+pub(crate) fn replay(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
+    Ok(guard("thinkthen_replay", || {
+        let value = text(context, "thinkthen_replay")?;
+        set(|held| held.replay = value.clone().map(PathBuf::from))?;
+        Ok(value)
+    })?)
 }
 
 /// `thinkthen_throttle(n)`: the most requests in flight, 1 through 32.

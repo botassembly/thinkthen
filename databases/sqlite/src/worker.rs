@@ -34,10 +34,13 @@ pub(crate) fn run<T: Send + 'static>(
     let due = budget::remaining(db)?.map(|(_, due)| due);
     let engine = settings::engine()?;
     settings::remaining()?;
+    let (send_budget, total) = settings::send_budget();
     let token = CancelToken::new();
     let theirs = token.clone();
     let (answers, _detached) = spawn(move || {
-        let mut options = CallOptions::new().cancel(&theirs);
+        let mut options = CallOptions::new()
+            .cancel(&theirs)
+            .send_budget(send_budget, total);
         let left = due
             .map(|due| {
                 let left = due.checked_duration_since(Instant::now()).ok_or_else(|| {

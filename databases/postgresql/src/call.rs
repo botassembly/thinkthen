@@ -4,14 +4,14 @@
 
 use std::ffi::CString;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, OnceLock};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
 use std::time::{Duration, Instant};
 
 use pgrx::prelude::*;
 use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
-use thinkthen::{CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind};
+use thinkthen::{CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget, SendBudgetDenial};
 
 use crate::ffi;
 
@@ -66,6 +66,9 @@ impl Refusal {
 
 impl From<Error> for Refusal {
     fn from(error: Error) -> Self {
+        if matches!(error.send_budget_denial(), Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })) {
+            return spent(u64::try_from(MAX_REQUESTS_TOTAL.get()).unwrap_or_default());
+        }
         Self {
             kind: error.kind(),
             message: error.detail().message().to_owned(),
@@ -117,21 +120,54 @@ pub(crate) fn throttle_refusal(value: i32) -> Option<String> {
 pub(crate) struct Plan {
     throttle: Option<u8>,
     max_requests: Option<usize>,
-    cache: Option<PathBuf>,
+    cache: Option<Option<PathBuf>>,
+    model: Option<String>,
+    timeout: Option<Duration>,
+    max_retries: Option<u32>,
+    profile: Option<String>,
+    record: Option<PathBuf>,
+    replay: Option<PathBuf>,
+}
+
+#[derive(Clone, Copy, Debug)]
+struct Raw<'a> {
+    throttle: i32,
+    max_requests: i32,
+    cache: Option<&'a str>,
+    model: Option<&'a str>,
+    timeout: i32,
+    max_retries: i32,
+    profile: Option<&'a str>,
+    record: Option<&'a str>,
+    replay: Option<&'a str>,
+}
+
+fn folder(value: Option<&str>) -> Result<Option<PathBuf>, Refusal> {
+    let Some(value) = value.filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    let path = PathBuf::from(value);
+    if !path.is_absolute() {
+        return Err(Refusal::usage("a SQL folder must be absolute"));
+    }
+    Ok(Some(path))
 }
 
 impl Plan {
     /// Read the four raw values. The throttle's check already holds it to
     /// -1 or 1..=32, and PostgreSQL's range checks hold the others to -1 or more.
-    pub(crate) fn of(
-        throttle: i32,
-        max_requests: i32,
-        cache: Option<&str>,
-    ) -> Result<Self, Refusal> {
+    fn of(raw: Raw<'_>) -> Result<Self, Refusal> {
+        let cache = if raw.cache == Some("off") { Some(None) } else { folder(raw.cache)?.map(Some) };
         Ok(Self {
-            throttle: (throttle != UNSET).then(|| u8::try_from(throttle).unwrap_or(u8::MAX)),
-            max_requests: usize::try_from(max_requests).ok(),
-            cache: cache.filter(|folder| !folder.is_empty()).map(PathBuf::from),
+            throttle: (raw.throttle != UNSET).then(|| u8::try_from(raw.throttle).unwrap_or(u8::MAX)),
+            max_requests: usize::try_from(raw.max_requests).ok(),
+            cache,
+            model: raw.model.filter(|value| !value.is_empty()).map(str::to_owned),
+            timeout: u64::try_from(raw.timeout).ok().map(Duration::from_secs),
+            max_retries: u32::try_from(raw.max_retries).ok(),
+            profile: raw.profile.filter(|value| !value.is_empty()).map(str::to_owned),
+            record: folder(raw.record)?,
+            replay: folder(raw.replay)?,
         })
     }
 }
@@ -147,9 +183,17 @@ fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBuilder, Error
     if let Some(value) = plan.max_requests {
         builder = builder.max_requests(Some(value))?;
     }
-    if let Some(folder) = &plan.cache {
-        builder = builder.cache_at(folder)?;
+    match &plan.cache {
+        Some(Some(folder)) => builder = builder.cache_at(folder)?,
+        Some(None) => builder = builder.no_cache(),
+        None => {}
     }
+    if let Some(model) = &plan.model { builder = builder.model(model)?; }
+    if let Some(timeout) = plan.timeout { builder = builder.timeout(timeout)?; }
+    if let Some(retries) = plan.max_retries { builder = builder.max_retries(retries); }
+    if let Some(profile) = &plan.profile { builder = builder.profile_json(profile)?; }
+    if let Some(record) = &plan.record { builder = builder.record(record)?; }
+    if let Some(replay) = &plan.replay { builder = builder.replay(replay)?; }
     Ok(builder)
 }
 
@@ -159,6 +203,7 @@ static ACTIVE_THROTTLE: AtomicU8 = AtomicU8::new(0);
 /// One engine per plan this backend used. Each engine counts its own sends,
 /// so the usage totals add them all.
 static ENGINES: Mutex<Vec<(Plan, Engine)>> = Mutex::new(Vec::new());
+static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
 
 fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
     ENGINES
@@ -305,6 +350,8 @@ pub(crate) fn run_result<T: Send + 'static>(
     let token = CancelToken::new();
     let (answer, answered) = mpsc::channel::<Result<T, Error>>();
     let (plan, worker_token) = (call.plan.clone(), token.clone());
+    let total = call.total;
+    let send_budget = SEND_BUDGET.get_or_init(SendBudget::new);
     ffi::spawn_masked(move || {
         deliver(&answer, || {
             let engine = match held {
@@ -313,6 +360,7 @@ pub(crate) fn run_result<T: Send + 'static>(
             };
             CallOptions::new()
                 .cancel(&worker_token)
+                .send_budget(send_budget, total)
                 .deadline_millis(i64::from(millis))
                 .and_then(|options| work(&engine, options))
         });
@@ -353,6 +401,12 @@ static THROTTLE: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS_TOTAL: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static CACHE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
+static MODEL: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
+static TIMEOUT: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
+static MAX_RETRIES: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
+static PROFILE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
+static RECORD: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
+static REPLAY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 
 fn text_of(setting: &GucSetting<Option<CString>>) -> Option<String> {
     setting
@@ -375,7 +429,21 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
         ));
     }
     let cache = text_of(&CACHE);
-    let plan = Plan::of(THROTTLE.get(), MAX_REQUESTS.get(), cache.as_deref())?;
+    let model = text_of(&MODEL);
+    let profile = text_of(&PROFILE);
+    let record = text_of(&RECORD);
+    let replay = text_of(&REPLAY);
+    let plan = Plan::of(Raw {
+        throttle: THROTTLE.get(),
+        max_requests: MAX_REQUESTS.get(),
+        cache: cache.as_deref(),
+        model: model.as_deref(),
+        timeout: TIMEOUT.get(),
+        max_retries: MAX_RETRIES.get(),
+        profile: profile.as_deref(),
+        record: record.as_deref(),
+        replay: replay.as_deref(),
+    })?;
     let active = ACTIVE_THROTTLE.load(Ordering::Acquire);
     if plan
         .throttle
@@ -434,6 +502,12 @@ pub(crate) fn register() {
         GucContext::Suset,
         GucFlags::default(),
     );
+    int(c"thinkthen.timeout", c"backend timeout in seconds; -1 keeps the environment default", &TIMEOUT, i32::MAX, GucContext::Userset, GucFlags::UNIT_S);
+    int(c"thinkthen.max_retries", c"backend status retries; -1 keeps the environment default", &MAX_RETRIES, i32::MAX, GucContext::Userset, GucFlags::default());
+    GucRegistry::define_string_guc(c"thinkthen.model", c"backend model; empty keeps the environment default", c"", &MODEL, GucContext::Userset, GucFlags::default());
+    GucRegistry::define_string_guc(c"thinkthen.profile", c"backend limits profile as JSON", c"", &PROFILE, GucContext::Userset, GucFlags::default());
+    GucRegistry::define_string_guc(c"thinkthen.record", c"recording folder", c"", &RECORD, GucContext::Suset, GucFlags::default());
+    GucRegistry::define_string_guc(c"thinkthen.replay", c"strict replay folder", c"", &REPLAY, GucContext::Suset, GucFlags::default());
     GucRegistry::define_string_guc(
         c"thinkthen.cache",
         c"answer cache folder; empty leaves the environment's",
@@ -470,14 +544,16 @@ mod tests {
     /// value reaches the plan. PostgreSQL's `'1MB'` arrives as bytes.
     #[test]
     fn the_registered_defaults_plan_nothing_and_set_values_carry() {
-        assert_eq!(Plan::of(UNSET, UNSET, None), Ok(Plan::default()));
-        assert_eq!(Plan::of(UNSET, UNSET, Some("")), Ok(Plan::default()));
+        let default = Raw { throttle: UNSET, max_requests: UNSET, cache: None, model: None, timeout: UNSET, max_retries: UNSET, profile: None, record: None, replay: None };
+        assert_eq!(Plan::of(default), Ok(Plan::default()));
+        assert_eq!(Plan::of(Raw { cache: Some(""), ..default }), Ok(Plan::default()));
         let set = Plan {
             throttle: Some(8),
             max_requests: Some(3),
-            cache: Some(PathBuf::from("/srv/cache")),
+            cache: Some(Some(PathBuf::from("/srv/cache"))),
+            ..Plan::default()
         };
-        assert_eq!(Plan::of(8, 3, Some("/srv/cache")), Ok(set));
+        assert_eq!(Plan::of(Raw { throttle: 8, max_requests: 3, cache: Some("/srv/cache"), ..default }), Ok(set));
     }
 
     /// R1-31 and R2-31: the one table maps every kind to its SQLSTATE.
