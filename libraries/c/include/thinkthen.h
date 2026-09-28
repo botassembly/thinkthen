@@ -4,8 +4,9 @@
  * One archive per platform ships this header, the shared library, and the
  * static library. Every language that cannot bind Rust
  * directly binds this door: the JSON door carries any request, and the
- * typed `thinkthen_decide` and `thinkthen_decide_many` carry the hot path
- * without building JSON in the host.
+ * typed decide and decide-many calls carry the hot path without building
+ * request JSON in the host. Prefer their `*_with_facts` forms for final
+ * call facts; the older typed names remain bare ABI compatibility forms.
  *
  * The prefix is `thinkthen_` on every name, and the public word for the
  * middle answer is UNSURE. An engine value carries its settings, holds no
@@ -28,8 +29,9 @@
  * once, and each caller sees the answers it would get alone.
  *
  * The lifetime rules: an engine lives until `thinkthen_engine_free`; a
- * string from `thinkthen_call`, `thinkthen_question_file`, `thinkthen_recognize`, or
- * `thinkthen_relate` lives until `thinkthen_free_string`; a cancel token
+ * string from `thinkthen_call`, `thinkthen_question_file`, `thinkthen_recognize`,
+ * `thinkthen_relate`, or a typed `*_with_facts` form lives until
+ * `thinkthen_free_string`; a cancel token
  * lives until `thinkthen_cancel_token_free`, and no call may carry a token
  * the host has freed; the message from `thinkthen_error_message` belongs
  * to the calling thread and lives until that thread records its next
@@ -350,6 +352,47 @@ int thinkthen_relate_opts(const thinkthen_engine *engine, const char *spec_json,
                           size_t count, int64_t deadline_ms,
                           thinkthen_cancel_token *cancel, char **out,
                           size_t *out_len);
+
+/* Preferred typed forms: each successful call owns final facts JSON beside
+ * its result. The facts object contains records, requests_sent, cache_answers,
+ * seconds, and optional input_tokens, output_tokens, and model. Free each
+ * returned JSON string with thinkthen_free_string. The old typed symbols
+ * above remain ABI-compatible bare-result forms; they do not return facts.
+ * A nonzero code changes no output slot. A started failure's facts remain
+ * available from thinkthen_error_facts_json under its borrowed lifetime.
+ * All output slots must be nonnull (except the zero-count answer array) and
+ * must not share an address. Counts times pointer, size_t, and answer sizes,
+ * and every text length, must fit PTRDIFF_MAX. The caller supplies live,
+ * aligned, adequately sized, nonoverlapping input and output storage. */
+int thinkthen_decide_with_facts(const thinkthen_engine *engine,
+    const char *question_json, const char *text, size_t text_len,
+    thinkthen_answer *out, char **facts_json, size_t *facts_len);
+int thinkthen_decide_with_facts_opts(const thinkthen_engine *engine,
+    const char *question_json, const char *text, size_t text_len,
+    int64_t deadline_ms, thinkthen_cancel_token *cancel,
+    thinkthen_answer *out, char **facts_json, size_t *facts_len);
+int thinkthen_decide_many_with_facts(const thinkthen_engine *engine,
+    const char *question_json, const char *const *texts, const size_t *lengths,
+    size_t count, thinkthen_answer *out, char **facts_json, size_t *facts_len);
+int thinkthen_decide_many_with_facts_opts(const thinkthen_engine *engine,
+    const char *question_json, const char *const *texts, const size_t *lengths,
+    size_t count, int64_t deadline_ms, thinkthen_cancel_token *cancel,
+    thinkthen_answer *out, char **facts_json, size_t *facts_len);
+int thinkthen_recognize_with_facts(const thinkthen_engine *engine,
+    const char *spec_json, const char *text, size_t text_len,
+    char **out, size_t *out_len, char **facts_json, size_t *facts_len);
+int thinkthen_recognize_with_facts_opts(const thinkthen_engine *engine,
+    const char *spec_json, const char *text, size_t text_len,
+    int64_t deadline_ms, thinkthen_cancel_token *cancel,
+    char **out, size_t *out_len, char **facts_json, size_t *facts_len);
+int thinkthen_relate_with_facts(const thinkthen_engine *engine,
+    const char *spec_json, const char *const *texts, const size_t *lengths,
+    size_t count, char **out, size_t *out_len,
+    char **facts_json, size_t *facts_len);
+int thinkthen_relate_with_facts_opts(const thinkthen_engine *engine,
+    const char *spec_json, const char *const *texts, const size_t *lengths,
+    size_t count, int64_t deadline_ms, thinkthen_cancel_token *cancel,
+    char **out, size_t *out_len, char **facts_json, size_t *facts_len);
 
 /* Free a string `thinkthen_call`, `thinkthen_recognize`, or
  * `thinkthen_relate` returned, or their `_opts` twins. NULL is accepted

@@ -10,6 +10,9 @@
 
 use std::ffi::{CStr, CString, c_char};
 
+#[path = "ffi/typed_facts/ffi.rs"]
+mod typed_facts;
+
 use thinkthen::CancelToken;
 
 use crate::failures::{self, DEFECT, Failure, Held, NO_MESSAGE, OK, USAGE, guard};
