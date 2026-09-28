@@ -36,7 +36,7 @@ fn fatal(error: &Error) -> bool {
     matches!(
         error.kind(),
         Kind::Cancelled | Kind::Deadline | Kind::Defect
-    ) || matches!(error, Error::SendBudgetFirst | Error::SendBudgetRetry(_))
+    )
 }
 
 pub(super) fn ask(

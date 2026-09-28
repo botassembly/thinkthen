@@ -162,6 +162,24 @@ pub(crate) fn ordered<W, R, E>(
     items: Vec<W>,
     cancel: &Cancel<'_>,
     work: &(impl Fn(W) -> Result<R, Error> + Sync),
+    each: impl FnMut(R) -> Result<(), E>,
+) -> Result<(), E>
+where
+    W: Send,
+    R: Send,
+    E: From<Error>,
+{
+    ordered_until(jobs, items, cancel, work, |_| false, each)
+}
+
+/// The native recoverable caller can stop feeding on a completed result while
+/// still delivering and joining every item already admitted.
+pub(crate) fn ordered_until<W, R, E>(
+    jobs: usize,
+    items: Vec<W>,
+    cancel: &Cancel<'_>,
+    work: &(impl Fn(W) -> Result<R, Error> + Sync),
+    terminal: impl Fn(&R) -> bool,
     mut each: impl FnMut(R) -> Result<(), E>,
 ) -> Result<(), E>
 where
@@ -203,7 +221,7 @@ where
                 match received.recv_timeout(Cancel::poll()) {
                     Ok((place, result)) => {
                         in_flight -= 1;
-                        halted |= result.is_err();
+                        halted |= result.as_ref().map_or(true, &terminal);
                         held.insert(place, result);
                     }
                     Err(RecvTimeoutError::Timeout) => {}

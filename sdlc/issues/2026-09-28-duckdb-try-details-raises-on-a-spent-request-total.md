@@ -1,6 +1,6 @@
 # DuckDB try_details raises on a spent request total
 
-Status: confirmed on the installed 0222 Linux artifact after a bounded independent re-audit. Severity 2; resolve before public 0.1. [Ticket 0240](../tickets/0240-duckdb-try-budget-values.md) and its [preflight](../records/0240-duckdb-try-budget-preflight.md) now propose the partial-outcome correction for fresh High design review. No runtime fix or new installed artifact is claimed yet.
+Status: confirmed on the installed 0222 Linux artifact after a bounded independent re-audit. Severity 2; resolve before public 0.1. [Ticket 0240](../tickets/0240-duckdb-try-budget-values.md) passed fresh High design review and has a newly built Linux repair candidate. Keep this issue open until independent code and artifact review accepts the corrected partial-outcome behavior.
 
 ## Expected behavior
 

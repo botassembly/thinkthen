@@ -43,6 +43,27 @@ enum Work {
     Failed(RecoverableDetails),
 }
 
+struct NativeOutcome {
+    rows: Vec<RecoverableDetails>,
+    denied: bool,
+}
+
+fn denied(error: &crate::engine::error::Error) -> bool {
+    matches!(
+        error,
+        crate::engine::error::Error::SendBudgetFirst
+            | crate::engine::error::Error::SendBudgetRetry(_)
+    )
+}
+
+fn spent() -> RecoverableDetails {
+    RecoverableDetails::Failed {
+        kind: ErrorKind::Usage,
+        retryable: false,
+        cause: None,
+    }
+}
+
 fn failed(error: &Error) -> RecoverableDetails {
     RecoverableDetails::Failed {
         kind: error.kind(),
@@ -173,7 +194,7 @@ fn read(
     result: Result<crate::engine::prepared_request::Answered, crate::engine::error::Error>,
     texts: &[String],
     parent: Option<(&facade::SplitParent, usize)>,
-) -> Result<Vec<RecoverableDetails>, crate::engine::error::Error> {
+) -> Result<NativeOutcome, crate::engine::error::Error> {
     let answered = match result {
         Ok(answered) => answered,
         Err(error) => {
@@ -182,16 +203,21 @@ fn read(
                 crate::engine::error::Kind::Cancelled
                     | crate::engine::error::Kind::Deadline
                     | crate::engine::error::Kind::Defect
-            ) || matches!(
-                error,
-                crate::engine::error::Error::SendBudgetFirst
-                    | crate::engine::error::Error::SendBudgetRetry(_)
             ) {
                 return Err(error);
             }
+            if denied(&error) {
+                return Ok(NativeOutcome {
+                    rows: (0..texts.len()).map(|_| spent()).collect(),
+                    denied: true,
+                });
+            }
             let error = Error::from(error);
             debug_assert!(recoverable(error.kind()));
-            return Ok((0..texts.len()).map(|_| failed(&error)).collect());
+            return Ok(NativeOutcome {
+                rows: (0..texts.len()).map(|_| failed(&error)).collect(),
+                denied: false,
+            });
         }
     };
     let mut rows = Vec::with_capacity(texts.len());
@@ -249,7 +275,10 @@ fn read(
             }
         }
     }
-    Ok(rows)
+    Ok(NativeOutcome {
+        rows,
+        denied: false,
+    })
 }
 
 struct NativeRun<'a> {
@@ -268,7 +297,7 @@ impl NativeRun<'_> {
         answered: Result<crate::engine::prepared_request::Answered, crate::engine::error::Error>,
         texts: &[String],
         parent: Option<(&facade::SplitParent, usize)>,
-    ) -> Result<Vec<RecoverableDetails>, crate::engine::error::Error> {
+    ) -> Result<NativeOutcome, crate::engine::error::Error> {
         read(
             self.engine,
             self.question,
@@ -286,9 +315,12 @@ impl NativeRun<'_> {
         &self,
         work: Work,
         cancel: &crate::engine::Cancel<'_>,
-    ) -> Result<Vec<RecoverableDetails>, crate::engine::error::Error> {
+    ) -> Result<NativeOutcome, crate::engine::error::Error> {
         match work {
-            Work::Failed(failed) => Ok(vec![failed]),
+            Work::Failed(failed) => Ok(NativeOutcome {
+                rows: vec![failed],
+                denied: false,
+            }),
             Work::Planned(work) => self.answer_planned(work, cancel),
         }
     }
@@ -297,13 +329,19 @@ impl NativeRun<'_> {
         &self,
         work: Planned,
         cancel: &crate::engine::Cancel<'_>,
-    ) -> Result<Vec<RecoverableDetails>, crate::engine::error::Error> {
+    ) -> Result<NativeOutcome, crate::engine::error::Error> {
         let sent = self.engine.ask_record_batch_with_one_split(
             &work.batch,
             || original_pairs(&work.texts, self.question),
             self.context,
             cancel,
-            |_, _| facade::SplitDecision::SendRight,
+            |_, result| {
+                if result.as_ref().err().is_some_and(denied) {
+                    facade::SplitDecision::Stop
+                } else {
+                    facade::SplitDecision::SendRight
+                }
+            },
         )?;
         self.decode(&work, sent)
     }
@@ -312,7 +350,7 @@ impl NativeRun<'_> {
         &self,
         work: &Planned,
         sent: facade::OneSplit,
-    ) -> Result<Vec<RecoverableDetails>, crate::engine::error::Error> {
+    ) -> Result<NativeOutcome, crate::engine::error::Error> {
         match sent {
             facade::OneSplit::Single(answered) => {
                 self.read(&work.batch, answered, &work.texts, None)
@@ -336,18 +374,26 @@ impl NativeRun<'_> {
                         .ok_or(crate::engine::error::Error::Defect(
                             "a split lost its right records",
                         ))?;
-                let mut rows =
+                let mut outcome =
                     self.read(&left_batch, left_answer, left_texts, Some((&parent, 0)))?;
                 if let Some(right) = right {
                     let (right_batch, right_answer) = *right;
-                    rows.extend(self.read(
+                    let right = self.read(
                         &right_batch,
                         right_answer,
                         right_texts,
                         Some((&parent, count)),
-                    )?);
+                    )?;
+                    outcome.denied |= right.denied;
+                    outcome.rows.extend(right.rows);
+                } else if outcome.denied {
+                    outcome.rows.extend((0..right_texts.len()).map(|_| spent()));
+                } else {
+                    return Err(crate::engine::error::Error::Defect(
+                        "a native split lost its right result",
+                    ));
                 }
-                Ok(rows)
+                Ok(outcome)
             }
         }
     }
@@ -397,15 +443,24 @@ impl Engine {
         };
         stop.run_call(count, |cancel| {
             let mut results = Vec::with_capacity(count);
+            let mut stopped = false;
             engine.ask_batches_recoverable(
                 cancel,
                 work,
                 &|work| run.answer(work, cancel),
-                |rows| {
-                    results.extend(rows);
+                |outcome| outcome.denied,
+                |outcome| {
+                    stopped |= outcome.denied;
+                    results.extend(outcome.rows);
                     Ok::<(), Error>(())
                 },
             )?;
+            if stopped {
+                results.resize_with(count, spent);
+            }
+            if results.len() != count {
+                return Err(Error::defect("a native batch lost its result rows"));
+            }
             Ok(results)
         })
     }
