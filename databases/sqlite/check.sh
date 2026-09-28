@@ -22,12 +22,18 @@ not_run() {
 	exit 77
 }
 command -v cc >/dev/null || not_run "no cc to build the SQLite 3.50.0 host"
-command -v shasum >/dev/null || not_run "no shasum to check the pinned source"
+if [ "$suffix" = dylib ]; then
+	command -v shasum >/dev/null || not_run "no shasum to check the pinned source on macOS"
+	hash_check() { shasum -a 256 -c "$1"; }
+else
+	command -v sha256sum >/dev/null || not_run "no sha256sum to check the pinned source on Linux"
+	hash_check() { sha256sum --check --quiet "$1"; }
+fi
 "$python" -c 'import sys; sys.exit(sys.version_info < (3, 10))' 2>/dev/null || not_run "no Python 3.10 or later"
-(cd -- "$source" 2>/dev/null && shasum -a 256 -c "$here/amalgamation.sha256") >/dev/null 2>&1 ||
+(cd -- "$source" 2>/dev/null && hash_check "$here/amalgamation.sha256") >/dev/null 2>&1 ||
 	not_run "no SQLite 3.50.0 amalgamation with the pinned hashes in $source"
 if [ "$suffix" = dylib ]; then
-	(cd -- "$old" 2>/dev/null && shasum -a 256 -c "$here/amalgamation-3490000.sha256") >/dev/null 2>&1 ||
+	(cd -- "$old" 2>/dev/null && hash_check "$here/amalgamation-3490000.sha256") >/dev/null 2>&1 ||
 		not_run "no SQLite 3.49.0 amalgamation with the pinned hashes in $old"
 fi
 cargo fetch --locked --offline --quiet 2>/dev/null || not_run "the cargo cache lacks a locked crate"

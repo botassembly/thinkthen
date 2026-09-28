@@ -5,8 +5,9 @@
 set -eu
 source=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
 host=$HOME/.cache/thinkthen-toolchains/sqlite-3500000-host
-stamp=$(cd -- "$source" && shasum -a 256 sqlite3.c shell.c)
 if [ "$(uname -s)" = Darwin ]; then
+	command -v shasum >/dev/null 2>&1 || { echo 'host_sqlite: shasum is required on macOS' >&2; exit 77; }
+	stamp=$(cd -- "$source" && shasum -a 256 sqlite3.c shell.c)
 	old=${SQLITE_OLD_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3490000}
 	stamp="$stamp
 $(cd -- "$old" && shasum -a 256 sqlite3.c shell.c)
@@ -17,6 +18,8 @@ $(shasum -a 256 "$(dirname -- "$0")/load_probe.c")"
 		exit 0
 	fi
 else
+	command -v sha256sum >/dev/null 2>&1 || { echo 'host_sqlite: sha256sum is required on Linux' >&2; exit 77; }
+	stamp=$(cd -- "$source" && sha256sum sqlite3.c shell.c)
 	if [ -f "$host/libsqlite3.so.0" ] && [ -x "$host/sqlite3" ] &&
 		[ "$(cat -- "$host/SOURCE.sha256" 2>/dev/null)" = "$stamp" ]; then
 		echo "$host"

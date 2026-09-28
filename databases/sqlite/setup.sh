@@ -6,7 +6,13 @@ set -eu
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 target=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
 old_target=${SQLITE_OLD_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3490000}
-command -v shasum >/dev/null 2>&1 || { echo 'setup: shasum is required to check source hashes' >&2; exit 77; }
+if [ "$(uname -s)" = Darwin ]; then
+	command -v shasum >/dev/null 2>&1 || { echo 'setup: shasum is required on macOS' >&2; exit 77; }
+	hash_check() { shasum -a 256 -c "$1" >/dev/null; }
+else
+	command -v sha256sum >/dev/null 2>&1 || { echo 'setup: sha256sum is required on Linux' >&2; exit 77; }
+	hash_check() { sha256sum --check --quiet "$1"; }
+fi
 . "$here/../../sdlc/scripts/scratch.sh"
 scratch_dir work
 if [ $# -ge 1 ]; then
@@ -18,7 +24,7 @@ else
 fi
 mkdir -p -- "$work/checked"
 cp -- "$from/sqlite3.c" "$from/shell.c" "$from/sqlite3.h" "$from/sqlite3ext.h" "$work/checked/"
-if ! (cd -- "$work/checked" && shasum -a 256 -c "$here/amalgamation.sha256" >/dev/null); then
+if ! (cd -- "$work/checked" && hash_check "$here/amalgamation.sha256"); then
 	echo "setup: the amalgamation in $from does not match the pinned hashes" >&2
 	exit 1
 fi
@@ -36,7 +42,7 @@ if [ "$(uname -s)" = Darwin ]; then
 	fi
 	mkdir -p -- "$work/old-checked"
 	cp -- "$old_from/sqlite3.c" "$old_from/shell.c" "$old_from/sqlite3.h" "$old_from/sqlite3ext.h" "$work/old-checked/"
-	if ! (cd -- "$work/old-checked" && shasum -a 256 -c "$here/amalgamation-3490000.sha256" >/dev/null); then
+	if ! (cd -- "$work/old-checked" && hash_check "$here/amalgamation-3490000.sha256"); then
 		echo "setup: the 3.49.0 amalgamation in $old_from does not match the pinned hashes" >&2
 		exit 1
 	fi
