@@ -462,7 +462,7 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
         }
         false
     };
-    let texts = ["one", "two", "three", "four", "five", "six"];
+    let texts = (0..8).map(|n| n.to_string());
     let caught = thread::scope(|scope| {
         let holders: Vec<_> = (0..4)
             .map(|_| scope.spawn(|| gated.decide(&asked, "Hold the gate.")))
@@ -495,6 +495,7 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
     let held = Backend::start().expect("backend");
     let batch = engine(&format!("{}/arm/held/v1", held.origin()));
     let runs = AtomicUsize::new(0);
+    let released = AtomicUsize::new(0);
     let check = || {
         if held.count() == 4 && runs.fetch_add(1, Ordering::SeqCst) >= 2 {
             resume_unwind(Box::new(PAYLOAD));
@@ -503,21 +504,26 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
     };
     let caught = thread::scope(|scope| {
         scope.spawn(|| {
-            held.wait(4);
+            assert_eq!(held.wait(4), 4, "four two-record requests are in flight");
             thread::sleep(Duration::from_millis(400));
             held.release();
+            released.store(1, Ordering::SeqCst);
         });
-        catch_unwind(AssertUnwindSafe(|| {
+        let caught = catch_unwind(AssertUnwindSafe(|| {
             batch
                 .filter_with(
                     &asked,
                     texts,
                     CallOptions::new()
                         .interrupt(&check)
-                        .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+                        .batch(BatchSetting::Records(
+                            std::num::NonZeroUsize::new(2).expect("two"),
+                        )),
                 )
                 .count()
-        }))
+        }));
+        assert_eq!(released.load(Ordering::SeqCst), 1);
+        caught
     });
     let Err(payload) = caught else {
         panic!("the panic never reached the caller");

@@ -123,13 +123,19 @@ fn a_reply_over_its_limit_names_it() {
 #[test]
 fn observer_panic_waits_for_a_held_later_batch_worker() {
     let _serial = serial();
-    let release = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
-    let held = std::sync::Arc::clone(&release);
+    let first = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let later = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let held_first = std::sync::Arc::clone(&first);
+    let held_later = std::sync::Arc::clone(&later);
+    let pair = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#;
     let listener = Listener::answering(move |body| {
-        if String::from_utf8_lossy(body).contains("beta") {
-            Canned::ok(DECIDED).after_release(std::sync::Arc::clone(&held))
-        } else {
+        let body = String::from_utf8_lossy(body);
+        if body.contains("gamma") {
             Canned::ok(DECIDED)
+        } else if body.contains("beta") {
+            Canned::ok(pair).after_release(std::sync::Arc::clone(&held_later))
+        } else {
+            Canned::ok(pair).after_release(std::sync::Arc::clone(&held_first))
         }
     })
     .expect("listener");
@@ -148,30 +154,39 @@ fn observer_panic_waits_for_a_held_later_batch_worker() {
         observed.send(()).expect("notice");
         resume_unwind(Box::new("held observer payload"));
     };
-    let setting = BatchSetting::Records(std::num::NonZeroUsize::MIN);
+    let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
     let asked = question();
     let mut rows = engine.decide_many_with(
         &asked,
-        ["alpha", "beta"],
+        ["alpha", "first", "beta", "second"],
         CallOptions::new().batch(setting).observe(&observe),
     );
+    let later_released = AtomicUsize::new(0);
     let (caught, held_worker) = thread::scope(|scope| {
         let listener = &listener;
-        let release = &release;
+        let released = &later_released;
         let helper = scope.spawn(move || {
-            notice.recv_timeout(BOUND).expect("observer fired");
             let began = Instant::now();
             while listener.count() < 2 && began.elapsed() < BOUND {
                 thread::sleep(Duration::from_millis(5));
             }
             let held_worker = listener.count() == 2;
+            assert!(first.wait(), "release first packed answer");
+            notice.recv_timeout(BOUND).expect("observer fired");
             if held_worker {
-                assert!(release.wait(), "release the held answer");
+                assert!(later.wait(), "release later packed answer");
+                released.store(1, Ordering::SeqCst);
             }
             held_worker
         });
         let caught = catch_unwind(AssertUnwindSafe(|| rows.next()));
-        (caught, helper.join().expect("release helper"))
+        let returned_after_release = later_released.load(Ordering::SeqCst) == 1;
+        let held_worker = helper.join().expect("release helper");
+        assert!(
+            returned_after_release,
+            "observer payload waited for the later reply"
+        );
+        (caught, held_worker)
     });
     assert!(held_worker, "a later request was in flight at the callback");
     let payload = caught.expect_err("observer panic reaches caller after join");
