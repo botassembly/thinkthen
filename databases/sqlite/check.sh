@@ -42,6 +42,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 		step "$test, installed"
 		sh "$LIMIT" 300 python3 "$test"
 	done
+	step "the pinned stock host's successful and failed load results, installed"
+	sh "$LIMIT" 60 python3 -c 'import sys; sys.path.insert(0, "tests"); from test_schema import test_a_host_below_the_floor_refuses_the_load as failed, test_pinned_host_keeps_a_successful_registration_available as successful; successful(); failed()'
 	echo "pass     databases/sqlite, installed"
 	exit 0
 fi
