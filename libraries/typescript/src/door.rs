@@ -3,6 +3,8 @@
 //! or `{"err": {kind, retryable, message}}`. It holds no rule of its own
 //! beyond the host's deadline spelling.
 
+mod diagnostics;
+
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use serde_json::{Map, Value, json};
@@ -66,20 +68,24 @@ type Answered = Result<String, Failure>;
 /// Run one body and write its envelope. The binding's one panic guard turns a
 /// panic into `defect`.
 pub(crate) fn guarded(body: impl FnOnce() -> Answered) -> String {
-    match caught(body) {
+    diagnostics::owned(|| match caught(body) {
         Ok(raw) => format!("{{\"ok\":{raw}}}"),
         Err(failure) => failure.envelope(),
-    }
+    })
 }
 
 /// The binding's one panic guard: a panic in `body` becomes `defect`, so no
 /// panic crosses into Node.
 pub(crate) fn caught<T>(body: impl FnOnce() -> Result<T, Failure>) -> Result<T, Failure> {
-    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|_| {
-        Err(Failure::of(
-            ErrorKind::Defect,
-            "defect: the Node binding panicked",
-        ))
+    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
+        Ok(value) => value,
+        Err(payload) => {
+            std::mem::forget(payload);
+            Err(Failure::of(
+                ErrorKind::Defect,
+                "defect: the Node binding panicked",
+            ))
+        }
     })
 }
 

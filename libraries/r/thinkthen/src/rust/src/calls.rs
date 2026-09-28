@@ -7,7 +7,6 @@
 //! once, so a request already on the wire never holds the caller. The
 //! detached worker then sends nothing new and finishes what it sent.
 
-use std::any::Any;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::thread;
@@ -21,6 +20,8 @@ use thinkthen::{
 };
 
 use crate::{carry, defect, engine, interrupted, usage};
+
+mod diagnostics;
 
 /// How long the main thread waits between R's interrupt checks.
 const TICK: Duration = Duration::from_millis(100);
@@ -98,8 +99,12 @@ fn on_worker<T: Send + 'static>(
     thread::Builder::new()
         .name("thinkthen-r".to_owned())
         .spawn(move || {
-            let answer = catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|panic| {
-                Err(defect(&format!("the call panicked: {}", words(&*panic))))
+            let answer = diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
+                Ok(value) => value,
+                Err(payload) => {
+                    std::mem::forget(payload);
+                    Err(defect("the call panicked"))
+                }
             });
             // The caller left after an interrupt when this send fails.
             let _ignored = sender.send(answer);
@@ -120,15 +125,6 @@ fn wait<T>(receiver: &Receiver<Crossed<T>>, _stop: &Stop, pending: Pending<'_>) 
             }
         }
     }
-}
-
-/// A panic's own words.
-fn words(panic: &(dyn Any + Send)) -> String {
-    panic
-        .downcast_ref::<&str>()
-        .map(|held| (*held).to_owned())
-        .or_else(|| panic.downcast_ref::<String>().cloned())
-        .unwrap_or_else(|| "no message".to_owned())
 }
 
 /// One text and its one-based place in the caller's vector.
@@ -485,7 +481,7 @@ mod tests {
         let boom: Crossed<i32> = on_worker(CancelToken::new(), &|| false, || {
             std::panic::panic_any("boom")
         });
-        assert_eq!(boom, Err(defect("the call panicked: boom")));
+        assert_eq!(boom, Err(defect("the call panicked")));
         assert_eq!(on_worker(CancelToken::new(), &|| false, || Ok(7)), Ok(7));
         let _ = std::panic::take_hook();
     }

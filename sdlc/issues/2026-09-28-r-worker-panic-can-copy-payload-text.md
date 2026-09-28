@@ -11,3 +11,7 @@ Keep the six error kinds, fixed non-retryable defect classification, cancellatio
 ## Closure proof
 
 Use one small child-process regression with a synthetic payload marker at the actual private R worker boundary. Check stdout, stderr and the returned error for absence of that marker; retain the defect kind, non-retryable behavior and a later successful call. Show that an unrelated host panic still reaches its intended handler. Keep injection private to the test boundary, preserve R's normal interrupt and shutdown contract, and run only the relevant installed-package or equivalent host boundary proof. Source inspection alone does not close this issue.
+
+## Reviewed implementation and remaining proof
+
+Ticket 0227 source and the evidenced Linux package subset landed from corrected candidate `e52c1604` after fresh High code review. The source children prove fixed non-retryable Defect, both synthetic payload forms, later success and unrelated prior-hook delivery. Installed Linux packages separately prove loading and no-fault later use. Python's reviewed correction also covers implicit reference cleanup. See [the build evidence](../records/0227-language-panic-build.md) and [code acceptance](../records/0227-code-review.md). Other target packages and the later 0212 Call conversion integration remain open; this issue is not counted complete from the Linux subset alone.

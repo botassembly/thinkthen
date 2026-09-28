@@ -20,6 +20,8 @@ struct State {
     remaining: usize,
     token: *mut ffi::PyObject,
     table: [*const c_void; 3],
+    #[cfg(test)]
+    diagnostic: bool,
 }
 
 unsafe extern "C" fn schema_release(schema: *mut ArrowSchema) {
@@ -28,6 +30,16 @@ unsafe extern "C" fn schema_release(schema: *mut ArrowSchema) {
 }
 
 unsafe extern "C" fn get_schema(_stream: *mut ArrowArrayStream, out: *mut ArrowSchema) -> c_int {
+    #[cfg(test)]
+    unsafe {
+        let state = &*(*_stream).private_data.cast::<State>();
+        if state.diagnostic {
+            let stopped = std::panic::catch_unwind(|| -> () { panic!("arrow-ingress-marker") });
+            if let Err(payload) = stopped {
+                std::mem::forget(payload);
+            }
+        }
+    }
     // SAFETY: `out` is the consumer's writable struct.
     unsafe {
         *out = ArrowSchema {
@@ -59,6 +71,16 @@ unsafe extern "C" fn array_release(array: *mut ArrowArray) {
     }
 }
 
+#[cfg(test)]
+unsafe extern "C" fn diagnostic_array_release(array: *mut ArrowArray) {
+    let stopped = std::panic::catch_unwind(|| -> () { panic!("arrow-release-marker") });
+    if let Err(payload) = stopped {
+        std::mem::forget(payload);
+    }
+    // SAFETY: the batch is the one this producer issued with one token ref.
+    unsafe { array_release(array) };
+}
+
 /// Each batch is one row, the text "x".
 static OFFSETS: [i32; 2] = [0, 1];
 static VALUES: [u8; 1] = *b"x";
@@ -77,7 +99,16 @@ unsafe extern "C" fn get_next(stream: *mut ArrowArrayStream, out: *mut ArrowArra
                 n_buffers: 3,
                 buffers: state.table.as_mut_ptr(),
                 private_data: state.token.cast(),
-                release: Some(array_release),
+                release: Some({
+                    #[cfg(test)]
+                    if state.diagnostic {
+                        diagnostic_array_release
+                    } else {
+                        array_release
+                    }
+                    #[cfg(not(test))]
+                    array_release
+                }),
                 ..EMPTY_ARRAY
             };
         }
@@ -106,6 +137,8 @@ pub(crate) fn _raw_producer(
         remaining: batches,
         token: token.into_ptr(),
         table: [ptr::null(), OFFSETS.as_ptr().cast(), VALUES.as_ptr().cast()],
+        #[cfg(test)]
+        diagnostic: false,
     });
     let stream = Box::new(ArrowArrayStream {
         get_schema: Some(get_schema),
@@ -116,3 +149,7 @@ pub(crate) fn _raw_producer(
     });
     capsule(py, Box::into_raw(stream).cast(), STREAM, stream_destructor)
 }
+
+#[cfg(test)]
+#[path = "diagnostics_tests.rs"]
+mod diagnostics_tests;
