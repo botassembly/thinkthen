@@ -32,8 +32,8 @@ function lands(href) {
   return false;
 }
 
-const planned = new Set(BINDING_PATHS_WITHOUT_PAGES);
-const stale = [...planned].filter((p) => lands(p));
+const withoutPage = new Set(BINDING_PATHS_WITHOUT_PAGES);
+const stale = [...withoutPage].filter((p) => lands(p));
 if (stale.length) {
   console.error(`binding paths listed as having no page, and a page exists: ${stale.join(', ')}`);
   process.exit(1);
@@ -54,7 +54,7 @@ for (const file of html) {
   if (/<\/table>\s*<code(?:\s|>)/i.test(body)) strayCode.push(from);
   if (/--details\b/.test(body)) details.push(from);
   for (const m of body.matchAll(/(?:href|src)="(\/[^"]*)"/g)) {
-    if (!lands(m[1]) && !planned.has(m[1])) broken.push(`${from} -> ${m[1]}`);
+    if (!lands(m[1]) && !withoutPage.has(m[1])) broken.push(`${from} -> ${m[1]}`);
   }
 }
 
@@ -79,4 +79,4 @@ if (strayCode.length) {
   process.exit(1);
 }
 
-console.log(`link check: ${html.length} pages, every internal link lands, apart from ${planned.size} binding install paths with no page yet`);
+console.log(`link check: ${html.length} pages, every internal link lands, apart from ${withoutPage.size} binding install paths with no page yet`);

@@ -19,7 +19,7 @@
 // squashed at launch, and a pinned commit would then stop resolving
 // (sdlc/issues/2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md).
 
-import { BINDINGS } from './catalog.mjs';
+import { BINDINGS, COUNTS } from './catalog.mjs';
 
 export const REPO = 'https://github.com/botassembly/beatles-bench';
 const tree = (name) => `${REPO}/tree/main/examples/${name}`;
@@ -81,7 +81,7 @@ const ARTICLES = {
   },
 
   "runs-in": {
-    title: "10 functions, 1 CLI, 24 bindings.",
+    title: `${COUNTS.functions}, ${COUNTS.cli}, ${COUNTS.bindings}.`,
     label: "Functions and bindings",
     goal: "ThinkThen is one command with ten functions, and its bindings bring the same functions to languages and databases.",
     idea: [
