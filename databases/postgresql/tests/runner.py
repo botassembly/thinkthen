@@ -73,14 +73,14 @@ def selected_ids(cases):
 def skipped(case):
     if case["id"] in NOT_RUN:
         return NOT_RUN[case["id"]]
-    if case["verb"] == "find":
-        return "not run: no SQL find function yet"
     return None
 
 
 def plan(cases):
     for case in cases:
         arm, setting = FAULTS.get(case["id"], (f"case/{case['id']}", ""))
+        if case["id"] in ("18-find-second", "19-find-none"):
+            arm += "/capture"
         print(f"{case['id']}\t{'-' if skipped(case) else arm}\t{setting}")
 
 
@@ -126,7 +126,10 @@ def digest(address, request):
 
 
 def url(case):
-    return f"http://127.0.0.1:{os.environ['BPORT']}/case/{case['id']}/v1/systemone"
+    arm = f"case/{case['id']}"
+    if case["id"] in ("18-find-second", "19-find-none"):
+        arm += "/capture"
+    return f"http://127.0.0.1:{os.environ['BPORT']}/{arm}/v1/systemone"
 
 
 def served(case):
@@ -221,6 +224,34 @@ def selected_rows(case, success):
     same("judgments sent", int(lines[2]) - int(lines[0]), len(records))
 
 
+def found(case, success):
+    question = case["question"]
+    units = question["units"]
+    none = "true" if question.get("none", False) else "false"
+    answer = json.loads(psql(f"SELECT thinkthen_find({lit(question['find'])}, {texts(units)}, {none})"))
+    operation = success["operation"]
+    selected = operation["selected"]
+    wanted = {
+        "index": selected,
+        "value": units[selected] if selected is not None else None,
+        "probability": next(one["probability"] for one in operation["probabilities"]
+                            if one["index"] == selected),
+        "candidates": operation["probabilities"],
+    }
+    same("find result", answer, wanted)
+
+
+def captured(case, path):
+    observed = load(path)
+    if "error" in observed:
+        raise Failed(f"backend capture: {observed['error']}")
+    bodies = observed.get("bodies", [])
+    same("captured body count", len(bodies), 1)
+    same("captured request", bodies[0], case["exchanges"][0]["request"])
+    same("captured digest", digest(url(case), bodies[0]),
+         digest(url(case), case["exchanges"][0]["request"]))
+
+
 def annotated(case, success):
     question_set = lit(json.dumps(case["question_set"]))
     failed = 0
@@ -284,6 +315,8 @@ def run(case):
     verb, kind = case["verb"], success["kind"]
     if kind == "decide_many":
         return many(case, success)
+    if kind == "find":
+        return found(case, success)
     if verb in ("filter", "rank"):
         return selected_rows(case, success)
     handler = {"annotate": annotated, "recognize": recognized, "relate": related}.get(verb, single)
@@ -308,6 +341,19 @@ def main():
         plan(chosen)
         not_run = sum(skipped(case) is not None for case in chosen)
         print(f"postgresql plan: total={len(cases)} selected={len(chosen)} supported={len(chosen) - not_run} not_run={not_run} unselected={len(cases) - len(chosen)}", file=sys.stderr)
+        return 0
+    if len(args) == 3 and args[0] == "capture":
+        _, wanted, path = args
+        case = next((one for one in chosen if one["id"] == wanted), None)
+        if case is None or wanted not in ("18-find-second", "19-find-none"):
+            print(f"fail {wanted}: no selected capture case")
+            return 0
+        try:
+            captured(case, path)
+        except (Failed, OSError, ValueError, KeyError) as error:
+            print(f"fail {wanted}: {error}")
+            return 0
+        print(f"pass {wanted}")
         return 0
     global SOCKET
     SOCKET, wanted = args

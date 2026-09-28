@@ -29,6 +29,10 @@
       "sql": "SELECT array_to_string(thinkthen_tag('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', 'the refund and the shipping', NULL), ',');",
       "expected": "refund,shipping"
     },
+    "find_empty": {
+      "sql": "SELECT thinkthen_find('Which passage answers?', ARRAY[]::text[]) IS NULL;",
+      "expected": "t"
+    },
     "annotate": {
       "sql": "SELECT thinkthen_annotate('{\"version\":1,\"questions\":{\"spam\":{\"decide\":\"Is this spam?\"},\"band\":{\"decide\":\"Refund?\",\"threshold\":\"0.2:0.8\"}}}', 'maybe later');",
       "expected": "{\"band\": true, \"spam\": true}"
