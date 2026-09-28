@@ -1,6 +1,6 @@
 # 0230 C JSON batching preflight
 
-Status: source investigation at main `cbaa5fbd`; no implementation or proof run. Accepted ADR 0089 is on the unlanded 0212 branch at `a713e462`, whose current source is `e306674f`. Read the final reviewed 0212 result before building. The C JSON door is B12b, not the typed C ABI.
+Status: technical design ACCEPT at `23f905ad`; source investigation pins main `cbaa5fbd`, with no implementation or proof run. Public C shapes and the new Rust bridge remain proposed pending the coordinator/Ian choice. Accepted ADR 0089 is on the unlanded 0212 branch at `a713e462`, whose current source is `e306674f`. Read the final reviewed 0212 result before building. The C JSON door is B12b, not the typed C ABI.
 
 ## Current path and needed change
 
