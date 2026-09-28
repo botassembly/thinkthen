@@ -6,13 +6,17 @@
 use super::{Chunk, Engine};
 use crate::core::adapters::built_in;
 use crate::core::{
-    AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, AnswerOutcome, Batch,
-    FailedValue, ModelName, Plan, QuestionSet, Reply, Usage,
+    AnnotateBatchMeta, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue,
+    AnswerOutcome, Batch, BatchError, BatchMeta, FailedValue, ModelName, Plan, QuestionSet, Reply,
+    Setting, Usage,
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 use crate::public::{Error as PublicError, ErrorKind};
 use std::sync::atomic::{AtomicU64, Ordering};
+
+mod batch;
+use batch::{group_completion, project_group};
 
 /// One sent chunk's reply and the set places its questions fill.
 pub(crate) struct ChunkAnswer {
@@ -23,6 +27,8 @@ pub(crate) struct ChunkAnswer {
     replayed: bool,
     parent_request: Option<String>,
     parent_sent: u64,
+    batch: Option<AnnotateBatchMeta>,
+    parent_batch: Option<AnnotateBatchMeta>,
 }
 
 /// Every chunk of one question group, and the one model they reported.
@@ -31,10 +37,33 @@ pub(crate) struct GroupAnswer {
     pub(crate) model: Option<ModelName>,
 }
 
+impl GroupAnswer {
+    pub(crate) fn usable(&self) -> bool {
+        self.answered.iter().any(|chunk| {
+            chunk
+                .reply
+                .outcomes()
+                .iter()
+                .any(|outcome| matches!(outcome, AnswerOutcome::Answered(_)))
+        })
+    }
+}
+
 /// One group's chunks, prepared once, and the question places each chunk asks.
 pub(crate) struct PreparedGroup {
     places: Vec<Vec<usize>>,
     pub(crate) chunks: Vec<Chunk>,
+}
+
+impl PreparedGroup {
+    /// The exact singleton profile slices, with their original named places.
+    pub(crate) fn slices(&self) -> Vec<(Vec<usize>, Vec<crate::core::Question>)> {
+        self.places
+            .iter()
+            .zip(&self.chunks)
+            .map(|(places, chunk)| (places.clone(), chunk.plan.questions().to_vec()))
+            .collect()
+    }
 }
 
 /// One record's named values and details, in set order, with the metadata.
@@ -45,6 +74,7 @@ pub(crate) struct Annotation {
     pub(crate) model: Option<ModelName>,
     pub(crate) usage: Option<Usage>,
     pub(crate) requests: Vec<String>,
+    pub(crate) batches: Vec<AnnotateBatchMeta>,
     pub(crate) requests_sent: u64,
     pub(crate) replayed: bool,
     pub(crate) failed_questions: usize,
@@ -62,6 +92,33 @@ struct ParentAttempt {
     digest: String,
     sent: u64,
     total: usize,
+    closed: crate::core::batch::Closed,
+    setting: Setting,
+}
+
+/// Retain the original cause until the command or public host maps it.
+pub(crate) enum GroupBatchFailure {
+    Engine(Error),
+    Batch(BatchError),
+    AllFailed,
+    Defect(&'static str),
+}
+
+impl From<Error> for GroupBatchFailure {
+    fn from(error: Error) -> Self {
+        Self::Engine(error)
+    }
+}
+
+fn public_failure(error: GroupBatchFailure) -> PublicError {
+    match error {
+        GroupBatchFailure::Engine(error) => error.into(),
+        GroupBatchFailure::Batch(error) => PublicError::refused(error),
+        GroupBatchFailure::AllFailed => {
+            PublicError::of(ErrorKind::Backend, "a backend question failed in a batch")
+        }
+        GroupBatchFailure::Defect(message) => PublicError::defect(message),
+    }
 }
 
 impl Engine {
@@ -72,6 +129,31 @@ impl Engine {
         cancel: &Cancel,
     ) -> Result<crate::engine::schedule::Completed<Vec<GroupAnswer>, PublicError>, PublicError>
     {
+        let done = self
+            .answer_group_batch_raw(work, cancel)
+            .map_err(public_failure)?;
+        Ok(crate::engine::schedule::Completed {
+            value: done.value,
+            records: done.records,
+            replayed: done.replayed,
+            partial_failure: done.partial_failure,
+            stop: done.stop.map(public_failure),
+        })
+    }
+
+    /// One group request before host-specific error conversion.
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the first and second half keep one ordered result and stop contract"
+    )]
+    pub(crate) fn answer_group_batch_raw(
+        &self,
+        work: &super::GroupWork,
+        cancel: &Cancel,
+    ) -> Result<
+        crate::engine::schedule::Completed<Vec<GroupAnswer>, GroupBatchFailure>,
+        GroupBatchFailure,
+    > {
         let super::GroupRequest::Packed {
             batch,
             records,
@@ -79,13 +161,17 @@ impl Engine {
         } = &work.request
         else {
             let super::GroupRequest::Legacy(prepared) = &work.request else {
-                return Err(PublicError::defect("an annotate group lost its request"));
+                return Err(GroupBatchFailure::Defect(
+                    "an annotate group lost its request",
+                ));
             };
             let prepared = prepared
                 .lock()
-                .map_err(|_| PublicError::defect("an annotate preparation was poisoned"))?
+                .map_err(|_| GroupBatchFailure::Defect("an annotate preparation was poisoned"))?
                 .take()
-                .ok_or_else(|| PublicError::defect("an annotate preparation ran twice"))?;
+                .ok_or(GroupBatchFailure::Defect(
+                    "an annotate preparation ran twice",
+                ))?;
             return Ok(group_completion(
                 vec![self.answer_group(prepared, cancel)?],
                 work.sole_group,
@@ -96,21 +182,33 @@ impl Engine {
         let attempted = AtomicU64::new(0);
         match self.ask_batch_with_attempts(batch, cancel, Some(&attempted)) {
             Ok(answered) => Ok(group_completion(
-                project_group(batch, places, answered, None)?,
+                project_group(batch, places, answered, None, work.group, work.setting)?,
                 sole_group,
             )),
-            Err(error) if error.too_large() && records.len() > 1 => {
+            Err(error)
+                if (error.too_large() || matches!(error, Error::ReplayMiss(_)))
+                    && records.len() > 1 =>
+            {
                 let [left, right] =
                     crate::core::group_halves(self.backend(), self.profile(), questions, records)
-                        .map_err(PublicError::refused)?;
+                        .map_err(GroupBatchFailure::Batch)?;
                 let parent = ParentAttempt {
                     digest: batch.digest.as_str().to_owned(),
                     sent: attempted.load(Ordering::Relaxed),
                     total: records.len(),
+                    closed: batch.closed,
+                    setting: work.setting,
                 };
                 let left_answer = self.ask_batch(&left, cancel)?;
                 let left = group_completion(
-                    project_group(&left, places, left_answer, Some((&parent, 0)))?,
+                    project_group(
+                        &left,
+                        places,
+                        left_answer,
+                        Some((&parent, 0)),
+                        work.group,
+                        work.setting,
+                    )?,
                     sole_group,
                 );
                 if left.stop.is_some() {
@@ -143,6 +241,8 @@ impl Engine {
                     places,
                     right_answer,
                     Some((&parent, value.len())),
+                    work.group,
+                    work.setting,
                 )?);
                 Ok(group_completion(value, sole_group))
             }
@@ -187,6 +287,8 @@ impl Engine {
                 replayed: result.replayed,
                 parent_request: None,
                 parent_sent: 0,
+                batch: None,
+                parent_batch: None,
             });
             Ok::<(), Error>(())
         })?;
@@ -219,92 +321,6 @@ impl Engine {
     }
 }
 
-fn project_group(
-    batch: &Batch,
-    places: &[usize],
-    answered: super::Answered,
-    parent: Option<(&ParentAttempt, usize)>,
-) -> Result<Vec<GroupAnswer>, Error> {
-    let members = batch
-        .group_members
-        .as_ref()
-        .ok_or(Error::Defect("an annotate batch has no group members"))?;
-    let mut fragments = Vec::with_capacity(members.len());
-    for (position, member) in members.iter().enumerate() {
-        if member.outcomes.len() != places.len() {
-            return Err(Error::Defect("an annotate batch lost its group slice"));
-        }
-        let outcomes = member
-            .outcomes
-            .iter()
-            .map(|&at| {
-                answered
-                    .reply
-                    .outcomes()
-                    .get(at)
-                    .cloned()
-                    .ok_or(Error::Defect("an annotate batch lost an answer"))
-            })
-            .collect::<Result<Vec<_>, _>>()?;
-        let reply = Reply::new(
-            answered.reply.model().clone(),
-            outcomes,
-            answered
-                .reply
-                .usage()
-                .map(|usage| usage.share(members.len(), position)),
-        );
-        let parent_sent = parent.map_or(0, |(attempt, offset)| {
-            crate::core::share(attempt.sent, attempt.total, offset + position)
-        });
-        fragments.push(GroupAnswer {
-            answered: vec![ChunkAnswer {
-                places: places.to_vec(),
-                reply,
-                digest: answered.request.as_str().to_owned(),
-                requests_sent: crate::core::share(answered.requests_sent, members.len(), position),
-                replayed: answered.replayed,
-                parent_request: parent.map(|(attempt, _)| attempt.digest.clone()),
-                parent_sent,
-            }],
-            model: Some(answered.reply.model().clone()),
-        });
-    }
-    Ok(fragments)
-}
-
-fn group_completion(
-    mut value: Vec<GroupAnswer>,
-    sole_group: bool,
-) -> crate::engine::schedule::Completed<Vec<GroupAnswer>, PublicError> {
-    let stop = if sole_group {
-        value
-            .iter()
-            .position(|one| {
-                one.answered.iter().all(|chunk| {
-                    chunk
-                        .reply
-                        .outcomes()
-                        .iter()
-                        .all(|answer| matches!(answer, AnswerOutcome::Failed(_)))
-                })
-            })
-            .map(|index| {
-                value.truncate(index + 1);
-                PublicError::of(ErrorKind::Backend, "a backend question failed in a batch")
-            })
-    } else {
-        None
-    };
-    crate::engine::schedule::Completed {
-        value,
-        records: 0,
-        replayed: 0,
-        partial_failure: false,
-        stop,
-    }
-}
-
 /// Fold every group's replies into one record's values, in set order.
 pub(crate) fn assemble(
     set: &QuestionSet,
@@ -322,6 +338,7 @@ pub(crate) fn assemble(
         model: None,
         usage: Some(Usage::new(0, 0)),
         requests: Vec::new(),
+        batches: Vec::new(),
         requests_sent: 0,
         replayed: true,
         failed_questions: 0,
@@ -330,8 +347,14 @@ pub(crate) fn assemble(
         check_model(&mut annotation.model, chunk.reply.model(), requested)?;
         if let Some(parent) = &chunk.parent_request {
             annotation.requests.push(parent.clone());
+            if let Some(meta) = &chunk.parent_batch {
+                annotation.batches.push(meta.clone());
+            }
         }
         annotation.requests.push(chunk.digest.clone());
+        if let Some(meta) = &chunk.batch {
+            annotation.batches.push(meta.clone());
+        }
         annotation.usage = match (annotation.usage, chunk.reply.usage()) {
             (Some(total), Some(next)) => {
                 Some(total.checked_plus(next).ok_or(Error::UsageOverflow)?)

@@ -84,7 +84,7 @@ def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):
 
 def test_a_failed_question_keeps_its_dtype_and_a_separate_marker(backend, tmp_path):
     """On the malformed arm, the failed answer stays null in a typed column.
-    The companion holds the exact marker. A Series verb still raises."""
+    The companion holds the exact marker. A Series stops after its first failed batch."""
     printed = run(SETUP + """
     got = engine.annotate(form, pd.DataFrame({"body": texts[:2]}), on="body").value
     print(got["late"].dtype.name, got["team"].dtype.name, got["team"].isna().all(),
@@ -94,7 +94,7 @@ def test_a_failed_question_keeps_its_dtype_and_a_separate_marker(backend, tmp_pa
     marker = {"team": {"failed": {"kind": "backend", "cause": "missing_answer"}}}
     assert printed.splitlines() == [
         f"boolean string True object {[marker, marker]}",
-        "BackendError the reply was refused: the response carries no answer for question `q1` 2"]
+        "BackendError the reply was refused: the response carries no answer for question `q1` 1"]
 
 
 def test_a_frame_gains_answer_columns_and_keeps_its_own(backend, tmp_path):

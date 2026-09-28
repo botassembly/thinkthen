@@ -46,6 +46,11 @@ impl GroupBatcher {
     pub(crate) fn finish(&mut self) -> Result<Option<Batch>, BatchError> {
         self.0.finish()
     }
+
+    /// Close an open slice only when upstream input itself pauses.
+    pub(crate) fn pause(&mut self) -> Result<Option<Batch>, BatchError> {
+        self.0.pause()
+    }
 }
 
 /// Rebuild one refused group request as two complete, ordered group slices.
@@ -88,12 +93,12 @@ pub(crate) fn group_halves(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::core::Plan;
+    use super::GroupBatcher;
     use crate::core::adapters::built_in;
     use crate::core::question::Labels;
     use crate::core::recording::Exchange;
     use crate::core::text::{Evidence, QuestionText};
+    use crate::core::{Backend, BackendProfile, BatchRecord, Plan, Question, Setting};
 
     fn question(text: &str) -> Question {
         Question::Decide {

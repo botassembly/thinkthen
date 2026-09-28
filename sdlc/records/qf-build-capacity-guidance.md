@@ -12,3 +12,5 @@ A machine-wide lock can serialize independent work despite spare capacity. Retai
 
 
 The follow-up at `3530c13c` removes stale serialization from the worktree rules, script index and helper comments. The same independent reviewer accepted the complete follow-up after requiring one accuracy correction: the unchanged helper warns and runs unlocked where `flock` is absent; shared mutations on M5 need separate exclusion, such as a Python `fcntl` wrapper. No executable helper line changed. The coordinator also removed the three contradictory shared-lock sentences in the current work plan. Pages, tickets and diff checks passed; no full build or test run was needed.
+
+A subsequent whole-plan read found one stale sentence in lane rule8 that still named the global lock. It now points to the capacity policy. The executable helper remains unchanged; workers use lane-specific lock paths.

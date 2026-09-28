@@ -306,3 +306,6 @@ The builder also withdrew a proposed first-publication blocker after checking th
 ## Build capacity correction
 
 Ian removed the one-heavy-build restriction. The [reviewed capacity guidance](qf-build-capacity-guidance.md) permits independent isolated builds when current load, memory and I/O allow; actual shared installation and output mutation still need exclusion. Four builders received lane-specific lock paths. This removes an avoidable scheduling restriction. No measured speedup is claimed, and the source and toolchain findings above remain separate causes of rework.
+
+
+The same0231 reviewer accepted corrected source `70b70041` after the post-sample epoch check and ordered regression. It initially proposed another rejection because `Invoke::begin` samples time before its count CAS. The coordinator required the accepted lifetime boundary before another rewrite. The reviewer then withdrew that finding: 0110 decision8/R6-6 starts the invocation before chunk reading, and0201 owns the C++ statement from QueryBegin through QueryEnd; neither defines the internal CAS as semantic start. Native artifact proof still follows source acceptance. Review findings need a broken accepted behavior, not an unsupported internal-boundary assumption. This intervention prevented another timestamp reorder that could reintroduce an already-corrected missed signal.
