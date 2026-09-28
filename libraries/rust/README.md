@@ -11,7 +11,7 @@ Every program builds its engine with `Engine::from_env()`, so it reads `THINKTHE
 
 `Engine::from_env()` also reads the configuration file's `cache: false` switch. A bare `Engine::builder()` starts with library defaults and does not read the configuration file, so that switch does not turn off its cache. Call `Engine::builder().no_cache()` to turn it off explicitly.
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `EngineBuilder::no_cache`.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `EngineBuilder::no_cache`.
 
 The builder also sets `max_request_bytes`, `timeout`, `max_retries`, `profile`, `record`, and strict `replay`; replay alone sends nothing, even on a miss. The request-byte ceiling defaults to 96,000, and a smaller profile value wins.
 
