@@ -5,6 +5,7 @@
 set -eu
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd "$repo"
+. "$repo/sdlc/scripts/scratch.sh"
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 fail() { echo "release-workflow: $*" >&2; exit 1; }
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
@@ -51,7 +52,7 @@ host-setup)
 		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
 		python3 -m pip install --disable-pip-version-check 'uv==0.9.17'
 		[ "$(uv --version)" = 'uv 0.9.17' ] || fail 'uv version differs from pin'
-		seed=$(mktemp -d)
+		scratch_dir seed
 		uv venv --quiet --python "$(command -v python3.12)" "$seed/venv"
 		uv pip install --quiet --require-hashes --python "$seed/venv/bin/python" -r libraries/python/requirements-dev.txt
 	fi
@@ -85,8 +86,7 @@ npm-assemble)
 	output=$3
 	mkdir -p "$output"
 	output=$(CDPATH='' cd -- "$output" && pwd)
-	work=$(mktemp -d)
-	trap 'rm -rf -- "$work"' EXIT
+	scratch_dir work
 	cp libraries/typescript/package.json libraries/typescript/loader.js libraries/typescript/index.js \
 		libraries/typescript/index.mjs libraries/typescript/index.d.ts libraries/typescript/LICENSE "$work/"
 	count=0
@@ -120,8 +120,8 @@ smoke-bundle)
 installer-smoke)
 	[ "$#" = 2 ] || fail 'installer-smoke DIR'
 	files=$(CDPATH='' cd -- "$2" && pwd)
-	work=$(mktemp -d)
-	trap 'kill "${server:-}" 2>/dev/null || true; rm -rf -- "$work"' EXIT
+	scratch_dir work
+	trap 'kill "${server:-}" 2>/dev/null || true; scratch_clean' EXIT
 	mkdir -p "$work/www/botassembly/thinkthen/releases/download/v$version" "$work/bin"
 	case $(uname -s):$(uname -m) in
 	Linux:x86_64) target=x86_64-unknown-linux-musl ;; Linux:aarch64) target=aarch64-unknown-linux-musl ;;
@@ -146,8 +146,7 @@ PY
 	;;
 crate-smoke)
 	[ "$#" = 3 ] || fail 'crate-smoke CRATE_DIR SAMPLE_DIR'
-	work=$(mktemp -d)
-	trap 'rm -rf -- "$work"' EXIT
+	scratch_dir work
 	crate_dir=$(CDPATH='' cd -- "$2" && pwd)
 	sample_dir=$(CDPATH='' cd -- "$3" && pwd)
 	crate=$crate_dir/thinkthen-$version.crate
@@ -220,8 +219,7 @@ tap)
 		aarch64-apple-darwin) mac_arm=$(sha256 "$file" | awk '{print $1}') ;;
 		esac
 	done
-	work=$(mktemp -d)
-	trap 'rm -rf -- "$work"' EXIT
+	scratch_dir work
 	umask 077
 	printf '%s\n' "$TAP_DEPLOY_KEY" >"$work/key"
 	printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' >"$work/known_hosts"
