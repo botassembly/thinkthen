@@ -74,17 +74,35 @@ fn wait_on_request(
 }
 
 #[test]
-fn a_writer_seen_after_the_zero_budget_key_lookup_keeps_hit_or_mismatch() {
-    for (name, winner_url, matching) in [
+fn a_writer_seen_after_an_early_key_refusal_keeps_hit_or_mismatch() {
+    for (name, winner_url, matching, zero_limit, outer_key) in [
         (
             "zero-budget-race-hit",
             "http://127.0.0.1:1/v1/systemone",
             true,
+            true,
+            "outer key",
         ),
         (
             "zero-budget-race-mismatch",
             "http://127.0.0.1:2/v1/systemone",
             false,
+            true,
+            "outer key",
+        ),
+        (
+            "line-break-race-hit",
+            "http://127.0.0.1:1/v1/systemone",
+            true,
+            false,
+            "outer\nkey",
+        ),
+        (
+            "line-break-race-mismatch",
+            "http://127.0.0.1:2/v1/systemone",
+            false,
+            false,
+            "outer\nkey",
         ),
     ] {
         let path = folder(name);
@@ -105,7 +123,11 @@ fn a_writer_seen_after_the_zero_budget_key_lookup_keeps_hit_or_mismatch() {
         let prepared = PreparedRequest::new(&backend, &plan).expect("outer request");
         let recorder = Recorder::of(Some(&path), Some(&path)).expect("outer cache");
         let budget = SendBudget::new();
-        let cancel = crate::engine::Cancel::default().with_send_budget(Some((budget, Some(0))));
+        let cancel = if zero_limit {
+            crate::engine::Cancel::default().with_send_budget(Some((budget, Some(0))))
+        } else {
+            crate::engine::Cancel::default()
+        };
         let sends = Arc::new(AtomicUsize::new(0));
         let winner_sends = Arc::clone(&sends);
         let result: Result<Answered, Error> = super::ask_prepared(
@@ -135,9 +157,9 @@ fn a_writer_seen_after_the_zero_budget_key_lookup_keeps_hit_or_mismatch() {
                     },
                 );
                 answered.expect("winner fills cache during outer key lookup");
-                Ok(Key::of("outer key"))
+                Ok(Key::of(outer_key))
             },
-            |_, _| Err(Error::Defect("zero-budget outer send reached")),
+            |_, _| Err(Error::Defect("outer send reached")),
         );
         if matching {
             assert!(result.expect("matching answer").replayed);
@@ -148,6 +170,56 @@ fn a_writer_seen_after_the_zero_budget_key_lookup_keeps_hit_or_mismatch() {
         assert!(path.join(".thinkthen-backend.json").is_file());
         fs::remove_dir_all(path).expect("fixture removed");
     }
+}
+
+#[test]
+fn a_stop_after_writable_admission_keeps_the_bound_marker() {
+    let path = folder("after-admission-stop");
+    let _absent = fs::remove_dir_all(&path);
+    let (backend, plan, prepared) = request();
+    let entry = prepared.digest.file_name();
+    let recorder = Recorder::of(Some(&path), Some(&path)).expect("cache recorder");
+    let result: Result<Answered, Error> = super::ask_prepared(
+        &backend,
+        &plan,
+        prepared,
+        &recorder,
+        &crate::engine::Cancel::default(),
+        &Counters::default(),
+        || Ok(Key::of("valid key")),
+        |_, _| {
+            assert!(path.join(".thinkthen-backend.json").is_file());
+            Err(Error::Cancelled)
+        },
+    );
+    assert!(matches!(result, Err(Error::Cancelled)));
+    assert!(path.join(".thinkthen-backend.json").is_file());
+    assert!(!path.join(entry).exists());
+    fs::remove_dir_all(path).expect("fixture removed");
+}
+
+#[test]
+fn a_stop_during_an_early_bad_key_wins_without_binding() {
+    let path = folder("stop-during-bad-key");
+    let _absent = fs::remove_dir_all(&path);
+    let (backend, plan, prepared) = request();
+    let recorder = Recorder::of(Some(&path), Some(&path)).expect("cache recorder");
+    let cancel = crate::engine::Cancel::default();
+    let result: Result<Answered, Error> = super::ask_prepared(
+        &backend,
+        &plan,
+        prepared,
+        &recorder,
+        &cancel,
+        &Counters::default(),
+        || {
+            cancel.fire();
+            Ok(Key::of("first\nsecond"))
+        },
+        |_, _| Err(Error::Defect("send unexpectedly reached")),
+    );
+    assert!(matches!(result, Err(Error::Cancelled)));
+    assert!(!path.exists());
 }
 
 #[test]

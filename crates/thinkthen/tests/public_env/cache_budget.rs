@@ -102,29 +102,30 @@ fn zero_budget_preserves_bound_and_unusable_folder_refusals() {
         .cut();
     let budget = SendBudget::new();
     let options = || CallOptions::new().send_budget(&budget, Some(0));
-    let engine = |base: &str, path: &Path| {
+    let engine = |base: &str, path: &Path, key: &str| {
         Engine::builder()
             .base_url(base)
             .and_then(|builder| builder.model("local-1"))
-            .and_then(|builder| builder.api_key("sk-test"))
+            .and_then(|builder| builder.api_key(key))
             .and_then(|builder| builder.cache_at(path))
             .and_then(EngineBuilder::build)
             .expect("engine")
     };
 
     let bound = folder("zero-budget-bound-mismatch");
-    engine(first.base(), &bound)
+    engine(first.base(), &bound, "sk-test")
         .decide(&question, EVIDENCE)
         .expect("first address fills cache");
     let marker = fs::read(bound.join(".thinkthen-backend.json")).expect("bound marker");
-    let mismatch = engine(second.base(), &bound)
+    let mismatch = engine(second.base(), &bound, "first\nsecond")
         .decide_with(&question, EVIDENCE, options())
         .expect_err("mismatch precedes zero-budget denial");
     assert_eq!(mismatch.kind(), ErrorKind::Local);
+    assert!(!mismatch.retryable());
     assert_eq!(mismatch.send_budget_denial(), None);
     assert_eq!(
         mismatch.to_string(),
-        "the recording folder belongs to another backend address"
+        "the recording folder belongs to another backend address; restore its backend settings or choose another folder"
     );
     assert_eq!(
         fs::read(bound.join(".thinkthen-backend.json")).unwrap(),
@@ -140,7 +141,7 @@ fn zero_budget_preserves_bound_and_unusable_folder_refusals() {
         b"old entry",
     )
     .expect("legacy final entry");
-    let legacy_error = engine(second.base(), &legacy)
+    let legacy_error = engine(second.base(), &legacy, "first\nsecond")
         .decide_with(&question, EVIDENCE, options())
         .expect_err("legacy refusal precedes budget");
     assert_eq!(legacy_error.kind(), ErrorKind::Local);
@@ -159,11 +160,42 @@ fn zero_budget_preserves_bound_and_unusable_folder_refusals() {
         b"secret invalid marker",
     )
     .expect("malformed marker");
-    let malformed_error = engine(second.base(), &malformed)
+    let malformed_error = engine(second.base(), &malformed, "first\nsecond")
         .decide_with(&question, EVIDENCE, options())
         .expect_err("malformed marker precedes budget");
     assert_eq!(malformed_error.kind(), ErrorKind::Local);
     assert_eq!(malformed_error.send_budget_denial(), None);
     assert!(!malformed_error.to_string().contains("secret"));
     assert_eq!(second.count(), 0);
+}
+
+#[test]
+fn zero_budget_still_precedes_a_line_break_key_on_first_use() {
+    let listener = Listener::answering(|_| Canned::ok("unused")).expect("listener");
+    let cache = folder("zero-budget-line-break-key");
+    let question = Question::decide("asks for a refund")
+        .expect("question")
+        .cut();
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .and_then(|builder| builder.model("local-1"))
+        .and_then(|builder| builder.api_key("first\nsecond"))
+        .and_then(|builder| builder.cache_at(&cache))
+        .and_then(EngineBuilder::build)
+        .expect("engine");
+    let budget = SendBudget::new();
+    let denied = engine
+        .decide_with(
+            &question,
+            EVIDENCE,
+            CallOptions::new().send_budget(&budget, Some(0)),
+        )
+        .expect_err("zero budget wins before writable admission");
+    assert_eq!(denied.kind(), ErrorKind::Usage);
+    assert_eq!(
+        denied.send_budget_denial(),
+        Some(SendBudgetDenial::BeforeFirstSend)
+    );
+    assert!(!cache.exists());
+    assert_eq!(listener.count(), 0);
 }
