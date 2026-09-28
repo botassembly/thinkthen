@@ -1,0 +1,42 @@
+---
+flow: build
+priority: 220
+opens: sdlc/tickets/0220-bound-rank-top-retention.md sdlc/records/0220-rank-top-preflight.md sdlc/records/0220-design-review.md
+---
+
+# 0220: Bound rank top retention
+
+Status: proposed for fresh design review. Owner: Codex. The [preflight](../records/0220-rank-top-preflight.md) traces the current two unbounded retention layers. No runtime or shared page is edited by this proposal. Ian may overturn the memory outcome in [the issue](../issues/2026-09-26-rank-top-holds-every-record.md); no new command choice is proposed.
+
+## Outcome and retained contract
+
+With `rank --top N`, retain at most N winning `Judged` payloads after each ordered output callback. An incoming row with a lower score than the current Nth row is dropped; a later exact tie at that boundary never displaces an earlier row. Keep the bounded input, worker and completed-batch pipeline independent of total file length, even when the earliest request stalls and later requests finish. Every eligible record is still judged. Output bytes, stable total order, detailed rows, planned request sequence, bodies, digests and count, retry/413 behavior, usage/facts, warning behavior, exit codes, cancellation and the rule that a failed rank run prints nothing stay as today. Concurrent transport arrival order may vary today and is not a new promise. `rank` without `--top` keeps its current all-row accumulation and scheduling mode. A single input record can still be large; this is a bound on retained *row count* across a long file, not a fixed process-byte limit or a change to recording/cache storage.
+
+The engine's existing `held` boolean conflates two decisions: `Run::waiting(true)` counts only in-flight work, while `Outcome::Stopped.held` tells the CLI that rank printed nothing. A stalled first batch allows later completed batches to collect without bound in `Run.pending`, even if the final output vector keeps only N. Use one private three-way record-flow value: streaming, held-all (rank without top), and held-windowed (rank with top). The last reports `held=true` on stop but admits new work only while `dispatched - next < jobs`, including completed batches waiting behind an earlier one. It does not change the worker pool, batching planner or transport.
+
+In the CLI output sink, keep the top-N rows in descending `f64::total_cmp` order and insert a later exact equal score after earlier equal rows. If N winners are already present, reject a candidate no better than the last; otherwise remove that last winner before insertion. Keep `usage.record_done()` for every completed row, including one dropped from the winners. Preserve the existing end-only missing-probability defect: remember if any ranked row lacks a probability and return the same defect at successful end before printing, even when that row was discarded. Reuse `core::order::ranking` on the at-most-N winners at the end, or prove an equivalent final order; do not introduce a second request or batch planner. Warnings remain tied to rows actually printed.
+
+## Prospective implementation scope
+
+- `crates/thinkthen/src/engine/{schedule,facade}.rs`: define and pass the private record-flow value. Separate the pending-window rule from the existing stopped-output `held` metadata. Keep the streaming and held-all rules identical to current source.
+- `crates/thinkthen/src/cli/{schedule,asking/batched}.rs`: choose held-windowed only for ordered output with `top: Some(_)`, for both singleton/table and batched paths. Bound retained winners and end sorting. `cli/asking.rs` is a read-only route unless implementation shows a necessary edit.
+- Existing private `Engine::records` callers in `src/public/batch.rs`, `src/cli/conformance_tests/runner.rs`, `src/engine/{facade_tests,facade_tests/contract_tests}.rs`, and `src/cli/schedule/width_tests/facade_tests.rs` need explicit streaming mode in place of their current `false`. Direct `run_cancelled` tests in `engine/schedule.rs` need the same mechanical mode update. These adapters must keep their behavior; no public Rust signature changes.
+- Focused proof can use `crates/thinkthen/tests/backend/keeping.rs` as a one-line private-module parent and a new `keeping/rank_top.rs` child; the parent is at 496/500 nonblank lines. A bounded private sink assertion may live under `cli/schedule/` without a product test hook. Update the now-stale retention sentences in `specification/rank.md` and `cli/args/command.rs`, plus the explanatory comment in `cli/failure/tests.rs`. The shared specification page is held by register 45's builder and must merge second after an exact implementation claim. Update `sdlc/ratchet.json` to measured Rust source and a 0220 build record with growth rationale and duplication search.
+
+## Focused proof and limit
+
+Use one outside-in edge table with literal expected output for `--top 1`, a boundary tie under `--top 2`, and `--top` above the input size. Include unchanged line/JSONL bytes and `--details` membership, count every listener request, and compare `--jobs 1` with a parallel job setting. Reuse `keeping.rs` helpers and its existing no-top order, top membership, failure, dry-run and invalid-argument tests; do not copy their matrix. Add one failed later record after a completed prefix under `--top` that pins empty stdout and today's exact stopped sentence. A batch-one form exercises the batched CLI route; a CSV/TSV focused row is needed only if its path is not covered by the same sink and existing table tests.
+
+A private sink invariant must fail if a plant restores `held.push(judged)` for all rows: after every callback, retained winner count is at most N while completed-row counts still advance. A small stalled-first-batch case, using the existing loopback held reply and an acknowledged later completion, checks that the reader/transport does not keep pulling past the configured `--jobs` window before release; after release it must finish all records and print the same order. This real-boundary witness complements the source invariant: finite fixtures cannot measure peak process memory or prove every possible thread schedule. Inspect `Run::request`, `Run::pending`, the 64-record feed, batch member cap, output vector and end sort together in review. No test-only product flag, repeated saturation/churn run, broad gate or provider call is needed. Use focused formatting, Clippy/test targets and affected documentation checks after implementation under the heavy lock.
+
+## Evidence
+
+- Starts from: Main `ebc80d88`, [the open issue](../issues/2026-09-26-rank-top-holds-every-record.md), settled `specification/rank.md`, current `cli/schedule.rs::Output`, `engine/schedule.rs::Run`, the 0146 batch route and existing `keeping.rs`/`order.rs` proofs, as traced in the preflight.
+- Keeps: Every request and accounting event; exact sorted output, stable ties, `--details`, warnings, stopped-run no-output wording, cancellation, replay/cache identity, `--top` validation, and the uncut rank path.
+- Changes: For rank with top only, a bounded winner sink and a bounded completed-batch window that still reports held-output failure semantics; truthful command/reference retention prose.
+- Proof: Literal top/tie/failure edge rows and listener counts; a private winner-count invariant that fails the all-row plant; one acknowledged stalled-first-batch backpressure witness; existing core stable-order and command tests; focused format, test, page, ticket, ratchet and diff checks.
+- Defers: Rank without top and any fixed byte/RSS ceiling, external recording/cache storage, graded-relevance redesign and register 45's separate guidance. No full gate, paid run or load campaign is part of this ticket.
+
+## What the build taught us
+
+Preparation found a second unbounded retention path beyond the obvious CLI vector: held-output scheduling gates on in-flight work, so later completed batches may accumulate in `Run.pending` behind a stalled first batch. The proposed private flow value preserves the failure wording while using the existing ordered window rule for top-N. `keeping.rs` has only four nonblank lines of headroom, so focused command cases need a child module. These are preparation findings, not build results. The builder must replace this paragraph with actual implementation surprises, measured growth and proof limits before landing.
