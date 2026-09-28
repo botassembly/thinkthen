@@ -24,12 +24,20 @@ fn the_schema_and_the_parser_agree_on_the_shared_corpus() {
         let verb = case["verb"].as_str().expect("a case verb");
         let file = serde_json::to_string(&case["file"]).expect("a case file is JSON");
         let written = written(&format!("corpus-{name}"), &file);
+        let has_batch = case["file"].get("batch").is_some();
         let input: &[u8] = if verb == "relate" {
             br#"[{"name":"Ada","kind":"person","label":"Ada","type":"person"},{"name":"Acme","kind":"organization","label":"Acme","type":"organization"}]"#
+        } else if has_batch {
+            b"Refund me please.\nAnother message.\n"
         } else {
             b"Refund me please."
         };
-        let output = run(&[verb, &written, "--dry-run"], input).expect("the compiled binary runs");
+        let mut arguments = vec![verb, &written, "--dry-run"];
+        if has_batch {
+            // A file batch is ignored on one document; a stream exercises its value.
+            arguments.push("--lines");
+        }
+        let output = run(&arguments, input).expect("the compiled binary runs");
         if case["valid"].as_bool().expect("a case verdict") {
             assert_eq!(
                 output.status.code(),

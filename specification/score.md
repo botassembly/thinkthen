@@ -26,6 +26,8 @@ The tool computes that weighted sum and normalization itself, from the probabili
 
 The number is a position on the levels the user named. It is not a probability that anything holds, and it is not a confidence in the answer. A script that compares two runs over different level lists is comparing two different scales.
 
+In `--details`, `answer.level` names the first level with the highest probability. Since levels are ordered lowest first, an exact tie for the highest probability names the lowest tied level there. It does not replace the weighted number under `value`: probabilities 0.5, 0, and 0.5 across three levels print 1 while `answer.level` names the first level.
+
 ## Options
 
 | Option | Meaning | Default |

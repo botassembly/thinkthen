@@ -27,7 +27,7 @@ pub(crate) struct Asked<'a> {
     pub(crate) settled: &'a Resolved,
     pub(crate) view: View,
     pub(crate) keeping: Keeping,
-    /// Where `decide`, `filter` and `rank` read their batch setting, or `None`.
+    /// Where record verbs read their batch setting, or `None`.
     pub(crate) batch: Option<Tiers<'a>>,
 }
 
@@ -332,7 +332,7 @@ pub(crate) fn choose(
     if arguments.raw && (arguments.common.csv || arguments.common.tsv) {
         return Err(Failure::TableRaw);
     }
-    let settled = asked::choose(arguments)?;
+    let (settled, file) = asked::choose(arguments)?;
     let asks = match arguments.options_pointer.as_deref() {
         Some(typed) => {
             if !arguments.common.jsonl {
@@ -358,7 +358,7 @@ pub(crate) fn choose(
             settled: &settled,
             view,
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,
