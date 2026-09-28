@@ -32,6 +32,7 @@ Each kept line or JSONL record prints as it arrived, in input order. A kept CSV 
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees. See [records.md](records.md) | The whole record |
 | `--details` | Prints one result object per kept record in place of the kept records | Off |
+| `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
@@ -58,6 +59,10 @@ thinkthen filter 'This describes a reproducible bug.' --jsonl --field /body < is
 
 ```sh
 thinkthen filter 'This mentions an open action.' --threshold 0.9 < notes.txt
+```
+
+```sh
+thinkthen filter 'It appears on the album Abbey Road.' --threshold 0.7 --context catalog.txt < songs.txt
 ```
 
 ```sh

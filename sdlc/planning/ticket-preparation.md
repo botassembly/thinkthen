@@ -16,6 +16,8 @@ Add concise investigation notes to the ticket. A shared record may hold facts co
 - Measure existing nonblank lines against each enforced file ceiling before treating a ticket's estimated growth as headroom. If a file is close, plan reuse or one coherent private extraction and review the actual growth.
 - Reusable code, experiments, fixtures and test helpers. Name fixture hashing, copied examples, serialized fields or host contracts that can surprise the build.
 - Keep one intended failure per fixture. Preserve valid digest names and inputs when testing a schema or file-open error, so an earlier failure cannot mask the target boundary.
+- When two inputs are individually supported, check their intersection before calling a public-output or secrecy finding non-issue. Register 106's exact configured-key collision is owned by ticket 0210; it does not justify unrelated test combinations.
+- Verify each claimed landed prerequisite by commit ancestry or explicit equivalent source comparison. A copied adapter file does not establish that its source and tests both transferred.
 - Check each host's accepted value ranges and NULL rules before reusing a proof across ports; a value valid in one host may be refused in another.
 - For port settings, inspect every current constructor and overload before copying an accepted ticket's sentence. A later landed adapter may already support a value that older prose called absent.
 - The smallest relevant validation commands and what each proves. Keep setup, compile, execution and lock wait separate when measured. No load campaign belongs in preparation.

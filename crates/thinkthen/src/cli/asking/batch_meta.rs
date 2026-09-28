@@ -8,14 +8,16 @@ pub(super) struct Description {
     setting: Setting,
     closed: Closed,
     split: bool,
+    context: bool,
 }
 
 impl Description {
-    pub(super) const fn new(setting: Setting, closed: Closed, split: bool) -> Self {
+    pub(super) const fn new(setting: Setting, closed: Closed, split: bool, context: bool) -> Self {
         Self {
             setting,
             closed,
             split,
+            context,
         }
     }
 
@@ -26,7 +28,7 @@ impl Description {
         usage: Option<Usage>,
         requests_sent: u64,
     ) -> Option<BatchMeta> {
-        (records > 1 || self.split).then(|| {
+        (records > 1 || self.split || self.context).then(|| {
             let meta = BatchMeta::new(
                 self.setting,
                 records,

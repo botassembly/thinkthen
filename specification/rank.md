@@ -30,6 +30,7 @@ Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JS
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | The framing | `--lines`, or `--jsonl` when a pointer is given |
 | `--field POINTER` | The part of each record the model sees | The whole record |
 | `--details` | Prints one result object for each record it prints | Off |
+| `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean, sent beside the question | No text |
 | `--dry-run` | Prints the plan for the first record and sends nothing | Off |
@@ -52,6 +53,10 @@ The request, the result object, and the recording entry are those of `decide`, s
 
 ```sh
 thinkthen rank 'This helps diagnose the login timeout.' --jsonl --field /body --top 5 < passages.jsonl
+```
+
+```sh
+thinkthen rank 'It appears on the album Abbey Road.' --context catalog.txt < songs.txt
 ```
 
 ```sh

@@ -311,7 +311,8 @@ The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `out
 | A line inserted into a recorded list | Its batch and the later batches of its stretch miss the cache. Batches before it and after the next content cut replay |
 | A record whose batch of one passes 96,000 bytes | Sent alone as today's request |
 | A record that passes Jev's evidence limit | The backend refuses it at exit 4 with today's `max_tokens_exceeded` message |
-| A context whose request with one record passes the ceiling or a profile limit | Exit 2 before any request. The message names the limit and the context's size, and echoes no text |
+| A context whose request with the question and no record passes a request or profile limit | Exit 2 before any request. The message names the binding limit and size, and echoes no text |
+| A later record whose batch of one with the context passes a request or profile limit | Exit 2 at that record. Earlier batches are sent and printed; the refused record sends nothing. ADR 0087 |
 | Two equal records in one batch | One question. Both get its answer. Both print where kept |
 | A record holding quote marks or a newline | JSON escapes inside the quote |
 | A CSV row | Quoted as its compact JSON object |

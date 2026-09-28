@@ -20,6 +20,7 @@ Two checks cannot be replayed, and their folders say so at the top of the script
 | `find-0040/` | Does the accepted one-request find shape hold from 100 through 255 choices before the public command is built |
 | `token-budget/` | Which of the vendor's two published request budgets is real. Written and not yet run, because a request that tests a 32,000 token ceiling costs more than 32,000 tokens |
 | `speed/` | How many requests, how much time and how many tokens each function and each Beatles Bench job takes, and whether `filter` over 306 titles finishes in under half a second (ticket 0145). Its gate runs in the `test` rung. Its live job is not replayable |
+| `context/` | Capped three-run shared-context accuracy check over the Beatles Bench titles (ticket 0172). Its live job is prepared but needs separate authorization; it keeps counts only |
 
 ## Running one again
 

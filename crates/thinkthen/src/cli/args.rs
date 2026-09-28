@@ -238,6 +238,10 @@ pub(crate) struct DecideArguments {
 /// The batch size of `decide`, `filter` and `rank` over a stream.
 #[derive(Args, Debug)]
 pub(crate) struct Batching {
+    /// Share the exact UTF-8 contents of FILE as evidence for every batch.
+    #[arg(long, value_name = "FILE", hide_short_help = true)]
+    pub(crate) context: Option<PathBuf>,
+
     /// Send at most N records of a stream in one request, or `max`. [default: max]
     ///
     /// `max` fills each request to the backend's limits. `--batch 1` asks one
