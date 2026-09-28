@@ -6,7 +6,7 @@ opens: sdlc/tickets/0233-python-label-types-and-annotate-models.md sdlc/records/
 
 # 0233: Type Python labels and annotate rows
 
-Status: Proposed J5 design from main `95070787`, corrected after first independent design review; implementation files are not claimed. Follow-up design review precedes source work. Owner: Codex. This is the existing Batch J5 item, not a new Every-item outcome.
+Status: Design accepted at `3d44d4dd` by the same independent Sol reviewer; coordinator approved implementation under ADR 0082 and main `f261fd11` granted the runtime claims. Code candidate is in build and awaits fresh independent review. Owner: Codex. This is the existing Batch J5 item, not a new Every-item outcome.
 
 ## Outcome and authority
 
@@ -47,4 +47,4 @@ After design acceptance, request exact implementation claims for `libraries/pyth
 
 ## What the build taught us
 
-Preparation only; no implementation has run. The first design review found that `_Recognize._build` erases structured meanings through `Option<String>`/`Description::text`; keyword recognition must use the existing version-one JSON and `_Recognize._from_json`. It also found that Python may collapse repeated Literal arguments before `get_args()`, so runtime can reject only visible duplicates and must leave a collapsed one-label choose set to the native count rule. Fill this section after source work with assumptions corrected by the build and review, the exact retained proof, measured growth, and remaining owner routes. The preflight also identifies the Literal ordering caveat, inherited Enum docstrings, optional import boundary and copied consumers so the build can test them directly.
+The accepted design's two corrections held in the build: recognition needed the existing JSON parser for structured kinds, and a collapsed duplicate Literal had to reach the native label-count rule. The new listener proof captured equal request bodies and returned digests for old and typed forms, including relation and default recognition settings; invalid override and alias paths sent nothing. The optional adapter stayed lazy under an import blocker, and its strict row model kept answered, unresolved and failed fields distinct. `LabelSet` remains `Any` in the stub because Python typing has no portable annotation for a direct `Literal[...]` object; concrete `Call`, annotation row, question-kind and error-kind outputs have strict mypy proof. The [build record](../records/0233-python-types-build.md) names the focused cases, installed-wheel proof, the measured 3,377 Python / 6,353 Rust ceilings, and one unrelated existing frame-listener failure requiring its owner's route. Library examples changed; marketing's separate site migration issue remains open. Fresh code/API review is required before landing.

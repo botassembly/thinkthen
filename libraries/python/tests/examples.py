@@ -24,7 +24,8 @@ def run(example, port):
         env = child_env(THINKTHEN_API_KEY=os.environ["THINKTHEN_API_KEY"],
                         THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1",
                         THINKTHEN_CACHE=str(pathlib.Path(folder, "cache")))
-        program = f"import thinkthen as tt\nprint(repr({example['python']}))"
+        program = ("import thinkthen as tt\n" + example.get("imports", "") +
+                   f"\nprint(repr({example['python']}))")
         done = subprocess.run([sys.executable, "-c", program], capture_output=True, text=True,
                               cwd=folder, env=env, timeout=60)
         return (done.stdout + done.stderr).strip()
