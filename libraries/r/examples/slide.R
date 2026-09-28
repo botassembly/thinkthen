@@ -1,7 +1,7 @@
 # The slide sample, exactly as drawn in
 # the product deck's surfaces page.
 # The harness defines the tickets frame before the drawn block and checks
-# the answer after; the drawn block itself is untouched.
+# the answer after. The calls read the new result's original value.
 
 
 tickets <- data.frame(
@@ -22,9 +22,9 @@ levels <- c("Routine.", "Soon.", "Immediate.")
 # a column goes in and a column comes out.
 # NA is "not sure", and filter() drops those rows
 tickets |>
-  filter(tt_decide("Is this a complaint?", body)) |>
+  filter(tt_decide("Is this a complaint?", body)$value) |>
   mutate(
-    team = tt_choose("Which team owns this?", body, teams),
-    urgency = tt_score("How urgent is this?", body, levels)
+    team = tt_choose("Which team owns this?", body, teams)$value,
+    urgency = tt_score("How urgent is this?", body, levels)$value
   ) |>
   arrange(desc(urgency))

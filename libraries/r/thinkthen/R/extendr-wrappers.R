@@ -17,28 +17,36 @@ NULL
 #' Check a question file and name its kind.
 tt_question_check <- function(body) .Call(wrap__tt_question_check, body)
 
-tt_decide_column <- function(question, records, deadline) .Call(wrap__tt_decide_column, question, records, deadline)
+tt_decide_column <- function(question, records, positions, deadline, batch, context, completion) .Call(wrap__tt_decide_column, question, records, positions, deadline, batch, context, completion)
 
-tt_column <- function(question, records, deadline) .Call(wrap__tt_column, question, records, deadline)
+tt_column <- function(question, records, positions, deadline, batch, context, completion) .Call(wrap__tt_column, question, records, positions, deadline, batch, context, completion)
 
-tt_filter_places <- function(question, records, deadline) .Call(wrap__tt_filter_places, question, records, deadline)
+tt_filter_places <- function(question, records, deadline, batch, context, completion) .Call(wrap__tt_filter_places, question, records, deadline, batch, context, completion)
 
-tt_rank_all <- function(question, records, deadline) .Call(wrap__tt_rank_all, question, records, deadline)
+tt_rank_all <- function(question, records, deadline, batch, context, completion) .Call(wrap__tt_rank_all, question, records, deadline, batch, context, completion)
 
-tt_find_one <- function(question, units, none, deadline) .Call(wrap__tt_find_one, question, units, none, deadline)
+tt_find_one <- function(question, units, none, deadline, completion) .Call(wrap__tt_find_one, question, units, none, deadline, completion)
 
-tt_annotate_file <- function(path, records, taken, deadline) .Call(wrap__tt_annotate_file, path, records, taken, deadline)
+tt_annotate_file <- function(path, records, taken, deadline, batch, completion) .Call(wrap__tt_annotate_file, path, records, taken, deadline, batch, completion)
 
-tt_details_one <- function(question, evidence, deadline) .Call(wrap__tt_details_one, question, evidence, deadline)
+tt_details_one <- function(question, evidence, deadline, completion) .Call(wrap__tt_details_one, question, evidence, deadline, completion)
 
 tt_usage_counters <- function() .Call(wrap__tt_usage_counters)
 
 tt_interrupt_pending <- function() .Call(wrap__tt_interrupt_pending)
 
-tt_recognize_column <- function(spec, path, texts, deadline) .Call(wrap__tt_recognize_column, spec, path, texts, deadline)
+tt_recognize_column <- function(spec, path, texts, positions, deadline, completion) .Call(wrap__tt_recognize_column, spec, path, texts, positions, deadline, completion)
 
-tt_relate_frame <- function(spec, path, names, kinds, deadline) .Call(wrap__tt_relate_frame, spec, path, names, kinds, deadline)
+tt_relate_frame <- function(spec, path, names, kinds, deadline, completion) .Call(wrap__tt_relate_frame, spec, path, names, kinds, deadline, completion)
 
-tt_engine_set <- function(base_url, model, throttle, max_requests, max_request_bytes, cache, timeout, max_retries, record, replay, profile) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_request_bytes, cache, timeout, max_retries, record, replay, profile)
+tt_engine_set <- function(base_url, model, throttle, max_requests, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_request_bytes, cache, timeout, max_retries, record, replay, profile, batch)
+
+tt_completion_new <- function() .Call(wrap__tt_completion_new)
+
+tt_completion_claim <- function(value) .Call(wrap__tt_completion_claim, value)
+
+tt_completion_read_native <- function(value) .Call(wrap__tt_completion_read_native, value)
+
+tt_completion_settle_early <- function(value, kind) .Call(wrap__tt_completion_settle_early, value, kind)
 
 # nolint end

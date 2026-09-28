@@ -238,6 +238,20 @@ fn the_first_line_is_the_port_and_count_lines_count_until_the_input_closes() -> 
 }
 
 #[test]
+fn full_arm_capture_keeps_only_opted_in_bodies() -> Tested {
+    let mut backend = start()?;
+    let (status, body) = post(backend.3, "/arm/full/capture/v1/systemone", DECIDE)?;
+    assert_eq!(status, "HTTP/1.1 200 X");
+    assert!(body.contains(r#""usage":{"input_tokens":1,"output_tokens":1}"#));
+    post(backend.3, "/arm/full/v1/systemone", DECIDE)?;
+    post(backend.3, "/generic/v1/systemone", DECIDE)?;
+    let captured: serde_json::Value = serde_json::from_str(&ask(&mut backend, "capture")?)?;
+    assert_eq!(captured["bodies"], serde_json::json!([DECIDE]));
+    assert_eq!(last(backend)?, "3");
+    Ok(())
+}
+
+#[test]
 fn a_held_reply_waits_for_a_release_line() -> Tested {
     let mut backend = start()?;
     let answer = posting(backend.3, HELD);

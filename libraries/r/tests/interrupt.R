@@ -77,8 +77,15 @@ invisible(ended(single))
 
 # The tick, batch at throttle 8: the cap is exactly 8, CAUGHT within 0.5 s,
 # and the cancelled batch sends nothing more after release.
-batch <- spawn(c('tt_engine(throttle = 8L)', sprintf('tryCatch(tt_decide("Q?", paste("batch", 1:200)), interrupt = %s)', caught),
-                 'Sys.sleep(5)'))
+receipt_caught <- 'function(e) { cat("CAUGHT", format(as.numeric(Sys.time()), digits = 15), "\\n"); cat("ON_INTERRUPT", tt_completion_read(h)$state, "\\n"); flush(stdout()) }'
+batch <- spawn(c('tt_engine(throttle = 8L)',
+  'h <- tt_completion(); cat("BEFORE", tt_completion_read(h)$state, "\\n")',
+  sprintf('tryCatch(tt_decide("Q?", paste("batch", 1:200), batch = 2L, completion = h), interrupt = %s)', receipt_caught),
+  'for (i in 1:100) { a <- tt_completion_read(h); if (identical(a$state, "terminal")) break; Sys.sleep(0.05) }',
+  'b <- tt_completion_read(h)',
+  'reuse <- tryCatch(tt_decide("Q?", "reuse", completion = h), thinkthen_error = function(e) e$kind)',
+  'cat("FINAL", a$kind, a$facts$requests_sent, a$facts$records, identical(a, b), reuse, "\\n")',
+  'a$details[[1]]$index <- 99; cat("OWNED", tt_completion_read(h)$details[[1]]$index, "\\n")'))
 at_signal <- settled(2L)
 check("throttle 8 holds exactly 8 on the wire", at_signal == 1L + 8L)
 signalled <- now()
@@ -93,12 +100,31 @@ later <- backend_count()
 Sys.sleep(2)
 check("the cancelled batch sends nothing after release", later == at_signal && backend_count() == at_signal)
 invisible(ended(batch))
+batch_lines <- paste(lines_of(batch), collapse = "\n")
+check("completion moves unused through running to final accounted cancellation",
+      grepl("BEFORE unused", batch_lines, fixed = TRUE) &&
+      grepl("ON_INTERRUPT running", batch_lines, fixed = TRUE) &&
+      grepl("FINAL cancelled 8 16 TRUE usage", batch_lines, fixed = TRUE))
+check("completion reads are owned snapshots", grepl("OWNED 0", batch_lines, fixed = TRUE))
+
+# The caller drops its only R handle while a sent scalar is still held. The
+# worker owns its Rust reference until cancellation settles and joins.
+base <- backend_count()
+collected <- spawn(c('h <- tt_completion()',
+  'tryCatch(tt_decide("Q?", "collected", completion = h), interrupt = function(e) { rm(h); invisible(gc()); cat("COLLECTED\\n"); flush(stdout()) })'))
+check("a handle can be collected during a held send", settled(base + 1L) == base + 1L)
+tools::pskill(collected$pid, 2L)
+check("R returns promptly after collecting the handle",
+      until(function() grepl("COLLECTED", paste(lines_of(collected), collapse = "\n"), fixed = TRUE), 5))
+backend_say("round")
+invisible(ended(collected))
+check("the collected handle starts no later send", backend_count() == base + 1L)
 
 # R2-23: choose, score, and tag over 50 texts cross as one parallel
 # annotate, so more than one request is on the wire before any release.
-bulk <- c(choose = 'tt_choose("Which?", paste("c", 1:50), c("a", "b"))',
-          score = 'tt_score("How much?", paste("s", 1:50), c("low", "high"))',
-          tag = 'tt_tag("Which labels?", paste("t", 1:50), c("x", "y"))')
+bulk <- c(choose = 'tt_choose("Which?", paste("c", 1:50), c("a", "b"), batch = 2L)',
+          score = 'tt_score("How much?", paste("s", 1:50), c("low", "high"), batch = 2L)',
+          tag = 'tt_tag("Which labels?", paste("t", 1:50), c("x", "y"), batch = 2L)')
 for (verb in names(bulk)) {
   base <- backend_count()
   job <- spawn(c('tt_engine(throttle = 8L)', bulk[[verb]]))
@@ -133,4 +159,4 @@ for (catch in c(FALSE, TRUE)) {
 }
 
 backend_say("release")
-finish("interrupt", 1L + 8L + 24L + 2L)
+finish("interrupt", 1L + 8L + 1L + 24L + 2L)
