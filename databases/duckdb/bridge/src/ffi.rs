@@ -328,7 +328,7 @@ pub(crate) fn run_detached<T: Send + 'static>(
             token.cancel();
             return Err(cancelled());
         }
-        match receiver.recv_timeout(Duration::from_millis(50)) {
+        match receiver.recv_timeout(Duration::from_millis(10)) {
             Ok(result) => {
                 if stop.stopped() {
                     token.cancel();

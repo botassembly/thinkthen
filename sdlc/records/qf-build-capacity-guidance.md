@@ -9,3 +9,6 @@ The coordinator observed Linux load 1.28 across 16 logical CPUs with 22.4 GiB av
 ## What the build taught us
 
 A machine-wide lock can serialize independent work despite spare capacity. Retain locks for the actual shared mutable resource and same-output exclusion. Use capacity observations to admit independent work; reduce build jobs or defer new heavy work when pressure rises. This removes an avoidable scheduling restriction, but it does not claim a measured speedup or explain away separate code-review and platform corrections.
+
+
+The follow-up at `3530c13c` removes stale serialization from the worktree rules, script index and helper comments. The same independent reviewer accepted the complete follow-up after requiring one accuracy correction: the unchanged helper warns and runs unlocked where `flock` is absent; shared mutations on M5 need separate exclusion, such as a Python `fcntl` wrapper. No executable helper line changed. The coordinator also removed the three contradictory shared-lock sentences in the current work plan. Pages, tickets and diff checks passed; no full build or test run was needed.

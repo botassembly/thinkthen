@@ -289,3 +289,23 @@ The retained preparer received the first two patterns for the cache/replay pass 
 Fresh High review of `85b93557` found that separate signal count, interval epoch and timestamp stores admit inconsistent observations. A sibling invoke can miss SIGINT, or a later interval can inherit it. The retained builder is correcting publication and proving the two ordered interleavings before repeating the selected installed signal checks. The earlier `b7cc755e` archive remains pre-fix evidence.
 
 The M5 follow-up also found builder-home paths in linked ring debug data through a raw-byte scan, despite an ordinary strings scan appearing clean. A scratch Mach-O strip removed the paths and loaded only after the DuckDB metadata footer was preserved and reattached. That experiment is not final package proof. The builder owns the packaging correction, exact final archive identity and stock-host load check. Future platform briefs must trace linked dependencies and inspect the actual artifact bytes; source remapping alone is insufficient.
+
+
+## 0231 follow-up: coherent signal time and review before packaging
+
+The same High reviewer found a further race at candidate `6b057903`. Its runtime source `a3cfea40` uses a full-width clock and an interval signal bit, but updates the shared timestamp before checking the captured interval. A delayed handler from an ended interval can advance the timestamp after the next interval receives its own real signal. The new bit then pairs with the old handler's later time and extends the ten-millisecond cancellation wave. The existing old-handler proof covers a new interval without its own signal, so it misses the mixed case. This remains an unaccepted source defect.
+
+The coordinator assigns the retained builder High effort for this repeated concurrency risk. The correction must state a coherent epoch/time invariant, cover the ordered mixed-handler case and preserve signal safety. Return the frozen source to the same reviewer before repeating native packaging. This separates cheap protocol correction from artifact validation and avoids spending a package build on a still-rejected protocol. Earlier exact package proof remains evidence only for its recorded source revision.
+
+## 0128 follow-up: verify toolchain and registry facts
+
+The release builder reports that the pinned rb-sys image carries Ruby 3.1 and 4.0, not the accepted Ruby 3.4 ABI, and uses glibc 2.31 rather than the stated 2.28 floor. The coordinator approved investigating the existing digest-pinned manylinux_2_28 images with SHA-pinned Ruby 3.4.11 source builds. Native installed smoke and all four target criteria remain required. The implementation and its exact image evidence still await fresh release-safety review; no platform completion is inferred from the route change.
+
+The builder also withdrew a proposed first-publication blocker after checking the official crates.io API and sparse index: thinkthen 0.0.1 already exists. Local `publish = false` does not establish registry state. Existing publisher/account configuration remains a separate release setup criterion. Future release preparation should inspect the exact image contents, target architecture and registry state before treating an accepted route or an external blocker as factual.
+
+## Build capacity correction
+
+Ian removed the one-heavy-build restriction. The [reviewed capacity guidance](qf-build-capacity-guidance.md) permits independent isolated builds when current load, memory and I/O allow; actual shared installation and output mutation still need exclusion. Four builders received lane-specific lock paths. This removes an avoidable scheduling restriction. No measured speedup is claimed, and the source and toolchain findings above remain separate causes of rework.
+
+
+The same0231 reviewer accepted corrected source `70b70041` after the post-sample epoch check and ordered regression. It initially proposed another rejection because `Invoke::begin` samples time before its count CAS. The coordinator required the accepted lifetime boundary before another rewrite. The reviewer then withdrew that finding: 0110 decision8/R6-6 starts the invocation before chunk reading, and0201 owns the C++ statement from QueryBegin through QueryEnd; neither defines the internal CAS as semantic start. Native artifact proof still follows source acceptance. Review findings need a broken accepted behavior, not an unsupported internal-boundary assumption. This intervention prevented another timestamp reorder that could reintroduce an already-corrected missed signal.
