@@ -1,6 +1,6 @@
 # 0250 early cache key refusal build
 
-Status: clean source and focused proof candidate for a **new** independent High code review. Fresh High design review accepted `25939814`; the coordinator recorded its implementation claim on main `1e1c4154`. The branch merged current main `bfe0791c` before source edits. Register 10 remains open, and no marker/schema, public documentation, saved cache or provider call changed.
+Status: fresh independent High code review **ACCEPT** at `0e3f5fa7996533c60f49ff5bee5d06e52fbb84d9`; the coordinator integrated the unchanged source and focused proof. Fresh High design review accepted `25939814`; the coordinator recorded its implementation claim on main `1e1c4154`. The branch merged current main `bfe0791c` before source edits. Register 10 remains open, and no marker/schema, public documentation, saved cache or provider call changed.
 
 ## Change and observed behavior
 
@@ -17,3 +17,7 @@ The root Rust count on merged main was 96,075 nonblank lines and this candidate 
 ## What the build taught us
 
 The HTTP key check was already a deterministic local refusal; sharing that exact predicate let the first-use path refuse without changing the transport's final guard. The second read-only observation is necessary because the key closure can allow a competing writer to bind and finish a useful hit. The source test that stops after writable admission makes the boundary visible: cleanup removes an unfinished entry, not the durable backend marker. The public cure can be fixed text, so it adds useful action without retaining or printing the bound address.
+
+## Independent review
+
+The fresh High reviewer traced the shared CR/LF guard, one key lookup, explicit-zero precedence, second read-only probe, cancellation checkpoint, writer races and retained gate-first paths. The public cure preserves Local and nonretryable behavior without exposing a key or address. The reviewer independently reran the focused backend line-break, private writer-race and public mismatch/budget cases offline. All passed. Register 10 remains open for its broader original criteria; this review does not silently narrow them.
