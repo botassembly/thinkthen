@@ -68,3 +68,72 @@ fn a_reply_over_its_limit_names_it() {
     );
     assert_eq!(listener.count(), 1);
 }
+
+#[test]
+fn observer_panic_waits_for_a_held_later_batch_worker() {
+    let _serial = serial();
+    let release = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let held = std::sync::Arc::clone(&release);
+    let listener = Listener::answering(move |body| {
+        if String::from_utf8_lossy(body).contains("beta") {
+            Canned::ok(DECIDED).after_release(std::sync::Arc::clone(&held))
+        } else {
+            Canned::ok(DECIDED)
+        }
+    })
+    .expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .throttle(2)
+        .expect("throttle")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let (observed, notice) = std::sync::mpsc::channel();
+    let observe = |_: thinkthen::RecordObservation<'_>| {
+        observed.send(()).expect("notice");
+        resume_unwind(Box::new("held observer payload"));
+    };
+    let setting = BatchSetting::Records(std::num::NonZeroUsize::MIN);
+    let asked = question();
+    let mut rows = engine.decide_many_with(
+        &asked,
+        ["alpha", "beta"],
+        CallOptions::new().batch(setting).observe(&observe),
+    );
+    let (caught, held_worker) = thread::scope(|scope| {
+        let listener = &listener;
+        let release = &release;
+        let helper = scope.spawn(move || {
+            notice.recv_timeout(BOUND).expect("observer fired");
+            let began = Instant::now();
+            while listener.count() < 2 && began.elapsed() < BOUND {
+                thread::sleep(Duration::from_millis(5));
+            }
+            let held_worker = listener.count() == 2;
+            if held_worker {
+                assert!(release.wait(), "release the held answer");
+            }
+            held_worker
+        });
+        let caught = catch_unwind(AssertUnwindSafe(|| rows.next()));
+        (caught, helper.join().expect("release helper"))
+    });
+    assert!(held_worker, "a later request was in flight at the callback");
+    let payload = caught.expect_err("observer panic reaches caller after join");
+    assert_eq!(
+        payload.downcast_ref::<&str>(),
+        Some(&"held observer payload")
+    );
+    assert_eq!(listener.count(), 2);
+    assert_eq!(
+        *engine
+            .decide(&question(), "gamma")
+            .expect("next call")
+            .value(),
+        Answer::Yes
+    );
+}

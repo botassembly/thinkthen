@@ -69,6 +69,37 @@ fn typed_bulk_verbs_share_one_request_and_keep_input_order() {
 }
 
 #[test]
+fn a_later_invalid_annotation_keeps_the_valid_group_prefix() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"left":{"decide":"Left?","on":"/left"},"right":{"decide":"Right?","on":"/right"}}}"#,
+    )
+    .expect("set");
+    let records = [r#"{"left":"a","right":"b"}"#, r#"{"left":"c"}"#];
+    let mut rows = engine.annotate(&set, records);
+    assert_eq!(
+        rows.next().expect("first").expect("valid prefix").input(),
+        &records[0]
+    );
+    assert_eq!(
+        rows.next()
+            .expect("refusal")
+            .expect_err("missing part")
+            .kind(),
+        ErrorKind::Usage
+    );
+    assert!(rows.next().is_none());
+    assert_eq!(
+        rows.facts()
+            .map(|facts| (facts.records(), facts.requests_sent())),
+        Some((1, 2))
+    );
+    assert_eq!(listener.requests().len(), 2);
+}
+
+#[test]
 fn typed_choice_keeps_null_distinct_from_a_failed_later_row() {
     let _serial = serial();
     let null = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","probabilities":{"first":1.0,"second":0.0}},"q2":{"type":"choice","probabilities":{"first":0.5,"second":0.5}}}}"#;
