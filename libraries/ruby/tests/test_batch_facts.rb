@@ -58,10 +58,16 @@ class TestBatchFacts < Minitest::Test
       rescue T::UsageError => error
         say [error.kind, error.facts]
       end
+      begin
+        T.decide_many("Question?", %w[one two], context: "\\xff".b)
+      rescue T::UsageError => error
+        say [error.kind, error.message, error.facts]
+      end
     RUBY
     assert_equal [[%w[billing billing], 2, 1, [0, 1]], [[0.1, 0.1], 2, 1, [0, 1]],
                   [[%w[money shipping], %w[money shipping]], 2, 1, [0, 1]]], lines.first
-    assert_equal Array.new(19) { ["usage", nil] }, lines.drop(1)
+    assert_equal Array.new(19) { ["usage", nil] }, lines[1, 19]
+    assert_equal ["usage", "context is not valid UTF-8", nil], lines.last
     assert_equal 3, count
   end
 
@@ -149,17 +155,26 @@ class TestBatchFacts < Minitest::Test
     port = listener.addr[1]
     received = Queue.new
     serving = Thread.new do
-      socket = listener.accept
-      headers = []
-      headers << socket.gets until headers.last == "\r\n"
-      length = Integer(headers.grep(/\Acontent-length:/i).first.split(":", 2).last)
-      body = socket.read(length)
-      received << [headers.first.strip, body]
-      ids = JSON.parse(body).fetch("questions").keys
-      answers = ids.to_h { |id| [id, { type: "noul", noul: 0.9 }] }
-      response = JSON.generate(model: "jev-1.13.0", answers: answers, usage: { input_tokens: 6, output_tokens: 3 })
-      socket.write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: #{response.bytesize}\r\nConnection: close\r\n\r\n#{response}")
-      socket.close
+      2.times do
+        socket = listener.accept
+        headers = []
+        headers << socket.gets until headers.last == "\r\n"
+        length = Integer(headers.grep(/\Acontent-length:/i).first.split(":", 2).last)
+        body = socket.read(length)
+        received << [headers.first.strip, body]
+        questions = JSON.parse(body).fetch("questions")
+        answers = questions.to_h do |id, question|
+          answer = if question.fetch("type") == "choice"
+                     { type: "choice", probabilities: { billing: 0.9, shipping: 0.1 } }
+                   else
+                     { type: "noul", noul: 0.9 }
+                   end
+          [id, answer]
+        end
+        response = JSON.generate(model: "jev-1.13.0", answers: answers, usage: { input_tokens: 6, output_tokens: 3 })
+        socket.write("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: #{response.bytesize}\r\nConnection: close\r\n\r\n#{response}")
+        socket.close
+      end
     end
     Dir.mktmpdir("thinkthen-ruby-packed-") do |root|
       url = "http://127.0.0.1:#{port}/generic/v1"
@@ -168,16 +183,20 @@ class TestBatchFacts < Minitest::Test
         say [result.value, result.facts, result.details, result.inspect,
              result.facts.frozen? && result.details.frozen? && result.details.all?(&:frozen?) &&
              result.details.all? { |row| row[:requests].frozen? }]
+        options = { billing: { route: { desk: "Refunds", channels: ["mail", "phone"] } }, shipping: "Delivery" }
+        chosen = T.choose_many("Which team?", ["first", "second"], options: options)
+        say [chosen.value, chosen.facts, chosen.details]
       RUBY
       out, errors, status = Open3.capture3(TestBackend.env(url, root), RbConfig.ruby, "-I", TestBackend::LIB,
                                            "-e", TestBackend::PRELUDE + script, unsetenv_others: true)
       assert status.success?, errors
       serving.value
       line, body = received.pop
+      choice_line, choice_body = received.pop
       assert_equal "POST /generic/v1/systemone HTTP/1.1", line
       expected = %q({"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Is it urgent?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Is it urgent?"}}})
       assert_equal expected, body
-      values, facts, details, inspection, frozen = JSON.parse(out)
+      values, facts, details, inspection, frozen = JSON.parse(out.lines.first)
       assert_equal [true, true, true], values
       assert_equal [3, 1, 0, 6, 3], facts.values_at("records", "requests_sent", "cache_answers", "input_tokens", "output_tokens")
       assert_equal [0, 1, 2], details.map { |row| row.fetch("index") }
@@ -188,6 +207,15 @@ class TestBatchFacts < Minitest::Test
       assert_equal inspection.include?("beta"), false
       assert_equal 2, JSON.parse(body).fetch("questions").size
       assert frozen
+      assert_equal "POST /generic/v1/systemone HTTP/1.1", choice_line
+      expected_choice = %q({"state":{"records":["first","second"]},"model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"first\". Which team?","criteria":{"billing":{"route":{"desk":"Refunds","channels":["mail","phone"]}},"shipping":"Delivery"}},"q2":{"type":"choice","instructions":"The text is \"second\". Which team?","criteria":{"billing":{"route":{"desk":"Refunds","channels":["mail","phone"]}},"shipping":"Delivery"}}}})
+      assert_equal expected_choice, choice_body
+      chosen, chosen_facts, chosen_details = JSON.parse(out.lines.last)
+      assert_equal %w[billing billing], chosen
+      assert_equal [2, 1], chosen_facts.values_at("records", "requests_sent")
+      assert_equal [0, 1], chosen_details.map { |row| row.fetch("index") }
+      choice_digest = Digest::SHA256.hexdigest("systemone\n#{url}/systemone\n#{expected_choice}")
+      assert_equal [[choice_digest], [choice_digest]], chosen_details.map { |row| row.fetch("requests") }
     end
   ensure
     listener&.close

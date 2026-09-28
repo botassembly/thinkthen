@@ -450,9 +450,11 @@ module ThinkThen
 
     def context_of(value)
       return nil if value.nil?
-      refuse("context is nonblank text") unless value.is_a?(String) && !value.strip.empty?
+      refuse("context is nonblank text") unless value.is_a?(String)
+      text = text_of(value, "context")
+      refuse("context is nonblank text") if text.strip.empty?
 
-      text_of(value, "context")
+      text
     end
 
     def attach_receipt(error, source)
