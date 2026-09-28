@@ -5,20 +5,17 @@ use serde::Serialize;
 
 use super::{Answered, Engine};
 use crate::core::{
-    Answer, AnswerOutcome, Asked, Backend, BackendProfile, Evidence, ModelName, NameOdds, Odds,
-    Piece, PieceOdds, Plan, Question, RecognizeSpec, RecognizedName, RelationEdge, TAGS, TagRow,
-    Usage, found_names, kind_question, name_groups, pieces, plan_stated, settle_names,
-    stated_edges, step_one_groups, step_one_questions, step_two_questions, window,
+    Answer, AnswerOutcome, Asked, Backend, BackendProfile, Evidence, Lead, ModelName, NameOdds,
+    Odds, Piece, PieceOdds, Plan, Question, RecognizeSpec, RecognizedName, RelationEdge, TAGS,
+    TagRow, Usage, found_names, kind_question, name_groups, pair_edges, pieces, plan_pairs,
+    settle_names, step_one_groups, step_one_questions, step_two_questions, window,
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::prepared_request::{PreparedChunk, PreparedRequests, relation_ceiling};
+use crate::engine::prepared_request::{PreparedChunk, PreparedRequests, pair_chunks};
 
 /// The default limit on one text's UTF-8 bytes, which caps spending.
 pub(crate) const MAX_TEXT_BYTES: usize = 600_000;
-
-/// The most pair questions one step-3 request holds.
-const MOST_PAIRS: usize = 400;
 
 /// The names one text holds, and the edges between them when rules were given.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -173,30 +170,12 @@ impl Engine {
         if spec.relations.is_empty() {
             return Ok(None);
         }
-        let Some(planned) = plan_stated(text, entities, &spec.relations)
+        let Some(planned) = plan_pairs(Some(text), entities, &spec.relations, Lead::Stated)
             .map_err(|_| Error::Defect("relation planning failed"))?
         else {
             return Ok(Some(Vec::new()));
         };
-        let ceiling = relation_ceiling(&self.backend, self.profile.as_ref());
-        let mut prepared = Vec::new();
-        for questions in planned.questions.chunks(MOST_PAIRS) {
-            let plan = Plan::new(
-                planned.evidence.clone(),
-                self.backend.model().clone(),
-                questions.to_vec(),
-            )
-            .map_err(|_| Error::Defect("relation planned no questions"))?;
-            prepared.extend(
-                PreparedRequests::with_profile(
-                    &self.backend,
-                    &plan,
-                    self.profile.as_ref(),
-                    ceiling,
-                )?
-                .into_chunks(),
-            );
-        }
+        let prepared = pair_chunks(&self.backend, self.profile.as_ref(), &planned)?;
         let (meta, details) = held;
         let answers = self.execute(prepared, meta, cancel)?;
         let cut = spec.relation_threshold.cut_value().unwrap_or(0.5);
@@ -215,7 +194,7 @@ impl Engine {
                 probability: answer.yes().ok_or(Error::RecognizeLogical)?,
             });
         }
-        Ok(Some(stated_edges(
+        Ok(Some(pair_edges(
             entities,
             &spec.relations,
             &planned.pairs,

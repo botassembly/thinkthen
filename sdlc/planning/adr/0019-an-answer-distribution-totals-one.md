@@ -14,6 +14,8 @@
 - A refused distribution names the question and the rule. It never repeats reply values.
 - A yes/no answer carries one probability rather than a distribution, so this rule does not apply to it.
 
+ADR 0057 makes every relation question yes/no. A relation no longer asks a choice, so this total-one rule does not limit how many relation edges reach the cut.
+
 ## Evidence and consequences
 
 The repository holds 493 distributions in recordings plus four standalone fixtures. Their largest measured distance from one is `1.1102230246251565e-16`, so every saved reply remains valid. At the largest choice list of 255 members, the admitted total error is at most about `5.7e-14`. A score has at most ten levels, so its tolerance is at most about `2.3e-15`; at position 9, an uncorrected total-mass drift is at most about `2.1e-14`. Dividing by the measured total removes that drift before the existing twelve-decimal rounding.
