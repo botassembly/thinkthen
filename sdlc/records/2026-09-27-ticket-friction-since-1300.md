@@ -343,7 +343,9 @@ The 0233 code review found two distinctions that its preparation missed. A score
 
 Ruby 0234 found that the landed Rust planner makes batch one interactive. The earlier suggestion to retain eight simultaneous held requests at batch one was impossible. Old exact wire fixtures still use batch one; cancellation and ownership cases that need multiple held requests use batch two with bounded inputs. Its code review then found that calling Ruby's strip before UTF-8 validation leaked ArgumentError instead of UsageError, that the README promised completion receipts beyond the accepted prompt-stop boundary, and that the required structured-description request proof used only plain descriptions. The next host preparation checks conversion order, every universal documentation promise, and the actual values exercised by a claimed parity test.
 
-## Preserve fatal metadata when recovering rows
+## Withdrawn fatal-budget interpretation in the first 0222 review
+
+The fatal-budget conclusion in this historical account was wrong for the explicit try form. The later audit below reproduced the regression and withdrew it; accepted ADR 0080/0149 requires a safe Usage value while still preventing extra sends. Do not use this paragraph as implementation guidance.
 
 The first 0222 code review found that whitespace context aborted try-details rather than returning a safe Usage row. The correction caught outer Usage errors too broadly and converted a tagged process send-budget denial into row failures. Both errors share the public Usage kind, but the accepted contract makes the budget denial fatal. The same reviewer reproduced the regression on the installed package with four rows, batch two and a request total of one. The builder now preserves the fatal metadata and adds the try-details form to the existing bounded total-one proof. Preparation must inspect the error's full classification and test the recovery adapter itself; an ordinary scalar's passing budget case cannot prove the recoverable adapter.
 
@@ -367,3 +369,7 @@ The 0219 builder stopped at `test_try_budget.py` because its preserved spent-tot
 
 
 The bounded independent DuckDB re-audit confirmed that the same blanket fatal-budget rule had already regressed 0222. The unchanged pre-0222 safe-value test passed against the earlier artifact and failed against the final accepted one. Its selected acceptance set had omitted that relevant contract test. The reviewer withdrew the conclusion; issue `2026-09-28-duckdb-try-details-raises-on-a-spent-request-total.md` and priority 0240 retain both the evidence and the deeper packed-result preservation requirement. Keep focused suites small by selecting tests from the retained contract and changed call paths, not only the latest new tests. A reviewer must resolve a contrary old assertion against the ADR before declaring it obsolete.
+
+## Cache refresh lock lifecycle, 0238
+
+Fresh High code review of `56ec112c` found an inode-lifetime race in the proposed refresh path. A waiting caller can open an old digest lock before the owner unlinks it, while a third caller creates and locks a new inode. The two waiters can then send concurrently. Correct serialization requires tracing the lock namespace across successful writers, failed writers and valid-entry rechecks, with prune's exclusive folder gate treated separately. The retained builder is correcting the live-path lifecycle and adding one controlled three-caller proof; no completion is claimed here. Review also found that dry-run bypassed the accepted active-cache validation. These are implementation boundary gaps, not resource saturation.
