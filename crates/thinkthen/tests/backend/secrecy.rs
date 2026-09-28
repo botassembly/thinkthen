@@ -429,11 +429,22 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             Some(format!("Bearer {KEY}").as_str()),
             "{name}"
         );
-        assert_eq!(
-            written(&dir).len(),
-            2,
-            "{name}: marker and one entry were recorded"
-        );
+        let files = written(&dir);
+        let marker = dir.join(".thinkthen-backend.json");
+        assert!(files.contains(&marker), "{name}: backend marker");
+        let entries: Vec<_> = files
+            .iter()
+            .filter(|path| {
+                path.parent() == Some(dir.as_path()) && path.as_path() != marker.as_path()
+            })
+            .collect();
+        assert_eq!(entries.len(), 1, "{name}: one recorded entry");
+        assert_eq!(entries[0].extension(), Some(std::ffi::OsStr::new("json")));
+        let digest = entries[0].file_stem().expect("entry digest");
+        let lock = dir.join(".locks").join(digest);
+        assert!(files.contains(&lock), "{name}: retained digest lock");
+        assert_eq!(fs::metadata(lock).expect("digest lock").len(), 0);
+        assert_eq!(files.len(), 3, "{name}: marker, entry, and digest lock");
         nothing_leaked(name, &output, &into);
     }
 }
