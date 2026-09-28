@@ -45,3 +45,7 @@ The follow-up reading adds three selection signals beyond distance from the cut.
 - **The shortlist.** The truth sits in Jev's top two on 70% of the chained album-year cases against 37% for the top pick, and 95% on the single-hop song-to-album question. A second-position answer is a case worth a label or a stronger judge.
 
 Evidence: `experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13.
+
+## Factual preparation refresh, 2026-09-28
+
+At source `9b766cf9`, `audit` groups saved outcomes and `diff` pairs changed cases, but neither orders an unlabeled candidate queue, reserves a seeded audit share or aligns repeat flips. The per-case audit issue can share its parser and identity; it does not fulfill this ranking criterion. The `runs/labels.json` advantage came from one 228-case yes/no pool, fixed held 76, label pool 152 and 300 trials. The original 10-to-60 advantage is retained as evidence, not a universal pass/fail gate. A future design must specify record plus tag/annotate criterion identity, key-free uncertainty versus labeled hard cases, missing probabilities, run/repeat pairing, stable ties and seeded share. Top-two evidence applies only when a suitable choice distribution exists. A small saved table can prove exact order/share, near-cut and hard misses, disagreement and flip, with zero sends; it need not reproduce the experiment's held-set accuracy. See `sdlc/records/2026-09-28-tuning-evidence-refresh.md`.
