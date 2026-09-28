@@ -265,7 +265,7 @@ export const FUNCTIONS = [
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
-    requests: 'It runs three steps. It finds the names. It labels each name with one of your kinds, the way choose picks an option. When you name a relation, it relates the names. --dry-run prints the request plan for the first record.',
+    requests: 'It runs three steps. It finds the names. It labels each name with one of your kinds. This step works like choose. When you name a relation, it relates the names. --dry-run prints the request plan for the first record.',
     args: 'KIND..., or one @FILE question file',
     options: [
       ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
@@ -508,8 +508,8 @@ export const SURFACES = [
 ];
 
 // The bindings: every language and database ThinkThen works with. Bash is
-// the command line, the one CLI, and not a binding. The list matches
-// BINDINGS in the talk's deck (common.py). Each binding links to
+// the command line, the one CLI, and not a binding. The talk's slides
+// name the same 24. Each binding links to
 // /install/<slug>/. A binding with no entry in SURFACES has no page yet, and
 // scripts/check-links.mjs allows exactly those paths.
 const DATABASE_SLUGS = new Set(['duckdb', 'postgresql', 'sqlite']);

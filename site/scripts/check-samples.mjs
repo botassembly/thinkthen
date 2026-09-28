@@ -165,7 +165,7 @@ function main() {
   for (const fn of CODE_FUNCTIONS) {
     const dir = path.join(root, 'functions', fn.name);
     const first = fs.readdirSync(dir).filter((n) => n.endsWith('.sh')).sort()[0];
-    if (!first) continue;
+    if (!first) { problems.push(`examples/functions/${fn.name}: no command example. Every function page opens with one.`); continue; }
     const script = path.join(dir, first);
     const shown = lineCount(script) + lineCount(script.replace(/\.sh$/, '.out'));
     if (shown < EXAMPLE_LINES.min || shown > EXAMPLE_LINES.max) problems.push(`examples/functions/${fn.name}/${first}: the page's example shows ${shown} lines of script and output. Keep it from ${EXAMPLE_LINES.min} to ${EXAMPLE_LINES.max}.`);
