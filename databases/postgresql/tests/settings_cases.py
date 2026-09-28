@@ -10,6 +10,7 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformanc
 from children import child_env  # noqa: E402
 
 CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "settings.json"
+CALIBRATION = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "calibration.json"
 QUESTION = "'{\"decide\":\"Is this a refund?\"}'"
 
 
@@ -23,6 +24,21 @@ def query(socket: str, statements: list[str]) -> subprocess.CompletedProcess[str
     for statement in statements:
         command += ["-c", statement]
     return subprocess.run(command, capture_output=True, text=True, timeout=30, check=False, env=child_env())
+
+
+def saved_calibration(socket: str) -> None:
+    """A SQL details call preserves the shared saved digest and mismatch."""
+    case = json.loads(CALIBRATION.read_text())
+    question = json.dumps(case["question"], separators=(",", ":"))
+    profile = json.dumps(case["runtime_profile"], separators=(",", ":"))
+    done = query(socket, [f"SET thinkthen.profile = {quote(profile)}",
+                          "SET thinkthen.cache = 'off'",
+                          f"SELECT thinkthen_details({quote(question)}, {quote(case['evidence'])})::text"])
+    assert done.returncode == 0, (done.stdout, done.stderr)
+    detail = json.loads(done.stdout.strip().splitlines()[-1])
+    assert detail["meta"]["question_sha256"] == case["question_sha256"], detail
+    assert detail["meta"]["profile_warning"] == case["warning"], detail
+    assert detail["meta"]["model"] == case["model"], detail
 
 
 def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
@@ -68,6 +84,10 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
 
 
 def main() -> None:
+    if sys.argv[1] == "calibration":
+        saved_calibration(sys.argv[2])
+        print("pass calibration")
+        return
     corpus = json.loads(CORPUS.read_text())
     assert corpus["schema"] == "thinkthen.settings-cases/1"
     if sys.argv[1] == "plan":

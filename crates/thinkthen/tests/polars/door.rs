@@ -8,7 +8,9 @@ mod common;
 
 use conformance_backend::Backend;
 use thinkthen::polars::prelude::{DataFrame, DataType, IntoColumn, NamedFrom, Series};
-use thinkthen::{CallOptions, Error, ErrorKind, PolarsEngine, Question, QuestionSet};
+use thinkthen::{
+    CallOptions, Error, ErrorKind, LoadedQuestion, PolarsEngine, Question, QuestionSet,
+};
 
 fn decide() -> Question {
     Question::decide("Does this ask for a refund?")
@@ -31,6 +33,33 @@ fn frame(columns: Vec<Series>) -> DataFrame {
         columns.into_iter().map(IntoColumn::into_column).collect(),
     )
     .expect("a frame")
+}
+
+#[test]
+fn a_profiled_question_keeps_its_identity_through_a_series() {
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../conformance/calibration.json"))
+            .expect("shared calibration fixture");
+    let question = match Question::from_json(&fixture["question"].to_string()).expect("question") {
+        LoadedQuestion::Question(question) => Some(question),
+        LoadedQuestion::Banded(_) => None,
+    }
+    .expect("the fixture is one decide question");
+    let backend = Backend::start().expect("backend");
+    let engine = common::builder(&format!("{}/generic/v1", backend.origin()))
+        .profile_json(&fixture["runtime_profile"].to_string())
+        .expect("runtime profile")
+        .build()
+        .expect("engine");
+    let evidence = fixture["evidence"].as_str().expect("evidence");
+    let answered = engine
+        .decide_series(&question, &common::column(&[evidence]), CallOptions::new())
+        .expect("series");
+    assert_eq!(answered.bool().expect("boolean series").get(0), Some(true));
+    let details = engine.details(&question, evidence).expect("details");
+    assert_eq!(details.question_sha256(), fixture["question_sha256"]);
+    assert_eq!(details.profile_warning(), Some(("old", "new")));
+    assert_eq!(backend.count(), 1);
 }
 
 /// Each refusal names its cause whole, in `Display` and `Debug`, and sends nothing.

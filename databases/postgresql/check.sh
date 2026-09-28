@@ -674,6 +674,13 @@ shared_settings_cases() {
 	done <"$RUN/settings.plan"
 }
 check shared_settings_cases
+calibration_saved_profile() {
+	fresh generic
+	line=$(python3 tests/settings_cases.py calibration "$SOCK")
+	same "$line" 'pass calibration'
+	same "$(bcount)" 1
+}
+check calibration_saved_profile
 a_cancelled_send_counts_toward_the_total() {
 	fresh arm/held "thinkthen.max_requests_total = 1"
 	q -c "SELECT thinkthen_decide('$Q', 'held')" -c "SELECT thinkthen_decide('$Q', 'next')" >"$RUN/held.out" 2>&1 &

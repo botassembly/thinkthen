@@ -34,6 +34,23 @@ class TestSurface < Minitest::Test
     assert_equal [["thinkthen.result/1", true, { "kind" => "yes_no", "probability" => 0.9 }, 1, 1]], lines
   end
 
+  def test_saved_profile_details_keep_shared_digest_and_warning
+    fixture = JSON.parse(File.read(File.expand_path("../../../conformance/calibration.json", __dir__)))
+    Dir.mktmpdir("thinkthen-ruby-profile-") do |folder|
+      profile = File.join(folder, "profile.json")
+      File.write(profile, JSON.generate(fixture.fetch("runtime_profile")))
+      lines, count = run_child(<<~RUBY)
+        engine = T::Engine.new(profile: #{profile.inspect}, cache: false)
+        question = T.question(decide: #{fixture.fetch("question").fetch("decide").inspect},
+                              profile: #{fixture.fetch("question").fetch("profile").inspect})
+        found = engine.details(question, #{fixture.fetch("evidence").inspect})
+        say [found["meta"]["question_sha256"], found["meta"]["profile_warning"], found["meta"]["model"]]
+      RUBY
+      assert_equal [[fixture.fetch("question_sha256"), fixture.fetch("warning"), fixture.fetch("model")]], lines
+      assert_equal 1, count
+    end
+  end
+
   def test_the_bulk_verbs_keep_input_order_and_map_places_back
     lines, count = run_child(<<~RUBY)
       records = ["one", { note: "two" }, "three"]
@@ -97,6 +114,22 @@ class TestSurface < Minitest::Test
       end
     RUBY
     assert_equal ["none is true or false"], lines
+    assert_equal 0, count
+  end
+
+  def test_rank_and_find_refuse_a_built_profile_before_sending
+    lines, count = run_child(<<~RUBY)
+      calibrated = T.question(decide: "Is this urgent?", profile: "old")
+      [:rank, :find].each do |verb|
+        begin
+          verb == :rank ? T.rank(calibrated, %w[a b]) : T.find(calibrated, %w[a b], none: true)
+        rescue T::UsageError => e
+          say [e.kind, e.message]
+        end
+      end
+    RUBY
+    assert_equal [["usage", "rank takes a decide question with no profile"],
+                  ["usage", "find takes a decide question with no profile"]], lines
     assert_equal 0, count
   end
 

@@ -20,6 +20,8 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 A call with `"details": true` returns the command's `--details` line for one text, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
+The JSON call keeps a question's saved calibration `profile` in `meta.question_sha256`. When `thinkthen_engine_new_with` selects a different runtime profile, details include `meta.profile_warning` with `tuned_for` and `running`. The selected profile enforces request limits before a send.
+
 A call of `{"usage": true}` returns this engine's running totals of requests sent, retries, cache answers and tokens.
 
 ## Throttle is per loaded copy

@@ -187,3 +187,53 @@ fn annotate_suppresses_the_warning_and_never_starts_after_first_preflight_refusa
     assert!(error.contains("stopped at record 1"), "{error}");
     assert!(!error.contains("warning:"), "{error}");
 }
+
+#[test]
+fn command_and_public_details_share_the_saved_calibration_digest() {
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../../conformance/calibration.json"))
+            .expect("shared calibration fixture");
+    let question = file(
+        "shared-calibration-question.json",
+        &fixture["question"].to_string(),
+    );
+    let running = file(
+        "shared-calibration-profile.json",
+        &fixture["runtime_profile"].to_string(),
+    );
+    let listener = Listener::serving(vec![Canned::ok(
+        r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+    )])
+    .expect("listener");
+    let output = spawn(
+        &[
+            "decide",
+            &format!("@{}", question.display()),
+            "--details",
+            "--profile",
+            &running.to_string_lossy(),
+            "--url",
+            listener.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("THINKTHEN_API_KEY", "key")],
+        fixture["evidence"].as_str().expect("evidence").as_bytes(),
+    )
+    .expect("command");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: warning: threshold tuned for profile old is running under profile new\n"
+    );
+    let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("result JSON");
+    assert_eq!(row["meta"]["question_sha256"], fixture["question_sha256"]);
+    assert_eq!(row["meta"]["profile_warning"], fixture["warning"]);
+    assert_eq!(row["meta"]["model"], fixture["model"]);
+    assert_eq!(listener.connections(), 1);
+}

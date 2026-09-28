@@ -1,6 +1,6 @@
 # Two gate failures in a root cloud container
 
-Status: Open. Items 1 and 3 are open. Item 2 is closed.
+Status: Closed by reviewed ticket 0218 for items 1 and 3; item 2 remains closed by its earlier Quick Fix.
 
 Filed on 2026-09-25 from Quick Fix `qf-install-nightly-and-root-test` (see its record). A root cloud container with 4 cores found both. Neither failed on the Beelink as uid 1000 at first. On 2026-09-25 the C failure (item 2) also hit the Beelink as uid 1000, in the surfaces rung at the landing of ticket 0130, and passed on the rung before it. Neither touches a key or the live ledger.
 
@@ -28,3 +28,8 @@ Fix: the same choice as item 1. Refuse to run the gate as root with one plain se
 
 - The test rung passes as root, or refuses to run as root with one plain sentence. That covers items 1 and 3.
 - The C surface passes 20 runs in a row on a 4-core machine.
+
+
+## Resolution
+
+Ticket 0218 source `54e06a71` passed fresh independent code review. The routine scratch-ledger test reaches its real append-error handler under a child-only file-size limit and passes under root and an ordinary user. The opt-in Linux full gate refuses unsupported UID/capabilities or a missing prlimit before lock acquisition and compilation; its list mode remains available. The existing no-send interrupt test passes under a supported nonroot user. See `sdlc/records/0218-build.md` for exact proof and limits. Ian’s later functional-gate ruling replaced the historical 20-run campaign; no repeated full suite is claimed or required for this closure.
