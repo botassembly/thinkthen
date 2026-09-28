@@ -1,6 +1,6 @@
 # 0233 Python label types and annotate models: build record
 
-Status: Two product findings from the fresh independent review of source `f88e3162` are corrected; the new candidate returns to the same reviewer. The design review accepted `3d44d4dd`; main `f261fd11` granted these exact runtime files. The branch merged that main text update before source edits. No shared Rust, site, or other lane file changed.
+Status: The same independent code reviewer accepted corrected source `8faa901b`. The design review accepted `3d44d4dd`; main `f261fd11` granted these exact runtime files. The branch then merged separately reviewed shared Rust 0222 from main `73932ef4` cleanly. Python product and test source remain identical to accepted `8faa901b`; root landing remains pending.
 
 ## What changed
 
@@ -26,6 +26,12 @@ The Pydantic adapter also accepted `float | None` and nullable tag lists, then b
 
 Final affected checks used `flock -o /run/user/1000/thinkthen-codex-1.lock` with 21 GiB available and load 2.37: `pytest -q -p no:cacheprovider --tb=short tests/test_label_types.py tests/test_pydantic.py` **5 passed**, `mypy --strict tests/type_contract.py` passed, and Python compilation passed. `sh -n libraries/python/check.sh`, `git diff --check`, and both exact ratchets passed. No broad suite, wheel rebuild, stress or provider call ran for the correction.
 
+## Shared Rust integration after acceptance
+
+Main `73932ef4` added independently reviewed DuckDB/shared Rust 0222 batching code. The merge was clean, and `git diff --name-only 8faa901b HEAD -- libraries/python/thinkthen libraries/python/src libraries/python/tests` was empty. With Linux load 2.07 on 16 CPUs, 21 GiB available and low I/O pressure, the pinned CPython 3.13.5 lane rebuilt the editable native extension with `VIRTUAL_ENV=/tmp/thinkthen-codex-1-py313`, `PYO3_PYTHON=/home/ian/.local/share/uv/python/cpython-3.13.5-linux-x86_64-gnu/bin/python3.13`, matching `PYTHONHOME` and `LD_LIBRARY_PATH`, `RUSTFLAGS=--remap-path-prefix=/home/ian=/build`, and `flock -o /run/user/1000/thinkthen-codex-1.lock maturin develop --quiet --locked --offline --features probe`.
+
+From `libraries/python`, with `THINKTHEN_API_KEY` unset, the same lane lock and pinned venv ran `python -m pytest -q -p no:cacheprovider --tb=short tests/test_label_types.py tests/test_pydantic.py tests/test_call.py::test_batches_labels_and_owned_details tests/test_call.py::test_returned_failure_keeps_its_final_account`: **7 passed in 2.48 s**. This covers captured label/model identity, optional import/rows, historical batch-one bytes/digest and returned-failure final facts against the integrated shared Rust. Both exact ratchets passed again: Python **3,431/3,431**, binding Rust **6,353/6,353**. The accepted fresh-wheel installation and optional-dependency proof above remains valid; no wheel/platform matrix, provider call or broad gate was rerun. The inherited `test_door.py` frame-listener fixture and `sdlc/scripts/settings` old Python engine path remain separately owned and unmodified.
+
 The focused commands ran from `libraries/python` with `THINKTHEN_API_KEY` unset and the pinned Python 3.13.5 venv:
 
 ```sh
@@ -39,7 +45,7 @@ The built wheel was installed with `uv pip install --no-deps` in fresh Python 3.
 
 ## Measured size and test economy
 
-`libraries/python/ratchet.py.json` is now exactly **3,431** nonblank Python lines, up **54** from reviewed candidate `f88e3162` and **537** from the accepted 2,894 baseline. Rust remains **6,353/6,353**; no Rust source was edited. `__init__.py` is 481 nonblank lines under its 500-line ceiling; `_labels.py` is 65 and optional `pydantic.py` is 144. The correction growth buys one captured score identity edge, explicit-null preservation, and four-form host-field validation in the existing test files. I sought duplication in the existing question/recognize parsers, `_spec`, `Call`, the old listener helper, and 0214 batch-one test; all are reused. No test was deleted or replaced. The new tests cover new public forms and strict optional validation; existing cancellation/facts and frame suites were not copied or rerun broadly. A second agent must review the raised Python ceiling, public signatures and dependency before landing.
+`libraries/python/ratchet.py.json` is now exactly **3,431** nonblank Python lines, up **54** from reviewed candidate `f88e3162` and **537** from the accepted 2,894 baseline. Rust remains **6,353/6,353**; no binding Rust source was edited. `__init__.py` is 481 nonblank lines under its 500-line ceiling; `_labels.py` is 65 and optional `pydantic.py` is 144. The correction growth buys one captured score identity edge, explicit-null preservation, and four-form host-field validation in the existing test files. I sought duplication in the existing question/recognize parsers, `_spec`, `Call`, the old listener helper, and 0214 batch-one test; all are reused. No test was deleted or replaced. The new tests cover new public forms and strict optional validation; existing cancellation/facts and frame suites were not copied or rerun broadly. The same independent reviewer accepted the raised Python ceiling, public signatures and dependency at `8faa901b`.
 
 ## Owner routes and next preparation lesson
 
