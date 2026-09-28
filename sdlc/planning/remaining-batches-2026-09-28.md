@@ -14,7 +14,21 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 | 8. Documentation, trust and launch usability | 7 | Continue codex-7; separate prose, runtime and external evidence. |
 | 9. Test inventory and retirement | 1 | Bounded inventory refresh after active release work. |
 | 10. New language integrations | 12 | Prepare after advertised surfaces are sound; preserve per-port evidence. |
-| **Total** | **75** | Each current to-do row appears once below. |
+| **Total** | **75** | Each original to-do row appears once below; later intake follows. |
+
+## Later intake
+
+Main through06b0803e adds three distinct issues after the75-row snapshot. The three additions raised the original75 to78. Reviewed relation proof then retired four already-fixed rows, leaving74 to do. These additions do not change completion counts.
+
+| Issue | Batch | Next action |
+| --- | --- | --- |
+| `usage-file-write-adds-50-ms-per-command` |5, accounting | Inspect the current atomic write and lock lifecycle before deciding whether the measured cost has a safe remedy. Preserve counts and old-reader compatibility; no timing campaign. |
+| `private-name-lint-fails-on-main-outside-site` |1, release readiness | Reproduce the named lint safely and remove private consumer names from the cited source/records. Coordinate public documentation with the marketing hold. |
+| `named-answers-lint-fails-on-three-database-readmes` |8, documentation | Verify the three exact alias failures and fix after the documentation hold clears. |
+
+## Current preparation
+
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Cumulative preparation covers35 original rows, including four since retired. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 
@@ -168,3 +182,7 @@ Twelve rows include the J8 umbrella, ten consumer-proof issues and C++. They are
 | issue | `dart-consumer-proof-needs-a-supported-package` | Batch J8: experiment 300 supplies reviewed two-stage Linux package evidence; integration still needs final native pin, full runtime type corpus, Flutter embedding and packaging. No publication or all-platform support is established |
 | ticket | J8: port integrations against the shared type contract | Batch J: one ticket per port after J1; rule 2 gates integration; split this family row when scoped |
 | issue | `add-a-c-plus-plus-binding` | Ian requests a typed C++ layer over the C door, ahead of COBOL. Prepare under J8 contract and package rules; an experiment or header alone does not establish supported integration |
+
+## Reviewed closure after this snapshot
+
+Fresh review798cbaef accepts the compiled proof for register110,112,113 and the shared-rule issue. The live table retires all four as already-fixed non-issues, without claiming four new runtime fixes. Recognition/batching therefore has12 open rows from the original16. No other original row is removed by this update. The three intake rows remain open.
