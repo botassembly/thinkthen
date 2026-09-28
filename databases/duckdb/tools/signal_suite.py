@@ -105,12 +105,17 @@ def held_cancel(query: str, in_flight: int) -> None:
             time.sleep(0.2)
             expect(backend.count(), in_flight, "the count after release")
         finally:
+            # Release a held arm even when an assertion fails, so cleanup
+            # cannot hide the actual count or timing failure.
+            backend.release()
             child.close()
 
 
 @case
 def r5_23_a_held_batch_stops_within_100_ms():
-    held_cancel(f"SELECT thinkthen_choose('Which team?', x, ['billing', 'shipping']) FROM (VALUES {texts(64, 'batch')}) t(x)", 8)
+    # The lazy default packs these 64 rows into one held request. Cancellation
+    # must stop that request without admitting a second one after release.
+    held_cancel(f"SELECT thinkthen_choose('Which team?', x, ['billing', 'shipping']) FROM (VALUES {texts(64, 'batch')}) t(x)", 1)
 
 
 @case
