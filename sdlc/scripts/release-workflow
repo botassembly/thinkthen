@@ -26,6 +26,13 @@ host-setup)
 	cargo deny fetch db
 	python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
 	[ "$(maturin --version)" = 'maturin 1.15.0' ] || fail 'maturin version differs from pin'
+	# DuckDB setup creates a Python 3.13 venv with uv on Mac and native Linux smoke.
+	if [ "$(uname -s)" = Darwin ] || [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+		command -v python3.13 >/dev/null || fail 'the pinned DuckDB host needs Python 3.13'
+		case $(python3.13 --version) in 'Python 3.13.'*) ;; *) fail 'the DuckDB Python 3.13 pin is unavailable' ;; esac
+		python3 -m pip install --disable-pip-version-check 'uv==0.9.17'
+		[ "$(uv --version)" = 'uv 0.9.17' ] || fail 'uv version differs from pin'
+	fi
 	if [ "$(uname -s)" = Darwin ]; then
 		. databases/postgresql/runtime-darwin.env
 		MACOSX_DEPLOYMENT_TARGET=15.0
@@ -54,8 +61,6 @@ host-setup)
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
 		command -v python3.12 >/dev/null || fail 'the installed Python smoke needs Python 3.12'
 		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
-		python3 -m pip install --disable-pip-version-check 'uv==0.9.17'
-		[ "$(uv --version)" = 'uv 0.9.17' ] || fail 'uv version differs from pin'
 		scratch_dir seed
 		uv venv --quiet --python "$(command -v python3.12)" "$seed/venv"
 		uv pip install --quiet --require-hashes --python "$seed/venv/bin/python" -r libraries/python/requirements-dev.txt

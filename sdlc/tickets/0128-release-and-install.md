@@ -391,7 +391,7 @@ Every decision above. The ones most worth his look: no PyPI source distribution 
 
 ## What the build taught us
 
-The Phase 3a Linux jobs build library packages in pinned containers but run installed smoke on separate native runners. Their shared `host-setup` originally fetched pinned DuckDB tools only on Darwin, leaving both Linux smoke runners dependent on incidental host state. The [Linux DuckDB setup Quick Fix](../records/qf-linux-duckdb-release-setup.md) places that fetch only in native Linux smoke and pins the orchestration with a fake-command invocation witness. It is a local proof of routing, not an actual runner result; the first four-target rehearsal and ARM64 migration review remain separate.
+The Phase 3a Linux jobs build library packages in pinned containers but run installed smoke on separate native runners. Their shared `host-setup` originally fetched pinned DuckDB tools only on Darwin, leaving both Linux smoke runners dependent on incidental host state. The [Linux DuckDB setup Quick Fix](../records/qf-linux-duckdb-release-setup.md) places that fetch only in native Linux smoke. Its first fake-command witness counted the call but silently supplied `uv` and Python 3.13 before the code did; fresh review caught the missing transitive prerequisites. The corrected witness enforces their order, and the workflow establishes Python 3.13 while retaining the active 3.10 build and 3.12 smoke interpreters. This is local proof of routing and provisioning, not an actual runner result; the first four-target rehearsal and separate ARM64 package integration remain open.
 
 ## Review
 

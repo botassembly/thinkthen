@@ -103,6 +103,24 @@ def release(name, doc):
             value = [value]
         if set(value) != need:
             out.append(f"{name}: job {job} must need {', '.join(sorted(need))}")
+    for job, active_version, condition in (("build", "3.10", "runner.os == 'macOS'"),
+                                           ("smoke", "3.12", None)):
+        job_steps = jobs.get(job, {}).get("steps") or []
+        host = next((i for i, step in enumerate(job_steps)
+                     if "release-workflow host-setup" in (step.get("run") or "")), None)
+        if host is None:  # The minimal graph fixture has no host operation.
+            continue
+        configured = [(i, step) for i, step in enumerate(job_steps[:host])
+                      if (step.get("uses") or "").startswith("actions/setup-python@")]
+        py313 = next(((i, step) for i, step in configured
+                      if (step.get("with") or {}).get("python-version") == "3.13"), None)
+        active = next(((i, step) for i, step in configured
+                       if (step.get("with") or {}).get("python-version") == active_version), None)
+        if (py313 is None or active is None or py313[0] >= active[0]
+                or py313[1].get("if") != condition or active[1].get("if") is not None
+                or py313[1].get("uses") != active[1].get("uses")
+                or (py313[1].get("with") or {}).get("update-environment") in (False, "false")):
+            out.append(f"{name}: job {job} must set up Python 3.13 before retaining Python {active_version} for host-setup")
     outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
     for job in outward:
         spec = jobs.get(job, {})
@@ -164,18 +182,42 @@ rustc) case $1 in
   esac ;;
 cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
 maturin) echo 'maturin 1.15.0' ;;
-uv) [ "$1" != --version ] || echo 'uv 0.9.17' ;;
-uname) [ "$1" != -s ] || echo Linux ;;
-sh) printf '%s %s\\n' "$1" "$2" >> "$FAKE_LOG" ;;
+python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac ;;
+python3.13) [ "$1" != --version ] || {
+  touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
+} ;;
+uv) [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
+  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo 'uv 0.9.17'; } ;;
+uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
+  -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
+xcrun) echo "$FAKE_ROOT/sdk" ;;
+brew) case $1 in --cache) echo "$FAKE_ROOT/bottle" ;; --prefix) echo "$FAKE_ROOT/openssl3" ;; esac ;;
+shasum) . databases/postgresql/runtime-darwin.env
+  case $FAKE_TARGET in aarch64*) pin=$PG_BOTTLE_ARM64_SEQUOIA ;;
+    *) pin=$PG_BOTTLE_X86_64_SONOMA ;; esac
+  printf '%s  %s\\n' "$pin" "$3" ;;
+sh) case $1 in databases/duckdb/tools/setup.sh)
+      [ -f "$FAKE_UV_READY" ] && [ -f "$FAKE_PY313_READY" ] || {
+        echo 'DuckDB setup preceded uv or Python 3.13 readiness' >&2; exit 92;
+      } ;;
+    esac
+    printf '%s %s\\n' "$1" "$2" >> "$FAKE_LOG" ;;
 esac
 """)
         route.chmod(0o755)
-        for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "python3", "python3.12"):
+        openssl = root / "openssl3/bin/openssl"
+        openssl.parent.mkdir(parents=True)
+        openssl.write_text("#!/bin/sh\necho 'OpenSSL 3.6.4 11 Feb 2026'\n")
+        openssl.chmod(0o755)
+        for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "xcrun", "brew", "shasum",
+                     "python3", "python3.12", "python3.13"):
             (bin_dir / name).symlink_to(route.name)
         log = root / "calls"
         env = os.environ.copy()
         env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
-                   TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), RELEASE_SMOKE="1" if smoke else "0")
+                   TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
+                   FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
+                   RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
         return result, log.read_text().splitlines() if log.exists() else []
@@ -327,18 +369,37 @@ def self_test():
         if got != expected:
             bad += 1
             print(f"workflows self-test {name}: expected {expected}, got {got}", file=sys.stderr)
-    host_cases = [(target, smoke) for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu")
+    host_cases = [(target, smoke) for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
+                                                 "aarch64-apple-darwin", "x86_64-apple-darwin")
                   for smoke in (False, True)]
     for target, smoke in host_cases:
         result, calls = host_setup_calls(target, smoke)
-        wanted = ["libraries/ruby/setup-ruby.sh "]
-        if smoke:
-            wanted.append("databases/duckdb/tools/setup.sh --fetch")
+        if "apple" in target:
+            wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
+                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch"]
+        else:
+            wanted = ["libraries/ruby/setup-ruby.sh "]
+        if smoke and "apple" not in target:
+            wanted = ["py313-ready", "uv-install", "uv-check", *wanted,
+                      "databases/duckdb/tools/setup.sh --fetch"]
         if result.returncode != 0 or calls != wanted:
             bad += 1
             print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "
                   f"wanted {wanted}, got {calls}; stderr {result.stderr}", file=sys.stderr)
-    total = len(cases) + len(host_cases)
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = pathlib.Path(tmp)
+        for path in (REPO / ".github/workflows").glob("*.y*ml"):
+            text = path.read_text(encoding="utf-8")
+            if path.name == "release.yml":
+                text = text.replace("with: {python-version: '3.13'}", "with: {python-version: '3.11'}")
+            (folder / path.name).write_text(text, encoding="utf-8")
+        wanted = ["release.yml: job build must set up Python 3.13 before retaining Python 3.10 for host-setup",
+                  "release.yml: job smoke must set up Python 3.13 before retaining Python 3.12 for host-setup"]
+        got = check(folder)
+        if got != wanted:
+            bad += 1
+            print(f"workflows self-test host Python: wanted {wanted}, got {got}", file=sys.stderr)
+    total = len(cases) + len(host_cases) + 1
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 
