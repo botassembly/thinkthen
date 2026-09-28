@@ -4,7 +4,7 @@ Status: accepted at `37b57014` after fresh independent High artifact review; see
 
 ## Exact source and host
 
-The M5's dedicated `/Users/ian/workspace/worktrees/thinkthen-codex-m5-duckdb` checkout fetched and detached at pushed main `c2db47e9db41c064fe13211c4907631cde967f34`, which contains independently High-accepted DuckDB find candidate `fb9009aac575063cb885f157b2d636c8fcabcfea`. Its only worktree change before and after the build was the known unrelated deletion of `site/examples/beatles/BENCH`; it was neither restored nor used as a source input. The previous 0222 extension was copied to the isolated 0224 output before `cpp/build.sh` replaced its default built-file path; its preserved SHA-256 is `332458264b319c4a44d4a69436cefb31e5068d4e70207b488645ddba860d6073`.
+The M5's dedicated `$HOME/workspace/worktrees/thinkthen-codex-m5-duckdb` checkout fetched and detached at pushed main `c2db47e9db41c064fe13211c4907631cde967f34`, which contains independently High-accepted DuckDB find candidate `fb9009aac575063cb885f157b2d636c8fcabcfea`. Its only worktree change before and after the build was the known unrelated deletion of `site/examples/beatles/BENCH`; it was neither restored nor used as a source input. The previous 0222 extension was copied to the isolated 0224 output before `cpp/build.sh` replaced its default built-file path; its preserved SHA-256 is `332458264b319c4a44d4a69436cefb31e5068d4e70207b488645ddba860d6073`.
 
 This host is `Darwin arm64`, macOS 26.4 build `25E246`. Before the build, load was 0.71 over 18 logical CPUs, memory pressure reported 95% free, and 447 GiB of disk was free. No toolchain install or shared cache update ran. The pinned DuckDB v1.5.5 C++ source was `d8cdaa33fda8df955cc76ef58a280f68f4cd43fa`. The stock v1.5.5 CLI SHA-256 was `d0610710dd30667aa6c76709299b6822e55dc9199803350aa2e1b06e3346943b`; the genuine stock v1.5.4 CLI was `6c5abaff49f07ba3f6b2e41ed1adf338d10fcb2d98777331b285cc97938fb00a`. The official cached Rust 1.95.0 `rustc` and `cargo` SHA-256 values were `b829b733131d4e1673eeebd1f34d06ae1e9ff4977b051313cf42e2a9e79ecf1c` and `c512bff73c86143b557463f021d0c3d5b0490d97d65040ba59ea2b3427784758`; the official `libstd` objects report `minos 11.0`.
 
@@ -20,7 +20,7 @@ With the official binaries prefixed on `PATH`, `CARGO_NET_OFFLINE=true`, a priva
 | Built `build/thinkthen.duckdb_extension` | `26f79addfae6045161cb498b1bb97a8479c804b3f44e78bbf1769d587ed3ada0` |
 | Source-matched conformance backend, rebuilt in isolated output | `e40ea9113654b3c1b732bf24a1ee7786879e5f3b63667a5636c484faafaf1940` |
 
-The extracted file is a single arm64 Mach-O, 54,511,686 bytes, with `LC_ID_DYLIB @rpath/thinkthen.duckdb_extension` and `LC_BUILD_VERSION minos 15.0` (SDK 26.5). Its exact 534-byte DuckDB footer has the required signature and `CPP`, `osx_arm64`, ABI `4` fields. A raw byte scan found zero `/Users/ian` occurrences. The build's official standard-library floor check passed. These deployment fields and inputs do not prove execution on macOS 15: this machine ran macOS 26.4.
+The extracted file is a single arm64 Mach-O, 54,511,686 bytes, with `LC_ID_DYLIB @rpath/thinkthen.duckdb_extension` and `LC_BUILD_VERSION minos 15.0` (SDK 26.5). Its exact 534-byte DuckDB footer has the required signature and `CPP`, `osx_arm64`, ABI `4` fields. A raw byte scan found zero occurrences of the builder's home path. The build's official standard-library floor check passed. These deployment fields and inputs do not prove execution on macOS 15: this machine ran macOS 26.4.
 
 ## Bounded installed proof
 

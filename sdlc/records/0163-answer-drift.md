@@ -18,7 +18,7 @@ The script run from the repository root was:
 import collections, io, json, pathlib, subprocess, tarfile
 
 pin = 'af538978aea39c738cc3c4d2a15aaf43c48b3a8a'
-bench = '/home/ian/workspace/repos/beatles-bench'
+bench = str(pathlib.Path.home() / 'workspace/repos/beatles-bench')
 repo = []
 for name in subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0'):
     if name.endswith('.json') and not name.startswith('site/') and pathlib.Path(name).is_file():

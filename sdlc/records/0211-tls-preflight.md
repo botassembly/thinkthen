@@ -1,6 +1,6 @@
 # 0211 TLS source preflight
 
-Original read-only snapshot: `origin/main` `5d15138ecf9e73c37a5a453925deebe4c883af56`, with the locally packaged `ureq` 3.4.2 and `rustls` 0.23.45 sources from the locked dependency graph. The [post-0210 refresh](#post-0210-source-refresh) below takes precedence for current paths and timing. Original issue: `/home/ian/workspace/experiments/284-issue-register/118-*.md`. Prior proof: `sdlc/records/0155-provider-backoff-build.md` and `0155-code-review.md`. No 0211 runtime source edit, build, TLS connection or provider call was made in either preparation pass.
+Original read-only snapshot: `origin/main` `5d15138ecf9e73c37a5a453925deebe4c883af56`, with the locally packaged `ureq` 3.4.2 and `rustls` 0.23.45 sources from the locked dependency graph. The [post-0210 refresh](#post-0210-source-refresh) below takes precedence for current paths and timing. Original issue: `$HOME/workspace/experiments/284-issue-register/118-*.md`. Prior proof: `sdlc/records/0155-provider-backoff-build.md` and `0155-code-review.md`. No 0211 runtime source edit, build, TLS connection or provider call was made in either preparation pass.
 
 ## Confirmed current mechanism
 

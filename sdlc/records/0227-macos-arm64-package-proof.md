@@ -9,7 +9,7 @@ The native Apple Silicon M5 ran macOS 26.4. An isolated clean worktree at source
 | `libraries/ruby/thinkthen-0.0.1-arm64-darwin-25.gem` | `5a7854c9d57e810339d05e31d97a2e464b1c1878c1e36f0fefe5f2bf067fd97c` |
 | Built and installed `thinkthen.bundle` | `ff22714c4916a162bd23d53c8280526b9c7e6654e8af22c15d29f0fb663177aa` |
 
-The installed bundle is Mach-O arm64 with `LC_ID_DYLIB @rpath/thinkthen.bundle`, deployment minimum 15.0, and links only system `libiconv` and `libSystem` beyond its own install name. `nm` shows local `std::panicking::HOOK`. Raw bundle bytes contain neither `/Users/ian` nor the synthetic panic marker. These inspections describe the built artifact; they do not prove execution on macOS 15.
+The installed bundle is Mach-O arm64 with `LC_ID_DYLIB @rpath/thinkthen.bundle`, deployment minimum 15.0, and links only system `libiconv` and `libSystem` beyond its own install name. `nm` shows local `std::panicking::HOOK`. Raw bundle bytes contain neither the builder's home path nor the synthetic panic marker. These inspections describe the built artifact; they do not prove execution on macOS 15.
 
 The focused installed invocation used pinned Ruby from the fresh gem home, unset `THINKTHEN_API_KEY`, `RUBYLIB` and `RUBYOPT`, disabled the cache, and used unused loopback port 9. `ThinkThen::Engine.new(...).decide("Is it urgent?", "text", deadline: 0)` returned `ThinkThen::DeadlineError` with kind `deadline`, `retryable=false` and final `requests_sent=0`. Two later `engine.usage` reads agreed and still reported zero sends. `$LOADED_FEATURES` resolved the native bundle inside the installed gem, rather than the checkout. Remote `REMOTE_STATUS=0`; the concise result is in `/tmp/thinkthen-0227-ruby-m5-smoke.log`.
 

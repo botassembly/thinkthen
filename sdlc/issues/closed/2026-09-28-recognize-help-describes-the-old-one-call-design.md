@@ -8,7 +8,7 @@ What happens. On main 3b96e720, `thinkthen recognize --help` says: "Each record 
 
 What the command does. Ticket 0147 and `specification/recognize.md` describe three steps. Step 1 asks one BEGIN, INSIDE, END, SINGLE or OUT question per piece. Step 2 asks one kind question per found name, plus an edge question for some names. Step 3 asks the allowed relation pairs. A recorded run of `recognize person song album place` with three relation rules on a 28-piece sentence sent 28 step-1 questions, 7 step-2 questions (5 kinds, 2 edges), and 4 pair questions, in 3 requests. No request asked a kind question for every word.
 
-Evidence. mktg branch `draft/recognize-steps`, `decks/2026-09-24-thinkthen-beatles/recordings/recognize-steps/`: the recording, `details.json`, and the `--dry-run` plan.
+Evidence. Private presentation branch `draft/recognize-steps`, `decks/2026-09-24-thinkthen-beatles/recordings/recognize-steps/`: the recording, `details.json`, and the `--dry-run` plan.
 
 Why it matters. A user reading the help to estimate cost counts the wrong questions. The deck and site describe the three steps, so the help disagrees with them.
 

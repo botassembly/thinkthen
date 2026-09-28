@@ -22,7 +22,7 @@ from probes.speed import measure as speed
 
 ROOT = Path(__file__).resolve().parents[2]
 HERE = Path(__file__).resolve().parent
-E262 = Path('/home/ian/workspace/experiments/262-packed-choice-confirm')
+E262 = Path.home() / 'workspace/experiments/262-packed-choice-confirm'
 IDS_SHA256 = '30ece78217239f69ca428dc029d2257a5129a9a33ff765c6b3f16e84e24e801e'
 SAMPLE_SHA256 = 'c8095321f3f464712f7ba1dc3506714c16d7afc5c31617f5bd111d653aebdc02'
 CATALOG_SHA256 = '982e6da743c57ea8b53eb8dbe1c1721b0059ea8e06ce416f2a944caca777151f'

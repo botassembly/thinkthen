@@ -1,6 +1,6 @@
 # 0231 Linux ARM64 native container preflight
 
-Status: isolated preparation against main `16e432b4` on 2026-09-28. No tracked product, package script or active DuckDB find source changed. No release matrix, provider call or workflow dispatch ran. The M5 work directory `/Users/ian/.cache/thinkthen-0231-linux-arm64-preflight` retains the pinned downloads, extracted inputs, official Rust toolchain and small linker probe outside Git. Five temporary `thinkthen-0231-arm64-*` containers used `--rm`; a final name-filtered `docker ps -a` showed none left. No existing keg, Docker service configuration or production mount changed.
+Status: isolated preparation against main `16e432b4` on 2026-09-28. No tracked product, package script or active DuckDB find source changed. No release matrix, provider call or workflow dispatch ran. The M5 work directory `$HOME/.cache/thinkthen-0231-linux-arm64-preflight` retains the pinned downloads, extracted inputs, official Rust toolchain and small linker probe outside Git. Five temporary `thinkthen-0231-arm64-*` containers used `--rm`; a final name-filtered `docker ps -a` showed none left. No existing keg, Docker service configuration or production mount changed.
 
 ## Actual native environment and input identity
 

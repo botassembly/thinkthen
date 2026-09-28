@@ -31,7 +31,7 @@ On a 16-CPU Linux x86-64 host at load 1.04 and 21 GiB available memory, `flock -
 | Extracted `thinkthen.duckdb_extension` | `1f8ff27cf7025897068d53de1c350f99199943e4a6ef25f4e74a07bbc4333626` |
 | Built `build/thinkthen.duckdb_extension` | `1f8ff27cf7025897068d53de1c350f99199943e4a6ef25f4e74a07bbc4333626` |
 
-The extracted file is 73,309,806 bytes and contains zero raw `/home/ian` bytes. The archive contains ThinkThen and DuckDB licenses, dependency inventory and notices. Against that extracted file, selected conformance IDs 18 and 19 passed 2/2. The actual captured complete bodies were:
+The extracted file is 73,309,806 bytes and contains zero raw-byte occurrences of the builder's home path. The archive contains ThinkThen and DuckDB licenses, dependency inventory and notices. Against that extracted file, selected conformance IDs 18 and 19 passed 2/2. The actual captured complete bodies were:
 
 ```json
 {"state":"[{\"id\":\"u001\",\"evidence\":\"First passage.\"},{\"id\":\"u002\",\"evidence\":\"Second passage.\"},{\"id\":\"u003\",\"evidence\":\"Third passage.\"}]","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which passage answers the question?","criteria":{"u001":null,"u002":null,"u003":null,"none":null}}}}

@@ -1,0 +1,18 @@
+# Quick Fix: private-name recurrence outside the website
+
+Status: candidate for fresh independent Medium review. Based on main `e4ccf486bca315815d52af519a3a16a0fb49f0fb`, with the exact 40-file claim in [the claim record](qf-private-name-recurrence-claim.md). The older [issue](../issues/2026-09-28-private-name-lint-fails-on-main-outside-site.md) described 61 lines in 36 files; the current external 30-entry guard found **70 lines in 41 files** at `8afb260a`. This change normalizes the 66 matching lines in the 40 claimed files. The other four lines belong to codex-6's active 0247 build record and are untouched here.
+
+## Change and preserved evidence
+
+- Historical Linux and M5 absolute home prefixes now use `$HOME` in prose and shell examples. External register/experiment references use home-relative code paths rather than Markdown links that would resolve incorrectly inside this repository. Binary inspections say “builder's home path” instead of claiming that the literal characters `$HOME` were searched. The internal DuckDB 0201 proof README keeps executable shell commands with quoted home-relative tool paths. No website or user-facing binding page changed.
+- Private presentation references now describe the consumer and retain the relevant branch, icon task, recording folder and to-do meaning without naming the private service. Source revisions, all 40- and 64-hex pins, observed failures, quantitative results and package paths after the home prefix remain intact. No old raw experiment or Git history changed.
+- `probes/choose/measure.py` resolves experiment 262 under `Path.home() / 'workspace/experiments/262-packed-choice-confirm'`. On this host it equals the former absolute input path, and its existing ID-file SHA-256 check passes. The probe still checks the sampled payload and catalog digests before any measured or paid work; its questions, grouping, output, stopping rule and provider behavior are unchanged. No provider call or new test ran. A Python example in the answer-drift record uses `pathlib.Path.home()` rather than a literal `$HOME` string, so it remains executable.
+
+## Focused checks and limit
+
+- The standalone path/file commands from `sdlc/scripts/lint` used the actual external 30-entry list, without running full lint. They found **zero tracked-path hits and four tracked-file lines**, all in `sdlc/records/0247-duckdb-complete-question-forms-build.md` at lines 34, 45, 54 and 71. The guard's safe file/line identifiers are retained in ignored `target/codex-builds/qf-private-name-recurrence/`; no matching text was printed. This is **not** a whole-tree pass while codex-6 owns that record. No newly introduced unclaimed hit appeared.
+- `python3 -m py_compile probes/choose/measure.py` passed. The home-relative probe target equals the prior target on this host and its ID-file SHA-256 matches the unchanged pin. The changed answer-drift Python block and the affected shell blocks parse. `python3 sdlc/scripts/pages` reports 1 coming, 22 green; 33 local links in the changed Markdown and new record resolve; `git diff --check` passes. Existing 40- and 64-hex pins are identical before and after across the 40 files. Plain replacements did not earn a new permanent test or a full gate.
+
+## What the build taught us
+
+A mechanical home-prefix swap can make an artifact claim false (“searched `$HOME` bytes”) or make Python treat `$HOME` as a literal path. Review each changed line as prose, shell or Python before counting a guard pass. Root should keep the issue open until the active 0247 record merges, rerun the standalone guard on that integrated tree, and close it only after a fresh Medium review and a zero-hit whole-tree result. Root owns the plan and issue counts.
