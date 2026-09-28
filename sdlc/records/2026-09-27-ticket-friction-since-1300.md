@@ -272,3 +272,20 @@ The last small held-input witness exposed a real defect: explicit batch one aske
 ## 0212 terminal input after a failed batch-one response
 
 High review of `503bd989` found that the successful held-input proof missed the next pull after a terminal error. A deferred scheduler ask could read caller input after the final result and frozen facts. Candidate `f9d9d128` clears deferred state on both terminal paths and only services it while the scheduler is live. Its one focused regression failed on the prior source, then passed with error followed by `None`, no extra caller pull and unchanged final facts. The same reviewer accepted it. For the upcoming 0230/0214 wrappers, trace terminal completion before fetching the next foreign input or issuing an observation; reuse this shared Rust proof and add host proof only for a distinct host boundary. This was a missed edge in the implementation and first proof, not machine contention.
+
+
+## 0230 review: empty controls, split provenance and missed consumers
+
+Fresh High review of source `360f4e7a`, integrated `6ff22a8e`, found three required corrections. These findings concern implementation and proof coverage; they are not evidence of slow tests. The retained builder owns the first two fixes and must record their focused proof before acceptance.
+
+- Split halves are rebuilt with an end-of-input closure, but record metadata must retain the original batch closure reason. The first split test pinned request lists and counts without pinning this origin field. Carry the parent reason and extend that same regression.
+- C call eligibility was checked while iterating option keys, so a present empty object bypassed the route restriction. The closed schema also allowed annotation context that runtime refused. Validate the container's eligibility independently of its keys and align parser, schema and corpus.
+- Seven site C examples still consume a bare response. The library example inventory missed the public site copies. The explicit marketing ownership rule prevents this lane editing them; [the release issue](../issues/2026-09-28-site-c-examples-need-json-value-wrapper.md) retains all seven migrations and their proof. The ticket must not claim every direct consumer is migrated.
+
+The retained preparer received the first two patterns for the cache/replay pass and whole-queue ranking. Apply them where a ticket has optional controls or derived metadata; do not add an unrelated exhaustive checklist.
+
+## 0231 review: signal publication and packaged path inspection
+
+Fresh High review of `85b93557` found that separate signal count, interval epoch and timestamp stores admit inconsistent observations. A sibling invoke can miss SIGINT, or a later interval can inherit it. The retained builder is correcting publication and proving the two ordered interleavings before repeating the selected installed signal checks. The earlier `b7cc755e` archive remains pre-fix evidence.
+
+The M5 follow-up also found builder-home paths in linked ring debug data through a raw-byte scan, despite an ordinary strings scan appearing clean. A scratch Mach-O strip removed the paths and loaded only after the DuckDB metadata footer was preserved and reattached. That experiment is not final package proof. The builder owns the packaging correction, exact final archive identity and stock-host load check. Future platform briefs must trace linked dependencies and inspect the actual artifact bytes; source remapping alone is insufficient.
