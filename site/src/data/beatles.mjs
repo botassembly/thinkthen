@@ -67,7 +67,7 @@ const ARTICLES = {
     goal: "Jev reads a text and a question and returns a probability for every answer.",
     idea: [
       "Jev is the model behind ThinkThen, a System One model from TypeSafe. It reads a text and a question and returns a probability for every answer. It writes no text, and you train nothing.",
-      "Roger Bannister's mile set a standard for runners. On Beatles Bench, Jev's median answer took 0.21 seconds, and a thousand answers cost 0.015 dollars.",
+      "Roger Bannister's mile set a standard for runners. Jev answers in about 60 milliseconds. That is the median time at Jev's server, measured on 2026-09-26. On Beatles Bench, a thousand answers cost 0.015 dollars.",
     ],
     credit: `Roger Bannister photo: 6 May 1954, public domain in the US, via Wikimedia Commons. ${FACES}`,
     source: record('jev'),
