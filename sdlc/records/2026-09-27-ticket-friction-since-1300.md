@@ -377,3 +377,5 @@ Fresh High code review of `56ec112c` found an inode-lifetime race in the propose
 ## Corrections retained from 0219, 0237 and 0239
 
 SQLite invokes aggregate finalize after a step error. The builder and next SQL preparer must check each host's actual failure lifecycle and stop unsent pending work without erasing earlier completed sends. R observation indexes must be mapped before publishing success, error or receipt snapshots; a host-only success transform leaves the other routes wrong. A packed frame proof must include a partial failure and pin both the typed null cell and the member's failure marker. The corrected cases reuse the existing listener and installed boundary; no stress run or duplicate framework was required.
+
+The 0242 closure check found a process error: later status prose had promoted optional entry signing into mandatory work, although the original done criterion required only trust pages and a chosen writable-folder policy. Independent review confirmed the original criterion. Preparers must compare status prose against the actual accepted outcome and distinguish required gaps from optional future hardening before preserving a to-do row.

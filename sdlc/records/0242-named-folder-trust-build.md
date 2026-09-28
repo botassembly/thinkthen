@@ -19,3 +19,7 @@ The exact proposed addition after the first paragraph in `SECURITY.md` is:
 > On Unix, the command warns when an existing named answer folder has another owner or group or other write permission. A quiet folder is not authenticated: ACLs, parent-directory changes and concurrent edits can still change what it serves. The warning is unavailable on non-Unix systems. Library callers receive no automatic warning and must apply the folder trust rule themselves.
 
 These are proposals for the documentation owner to merge after its current edits, not claims that the pages changed. The filed register-40 issue still retains optional keyed-integrity and library/ACL limits; this candidate closes only the reviewed CLI warning criterion after code review and landing.
+
+## Coordinator integration and closure
+
+The independent reviewer accepted `2e3e32c6` and reran the three compiled warning cases. Main integration changes no product or test bytes. The coordinator added the exact proposed recording/security wording above; ticket 0241 will preserve it during its later shared-page merge. The original issue's done criterion requires the trust pages and the selected writable-folder policy, both now complete. The review confirmed that optional keyed hardening had accidentally become a required status remainder. Register 40 closes for the implemented advisory policy, retaining all documented limits and optional future hardening.

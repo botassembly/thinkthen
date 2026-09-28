@@ -1,6 +1,6 @@
 # Ticket 0242: Warn before trusting a writable named answer folder
 
-Status: **Accepted for implementation.** Fresh Medium design review accepted `c14f06ae`; the coordinator approves the bounded policy and claimed runtime scope. Severity 2, register 40's remaining warning. Ticket 0163 completed the writer-authority pages. This ticket does not authenticate an entry or change a recording format. The coordinator scheduled this warning after the 0238 cache correctness landing, superseding the older post-0.1 priority note without changing its criterion.
+Status: **Complete.** Fresh independent Medium code review accepted `2e3e32c6`; the coordinator integrated unchanged runtime and the reviewed warning/limits additions in recording.md and SECURITY.md. The original issue and register 40 criteria are met. Optional signing and the stated platform/library limits remain future work, not a claim of authentication.
 
 ## Outcome
 
