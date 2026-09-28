@@ -41,3 +41,10 @@ After coordination with documentation ticket 0241, add the fixed warning conditi
 ## Decision the owner may overturn
 
 The recommended small policy warns on Unix owner mismatch or group/other directory write bits, leaves judgment possible, and does not print from a library. Ian may choose a refusal or a typed cross-host advisory later. Either choice needs a separate reviewed contract because a warning does not prevent a deliberate entry plant.
+
+## What the build taught us
+
+- The shared `asking::engine` boundary prints one fixed line before the existing refresh-cost line and before `Engine::with_roots`; every asking verb reaches it after its folder and argument checks. The metadata probe changes no marker, entry or digest lock.
+- Loopback backends intentionally accept a missing key. The no-key `--record` proof therefore uses the reserved invalid domain and verifies the key refusal before transport. The keyless cache and replay proofs use a counted loopback listener and send nothing.
+- A `0500` replay fixture must restore its mode after the assertion so a later test run can replace it. The test also restores permissions before cleanup if an earlier run stopped after setting that mode.
+- The [build record](../records/0242-named-folder-trust-build.md) gives the exact warning, red/green evidence, size accounting and deferred documentation patch. Keyed entry integrity, ACLs, ancestor swaps, non-Unix classification and library warnings remain outside this CLI advisory.
