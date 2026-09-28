@@ -2,6 +2,8 @@
 
 One runnable program for each `thinkthen` function, plus the deck's Rust slide. Each program depends on `thinkthen` the way an outside user does: by path, with default features off, through the public API alone.
 
+`choices!` keeps `Variant => "label"` for a bare label. Add `: "description"` for text, or a block returning `Result<Description, Error>` for a structured description built with `Description::builder()`. In a typed `choose` or `tag` builder, `None` takes that variant default and `Some(description)` overrides it for that label. A question loaded from JSON keeps its own complete ordered map, including explicit `null` entries; binding it to a `Choice` checks labels without replacing its descriptions.
+
 ```sh
 export THINKTHEN_API_KEY=...
 cargo run --example decide

@@ -125,6 +125,10 @@ impl Listing {
                 place + 1
             )));
         }
+        let description = match description {
+            Some(explicit) => Some(explicit),
+            None => value.description()?,
+        };
         self.push(value.label(), description)
     }
 

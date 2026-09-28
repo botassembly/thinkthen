@@ -18,6 +18,9 @@ use thinkthen::{
 
 const CASES: &str = include_str!("../../../conformance/cases.json");
 
+#[path = "public_members/choice_descriptions.rs"]
+mod choice_descriptions;
+
 thinkthen::choices! {
     /// The teams the runtime labels name.
     enum Team { Billing => "billing", Outage => "outage" }
