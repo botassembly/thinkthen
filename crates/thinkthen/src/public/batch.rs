@@ -19,6 +19,7 @@ mod annotation;
 mod planned;
 
 pub(crate) use annotation::start_annotation;
+pub(crate) use planned::start_details;
 pub(crate) use planned::start_planned;
 
 /// How often a waiting batch runs the caller's controls, as the engine's poll.

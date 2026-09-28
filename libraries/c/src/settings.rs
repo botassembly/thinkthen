@@ -1,9 +1,10 @@
 //! The closed JSON settings object for the C constructor.
 
+use std::num::NonZeroUsize;
 use std::{collections::HashSet, time::Duration};
 
 use serde_json::{Map, Value};
-use thinkthen::{Engine, EngineBuilder};
+use thinkthen::{BatchSetting, Engine, EngineBuilder};
 
 use crate::failures::Failure;
 
@@ -117,10 +118,23 @@ fn apply(
                 u32::try_from(whole()?)
                     .map_err(|_| Failure::usage("settings max_retries is a whole number"))?,
             ),
+            "batch" => builder.batch(batch(value)?),
             _ => return Err(unknown()),
         };
     }
     Ok(builder)
+}
+
+pub(crate) fn batch(value: &Value) -> Result<BatchSetting, Failure> {
+    if value.as_str() == Some("max") {
+        return Ok(BatchSetting::Max);
+    }
+    value
+        .as_u64()
+        .and_then(|count| usize::try_from(count).ok())
+        .and_then(NonZeroUsize::new)
+        .map(BatchSetting::Records)
+        .ok_or_else(|| Failure::usage("batch takes max or a whole number of at least 1"))
 }
 
 pub(crate) fn build(text: &str) -> Result<Engine, Failure> {

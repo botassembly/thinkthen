@@ -6,6 +6,7 @@ use super::{Packet, Work};
 use crate::core::{self, AnswerOutcome, BatchRecord};
 use crate::engine::facade::{self, Completed};
 use crate::public::error::Error;
+use crate::public::results::Member;
 use crate::public::results::ObservedQuestion;
 
 struct ParentAttempt {
@@ -31,6 +32,9 @@ impl ParentAttempt {
 
 struct Observation<'a> {
     enabled: bool,
+    details: bool,
+    setting: core::Setting,
+    context: bool,
     parent: Option<&'a ParentAttempt>,
 }
 
@@ -39,10 +43,44 @@ impl Observation<'_> {
         self.parent
             .map_or(Ok(()), |parent| parent.add_to(detail, position))
     }
+
+    fn member(
+        &self,
+        batch: &core::Batch,
+        answered: &crate::engine::prepared_request::Answered,
+        answer: &core::Answer,
+        read: &(core::Value, core::Outcome),
+        position: usize,
+    ) -> Result<Option<Member>, Error> {
+        if !self.details {
+            return Ok(None);
+        }
+        let parent = self.parent.map(|parent| {
+            (
+                parent.digest.as_str(),
+                parent.sent,
+                parent.total,
+                parent.offset,
+            )
+        });
+        Member::from_batch(
+            batch,
+            answered,
+            answer,
+            read.0.clone(),
+            read.1,
+            position,
+            self.setting,
+            self.context,
+            parent,
+        )
+        .map(Some)
+    }
 }
 
 #[allow(
     clippy::too_many_arguments,
+    clippy::too_many_lines,
     reason = "one worker needs the selected question, call controls and bounded detail flag"
 )]
 pub(super) fn answer(
@@ -54,9 +92,15 @@ pub(super) fn answer(
     context: Option<&core::Evidence>,
     cancel: &crate::engine::Cancel<'static>,
     observing: bool,
+    details: bool,
+    setting: core::Setting,
 ) -> Result<Completed<Vec<Packet>, Error>, Error> {
     let attempted = AtomicU64::new(0);
-    match engine.ask_batch_with_attempts(&work.batch, cancel, observing.then_some(&attempted)) {
+    match engine.ask_batch_with_attempts(
+        &work.batch,
+        cancel,
+        (observing || details).then_some(&attempted),
+    ) {
         Ok(answered) => rows(
             engine,
             &work.batch,
@@ -65,6 +109,9 @@ pub(super) fn answer(
             tuned_for,
             Observation {
                 enabled: observing,
+                details,
+                setting,
+                context: context.is_some(),
                 parent: None,
             },
         ),
@@ -96,6 +143,9 @@ pub(super) fn answer(
                 tuned_for,
                 Observation {
                     enabled: observing,
+                    details,
+                    setting,
+                    context: context.is_some(),
                     parent: Some(&parent),
                 },
             )?;
@@ -117,6 +167,9 @@ pub(super) fn answer(
                     tuned_for,
                     Observation {
                         enabled: observing,
+                        details,
+                        setting,
+                        context: context.is_some(),
                         parent: Some(&ParentAttempt {
                             offset: right_offset,
                             ..parent
@@ -185,10 +238,12 @@ fn rows(
         };
         match outcome {
             Some(AnswerOutcome::Answered(answer)) => {
-                let (value, _) = answer.read(threshold);
+                let read = answer.read(threshold);
+                let member = observation.member(batch, &answered, answer, &read, position)?;
                 values.push(Packet {
-                    value: Some((value, answer.yes().unwrap_or_default())),
+                    value: Some((read.0, answer.yes().unwrap_or_default())),
                     detail,
+                    member,
                 });
                 completed += 1;
             }
@@ -196,6 +251,7 @@ fn rows(
                 values.push(Packet {
                     value: None,
                     detail,
+                    member: None,
                 });
                 stop = Some(Error::of(
                     crate::public::error::ErrorKind::Backend,

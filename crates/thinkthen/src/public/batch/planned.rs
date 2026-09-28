@@ -10,6 +10,7 @@ use crate::engine::facade::{self, Input, InputPort};
 use crate::public::Evidence;
 use crate::public::error::Error;
 use crate::public::options::Stop;
+use crate::public::question::Question;
 use crate::public::results::{
     self, Facts, ObservedQuestion, ObservedRow, QuestionDetail, RecordObservation,
 };
@@ -18,10 +19,13 @@ use super::{Batch, Event, Source, TICK, join_scheduler, schedule};
 
 type Answered = (Value, f64);
 type Pair<I, T> = fn(I, Answered) -> Result<Option<T>, Error>;
+type Convert<'a, I, T> =
+    Box<dyn Fn(I, Answered, Option<results::Member>) -> Result<Option<T>, Error> + 'a>;
 
 struct Packet {
     value: Option<Answered>,
     detail: Option<ObservedQuestion>,
+    member: Option<results::Member>,
 }
 
 struct Work {
@@ -36,7 +40,7 @@ struct Stream<'a, I: Iterator, T> {
     ready: VecDeque<Result<T, Error>>,
     queue: VecDeque<Work>,
     planner: Batcher,
-    pair: Pair<I::Item, T>,
+    pair: Convert<'a, I::Item, T>,
     events: Receiver<Event<Work, Vec<Packet>>>,
     port: Option<InputPort<Work, Vec<Packet>, Error>>,
     stop: Stop<'a>,
@@ -73,6 +77,90 @@ where
     I: Iterator + 'a,
     I::Item: crate::public::Evidence,
 {
+    start(
+        engine,
+        records,
+        stop,
+        most,
+        question,
+        threshold,
+        tuned_for,
+        setting,
+        context,
+        false,
+        Box::new(move |item, value, _| pair(item, value)),
+    )
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    clippy::type_complexity,
+    reason = "one detailed stream retains its question, input and selected call controls"
+)]
+pub(crate) fn start_details<'a, I>(
+    engine: Arc<facade::Engine>,
+    records: I,
+    stop: Stop<'a>,
+    most: Option<usize>,
+    question: &'a Question,
+    setting: core::Setting,
+    context: Option<core::Evidence>,
+    context_sha256: Option<String>,
+    profile: Option<&'a core::BackendProfile>,
+) -> Result<Batch<'a, crate::public::results::Row<I::Item, results::Details>>, Error>
+where
+    I: Iterator + 'a,
+    I::Item: Evidence + serde::Serialize,
+{
+    let backend = engine.backend().clone();
+    start(
+        engine,
+        records,
+        stop,
+        most,
+        question.core.clone(),
+        question.threshold,
+        question.profile.clone(),
+        setting,
+        context,
+        true,
+        Box::new(move |item, _, member| {
+            let member = member.ok_or_else(|| Error::defect("a detailed row lost its receipt"))?;
+            let details = results::Details::of_member(
+                member,
+                &item,
+                question,
+                &backend,
+                profile,
+                setting,
+                context_sha256.as_deref(),
+            )?;
+            Ok(Some(results::Row::new(item, details, 0.0)))
+        }),
+    )
+}
+
+#[allow(
+    clippy::too_many_arguments,
+    reason = "one planned stream carries selected controls and its row conversion"
+)]
+fn start<'a, I, T: 'a>(
+    engine: Arc<facade::Engine>,
+    records: I,
+    stop: Stop<'a>,
+    most: Option<usize>,
+    question: core::Question,
+    threshold: Option<core::Threshold>,
+    tuned_for: Option<core::ProfileName>,
+    setting: core::Setting,
+    context: Option<core::Evidence>,
+    details: bool,
+    pair: Convert<'a, I::Item, T>,
+) -> Result<Batch<'a, T>, Error>
+where
+    I: Iterator + 'a,
+    I::Item: Evidence,
+{
     let planner = Batcher::new(
         engine.backend().clone(),
         engine.profile().cloned(),
@@ -99,6 +187,8 @@ where
                     context.as_ref(),
                     &cancel,
                     observing,
+                    details,
+                    setting,
                 )
             },
             &sender,
@@ -283,7 +373,7 @@ where
                 return;
             }
             self.completed += 1;
-            match (self.pair)(item, value) {
+            match (self.pair)(item, value, packet.member) {
                 Ok(Some(row)) => self.ready.push_back(Ok(row)),
                 Ok(None) => {}
                 Err(error) => {

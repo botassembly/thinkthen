@@ -80,6 +80,10 @@ static void answer(thinkthen_engine *tt, const char *verb, size_t count) {
     if (strcmp(verb, "call") == 0) {
         out = thinkthen_call(tt, fields[1]);
         rc = out == NULL ? thinkthen_error_code(tt) : THINKTHEN_OK;
+    } else if (strcmp(verb, "facts") == 0) {
+        const char *facts = thinkthen_error_facts_json(tt);
+        said(THINKTHEN_OK, facts == NULL ? "null" : facts, facts == NULL ? 4 : strlen(facts));
+        return;
     } else if (strcmp(verb, "recognize") == 0) {
         rc = thinkthen_recognize(tt, fields[1], fields[2], lengths[2], &out, &out_len);
     } else if (strcmp(verb, "relate") == 0) {
