@@ -41,6 +41,7 @@ struct Cache {
     enabled_source: &'static str,
     path: Option<String>,
     path_source: &'static str,
+    binding: crate::engine::cache_prune::binding::Binding,
     entries: Option<u64>,
     bytes: Option<u64>,
     bad_entries: Option<u64>,
@@ -113,31 +114,13 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
     } else {
         "built_in"
     };
-    let enabled_source = if environment.named_cache() {
-        "environment"
-    } else if config.has_cache() {
-        "configuration"
-    } else {
-        "built_in"
-    };
-    let target_source = if config.has_cache_bytes() {
-        "configuration"
-    } else {
-        "built_in"
-    };
     let resolved_backend = crate::core::Backend::resolve(
         None,
         environment.base_url(),
         environment.model().unwrap_or(DEFAULT_MODEL),
     )?;
     environment.check_key(&resolved_backend)?;
-    let cache_counts = environment
-        .cache()
-        .map(|path| {
-            crate::engine::cache_prune::inspect(path, environment.cache_is_platform_default())
-        })
-        .transpose()
-        .map_err(|_| Failure::StatusState)?;
+    let cache = cache_status(environment, &resolved_backend)?;
     let month = crate::engine::usage::month_now();
     let usage = environment
         .usage_path()
@@ -161,28 +144,67 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
             model_source,
             api_key_set: environment.api_key_set(),
         },
-        cache: Cache {
-            enabled: environment.named_cache() || environment.default_cache_enabled(),
-            enabled_source,
-            path: environment.cache().map(display),
-            path_source: if environment.named_cache() {
-                "environment"
-            } else {
-                "platform"
-            },
-            entries: cache_counts.as_ref().map(|counts| counts.entries),
-            bytes: cache_counts.as_ref().map(|counts| counts.bytes),
-            bad_entries: cache_counts.as_ref().map(|counts| counts.bad_entries),
-            temporary_entries: cache_counts.as_ref().map(|counts| counts.temporary_entries),
-            temporary_bytes: cache_counts.as_ref().map(|counts| counts.temporary_bytes),
-            target_bytes: environment.cache_bytes(),
-            target_source,
-        },
+        cache,
         usage: UsageStatus {
             path: environment.usage_path().map(display),
             month,
             this_month: usage.as_ref().map(|totals| totals.month.into()),
             total: usage.map(|totals| totals.total.into()),
+        },
+    })
+}
+
+fn cache_status(
+    environment: &Environment,
+    backend: &crate::core::Backend,
+) -> Result<Cache, Failure> {
+    use crate::engine::cache_prune::binding::Binding;
+
+    let enabled = environment.named_cache() || environment.default_cache_enabled();
+    let counts = environment
+        .cache()
+        .map(|path| {
+            crate::engine::cache_prune::inspect(
+                path,
+                environment.cache_is_platform_default(),
+                enabled.then_some(backend),
+            )
+        })
+        .transpose()
+        .map_err(|_| Failure::StatusState)?;
+    Ok(Cache {
+        enabled,
+        enabled_source: if environment.named_cache() {
+            "environment"
+        } else if environment.config().has_cache() {
+            "configuration"
+        } else {
+            "built_in"
+        },
+        path: environment.cache().map(display),
+        path_source: if environment.named_cache() {
+            "environment"
+        } else {
+            "platform"
+        },
+        binding: counts.as_ref().map_or(
+            if enabled {
+                Binding::Unavailable
+            } else {
+                Binding::Disabled
+            },
+            |counts| counts.binding,
+        ),
+        entries: counts.as_ref().map(|counts| counts.entries),
+        bytes: counts.as_ref().map(|counts| counts.bytes),
+        bad_entries: counts.as_ref().map(|counts| counts.bad_entries),
+        temporary_entries: counts.as_ref().map(|counts| counts.temporary_entries),
+        temporary_bytes: counts.as_ref().map(|counts| counts.temporary_bytes),
+        target_bytes: environment.cache_bytes(),
+        target_source: if environment.config().has_cache_bytes() {
+            "configuration"
+        } else {
+            "built_in"
         },
     })
 }
@@ -233,6 +255,10 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
     edge::write_line(
         &mut writer,
         &format!("cache_path_source {}", status.cache.path_source),
+    )?;
+    edge::write_line(
+        &mut writer,
+        &format!("cache_binding {}", status.cache.binding.name()),
     )?;
     optional_line(&mut writer, "cache_entries", status.cache.entries)?;
     optional_line(&mut writer, "cache_bytes", status.cache.bytes)?;

@@ -40,13 +40,140 @@ fn default_cache_binds_replays_and_stays_out_of_status_and_prune_counts() {
 
     let status = spawn(
         &["status", "--json"],
-        &[("THINKTHEN_CACHE", cache_text)],
+        &[
+            ("THINKTHEN_CACHE", cache_text),
+            ("THINKTHEN_BASE_URL", listener.base()),
+        ],
         &[],
     )
     .expect("status runs");
     assert_eq!(status.status.code(), Some(0));
     let value: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
     assert_eq!(value["cache"]["entries"], 1);
+    assert_eq!(value["cache"]["binding"].as_str(), Some("matching"));
+    assert_eq!(
+        value["backend"]["url"],
+        format!("{}/systemone", listener.base())
+    );
+}
+
+#[test]
+fn default_mismatch_status_and_whole_folder_recovery_keep_old_bytes() {
+    let home = folder("default-cache-recovery-home");
+    let old = Listener::serving(vec![Canned::ok(ANSWER)]).expect("old listener");
+    let new = Listener::serving(vec![Canned::ok(ANSWER)]).expect("new listener");
+    let home_text = home.to_str().expect("home");
+    let old_run = spawn(
+        &[
+            "decide",
+            QUESTION,
+            "--url",
+            old.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("HOME", home_text)],
+        EVIDENCE.as_bytes(),
+    )
+    .expect("first binding");
+    assert_eq!(old_run.status.code(), Some(0));
+    assert_eq!(old.requests().len(), 1);
+    let cache = default_cache(&home);
+    let old_files = files(&cache).expect("old cache files");
+    assert!(old_files.len() >= 2, "marker and answer exist");
+
+    assert_mismatched_status(home_text, new.base(), &cache, &old_files)
+        .expect("mismatch status surfaces");
+    assert!(new.requests().is_empty(), "status sent no request");
+
+    let refused = spawn(
+        &[
+            "decide",
+            QUESTION,
+            "--url",
+            new.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("HOME", home_text)],
+        EVIDENCE.as_bytes(),
+    )
+    .expect("mismatched request");
+    assert_eq!(refused.status.code(), Some(5));
+    assert!(refused.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8(refused.stderr).expect("safe diagnostic"),
+        format!(
+            "thinkthen: the default cache is bound to a backend address other than `{}/systemone`; stop every process using the cache, move the entire cache folder shown by thinkthen status aside to preserve it, then retry; or set THINKTHEN_CACHE to a new folder\n",
+            new.base()
+        )
+    );
+    assert!(new.requests().is_empty(), "refusal sent no request");
+    assert_eq!(files(&cache).expect("unchanged mismatch"), old_files);
+
+    let backup = home.join("old-cache-kept");
+    fs::rename(&cache, &backup).expect("operator moved entire idle folder");
+    assert_eq!(files(&backup).expect("preserved backup"), old_files);
+    let rebound = spawn(
+        &[
+            "decide",
+            QUESTION,
+            "--url",
+            new.base(),
+            "--model",
+            "local-1",
+        ],
+        &[("HOME", home_text)],
+        EVIDENCE.as_bytes(),
+    )
+    .expect("fresh bind");
+    assert_eq!(rebound.status.code(), Some(0));
+    assert_eq!(new.requests().len(), 1);
+    assert_eq!(files(&backup).expect("old bytes retained"), old_files);
+    assert_ne!(
+        fs::read(cache.join(".thinkthen-backend.json")).expect("new marker"),
+        fs::read(backup.join(".thinkthen-backend.json")).expect("old marker")
+    );
+}
+
+fn assert_mismatched_status(
+    home: &str,
+    base: &str,
+    cache: &Path,
+    old_files: &FolderFiles,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let report = spawn(
+        &["status", "--json"],
+        &[("HOME", home), ("THINKTHEN_BASE_URL", base)],
+        &[],
+    )?;
+    assert_eq!(report.status.code(), Some(0));
+    assert!(report.stderr.is_empty());
+    let value: serde_json::Value = serde_json::from_slice(&report.stdout)?;
+    assert_eq!(
+        value
+            .pointer("/cache/binding")
+            .and_then(serde_json::Value::as_str),
+        Some("mismatched")
+    );
+    let expected_url = format!("{base}/systemone");
+    assert_eq!(
+        value
+            .pointer("/backend/url")
+            .and_then(serde_json::Value::as_str),
+        Some(expected_url.as_str())
+    );
+    assert_eq!(&files(cache)?, old_files);
+    let human = spawn(
+        &["status"],
+        &[("HOME", home), ("THINKTHEN_BASE_URL", base)],
+        &[],
+    )?;
+    assert_eq!(human.status.code(), Some(0));
+    assert!(human.stderr.is_empty());
+    assert!(String::from_utf8(human.stdout)?.contains("cache_binding mismatched\n"));
+    assert_eq!(&files(cache)?, old_files);
+    Ok(())
 }
 
 #[test]
