@@ -4,6 +4,7 @@
 use serde::Serialize;
 
 use super::{Answered, Engine};
+use crate::core::relation::count_pairs;
 use crate::core::{
     Answer, AnswerOutcome, Asked, Backend, BackendProfile, Evidence, Lead, ModelName, NameOdds,
     Odds, Piece, PieceOdds, Plan, Question, RecognizeSpec, RecognizedName, RelationEdge, TAGS,
@@ -16,6 +17,8 @@ use crate::engine::prepared_request::{PreparedChunk, PreparedRequests, pair_chun
 
 /// The default limit on one text's UTF-8 bytes, which caps spending.
 pub(crate) const MAX_TEXT_BYTES: usize = 600_000;
+const MAX_RELATION_NAMES: usize = 255;
+const MAX_RELATION_QUESTIONS: usize = 4_000;
 
 /// The names one text holds, and the edges between them when rules were given.
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -211,6 +214,26 @@ impl Engine {
     ) -> Result<Option<Vec<RelationEdge<RecognizedName>>>, Error> {
         if spec.relations.is_empty() {
             return Ok(None);
+        }
+        let count = count_pairs(entities, &spec.relations);
+        if count.questions == Some(0) {
+            return Ok(Some(Vec::new()));
+        }
+        if count.admitted > MAX_RELATION_NAMES {
+            return Err(Error::RecognizeRelationNames {
+                count: count.admitted,
+                limit: MAX_RELATION_NAMES,
+            });
+        }
+        if count
+            .questions
+            .is_none_or(|questions| questions > MAX_RELATION_QUESTIONS)
+        {
+            return Err(Error::RecognizeRelationQuestions {
+                names: count.admitted,
+                count: count.questions,
+                limit: MAX_RELATION_QUESTIONS,
+            });
         }
         let Some(planned) = plan_pairs(Some(text), entities, &spec.relations, Lead::Stated)
             .map_err(|_| Error::Defect("relation planning failed"))?

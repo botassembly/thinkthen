@@ -18,7 +18,7 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Later intake
 
-Main through06b0803e adds three distinct issues after the75-row snapshot. The three additions raised the original75 to78. Reviewed relation proof then retired four already-fixed rows, leaving74 to do. These additions do not change completion counts.
+Main through06b0803e adds three distinct issues after the75-row snapshot. The three additions raised the original75 to78. Reviewed relation proof then retired four already-fixed rows, leaving74 to do before0245. These additions do not change completion counts.
 
 | Issue | Batch | Next action |
 | --- | --- | --- |
@@ -185,4 +185,4 @@ Twelve rows include the J8 umbrella, ten consumer-proof issues and C++. They are
 
 ## Reviewed closure after this snapshot
 
-Fresh review798cbaef accepts the compiled proof for register110,112,113 and the shared-rule issue. The live table retires all four as already-fixed non-issues, without claiming four new runtime fixes. Recognition/batching therefore has12 open rows from the original16. No other original row is removed by this update. The three intake rows remain open.
+Fresh review798cbaef accepts the compiled proof for register110,112,113 and the shared-rule issue. The live table retires all four as already-fixed non-issues, without claiming four new runtime fixes. 0245 then fixes register111 in code. Recognition/batching now has11 open rows from the original16, and the live queue has73 to do. No other original row is removed by this update. The three intake rows remain open.

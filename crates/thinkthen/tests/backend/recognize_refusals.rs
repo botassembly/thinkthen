@@ -1,12 +1,125 @@
 //! Pair refusals after cached recognition answers.
 
 use crate::harness::Listener;
-use crate::recognize::{automatic, local, stdout};
+use crate::recognize::{automatic, local, questions, stdout};
 use std::{
     fs, io,
     path::{Path, PathBuf},
     process::Output,
 };
+
+fn dense_names(count: usize) -> String {
+    (0..count)
+        .map(|place| format!("P{place:03}"))
+        .collect::<Vec<_>>()
+        .join(" x ")
+}
+
+#[test]
+fn relation_plan_limits_refuse_after_the_real_recognition_sends() {
+    for (names, expected) in [
+        (
+            64,
+            "thinkthen: recognize: 64 distinct relation-eligible names would ask 4032 relation questions, over the limit of 4000; reduce names or relation rules, or split the input\n",
+        ),
+        (
+            256,
+            "thinkthen: recognize: 256 distinct relation-eligible names exceed the limit of 255; reduce names or split the input\n",
+        ),
+    ] {
+        let listener = Listener::answering(automatic).expect("listener");
+        let input = dense_names(names);
+        let output = local(
+            &listener,
+            &["person", "--relation", "near=person:person", "--no-cache"],
+            Some("key"),
+            input.as_bytes(),
+        );
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stderr).expect("diagnostic"),
+            expected
+        );
+        let sent = listener.requests();
+        assert_eq!(sent.len(), if names == 64 { 8 } else { 26 });
+        assert!(sent.iter().all(|request| {
+            questions(&request.body)
+                .iter()
+                .all(|question| question["type"] != "noul")
+        }));
+    }
+}
+
+#[test]
+fn many_names_without_a_possible_pair_keep_empty_relations() {
+    let listener = Listener::answering(automatic).expect("listener");
+    let input = dense_names(256);
+    let output = local(
+        &listener,
+        &[
+            "person",
+            "place",
+            "--relation",
+            "near=person:place",
+            "--no-cache",
+        ],
+        Some("key"),
+        input.as_bytes(),
+    );
+    let value: serde_json::Value = serde_json::from_str(&stdout(&output)).expect("result");
+    assert_eq!(value["entities"].as_array().map(Vec::len), Some(256));
+    assert_eq!(value["relations"], serde_json::json!([]));
+    assert!(listener.requests().iter().all(|request| {
+        questions(&request.body)
+            .iter()
+            .all(|question| question["type"] != "noul")
+    }));
+
+    let no_rule = local(
+        &listener,
+        &["person", "--no-cache"],
+        Some("key"),
+        b"Ada x Grace",
+    );
+    let no_rule: serde_json::Value = serde_json::from_str(&stdout(&no_rule)).expect("result");
+    assert!(no_rule.get("relations").is_none());
+}
+
+#[test]
+fn public_relation_refusal_keeps_the_spent_recognition_facts() {
+    let listener = Listener::answering(automatic).expect("listener");
+    let engine = thinkthen::Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("key")
+        .expect("key")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let asked = thinkthen::Recognize::builder()
+        .kind(thinkthen::Kind::new("person", None).expect("kind"))
+        .expect("kind")
+        .relation(thinkthen::RelationRule::one_way("near", "person", "person").expect("rule"))
+        .expect("relation")
+        .build()
+        .expect("recognize");
+    let error = engine
+        .recognize(&asked, &dense_names(64))
+        .expect_err("limit");
+    assert_eq!(error.kind(), thinkthen::ErrorKind::Usage);
+    assert_eq!(
+        error.detail().message(),
+        "64 distinct relation-eligible names would ask 4032 relation questions, over the limit of 4000; reduce names or relation rules, or split the input"
+    );
+    let facts = error.facts().expect("completed stage facts");
+    assert_eq!((facts.records(), facts.requests_sent()), (0, 8));
+    assert_eq!(
+        (facts.input_tokens(), facts.output_tokens()),
+        (Some(80), Some(16))
+    );
+    assert_eq!(listener.requests().len(), 8);
+}
 
 #[test]
 fn impossible_relation_state_uses_cached_recognition_and_sends_nothing() {
