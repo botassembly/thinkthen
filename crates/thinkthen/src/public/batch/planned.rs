@@ -2,30 +2,23 @@
 
 use std::collections::VecDeque;
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::thread::{self, JoinHandle};
 
 use crate::core::{self, AnswerOutcome, BatchRecord, Batcher};
-use crate::engine::facade::{self, Completed, Input, InputPort, RunOutcome};
+use crate::engine::facade::{self, Completed, Input, InputPort};
 use crate::public::Evidence;
 use crate::public::error::Error;
-use crate::public::options::{Stop, guarded};
+use crate::public::options::Stop;
 use crate::public::results::{self, Answer};
 
-use super::{Batch, Source, TICK};
+use super::{Batch, Event, Source, TICK, join_scheduler, schedule};
 
 type Decided = (Answer, f64);
 
 struct Work {
     batch: core::Batch,
     texts: Vec<String>,
-}
-
-enum Event {
-    Port(InputPort<Work, Vec<Decided>, Error>),
-    Ask,
-    Rows(Vec<Decided>),
-    End(Result<(), Error>),
 }
 
 struct Stream<'a, I: Iterator, T> {
@@ -36,7 +29,7 @@ struct Stream<'a, I: Iterator, T> {
     queue: VecDeque<Work>,
     planner: Batcher,
     pair: fn(I::Item, Decided) -> Option<T>,
-    events: Receiver<Event>,
+    events: Receiver<Event<Work, Vec<Decided>>>,
     port: Option<InputPort<Work, Vec<Decided>, Error>>,
     stop: Stop<'a>,
     fed: usize,
@@ -81,9 +74,16 @@ where
         schedule(
             &engine,
             &cancel,
-            &question,
-            threshold,
-            context.as_ref(),
+            &|work: &Work| {
+                answer(
+                    &engine,
+                    work,
+                    &question,
+                    threshold,
+                    context.as_ref(),
+                    &cancel,
+                )
+            },
             &sender,
         );
     });
@@ -106,40 +106,6 @@ where
             scheduler: Some(scheduler),
         }),
     })
-}
-
-fn schedule(
-    engine: &facade::Engine,
-    cancel: &crate::engine::Cancel<'static>,
-    question: &core::Question,
-    threshold: Option<core::Threshold>,
-    context: Option<&core::Evidence>,
-    sender: &Sender<Event>,
-) {
-    let mut relay = None;
-    let ended = guarded(|| {
-        let outcome = engine.records(
-            crate::engine::schedule::RecordFlow::Streaming,
-            cancel,
-            |asks: Receiver<()>, port| {
-                let _sent = sender.send(Event::Port(port));
-                relay = Some(relay_asks(asks, sender.clone()));
-            },
-            &|work: &Work| answer(engine, work, question, threshold, context, cancel),
-            |rows| Ok(sender.send(Event::Rows(rows)).is_ok()),
-        )?;
-        match outcome {
-            RunOutcome::Complete => Ok(()),
-            RunOutcome::Stopped { cause, .. } => Err(cause),
-        }
-    });
-    let joined = relay.map_or(Ok(()), JoinHandle::join);
-    let ended = ended.and_then(|()| joined.map_err(|_| Error::defect("the record relay panicked")));
-    let _sent = sender.send(Event::End(ended));
-}
-
-fn relay_asks(asks: Receiver<()>, sender: Sender<Event>) -> JoinHandle<()> {
-    thread::spawn(move || while asks.recv().is_ok() && sender.send(Event::Ask).is_ok() {})
 }
 
 fn answer(
@@ -281,11 +247,11 @@ where
     I: Iterator,
     I::Item: crate::public::Evidence,
 {
-    fn take(&mut self, event: Event) -> Option<Option<Result<T, Error>>> {
+    fn take(&mut self, event: Event<Work, Vec<Decided>>) -> Option<Option<Result<T, Error>>> {
         match event {
             Event::Port(port) => self.port = Some(port),
             Event::Ask => self.feed(),
-            Event::Rows(rows) => {
+            Event::Row(rows) => {
                 if let Err(error) = self.take_rows(rows) {
                     return Some(Some(Err(error)));
                 }
@@ -396,21 +362,12 @@ impl<I: Iterator, T> Stream<'_, I, T> {
     }
 
     fn join(&mut self) -> Result<(), Error> {
-        let Some(scheduler) = self.scheduler.take() else {
-            return Ok(());
-        };
-        self.stop.fire();
-        while !scheduler.is_finished() {
-            match self.events.recv_timeout(TICK) {
-                Ok(Event::Port(port)) => self.port = Some(port),
-                Ok(Event::Ask) => self.send(Input::End),
-                Ok(Event::Rows(_) | Event::End(_)) | Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => break,
-            }
-        }
-        scheduler
-            .join()
-            .map_err(|_| Error::defect("the record scheduler panicked"))
+        join_scheduler(
+            &mut self.scheduler,
+            &self.stop,
+            &self.events,
+            &mut self.port,
+        )
     }
 }
 

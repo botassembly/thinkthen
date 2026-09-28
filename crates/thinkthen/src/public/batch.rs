@@ -72,9 +72,11 @@ impl<T> Source<T> for Option<Error> {
 
 /// One record's answer, computed on an engine worker.
 pub(crate) type Answer<V> = dyn Fn(&str) -> Result<Completed<V, Error>, Error> + Send + Sync;
+type ScheduledAnswer<'a, W, V> =
+    dyn Fn(&W) -> Result<Completed<V, Error>, Error> + Send + Sync + 'a;
 
-enum Event<V> {
-    Port(InputPort<String, V, Error>),
+pub(super) enum Event<W, V> {
+    Port(InputPort<W, V, Error>),
     Ask,
     Row(V),
     End(Result<(), Error>),
@@ -85,7 +87,7 @@ struct Stream<'a, I: Iterator, V, T> {
     items: I,
     held: VecDeque<I::Item>,
     pair: fn(I::Item, V) -> Option<T>,
-    events: Receiver<Event<V>>,
+    events: Receiver<Event<String, V>>,
     port: Option<InputPort<String, V, Error>>,
     stop: Stop<'a>,
     fed: usize,
@@ -109,9 +111,11 @@ where
     V: Send + 'static,
     T: 'a,
 {
-    let (sender, events) = channel();
+    let (sender, events) = channel::<Event<String, V>>();
     let cancel = stop.shared();
-    let scheduler = thread::spawn(move || schedule(&engine, &cancel, answer.as_ref(), &sender));
+    let scheduler = thread::spawn(move || {
+        schedule::<String, V>(&engine, &cancel, &|work: &String| answer(work), &sender);
+    });
     Batch {
         source: Box::new(Stream {
             items: records,
@@ -129,11 +133,11 @@ where
 
 /// The scheduler thread: run the engine's ordered scheduler, relay its asks
 /// and rows, and report how it ended once its relay has joined.
-fn schedule<V: Send + 'static>(
+pub(super) fn schedule<W: Send + 'static, V: Send + 'static>(
     engine: &facade::Engine,
     cancel: &crate::engine::Cancel<'static>,
-    answer: &Answer<V>,
-    sender: &Sender<Event<V>>,
+    answer: &ScheduledAnswer<'_, W, V>,
+    sender: &Sender<Event<W, V>>,
 ) {
     let mut relay = None;
     let ended = guarded(|| {
@@ -144,7 +148,7 @@ fn schedule<V: Send + 'static>(
                 let _sent = sender.send(Event::Port(port));
                 relay = Some(relay_asks(asks, sender.clone()));
             },
-            &|text: &String| answer(text),
+            &|work: &W| answer(work),
             |row| Ok(sender.send(Event::Row(row)).is_ok()),
         )?;
         match outcome {
@@ -158,7 +162,10 @@ fn schedule<V: Send + 'static>(
 }
 
 /// Turn each scheduler ask into one event for the calling thread.
-fn relay_asks<V: Send + 'static>(asks: Receiver<()>, sender: Sender<Event<V>>) -> JoinHandle<()> {
+fn relay_asks<W: Send + 'static, V: Send + 'static>(
+    asks: Receiver<()>,
+    sender: Sender<Event<W, V>>,
+) -> JoinHandle<()> {
     thread::spawn(move || while asks.recv().is_ok() && sender.send(Event::Ask).is_ok() {})
 }
 
@@ -193,7 +200,7 @@ where
     I::Item: super::Evidence,
 {
     /// Act on one event; `Some` is what this pull returns.
-    fn take(&mut self, event: Event<V>) -> Option<Option<Result<T, Error>>> {
+    fn take(&mut self, event: Event<String, V>) -> Option<Option<Result<T, Error>>> {
         match event {
             Event::Port(port) => self.port = Some(port),
             Event::Ask => self.feed(),
@@ -250,22 +257,41 @@ impl<I: Iterator, V, T> Stream<'_, I, V, T> {
 
     /// Stop the scheduler, answer its last asks with the end, and join it.
     fn join(&mut self) -> Result<(), Error> {
-        let Some(scheduler) = self.scheduler.take() else {
-            return Ok(());
-        };
-        self.stop.fire();
-        while !scheduler.is_finished() {
-            match self.events.recv_timeout(TICK) {
-                Ok(Event::Port(port)) => self.port = Some(port),
-                Ok(Event::Ask) => self.send(Input::End),
-                Ok(Event::Row(_) | Event::End(_)) | Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => break,
-            }
-        }
-        scheduler
-            .join()
-            .map_err(|_| Error::defect("the record scheduler panicked"))
+        join_scheduler(
+            &mut self.scheduler,
+            &self.stop,
+            &self.events,
+            &mut self.port,
+        )
     }
+}
+
+/// Stop one typed scheduler, answer its final asks, and join every worker.
+pub(super) fn join_scheduler<W, V>(
+    scheduler: &mut Option<JoinHandle<()>>,
+    stop: &Stop<'_>,
+    events: &Receiver<Event<W, V>>,
+    port: &mut Option<InputPort<W, V, Error>>,
+) -> Result<(), Error> {
+    let Some(scheduler) = scheduler.take() else {
+        return Ok(());
+    };
+    stop.fire();
+    while !scheduler.is_finished() {
+        match events.recv_timeout(TICK) {
+            Ok(Event::Port(next)) => *port = Some(next),
+            Ok(Event::Ask) => {
+                if let Some(port) = port {
+                    let _sent = port.send(Input::End);
+                }
+            }
+            Ok(Event::Row(_) | Event::End(_)) | Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => break,
+        }
+    }
+    scheduler
+        .join()
+        .map_err(|_| Error::defect("the record scheduler panicked"))
 }
 
 impl<I: Iterator, V, T> Drop for Stream<'_, I, V, T> {
