@@ -1,6 +1,6 @@
 # Ticket 0238: Refresh cached answers for a mutable model alias and refuse mixed-version runs
 
-Status: **Implementation pushed, awaiting fresh High code review.** Severity 2, public 0.1 correctness. This joins remaining register 09 and the cache portion of register 23. Fresh High design re-review accepted ADR [0100](../planning/adr/0100-cache-model-freshness.md) and this ticket at `2e101ded583f639dffa601df2e502931e077c43c`; the coordinator approved implementation within that outcome. The [preflight](../records/0238-cache-model-preflight.md) pins the design source, and the [build record](../records/0238-cache-model-build.md) holds implementation evidence. The original issues remain open until code review and landing.
+Status: **Complete after fresh High code-review recheck ACCEPT `2ab0fe65`.** Severity 2, public 0.1 correctness. This joins remaining register 09 and the cache portion of register 23. Fresh High design re-review accepted ADR [0100](../planning/adr/0100-cache-model-freshness.md) and this ticket at `2e101ded583f639dffa601df2e502931e077c43c`; the coordinator approved implementation within that outcome. The [preflight](../records/0238-cache-model-preflight.md) pins the design source, and the [build record](../records/0238-cache-model-build.md) holds implementation evidence. The coordinator integrates the unchanged reviewed implementation and closes register 09 and the cache defect in register 23; recording vintage and named-folder trust remain separate.
 
 ## Outcome
 
@@ -43,7 +43,7 @@ Extend `crates/thinkthen/tests/backend/annotate/cache_versions.rs` and the neare
 
 ## Routing
 
-Fresh High design review accepted the corrected proposal at `2e101ded`; the coordinator claimed and approved its runtime slice. Fresh High code review, landing and issue-outcome verification remain. Register 105 and 40 retain separate owners and outcomes.
+Fresh High design review accepted the corrected proposal at `2e101ded`; the coordinator claimed and approved its runtime slice. Fresh High code review accepted the corrected lock lifecycle and dry-run boundary at `2ab0fe65`; integration preserves the reviewed source and closes the two scoped outcomes. Register 105 and 40 retain separate owners and outcomes.
 
 ## What the build taught us
 
@@ -51,4 +51,4 @@ Fresh High design review accepted the corrected proposal at `2e101ded`; the coor
 - `public/engine.rs::for_model` shares a recorder through `facade::with_model`; selecting refresh from `Plan::model()` at each request passed both override directions. A constructor-time alias bit would have been wrong.
 - The existing held-folder cancellation unit fixture assumed an empty folder waits before key lookup. ADR 0099 intentionally lets an unbound empty folder inspect the key first. Binding the fixture folder before taking its gate preserves the focused cancellation assertion without changing product behavior.
 - The scripted `Listener::requests()` drains recorded requests; the offline replay proof reads it once after all calls. A complete live answer followed by injected pre-rename install failure preserved the exact old entry bytes.
-- The [build record](../records/0238-cache-model-build.md) names the passing checks, real old-reader proof, exact hashes and one unrelated full-lint blocker. Cache vintage 105 and named-folder trust warning 40 remain deferred.
+- The [build record](../records/0238-cache-model-build.md) names the passing checks, real old-reader proof, exact hashes and the subsequently resolved unrelated full-lint blocker. Cache vintage 105 and named-folder trust warning 40 remain deferred.

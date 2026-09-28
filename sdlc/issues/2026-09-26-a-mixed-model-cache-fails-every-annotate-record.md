@@ -1,6 +1,6 @@
 # A mixed-model cache fails every `annotate` record
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 03, finding 2-5. Question 1 in the 0.1 backlog, the default-model pin, is answered. The message half is done: ticket 0159 landed on 2026-09-26, and the message now says a cache or recording folder may hold answers from the other version and names `--no-cache` and `cache prune`. The cache fix still waits and has no owner.
+Status: closed by ticket 0238 after High code-review ACCEPT `2ab0fe65`. Mutable-alias cache use now refreshes each actual planned exchange; explicit `--refresh-cache` refreshes a pinned cache. The edited-group loopback proof succeeds with one live version while preserving genuine mixed-live refusal. The build and code-review records pin the source and artifact. The historical failure and earlier proposed alternatives below are retained as evidence.
 
 ## What happens
 
