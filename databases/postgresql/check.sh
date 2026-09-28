@@ -663,6 +663,17 @@ sql_settings_and_retry_total() {
 		'permission denied to set parameter "thinkthen.record"'
 }
 check sql_settings_and_retry_total
+shared_settings_cases() {
+	python3 tests/settings_cases.py plan >"$RUN/settings.plan"
+	while IFS=$'\t' read -r id arm expected; do
+		fresh "$arm"
+		line=$(python3 tests/settings_cases.py "$SOCK" "$id" "$RUN/settings-$id")
+		same "$line" "pass $id"
+		actual=$(bcount)
+		[ "$actual" = "$expected" ] || { echo "$id: wanted $expected sends, got $actual" >&2; return 1; }
+	done <"$RUN/settings.plan"
+}
+check shared_settings_cases
 a_cancelled_send_counts_toward_the_total() {
 	fresh arm/held "thinkthen.max_requests_total = 1"
 	q -c "SELECT thinkthen_decide('$Q', 'held')" -c "SELECT thinkthen_decide('$Q', 'next')" >"$RUN/held.out" 2>&1 &

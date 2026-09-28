@@ -202,6 +202,7 @@ impl Files {
             max_requests_total: self
                 .setting(c"thinkthen_max_requests_total")
                 .and_then(|value| value.number),
+            ..Asked::default()
         }
     }
 

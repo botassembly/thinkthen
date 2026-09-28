@@ -150,8 +150,6 @@ def engine_cells(page, rows):
             out.append(f'{page}: engine setting "{name}" has no row')
             continue
         for surface, path in ENGINE_SOURCES.items():
-            if name == "Model" and surface == "DuckDB":
-                continue  # 0149 has not added DuckDB's engine setting yet
             source = (REPO / path).read_text(encoding="utf-8")
             cell = row[COLUMNS.index(surface)]
             for setter in setters:

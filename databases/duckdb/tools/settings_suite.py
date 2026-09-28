@@ -16,12 +16,69 @@ import tempfile
 from pathlib import Path
 
 from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from settings_cases import shared_settings_corpus
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow"
 SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme"
 THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32"
 SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it"
+
+case(shared_settings_corpus)
+
+@case
+def caller_settings_and_warm_share_one_engine():
+    """Warm fills only the calling session's selected cache and model plan."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        query = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
+        got = run([
+            f"SET thinkthen_cache = '{folder}'",
+            "SET thinkthen_model = 'other-model'",
+            "SELECT thinkthen_warm('Is it a refund?', 'refund now')",
+            query,
+            ["B", query],
+            "SELECT metric, value FROM thinkthen_usage()",
+        ], backend.base())
+        expect(rows(got[2]), [[1]], "warm result")
+        expect(rows(got[3]), [[True]], "same-session scalar result")
+        expect(rows(got[4]), [[True]], "other-session scalar result")
+        usage = dict(rows(got[5]))
+        expect(usage["cache_answers"], 1, "same-session warm cache hit")
+        expect(backend.count(), 2, "one warm send and one isolated-session send")
+
+
+@case
+def retry_spends_the_process_total_before_transport():
+    """A second attempt cannot pass a total of one after a 503."""
+    with Backend() as backend:
+        got = run(["SET thinkthen_max_retries = 1", "SET thinkthen_max_requests_total = 1", ASK], backend.base("arm/503"))
+        expect(said(got[2]), SPENT.replace("of 3", "of 1"), "typed retry denial")
+        expect(backend.count(), 1, "the refused retry opens no transport")
+
+
+@case
+def inline_profile_and_record_replay_respect_caller_settings():
+    """An inline profile refuses before send; record and strict replay share a folder."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        profile = json.dumps({"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 4})
+        got = run([f"SET thinkthen_profile = '{profile}'", ASK], backend.base())
+        expect(said(got[1]).startswith("thinkthen usage: profile small allows at most 4 evidence bytes"), True, "inline profile")
+        expect(backend.count(), 0, "profile sends nothing")
+        got = run([f"SET thinkthen_record = '{folder}'", ASK, "RESET thinkthen_record",
+                   f"SET thinkthen_replay = '{folder}'", ASK,
+                   "SELECT thinkthen_decide('Is it a refund?', 'another text')"], backend.base())
+        expect(rows(got[1]), [[True]], "record result")
+        expect(rows(got[4]), [[True]], "replay result")
+        expect(said(got[5]).startswith("thinkthen local:"), True, "strict replay miss")
+        expect(backend.count(), 1, "replay and miss send nothing")
+
+
+@case
+def recording_folder_obeys_current_caller_permission():
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        got = run([f"SET thinkthen_record = '{folder}'", "SET enable_external_access = false", ASK], backend.base())
+        expect(said(got[2]), "thinkthen usage: the recording folder is outside what this database's file settings allow", "recording permission")
+        expect(backend.count(), 0, "permission refusal sends nothing")
 
 
 @case
@@ -271,13 +328,13 @@ def access_cases_match_duckdb():
                         wrong.append(f"@file {verb} {setting} {name}: read_text {oracle}, we {ours}")
                 if oracle != "allowed" and backend.count() != sent:
                     wrong.append(f"@file {setting} {name}: a file DuckDB did not read sent something")
-        # Ticket 0129 decision 7: `~` follows the session's home_directory, which warm cannot see.
+        # Ticket 0129 decision 7 retains warm's @~ refusal.
         home = root / "home"
         home.mkdir()
         (home / "q.json").write_text('{"decide": "Is it a refund?"}')
         tilde = run([f"SET home_directory = '{home}'", *(f"SELECT {verb}('@~/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm"))], backend.base())
         expect(rows(tilde[1]), [[True]], "decide reads ~ from the session's home_directory")
-        expect(said(tilde[2]), "thinkthen usage: thinkthen_warm cannot read an '@~' path, because home_directory is a session setting it cannot see; write the full path", "warm and ~")
+        expect(said(tilde[2]), "thinkthen usage: thinkthen_warm cannot read an '@~' path; write the full path", "warm and ~")
         if wrong:
             raise AssertionError("; ".join(wrong))
 

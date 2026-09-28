@@ -1,0 +1,17 @@
+# 0149 DuckDB settings integration build
+
+This is an implementation checkpoint on `ticket/0149-sql-settings`, after the accepted independent core, SQLite and PostgreSQL slice `0c987e46` merged with staged Linux C++ DuckDB main `4935fb8c`. The DuckDB source and SQL corpus adapters in this checkpoint have not received fresh code review. Other three DuckDB release targets still ship the C API package and remain outside this Linux settings proof.
+
+## Source and selected proof
+
+The C++ caller reads six added session settings at execution and passes copied values through the matching Rust ABI layout. The Rust registry validates all values before a map hit and keys every engine-affecting value. Cache `off` disables caching. SQL cache, record and replay folders are checked against the current caller's file authority. All DuckDB engine call families carry one process `SendBudget`, so a retry cannot pass the SQL total between the pre-call row cut and transport. Warm uses its captured caller context at finalization, the same checked engine resolver and budget as scalars.
+
+The stock v1.5.5 C++ build and strict bridge Clippy passed. The selected DuckDB settings check passed all eight `conformance/settings.json` cases, a same-session warm-to-scalar cache hit with another session's separate send, a 503 followed by typed total-one retry refusal with one backend send, inline profile and strict record/replay, current recording-folder permission refusal, and the retained file-access table including warm's `@~` refusal. The selected SQLite shared corpus adapter passed eight rows on the pinned 3.50 host. The selected PostgreSQL 16.15 package check passed eight rows with one selected step, `shared_settings_cases`, and zero failures. PostgreSQL's array form refuses a three-record call under `max_requests=2` before any send. Its adapter asserts zero rather than the shared streaming row's two sends; the SQL error and no-send boundary are the equivalent host proof. These cases used loopback addresses and fake keys, with no paid call.
+
+The older C API DuckDB crate still compiles after its shared `Asked` initializer supplies defaults for the new fields. Its unchanged strict Clippy path reports `large_enum_variant` in `src/scalars/ffi.rs`; that warning is outside this Linux C++ integration and was not treated as a passing strict lint. The old C API runtime needs separate migrations on the other three targets.
+
+## Growth and next gate
+
+Combining the two accepted branches put `public/options.rs` at 531 nonblank lines, above the 500-line policy cap. An unchanged private extraction moved the budget carrier to `public/options/budget.rs`; the parent is now 411 lines. The C++ ABI fields put `bridge/src/ffi.rs` over its cap, so the copied settings conversion moved to `bridge/src/ffi/settings.rs`; the parent is 439 lines. The new DuckDB shared corpus adapter moved to its own small module when `settings_suite.py` reached 508 lines; the parent is 469. These are single-purpose extractions, not additional public APIs or test hooks. The final derived ratchets and policy check follow the main integration merge.
+
+The final source candidate still needs current-main reconciliation, a focused policy and settings-page check, exact DuckDB rebuild after its last changes, one selected host proof, record cleanup and fresh independent source review. This record does not claim 0149, register 51, or the original settings issues closed.

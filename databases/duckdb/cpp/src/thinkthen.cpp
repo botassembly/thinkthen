@@ -380,6 +380,12 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
 	                          LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);
+	config.AddExtensionOption("thinkthen_model", "ThinkThen model", LogicalType::VARCHAR);
+	config.AddExtensionOption("thinkthen_timeout", "Live attempt timeout in seconds", LogicalType::BIGINT);
+	config.AddExtensionOption("thinkthen_max_retries", "Maximum live retries", LogicalType::BIGINT);
+	config.AddExtensionOption("thinkthen_profile", "Inline backend limits profile JSON", LogicalType::VARCHAR);
+	config.AddExtensionOption("thinkthen_record", "Local recording folder", LogicalType::VARCHAR);
+	config.AddExtensionOption("thinkthen_replay", "Local strict replay folder", LogicalType::VARCHAR);
 	for (auto name : {"thinkthen_decide", "thinkthen_probability", "thinkthen_details", "thinkthen_try_details", "thinkthen_annotate"}) {
 		const auto result = string(name) == "thinkthen_details" || string(name) == "thinkthen_try_details" || string(name) == "thinkthen_annotate" ? LogicalType::VARCHAR
 		                    : string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;

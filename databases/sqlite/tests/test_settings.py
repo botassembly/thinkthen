@@ -6,12 +6,58 @@ from __future__ import annotations
 
 import os
 import pathlib
+import json
 import sys
+import tempfile
 import time
 
 from helper import Backend, Child, child, environment, expect, main
 
 AFTER_BUILD = "thinkthen usage: settings apply before the first call; this process already built its engine"
+
+
+def test_shared_settings_corpus() -> None:
+    """Run the shared eight setting cases through SQLite's public SQL functions."""
+    corpus = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance" / "settings.json").read_text())
+    expect(corpus["schema"], "thinkthen.settings-cases/1", "settings corpus version")
+    for shared in corpus["cases"]:
+        backend = Backend()
+        with tempfile.TemporaryDirectory() as folder:
+            for step in shared["steps"]:
+                setup = []
+                for name, value in step["settings"].items():
+                    if value == "$PROFILE":
+                        value = json.dumps(shared["profile"], separators=(",", ":"))
+                    elif value == "$FOLDER":
+                        value = folder
+                    if name == "cache" and value is False:
+                        setup.append("SELECT thinkthen_cache(NULL)")
+                    else:
+                        literal = str(value) if isinstance(value, int) else "'" + str(value).replace("'", "''") + "'"
+                        setup.append(f"SELECT thinkthen_{name}({literal})")
+                if step.get("verb") == "decide_many":
+                    values = ", ".join("('" + value.replace("'", "''") + "')" for value in step["records"])
+                    sql = f"SELECT thinkthen_warm('Is this a refund?', column1) FROM (VALUES {values})"
+                elif "model" in step:
+                    sql = f"SELECT json_extract(thinkthen_details('Is this a refund?', '{step['text']}'), '$.meta.model')"
+                else:
+                    sql = f"SELECT thinkthen_decide('Is this a refund?', '{step['text']}')"
+                result = child(f"db = connect()\nsetup = {setup!r}\n"
+                               f"for statement in setup:\n    assert not isinstance(run(db, statement), str)\n"
+                               f"say(value=run(db, {sql!r}))\n",
+                               environment(backend, shared["arm"].removesuffix("/v1")))["value"]
+                label = shared["id"]
+                if "error" in step:
+                    expect(isinstance(result, str) and result.startswith(f"thinkthen {step['error']}"), True, label)
+                elif "model" in step:
+                    expect(result, [[step["model"]]], label)
+                else:
+                    expect(result, [[1]], label)
+                expect(backend.count(), step["count"], f"{label} listener count")
+            if "entries" in shared:
+                saved = sum(path.is_file() and path.name != ".thinkthen-backend.json" for path in pathlib.Path(folder).rglob("*"))
+                expect(saved, shared["entries"], f"{shared['id']} saved entries")
+        backend.close()
 
 
 def entries(folder: str) -> int:
