@@ -185,26 +185,31 @@ fn ineligible_calls_refuse_shared_context_before_a_send() {
     let denied = [
         (
             "decide",
+            "a single-document call does not take a shared context",
             engine.decide_with(&one, "Ada", options).map(|_| ()),
         ),
         (
             "details",
+            "a single-document call does not take a shared context",
             engine.details_with(&one, "Ada", options).map(|_| ()),
         ),
         (
             "find",
+            "find does not take a shared context",
             engine
                 .find_with(&find, ["Ada", "Acme"], options)
                 .map(|_| ()),
         ),
         (
             "recognize",
+            "recognize does not take a shared context",
             engine
                 .recognize_with(&recognize, "Ada", options)
                 .map(|_| ()),
         ),
         (
             "relate",
+            "relate does not take a shared context",
             engine
                 .relate_with(
                     &relate,
@@ -217,10 +222,10 @@ fn ineligible_calls_refuse_shared_context_before_a_send() {
                 .map(|_| ()),
         ),
     ];
-    for (name, result) in denied {
+    for (name, sentence, result) in denied {
         let error = result.expect_err(name);
         assert_eq!(error.kind(), ErrorKind::Usage, "{name}");
-        assert!(error.to_string().contains("context"), "{name}");
+        assert_eq!(error.to_string(), sentence, "{name}");
         assert!(error.facts().is_none(), "{name} never started");
     }
     assert_eq!(listener.count(), 0);

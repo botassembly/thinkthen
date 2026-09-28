@@ -257,8 +257,13 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
             CallOptions::new().batch(setting).context("changed"),
         )
         .next()
-        .expect("strict replay miss");
-    assert!(missed.is_err());
+        .expect("strict replay miss")
+        .expect_err("changed context missed the recorded request");
+    assert_eq!(missed.kind(), ErrorKind::Local);
+    assert_eq!(
+        missed.to_string(),
+        "the replay folder holds no reply for this request"
+    );
     assert_eq!(listener.count(), 1, "strict replay opened no new send");
     std::fs::remove_dir_all(folder).expect("remove recording");
 }
@@ -381,10 +386,27 @@ fn context_and_later_record_overflow_keep_zero_send_and_ordered_prefix() {
     assert_eq!(listener.count(), 1);
 }
 
+fn group_request_shape(body: &[u8]) -> (usize, usize) {
+    let body: serde_json::Value = serde_json::from_slice(body).expect("group request");
+    (
+        body.get("questions")
+            .and_then(serde_json::Value::as_object)
+            .expect("questions")
+            .len(),
+        body.get("state")
+            .and_then(|state| state.get("records"))
+            .and_then(serde_json::Value::as_array)
+            .map_or(1, Vec::len),
+    )
+}
+
 #[test]
 fn unequal_group_closes_send_the_oldest_open_fragment_first() {
     let _serial = serial();
-    let listener = Listener::answering(|body| {
+    let held = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let first_release = std::sync::Arc::clone(&held);
+    let arrivals = AtomicUsize::new(0);
+    let listener = Listener::answering(move |body| {
         let request: serde_json::Value = serde_json::from_slice(body).expect("request");
         let answers = request["questions"]
             .as_object()
@@ -392,7 +414,13 @@ fn unequal_group_closes_send_the_oldest_open_fragment_first() {
             .keys()
             .map(|name| (name.clone(), serde_json::json!({"type":"noul","noul":0.9})))
             .collect::<serde_json::Map<_, _>>();
-        Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers}).to_string())
+        let reply =
+            Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers}).to_string());
+        if arrivals.fetch_add(1, Ordering::SeqCst) == 0 {
+            reply.after_release(std::sync::Arc::clone(&first_release))
+        } else {
+            reply
+        }
     })
     .expect("listener");
     let engine = Engine::builder()
@@ -415,35 +443,45 @@ fn unequal_group_closes_send_the_oldest_open_fragment_first() {
         r#"{"a":"a1","b":"b1"}"#,
         r#"{"a":"a2","b":"b2"}"#,
         r#"{"a":"a3","b":"b3"}"#,
+        r#"{"a":"a4","b":"b4"}"#,
     ];
     let mut rows = engine.annotate(&set, records);
+    let (values, first_two) = thread::scope(|scope| {
+        let helper = scope.spawn(|| {
+            let began = Instant::now();
+            while listener.count() < 2 && began.elapsed() < Duration::from_secs(3) {
+                thread::sleep(Duration::from_millis(5));
+            }
+            let seen = listener.requests();
+            assert!(held.wait(), "release first request");
+            seen
+        });
+        let values = rows.by_ref().collect::<Result<Vec<_>, _>>().expect("rows");
+        (values, helper.join().expect("release helper"))
+    });
     assert_eq!(
-        rows.by_ref()
-            .collect::<Result<Vec<_>, _>>()
-            .expect("rows")
-            .len(),
-        4
+        values.iter().map(|row| row.input()).collect::<Vec<_>>(),
+        records.iter().collect::<Vec<_>>()
     );
+    assert!(values.iter().all(|row| row.values().len() == 5));
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((4, 3))
+        Some((5, 4))
     );
-    let sent = listener.requests();
-    let shapes = sent
+    assert_eq!(
+        first_two.len(),
+        2,
+        "two requests began before the first reply"
+    );
+    assert_eq!(group_request_shape(&first_two[1].body), (5, 5));
+    let mut sent = first_two;
+    sent.extend(listener.requests());
+    assert_eq!(sent.len(), 4, "one request for each complete group slice");
+    let mut shapes = sent
         .iter()
-        .map(|request| {
-            let body: serde_json::Value = serde_json::from_slice(&request.body).expect("body");
-            (
-                body["questions"].as_object().expect("questions").len(),
-                body["state"]["records"].as_array().expect("records").len(),
-            )
-        })
+        .map(|request| group_request_shape(&request.body))
         .collect::<Vec<_>>();
-    assert_eq!(shapes.len(), 3);
-    assert_eq!(shapes[2], (8, 2), "the later A slice waits for B");
-    assert!(
-        shapes[..2] == [(8, 2), (4, 4)] || shapes[..2] == [(4, 4), (8, 2)],
-        "both row-zero fragments precede the later A slice: {shapes:?}"
-    );
+    shapes.sort_unstable();
+    assert_eq!(shapes, [(4, 1), (5, 5), (8, 2), (8, 2)]);
 }
