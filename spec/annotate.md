@@ -31,7 +31,7 @@ thinkthen annotate triage.json "${offline[@]}" --replay "$root/spec/fixtures/ann
   | mustmatch '{"id":"T-91","body":"Payouts have failed for 3 days.","open":true,"kind":"bug","impact":1.6}'
 
 # A JSONL stream with no --field: `on` reads /body inside each record.
-thinkthen annotate triage.json --jsonl "${offline[@]}" --replay "$root/spec/fixtures/annotate" < issues.jsonl \
+thinkthen annotate triage.json --jsonl --batch 1 "${offline[@]}" --replay "$root/spec/fixtures/annotate" < issues.jsonl \
   | jq -c 'select(.kind == "bug")' \
   | mustmatch '{"id":"T-91","body":"Payouts have failed for 3 days.","open":true,"kind":"bug","impact":1.6}'
 

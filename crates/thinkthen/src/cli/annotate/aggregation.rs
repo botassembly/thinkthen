@@ -18,6 +18,7 @@ pub(super) fn finish(
     let replayed = annotation.replayed;
     let failed_questions = annotation.failed_questions;
     let printed = if judging.common.details {
+        let batches = annotation.batches;
         let meta = AnnotateMeta::new(
             env!("CARGO_PKG_VERSION"),
             judging.set.sha256()?,
@@ -29,7 +30,8 @@ pub(super) fn finish(
             RequestMeta::new(replayed, annotation.requests_sent, annotation.requests)
                 .with_failed_questions(failed_questions)
                 .with_profile_warning(judging.mismatch.warning()),
-        );
+        )
+        .with_batches(batches);
         json_line(&AnnotateResult::new(
             record,
             annotation.values,

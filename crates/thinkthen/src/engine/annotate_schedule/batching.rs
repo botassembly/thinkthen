@@ -10,6 +10,8 @@ use crate::core::{
 use crate::engine::error::Error;
 use crate::engine::facade::{Engine, PreparedGroup};
 
+mod slices;
+
 pub(crate) enum GroupRequest {
     Packed {
         batch: Box<Batch>,
@@ -24,8 +26,11 @@ pub(crate) struct GroupWork {
     pub(crate) request: GroupRequest,
     pub(crate) places: Vec<usize>,
     pub(crate) rows: Vec<usize>,
+    /// Each row's fragment place after its own profile layout was chosen.
+    pub(crate) slots: Vec<usize>,
     pub(crate) group: usize,
     pub(crate) sole_group: bool,
+    pub(crate) setting: Setting,
 }
 
 /// Preserve caller selection and profile refusals across the private planner.
@@ -41,6 +46,14 @@ struct Group {
     questions: Vec<Question>,
     planner: GroupBatcher,
     pending: VecDeque<(usize, BatchRecord)>,
+    slices: Vec<Slice>,
+}
+
+struct Slice {
+    places: Vec<usize>,
+    questions: Vec<Question>,
+    planner: GroupBatcher,
+    pending: VecDeque<(usize, BatchRecord, usize)>,
 }
 
 /// One open pure planner for each normalized `on` group.
@@ -84,6 +97,7 @@ impl GroupPlanner {
                     questions,
                     planner,
                     pending: VecDeque::new(),
+                    slices: Vec::new(),
                 })
             })
             .collect::<Result<Vec<_>, GroupPlanError>>()?;
@@ -171,8 +185,10 @@ impl GroupPlanner {
                     request: GroupRequest::Legacy(Mutex::new(Some(prepared))),
                     places: held.places.clone(),
                     rows: vec![row],
+                    slots: vec![group],
                     group,
                     sole_group: self.groups.len() == 1,
+                    setting: self.setting,
                 },
             );
             self.sequence += 1;
@@ -206,6 +222,7 @@ impl GroupPlanner {
             if let Some(batch) = closed {
                 self.queue(group, batch).map_err(GroupPlanError::Defect)?;
             }
+            self.close_slices(group, false)?;
         }
         Ok(())
     }
@@ -236,8 +253,10 @@ impl GroupPlanner {
                 },
                 places: held.places.clone(),
                 rows,
+                slots: vec![group; members],
                 group,
                 sole_group,
+                setting: self.setting,
             },
         );
         self.sequence += 1;

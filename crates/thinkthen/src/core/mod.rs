@@ -92,9 +92,9 @@ pub(crate) use crate::core::reply::{
 };
 pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::{
-    AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
-    AnnotatedValue, BatchMeta, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues,
-    ProfileWarning, RecordValue, RequestMeta, Usage, share,
+    AnnotateBatchMeta, AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry,
+    AnnotatedFailure, AnnotatedValue, BatchMeta, BatchSetting, BatchWarning, DecisionResult, Meta,
+    NamedValues, ProfileWarning, RecordValue, RequestMeta, Usage, share,
 };
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,

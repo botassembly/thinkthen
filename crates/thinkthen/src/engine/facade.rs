@@ -37,7 +37,9 @@ pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
-pub(crate) use annotate::{Annotation, GroupAnswer, PreparedGroup, assemble, check_model};
+pub(crate) use annotate::{
+    Annotation, GroupAnswer, GroupBatchFailure, PreparedGroup, assemble, check_model,
+};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 

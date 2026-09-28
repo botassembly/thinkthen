@@ -182,6 +182,33 @@ impl BatchMeta {
         self.split = Some(true);
         self
     }
+
+    pub(crate) fn active(&self) -> bool {
+        self.records > 1 || self.split.is_some()
+    }
+}
+
+/// One annotate request's group and whole-request batch facts.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+pub(crate) struct AnnotateBatchMeta {
+    group: usize,
+    request: String,
+    #[serde(flatten)]
+    batch: BatchMeta,
+}
+
+impl AnnotateBatchMeta {
+    pub(crate) fn new(group: usize, request: String, batch: BatchMeta) -> Self {
+        Self {
+            group,
+            request,
+            batch,
+        }
+    }
+
+    pub(crate) fn active(&self) -> bool {
+        self.batch.active()
+    }
 }
 
 /// One named answer inside an annotated detailed row.
@@ -293,6 +320,8 @@ pub(crate) struct AnnotateMeta {
     requests_sent: u64,
     cached: bool,
     requests: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    batches: Option<Vec<AnnotateBatchMeta>>,
     failed_questions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     profile_warning: Option<ProfileWarning>,
@@ -328,9 +357,17 @@ impl AnnotateMeta {
             requests_sent,
             cached: replayed,
             requests,
+            batches: None,
             failed_questions,
             profile_warning,
         }
+    }
+
+    pub(crate) fn with_batches(mut self, batches: Vec<AnnotateBatchMeta>) -> Self {
+        if batches.iter().any(AnnotateBatchMeta::active) {
+            self.batches = Some(batches);
+        }
+        self
     }
 }
 
