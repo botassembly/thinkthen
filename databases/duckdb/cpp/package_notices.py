@@ -42,6 +42,7 @@ def main() -> None:
         ("Linux", "x86_64"): "archive-sha256.txt",
         ("Linux", "aarch64"): "archive-sha256-linux-arm64.txt",
         ("Darwin", "arm64"): "archive-sha256-osx-arm64.txt",
+        ("Darwin", "x86_64"): "archive-sha256-osx-amd64.txt",
     }
     host = (platform.system(), platform.machine())
     if host not in manifests:

@@ -15,13 +15,13 @@ RUST_TARGET=$(rustc -vV | sed -n 's/^host: //p')
 CARGO_OUT=${CARGO_TARGET_DIR:-$ROOT/bridge/target}
 case $CARGO_OUT in /*) ;; *) CARGO_OUT=$REPO/$CARGO_OUT ;; esac
 CMAKE=$(command -v cmake || true)
-if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then CMAKE=$TOOLS/venv/bin/cmake; fi
+case $HOST_TARGET in *-apple-darwin) CMAKE=$TOOLS/venv/bin/cmake ;; esac
 [ -x "$CMAKE" ] || { echo "duckdb: project-local CMake is missing; run tools/setup.sh --fetch" >&2; exit 77; }
 RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
 CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 CXXFLAGS="${CXXFLAGS:+$CXXFLAGS }-ffile-prefix-map=$HOME=/build"
 export RUSTFLAGS CFLAGS CXXFLAGS
-if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then
+case $HOST_TARGET in *-apple-darwin)
 	MACOSX_DEPLOYMENT_TARGET=15.0
 	export MACOSX_DEPLOYMENT_TARGET
 	# A final Mach-O may report 15.0 even when prebuilt Rust objects require
@@ -35,7 +35,7 @@ if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then
 		echo 'duckdb: the Rust standard library requires macOS newer than 15.0' >&2
 		exit 1
 	fi
-fi
+;; esac
 VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 [ -n "$VERSION" ] || { echo 'duckdb: the ThinkThen version is missing' >&2; exit 1; }
 
@@ -46,7 +46,7 @@ VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.tom
 cd -- "$REPO"
 cargo build --locked --offline --release --manifest-path "$ROOT/bridge/Cargo.toml"
 set -- -DCMAKE_BUILD_TYPE=Release "-DCMAKE_C_FLAGS=$CFLAGS" "-DCMAKE_CXX_FLAGS=$CXXFLAGS"
-if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then set -- "$@" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0; fi
+case $HOST_TARGET in *-apple-darwin) set -- "$@" -DCMAKE_OSX_DEPLOYMENT_TARGET=15.0 ;; esac
 "$CMAKE" -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' "$@" \
 	-DBUILD_UNITTESTS=OFF -DBUILD_SHELL=OFF -DEXTENSION_STATIC_BUILD=OFF \
 	-DDUCKDB_EXTENSION_CONFIGS="$HERE/extension_config.cmake" \
@@ -59,8 +59,16 @@ if [ "$HOST_TARGET" = aarch64-unknown-linux-gnu ]; then
 	[ "$machine" = AArch64 ] || { echo "duckdb: built extension is $machine, not AArch64" >&2; exit 1; }
 fi
 mkdir -p "$ROOT/build/artifacts/cpp/$HOST_TARGET"
-if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then
-	python3 "$HERE/strip_macos.py" "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
+case $HOST_TARGET in
+aarch64-apple-darwin) mac_arch=arm64 mac_platform=osx_arm64 ;;
+x86_64-apple-darwin) mac_arch=x86_64 mac_platform=osx_amd64 ;;
+esac
+if [ -n "${mac_arch:-}" ]; then
+	[ "$(lipo -archs "$BUILD/extension/thinkthen/thinkthen.duckdb_extension")" = "$mac_arch" ] || {
+		echo "duckdb: built extension is not one $mac_arch Mach-O" >&2
+		exit 1
+	}
+	python3 "$HERE/strip_macos.py" "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension" "$mac_platform"
 else
 	cp -- "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
 fi

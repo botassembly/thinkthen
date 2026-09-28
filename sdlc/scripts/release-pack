@@ -106,47 +106,36 @@ part_sqlite() {
 # DuckDB reads its footer: the platform, the DuckDB version, and the extension's version.
 part_duckdb() {
 	case $TARGET in
-	x86_64-unknown-linux-gnu | aarch64-unknown-linux-gnu | aarch64-apple-darwin) ;;
-	*)
-		# Keep the existing C API package on Intel macOS until its C++ input
-		# and native host proof are reviewed.
-		if [ -z "$reuse" ]; then
-			(cd databases/duckdb && cargo build --locked --quiet --release)
-			. databases/duckdb/tools/version.env
-			case $TARGET in
-			aarch64-*linux*) platform=linux_arm64 ;;
-			x86_64-apple*) platform=osx_amd64 ;; *) platform=osx_arm64 ;;
-			esac
-			printf '%s' "$platform" >"$stage/platform.txt"
-			printf '%s' "$V" >"$stage/version.txt"
-			mkdir -p "databases/duckdb/build/artifacts/c-api/$TARGET"
-			python3 databases/duckdb/vendor/append_extension_metadata.py \
-				-l "$(built databases/duckdb)/release/libthinkthen_duckdb.$dl" -o "databases/duckdb/build/artifacts/c-api/$TARGET/thinkthen.duckdb_extension" \
-				-n thinkthen -dv "$DUCKDB_VERSION" -evf "$stage/version.txt" -pf "$stage/platform.txt" \
-				--abi-type C_STRUCT_UNSTABLE >/dev/null
-		fi
-		folder=$(fresh duckdb)
-		cp "databases/duckdb/build/artifacts/c-api/$TARGET/thinkthen.duckdb_extension" "$folder/"
-		pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
-		return
-		;;
+	x86_64-unknown-linux-gnu | aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin) ;;
+	*) echo "release-pack: no pinned DuckDB C++ package for $TARGET" >&2; exit 77 ;;
 	esac
 	if [ -z "$reuse" ]; then
 		sh databases/duckdb/cpp/build.sh
 	fi
 	extension="databases/duckdb/build/artifacts/cpp/$TARGET/thinkthen.duckdb_extension"
 	[ -f "$extension" ] || { echo "release-pack: $extension is missing; build it first" >&2; exit 1; }
-	if [ "$TARGET" = aarch64-unknown-linux-gnu ]; then
+	elf_arch= mac_arch=
+	case $TARGET in
+	x86_64-unknown-linux-gnu) elf_arch='Advanced Micro Devices X86-64' ;;
+	aarch64-unknown-linux-gnu) elf_arch=AArch64 ;;
+	aarch64-apple-darwin) mac_arch=arm64 ;;
+	x86_64-apple-darwin) mac_arch=x86_64 ;;
+	esac
+	if [ -n "${elf_arch:-}" ]; then
 		machine=$(readelf -h "$extension" | sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p')
-		[ "$machine" = AArch64 ] || { echo "release-pack: DuckDB extension is $machine, not AArch64" >&2; exit 1; }
+		[ "$machine" = "$elf_arch" ] || { echo "release-pack: DuckDB extension is $machine, not $elf_arch" >&2; exit 1; }
 	fi
-	if [ "$TARGET" = aarch64-apple-darwin ]; then
-		[ "$(lipo -archs "$extension")" = arm64 ] || { echo "release-pack: $extension is not a single arm64 Mach-O" >&2; exit 1; }
+	if [ -n "${mac_arch:-}" ]; then
+		[ "$(lipo -archs "$extension")" = "$mac_arch" ] || {
+			echo "release-pack: $extension is not a single $mac_arch Mach-O" >&2
+			exit 1
+		}
 	fi
+	. databases/duckdb/tools/version.env
+	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$DUCKDB_VERSION" "$V"
 	folder=$(fresh duckdb)
 	cp "$extension" "$folder/"
 	cp LICENSE "$folder/LICENSE.thinkthen"
-	. databases/duckdb/tools/version.env
 	tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 	source=${THINKTHEN_DUCKDB_CPP_SOURCE:-$tools/source}
 	cp "$source/LICENSE" "$folder/LICENSE.duckdb"
