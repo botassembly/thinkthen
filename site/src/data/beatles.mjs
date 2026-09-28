@@ -19,6 +19,8 @@
 // squashed at launch, and a pinned commit would then stop resolving
 // (sdlc/issues/2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md).
 
+import { BINDINGS } from './catalog.mjs';
+
 export const REPO = 'https://github.com/botassembly/beatles-bench';
 const tree = (name) => `${REPO}/tree/main/examples/${name}`;
 // The bench folder that names a slide's numbers and their sources.
@@ -83,8 +85,8 @@ const ARTICLES = {
     label: "Functions and bindings",
     goal: "ThinkThen is one command with ten functions, and its bindings bring the same functions to languages and databases.",
     idea: [
-      "ThinkThen is one command-line tool, `thinkthen`. It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
-      "Bindings bring the same ten functions to 24 programming languages and databases: Ada, C, C#, C++, COBOL, Dart, DuckDB, Go, Java, Kotlin, Objective-C, pandas, PHP, Polars, PostgreSQL, Python, R, Ruby, Rust, Scala, SQLite, Swift, TypeScript, and Zig.",
+      "ThinkThen is one command-line tool, `thinkthen`. It runs from the command line in [Bash](/install/shell/). It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
+      `Bindings bring the same ten functions to ${BINDINGS.length} programming languages and databases: ${BINDINGS.map((b, i) => `${i === BINDINGS.length - 1 ? 'and ' : ''}[${b.name}](${b.route})`).join(', ')}.`,
       "To set one up, start at [Install](/install/).",
     ],
     see: {
