@@ -25,3 +25,7 @@ The answers are stable and the scale moves a couple of points. The only real wob
 `--repeat N` on `decide`, `filter`, `rank`, and `choose`, default 1. Each repeat sends a fresh request and prints its own row or its own share, so a script can count flips and see the spread. Repeats must bypass the cache or the option measures nothing.
 
 A smaller alternative is a stability section in `audit` over a repeated run. The option is the more direct form, it is additive, and a default of 1 changes no existing run.
+
+## Factual preparation, 2026-09-28
+
+At main `86d5cff1`, both `--no-cache` and `--refresh-cache` support an external fresh-call loop. The latter requires an enabled answer cache, replaces complete cached answers and conflicts with `--no-cache`, `--record` and `--replay`; it does not add a repeat count or stability output. A built-in repeat needs explicit record/repeat identity and whole-run attempt facts. Under default packing, four logical answers may use fewer than four transport sends; a four-send proof must specify `--batch 1`. This is optional tuning work, not a 0.1 correctness blocker. The observed one flip in 150 calls is evidence, not a future test threshold. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.

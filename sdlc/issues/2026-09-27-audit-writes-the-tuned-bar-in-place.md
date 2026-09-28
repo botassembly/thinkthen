@@ -17,3 +17,7 @@ Experiments 296 and 297. The runner wrote every candidate to a content-addressed
 ## What to change
 
 A flag beside `--write` that writes the tuned file to a named path and leaves the named question file alone. `--write` keeps its present meaning. Additive, and the digest rule stays as it is.
+
+## Factual preparation, 2026-09-28
+
+At main `e58aceae`, `cli/audit/write.rs::bars` checks applicable saved question digests and splices tuned text before `std::fs::write(path, new)`. The original report describes deliberate in-place overwrite, not an observed crash loss. The separate-destination criterion remains open. A design should preserve the incumbent bytes and examine destination aliasing and partial-write failure. This preparation has not chosen an overwrite policy or changed `--write`. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.

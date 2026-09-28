@@ -431,6 +431,7 @@ const ARTICLES = {
     idea: [
       "Routing: `decide` picks an easy or a hard model. `choose` picks the agent for each part of a task. `decide` says loop or stop.",
       "Evaluation: `decide`, `score`, and `rank` ask whether the work is done, whether it is right, and which prompt wins.",
+      "ThinkThen replaces LLM-as-a-judge. An LLM judge writes a grade in free text. A ThinkThen judgment comes back as a probability. `decide` also sets an exit code: 0 for yes, 1 for no, and 3 for not sure. You can check the probabilities against cases a person labeled. That check shows whether 0.8 means about eight in ten for your question.",
       "Extraction: `tag`, `annotate`, `recognize`, and `relate` pull out tags, names, and relations. Their edges can feed a knowledge graph.",
       "Retrieval: `filter`, `rank`, and `find` keep, order, and find the records that answer a question.",
     ],
