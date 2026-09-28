@@ -2,7 +2,7 @@
 
 Status: Candidate for fresh code review on `ticket/qf-binding-diagnostic-policy`. This changes test dispatch and the location of one CPython FFI operation; it changes no runtime contract, policy rule, subprocess isolation or public test hook.
 
-## Cause and correction
+## What the build taught us
 
 On main `3b96e720`, `python3 sdlc/scripts/policy.py` exited 1 with six findings: the Python diagnostic child test held `unsafe` outside a binding FFI file, four binding diagnostic tests returned before their first assertion, and `crates/thinkthen/src/core/batch/groups.rs` used a prohibited glob import. The core finding belongs to 0216 and is outside this claim.
 
