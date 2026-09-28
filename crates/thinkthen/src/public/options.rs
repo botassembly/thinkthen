@@ -8,7 +8,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::engine::{Cancel, Deadline};
+use crate::engine::{Cancel, Deadline, workers};
 use crate::public::error::Error;
 
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
@@ -248,12 +248,14 @@ impl<'a> Stop<'a> {
         let Some(check) = self.check else {
             return false;
         };
-        catch_unwind(AssertUnwindSafe(check)).unwrap_or_else(|payload| {
-            if let Ok(mut held) = self.panic.lock() {
-                held.get_or_insert(payload);
-            }
-            true
-        })
+        workers::with_host_diagnostics(|| catch_unwind(AssertUnwindSafe(check))).unwrap_or_else(
+            |payload| {
+                if let Ok(mut held) = self.panic.lock() {
+                    held.get_or_insert(payload);
+                }
+                true
+            },
+        )
     }
 
     /// Run one engine call on this thread with the caller's controls polled
@@ -285,7 +287,7 @@ impl<'a> Stop<'a> {
 
 /// Run one engine call and turn any panic below the door into a defect.
 pub(crate) fn guarded<T>(call: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
-    catch_unwind(AssertUnwindSafe(call))
+    catch_unwind(AssertUnwindSafe(|| workers::with_engine_diagnostics(call)))
         .unwrap_or_else(|_| Err(Error::defect("the engine panicked below the public door")))
 }
 
@@ -295,25 +297,137 @@ impl fmt::Debug for Stop<'_> {
     }
 }
 
-/// R1-10 has no real seam: no input makes the engine panic, and the owner's
-/// ruling removed the private fault hook. This row holds the one door every
-/// public call passes, so dropping its guard turns it red.
+/// The private child exercises diagnostic and worker boundaries that no
+/// ordinary input can force. The public API has no fault hook.
 #[cfg(test)]
 mod tests {
-    use std::panic::resume_unwind;
+    use std::panic::{AssertUnwindSafe, catch_unwind, panic_any};
+    use std::process::Command;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::mpsc;
 
-    use super::guarded;
+    use super::{CallOptions, Stop, guarded};
+    use crate::engine::{Cancel, workers};
     use crate::public::error::{Error, ErrorKind};
 
+    fn wait_for_host_check(held: mpsc::Receiver<()>, joined: Arc<AtomicBool>) {
+        held.recv().expect("host check releases worker");
+        joined.store(true, Ordering::Release);
+    }
+
     #[test]
-    fn a_panic_below_the_door_is_a_defect_and_the_next_call_runs() {
-        let panicked: Result<(), Error> = guarded(|| resume_unwind(Box::new("engine fault")));
-        let error = panicked.err();
-        assert_eq!(error.as_ref().map(Error::kind), Some(ErrorKind::Defect));
+    fn diagnostic_boundary_child() {
+        if std::env::var_os("THINKTHEN_TEST_DIAGNOSTIC_CHILD").is_none() {
+            return;
+        }
+        std::panic::set_hook(Box::new(|info| {
+            let message = info
+                .payload()
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown panic");
+            let _written = std::io::Write::write_all(
+                &mut std::io::stderr(),
+                format!("prior hook: {message}\n").as_bytes(),
+            );
+        }));
+
+        let worker: Result<(), Error> = guarded(|| {
+            workers::on_worker(&Cancel::default(), || {
+                panic_any("worker key evidence secret")
+            });
+            Ok(())
+        });
+        let error = worker.expect_err("worker panic becomes a defect");
+        assert_eq!(error.kind(), ErrorKind::Defect);
+        assert!(!error.retryable());
         assert_eq!(
-            error.map(|error| error.to_string()).as_deref(),
-            Some("defect: the engine panicked below the public door")
+            error.to_string(),
+            "defect: the engine panicked below the public door"
         );
+
+        let scoped: Result<(), Error> = guarded(|| {
+            let (results, _received) = mpsc::channel::<()>();
+            workers::scoped_observed(
+                1,
+                results,
+                &|_: ()| (),
+                &|| panic_any("scoped key evidence secret"),
+                |queue| {
+                    let _sent = queue.send(());
+                },
+            );
+            Ok(())
+        });
+        let error = scoped.expect_err("scoped worker panic becomes a defect");
+        assert_eq!(error.kind(), ErrorKind::Defect);
+        assert!(!error.retryable());
+
+        let (release, held) = mpsc::channel();
+        let joined = Arc::new(AtomicBool::new(false));
+        let check = || -> bool {
+            let _sent = release.send(());
+            panic_any("host stop marker");
+        };
+        let stop = Stop::begin(CallOptions::new().interrupt(&check)).expect("valid stop");
+        let joined_worker = Arc::clone(&joined);
+        let resumed = catch_unwind(AssertUnwindSafe(|| {
+            let _: Result<(), Error> = stop.run(|cancel| {
+                workers::on_worker(cancel, move || wait_for_host_check(held, joined_worker));
+                Ok(())
+            });
+        }))
+        .expect_err("host check panic resumes");
+        assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host stop marker"));
+        assert!(joined.load(Ordering::Acquire));
+
+        let (release, held) = mpsc::channel();
+        let joined = Arc::new(AtomicBool::new(false));
+        let check = || -> bool {
+            let _sent = release.send(());
+            panic_any("host cancel marker");
+        };
+        let cancel = Cancel::default().with_check(&check);
+        let joined_worker = Arc::clone(&joined);
+        let resumed = catch_unwind(AssertUnwindSafe(|| {
+            workers::with_engine_diagnostics(|| {
+                workers::on_worker(&cancel, move || wait_for_host_check(held, joined_worker));
+            });
+        }))
+        .expect_err("direct host check panic resumes");
+        assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host cancel marker"));
+        assert!(joined.load(Ordering::Acquire));
+
+        let _unrelated = std::thread::spawn(|| panic_any("unrelated host marker")).join();
         assert_eq!(guarded(|| Ok(7)).ok(), Some(7));
+    }
+
+    #[test]
+    fn engine_diagnostics_hide_worker_payloads_and_preserve_host_hook() {
+        let output = Command::new(std::env::current_exe().expect("test binary"))
+            .args([
+                "--exact",
+                "public::options::tests::diagnostic_boundary_child",
+                "--nocapture",
+            ])
+            .env("THINKTHEN_TEST_DIAGNOSTIC_CHILD", "1")
+            .output()
+            .expect("run diagnostic child");
+        assert!(
+            output.status.success(),
+            "diagnostic child failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        for stream in [&*stdout, &*stderr] {
+            assert!(!stream.contains("worker key evidence secret"));
+            assert!(!stream.contains("scoped key evidence secret"));
+        }
+        assert!(stderr.contains("prior hook: host stop marker"));
+        assert!(stderr.contains("prior hook: host cancel marker"));
+        assert!(stderr.contains("prior hook: unrelated host marker"));
     }
 }

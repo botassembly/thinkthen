@@ -94,16 +94,15 @@ def test_recognize_is_cancelled_while_its_send_is_held() -> None:
 
 
 def test_relate_is_cancelled_and_sends_no_more_after_release() -> None:
-    """R4-17 relate half: three entities need two sends, and only the first goes.
+    """R4-17 relate half: 21 persons make 420 pairs in two requests.
 
-    Relations go out together since ticket 0143, so throttle 1 keeps the
-    second send waiting behind the first.
+    Throttle 1 keeps the second request waiting behind the first.
     """
     backend = Backend()
     setup = """db.execute("SELECT thinkthen_throttle(1)")
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
-db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, 'Ada', 'person'), (2, 'Acme', 'organization'), (3, 'Bo', 'person')])"""
-    sql = "SELECT * FROM thinkthen_relate('e', 'id', 'name', 'kind', 'works_for=person:organization', 'knows=person:person')"
+db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(n, f'Person {n}', 'person') for n in range(21)])"""
+    sql = "SELECT * FROM thinkthen_relate('e', 'id', 'name', 'kind', 'knows=person:person')"
     stopped_fast(interrupted(backend, sql, 1, setup))
     settled(backend, 1)
 

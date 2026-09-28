@@ -1,6 +1,6 @@
 # The DuckDB extension: goals and anti-goals
 
-Shared rules live in [README.md](README.md). That page fixes the nine functions and the eight rules. This page holds what is particular to DuckDB.
+Shared rules live in [README.md](README.md). That page fixes the nine functions and the eight rules. This page holds what is particular to DuckDB. The C API experiment and ticket 0110 paragraphs below are historical evidence. Ticket 0201's Linux x86_64 candidate uses a pinned C++ host extension and Rust bridge; its wider release target choice remains open.
 
 ## What really good looks like
 
@@ -15,18 +15,16 @@ SELECT id, body FROM 'reviews.parquet'
 WHERE thinkthen_decide('The reviewer asks for a refund.', body);
 
 -- one request per row, every question at once, unpacked into columns
-SELECT id, a.* FROM (
-  SELECT id, thinkthen_annotate('triage.json', body) AS a FROM 'inbox.parquet'
-);
+SELECT id, thinkthen_annotate('triage.json', body) AS triage_json FROM 'inbox.parquet';
 ```
 
 ## Goals
 
-- `INSTALL thinkthen FROM community` on every platform DuckDB's CI builds and signs. The version pin and its cost: the current Rust path builds only against the unstable C API at a pinned DuckDB version, so the host CLI and the extension must move together; a v1.1.3 host cannot load a current build, and v1.5.5 is the floor today. `USE_UNSTABLE_C_API=1` is not optional on that path (207).
+- `INSTALL thinkthen FROM community` on every platform DuckDB's CI builds and signs. The Linux x86_64 candidate uses the pinned C++ v1.5.5 host API; its extension loads in stock v1.5.5 CLI and Python and refuses stock v1.5.4. The retired C API path required `USE_UNSTABLE_C_API=1` (207). Other release targets still need a C++ package decision.
 - The whole chunk of 2,048 rows crosses into the engine once and runs at the throttle the engine names.
 - Repeated text in one chunk costs one judgment. The shim groups the chunk by the pair of question and text, and writes the one answer into every row holding that pair.
-- A bad question or a bad threshold fails before any paid request. The bind-time check is dropped for the first release: the scalar-bind accessors are broken on the stable C API, and the first-row parse already fails before any request, measured at zero requests (207). Rule 4 stays the aspiration, with this experiment as the citation.
-- `thinkthen_annotate` returns a real `STRUCT`, so `a.*` expands into typed columns. `thinkthen_tag` returns a real `LIST`.
+- A bad question or a bad threshold fails before any paid request. The C++ candidate validates ordinary foldable questions at bind and nonconstant chunks before their first send. `thinkthen_try_details` instead retains recoverable failures as safe row values. The C API bind crash in experiment 207 is the reason for the migration.
+- `thinkthen_annotate` returns JSON text under the retained SQL contract. `thinkthen_tag` returns a real `LIST`.
 - A `NULL` text costs nothing. DuckDB skips the call and writes `NULL` unless the function asks for special handling, and this one does not.
 - The key stays in the environment variable. The stable C API registers no secret type and exposes no secret call, and a `SET` would put the key into SQL text anyway (207).
 - `Ctrl-C` on a running query stops the waiting inside the engine.
@@ -37,7 +35,7 @@ SELECT id, a.* FROM (
 - No table-producing judgment in the first release. `thinkthen_usage()` is the one table function.
 - No extension-level cache. The engine's cache is the only one, and it outlives the session.
 
-## Where this database wastes time
+## Where the C API experiment found costs (history)
 
 - **A call per row.** DuckDB hands a scalar function a chunk of up to 2,048 rows. The shim reads the whole chunk into one engine call and writes the answers back into the output vector. A per-row loop pays the crossing 2,048 times and judges in series.
 - **A repeated value judged again.** DuckDB has constant vectors and dictionary vectors, and C++ reads the vector type and the unified vector format without flattening. The stable C extension API exposes neither. It hands out the data pointer, the validity mask, and the logical type, and no call names the storage form. Grouping the chunk by value in the shim buys the same saving: a constant column becomes one judgment and a dictionary column one judgment for each distinct value. The cost is a hash of each string.
@@ -46,7 +44,7 @@ SELECT id, a.* FROM (
 - **The same call in `WHERE` and in `SELECT`.** `colliber/duckdb-jev` warns that the query asks twice and does not fix it. Whether DuckDB folds the two appearances is unchecked. The engine's cache is keyed by the whole request and answers the second for free.
 - **The volatile marking.** Rule 8 marks the function volatile, and `duckdb_scalar_function_set_volatile()` is the C call. DuckDB issue 13238 constant-folded the first result of a volatile function that took no arguments, and pull request 13241 closed it in version 1.1.0. Every function here takes arguments, so the bug should not reach them.
 
-## How little code
+## C API experiment architecture (history)
 
 **The raw C API through `libduckdb-sys`, with no wrapper crate.** Ticket 0110 (2026-09-25) replaced `duckdb-rs` and its `vscalar` feature. Every scalar needs an init callback, which reads the caller's client context and file system, and `VScalar` registers none. The usage table and the warm aggregate already went through the raw C API. The `duckdb` crate's `arrow` and `hashlink` trees leave with it. Experiment 207's choice of `vscalar` stands as history.
 
@@ -68,9 +66,9 @@ Two gaps sit in the Rust binding rather than in DuckDB. The `VScalar` trait requ
 
 ## Relate on the caller's database, 2026-09-25
 
-Ticket 0118 ports `thinkthen_relate(query, rules)` onto the public API under ADR 0038. The query runs as one read-only `SELECT` on a connection LOAD opened on the caller's database, found through a random probe database and never through a name. It reads at most 255 rows, runs under `SET thinkthen_relate_seconds`, and passes a plan-size guard first. A Ctrl-C reaches the running query through a bridge thread and the engine call through the worker. The row cap is stricter than the engine's unique-pair cap. Temporary tables and the caller's open transaction stay out of sight, as the stable C API bounds them. The README's relate section pins each sentence, and `sdlc/records/0118-relate-on-the-callers-duckdb-database.md` holds the proof.
+Ticket 0118 originally routed `thinkthen_relate(query, rules)` through a random C API probe, as ADR 0038 records. The ticket 0201 C++ bind now selects the caller's database directly. Its separate read-only connection reads committed tables even when the caller opened the file read-only; it cannot see the caller's temporary or uncommitted rows. It retains the 255-row cap, plan guard, time limit, caller file settings, and cancellation. The focused read-only regression counts zero sends for a mutating query and a caller-denied rules file. The wider C++ release target choice remains pending.
 
-## Open questions for the ADR
+## Historical questions from experiment 207
 
 1. Answered by 207: drop the bind-time check for the first release. The C API cannot support it, the first-row parse already fails before any request at zero cost, and rule 4 keeps the aspiration with the citation.
 2. Does the question come only as a constant, or does a per-row question column stay legal with the check skipped?

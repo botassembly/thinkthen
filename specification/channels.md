@@ -119,4 +119,4 @@ A run that read a question file carries one more field, `from`, between `input` 
 
 `recognize --dry-run` reports its piece count and every exact step-1 request for the first record under `thinkthen.recognize-plan/2`. [recognize.md](recognize.md) fixes that schema.
 
-`relate --dry-run` reports the complete entity set, expanded relations, method and fallback choices, and every exact split request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.
+`relate --dry-run` reports the complete entity set, ordered rules, their fixed yes/no method and null fallback, and every exact shared request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.

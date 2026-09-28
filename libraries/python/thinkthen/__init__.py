@@ -313,15 +313,17 @@ class Engine:
         text. One ``dict`` comes back per record. A question the backend failed
         reads ``{"failed": {"kind": "backend", "cause": ...}}``. With ``on=``,
         ``records`` is a Polars or pandas ``DataFrame``, and the frame comes
-        back with one new column per question. A failed question's column
-        holds each answer's text, as does a Polars frame's tag column. A pandas
-        frame keeps its index. A question named as a column is refused first.
+        back with one typed column per question. The last column, ``failed``,
+        holds a question-to-failure map for partial rows and null otherwise.
+        A pandas frame keeps its index. A question named as a column is refused first.
         """
         asked = _spec(_thinkthen._QuestionSet, questions)
         if on is None:
             return self._engine.annotate(asked, records, deadline, token)
+        if "failed" in asked._names():
+            raise UsageError("the question name failed is reserved for frame failures")
         if _pandas(records) == "DataFrame":
-            column = _on(records, on, asked._names())
+            column = _on(records, on, (*asked._names(), "failed"))
             answers = _thinkthen._annotate_column(self._engine, asked, _marked(column, "Series"),
                                                   deadline, token)
             out = records.assign()

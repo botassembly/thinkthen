@@ -1,20 +1,10 @@
 //! Reading a text column in place, and writing one question's answers as a column.
 
-use std::collections::BTreeMap;
-
 use crate::public::{Annotated, AnnotatedRecord, Answer, Error, NamedAnnotation, QuestionKind};
 use polars::prelude::{
-    DataType, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom, Series,
+    BooleanChunked, DataType, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom,
+    NewChunkedArray, Series, StructChunked,
 };
-use serde_json::value::RawValue;
-
-/// Where a column goes. A tag column in a frame holds the JSON array text,
-/// as the Python door writes it. A tag series is a `List(String)`.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum Shape {
-    Series,
-    Frame,
-}
 
 /// Each row's text, borrowed from the column's own buffers across every
 /// chunk and slice offset. A column that is not text, or that holds a null,
@@ -52,12 +42,10 @@ pub(crate) const fn kind_word(kind: QuestionKind) -> &'static str {
     }
 }
 
-/// One member's answers over every record, as a column of the member's
-/// kind. When any row failed, the whole column widens to `String`.
+/// One member's answers over every record, as a column of the member's kind.
 pub(crate) fn answered(
     name: &str,
     kind: QuestionKind,
-    shape: Shape,
     records: &[AnnotatedRecord<&str>],
     place: usize,
 ) -> Result<Series, Error> {
@@ -71,85 +59,115 @@ pub(crate) fn answered(
                 .ok_or_else(|| Error::defect(&format!("a record has no member {name}")))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    if values
-        .iter()
-        .any(|value| matches!(value, Annotated::Failed(_)))
-    {
-        let cells = records
-            .iter()
-            .zip(&values)
-            .map(|(record, value)| widened(name, record, value))
-            .collect::<Result<Vec<_>, _>>()?;
-        return Ok(Series::new(name.into(), cells));
-    }
     let mismatch = || Error::defect(&format!("the member {name} answered another kind"));
-    let series = match (kind, shape) {
-        (QuestionKind::Decide, _) => {
+    let series = match kind {
+        QuestionKind::Decide => {
             let cells = values.iter().map(|value| match value {
                 Annotated::Decision(Answer::Yes) => Ok(Some(true)),
                 Annotated::Decision(Answer::No) => Ok(Some(false)),
                 Annotated::Decision(Answer::Unsure) => Ok(None),
+                Annotated::Failed(_) => Ok(None),
                 _ => Err(mismatch()),
             });
             Series::new(name.into(), cells.collect::<Result<Vec<_>, _>>()?)
         }
-        (QuestionKind::Choose, _) => {
+        QuestionKind::Choose => {
             let cells = values.iter().map(|value| match value {
                 Annotated::Choice(label) => Ok(label.as_deref()),
+                Annotated::Failed(_) => Ok(None),
                 _ => Err(mismatch()),
             });
             Series::new(name.into(), cells.collect::<Result<Vec<_>, _>>()?)
         }
-        (QuestionKind::Score, _) => {
+        QuestionKind::Score => {
             let cells = values.iter().map(|value| match value {
-                Annotated::Score(position) => Ok(*position),
+                Annotated::Score(position) => Ok(Some(*position)),
+                Annotated::Failed(_) => Ok(None),
                 _ => Err(mismatch()),
             });
             Series::new(name.into(), cells.collect::<Result<Vec<_>, _>>()?)
         }
-        (QuestionKind::Tag, Shape::Series) => {
+        QuestionKind::Tag => {
             let mut lists = ListStringChunkedBuilder::new(name.into(), values.len(), values.len());
             for value in &values {
-                let Annotated::Tags(labels) = value else {
-                    return Err(mismatch());
-                };
-                lists.append_values_iter(labels.iter().map(String::as_str));
+                match value {
+                    Annotated::Tags(labels) => {
+                        lists.append_values_iter(labels.iter().map(String::as_str))
+                    }
+                    Annotated::Failed(_) => lists.append_null(),
+                    _ => return Err(mismatch()),
+                }
             }
             lists.finish().into_series()
         }
-        (QuestionKind::Tag, Shape::Frame) => {
-            let cells = records
-                .iter()
-                .map(|record| member(name, record).map(|raw| raw.get().to_owned()))
-                .collect::<Result<Vec<_>, _>>()?;
-            Series::new(name.into(), cells)
-        }
-        (QuestionKind::Rank | QuestionKind::Find, _) => return Err(mismatch()),
+        QuestionKind::Rank | QuestionKind::Find => return Err(mismatch()),
     };
     Ok(series)
 }
 
-/// One cell of a widened column: the member's text from `value_json`,
-/// unchanged, except that a choice holds its plain label and a not-sure or
-/// nothing-fits answer stays null.
-fn widened(
-    name: &str,
-    record: &AnnotatedRecord<&str>,
-    value: &Annotated,
-) -> Result<Option<String>, Error> {
-    if let Annotated::Choice(label) = value {
-        return Ok(label.clone());
+/// A fixed-field failure map. Explicit parent validity distinguishes a row
+/// with no failures from a row whose other question fields are null.
+pub(crate) fn failed(names: &[&str], records: &[AnnotatedRecord<&str>]) -> Result<Series, Error> {
+    let mut fields = Vec::with_capacity(names.len());
+    let mut any = vec![false; records.len()];
+    for (place, name) in names.iter().enumerate() {
+        let mut kinds = Vec::with_capacity(records.len());
+        let mut causes = Vec::with_capacity(records.len());
+        let mut present = Vec::with_capacity(records.len());
+        for (any, record) in any.iter_mut().zip(records) {
+            let value = record
+                .values()
+                .get(place)
+                .ok_or_else(|| Error::defect(&format!("a record has no member {name}")))?;
+            if matches!(value.value(), Annotated::Failed(_)) {
+                let (kind, cause) = marker(record, name)?;
+                kinds.push(Some(kind));
+                causes.push(Some(cause));
+                present.push(true);
+                *any = true;
+            } else {
+                kinds.push(None);
+                causes.push(None);
+                present.push(false);
+            }
+        }
+        let marker = struct_with_validity(
+            "failed",
+            &[
+                Series::new("kind".into(), kinds),
+                Series::new("cause".into(), causes),
+            ],
+            &present,
+        )?;
+        fields.push(struct_with_validity(name, &[marker], &present)?);
     }
-    let raw = member(name, record)?;
-    Ok((raw.get() != "null").then(|| raw.get().to_owned()))
+    struct_with_validity("failed", &fields, &any)
 }
 
-/// The member's raw JSON text in the record's `value_json`.
-fn member(name: &str, record: &AnnotatedRecord<&str>) -> Result<Box<RawValue>, Error> {
-    let json = record.value_json();
-    let mut members: BTreeMap<String, Box<RawValue>> = serde_json::from_str(&json)
+fn marker(record: &AnnotatedRecord<&str>, name: &str) -> Result<(String, String), Error> {
+    let json: serde_json::Value = serde_json::from_str(&record.value_json())
         .map_err(|error| Error::defect(&format!("the record's JSON did not parse: {error}")))?;
-    members
-        .remove(name)
-        .ok_or_else(|| Error::defect(&format!("the record's JSON has no member {name}")))
+    let failed = json
+        .get(name)
+        .and_then(|value| value.get("failed"))
+        .ok_or_else(|| Error::defect(&format!("the record has no failure marker for {name}")))?;
+    let field = |key| {
+        failed
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+            .ok_or_else(|| Error::defect(&format!("the failure marker has no {key}")))
+    };
+    Ok((field("kind")?, field("cause")?))
+}
+
+fn struct_with_validity(name: &str, fields: &[Series], present: &[bool]) -> Result<Series, Error> {
+    let mask = BooleanChunked::from_slice("valid".into(), present);
+    let bitmap = mask
+        .downcast_iter()
+        .next()
+        .map(|array| array.values().clone());
+    StructChunked::from_series(name.into(), present.len(), fields.iter())
+        .map(|column| column.with_outer_validity(bitmap).into_series())
+        .map_err(|error| Error::defect(&format!("the failed column could not be built: {error}")))
 }
