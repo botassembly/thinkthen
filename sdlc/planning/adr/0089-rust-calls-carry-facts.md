@@ -1,6 +1,6 @@
 # ADR 0089: Rust calls carry their own run facts
 
-- Status: Corrected proposal for the same 0212 reviewer after findings on `8541ca52`. No implementation or public API change has landed. Ian can overturn the proposed shape.
+- Status: Accepted design after the same independent Sol review of `a713e462`. The coordinator approved the routine `Call<T>` choice under Ian's facts-on-every-call outcome. No implementation or public API change has landed; Ian can overturn the choice.
 - Date: 2026-09-27
 
 ## Context

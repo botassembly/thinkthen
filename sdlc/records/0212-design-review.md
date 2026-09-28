@@ -1,6 +1,6 @@
 # 0212 design review handoff
 
-Status: same independent reviewer accepted the return-shape, bounded-observer, final-facts and compile-migration corrections at `bcf588b4`, with one remaining full-detail field gap. This narrower correction awaits that reviewer. Notes only; no runtime authority, accepted ADR, test result or closed register item. Read the [ticket](../tickets/0212-rust-library-batching.md), [preflight](0212-rust-batching-preflight.md) and [proposed ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) against main `1e771675` with 0172 landed at `2e1f0d88`, accepted 0149/0157 branch `12309f56`, and proposed 0213 `7c97e2f8` separately. No pending source was merged into this branch.
+Status: ACCEPT. The same independent Sol reviewer accepted `a713e462`: full detail fields, bounded ordered borrowed question events, filtered rows, final facts and the complete compiling-consumer migration. The coordinator approved the routine `Call<T>` shape under Ian's accepted facts-on-every-call outcome. This is design acceptance only; no runtime implementation, test result or closed register item. Read the [ticket](../tickets/0212-rust-library-batching.md), [preflight](0212-rust-batching-preflight.md) and [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) against main `1e771675` with 0172 landed at `2e1f0d88`, accepted 0149/0157 branch `12309f56`, and proposed 0213 `7c97e2f8` separately. No pending source was merged into this branch.
 
 ## Questions for the reviewer
 

@@ -6,7 +6,7 @@ opens: sdlc/tickets/0212-rust-library-batching.md sdlc/records/0212-rust-batchin
 
 # 0212: Batch Rust library records and return run facts
 
-Status: narrow full-detail correction for the same independent reviewer after follow-up on `bcf588b4`. Owner: Codex. Notes only. Runtime work needs exact claims for files overlapping 0149/0157; those settings tickets are coordination dependencies, not new semantic prerequisites to the batch rule. [Proposed ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) makes the Rust public return choice explicit; design acceptance and runtime claims remain pending.
+Status: design accepted at `a713e462` by the same independent Sol reviewer; the coordinator approved the routine `Call<T>` choice. Owner: Codex. Runtime work needs exact claims for files overlapping 0149/0157; those settings tickets are coordination dependencies, not new semantic prerequisites to the batch rule. [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) fixes the Rust public return choice. No implementation or register closure is claimed.
 
 ## Outcome and authority
 
@@ -40,7 +40,7 @@ Use the existing Rust public consumer and loopback listener with the pinned `bat
 - Keeps: Six error kinds, typed null and annotation failure semantics, lazy ordered rows, first-error stop, one-record request bytes, cache/replay identity, process throttle, cancellation and fork recovery.
 - Changes: Proposed Rust batch/context selectors and three bulk verbs, batch planning on Rust many-record paths, uniform eager `Call<T>`, final lazy facts and bounded ordered observation of every finished row after ADR review.
 - Proof: Exact shared request/digest fixture through public Rust, listener-count table for batching and refusals, typed null/error cases, per-call retry facts and old `batch 1` replay compatibility.
-- Defers: Native wrapper, frame and SQL batching behavior to B12b–B13e while requiring their current Rust adapters to compile in B12a; pricing/server time/request ID to their existing issue. The uniform result and bounded-detail proposal awaits fresh design acceptance before implementation. No register item closes from this draft.
+- Defers: Native wrapper, frame and SQL batching behavior to B12b–B13e while requiring their current Rust adapters to compile in B12a; pricing/server time/request ID to their existing issue. Accepted design still awaits implementation and focused proof. No register item closes from this draft.
 
 ## What preparation taught us
 
