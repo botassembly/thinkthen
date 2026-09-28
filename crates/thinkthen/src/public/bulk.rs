@@ -405,11 +405,20 @@ impl Engine {
     {
         Batch::of((|| {
             options.without_context("annotate")?;
-            let setting = options
-                .batch_setting()
-                .map(Into::into)
-                .or(self.batch)
-                .unwrap_or(core::Setting::Max);
+            let setting = if let Some(typed) = options.batch_setting() {
+                typed.into()
+            } else if let Some(engine) = self.batch {
+                engine
+            } else if let Some(file) = questions.0.batch() {
+                core::Setting::of_json(file).ok_or_else(|| {
+                    Error::refused(core::QuestionSetError::Shape {
+                        path: "batch".to_owned(),
+                        wanted: "takes max or a whole number of at least 1",
+                    })
+                })?
+            } else {
+                core::Setting::Max
+            };
             let stop = Stop::begin(options)?;
             let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
             batch::start_annotation(engine, set, records.into_iter(), stop, self.most, setting)
