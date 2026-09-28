@@ -19,7 +19,7 @@ fn path_of(question: &str) -> Option<&str> {
     question.strip_prefix('@')
 }
 
-/// A question file, if the first argument names one, and a `decide` file's raw `batch`.
+/// A question file, if the first argument names one, and an eligible file's raw `batch`.
 /// Clippy's type-complexity rule asks for the name.
 type Top = (Option<QuestionFile>, Option<Json>);
 
@@ -129,8 +129,9 @@ pub(crate) fn rank(arguments: &RankArguments) -> Result<(Resolved, FileTier), Fa
 }
 
 /// Settle everything `choose` was asked.
-pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
-    let file = read_top(&arguments.question)?.0;
+pub(crate) fn choose(arguments: &ChooseArguments) -> Result<(Resolved, FileTier), Failure> {
+    let (file, batch) = read_top(&arguments.question)?;
+    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
     let listed = !arguments.options.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -166,12 +167,13 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<Resolved, Failure> {
         options_from_record: arguments.options_pointer.is_some(),
         ..Typed::default()
     };
-    Ok(resolve(
+    let settled = resolve(
         Verb::Choose,
         typed_text(&arguments.question, file.is_some()),
         file.as_ref(),
         &typed,
-    )?)
+    )?;
+    Ok((settled, FileTier { batch, tuned }))
 }
 
 /// Settle everything `tag` was asked.

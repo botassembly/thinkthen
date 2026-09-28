@@ -229,7 +229,7 @@ Every function that can batch does so by default. Its measured accuracy cost is 
 | Function | How it batches | Default |
 | --- | --- | --- |
 | `decide`, `filter`, `rank` over records | One yes/no question per record | Fill to the limit, from B4. Measured in 208, 260 and 271 |
-| `choose` over records | One pick-one question per record, options as today | Fill to the limit, from B8. Measured at 10 in 262. Test 11 measures it at the default |
+| `choose` over records | One pick-one question per distinct selected-record and complete-question pair; ordered options stay with their row | Fill to the limit, from B8. Experiment 262 measured an earlier form at 10; test 11 measures this build |
 | `tag` over records | One yes/no question per record and label | Fill to the limit, from B9. B9 measures it |
 | `score` over records | One levels question per record | Fill to the limit, from B9. B9 measures it |
 | `annotate` over records | The records of one `on` group share a request, each question quoting its record | Fill to the limit, from B10 |
