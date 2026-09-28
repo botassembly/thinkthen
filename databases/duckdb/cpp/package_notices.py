@@ -10,7 +10,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 BRIDGE = HERE.parent / "bridge" / "Cargo.toml"
-LEGAL = ("license", "notice", "copying")
+LEGAL = ("license", "notice", "copying", "authors", "copyright", "patents")
 
 
 def legal_files(folder: Path) -> list[Path]:

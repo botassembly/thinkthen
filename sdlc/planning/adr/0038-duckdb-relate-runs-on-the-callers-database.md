@@ -35,7 +35,7 @@ Landed at `0345a42` ("Route DuckDB's relate to the caller's database, respect it
 
 ## Amendment of 2026-09-27: C++ migration wording (ticket 0201)
 
-The C++ extension can reach the caller's `ClientContext`, so the stable C API is no longer the reason for the temporary-table boundary. Ticket 0201 retains the settled committed-data behavior by running relate SQL on a separate connection. Its current boundary message says `relate runs on a separate connection`; the older C API wording above records the shipped implementation's historical proof, not the C++ candidate's behavior. The proposed read-only database change remains pending review in ticket 0201.
+The C++ extension can reach the caller's `ClientContext`, so the stable C API is no longer the reason for the temporary-table boundary. Ticket 0201 retains the settled committed-data behavior by running relate SQL on a separate connection. Its current boundary message says `relate runs on a separate connection`; the older C API wording above records the shipped implementation's historical proof, not the C++ candidate's behavior. Fresh read-only review accepted the C++ route's read-only-file behavior after a focused regression proved committed rows, caller file permissions, temporary-table isolation, mutating-query refusal, and zero sends on refusals. The C++ bind selects the caller's database directly, so the old probe refusal no longer applies. The coordinator approved this routine amendment within ticket 0201; wider platform release scope remains undecided.
 
 ## Amendment of 2026-09-25: the ported extension, part one (ticket 0110)
 
