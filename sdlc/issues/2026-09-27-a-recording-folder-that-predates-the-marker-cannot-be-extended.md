@@ -22,3 +22,7 @@ One of two additive forms:
 2. A `cache bind` subcommand that does the same thing deliberately and reports what it found before writing the marker.
 
 Either form widens what works. No existing folder changes behavior, and a mixed folder stays refused.
+
+## Factual preparation, 2026-09-28
+
+At main `e58aceae`, `Entry` stores the adapter, URL and request, and `Entry::inspected` can recompute the exchange digest. The filename digest by itself does not reveal the old endpoint. Matching stored fields and digest establishes internal consistency, not authenticated origin: another writer of an explicit folder can forge both. The marker gate, safe publication and read-only replay behavior remain necessary. Experiment 296's model-alias miss is a separate complete-request identity; binding a marker cannot make it a cache hit. The recovery choice and a temporary mixed-folder/concurrent-binder proof remain open. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.

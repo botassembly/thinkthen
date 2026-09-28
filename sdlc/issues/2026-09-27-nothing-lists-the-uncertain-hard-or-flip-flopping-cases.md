@@ -31,3 +31,7 @@ The same experiment measured the flip side, in `runs/noise-summary.json`: fifty 
 A subcommand that ranks cases for labeling: distance from the cut, disagreement between two saved runs, and a flip across repeats, with a random share for quiet drift. It reads saved `--details` rows, sends nothing, and needs no key, like `audit` and `diff`.
 
 The label simulation above is the contract to test it against: ten to sixty uncertainty-picked cases should beat random on a held set. A new command is additive.
+
+## Factual preparation, 2026-09-28
+
+At main `e58aceae`, `audit` groups scored cases and `diff` names changes; neither supplies the proposed label-order queue. Per-case parsing would help, but uncertainty, disagreement, hard-case and seeded audit-share criteria remain distinct. Experiment 297’s 10–60-label advantage was observed on one cohort and must not become a required empirical accuracy gate. A small saved-row table can prove deterministic ordering, tie handling and zero sends. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.
