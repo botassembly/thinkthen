@@ -10,14 +10,13 @@ import json
 import hashlib
 import sys
 import tempfile
-import threading
 from pathlib import Path
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests"))
 from conditional_backend import ConditionalBackend
 
 from harness import Backend, case, expect, main, rows, run, said
+from verbs_budget import PACKED_PAIR_BODIES, PackedReplies
 
 REFUND = "Does the writer ask for a refund?"
 SHUFFLED = "(VALUES (1, 'good morning'), (2, NULL), (3, 'refund now'), (4, 'good morning'), (5, NULL), (6, 'refund now')) t(i, x)"
@@ -326,55 +325,6 @@ def atfile_reads_through_the_callers_file_system():
         expect(said(got[3]), f"thinkthen local: the question file {path} was not read: this database's file settings refuse it", "a refused file")
 
 
-class PackedReplies:
-    """Two deterministic loopback replies, keyed by request member count."""
-
-    def __init__(self, missing_second=True, fail_first_pair=False):
-        self.bodies = []
-        owner = self
-
-        class Handler(BaseHTTPRequestHandler):
-            def do_POST(self):
-                body = self.rfile.read(int(self.headers["Content-Length"]))
-                owner.bodies.append(body)
-                if fail_first_pair and b'alpha' in body:
-                    self.send_response(503)
-                    self.send_header("Content-Length", "0")
-                    self.end_headers()
-                    return
-                questions = json.loads(body)["questions"]
-                if len(questions) == 3 and missing_second:
-                    answers = {"q1": {"type": "noul", "noul": 0.9},
-                               "q3": {"type": "noul", "noul": 0.8}}
-                else:
-                    answers = {key: {"type": "noul", "noul": 0.7} for key in questions}
-                reply = json.dumps({"model": "jev-latest", "answers": answers}).encode()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(reply)))
-                self.end_headers()
-                self.wfile.write(reply)
-
-            def log_message(self, _format, *_args):
-                pass
-
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-        self.thread = threading.Thread(target=self.server.serve_forever)
-        self.thread.start()
-
-    @property
-    def base(self):
-        return f"http://127.0.0.1:{self.server.server_port}/v1"
-
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_):
-        self.server.shutdown()
-        self.thread.join(timeout=10)
-        self.server.server_close()
-
-
 @case
 def b13c_try_details_members():
     """One reply has good/failed/good, followed by an independent good request."""
@@ -489,12 +439,6 @@ def b13c_warm_first_seen_context():
         expect(backend.bodies[0], expected, "first-seen warm body")
 
 
-PACKED_PAIR_BODIES = {
-    b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
-    b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
-}
-
-
 @case
 def b13c_packed_total_admits_one_attempt():
     """The process total counts packed sends, independent of SQL row count or arrival order."""
@@ -513,16 +457,27 @@ def b13c_packed_total_admits_one_attempt():
 
 
 @case
-def b13c_try_details_total_one_stops_the_vector():
-    """A send-budget denial stays fatal even though its public kind is Usage."""
+def b13c_try_details_total_one_preserves_answered_rows():
+    """A spent total retains the packed answer at its original SQL positions."""
     query = ("SELECT thinkthen_try_details('Is it a refund?', x) FROM "
-             "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i")
+             "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta'),(5,NULL)) t(i,x) ORDER BY i")
     with PackedReplies() as backend:
         got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
                    "SET thinkthen_max_requests_total = 1", query], backend.base)
-        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it", "fatal spent total leaves no completed vector")
         expect(len(backend.bodies), 1, "one real request was admitted")
         expect(backend.bodies[0] in PACKED_PAIR_BODIES, True, "the sole send is a complete packed request")
+        values = [json.loads(value) if value is not None else None for value in column(got[3])]
+        answered = [0, 1] if b'alpha' in backend.bodies[0] else [2, 3]
+        failed = [place for place in range(4) if place not in answered]
+        expect(values[4], None, "NULL text remains SQL NULL")
+        digest = hashlib.sha256(b"systemone\n" + backend.base.encode() + b"/systemone\n" + backend.bodies[0]).hexdigest()
+        for place in answered:
+            expect(values[place]["status"], "answered", f"answered SQL slot {place}")
+            expect(values[place]["details"]["meta"]["requests"], [digest], f"answer identity {place}")
+        for place in failed:
+            expect(values[place], {"status": "failed", "error": {"kind": "usage", "message":
+                   "check the row's question and arguments, or raise the process request total when it is spent",
+                   "retryable": False}}, f"safe denied SQL slot {place}")
 
 
 if __name__ == "__main__":
