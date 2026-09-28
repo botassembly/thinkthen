@@ -9,6 +9,9 @@ use serde_json::{Map, Value, json};
 use crate::batching::{self, KEY, QUESTION};
 use crate::harness::{Canned, Listener, spawn};
 
+#[cfg(unix)]
+mod usage_lock;
+
 fn answered(body: &[u8]) -> Canned {
     let answers: Map<String, Value> = batching::places(body)
         .into_iter()
