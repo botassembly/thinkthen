@@ -1,6 +1,6 @@
 # 0227 native macOS ARM64 Ruby package proof
 
-Status: candidate for independent package review. This is an installed-package supplement to the accepted [0227 source and Linux proof](0227-language-panic-build.md), not a new caught-panic source test or a blanket platform closure.
+Status: accepted after fresh independent High package review of `bfc7b48bf2c4e61cdf0eccc4e20be730e3bf749d`. This is an installed-package supplement to the accepted [0227 source and Linux proof](0227-language-panic-build.md), not a new caught-panic source test or a blanket platform closure.
 
 The native Apple Silicon M5 ran macOS 26.4. An isolated clean worktree at source `ca6e6625244254c429d503bad457d2440042ab91` used pinned Ruby 3.4.11 (`arm64-darwin25`), official Rust 1.95.0 `aarch64-apple-darwin`, the Xcode Command Line Tools libclang and macOS deployment target 15.0. The build used existing `libraries/ruby/build.sh` with a separate `/tmp/thinkthen-0227-ruby-m5-target`; remote `BUILD_STATUS=0`. A fresh isolated `GEM_HOME=/tmp/thinkthen-0227-ruby-m5-gems` received `gem install --local --ignore-dependencies --no-document`; remote `INSTALL_STATUS=0`. The source worktree has no tracked edits. Logs and outputs stay on M5 under `/tmp/thinkthen-0227-ruby-m5-*` and the isolated worktree.
 
@@ -16,3 +16,7 @@ The focused installed invocation used pinned Ruby from the fresh gem home, unset
 The first smoke script exited 1 only because it compared the `/private/tmp` loaded path to a literal `/tmp` gem home. Its Deadline and usage assertions had passed. The corrected script canonicalized both paths with `File.realpath` and exited 0. This is a harness path-alias correction, not a product change. SSH's local exit status has previously failed to carry M5 remote failures; the recorded statuses above were emitted inside the remote command.
 
 The accepted 0227 Ruby source child supplied the synthetic panic, marker secrecy, prior-hook and later-success evidence. This installed invocation exercises ordinary no-send error handling and package linkage, not a real caught panic in the shipped gem. The M5 ran macOS 26.4; actual macOS 15 execution and native Intel remain unproved. The artifact differs from 0227's earlier Linux gem and requires fresh independent review before acceptance.
+
+## Independent review
+
+The fresh reviewer verified the M5 source and toolchains, both artifact hashes, Mach-O architecture and deployment minimum, system linkage, local panic-hook symbol, actual installed load path and explicit smoke status. Ruby and engine source did not change between the built source and the reviewed candidate. ACCEPT covers the stated installed no-fault proof only. A caught panic in the shipped gem, macOS 15 execution and native Intel hardware remain unproved.
