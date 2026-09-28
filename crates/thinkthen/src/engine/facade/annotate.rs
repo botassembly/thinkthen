@@ -193,8 +193,8 @@ impl Engine {
         Ok(GroupAnswer { answered, model })
     }
 
-    /// Prepare every group of one text before sending any, as the command
-    /// does, then answer them in set order and assemble the record.
+    /// Keep the original single-record seam for its focused engine tests.
+    #[cfg(test)]
     pub(crate) fn annotate(
         &self,
         set: &QuestionSet,
