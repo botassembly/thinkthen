@@ -1,6 +1,6 @@
 # 0222 DuckDB batching preflight
 
-Status: B13c technical design accepted at `e103c36f`; Ian approved its public carrier and all ten choices. This page preserves the historical preflight audit. Linux implementation is in progress; no installed-host or other-platform completion is claimed. The [ticket](../tickets/0222-duckdb-record-batching.md) holds the accepted behavior; the [handoff](0222-design-review.md) names the review seams.
+Status: B13c technical design accepted at `e103c36f`; Ian approved its public carrier and all ten choices. This page preserves the historical preflight audit. Linux x86-64 implementation and selected installed-host proof are recorded in the [build record](0222-duckdb-batching-build.md), pending fresh High review; no other-platform completion is claimed. The [ticket](../tickets/0222-duckdb-record-batching.md) holds the accepted behavior; the [handoff](0222-design-review.md) names the review seams.
 
 ## Pinned executable source
 
