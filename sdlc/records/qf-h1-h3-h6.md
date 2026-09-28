@@ -30,7 +30,7 @@ Plants:
 - Item 7. `sdlc/scripts/demos` refuses a `--replay` folder name that holds anything but letters, digits, and `. _ / -`, and names the text. Self-test case `replay-spaced` pins it.
 - Item 8. Demo 27 prints `triage.sh` from `set -eu` down in a `bash` block and pins every line.
 - Item 9. `sdlc/scripts/demos` refuses `set +e` or `set +o errexit` in a demo `bash` block. Self-test case `set-e-off` pins it. Demos 19 and 27 keep `set -e` and capture each code with `&& rc=0 || rc=$?`. The `spec/` pages still use `set +e`, and this check does not read them.
-- Items 7, 8, and 9 of `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md` are settled. That issue stays open for items 1 and 4.
+- Items 7, 8, and 9 of `sdlc/issues/closed/2026-09-25-test-harness-and-review-leftovers.md` are settled. That issue stays open for items 1 and 4.
 
 The two self-test cases answer the four questions. They protect the two new refusals. Dropping either refusal fails its case. No case covered either refusal before. Each case runs the real runner on a fixture page.
 

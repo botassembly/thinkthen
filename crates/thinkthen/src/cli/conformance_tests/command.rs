@@ -15,12 +15,10 @@ use crate::failure::{Failure, report};
 use clap::Parser as _;
 use serde::Deserialize;
 use std::collections::BTreeMap;
-use std::io::{Cursor, Read as _, Write as _};
-use std::net::TcpListener;
+use std::io::{Cursor, ErrorKind, Read as _, Write as _};
+use std::net::{TcpListener, ToSocketAddrs as _};
 use std::path::{Path, PathBuf};
 use std::process::{self, ExitCode, Output};
-use std::sync::Arc;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
 use std::{fs, thread};
 
@@ -192,22 +190,24 @@ fn child(job: &str) -> Output {
     crate::test_deadline::output(&mut command).expect("form child")
 }
 
-/// A loopback address whose listener counts each connection and answers none.
-fn counting() -> (String, Arc<AtomicUsize>) {
+/// A loopback address that can synchronously prove no connection was queued.
+fn quiet() -> (String, TcpListener) {
     let listener = TcpListener::bind("127.0.0.1:0").expect("loopback listener");
+    listener
+        .set_nonblocking(true)
+        .expect("nonblocking listener");
     let url = format!(
         "http://{}/v1",
         listener.local_addr().expect("loopback address")
     );
-    let count = Arc::new(AtomicUsize::new(0));
-    let seen = Arc::clone(&count);
-    thread::spawn(move || {
-        for stream in listener.incoming() {
-            seen.fetch_add(1, Ordering::SeqCst);
-            drop(stream);
-        }
-    });
-    (url, count)
+    (url, listener)
+}
+
+fn no_connection(listener: &TcpListener, label: &str) {
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock),
+        "{label}: no connection reached the named address"
+    );
 }
 
 fn say(line: &str) {
@@ -256,13 +256,17 @@ fn form_child() {
 }
 
 /// Ask a valid question at an address the rules cannot prove is this machine,
-/// where a missing key still refuses, and report what went out. Nothing listens
-/// at that address, so the counting listener cannot see a stray request. The
-/// pinned `says` line catches one, because a send would print a connection
-/// failure in place of the missing-key sentence.
+/// where a missing key still refuses, and report what went out. The short
+/// spelling must resolve to the socket whose pending connections we inspect.
 fn probe() {
-    let (url, count) = counting();
-    let url = url.replace("http://127.0.0.1", "https://127.0.0.2");
+    let (_, listener) = quiet();
+    let bound = listener.local_addr().expect("bound address");
+    let resolved = ("127.1", bound.port())
+        .to_socket_addrs()
+        .expect("the short address resolves")
+        .collect::<Vec<_>>();
+    assert_eq!(resolved, [bound], "the named address reaches this listener");
+    let url = format!("https://127.1:{}/v1", bound.port());
     let arguments = [
         "thinkthen",
         "decide",
@@ -277,7 +281,8 @@ fn probe() {
     if let Err(failure) = result {
         let _code = report(&failure, &mut diagnostic);
     }
-    say(&format!("requests {}", count.load(Ordering::SeqCst)));
+    no_connection(&listener, "probe");
+    say("requests 0");
     say(&format!(
         "says {}",
         String::from_utf8_lossy(&diagnostic).trim_end()
@@ -287,7 +292,7 @@ fn probe() {
 /// The runner, started under a planted key and address, hides both from its child.
 #[test]
 fn the_runner_hides_a_key_and_an_address_from_its_children() {
-    let (url, count) = counting();
+    let (url, listener) = quiet();
     let output = crate::test_deadline::output(
         test_child("form_runner")
             .env("THINKTHEN_API_KEY", "test-key-not-real")
@@ -308,7 +313,7 @@ fn the_runner_hides_a_key_and_an_address_from_its_children() {
         ]
     );
     assert!(output.status.success(), "{stdout}");
-    assert_eq!(count.load(Ordering::SeqCst), 0);
+    no_connection(&listener, "form runner");
 }
 
 #[test]
@@ -328,7 +333,7 @@ fn form_runner() {
     reason = "fixture-only question members become command-line text"
 )]
 fn rule_breaking(case: &Case, kind: &str) {
-    let (url, count) = counting();
+    let (url, listener) = quiet();
     let scratch = folder(case);
     let folder = scratch.0.clone();
     let mut arguments = vec!["thinkthen".to_owned(), case.verb.clone()];
@@ -372,7 +377,7 @@ fn rule_breaking(case: &Case, kind: &str) {
         case.id
     );
     assert!(output.is_empty(), "{}", case.id);
-    assert_eq!(count.load(Ordering::SeqCst), 0, "{}", case.id);
+    no_connection(&listener, &case.id);
 }
 
 /// Answer one request on loopback, then refuse any later one.

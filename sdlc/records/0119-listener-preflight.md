@@ -1,6 +1,6 @@
 # 0119 listener cleanup preflight
 
-Status: bounded design accepted at `30d1c597` by a fresh independent Medium reviewer; the coordinator approved the routine internal cleanup. This preflight compares the eleven historical item 1 references in [the test-harness issue](../issues/2026-09-25-test-harness-and-review-leftovers.md) with main `f45dae96` and the accepted 0119 branch through `02dbdf08` and `db1dfca4`. Its original investigation made no test-source change, compile run or mutation run. The subsequent narrow build is in [the listener build record](0119-listener-build.md). The earlier deadline, process and recorder test comparisons already found no proved duplicate; this pass does not repeat them.
+Status: bounded design accepted at `30d1c597` by a fresh independent Medium reviewer; the coordinator approved the routine internal cleanup. This preflight compares the eleven historical item 1 references in [the test-harness issue](../issues/closed/2026-09-25-test-harness-and-review-leftovers.md) with main `f45dae96` and the accepted 0119 branch through `02dbdf08` and `db1dfca4`. Its original investigation made no test-source change, compile run or mutation run. The subsequent narrow build is in [the listener build record](0119-listener-build.md). The earlier deadline, process and recorder test comparisons already found no proved duplicate; this pass does not repeat them.
 
 ## One small equivalence group
 
