@@ -133,6 +133,45 @@ fn shared_settings_reach_the_c_constructor() {
 }
 
 #[test]
+fn saved_calibration_keeps_its_digest_and_warning_through_the_c_door() {
+    let fixture: Value =
+        serde_json::from_str(include_str!("../../../../conformance/calibration.json"))
+            .expect("calibration fixture");
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let folder = scratch("calibration-c");
+    let profile = folder.join("profile.json");
+    std::fs::write(&profile, fixture["runtime_profile"].to_string()).expect("profile");
+    let mut script = Script::default();
+    script.ask(
+        "settings",
+        &[&base, &json!({"profile":profile,"cache":false}).to_string()],
+    );
+    let mut request = fixture["question"].as_object().expect("question").clone();
+    request.insert("evidence".to_owned(), fixture["evidence"].clone());
+    request.insert("details".to_owned(), json!(true));
+    script.ask("call", &[&base, &Value::Object(request).to_string()]);
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let output = run(&driver, &base, &script.0);
+    assert!(
+        output.status.success(),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let said = replies(&output.stdout).expect("replies");
+    assert_eq!(said[0].0, 0, "constructor: {:?}", said[0]);
+    assert_eq!(said[1].0, 0, "call: {:?}", said[1]);
+    let details: Value = serde_json::from_str(&said[1].1).expect("details");
+    assert_eq!(
+        details["meta"]["question_sha256"],
+        fixture["question_sha256"]
+    );
+    assert_eq!(details["meta"]["profile_warning"], fixture["warning"]);
+    assert_eq!(details["meta"]["model"], fixture["model"]);
+    assert_eq!(backend.count(), 1);
+}
+
+#[test]
 fn the_c_settings_object_refuses_bad_shapes_and_keys() {
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let backend = Backend::start().expect("backend");
