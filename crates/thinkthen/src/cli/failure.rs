@@ -25,6 +25,8 @@ mod status;
 mod stopped;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
+const RUN_MODELS_DIFFER: &str =
+    "the replies for one filter or rank run named different model versions; pin --model and rerun";
 
 /// What a usage error with no sentence of its own would be told.
 const UNNAMED: &str = "defect: a usage error with no sentence";
@@ -61,6 +63,8 @@ pub(crate) enum Failure {
     AnnotationCollision(String),
     /// Replies for one record named different model versions.
     ModelsDiffer(Option<(String, String)>),
+    /// Separate filter or rank replies named different model versions.
+    RunModelsDiffer,
     /// Reply token counts cannot be represented as one total.
     UsageOverflow,
     /// A command-line shape was understood but cannot act.
@@ -345,6 +349,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             4,
             "the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns".to_owned(),
         ),
+        Failure::RunModelsDiffer => (4, RUN_MODELS_DIFFER.to_owned()),
         Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (
             4,

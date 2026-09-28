@@ -47,6 +47,7 @@ pub(super) fn finish(
         json_line(&record.annotated(annotation.values))?
     };
     Ok(Judged {
+        model: None,
         printed: Some(printed),
         outcome: Outcome::Yes,
         replayed,

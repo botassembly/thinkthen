@@ -155,6 +155,11 @@ pub(crate) struct Common {
     #[arg(long, conflicts_with = "cache")]
     pub(crate) no_cache: bool,
 
+    /// Send each planned exchange live and replace its complete cached answer.
+    /// A mutable `jev-latest` model does this automatically in cache mode.
+    #[arg(long, conflicts_with_all = ["record", "replay", "no_cache"], hide_short_help = true)]
+    pub(crate) refresh_cache: bool,
+
     /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(
         long,

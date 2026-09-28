@@ -5,6 +5,7 @@ use crate::failure::Failure;
 
 fn row(name: &str, probability: Option<f64>) -> Judged {
     Judged {
+        model: None,
         printed: Some(name.to_owned()),
         outcome: Outcome::Yes,
         replayed: false,
