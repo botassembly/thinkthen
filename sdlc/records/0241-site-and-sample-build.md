@@ -45,3 +45,21 @@ them. Host samples have not been executed against every installed package.
 The full build log and wrapper artifacts are under `target/codex-builds/0241/`.
 No provider call, deployment, release arming, noindex change, or external Bench
 source change was made.
+
+## Settings and release-facing copy slice
+
+The 46-row settings table's mixed Default cells became 50 value-only rows
+with a separate Source column. The audit flags now each have their own default
+and allowed values. The table names the built-in address, the key's environment
+route on hosts and SQL, the band's inclusive zero low end, and deadline units.
+The site reads those values from the table. `sdlc/scripts/settings` reports
+50 rows, 54 flags, six environment names, and 15 question-file keys with no
+failure; its 10 planted failures still pass. The full offline site build passes
+its 50-row settings check and all 126 internal links.
+
+The install pages now label release channels as planned until packages are
+published and verified. README's first run uses the source checkout's existing
+recording; I ran that exact `decide --replay` invocation with the lane binary
+and got `true`, exit zero. The site details route imports a saved request and
+Jev response body with its reported usage, and links the canonical type,
+result, and schema files.

@@ -2,7 +2,7 @@
 // scripts/check-settings.mjs both call parseSettings, so they read the file
 // the same way. Nothing on the page is typed from the table by hand.
 //
-// The table's 17 columns are fixed. sdlc/scripts/settings fails the product's
+// The table's 18 columns are fixed. sdlc/scripts/settings fails the product's
 // spec rung when one moves, and parseSettings fails the site build.
 
 import fs from 'node:fs';
@@ -10,7 +10,7 @@ import path from 'node:path';
 import { REPO } from '../data/repo.mjs';
 
 export const COLUMNS = [
-  'Setting', 'What it does', 'Default', 'Allowed values',
+  'Setting', 'What it does', 'Default', 'Allowed values', 'Source',
   'Command flag', 'Environment variable', 'Configuration file', 'Question-file key',
   'Rust', 'Python', 'TypeScript', 'Ruby', 'R', 'C',
   'DuckDB', 'PostgreSQL', 'SQLite',
@@ -82,51 +82,6 @@ function cellsOf(line) {
   return inner.split(/(?<!\\)\|/).map((c) => c.trim().replace(/\\\|/g, '|'));
 }
 
-// A Default cell holds the value, then where the rule is written, and
-// sometimes a note, such as a limit on the libraries. The value ends where
-// the first source starts: a link, a file path in code, an ADR, a ticket, or
-// a ruling. The rest splits into clauses. A clause that starts with a source
-// is a source. A clause with a source later keeps its words before it as a
-// note, such as "SQL cannot name one, by tickets 0109 and 0110".
-const SOURCE_START = /\[[^\]]+\]\([^)]+\)|`[^`\s]*\/[^`\s]*\.[a-z]+`|\bADR \d|\btickets? \d|\bIan's ruling/i;
-const SOURCE_ANY = new RegExp(`${SOURCE_START.source}|\\bNo reason recorded`, 'i');
-const LINK_WORDS = /[\s,;]*\b(by|in)?\s*$/;
-
-const letters = (s) => plain(s).replace(/[^A-Za-z0-9]/g, '');
-
-export function splitDefault(cell) {
-  const m = SOURCE_START.exec(cell);
-  const value = m ? cell.slice(0, m.index).replace(/[\s.,;]+$/, '') : cell;
-  if (!m || !value) return { value: cell, note: '', source: '' };
-  const notes = [];
-  const sources = [];
-  let joins = '';
-  for (const clause of cell.slice(m.index).split(/(?<=\.)\s+|;\s+/)) {
-    const c = clause.trim().replace(/\.$/, '');
-    if (!c) continue;
-    const at = SOURCE_ANY.exec(c);
-    if (!at) { notes.push(c); continue; }
-    if (at.index === 0) { sources.push(c); continue; }
-    const before = c.slice(0, at.index);
-    const lead = before.replace(LINK_WORDS, '');
-    joins += before.slice(lead.length);
-    notes.push(lead);
-    sources.push(c.slice(at.index));
-  }
-  const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-  const out = {
-    value,
-    note: notes.map((n) => `${cap(n)}.`).join(' '),
-    source: sources.map(cap).join('. '),
-  };
-  // Every letter of the cell lands in one part, apart from the joining
-  // words dropped before a source. A split that loses words fails.
-  if (letters(cell).length !== letters(out.value + out.note + out.source + joins).length) {
-    throw new Error(`settings.md: the Default cell "${cell.slice(0, 40)}" lost words when the site split it`);
-  }
-  return out;
-}
-
 // The page shows the prose, not where each rule is written. A sentence that
 // only cites a record goes, and so does a trailing clause that cites an ADR.
 const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Tickets? \d|Ian's ruling)/i;
@@ -167,14 +122,14 @@ export function parseSettings(text) {
     if (cells.length !== COLUMNS.length) {
       throw new Error(`settings.md: table row ${i + 1} has ${cells.length} cells, not ${COLUMNS.length}`);
     }
-    const [name, does, dflt, allowed, ...surfaces] = cells;
+    const [name, does, dflt, allowed, source, ...surfaces] = cells;
     if (!name) throw new Error(`settings.md: table row ${i + 1} has no setting name`);
-    const def = splitDefault(dflt);
+    if (!source || /\]\(/.test(dflt)) throw new Error(`settings.md: ${name} needs a separate source and a value-only default`);
     return {
       name,
       id: slug(name),
       does: does.replace(CITE_BRACKET, '').replace(/, (?:ADR|ticket) \d+$/i, ''),
-      default: { ...def, note: def.note.split(/(?<=\.)\s+/).filter((n) => !NO_EFFECT.test(n)).join(' ') },
+      default: { value: dflt, note: '', source },
       allowed,
       on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : surfaces[j]])),
     };
@@ -262,7 +217,7 @@ export function setting(name) {
       let rest = null;
       for (const clause of row.default.value.split(/;\s*/)) {
         const m = /^(.+?) on (`.+)$/.exec(clause);
-        if (!m) rest = plain(clause);
+        if (!m) rest ??= plain(clause);
         else if ([...m[2].matchAll(/`([^`]+)`/g)].some((c) => c[1] === fn)) return plain(m[1]);
       }
       return (takeRest && rest) || fail(`the default "${value}" names no value for ${fn}`);

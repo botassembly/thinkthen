@@ -8,9 +8,7 @@ import { setting } from '../lib/settings-table.mjs';
 // Every row on this page comes from specification/. Nothing
 // here is an example. The runs live on the function pages and the tutorial.
 // Every default, range and allowed value comes from
-// specification/settings.md through setting(). The address stays typed:
-// the table gives its default only as "the built-in address", and its
-// allowed values name "the backend rule", which a reader cannot follow.
+// specification/settings.md through setting().
 const lower = (s) => s.charAt(0).toLowerCase() + s.slice(1);
 const takes = (name) => lower(setting(name).allowed);
 const dflt = (name) => lower(setting(name).default);
@@ -27,7 +25,7 @@ const pruneKey = PRUNE.surface('Configuration file');
 const GLOBAL = [
   ['--details', 'none', 'Prints the whole result object in place of the bare value.', dflt('Details')],
   ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', dflt('Dry run')],
-  ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', 'https://api.typesafe.ai/v1'],
+  ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
   ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
   ['--timeout SECONDS', takes('Timeout'), 'Covers one attempt, connect to last byte. 0 is a usage error.', setting('Timeout').number],
   ['--max-retries N', takes('Retries'), 'How many times a retried status is sent again. A transport failure is never sent again.', setting('Retries').default],
@@ -66,7 +64,7 @@ const EXITS = [
 
 const ENVS = [
   ['THINKTHEN_API_KEY', 'The key. No option names another variable. Absent or empty is exit 4, and an empty variable counts as absent.', dflt('Key')],
-  ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', 'https://api.typesafe.ai/v1'],
+  ['THINKTHEN_BASE_URL', 'The base address. --url outranks it. Empty counts as absent.', dflt('Address')],
   ['THINKTHEN_CACHE', 'Selects another folder for the platform cache. It never moves the usage folder.', dflt('Answer cache')],
   ['XDG_CACHE_HOME', 'The root for the cache and the usage folder. It counts only when absolute.', '$HOME/.cache on Linux'],
   ['XDG_CONFIG_HOME', 'The root for config.json. It counts only when absolute.', '$HOME/.config on Linux'],

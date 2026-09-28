@@ -10,19 +10,20 @@ thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --fi
 thinkthen find 'Which line answers the question?' --lines < handbook.txt
 ```
 
-The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. `--details` adds the probabilities behind any answer.
+The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. The [type contract](specification/types.md) names their meanings; the [result contract](specification/result.md) fixes detailed fields.
 
 Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
 
 ## First run
 
-The sample needs no key. It holds one bug report and the recorded answer to one question about it, and `--replay` reads that answer with no network.
+From a source checkout, this sample needs no key or network. It holds one bug report and the recorded answer to one question about it.
 
 ```sh
-curl -fsSLO https://github.com/botassembly/thinkthen/releases/latest/download/thinkthen-first-run.tar.gz
-tar -xzf thinkthen-first-run.tar.gz
-thinkthen decide 'Does this report say what the person did before the problem appeared?' \
-  --replay thinkthen-first-run/recording < thinkthen-first-run/report.txt
+cargo build --release -p thinkthen --bin thinkthen
+cd demos/27-test-with-no-network
+../../target/release/thinkthen decide \
+  'Does this report say what the person did before the problem appeared?' \
+  --replay recording < report.txt
 ```
 
 It prints `true`. `demos/27-test-with-no-network` shows how a test replays a recording.
@@ -42,7 +43,7 @@ The answer cache is on by default. Cache entries contain the complete request an
 ## What it is not for
 
 - **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. For a `coproc` loop that sends one line and waits for one reply, use `decide --lines --batch 1`: it prints one result per nonblank input line and flushes it. `filter` prints only kept records, so a dropped line gives the loop no reply. `rank` waits for the complete input before it prints an order. Record mode keeps one process alive for the loop, but each decision still waits on the model.
-- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. A Rust program uses the library below. Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`.
+- **A call from inside a program written in another language.** Rust, Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`. Their APIs return a value and run facts within the host program.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.
 

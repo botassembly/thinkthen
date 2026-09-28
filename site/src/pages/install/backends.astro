@@ -8,6 +8,7 @@ import { run } from '../../data/samples.mjs';
 import { setting } from '../../lib/settings-table.mjs';
 
 const model = setting('Model').default;
+const address = setting('Address').default;
 
 const dryRun = run('install/backends', '1-dry-run');
 ---
@@ -23,7 +24,7 @@ const dryRun = run('install/backends', '1-dry-run');
   <h2>The default</h2>
   <table>
     <tr><th>Setting</th><th>Default</th><th>Set it with</th></tr>
-    <tr><td>Address</td><td><code>https://api.typesafe.ai/v1</code></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code>, then <code>url</code> in the configuration file</td></tr>
+    <tr><td>Address</td><td><code set:text={address} /></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code>, then <code>url</code> in the configuration file</td></tr>
     <tr><td>Model</td><td><code set:text={model} /></td><td><code>--model NAME</code>, or <code>model</code> in a question file</td></tr>
   </table>
   <p>The default model is a pinned name. Name another version only when you intend to change the model behind a run.</p>
