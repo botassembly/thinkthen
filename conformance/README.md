@@ -28,6 +28,8 @@ The pure-core integration test validates this file offline through the productio
 
 `backend-profiles.json` adds the shared limit and calibration cases. Its exact edges cross the production profile parser and request encoder. It covers evidence bytes, request bytes, expanded tags, grouped annotate, equal and differing names, and either absent name.
 
+`calibration.json` pins one saved question's canonical bytes, full independently calculated digest and mismatch pair. It also pins a named set's canonical bytes and digest. Public library and SQL details checks use this one input at their real entry points; text-only routes assert refusal before a send.
+
 `record-values.json` fixes the host-neutral default bulk row. Typed records and bare values cross the production serializer. Command-line framing stays in compiled binary tests.
 
 ## The loopback backend

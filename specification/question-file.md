@@ -126,6 +126,8 @@ Each single-question `--details` row carries `meta.question_sha256`. It names th
 
 The digest is the SHA-256 of the canonical form below, written as 64 lowercase hexadecimal figures. A saved `profile` follows `threshold` in that form and changes the digest. Selecting `--profile FILE` does not.
 
+The command, public Rust API, language libraries, and SQL details forms keep that saved name when they parse the same question. A runtime backend profile applies limits but does not change the question digest. A surface that cannot keep a saved name in a grouped or text-only call refuses the call before sending.
+
 ### The canonical form
 
 The canonical form is one JSON object on one line. Another implementation follows these rules and reaches the same digest.

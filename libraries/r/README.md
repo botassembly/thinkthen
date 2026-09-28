@@ -11,6 +11,7 @@ tickets |>
 ```
 
 - `tt_choose`, `tt_score`, and `tt_tag` over a column send one annotate call, so their requests run in parallel.
+- `tt_question(file = path)` keeps a saved calibration `profile` on a single question. A profiled choose, score, or tag column uses one call per live row because an annotate set cannot carry a member's profile. A built profiled question is refused by `tt_rank` and `tt_find` before a request; pass plain text to those verbs.
 - `tt_recognize` returns one data frame per text, with the columns `text`, `start`, `end`, `length`, `kind`, and `strength`. The `start` and `end` columns count characters from one, so `substr(text, start, end)` gives the name, and `length` counts its characters. With no kinds, every name has the kind `ENTITY`. Relations ride in the `relations` attribute.
 - `tt_relate` takes a data frame with `name` and `kind` columns, such as `tidyr::unnest()` of `tt_recognize`. A frame with `text` and no `name` column is named by its `text`. It returns edges whose first two columns `igraph::graph_from_data_frame` reads.
 - `tt_engine()` sets the base URL, model, throttle, request cap, request-byte ceiling, cache, timeout, retries, profile, record, and strict replay once per R session, over the environment's own settings. The key comes only from `THINKTHEN_API_KEY`.
