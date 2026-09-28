@@ -16,9 +16,9 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 | 10. New language integrations | 12 | Prepare after advertised surfaces are sound; preserve per-port evidence. |
 | **Total** | **75** | Each original to-do row appears once below; later intake follows. |
 
-## Current open counts after 0247
+## Current open counts after 0248
 
-At main `97e2b899`, the live queue has 73 to-do rows. Accepted 0246 and 0247 close narrower implementation steps; their umbrella rows retain explicit criteria. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. Matching every current open ID to its original family plus the three intake rows gives:
+After accepted 0248 correctness and measurement, the live queue has 72 to-do rows. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |
@@ -26,13 +26,13 @@ At main `97e2b899`, the live queue has 73 to-do rows. Accepted 0246 and 0247 clo
 | Cross-surface contracts and replay |5| Reviewed preparation; 0247 landed DuckDB complete choose/score/tag with Linux installed proof. Other changed targets and the broader file-form map remain. |
 | Recognition, relations and batching |11| Preparation accepted; retain distinct measurement, text-cost and record-batching outcomes. |
 | Cache and replay |6| Preparation accepted; 0246 landed the demonstrated zero-budget first-use correction. Broader post-admission and diagnostic criteria remain. |
-| Accounting, timing and budgets |9| Eight reviewed rows plus the accepted usage-write preflight; 0248 design is in High review. Keep optional pacing behind release correctness. |
+| Accounting, timing and budgets |8| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
 | Record failure handling |4| One related preparation pass still needed before a design. |
 | Question controls and uncertainty |4| Refresh accepted rank and environment decisions before proposing new grammar. |
 | Documentation, trust and launch usability |8| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
 | New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
-| **Total** |**73**| Counts are tracked rows, not73 independent builds. |
+| **Total** |**72**| Counts are tracked rows, not 72 independent builds. |
 
 ## Later intake
 
@@ -46,7 +46,7 @@ Main through06b0803e adds three distinct issues after the75-row snapshot. The th
 
 ## Current preparation
 
-Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 36 rows including the newer usage-write preflight; five have closed and 31 remain open. The 0248 design is under fresh review. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 36 rows including the newer usage-write preflight; six have closed and 30 remain open. The 0248 design is under fresh review. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 

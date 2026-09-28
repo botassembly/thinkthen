@@ -6,13 +6,13 @@ opens: crates/thinkthen/src/engine/usage/storage.rs crates/thinkthen/src/engine/
 
 # 0248: Skip an unchanged retry-sidecar replacement
 
-Status: **accepted and integrated after fresh High code review of `557d01a7`**. The [build record](../records/0248-build.md) gives focused proof and retained limits. The original issue’s latency attribution remains open.
+Status: **accepted and integrated after fresh High code review of `557d01a7`**. The [build record](../records/0248-build.md) gives focused proof and retained limits. The independently reviewed [timing record](../records/0248-timing.md) closes the original measurement and safe-skip request with explicit limits.
 
 ## Outcome and boundary
 
 For an ordinary usage delta that changes no retry count, keep an already validated retry sidecar untouched, or keep it absent for a clean zero-retry month. Persist the changed five-member legacy monthly base exactly as today. A retry increment still writes and directory-syncs that base **before** writing and directory-syncing the changed retry sidecar. This narrowly amends [ticket 0235](0235-usage-compatibility-and-transient-backend-failures.md)'s sentence “for each ordinary new current-month delta ... then do the same for the retry sidecar”: the sidecar step is conditional on a changed absolute retry total **after** all validation, checked arithmetic and required migration. It does not amend the schema, file modes, old-reader compatibility, historical snapshots, migration order, warning/corruption policy, or the accepted possibility of interrupted retry undercount. Ian or the coordinator may overturn this conditional-write choice.
 
-The [filed issue](../issues/2026-09-28-usage-file-write-adds-50-ms-per-command.md) asks to measure the per-process write and decide whether work can be skipped or deferred without losing counts. The reported 50 ms is a whole-command observation on an older named build, not this change's promised saving. Ticket 0248 addresses a source-demonstrably redundant operation. The broader timing criterion stays open until a bounded current-binary observation attributes cost; no issue closure follows from the code change alone.
+The [filed issue](../issues/closed/2026-09-28-usage-file-write-adds-50-ms-per-command.md) asks to measure the per-process write and decide whether work can be skipped or deferred without losing counts. The reported 50 ms is a whole-command observation on an older named build, not this change's promised saving. Ticket 0248 addresses a source-demonstrably redundant operation. The later bounded comparison in the timing record supplies that observation; the coordinator closes the original Asked criterion while retaining the older 50 ms and concurrent observations as unverified by this experiment.
 
 ## Design
 

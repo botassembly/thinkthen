@@ -1,6 +1,6 @@
 # 0248 build: retain unchanged retry sidecars
 
-Status: accepted after fresh independent High code review of `557d01a7f856ff9d261df69fef10c3ec0cf5d6bb` and integrated with unchanged runtime and tests. Based on main `16f06251b1f28cd21117ca86d2e1f5aaf14a28e0` after design ACCEPT at `dcfe07f8b2d158fda65af2a18dee970d54c0fd0c`. No latency claim or original issue closure follows from this build.
+Status: accepted after fresh independent High code review of `557d01a7f856ff9d261df69fef10c3ec0cf5d6bb` and integrated with unchanged runtime and tests. Based on main `16f06251b1f28cd21117ca86d2e1f5aaf14a28e0` after design ACCEPT at `dcfe07f8b2d158fda65af2a18dee970d54c0fd0c`. The later independently reviewed timing record supplies the bounded observation and original issue closure; correctness alone makes no latency claim.
 
 ## Change and protocol
 
@@ -15,7 +15,7 @@ Status: accepted after fresh independent High code review of `557d01a7f856ff9d26
 
 ## Limits and learning
 
-The inode proof is a Unix filesystem observation. It establishes skipped replacement at that boundary, not a measured 50 ms saving. The original issue's current-binary timing attribution remains open. The build exposed setup assumptions in older tests: a zero-retry baseline no longer manufactures a sidecar, so a sidecar fault or corruption test must deliberately seed one. No test was deleted or consolidated; existing distinct regressions remain. The earlier preflight correctly warned about these fixtures, which kept the implementation local to the accepted protocol.
+The inode proof is a Unix filesystem observation. It establishes skipped replacement at that boundary, not a measured 50 ms saving. The later [timing record](0248-timing.md) closes the original Asked criterion with a bounded comparison and explicit limits. The build exposed setup assumptions in older tests: a zero-retry baseline no longer manufactures a sidecar, so a sidecar fault or corruption test must deliberately seed one. No test was deleted or consolidated; existing distinct regressions remain. The earlier preflight correctly warned about these fixtures, which kept the implementation local to the accepted protocol.
 
 ## Independent review
 
