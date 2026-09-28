@@ -178,7 +178,7 @@ fn run_fault(case: &super::Case, expected: &str) {
     let engine = replaying(&backend, std::env::temp_dir());
     let outcome = engine
         .records(
-            false,
+            crate::engine::schedule::RecordFlow::Streaming,
             &Cancel::default(),
             |requests, events| {
                 thread::spawn(move || {
