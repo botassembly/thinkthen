@@ -19,6 +19,15 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const rows: tt.AnnotatedRow[] = await tt.annotate('form.json', reviews, { signal, deadlineMs: null });
   const found: tt.Found | null = await tt.find('Which unit answers best?', reviews);
   const audit: tt.Details = await tt.details('Refund?', text, { deadlineMs: 5_000 });
+  const calibrated: tt.QuestionSpec[] = [
+    { decide: 'Refund?', profile: 'old' },
+    { choose: 'Which?', options: ['one', 'two'], profile: 'old' },
+    { tag: 'Which?', labels: ['one'], profile: 'old' },
+    { score: 'How?', levels: ['low', 'high'], profile: 'old' },
+  ];
+  const warning: { tuned_for: string; running: string } | undefined = audit.meta.profile_warning;
+  void calibrated;
+  void warning;
   const digests: string[] = audit.meta.requests;
   const confidence: number | undefined = audit.answer.confidence;
   const url: string = audit.meta.url;

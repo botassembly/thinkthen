@@ -100,6 +100,22 @@ class TestSurface < Minitest::Test
     assert_equal 0, count
   end
 
+  def test_rank_and_find_refuse_a_built_profile_before_sending
+    lines, count = run_child(<<~RUBY)
+      calibrated = T.question(decide: "Is this urgent?", profile: "old")
+      [:rank, :find].each do |verb|
+        begin
+          verb == :rank ? T.rank(calibrated, %w[a b]) : T.find(calibrated, %w[a b], none: true)
+        rescue T::UsageError => e
+          say [e.kind, e.message]
+        end
+      end
+    RUBY
+    assert_equal [["usage", "rank takes a decide question with no profile"],
+                  ["usage", "find takes a decide question with no profile"]], lines
+    assert_equal 0, count
+  end
+
   # R3-16 and G11: a nil, invalid UTF-8, or NUL record refuses by its index
   # before any request.
   def test_a_record_with_no_honest_text_refuses_by_index
