@@ -1,6 +1,6 @@
 # 0234 Ruby batching and call-facts build
 
-Status: source candidate awaiting independent High code review. The accepted design is `4b9bde49`; this build began from main `fa6774b1` on `ticket/0234-ruby-batching-and-call-facts`. No provider, installed gem, site edit or broad package rebuild was used.
+Status: High code review accepted `c513b98a`; merged main `73932ef4` and passed focused Ruby integration proof. Awaiting coordinator landing. The accepted design is `4b9bde49`; this build began from main `fa6774b1` on `ticket/0234-ruby-batching-and-call-facts`. No provider, installed gem, site edit or broad package rebuild was used.
 
 ## Implemented boundary
 
@@ -19,8 +19,12 @@ The source ratchet rises from 913 to 1407 nonblank Rust lines because owned deta
 
 The design accepted batch-one fixtures but incorrectly proposed batch one for the held saturation tests. `crates/thinkthen/src/public/batch/planned.rs` makes `Records(1)` interactive; an actual held run admitted one request per call, even through eager rank. Batch two with enough records reached the existing eight/16-send boundaries and kept their cancellation purpose. This is a test setup correction, not a scheduler change. A pre-accounting oversized rank has absent facts/details even after worker start; a spent deadline has final zero-send facts. A completed Ruby conversion failure retains frozen facts/details. The focused tests cover each distinction.
 
-Fresh code review still needs to inspect the FFI exception/receipt boundary, Ruby conversion failure propagation, host keyword coverage, the source ratchet, and the resulting site migration dependency. The current-OS source extension and loopback checks do not establish a rebuilt installed gem, release runner portability, or published behavior. No speed gain or public issue closure is claimed here.
+The independent High review accepted the corrected Ruby code at `c513b98a`. The current-OS source extension and loopback checks do not establish a rebuilt installed gem, release runner portability, or published behavior. No speed gain or public issue closure is claimed here.
 
-## High code review corrections pending re-review
+## High code review corrections accepted
 
-Fresh review of `43508cf8` found three bounded gaps. `context_of` trimmed bytes before UTF-8 validation, so invalid context bytes raised Ruby's bare `ArgumentError`; it now runs the existing `text_of` validation before `strip`, and the outside-in keyword table checks `UsageError`, its exact message, absent facts and zero additional sends. The README's receipt sentence incorrectly covered every exception after worker start, while an accounted terminal deadline has final facts without a receipt; the wording now describes early caller stops only. Finally, the previous runtime-label test used string descriptions. The captured request test now pins a nested structured description, declared option order and an independently expected request digest. These are review findings and corrections, not reviewer acceptance. No Rust scheduler, package, provider or site code changed in this pass.
+Fresh review of `43508cf8` found three bounded gaps. `context_of` trimmed bytes before UTF-8 validation, so invalid context bytes raised Ruby's bare `ArgumentError`; it now runs the existing `text_of` validation before `strip`, and the outside-in keyword table checks `UsageError`, its exact message, absent facts and zero additional sends. The README's receipt sentence incorrectly covered every exception after worker start, while an accounted terminal deadline has final facts without a receipt; the wording now describes early caller stops only. Finally, the previous runtime-label test used string descriptions. The captured request test now pins a nested structured description, declared option order and an independently expected request digest. The same High reviewer accepted `c513b98a` after those corrections. No Rust scheduler, package, provider or site code changed in that review fix.
+
+## Post-merge integration
+
+Merged main `73932ef4` as `f5edcde4`. `git diff c513b98a..f5edcde4 -- libraries/ruby` is empty: no accepted Ruby product file changed. The settings-table conflict kept Ruby's accepted batch/context cells and the newly landed staged DuckDB batch/context cells. Using the pinned Ruby 3.4.11 and the warm isolated Cargo target, the extension rebuilt against the merged shared Rust. The focused batch/facts file passed 7/44, including the held completion case; a separate selection of that case passed 1/11. The prior 20 selected shared conformance cases and host ownership proofs remain recorded above and were not rerun for this shared Rust merge. This integration does not prove a packaged gem or other release targets.
