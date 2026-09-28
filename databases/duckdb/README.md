@@ -1,6 +1,6 @@
 # The DuckDB surface
 
-A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. The staged Linux x86_64 release uses DuckDB's C++ API and a Rust bridge to `thinkthen`'s public API (ticket 0201). Other release targets retain the C API package until their C++ migration is built and proved. The new caller-session settings below apply to the Linux C++ extension; the older C packages retain their earlier settings until those migrations.
+A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. The staged Linux x86_64 and Apple Silicon releases use DuckDB's C++ API and a Rust bridge to `thinkthen`'s public API (tickets 0201 and 0231). Linux ARM64 and Intel macOS retain the C API package until their C++ migration is built and proved. The new caller-session settings below apply to the C++ extension; the older C packages retain their earlier settings until those migrations.
 
 ## Functions
 
@@ -9,6 +9,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | `thinkthen_decide(question, text)` | `BOOLEAN`; `NULL` is "not sure" |
 | `thinkthen_probability(question, text)` | `DOUBLE`, the yes probability |
 | `thinkthen_choose(question, text, options)` | `VARCHAR`, or `NULL` when the choice is not sure (below the cut or an exact tie) |
+| `thinkthen_find(question, units[, none[, deadline_ms]])` | a struct with original `index`, `value`, `probability` and ordered `(index, probability)` candidates |
 | `thinkthen_score(question, text, levels)` | `DOUBLE`, the position from 0 for the first level |
 | `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
 | `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
@@ -20,7 +21,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | `thinkthen_warm(question, text[, context])` | an aggregate: asks distinct texts in first-seen order and returns how many |
 | `thinkthen_usage()` | rows `(metric, value)` for `requests_sent`, `cache_answers`, `input_tokens`, and `output_tokens` |
 
-`WHERE` and `ORDER BY` provide filter and rank forms. `LIMIT` truncates rows; it does not implement grouped find, which has a separate open issue. Every scalar except `thinkthen_recognize` also takes a `BIGINT` deadline in milliseconds. On the staged Linux x86-64 C++ extension, decide, probability, details and try-details accept a final literal context after that deadline; choose, score and tag accept it after their members and deadline; warm accepts it as its third argument. Use `-1` for no deadline when supplying context. A `NULL` question or text gives a `NULL` row, as do other `NULL` arguments except try-details' optional `NULL` deadline and a `NULL` context, which mean absent. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
+`WHERE` and `ORDER BY` provide filter and rank forms. `thinkthen_find` judges one ordered list per call; build a list from rows with `list(unit ORDER BY ordinal)` to preserve caller order. It accepts 2–255 nonblank units, or 2–254 when `none` is true, and at most 16 MiB of unit text. Equal units keep separate original indexes. A selected none has a non-NULL result with NULL `index` and `value`; a top-level SQL NULL or empty list returns SQL NULL without sending. The question is literal text, including text beginning with `@` or looking like JSON. The Linux x86-64 C++ package has installed find proof; Apple Silicon and retained C API packages still need their 0224 find proof. Every other scalar except `thinkthen_recognize` also takes a `BIGINT` deadline in milliseconds. On the C++ extension, decide, probability, details and try-details accept a final literal context after that deadline; choose, score and tag accept it after their members and deadline; warm accepts it as its third argument. Use `-1` for no deadline when supplying context. A `NULL` question or text gives a `NULL` row, as do other `NULL` arguments except try-details' optional `NULL` deadline and a `NULL` context, which mean absent. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
 
 A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. `start`, `end`, and `length` count code points, as DuckDB's string indexing does.
 
@@ -30,6 +31,7 @@ SELECT id FROM (
   SELECT id, thinkthen_decide('Does the writer ask for a refund?', body) AS asks_refund FROM tickets
 ) WHERE asks_refund;
 SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team FROM tickets;
+SELECT thinkthen_find('Which statement matches?', list(body ORDER BY id), TRUE) FROM passages;
 ```
 
 ## Constrain a stored answer

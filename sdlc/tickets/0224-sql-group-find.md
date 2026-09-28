@@ -4,7 +4,7 @@ opens: sdlc/tickets/0224-sql-group-find.md sdlc/records/0224-sql-find-preflight.
 
 # 0224: Find one best unit from an ordered SQL group
 
-Status: **SQLite and PostgreSQL slices complete; DuckDB and remaining platform proof stay open.** Fresh High reviews accepted SQLite `d482ed6a` and PostgreSQL `f59bd3d5`, each with independent installed cases 18/19 and host edge checks. Their product source merged unchanged. Ian already approved ADR 0096. See [SQLite review](../records/0224-sqlite-code-review.md), [PostgreSQL review](../records/0224-postgresql-code-review.md) and [current DuckDB preflight](../records/0224-duckdb-find-preflight.md). This is not whole-ticket or new-platform completion.
+Status: **Linux SQLite, PostgreSQL and DuckDB slices complete; remaining target work stays open.** Fresh High reviews accepted SQLite `d482ed6a` and PostgreSQL `f59bd3d5`, and Linux DuckDB `fb9009aa`, each with independent installed cases 18/19 and host edge checks. Their product source merged unchanged. Ian already approved ADR 0096. See [SQLite review](../records/0224-sqlite-code-review.md), [PostgreSQL review](../records/0224-postgresql-code-review.md) and [current DuckDB preflight](../records/0224-duckdb-find-preflight.md). This is not whole-ticket or new-platform completion.
 
 ## Outcome and retained behavior
 
@@ -32,7 +32,7 @@ The exact SQLite source and capture claims were assigned on main; this lane exte
 
 - Starts from: the SQL-find issue, `specification/find.md`, shared cases 18/19, accepted design `e648e35f`, approved spellings, and the earlier deferral in ticket 0150; the current SQLite source and host inventory is in the [preflight](../records/0224-sql-find-preflight.md).
 - Keeps: one set-level request, original input order and duplicates, generated unit IDs, tie/none selection, bounded units, six error kinds, host settings/file authority, query deadlines and cancellation.
-- Changes: SQLite now registers the 2/3/4 argument native scalar and uses one public `find_with` call; the shared backend captures cases 18/19. PostgreSQL now implements its approved native array/JSONB form. DuckDB retains the approved form awaiting implementation.
+- Changes: SQLite now registers the 2/3/4 argument native scalar and uses one public `find_with` call; the shared backend captures cases 18/19. PostgreSQL now implements its approved native array/JSONB form. Linux DuckDB now implements the approved typed list/STRUCT form. Its remaining targets retain their own implementation and installed proof.
 - Proof: runtime source `785c5e7e`; installed Linux x86-64 archive SHA-256 `7d000d0c4fe453e1b2b5b138870a81693aad39f7dd6091ccc83bdd0d1eed50e5` passes selected 18/19 exact-body capture, observed/expected served-URL digest, original selection and candidate distribution, plus duplicate/tie/invalid/NULL, spent budget/total, held interrupt, native load and direct-only checks. A subsequent test-only correction makes the edge expectations literal and passes against the same archive. [Exact commands and results](../records/0224-sql-find-build.md).
 - Defers: DuckDB C++ `VARCHAR[]`/`STRUCT`, the two retained C API target implementations and changed-package installed proof; scalar throughput and platform release criteria. No whole-ticket closure follows from SQLite alone.
 

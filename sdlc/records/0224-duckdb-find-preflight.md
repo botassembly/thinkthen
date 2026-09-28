@@ -1,6 +1,6 @@
 # 0224 DuckDB ordered find preflight
 
-Status: notes only at main `2f274076a6463bffbc2286c4fc2c8e06222ea3be`. SQLite 0224 was accepted at `d482ed6a` and landed; the shared capture selector for cases 18/19 is already present. Ian approved ADR 0096's DuckDB SQL spelling. No DuckDB find runtime, archive, installed result, or platform completion is claimed here. The accepted [ticket](../tickets/0224-sql-group-find.md) retains the full three-database outcome; this record is the DuckDB handoff, not a new decision or ticket.
+Status: the historical notes-only baseline was main `2f274076a6463bffbc2286c4fc2c8e06222ea3be`. The first Linux x86-64 C++ route is now implemented on `ticket/0224-duckdb-find`; its exact build and selected proof belong in [the DuckDB build record](0224-duckdb-find-build.md). SQLite 0224 was accepted at `d482ed6a` and landed; the shared capture selector for cases 18/19 was already present. Ian approved ADR 0096's DuckDB SQL spelling. The accepted [ticket](../tickets/0224-sql-group-find.md) retains the full three-database outcome; this record is the DuckDB handoff, not a new decision or ticket.
 
 ## Current target and call paths
 

@@ -27,7 +27,6 @@ CANONICAL_CASES = ROOT.parent.parent / "conformance" / "cases.json"
 
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
-    "find": "no SQL find function yet",
     "internal_invariant_failure": "the private shared panic-boundary proof replaces the retired C API test hook",
 }
 
@@ -210,6 +209,35 @@ def related(case: dict, base: str) -> list:
     ]
 
 
+FIND_RESULTS = {
+    "18-find-second": {
+        "index": 1, "value": "Second passage.", "probability": 0.8,
+        "candidates": [{"index": 0, "probability": 0.1}, {"index": 1, "probability": 0.8},
+                       {"index": 2, "probability": 0.05}, {"index": None, "probability": 0.05}],
+    },
+    "19-find-none": {
+        "index": None, "value": None, "probability": 0.7,
+        "candidates": [{"index": 0, "probability": 0.1}, {"index": 1, "probability": 0.2},
+                       {"index": None, "probability": 0.7}],
+    },
+}
+
+
+def find(case: dict, base: str, backend: Backend) -> dict:
+    question = case["question"]
+    sql = (f"SELECT thinkthen_find({quoted(question['find'])}, list(x ORDER BY i), "
+           f"{str(question.get('none', False)).upper()}) FROM {values(question['units'])}")
+    result = rows(run([sql], base)[0])[0][0]
+    observed = backend.capture()
+    expect(len(observed), 1, "one captured find body")
+    pinned = case["exchanges"][0]["request"]
+    expect(observed[0], pinned, "complete sent find body")
+    served = base + "/systemone"
+    expect(digest(served, observed[0]), digest(served, pinned), "served find request digest")
+    expect(backend.count(), 1, "one find attempt")
+    return result
+
+
 def counters(case: dict, base: str) -> dict:
     question, text = quoted(json.dumps(case["question"])), quoted(evidence(case)[0])
     with tempfile.TemporaryDirectory() as cache:
@@ -257,10 +285,13 @@ def check(case: dict) -> str | None:
         if "error" in case["expect"]:
             wanted, got = case["expect"]["error"]["kind"], fault(case, backend)
             return None if got == wanted else f"wanted {wanted}, got {got}"
-        base = backend.base(f"case/{case['id']}")
+        arm = f"case/{case['id']}" + ("/capture" if case["verb"] == "find" else "")
+        base = backend.base(arm)
         success = case["expect"]["success"]
         kind = success["kind"]
-        if kind == "relate":
+        if kind == "find":
+            got, wanted = find(case, base, backend), FIND_RESULTS[case["id"]]
+        elif kind == "relate":
             got, wanted = related(case, base), expected(case)[0]
         elif kind == "recognize":
             got, wanted = relations(case, base), relations_wanted(case)
