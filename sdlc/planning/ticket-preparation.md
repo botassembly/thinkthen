@@ -107,3 +107,6 @@ For interpreter boundaries, inventory host callbacks separately on the caller, w
 
 
 For Python host scopes, include ownership and release of returned iterator, item and exception references. Their final reference release can invoke user cleanup after the explicit method call ends. For isolated package validation, carry the pinned host and compiler into installation and execution as well as the build wrapper; system Node or Rust outside the repository may differ from the required toolchain.
+
+
+For a new command, identify the executable user workflow before proposing its syntax. An outside-in test proves behavior but does not replace the repository's requirement that a demo needs the command. For fixture maintenance, distinguish result retention from request use: filtered rows and bare output cannot supply a complete access manifest. Name the exact complete route being proved and keep broader harness integration open.
