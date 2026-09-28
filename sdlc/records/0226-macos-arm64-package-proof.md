@@ -1,0 +1,21 @@
+# 0226 macOS ARM64 package proof
+
+Status: C source and installed archive proof passed on the M5 at pushed source `10f85fa74d56e627d4aa112173d96536d454d9d5`. SQLite source tests and archive build passed, but its installed macOS check remains open. This record does not close ticket 0226 or infer results for macOS Intel, Linux ARM64, or retained DuckDB packages.
+
+## Host and source boundary
+
+The host reports Darwin ARM64, 18 logical cores, Rust 1.95.0 and Cargo 1.95.0. Its one-minute load was 0.57 before work. The isolated checkout `/Users/ian/workspace/worktrees/thinkthen-codex-m5` uses the exact pushed SHA above. On this case-insensitive filesystem, tracked `site/examples/beatles/BENCH` collides with tracked `site/examples/beatles/bench/` and appears deleted immediately after checkout. It stayed visible in `git status`; no test or package input under C or SQLite changed. The canonical M5 checkout and older worktrees were untouched.
+
+The focused C command `cargo test --locked --lib failures::tests -- --nocapture` passed all three selected tests, including the child-process caught-payload diagnostic proof. The focused SQLite command `cargo test --locked --lib worker::tests -- --nocapture` passed all three selected tests. Both ran under the host's `/tmp/thinkthen-heavy.lock`. These source tests inject synthetic panics into private Rust boundaries. They do not prove an installed archive can inject a panic through a public native door.
+
+## Packaged C result
+
+`sh sdlc/scripts/release-pack aarch64-apple-darwin /tmp/thinkthen-m5-artifacts c sqlite` built both release archives from the exact source SHA under the same lock. The C archive `thinkthen-c-0.0.1-aarch64-apple-darwin.tar.gz` has SHA-256 `1cdcc4f6afb3bfef46ecf66e91887fbe0109d10cf69efbfe9e9a109eccb29f87`. Its packaged dynamic library has SHA-256 `2124eaa373e59f8ccd1905b787c9d3c65249c6081446e0d637e1f2e3c8af52c8`; the distinct static archive has SHA-256 `1441ae22d577dee9359e9be61ca2b5bade56d73b1fc021a2d0fc19b6569a03bf` and has no loader lifetime claim. The dynamic library is an ARM64 Mach-O dylib with install name `@rpath/libthinkthen.0.dylib`, no `NODELETE` flag, only system dynamic dependencies, and a local `std::panicking::HOOK` symbol.
+
+The existing installed driver, `libraries/c/check.sh`, unpacked the archive, found its `thinkthen.pc`, compiled the C slide against the archive's headers and dynamic library, and matched `examples/slide.txt`. Its loopback backend counted three sends. The run did not use a real key or paid endpoint.
+
+A separate read-only loader probe unpacked that same archive in a temporary directory, called packaged `thinkthen_error_code(NULL)` from a joined thread, received `1`, and received `0` from `dlclose`. `_dyld_get_image_name` still listed the packaged library after `dlclose`. An open/close sequence with no call also left this exact packaged library listed. A trivial control dylib with the same ordinary Mach-O flags disappeared from the image list after a joined-thread call and `dlclose`. These are observations of this exact package and host, not a promise of macOS unload behavior on every build or a general hook-lifetime guarantee.
+
+## SQLite remainder
+
+The SQLite archive `thinkthen-sqlite-0.0.1-aarch64-apple-darwin.tar.gz` has SHA-256 `05cf525d3fac5f3a45d409320b6e17ea76a33d9ec65954b71d69490fe532690a`; its packaged `libthinkthen0.dylib` has SHA-256 `df57a85b8194c3377f81cb97783156ddaeaa3113bef957a3883eaa640a770adf`. The current installed checker uses the Linux `.so` name, `LD_LIBRARY_PATH`, and a Linux host builder. The M5's stock SQLite is 3.51.0, above the 3.50.0 safety floor, so it cannot prove the required below-floor refusal. Ticket 0232 will adapt the existing installed regression entry points for a pinned native host, a genuinely older host, successful and refused load outcomes, later host operations, and DSO residency. No installed SQLite load or diagnostic result is claimed yet.
