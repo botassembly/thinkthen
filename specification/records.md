@@ -138,6 +138,8 @@ The default can run past the vendor's documented 1,200 requests a minute on shor
 
 Output order never depends on `jobs`. A run with any number prints the bytes that `--jobs 1` prints, on standard output and on standard error, whether it finished or stopped. The tool holds finished rows in a bounded buffer until the rows before them are written, and the buffer holds at most `jobs` rows, so the memory of a long run stays flat.
 
+That order can make a live stream look idle: if its oldest unprinted record or batch is slow or retrying, finished later rows wait behind it. Once the bounded `jobs` window fills, the scheduler sends no more batches until that earlier work completes or stops. An attempt has its own `--timeout`; retried statuses can add waits, and another call's provider backoff can delay a send. The command has no whole-run deadline, so `--timeout` is not a promise that a whole run finishes within that time. A stop diagnostic names the failed record or request range after the failure; `--facts` gives final totals, not a live identity for the record currently blocking output.
+
 On `decide`, `filter`, `rank`, and `choose`, `jobs` counts batches in flight. A batch is one request, so it still counts requests in flight. The buffer holds at most `jobs` batches of rows. `--jobs` changes no batch.
 
 One process opens one pool of connections and every worker posts through it, so a run over many records pays for one handshake rather than one for each record. A run opens up to one connection for each request in flight, so `--jobs N` opens up to N connections. Experiment 218 saw 30 to 35 open file descriptors at `--jobs 32` and 7 at `--jobs 4`. A backend or proxy that caps connections per client needs a lower `--jobs`.
