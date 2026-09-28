@@ -17,7 +17,7 @@ mod nested;
 mod scalar;
 mod settings;
 
-pub(crate) use settings::{BridgeSettings, asked, probe};
+pub(crate) use settings::{BridgeSettings, asked, batch, probe};
 
 thread_local! {
     static BRIDGE_DEPTH: Cell<usize> = const { Cell::new(0) };
@@ -287,6 +287,8 @@ pub(crate) struct CallScope<'a> {
     pub(crate) due: i64,
     pub(crate) token: &'a CancelToken,
     pub(crate) total: Option<i64>,
+    pub(crate) batch: Option<&'a str>,
+    pub(crate) context: Option<&'a str>,
 }
 
 // SAFETY: the public engine invokes the host check only on the FFI calling
@@ -429,6 +431,8 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_nested_group(
                 due: deadline_ms,
                 token: &token,
                 total,
+                batch: None,
+                context: None,
             };
             let values = nested::run(&engine, &ask, texts, kind, scope)?;
             if let Some(error) = cut {
@@ -454,23 +458,31 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_listed_group(
     deadline_ms: i64,
     kind: i32,
     settings: BridgeSettings,
+    context_bytes: *const u8,
+    context_len: usize,
     stop: BridgeStop,
 ) -> Reply {
     reply_boundary(|| {
         let question = text(question, question_len)?;
         let members = copied_texts(members, member_count)?;
         let texts = copied_texts(texts, text_count)?;
+        let context = (!context_bytes.is_null())
+            .then(|| text(context_bytes, context_len).map(str::to_owned))
+            .transpose()?;
+        let batch = batch(&settings)?;
         let set = listed::set(kind, question, &members)?;
         let asked = asked(&settings)?;
         let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
-        let (texts, cut) = engines::within_total(&asked, texts)?;
         let total = asked.max_requests_total;
         run_detached(stop, move |token| {
-            let options = engines::options(deadline_ms, &token, total)?;
+            let options = engines::options_for(
+                deadline_ms,
+                &token,
+                total,
+                batch.as_deref(),
+                context.as_deref(),
+            )?;
             let values = listed::run(&engine, &set, texts, options, total)?;
-            if let Some(error) = cut {
-                return Err(error);
-            }
             Ok(values)
         })
     })

@@ -86,7 +86,7 @@ pub(crate) enum Error {
 }
 
 /// The statuses a backend is asked again after.
-const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
+const RETRIED: [u16; 11] = [429, 500, 502, 503, 504, 520, 521, 522, 523, 524, 529];
 
 pub(crate) fn retried_status(status: u16) -> bool {
     RETRIED.contains(&status)

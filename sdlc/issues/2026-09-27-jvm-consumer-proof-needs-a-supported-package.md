@@ -43,3 +43,8 @@ Host: Ubuntu 24.04.3 LTS, kernel 6.17.0-35-generic, glibc 2.39, x86_64. JDK: `op
 ## CI and release direction (Ian, 2026-09-27)
 
 Each port must state its dependencies and how they were installed, and the product must also build and release on GitHub Actions `ubuntu-24.04` runners (JDK 21 is preinstalled; pin Kotlin and Scala versions in the workflow), publish native archives through GitHub Releases, and distribute JARs directly or through the JVM repository the queue owner chooses. The queue owner owns the workflow, release, and publishing tickets; nothing is published from the experiments.
+
+
+## ABI preflight drift note (2026-09-28, from the Dart port)
+
+The C header now exports twenty-one symbols at recent pins: `thinkthen_error_facts_json` joined `thinkthen_engine_new_with` at main `5f069321`. Any consumer ABI preflight this issue recorded with a fixed count (nineteen or twenty at its stage pins) is stale at final pins. J8 must derive the export list from the sealed header at each rebuild instead of pinning a count; the Dart stage-two gate (`exports.py` comparing header declarations against `nm -D`) is the pattern to copy. Evidence: local experiment 300, `stage2/FINDINGS.md`.

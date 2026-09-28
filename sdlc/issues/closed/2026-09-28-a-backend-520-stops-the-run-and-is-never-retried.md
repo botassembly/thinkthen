@@ -1,6 +1,6 @@
 # A backend 520 stops the run and is never retried
 
-Status: Open. Filed 2026-09-28 from local experiment 345, finding 2. Severity 3: a sharp edge, with a wrong refusal message beside it.
+Status: closed by ticket 0235, independently reviewed source `ce9c7b8b`. The original finding and reproduction follow; the resolution below records the verified behavior.
 
 ## What happens
 
@@ -26,3 +26,7 @@ Retry the transient Cloudflare family 520 to 524 on the same backoff as 5xx, and
 ## Done when
 
 A 520 is retried on the ordinary backoff, and the timeout message names the timeout, with a test for each.
+
+## Resolution
+
+Statuses 520–524 now use the existing bounded jittered per-address retry gate and Retry-After, deadline and cancellation rules. Focused listener checks pin actual attempts and safe exhausted messages. Per-attempt timeout advice names `--timeout`; actual size refusals retain size guidance. The held two-record timeout and existing retry controls pass. Ticket 0235 records the evidence; no provider call was needed for this fix.

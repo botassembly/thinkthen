@@ -401,7 +401,7 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B15 | Replaced | It is ticket D1 | none | none | none |
 | D1 | The documentation page | Described below | Docs review; every number on the page names its record and build | B6, B7, S1, ticket 0137 | no |
 
-Ticket 0216 lands independently reviewed offline B10 code at accepted source `efa2cd9e`, with request-aligned `meta.batches` under accepted ADR 0092. The separate recorded yes/no and pick-one comparison remains. S1 keeps its annotate function row and B10 exception until that comparison supplies reviewed evidence; a code build alone does not close them.
+Ticket 0216 lands independently reviewed offline B10 code at accepted source `efa2cd9e`, with request-aligned `meta.batches` under accepted ADR 0092. Its separately recorded 182-case yes/no and pick-one comparison passed independent evidence review at `c61654d4`: batch one sent 364 attempts, default sent 3, and both retained exact facts, usage and answer-to-recording identities. B10 removes only annotate's exception from S1's function list; the annotate workload and S1's separate wider live measurements remain. The paired accuracy and wall-time differences are observations from this cohort, not general guarantees.
 
 
 ### C1: the settings reference

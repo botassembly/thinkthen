@@ -1,7 +1,5 @@
 //! One planned request, its optional split, and ordered row packets.
 
-use std::sync::atomic::{AtomicU64, Ordering};
-
 use super::{Packet, Work};
 use crate::core::{self, AnswerOutcome, BatchRecord};
 use crate::engine::facade::{self, Completed};
@@ -96,13 +94,41 @@ pub(super) fn answer(
     details: bool,
     setting: core::Setting,
 ) -> Result<Completed<Vec<Packet>, Error>, Error> {
-    let attempted = AtomicU64::new(0);
-    match engine.ask_batch_with_attempts(
-        &work.batch,
-        cancel,
-        (observing || details).then_some(&attempted),
-    ) {
-        Ok(answered) => rows(
+    let sent = engine
+        .ask_record_batch_with_one_split(
+            &work.batch,
+            || {
+                work.texts
+                    .iter()
+                    .map(|text| {
+                        record(text)
+                            .map(|record| (record, question.clone()))
+                            .map_err(|_| {
+                                crate::engine::error::Error::Defect("a planned record changed")
+                            })
+                    })
+                    .collect()
+            },
+            context,
+            cancel,
+            |left, result| {
+                if result.as_ref().is_ok_and(|answered| {
+                    left.outcomes.iter().all(|&place| {
+                        matches!(
+                            answered.reply.outcomes().get(place),
+                            Some(AnswerOutcome::Answered(_))
+                        )
+                    })
+                }) {
+                    facade::SplitDecision::SendRight
+                } else {
+                    facade::SplitDecision::Stop
+                }
+            },
+        )
+        .map_err(Error::from)?;
+    match sent {
+        facade::OneSplit::Single(Ok(answered)) => rows(
             engine,
             &work.batch,
             answered,
@@ -116,31 +142,25 @@ pub(super) fn answer(
                 parent: None,
             },
         ),
-        Err(error) if error.too_large() && work.texts.len() > 1 => {
+        facade::OneSplit::Single(Err(error)) => Err(error.into()),
+        facade::OneSplit::Halved {
+            parent,
+            left,
+            right,
+        } => {
             let parent = ParentAttempt {
-                digest: work.batch.digest.as_str().to_owned(),
-                sent: attempted.load(Ordering::Relaxed),
-                total: work.batch.outcomes.len(),
+                digest: parent.digest,
+                sent: parent.sent,
+                total: parent.total,
                 offset: 0,
-                closed: work.batch.closed,
+                closed: parent.closed,
             };
-            let records = work
-                .texts
-                .iter()
-                .map(|text| Ok((record(text)?, question.clone())))
-                .collect::<Result<Vec<_>, Error>>()?;
-            let [left, right] = core::batch::halves_with_questions(
-                engine.backend(),
-                engine.profile(),
-                context,
-                records,
-            )
-            .map_err(Error::refused)?;
-            let right_offset = left.outcomes.len();
+            let (left_batch, left_answer) = *left;
+            let right_offset = left_batch.outcomes.len();
             let left = rows(
                 engine,
-                &left,
-                engine.ask_batch(&left, cancel).map_err(Error::from)?,
+                &left_batch,
+                left_answer.map_err(Error::from)?,
                 threshold,
                 tuned_for,
                 Observation {
@@ -154,16 +174,14 @@ pub(super) fn answer(
             if left.stop.is_some() {
                 return Ok(left);
             }
-            if let Some(stop) = cancel.stop() {
-                return Ok(Completed {
-                    stop: Some(stop.into()),
-                    ..left
-                });
-            }
-            let right = match engine.ask_batch(&right, cancel) {
+            let Some(right) = right else {
+                return Ok(left);
+            };
+            let (right_batch, right_answer) = *right;
+            let right = match right_answer {
                 Ok(answered) => rows(
                     engine,
-                    &right,
+                    &right_batch,
                     answered,
                     threshold,
                     tuned_for,
@@ -194,7 +212,6 @@ pub(super) fn answer(
                 }),
             }
         }
-        Err(error) => Err(error.into()),
     }
 }
 

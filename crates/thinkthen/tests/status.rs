@@ -164,7 +164,7 @@ fn a_malformed_recognized_usage_month_fails_without_partial_output_or_repair() {
     fs::write(&lock, []).expect("lock");
     fs::set_permissions(&lock, fs::Permissions::from_mode(0o600)).expect("private lock");
     let month = usage.join("2026-09.json");
-    fs::write(&month, b"private malformed marker\n").expect("bad month");
+    fs::write(&month, b"").expect("zero-byte month");
     fs::set_permissions(&month, fs::Permissions::from_mode(0o600)).expect("private month");
     let before = fs::read(&month).expect("before");
 
@@ -173,7 +173,7 @@ fn a_malformed_recognized_usage_month_fails_without_partial_output_or_repair() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: status could not read the local cache or usage state; check its permissions and contents\n"
+        "thinkthen: status could not read local usage file 2026-09.json: invalid contents\n"
     );
     assert_eq!(fs::read(month).expect("after"), before);
     assert!(!usage.join(".update.tmp").exists());

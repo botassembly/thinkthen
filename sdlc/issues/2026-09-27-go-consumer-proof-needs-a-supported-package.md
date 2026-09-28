@@ -47,3 +47,8 @@ Each port must state its dependencies and how they were installed, and the produ
 ## Post-J1 re-pin pass (2026-09-28, pin 6dbdf03f)
 
 The accepted four-consumer gate passed unchanged in every behavioral assertion at the post-J1 pin (39 receipts, exact 47-arrival multisets per consumer, strict held scalar 5 / bulk 5 / deadline 3 with recovery, direct-C proofs). One mechanical adaptation: the ABI preflight now expects twenty exports for `thinkthen_engine_new_with`, which the Go wrapper still does not bind — that stays with the J8 ticket. One drift finding filed separately: recognition relation-pair request shape changed (see `2026-09-28-recognition-relation-requests-changed-shape-on-main.md`). Evidence: local experiment 274, `post-j1/POST-J1-REPORT.md`.
+
+
+## ABI preflight drift note (2026-09-28, from the Dart port)
+
+The C header now exports twenty-one symbols at recent pins: `thinkthen_error_facts_json` joined `thinkthen_engine_new_with` at main `5f069321`. Any consumer ABI preflight this issue recorded with a fixed count (nineteen or twenty at its stage pins) is stale at final pins. J8 must derive the export list from the sealed header at each rebuild instead of pinning a count; the Dart stage-two gate (`exports.py` comparing header declarations against `nm -D`) is the pattern to copy. Evidence: local experiment 300, `stage2/FINDINGS.md`.

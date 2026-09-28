@@ -1,6 +1,6 @@
 # A newer usage file breaks an older build's `status` and its usage writes
 
-Status: Open. Filed 2026-09-28 from local experiment 345, finding 1. Severity 2: a working install breaks with no clear message after any newer binary touches the machine.
+Status: closed by ticket 0235, independently reviewed source `ce9c7b8b`. The original finding and reproduction follow; the resolution below records the verified behavior.
 
 ## What happens
 
@@ -30,3 +30,7 @@ Either move the schema identifier when a field is added, or keep a tolerant read
 ## Done when
 
 An older build on a machine whose usage file holds `retries` either reads it or says which file it cannot read, and a test pins the chosen rule.
+
+## Resolution
+
+The writer restores the five-member legacy shape (schema plus four counters) and stores retries in a sidecar that old readers ignore. Its next successful write repairs all retry-extended months under the stable lock. Current status reads both forms without writing. A temporary fixture proved that pinned `02dc0b96` reads and writes successfully after this recovery. A zero-byte or other malformed month is named and preserved; its missing totals are not invented. The observed zero-byte origin remains unverified. Immutable old executables retain their old diagnostics until upgraded; old readers of contaminated files need a compatible write first. Ticket 0235 and its build record document the interruption limits and focused proof.
