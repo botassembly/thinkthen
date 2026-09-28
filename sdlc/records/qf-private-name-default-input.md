@@ -9,3 +9,5 @@ The exact standalone guard passed with the override absent and checked all 30 co
 ## What the build taught us
 
 A missing environment export was mistaken for a missing prerequisite. Discovering the already configured local input prevents that shell difference from silently disabling the privacy check. Explicit configuration and external storage still govern the guard; the checker does not acquire or embed its own name list.
+
+Fresh review found an unset-HOME edge: the first fallback expanded HOME under `set -u`. The corrected condition checks that HOME is nonempty before composing the path. The standalone guard now preserves the existing skip when both HOME and the override are absent. The configured 30-entry default and explicit override cases still pass.
