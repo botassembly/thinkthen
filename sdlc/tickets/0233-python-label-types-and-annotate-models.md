@@ -6,7 +6,7 @@ opens: sdlc/tickets/0233-python-label-types-and-annotate-models.md sdlc/records/
 
 # 0233: Type Python labels and annotate rows
 
-Status: Proposed J5 design on clean main `b98118fb`; implementation files are not claimed. Fresh independent design review precedes source work. Owner: Codex. This is the existing Batch J5 item, not a new Every-item outcome.
+Status: Proposed J5 design on clean main `95070787`; implementation files are not claimed. Fresh independent design review precedes source work. Owner: Codex. This is the existing Batch J5 item, not a new Every-item outcome.
 
 ## Outcome and authority
 
@@ -38,7 +38,7 @@ After design acceptance, request exact implementation claims for `libraries/pyth
 
 ## Evidence
 
-- Starts from: Main `b98118fb`, the [0233 preflight](../records/0233-python-types-preflight.md), ADR 0082, specification/types.md, settled question-file grammar, reviewed 0209/0214 code and tests, and the Python/Pydantic primary API references in the preflight.
+- Starts from: Main `95070787`, the [0233 preflight](../records/0233-python-types-preflight.md), ADR 0082, specification/types.md, settled question-file grammar, reviewed 0209/0214 code and tests, and the Python/Pydantic primary API references in the preflight.
 - Keeps: The existing parser, ordered list/map labels, descriptions, exact request identity for equivalent inputs, stable frames, `Call`, receipts and six exception behaviors.
 - Changes: Python label input forms and per-label metadata, stub kinds/rows, optional Pydantic authoring and row validation, internal examples and focused proof.
 - Proof: One captured listener table, zero-send invalid override, partial annotation/null/failure, optional-model import/validation, strict static fixture and exact counters.
