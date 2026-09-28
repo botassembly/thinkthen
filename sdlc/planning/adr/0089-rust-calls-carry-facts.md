@@ -29,3 +29,7 @@ The recommended public choice amends ADR 0017 and ticket 0084 only after review 
 ## Existing decisions retained
 
 ADRs 0048, 0053 and 0055 continue to fix batch shape, limits and shares. ADR 0056 continues to fix recognize's separate three-step planner. ADR 0083 remains the command's stop and count contract. ADR 0017's blocking engine, shared throttle, fork rebuild, six error kinds and cancellation rules remain. This proposal amends only the public Rust return shape and call-scoped facts access once reviewed and accepted.
+
+## Proposed 0212 source-boundary clarification
+
+Status: pending the independent review and Ian choice named in ADR 0053's proposed caller-owned iterator amendment. It does not change the accepted `Call<T>` or facts decision. A synchronous Rust `Batch::next()` may remain in a caller-owned `Iterator::next()` until a record or end arrives. No send or row observation can be promised while that call blocks. The proposed ADR 0053 rule would close a `Max` batch only on an actual batch boundary for this input type; explicit `BatchSetting::Records(1)` preserves one-record interactive progress. Once a batch closes, the accepted ordered stop, worker join, final facts and caller-thread observation rules above still apply. The 50 ms command pause is unchanged.
