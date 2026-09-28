@@ -1,7 +1,7 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
 use std::io;
-use std::net::TcpListener;
+use std::net::{TcpListener, ToSocketAddrs};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
@@ -371,18 +371,22 @@ fn a_variable_that_holds_nothing_counts_as_absent() {
 }
 
 /// With no key, an address the rules cannot prove is this machine stops at
-/// exit 4 before any connection. Bind the counted socket to that same address.
+/// exit 4 before any connection. The short address resolves to the socket we
+/// count, but the backend's textual loopback rule does not admit its spelling.
 #[test]
 fn a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback() {
     const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";
-    let listener = TcpListener::bind("127.0.0.2:0").expect("the named local address binds");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback listener");
     listener
         .set_nonblocking(true)
         .expect("nonblocking listener");
-    let elsewhere = format!(
-        "https://{}/v1",
-        listener.local_addr().expect("bound address")
-    );
+    let bound = listener.local_addr().expect("bound address");
+    let resolved = ("127.1", bound.port())
+        .to_socket_addrs()
+        .expect("the short address resolves")
+        .collect::<Vec<_>>();
+    assert_eq!(resolved, [bound], "the named address reaches this listener");
+    let elsewhere = format!("https://127.1:{}/v1", bound.port());
     for key in [None, Some(""), Some("   ")] {
         let mut environment = vec![("THINKTHEN_BASE_URL", elsewhere.as_str())];
         environment.extend(key.map(|key| ("THINKTHEN_API_KEY", key)));
