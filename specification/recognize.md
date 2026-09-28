@@ -23,6 +23,8 @@ Step 2 sends one request for each step-1 request that holds a found name's first
 - **The kind question.** One per found name when the run has kinds. The options are the caller's kinds in order, each with its description when given, then `none of these`. A name whose answer is `none of these` is dropped.
 - **The edge question.** One per found name that has two or more stretches to choose from. The options are the name as found, the name plus a touching mark at either end, and the name less a mark at either end. A one-piece name gets no removal option. A name with no edge question keeps its span.
 
+An exact tie for a kind or edge option takes the first option asked. Kinds follow caller order, with `none of these` last. Edge options follow the order above.
+
 With no kinds, only edge questions go out. When the edge pick leaves two names with the same start, end and kind, the one with the higher strength prints, and on equal strength the first.
 
 ## Names
