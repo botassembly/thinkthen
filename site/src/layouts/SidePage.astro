@@ -5,9 +5,10 @@
 //
 // `pages` is the section in order. Each page has a route, a title, a label,
 // and a group. The first page may have no group. `name` labels the list.
+// `image` and `imageAlt` pass the page's social card to Base.
 import Base from './Base.astro';
 
-const { pages, page, name, repo } = Astro.props;
+const { pages, page, name, repo, image, imageAlt } = Astro.props;
 const at = pages.findIndex((p) => p.route === page.route);
 if (at < 0) throw new Error(`side page: ${page.route} is not in the ${name} list`);
 const prev = pages[at - 1];
@@ -19,7 +20,7 @@ for (const p of pages) {
   else groups.push([p.group || null, [p]]);
 }
 ---
-<Base title={page.title.replace(/\.$/, '')} description={page.description || page.title} repo={repo}>
+<Base title={page.title.replace(/\.$/, '')} description={page.description || page.title} repo={repo} image={image} imageAlt={imageAlt}>
   <div class="bench">
     <aside class="bench-side" aria-label={name}>
       {groups.map(([group, list]) => (

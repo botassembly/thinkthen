@@ -1,12 +1,12 @@
 ---
-// Goal: teach one idea from the talk with one slide, one real run on Beatles
-// Bench, and the same run at another bar. Each page's own goal sits in
-// beatles.mjs.
+// Goal: teach one idea from the talk with one slide, and where the slide has
+// a run, one real run on Beatles Bench and the same run at another bar. Each
+// page's own goal sits in beatles.mjs.
 import BeatlesPage from '../../../layouts/BeatlesPage.astro';
 import Terminal from '../../../components/Terminal.astro';
 import Code from '../../../components/Code.astro';
 import { PAGES } from '../../../data/beatles.mjs';
-import { captioned, benchFile } from '../../../data/samples.mjs';
+import { captioned, benchFile, files } from '../../../data/samples.mjs';
 import folders from '../../../../examples/beatles/folders.json';
 import slides from '../../../data/slides.json';
 
@@ -15,36 +15,47 @@ export function getStaticPaths() {
 }
 
 const { page } = Astro.props;
-for (const field of ['goal', 'lesson', 'takeaway']) {
+for (const field of ['goal', 'takeaway']) {
   if (!page[field]) throw new Error(`beatles: ${page.slug} has no ${field}`);
 }
-const runs = captioned(`beatles/${page.slug}`, page.see, page.historical);
-const inputs = (page.files || []).map((name) => benchFile(folders[page.slug], name));
-// Prose marks code with backticks.
-const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
+const runs = captioned(`beatles/${page.slug}`, page.see, !page.see);
+if (runs.length && !page.lesson) throw new Error(`beatles: ${page.slug} has examples and no lesson`);
+// A page shows files from its bench folder, or from its own files/.
+const own = files(`beatles/${page.slug}`);
+const inputs = Object.entries(page.files || {}).map(([name, caption]) => {
+  const file = folders[page.slug] ? benchFile(folders[page.slug], name) : own.find((f) => f.name === name);
+  if (!file) throw new Error(`beatles: ${page.slug} shows ${name}, and its files/ has none`);
+  return { ...file, caption };
+});
+// Prose marks code with backticks and a link as [text](/route/).
+const parts = (text) => text.split(/(`[^`]+`|\[[^\]]+\]\([^)]+\))/).filter(Boolean).map((p) => {
+  if (p.startsWith('`')) return { code: p.slice(1, -1) };
+  const link = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(p);
+  return link ? { text: link[1], href: link[2] } : { text: p };
+});
 const [first, ...rest] = page.title.split(' ');
 ---
-<BeatlesPage page={{ ...page, description: page.idea[0].replaceAll('`', '') }}>
+<BeatlesPage page={{ ...page, description: page.idea[0].replace(/`|\[|\]\([^)]*\)/g, '') }}>
   <div class="eyebrow">Beatles Bench · {page.group}</div>
   <h1>{page.command ? <><code>{first}</code> {rest.join(' ')}</> : page.title}</h1>
   <figure class="slide">
     <img src={page.slide} alt={`The talk's slide: ${page.title}`} width="1600" height={slides.slides[page.slug]?.height || 900} loading="eager" />
     {page.credit && <figcaption>{page.credit}</figcaption>}
   </figure>
-  {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
+  {page.idea.map((para) => <p>{parts(para).map((p) => p.code !== undefined ? <code>{p.code}</code> : p.href ? <a href={p.href}>{p.text}</a> : p.text)}</p>)}
   {page.source && <p>The numbers come from {[page.source].flat().map((s, i, all) => <Fragment>{i > 0 && (i === all.length - 1 ? ' and ' : ', ')}<a href={s.href}>{s.text}</a></Fragment>)}.</p>}
-  {page.historical && <p>These slide results measure the pinned bench method. For the current command, see <a href={`/functions/${page.slug}/`}>{page.slug}</a>.</p>}
 
-  {inputs.map((file) => <Code code={file.text} caption={`${file.name}, the question set`} />)}
+  {(page.blocks || []).map((b) => <Code code={b.code} caption={b.caption} />)}
+  {inputs.map((file) => <Code code={file.text} caption={file.caption} />)}
   {runs.map((run, i) => (
     <Fragment>
-      {i === 0 && <h2>Run it</h2>}
+      {i === 0 && !page.headings?.[run.name] && <h2>Run it</h2>}
       {page.headings?.[run.name] && <h2>{page.headings[run.name]}</h2>}
       <Terminal run={run} caption={run.see} />
     </Fragment>
   ))}
 
-  <h2>The lesson</h2>
-  <p>{parts(page.lesson).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
-  <p class="refrain">{parts(page.takeaway).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>
+  {page.lesson && <h2>The lesson</h2>}
+  {page.lesson && <p>{parts(page.lesson).map((p) => p.code !== undefined ? <code>{p.code}</code> : p.href ? <a href={p.href}>{p.text}</a> : p.text)}</p>}
+  <p class="refrain">{parts(page.takeaway).map((p) => p.code !== undefined ? <code>{p.code}</code> : p.href ? <a href={p.href}>{p.text}</a> : p.text)}</p>
 </BeatlesPage>
