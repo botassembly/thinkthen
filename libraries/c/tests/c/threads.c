@@ -32,6 +32,9 @@ static void *run(void *argument) {
         fail("a broken request answered");
     }
     const char *saved = thinkthen_error_message(work->engine);
+    if (thinkthen_error_facts_json(work->engine) != NULL) {
+        fail("a parser refusal gained call facts");
+    }
     if (thinkthen_error_code(work->engine) != THINKTHEN_EUSAGE || strcmp(saved, work->own) != 0) {
         fail("the first read is not this thread's own failure");
     }

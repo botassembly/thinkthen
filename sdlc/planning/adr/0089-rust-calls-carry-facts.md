@@ -1,6 +1,6 @@
 # ADR 0089: Rust calls carry their own run facts
 
-- Status: Accepted design after the same independent Sol review of `a713e462`. The coordinator approved the routine `Call<T>` choice under Ian's facts-on-every-call outcome. No implementation or public API change has landed; Ian can overturn the choice.
+- Status: Accepted design after the same independent Sol review of `a713e462`. The coordinator approved the routine `Call<T>` choice under Ian's facts-on-every-call outcome. Its 0212 implementation landed at `737a762e`; the additive 0230 bridge below remains under fresh code/API review. Ian can overturn the choice.
 - Date: 2026-09-27
 
 ## Context
@@ -33,3 +33,7 @@ ADRs 0048, 0053 and 0055 continue to fix batch shape, limits and shares. ADR 005
 ## Accepted 0212 source-boundary clarification
 
 Status: Ian approved the ADR 0053 caller-owned iterator amendment on 2026-09-28. It does not change the accepted `Call<T>` or facts decision. A synchronous Rust `Batch::next()` may remain in a caller-owned `Iterator::next()` until a record or end arrives. No send or row observation can be promised while that call blocks. A `Max` batch closes only on an actual batch boundary for this input type; explicit `BatchSetting::Records(1)` preserves one-record interactive progress without pulling the next caller item first. Once a batch closes, the accepted ordered stop, worker join, final facts and caller-thread observation rules above still apply. The 50 ms command pause is unchanged.
+
+## Additive 0230 dynamic details bridge
+
+Ian approved a public stopping `Engine::details_many[_with]` route for runtime judgment questions on 2026-09-28. It returns the existing `Batch<Row<I::Item, Details>>` shape, with ordered terminal error and final facts after join. Its `I::Item: Evidence + Serialize` bound preserves the whole caller item in serialized record `input` even when `Evidence` selects only one field. The coordinator accepted this necessary bound refinement for fresh code/API review. Its private answered-member carrier works independently of a user observer and feeds the existing result writer; it is separate from SQL 0222's recoverable continue-after-row-error policy. This addition changes neither the 0212 caller-thread input rule nor the eager `Call<T>` result contract.
