@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/question.rs crates/thinkthen/src/public/build
 
 # 0203: Preserve calibration profiles across libraries
 
-Status: ready. Owner: Codex. Design accepted; runtime build and proof remain open.
+Status: building. Owner: Codex. Design accepted; the saved-name public writer slice is under construction. Wrapper and SQL proof remain open.
 
 ## Outcome
 
@@ -68,11 +68,11 @@ Tickets 0146 and 0148 and the scoped 0149 SQL profile controls are on main. The 
 
 ### Post-settings source refresh
 
-Main `42c9be31` contains scoped 0149 profile JSON settings for SQLite, PostgreSQL and Linux x86-64 DuckDB; its three other DuckDB C API targets remain separate unfinished platform work. The latest pushed 0157 checkpoint `85180c3f` is a complete staged candidate with focused checks, but it is pending independent source review and is not landed. It adds the Rust request-size setter and retry accessor, the binding wrappers, SQL settings and R's generated constructor wrapper. Before 0203 freezes file claims, merge the reviewed final 0157 source and inspect every public constructor, native wrapper, generated declaration and usage/result carrier. [The source inventory](../records/0203-post-settings-preflight.md) identifies exact current routes and headroom without changing the accepted saved-profile, mismatch or refusal rules.
+Main `42c9be31` contains scoped 0149 profile JSON settings for SQLite, PostgreSQL and Linux x86-64 DuckDB; its three other DuckDB C API targets remain separate unfinished platform work. The 0157 source `85180c3f` passed fresh High review and landed at `1d056e7e`. It adds the Rust request-size setter and retry accessor, the binding wrappers, SQL settings and R's generated constructor wrapper. The 0203 builder inspected the landed 0157 public constructors, native wrappers, generated declarations and result carriers before runtime edits. [The source inventory](../records/0203-post-settings-preflight.md) identifies exact current routes and headroom without changing the accepted saved-profile, mismatch or refusal rules.
 
 The current public `Question::from_json` discards `Resolved::profile`, and `Details::of` supplies `None` for both the saved-name digest and warning. Include `public/builders.rs` constructors and `public/set.rs` member validation with that fix. TypeScript `index.js` already forwards object keys, but `index.d.ts` lacks `profile` on its question specs and `meta.profile_warning` on Details; include that declaration in the 0203 inventory. R can reuse its registered `tt_question_check` and `tt_details_one` calls for the accepted `tt_question(file=)` path; update generated wrappers only if a new native signature is genuinely needed. Ruby's `question_text`, Python's non-decide column builder, R's one-by-one fallback and the three SQL details adapters remain distinct accepted boundary proofs. Existing core recognize/relate specs already hold saved names, so trace their result writers before editing their public wrappers.
 
-At this main revision, near-cap Rust parents include `public/question.rs` 474, `public/results.rs` 457, `core/question_set.rs` 469, Python `src/engine.rs` 467, R `src/rust/src/calls.rs` 464, C `src/ffi.rs` 458 and SQLite `src/scalars.rs` 471 nonblank lines. Recheck after 0157 lands. Reuse one independently pinned full digest, exact optional warning pair and counted no-send public entries rather than copying a planner matrix across hosts. The retained 0157 builder should verify these notes after code review and correct factual path drift; any changed accepted contract or prerequisite still needs independent design review. These are preparation facts, not implementation or closure.
+At the earlier main revision, near-cap Rust parents included `public/question.rs` 474, `public/results.rs` 457, `core/question_set.rs` 469, Python `src/engine.rs` 467, R `src/rust/src/calls.rs` 464, C `src/ffi.rs` 458 and SQLite `src/scalars.rs` 471 nonblank lines. Landed 0157 parent counts are recorded in the updated post-settings preflight. Reuse one independently pinned full digest, exact optional warning pair and counted no-send public entries rather than copying a planner matrix across hosts. The 0203 builder verified these notes after code review and corrected factual status drift; any changed accepted contract or prerequisite still needs independent design review. These are preparation facts, not implementation or closure.
 
 ## Deferred gaps
 
