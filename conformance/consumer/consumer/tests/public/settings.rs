@@ -22,7 +22,11 @@ fn related(engine: &Engine, case: &serde_json::Value, step: &serde_json::Value, 
     )
     .expect("rule");
     let edges = engine.relate(&rule, entities).expect("relate").into_value();
-    assert_eq!(edges.len(), step["edges"].as_u64().expect("edges") as usize, "{id}");
+    assert_eq!(
+        edges.len(),
+        step["edges"].as_u64().expect("edges") as usize,
+        "{id}"
+    );
 }
 
 #[test]
@@ -44,15 +48,32 @@ fn builder_validates_new_settings_at_the_public_edge() {
         (replay.kind(), replay.to_string().as_str()),
         (ErrorKind::Usage, "a recording folder is a path, not empty")
     );
-    let missing = std::env::temp_dir().join(format!("consumer-profile-missing-{}", std::process::id()));
-    let error = Engine::builder().profile(&missing).expect("path").build().expect_err("missing");
-    assert_eq!((error.kind(), error.to_string().as_str()),
-        (ErrorKind::Local, "the profile file could not be read"));
+    let missing =
+        std::env::temp_dir().join(format!("consumer-profile-missing-{}", std::process::id()));
+    let error = Engine::builder()
+        .profile(&missing)
+        .expect("path")
+        .build()
+        .expect_err("missing");
+    assert_eq!(
+        (error.kind(), error.to_string().as_str()),
+        (ErrorKind::Local, "the profile file could not be read")
+    );
     let bad = std::env::temp_dir().join(format!("consumer-profile-invalid-{}", std::process::id()));
-    std::fs::write(&bad, r#"{"schema":"thinkthen.backend-profile/1","unknown":1}"#).expect("bad profile");
-    let error = Engine::builder().profile(&bad).expect("path").build().expect_err("invalid");
-    assert_eq!((error.kind(), error.to_string().as_str()),
-        (ErrorKind::Local, "the profile file holds no unknown keys"));
+    std::fs::write(
+        &bad,
+        r#"{"schema":"thinkthen.backend-profile/1","unknown":1}"#,
+    )
+    .expect("bad profile");
+    let error = Engine::builder()
+        .profile(&bad)
+        .expect("path")
+        .build()
+        .expect_err("invalid");
+    assert_eq!(
+        (error.kind(), error.to_string().as_str()),
+        (ErrorKind::Local, "the profile file holds no unknown keys")
+    );
     std::fs::remove_file(bad).expect("clean profile");
 }
 
@@ -115,7 +136,10 @@ fn old_recording_child() {
         "/../../../demos/27-test-with-no-network/vague.txt"
     ));
     assert_eq!(
-        engine.decide(&question, report).expect("saved").into_value(),
+        engine
+            .decide(&question, report)
+            .expect("saved")
+            .into_value(),
         Answer::Yes
     );
     let error = engine.decide(&question, vague).expect_err("local miss");
@@ -142,6 +166,10 @@ fn old_recording_child() {
 }
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one folder matrix keeps the command and library boundaries together"
+)]
 fn the_builder_follows_the_command_folder_rules() {
     use conformance_backend::Backend;
     let backend = Backend::start().expect("loopback");
@@ -153,39 +181,113 @@ fn the_builder_follows_the_command_folder_rules() {
     let missing = root.join("missing");
     let file = root.join("file");
     std::fs::write(&file, b"not a folder").expect("file");
-    let ask = Question::decide("Does this need attention?").expect("question").cut();
-    let error = Engine::builder().cache_at(&saved).expect("cache")
-        .replay(&saved).expect("replay").build().expect_err("cache conflict");
-    assert_eq!(error.to_string(), "a cache folder is record and replay on one folder, so it stands beside neither");
-    let error = Engine::builder().record(&saved).expect("record")
-        .replay(&other).expect("replay").build().expect_err("two folders");
-    assert_eq!(error.to_string(), "record and replay name two different folders, and one engine keeps one");
-    let error = Engine::builder().record(&file).expect("record path")
-        .build().expect_err("file is not a folder");
-    assert_eq!((error.kind(), error.to_string().as_str()),
-        (ErrorKind::Local, "the recording folder names a file"));
-    let miss = Engine::builder().base_url(&base).expect("base")
-        .replay(&missing).expect("replay").build().expect("missing replay");
-    assert_eq!(miss.decide(&ask, "never saved").expect_err("miss").kind(), ErrorKind::Local);
+    let ask = Question::decide("Does this need attention?")
+        .expect("question")
+        .cut();
+    let error = Engine::builder()
+        .cache_at(&saved)
+        .expect("cache")
+        .replay(&saved)
+        .expect("replay")
+        .build()
+        .expect_err("cache conflict");
+    assert_eq!(
+        error.to_string(),
+        "a cache folder is record and replay on one folder, so it stands beside neither"
+    );
+    let error = Engine::builder()
+        .record(&saved)
+        .expect("record")
+        .replay(&other)
+        .expect("replay")
+        .build()
+        .expect_err("two folders");
+    assert_eq!(
+        error.to_string(),
+        "record and replay name two different folders, and one engine keeps one"
+    );
+    let error = Engine::builder()
+        .record(&file)
+        .expect("record path")
+        .build()
+        .expect_err("file is not a folder");
+    assert_eq!(
+        (error.kind(), error.to_string().as_str()),
+        (ErrorKind::Local, "the recording folder names a file")
+    );
+    let miss = Engine::builder()
+        .base_url(&base)
+        .expect("base")
+        .replay(&missing)
+        .expect("replay")
+        .build()
+        .expect("missing replay");
+    assert_eq!(
+        miss.decide(&ask, "never saved").expect_err("miss").kind(),
+        ErrorKind::Local
+    );
     assert!(!missing.exists(), "replay does not make a folder");
-    let paired = Engine::builder().base_url(&base).expect("base")
-        .api_key("loopback").expect("key").record(&saved).expect("record")
-        .replay(&saved).expect("replay").build().expect("pair");
-    assert_eq!(paired.decide(&ask, "one").expect("send").into_value(), Answer::Yes);
-    assert_eq!(paired.decide(&ask, "one").expect("replay").into_value(), Answer::Yes);
+    let paired = Engine::builder()
+        .base_url(&base)
+        .expect("base")
+        .api_key("loopback")
+        .expect("key")
+        .record(&saved)
+        .expect("record")
+        .replay(&saved)
+        .expect("replay")
+        .build()
+        .expect("pair");
+    assert_eq!(
+        paired.decide(&ask, "one").expect("send").into_value(),
+        Answer::Yes
+    );
+    assert_eq!(
+        paired.decide(&ask, "one").expect("replay").into_value(),
+        Answer::Yes
+    );
     assert_eq!((backend.count(), paired.usage().cache_answers()), (1, 0));
-    let recorder = Engine::builder().base_url(&base).expect("base")
-        .api_key("loopback").expect("key").record(&saved).expect("record")
-        .build().expect("record only");
-    assert_eq!(recorder.decide(&ask, "one").expect("send again").into_value(), Answer::Yes);
+    let recorder = Engine::builder()
+        .base_url(&base)
+        .expect("base")
+        .api_key("loopback")
+        .expect("key")
+        .record(&saved)
+        .expect("record")
+        .build()
+        .expect("record only");
+    assert_eq!(
+        recorder
+            .decide(&ask, "one")
+            .expect("send again")
+            .into_value(),
+        Answer::Yes
+    );
     assert_eq!(backend.count(), 2);
-    let reader = Engine::builder().base_url(&base).expect("base")
-        .no_cache().replay(&saved).expect("replay").build().expect("reader");
-    assert_eq!(reader.decide(&ask, "one").expect("saved").into_value(), Answer::Yes);
+    let reader = Engine::builder()
+        .base_url(&base)
+        .expect("base")
+        .no_cache()
+        .replay(&saved)
+        .expect("replay")
+        .build()
+        .expect("reader");
+    assert_eq!(
+        reader.decide(&ask, "one").expect("saved").into_value(),
+        Answer::Yes
+    );
     assert_eq!(backend.count(), 2);
-    let wrong = Engine::builder().base_url(&format!("{}/arm/503/v1", backend.origin()))
-        .expect("other base").replay(&saved).expect("replay").build().expect("wrong reader");
-    assert_eq!(wrong.decide(&ask, "one").expect_err("mismatch").kind(), ErrorKind::Local);
+    let wrong = Engine::builder()
+        .base_url(&format!("{}/arm/503/v1", backend.origin()))
+        .expect("other base")
+        .replay(&saved)
+        .expect("replay")
+        .build()
+        .expect("wrong reader");
+    assert_eq!(
+        wrong.decide(&ask, "one").expect_err("mismatch").kind(),
+        ErrorKind::Local
+    );
     assert_eq!(backend.count(), 2, "a mismatch sends nothing");
     std::fs::remove_dir_all(root).expect("clean root");
 }
@@ -222,7 +324,12 @@ fn every_shared_setting_reaches_the_public_engine() {
             .expect("question")
             .cut();
         for step in case["steps"].as_array().expect("steps") {
-            let mut builder = Engine::builder().base_url(&base).expect("base").no_cache();
+            let mut builder = Engine::builder()
+                .base_url(&base)
+                .expect("base")
+                .api_key("sk-consumer-loopback")
+                .expect("key")
+                .no_cache();
             for (name, value) in step["settings"].as_object().expect("settings") {
                 builder = match name.as_str() {
                     "timeout" => builder
@@ -252,9 +359,22 @@ fn every_shared_setting_reaches_the_public_engine() {
             } else if step["verb"] == "decide_many" {
                 let records = step["records"].as_array().expect("records");
                 let answers: Vec<_> = engine
-                    .decide_many(&question, records.iter().map(|v| v.as_str().expect("text")))
+                    .decide_many_with(
+                        &question,
+                        records.iter().map(|v| v.as_str().expect("text")),
+                        thinkthen::CallOptions::new().batch(thinkthen::BatchSetting::Records(
+                            std::num::NonZeroUsize::MIN,
+                        )),
+                    )
                     .collect();
                 assert_eq!(answers.len(), records.len(), "{id}");
+                for answer in &answers[..2] {
+                    assert_eq!(
+                        *answer.as_ref().expect("sent row").value(),
+                        Answer::Yes,
+                        "{id}"
+                    );
+                }
                 assert_eq!(
                     answers[2].as_ref().expect_err("limit").kind().name(),
                     step["error"],
@@ -265,7 +385,11 @@ fn every_shared_setting_reaches_the_public_engine() {
                 if let Some(model) = step["model"].as_str() {
                     let details = engine.details(&question, text).expect("details");
                     assert_eq!(details.value().model(), model, "{id}");
-                    assert_eq!(details.value().value(), &Judgment::Decision(Answer::Yes), "{id}");
+                    assert_eq!(
+                        details.value().value(),
+                        &Judgment::Decision(Answer::Yes),
+                        "{id}"
+                    );
                 } else {
                     let result = engine.decide(&question, text);
                     if let Some(kind) = step["error"].as_str() {
