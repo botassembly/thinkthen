@@ -2,7 +2,7 @@ opens: sdlc/tickets/0213-choose-record-batching.md sdlc/records/0213-choose-batc
 
 # 0213: Batch choose records
 
-Status: Design and [ADR 0090](../planning/adr/0090-choose-batches-preserve-row-options.md) accepted by fresh independent review of `02e60bc6`; command implementation and focused local proof are a candidate awaiting code review and paid measurement. Owner: Codex. The [preflight](../records/0213-choose-batching-preflight.md) records the source assumptions and their corrections. Ian can overturn the batching rulings in [the design issue](../issues/2026-09-26-batching-design.md); this build preserves them.
+Status: Design and [ADR 0090](../planning/adr/0090-choose-batches-preserve-row-options.md) accepted by fresh independent review of `02e60bc6`; command implementation and focused local proof passed fresh independent code/helper review at `b595decf`; the authorized paid measurement remains. Owner: Codex. The [preflight](../records/0213-choose-batching-preflight.md) records the source assumptions and their corrections. Ian can overturn the batching rulings in [the design issue](../issues/2026-09-26-batching-design.md); this build preserves them.
 
 ## Outcome
 
