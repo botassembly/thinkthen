@@ -16,3 +16,10 @@ The port notes of ticket 0107. The tag `surfaces-wave7-frozen-2026-09-24b` keeps
 - **Saw:** `find` takes `{ none: true }` since ticket 0150, so cases `18-find-second` and `19-find-none` run.
 - **Saw:** the engine's throttle sentence carries no `thinkthen: ` prefix. The command adds that prefix.
 - **Tried:** `ratchet.mjs` skips only `target`, so `npm ci --offline --prefix target/npm` holds `node_modules`, and `tsc` runs from there.
+
+## 2026-09-28: batching, described labels, and call facts
+
+- **Saw:** default Max packs distinct rows and coalesces duplicate questions in one body. The old exact-body corpus needs local `batch: 1`; the captured-body test checks Max separately.
+- **Saw:** a bare score list stays a string list in the request. An object map with a null description becomes an explicit empty-object level in the request. The two forms cannot share one normalization.
+- **Saw:** recognition accepts a structured kind description through its parser, but its token-position request names the kind without quoting that description. The test checks the real body and its digest instead of assuming the description appears in the prompt.
+- **Saw:** a worker may start before a Rust account exists. A pre-account usage error has no facts; a failed sent request has final facts with zero completed records. A prompt abort carries one receipt, and observing it keeps the same worker alive for its final report.

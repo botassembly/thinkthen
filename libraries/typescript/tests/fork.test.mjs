@@ -14,7 +14,7 @@ test('a forked child and a worker thread answer after the first call', async (t)
     const { fork } = await import('node:child_process');
     const { Worker } = await import('node:worker_threads');
     const { once } = await import('node:events');
-    const first = await tt.decide('Does the customer ask for a refund?', 'parent text');
+    const first = (await tt.decide('Does the customer ask for a refund?', 'parent text')).value;
     const before = tt.usage().requests_sent;
     const forked = fork(${script('fork_child.mjs')}, { execArgv: [] });
     const [fromChild] = await once(forked, 'message');
