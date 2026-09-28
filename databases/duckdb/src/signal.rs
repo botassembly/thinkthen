@@ -19,8 +19,8 @@ mod ffi;
 )]
 pub(crate) use ffi::{install, start_bridge};
 
-/// Full-width time of the latest signal. A delayed old handler cannot move it
-/// backwards. The active interval's signal bit decides ownership separately.
+/// Full-width time of the latest signal. A handler validates its captured
+/// interval after sampling time, before it can advance this value.
 static SIGNAL_TIME: AtomicU64 = AtomicU64::new(0);
 
 /// Scalar invokes, warm finalizes, and table scans running now. A query that
@@ -65,9 +65,14 @@ fn publish_signal(active: u64, at: u64) {
 
 fn publish_signal_to(invoking: &AtomicU64, signal_time: &AtomicU64, active: u64, at: u64) {
     if active & COUNT_MASK != 0 {
-        signal_time.fetch_max(at, Ordering::SeqCst);
         let epoch = active >> EPOCH_SHIFT;
         let mut current = invoking.load(Ordering::SeqCst);
+        if current >> EPOCH_SHIFT != epoch || current & COUNT_MASK == 0 {
+            return;
+        }
+        // `at` was sampled before this epoch check. If the interval ends
+        // after the check, its later successor signal has a later time.
+        signal_time.fetch_max(at, Ordering::SeqCst);
         while current >> EPOCH_SHIFT == epoch && current & COUNT_MASK != 0 {
             match invoking.compare_exchange(
                 current,
@@ -117,6 +122,7 @@ pub(crate) struct Invoke {
 impl Invoke {
     /// Count the calling invoke as running.
     pub(crate) fn begin() -> Self {
+        let started = now_ms();
         let mut active = INVOKING.load(Ordering::SeqCst);
         let epoch = loop {
             let next = next_active(active);
@@ -125,10 +131,7 @@ impl Invoke {
                 Err(observed) => active = observed,
             }
         };
-        Self {
-            started: now_ms(),
-            epoch,
-        }
+        Self { started, epoch }
     }
 
     /// The one interrupt predicate: a SIGINT landed inside this invoke, or
@@ -234,6 +237,31 @@ mod tests {
             after >> 16,
             (after & !0x7fff) | 0x8001,
             new_ms
+        ));
+    }
+
+    #[test]
+    fn old_handler_cannot_extend_a_new_intervals_real_wave() {
+        let old = next_active(0);
+        let new = next_active(old & !0x7fff);
+        let invoking = AtomicU64::new(new);
+        let time = AtomicU64::new(0);
+        publish_signal_to(&invoking, &time, new, 100);
+        assert!(!observes_signal(
+            115,
+            new >> 16,
+            invoking.load(Ordering::SeqCst),
+            time.load(Ordering::SeqCst)
+        ));
+
+        // The old handler captured `old`, but resumes after the new signal.
+        publish_signal_to(&invoking, &time, old, 200);
+        assert_eq!(time.load(Ordering::SeqCst), 100);
+        assert!(!observes_signal(
+            205,
+            new >> 16,
+            invoking.load(Ordering::SeqCst),
+            time.load(Ordering::SeqCst)
         ));
     }
 }
