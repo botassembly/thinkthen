@@ -18,6 +18,9 @@ export async function sample(text: string, message: string, inbox: string[], rev
   void callFacts; void firstDetail;
   const refund = tt.question({ decide: 'Does the customer ask for a refund?', threshold: [0.2, 0.8] });
   const second: boolean | null = (await tt.decide(refund, 'I was charged twice. Can you fix this?')).value;
+  const fromFile: tt.Question = tt.questionFile('question.json');
+  const fileAnswer: tt.Answer = (await tt.decide(fromFile, text)).value;
+  void fileAnswer;
   const level: number = (await tt.score('How urgent?', text, { levels: ['low', 'mid', 'high'] })).value;
   const complaints: string[] = (await tt.filter('Is this a complaint?', reviews, { batch: 2, context: 'Shared evidence.' })).value;
   const rows: tt.AnnotatedRow[] = (await tt.annotate('form.json', reviews, { signal, deadlineMs: null, batch: 2 })).value;

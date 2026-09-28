@@ -28,3 +28,7 @@ The tag's notes stay on tag `surfaces-wave7-frozen-2026-09-24b` as history. Thes
 - Five cases do not run, each with its reason printed: two `none: true` finds, the two-group annotate that reads parts of a record, the injected defect, and the question-file loader.
 - `test_errors.rb` keeps only the set boundaries. The conformance runner's error paths hold every other fault kind.
 - The pinned-Ruby guard and the deny run with its `file://` plant live in `check.sh`. `lint` reaches Ruby only through `surfaces --registry`, and this port changes no ladder script.
+
+## 2026-09-28: named single-question files
+
+The older five-skip bullet above records the port's historical source. Current shared conformance retained two skips before this change; selected case 30 now passes through `ThinkThen.question(file:)`, leaving only the internal-injection case 25. The native edge reads at most 1 MiB plus one byte, returns the existing `QuestionValue`, and maps file failures to non-retryable Local. The case-01 file call checks the independently captured digest and one send; missing, blank, oversized and invalid-UTF-8 files raise before any send. Keyword questions and set files retain their separate meanings.

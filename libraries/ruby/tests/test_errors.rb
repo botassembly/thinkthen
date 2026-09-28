@@ -51,6 +51,49 @@ class TestErrors < Minitest::Test
     assert_equal 0, count
   end
 
+  def test_named_single_questions_refuse_local_files_without_sends
+    lines, count = TestBackend.run(<<~RUBY)
+      folder = ENV.fetch("HOME")
+      missing = File.join(folder, "missing-question.json")
+      blank = File.join(folder, "blank-question.json")
+      large = File.join(folder, "large-question.json")
+      utf8 = File.join(folder, "utf8-question.json")
+      unknown = File.join(folder, "unknown-question.json")
+      valid = File.join(folder, "valid-é-question.json")
+      wrong = File.join(folder, "choose-question.json")
+      File.write(blank, '{"decide":"   "}')
+      File.binwrite(large, "x" * 1_048_577)
+      File.binwrite(utf8, [255].pack("C"))
+      marker = "SYNTHETIC_PRIVATE_MARKER_0244"
+      File.write(unknown, JSON.generate({ "decide" => "Question?", marker => 1 }))
+      File.write(valid, '{"decide":"Question?"}')
+      File.write(wrong, '{"choose":"Which?","options":["a","b"]}')
+      seen = [missing, blank, large, utf8, unknown].map do |file|
+        begin
+          T.question(file: file)
+          "accepted"
+        rescue T::Error => error
+          [error.kind, error.retryable, error.message.include?(file) || error.message.include?(marker)]
+        end
+      end
+      [-> { T.question(file: 4) }, -> { T.question(file: [255].pack("C")) },
+       -> { T.question(file: blank, decide: "x") },
+       -> { T.decide(T.question(file: wrong), "text") },
+       -> { T.question(decide: "   ") }].each do |call|
+        begin
+          call.call
+          seen << "accepted"
+        rescue T::Error => error
+          seen << [error.kind, error.retryable]
+        end
+      end
+      seen << (T.question(file: valid.b) ? "valid binary path" : "refused valid binary path")
+      say seen
+    RUBY
+    assert_equal [["local", false, false]] * 5 + [["usage", false]] * 5 + ["valid binary path"], lines.fetch(0)
+    assert_equal 0, count
+  end
+
   def test_no_message_or_inspect_line_holds_the_key_or_the_address_credentials
     lines, count, errors = TestBackend.run(<<~RUBY)
       base = ENV.fetch("THINKTHEN_BASE_URL").delete_suffix("/generic/v1")

@@ -95,11 +95,23 @@ function specOf(questionOrSpec) {
  * so no spread or stringify turns it back into text by accident. */
 function question(spec) {
   if (!isObject(spec)) throw usageError('question takes an object: { decide | choose | score | tag, ... }');
+  return builtQuestion(jsonText(specOf(spec), 'the question'));
+}
+
+function builtQuestion(source) {
   const held = () => {
     throw usageError('a question value is asked, not called');
   };
-  held.__spec = jsonText(specOf(spec), 'the question');
+  held.__spec = source;
   return Object.freeze(held);
+}
+
+/** Load one named local question; ordinary strings remain literal questions. */
+function questionFile(path) {
+  if (typeof path !== 'string' || path.length === 0 || !path.isWellFormed() || path.includes('\0')) {
+    throw usageError('questionFile takes a valid text path');
+  }
+  return builtQuestion(opened(native.questionFile(path)));
 }
 
 // The ruled shape of 2026-09-21: the last object carries the question's
@@ -148,7 +160,7 @@ function specFrom(verb, questionOrSpec, inputs) {
     for (const key of ['options', 'labels', 'levels']) {
       if (has(inputs, key)) throw usageError(`${verb}: a question value carries its own ${key}; the last object holds call options and top`);
     }
-    return jsonText(specOf(questionOrSpec), 'the question');
+    return isQuestion(questionOrSpec) ? questionOrSpec.__spec : jsonText(specOf(questionOrSpec), 'the question');
   }
   if (!listed) return jsonText(specOf(questionOrSpec), 'the question');
   if (!has(inputs, listed)) throw usageError(`${verb} takes its ${listed} in the last object: { ${listed} }`);
@@ -417,7 +429,7 @@ class Engine {
   }
 }
 
-const exported = { ThinkThenError, Engine, question, usage };
+const exported = { ThinkThenError, Engine, question, questionFile, usage };
 for (const [name, verb] of Object.entries(verbs)) exported[name] = (...args) => verb(null, ...args);
 
 module.exports = exported;

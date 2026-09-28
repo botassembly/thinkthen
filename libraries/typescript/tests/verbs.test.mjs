@@ -5,12 +5,59 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { FAKE_KEY, ask, startBackend } from './backend.mjs';
 const recordingDigest = (base, body) => createHash('sha256').update(`systemone\n${base}/systemone\n${body}`).digest('hex');
+
+test('a named rich question preserves source order and its captured request', async (t) => {
+  const backend = await captured(t);
+  const source = '{"choose":"Which?","options":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}';
+  const file = join(backend.folder, 'rich-question.json');
+  writeFileSync(file, source);
+  const { value, error } = await ask(backend, `
+    const loaded = tt.questionFile(${JSON.stringify(file)});
+    const result = await tt.choose(loaded, 'first');
+    return { source: loaded.__spec, answer: result.value, request: result.details[0].requests[0] };`);
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.equal(value.source, source);
+  const body = '{"state":"first","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which?","criteria":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}}}';
+  assert.deepEqual(backend.bodies, [body]);
+  assert.equal(value.request, recordingDigest(backend.base(), body));
+});
+
+test('named question files refuse bounded local failures before any send', async (t) => {
+  const backend = await captured(t);
+  const marker = 'SYNTHETIC_PRIVATE_MARKER_0244';
+  const files = ['missing.json', 'blank.json', 'large.json', 'utf8.json', 'unknown.json', 'choose.json'].map((name) => join(backend.folder, name));
+  writeFileSync(files[1], '{"decide":"   "}');
+  writeFileSync(files[2], Buffer.alloc(1_048_577, 120));
+  writeFileSync(files[3], Buffer.from([0xff]));
+  writeFileSync(files[4], JSON.stringify({ decide: 'Question?', [marker]: 1 }));
+  writeFileSync(files[5], '{"choose":"Which?","options":["a","b"]}');
+  const { value, error } = await ask(backend, `
+    const files = ${JSON.stringify(files)};
+    const observed = [];
+    for (const file of files.slice(0, 5)) {
+      try { tt.questionFile(file); observed.push('accepted'); }
+      catch (failure) { observed.push([failure.kind, failure.retryable, failure.message.includes(file) || failure.message.includes(${JSON.stringify(marker)})]); }
+    }
+    try { tt.questionFile(42); observed.push('accepted'); }
+    catch (failure) { observed.push([failure.kind, failure.retryable]); }
+    try { await tt.decide(tt.questionFile(files[5]), 'text'); observed.push('accepted'); }
+    catch (failure) { observed.push([failure.kind, failure.retryable]); }
+    try { await tt.decide(tt.question({ decide: '   ' }), 'text'); observed.push('accepted'); }
+    catch (failure) { observed.push([failure.kind, failure.retryable]); }
+    return observed;`);
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.deepEqual(value, [
+    ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false],
+    ['usage', false], ['usage', false], ['usage', false],
+  ]);
+  assert.deepEqual(backend.bodies, []);
+});
 
 // Capture the listener's exact body bytes while answering by the generic rule.
 async function captured(t) {

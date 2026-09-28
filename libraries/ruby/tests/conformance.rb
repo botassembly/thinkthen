@@ -8,10 +8,9 @@
 # backend served. It prints one line a case and a count line, and exits
 # nonzero after any failure or a count that does not add up.
 #
-# Two cases do not run here:
+# One case does not run here:
 NOT_RUN = {
-  "25-defect-fault" => "injects an internal invariant failure that no outside boundary reaches; src/lib.rs tests the guard",
-  "30-local-question-file" => "the surface has no question-file loader; ThinkThen.question takes keywords"
+  "25-defect-fault" => "injects an internal invariant failure that no outside boundary reaches; src/lib.rs tests the guard"
 }.freeze
 
 LEGACY_BATCH_ONE = %w[13-filter-records 14-filter-none 15-rank-records 16-rank-stable-tie
@@ -187,6 +186,15 @@ def check(one)
     same("bare", engine.decide_many(question(held), texts).value, success["answers"].map { |answer| answer["bare"] })
   else
     single(engine, question(held), texts[0], success, base)
+    if id == "01-decide-yes-captured"
+      Dir.mktmpdir do |folder|
+        file = File.join(folder, "question.json")
+        File.write(file, JSON.generate(held))
+        before = engine.usage[:requests_sent]
+        detailed(engine.details(T.question(file: file), texts[0]).value, success["answers"][0], base)
+        same("named-file sends", engine.usage[:requests_sent] - before, 1)
+      end
+    end
   end
 end
 
@@ -213,6 +221,12 @@ def refused(one, kind)
       counted.decide(text, "Is this urgent?", cancel: token)
     when "24-deadline-fault" then counted.decide(text, "Is this urgent?", deadline: 0)
     when "29-usage-json-text" then T.question(decide: text, threshold: one["question"]["threshold"])
+    when "30-local-question-file"
+      Dir.mktmpdir do |folder|
+        file = File.join(folder, "question.json")
+        File.write(file, JSON.generate(one["question"]))
+        counted.decide(T.question(file: file), one["evidence"])
+      end
     when "31-usage-rank-blank-question" then counted.rank(text, %w[one two])
     else raise "no public boundary is written for #{one['id']}"
     end
