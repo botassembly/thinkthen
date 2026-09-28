@@ -38,18 +38,43 @@ test('an abort settles a held single call at once, and Node exits', async (t) =>
   assert.ok(exited && exited.at - abortAt <= 500, 'the child exits while the reply is held');
   assert.equal(count, 1);
   const next = await ask(backend, "return tt.decide('Refund?', 'next');");
-  assert.deepEqual(next, { value: true }, 'a detached worker leaks into no later call');
+  assert.equal(next.value.value, true, 'a detached worker leaks into no later call');
 });
 
 test('an abort settles a held batch at once, and the batch sends no more', async (t) => {
   const records = JSON.stringify(Array.from({ length: 200 }, (_, at) => `record ${at}`));
   // A 3 s timer keeps the child alive past the release, so a batch whose token never fired would send again.
-  const call = `(setTimeout(() => {}, 3000), new tt.Engine({ throttle: 4 }).decide_many('Refund?', ${records}, { signal: stop.signal }))`;
+  const call = `(setTimeout(() => {}, 3000), new tt.Engine({ throttle: 4 }).decide_many('Refund?', ${records}, { signal: stop.signal, batch: 2 }))`;
   const { run, abortAt, count } = await aborted(t, call, 4);
   const [{ at, value }] = run.lines;
   assert.equal(value.value.kind, 'cancelled');
   assert.ok(at - abortAt <= 100, `rejected ${Math.round(at - abortAt)} ms after the abort`);
   assert.equal(count, 4);
+});
+
+test('an observed completion retains the one held worker and its final account', async (t) => {
+  const backend = await startBackend(t);
+  const run = child(backend, `
+    const stop = new AbortController();
+    process.stdin.once('data', () => { process.stdin.destroy(); stop.abort('stop'); });
+    try { await tt.decide_many('Refund?', ['first', 'second', 'third'], { signal: stop.signal, batch: 2 }); }
+    catch (error) {
+      line({ early: error.kind, hasFacts: Object.hasOwn(error, 'facts'), hasCompletion: !!error.completion });
+      return error.completion.wait();
+    }`, { arm: 'arm/held', stdin: true });
+  assert.equal(await backend.wait(2), 2);
+  run.proc.stdin.write('abort\n');
+  assert.ok(await until(() => run.lines.length === 1, 1000), 'the early rejection is prompt');
+  assert.deepEqual(run.lines[0].value, { early: 'cancelled', hasFacts: false, hasCompletion: true });
+  backend.release();
+  await run.exited;
+  assert.equal(run.lines.length, 2);
+  const report = run.lines[1].value.value;
+  assert.equal(report.err.kind, 'cancelled');
+  assert.equal(report.err.facts.requests_sent, 2);
+  assert.equal(report.err.facts.records, 3);
+  assert.equal(report.err.details.length, 3);
+  assert.equal(await backend.count(), 2, 'the cancelled planner admits no later request');
 });
 
 test('a settled call lets Node exit, after a result and after an error', async (t) => {

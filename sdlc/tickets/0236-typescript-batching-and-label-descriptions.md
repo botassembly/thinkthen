@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-batching-design.md sdlc/issues/2026-09-26-every-su
 
 # 0236: Batch TypeScript calls and preserve described labels
 
-Status: Prepared for fresh design review at main `0ad07ff4`. This ticket combines B12d and J3 in the same TypeScript source lane under accepted ADRs 0082 and 0089. It authorizes no runtime edit by itself. The [preflight](../records/0236-typescript-batching-preflight.md) records the current constructors, consumers, counters and overlap. Owner: Codex.
+Status: Implementation complete on the ticket branch; fresh High code review is next. High design review accepted corrected source `5283cfe3`, and the coordinator approved implementation under main `25b60b34`'s TypeScript claims. The original design review found that the first description type narrowed existing native JSON forms; the corrected recursive form and captured-identity proof were accepted. This ticket combines B12d and J3 in the same TypeScript source lane under accepted ADRs 0082 and 0089. The [preflight](../records/0236-typescript-batching-preflight.md) records the original constructors, consumers, counters and overlap. The [build record](../records/0236-typescript-build.md) records focused proof and measured growth. Owner: Codex.
 
 ## Outcome and retained behavior
 
@@ -38,6 +38,7 @@ At build, compile the affected native addon and TypeScript declarations, run foc
 - Keeps: All existing ten semantic verbs and the `decide_many` surface, module delegates, bare answers inside `.value`, six error names, old one-record wire identity and host-owned input order.
 - Changes: TypeScript batch/context selectors, runtime-label many calls, typed success/failure facts and detail, truthful early-abort completion, and ordered described input forms.
 - Proof: Captured packed and historical request bodies, one route/refusal table, one ordered-label table, one held completion boundary, retained conformance fixture bodies and affected type consumers.
+- Built proof: The captured loopback listener verified Max, batch one, duplicate coalescing, context identity, request digests, ordered described labels, null versus bare score levels, final facts and top-trimmed detail. Exact old selected conformance cases passed 8/8, annotate mixed/partial/grouped cases 3/3, and 37 affected Node cases passed without the stress-named case. Native unit, strict lint, format, strict types, source counters, pages, tickets and diff checks passed. The build record gives commands and the corrected early test failures.
 - Defers: Marketing-owned site TypeScript sample migration through the existing site issue, R's B12f/J6 work, SQL per-call facts, vendor timing/request ID and cost pricing, and measured speed/accuracy claims. This design does not close the broader batching or run-facts issues.
 
 ## What preparation taught us
