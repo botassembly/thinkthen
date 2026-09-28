@@ -1,0 +1,268 @@
+#!/bin/sh
+# Small, local operations shared by the dispatch-only release jobs. They read
+# files made from resolve's SHA. Only `draft`, `tap`, and `publish` change a
+# remote service, and the workflow gates those jobs separately.
+set -eu
+repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+cd "$repo"
+sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
+fail() { echo "release-workflow: $*" >&2; exit 1; }
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+case ${1:-} in
+host-setup)
+	[ "$#" = 2 ] || fail 'host-setup TARGET'
+	[ "$(rustc -vV | sed -n 's/^host: //p')" = "$2" ] || fail "runner does not have target $2"
+	rustup toolchain install 1.95.0 --profile minimal --component clippy --component rustfmt
+	[ "$(rustc --version)" = "rustc 1.95.0 (59807616e 2026-04-14)" ] || fail 'Rust 1.95.0 pin changed'
+	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac
+	for manifest in Cargo.toml libraries/c/Cargo.toml databases/sqlite/Cargo.toml databases/duckdb/Cargo.toml \
+		databases/postgresql/Cargo.toml libraries/python/Cargo.toml libraries/typescript/Cargo.toml libraries/ruby/Cargo.toml; do
+		cargo fetch --locked --manifest-path "$manifest"
+	done
+	if [ "$(cargo deny --version 2>/dev/null || true)" != 'cargo-deny 0.19.4' ]; then
+		cargo install --locked --version 0.19.4 cargo-deny
+	fi
+	cargo deny fetch db
+	python3 -m pip install --disable-pip-version-check 'maturin==1.15.0'
+	[ "$(maturin --version)" = 'maturin 1.15.0' ] || fail 'maturin version differs from pin'
+	if [ "$(uname -s)" = Darwin ]; then
+		. databases/postgresql/runtime-darwin.env
+		MACOSX_DEPLOYMENT_TARGET=15.0
+		SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+		export MACOSX_DEPLOYMENT_TARGET SDKROOT
+		case $(uname -m) in arm64) tag=arm64_sequoia; pin=$PG_BOTTLE_ARM64_SEQUOIA ;; x86_64) tag=sonoma; pin=$PG_BOTTLE_X86_64_SONOMA ;; *) fail 'unknown Mac chip' ;; esac
+		brew fetch --bottle-tag="$tag" postgresql@16
+		bottle=$(brew --cache --bottle-tag="$tag" postgresql@16)
+		[ "$(shasum -a 256 "$bottle" | awk '{print $1}')" = "$pin" ] || fail 'Homebrew PostgreSQL bottle differs from pin'
+		brew install --force-bottle postgresql@16
+		brew install pkgconf jq openssl@3
+		[ "${RELEASE_SMOKE:-0}" != 1 ] || brew install coreutils
+		. libraries/ruby/toolchain.env
+		case $("$(brew --prefix openssl@3)/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_VERSION "*) ;; *) fail 'OpenSSL host version differs from pin' ;; esac
+		cargo install --locked --version 0.17.0 cargo-pgrx
+		sh libraries/ruby/setup-ruby.sh
+		sh databases/sqlite/setup.sh
+		sh databases/duckdb/tools/setup.sh --fetch
+	else
+		sh libraries/ruby/setup-ruby.sh
+	fi
+	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+		command -v python3.12 >/dev/null || fail 'the installed Python smoke needs Python 3.12'
+		command -v sha256sum >/dev/null || fail 'the installed Python check needs sha256sum'
+		python3 -m pip install --disable-pip-version-check 'uv==0.9.17'
+		[ "$(uv --version)" = 'uv 0.9.17' ] || fail 'uv version differs from pin'
+		seed=$(mktemp -d)
+		uv venv --quiet --python "$(command -v python3.12)" "$seed/venv"
+		uv pip install --quiet --require-hashes --python "$seed/venv/bin/python" -r libraries/python/requirements-dev.txt
+	fi
+	;;
+resolve)
+	[ "$#" = 3 ] || fail 'resolve MODE REF needs exactly two arguments'
+	mode=$2 ref=$3
+	case $mode in
+	rehearse) [ "$ref" = refs/heads/main ] || fail "rehearse must run from main, got $ref" ;;
+	release) case $ref in refs/tags/v*) ;; *) fail "release must run from a v* tag, got $ref" ;; esac ;;
+	*) fail "unknown mode $mode" ;;
+	esac
+	[ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ] || fail 'checkout differs from dispatch SHA'
+	if [ "$mode" = release ]; then sdlc/scripts/versions --tag "${ref#refs/tags/}"; else sdlc/scripts/versions; fi
+	printf 'sha=%s\nversion=%s\nname=%s\n' "$GITHUB_SHA" "$version" \
+		"$(if [ "$mode" = release ]; then printf 'v%s' "$version"; else printf 'v%s-rehearsal-%.7s' "$version" "$GITHUB_SHA"; fi)"
+	;;
+verify-family)
+	[ "$#" = 4 ] || fail 'verify-family ROOT PATTERN COUNT'
+	count=0
+	for file in "$2"/*/$3; do
+		[ -f "$file" ] || continue
+		(cd "${file%/*}" && sha256 -c "${file##*/}.sha256" >/dev/null) || fail "bad checksum for $file"
+		count=$((count + 1))
+	done
+	[ "$count" = "$4" ] || fail "wanted $4 files matching $3, got $count"
+	;;
+npm-assemble)
+	[ "$#" = 3 ] || fail 'npm-assemble INPUT OUT'
+	input=$(CDPATH='' cd -- "$2" && pwd)
+	output=$3
+	mkdir -p "$output"
+	output=$(CDPATH='' cd -- "$output" && pwd)
+	work=$(mktemp -d)
+	trap 'rm -rf -- "$work"' EXIT
+	cp libraries/typescript/package.json libraries/typescript/loader.js libraries/typescript/index.js \
+		libraries/typescript/index.mjs libraries/typescript/index.d.ts libraries/typescript/LICENSE "$work/"
+	count=0
+	for file in "$input"/*/thinkthen-"$version".tgz; do
+		[ -f "$file" ] || continue
+		(cd "${file%/*}" && sha256 -c "${file##*/}.sha256" >/dev/null) || fail "bad checksum for $file"
+		entry=$(tar -tzf "$file" | sed -n '/^package\/thinkthen-.*\.node$/p')
+		[ "$(printf '%s\n' "$entry" | wc -l | tr -d ' ')" = 1 ] || fail "wanted one addon in $file"
+		tar -xOf "$file" "$entry" >"$work/${entry##*/}"
+		count=$((count + 1))
+	done
+	[ "$count" = 4 ] || fail "wanted four platform npm builds, got $count"
+	for platform in linux-x64 linux-arm64 darwin-x64 darwin-arm64; do
+		[ -f "$work/thinkthen-$platform.node" ] || fail "the $platform addon is missing"
+	done
+	(cd "$work" && npm pack --silent --offline --pack-destination "$output" >/dev/null)
+	(cd "$output" && sha256 "thinkthen-$version.tgz" >"thinkthen-$version.tgz.sha256")
+	;;
+smoke-bundle)
+	[ "$#" = 4 ] || fail 'smoke-bundle PLATFORM_DIR NPM_DIR OUT'
+	mkdir -p "$4"
+	cp "$2"/* "$4/"
+	rm -f -- "$4/thinkthen-$version.tgz" "$4/thinkthen-$version.tgz.sha256"
+	cp "$3/thinkthen-$version.tgz" "$3/thinkthen-$version.tgz.sha256" "$4/"
+	;;
+installer-smoke)
+	[ "$#" = 2 ] || fail 'installer-smoke DIR'
+	files=$(CDPATH='' cd -- "$2" && pwd)
+	work=$(mktemp -d)
+	trap 'kill "${server:-}" 2>/dev/null || true; rm -rf -- "$work"' EXIT
+	mkdir -p "$work/www/botassembly/thinkthen/releases/download/v$version" "$work/bin"
+	case $(uname -s):$(uname -m) in
+	Linux:x86_64) target=x86_64-unknown-linux-musl ;; Linux:aarch64) target=aarch64-unknown-linux-musl ;;
+	Darwin:arm64) target=aarch64-apple-darwin ;; Darwin:x86_64) target=x86_64-apple-darwin ;;
+	*) fail 'no installer target for this host' ;;
+	esac
+	file=thinkthen-$version-$target.tar.gz
+	cp "$files/$file" "$files/$file.sha256" "$work/www/botassembly/thinkthen/releases/download/v$version/"
+	python3 - "$work/www" "$work/port" <<'PY' &
+import functools, http.server, pathlib, sys
+handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=sys.argv[1])
+server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+pathlib.Path(sys.argv[2]).write_text(str(server.server_port))
+server.serve_forever()
+PY
+	server=$!
+	for _ in 1 2 3 4 5 6 7 8 9 10; do [ ! -s "$work/port" ] || break; sleep 1; done
+	[ -s "$work/port" ] || fail 'loopback install server did not start'
+	THINKTHEN_INSTALL_BASE="http://127.0.0.1:$(cat "$work/port")" THINKTHEN_INSTALL_DIR="$work/bin" \
+		sh install.sh --version "$version"
+	[ "$("$work/bin/thinkthen" --version)" = "thinkthen $version" ] || fail 'loopback installed command reports another version'
+	;;
+crate-smoke)
+	[ "$#" = 3 ] || fail 'crate-smoke CRATE_DIR SAMPLE_DIR'
+	work=$(mktemp -d)
+	trap 'rm -rf -- "$work"' EXIT
+	crate=$2/thinkthen-$version.crate
+	[ -f "$crate" ] || fail "missing packed crate $crate"
+	tar -xzf "$crate" -C "$work"
+	cargo install --locked --path "$work/thinkthen-$version" --root "$work/install"
+	tar -xzf "$3/thinkthen-first-run.tar.gz" -C "$work"
+	answer=$(env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL "$work/install/bin/thinkthen" decide \
+		'Does this report say what the person did before the problem appeared?' \
+		--replay "$work/thinkthen-first-run/recording" <"$work/thinkthen-first-run/report.txt")
+	[ "$answer" = true ] || fail "the packed crate first run answered $answer"
+	;;
+collect)
+	[ "$#" = 4 ] || fail 'collect PLATFORM_ROOT NPM_DIR OUT'
+	mkdir -p "$4"
+	for folder in "$2"/*; do
+		[ -d "$folder" ] || continue
+		for file in "$folder"/*; do
+			case $file in *.tgz|*.tgz.sha256) continue ;; esac
+			if [ -e "$4/${file##*/}" ]; then
+				case ${file##*/} in thinkthen-first-run.tar.gz|thinkthen-first-run.tar.gz.sha256) cmp -s "$file" "$4/${file##*/}" || fail 'first-run differs between targets'; continue ;; esac
+				fail "duplicate release file ${file##*/}"
+			fi
+			cp "$file" "$4/"
+		done
+	done
+	cp "$3/thinkthen-$version.tgz" "$3/thinkthen-$version.tgz.sha256" "$4/"
+	;;
+draft)
+	[ "$#" = 5 ] || fail 'draft MODE NAME SHA DIR'
+	mode=$2 name=$3 sha=$4; files=$5
+	[ "$sha" = "$(git rev-parse HEAD)" ] || fail 'draft checkout differs from resolve SHA'
+	if gh release view "$name" >/dev/null 2>&1; then fail "release $name already exists"; fi
+	if [ "$mode" = rehearse ]; then
+		# GitHub names a missing tag in a draft but should create its ref only
+		# on publication. Check the real server boundary before and after.
+		tag_status() {
+			gh api --include "repos/$GITHUB_REPOSITORY/git/ref/tags/$name" 2>&1 |
+				sed -n '1s/^HTTP[^ ]* \([0-9][0-9][0-9]\).*/\1/p'
+		}
+		[ "$(tag_status)" = 404 ] || fail 'a rehearsal tag exists or its absence could not be proved'
+	fi
+	if [ "$mode" = release ]; then
+		[ "$GITHUB_REF" = "refs/tags/$name" ] || fail 'release ref differs from name'
+		gh release create "$name" --draft --verify-tag --title "$name" --notes "ThinkThen $name"
+	else
+		gh release create "$name" --draft --target "$sha" --title "$name" --notes "Rehearsal from $sha; do not publish"
+		[ "$(tag_status)" = 404 ] || fail 'draft created a rehearsal tag; stop before uploading assets'
+	fi
+	gh release upload "$name" "$files"/*
+	;;
+tap)
+	[ "$#" = 3 ] || fail 'tap VERSION PLATFORM_ROOT'
+	[ "$2" = "$version" ] || fail 'tap version differs from resolved version'
+	[ -n "${TAP_DEPLOY_KEY:-}" ] || fail 'the release deploy key is missing'
+	platform=$(CDPATH='' cd -- "$3" && pwd)
+	for target in x86_64-unknown-linux-musl aarch64-unknown-linux-musl x86_64-apple-darwin aarch64-apple-darwin; do
+		case $target in *linux-musl) folder=${target%-musl}-gnu ;; *) folder=$target ;; esac
+		file=$platform/platform-$folder/thinkthen-$version-$target.tar.gz
+		[ -f "$file" ] || fail "tap archive $file is missing"
+		(cd "${file%/*}" && sha256 -c "${file##*/}.sha256" >/dev/null) || fail "tap archive $file differs from its checksum"
+		case $target in
+		x86_64-unknown-linux-musl) linux_intel=$(sha256 "$file" | awk '{print $1}') ;;
+		aarch64-unknown-linux-musl) linux_arm=$(sha256 "$file" | awk '{print $1}') ;;
+		x86_64-apple-darwin) mac_intel=$(sha256 "$file" | awk '{print $1}') ;;
+		aarch64-apple-darwin) mac_arm=$(sha256 "$file" | awk '{print $1}') ;;
+		esac
+	done
+	work=$(mktemp -d)
+	trap 'rm -rf -- "$work"' EXIT
+	umask 077
+	printf '%s\n' "$TAP_DEPLOY_KEY" >"$work/key"
+	printf '%s\n' 'github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl' >"$work/known_hosts"
+	GIT_SSH_COMMAND="ssh -i $work/key -o UserKnownHostsFile=$work/known_hosts -o StrictHostKeyChecking=yes -o IdentitiesOnly=yes"
+	export GIT_SSH_COMMAND
+	git clone --quiet git@github.com:botassembly/homebrew-thinkthen.git "$work/tap"
+	default=$(git -C "$work/tap" symbolic-ref --short refs/remotes/origin/HEAD)
+	default=${default#origin/}
+	mkdir -p "$work/tap/Formula"
+	formula=$work/tap/Formula/thinkthen.rb
+	[ ! -f "$formula" ] || ! grep -Fq "version \"$version\"" "$formula" || fail 'the tap already holds this version'
+	cat >"$formula" <<EOF
+class Thinkthen < Formula
+  desc "Semantic judgments over text"
+  homepage "https://thinkthen.dev"
+  version "$version"
+  license "MIT"
+
+  if OS.mac?
+    if Hardware::CPU.arm?
+      url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-aarch64-apple-darwin.tar.gz"
+      sha256 "$mac_arm"
+    else
+      url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-x86_64-apple-darwin.tar.gz"
+      sha256 "$mac_intel"
+    end
+  elsif Hardware::CPU.arm?
+    url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-aarch64-unknown-linux-musl.tar.gz"
+    sha256 "$linux_arm"
+  else
+    url "https://github.com/botassembly/thinkthen/releases/download/v$version/thinkthen-$version-x86_64-unknown-linux-musl.tar.gz"
+    sha256 "$linux_intel"
+  end
+
+  def install
+    bin.install "thinkthen"
+  end
+
+  test do
+    assert_match "thinkthen $version", shell_output("#{bin}/thinkthen --version")
+  end
+end
+EOF
+	git -C "$work/tap" add Formula/thinkthen.rb
+	git -C "$work/tap" diff --cached --quiet && fail 'the tap formula has no change'
+	git -C "$work/tap" -c user.name='GitHub Actions' -c user.email='github-actions[bot]@users.noreply.github.com' commit -qm "Update thinkthen to $version"
+	git -C "$work/tap" push origin "HEAD:$default"
+	;;
+publish)
+	[ "$#" = 3 ] || fail 'publish NAME SHA'
+	[ "$(git rev-parse HEAD)" = "$3" ] || fail 'publish checkout differs from resolve SHA'
+	gh release edit "$2" --draft=false
+	;;
+*) fail "unknown operation ${1:-}" ;;
+esac

@@ -57,6 +57,21 @@ awk '/^(unsafe extern "C" )?fn (wait_for|wake)\(/ { held = 1 }
 # this catches the rooting calls that dodge it.
 ! grep -nE 'Opaque|BoxValue|rb_gc_register|magnus::gc|register_mark_object' src/*.rs >&2 || fail "src holds a Ruby object"
 
+# Refuse an absent host toolchain before the offline deny plant or a build.
+host=$(uname -s)
+case $host in Linux|Darwin) ;; *) not_run "no Ruby host route for $host" ;; esac
+. ./toolchain.env
+if [ "$host" = Darwin ]; then
+  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION-$(uname -m)-darwin
+else
+  prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
+fi
+setup="run libraries/ruby/setup-ruby.sh once on this machine, with the network"
+[ -f "$prefix/thinkthen-toolchain.stamp" ] || not_run "no Ruby $RUBY_VERSION prefix; $setup"
+stamp=$(head -n 3 "$prefix/thinkthen-toolchain.stamp")
+[ "$stamp" = "$(printf 'ruby %s\nyaml %s\nyaml512 %s' "$RUBY_SHA256" "$YAML_SHA256" "$YAML_SHA512")" ] ||
+  not_run "the prefix's stamp does not match toolchain.env; move the prefix aside and $setup"
+
 # deny on the lock, then a planted file:// git source meets the sources rule
 # (R3-28). This is the Ruby lint block: lint reaches this surface only
 # through surfaces --registry, and the pinned-Ruby guard lives below (R5-35).
@@ -79,23 +94,31 @@ code=$?
 set -e
 [ "$code" -eq 8 ] && grep -q source-not-allowed "$plant/deny" || fail "deny passed a git source (exit $code)"
 
-# The host and toolchain probe. Only the pinned prefix runs, never a ruby
-# found on PATH.
-[ "$(uname -s)" = Linux ] || not_run "Linux only at 0.1"
-. ./toolchain.env
-prefix=$HOME/.cache/thinkthen-toolchains/ruby/$RUBY_VERSION
-setup="run libraries/ruby/setup-ruby.sh once on this machine, with the network"
-[ -f "$prefix/thinkthen-toolchain.stamp" ] || not_run "no Ruby $RUBY_VERSION prefix; $setup"
-stamp=$(head -n 3 "$prefix/thinkthen-toolchain.stamp")
-[ "$stamp" = "$(printf 'ruby %s\nyaml %s\nyaml512 %s' "$RUBY_SHA256" "$YAML_SHA256" "$YAML_SHA512")" ] ||
-  not_run "the prefix's stamp does not match toolchain.env; move the prefix aside and $setup"
+# Only the pinned prefix runs, never a ruby found on PATH.
 if [ -n "${RUBY:-}" ] && [ "$RUBY" != "$prefix/bin/ruby" ]; then
   fail "RUBY names $RUBY; this check runs only $prefix/bin/ruby"
 fi
 RUBY=$prefix/bin/ruby
 "$RUBY" -v | grep -q "^ruby $RUBY_VERSION " || fail "$RUBY is not Ruby $RUBY_VERSION behind a matching stamp"
-clang=$(for lib in /usr/lib/llvm-*/lib; do [ -e "$lib/libclang.so.1" ] && echo "$lib"; done | sort -V | tail -n 1)
-[ -n "$clang" ] || not_run "no libclang under /usr/lib/llvm-*/lib; install the host's libclang"
+if [ "$host" = Darwin ]; then
+  command -v xcrun >/dev/null 2>&1 || not_run "xcrun is missing"
+  openssl=${THINKTHEN_RUBY_OPENSSL:-$(brew --prefix openssl@3 2>/dev/null || true)}
+  [ -x "$openssl/bin/openssl" ] || not_run "OpenSSL $RUBY_OPENSSL_VERSION host prefix is missing"
+  case $("$openssl/bin/openssl" version) in "OpenSSL $RUBY_OPENSSL_VERSION "*) ;; *) not_run "OpenSSL host version differs from toolchain.env" ;; esac
+  clang=$(xcrun --find clang 2>/dev/null)
+  clang=${clang%/bin/clang}/lib
+  [ -f "$clang/libclang.dylib" ] || not_run "no libclang.dylib beside the selected Xcode clang"
+  [ "${MACOSX_DEPLOYMENT_TARGET:-$RUBY_MACOS_DEPLOYMENT_TARGET}" = "$RUBY_MACOS_DEPLOYMENT_TARGET" ] || fail "the macOS deployment target differs from $RUBY_MACOS_DEPLOYMENT_TARGET"
+  MACOSX_DEPLOYMENT_TARGET=$RUBY_MACOS_DEPLOYMENT_TARGET
+  SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+  DYLD_LIBRARY_PATH=$prefix/lib:$openssl/lib${DYLD_LIBRARY_PATH:+:$DYLD_LIBRARY_PATH}
+  export SDKROOT MACOSX_DEPLOYMENT_TARGET DYLD_LIBRARY_PATH
+else
+  clang=$(for lib in /usr/lib/llvm-*/lib; do [ -e "$lib/libclang.so.1" ] && echo "$lib"; done | sort -V | tail -n 1)
+  [ -n "$clang" ] || not_run "no libclang under /usr/lib/llvm-*/lib; install the host's libclang"
+  LD_LIBRARY_PATH=$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
+  export LD_LIBRARY_PATH
+fi
 cargo fetch --locked --offline --quiet 2>/dev/null ||
   not_run "a crate is missing from Cargo's cache; fetch libraries/ruby's locked crates once, with the network"
 backend=$repo/${CARGO_TARGET_DIR:-target}/debug/conformance-backend
@@ -103,9 +126,8 @@ case $backend in /*) ;; *) backend=$repo/$backend ;; esac
 [ -x "$backend" ] || fail "no loopback backend at $backend; the surfaces rung builds it"
 PATH=$prefix/bin:$PATH
 LIBCLANG_PATH=$clang
-LD_LIBRARY_PATH=$prefix/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}
 THINKTHEN_TEST_BACKEND=$backend
-export RUBY PATH LIBCLANG_PATH LD_LIBRARY_PATH THINKTHEN_TEST_BACKEND
+export RUBY PATH LIBCLANG_PATH THINKTHEN_TEST_BACKEND
 
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   # The installed-file mode (ticket 0128): the gem in a fresh gem folder, and the shared cases

@@ -77,6 +77,31 @@ def release(name, doc):
     out = []
     if doc.get("permissions") != {}:
         out.append(f"{name}: top-level permissions must be {{}}")
+    trigger = doc.get("on", doc.get(True)) or {}
+    dispatch = trigger.get("workflow_dispatch", {}) if isinstance(trigger, dict) else {}
+    inputs = dispatch.get("inputs", {}) if isinstance(dispatch, dict) else {}
+    if set(inputs) != {"mode"} or inputs["mode"].get("options") != ["rehearse", "release"]:
+        out.append(f"{name}: dispatch must have only mode with rehearse and release choices")
+    jobs = doc.get("jobs") or {}
+    required = {"resolve", "build", "wheels", "npm-pack", "gems", "crate", "smoke", "draft",
+                "crates", "pypi", "npm", "rubygems", "tap", "publish"}
+    if set(jobs) != required:
+        out.append(f"{name}: release job graph differs from the accepted jobs")
+    dependencies = {"build": {"resolve"}, "wheels": {"resolve", "build"},
+                    "npm-pack": {"resolve", "build"}, "gems": {"resolve", "build"},
+                    "crate": {"resolve"}, "smoke": {"resolve", "build", "wheels", "npm-pack", "gems", "crate"},
+                    "draft": {"resolve", "smoke"}, "publish": {"resolve", "draft", "crates", "pypi", "npm", "rubygems", "tap"}}
+    for job in ("crates", "pypi", "npm", "rubygems", "tap"):
+        dependencies[job] = {"resolve", "draft"}
+    for job, need in dependencies.items():
+        value = jobs.get(job, {}).get("needs", [])
+        if isinstance(value, str):
+            value = [value]
+        if set(value) != need:
+            out.append(f"{name}: job {job} must need {', '.join(sorted(need))}")
+    for job in ("crates", "pypi", "npm", "rubygems", "tap", "publish"):
+        if "inputs.mode == 'release'" not in str(jobs.get(job, {}).get("if", "")):
+            out.append(f"{name}: job {job} must require release mode")
     for job, spec in (doc.get("jobs") or {}).items():
         permissions = spec.get("permissions") or {}
         text = yaml.safe_dump(spec)
@@ -142,21 +167,31 @@ jobs:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
         with: {ref: "${{ needs.resolve.outputs.sha }}"}
       - run: python3 -m pip install maturin==1.9.6
+  wheels: {needs: [resolve, build]}
+  npm-pack: {needs: [resolve, build]}
+  gems: {needs: [resolve, build]}
+  crate: {needs: resolve}
+  smoke: {needs: [resolve, build, wheels, npm-pack, gems, crate]}
   draft:
-    needs: build
+    needs: [resolve, smoke]
     runs-on: ubuntu-24.04
     permissions: {contents: write}
     steps:
       - run: gh release create "$TAG" --draft
         env: {GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}"}
   pypi:
-    needs: draft
+    needs: [resolve, draft]
     if: inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'
     runs-on: ubuntu-24.04
     environment: release
     permissions: {id-token: write}
     steps:
       - run: echo publish
+  crates: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
+  npm: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
+  rubygems: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
+  tap: {needs: [resolve, draft], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
+  publish: {needs: [resolve, draft, crates, pypi, npm, rubygems, tap], if: "inputs.mode == 'release' && vars.RELEASE_ARMED == 'true'", environment: release}
 """
 
 
@@ -184,12 +219,16 @@ def self_test():
          ["release.yml: job build holds contents: write; only draft and publish may"]),
         ("environment", "release.yml", lambda t: t.replace("    environment: release\n", ""),
          ["release.yml: job pypi holds id-token or a secret outside environment release"]),
-        ("armed", "release.yml", lambda t: t.replace(" && vars.RELEASE_ARMED == 'true'", ""),
+        ("armed", "release.yml", lambda t: t.replace(" && vars.RELEASE_ARMED == 'true'", "", 1),
          ["release.yml: job pypi runs in environment release without the RELEASE_ARMED condition"]),
         ("checkout", "release.yml", lambda t: t.replace('{ref: "${{ needs.resolve.outputs.sha }}"}', '{ref: main}'),
          ["release.yml: job build checks out main, not the resolved SHA"]),
         ("top", "release.yml", lambda t: t.replace("permissions: {}\n", "permissions: {contents: read}\n"),
          ["release.yml: top-level permissions must be {}"]),
+        ("mode", "release.yml", lambda t: t.replace("options: [rehearse, release]", "options: [rehearse, deploy]"),
+         ["release.yml: dispatch must have only mode with rehearse and release choices"]),
+        ("draft-order", "release.yml", lambda t: t.replace("needs: [resolve, smoke]", "needs: [resolve, build]"),
+         ["release.yml: job draft must need resolve, smoke"]),
         ("maturin", "release.yml", lambda t: t.replace("maturin==1.9.6", "maturin"),
          ["release.yml: job build installs maturin with no version"]),
     ]
@@ -202,7 +241,8 @@ def self_test():
                 folder = pathlib.Path(tmp)
                 for path in (REPO / ".github/workflows").glob("*.y*ml"):
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-                source = RELEASE if file == "release.yml" and not (folder / file).exists() else (folder / file).read_text()
+                # Keep each planted rule independent after the real release.yml lands.
+                source = RELEASE if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:
