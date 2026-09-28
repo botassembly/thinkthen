@@ -61,6 +61,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
+	step "selected find value, budget and interrupt boundaries, installed"
+	sh "$LIMIT" 300 "$python" -c 'import sys; sys.path.insert(0, "tests"); from test_values import test_find_preserves_duplicate_positions_and_strict_ties as answers, test_find_null_empty_and_invalid_inputs_never_send as invalid; from test_try_budget import test_find_uses_the_scalar_budget_and_total_before_a_second_send as budget; from test_interrupt import test_find_is_cancelled_while_its_one_send_is_held as interrupt; answers(); invalid(); budget(); interrupt()'
 	step "the pinned native host's successful and failed load results, installed"
 	sh "$LIMIT" 60 "$python" -c 'import sys; sys.path.insert(0, "tests"); from test_schema import test_a_host_below_the_floor_refuses_the_load as failed, test_pinned_host_keeps_a_successful_registration_available as successful; successful(); failed()'
 	echo "pass     databases/sqlite, installed"

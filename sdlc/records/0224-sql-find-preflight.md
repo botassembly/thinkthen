@@ -1,6 +1,6 @@
 # 0224 SQL group find preflight
 
-Status: notes-only SQLite-first refresh after merging main `5ff6d31b` into the accepted 0224 branch as `799994c6`. Ian approved the reviewed ADR 0096 SQL spellings in the current work plan; the older “awaits Ian” design prose is historical. No 0224 runtime, build, provider call or issue closure is claimed. The original `f3214df8` source inventory below remains historical evidence; the current source and exact prospective claim follow first. [Ticket](../tickets/0224-sql-group-find.md), [ADR 0096](../planning/adr/0096-sql-group-find-contract.md), and [review handoff](0224-design-review.md) retain the full three-host outcome.
+Status: historical preparation, superseded for SQLite by pushed runtime source `785c5e7e` and its [installed Linux build record](0224-sql-find-build.md). This preflight retains the source inventory and claim request that preceded implementation; it does not claim PostgreSQL, DuckDB, other platforms, provider calls or whole-issue closure. Ian approved the reviewed ADR 0096 SQL spellings in the current work plan; the older “awaits Ian” design prose is historical. [Ticket](../tickets/0224-sql-group-find.md), [ADR 0096](../planning/adr/0096-sql-group-find-contract.md), and [review handoff](0224-design-review.md) retain the full three-host outcome.
 
 ## Current SQLite-first source and claim request
 

@@ -9,9 +9,80 @@ import os
 import sys
 
 from helper import Backend, child, environment, expect, main
+from conditional_backend import ConditionalBackend
 
 BANDED = json.dumps({"decide": "Is it red?", "threshold": "0.2:0.8"})
 SCALARS = ("thinkthen_decide", "thinkthen_choose", "thinkthen_score", "thinkthen_tag", "thinkthen_details", "thinkthen_annotate")
+
+
+def test_find_preserves_duplicate_positions_and_strict_ties() -> None:
+    """A canned reply selects the second equal text; a real tie beats a peer but loses to none."""
+    backend = Backend()
+    cases = (
+        (["same", "same", "other"], False, {"u001": 0.1, "u002": 0.8, "u003": 0.1},
+         {"index": 1, "value": "same", "probability": 0.8,
+          "candidates": [{"index": 0, "probability": 0.1}, {"index": 1, "probability": 0.8},
+                         {"index": 2, "probability": 0.1}]}),
+        (["first", "second"], False, {"u001": 0.5, "u002": 0.5},
+         {"index": 0, "value": "first", "probability": 0.5,
+          "candidates": [{"index": 0, "probability": 0.5}, {"index": 1, "probability": 0.5}]}),
+        (["first", "second"], True, {"u001": 0.4, "u002": 0.2, "none": 0.4},
+         {"index": None, "value": None, "probability": 0.4,
+          "candidates": [{"index": 0, "probability": 0.4}, {"index": 1, "probability": 0.2},
+                         {"index": None, "probability": 0.4}]}),
+    )
+    for units, offered, probabilities, selected in cases:
+        answer = json.dumps({"model": "jev-latest", "answers": {"q1": {
+            "type": "choice", "probabilities": probabilities}}}).encode()
+        with ConditionalBackend(backend.base(), reply=answer) as proxy:
+            held = child(f"""
+db = connect()
+say(result=run(db, "SELECT thinkthen_find(?, ?, ?)",
+               ("Which unit?", {json.dumps(units)!r}, {int(offered)})))
+""", environment(backend, THINKTHEN_BASE_URL=proxy.base))
+            expect(proxy.count(), 1, "one find request")
+        result = json.loads(held["result"][0][0])
+        expect(result, selected, "original selected unit and input-order probabilities")
+    expect(backend.close(), 0, "fixed replies did not reach the generic arm")
+
+
+def test_find_null_empty_and_invalid_inputs_never_send() -> None:
+    backend = Backend()
+    held = child("""
+db = connect()
+good = ['one', 'two']
+bad = [
+    ('question NULL', None, json.dumps(good), 0, -1),
+    ('units NULL', 'Which?', None, 0, -1),
+    ('none NULL', 'Which?', json.dumps(good), None, -1),
+    ('deadline NULL', 'Which?', json.dumps(good), 0, None),
+    ('empty', 'Which?', '[]', 0, -1),
+    ('one', 'Which?', '["one"]', 0, -1),
+    ('member NULL', 'Which?', '["one",null]', 0, -1),
+    ('member number', 'Which?', '["one",7]', 0, -1),
+    ('member blank', 'Which?', '["one","  "]', 0, -1),
+    ('question number', 7, json.dumps(good), 0, -1),
+    ('units number', 'Which?', 7, 0, -1),
+    ('units blob', 'Which?', b'["one","two"]', 0, -1),
+    ('malformed', 'Which?', '[', 0, -1),
+    ('not array', 'Which?', '{}', 0, -1),
+    ('bad none', 'Which?', json.dumps(good), 2, -1),
+    ('bad question', '   ', json.dumps(good), 0, -1),
+    ('bad deadline', 'Which?', json.dumps(good), 0, 0.5),
+    ('too many', 'Which?', json.dumps(['x'] * 256), 0, -1),
+    ('none too many', 'Which?', json.dumps(['x'] * 255), 1, -1),
+    ('too much text', 'Which?', json.dumps(['x' * (16 * 1024 * 1024), 'y']), 0, -1),
+]
+say(results={name: run(db, 'SELECT thinkthen_find(?, ?, ?, ?)', (q, units, none, deadline)) for
+             name, q, units, none, deadline in bad})
+""", environment(backend))
+    for name in ("question NULL", "units NULL", "none NULL", "deadline NULL", "empty"):
+        expect(held["results"][name], [[None]], name)
+    for name in ("one", "member NULL", "member number", "member blank", "question number", "units number",
+                 "units blob", "malformed", "not array",
+                 "bad none", "bad question", "bad deadline", "too many", "none too many", "too much text"):
+        expect(held["results"][name].startswith("thinkthen usage: "), True, name)
+    expect(backend.close(), 0, "all refused inputs send nothing")
 
 
 def test_a_null_text_is_null_and_a_bad_value_is_refused_before_any_send() -> None:

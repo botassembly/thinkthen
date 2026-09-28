@@ -116,7 +116,7 @@ impl Capture {
     }
 }
 
-/// The dedicated case path or full-answer arm opts in. Ordinary traffic does not.
+/// The dedicated find/relation case path or full-answer arm opts in.
 fn capturing(request: &Recorded) -> bool {
     let path = request.line.split(' ').nth(1).unwrap_or_default();
     let mut parts = path.trim_start_matches('/').split('/');
@@ -125,7 +125,7 @@ fn capturing(request: &Recorded) -> bool {
         (Some("case"), Some(id), Some("capture")) => id
             .split_once('-')
             .and_then(|(number, _)| number.parse::<u8>().ok())
-            .is_some_and(|number| (42..=50).contains(&number)),
+            .is_some_and(|number| matches!(number, 18 | 19 | 42..=50)),
         _ => false,
     }
 }

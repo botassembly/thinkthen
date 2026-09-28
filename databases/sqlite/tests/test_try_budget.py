@@ -49,6 +49,25 @@ say(spent=run(a, "SELECT thinkthen_try_details('Is it red?', 'a red door')"),
     expect(backend.close(), 1, "only the other connection sent")
 
 
+def test_find_uses_the_scalar_budget_and_total_before_a_second_send() -> None:
+    backend = Backend()
+    held = child("""
+db = connect()
+units = '["first","second"]'
+db.execute('SELECT thinkthen_budget_ms(0)')
+expired = run(db, 'SELECT thinkthen_find(?, ?)', ('Which?', units))
+db.execute('SELECT thinkthen_budget_ms(-1)')
+db.execute('SELECT thinkthen_max_requests_total(1)')
+first = run(db, 'SELECT thinkthen_find(?, ?)', ('Which?', units))
+spent = run(db, 'SELECT thinkthen_find(?, ?)', ('Which other?', units))
+say(expired=expired, first=first, spent=spent)
+""", environment(backend))
+    expect(held["expired"], "thinkthen deadline: the connection's ThinkThen budget passed", "expired query")
+    expect(json.loads(held["first"][0][0])["index"], 0, "one completed find")
+    expect(held["spent"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_max_requests_total)", "ordinary scalar preflight")
+    expect(backend.close(), 1, "expired and spent calls send nothing")
+
+
 def test_backend_failure_keeps_a_later_good_row() -> None:
     backend = Backend()
     with ConditionalBackend(backend.base()) as proxy:
