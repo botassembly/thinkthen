@@ -164,6 +164,28 @@ fn one_entry(folder: &Path) -> io::Result<PathBuf> {
     Ok(entry.clone())
 }
 
+#[cfg(target_os = "linux")]
+fn assert_three_refresh_results(
+    outputs: [&Output; 3],
+    listener: &Listener,
+    lock: &fs::DirEntry,
+    original: &fs::Metadata,
+    cache: &Path,
+) -> io::Result<()> {
+    use std::os::unix::fs::MetadataExt as _;
+
+    for output in outputs {
+        let (_details, replayed, attempts) = normalized_details(output)?;
+        assert!(!replayed);
+        assert_eq!(attempts, 1);
+    }
+    assert_eq!(listener.requests().len(), 3);
+    assert!(fs::read(lock.path())?.is_empty());
+    assert_eq!(lock.metadata()?.ino(), original.ino());
+    assert!(one_entry(cache)?.is_file());
+    Ok(())
+}
+
 #[derive(Clone, Copy)]
 enum FailedReply {
     Backend,
@@ -398,24 +420,14 @@ fn three_refresh_callers_keep_one_digest_lock_inode_across_completed_writes() {
     ));
     let third_output = third.wait().expect("third finishes");
     assert_eq!(third_output.status.code(), Some(0));
-    for output in [&first_output, &second_output, &third_output] {
-        let (_details, replayed, attempts) = normalized_details(output).expect("refresh details");
-        assert!(!replayed);
-        assert_eq!(attempts, 1);
-    }
-    assert_eq!(listener.requests().len(), 3);
-    assert!(
-        fs::read(lock.path())
-            .expect("retained lock is empty")
-            .is_empty()
-    );
-    assert_eq!(
-        lock.metadata()
-            .expect("lock survives all completions")
-            .ino(),
-        original.ino()
-    );
-    assert!(one_entry(&cache).expect("one complete entry").is_file());
+    assert_three_refresh_results(
+        [&first_output, &second_output, &third_output],
+        &listener,
+        &lock,
+        &original,
+        &cache,
+    )
+    .expect("three stable refresh results");
 }
 
 #[test]
