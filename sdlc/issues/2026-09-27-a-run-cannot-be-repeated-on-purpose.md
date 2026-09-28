@@ -29,3 +29,7 @@ A smaller alternative is a stability section in `audit` over a repeated run. The
 ## Factual preparation, 2026-09-28
 
 At main `86d5cff1`, both `--no-cache` and `--refresh-cache` support an external fresh-call loop. The latter requires an enabled answer cache, replaces complete cached answers and conflicts with `--no-cache`, `--record` and `--replay`; it does not add a repeat count or stability output. A built-in repeat needs explicit record/repeat identity and whole-run attempt facts. Under default packing, four logical answers may use fewer than four transport sends; a four-send proof must specify `--batch 1`. This is optional tuning work, not a 0.1 correctness blocker. The observed one flip in 150 calls is evidence, not a future test threshold. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.
+
+## Added 2026-09-28: the scale of the flip rate
+
+Arize compared Jev against five LLM judges over 517 labeled examples with ten runs each (the Jev-as-judge post, read 2026-09-28). Jev changed its answer on 0.97% of examples as a drop-in and 0.19% native, the lowest of any judge there. ThinkThen is the native form by construction. Local experiment 297 measured one flip in 150 calls, on a case at p 0.49 to 0.52, and a median probability spread of 0.020. The flips live at the cut. The repeat feature is for finding those cases, not for doubting the model.
