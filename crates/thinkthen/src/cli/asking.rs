@@ -1,5 +1,5 @@
 //! One record to one request, and one reply to one row. `batched.rs` sends
-//! `decide`, `filter` and `rank` over a stream in batches.
+//! `decide`, `filter`, `rank` and `choose` over a stream in batches.
 //!
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
@@ -30,10 +30,12 @@ mod batched;
 mod context;
 mod folders;
 mod plan;
+mod reading;
 
 use context::Context;
 pub(crate) use folders::Folders;
 use plan::{plan, plan_record, print_plan};
+use reading::read_by;
 
 struct RowContext<'a> {
     arrived: Option<&'a [u8]>,
@@ -75,7 +77,7 @@ pub(crate) fn engine(
 /// Every verb but `choose --options` asks the same question of every record.
 /// `--options` names a pointer, and each record holds its own candidate list
 /// there, so the question is built again for each one.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum Asks {
     /// One question, asked of every record.
     Fixed(Question),
@@ -160,8 +162,13 @@ pub(crate) fn run(
         .model_is_default()
         .then(|| environment.model())
         .flatten();
+    let choose = matches!(
+        asks,
+        Asks::Fixed(Question::Choose { .. }) | Asks::FromRecord { .. }
+    );
     let request_size = batch
         .as_ref()
+        .filter(|_| !choose || common.framing() != Framing::Document)
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
     let backend = Backend::resolve(
@@ -312,22 +319,6 @@ fn over_table(
         judging.environment.cancel(),
         output,
     )
-}
-
-/// Read the framing the command line asked for, over the settled pointers.
-/// With no flag, `filter` and `rank` read lines, or JSON Lines under a pointer.
-fn read_by(common: &Common, settled: &Resolved, keeping: Keeping) -> Result<Reading, Failure> {
-    let on = settled.on().to_vec();
-    let asked = common.framing();
-    if asked != Framing::Document || !keeping.streams_only() {
-        return Ok(Reading::new(asked, on)?);
-    }
-    let framing = if on.is_empty() {
-        Framing::Lines
-    } else {
-        Framing::Jsonl
-    };
-    Ok(Reading::new(framing, on)?.by_default())
 }
 
 fn table_kind(common: &Common) -> Option<TableKind> {

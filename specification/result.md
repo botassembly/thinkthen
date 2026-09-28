@@ -57,7 +57,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 {"schema":"thinkthen.result/1","value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02},"confidence":0.91},"threshold":0.8,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"5d5f...25","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
 ```
 
-`answer.pick` is the option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the label that cleared the cut.
+`answer.pick` is the first option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the sole leading label when it clears a supplied cut, or the sole leader when no cut was supplied.
 
 `value` is `null` when the answer is not sure, and `answer.pick` still names the option that led. A script reads `value` and never `pick`. A person reading a not sure row learns from `pick` what the model was leaning toward.
 
@@ -75,7 +75,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 {"schema":"thinkthen.result/1","value":1.6,"question":{"verb":"score","text":"How much disruption does this report?","levels":["None.","Work continues with a workaround.","Work is blocked."]},"answer":{"kind":"score","level":"Work is blocked.","probabilities":{"None.":0.05,"Work continues with a workaround.":0.30,"Work is blocked.":0.65}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"005c...f5","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
 ```
 
-`answer.level` is the level with the highest probability. `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first. `value` is the weighted position on those levels, and [score.md](score.md) gives the arithmetic.
+`answer.level` is the first level with the highest probability, so an exact top tie names the lowest tied level. `answer.probabilities` holds one entry per level, in the order the levels were given, lowest first. `value` is the weighted position on those levels, and [score.md](score.md) gives the arithmetic. A 0.5, 0, 0.5 split across three levels gives `value: 1` and names the lowest level in `answer.level`.
 
 **`find`**, from `find`.
 
@@ -86,6 +86,21 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 `answer.pick` names the first wire choice at the highest probability. `answer.probabilities` follows unit order and puts `none` last. `value` is the selected original unit. A strict `none` lead or any top tie involving `none` makes `value` null. A tie among real units selects the first input unit.
 
 The canonical `find` question is compact JSON with keys in this order: `{"verb":"find","text":TEXT,"none":BOOL}`. Generated unit ids, evidence, and unit count are absent. For `Which unit answers?` without `--none`, the canonical bytes are `{"verb":"find","text":"Which unit answers?","none":false}` and their SHA-256 is `01456d0e17c98c801c2ad9b2a9b56e47aeb33ff0eacde8d44bd6f55e4d0ab9ef`. Question text or the `none` policy changes the digest; changing only the units does not.
+
+## Ties by command
+
+For `choose`, `score`, `find`, `rank`, and `recognize` step-2 options, a tie means equal reported probabilities. `recognize` step 1 instead compares accumulated scores of valid tag paths. Those paths can tie even when individual tag probabilities differ. Its duplicate-name rule compares printed strengths. The bare `value` and a detailed answer field can differ because they serve different purposes.
+
+| Command | Result at a tie | Existing proof |
+| --- | --- | --- |
+| `choose` | `value` is `null`; on one document the command exits 3. `answer.pick` still names the first tied option in caller order | `crates/thinkthen/src/core/answer_tests.rs::the_leader_is_the_first_of_a_tie_and_a_tie_is_still_unresolved`; `crates/thinkthen/tests/backend/choosing.rs::a_winner_under_the_cut_and_an_exact_tie_are_both_unresolved` |
+| `score` | `value` is the probability-weighted position, not a selected level. `answer.level` names the first tied level, which is the lowest tied level | `crates/thinkthen/src/core/answer_tests.rs::a_score_is_the_weighted_position_on_the_levels_it_was_given` proves the value; `crates/thinkthen/src/core/answer.rs::Distribution::leader` defines the detailed level |
+| `tag` | Each label that reaches the cut is included in caller order; labels never compete for one winning place | `crates/thinkthen/src/core/answer_tests.rs::tag_selects_each_label_at_or_above_one_shared_cut_and_empty_succeeds` |
+| `find` | The first tied real unit in input order wins. A top tie involving `none` gives `value: null` and exits 3 when `--none` was supplied | `crates/thinkthen/src/core/find.rs::real_ties_take_the_first_and_any_none_tie_is_unresolved`; `crates/thinkthen/tests/backend/find.rs::a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader` |
+| `rank` | Equal yes probabilities keep input order, including at a `--top` boundary | `crates/thinkthen/src/core/order.rs::the_highest_probability_comes_first_and_an_exact_tie_keeps_input_order` |
+| `recognize` | Step-1 tag ties take the earlier tag in its fixed order. Step-2 kind and edge-option ties take the first option asked; a duplicate span and kind at equal strength keeps the first found name | `crates/thinkthen/src/core/recognize/bilou.rs::best_of`, `crates/thinkthen/src/core/recognize.rs::Odds::leader` and `settle` define these paths; no existing test isolates the step-2 tie |
+
+`decide` and `filter` read one yes probability against a rule, while `relate` reads each edge probability against one cut. They do not pick a winner among competing options. An `annotate` question follows its own verb's row above.
 
 ## `meta`
 
@@ -126,7 +141,7 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 | `decide` | `decide` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `filter` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `rank` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
-| `choose` | `choose` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
+| `choose` | `choose` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `tag` | `tag` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `score` | `score` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `find` | `find` | `schema` `value` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |

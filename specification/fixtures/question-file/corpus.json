@@ -67,6 +67,26 @@
       "valid": true
     },
     {
+      "name": "choose-batch-max",
+      "verb": "choose",
+      "file": {
+        "choose": "Which team?",
+        "options": ["billing", "other"],
+        "batch": "max"
+      },
+      "valid": true
+    },
+    {
+      "name": "choose-batch-zero",
+      "verb": "choose",
+      "file": {
+        "choose": "Which team?",
+        "options": ["billing", "other"],
+        "batch": 0
+      },
+      "valid": false
+    },
+    {
       "name": "tag-described-map",
       "verb": "tag",
       "file": {
