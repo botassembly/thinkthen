@@ -68,9 +68,13 @@ pub(crate) struct FindCommon {
         help = format!("The model named in the request. [default: {DEFAULT_MODEL}]")
     )]
     pub(crate) model: Option<String>,
-    /// Write the completed exchange into DIR.
+    /// Call the backend for every request, then write its exchange into DIR.
     ///
-    /// An explicit recording folder suppresses the platform default cache.
+    /// A held request is sent again and may be billed again. A different fresh
+    /// answer exits 5 without printing it; the old entry stays. Use --cache
+    /// DIR to reuse held answers, or record into a new empty folder for a
+    /// deliberate fresh run. An explicit recording folder suppresses the
+    /// platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
     /// Answer from DIR alone.

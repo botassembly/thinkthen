@@ -119,11 +119,13 @@ pub(crate) struct Common {
     )]
     pub(crate) model: Option<String>,
 
-    /// Call the backend, then write the exchange into DIR. DIR is created when absent.
+    /// Call the backend for every request, then write its exchange into DIR.
     ///
-    /// An explicit recording folder suppresses the platform default cache. A
-    /// folder that already holds an answer stops at exit 5 when the backend
-    /// answers that request differently.
+    /// DIR is created when absent. A held request is sent again and may be
+    /// billed again. A different fresh answer exits 5 without printing it;
+    /// the old entry stays. Use --cache DIR to reuse held answers, or record
+    /// into a new empty folder for a deliberate fresh run. An explicit
+    /// recording folder suppresses the platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
 
