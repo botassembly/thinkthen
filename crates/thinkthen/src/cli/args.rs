@@ -8,6 +8,7 @@ use clap::{Args, Parser};
 
 mod batching;
 mod command;
+mod debug;
 mod find;
 mod relate;
 pub(crate) use batching::Batching;
@@ -33,7 +34,7 @@ pub(crate) struct Cli {
 }
 
 /// The options every judging verb takes.
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct Common {
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]
@@ -90,7 +91,8 @@ pub(crate) struct Common {
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,
 
-    /// Print what would be sent and stop. No key is read and no connection opens.
+    /// Print what would be sent and stop. An optional key is checked against
+    /// the address; no key is required and no connection opens.
     #[arg(long)]
     pub(crate) dry_run: bool,
 
@@ -129,7 +131,8 @@ pub(crate) struct Common {
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
 
-    /// Answer from DIR alone. No connection opens, and no key is read.
+    /// Answer from DIR alone. No connection opens and no key is required.
+    /// An optional key is checked against the backend address first.
     ///
     /// An explicit replay folder suppresses the platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]

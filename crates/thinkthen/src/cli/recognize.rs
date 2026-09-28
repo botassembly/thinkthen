@@ -81,6 +81,7 @@ pub(crate) fn run(
         configured.unwrap_or(crate::core::DEFAULT_MODEL),
     )?
     .with_request_size(request_size);
+    environment.check_key(&backend)?;
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
     let mismatch = profile::Mismatch::new(spec.profile.as_ref(), selected_profile.as_ref());

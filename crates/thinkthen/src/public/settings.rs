@@ -6,7 +6,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::config::{self, Config};
-use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_VAR, ModelName};
+use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, KEY_VAR, ModelName};
 use crate::engine::Width;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Key, Settings, Storage};
@@ -53,7 +53,6 @@ impl fmt::Debug for Secret {
 ///
 /// A builder holds settings alone. It opens no file, counts nothing, and
 /// registers no throttle until `build`.
-#[derive(Debug)]
 pub struct EngineBuilder {
     base_url: Option<String>,
     key: Option<Secret>,
@@ -68,6 +67,27 @@ pub struct EngineBuilder {
     profile: Option<Profile>,
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
+}
+
+impl fmt::Debug for EngineBuilder {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("EngineBuilder")
+            .field("base_url", &self.base_url.as_ref().map(|_| "<withheld>"))
+            .field("key", &self.key)
+            .field("model", &self.model)
+            .field("width", &self.width)
+            .field("max_requests", &self.max_requests)
+            .field("max_request_bytes", &self.max_request_bytes)
+            .field("cache", &self.cache)
+            .field("seeded", &self.seeded)
+            .field("timeout", &self.timeout)
+            .field("max_retries", &self.max_retries)
+            .field("profile", &self.profile)
+            .field("record", &self.record)
+            .field("replay", &self.replay)
+            .finish()
+    }
 }
 
 impl EngineBuilder {
@@ -317,6 +337,13 @@ impl EngineBuilder {
     /// Returns [`Error::Usage`] when the default cache is selected and no
     /// folder is available, or when a different throttle is already active.
     pub fn build(self) -> Result<super::Engine, Error> {
+        let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
+        let backend = Backend::resolve(self.base_url.as_deref(), None, model)
+            .map_err(Error::refused)?
+            .with_request_size(self.max_request_bytes);
+        if backend.address_contains_key(self.key.as_ref().map(|Secret(value)| value.as_ref())) {
+            return Err(Error::usage(KEY_IN_ADDRESS));
+        }
         let profile = self
             .profile
             .as_ref()
@@ -330,10 +357,6 @@ impl EngineBuilder {
                 Profile::Inline(profile) => Ok(profile.clone()),
             })
             .transpose()?;
-        let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
-        let backend = Backend::resolve(self.base_url.as_deref(), None, model)
-            .map_err(Error::refused)?
-            .with_request_size(self.max_request_bytes);
         let key = self.key.clone();
         let settings = Settings {
             backend,

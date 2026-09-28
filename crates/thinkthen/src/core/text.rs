@@ -37,44 +37,6 @@ pub(crate) enum BlankTextError {
     Description,
 }
 
-/// Declare one text value that is not blank, its accessor, and its conversions.
-macro_rules! text_value {
-    ($name:ident, $variant:ident, $what:literal) => {
-        #[doc = concat!("The ", $what, ", as text that is not blank.")]
-        #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-        #[serde(into = "String")]
-        pub(crate) struct $name(String);
-
-        impl $name {
-            #[doc = concat!("Take text that is not blank as the ", $what, ".")]
-            ///
-            /// # Errors
-            ///
-            /// Returns [`BlankTextError`] when the text is empty or holds only
-            /// white space.
-            pub(crate) fn new(text: impl Into<String>) -> Result<Self, BlankTextError> {
-                let text = text.into();
-                if text.trim().is_empty() {
-                    return Err(BlankTextError::$variant);
-                }
-                Ok(Self(text))
-            }
-
-            #[doc = concat!("Read the ", $what, " back as text.")]
-            #[must_use]
-            pub(crate) fn as_str(&self) -> &str {
-                &self.0
-            }
-        }
-
-        impl From<$name> for String {
-            fn from(value: $name) -> Self {
-                value.0
-            }
-        }
-    };
-}
-
 /// The evidence a judgment reads: text that is not blank, or the JSON object
 /// or list a pointer selection made.
 #[derive(Clone, Eq, PartialEq)]
@@ -212,7 +174,39 @@ impl From<ModelName> for String {
     }
 }
 
-text_value!(Url, Url, "URL a request is posted to");
+/// The URL a request is posted to. Debug never prints the raw address.
+#[derive(Clone, Eq, PartialEq, Serialize)]
+#[serde(into = "String")]
+pub(crate) struct Url(String);
+
+impl Url {
+    /// Take a nonblank posting URL.
+    pub(crate) fn new(text: impl Into<String>) -> Result<Self, BlankTextError> {
+        let text = text.into();
+        if text.trim().is_empty() {
+            return Err(BlankTextError::Url);
+        }
+        Ok(Self(text))
+    }
+
+    /// Read the original posting URL for wire and result serialization.
+    #[must_use]
+    pub(crate) fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+impl From<Url> for String {
+    fn from(value: Url) -> Self {
+        value.0
+    }
+}
+
+impl fmt::Debug for Url {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("Url(<withheld>)")
+    }
+}
 
 /// The question a judgment asks, as text that is not blank, an object, or a
 /// list.

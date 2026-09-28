@@ -29,7 +29,7 @@ const SCHEMA: &str = "configuration field `schema` must be `thinkthen.config/1`"
 const CACHE_BYTES: &str =
     "configuration field `cache_bytes` must be a whole number greater than zero";
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Default, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Config {
     #[serde(skip)]
@@ -41,6 +41,21 @@ pub(crate) struct Config {
     model: Option<String>,
     cache: Option<bool>,
     cache_bytes: Option<u64>,
+}
+
+impl std::fmt::Debug for Config {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Config")
+            .field("present", &self.present)
+            .field("shared", &self.shared)
+            .field("schema", &self.schema)
+            .field("url", &self.url.as_ref().map(|_| "<withheld>"))
+            .field("model", &self.model)
+            .field("cache", &self.cache)
+            .field("cache_bytes", &self.cache_bytes)
+            .finish()
+    }
 }
 
 impl Config {
