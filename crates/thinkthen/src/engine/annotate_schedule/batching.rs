@@ -3,15 +3,18 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use crate::core::batch::BatchError;
-use crate::core::{Batch, BatchRecord, GroupBatcher, PartError, QuestionSet, Setting};
+use crate::core::{Batch, BatchRecord, GroupBatcher, PartError, Question, QuestionSet, Setting};
 use crate::engine::facade::Engine;
 
 /// One closed request and the input rows its logical members answer.
 pub(crate) struct GroupWork {
     pub(crate) batch: Batch,
+    pub(crate) records: Vec<BatchRecord>,
+    pub(crate) questions: Vec<Question>,
     pub(crate) places: Vec<usize>,
     pub(crate) rows: Vec<usize>,
     pub(crate) group: usize,
+    pub(crate) sole_group: bool,
 }
 
 /// Preserve caller selection and profile refusals across the private planner.
@@ -23,8 +26,9 @@ pub(crate) enum GroupPlanError {
 
 struct Group {
     places: Vec<usize>,
+    questions: Vec<Question>,
     planner: GroupBatcher,
-    pending: VecDeque<usize>,
+    pending: VecDeque<(usize, BatchRecord)>,
 }
 
 /// One open pure planner for each normalized `on` group.
@@ -58,12 +62,13 @@ impl GroupPlanner {
                 let planner = GroupBatcher::new(
                     engine.backend().clone(),
                     engine.profile().cloned(),
-                    questions,
+                    questions.clone(),
                     setting,
                 )
                 .map_err(GroupPlanError::Batch)?;
                 Ok(Group {
                     places,
+                    questions,
                     planner,
                     pending: VecDeque::new(),
                 })
@@ -101,7 +106,7 @@ impl GroupPlanner {
                 .groups
                 .get_mut(group)
                 .ok_or(GroupPlanError::Defect("an annotate group disappeared"))?;
-            held.pending.push_back(row);
+            held.pending.push_back((row, selected.clone()));
             let mut closed = Vec::new();
             held.planner
                 .push(selected, &mut closed)
@@ -131,6 +136,7 @@ impl GroupPlanner {
     }
 
     fn queue(&mut self, group: usize, batch: Batch) -> Result<(), &'static str> {
+        let sole_group = self.groups.len() == 1;
         let members = batch
             .group_members
             .as_ref()
@@ -140,7 +146,7 @@ impl GroupPlanner {
             .groups
             .get_mut(group)
             .ok_or("an annotate group disappeared")?;
-        let rows = held.pending.drain(..members).collect::<Vec<_>>();
+        let (rows, records): (Vec<_>, Vec<_>) = held.pending.drain(..members).unzip();
         let first = *rows.first().ok_or("a group request has no input row")?;
         if rows.len() != members {
             return Err("a group request lost an input row");
@@ -149,9 +155,12 @@ impl GroupPlanner {
             (first, group, self.sequence),
             GroupWork {
                 batch,
+                records,
+                questions: held.questions.clone(),
                 places: held.places.clone(),
                 rows,
                 group,
+                sole_group,
             },
         );
         self.sequence += 1;

@@ -185,6 +185,10 @@ pub(crate) struct ObservedQuestion {
 }
 
 impl ObservedQuestion {
+    pub(crate) fn prepend_request(&mut self, digest: String) {
+        self.requests.insert(0, digest);
+    }
+
     pub(crate) fn from_annotated(
         entry: &core::AnnotatedEntry,
         profile: Option<&ProfileName>,

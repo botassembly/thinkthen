@@ -143,6 +143,117 @@ fn overlapping_named_groups_emit_only_the_fully_assembled_prefix() {
 }
 
 #[test]
+fn named_group_refused_parent_and_halves_keep_request_identity() {
+    let _serial = serial();
+    let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#;
+    let listener = Listener::serving(vec![
+        Canned::status(413, "too large"),
+        Canned::ok(reply),
+        Canned::ok(reply),
+    ])
+    .expect("listener");
+    let engine = engine(listener.base());
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+    )
+    .expect("set");
+    let seen = Mutex::new(Vec::new());
+    let observe = |event: RecordObservation<'_>| {
+        if let RecordObservation::Question {
+            index,
+            member,
+            detail,
+            ..
+        } = event
+        {
+            seen.lock().expect("events").push((
+                index,
+                member.expect("name").to_owned(),
+                detail.requests().to_vec(),
+                detail.requests_sent(),
+            ));
+        }
+    };
+    let mut rows = engine.annotate_with(&set, ["alpha", "beta"], packed().observe(&observe));
+    assert_eq!(
+        rows.by_ref()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("rows")
+            .len(),
+        2
+    );
+    assert_eq!(
+        rows.facts()
+            .map(|facts| (facts.records(), facts.requests_sent())),
+        Some((2, 3))
+    );
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 3);
+    let digests = requests
+        .iter()
+        .map(|one| digest(listener.url(), &one.body))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        *seen.lock().expect("events"),
+        [
+            (
+                0,
+                "first".to_owned(),
+                vec![digests[0].clone(), digests[1].clone()],
+                2
+            ),
+            (
+                0,
+                "second".to_owned(),
+                vec![digests[0].clone(), digests[1].clone()],
+                0
+            ),
+            (
+                1,
+                "first".to_owned(),
+                vec![digests[0].clone(), digests[2].clone()],
+                1
+            ),
+            (
+                1,
+                "second".to_owned(),
+                vec![digests[0].clone(), digests[2].clone()],
+                0
+            ),
+        ]
+    );
+}
+
+#[test]
+fn named_group_failed_left_half_does_not_send_right() {
+    let _serial = serial();
+    let missing = r#"{"model":"jev-latest","answers":{}}"#;
+    let listener = Listener::serving(vec![
+        Canned::status(413, "too large"),
+        Canned::ok(missing),
+        Canned::ok(DECIDED),
+    ])
+    .expect("listener");
+    let engine = engine(listener.base());
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+    )
+    .expect("set");
+    let mut rows = engine.annotate_with(&set, ["alpha", "beta"], packed());
+    assert_eq!(
+        rows.next().expect("stop").expect_err("failed left").kind(),
+        ErrorKind::Backend
+    );
+    assert!(rows.next().is_none());
+    assert_eq!(
+        rows.facts()
+            .map(|facts| (facts.records(), facts.requests_sent())),
+        Some((0, 2))
+    );
+    assert_eq!(listener.requests().len(), 2);
+}
+
+#[test]
 fn a_refused_parent_and_both_halves_keep_exact_request_shares() {
     let _serial = serial();
     let listener = Listener::serving(vec![

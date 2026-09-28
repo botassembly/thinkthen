@@ -26,7 +26,7 @@ use crate::core::text::{Evidence, QuestionText};
 
 mod groups;
 mod questions;
-pub(crate) use groups::{GroupBatcher, GroupMember};
+pub(crate) use groups::{GroupBatcher, GroupMember, group_halves};
 #[cfg(test)]
 pub(crate) use questions::halves;
 pub(crate) use questions::halves_with_questions;
@@ -71,6 +71,7 @@ impl Setting {
 
 /// One record as a batch reads it: today's evidence for a batch of one, and
 /// the JSON value a batch quotes, lists, hashes, and compares for copies.
+#[derive(Clone)]
 pub(crate) struct BatchRecord {
     pub(crate) evidence: Evidence,
     pub(crate) value: Json,

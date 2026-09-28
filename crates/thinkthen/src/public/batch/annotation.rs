@@ -82,17 +82,15 @@ where
             &worker,
             &cancel,
             &|work: &GroupWork| {
-                let answered = worker
-                    .answer_group_batch(&work.batch, &work.places, &cancel)
-                    .map_err(Error::from)?;
-                if answered.len() != work.rows.len() {
+                let answered = worker.answer_group_batch(work, &cancel)?;
+                if answered.value.len() > work.rows.len() {
                     return Err(Error::defect("an annotate request lost a row"));
                 }
                 let value = work
                     .rows
                     .iter()
                     .copied()
-                    .zip(answered)
+                    .zip(answered.value)
                     .map(|(row, answer)| Fragment {
                         row,
                         group: work.group,
@@ -104,7 +102,7 @@ where
                     records: 0,
                     replayed: 0,
                     partial_failure: false,
-                    stop: None,
+                    stop: answered.stop,
                 })
             },
             &sender,

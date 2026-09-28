@@ -1,6 +1,6 @@
 //! Pure request packing for one compatible annotate group slice.
 
-use super::{Batch, BatchError, BatchRecord, Batcher, Setting};
+use super::{Batch, BatchError, BatchRecord, Batcher, Setting, text};
 use crate::core::{Backend, BackendProfile, Question};
 
 /// One input record's named logical questions and their decoded places.
@@ -16,12 +16,20 @@ impl GroupBatcher {
     pub(crate) fn new(
         backend: Backend,
         profile: Option<BackendProfile>,
-        questions: Vec<Question>,
+        mut questions: Vec<Question>,
         setting: Setting,
     ) -> Result<Self, BatchError> {
         if questions.is_empty() {
             return Err(BatchError::Defect("an annotate group asks nothing"));
         }
+        let setting = if questions
+            .iter_mut()
+            .any(|question| text(question).as_json().as_str().is_none())
+        {
+            Setting::Records(std::num::NonZeroUsize::MIN)
+        } else {
+            setting
+        };
         Batcher::new_slice(backend, profile, questions, setting, None, true).map(Self)
     }
 
@@ -38,6 +46,44 @@ impl GroupBatcher {
     pub(crate) fn finish(&mut self) -> Result<Option<Batch>, BatchError> {
         self.0.finish()
     }
+}
+
+/// Rebuild one refused group request as two complete, ordered group slices.
+pub(crate) fn group_halves(
+    backend: &Backend,
+    profile: Option<&BackendProfile>,
+    questions: &[Question],
+    records: &[BatchRecord],
+) -> Result<[Batch; 2], BatchError> {
+    if records.len() < 2 {
+        return Err(BatchError::Defect(
+            "a group batch needs two members to halve",
+        ));
+    }
+    let at = records.len().div_ceil(2);
+    let build = |records: &[BatchRecord]| -> Result<Batch, BatchError> {
+        let mut planner = GroupBatcher::new(
+            backend.clone(),
+            profile.cloned(),
+            questions.to_vec(),
+            Setting::Records(
+                std::num::NonZeroUsize::new(records.len())
+                    .ok_or(BatchError::Defect("an empty group half"))?,
+            ),
+        )?;
+        let mut closed = Vec::new();
+        for record in records {
+            planner.push(record.clone(), &mut closed)?;
+        }
+        closed.extend(planner.finish()?);
+        <[Batch; 1]>::try_from(closed)
+            .map(|[batch]| batch)
+            .map_err(|_| BatchError::Defect("a group half formed more than one batch"))
+    };
+    let (left, right) = records
+        .split_at_checked(at)
+        .ok_or(BatchError::Defect("a group half is outside its request"))?;
+    Ok([build(left)?, build(right)?])
 }
 
 #[cfg(test)]
@@ -159,6 +205,38 @@ mod tests {
             closed
                 .iter()
                 .all(|batch| batch.plan.wire_question_count() == 4)
+        );
+    }
+
+    #[test]
+    fn structured_question_keeps_singleton_request_shape() {
+        let backend =
+            Backend::resolve(Some("http://127.0.0.1:9"), None, "jev-latest").expect("backend");
+        let question = Question::Decide {
+            text: QuestionText::structured(&crate::core::Json::Object(vec![(
+                "ask".to_owned(),
+                crate::core::Json::String("Structured?".to_owned()),
+            )]))
+            .expect("structured question"),
+            yes: None,
+            no: None,
+        };
+        let mut planner =
+            GroupBatcher::new(backend.clone(), None, vec![question.clone()], Setting::Max)
+                .expect("group");
+        let mut closed = Vec::new();
+        planner.push(record("alpha"), &mut closed).expect("first");
+        planner.push(record("beta"), &mut closed).expect("second");
+        assert_eq!(closed.len(), 2);
+        let old = Plan::new(
+            Evidence::new("alpha").expect("evidence"),
+            backend.model().clone(),
+            vec![question],
+        )
+        .expect("old plan");
+        assert_eq!(
+            closed.first().expect("first batch").body,
+            built_in::encode(&old).expect("old body")
         );
     }
 }

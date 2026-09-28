@@ -66,16 +66,17 @@ pub(crate) fn rendered(
             .iter()
             .zip(&annotation.receipts)
             .map(|((name, entry), receipt)| {
-                Ok((
-                    name.clone(),
-                    ObservedQuestion::from_annotated(
-                        entry,
-                        set.profile(),
-                        engine.backend(),
-                        model,
-                        (receipt.usage, receipt.requests_sent, receipt.replayed),
-                    )?,
-                ))
+                let mut detail = ObservedQuestion::from_annotated(
+                    entry,
+                    set.profile(),
+                    engine.backend(),
+                    model,
+                    (receipt.usage, receipt.requests_sent, receipt.replayed),
+                )?;
+                if let Some(parent) = &receipt.parent_request {
+                    detail.prepend_request(parent.clone());
+                }
+                Ok((name.clone(), detail))
             })
             .collect::<Result<Vec<_>, Error>>()?
     } else {
