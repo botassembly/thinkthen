@@ -7,6 +7,8 @@ use crate::engines;
 #[repr(C)]
 #[derive(Debug)]
 pub(crate) struct BridgeSettings {
+    batch_bytes: *const u8,
+    batch_len: usize,
     throttle: i64,
     max_requests: i64,
     max_request_bytes: i64,
@@ -49,6 +51,12 @@ pub(crate) fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String>
         record: optional(settings.record_bytes, settings.record_len)?,
         replay: optional(settings.replay_bytes, settings.replay_len)?,
     })
+}
+
+pub(crate) fn batch(settings: &BridgeSettings) -> Result<Option<String>, String> {
+    (!settings.batch_bytes.is_null())
+        .then(|| text(settings.batch_bytes, settings.batch_len).map(str::to_owned))
+        .transpose()
 }
 
 pub(crate) fn probe(settings: &BridgeSettings, path: &str) -> engines::Probe {

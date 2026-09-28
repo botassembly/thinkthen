@@ -13,6 +13,9 @@ mod contracts;
 #[path = "public_batches/splits.rs"]
 mod splits;
 
+#[path = "public_batches/native.rs"]
+mod native;
+
 #[path = "public_batches/recognition.rs"]
 mod recognition;
 

@@ -195,6 +195,10 @@ def case(function):
 def main() -> int:
     """Run every registered case, or the ones named on the command line."""
     named = set(sys.argv[1:])
+    absent = named - {function.__name__ for function in CASES}
+    if absent:
+        print(f"FAIL unknown selected case: {sorted(absent)[0]}")
+        return 2
     failed = 0
     for function in CASES:
         if named and function.__name__ not in named:

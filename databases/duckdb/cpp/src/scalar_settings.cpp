@@ -37,7 +37,8 @@ bool FolderAllowed(ClientContext &context, const std::optional<string> &folder) 
 } // namespace
 
 SessionSettings Settings(ClientContext &context) {
-	SessionSettings settings {NumericSetting(context, "thinkthen_throttle"),
+	SessionSettings settings {TextSetting(context, "thinkthen_batch"),
+	                          NumericSetting(context, "thinkthen_throttle"),
 	                          NumericSetting(context, "thinkthen_max_requests"),
 	                          NumericSetting(context, "thinkthen_max_request_bytes"),
 	                          NumericSetting(context, "thinkthen_max_requests_total"),
