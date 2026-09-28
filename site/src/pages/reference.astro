@@ -27,7 +27,7 @@ const GLOBAL = [
   ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', dflt('Dry run')],
   ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
   ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
-  ['--timeout SECONDS', takes('Timeout'), 'Covers one attempt, connect to last byte. 0 is a usage error.', setting('Timeout').number],
+  ['--timeout SECONDS', takes('Timeout').split(';')[0].replace(/^command: /, ''), 'Covers one attempt from connect to last byte. Other values exit 2.', setting('Timeout').number],
   ['--max-retries N', takes('Retries'), 'How many times a retried status is sent again. A transport failure is never sent again.', setting('Retries').default],
   ['--record DIR', takes('Recording'), 'Calls the backend and writes each exchange into DIR. The folder is created when absent.', dflt('Recording')],
   ['--replay DIR', takes('Recording'), 'Answers from DIR alone. No connection and no key. A missing entry is exit 5.', dflt('Recording')],
@@ -211,7 +211,7 @@ const COUNTS = [
     <li>An entry holds the evidence. A folder the tool creates is mode 0700 and each entry is 0600, whatever the umask says.</li>
     <li>The first write binds a folder to one backend through a private marker. Reusing that folder against another address fails at exit 5, before the key is read and before any request. The message names the address this run asked for, and for the default cache it names <code>--no-cache</code> and <code>THINKTHEN_CACHE</code>.</li>
     <li>An explicit <code>--record</code> or <code>--replay</code> replaces the default cache for that run.</li>
-    <li><code>thinkthen cache prune DIR</code> is the only way entries are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> and deletes nothing.</li>
+    <li><code>thinkthen cache prune DIR</code> is the only way entries are removed, and <code>DIR</code> is always explicit. <code>--older-than</code> and <code>--answered-by-other-than MODEL</code> select a union, and <code>--max-size BYTES</code> sets a target for that run. <code>MODEL</code> is the version that answered, as a result's <code>meta.model</code> shows it. Prune refuses the alias passed to <code>--model</code> or a model no reply in the folder names, and deletes nothing. An empty folder accepts any model name.</li>
     <li>Nothing trims the cache on its own. It grows, and keeps the judged text, until you run <code>cache prune</code>.</li>
   </ul>
   <p>Count-only usage totals live beside the cache, in <code>thinkthen-usage</code>. One file per UTC month holds requests sent, input tokens, output tokens, and cache answers. The files hold no request, no response, no address, no model, no price, and no key. <code>THINKTHEN_CACHE</code> never moves them and <code>--no-cache</code> never turns them off. They count what this machine saw. Your provider’s bill is the real cost.</p>

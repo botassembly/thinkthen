@@ -79,3 +79,15 @@ does not execute any proposed command. Its host mapping was checked on
 twins, and checks 130 internal routes. The sample checker still examines
 copyable examples; it omits exact recorded inputs and wire bodies that the
 smoke run consumes.
+
+## Reference and site guard follow-up
+
+The SQLite install text now states the complete-request cache rule and names
+`thinkthen_batch(1)` for the legacy scalar-after-warm recipe. The DuckDB
+recognize sample unnests the scalar relation list, and its relate sample uses
+the current rule shape. The reference page matches the command's timeout
+range and prune's refusal of a model no reply names. The built HTML check
+catches a stray `<code>` tag after a table. I planted that exact fault in a
+generated page and observed exit 1 with the page path, then restored the page
+and observed the 130-page link check pass. The red log is under
+`target/codex-builds/0241/stray-code-red.log`.

@@ -489,11 +489,11 @@ export const SURFACES = [
   {
     slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',
     lang: 'sql', tab: 'SQL',
-    blurb: 'One warm pass answers the whole table. Every later query reads the saved answers.',
+    blurb: 'Warm can prepare saved answers for later queries with the same complete request and model.',
     unsureWord: 'NULL',
     install: [['.load ./thinkthen', null]],
     particular: [
-      'SQLite calls a function one row at a time. `thinkthen_warm` answers the whole table in one pass first.',
+      'For scalar reuse after warm, set `thinkthen_batch(1)` before the engine is created and keep the question, context, and model the same.',
     ],
   },
   {
