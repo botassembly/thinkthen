@@ -84,3 +84,9 @@ When a host gains maximal batching, search its existing tests for asserted reque
 
 
 For cross-library work, list each changed surface’s source counters with its build prerequisites. Verify the root total and every affected named native/source total; the root ratchet excludes binding workspaces. Separate inherited metadata drift from the current ticket’s growth and preserve passing functional evidence while correcting it.
+
+
+For a timeout, trace every join and destructor after the apparent wait. The 0225 preparation confirmed that timing out Counters::finish alone leaves Drop joining the same blocked writer. Bound the lock acquisition that causes the wait, and distinguish that promise from arbitrary filesystem I/O. Keep advisory usage totals separate from the paid ledger. For an automatic split, decide whether the caller may continue after the left half before sending the right half; 0222 must preserve the stopping Rust path as well as native recoverable rows.
+
+
+Name the exact setting when checking accepted values: SQLite’s connection time budget accepts zero, while its process request total refuses zero. Do not copy a domain restriction between them. When a proof compares an emitted request with a corpus, name the actual capture route and derive observations from the bytes the listener received; hashing the expected body alone is no observation of the adapter.
