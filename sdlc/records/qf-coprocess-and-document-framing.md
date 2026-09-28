@@ -1,6 +1,6 @@
 # Quick Fix: name coprocess limits and annotate document framing
 
-Status: built for independent review. Branch: `ticket/qf-coprocess-and-document-framing`. Based on `origin/main` at `5de14a00`. Scope: experiment 284 register 55 and 70. No runtime source changed.
+Status: accepted by fresh independent review; ready for coordinator landing. Branch: `ticket/qf-coprocess-and-document-framing`. Based on `origin/main` at `5de14a00`. Scope: experiment 284 register 55 and 70. No runtime source changed.
 
 ## Findings and source evidence
 
@@ -15,7 +15,9 @@ The README now recommends `decide --lines --batch 1` for a line-at-a-time reques
 
 The builder checked the changed pages, the cited source and existing regression test, `sdlc/scripts/pages`, `sdlc/scripts/tickets`, and `git diff --check`. The changed files are not executable demo pages with a 900-word limit. No provider, broad gate, or paid call ran.
 
-Recommend closing register 55 and 70 after a fresh independent prose and source review accepts this candidate and it lands. Preserve the shared records page's independent 0213 edits when merging second. The work plan and register remain for the coordinator to update.
+A fresh independent reviewer returned ACCEPT for exact candidate `4ac6f43755febf60c5bed2160d7db3e076b8e46d`, with no blocking findings. The review traced the flush, dropped filter output, held rank order, annotate JSON detection, and available framing choices in source. Its abbreviated-command note was optional; product prose stays as reviewed. A later fetch found `origin/main` still at the candidate's base `5de14a00`, so merging main added no commit and changed no reviewed prose. After this record update, `sdlc/scripts/pages`, `sdlc/scripts/tickets`, and `git diff --check` passed again.
+
+Recommend closing register 55 and 70 when the coordinator lands the accepted candidate. Preserve the shared records page's independent 0213 edits when merging second. The work plan and register remain for the coordinator to update.
 
 ## What the build taught us
 
