@@ -24,7 +24,9 @@ use crate::core::recording::{Digest, Exchange};
 use crate::core::render::json_line;
 use crate::core::text::{Evidence, QuestionText};
 
+mod groups;
 mod questions;
+pub(crate) use groups::{GroupBatcher, GroupMember};
 #[cfg(test)]
 pub(crate) use questions::halves;
 pub(crate) use questions::halves_with_questions;
@@ -95,6 +97,8 @@ pub(crate) struct Batch {
     pub(crate) outcomes: Vec<usize>,
     /// The complete question of each logical row, before record quoting.
     pub(crate) row_questions: Vec<Question>,
+    /// Complete logical slices for annotate members, absent on ordinary batches.
+    pub(crate) group_members: Option<Vec<GroupMember>>,
     pub(crate) closed: Closed,
 }
 
@@ -131,8 +135,8 @@ pub(crate) enum BatchError {
 /// One distinct record in the open batch.
 struct Joined {
     record: BatchRecord,
-    base: Question,
-    question: Option<Question>,
+    base: Vec<Question>,
+    question: Option<Vec<Question>>,
     wire: usize,
     share: usize,
     line_len: usize,
@@ -142,7 +146,8 @@ struct Joined {
 pub(crate) struct Batcher {
     backend: Backend,
     profile: Option<BackendProfile>,
-    question: Question,
+    question: Vec<Question>,
+    grouped: bool,
     size: Option<usize>,
     context: Option<Evidence>,
     /// The batched evidence: the context, `QUOTED`, or `None` for the records' list.
@@ -175,8 +180,21 @@ impl Batcher {
         setting: Setting,
         context: Option<Evidence>,
     ) -> Result<Self, BatchError> {
-        let mut question = question;
-        let quotable = text(&mut question).as_json().as_str().is_some();
+        Self::new_slice(backend, profile, vec![question], setting, context, false)
+    }
+
+    fn new_slice(
+        backend: Backend,
+        profile: Option<BackendProfile>,
+        question: Vec<Question>,
+        setting: Setting,
+        context: Option<Evidence>,
+        grouped: bool,
+    ) -> Result<Self, BatchError> {
+        let quotable = question.iter().all(|question| {
+            let mut question = question.clone();
+            text(&mut question).as_json().as_str().is_some()
+        });
         if context.is_some() && !quotable {
             return Err(BatchError::StructuredQuestionWithContext);
         }
@@ -185,10 +203,12 @@ impl Batcher {
             Setting::Max => None,
             Setting::Records(most) => Some(most.get()),
         };
-        let shared = match (&context, &question) {
-            (Some(context), _) => Some(context.clone()),
-            (None, Question::Decide { .. }) => Some(Evidence::new(QUOTED).map_err(|_| defect())?),
-            (None, _) => None,
+        let shared = if let Some(context) = &context {
+            Some(context.clone())
+        } else if !grouped && matches!(question.first(), Some(Question::Decide { .. })) {
+            Some(Evidence::new(QUOTED).map_err(|_| defect())?)
+        } else {
+            None
         };
         let evidence = match &shared {
             Some(shared) => shared.as_text().map_err(|_| defect())?.len(),
@@ -198,6 +218,7 @@ impl Batcher {
             backend,
             profile,
             question,
+            grouped,
             size,
             context,
             shared,
@@ -222,7 +243,7 @@ impl Batcher {
         record: BatchRecord,
         closed: &mut Vec<Batch>,
     ) -> Result<(), BatchError> {
-        self.push_with_question(record, self.question.clone(), closed)
+        self.push_slice(record, self.question.clone(), closed)
     }
 
     /// Close the open batch at the end of input, if it holds a record.
@@ -331,17 +352,39 @@ impl Batcher {
             .iter()
             .scan(0, |at, held| Some(std::mem::replace(at, *at + held.wire)))
             .collect();
+        let logical: Vec<usize> = distinct
+            .iter()
+            .scan(0, |at, held| {
+                Some(std::mem::replace(at, *at + held.base.len()))
+            })
+            .collect();
+        let group_members = self.grouped.then(|| {
+            members
+                .iter()
+                .filter_map(|&place| {
+                    let held = distinct.get(place)?;
+                    let first = *logical.get(place)?;
+                    Some(GroupMember {
+                        outcomes: (first..first + held.base.len()).collect(),
+                    })
+                })
+                .collect()
+        });
         Ok(Batch {
             digest: Exchange::new(self.backend.url(), &body).digest(),
             questions: members
                 .iter()
                 .filter_map(|&place| firsts.get(place).copied())
                 .collect(),
-            outcomes: members.clone(),
+            outcomes: members
+                .iter()
+                .filter_map(|&place| logical.get(place).copied())
+                .collect(),
             row_questions: members
                 .iter()
-                .filter_map(|&place| distinct.get(place).map(|held| held.base.clone()))
+                .filter_map(|&place| distinct.get(place)?.base.first().cloned())
                 .collect(),
+            group_members,
             plan,
             body,
             closed,
@@ -362,13 +405,13 @@ impl Batcher {
             Some(only) if !batched => Plan::new(
                 only.record.evidence.clone(),
                 self.model(),
-                vec![only.base.clone()],
+                only.base.clone(),
             )
             .map_err(|_| defect())?,
             _ => self.plan(
                 &distinct
                     .iter()
-                    .filter_map(|held| Some((&held.record.value, held.question.as_ref()?)))
+                    .filter_map(|held| Some((&held.record.value, held.question.as_deref()?)))
                     .collect::<Vec<_>>(),
             )?,
         };
@@ -389,7 +432,7 @@ impl Batcher {
     }
 
     /// The batched plan of these records: the shared evidence or their values.
-    fn plan(&self, pairs: &[(&Json, &Question)]) -> Result<Plan, BatchError> {
+    fn plan(&self, pairs: &[(&Json, &[Question])]) -> Result<Plan, BatchError> {
         let values = || records(pairs.iter().map(|(value, _)| (*value).clone()).collect());
         let evidence = match &self.shared {
             Some(shared) => shared.clone(),
@@ -397,13 +440,13 @@ impl Batcher {
         };
         let questions = pairs
             .iter()
-            .map(|(_, question)| (*question).clone())
+            .flat_map(|(_, questions)| questions.iter().cloned())
             .collect();
         Plan::new(evidence, self.model(), questions).map_err(|_| defect())
     }
 
     /// The wire questions and encoded bytes of the batched plan of these records.
-    fn measured(&self, pairs: &[(&Json, &Question)]) -> Result<(usize, usize), BatchError> {
+    fn measured(&self, pairs: &[(&Json, &[Question])]) -> Result<(usize, usize), BatchError> {
         let plan = self.plan(pairs)?;
         let body = built_in::encode(&plan).map_err(|_| defect())?;
         Ok((plan.wire_question_count(), body.len()))

@@ -48,6 +48,7 @@ pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
 };
+pub(crate) use crate::core::batch::GroupBatcher;
 pub(crate) use crate::core::batch::{Batch, BatchError, BatchRecord, Batcher, Setting};
 pub(crate) use crate::core::digest::bytes_sha256;
 #[cfg(test)]
