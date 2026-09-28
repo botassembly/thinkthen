@@ -4,7 +4,7 @@ opens: sdlc/tickets/0232-macos-sqlite-checks.md sdlc/records/0226-macos-arm64-pa
 
 # 0232: Check installed SQLite packages on macOS ARM64
 
-Status: design ACCEPT at `ba45d60e` by a fresh independent reviewer; checker implementation underway. Owner: Codex. This ticket serves the macOS ARM64 SQLite package remainder of ticket 0226. Its product source is read-only; it changes setup, packaging and verification code after design review. The first isolated M5 checkout was based on pushed `10f85fa7` and visibly reported the unrelated `site/examples/beatles/BENCH` case collision.
+Status: design ACCEPT at `ba45d60e` by a fresh independent reviewer; checker implementation passed focused M5 proof and awaits independent code review. Owner: Codex. This ticket serves the macOS ARM64 SQLite package remainder of ticket 0226. Its runtime product source remains unchanged; it changes setup, packaging and verification code after design review. The first isolated M5 checkout was based on pushed `10f85fa7` and visibly reported the unrelated `site/examples/beatles/BENCH` case collision.
 
 ## Outcome and retained behavior
 
@@ -36,4 +36,4 @@ The smallest reviewable validation is: hash-check both source trees; compile the
 
 ## What the build taught us
 
-Pending implementation and review.
+The M5's `/sbin/sha256sum` hashes files but does not check manifests, so selecting it by command name was insufficient. Its managed Python has SQLite 3.50.4 built in, which made a loader-path override unsuitable for the exact 3.50.0 and below-floor cases. A native probe through the existing `test_schema.py` functions gave the exact host versions without rebuilding Python. The first macOS archive exposed an absolute builder path in `LC_ID_DYLIB`; the relative install name and raw-byte scan closed that package gap. Both successful and failed loads remained mapped on this M5. The host probe's cache stamp now includes its source so a changed assertion cannot reuse an old binary. The design reviewer also caught source-mode `.so` and `nm -D` assumptions, which the checker now selects by host. The [build record](../records/0232-build.md) separates those installed results from the earlier synthetic panic tests and leaves macOS 15 compatibility open.

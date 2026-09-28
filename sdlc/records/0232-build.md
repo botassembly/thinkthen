@@ -1,0 +1,29 @@
+# 0232 macOS SQLite package checker build
+
+Status: implementation and focused M5 native package proof passed at pushed candidate `b1013288`; a one-line cache-stamp correction followed and needs the same focused host check. Independent code review is pending. This record does not establish a macOS 15 runner result or complete other 0226 targets.
+
+## Changed behavior
+
+The installed SQLite check now selects packaged `libthinkthen0.dylib` on macOS. Existing `test_schema.py` entry points call one native host probe linked directly to checked SQLite 3.50.0 and 3.49.0 amalgamations. The probe executes real SQLite load, SQL, close, later SQL and dyld image inspection. Ordinary examples and conformance run with a selected Python 3.10+ executable and retain their own backend counts. The Linux Python host route remains. The new SQLite build script gives the macOS dylib a relative install name. Checks use `shasum -a 256 -c` where M5's `sha256sum` cannot verify a manifest, and source mode selects the platform library and exported symbol spelling.
+
+The official SQLite 3.50.0 zip has SHA-256 `f196539ae448ecb304f05598d8614b125ace159a63a980dca691e066250d7fa2`; its two repository-pinned source hashes matched. The official 3.49.0 zip has SHA-256 `cb6851ebad74913672014c20f642bbd7883552c4747780583a54ee1cd493f13b`; its pinned `sqlite3.c` and `shell.c` hashes matched. One-time setup compiled both probes and the pinned 3.50.0 CLI on the M5. The existing `setup.sh` had previously stopped at M5's unsupported `sha256sum --check --quiet`, before compilation; the revised setup passed.
+
+## Exact M5 package and installed results
+
+The M5 checkout was detached at pushed `b101328825ba1473e6bdde63ef9f613a4b8bbb99`. The unrelated tracked `site/examples/beatles/BENCH` case collision remained visible as deleted on its case-insensitive filesystem. It did not change the C or SQLite package inputs. Host load was low before the earlier C slice; each heavy command here acquired `/tmp/thinkthen-heavy.lock`.
+
+`release-pack aarch64-apple-darwin ... sqlite` built `thinkthen-sqlite-0.0.1-aarch64-apple-darwin.tar.gz`, SHA-256 `72d9f7165149d7f16d3656c230cb42ee6dfcca865e15b710cfa4e02f6200d048`. Its packaged `libthinkthen0.dylib` has SHA-256 `0c7244592f9662afa5cff72c5a81a66b47f7837ef84b7bb3a12143679b0c7d6d`. `otool -D` reports `@rpath/libthinkthen0.dylib`, and a raw-byte check found zero occurrences of `/Users/ian` in the dylib. `nm -aC` found a local `std::panicking::HOOK` symbol. The dylib links only system dynamic libraries. Its Mach-O build version reports minos 11.0 and SDK 26.5.
+
+The existing installed `databases/sqlite/check.sh` passed with managed Python 3.13.13, whose built-in SQLite reports 3.50.4. Installed examples passed. The installed conformance driver reported 51 pass, 0 FAIL, and 3 declared not-run among 54 selected cases. The selected existing `test_schema.py` functions then passed both native-host load assertions. The pinned 3.50.0 probe reported load 0, `thinkthen_usage()` with `requests_sent: 0`, later `SELECT 7`, and resident 1 after close. The genuine 3.49.0 probe reported load 1 with the exact `thinkthen needs SQLite 3.50.0 or newer ... this host is 3.49.0 (3049000)` sentence, later `SELECT 7`, and resident 1 after failed load and close. Both returned an empty stderr. This package's failed-load residency is an observed M5 dyld outcome, not evidence of an explicit failed-load pin or a guarantee on every macOS build.
+
+M5 uses Homebrew Rust/Cargo 1.95.0 for aarch64-apple-darwin, Apple clang 21.0.0 and SDK 26.5. The native probe binary's build version reports minos 26.0. The final dylib's minos 11.0 does not establish that all linked Rust standard-library objects run on macOS 15; ticket 0231 investigates the compatible sysroot. This check claims only native M5 ARM64 behavior.
+
+## Focused checks and retained evidence
+
+On M5, SQLite `cargo fmt --check` and strict all-target/all-feature offline Clippy passed. The source-mode macOS symbol command found only `_sqlite3_thinkthen_init`; the guard count stayed one; a byte-oriented search found no builder home in the release dylib. The complete source-mode `check.sh` and repository `surfaces` rung were not run. On Linux, shell syntax, Python syntax, `sdlc/scripts/tickets`, `git diff --check`, and the SQLite Python ratchet passed. That ratchet rose from 1,714 to 1,737 nonblank test lines: 23 lines add the selected native-host assertions and platform library name while reusing the existing test entry points. The new native C probe has no product export or dependency. The caught-panic Rust guard and worker files are unchanged from the earlier 3/3 source child run at `10f85fa7`; no installed test injects a synthetic panic.
+
+Retained M5 logs are `/tmp/thinkthen-m5-0232-setup.log`, `/tmp/thinkthen-m5-0232-pack.log`, `/tmp/thinkthen-m5-0232-installed.log`, `/tmp/thinkthen-m5-0232-lint.log`, `/tmp/thinkthen-m5-0232-floor-success.log`, and `/tmp/thinkthen-m5-0232-floor-refusal.log`. The pack log is empty because successful quiet Cargo and packaging emitted no output. The archives and checksum manifest remain in `/tmp/thinkthen-m5-artifacts-0232/`, with the unpacked dylib in `/tmp/thinkthen-m5-sqlite-installed-0232/`. The source zips and exploratory first probe remain under `/tmp/thinkthen-sqlite-*`; none is committed or published.
+
+## Remaining work
+
+Recheck the cache-stamp correction on M5, then have a fresh independent reviewer inspect the exact checker diff and evidence. The release package still needs an actual macOS 15 compatibility result before any such support claim. Linux ARM64, macOS Intel, retained DuckDB C API and separate language-binding panic issues remain outside this ticket.

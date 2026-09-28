@@ -9,7 +9,8 @@ stamp=$(cd -- "$source" && shasum -a 256 sqlite3.c shell.c)
 if [ "$(uname -s)" = Darwin ]; then
 	old=${SQLITE_OLD_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3490000}
 	stamp="$stamp
-$(cd -- "$old" && shasum -a 256 sqlite3.c shell.c)"
+$(cd -- "$old" && shasum -a 256 sqlite3.c shell.c)
+$(shasum -a 256 "$(dirname -- "$0")/load_probe.c")"
 	if [ -x "$host/load-probe-3500000" ] && [ -x "$host/load-probe-3490000" ] &&
 		[ -x "$host/sqlite3" ] && [ "$(cat -- "$host/SOURCE.sha256" 2>/dev/null)" = "$stamp" ]; then
 		echo "$host"

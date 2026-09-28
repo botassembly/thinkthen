@@ -1,6 +1,6 @@
 # 0226 macOS ARM64 package proof
 
-Status: C source and installed archive proof passed on the M5 at pushed source `10f85fa74d56e627d4aa112173d96536d454d9d5`. SQLite source tests and archive build passed, but its installed macOS check remains open. This record does not close ticket 0226 or infer results for macOS Intel, Linux ARM64, or retained DuckDB packages.
+Status: C source and installed archive proof passed on the M5 at pushed source `10f85fa74d56e627d4aa112173d96536d454d9d5`. SQLite source tests and its first archive build passed there. A later SQLite package and installed native-host check passed under ticket 0232 at `b1013288`, pending its independent code review. Neither result establishes macOS 15 compatibility or closes ticket 0226's other target remainders.
 
 ## Host and source boundary
 
@@ -25,3 +25,7 @@ The SQLite archive `thinkthen-sqlite-0.0.1-aarch64-apple-darwin.tar.gz` has SHA-
 ## Independent evidence review
 
 Fresh independent Sol Medium reviewer `01a0e7b1-7833-7bd0-8cd4-e036596115c8` accepted this limited C macOS ARM64 record after the `564d6e1c` wording correction. It verified the archive and build hashes, both focused source logs, the installed C runner and three loopback sends; it replayed only the three retained small loader probes. The empty packaging log establishes no command or exit by itself. The artifact checks support identity, and loader observations remain host-specific. SQLite installed proof and other targets remain open. The reviewer made no source edits or broad reruns.
+
+## Later SQLite package candidate
+
+Ticket 0232's [build record](0232-build.md) holds the exact later archive, real SQLite 3.50.0 and 3.49.0 host outputs, installed examples and conformance, Mach-O install-name correction, and M5 evidence paths. It uses a later source tree containing landed 0212 adapter changes; the caught-panic guard and worker source checked above did not change between `10f85fa7` and `b1013288`. The earlier review remains a C-only acceptance at its own archive hash. The later SQLite candidate needs its own code review before the macOS ARM64 package remainder can be marked reviewed.
