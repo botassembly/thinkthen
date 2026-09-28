@@ -1,6 +1,10 @@
 # The scalar-bind surface is unusable on DuckDB's stable C API
 
-Status: Open. Ticket 0110 landed on 2026-09-25 (`sdlc/records/0110-port-the-duckdb-surface.md`) and works around this page without fixing it. The extension registers each scalar through the raw C API with an init callback and no bind callback. `SET thinkthen_max_requests` caps one chunk's call, and `databases/duckdb/README.md` names this page as the lever for a per-query cap. The bind path stays broken, and the decision below stays Ian's.
+Status: Closed (non-issue). Superseded for the shipped product by the accepted C++ route under ADR 0081, 0201 and 0231. Fresh criterion review accepted `5ee51bf8`. This does not claim the upstream stable C API was repaired or authorize an upstream report. Native Intel and release-runner qualification remain in 0231 and 0128.
+
+The earlier investigation below is historical. The [closure reconciliation](../../records/2026-09-28-platform-closure-reconciliation.md) maps original criteria to accepted proof.
+
+Historical status before the C++ migration: Ticket 0110 landed on 2026-09-25 (`sdlc/records/0110-port-the-duckdb-surface.md`) and works around this page without fixing it. The extension registers each scalar through the raw C API with an init callback and no bind callback. `SET thinkthen_max_requests` caps one chunk's call, and `databases/duckdb/README.md` names this page as the lever for a per-query cap. The bind path stays broken, and the decision below stays Ian's.
 
 Found by experiment 207 (`experiments/207-thinkthen-db/duckdb/NOTES.md`, entry on the round-one build, isolated step by step). Nobody opens an issue upstream. Ian decides.
 

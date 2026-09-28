@@ -1,7 +1,7 @@
 # ADR 0096: One ordered SQL set enters one find call
 
 - Status: Accepted. Independent technical review accepted `e648e35f`; Ian approved the recommended SQL spelling in the work plan on 2026-09-28, decision 6. SQLite implementation is claimed under 0224; no host completion follows from this decision.
-- Context: [issue: SQL find is missing](../../issues/2026-09-27-sql-find-is-missing-from-three-databases.md), [ticket 0224](../../tickets/0224-sql-group-find.md), and settled [find](../../../specification/find.md).
+- Context: [issue: SQL find is missing](../../issues/closed/2026-09-27-sql-find-is-missing-from-three-databases.md), [ticket 0224](../../tickets/0224-sql-group-find.md), and settled [find](../../../specification/find.md).
 
 ## Decision
 

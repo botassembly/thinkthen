@@ -1,6 +1,10 @@
 # Register the DuckDB scalars through the C API to get a per-query hook
 
-Found: 2026-09-23, review 7 fixer lane (databases). Severity: low. Status: open, follow-up.
+Status: Closed (done). The accepted C++ route under 0201 and 0231 supplies statement lifetime and late-signal handling on every selected package route. Fresh criterion review accepted `5ee51bf8` against retained installed proofs. The product no longer relies on the old C API hook. Native Intel and release-runner qualification remain in 0231 and 0128.
+
+The earlier investigation below is historical. The [closure reconciliation](../../records/2026-09-28-platform-closure-reconciliation.md) maps original criteria to accepted proof.
+
+Found: 2026-09-23, review 7 fixer lane (databases). Severity at filing: low; then open as follow-up.
 
 ## What was observed
 

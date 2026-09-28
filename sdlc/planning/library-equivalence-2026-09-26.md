@@ -300,7 +300,7 @@ The tests section 4 and section 5 name. Land E11 before E7, so batching starts f
 - **DuckDB's stable C API limits errors and cancel.**
   - A scalar can set only an error message, so the kind cannot become a host class. The message prefix is the contract.
   - A scalar cannot see the query's interrupt, so `con.interrupt()` never reaches it (`databases/duckdb/README.md:68`).
-  - Scalar bind is unusable (`sdlc/issues/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md`).
+  - Scalar bind is unusable (`sdlc/issues/closed/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md`).
   - An aggregate has no client context and cannot read `SET` values. That is why warm skips the request total (`src/tables.rs:69-93`).
   - A table function cannot run SQL on the caller's connection.
   - What would change the answer: DuckDB adding these to its stable C API, or a move to the C++ extension API, which ties each build to one DuckDB version.

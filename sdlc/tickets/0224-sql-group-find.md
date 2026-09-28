@@ -1,5 +1,5 @@
 ---
-opens: sdlc/tickets/0224-sql-group-find.md sdlc/records/0224-sql-find-preflight.md sdlc/records/0224-design-review.md sdlc/planning/adr/0096-sql-group-find-contract.md sdlc/issues/2026-09-27-sql-find-is-missing-from-three-databases.md crates/thinkthen/src/public/bulk.rs crates/thinkthen/src/public/results.rs databases/sqlite databases/postgresql databases/duckdb conformance specification/find.md sdlc/ratchet.json
+opens: sdlc/tickets/0224-sql-group-find.md sdlc/records/0224-sql-find-preflight.md sdlc/records/0224-design-review.md sdlc/planning/adr/0096-sql-group-find-contract.md sdlc/issues/closed/2026-09-27-sql-find-is-missing-from-three-databases.md crates/thinkthen/src/public/bulk.rs crates/thinkthen/src/public/results.rs databases/sqlite databases/postgresql databases/duckdb conformance specification/find.md sdlc/ratchet.json
 ---
 
 # 0224: Find one best unit from an ordered SQL group
