@@ -14,3 +14,6 @@ Follow-up review against local experiment 284 details 47 and 98, landed tickets 
 4. **Scope and decision:** Check exact output, no committed temporary names, unchanged final-entry summary when no temporary exists, parent/adaptor inventory and 463/500 headroom. Ian accepted the new public fields and irreversible unlink of matching regular partials in both cache and named recording folders at `a2c9057a`. Model freshness, binding, usage wait and folder authority remain separate.
 
 The accepted design informed the [build record](0208-build.md). A fresh independent code review must assess the frozen implementation. Do not infer closure of register 47 or 98 from design acceptance.
+
+
+The later implementation passed fresh independent code review at `60d10516`; [the build record](0208-build.md) records accepted growth, preserved limits and merged functional checks. Register closure follows that implementation proof, not this earlier design review.

@@ -1,6 +1,6 @@
 # 0208 cache maintenance build record
 
-Status: implementation candidate on `ticket/0208-cache-maintenance-preview-and-orphans`, awaiting fresh independent code review. The accepted design is `3a1edbbe`; Ian authorized its preview, temporary status fields and guarded explicit cleanup at main `a2c9057a`. The builder merged main `720431a8` into this branch at `9d81dc6d`. No register row is closed here.
+Status: complete. Fresh independent code review accepted `60d10516fec9680aaba6ed185cb9451cf2c1878d`; merged integration at `7b8c9f26` passed. The accepted design is `3a1edbbe`; Ian authorized its preview, temporary status fields and guarded explicit cleanup at main `a2c9057a`. The builder merged main `720431a8` into this branch at `9d81dc6d`. The landing closes register 47 and 98 with the scope and limits below.
 
 ## Changed boundary
 
@@ -23,3 +23,12 @@ I checked the existing prune tests before adding coverage. The deleted `prune_se
 ## Limits for review
 
 The gate proof is Linux-specific. Other supported hosts retain the existing shared/exclusive folder-lock design but did not run this interleaving check. A process that writes the named folder without taking the gate can race with name-based removal; PID and mtime are never treated as abandonment evidence. The mode-0400 test proves the early Local path on this host, while source review must verify all classification errors occur before deletion. The retained unit test proves an honest oldest final-entry prefix after a late injected failure; no new test-only hook or race campaign was added for temporary unlink failure. These limits do not change the accepted explicit-prune contract.
+
+
+## Accepted review and integration
+
+Fresh Codex Sol High review accepted `60d10516` with no findings. High effort covered irreversible temporary cleanup, cooperating-writer exclusion, no-write preview, the new status fields and measured source growth. The reviewer traced the shared folder gate through live writes and partial cleanup, complete classification before every unlink, and the shared final-entry selector. The reviewer accepted the stronger boundary coverage replacing the deleted duplicate test. It retained the Linux and permission-test limits above; it did not claim a stress campaign or cross-platform execution.
+
+The coordinator merged main `0a275716` at `7b8c9f26`. The only conflict was the derived root ratchet, remeasured at **80,114**, which is current main's 79,679 plus the accepted 435 lines. A Git comparison confirmed all 0208 product files, tests and changed specification pages remain byte-identical to accepted `60d10516`. Existing strict all-feature/all-target Clippy evidence is retained for this unchanged source; the intervening main changes already carry their own reviews and checks.
+
+Merged focused proof passed: backend `default_cache::prune` selected eight tests, including the live-partial gate case; status passed five tests; the retained cache-prune unit group passed four. Cargo reported compilation phases of 11.48, 0.28 and 10.27 seconds and execution phases of 0.16, 0.02 and 0.02 seconds. These are separate component timings, not a measured total wall time or lock-wait estimate. Format, policy (189 resolved packages), pages, tickets, ratchet and diff checks also passed. Logs remain in the lane's ignored `target/codex-builds/0208/integration/`. No provider, stress, full-port or repeated full-ladder run was needed. The next broad validation belongs to the related cache/recording checkpoint after 0210, with any affected constructor prerequisites integrated.

@@ -6,7 +6,7 @@ opens: sdlc/tickets/0208-cache-maintenance-preview-and-orphans.md sdlc/records/0
 
 # 0208: Preview cache maintenance and remove abandoned partials
 
-Status: accepted design at `3a1edbbe`, with Ian’s explicit public/deletion approval on main `a2c9057a`. The implementation candidate awaits fresh independent code review. Owner: Codex Sol Medium, codex-5. [Build evidence](../records/0208-build.md) records focused proof and limits.
+Status: complete. Fresh independent code review accepted `60d10516`; integration at `7b8c9f26` preserves that source and passed the focused checks. Ian approved the public behavior and explicit cleanup at `a2c9057a`. [Build evidence](../records/0208-build.md) records review, proof and limits.
 
 ## Outcome and authority
 
@@ -56,11 +56,11 @@ Ian approved the reviewed outward contract at main `a2c9057a`: additive `--dry-r
 
 ## Deferred gaps and closure
 
-No register row or product issue closes from the unreviewed candidate. After independent code review accepts the build, register 47 may close only for recognizable regular partials under the agreed gate rule. Register 98 may close only after a CLI proof shows accurate selection without writes or lock-file creation; Ian has accepted additive preview as sufficient. The landed unknown-model guard already fixed its original unmatched-typo example. Model freshness 09/23/105, binding 10, usage wait 31 and folder authority 40 stay with their existing owners. Unsafe dot names and external writers retain the limits stated above.
+Register 47 closes for recognizable regular partials under the agreed gate rule. Register 98 closes with the exact CLI preview proof showing accurate selection without writes or lock-file creation; Ian accepted additive preview as sufficient. The landed unknown-model guard already fixed its original unmatched-typo example. Model freshness 09/23/105, binding 10, usage wait 31 and folder authority 40 stay with their existing owners. Unsafe dot names and external writers retain the limits stated above.
 
 ## Routing
 
-Design review and Ian’s ruling are complete. The frozen implementation diff goes to a fresh independent code reviewer. The coordinator owns register closure and landing; Ian can overturn the public forms in their owning record.
+Design, code review and focused integration checks passed. The coordinator closes register 47 and 98 in the same landing. Ian can overturn the public forms in their owning record.
 
 ## What the preparation taught us
 
@@ -68,4 +68,4 @@ The 0163 follow-on memo correctly grouped hidden partials with prune preview but
 
 ## What the build taught us
 
-The preflight correctly identified the folder gate and parent-file cap. `cache_prune.rs` needed a private scan child so the final and temporary inspections could share one bounded plan without crossing 500 nonblank lines. The preview proof caught a separate mutation path: `try_acquire` creates `.locks`, so preview cannot enter the commit loop. A held-writer check found an actual partial at the listener event; its first fixture also counted `.thinkthen-backend.json` as a partial, so the corrected assertion matches the writer-shaped name. An older model/bad-entry test duplicated the exact alias, bad-name, secrecy and new preview cases and was removed. The new CLI proof checks names and bytes unchanged by preview, safe temporary cleanup and status visibility. A mode-0400 folder gave a deterministic inspection failure on this Linux host; the CLI returned Local with no success line or deletion. The test explicitly skips that assertion if a privileged host can still inspect the name. Source order puts the whole temporary scan before the first unlink, which still needs code review. The measured source rose from 80,239 to 80,674 nonblank lines: engine +164, CLI +58, backend tests +194 and status tests +19. Product growth is 222, tests 213; the file cap remains 500. The scan extraction reuses existing final-entry parsing, identity and allocated-byte helpers; no second parser or test harness was added.
+The preflight correctly identified the folder gate and parent-file cap. `cache_prune.rs` needed a private scan child so the final and temporary inspections could share one bounded plan without crossing 500 nonblank lines. The preview proof caught a separate mutation path: `try_acquire` creates `.locks`, so preview cannot enter the commit loop. A held-writer check found an actual partial at the listener event; its first fixture also counted `.thinkthen-backend.json` as a partial, so the corrected assertion matches the writer-shaped name. An older model/bad-entry test duplicated the exact alias, bad-name, secrecy and new preview cases and was removed. The new CLI proof checks names and bytes unchanged by preview, safe temporary cleanup and status visibility. A mode-0400 folder gave a deterministic inspection failure on this Linux host; the CLI returned Local with no success line or deletion. The test explicitly skips that assertion if a privileged host can still inspect the name. Source order puts the whole temporary scan before the first unlink, which independent code review confirmed. The measured source rose from 80,239 to 80,674 nonblank lines: engine +164, CLI +58, backend tests +194 and status tests +19. Product growth is 222, tests 213; the file cap remains 500. The scan extraction reuses existing final-entry parsing, identity and allocated-byte helpers; no second parser or test harness was added.
