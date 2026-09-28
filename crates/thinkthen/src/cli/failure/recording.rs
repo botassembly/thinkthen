@@ -113,7 +113,9 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
             5,
             format!(
                 "the default cache is bound to a backend address other than `{url}`; \
-                 go back to that address, use --no-cache, or set THINKTHEN_CACHE to another folder"
+                 stop every process using the cache, move the entire cache folder shown by \
+                 thinkthen status aside to preserve it, then retry; or set THINKTHEN_CACHE \
+                 to a new folder"
             ),
         ),
         Failure::RecordingBackendMismatch(url, false) => (

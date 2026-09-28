@@ -319,7 +319,7 @@ fn a_mismatch_names_the_folder_and_the_address() {
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
     let default_sentence = format!(
         "thinkthen: the default cache is bound to a backend address other than `{}`; \
-         go back to that address, use --no-cache, or set THINKTHEN_CACHE to another folder\n",
+         stop every process using the cache, move the entire cache folder shown by thinkthen status aside to preserve it, then retry; or set THINKTHEN_CACHE to a new folder\n",
         second.url()
     );
     let named_sentence = mismatch(second.url());
