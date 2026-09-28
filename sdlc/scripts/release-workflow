@@ -107,6 +107,11 @@ npm-assemble)
 	;;
 smoke-bundle)
 	[ "$#" = 4 ] || fail 'smoke-bundle PLATFORM_DIR NPM_DIR OUT'
+	duckdb=$(find "$2" -maxdepth 1 -name "thinkthen-duckdb-$version-*.tar.gz" -print)
+	[ -f "$duckdb" ] || fail 'this target has no DuckDB release archive'
+	for needed in ./LICENSE.thinkthen ./LICENSE.duckdb ./NOTICE ./DEPENDENCIES.txt; do
+		tar -tzf "$duckdb" | grep -Fxq "$needed" || fail "DuckDB archive lacks C++ package marker $needed"
+	done
 	mkdir -p "$4"
 	cp "$2"/* "$4/"
 	rm -f -- "$4/thinkthen-$version.tgz" "$4/thinkthen-$version.tgz.sha256"
