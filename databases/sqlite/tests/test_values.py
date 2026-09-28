@@ -54,6 +54,23 @@ say(**{{name: run(db, f"SELECT {{name}}(?, 'a red door')", ({BANDED!r},))
     expect(backend.close(), 0, "sends")
 
 
+def test_warm_step_refusal_discards_pending_groups_without_a_send() -> None:
+    """SQLite finalizes a failed aggregate; the earlier pending row must not flush."""
+    backend = Backend()
+    choose = json.dumps({"choose": "Which colour?", "options": ["red", "blue"]})
+    held = child(f"""
+db = connect()
+db.execute("CREATE TABLE t(i INTEGER, q TEXT, e TEXT)")
+db.executemany("INSERT INTO t VALUES (?, ?, ?)", [(1, "Is it red?", "red door"), (2, {choose!r}, "blue door")])
+warm = run(db, "SELECT thinkthen_warm(q, e) FROM (SELECT q, e FROM t ORDER BY i)")
+usage = json.loads(run(db, "SELECT thinkthen_usage()")[0][0])
+say(warm=warm, requests_sent=usage["requests_sent"])
+""", environment(backend))
+    expect(held, {"warm": "thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide",
+                  "requests_sent": 0}, "failed aggregate has no count and no late send")
+    expect(backend.close(), 0, "no send after the step refusal")
+
+
 def test_recognize_counts_offsets_as_substr_does_and_refuses_relations() -> None:
     """Case 41 and decision 10."""
     backend = Backend()

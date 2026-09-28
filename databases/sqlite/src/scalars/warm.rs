@@ -32,6 +32,7 @@ pub(crate) struct WarmState {
     judged: i64,
     deadline: Option<Option<i64>>,
     due: Option<Instant>,
+    failed: bool,
 }
 
 /// A full chunk of one question's texts, ready to send.
@@ -135,7 +136,10 @@ impl Aggregate<WarmState, i64> for Warm {
     }
 
     fn step(&self, context: &mut Context<'_>, state: &mut WarmState) -> rusqlite::Result<()> {
-        Ok(guard("thinkthen_warm", || {
+        if state.failed {
+            return Ok(());
+        }
+        let result = guard("thinkthen_warm", || {
             let due = deadline(context)?;
             if state.deadline.is_some_and(|first| first != due) {
                 return Err(Failure::usage(
@@ -161,7 +165,11 @@ impl Aggregate<WarmState, i64> for Warm {
                 state.judged += flush(context, chunk, state.due)?;
             }
             Ok(())
-        })?)
+        });
+        if result.is_err() {
+            state.failed = true;
+        }
+        Ok(result?)
     }
 
     fn finalize(
@@ -173,6 +181,9 @@ impl Aggregate<WarmState, i64> for Warm {
             let Some(mut state) = state else {
                 return Ok(0);
             };
+            if state.failed {
+                return Ok(0);
+            }
             for group in std::mem::take(&mut state.groups) {
                 state.judged += flush(
                     context,
