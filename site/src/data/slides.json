@@ -1,5 +1,5 @@
 {
-  "deck": "681004887830a47bf482625ac52a3df8c16b8ea6",
+  "deck": "d775ccd9cb2afc7704b8e157c9d2cd05cb7b9dc9",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
@@ -78,52 +78,52 @@
       "card": "c6ca51760ca22702f24ab73a3ee4060ef7c6ca6781e4c75bc4c354e7798fa7a5"
     },
     "languages": {
-      "slide": "17-languages",
+      "slide": "18-languages",
       "sha256": "acab00669c6158ab9954fdb0cda6eb347773e35768bd472ba2a33b30188d3109",
       "card": "ae622a021f98a8a49d22cce5430faa01d884363ce3577ecb3e3f149f7950d77c"
     },
     "data": {
-      "slide": "18-data",
-      "sha256": "0aecdd2b8679c500c031295419d489af63ddbb15cacc11c31327195fb6f585ed",
-      "card": "7fb3c3f4aaa9ba7a96c7813fb461ca6238941557f4e519cb4c06e162e27823ec"
+      "slide": "19-data",
+      "sha256": "0c4ad5ebe68463c789c7d14ee2d171648cee15a1a9d2b5c5d22bba7d5c8e8fef",
+      "card": "8a57175ea135db3fa618b4cd88ab06b8b8dfcb5889c22239de6d627bd86195b5"
     },
     "blind-spots": {
-      "slide": "19-catches",
+      "slide": "20-catches",
       "sha256": "6abace6b3d317e4f99396bd82b6bcfdb48808697767e7f9b3ae26dd6e6c6c339",
       "card": "4a79892b81f04ad7c42994a9dca78546ad6eafc7f32373d8e41b4b90de8bd8a6"
     },
     "rad": {
-      "slide": "20-open-book",
+      "slide": "21-open-book",
       "sha256": "0b6f1989af709bd5fe46f30263e6d855b211e6e9be235ef54d3c066c6c02fabe",
       "card": "107ad54938fce6995d74130f3ab6e49594ca9c6aedc60e29dd12d0091d942307"
     },
     "audit": {
-      "slide": "21-audit",
+      "slide": "22-audit",
       "sha256": "bd0f3d01d9fc0eadd01ce3af1ef2acc956f34744c12e0221bd1e35e79d92375b",
       "card": "c645acbf39ff954f26cc66ca62d79d53f4dfa859899adf73e07f007a8d5ae4af"
     },
     "diff": {
-      "slide": "22-diff",
+      "slide": "23-diff",
       "sha256": "7afa24f0f535ce061ec4b33fe5ecbf2e5d0ef4aef51cc7a9faba8486de19109c",
       "card": "87feb9d8b1501d578855326f30e4ffb396c674470df9cb890628c4fbf2f751cd"
     },
     "use-cases": {
-      "slide": "23-use-cases",
+      "slide": "24-use-cases",
       "sha256": "c36885eec2d0e8c354fe74e9a5eb2d4f37bfba82048ee4f2475819c2e5b01f69",
       "card": "ac02012cf75b49e8ac7bf4c611dd89269db6963b69e951ae29cbb93463c55963"
     },
     "retrieval": {
-      "slide": "24-retrieval",
+      "slide": "25-retrieval",
       "sha256": "595f6897948a7fa31bb98beaec42f808d4e582e2f734eeda528e38e86e9cfd13",
       "card": "b075fa6107c92e5dafa283e01311c0a43aa26afee4f7b10bfbec6914e4830c1b"
     },
     "bench-run": {
-      "slide": "25-bench-run",
+      "slide": "26-bench-run",
       "sha256": "c8627bb04f702699104063632fed07925f18368c91cbcef69ab1deb835753525",
       "card": "30dd5f65163adcc156f750c3ef0b9a54d5ff55fefd2981507cc56d831e957d53"
     },
     "backends": {
-      "slide": "26-backends",
+      "slide": "27-backends",
       "height": 720,
       "sha256": "bbbe99f4b4ca596db38aeafbd169995917ae851376490dd517e7f8cceb4b01ed",
       "card": "09fb7660fd37c3c7eef97e699912c5b8f14265865ebce8d4bd60d9a40d297180"

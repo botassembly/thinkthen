@@ -122,6 +122,11 @@ impl<'a> Cancel<'a> {
         }
     }
 
+    /// Only a zero limit is certainly spent without reserving an attempt.
+    pub(crate) fn has_zero_send_limit(&self) -> bool {
+        matches!(self.send_budget, Some((_, Some(0))))
+    }
+
     pub(crate) fn reserve_send(
         &self,
         last_status: Option<u16>,
