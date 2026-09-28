@@ -72,6 +72,76 @@ say(names=run(db, "SELECT text, start, \\"end\\", length, substr(?, start + 1, l
     expect(backend.close(), 2, "sends: the two recognize steps, and the relations spec sent nothing")
 
 
+def test_recognize_document_accepts_spec_forms_and_refuses_bad_sql_values() -> None:
+    """The document form keeps empty relations and handles arguments before sending."""
+    backend = Backend()
+    bare = {"kinds": {"person": "A person's name."}, "relations": [
+        {"name": "knows", "source": "person", "target": "person"}]}
+    full = {"version": 1, "recognize": bare}
+    plain = {"kinds": {"person": "A person's name."}}
+    bad = {"kinds": {"person": "A person."}, "relations": [
+        {"name": "bad", "source": "absent", "target": "person"}]}
+    held = child(f"""
+db = connect()
+path = os.environ['SCRATCH'] + '/recognize.json'
+open(path, 'w').write({json.dumps(full)!r})
+bad_path = os.environ['SCRATCH'] + '/bad-recognize.json'
+open(bad_path, 'w').write({json.dumps(bad)!r})
+say(forms=[run(db, 'SELECT thinkthen_recognize_document(?, ?)', ('', spec))
+           for spec in ({json.dumps(full)!r}, {json.dumps(bare)!r}, '@' + path, {json.dumps(plain)!r})],
+    refused=[run(db, 'SELECT thinkthen_recognize_document(?, ?)', pair) for pair in (
+        (None, {json.dumps(full)!r}), ('', None), (b'x', {json.dumps(full)!r}),
+        (7, {json.dumps(full)!r}), ('x\\x00y', {json.dumps(full)!r}),
+        ('', b'{{}}'), ('', 7), ('', '{{}}\\x00'), ('', '{{'),
+        ('', {json.dumps(bad)!r}),
+        ('', '@' + bad_path),
+    )] + [run(db, "SELECT thinkthen_recognize_document(CAST(x'ff' AS TEXT), '{{}}')"),
+         run(db, "SELECT thinkthen_recognize_document('', CAST(x'ff' AS TEXT))")])
+""", environment(backend))
+    expect([json.loads(one[0][0]) for one in held["forms"]], [
+        {"entities": [], "relations": []}, {"entities": [], "relations": []},
+        {"entities": [], "relations": []}, {"entities": []},
+    ], "forms and empty edge shape")
+    expect(held["refused"][:8], [
+        [[None]], [[None]],
+        "thinkthen usage: the text is a BLOB; pass text",
+        "thinkthen usage: the text is a number; pass text",
+        "thinkthen usage: the text holds a NUL byte",
+        "thinkthen usage: the recognize spec is a BLOB; pass text",
+        "thinkthen usage: the recognize spec is a number; pass text",
+        "thinkthen usage: the recognize spec holds a NUL byte",
+    ], "SQL argument forms")
+    expect(held["refused"][-5:-2], [
+        "thinkthen usage: the recognize argument is not JSON: EOF while parsing an object at line 1 column 1",
+        "thinkthen usage: a relation source and target name a kind or explicit `*`",
+        "thinkthen local: a relation source and target name a kind or explicit `*`",
+    ], "malformed inline and file specs")
+    expect(held["refused"][-2:], [
+        "thinkthen usage: the text is not UTF-8",
+        "thinkthen usage: the recognize spec is not UTF-8",
+    ], "invalid UTF-8")
+    expect(backend.close(), 0, "zero sends")
+
+
+def test_recognize_document_applies_a_nondefault_relation_threshold() -> None:
+    """A stronger edge cut removes the edge without losing recognized entities."""
+    evidence = "Maria Chen joined Northwind Freight in Chicago last spring."
+    question = {"version": 1, "recognize": {
+        "kinds": {"organization": "An organization."},
+        "relations": [{"name": "knows", "source": "organization", "target": "organization"}],
+    }, "threshold": 0.5, "relation_threshold": 0.5}
+    backend = Backend()
+    held = child(f"""
+db = connect()
+say(result=[run(db, 'SELECT thinkthen_recognize_document(?, ?)', ({evidence!r}, spec))
+            for spec in ({json.dumps(question)!r}, {json.dumps(dict(question, relation_threshold=1.0))!r})])
+""", environment(backend))
+    low, high = (json.loads(one[0][0]) for one in held["result"])
+    expect(len(low["relations"]), 2, "generic answer has two directed relations to cut")
+    expect(high, {"entities": low["entities"], "relations": []}, "nondefault edge cut")
+    expect(backend.close(), 3, "the second local cut reuses the three cached phases")
+
+
 RELATE = """
 db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
