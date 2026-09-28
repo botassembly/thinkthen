@@ -1,6 +1,6 @@
 # Audit shows group counts and no per-case evidence
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in `~/workspace/experiments/296-gepa-question-tuning/` and `~/workspace/experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/296-gepa-question-tuning/` and `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
 
 ## What happens today
 
@@ -28,3 +28,14 @@ A per-case member on the existing group row is not enough: one group holds many 
 ## Factual preparation, 2026-09-28
 
 At main `e58aceae`, `cli/audit.rs::grade_all` reads details and a separate key, while `core/measure/{answer,key}.rs` supplies identity and grading primitives. The detail row alone does not supply truth; the key join does. The command still emits aggregate groups, while `diff` emits changed cases only. A per-case view remains distinct. Reuse the existing join and refusal rules, and prove labeled, unlabeled, failed and duplicate-identity edges without new sends. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.
+
+## Added 2026-09-28: the reading, and what the case row must carry
+
+The follow-up work after `notes/Autorubric cookbook.md` and `~/foss/awesome-evals` showed that a loop needs the shape of each miss, not only right or wrong. Two free measurements from saved answers, in local experiment 297:
+
+- The chained album-year question misses 38 of 60 cases. The model is one year off on fifteen and two years off on eleven, in both directions, and the song's own year equals the album's year on every case. The shape is noisy recall, not a wording problem.
+- On the lead-set questions for John, accuracy reads 0.462 while the true positive rate is 0.368: the question holds nineteen yeses in twenty-six, and the model misses most of them.
+
+A per-case view should carry enough to cluster by shape: the answer, the truth, the probabilities, the options in their sent order, and the case's kind. `audit` already prints precision, recall, f1, and both disagreement directions per group. The case list wants the same counts, and the evals literature names the rule: report TPR and TNR separately, because accuracy hides a rare class.
+
+Evidence: `~/workspace/experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13, `pipeline.py`, and `runs/pipeline/`.

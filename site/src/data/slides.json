@@ -1,5 +1,5 @@
 {
-  "deck": "33f51e85d09e543d50eff88551b21e09368c4263",
+  "deck": "42c6b871ecf650af8a86262d48f3eb612778227d",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
@@ -14,8 +14,8 @@
     },
     "jev": {
       "slide": "03-jev",
-      "sha256": "efa62a217f2ea5256bae4c7237a826af0caca00318d547a8ffa63926800f3bce",
-      "card": "3ae95da424c85071378fe17afa86a6c75a5d187500d991fcf523158a3ffee975"
+      "sha256": "cc6babe9739feba2ff586be83e945c4046c033fc99290298f8d0a633207d12ac",
+      "card": "bf98bb7ff84ac473c916feefc2e2d0b143adec3a8bfc7c7049afc7d234676710"
     },
     "runs-in": {
       "slide": "05-runs-in",
@@ -124,13 +124,14 @@
     },
     "retrieval": {
       "slide": "26-retrieval",
-      "sha256": "595f6897948a7fa31bb98beaec42f808d4e582e2f734eeda528e38e86e9cfd13",
-      "card": "b075fa6107c92e5dafa283e01311c0a43aa26afee4f7b10bfbec6914e4830c1b"
+      "deck": "6a9600b53e2f18160efd80a60938e663fff2c5fb",
+      "sha256": "f6731fdabf259afa5e58abaffbc5887b5f678f84935d9096db4dfff35ed6338d",
+      "card": "90fadf10ac49a524a3e996edce30b45d12d996ea0a4d52aee947ff7a3c6ec35b"
     },
     "bench-run": {
       "slide": "27-bench-run",
-      "sha256": "c8627bb04f702699104063632fed07925f18368c91cbcef69ab1deb835753525",
-      "card": "30dd5f65163adcc156f750c3ef0b9a54d5ff55fefd2981507cc56d831e957d53"
+      "sha256": "af9ebaa10f2c345dc184f51c57451ec2223e7bfb9e0992ecbb624114be8c1db1",
+      "card": "c6b508bfa34c5ab3939e35c002c7170dc2818263e7feeaf0bd7b7f2d61790d3d"
     },
     "backends": {
       "slide": "28-backends",
