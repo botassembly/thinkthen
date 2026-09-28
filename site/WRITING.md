@@ -11,6 +11,8 @@ Follow these rules when you write or edit any page or code example on this site.
 - Write no dash glosses. Do not end a sentence with a trailing clause such as "which is" or "so that". Do not write clefts such as "It is X that".
 - Use plain words. Write "not sure", "context", "wrong yes", and "missed yes". Do not write "false positive" or "false negative". Command output keeps its own words.
 - Write no status words. A page never says planned, drawn, preview, coming soon, or "Plan for 0.1". The site goes up after the release it describes.
+- Show every binding as part of the product (Ian, 2026-09-28). "Bindings" names the languages and databases together. A binding carries no status, date, readiness note, or caveat, including none about 0.1 or alpha. Where a page counts them, it says "10 functions, 1 CLI, 24 bindings" from `COUNTS` in `src/data/catalog.mjs`.
+- Link every binding to its install page, even before that page exists (Ian, 2026-09-28). `BINDINGS` in `src/data/catalog.mjs` holds the list. The link check allows exactly the install paths of the bindings with no page yet.
 - Teach the idea. Do not walk the reader through repository files, JSONL files, pins, or run folders.
 - Name the threshold in the command and in the prose. Show one band per page.
 - A number in the prose shows in an example on the same page, or it links the record that measured it.
@@ -94,15 +96,17 @@ Every line of code stays at 60 characters or fewer. Code reads down the page, no
 
 `scripts/check-samples.mjs` fails on a longer line. Its `EXEMPT` list names each kind of line that cannot break, with the reason: one JSON string, one JSON Lines record, a record `filter` printed whole, and the `diff` warning. Keep that list short. Add to it only for a line a program really prints wider, or a line the format cannot break.
 
-### Keep full details on the reference route
+### Leave out --details
 
-Ordinary function and how-to examples show the command, its value, and its exit code. Put a full `--details` example under `examples/reference/details/` and show it whole. For a stream, show the first record:
+The docs leave out `--details` for now (Ian, 2026-09-28). Every example shows the command, its plain value, and its exit code. To show where a probability sits, run the same example at a bar or a band. `check-samples` fails an example, a page, or an article that names `--details`.
 
-```bash
-... --details | head -n 1 | jq .
-```
+### Keep a function page's example short
 
-For one document, `| jq .` is enough. Never cut the details down with a `jq` filter. The dedicated reference links to `specification/result.md`, the normative result contract. Beatles Bench analysis may retain full historical detail output when it is the evidence being discussed. The check fails an ordinary script that asks for `--details`, and any full details script that does not end in `jq .`.
+Each function page opens with one command example of 10 to 25 lines, the script and its shown output together (Ian, 2026-09-28). Trim a long output with `jq`, or ask a shorter question. The example still shows something useful. `check-samples` counts the first example of each function.
+
+### Honest examples
+
+An example asks what a sensible user would ask, and it shows the tool's real output from Jev (Ian, 2026-09-28). No example is fake or deliberately false. A wrong answer or a low score is fine to show and explain. A result that looks like a bug goes to ThinkThen as an issue, with its evidence.
 
 ### Output in its own block
 

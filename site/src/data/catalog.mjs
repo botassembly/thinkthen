@@ -48,7 +48,6 @@ const BACKEND_OPTIONS = [
 ];
 
 const COMMON_OPTIONS = [
-  ['--details', 'Prints the whole result in place of the bare value: the probabilities, the question, and the run.'],
   ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick at most one.'],
@@ -225,7 +224,6 @@ export const FUNCTIONS = [
       ['--none', 'Lets it answer that nothing fits. It then prints nothing and exits 3.'],
       ['--lines, --jsonl', `How the lines are framed. --${setting('Framing').defaultOn('find')} is the default. CSV and TSV are refused.`],
       ['--field POINTER', 'Names the part of each record to read.'],
-      ['--details', 'Prints the whole result, with a probability for every line.'],
       ['--input FILE', 'Reads the evidence from a file instead of standard input.'],
       ['--dry-run', 'Prints the plan and sends nothing.'],
       ...BACKEND_OPTIONS,
@@ -267,7 +265,7 @@ export const FUNCTIONS = [
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
-    requests: 'It finds candidate spans, assigns kinds, then tests requested relations. --dry-run prints the request plan for the first record.',
+    requests: 'It runs three steps. It finds the names. It labels each name with one of your kinds, the way choose picks an option. When you name a relation, it relates the names. --dry-run prints the request plan for the first record.',
     args: 'KIND..., or one @FILE question file',
     options: [
       ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
@@ -280,7 +278,7 @@ export const FUNCTIONS = [
     unsure: 'The model only picks from options. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
     see: {
-      '1-names': 'The command returns the names, kinds, offsets, and strengths. Recognition uses candidate spans, kind selection, then relation checks when requested.',
+      '1-names': 'recognize finds three names. Each comes back with its kind and its strength.',
     },
   },
   {
@@ -288,7 +286,7 @@ export const FUNCTIONS = [
     goal: 'relate asks the model about named entities, one possible edge per pair and rule.',
     primitive: 'Yes or no per allowed entity pair and rule',
     line: 'Find relationships among named entities.',
-    lede: 'You give it entity names, kinds, and relation rules. Standalone relate reads no source text; each edge reports the model’s belief about those names. The sample asks whether gateway calls billing.',
+    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability.',
     takes: 'one set of named entities and relation rules',
     gives: 'one edge for each related pair, with a probability',
     requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --dry-run prints the requests it would send.',
@@ -303,7 +301,7 @@ export const FUNCTIONS = [
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
     see: {
-      '1-pair': 'The current pair question links gateway to billing. The edge comes from the model answer for these two named services.',
+      '1-sings': 'Paul McCartney sings Yesterday, and Ringo Starr sings Octopus\'s Garden. The two wrong pairs do not reach the default bar.',
     },
   },
   {
@@ -509,6 +507,39 @@ export const SURFACES = [
   },
 ];
 
+// The bindings: every language and database ThinkThen works with. Bash is
+// the command line, the one CLI, and not a binding. The list matches
+// BINDINGS in the talk's deck (common.py). Each binding links to
+// /install/<slug>/. A binding with no entry in SURFACES has no page yet, and
+// scripts/check-links.mjs allows exactly those paths.
+const DATABASE_SLUGS = new Set(['duckdb', 'postgresql', 'sqlite']);
+export const BINDINGS = [
+  ['Ada', 'ada'], ['C', 'c'], ['C#', 'csharp'], ['C++', 'cpp'],
+  ['COBOL', 'cobol'], ['Dart', 'dart'], ['DuckDB', 'duckdb'], ['Go', 'go'],
+  ['Java', 'java'], ['Kotlin', 'kotlin'], ['Objective-C', 'objective-c'],
+  ['pandas', 'pandas'], ['PHP', 'php'], ['Polars', 'polars'],
+  ['PostgreSQL', 'postgresql'], ['Python', 'python'], ['R', 'r'],
+  ['Ruby', 'ruby'], ['Rust', 'rust'], ['Scala', 'scala'],
+  ['SQLite', 'sqlite'], ['Swift', 'swift'], ['TypeScript', 'typescript'],
+  ['Zig', 'zig'],
+].map(([name, slug]) => ({ name, slug, database: DATABASE_SLUGS.has(slug), route: `/install/${slug}/` }));
+
+// The install paths of the bindings with no page yet.
+export const BINDING_PATHS_WITHOUT_PAGES = BINDINGS
+  .filter((b) => !SURFACES.some((s) => s.slug === b.slug))
+  .map((b) => b.route);
+
+// The counts the home page and the functions index give.
+export const COUNTS = {
+  functions: `${CODE_FUNCTIONS.length} functions`,
+  cli: '1 CLI',
+  bindings: `${BINDINGS.length} bindings`,
+};
+
+for (const s of SURFACES) {
+  if (s.slug !== 'shell' && !BINDINGS.some((b) => b.slug === s.slug)) throw new Error(`catalog: the surface ${s.slug} is not in BINDINGS`);
+}
+
 // The tabs on the home page sample, and on every code block that has variants.
 export const TABS = ['Bash', 'Python', 'TypeScript', 'Ruby', 'R', 'Rust', 'SQL'];
 
@@ -682,7 +713,7 @@ export const TECHNIQUES = [
   {
     slug: 'agent-tool-guard', title: 'Guard a coding agent tool call', label: 'tool guard',
     goal: 'Map a bounded decide answer to one coding agent host hook contract.',
-    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text; it runs none of the proposals. A yes yields `allow`, no yields `deny`, and not sure yields `ask`. A failed judge also denies. The hook decision is JSON, because ThinkThen exit 2 means an input error, while a hook exit 2 blocks the tool call.',
+    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text. It runs none of the proposals. A yes gives `allow`, a no gives `deny`, and not sure gives `ask`. A failed judge also gives `deny`. The hook answers in JSON. In ThinkThen, exit 2 means an input error. In a hook, exit 2 blocks the tool call.',
     source: ['Claude Code hooks reference, checked 2026-09-28', 'https://code.claude.com/docs/en/hooks#pretooluse-decision-control'],
     see: { '1-guard': 'One recorded proposal is allowed, one asks a person, and one is denied.' },
   },

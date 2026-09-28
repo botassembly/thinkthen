@@ -16,9 +16,9 @@ Here's a support ticket, and here's the whole idea:
 
 <!-- example: functions/decide/3-one -->
 
-The command returns exit code 0. The word "refund" appears in that ticket, and `grep` would have caught this one. The [detailed result](/reference/details/) also carries the model's probability and run facts.
+The command returns exit code 0. The word "refund" appears in that ticket, and `grep` would have caught this one.
 
-Be careful what you read into that number. The probability describes the evidence you handed over. It doesn't measure how often the model is right. Run the question against cases you have labeled. That run tells you what a probability means for your question. Measure first, then pick a threshold.
+Be careful what you read into the probability behind that answer. The probability describes the evidence you handed over. It doesn't measure how often the model is right. Run the question against cases you have labeled. That run tells you what a probability means for your question. Measure first, then pick a threshold.
 
 ## The threshold and the middle
 

@@ -4,7 +4,10 @@
 //
 //   - No line over 60 characters, apart from the exempt lines below.
 //   - A library sample asserts. It never prints.
-//   - Full --details examples live on the dedicated reference route.
+//   - No example, page, or article shows --details. The docs leave it out
+//     for now (Ian, 2026-09-28).
+//   - Each function page opens with one command example of 10 to 25
+//     lines, script and output together (Ian, 2026-09-28).
 //   - Code carries no comments.
 //   - Every page and article starts with its goal: a `// Goal:` line in
 //     an Astro page, and a `goal:` field or a `<!-- Goal: -->` comment in
@@ -20,12 +23,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { namedAnswerProblems } from './named-answers.mjs';
+import { CODE_FUNCTIONS } from '../src/data/catalog.mjs';
 
 const here = fileURLToPath(import.meta.url);
 const site = path.resolve(path.dirname(here), '..');
 const root = path.join(site, 'examples');
 const bench = path.join(root, 'beatles', 'bench');
 const WIDTH = 60;
+// The lines a function page's example may show, script and output together.
+const EXAMPLE_LINES = { min: 10, max: 25 };
 
 // Each exempt entry names a kind of line that cannot break, and says why.
 const EXEMPT = [
@@ -152,11 +158,27 @@ function main() {
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
-    if (ext === '.sh' && /--details\b/.test(text)) {
-      if (!rel.startsWith('reference/details/') && !rel.startsWith('beatles/')) problems.push(`examples/${rel}: move the full --details run to reference/details`);
-      const last = text.split('\n').at(-1).trim();
-      if (last !== 'jq .') problems.push(`examples/${rel}: asks for --details and does not end in jq . Show the details whole.`);
-    }
+    if (ext === '.sh' && /--details\b/.test(text)) problems.push(`examples/${rel}: asks for --details. The docs leave it out for now.`);
+  }
+
+  const lineCount = (file) => (fs.existsSync(file) ? fs.readFileSync(file, 'utf8').replace(/\n+$/, '').split('\n').length : 0);
+  for (const fn of CODE_FUNCTIONS) {
+    const dir = path.join(root, 'functions', fn.name);
+    const first = fs.readdirSync(dir).filter((n) => n.endsWith('.sh')).sort()[0];
+    if (!first) continue;
+    const script = path.join(dir, first);
+    const shown = lineCount(script) + lineCount(script.replace(/\.sh$/, '.out'));
+    if (shown < EXAMPLE_LINES.min || shown > EXAMPLE_LINES.max) problems.push(`examples/functions/${fn.name}/${first}: the page's example shows ${shown} lines of script and output. Keep it from ${EXAMPLE_LINES.min} to ${EXAMPLE_LINES.max}.`);
+  }
+
+  function sources(dir) {
+    return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+      const p = path.join(dir, e.name);
+      return e.isDirectory() ? sources(p) : /\.(astro|mjs|md)$/.test(p) ? [p] : [];
+    });
+  }
+  for (const file of sources(path.join(site, 'src'))) {
+    if (/--details\b/.test(fs.readFileSync(file, 'utf8'))) problems.push(`${path.relative(site, file)}: names --details. The docs leave it out for now.`);
   }
 
   const articles = path.join(site, 'src', 'articles');

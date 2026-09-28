@@ -2,12 +2,13 @@
 // Goal: list the ten functions, simplest first, each as code a reader
 // already writes.
 import Base from '../../layouts/Base.astro';
-import { CODE_FUNCTIONS, FUNCTIONS } from '../../data/catalog.mjs';
+import { CODE_FUNCTIONS, FUNCTIONS, COUNTS } from '../../data/catalog.mjs';
 const questionFile = FUNCTIONS.find((f) => f.notAFunction);
 ---
 <Base title="Functions" description="The ten functions and the answer each one gives.">
   <h1>The ten functions</h1>
   <p class="lede">Each function reads text and answers a question about it. Each does a job you already write in code: an if, a switch, a grep, a sort.</p>
+  <p class="counts">{COUNTS.functions}, <a href="/install/shell/">{COUNTS.cli}</a>, <a href="/install/">{COUNTS.bindings}</a>.</p>
 
   <table>
     <tr><th>Function</th><th>What it does</th><th>Kind of answer</th></tr>

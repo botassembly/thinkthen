@@ -1,16 +1,4 @@
-{
-  "input": "Please refund the extra fee on my invoice.",
-  "value": "billing"
-}
-{
-  "input": "My parcel went to the wrong address.",
-  "value": "shipping"
-}
-{
-  "input": "I cannot reset my password.",
-  "value": "account"
-}
-{
-  "input": "My parcel never came, and now I cannot log in to track it.",
-  "value": null
-}
+billing
+shipping
+account
+null

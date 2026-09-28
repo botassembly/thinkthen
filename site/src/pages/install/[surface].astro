@@ -22,7 +22,7 @@ const headline = shell
 // Copy marks code with backticks.
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
 const runFacts = {
-  shell: '`--details` prints `meta.usage`, `meta.requests_sent`, `meta.cached`, and `meta.url` for one answer.',
+  shell: '`--facts` prints one line of run facts on standard error, after the answers.',
   python: '`Call.facts` counts this call; `Call.details` holds its question observations. `tt.details(question, text).value` gives the result schema for one text.',
   polars: '`Call.facts` counts this frame call outside its columns. `Call.details` holds the question observations.',
   typescript: '`Call.facts` counts this call; `Call.details` holds its question observations. `engine.details(question, text).value` gives the result schema for one text.',
@@ -39,7 +39,6 @@ const runFacts = {
   <div class="eyebrow"><a href="/install/">Install</a></div>
   <h1>{headline}</h1>
   <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
-  <p>The install channel below is planned for 0.1. Use the source checkout until a release package for this surface is published and verified.</p>
 
   <h2>Install</h2>
   <table>
@@ -62,7 +61,7 @@ const runFacts = {
   <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person. Each <a href="/functions/">function page</a> shows its {surface.name} call.</p>
 
   <h2>Run facts</h2>
-  <p>{parts(runFacts[surface.slug]).map((x) => x.code ? <code>{x.part}</code> : x.part)} The <a href="/reference/details/">result reference</a> names the fields and their source.</p>
+  <p>{parts(runFacts[surface.slug]).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
 
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>

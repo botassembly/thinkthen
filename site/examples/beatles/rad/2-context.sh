@@ -14,6 +14,5 @@ printf 'Catalog:\n%s\n%s\nText: %s' \
   "$entry" \
   "A Day in the Life" |
 thinkthen decide "$question" \
-  --details \
-  --replay recording |
-jq .
+  --threshold 0.1:0.9 \
+  --replay recording

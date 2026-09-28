@@ -15,4 +15,4 @@ thinkthen recognize \
   --kind "$org" \
   --kind "$place" \
   --kind "$other" |
-jq .
+jq -c '.entities[] | [.text, .kind, .strength]'

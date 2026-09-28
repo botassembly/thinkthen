@@ -5,6 +5,5 @@ printf '%s\n' "Yesterday" |
 thinkthen decide "$question" \
   --batch 1 \
   --lines \
-  --details \
-  --replay recording |
-jq .
+  --threshold 0.6 \
+  --replay recording

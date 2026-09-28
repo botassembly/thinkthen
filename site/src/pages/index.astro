@@ -5,7 +5,7 @@ import Base from '../layouts/Base.astro';
 import Terminal from '../components/Terminal.astro';
 import Code from '../components/Code.astro';
 import InstallLine from '../components/InstallLine.astro';
-import { CODE_FUNCTIONS, SURFACES, HOWTOS, FUNCTIONS } from '../data/catalog.mjs';
+import { CODE_FUNCTIONS, SURFACES, HOWTOS, FUNCTIONS, COUNTS } from '../data/catalog.mjs';
 import { captioned, firstCall } from '../data/samples.mjs';
 
 const tabs = [
@@ -49,6 +49,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
   <p><code>decide</code> is an if that understands. <code>filter</code> is a grep that understands. <code>rank</code> is a sort that understands. Every answer rests on the model's probabilities. On <code>decide</code>, a band sends anything between its two sides back as not sure. A person reads those.</p>
 
   <h2>The ten functions</h2>
+  <p class="counts">{COUNTS.functions}, <a href="/install/shell/">{COUNTS.cli}</a>, <a href="/install/">{COUNTS.bindings}</a>.</p>
   <div class="grid">
     {CODE_FUNCTIONS.map((fn) => (
       <a class="tile" href={`/functions/${fn.name}/`}>

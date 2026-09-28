@@ -23,7 +23,6 @@ const PRUNE = setting('Prune target');
 const pruneKey = PRUNE.surface('Configuration file');
 
 const GLOBAL = [
-  ['--details', 'none', 'Prints the whole result object in place of the bare value.', dflt('Details')],
   ['--dry-run', 'none', 'Prints the plan and sends nothing. It reads no key. In record mode it prints the plan for the first record and stops.', dflt('Dry run')],
   ['--url BASE', 'an address', 'The backend base address. The tool posts to BASE/systemone. It outranks THINKTHEN_BASE_URL.', dflt('Address')],
   ['--model NAME', takes('Model'), 'The model the request carries. This is how a run is pinned to one version.', setting('Model').default],
@@ -141,7 +140,7 @@ const COUNTS = [
   </table>
   <p><code>--jobs N</code> sets the throttle. The throttle is the most requests in flight at once. The flag is not global. It runs from {THROTTLE.range.min} to {THROTTLE.range.max}, defaults to {THROTTLE.default}, and it belongs to record mode. <code>annotate</code> also accepts it on one document, and <code>relate</code> on its one set of names. Every other function refuses it outside record mode.</p>
   <p>The vendor documents a limit of 1,200 requests a minute. The <a href="https://github.com/botassembly/thinkthen/blob/main/specification/records.md">records specification</a> holds the measured rates. <code>--jobs</code> caps the requests in flight. It sets no limit on requests a minute. The rate depends on how fast replies come back. On short records, the default of {THROTTLE.default} can pass that limit. In a <a href="https://github.com/botassembly/thinkthen/blob/main/sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md">review</a>, the default sent 1,519 requests a minute to the vendor. Against a local test server with 100 ms replies, <code>--jobs 3</code> sent 1,285 a minute. Lower <code>--jobs</code> when replies come back fast.</p>
-  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only, and a usage error beside <code>--details</code>), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
+  <p>Function-only flags: <code>--threshold</code>, <code>--true TEXT</code> and <code>--false TEXT</code> (<code>decide</code>, <code>filter</code>, <code>rank</code>), <code>--quiet</code> (<code>decide</code> and <code>choose</code>, one document only), <code>--raw</code> (<code>choose</code> only, refused under CSV and TSV), <code>--option LABEL=DESCRIPTION</code>, <code>--label LABEL=DESCRIPTION</code>, <code>--options POINTER</code> (<code>choose</code>, and it needs <code>--jsonl</code>), <code>--top N</code> (<code>rank</code>, {takes('Top')}), <code>--none</code> (<code>find</code>).</p>
 
   <h2>Framing a stream</h2>
   <p>The four framing flags are mutually exclusive. The tool never guesses a framing from a filename.</p>
@@ -155,7 +154,7 @@ const COUNTS = [
   </table>
 
   <h3><code>--field POINTER</code></h3>
-  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees. Only the pointed value leaves the machine. Under <code>--details</code> the whole record still comes back in <code>input</code>.</p>
+  <p>A JSON Pointer, RFC 6901. It names the part of each record the model sees. Only the pointed value leaves the machine.</p>
   <ul>
     <li>Under <code>--jsonl</code>, <code>--csv</code>, or <code>--tsv</code> it reads the pointer in each record.</li>
     <li>With no framing flag it reads the whole input as one JSON value and takes the pointer inside it. There is no separate JSON framing flag.</li>
@@ -176,15 +175,12 @@ const COUNTS = [
   <p>Evidence past the token limit is refused and the command exits 4. Under <code>annotate</code> the questions and the evidence count together. A long question set can pass the limit on evidence that fits on its own. Fewer questions per file is the answer.</p>
 
   <h2>What one row looks like</h2>
-  <h3>Without <code>--details</code></h3>
   <table>
     <tr><th>Function</th><th>Standard output</th></tr>
     {BARE.map(([fn, out]) => (<tr><td><code>{fn}</code></td><td>{out}</td></tr>))}
   </table>
   <p>In record mode, a <code>decide</code>, <code>choose</code>, <code>tag</code>, or <code>score</code> row is <code>{'{"input":RECORD,"value":ANSWER}'}</code>, in that key order. <code>filter</code>, <code>rank</code>, and <code>find</code> keep returning records. Every result is compact and sits on one line.</p>
   <p><code>annotate</code> in record mode adds one top-level field per question to an object record. A line, a JSON scalar, or a JSON array keeps its parsed record under <code>input</code> and its named answers under <code>value</code>. CSV and TSV rows are objects, and they stay flat.</p>
-
-  <p>For full probabilities and run fields, see <a href="/reference/details/"><code>--details</code></a>. The ordinary examples show the value and exit code.</p>
 
   <h2>Exit codes</h2>
   <table>
