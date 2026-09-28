@@ -1,0 +1,10 @@
+{
+  "score": "The text is the title of a song by the Beatles. How long is the recording?",
+  "levels": {
+    "very short": "very short: under 1:28",
+    "short": "short: 1:28 to 2:05",
+    "average": "average: 2:05 to 2:58",
+    "long": "long: 2:58 to 4:12",
+    "very long": "very long: over 4:12"
+  }
+}

@@ -1,15 +1,17 @@
 ---
 import '../styles/site.css';
 import { TAGLINE, NOINDEX, REPO } from '../data/catalog.mjs';
+import { DEFAULT_CARD, routeCard } from '../data/cards.mjs';
 
-// `repo` is the one GitHub link a page carries, at its bottom.
-const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.', repo = REPO } = Astro.props;
+// `repo` is the one GitHub link a page carries, at its bottom. `image` and
+// `imageAlt` name the page's social card. A page without one takes the card
+// cards.mjs gives its route, or the ThinkThen card.
+const { title, description = 'Simple functions that give your software the judgment to handle whatever comes its way. Call them from your scripts, your programs, and your queries.', repo = REPO, image, imageAlt } = Astro.props;
 const full = title === 'ThinkThen' ? 'ThinkThen: code that knows what you mean' : `${title} — ThinkThen`;
 const here = Astro.url.pathname;
 const mdHref = here === '/' ? '/index.md' : here.replace(/\/$/, '') + '.md';
-// One card for every page. The image is the wordmark on the light ground.
-const social = 'Simple functions that give your software the judgment to handle whatever comes its way. From the command line, your code, or SQL.';
-const cardImage = new URL('/brand/thinkthen-card.png', Astro.site).href;
+const card = image ? { image, alt: imageAlt || title } : routeCard(here) || DEFAULT_CARD;
+const cardImage = new URL(card.image, Astro.site).href;
 const pageUrl = new URL(here, Astro.site).href;
 const nav = [
   ['/install/', 'Install'],
@@ -30,15 +32,16 @@ const nav = [
 <meta property="og:site_name" content="ThinkThen">
 <meta property="og:url" content={pageUrl}>
 <meta property="og:title" content={full}>
-<meta property="og:description" content={social}>
+<meta property="og:description" content={description}>
 <meta property="og:image" content={cardImage}>
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="ThinkThen">
+<meta property="og:image:alt" content={card.alt}>
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content={full}>
-<meta name="twitter:description" content={social}>
+<meta name="twitter:description" content={description}>
 <meta name="twitter:image" content={cardImage}>
+<meta name="twitter:image:alt" content={card.alt}>
 {NOINDEX && <meta name="robots" content="noindex">}
 <link rel="icon" href="/brand/thinkthen-mark-dark.svg" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="/brand/thinkthen-mark-light.svg" media="(prefers-color-scheme: light)">

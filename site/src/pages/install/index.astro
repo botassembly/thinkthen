@@ -1,42 +1,31 @@
 ---
-// Goal: give the install line for every surface, command line first.
+// Goal: give the command line's install line, and link every binding to its
+// install page.
 import Base from '../../layouts/Base.astro';
 import InstallLine from '../../components/InstallLine.astro';
-import { SURFACES, KEY_VARIABLE } from '../../data/catalog.mjs';
-import { REPO } from '../../data/repo.mjs';
+import { SURFACES, BINDINGS, KEY_VARIABLE } from '../../data/catalog.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
-const DATABASES = new Set(['duckdb', 'sqlite', 'postgresql']);
-const languages = SURFACES.filter((s) => s.slug !== 'shell' && !DATABASES.has(s.slug));
-const databases = SURFACES.filter((s) => DATABASES.has(s.slug));
-// The rows are mapped, not written out one by one. An expression inside a
-// <code> element written straight into a table makes the Astro compiler emit
-// a stray <code> after the table, and the rest of the page turns monospace.
-const tables = [['Languages', 'Language', languages], ['Databases', 'Database', databases]];
+const lists = [
+  ['Languages', BINDINGS.filter((b) => !b.database)],
+  ['Databases', BINDINGS.filter((b) => b.database)],
+];
 ---
 <Base title="Install" description="Install ThinkThen for the command line, each language, and each database, and point it at a backend.">
   <h1>Install</h1>
   <p class="lede">ThinkThen runs from the command line, from your language, and from your database.</p>
-  <p>These are the planned 0.1 install channels. Release packages and the download script are still being prepared. For a working offline first run today, follow the <a href={`${REPO}/blob/main/README.md#first-run`}>source checkout example</a>.</p>
 
   <h2><a href="/install/shell/">The command line</a></h2>
   <InstallLine line={shell.install[0][0]} caption="The download script" />
   <InstallLine line={shell.install[1][0]} caption="Homebrew, an option on a Mac" />
   <p>Set <code>{KEY_VARIABLE}</code> in the environment. <code>--dry-run</code> needs no key.</p>
 
-  {tables.map(([heading, what, list]) => (
+  {lists.map(([heading, list]) => (
     <Fragment>
       <h2>{heading}</h2>
-      <table>
-        <tr><th>{what}</th><th>Install</th><th>Not sure comes back as</th></tr>
-        {list.map((s) => (
-          <tr>
-            <td><a href={`/install/${s.slug}/`}>{s.name}</a></td>
-            <td><code>{s.install[0][0]}</code></td>
-            <td><code>{s.unsureWord}</code></td>
-          </tr>
-        ))}
-      </table>
+      <ul class="bindings">
+        {list.map((b) => <li><a href={b.route}>{b.name}</a></li>)}
+      </ul>
     </Fragment>
   ))}
 

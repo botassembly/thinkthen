@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "relate": {
+    "relations": [
+      {
+        "name": "sings",
+        "source": "person",
+        "target": "song",
+        "reads": "sings the lead vocal on"
+      },
+      {
+        "name": "on_album",
+        "source": "song",
+        "target": "album",
+        "reads": "is on the album"
+      }
+    ]
+  }
+}

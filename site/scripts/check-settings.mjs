@@ -7,12 +7,14 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseSettings, plain, SURFACES, ABSENT } from '../src/lib/settings-table.mjs';
+import { parseSettings, plain, SURFACES, ABSENT, LEFT_OUT } from '../src/lib/settings-table.mjs';
 
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const spec = fs.readFileSync(path.join(site, '..', 'specification', 'settings.md'), 'utf8');
 const page = fs.readFileSync(path.join(site, 'dist', 'install', 'settings', 'index.html'), 'utf8');
-const { precedence, rows } = parseSettings(spec);
+const parsed = parseSettings(spec);
+const { precedence } = parsed;
+const rows = parsed.rows.filter((r) => !LEFT_OUT.has(r.name));
 
 // Tags split words, and a closing tag can sit before a comma, so the
 // comparison drops every space.
@@ -22,6 +24,7 @@ const text = (html) => squash(html.replace(/<[^>]*>/g, ' ')
   .replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, '&'));
 
 const problems = [];
+for (const name of LEFT_OUT) if (!parsed.rows.some((r) => r.name === name)) problems.push(`LEFT_OUT names ${name}, and the table has no such setting`);
 const expect = (where, body, want) => {
   if (want && !body.includes(squash(plain(want)))) problems.push(`${where}: the page does not say "${plain(want).slice(0, 80)}"`);
 };

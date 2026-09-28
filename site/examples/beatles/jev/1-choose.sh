@@ -10,6 +10,5 @@ singers=(
 
 printf '%s' "Octopus's Garden" |
 thinkthen choose "$question" "${singers[@]}" \
-  --details \
-  --replay recording |
-jq .
+  --threshold 0.8 \
+  --replay recording

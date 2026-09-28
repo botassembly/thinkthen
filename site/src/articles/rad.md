@@ -14,15 +14,15 @@ The idea borrows from retrieval-augmented generation, or RAG. RAG finds the righ
 
 ## What Jev knows from memory
 
-We built Beatles Bench to find out what Jev knows. Jev is TypeSafe's model. A script set every right answer on the bench from Wikipedia and Wikidata. From memory, Jev gets 67% of the 1,313 Beatles questions right. The best vector search gets 38%. GLM-5.3 Flash, a large chat model, gets 96%. Its median answer takes 8.24 seconds, and Jev's takes 0.21. The [full results](https://github.com/botassembly/beatles-bench/blob/main/reports/results.md) give each run.
+We built Beatles Bench to find out what Jev knows. Jev is TypeSafe's model. A script set every right answer on the bench from Wikipedia and Wikidata. The [full results](https://github.com/botassembly/beatles-bench/blob/main/reports/results.md) give each run.
 
-Jev knows the famous facts. It misses the fine ones: a year, a first album, which of two songs runs longer. Ask it whether A Day in the Life is on Abbey Road. Jev says yes at 0.94. That is wrong.
+Jev knows the famous facts. It misses the fine ones: a year, a first album, which of two songs runs longer. Ask it whether A Day in the Life is on Abbey Road. With a band of 0.1 to 0.9, Jev still says yes. That is wrong.
 
 <!-- example: beatles/rad/1-memory -->
 
 ## What the facts fix
 
-Put the song's catalog entry in front of the question and ask again. The entry names Sgt. Pepper's Lonely Hearts Club Band as the first album. Jev now says no at 0.04.
+Put the song's catalog entry in front of the question and ask again. The entry names Sgt. Pepper's Lonely Hearts Club Band as the first album. Under the same band, Jev now says no.
 
 <!-- example: beatles/rad/2-context -->
 
@@ -32,7 +32,7 @@ The catalog broke an answer on "The Ballad of John and Yoko". Asked whether two 
 
 ## What it costs
 
-Context costs input tokens. From memory, the call above reads 291 input tokens. With the one entry, it reads 368. In the [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md), the whole catalog of 306 songs took a median of 12,214 input tokens a call. Send the one entry the question is about.
+Context costs input tokens. In the [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md), the whole catalog of 306 songs took a median of 12,214 input tokens a call. Send the one entry the question is about.
 
 ## What I don't know
 

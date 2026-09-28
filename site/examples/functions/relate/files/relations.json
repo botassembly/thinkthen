@@ -1,1 +1,0 @@
-{"version":1,"relate":{"fields":{"name":"/name","kind":"/kind"},"relations":[{"name":"calls","source":"service","target":"service"}]},"threshold":0.5,"model":"local-1"}

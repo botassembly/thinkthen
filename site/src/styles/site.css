@@ -346,3 +346,4 @@ p code, li code { white-space: nowrap; }
 @media (max-width: 34rem) {
   .setting dl.kv > div { grid-template-columns: 1fr; }
 }
+.bindings { display: flex; flex-wrap: wrap; gap: .3rem 1.4rem; list-style: none; padding: 0; margin: 0 0 1.4rem; }

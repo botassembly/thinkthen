@@ -15,4 +15,4 @@ thinkthen choose "$question" "${teams[@]}" \
   --batch 1 \
   --lines \
   --threshold 0.9 |
-jq .
+jq -r .value

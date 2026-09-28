@@ -1,16 +1,20 @@
 import thinkthen as tt
 
-entities = [
-    ("gateway", "service"),
-    ("billing", "service"),
+names = [
+    ("Paul McCartney", "singer"),
+    ("Ringo Starr", "singer"),
+    ("Yesterday", "song"),
+    ("Octopus's Garden", "song"),
 ]
-edges = tt.Engine(model="local-1").relate(
-    entities,
-    relations={"calls": ("service", "service")},
-    threshold=0.5,
+who_sings = tt.relate(
+    names,
+    relations={"sings": ("singer", "song")},
 ).value
-pairs = [
-    (edge.relation, edge.source.name, edge.target.name)
-    for edge in edges
+sings = [
+    (edge.source.name, edge.target.name)
+    for edge in who_sings
 ]
-assert pairs == [("calls", "gateway", "billing")]
+assert sings == [
+    ("Paul McCartney", "Yesterday"),
+    ("Ringo Starr", "Octopus's Garden"),
+]

@@ -4,6 +4,5 @@ question="$is_a_song $on_abbey_road"
 
 printf '%s' "A Day in the Life" |
 thinkthen decide "$question" \
-  --details \
-  --replay recording |
-jq .
+  --threshold 0.1:0.9 \
+  --replay recording

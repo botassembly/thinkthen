@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":{"entities":[{"id":"i1","name":"Paul McCartney","kind":"singer"},{"id":"i2","name":"Ringo Starr","kind":"singer"},{"id":"i3","name":"Yesterday","kind":"song"},{"id":"i4","name":"Octopus's Garden","kind":"song"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it true that i1 sings i3?"},"q2":{"type":"noul","instructions":"Is it true that i1 sings i4?"},"q3":{"type":"noul","instructions":"Is it true that i2 sings i3?"},"q4":{"type":"noul","instructions":"Is it true that i2 sings i4?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.81},"q2":{"type":"noul","noul":0.13},"q3":{"type":"noul","noul":0.23},"q4":{"type":"noul","noul":0.88}},"usage":{"input_tokens":451,"output_tokens":72}}
+}

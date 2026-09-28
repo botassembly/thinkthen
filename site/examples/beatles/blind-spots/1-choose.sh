@@ -9,6 +9,4 @@ singers=(
 
 printf '%s' "Nothin' Shakin'" |
 thinkthen choose "$question" "${singers[@]}" \
-  --details \
-  --replay recording |
-jq .
+  --replay recording

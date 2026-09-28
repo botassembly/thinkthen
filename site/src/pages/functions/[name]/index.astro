@@ -7,6 +7,7 @@ import CrossView from '../../../components/CrossView.astro';
 import { FUNCTIONS, HOWTOS } from '../../../data/catalog.mjs';
 import { captioned, files } from '../../../data/samples.mjs';
 import { beatlesPageFor } from '../../../data/beatles.mjs';
+import { slideCard } from '../../../data/cards.mjs';
 
 export function getStaticPaths() {
   return FUNCTIONS.map((fn) => ({ params: { name: fn.name }, props: { fn } }));
@@ -23,8 +24,9 @@ const title = fn.title || fn.name;
 const line = fn.line.charAt(0).toLowerCase() + fn.line.slice(1);
 // The same function on Beatles Bench, where every answer is known.
 const bench = beatlesPageFor(fn.name);
+const card = slideCard(fn.name);
 ---
-<Base title={title} description={fn.line}>
+<Base title={title} description={fn.line} image={card?.image} imageAlt={card?.alt}>
   <div class="eyebrow">{fn.notAFunction ? 'a saved question' : fn.primitive}</div>
   <h1><code>{title}</code>: {line}</h1>
   {inputs.map((file) => <Code code={file.text} caption={`${file.name}, a file the examples read`} />)}
@@ -51,7 +53,7 @@ const bench = beatlesPageFor(fn.name);
   <h2>Call it from your language</h2>
   <CrossView fn={fn.name} above={Boolean(first)} />
 
-  <p class="pagelinks"><a href={`/reference/functions/${fn.name}/`}>Arguments, options, and more examples</a> · <a href="/reference/details/">Detailed results</a></p>
+  <p class="pagelinks"><a href={`/reference/functions/${fn.name}/`}>Arguments, options, and more examples</a></p>
 
   {howtos.length > 0 && (
     <>

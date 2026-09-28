@@ -22,8 +22,11 @@ export default defineConfig({
     '/beatles-bench/the-data': '/learn/beatles-bench/',
     '/beatles-bench/run-it-for-free': '/learn/beatles-bench/',
     '/beatles-bench/every-language': '/install/',
-    ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'what-jev-knows', 'blind-spots', 'rad']
+    ...Object.fromEntries(['decide', 'choose', 'tag', 'score', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate', 'audit', 'diff', 'blind-spots', 'rad']
       .map((slug) => [`/beatles-bench/${slug}`, `/learn/beatles-bench/${slug}/`])),
+    // The talk cut its what-jev-knows slide. The strings page compares Jev with search.
+    '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
+    '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
   },
   // The article's code blocks follow the page theme. Shiki writes both colours
   // on every token and site.css picks the dark one under a dark page, so a

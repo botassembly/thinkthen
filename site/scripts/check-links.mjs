@@ -1,9 +1,12 @@
 #!/usr/bin/env node
 // A broken internal link fails the build. Every href that starts with / must
-// land on a file in dist/.
+// land on a file in dist/. The one exception is the install path of a
+// binding with no page yet. BINDING_PATHS_WITHOUT_PAGES in catalog.mjs lists
+// them. A listed path that has a page fails too, so the list stays exact.
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { BINDING_PATHS_WITHOUT_PAGES } from '../src/data/catalog.mjs';
 
 const DIST = path.join(process.cwd(), 'dist');
 
@@ -29,8 +32,18 @@ function lands(href) {
   return false;
 }
 
+const withoutPage = new Set(BINDING_PATHS_WITHOUT_PAGES);
+const stale = [...withoutPage].filter((p) => lands(p));
+if (stale.length) {
+  console.error(`binding paths listed as having no page, and a page exists: ${stale.join(', ')}`);
+  process.exit(1);
+}
+
 const broken = [];
 const strayCode = [];
+// The docs leave out --details for now (Ian, 2026-09-28). A built page
+// may carry it from a source outside src/, such as the settings table.
+const details = [];
 // A draft post builds only when THINKTHEN_DRAFTS=1 asks for it. A normal
 // build that holds one fails, so a draft cannot deploy by accident.
 const drafts = [];
@@ -39,8 +52,9 @@ for (const file of html) {
   const from = '/' + path.relative(DIST, file).split(path.sep).join('/');
   if (body.includes('data-draft')) drafts.push(from);
   if (/<\/table>\s*<code(?:\s|>)/i.test(body)) strayCode.push(from);
+  if (/--details\b/.test(body)) details.push(from);
   for (const m of body.matchAll(/(?:href|src)="(\/[^"]*)"/g)) {
-    if (!lands(m[1])) broken.push(`${from} -> ${m[1]}`);
+    if (!lands(m[1]) && !withoutPage.has(m[1])) broken.push(`${from} -> ${m[1]}`);
   }
 }
 
@@ -55,9 +69,14 @@ if (broken.length) {
   process.exit(1);
 }
 
+if (details.length) {
+  console.error(`pages that show --details: ${details.join(', ')}`);
+  process.exit(1);
+}
+
 if (strayCode.length) {
   console.error(`stray code tag after a table: ${strayCode.join(', ')}`);
   process.exit(1);
 }
 
-console.log(`link check: ${html.length} pages, every internal link lands`);
+console.log(`link check: ${html.length} pages, every internal link lands, apart from ${withoutPage.size} binding install paths with no page yet`);
