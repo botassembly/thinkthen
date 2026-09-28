@@ -21,6 +21,7 @@ Add concise investigation notes to the ticket. A shared record may hold facts co
 - Check each host's accepted value ranges and NULL rules before reusing a proof across ports; a value valid in one host may be refused in another.
 - For port settings, inspect every current constructor and overload before copying an accepted ticket's sentence. A later landed adapter may already support a value that older prose called absent.
 - The smallest relevant validation commands and what each proves. Keep setup, compile, execution and lock wait separate when measured. No load campaign belongs in preparation.
+- For paid jobs, distinguish a reservation charged before execution from a runtime limit. Trace the wrapper's enforcement point and count every token kind it reserves; a missing usage report must not become a guessed count.
 - Unresolved questions and missing evidence. Distinguish a proposed solution from an accepted decision; seek design review before changing the contract.
 
 Review the notes against source and ask the builder whether they are actionable. Correct inaccurate or speculative claims before handoff. Keep accepted unbuilt tickets on their existing branches; do not land them early merely to add notes.

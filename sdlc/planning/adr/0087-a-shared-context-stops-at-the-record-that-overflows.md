@@ -9,7 +9,7 @@ Status: accepted by ticket 0172. Date: 2026-09-27. Amends ADR 0048 item 11.
 ## Decision
 
 1. Before any request, refuse at exit 2 when the context, question and no record exceed the resolved request size or a profile limit. The message names the binding limit and echoes no context or record text.
-2. Check each record when the reader reaches it. Close and send any earlier open batch before refusing a record that cannot fit beside the context. Stop at that record with exit 2; send nothing for it. Earlier batches may have been sent and their rows printed.
+2. Check each record when the reader reaches it. Close and send any earlier open batch before refusing a record that cannot fit beside the context. Stop at that record with exit 2; send nothing for it. Earlier batches may have been sent. `decide` and `filter` print completed rows; `rank` withholds them on a stop to preserve ordering.
 3. Keep ADR 0051's one halving when the backend refuses an already sent batch as too large. A refused half fails at exit 4 under that rule.
 4. Do not read ahead to predict a later record's size. A stream can be endless; the reader's 50 ms pause and memory bound still apply.
 

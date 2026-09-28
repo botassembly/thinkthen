@@ -18,6 +18,31 @@ def refuse(message):
     raise SystemExit(2)
 
 
+def counted_tokens(total, rows):
+    """Require reported usage on every row and match the process totals."""
+    if not isinstance(total, dict) or not rows:
+        refuse("the backend did not report complete token usage")
+    usages = []
+    for row in rows:
+        meta = row.get("meta") if isinstance(row, dict) else None
+        usage = meta.get("usage") if isinstance(meta, dict) else None
+        if not isinstance(usage, dict):
+            refuse("the backend did not report complete token usage")
+        usages.append(usage)
+    spent = 0
+    for field in ("input_tokens", "output_tokens"):
+        value = total.get(field)
+        shares = [usage.get(field) for usage in usages]
+        if type(value) is not int or value < 0 or any(type(part) is not int or part < 0 for part in shares):
+            refuse("the backend did not report complete token usage")
+        if sum(shares) != value:
+            refuse("the result and process token counts differ")
+        spent += value
+    if spent == 0:
+        refuse("the sent request has no reported token usage")
+    return spent
+
+
 def run(binary, titles, catalog, key, scratch):
     home = scratch / "home"
     home.mkdir()
@@ -35,6 +60,8 @@ def run(binary, titles, catalog, key, scratch):
         refuse(f"decide exited {command.returncode}")
     status = subprocess.run([str(binary), "status", "--json"], capture_output=True, env=env, check=True)
     total = json.loads(status.stdout)["usage"]["total"]
+    result_rows = [json.loads(line) for line in results.read_bytes().splitlines()]
+    spent = counted_tokens(total, result_rows)
     report = subprocess.run(
         [str(binary), "audit", str(results), str(key), "--id", ""],
         capture_output=True, env=speed.plain(), check=False,
@@ -49,6 +76,7 @@ def run(binary, titles, catalog, key, scratch):
         refuse(f"sent {total['requests_sent']} requests instead of one")
     return {"right": grade["right"], "false_yes": grade["false_yes"],
             "misses": grade["false_no"], "input_tokens": total["input_tokens"],
+            "output_tokens": total["output_tokens"], "counted_tokens": spent,
             "requests_sent": total["requests_sent"]}
 
 
@@ -80,7 +108,7 @@ def main(bench, name):
             scratch = root / f"repeat-{repeat}"
             scratch.mkdir()
             counts = run(binary, titles, catalog, key, scratch)
-            spent += counts["input_tokens"] or 30_000
+            spent += counts["counted_tokens"]
             line = json.dumps({"name": name, "repeat": repeat, "build": speed.git("rev-parse", "HEAD"), **counts})
             with output.open("a", encoding="utf-8") as kept:
                 kept.write(line + "\n")
