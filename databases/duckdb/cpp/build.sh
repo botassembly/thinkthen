@@ -55,6 +55,10 @@ if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then set -- "$@" -DCMAKE_OSX_DEPLO
 	-DTHINKTHEN_DUCKDB_STATIC_DIR="$STATIC"
 "$CMAKE" --build "$BUILD" --target thinkthen_loadable_extension -j 2
 mkdir -p "$ROOT/build/artifacts/cpp/$HOST_TARGET"
-cp -- "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
+if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then
+	python3 "$HERE/strip_macos.py" "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
+else
+	cp -- "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
+fi
 chmod 644 "$ROOT/build/thinkthen.duckdb_extension"
 cp -- "$ROOT/build/thinkthen.duckdb_extension" "$ROOT/build/artifacts/cpp/$HOST_TARGET/thinkthen.duckdb_extension"

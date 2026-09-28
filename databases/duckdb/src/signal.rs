@@ -107,6 +107,21 @@ impl Invoke {
     }
 }
 
+impl Drop for Invoke {
+    fn drop(&mut self) {
+        let mut active = INVOKING.load(Ordering::SeqCst);
+        loop {
+            let count = active & COUNT_MASK;
+            debug_assert!(count > 0);
+            let next = (active & !COUNT_MASK) | (count - 1);
+            match INVOKING.compare_exchange(active, next, Ordering::SeqCst, Ordering::SeqCst) {
+                Ok(_) => break,
+                Err(observed) => active = observed,
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{INVOKING, Invoke, Ordering, publish_signal, start_clock};
@@ -134,20 +149,5 @@ mod tests {
         let next = Invoke::begin();
         publish_signal(old_interval);
         assert!(!next.stopped(), "the next query inherited the prior signal");
-    }
-}
-
-impl Drop for Invoke {
-    fn drop(&mut self) {
-        let mut active = INVOKING.load(Ordering::SeqCst);
-        loop {
-            let count = active & COUNT_MASK;
-            debug_assert!(count > 0);
-            let next = (active & !COUNT_MASK) | (count - 1);
-            match INVOKING.compare_exchange(active, next, Ordering::SeqCst, Ordering::SeqCst) {
-                Ok(_) => break,
-                Err(observed) => active = observed,
-            }
-        }
     }
 }
