@@ -93,3 +93,8 @@ Name the exact setting when checking accepted values: SQLite’s connection time
 
 
 For layered builder configuration, trace when each candidate value is validated and which one is finally selected. An invalid environment value must not preclude an accepted explicit override. Prove precedence with conflicting values through the environment-aware builder; a bare builder or identical values cannot distinguish the paths. The 0211 review supplied that counterexample. Retain 0212’s existing selected-tier validation rule through the later consumer migration.
+
+
+For native panic handling, trace the hook before the catch, detached worker entry, opaque payload destruction and actual artifact linkage. A caught payload may panic from Drop; name the disposal policy and its cost. A process-global Rust hook is not evidence that hook state outlives its DSO. Verify the changed package and exact load outcome before prescribing a new lifetime policy or claiming other platforms.
+
+Before declaring a proof complete, match each promised property to its actual assertion before and after the triggering operation. A read-only success, an absent directory, and a miss in an existing directory establish different guarantees. Extend the closest existing boundary test when its setup already covers the case.
