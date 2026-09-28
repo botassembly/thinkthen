@@ -1,6 +1,6 @@
 # 0216 independent design review handoff
 
-Status: proposed B10 [ticket](../tickets/0216-annotate-record-batching.md), [preflight](0216-batching-preflight.md) and [ADR 0092](../planning/adr/0092-annotate-group-batch-metadata.md) for a fresh independent reviewer. No self-acceptance, product completion, runtime or paid result. Historical base main `d0dd6ad3`; current main `374f8396` includes reviewed B8 landing `78eea61c`. B9 accepted design `d5836c45` is separate and still building. This correction addresses independent findings on frozen `8121c171`.
+Status: the same independent reviewer **ACCEPTED design quality** at frozen `e5a29e89`, resolving all three prior findings without finding a new defect. [ADR 0092](../planning/adr/0092-annotate-group-batch-metadata.md) and its `meta.batches` public choice remain proposed pending Ian's answer. This review grants no runtime approval, product completion or paid result. Historical base main `d0dd6ad3`; current main `374f8396` includes reviewed B8 landing `78eea61c`. B9 accepted design `d5836c45` is separate and still building. This correction addresses independent findings on frozen `8121c171`.
 
 ## Review the exact boundaries
 

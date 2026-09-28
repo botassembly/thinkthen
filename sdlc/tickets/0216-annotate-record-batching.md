@@ -6,7 +6,7 @@ opens: sdlc/tickets/0216-annotate-record-batching.md sdlc/records/0216-batching-
 
 # 0216: Batch annotate records within each on group
 
-Status: Proposed B10 design for fresh independent review. No runtime, paid result or B10 completion is claimed. ADR 0092 proposes one additive metadata choice; it is not accepted. Owner: Codex.
+Status: B10 design quality accepted by the same independent reviewer at `e5a29e89`. ADR 0092 and its `meta.batches` public choice remain proposed pending Ian's answer. No runtime, paid result or B10 completion is claimed. Owner: Codex.
 
 ## Accepted outcome and retained behavior
 
