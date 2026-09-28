@@ -16,7 +16,7 @@ The consumer-language program finished twelve languages across ten experiments (
 
 **P4 — One model-produced non-BMP offset case in the shared corpus.** Why: every port proves the shared synthetic case; a model-produced case would close the last gap between synthetic and live evidence for offset correctness.
 
-**Standing risk to weigh:** single-host proofs (one Linux box, one toolchain per language), so the first CI rebuild per language is also its first second-environment run. The Go and Swift post-J1 reports show what drift checks look like and cost.
+**Compute: no constraint.** Ian's ruling (2026-09-28): fill this Linux machine and the M5 Mac with as many builds as the work needs. The only courtesy rule on the Linux box is not to overload it while other lanes hold the shared lock (the existing load gate already handles this). The experiments' single-host wording describes evidence provenance, not a capacity limit: rebuild tickets should run on both machines and in CI without asking. The one true second-environment finding so far is positive — the first macOS native package checks and the M5 proof landed cleanly. The Go and Swift post-J1 reports show what drift checks look like and cost.
 
 ## Decisions Ian can overturn
 
