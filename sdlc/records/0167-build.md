@@ -1,6 +1,6 @@
 # 0167 build and synthetic proof, 2026-09-27
 
-Status: source slice `c27fc529` is pushed. This completion slice adds the synthetic conformance, replay, host, specification, and fixture evidence for fresh review. No paid provider call has occurred. Ian's separate authorization remains required for the choice baseline and pair recordings.
+Status: source and synthetic proof independently accepted at `7855f394`. Ian approved the bounded paid validation through the delegated budget ruling on main `a2c9057a`. Run A and Run B each completed exactly three provider calls. This recording, fixture and documentation completion slice awaits narrow fresh review before coordinator landing. No additional paid call is planned.
 
 ## Changed path
 
@@ -22,4 +22,23 @@ The source test table replaces the old choice planner and option-fallback tests.
 
 ## Public-fact validation gate
 
-`specification/fixtures/relate/` now contains the three entity sets, two rule files, and the 28-edge key. Their keyless dry runs plan 30, 80 and 110 questions, each in one request, with 3,035, 7,001 and 9,476 request bytes respectively. These counts are local synthetic planning evidence, not provider token usage or accuracy. The README does not yet claim replayed audit rows. Once fresh review accepts the complete diff, the coordinator may present the ticket's separately capped Run A and Run B for Ian's authorization. Run B's measured pair-token rate must pass ticket stop rule 8 before the recorded fixture and accuracy bars are considered complete.
+`specification/fixtures/relate/` contains the three entity sets, two rule files, and the 28-edge key. Their keyless dry runs planned 30, 80 and 110 pair questions, each in one request, with 3,035, 7,001 and 9,476 request bytes respectively. Those counts were local planning evidence. The separately authorized paid runs supplied the reported usage and accuracy below; only Run B's three checked public recordings were promoted. Its executable README now pins the replayed strict audit rows.
+
+## Authorized A/B validation
+
+The ignored `target/codex-builds/0167/paid-plan/` holds the exact run script, frozen plans, binary digest list, private Run A answers, Run B execution output, strict audits and the literal stop-rule calculator. Run A used clean-main `97d213660df32baad68f693539562330099ed4c2` choice binary SHA-256 `bac312e534c3585c5ce992819944841b960cde5369d7ac51c51d088cf9f8ec8f`. Run B used the reviewed pair binary from `cc5f9d4a`, SHA-256 `7b6d9200d24454b9d40ba02c1578117541219d6fed04346efcbb79abae2e2ad3`. Both digests matched immediately before execution. Each command named the canonical URL, model `jev-1.13.0`, and `--max-retries 0`; `sdlc/scripts/live` durably reserved 60,000 tokens for A and 80,000 for B. The ledger showed 462,550,291 charged before A and 462,610,291 afterward. It showed 462,760,291 immediately before B and 462,840,291 afterward; other reservations occurred between these two runs and are not attributed to 0167. The provider reported 22,523 actual tokens for the six 0167 calls, not 140,000 consumed tokens. Every call returned `thinkthen.result/1`, the named model and URL, one send, positive input/output usage and the exact compiled dry-run request digest. No authentication refusal occurred. Run A answers remain only under ignored `target/`.
+
+| Set | Run A true / extra / missed | A input + output tokens | Run B true / extra / missed | B input + output tokens |
+| --- | --- | ---: | --- | ---: |
+| bands | 10 / 0 / 2 | 2,057 + 514 | 12 / 3 / 0 | 1,280 + 535 |
+| cities | 3 / 0 / 5 | 3,126 + 867 | 8 / 0 / 0 | 2,366 + 1,435 |
+| cities-plus | 8 / 0 / 0 | 4,041 + 1,239 | 8 / 0 / 0 | 3,077 + 1,986 |
+| overall | 21 / 0 / 7 | 9,224 + 2,620 | 28 / 3 / 0 | 6,723 + 3,956 |
+
+Run A missed George Harrison → Traveling Wilburys and Paul McCartney → Wings in bands. In cities it missed Kyoto → Japan, Lyon → France, Marseille → France, Osaka → Japan and Rio de Janeiro → Brazil. Run B missed none. Its three extra band edges were John Lennon, Paul McCartney and Ringo Starr → Traveling Wilburys. The two city results had zero difference over their shared eight cities and ten countries. Thus Run B passed the accepted 26/28 with at most three extras, bands 11/12, each city set 7/8, and stability within one edge. The Run A baseline intentionally does not meet those pair-method bars. Ticket proof text previously said “Bars, on every run”; this completion clarifies it to “Bars, on every Run B pair recording” to match stop rule 3 and the prepared paid plan. No threshold changed.
+
+The first private per-set audit used the original key ids 2 and 3 after extracting one result line, which `audit` numbers as id 1. The second set therefore returned “no answer has a label in the key.” The corrected private copy changes only that extracted key id to 1. The committed three-id key and all six provider results stayed unchanged. Four strict audit rows per run then produced the figures above. This was a proof-preparation miss; no paid call or product source was repeated.
+
+Run B's measured pair rate is `(6,723 input tokens - 300 × 3 requests) / 220 questions = 26.468` input tokens per question. The literal ticket stop rule uses the largest planned state, the 100,129-byte one-question ceiling case, estimated at 51,667 tokens from the accepted 0.516 tokens/byte ratio. Its sum is `400 × 26.468 + 51,667 + 300 = 62,554.3`, below 65,536, so rule 8 passes. The 13,972-byte state actually beside 400 questions is only a diagnostic; it was not substituted for the literal largest state. The state estimate is based on the earlier choice-body ratio, not a newly measured tokenizer count.
+
+Before promotion, keyless replay from Run B's private recording returned the same three answer objects, values and request digests with zero sends, and a strict audit again gave 28 matched, three extra, zero missed. The three exchange files and backend marker were copied byte-for-byte into `specification/fixtures/relate/recording/`; transient lock files were not copied. `mustmatch test specification/fixtures/relate/README.md` passed three blocks, including the four exact audit rows, with the key absent. `sdlc/scripts/spec` now includes that fixture page so the proof remains routine. No full spec or surface ladder was rerun for this completion slice.

@@ -6,9 +6,9 @@ opens: sdlc/planning/adr/0057-relate-asks-one-yes-no-question-per-pair.md sdlc/p
 
 # 0167: Relate keeps every true edge
 
-Status: building on `ticket/0167-relate-keeps-every-true-edge`. The coordinator accepted the outcome on 2026-09-27 after a fresh read-only design review. Ian's later handover routes build and fresh review to Codex. The separately authorized paid recordings are pending.
+Status: source and paid proof complete on `ticket/0167-relate-keeps-every-true-edge`; the final recording and documentation slice awaits fresh read-only completion review and coordinator landing. The coordinator accepted the outcome on 2026-09-27 after a fresh read-only design review. Ian's later handover routes build and review to Codex. Ian approved the bounded paid runs through the delegated budget ruling recorded on main `a2c9057a`.
 
-Review route: the accepted design was reviewed before the handover. A fresh read-only Codex reviewer checks the final diff and build lessons before the coordinator offers the paid validation to Ian.
+Review route: the accepted design was reviewed before the handover, and the source and synthetic proof were independently accepted at `7855f394`. A fresh read-only Codex reviewer checks the paid fixture, executable audit rows and completion lessons before landing.
 
 ## Outcome and authority
 
@@ -158,9 +158,9 @@ A new fixture, `specification/fixtures/relate/`, holds three entity sets of publ
 
 Each set is built to break today's planner. In `bands`, persons outnumber bands, so each person asks and keeps at most one band. Paul McCartney and George Harrison lose one each. In `cities`, countries outnumber cities, so each country keeps at most one city, and at most 3 of 8 edges survive. In `cities-plus`, three unrelated cities make the cities ask, so all 8 can return. That is item 2's flip on facts with one answer.
 
-`relate` reads one entity set and one `@FILE` a call. A file holding both rules would exit 2, because each set lacks the other rule's kinds (row 18). So one run is three calls, each appending one line to the run's results file: `relate @member-of.json --jsonl --details --record DIR < bands.jsonl`, then `relate @located-in.json` over `cities.jsonl`, then over `cities-plus.jsonl`. The lines carry no `input`, so `audit` takes ids 1 to 3 from their line numbers. `audit` pools a group's lines into one row, so each run takes four audits with `--match strict`: one over all of `key.jsonl`, and one for each set against that set's key line alone, made with `jq -c 'select(.id == N)' key.jsonl`. Unlabeled lines leave every measure. Three runs make the proof.
+`relate` reads one entity set and one `@FILE` a call. A file holding both rules would exit 2, because each set lacks the other rule's kinds (row 18). So one run is three calls, each appending one line to the run's results file: `relate @member-of.json --jsonl --details --record DIR < bands.jsonl`, then `relate @located-in.json` over `cities.jsonl`, then over `cities-plus.jsonl`. The lines carry no `input`, so `audit` takes ids 1 to 3 from their line numbers. `audit` pools a group's lines into one row, so each run takes four audits with `--match strict`: one over all of `key.jsonl`, and one for each set against that set's key line alone. A private single-set key copy changes that id to 1, because an extracted one-line result has id 1; the committed key stays unchanged. Unlabeled lines leave every measure. Three calls make each run's proof.
 
-Bars, on every run:
+Bars, on every Run B pair recording; Run A is the measured old-choice baseline:
 
 - Matched at least 26 of the 28 key edges, with at most 3 extra.
 - `bands` matches at least 11 of 12. Today's planner reaches at most 10.
@@ -171,7 +171,7 @@ No experiment measured this wording on these sets. Local experiment 237's yes/no
 
 ### Outside-in tests
 
-1. **The recorded runs.** The fixture README's blocks replay the three runs and pin each audit row. They protect the whole path on real answers. Restoring the choice drops `cities` below 7 of 8 in any new recording. No existing test grades `relate` against a key. No hook is needed.
+1. **The recorded pair calls.** The fixture README replays Run B's three calls and pins the overall and each set's audit row. They protect the whole path on real answers. The measured old-choice baseline found only 3 of 8 `cities` edges. No earlier test graded `relate` against this key. No hook is needed.
 2. **One-to-many, loopback.** Rows 1 and 2 in `tests/backend/relate.rs`. The test pins the three lines and the request counts. It replaces `choice_and_h_edges_keep_ruled_order_and_endpoint_shape`. It protects every true edge and invariance under an unrelated entity. Restoring the choice prints no line for row 1. Today's tests pin the choice itself. It drives the real command against a listener.
 3. **Plans, by dry run.** Rows 3, 5, 9, 9b, 10 to 13 and 15, and row 14 through a loopback count, in `tests/backend/relate.rs` and `tests/backend/relate/ceiling.rs`. The test pins row 3's whole plan and the request counts of the rest. It protects the shared state, the filter to rule kinds, the 400 limit at every address, the profile rules and the plan's per-rule counts under version 1. A per-rule state, a kept `Paris`, a missing limit or a limit only at the built-in address each fail a row. No existing test pins one state for several rules.
 4. **Retained contracts.** The detail tests `an_h_entry_at_the_cut_is_accepted_and_bare_partial_output_exits_six`, `mixed_logical_failure_prints_details_and_exits_six`, `the_detailed_question_digest_hashes_the_printed_line_question` and `no_valid_logical_answer_exits_four_without_output` pass unchanged in their assertions, over rebuilt exchanges. So do `secrecy_relate.rs`, the empty-input test and the cache test. Ticket 0147's recognize replays pass with no recording changed.
@@ -224,14 +224,14 @@ This table maps each credible regression to its focused proof. The older fourtee
 
 ## Recordings and the paid run
 
-Ian authorizes each run before it starts. Each goes through `sdlc/scripts/live` under its token cap, on the public facts above. Costs use the dry-run bytes, 0.516 input tokens a byte and $0.042 a million input tokens.
+Ian authorized both bounded runs through the delegated budget ruling on main `a2c9057a`. Each went through `sdlc/scripts/live` under its token reservation, on the public facts above. The estimates below used dry-run bytes, 0.516 input tokens a byte and $0.042 a million input tokens; actual reported usage is in the [build record](../records/0167-build.md).
 
 | Run | When | Questions | Estimated input tokens | Cap | Estimated cost |
 | --- | --- | --- | --- | --- | --- |
-| A. Choice baseline, three runs, from the saved pre-0167 binary | After source, synthetic proof and review are concrete, with separate authorization | 31 a run | about 26,000 | 60,000 tokens | about $0.001 |
-| B. The pairs, three runs, recorded | After source, synthetic proof and review are concrete, with separate authorization | 220 a run | unmeasured; about 54,000 at 73 tokens a question | 80,000 tokens | about $0.0023 |
+| A. Choice baseline, three calls, from the saved pre-0167 binary | Completed after source, synthetic proof and review | 31 total | about 26,000 | 60,000 tokens | about $0.001 |
+| B. The pairs, three calls, recorded | Completed after source, synthetic proof and review | 220 total | about 54,000 at 73 tokens a question | 80,000 tokens | about $0.0023 |
 
-The total cap is 140,000 tokens, about $0.006. Run A is local experiment evidence. Its answers stay unpushed, and the build record cites its figures. It measures today's recall and tokens on the same sets, as ADR 0054 item 5 asks. Run B's recordings join the fixture. The build record also reports run B's pair rate: input tokens, less 300 times the requests, divided by the questions. Stop rule 8 uses it. No other recording is re-made, because every other relate exchange in the repository is synthetic.
+The two reservations total 140,000 tokens; the provider reported 22,523 tokens across the six calls. Run A is local experiment evidence. Its answers stay unpushed, and the build record cites its figures. It measured the old choice path on the same sets, as ADR 0054 item 5 asks. Only Run B's three verified recordings join the fixture. The build record reports Run B's pair rate: input tokens, less 300 times the requests, divided by the questions. Stop rule 8 uses it. No other recording was re-made, because every other relate exchange in the repository is synthetic.
 
 ## Pages
 
@@ -307,14 +307,15 @@ The owner's calls, which ADR 0057 lists. Ian can overturn each.
 6. **The limit applies at every address**, as `recognize` step 3 applies it. This is the coordinator's call. It departs from Ian's accepted sentence, "A relation request at the built-in address holds at most 400 questions".
 7. **Plan version 1 stays, by the coordinator's ruling.** Ian's accepted text keeps `method` and `fallback`, always `yes_no` and null. Each plan entry is one rule as given, and its `request_count` counts the requests carrying its questions. `method: "yes_no"` stays in detail entries too, so consumers keep working.
 8. **ADR 0019 gains a note and keeps its rule.** The coordinator asked for an amendment to ADR 0019. ADR 0057 amends `relate-design.md`, which holds the planner.
-9. **Run A measures today's choice before the build.** It costs about $0.001 and answers ADR 0054 item 5.
+9. **Run A measures the source-pinned pre-0167 choice.** It answers ADR 0054 item 5 without rebuilding the old implementation on this branch.
 
 ## What the build taught us
 
 - The preflight correctly identified the shared planner, replay digest changes, and the SQLite cancellation setup. It missed DuckDB's throttle case: nine old per-rule requests became six shared requests, so the case now uses sixteen rules and still proves eight held requests with later work waiting.
 - A recording entry stores the exact request as raw JSON. Pretty-printing the rebuilt synthetic request under the correct digest made replay reject it; keeping the compiled dry-run's compact request bytes fixed the executable spec. The 0152 fixture-hash lesson helped find the new digest, but did not predict this raw-byte requirement.
 - The two synthetic conformance cases now share one request where case 51 formerly had two. Their replies were remapped to ordered pair questions, while their expected edges and question digests stayed. The source ratchet is 76,823 against merged main's 77,650, after removing choice-only code and tests; see `sdlc/records/0167-build.md` for the focused proof and deleted-test replacements.
-- The public-fact inputs and key are ready without a provider call. Run A and run B still need Ian's separate authorization after fresh code review. The related command and surface checkpoint belongs to the batch coordinator.
+- The prepared private per-set audit copied key ids 2 and 3 without renumbering them after extracting one result line. `audit` therefore had no matching label for the second set. The corrected private key transform sets each extracted key's id to 1 and leaves the committed key unchanged; the exact four strict rows now pass for both paid runs. A missed preflight detail, not a provider or source failure.
+- Ian approved the bounded paid budgets after fresh source review. Run A's old choice missed seven true edges; Run B's pairs found all 28 with three extra band edges. The literal 400-question token stop rule passed. The pair recordings replay without a key or network. The source ratchet remains 827 lines below the merged main value after the later main integration; the related command and surface checkpoint belongs to the batch coordinator.
 
 ## What Ian can overturn
 
@@ -335,5 +336,5 @@ The owner's calls, which ADR 0057 lists. Ian can overturn each.
 - Starts from: Ian's ruling of 2026-09-26, item 5 of ticket 0147 before commit `2e0c6551`. ADR 0056 and ticket 0147, which built the pair path for `recognize` step 3. Item 2 of the architect review 10 issue, with its live and replayed failures. Local experiment 237, where yes/no per pair found 89 of 89 true edges against 79 for the choice. Local experiment 275, where one shared state cut input tokens by 51% to 59% within the noise. Local experiment 284's step-3 figures, 66 to 68 of 70 stated edges, in `sdlc/records/2026-09-26-recognize-three-step-evidence.md`. Main's dry runs at `a057c594` for today's bytes, relate's 0.516 tokens a byte on choice bodies in `specification/backends.md`, and local experiment 260's 73 tokens a yes/no question.
 - Keeps: Rules, entity input, validation, the cut, the edge shape on every surface, the yes/no detail entry, exit 6, the question digest, `--jobs`, the ceiling, profiles, record, replay, cache, and every recognize request body.
 - Changes: Every relation asks yes/no pairs. One state per run holds only rule kinds. Questions name their relation with `Is it true that`. Requests hold at most 400 questions at every address. The fallback and choice entries go. The dry run keeps version 1 with one entry per rule. The page says an edge comes from the model's knowledge.
-- Proof: The compiled one-to-many command, dry-run plans, partial details, shared conformance cases, recognize request identity, and focused SQLite and DuckDB cases pass. The public-fact inputs and key are prepared. Three paid recorded runs and their `audit` bars remain pending separate authorization. The regression table maps the older proposed breaks to these focused proofs.
+- Proof: The compiled one-to-many command, dry-run plans, partial details, shared conformance cases, recognize request identity, and focused SQLite and DuckDB cases pass. The public-fact Run A baseline and Run B pair calls completed under Ian's approved reservations; Run B passed all four strict audit bars and stop rule 8. Its three recordings replay with no key or network. The regression table maps the older proposed breaks to these focused proofs.
 - Defers: A large set's cost, the 400 limit's repeated state, a state over the backend's token limit, precision on one-target facts, the `either` wording, and recognize's mention and distance limits.
