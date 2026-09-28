@@ -1,6 +1,6 @@
 # 0227 language panic diagnostics preflight
 
-Status: notes-only source inventory at main `dad31fd8`, refreshed against the reviewed 0226 Linux landing `fadb6c5c` and its SQLite Python-counter correction `614471dd`; [ticket 0227](../tickets/0227-language-panic-diagnostics.md) awaits High design follow-up. MacOS and retained old DuckDB target-package checks remain 0226 remainders. No 0227 build, host execution, provider call or package proof was run here.
+Status: accepted High design at `582a2941`; this source inventory was pinned at main `dad31fd8` and refreshed against the reviewed 0226 Linux landing `fadb6c5c` and its SQLite Python-counter correction `614471dd`. MacOS and retained old DuckDB target-package checks remain 0226 remainders. The 0227 build now follows [ticket 0227](../tickets/0227-language-panic-diagnostics.md); this preparation itself ran no host, provider or package proof.
 
 ## Current routes and integration traps
 

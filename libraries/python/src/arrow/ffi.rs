@@ -17,6 +17,7 @@ use std::ffi::{CStr, c_char, c_int, c_void};
 use std::ptr;
 use std::sync::Arc;
 
+use crate::diagnostics::host;
 use pyo3::prelude::*;
 use pyo3::types::PyCapsule;
 
@@ -161,11 +162,12 @@ unsafe impl Sync for Imported {}
 impl Imported {
     /// A column: any object with `__arrow_c_stream__` or `__arrow_c_array__`.
     pub(crate) fn column(value: &Bound<'_, PyAny>) -> PyResult<Self> {
-        if value.hasattr("__arrow_c_stream__")? {
+        if host(|| value.hasattr("__arrow_c_stream__"))? {
             return Self::stream(value, true);
         }
-        let pair = value.call_method0("__arrow_c_array__")?;
-        let (schema, array): (Bound<'_, PyCapsule>, Bound<'_, PyCapsule>) = pair.extract()?;
+        let pair = host(|| value.call_method0("__arrow_c_array__"))?;
+        let (schema, array): (Bound<'_, PyCapsule>, Bound<'_, PyCapsule>) =
+            host(|| pair.extract())?;
         let schema = schema
             .pointer_checked(Some(SCHEMA))?
             .as_ptr()
@@ -201,7 +203,7 @@ impl Imported {
 
     fn stream(value: &Bound<'_, PyAny>, gated: bool) -> PyResult<Self> {
         let py = value.py();
-        let capsule = value.call_method0("__arrow_c_stream__")?;
+        let capsule = host(|| value.call_method0("__arrow_c_stream__"))?;
         let capsule = capsule.cast::<PyCapsule>()?;
         let source = capsule
             .pointer_checked(Some(STREAM))?
@@ -229,7 +231,7 @@ impl Imported {
         unsafe {
             let got = (*stream)
                 .get_schema
-                .map_or(-1, |get| get(stream, &raw mut taken.schema));
+                .map_or(-1, |get| host(|| get(stream, &raw mut taken.schema)));
             if got != 0 || taken.schema.release.is_none() {
                 return Err(usage(
                     py,
@@ -240,7 +242,7 @@ impl Imported {
                 let mut batch = EMPTY_ARRAY;
                 let got = (*stream)
                     .get_next
-                    .map_or(-1, |next| next(stream, &raw mut batch));
+                    .map_or(-1, |next| host(|| next(stream, &raw mut batch)));
                 if got != 0 {
                     return Err(usage(
                         py,
@@ -263,16 +265,16 @@ impl Imported {
         unsafe {
             for batch in &mut self.batches {
                 if let Some(release) = batch.release {
-                    release(batch);
+                    host(|| release(batch));
                 }
             }
             if let Some(release) = self.schema.release {
-                release(&raw mut self.schema);
+                host(|| release(&raw mut self.schema));
             }
             if let Some(stream) = self.stream.as_deref_mut()
                 && let Some(release) = stream.release
             {
-                release(stream);
+                host(|| release(stream));
             }
         }
     }
@@ -297,7 +299,7 @@ unsafe fn last_error(stream: *mut ArrowArrayStream, context: &str) -> String {
     let text = unsafe {
         (*stream)
             .get_last_error
-            .map_or(ptr::null(), |last| last(stream))
+            .map_or(ptr::null(), |last| host(|| last(stream)))
     };
     Readable::snapshot()
         .ok()

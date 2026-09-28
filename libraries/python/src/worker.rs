@@ -11,6 +11,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, sync_channel};
 use std::time::Duration;
 
+use crate::diagnostics::host;
 use pyo3::exceptions::PyKeyboardInterrupt;
 use pyo3::prelude::*;
 use thinkthen::{CallOptions, CancelToken, Error, ErrorKind};
@@ -144,7 +145,7 @@ fn wait<T: Send>(
             }
             Err(RecvTimeoutError::Timeout) => {}
         }
-        if let Err(signal) = py.check_signals() {
+        if let Err(signal) = host(|| py.check_signals()) {
             internal.cancel();
             return Err(if signal.is_instance_of::<PyKeyboardInterrupt>(py) {
                 raise(py, ErrorKind::Cancelled, INTERRUPTED, false)

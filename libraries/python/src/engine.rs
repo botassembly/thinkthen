@@ -4,6 +4,7 @@
 //! the detachable worker. The package names the verb, so one method serves
 //! each shape: one text, many texts, an ordering, and the three set calls.
 
+use crate::diagnostics::host;
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict};
 use thinkthen::{
@@ -113,7 +114,7 @@ fn cached(builder: EngineBuilder, cache: &Bound<'_, PyAny>) -> PyResult<EngineBu
             builder.no_cache()
         });
     }
-    let folder: std::path::PathBuf = cache.extract().map_err(|_| usage(py, CACHE))?;
+    let folder: std::path::PathBuf = host(|| cache.extract()).map_err(|_| usage(py, CACHE))?;
     builder.cache_at(folder).map_err(|error| raised(py, &error))
 }
 
@@ -146,7 +147,7 @@ fn folder_path(
     refusal: &'static str,
 ) -> PyResult<Option<std::path::PathBuf>> {
     value
-        .map(|value| value.extract().map_err(|_| usage(py, refusal)))
+        .map(|value| host(|| value.extract()).map_err(|_| usage(py, refusal)))
         .transpose()
 }
 
@@ -322,7 +323,10 @@ impl Engine {
                     model,
                     throttle: checked_throttle(throttle)?,
                     most: setting(max_requests, MAX_REQUESTS)?,
-                    max_request_bytes: setting(max_request_bytes, "max_request_bytes is a whole number")?,
+                    max_request_bytes: setting(
+                        max_request_bytes,
+                        "max_request_bytes is a whole number",
+                    )?,
                     timeout: setting(timeout, "a timeout is a whole number of seconds above zero")?,
                     retries: setting(max_retries, "max_retries is a whole number")?,
                     record: folder_path(py, record, "record is a folder path")?,

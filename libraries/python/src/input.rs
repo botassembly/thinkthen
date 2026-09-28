@@ -11,6 +11,7 @@ use pyo3::types::{PyBool, PyDict, PyInt, PyString};
 use thinkthen::{CallOptions, CancelToken};
 
 use crate::asked::{Entity, RecognizedEntity};
+use crate::diagnostics::host;
 use crate::worker::{Controls, Token};
 use crate::{raised, usage};
 
@@ -26,7 +27,7 @@ pub(crate) const DEADLINE: &str =
 pub(crate) fn top(value: &Bound<'_, PyAny>) -> PyResult<String> {
     let mut first = None;
     for kind in value.get_type().mro() {
-        let module = kind.getattr("__module__")?.str()?;
+        let module = host(|| kind.getattr("__module__")?.str())?;
         let top = module.to_str()?.split('.').next().unwrap_or_default();
         if top == "pandas" {
             return Ok(top.to_owned());
@@ -43,7 +44,7 @@ pub(crate) fn refuse_container(value: &Bound<'_, PyAny>) -> PyResult<()> {
     if matches!(top(value)?.as_str(), "pandas" | "polars" | "pyarrow")
         || arrow
             .iter()
-            .any(|name| value.hasattr(*name).unwrap_or(false))
+            .any(|name| host(|| value.hasattr(*name)).unwrap_or(false))
     {
         return Err(usage(value.py(), ARROW));
     }
@@ -67,13 +68,13 @@ impl Pandas {
 pub(crate) fn is_column(value: &Bound<'_, PyAny>) -> PyResult<bool> {
     Ok(value.is_instance_of::<Pandas>()
         || top(value)? == "pandas"
-        || value.hasattr("__arrow_c_stream__")?
-        || value.hasattr("__arrow_c_array__")?)
+        || host(|| value.hasattr("__arrow_c_stream__"))?
+        || host(|| value.hasattr("__arrow_c_array__"))?)
 }
 
 /// A Polars frame, or a refusal before any request (decision 4).
 pub(crate) fn polars_frame(value: &Bound<'_, PyAny>, verb: &str) -> PyResult<()> {
-    if top(value)? != "polars" || !value.hasattr("__arrow_c_stream__")? {
+    if top(value)? != "polars" || !host(|| value.hasattr("__arrow_c_stream__"))? {
         return Err(usage(
             value.py(),
             &format!(
@@ -120,14 +121,14 @@ pub(crate) fn texts(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
 /// Every text of an iterable, with no container check (a marked pandas Series).
 pub(crate) fn listed(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
     let py = records.py();
-    let items = records.try_iter().map_err(|_| {
+    let mut items = host(|| records.try_iter()).map_err(|_| {
         usage(
             py,
             "the records are a list, tuple, or other iterable of str",
         )
     })?;
     let mut read = Vec::new();
-    for (index, item) in items.enumerate() {
+    for (index, item) in std::iter::from_fn(|| host(|| items.next())).enumerate() {
         let item = item?;
         let what = format!("record {index}");
         read.push(string(&item, &what)?.ok_or_else(|| usage(py, &format!("{what} is not a str")))?);
@@ -140,11 +141,10 @@ pub(crate) fn listed(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
 pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Entity>> {
     let py = values.py();
     refuse_container(values)?;
-    let items = values
-        .try_iter()
+    let mut items = host(|| values.try_iter())
         .map_err(|_| usage(py, "the entities are a list of (name, kind) pairs"))?;
     let mut read = Vec::new();
-    for (index, item) in items.enumerate() {
+    for (index, item) in std::iter::from_fn(|| host(|| items.next())).enumerate() {
         let item = item?;
         let refused = || {
             usage(
@@ -165,7 +165,7 @@ pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Ent
             let field = |key: &str| -> PyResult<Option<String>> {
                 fields
                     .get_item(key)?
-                    .map(|value| value.extract().map_err(|_| refused()))
+                    .map(|value| host(|| value.extract()).map_err(|_| refused()))
                     .transpose()
             };
             let name = match field("name")? {
@@ -174,7 +174,7 @@ pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Ent
             };
             (name, field("kind")?.ok_or_else(refused)?)
         } else {
-            item.extract().map_err(|_| refused())?
+            host(|| item.extract()).map_err(|_| refused())?
         };
         read.push(thinkthen::Entity::new(&name, &kind).map_err(|error| raised(py, &error))?);
     }
@@ -197,7 +197,7 @@ pub(crate) fn controls(
             if value.is_instance_of::<PyBool>() || matches!(name.to_str()?, "bool" | "bool_") {
                 return Err(usage(py, DEADLINE));
             }
-            let seconds: f64 = value.extract().map_err(|_| usage(py, DEADLINE))?;
+            let seconds: f64 = host(|| value.extract()).map_err(|_| usage(py, DEADLINE))?;
             CallOptions::new()
                 .deadline_seconds(seconds)
                 .map_err(|error| raised(py, &error))?;
@@ -216,5 +216,5 @@ pub(crate) fn whole(value: &Bound<'_, PyAny>, sentence: &str) -> PyResult<i64> {
     if value.is_instance_of::<PyBool>() || !value.is_instance_of::<PyInt>() {
         return Err(usage(value.py(), sentence));
     }
-    value.extract().map_err(|_| usage(value.py(), sentence))
+    host(|| value.extract()).map_err(|_| usage(value.py(), sentence))
 }
