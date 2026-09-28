@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/question.rs crates/thinkthen/src/public/build
 
 # 0203: Preserve calibration profiles across libraries
 
-Status: candidate under focused verification. Owner: Codex. The saved-name public writer, wrapper routes, selected SQL details adapters and shared fixture are implemented. Fresh code review and landing remain. The three retained DuckDB C API platform packages remain outside this staged Linux C++ parity claim.
+Status: source accepted by fresh High review; ready to land. Owner: Codex. The saved-name public writer, wrapper routes, selected SQL details adapters and shared fixture are implemented and checked. Landing remains. The three retained DuckDB C API platform packages remain outside this staged Linux C++ parity claim.
 
 ## Outcome
 
@@ -89,6 +89,8 @@ The prior 0157 landing checked only the root source counter. It left 17 of 21 na
 The cross-surface command proof also pushed `backend/profile.rs` past its 500-line cap. Moving the new parity case to the existing warning-test child kept both files under the cap and preserved the same assertion. Preparation should have assigned a test home before adding another command case to a near-cap parent.
 
 Fresh High review caught one missed exact-message comparison: the code and two tests said `the set names it`, while this accepted ticket said `name it on the set`. The corrected wording preserves the same Usage refusal before a send. A targeted public test and a rebuilt Python real-column test pass after the correction. Future boundary preparation should copy accepted diagnostic text into the first outside-in assertion before the implementation chooses its wording.
+
+The same fresh High reviewer accepted corrected source `37e3d067` with no remaining code finding. [The code-review record](../records/0203-code-review.md) separates the original selected host proof from the corrected Rust/Python rerun. At landing, close register 24, the libraries' saved-profile loss. Keep the three DuckDB C API platform migrations in their existing separate 0201, 0149, register 50/51/72 and issue rows; this ticket does not claim their settings, warm or query-hook parity.
 
 ## What Ian can overturn
 
