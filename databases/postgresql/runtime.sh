@@ -179,6 +179,14 @@ bcount() {
 	tail -1 "$RUN/b.out"
 }
 
+# The bounded complete request bodies the selected backend arm captured.
+bcapture() {
+	lines=$(wc -l <"$RUN/b.out")
+	echo capture >&7
+	for _ in $(seq 200); do [ "$(wc -l <"$RUN/b.out")" -gt "$lines" ] && break; sleep 0.01; done
+	tail -1 "$RUN/b.out"
+}
+
 # Wait up to 10 s for the count to reach $1.
 bwait() {
 	for _ in $(seq 500); do [ "$(bcount)" -ge "$1" ] && return 0; sleep 0.02; done

@@ -16,6 +16,7 @@ mod context;
 )]
 mod ffi;
 mod files;
+mod find;
 mod relate;
 mod warm;
 
