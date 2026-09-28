@@ -1,5 +1,5 @@
 {
-  "deck": "03c072703532ead4ba33e7d857caac3b387a64b4",
+  "deck": "943f9da570f37b99c1e57c727b4c91bea5897290",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
@@ -119,8 +119,8 @@
     },
     "use-cases": {
       "slide": "25-use-cases",
-      "sha256": "c36885eec2d0e8c354fe74e9a5eb2d4f37bfba82048ee4f2475819c2e5b01f69",
-      "card": "ac02012cf75b49e8ac7bf4c611dd89269db6963b69e951ae29cbb93463c55963"
+      "sha256": "e5b3a33ba8271a7bae47415e2c6536856a5625825c2c948671c233fac13fb30f",
+      "card": "f7ca053596665898154d54172dcf79b3f9b6cb6161a3d1a0d292132d622b4171"
     },
     "retrieval": {
       "slide": "26-retrieval",
