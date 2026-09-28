@@ -10,7 +10,7 @@ Status: done on 2026-09-27. Fresh independent code review accepted `21564a96` wi
 
 ## Outcome
 
-Close the smallest proof gaps that existing SQL and R doors can satisfy. Reuse the 54-case `conformance/cases.json` and its captured loopback arms. Keep the 31-ID routine selection from 0205 and its separate full-functional and stress commands. Do not add a product function, public injection hook, or another case corpus. The starting inventory is `sdlc/records/2026-09-27-shared-case-gap-audit.md`, with the proof issue `sdlc/issues/2026-09-27-shared-conformance-skips-need-equivalent-boundary-proofs.md`. The landed 0205 record names the routine counts; a `not run` is not a failure and is not proof of behavior.
+Close the smallest proof gaps that existing SQL and R doors can satisfy. Reuse the 54-case `conformance/cases.json` and its captured loopback arms. Keep the 31-ID routine selection from 0205 and its separate full-functional and stress commands. Do not add a product function, public injection hook, or another case corpus. The starting inventory is `sdlc/records/2026-09-27-shared-case-gap-audit.md`, with the proof issue `sdlc/issues/closed/2026-09-27-shared-conformance-skips-need-equivalent-boundary-proofs.md`. The landed 0205 record names the routine counts; a `not run` is not a failure and is not proof of behavior.
 
 ## Evidence
 
