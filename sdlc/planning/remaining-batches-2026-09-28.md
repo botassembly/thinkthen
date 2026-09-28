@@ -28,7 +28,7 @@ Main through06b0803e adds three distinct issues after the75-row snapshot. The th
 
 ## Current preparation
 
-Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 is prepared at53b28a5 and awaits review. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Cumulative preparation covers35 original rows, including four since retired. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 
