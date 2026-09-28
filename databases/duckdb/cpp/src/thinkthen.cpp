@@ -4,6 +4,7 @@
 #include "bridge.hpp"
 #include "find.hpp"
 #include "listed_result.hpp"
+#include "listed_complete.hpp"
 #include "nested.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
@@ -58,6 +59,7 @@ struct ScalarBind : FunctionData {
 	std::optional<string> constant_question;
 	std::optional<int64_t> constant_deadline;
 	int32_t kind = 0;
+	bool complete_listed = false;
 
 	explicit ScalarBind(weak_ptr<ClientContext> context_p) : context(std::move(context_p)) {
 	}
@@ -66,12 +68,14 @@ struct ScalarBind : FunctionData {
 		copy->constant_question = constant_question;
 		copy->constant_deadline = constant_deadline;
 		copy->kind = kind;
+		copy->complete_listed = complete_listed;
 		return copy;
 	}
 	bool Equals(const FunctionData &other) const override {
 		auto &held = other.Cast<ScalarBind>();
 		return context.lock() == held.context.lock() && constant_question == held.constant_question &&
-		       constant_deadline == held.constant_deadline && kind == held.kind;
+		       constant_deadline == held.constant_deadline && kind == held.kind &&
+		       complete_listed == held.complete_listed;
 	}
 };
 
@@ -90,6 +94,7 @@ unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &func
 	            : function.name == "thinkthen_score" ? 5
 	            : function.name == "thinkthen_tag" ? 6
 	            : function.name == "thinkthen_annotate" ? 7 : 0;
+	bound->complete_listed = IsListed(bound->kind) && arguments.size() == 2;
 	if (arguments[0]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[0]);
 		if (!value.IsNull()) {
@@ -97,16 +102,18 @@ unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &func
 			auto &text = *bound->constant_question;
 			if (bound->kind == 0 || bound->kind == 1 || bound->kind == 2 || bound->kind == 7) {
 				ValidateQuestion(ResolveQuestion(context, text), bound->kind == 7);
+			} else if (bound->complete_listed) {
+				ValidateCompleteListed(ResolveQuestion(context, text), bound->kind);
 			}
 		}
 	}
-	if (IsListed(bound->kind) && bound->constant_question && arguments[2]->IsFoldable()) {
+	if (IsListed(bound->kind) && !bound->complete_listed && bound->constant_question && arguments[2]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[2]);
 		if (auto members = Members(value)) {
 			ValidateListed(*bound->constant_question, *members, bound->kind);
 		}
 	}
-	const auto deadline_index = IsListed(bound->kind) ? 3 : 2;
+	const auto deadline_index = IsListed(bound->kind) && !bound->complete_listed ? 3 : 2;
 	if (arguments.size() > deadline_index && arguments[deadline_index]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[deadline_index]);
 		if (!value.IsNull()) {
@@ -367,6 +374,15 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 }
 
+void CompleteListedCall(DataChunk &args, ExpressionState &state, Vector &result) {
+	auto &bound = Bound(state);
+	auto context = bound.context.lock();
+	if (!context) {
+		throw InvalidInputException("thinkthen defect: the caller session ended");
+	}
+	CompleteListed(args, *context, bound.kind, result);
+}
+
 } // namespace
 
 void LoadThinkThen(ExtensionLoader &loader) {
@@ -408,6 +424,9 @@ void LoadThinkThen(ExtensionLoader &loader) {
 		const auto result = string(name) == "thinkthen_score" ? LogicalType::DOUBLE
 		                    : string(name) == "thinkthen_tag" ? LogicalType::LIST(LogicalType::VARCHAR)
 		                                                       : LogicalType::VARCHAR;
+		ScalarFunction complete(name, {LogicalType::VARCHAR, LogicalType::VARCHAR}, result, CompleteListedCall, BindDecide);
+		complete.SetStability(FunctionStability::VOLATILE);
+		loader.RegisterFunction(complete);
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                                                 LogicalType::LIST(LogicalType::VARCHAR)},
 		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,

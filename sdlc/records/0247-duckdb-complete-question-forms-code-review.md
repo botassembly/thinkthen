@@ -1,0 +1,5 @@
+# 0247 DuckDB complete-question forms code/package review
+
+Status: **Pending fresh independent High review.** Candidate source `dc5b428b9f11cb5fddd9456b62e9ab07bbb070e3` and the [build record](0247-duckdb-complete-question-forms-build.md) identify the exact Linux package and selected host proof. No code or release acceptance is claimed in this record.
+
+Review binder and execution arity together, including `ScalarBind::Copy`/`Equals` and the legacy three-argument NULL/list overload. Check caller `ClientContext` file authority, active-statement snapshot and later prepared recheck, whole-chunk validation before a send, Local parser secrecy, typed SQL NULL/value codec, public details metadata, actual budget/cancellation and package hashes. Compare captured request bodies and independent canonical digests with the changed path. Confirm Linux stock v1.5.5 load, unchanged-artifact v1.5.4 refusal, caps, strict policy and stated cross-platform limits. Return ACCEPT or concrete findings before landing.

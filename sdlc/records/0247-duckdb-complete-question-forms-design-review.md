@@ -1,0 +1,7 @@
+# 0247 DuckDB complete-question forms design review
+
+Status: **ACCEPT** at `4f0f93e55740bc00f9729ec39ecc2cc51cb891fb` after a fresh High review and its narrow recheck. The coordinator approved implementation and pushed the exact runtime claim at main `6fd7b170`. This record does not claim runtime or package acceptance; a fresh High code/package review follows the build.
+
+The first High review found one factual wording error: the existing file reader appends 64 KiB blocks and rejects after accumulated content exceeds 1 MiB. It accepts no more than 1 MiB, but a refused stream may reach 1 MiB plus 64 KiB before rejection. The ticket and preflight now say this precisely and retain the existing `/dev/zero` refusal proof. The same reviewer accepted the corrected design with no other finding.
+
+Review the original Q5/shared-conformance criterion against the current four-target C++ release selector. Check that the two-argument mode branches at both bind and execution, leaves the three-argument list and untyped-NULL overload behavior intact, and uses the caller's file system and statement owner. Check safe Local file diagnostics, inline and wrong-kind Usage, whole-evidence `on` refusal, saved model/profile and description identity through `details_many_with`, typed NULL/results, and exact-source stock-host proof. Record ACCEPT or concrete findings here after the independent review. The coordinator then decides a runtime claim under the approved outcome; this candidate does not self-accept.
