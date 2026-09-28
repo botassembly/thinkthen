@@ -1,0 +1,5 @@
+# 0225 code review
+
+Status: pending fresh independent code review of the focused candidate. Review [ticket 0225](../tickets/0225-bound-usage-lock-waits.md), [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md), the [build record](0225-build.md), source, compiled held-lock test and amended recording page. This note records no code acceptance.
+
+Trace `finish` and `Drop` publishing one queue deadline, every taken month's `try_lock` reading it, and the writer's failure/clear/notify path. Check that a command cannot still join a writer blocked on the foreign advisory lock after the deadline. Preserve completed month writes and in-memory run facts, with one warning before final facts and unchanged answer and exit code. The held-lock case must retain the foreign lock until child exit, use only scratch usage state, and leave the paid ledger untouched. Do not infer a total exit bound for unrelated filesystem calls or the status reader. Review the +135-line ratchet and the duplication search named in the commit and build record.

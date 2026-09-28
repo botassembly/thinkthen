@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lo
 
 # 0225: Bound the advisory usage-lock wait at exit
 
-Status: design **ACCEPT** at `1e4936a7` by fresh Medium reviewer session `01a0e695-9381-7070-a807-bcc3be1f739f`; coordinator approved routine implementation. Build and code review remain. Owner: Codex. [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md) proposes the policy change; [the source preflight](../records/0225-usage-lock-preflight.md) confirms register 31 against main `4e0505a9`. The 0163 page fix closed only the separate recording-page issue. This ticket would close register 31's remaining runtime defect after a reviewed build, without touching the paid live ledger.
+Status: design **ACCEPT** at `1e4936a7` by fresh Medium reviewer session `01a0e695-9381-7070-a807-bcc3be1f739f`; coordinator approved routine implementation. A focused build candidate is prepared for fresh code review; no register closure is claimed. Owner: Codex. [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md) proposes the policy change; [the source preflight](../records/0225-usage-lock-preflight.md) confirms register 31 against main `4e0505a9`. The 0163 page fix closed only the separate recording-page issue. This ticket would close register 31's remaining runtime defect after a reviewed build, without touching the paid live ledger.
 
 ## Outcome and retained behavior
 
@@ -34,4 +34,4 @@ Prospective source: `crates/thinkthen/src/engine/usage.rs` and one coherent `eng
 
 ## What the build taught us
 
-Preparation found a second wait in `Counters::drop`: a timeout in `finish` alone would not release exit. It also found that `write_behind` may hold several month deltas, so a fresh deadline per `update` would not give one finalization bound. The accepted design must account for both. This is preparation evidence, not a build result; replace it with measured findings before closure.
+Preparation correctly identified `Drop`'s join and the multi-month `taken` vector. The build put one `finish_deadline` in the shared queue; both finish and drop publish it, and each writer lock attempt reads it. `File::try_lock` reports `TryLockError::WouldBlock`, which the first compile caught before the helper was corrected. The compiled held-lock case proved a command exits with its answer, one warning, final facts and no month write while the holder keeps the lock. The scripted listener counts recorded requests through `requests()`, not `count()`; that test assertion was corrected. Existing released-lock durability and warning cases still pass. Arbitrary filesystem I/O and the status reader remain outside this bound; fresh code review and coordinator closure remain.
