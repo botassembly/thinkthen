@@ -1,6 +1,6 @@
 # 0224 DuckDB ordered find: first Linux C++ slice
 
-Status: source implementation and selected local proof on `ticket/0224-duckdb-find`; exact packaged artifact and independent native review are pending in this record. This is Linux x86-64 C++ source and host work. Apple Silicon, Linux ARM64 and Intel macOS find packages, actual macOS 15 execution, PostgreSQL and the full 0224 outcome remain open.
+Status: selected Linux x86-64 C++ source and installed package proof from source commit `ba7a090eb6c5898002d0a0a081e5e01cecae402d` on `ticket/0224-duckdb-find`; independent High native review is pending. Apple Silicon, Linux ARM64 and Intel macOS find packages, actual macOS 15 execution, PostgreSQL and the full 0224 outcome remain open.
 
 ## Source and ownership
 
@@ -22,4 +22,22 @@ DuckDB's `Value` list preserves equal children and dictionary selection, but the
 
 ## Exact package and installed result
 
-Pending a source-frozen release build and selected installed checks. The prior baseline hash above is historical and does not prove this source.
+On a 16-CPU Linux x86-64 host at load 1.04 and 21 GiB available memory, `flock -o /run/user/1000/thinkthen-codex-3.lock env CARGO_NET_OFFLINE=true RUSTC_WRAPPER= THINKTHEN_DUCKDB_CPP_BUILD=/tmp/thinkthen-0224-duckdb-find/cpp-build sh databases/duckdb/cpp/build.sh` exited 0. The isolated CMake output and lane lock did not serialize other independent builds. After source commit `ba7a090e`, `flock -o /run/user/1000/thinkthen-codex-3.lock sdlc/scripts/release-pack --reuse x86_64-unknown-linux-gnu /tmp/thinkthen-0224-duckdb-find/package duckdb` exited 0 using that unchanged built extension. Exact SHA-256 values:
+
+| File | SHA-256 |
+| --- | --- |
+| Rust bridge static archive, `bridge/target/release/libthinkthen_duckdb_bridge.a` | `1c07548cb18bfac167cf4fb64640ffdaad4cf29ccaebb82eed273d81c006d094` |
+| `thinkthen-duckdb-0.0.1-x86_64-unknown-linux-gnu.tar.gz` | `faa9a07a9866e0c76aa27e7775085478f14458211daaece734e10967c5369aeb` |
+| Extracted `thinkthen.duckdb_extension` | `1f8ff27cf7025897068d53de1c350f99199943e4a6ef25f4e74a07bbc4333626` |
+| Built `build/thinkthen.duckdb_extension` | `1f8ff27cf7025897068d53de1c350f99199943e4a6ef25f4e74a07bbc4333626` |
+
+The extracted file is 73,309,806 bytes and contains zero raw `/home/ian` bytes. The archive contains ThinkThen and DuckDB licenses, dependency inventory and notices. Against that extracted file, selected conformance IDs 18 and 19 passed 2/2. The actual captured complete bodies were:
+
+```json
+{"state":"[{\"id\":\"u001\",\"evidence\":\"First passage.\"},{\"id\":\"u002\",\"evidence\":\"Second passage.\"},{\"id\":\"u003\",\"evidence\":\"Third passage.\"}]","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which passage answers the question?","criteria":{"u001":null,"u002":null,"u003":null,"none":null}}}}
+{"state":"[{\"id\":\"u001\",\"evidence\":\"First passage.\"},{\"id\":\"u002\",\"evidence\":\"Second passage.\"}]","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which passage answers the question?","criteria":{"u001":null,"u002":null,"none":null}}}}
+```
+
+Case 18's actual body SHA-256 was `6f2db9a5d733178470a4f58ebc2495dd66ebe2609c6c1bec8f534e9e8a6a77fe`; with served URL `http://127.0.0.1:44639/case/18-find-second/capture/v1/systemone`, its recording digest was `4f877e1a9785b9de1bca06a4c332cc63266cd11722330035519571870206cfbd`. Case 19's actual body SHA-256 was `d2e0ca3f5223f468512160e22784684fbc812306fa948b17dfc11d9098970a20`; with served URL `http://127.0.0.1:33005/case/19-find-none/capture/v1/systemone`, its digest was `58d9e7278cc515ad6b207163871465731becdbefbfb6b389dfd548c66c926f5e`. Each actual body and digest matched independent corpus bytes and its computed digest for that same ephemeral URL; each listener counted exactly one send. Literal expected SQL results covered the second original member and none, including all ordered candidate probabilities.
+
+The same extracted extension passed `original_duplicate_and_ties`, `null_empty_and_invalid_units_do_not_send`, and `held_find_and_spent_statement_budget` 3/3: original duplicate and tie indexes, full typed struct, NULL and empty SQL results, invalid member/count/byte/deadline zero sends, held cancellation, and spent statement zero sends. `cpp/verify_package.py` exited 0: stock DuckDB v1.5.5 loaded it, a changed-version footer was refused, and the unchanged file was refused by the genuine stock v1.5.4 host. The prior baseline hash above is historical and does not prove this source.
