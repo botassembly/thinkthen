@@ -26,6 +26,7 @@ The official [DuckDB v1.5.5 release](https://github.com/duckdb/duckdb/releases/t
 
 | Target | Official static ZIP SHA-256 | Official matching CLI ZIP SHA-256 | Archive count |
 | --- | --- | --- | --- |
+| `x86_64-unknown-linux-gnu` | `static-libs-linux-amd64.zip` `deb47c5300f3c99725e84cdb14d214c3b12bbd748b613b1698b938c894cb68eb` | `duckdb_cli-linux-amd64.zip` `08c0ca117111fcede14239d0093792352befdc174218c344d232c13279643d05` | 22 |
 | `aarch64-unknown-linux-gnu` | `static-libs-linux-arm64.zip` `ea6a34cb49ec2db5ed23d9e8311237c53c32abf9cdbf5dd608c4176c3dd8bfeb` | `duckdb_cli-linux-arm64.zip` `02163197027a42149147364d31fa67cac82108517a4be43304a1cc226eaef07a` | 22 |
 | `x86_64-apple-darwin` | `static-libs-osx-amd64.zip` `a27d36fa1247a3ffa1692e7aa0bf4ea4d1e0ee51da7c4df7a5db5217357b1b4d` | `duckdb_cli-osx-amd64.zip` `47cbda17c5d4643a58833617dfae649a6a8722d7e54435a08161b98ac1c4e832` | 21 |
 | `aarch64-apple-darwin` | `static-libs-osx-arm64.zip` `d79ec66b8a4054b866faada82e9e31f859a713c555b3f1c4b71c4a43d3273e9c` | `duckdb_cli-osx-arm64.zip` `da5177b8869c4ed8c65d514fb47a8ed0f6fa7427f103304932d5e83851e46abd` | 21 |
