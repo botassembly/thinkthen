@@ -11,7 +11,7 @@ set -eu
 
 thinkthen choose 'Which of these actions should be taken next?' \
   --jsonl --field /state --options /actions --raw \
-  --input steps.jsonl --replay recording/ \
+  --input steps.jsonl --batch 1 --replay recording/ \
   | mustmatch "look_up_the_order
 open_a_carrier_claim
 ship_a_replacement"
@@ -21,7 +21,7 @@ ship_a_replacement"
 
 `steps.jsonl` holds three steps of one support job, each with `id`, `state`, and `actions`. The state says what has happened so far, and the actions are what a script could do next. The first two records hold their actions as a list of names. The third holds them as an object, where each name carries a sentence that says what the action means.
 
-`--field /state` sends the state and leaves the rest of the record at home, and `--raw` prints the bare name for a `case` branch. `recording/` holds the three exchanges this page replays, and `record.sh` made them through `sdlc/scripts/live` on 2026-09-19.
+`--field /state` sends the state and leaves the rest of the record at home, and `--raw` prints the bare name for a `case` branch. `recording/` holds three one-record exchanges, so replay uses `--batch 1`; the default packs records differently. `record.sh` made them through `sdlc/scripts/live` on 2026-09-19.
 
 ## Step 1: see what each step chose between
 
@@ -32,7 +32,7 @@ set -eu
 
 thinkthen choose 'Which of these actions should be taken next?' \
   --jsonl --field /state --options /actions --details \
-  --input steps.jsonl --replay recording/ \
+  --input steps.jsonl --batch 1 --replay recording/ \
   | jq -c '{id: .input.id, value, options: .question.options,
             p: (.answer.probabilities[.value] * 100 | round / 100)}' \
   | mustmatch '{"id":"S-1","value":"look_up_the_order","options":["look_up_the_order","ask_for_the_order_number","open_a_carrier_claim","close_the_ticket"],"p":1}
@@ -67,7 +67,7 @@ set -eu
 
 printf '%s\n' '{"id":"S-8","state":"Nothing has happened yet.","moves":["look_up_the_order"]}' \
   | thinkthen choose 'Which of these actions should be taken next?' \
-      --jsonl --field /state --options /actions --replay recording/ 2>&1 >/dev/null \
+      --jsonl --field /state --options /actions --batch 1 --replay recording/ 2>&1 >/dev/null \
   | mustmatch "thinkthen: the record holds nothing at \`/actions\`
 thinkthen: stopped at record 1; 0 records finished, 0 records from a recording"
 ```
@@ -79,7 +79,7 @@ set -eu
 
 printf '%s\n' '{"id":"S-7","state":"Nothing has happened yet.","actions":["look_up_the_order","ok\nrm -rf /","close_the_ticket"]}' \
   | thinkthen choose 'Which of these actions should be taken next?' \
-      --jsonl --field /state --options /actions --replay recording/ 2>&1 >/dev/null \
+      --jsonl --field /state --options /actions --batch 1 --replay recording/ 2>&1 >/dev/null \
   | mustmatch "thinkthen: an option is one line of printable text
 thinkthen: stopped at record 1; 0 records finished, 0 records from a recording"
 ```
