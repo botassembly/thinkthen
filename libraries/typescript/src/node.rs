@@ -48,6 +48,12 @@ pub fn question_file(path: String) -> String {
     door::question_file(&path)
 }
 
+/// Read one bounded, validated recognition or relation plan.
+#[napi]
+pub fn plan_file(path: String, verb: String) -> String {
+    door::plan_file(&path, &verb)
+}
+
 /// The threadsafe function, held so `detach` can close it.
 struct Held(Done);
 

@@ -237,6 +237,8 @@ export interface Recognized {
 }
 
 export interface RecognizeOptions extends CallOptions {
+  /** A named version-one recognition plan; exclusive with inline plan options. */
+  file?: string;
   /** Kind words, or kind words with their descriptions. */
   kinds?: readonly string[] | { readonly [key: string]: Description };
   /** Each rule's ends, as kind words or the any-kind end "*", or the file's rule list. */
@@ -261,6 +263,8 @@ export interface Edge {
 }
 
 export interface RelateOptions extends CallOptions {
+  /** A named version-one relation plan; exclusive with inline plan options. */
+  file?: string;
   /** Rule names, each `name` or `name=source:target`. */
   relations?: readonly string[];
   /** The rule names that hold both ways. */

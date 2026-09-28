@@ -8,9 +8,82 @@ import { createServer } from 'node:http';
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { createRequire } from 'node:module';
 
 import { FAKE_KEY, ask, startBackend } from './backend.mjs';
 const recordingDigest = (base, body) => createHash('sha256').update(`systemone\n${base}/systemone\n${body}`).digest('hex');
+const native = createRequire(import.meta.url)('../loader.js');
+
+test('named recognition and relation plans retain source, model and bounded answers', async (t) => {
+  const backend = await captured(t);
+  const recognition = '{"version":1,"recognize":{"kinds":{"person":"A person"},"relations":[{"name":"knows","source":"person","target":"person","reads":"knows","either":false}]},"threshold":0.95,"relation_threshold":0.65,"model":"fixture-recognize-model","profile":"recognize-calibration"}';
+  const relation = '{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.95,"model":"fixture-relate-model","profile":"relate-calibration"}';
+  const first = join(backend.folder, 'recognize.json');
+  const second = join(backend.folder, 'relate.json');
+  writeFileSync(first, recognition); writeFileSync(second, relation);
+  assert.equal(JSON.parse(native.planFile(first, 'recognize')).ok, recognition, 'validated recognition source, including saved profile');
+  assert.equal(JSON.parse(native.planFile(second, 'relate')).ok, relation, 'validated relation source, including saved profile');
+  const { value, error } = await ask(backend, `
+    const engine = new tt.Engine({ model: 'engine-default-0252', cache: false });
+    const recognized = await engine.recognize('Ana Bob', { file: ${JSON.stringify(first)} });
+    const related = await engine.relate([['Ana', 'person'], ['Acme', 'organization']], { file: ${JSON.stringify(second)} });
+    const inlineNames = await engine.recognize('Ana Bob', { kinds: ['person'] });
+    const inlineEdges = await engine.relate([['Ana', 'person'], ['Acme', 'organization']], { relations: ['works_for=person:organization'] });
+    return { recognized, related, inlineNames: inlineNames.value.entities, inlineEdges: inlineEdges.value };`);
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.deepEqual(value.recognized.value, { entities: [], relations: [] }, '0.95 file cut drops the generic name');
+  assert.deepEqual(value.related.value, [], '0.95 file cut drops the generic 0.9 edge');
+  assert.equal(value.inlineNames.length, 1, 'the retained default cut admits the same name');
+  assert.equal(value.inlineEdges.length, 1, 'the retained default cut admits the same edge');
+  assert.equal(backend.bodies.length, 6, 'the two named plans send three requests before inline calls');
+  assert.deepEqual(backend.bodies.slice(0, 3).map((body) => createHash('sha256').update(body).digest('hex')), [
+    '500ade25b0ef5826b8823bca242b4540dd1d8d0a061efc37457011e3f33aae4b',
+    '3745ebe527887293996e6cc7d1bc12e94b7fec31f2ed42ef6d4e3141da445f28',
+    '526b75c58f1c5921c7b313c2c059c6622d8926ce167c129d9ee9b36fc259480e',
+  ], 'independently pinned recognition-stage and relation request bytes');
+  assert.deepEqual(backend.bodies.slice(0, 3).map((body) => JSON.parse(body).model),
+    ['fixture-recognize-model', 'fixture-recognize-model', 'fixture-relate-model']);
+  assert.deepEqual(value.recognized.details.map((detail) => detail.model), ['fixture-recognize-model', 'fixture-recognize-model', 'fixture-recognize-model']);
+  assert.equal(value.related.details[0].question_sha256, '6a7c109d0897d85c579046930f83ec063b51b526e1155b42c092b627a12e6fda',
+    'the logical pair digest is stable, not a whole-plan profile digest');
+});
+
+test('named plans refuse unsafe sources and mixed inline options before sending', async (t) => {
+  const backend = await captured(t);
+  const marker = 'SYNTHETIC_PRIVATE_MARKER_0252';
+  const paths = ['missing', 'unknown', 'wrong', 'large', 'utf8', 'malformed', 'relation-unknown'].map((name) => join(backend.folder, `${name}.json`));
+  writeFileSync(paths[1], JSON.stringify({ version: 1, recognize: { kinds: { person: 'Person' } }, [marker]: 1 }));
+  writeFileSync(paths[2], '{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}');
+  writeFileSync(paths[3], Buffer.alloc(1_048_577, 120));
+  writeFileSync(paths[4], Buffer.from([0xff]));
+  writeFileSync(paths[5], '{"version":');
+  writeFileSync(paths[6], JSON.stringify({ version: 1, relate: { relations: [{ name: 'knows', source: 'person', target: 'person' }] }, [marker]: 1 }));
+  const { value, error } = await ask(backend, `
+    const paths = ${JSON.stringify(paths)};
+    const seen = [];
+    for (const file of paths) {
+      try { await tt.recognize('Ana', { file }); seen.push('accepted'); }
+      catch (failure) { seen.push([failure.kind, failure.retryable, failure.message.includes(file) || failure.message.includes(${JSON.stringify(marker)})]); }
+    }
+    try { await tt.relate([['Ana', 'person']], { file: paths[6] }); seen.push('accepted'); }
+    catch (failure) { seen.push([failure.kind, failure.retryable, failure.message.includes(paths[6]) || failure.message.includes(${JSON.stringify(marker)})]); }
+    for (const call of [
+      () => tt.recognize('Ana', { file: paths[2], kinds: ['person'] }),
+      () => tt.relate([['Ana', 'person']], { file: paths[2], relations: ['knows=person:person'] }),
+      () => tt.recognize('Ana', { file: '\\ud800' }),
+      () => tt.relate([['Ana', 'person']], { file: 4 }),
+    ]) {
+      try { await call(); seen.push('accepted'); }
+      catch (failure) { seen.push([failure.kind, failure.retryable]); }
+    }
+    return seen;`);
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.deepEqual(value, [['local', false, false], ['local', false, false], ['local', false, false],
+    ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false],
+    ['local', false, false], ['usage', false], ['usage', false],
+    ['usage', false], ['usage', false]]);
+  assert.deepEqual(backend.bodies, []);
+});
 
 test('a named rich question preserves source order and its captured request', async (t) => {
   const backend = await captured(t);

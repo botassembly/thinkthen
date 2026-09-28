@@ -457,6 +457,10 @@ fn file_question(ruby: &Ruby, path: String) -> Result<QuestionValue, Error> {
     Ok(QuestionValue { json, loaded })
 }
 
+fn file_plan(ruby: &Ruby, path: String, verb: String) -> Result<String, Error> {
+    checked(ruby, question_file::read_plan(&path, &verb))
+}
+
 fn set_json(ruby: &Ruby, json: String) -> Result<SetValue, Error> {
     checked(ruby, QuestionSet::from_json(&json).map_err(Fault::from)).map(SetValue)
 }
@@ -489,6 +493,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     native.define_module_function("engine", function!(new_engine, 1))?;
     native.define_module_function("question", function!(question, 1))?;
     native.define_module_function("question_file", function!(file_question, 1))?;
+    native.define_module_function("plan_file", function!(file_plan, 2))?;
     native.define_module_function("set_json", function!(set_json, 1))?;
     native.define_module_function("set_file", function!(set_file, 1))?;
     Ok(())

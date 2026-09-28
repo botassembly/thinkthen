@@ -305,10 +305,15 @@ module ThinkThen
     #   found = ThinkThen.recognize(text, kinds: %w[person organization place],
     #                               relations: { works_for: %w[person organization] })
     #   found.entities.first.kind  # "person"
-    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, cancel: nil, deadline: nil,
+    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, file: nil, cancel: nil, deadline: nil,
                   batch: nil, context: nil)
-      spec = ThinkThen.__send__(:recognize_spec, kinds, relations, threshold, relation_threshold)
-      crossing("recognize", JSON.generate(spec), ThinkThen.__send__(:text_of, text), cancel, deadline,
+      unless file.nil?
+        ThinkThen.__send__(:refuse, "recognize file takes no inline plan options") unless [kinds, relations, threshold, relation_threshold].all?(&:nil?)
+        spec = Native.plan_file(ThinkThen.__send__(:file_path, file, "plan"), "recognize")
+      else
+        spec = JSON.generate(ThinkThen.__send__(:recognize_spec, kinds, relations, threshold, relation_threshold))
+      end
+      crossing("recognize", spec, ThinkThen.__send__(:text_of, text), cancel, deadline,
                batch: batch, context: context).map { |json| ThinkThen.__send__(:recognized, JSON.parse(json)) }
     end
 
@@ -318,10 +323,16 @@ module ThinkThen
     #
     #   edges = ThinkThen.relate([["Ana", "person"], ["Acme", "organization"]],
     #                            relations: { works_for: %w[person organization] })
-    def relate(entities, relations:, either: nil, threshold: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
-      spec = ThinkThen.__send__(:relate_spec, relations, either, threshold)
+    def relate(entities, relations: nil, either: nil, threshold: nil, file: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+      unless file.nil?
+        ThinkThen.__send__(:refuse, "relate file takes no inline plan options") unless [relations, either, threshold].all?(&:nil?)
+        spec = Native.plan_file(ThinkThen.__send__(:file_path, file, "plan"), "relate")
+      else
+        ThinkThen.__send__(:refuse, "relate needs at least one relation rule") if relations.nil?
+        spec = JSON.generate(ThinkThen.__send__(:relate_spec, relations, either, threshold))
+      end
       pairs = entities.to_a.each_with_index.map { |entity, place| ThinkThen.__send__(:pair_of, entity, place) }
-      crossing("relate", JSON.generate(spec), pairs, cancel, deadline, batch: batch, context: context)
+      crossing("relate", spec, pairs, cancel, deadline, batch: batch, context: context)
         .map do |rows|
           rows.map do |json|
             edge = JSON.parse(json)
@@ -406,13 +417,7 @@ module ThinkThen
       if keywords.key?(:file)
         raise UsageError.new("question file takes no other question keys", "usage") unless keywords.size == 1
 
-        path = keywords[:file]
-        raise UsageError.new("question file path is valid text", "usage") unless path.is_a?(String)
-
-        path = path.dup.force_encoding(Encoding::UTF_8) unless path.encoding == Encoding::UTF_8
-        raise UsageError.new("question file path is valid text", "usage") unless path.valid_encoding? && !path.include?("\0") && !path.empty?
-
-        return Native.question_file(path)
+        return Native.question_file(file_path(keywords[:file], "question"))
       end
 
       body = keywords.transform_keys(&:to_s)
@@ -497,6 +502,14 @@ module ThinkThen
 
     def refuse(message)
       raise UsageError.new(message, "usage")
+    end
+
+    def file_path(path, role)
+      refuse("#{role} file path is valid text") unless path.is_a?(String)
+      path = path.dup.force_encoding(Encoding::UTF_8) unless path.encoding == Encoding::UTF_8
+      refuse("#{role} file path is valid text") unless path.valid_encoding? && !path.include?("\0") && !path.empty?
+
+      path
     end
 
     def text_setting(name, value)
