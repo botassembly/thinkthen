@@ -13,7 +13,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .relation(works_for)?
         .build()?;
     let text = "Maria Chen joined Northwind Freight last spring.";
-    let found = tt.recognize(&ask, text)?;
+    let found = tt.recognize(&ask, text)?.into_value();
     let mut out = std::io::stdout().lock();
     for name in found.entities() {
         writeln!(out, "{} {}", name.text(), name.kind())?;

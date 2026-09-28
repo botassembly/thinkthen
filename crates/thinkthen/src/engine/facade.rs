@@ -8,6 +8,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
@@ -27,7 +28,8 @@ use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
 
 pub(crate) use crate::engine::annotate_schedule::{
-    InputPort as GroupPort, Outcome as GroupOutcome, Prepared,
+    GroupPlanError, GroupPlanner, GroupRequest, GroupWork, InputPort as GroupPort,
+    Outcome as GroupOutcome, Prepared,
 };
 pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
@@ -35,7 +37,7 @@ pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
-pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
+pub(crate) use annotate::{Annotation, GroupAnswer, PreparedGroup, assemble, check_model};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
@@ -283,12 +285,22 @@ impl Engine {
     /// Send one batch's exact body as one request, through the same replay,
     /// retries, recording, cache, and counters as every other request.
     pub(crate) fn ask_batch(&self, batch: &Batch, cancel: &Cancel) -> Result<Answered, Error> {
+        self.ask_batch_with_attempts(batch, cancel, None)
+    }
+
+    /// Attribute actual marked attempts to one prepared batch, including a 413.
+    pub(crate) fn ask_batch_with_attempts(
+        &self,
+        batch: &Batch,
+        cancel: &Cancel,
+        attempts: Option<&AtomicU64>,
+    ) -> Result<Answered, Error> {
         let state = self.state(cancel)?;
         let prepared = PreparedRequest {
             body: batch.body.clone(),
             digest: batch.digest.clone(),
         };
-        request::ask_sent(
+        request::ask_sent_observed(
             &self.backend,
             &batch.plan,
             prepared,
@@ -296,6 +308,11 @@ impl Engine {
             cancel,
             self.transport(&state),
             || (self.key)(),
+            || {
+                if let Some(attempts) = attempts {
+                    attempts.fetch_add(1, Ordering::Relaxed);
+                }
+            },
         )
     }
 
@@ -321,9 +338,20 @@ impl Engine {
         cancel: &Cancel,
         mut each: impl FnMut(Answered) -> Result<(), E>,
     ) -> Result<(), E> {
+        self.ask_chunks_with_plan(chunks, cancel, |_, answered| each(answered))
+    }
+
+    /// Retain each already prepared plan beside its ordered reply for a
+    /// caller that must name the actual logical questions it answered.
+    pub(crate) fn ask_chunks_with_plan<E: From<Error>>(
+        &self,
+        chunks: Vec<Chunk>,
+        cancel: &Cancel,
+        mut each: impl FnMut(&Plan, Answered) -> Result<(), E>,
+    ) -> Result<(), E> {
         let state = self.state(cancel)?;
         let send = |chunk: Chunk| {
-            request::ask_sent(
+            let answered = request::ask_sent(
                 &self.backend,
                 &chunk.plan,
                 chunk.request,
@@ -331,16 +359,20 @@ impl Engine {
                 cancel,
                 self.transport(&state),
                 || self.key(),
-            )
+            )?;
+            Ok::<_, Error>((chunk.plan, answered))
         };
         let jobs = state.width.min(chunks.len());
         if jobs < 2 {
             for chunk in chunks {
-                each(send(chunk)?)?;
+                let (plan, answered) = send(chunk)?;
+                each(&plan, answered)?;
             }
             return Ok(());
         }
-        crate::engine::workers::ordered(jobs, chunks, cancel, &send, each)
+        crate::engine::workers::ordered(jobs, chunks, cancel, &send, |(plan, answered)| {
+            each(&plan, answered)
+        })
     }
 
     /// Answer framed inputs over this engine's width and emit them in input order.

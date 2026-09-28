@@ -216,7 +216,8 @@ impl Table for Recognizer {
         let deadline = deadline(arguments, 2)?;
         let found = worker::run(db, deadline, move |engine, options| {
             Ok(engine.recognize_with(&ask, &evidence, options)?)
-        })?;
+        })?
+        .into_value();
         found
             .entities()
             .iter()
@@ -373,7 +374,8 @@ impl Table for Relater {
         let (entities, ids) = Self::entities(db, &names)?;
         let edges = worker::run(db, deadline, move |engine, options| {
             Ok(engine.relate_with(&ask, entities, options)?)
-        })?;
+        })?
+        .into_value();
         let mut rows = Vec::new();
         for edge in &edges {
             let held =

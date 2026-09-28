@@ -182,7 +182,11 @@ impl<R, E> Run<R, E> {
         clippy::excessive_nesting,
         reason = "the ordered state machine handles one result inside one draining loop"
     )]
-    fn drain(&mut self, emit: &mut impl FnMut(R) -> Result<bool, E>) -> Result<(), E> {
+    fn drain(
+        &mut self,
+        emit: &mut impl FnMut(R) -> Result<bool, E>,
+        cancel: &crate::engine::Cancel,
+    ) -> Result<(), E> {
         while self.printing {
             let Some(result) = self.pending.remove(&self.next) else {
                 return Ok(());
@@ -197,6 +201,7 @@ impl<R, E> Run<R, E> {
                     self.replayed += completed.replayed;
                     let more = emit(completed.value)?;
                     self.finished += completed.records;
+                    cancel.finished_records(completed.records);
                     self.next += 1;
                     self.stop = completed.stop;
                     if !more || self.stop.is_some() {
@@ -295,7 +300,7 @@ where
         |work| {
             let mut state = Run::new();
             loop {
-                state.drain(&mut emit)?;
+                state.drain(&mut emit, cancel)?;
                 if let Some(stop) = cancel.stop().filter(|_| !state.halted) {
                     state.refuse(stopped(stop));
                     continue;
@@ -387,7 +392,8 @@ mod tests {
     #[test]
     #[allow(clippy::excessive_nesting, reason = "synchronized reader fixture")]
     fn cancellation_with_work_in_flight_ignores_later_input_and_joins() {
-        let cancel = crate::engine::Cancel::default();
+        let facts = crate::engine::CallFacts::new();
+        let cancel = crate::engine::Cancel::default().with_facts(facts.clone());
         let run_cancel = cancel.clone();
         let started = Arc::new(Barrier::new(2));
         let answer_started = Arc::clone(&started);
@@ -451,6 +457,7 @@ mod tests {
         assert_eq!(emitted.try_iter().collect::<Vec<_>>(), [0]);
         assert_eq!(starts.load(Ordering::SeqCst), 1);
         assert_eq!(active.load(Ordering::SeqCst), 0);
+        assert_eq!(facts.snapshot().records, 1);
         assert!(matches!(
             result,
             Outcome::Stopped {

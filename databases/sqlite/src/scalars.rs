@@ -93,7 +93,8 @@ fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
                 LoadedQuestion::Question(asked) => engine.decide_with(asked, &evidence, options)?,
                 LoadedQuestion::Banded(asked) => engine.decide_with(asked, &evidence, options)?,
             })
-        })?;
+        })?
+        .into_value();
         Ok(match answer {
             Answer::Yes => Some(1),
             Answer::No => Some(0),
@@ -114,7 +115,8 @@ fn judged(
     only(&held, name, kind)?;
     let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
         Ok(engine.details_with(plain(&held)?, &evidence, options)?)
-    })?;
+    })?
+    .into_value();
     Ok(Some(details.value().clone()))
 }
 
@@ -148,7 +150,8 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
         only(&held, "thinkthen_score", QuestionKind::Score)?;
         let position = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
             Ok(engine.score_with(plain(&held)?, &evidence, options)?)
-        })?;
+        })?
+        .into_value();
         Ok(Some(position))
     })?)
 }
@@ -165,7 +168,8 @@ fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
                 }
                 LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options)?,
             })
-        })?;
+        })?
+        .into_value();
         Ok(Some(details.to_json()))
     })?)
 }
@@ -186,7 +190,8 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
                 }
                 LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options)?,
             })
-        })?;
+        })?
+        .into_value();
         let details: serde_json::Value = serde_json::from_str(&details.to_json())
             .map_err(|_| Failure::defect("a result is not JSON"))?;
         Ok(Some(

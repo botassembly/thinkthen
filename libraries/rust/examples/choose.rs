@@ -20,7 +20,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "I cannot reset my password.",
     ] {
         // The compiler makes you handle "not sure".
-        match tt.choose(&owner, text)? {
+        match tt.choose(&owner, text)?.into_value() {
             Some(team) => writeln!(out, "{}: {text}", team.label())?,
             None => writeln!(out, "a person: {text}")?,
         }

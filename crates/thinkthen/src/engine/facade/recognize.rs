@@ -76,6 +76,17 @@ pub(crate) struct Recognition {
     pub(crate) meta: Aggregate,
 }
 
+fn asked_stages(asked: &[Asked]) -> impl Iterator<Item = &'static str> + '_ {
+    asked.iter().flat_map(|one| {
+        [
+            one.kind.then_some("kind"),
+            one.edge_question().then_some("edge"),
+        ]
+        .into_iter()
+        .flatten()
+    })
+}
+
 impl Engine {
     /// Recognize the names in one text, then relate them when rules were given.
     /// A text over `limit` bytes is refused before any request.
@@ -85,6 +96,18 @@ impl Engine {
         text: &str,
         limit: usize,
         cancel: &Cancel,
+    ) -> Result<Recognition, Error> {
+        self.recognize_observed(spec, text, limit, cancel, |_, _, _| Ok(()))
+    }
+
+    /// The same call with each actual answered request plan handed to its caller.
+    pub(crate) fn recognize_observed(
+        &self,
+        spec: &RecognizeSpec,
+        text: &str,
+        limit: usize,
+        cancel: &Cancel,
+        mut observe: impl FnMut(&[&'static str], &Plan, &Answered) -> Result<(), Error>,
     ) -> Result<Recognition, Error> {
         let (pieces, prepared) = step_one(&self.backend, self.profile.as_ref(), spec, text, limit)?;
         let mut meta = Aggregate::default();
@@ -99,7 +122,14 @@ impl Engine {
                 meta,
             });
         }
-        let answers = self.execute(prepared, &mut meta, cancel)?;
+        let stages = vec![
+            "boundary";
+            prepared
+                .iter()
+                .map(|chunk| chunk.plan.questions().len())
+                .sum()
+        ];
+        let answers = self.execute(prepared, stages, &mut meta, cancel, &mut observe)?;
         let rows = answers.iter().map(tag_row).collect::<Result<Vec<_>, _>>()?;
         details.pieces = pieces
             .iter()
@@ -109,10 +139,12 @@ impl Engine {
         let stretches = found_names(&rows);
         let mut prepared = Vec::new();
         let mut asked: Vec<Asked> = Vec::new();
+        let mut stages = Vec::new();
         for group in name_groups(&stretches) {
             let (questions, held) =
                 step_two_questions(text, &pieces, &stretches, group.clone(), &spec.kinds)
                     .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
+            stages.extend(asked_stages(&held));
             asked.extend(held);
             let first = stretches.get(group.start).map_or(0, |name| name.0);
             let last = stretches
@@ -128,7 +160,7 @@ impl Engine {
                 )?);
             }
         }
-        let answers = self.execute(prepared, &mut meta, cancel)?;
+        let answers = self.execute(prepared, stages, &mut meta, cancel, &mut observe)?;
         let mut answers = answers.iter();
         let mut read = || answers.next().ok_or(Error::RecognizeLogical).and_then(odds);
         let mut settled = Vec::with_capacity(stretches.len());
@@ -147,7 +179,13 @@ impl Engine {
         }
         let cut = spec.threshold.cut_value().unwrap_or(0.5);
         let entities = settle_names((text, &pieces), &rows, &stretches, &settled, cut);
-        let relations = self.relations(spec, text, &entities, (&mut meta, &mut details), cancel)?;
+        let relations = self.relations(
+            spec,
+            text,
+            &entities,
+            (&mut meta, &mut details, &mut observe),
+            cancel,
+        )?;
         Ok(Recognition {
             value: Recognized {
                 entities,
@@ -164,7 +202,11 @@ impl Engine {
         spec: &RecognizeSpec,
         text: &str,
         entities: &[RecognizedName],
-        held: (&mut Aggregate, &mut Probabilities),
+        held: (
+            &mut Aggregate,
+            &mut Probabilities,
+            &mut impl FnMut(&[&'static str], &Plan, &Answered) -> Result<(), Error>,
+        ),
         cancel: &Cancel,
     ) -> Result<Option<Vec<RelationEdge<RecognizedName>>>, Error> {
         if spec.relations.is_empty() {
@@ -176,8 +218,15 @@ impl Engine {
             return Ok(Some(Vec::new()));
         };
         let prepared = pair_chunks(&self.backend, self.profile.as_ref(), &planned)?;
-        let (meta, details) = held;
-        let answers = self.execute(prepared, meta, cancel)?;
+        let (meta, details, observe) = held;
+        let stages = vec![
+            "relation";
+            prepared
+                .iter()
+                .map(|chunk| chunk.plan.questions().len())
+                .sum()
+        ];
+        let answers = self.execute(prepared, stages, meta, cancel, observe)?;
         let cut = spec.relation_threshold.cut_value().unwrap_or(0.5);
         for (pair, answer) in planned.pairs.iter().zip(&answers) {
             let (Some(rule), Some(source), Some(target)) = (
@@ -207,11 +256,20 @@ impl Engine {
     fn execute(
         &self,
         prepared: Vec<PreparedChunk>,
+        stages: Vec<&'static str>,
         meta: &mut Aggregate,
         cancel: &Cancel,
+        observe: &mut impl FnMut(&[&'static str], &Plan, &Answered) -> Result<(), Error>,
     ) -> Result<Vec<Answer>, Error> {
         let mut answers = Vec::new();
-        self.ask_chunks(prepared, cancel, |answered| {
+        let mut stages = stages.into_iter();
+        self.ask_chunks_with_plan(prepared, cancel, |plan, answered| {
+            let chunk_stages = plan
+                .questions()
+                .iter()
+                .map(|_| stages.next().ok_or(Error::RecognizeLogical))
+                .collect::<Result<Vec<_>, _>>()?;
+            observe(&chunk_stages, plan, &answered)?;
             for outcome in answered.reply.outcomes() {
                 match outcome {
                     AnswerOutcome::Answered(answer) => answers.push(answer.clone()),
@@ -220,6 +278,9 @@ impl Engine {
             }
             meta.add_answered(&answered, self.backend.model())
         })?;
+        if stages.next().is_some() {
+            return Err(Error::RecognizeLogical);
+        }
         Ok(answers)
     }
 }

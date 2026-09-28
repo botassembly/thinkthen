@@ -7,6 +7,9 @@ use crate::engine::error::Error;
 use crate::engine::schedule::{Completed, Input};
 use crate::engine::workers;
 
+mod batching;
+pub(crate) use batching::{GroupPlanError, GroupPlanner, GroupRequest, GroupWork};
+
 pub(crate) struct Prepared<S, A, W> {
     pub(crate) seed: S,
     pub(crate) accumulator: A,
@@ -165,7 +168,7 @@ where
         |work| {
             let mut state = Run::new();
             loop {
-                drain(&mut state, &mut emit)?;
+                drain(&mut state, &mut emit, cancel)?;
                 if let Some(stop) = cancel.stop().filter(|_| !state.halted) {
                     state.cancel(stopped(stop));
                 }
@@ -354,6 +357,7 @@ fn receive_input<T, S, A, W, G, R, E>(
 fn drain<S, A, W, G, R, E>(
     state: &mut Run<S, A, W, G, R, E>,
     emit: &mut impl FnMut(R) -> Result<bool, E>,
+    cancel: &crate::engine::Cancel,
 ) -> Result<(), E> {
     while state.printing {
         let Some(completed) = state.ready.remove(&state.next_row) else {
@@ -366,6 +370,7 @@ fn drain<S, A, W, G, R, E>(
             state.printing = false;
             state.quiet_stop = true;
         }
+        cancel.finished_records(completed.records);
         state.next_row += 1;
     }
     Ok(())
