@@ -82,6 +82,17 @@ def recording_folder_obeys_current_caller_permission():
 
 
 @case
+def recording_folders_require_absolute_local_paths():
+    with Backend() as backend:
+        for name in ("record", "replay"):
+            for folder in ("off", "relative", "s3://bucket/saved"):
+                got = run([f"SET thinkthen_{name} = '{folder}'", ASK], backend.base())
+                expect(said(got[1]), "thinkthen usage: a SQL folder is an absolute local path with no scheme",
+                       f"{name} folder {folder}")
+        expect(backend.count(), 0, "invalid recording paths send nothing")
+
+
+@case
 def throttle_conflict():
     with Backend() as backend:
         got = run(["SET thinkthen_throttle = 8", ASK, "SET thinkthen_throttle = 4", ASK], backend.base())

@@ -246,8 +246,8 @@ def cases(text):
         ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Threshold" has two rows']),
         ("a missing engine cell", edit(text, COLUMNS.index("Python"), "`Engine(timeout=)`", "not on this surface"),
          [page + "Python Timeout source setter has no cell: timeout"]),
-        ("a stale SQL cell", cell_edit(text, "Timeout", COLUMNS.index("DuckDB"), "`SET thinkthen_timeout`"),
-         [page + "DuckDB Timeout source has no setter: timeout"]),
+        ("a stale SQL cell", cell_edit(text, "Address", COLUMNS.index("DuckDB"), "`SET thinkthen_base_url`"),
+         [page + "DuckDB Address source has no setter: base_url"]),
         ("the real page", text, []),
     ]
 
