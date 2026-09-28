@@ -54,22 +54,26 @@ pub(crate) fn engine(
     width: Option<u8>,
 ) -> Result<Engine, Failure> {
     let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
-    Ok(Engine::new(Settings {
-        backend,
-        profile,
-        timeout: Duration::from_secs(common.timeout),
-        max_retries: common.max_retries,
-        retry_wait: environment.retry_wait(),
-        width,
-        storage: Storage {
-            record: folders.record,
-            replay: folders.replay,
-            private_default: folders.private_default,
-            cache_answers: folders.cache_answers,
+    let roots = environment.roots()?;
+    Ok(Engine::with_roots(
+        Settings {
+            backend,
+            profile,
+            timeout: Duration::from_secs(common.timeout),
+            max_retries: common.max_retries,
+            retry_wait: environment.retry_wait(),
+            width,
+            storage: Storage {
+                record: folders.record,
+                replay: folders.replay,
+                private_default: folders.private_default,
+                cache_answers: folders.cache_answers,
+            },
+            key: environment.key_reader(),
+            usage: environment.counters(),
         },
-        key: environment.key_reader(),
-        usage: environment.counters(),
-    })?)
+        roots,
+    )?)
 }
 
 /// Where one record's question comes from.
