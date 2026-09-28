@@ -78,6 +78,13 @@ def test_a_single_call_is_cancelled_while_its_send_is_held() -> None:
     settled(backend, 1)
 
 
+def test_find_is_cancelled_while_its_one_send_is_held() -> None:
+    backend = Backend()
+    sql = "SELECT thinkthen_find('Which unit?', '[\"first\",\"second\"]')"
+    stopped_fast(interrupted(backend, sql, 1))
+    settled(backend, 1)
+
+
 def test_the_second_connection_hears_its_own_interrupt() -> None:
     """R1-14: the interrupt is read from the calling connection, the first one closed."""
     backend = Backend()

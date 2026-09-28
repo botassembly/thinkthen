@@ -13,13 +13,13 @@ use thinkthen::{
 use crate::question::{question, set, shown, text};
 use crate::{Failure, ffi, guard, recognize_document, settings, worker};
 
-/// The third argument, milliseconds under ADR 0041: an INTEGER as given, or
+/// One deadline slot, milliseconds under ADR 0041: an INTEGER as given, or
 /// a finite, whole REAL inside `i64`. Anything else is `usage`.
-fn deadline(context: &Context<'_>) -> Result<Option<i64>, Failure> {
-    if context.len() < 3 {
+fn deadline_at(context: &Context<'_>, slot: usize) -> Result<Option<i64>, Failure> {
+    if context.len() <= slot {
         return Ok(None);
     }
-    let value = context.get_raw(2);
+    let value = context.get_raw(slot);
     let millis = match value {
         ValueRef::Integer(whole) => Some(whole),
         ValueRef::Real(real)
@@ -39,6 +39,11 @@ fn deadline(context: &Context<'_>) -> Result<Option<i64>, Failure> {
     })?;
     CallOptions::new().deadline_millis(millis)?;
     Ok(Some(millis))
+}
+
+/// The established judgment and warm deadline is the third argument.
+fn deadline(context: &Context<'_>) -> Result<Option<i64>, Failure> {
+    deadline_at(context, 2)
 }
 
 /// One scalar call's question, evidence, and deadline, or `None` for a NULL.
@@ -340,6 +345,7 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
 
 mod warm;
 use warm::Warm;
+mod find;
 
 /// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
@@ -364,6 +370,7 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
     for arity in [2, 3, 4] {
         connection.create_aggregate_function("thinkthen_warm", arity, volatile, Warm)?;
+        connection.create_scalar_function("thinkthen_find", arity, volatile, find::find)?;
     }
     connection.create_scalar_function("thinkthen_throttle", 1, volatile, settings::throttle)?;
     connection.create_scalar_function("thinkthen_batch", 1, volatile, settings::batch)?;
