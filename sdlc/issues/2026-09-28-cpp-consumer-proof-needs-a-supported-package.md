@@ -21,3 +21,8 @@ Local experiment 301: FINDINGS.md (both stages), stage2/FINDINGS.md, BUILD-REPOR
 ## Limits
 
 One Linux host/toolchain pair, synthetic loopback, decimal/exponent doubles documented, Rust not sanitizer-instrumented, full J1 corpus at J8.
+
+
+## Pre-merge re-pin (2026-09-28, pin 71f25087)
+
+no repin run; review-verified that its pin 4a0a2d6e already matches the current contracts. Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
