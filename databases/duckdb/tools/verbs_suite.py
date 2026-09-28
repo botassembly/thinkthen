@@ -32,13 +32,14 @@ def r1_1_answers_map_back_by_text():
     with Backend() as backend:
         got = run(
             [
+                "SET thinkthen_batch = '1'",
                 f"SELECT thinkthen_decide('{REFUND}', x) FROM {SHUFFLED} ORDER BY i",
                 f"SELECT thinkthen_probability('{REFUND}', x) FROM {SHUFFLED} ORDER BY i",
             ],
             backend.base("case/28-decide-many-repeated-texts"),
         )
-        expect(column(got[0]), [False, None, True, False, None, True], "decide rows")
-        expect(column(got[1]), [0.03, None, 0.97, 0.03, None, 0.97], "probability rows")
+        expect(column(got[1]), [False, None, True, False, None, True], "decide rows")
+        expect(column(got[2]), [0.03, None, 0.97, 0.03, None, 0.97], "probability rows")
         expect(backend.count(), 2, "counted sends for two distinct texts")
 
 
@@ -229,7 +230,7 @@ def r2_22_warm_takes_the_banded_file_decide_uses():
         got = run([f"SELECT thinkthen_warm('@{banded}', x) FROM {texts}", f"SELECT thinkthen_decide('@{banded}', x) FROM {texts}"], backend.base())
         expect(column(got[0]), [2], "warm counts distinct texts")
         expect(column(got[1]), [None, None, None], "decide reads unsure under the band")
-        expect(backend.count(), 2, "counted sends: decide reads what warm filled")
+        expect(backend.count(), 1, "one packed warm send fills decide's cache")
 
 
 @case
@@ -328,7 +329,7 @@ def atfile_reads_through_the_callers_file_system():
 class PackedReplies:
     """Two deterministic loopback replies, keyed by request member count."""
 
-    def __init__(self):
+    def __init__(self, missing_second=True):
         self.bodies = []
         owner = self
 
@@ -337,13 +338,11 @@ class PackedReplies:
                 body = self.rfile.read(int(self.headers["Content-Length"]))
                 owner.bodies.append(body)
                 questions = json.loads(body)["questions"]
-                if len(questions) == 3:
+                if len(questions) == 3 and missing_second:
                     answers = {"q1": {"type": "noul", "noul": 0.9},
                                "q3": {"type": "noul", "noul": 0.8}}
-                elif len(questions) == 1:
-                    answers = {"q1": {"type": "noul", "noul": 0.7}}
                 else:
-                    raise AssertionError(f"unexpected packed member count: {len(questions)}")
+                    answers = {key: {"type": "noul", "noul": 0.7} for key in questions}
                 reply = json.dumps({"model": "jev-latest", "answers": answers}).encode()
                 self.send_response(200)
                 self.send_header("Content-Type", "application/json")
@@ -385,7 +384,7 @@ def b13c_try_details_members():
         expect(len(backend.bodies), 2, "one packed and one independent attempt")
         expected = [
             b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}',
-            b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
+            b'{"state":"delta","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
         ]
         expect(set(backend.bodies), set(expected), "full first-seen request bodies")
         digests = [hashlib.sha256(b"systemone\n" + backend.base.encode() + b"/systemone\n" + body).hexdigest()
@@ -406,6 +405,43 @@ def b13c_try_details_prepared():
         expect([value["status"] for value in values], ["failed", "answered"], "prepared safe and good rows")
         expect(values[0]["error"]["kind"], "usage", "invalid foldable question kind")
         expect(backend.count(), 1, "good prepared sibling alone sends")
+
+
+@case
+def b13c_context_and_batch_one_wire_identity():
+    """The final literal context packs two members; batch one retains bare legacy bodies."""
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = 'max'",
+                   "SELECT thinkthen_details('Is it a refund?', x, -1, 'shared') "
+                   "FROM (VALUES (1,'alpha'),(2,'beta')) t(i,x) ORDER BY i",
+                   "SET thinkthen_batch = '1'",
+                   "SELECT thinkthen_details('Is it a refund?', x) "
+                   "FROM (VALUES (1,'gamma'),(2,'delta')) t(i,x) ORDER BY i"], backend.base)
+        expect(len(column(got[2])), 2, "context vector rows")
+        expect(len(column(got[4])), 2, "batch-one vector rows")
+        expect(len(backend.bodies), 3, "one packed and two bare requests")
+        expected = {
+            b'{"state":"shared","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
+            b'{"state":"gamma","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
+            b'{"state":"delta","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it a refund?"}}}',
+        }
+        expect(set(backend.bodies), expected, "context and batch-one full request bytes")
+        details = [json.loads(value) for value in column(got[2])]
+        expect(["input" in value for value in details], [False, False], "scalar details omit record input")
+        expect(len({value["meta"]["context_sha256"] for value in details}), 1, "one context identity")
+
+
+@case
+def b13c_warm_first_seen_context():
+    """One warm group sends its distinct texts in first-seen order with its literal context."""
+    with PackedReplies(missing_second=False) as backend:
+        got = run(["SET threads = 1",
+                   "SELECT thinkthen_warm('Is it a refund?', x, 'shared') "
+                   "FROM (VALUES (1,'zeta'),(2,'alpha'),(3,'zeta'),(4,'beta')) t(i,x)"], backend.base)
+        expect(column(got[1]), [3], "warm distinct count")
+        expect(len(backend.bodies), 1, "one warm request")
+        expected = b'{"state":"shared","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"zeta\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}'
+        expect(backend.bodies[0], expected, "first-seen warm body")
 
 
 if __name__ == "__main__":
