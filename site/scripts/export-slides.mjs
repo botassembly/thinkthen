@@ -62,6 +62,7 @@ for (const [page, entry] of Object.entries(manifest.slides)) {
   const target = path.join(out, `${page}.webp`);
   execFileSync('convert', ['png:-', '-resize', '1600x900', ...crop, '-quality', '85', `webp:${target}`], { input: png });
   entry.sha256 = sha(target);
+  delete entry.deck;
   const card = path.join(cards, `${page}.png`);
   execFileSync('convert', ['png:-', '-resize', 'x630', '-background', ground[1], '-gravity', 'center',
     '-extent', '1200x630', '-strip', `png:${card}`], { input: png });
