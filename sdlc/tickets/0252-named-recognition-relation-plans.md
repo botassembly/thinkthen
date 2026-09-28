@@ -1,6 +1,6 @@
 # 0252: Load named recognition and relation plans in TypeScript and Ruby
 
-Status: proposed for fresh independent design review. The [preflight](../records/0252-named-plan-preflight.md) pins current source and existing host forms. The coordinator may approve routine spelling within the already approved library-equivalence question-file outcome; this ticket does not grant a runtime claim or close the shared-conformance issue.
+Status: fresh independent High design review accepted `4209b350838e9bdf4f6ab5dda21d6d92d1a33336`. The coordinator approves implementation within the already approved library-equivalence question-file outcome. The Lanes table records the runtime claim. Ian can overturn the public spelling; no further answer is needed to build. The [preflight](../records/0252-named-plan-preflight.md) pins current source and existing host forms. This acceptance closes no product issue.
 
 ## Outcome
 
