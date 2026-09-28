@@ -47,8 +47,11 @@ mod annotate;
 #[cfg(test)]
 #[cfg(feature = "cli")]
 mod fork_tests;
+mod native_batch;
 mod recognize;
 mod relate;
+mod split;
+pub(crate) use split::{OneSplit, SplitDecision, SplitParent};
 
 /// The folders replies are replayed from and recorded to.
 #[derive(Clone, Debug, Default)]
@@ -316,6 +319,17 @@ impl Engine {
                 }
             },
         )
+    }
+
+    pub(crate) fn ask_record_batch_with_one_split(
+        &self,
+        batch: &Batch,
+        records: impl FnOnce() -> Result<Vec<(crate::core::BatchRecord, Question)>, Error>,
+        context: Option<&crate::core::Evidence>,
+        cancel: &Cancel,
+        after_left: impl FnOnce(&Batch, &Result<Answered, Error>) -> SplitDecision,
+    ) -> Result<OneSplit, Error> {
+        split::ask(self, batch, records, context, cancel, after_left)
     }
 
     /// Ask one aggregate question over a bounded set and select one unit.

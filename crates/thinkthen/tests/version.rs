@@ -203,6 +203,19 @@ fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
 
 #[test]
 fn no_page_or_transform_says_unresolved() {
+    let has_retired_word = |text: &str| {
+        let lower = text.to_lowercase();
+        lower.match_indices("unresolved").any(|(start, word)| {
+            let before = lower[..start].chars().next_back();
+            let after = lower[start + word.len()..].chars().next();
+            let identifier = |character: char| character.is_alphanumeric() || character == '_';
+            !before.is_some_and(identifier) && !after.is_some_and(identifier)
+        })
+    };
+    assert!(has_retired_word("an unresolved choice"));
+    assert!(has_retired_word("\"unresolved\""));
+    assert!(!has_retired_word("a_tie_is_unresolved"));
+    assert!(!has_retired_word("unresolved_result"));
     const DEFINITION: &str = "`unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms.";
     let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
     let mut defined = Vec::new();
@@ -228,12 +241,12 @@ fn no_page_or_transform_says_unresolved() {
                     .into_owned(),
             );
         }
-        let lower = text.to_lowercase();
         assert!(
-            !lower.contains("unresolved"),
+            !has_retired_word(&text),
             "{} says the old word",
             page.display()
         );
+        let lower = text.to_lowercase();
         for banned in ["decider model", "decision model"] {
             assert!(!lower.contains(banned), "{} says {banned}", page.display());
         }
