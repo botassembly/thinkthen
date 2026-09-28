@@ -65,7 +65,7 @@ def test_saved_profile_details_and_column_refusal(backend, tmp_path):
     assert json.loads(printed) == {
         "digest": case["question_sha256"], "warning": case["warning"],
         "model": case["model"], "kind": "usage",
-        "message": "a question set member takes no profile; the set names it",
+        "message": "a question set member takes no profile; name it on the set",
     }
     assert backend.count() == 1
 

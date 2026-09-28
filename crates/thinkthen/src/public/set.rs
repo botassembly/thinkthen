@@ -88,7 +88,7 @@ impl QuestionSetBuilder {
         }
         if value.profile.is_some() {
             return Err(Error::usage(
-                "a question set member takes no profile; the set names it",
+                "a question set member takes no profile; name it on the set",
             ));
         }
         core::check_name(name).map_err(Error::refused)?;

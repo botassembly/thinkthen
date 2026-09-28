@@ -54,7 +54,7 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
     assert_eq!(refused.kind(), ErrorKind::Usage);
     assert_eq!(
         refused.to_string(),
-        "a question set member takes no profile; the set names it"
+        "a question set member takes no profile; name it on the set"
     );
     assert_eq!(listener.count(), 0);
     let engine = Engine::builder()

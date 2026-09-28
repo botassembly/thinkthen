@@ -88,6 +88,8 @@ The prior 0157 landing checked only the root source counter. It left 17 of 21 na
 
 The cross-surface command proof also pushed `backend/profile.rs` past its 500-line cap. Moving the new parity case to the existing warning-test child kept both files under the cap and preserved the same assertion. Preparation should have assigned a test home before adding another command case to a near-cap parent.
 
+Fresh High review caught one missed exact-message comparison: the code and two tests said `the set names it`, while this accepted ticket said `name it on the set`. The corrected wording preserves the same Usage refusal before a send. A targeted public test and a rebuilt Python real-column test pass after the correction. Future boundary preparation should copy accepted diagnostic text into the first outside-in assertion before the implementation chooses its wording.
+
 ## What Ian can overturn
 
 The surface-routing and refusal policy, public metadata access shape, and any further decisions recorded in this ticket. ADRs 0032 and 0048 remain accepted authority; overturning their identity or batch rules requires an ADR.
