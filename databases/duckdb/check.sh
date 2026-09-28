@@ -14,14 +14,22 @@ LIMIT=$HERE/../../sdlc/scripts/time-limit
 TOOLS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 CLI=${THINKTHEN_DUCKDB_CLI:-$TOOLS/duckdb}
 PY=$TOOLS/venv/bin/python
-if [ "$(uname -s)" != Linux ]; then
-	echo "not run: databases/duckdb checks on Linux only"
-	exit 77
-fi
+case $(uname -s):$(uname -m) in
+Linux:x86_64 | Darwin:arm64) ;;
+*) echo "not run: no pinned DuckDB C++ host for $(uname -s):$(uname -m)"; exit 77 ;;
+esac
 if [ ! -x "$CLI" ] || [ ! -x "$PY" ] || [ ! -f "$TOOLS/platform.txt" ]; then
 	echo "not run: the DuckDB $DUCKDB_VERSION toolchain is missing; run databases/duckdb/tools/setup.sh --fetch"
 	exit 77
 fi
+case $(uname -s):$(uname -m) in
+Linux:x86_64) expected_platform=linux_amd64 ;;
+Darwin:arm64) expected_platform=osx_arm64 ;;
+esac
+[ "$(cat "$TOOLS/platform.txt")" = "$expected_platform" ] || {
+	echo "check: the stock DuckDB platform differs from $expected_platform" >&2
+	exit 1
+}
 if [ -n "${CHECK_SETUP_ONLY:-}" ]; then
 	echo "setup ok"
 	exit 0

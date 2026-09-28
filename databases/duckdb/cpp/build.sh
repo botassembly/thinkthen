@@ -9,8 +9,14 @@ TOOLS=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_
 SOURCE=${THINKTHEN_DUCKDB_CPP_SOURCE:-$TOOLS/source}
 STATIC=${THINKTHEN_DUCKDB_CPP_STATIC_DIR:-$TOOLS/static-libs}
 BUILD=${THINKTHEN_DUCKDB_CPP_BUILD:-$ROOT/build/cpp}
-TARGET=${CARGO_TARGET_DIR:-$ROOT/bridge/target}
-case $TARGET in /*) ;; *) TARGET=$REPO/$TARGET ;; esac
+HOST_TARGET=$(sh "$ROOT/tools/setup.sh" --target)
+RUST_TARGET=$(rustc -vV | sed -n 's/^host: //p')
+[ "$HOST_TARGET" = "$RUST_TARGET" ] || { echo "duckdb: $RUST_TARGET is not the pinned host $HOST_TARGET" >&2; exit 1; }
+CARGO_OUT=${CARGO_TARGET_DIR:-$ROOT/bridge/target}
+case $CARGO_OUT in /*) ;; *) CARGO_OUT=$REPO/$CARGO_OUT ;; esac
+CMAKE=$(command -v cmake || true)
+if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then CMAKE=$TOOLS/venv/bin/cmake; fi
+[ -x "$CMAKE" ] || { echo "duckdb: project-local CMake is missing; run tools/setup.sh --fetch" >&2; exit 77; }
 VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 [ -n "$VERSION" ] || { echo 'duckdb: the ThinkThen version is missing' >&2; exit 1; }
 
@@ -20,14 +26,14 @@ VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.tom
 }
 cd -- "$REPO"
 cargo build --locked --offline --release --manifest-path "$ROOT/bridge/Cargo.toml"
-cmake -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release \
+"$CMAKE" -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release \
 	-DBUILD_UNITTESTS=OFF -DBUILD_SHELL=OFF -DEXTENSION_STATIC_BUILD=OFF \
 	-DDUCKDB_EXTENSION_CONFIGS="$HERE/extension_config.cmake" \
 	-DTHINKTHEN_EXTENSION_VERSION="$VERSION" \
-	-DTHINKTHEN_RUST_STATICLIB="$TARGET/release/libthinkthen_duckdb_bridge.a" \
+	-DTHINKTHEN_RUST_STATICLIB="$CARGO_OUT/release/libthinkthen_duckdb_bridge.a" \
 	-DTHINKTHEN_DUCKDB_STATIC_DIR="$STATIC"
-cmake --build "$BUILD" --target thinkthen_loadable_extension -j 2
-mkdir -p "$ROOT/build/artifacts/cpp/x86_64-unknown-linux-gnu"
+"$CMAKE" --build "$BUILD" --target thinkthen_loadable_extension -j 2
+mkdir -p "$ROOT/build/artifacts/cpp/$HOST_TARGET"
 cp -- "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
 chmod 644 "$ROOT/build/thinkthen.duckdb_extension"
-cp -- "$ROOT/build/thinkthen.duckdb_extension" "$ROOT/build/artifacts/cpp/x86_64-unknown-linux-gnu/thinkthen.duckdb_extension"
+cp -- "$ROOT/build/thinkthen.duckdb_extension" "$ROOT/build/artifacts/cpp/$HOST_TARGET/thinkthen.duckdb_extension"
