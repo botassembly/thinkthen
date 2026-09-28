@@ -309,7 +309,7 @@ const ARTICLES = {
     label: "Bash scripts",
     goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
     idea: [
-      "The script reads one song per line from `setlist.jsonl`. It asks `original.json` from the last page about each song. The [question file page](/functions/question-file/) lists every key a file can hold. It plays a yes, skips a no, and hands a not sure to a person.",
+      "The script reads one song per line from `setlist.jsonl`. It asks `original.json` from the last page about each song. The script plays a yes, skips a no, and hands a not sure to a person. The [question file page](/functions/question-file/) lists every key a file can hold.",
       "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means, and `if` reads it directly. `code=$?` names the code, and `case` tells a no from a not sure. Any other code is a failure, and the script stops. [Handle not sure](/how-tos/bash/not-sure/) teaches the same form.",
     ],
     files: {
@@ -373,15 +373,15 @@ const ARTICLES = {
     title: "diff shows what changed.",
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
-      "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake or made one.",
-      "Here the first run asks about the 12 songs on the [audit page](/learn/beatles-bench/audit/) from the title alone. The second run gives Jev each song's catalog entry too. The warning is right. The two runs asked different questions.",
+      "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
+      "Here the page reads two saved runs for the 12 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The warning is right. The two runs asked different questions.",
     ],
     see: {
-      '1-band': "Inside the band 0.2:0.8, 9 of the 12 answers changed, and all 12 end right.",
+      '1-band': "At the band 0.2:0.8, 9 of the 12 answers changed, and all 12 end right.",
       '2-bar': "At a bar of 0.5, 7 changed. Each was a wrong yes that turned right.",
     },
     headings: { '2-bar': "Change the bar" },
-    lesson: "`gained` marks a wrong answer that turned right. `resolved` marks a not-sure answer that turned right. `lost` counts right answers that turned wrong, and none did. Come Together, Here Comes the Sun, and Octopus's Garden kept their answers. `diff` leaves them out.",
+    lesson: "`gained` marks a wrong answer that turned right. `resolved` marks a not-sure answer that turned right. `lost` counts right answers that turned wrong, and none did. At the band 0.2:0.8, Come Together, Here Comes the Sun, and Octopus's Garden kept their answers. `diff` leaves them out.",
     takeaway: "diff shows what a change fixed and what it broke.",
     link: tree('audit'),
   },
