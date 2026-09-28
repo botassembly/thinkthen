@@ -57,6 +57,14 @@ class Backend:
         self._say("count")
         return int(self._line())
 
+    def capture(self) -> list[str]:
+        """Bodies retained by the shared backend's bounded opt-in case arm."""
+        self._say("capture")
+        held = json.loads(self._line())
+        if "error" in held:
+            raise AssertionError(held["error"])
+        return held["bodies"]
+
     def wait(self, least: int) -> int:
         self._say(f"wait {least}")
         while True:

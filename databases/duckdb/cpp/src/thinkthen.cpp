@@ -2,6 +2,7 @@
 
 #include "duckdb.hpp"
 #include "bridge.hpp"
+#include "find.hpp"
 #include "listed_result.hpp"
 #include "nested.hpp"
 #include "scalar_owner.hpp"
@@ -419,6 +420,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 		}
 	}
 	RegisterNested(loader);
+	RegisterFind(loader);
 	RegisterUsage(loader);
 	RegisterWarm(loader);
 	RegisterRelate(loader);

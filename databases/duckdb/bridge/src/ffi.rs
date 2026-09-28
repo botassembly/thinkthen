@@ -11,6 +11,7 @@ use std::time::Duration;
 use crate::{engines, errors, signal};
 use thinkthen::{CancelToken, LoadedQuestion, Question, QuestionSet};
 
+mod find;
 mod listed;
 mod nested;
 #[path = "ffi/scalar/ffi.rs"]
@@ -104,6 +105,50 @@ pub(crate) fn reply_boundary(call: impl FnOnce() -> Result<Vec<u8>, String>) -> 
         status: 4,
         bytes: std::ptr::null_mut(),
         len: 0,
+    })
+}
+
+/// Validate one whole find row before any row in its chunk can send.
+///
+/// # Safety
+/// The caller retains the question and unit byte ranges through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_find(
+    question: *const u8,
+    question_len: usize,
+    units: *const BridgeText,
+    count: usize,
+    none: i32,
+) -> Reply {
+    reply_boundary(|| find::validate(question, question_len, units, count, none))
+}
+
+/// Evaluate one owned find set, returning its original-index result frame.
+///
+/// # Safety
+/// The C++ caller retains the question, units, settings and stop predicate through this call.
+#[unsafe(no_mangle)]
+pub(crate) unsafe extern "C" fn thinkthen_cpp_find(
+    question: *const u8,
+    question_len: usize,
+    units: *const BridgeText,
+    count: usize,
+    none: i32,
+    deadline_ms: i64,
+    settings: BridgeSettings,
+    stop: BridgeStop,
+) -> Reply {
+    reply_boundary(|| {
+        find::run(find::Input {
+            question,
+            question_len,
+            units,
+            count,
+            none,
+            deadline_ms,
+            settings,
+            stop,
+        })
     })
 }
 
