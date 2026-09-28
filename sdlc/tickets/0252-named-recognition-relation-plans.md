@@ -1,6 +1,6 @@
 # 0252: Load named recognition and relation plans in TypeScript and Ruby
 
-Status: fresh independent High design review accepted `4209b350838e9bdf4f6ab5dda21d6d92d1a33336`. The coordinator approves implementation within the already approved library-equivalence question-file outcome. The Lanes table records the runtime claim. Ian can overturn the public spelling; no further answer is needed to build. The [preflight](../records/0252-named-plan-preflight.md) pins current source and existing host forms. This acceptance closes no product issue.
+Status: implementation complete after fresh independent High code review accepted `58ed0e77541e3009182212f07ed3bc38e2a75345`. The coordinator integrated unchanged host source. Public documentation and the final shared-conformance criterion map remain separate. The [build record](../records/0252-named-plan-build.md) records exact artifacts, focused checks and profile-retention limits.
 
 ## Outcome
 
