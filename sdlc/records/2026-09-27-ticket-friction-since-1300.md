@@ -455,3 +455,11 @@ The bounded test inventory found repeated assertions but no equivalent replaceme
 ## Repeated policy parsing
 
 Experiment2035 measured a warm policy check at45.86 seconds; door and facade scans used42.27 seconds. Each mutation probe parsed every unchanged Rust source again, and the facade presence scan parsed its source once per token position. The reviewed Quick Fix parses fresh source once per check and only reparses the complete modified file for each probe. All diagnostics and probes remain. A single local after sample took7.19 seconds. These samples use different source revisions and do not establish a product performance claim. Diagnose slow checker stages before deleting tests or buying more parallel capacity.
+
+## Reconcile test setup with the accepted request contract
+
+The shared functional checkpoint exposed old singleton assumptions after the accepted interactive iterator and default packing changes. The reviewed public-fixture correction at `74810363` retains the same panic payload, worker-join, later-call and probability guarantees using finite two-record requests and matching q1/q2 replies. No production defect or equivalent test retirement was established. Preparation should state whether each fixture proves singleton scheduling, packed scheduling or behavior independent of scheduling. Choose its batch setting explicitly and retain exact observed requests and sends; changing an expected count alone is insufficient.
+
+The checkpoint reviewer also found that a terminated wrapper's retained log lacked its exit status. The corrected record at `b084a9b3` calls it a partial log and makes no exact exit-code claim. Capture status at execution or report it as unavailable. A process interruption does not supply a passing check or a known persisted status.
+
+The C/process-replay preflight review at `2e98af53` found two scope shortcuts before design. A fixed verb does not identify two distinct caller sites. An inherited engine rebuilds after fork from its immutable settings, so a proposed build-time environment snapshot would remain unchanged in that inherited engine. Preparation now quotes the original call-site criterion and names existing-engine, fork and new-engine limits before proposing an environment policy. This refresh adds no completed product behavior.
