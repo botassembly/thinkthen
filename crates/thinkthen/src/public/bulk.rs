@@ -2,14 +2,15 @@
 
 use std::sync::Arc;
 
-use crate::core::{self, Find, Plan, ranking};
+use crate::core::{self, Find, Plan, Value, ranking};
 use crate::engine::facade::{self, Completed};
 use crate::public::annotated::AnnotatedRecord;
 use crate::public::batch::{self, Batch};
+use crate::public::choice::Choice;
 use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evidence, only};
-use crate::public::error::Error;
+use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
-use crate::public::question::{Kind, Question};
+use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
 use crate::public::results::{Answer, Call, Found, Ranked, Row, Written};
 use crate::public::set::QuestionSet;
 
@@ -17,7 +18,12 @@ use crate::public::set::QuestionSet;
 type Values = (Vec<(String, core::AnnotatedValue)>, Written);
 
 /// One record's answer and its probability of yes.
-type Decided = (Answer, f64);
+type Decided = (Value, f64);
+type Pair<I, T> = fn(I, Decided) -> Result<Option<T>, Error>;
+
+fn invalid_answer() -> Error {
+    Error::of(ErrorKind::Backend, "a backend question failed in a batch")
+}
 
 fn selected_batch(
     question: &Question,
@@ -63,9 +69,15 @@ impl Engine {
         I::Item: Evidence,
     {
         Batch::of(only(question, &[Kind::Decide], "filter").and_then(|()| {
-            self.decisions(question, records, options, |item, (answer, _)| {
-                (answer == Answer::Yes).then_some(item)
-            })
+            self.decisions(
+                question,
+                records,
+                options,
+                |item, (answer, _)| match answer {
+                    Value::YesNo(value) => Ok((value == Some(true)).then_some(item)),
+                    _ => Err(invalid_answer()),
+                },
+            )
         }))
     }
 
@@ -95,10 +107,137 @@ impl Engine {
     {
         let question = question.question();
         Batch::of(only(question, DECISIONS, "decide_many").and_then(|()| {
-            self.decisions(question, records, options, |item, (answer, yes)| {
-                Some(Row::new(item, answer, yes))
-            })
+            self.decisions(
+                question,
+                records,
+                options,
+                |item, (answer, yes)| match answer {
+                    Value::YesNo(value) => Ok(Some(Row::new(
+                        item,
+                        match value {
+                            Some(true) => Answer::Yes,
+                            Some(false) => Answer::No,
+                            None => Answer::Unsure,
+                        },
+                        yes,
+                    ))),
+                    _ => Err(invalid_answer()),
+                },
+            )
         }))
+    }
+
+    /// Each record's typed choice, including an unresolved `None`, in input order.
+    pub fn choose_many<'a, I, C: Choice>(
+        &'a self,
+        question: &'a ChooseQuestion<C>,
+        records: I,
+    ) -> Batch<'a, Row<I::Item, Option<C>>>
+    where
+        I: IntoIterator + 'a,
+        I::Item: Evidence,
+    {
+        self.choose_many_with(question, records, CallOptions::new())
+    }
+
+    /// [`Engine::choose_many`] under these controls.
+    pub fn choose_many_with<'a, I, C: Choice>(
+        &'a self,
+        question: &'a ChooseQuestion<C>,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Batch<'a, Row<I::Item, Option<C>>>
+    where
+        I: IntoIterator + 'a,
+        I::Item: Evidence,
+    {
+        Batch::of(
+            self.decisions(&question.0, records, options, |item, (answer, _)| {
+                let value = match answer {
+                    Value::Choice(Some(label)) => {
+                        Some(C::from_label(&label).ok_or_else(invalid_answer)?)
+                    }
+                    Value::Choice(None) => None,
+                    _ => return Err(invalid_answer()),
+                };
+                Ok(Some(Row::new(item, value, 0.0)))
+            }),
+        )
+    }
+
+    /// Each record's position on the declared scale, in input order.
+    pub fn score_many<'a, I>(
+        &'a self,
+        question: &'a Question,
+        records: I,
+    ) -> Batch<'a, Row<I::Item, f64>>
+    where
+        I: IntoIterator + 'a,
+        I::Item: Evidence,
+    {
+        self.score_many_with(question, records, CallOptions::new())
+    }
+
+    /// [`Engine::score_many`] under these controls.
+    pub fn score_many_with<'a, I>(
+        &'a self,
+        question: &'a Question,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Batch<'a, Row<I::Item, f64>>
+    where
+        I: IntoIterator + 'a,
+        I::Item: Evidence,
+    {
+        Batch::of(only(question, &[Kind::Score], "score_many").and_then(|()| {
+            self.decisions(
+                question,
+                records,
+                options,
+                |item, (answer, _)| match answer {
+                    Value::Score(value) => Ok(Some(Row::new(item, value, 0.0))),
+                    _ => Err(invalid_answer()),
+                },
+            )
+        }))
+    }
+
+    /// Each record's labels in declared order, in input order.
+    pub fn tag_many<'a, I, C: Choice>(
+        &'a self,
+        question: &'a TagQuestion<C>,
+        records: I,
+    ) -> Batch<'a, Row<I::Item, Vec<C>>>
+    where
+        I: IntoIterator + 'a,
+        I::Item: Evidence,
+    {
+        self.tag_many_with(question, records, CallOptions::new())
+    }
+
+    /// [`Engine::tag_many`] under these controls.
+    pub fn tag_many_with<'a, I, C: Choice>(
+        &'a self,
+        question: &'a TagQuestion<C>,
+        records: I,
+        options: CallOptions<'a>,
+    ) -> Batch<'a, Row<I::Item, Vec<C>>>
+    where
+        I: IntoIterator + 'a,
+        I::Item: Evidence,
+    {
+        Batch::of(
+            self.decisions(&question.0, records, options, |item, (answer, _)| {
+                let Value::Tag(labels) = answer else {
+                    return Err(invalid_answer());
+                };
+                let values = labels
+                    .iter()
+                    .map(|label| C::from_label(label).ok_or_else(invalid_answer))
+                    .collect::<Result<Vec<_>, _>>()?;
+                Ok(Some(Row::new(item, values, 0.0)))
+            }),
+        )
     }
 
     /// Every record, most likely yes first; ties keep input order.
@@ -145,7 +284,7 @@ impl Engine {
         only(question, &[Kind::Rank], "rank")?;
         let records = self.within_limit(records)?;
         let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
-            Some(Ranked::new(item, yes))
+            Ok(Some(Ranked::new(item, yes)))
         })?;
         let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
         let facts = batch
@@ -284,7 +423,7 @@ impl Engine {
         question: &Question,
         records: I,
         options: CallOptions<'a>,
-        pair: fn(I::Item, Decided) -> Option<T>,
+        pair: Pair<I::Item, T>,
     ) -> Result<Batch<'a, T>, Error>
     where
         I: IntoIterator + 'a,

@@ -5,16 +5,17 @@ use std::sync::Arc;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
 use std::thread::{self, JoinHandle};
 
-use crate::core::{self, AnswerOutcome, BatchRecord, Batcher};
+use crate::core::{self, AnswerOutcome, BatchRecord, Batcher, Value};
 use crate::engine::facade::{self, Completed, Input, InputPort};
 use crate::public::Evidence;
 use crate::public::error::Error;
 use crate::public::options::Stop;
-use crate::public::results::{self, Answer, Facts};
+use crate::public::results::Facts;
 
 use super::{Batch, Event, Source, TICK, join_scheduler, schedule};
 
-type Decided = (Answer, f64);
+type Answered = (Value, f64);
+type Pair<I, T> = fn(I, Answered) -> Result<Option<T>, Error>;
 
 struct Work {
     batch: core::Batch,
@@ -25,12 +26,12 @@ struct Stream<'a, I: Iterator, T> {
     items: I,
     held: VecDeque<I::Item>,
     pending_texts: VecDeque<String>,
-    ready: VecDeque<T>,
+    ready: VecDeque<Result<T, Error>>,
     queue: VecDeque<Work>,
     planner: Batcher,
-    pair: fn(I::Item, Decided) -> Option<T>,
-    events: Receiver<Event<Work, Vec<Decided>>>,
-    port: Option<InputPort<Work, Vec<Decided>, Error>>,
+    pair: Pair<I::Item, T>,
+    events: Receiver<Event<Work, Vec<Answered>>>,
+    port: Option<InputPort<Work, Vec<Answered>, Error>>,
     stop: Stop<'a>,
     facts: Option<Facts>,
     fed: usize,
@@ -55,7 +56,7 @@ pub(crate) fn start_planned<'a, I, T: 'a>(
     threshold: Option<core::Threshold>,
     setting: core::Setting,
     context: Option<core::Evidence>,
-    pair: fn(I::Item, Decided) -> Option<T>,
+    pair: Pair<I::Item, T>,
 ) -> Result<Batch<'a, T>, Error>
 where
     I: Iterator + 'a,
@@ -117,7 +118,7 @@ fn answer(
     threshold: Option<core::Threshold>,
     context: Option<&core::Evidence>,
     cancel: &crate::engine::Cancel<'static>,
-) -> Result<Completed<Vec<Decided>, Error>, Error> {
+) -> Result<Completed<Vec<Answered>, Error>, Error> {
     match engine.ask_batch(&work.batch, cancel) {
         Ok(answered) => rows(&work.batch, answered, threshold),
         Err(error) if error.too_large() && work.texts.len() > 1 => {
@@ -173,7 +174,7 @@ fn rows(
     batch: &core::Batch,
     answered: crate::engine::prepared_request::Answered,
     threshold: Option<core::Threshold>,
-) -> Result<Completed<Vec<Decided>, Error>, Error> {
+) -> Result<Completed<Vec<Answered>, Error>, Error> {
     if batch.outcomes.len() != batch.questions.len() {
         return Err(Error::defect("a batch lost its row outcomes"));
     }
@@ -183,7 +184,7 @@ fn rows(
         match answered.reply.outcomes().get(place) {
             Some(AnswerOutcome::Answered(answer)) => {
                 let (value, _) = answer.read(threshold);
-                values.push((results::answer(&value), answer.yes().unwrap_or_default()));
+                values.push((value, answer.yes().unwrap_or_default()));
             }
             _ => {
                 stop = Some(Error::of(
@@ -222,11 +223,11 @@ where
     I::Item: crate::public::Evidence,
 {
     fn pull(&mut self) -> Option<Result<T, Error>> {
-        self.scheduler.as_ref()?;
         loop {
             if let Some(row) = self.ready.pop_front() {
-                return Some(Ok(row));
+                return Some(row);
             }
+            self.scheduler.as_ref()?;
             if self.stop.interrupted() {
                 self.stop.fire();
             }
@@ -253,15 +254,11 @@ where
     I: Iterator,
     I::Item: crate::public::Evidence,
 {
-    fn take(&mut self, event: Event<Work, Vec<Decided>>) -> Option<Option<Result<T, Error>>> {
+    fn take(&mut self, event: Event<Work, Vec<Answered>>) -> Option<Option<Result<T, Error>>> {
         match event {
             Event::Port(port) => self.port = Some(port),
             Event::Ask => self.feed(),
-            Event::Row(rows) => {
-                if let Err(error) = self.take_rows(rows) {
-                    return Some(Some(Err(error)));
-                }
-            }
+            Event::Row(rows) => self.take_rows(rows),
             Event::End(ended) => {
                 let ended = self.join().and(ended);
                 let ended = self.stop.finish(ended);
@@ -332,16 +329,23 @@ where
         }
     }
 
-    fn take_rows(&mut self, rows: Vec<Decided>) -> Result<(), Error> {
+    fn take_rows(&mut self, rows: Vec<Answered>) {
         for value in rows {
             let Some(item) = self.held.pop_front() else {
-                return Err(self.end(Error::defect("a row arrived with no record")));
+                let error = self.end(Error::defect("a row arrived with no record"));
+                self.ready.push_back(Err(error));
+                return;
             };
-            if let Some(row) = (self.pair)(item, value) {
-                self.ready.push_back(row);
+            match (self.pair)(item, value) {
+                Ok(Some(row)) => self.ready.push_back(Ok(row)),
+                Ok(None) => {}
+                Err(error) => {
+                    let error = self.end(error);
+                    self.ready.push_back(Err(error));
+                    return;
+                }
             }
         }
-        Ok(())
     }
 
     fn queue_batch(&mut self, batch: core::Batch) {

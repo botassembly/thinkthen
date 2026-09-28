@@ -25,6 +25,8 @@ use thinkthen::{
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
 const THROTTLE: u8 = 2;
 
+thinkthen::choices! { enum BulkLabel { First => "first", Second => "second" } }
+
 static SERIAL: Mutex<()> = Mutex::new(());
 
 fn serial() -> MutexGuard<'static, ()> {
@@ -159,6 +161,122 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
         .next();
     assert!(failed.is_some_and(|row| row.is_err_and(|error| error.kind() == ErrorKind::Usage)));
     assert_eq!(listener.count(), 7, "invalid context sends nothing");
+}
+
+#[test]
+fn typed_bulk_verbs_share_one_request_and_keep_input_order() {
+    let _serial = serial();
+    let backend = Backend::start().expect("backend");
+    let engine = engine(&format!("{}/generic/v1", backend.origin()));
+    let records = ["alpha", "beta"];
+    let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
+
+    let choose = Question::choose::<BulkLabel>("Which label?")
+        .and_then(|builder| builder.option(BulkLabel::First, None))
+        .and_then(|builder| builder.option(BulkLabel::Second, None))
+        .and_then(thinkthen::ChooseBuilder::build)
+        .expect("choose");
+    let rows = engine
+        .choose_many_with(&choose, records, CallOptions::new().batch(setting))
+        .collect::<Result<Vec<_>, _>>()
+        .expect("choices");
+    assert_eq!(
+        rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+        records
+    );
+    assert!(
+        rows.iter()
+            .all(|row| *row.value() == Some(BulkLabel::First))
+    );
+    assert_eq!(backend.count(), 1);
+
+    let score = Question::score("How high?")
+        .and_then(|builder| builder.level("low", None))
+        .and_then(|builder| builder.level("high", None))
+        .and_then(thinkthen::ScoreBuilder::build)
+        .expect("score");
+    let rows = engine
+        .score_many_with(&score, records, CallOptions::new().batch(setting))
+        .collect::<Result<Vec<_>, _>>()
+        .expect("scores");
+    assert_eq!(
+        rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+        records
+    );
+    assert!(
+        rows.iter()
+            .all(|row| (*row.value() - 0.1).abs() < 0.000_001)
+    );
+    assert_eq!(backend.count(), 2);
+
+    let tag = Question::tag::<BulkLabel>("Which labels?")
+        .and_then(|builder| builder.label(BulkLabel::First, None))
+        .and_then(|builder| builder.label(BulkLabel::Second, None))
+        .and_then(thinkthen::TagBuilder::cut)
+        .expect("tag");
+    let rows = engine
+        .tag_many_with(&tag, records, CallOptions::new().batch(setting))
+        .collect::<Result<Vec<_>, _>>()
+        .expect("tags");
+    assert_eq!(
+        rows.iter().map(|row| *row.input()).collect::<Vec<_>>(),
+        records
+    );
+    assert!(
+        rows.iter()
+            .all(|row| row.value() == &vec![BulkLabel::First, BulkLabel::Second])
+    );
+    assert_eq!(backend.count(), 3);
+}
+
+#[test]
+fn typed_choice_keeps_null_distinct_from_a_failed_later_row() {
+    let _serial = serial();
+    let null = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","probabilities":{"first":1.0,"second":0.0}},"q2":{"type":"choice","probabilities":{"first":0.5,"second":0.5}}}}"#;
+    let failed = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","probabilities":{"first":1.0,"second":0.0}}}}"#;
+    let listener =
+        Listener::serving(vec![Canned::ok(null), Canned::ok(failed)]).expect("scripted listener");
+    let engine = engine(listener.base());
+    let choose = Question::choose::<BulkLabel>("Which label?")
+        .and_then(|builder| builder.option(BulkLabel::First, None))
+        .and_then(|builder| builder.option(BulkLabel::Second, None))
+        .and_then(thinkthen::ChooseBuilder::build)
+        .expect("choose");
+    let setting = BatchSetting::Records(std::num::NonZeroUsize::new(2).expect("two"));
+    let rows = engine
+        .choose_many_with(
+            &choose,
+            ["alpha", "beta"],
+            CallOptions::new().batch(setting),
+        )
+        .collect::<Result<Vec<_>, _>>()
+        .expect("a tie is a null choice");
+    assert_eq!(rows.len(), 2);
+    assert_eq!(*rows[0].value(), Some(BulkLabel::First));
+    assert_eq!(*rows[1].value(), None);
+
+    let mut rows = engine.choose_many_with(
+        &choose,
+        ["gamma", "delta"],
+        CallOptions::new().batch(setting),
+    );
+    assert_eq!(
+        rows.next()
+            .expect("first row")
+            .expect("first choice")
+            .value(),
+        &Some(BulkLabel::First)
+    );
+    let error = rows
+        .next()
+        .expect("failed row")
+        .expect_err("missing answer");
+    assert_eq!(error.kind(), ErrorKind::Backend);
+    assert!(rows.next().is_none());
+    let facts = rows.facts().expect("finished failure facts");
+    assert_eq!((facts.records(), facts.requests_sent()), (1, 1));
+    assert_eq!(error.facts().map(|facts| facts.records()), Some(1));
+    assert_eq!(listener.requests().len(), 2);
 }
 
 #[test]
