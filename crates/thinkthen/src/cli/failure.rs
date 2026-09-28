@@ -183,6 +183,8 @@ pub(crate) enum Failure {
     DefaultCachePrivate,
     Configuration(&'static str),
     CacheEntry,
+    /// The caller's digest list could not be read; its path is withheld.
+    UsedManifestUnreadable,
     StatusState,
     StatusUsage {
         name: String,
@@ -370,6 +372,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         ),
         Failure::Configuration(message) => (5, (*message).to_owned()),
         Failure::CacheEntry => (5, "the cache contains a malformed final entry".to_owned()),
+        Failure::UsedManifestUnreadable => (5, "the --used digest file could not be read".to_owned()),
         Failure::StatusState => (
             5,
             "status could not read the local cache or usage state; check its permissions and contents"

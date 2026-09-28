@@ -201,6 +201,10 @@ fn replay_of_a_missing_directory_is_a_miss_and_creates_nothing() {
 mod prune;
 
 #[cfg(unix)]
+#[path = "default_cache/unused.rs"]
+mod unused;
+
+#[cfg(unix)]
 #[test]
 fn replay_locks_a_read_only_directory_without_changing_it() {
     use std::os::unix::fs::PermissionsExt as _;

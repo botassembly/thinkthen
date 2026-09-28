@@ -6,7 +6,7 @@ opens: sdlc/tickets/0229-identify-unused-fixture-entries.md sdlc/records/0229-un
 
 # 0229: Report unused entries in an explicit recording folder
 
-Status: **Accepted for implementation.** Independent Medium design review accepted `97abffa6`; Ian approved the public command and complete caller-supplied manifest in the work plan. Current preparation `e976be74` and the restored shared policy boundary support the exact runtime claims now recorded in the Lanes table. Product completion still requires code review and functional proof.
+Status: **Complete after independent code ACCEPT at `07f277a4`.** Independent Medium design review accepted `97abffa6`; Ian approved the public command and complete caller-supplied manifest in the work plan. Current preparation `e976be74` and the restored shared policy boundary support the exact runtime claims now recorded in the Lanes table. The command, bounded replay proof and executable how-to passed; [code review](../records/0229-code-review.md) records closure and retained limits.
 
 ## Outcome and authority
 
@@ -39,6 +39,10 @@ The outside-in case must prove that a single completed replay's detailed `meta.r
 ## Deferred gaps and routing
 
 This ticket may complete the **reporting utility** after the proof and fresh code review. Register 107's original criterion asks for one command that reports unused entries after a full pass so a bench can keep its folders lean. The command accepts the complete digest list from the caller; the executable one-run example demonstrates that workflow. A general suite-manifest producer and actual external bench cleanup belong to their owner, not to this command's acceptance gate. A partial list must never be labeled a full pass. The settled removal rule in ADR 0017 section 5 and `recording.md:111` remains intact because this command does not remove. The fresh Medium reviewer accepted the technical design at `97abffa6` and found no substantive new ADR requirement. Ian's work-plan approval settles the CLI and manifest form. The coordinator will grant exact source claims and review register closure after verified behavior. No ADR number is reserved.
+
+## What the build taught us
+
+The accepted scanner and shared directory gate served the report without a second entry parser or digest lock. One new path-free local failure message was needed for an unreadable caller manifest; a recording-folder message would have given false advice. The compiled replay pinned the used digest independently from the report and kept every measured folder byte and stable metadata unchanged. The dedicated how-to names only its one-message run. The full checks and measured growth are in the build record.
 
 ## What preparation taught us
 

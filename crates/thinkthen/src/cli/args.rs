@@ -12,7 +12,9 @@ mod debug;
 mod find;
 mod relate;
 pub(crate) use batching::Batching;
-pub(crate) use command::{CacheCommand, CheckArguments, Command, PruneArguments, StatusArguments};
+pub(crate) use command::{
+    CacheCommand, CheckArguments, Command, PruneArguments, StatusArguments, UnusedArguments,
+};
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;
 

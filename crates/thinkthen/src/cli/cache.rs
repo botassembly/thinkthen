@@ -1,13 +1,54 @@
 //! Explicit cache maintenance commands.
 
-use std::io::Write;
+use std::collections::HashSet;
+use std::fs;
+use std::io::{self, Write};
 use std::process::ExitCode;
 use std::time::Duration;
 
-use crate::cli::args::PruneArguments;
+use crate::cli::args::{PruneArguments, UnusedArguments};
 use crate::cli::edge;
 use crate::cli::edge::Environment;
 use crate::failure::Failure;
+
+const BAD_DIGEST: &str = "--used takes one lowercase 64-character request digest per nonblank line";
+
+pub(crate) fn unused(
+    arguments: &UnusedArguments,
+    mut writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    // Parse the whole manifest before opening the named folder.
+    let lines = fs::read_to_string(&arguments.used).map_err(|error| {
+        if error.kind() == io::ErrorKind::InvalidData {
+            Failure::Usage(BAD_DIGEST)
+        } else {
+            Failure::UsedManifestUnreadable
+        }
+    })?;
+    let mut used = HashSet::new();
+    for line in lines.lines() {
+        if line.trim().is_empty() {
+            continue;
+        }
+        if line.len() != 64
+            || !line
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+        {
+            return Err(Failure::Usage(BAD_DIGEST));
+        }
+        used.insert(line.to_owned());
+    }
+    let names = crate::engine::cache_prune::unused(&arguments.directory, &used)?;
+    edge::write_line(
+        &mut writer,
+        &format!("unused from supplied digests: {}", names.len()),
+    )?;
+    for name in names {
+        edge::write_line(&mut writer, &format!("unused {name}"))?;
+    }
+    Ok(ExitCode::SUCCESS)
+}
 
 pub(crate) fn prune(
     arguments: &PruneArguments,
