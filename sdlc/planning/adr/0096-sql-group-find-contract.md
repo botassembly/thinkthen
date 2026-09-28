@@ -1,9 +1,9 @@
 # ADR 0096: One ordered SQL set enters one find call
 
-- Status: Technically accepted at `e648e35f` by independent review; proposed outward SQL spelling awaits Ian's choice. No SQL function or Rust change is built.
+- Status: Accepted. Independent technical review accepted `e648e35f`; Ian approved the recommended SQL spelling in the work plan on 2026-09-28, decision 6. SQLite implementation is claimed under 0224; no host completion follows from this decision.
 - Context: [issue: SQL find is missing](../../issues/2026-09-27-sql-find-is-missing-from-three-databases.md), [ticket 0224](../../tickets/0224-sql-group-find.md), and settled [find](../../../specification/find.md).
 
-## Proposed decision
+## Decision
 
 `thinkthen_find` is one volatile, direct SQL scalar over an already ordered collection. It invokes the existing public `Engine::find_with` once; it never judges each unit separately. The question is nonblank plain text, passed to `Question::find`; a true `none` argument calls `offering_none`. No `@file`, question-file JSON, threshold, per-question model or profile is invented: the current public find constructors do not offer those paths. `@` in the question is literal text. Engine environment and each host's existing model, profile, cache, replay, request-total and deadline settings retain their authority. The command's `--none` behavior, generated `u001`…`u255` identities and selection rule remain with the public find core.
 
