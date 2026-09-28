@@ -124,8 +124,9 @@
     },
     "retrieval": {
       "slide": "26-retrieval",
-      "sha256": "595f6897948a7fa31bb98beaec42f808d4e582e2f734eeda528e38e86e9cfd13",
-      "card": "b075fa6107c92e5dafa283e01311c0a43aa26afee4f7b10bfbec6914e4830c1b"
+      "deck": "6a9600b53e2f18160efd80a60938e663fff2c5fb",
+      "sha256": "f6731fdabf259afa5e58abaffbc5887b5f678f84935d9096db4dfff35ed6338d",
+      "card": "90fadf10ac49a524a3e996edce30b45d12d996ea0a4d52aee947ff7a3c6ec35b"
     },
     "bench-run": {
       "slide": "27-bench-run",

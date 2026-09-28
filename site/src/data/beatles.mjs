@@ -442,12 +442,13 @@ const ARTICLES = {
   retrieval: {
     title: "Four ways to retrieve.",
     label: "Retrieval",
-    goal: "Classification asks Jev your question about each record, and it adds a fourth way to retrieve.",
+    goal: "Classification understands each item more deeply than search, and it costs more to run.",
     idea: [
-      "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings and cosine similarity work this way. Hybrid search blends the two.",
-      "Classification asks Jev a question about each record: keep or drop, how well it fits, which tags apply. `decide`, `score`, and `tag` answer, and each answer carries a probability. `filter` and `rank` keep and order the records on those answers. Classification can also ask about the names that `recognize` pulls out.",
+      "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings and cosine similarity work this way. Hybrid search blends the two scores.",
+      "Classification asks a question about each item. Should it stay? How well does it fit? Which tags apply? A language model reads the item and answers. Each answer carries a probability.",
+      "The trade-off is cost. Keyword and semantic search look items up in a prebuilt index. Classification sends every item to a language model. It costs more and takes longer. Search narrows the pile first. Classification reads what is left.",
     ],
-    takeaway: "Search finds text like your question. Classification answers it.",
+    takeaway: "Classification understands each item far more deeply than search.",
     link: REPO,
   },
 
