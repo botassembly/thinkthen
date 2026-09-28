@@ -115,4 +115,4 @@ As the ticket lists them. Items 1 and 16 are now unblocked, since 0134, 0135, an
 
 - `sdlc/issues/closed/2026-09-25-exchange-400-rows-belong-in-the-status-reason-table.md`: the lander moves it to `closed/`.
 - `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`: this branch marks items 10 to 15 and 17 fixed and items 2 to 9 with their commits. It stays open for items 1 and 16.
-- Item 5 of `sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md`: the coordinator marks it settled.
+- Item 5 of `sdlc/issues/closed/2026-09-25-test-harness-and-review-leftovers.md`: the coordinator marks it settled.

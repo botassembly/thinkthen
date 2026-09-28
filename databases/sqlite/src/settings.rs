@@ -1,12 +1,13 @@
 //! The process engine and SQL settings fixed before its first build.
 
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::Duration;
 
 use rusqlite::functions::Context;
-use rusqlite::types::ValueRef;
-use thinkthen::{Engine, EngineBuilder, SendBudget};
+use rusqlite::types::{Value, ValueRef};
+use thinkthen::{BatchSetting, Engine, EngineBuilder, SendBudget};
 
 use crate::question::shown;
 use crate::{Failure, guard};
@@ -15,6 +16,7 @@ use crate::{Failure, guard};
 #[derive(Debug, Default)]
 struct Stored {
     throttle: Option<u8>,
+    batch: Option<BatchSetting>,
     max_requests: Option<Option<usize>>,
     max_request_bytes: Option<usize>,
     cache: Option<Option<PathBuf>>,
@@ -31,6 +33,9 @@ impl Stored {
     fn apply(&self, mut builder: EngineBuilder) -> Result<EngineBuilder, thinkthen::Error> {
         if let Some(value) = self.throttle {
             builder = builder.throttle(value)?;
+        }
+        if let Some(value) = self.batch {
+            builder = builder.batch(value);
         }
         if let Some(value) = self.max_requests {
             builder = builder.max_requests(value)?;
@@ -67,6 +72,7 @@ impl Stored {
 
 static STORED: Mutex<Stored> = Mutex::new(Stored {
     throttle: None,
+    batch: None,
     max_requests: None,
     max_request_bytes: None,
     cache: None,
@@ -110,8 +116,8 @@ pub(crate) fn built() -> Option<&'static Engine> {
     ENGINE.get()
 }
 
-/// What remains of the process request total (decision 17), or `None` with
-/// no total. A spent total refuses before any send.
+/// What remains of the process request total for an ordinary scalar call.
+/// A spent total refuses even a cached scalar answer, as before B13e.
 pub(crate) fn remaining() -> Result<Option<usize>, Failure> {
     let Some(total) = stored().total else {
         return Ok(None);
@@ -245,6 +251,32 @@ pub(crate) fn throttle(context: &Context<'_>) -> rusqlite::Result<i64> {
         let throttle = u8::try_from(value).unwrap_or(0);
         set(|held| held.throttle = Some(throttle))?;
         Ok(value)
+    })?)
+}
+
+/// `thinkthen_batch`: `max`, a positive member cap, or NULL to restore the environment.
+pub(crate) fn batch(context: &Context<'_>) -> rusqlite::Result<Value> {
+    Ok(guard("thinkthen_batch", || {
+        let (shown, setting) = match context.get_raw(0) {
+            ValueRef::Null => (Value::Null, None),
+            ValueRef::Text(b"max") => (Value::Text("max".to_owned()), Some(BatchSetting::Max)),
+            ValueRef::Integer(value) => {
+                let count = usize::try_from(value)
+                    .ok()
+                    .and_then(NonZeroUsize::new)
+                    .ok_or_else(|| {
+                        Failure::usage("a batch is 'max' or a whole number of 1 or more")
+                    })?;
+                (Value::Integer(value), Some(BatchSetting::Records(count)))
+            }
+            _ => {
+                return Err(Failure::usage(
+                    "a batch is 'max' or a whole number of 1 or more",
+                ));
+            }
+        };
+        set(|held| held.batch = setting)?;
+        Ok(shown)
     })?)
 }
 

@@ -1,5 +1,13 @@
 # Python binding notes
 
+## J5 label and row types
+
+Ticket 0233 normalizes Enum/Literal/Pydantic label forms in private `_labels.py` before the existing JSON question parser. Old list/map inputs pass through unchanged. Recognition keywords use the version-one recognize JSON parser because the old native `_Recognize._build` accepts text descriptions only; relation order, cuts, default `ENTITY`, and `on=` eligibility stay with that parser and the existing wrapper guard. The optional `pydantic.py` module is imported only for Pydantic forms or explicit row validation. It validates question sets natively before deriving strict Pydantic row fields. The stub narrows question/error kinds and list annotation rows while keeping `Call`, frame, and completion types. `test_label_types.py` compares listener-captured bodies and digests; `test_pydantic.py` checks optional authoring, failure markers and strict rows; `type_contract.py` is checked by pinned mypy from `check.sh`.
+
+## B12c call accounts
+
+Ticket 0214 returns `Call.value`, `Call.facts`, and owned immutable `Call.details` through the same binding path for scalar, eager list, column, and frame calls. Its worker observes borrowed Rust question events on the worker thread and copies them before each callback ends. A stopped caller receives a prompt exception with a completion receipt; the original worker fixes the receipt after its joined terminal outcome. Recognition frames combine their per-text Rust facts and row-indexed details before Arrow or pandas reconstruction. The site copies of Python examples remain marketing owned and require their own migration before public release.
+
 Ticket 0105 ported the Python surface from tag `surfaces-wave7-frozen-2026-09-24b` onto the public `thinkthen` API. The tag's own `NOTES.md` stays at the tag as history. This file records what the port decided and why. Ian can overturn each point.
 
 ## Shape
@@ -78,6 +86,7 @@ Each engine call runs in a child Python with its own loopback backend and cache 
 - `test_release.py`: attached release after the caller leaves, and the exit-freeze test of change 6. `arrow_c.py` holds the hand-built producers.
 - `test_column_timing.py`: one deadline and one token per column, throttle equality, the in-flight count, and the recognize loop's one deadline.
 - `test_stopping.py`: the caller's token, Ctrl-C on single, batch, and Polars column calls, and a handler's `SystemExit`.
+- `test_call.py`: `Call` accounting, maximal packing versus explicit batch one, runtime-label lists, immutable observations, frame reconstruction, returned failure, prompt receipt, `SystemExit` receipt, and host reconstruction failure.
 - `test_engine.py`: the `tt.Engine` settings.
 - `test_secrecy.py`: the child environment, the fake key at a loopback listener, and every message and `repr`.
 - `conformance.py` runs every case in `conformance/cases.json`, and each typed, `decide_many`, and `annotate` case again over a Polars column or frame. It reports pass, fail, or not run with a reason, and the three counts sum to the file's count.

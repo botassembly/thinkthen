@@ -9,6 +9,9 @@
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
+#[path = "public_controls/call_facts.rs"]
+mod call_facts;
+
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
@@ -17,7 +20,8 @@ use std::time::{Duration, Instant};
 
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::{
-    Answer, CallOptions, CancelToken, Engine, Entity, Error, ErrorKind, Question, Relate,
+    Answer, BatchSetting, CallOptions, CancelToken, Engine, Entity, Error, ErrorKind, Question,
+    Relate,
 };
 
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
@@ -63,7 +67,9 @@ fn message<T>(result: Result<T, Error>) -> String {
 fn decided(options: CallOptions<'_>) -> (Result<Answer, Error>, usize) {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let result = engine(listener.base()).decide_with(&question(), "Refund me.", options);
+    let result = engine(listener.base())
+        .decide_with(&question(), "Refund me.", options)
+        .map(thinkthen::Call::into_value);
     (result, listener.count())
 }
 
@@ -133,6 +139,12 @@ fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
     for options in spent {
         let (result, sent) = decided(options.expect("options"));
         assert_eq!((kind(&result), sent), (Some(ErrorKind::Deadline), 0));
+        let facts = result
+            .as_ref()
+            .err()
+            .and_then(Error::facts)
+            .expect("the spent call started and carries zero-send facts");
+        assert_eq!((facts.records(), facts.requests_sent()), (0, 0));
     }
     // `-1` clears an earlier deadline, and a later budget replaces a spent one.
     let live = [
@@ -247,7 +259,14 @@ fn a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes() {
 
         backend.release();
         for holder in holders {
-            assert_eq!(holder.join().expect("holder").ok(), Some(Answer::Yes));
+            assert_eq!(
+                holder
+                    .join()
+                    .expect("holder")
+                    .ok()
+                    .map(thinkthen::Call::into_value),
+                Some(Answer::Yes)
+            );
         }
     });
     assert_eq!(backend.count(), 4, "nothing new was sent");
@@ -318,7 +337,10 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
         second.release();
         call.join().expect("call")
     });
-    assert_eq!(answer.ok(), Some(Answer::Yes));
+    assert_eq!(
+        answer.ok().map(thinkthen::Call::into_value),
+        Some(Answer::Yes)
+    );
 }
 
 /// Shared pair requests fill the throttle of 4. A host check while four
@@ -370,7 +392,9 @@ fn a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new() {
     let texts = ["one", "two", "three", "four", "five", "six"];
     let runs = Runs::default();
     let check = || runs.record(backend.count()) >= 3 && backend.count() == 4;
-    let options = CallOptions::new().interrupt(&check);
+    let options = CallOptions::new()
+        .interrupt(&check)
+        .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
     let rows: Vec<_> = thread::scope(|scope| {
         scope.spawn(|| {
             backend.wait(4);
@@ -410,7 +434,14 @@ fn a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new() {
         assert_eq!(kind(&result), Some(ErrorKind::Cancelled), "{result:?}");
         assert!(waited.all_on(thread::current().id()));
         backend.release();
-        assert_eq!(owner.join().expect("owner").ok(), Some(Answer::Yes));
+        assert_eq!(
+            owner
+                .join()
+                .expect("owner")
+                .ok()
+                .map(thinkthen::Call::into_value),
+            Some(Answer::Yes)
+        );
     });
     assert_eq!(backend.count(), 5, "the waiting engine sent nothing");
     assert_eq!(second.usage().requests_sent(), 0);
@@ -443,7 +474,14 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
         // An uncancelled waiter would send once the gate frees.
         backend.release();
         for holder in holders {
-            assert_eq!(holder.join().expect("holder").ok(), Some(Answer::Yes));
+            assert_eq!(
+                holder
+                    .join()
+                    .expect("holder")
+                    .ok()
+                    .map(thinkthen::Call::into_value),
+                Some(Answer::Yes)
+            );
         }
         single
     });
@@ -471,7 +509,13 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
         });
         catch_unwind(AssertUnwindSafe(|| {
             batch
-                .filter_with(&asked, texts, CallOptions::new().interrupt(&check))
+                .filter_with(
+                    &asked,
+                    texts,
+                    CallOptions::new()
+                        .interrupt(&check)
+                        .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+                )
                 .count()
         }))
     });
@@ -480,53 +524,4 @@ fn a_panicking_check_stops_the_call_then_resumes_its_payload_after_the_join() {
     };
     assert_eq!(payload.downcast_ref::<&str>(), Some(&PAYLOAD));
     assert_eq!(held.count(), 4, "nothing was sent after the panic");
-}
-
-#[test]
-fn counters_and_cache_answers_match_the_real_attempts() {
-    let _serial = serial();
-    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
-    let folder = std::env::temp_dir().join(format!("thinkthen-counters-{}", std::process::id()));
-    let _gone = std::fs::remove_dir_all(&folder);
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .and_then(|b| b.api_key("sk-public-controls"))
-        .and_then(|b| b.cache_at(&folder))
-        .and_then(thinkthen::EngineBuilder::build)
-        .expect("engine");
-    let asked = question();
-    for _ in 0..2 {
-        assert_eq!(engine.decide(&asked, "Refund me.").ok(), Some(Answer::Yes));
-    }
-    let token = CancelToken::new();
-    token.cancel();
-    let options = CallOptions::new().cancel(&token);
-    assert!(engine.decide_with(&asked, "Another.", options).is_err());
-    let usage = engine.usage();
-    assert_eq!(listener.count(), 1);
-    assert_eq!((usage.requests_sent(), usage.cache_answers()), (1, 1));
-    let _gone = std::fs::remove_dir_all(&folder);
-}
-
-/// Ticket 0132: a reply over 1 MiB plus 8 bytes per request byte is refused by name, once.
-#[test]
-fn a_reply_over_its_limit_names_it() {
-    let _serial = serial();
-    let listener = Listener::answering(|body| {
-        let size = 1_048_576 + 8 * body.len() + 1;
-        let (head, tail) = DECIDED.split_at(DECIDED.len() - 1);
-        Canned::ok(&format!("{head}{}{tail}", " ".repeat(size - DECIDED.len())))
-    })
-    .expect("listener");
-    let result = engine(listener.base()).decide(&question(), "Refund me.");
-    let limit = 1_048_576 + 8 * listener.requests()[0].body.len();
-    assert_eq!(kind(&result), Some(ErrorKind::Backend));
-    assert_eq!(result.as_ref().err().map(Error::retryable), Some(false));
-    assert_eq!(
-        message(result),
-        format!(
-            "the backend's reply passed this request's limit of {limit} bytes, so the answer was not kept; the request was not sent again"
-        )
-    );
-    assert_eq!(listener.count(), 1);
 }

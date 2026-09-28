@@ -1,20 +1,17 @@
 //! The judgment functions: six scalars, `thinkthen_usage`, and the
 //! `thinkthen_warm` aggregate, each registered volatile and direct-only.
 
-use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
-use std::time::{Duration, Instant};
 
 use rusqlite::Connection;
-use rusqlite::functions::{Aggregate, Context, FunctionFlags};
+use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
-use thinkthen::{Answer, CallOptions, Judgment, LoadedQuestion, Question, QuestionKind};
+use thinkthen::{
+    Answer, CallOptions, Details, Engine, Judgment, LoadedQuestion, Question, QuestionKind,
+};
 
 use crate::question::{question, set, shown, text};
 use crate::{Failure, ffi, guard, recognize_document, settings, worker};
-
-/// Warm sends each question's texts in chunks of this many rows.
-const CHUNK: usize = 256;
 
 /// The third argument, milliseconds under ADR 0041: an INTEGER as given, or
 /// a finite, whole REAL inside `i64`. Anything else is `usage`.
@@ -45,7 +42,19 @@ fn deadline(context: &Context<'_>) -> Result<Option<i64>, Failure> {
 }
 
 /// One scalar call's question, evidence, and deadline, or `None` for a NULL.
-type Inputs = Option<(Arc<LoadedQuestion>, String, Option<i64>)>;
+type Inputs = Option<(Arc<LoadedQuestion>, String, Option<i64>, Option<String>)>;
+
+/// A final literal context, with SQL NULL meaning the old no-context call.
+fn shared(context: &Context<'_>) -> Result<Option<String>, Failure> {
+    if context.len() < 4 {
+        return Ok(None);
+    }
+    let value = text(context.get_raw(3), "the context")?;
+    if value.as_ref().is_some_and(|value| value.trim().is_empty()) {
+        return Err(Failure::usage("context is text, not white space"));
+    }
+    Ok(value)
+}
 
 fn inputs(context: &Context<'_>) -> Result<Inputs, Failure> {
     let deadline = deadline(context)?;
@@ -55,7 +64,29 @@ fn inputs(context: &Context<'_>) -> Result<Inputs, Failure> {
     let Some(evidence) = text(context.get_raw(1), "the text")? else {
         return Ok(None);
     };
-    Ok(Some((question(&argument)?, evidence, deadline)))
+    let shared = shared(context)?;
+    Ok(Some((question(&argument)?, evidence, deadline, shared)))
+}
+
+/// The shared many-record details path for a contextual singleton.
+fn contextual(
+    engine: &Engine,
+    held: &LoadedQuestion,
+    evidence: String,
+    options: CallOptions<'_>,
+) -> Result<Details, Failure> {
+    let row = match held {
+        LoadedQuestion::Question(asked) => {
+            engine.details_many_with(asked, [evidence], options).next()
+        }
+        LoadedQuestion::Banded(asked) => {
+            engine.details_many_with(asked, [evidence], options).next()
+        }
+    };
+    Ok(row
+        .ok_or_else(|| Failure::defect("details returned no record"))??
+        .into_parts()
+        .1)
 }
 
 /// Refuse a question `name` does not take, before any send.
@@ -83,16 +114,34 @@ fn plain(held: &LoadedQuestion) -> Result<&Question, Failure> {
     }
 }
 
+fn plain_decide(
+    engine: &Engine,
+    held: &LoadedQuestion,
+    evidence: &str,
+    options: CallOptions<'_>,
+) -> Result<Answer, Failure> {
+    Ok(match held {
+        LoadedQuestion::Question(asked) => {
+            engine.decide_with(asked, evidence, options)?.into_value()
+        }
+        LoadedQuestion::Banded(asked) => engine.decide_with(asked, evidence, options)?.into_value(),
+    })
+}
+
 fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
     Ok(guard("thinkthen_decide", || {
-        let Some((held, evidence, deadline)) = inputs(context)? else {
+        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
             return Ok(None);
         };
         let answer = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            Ok(match &*held {
-                LoadedQuestion::Question(asked) => engine.decide_with(asked, &evidence, options)?,
-                LoadedQuestion::Banded(asked) => engine.decide_with(asked, &evidence, options)?,
-            })
+            if let Some(shared) = shared {
+                match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    Judgment::Decision(answer) => Ok(*answer),
+                    _ => Err(Failure::defect("a decide answer held no decision")),
+                }
+            } else {
+                plain_decide(engine, &held, &evidence, options)
+            }
         })?;
         Ok(match answer {
             Answer::Yes => Some(1),
@@ -108,14 +157,26 @@ fn judged(
     name: &'static str,
     kind: QuestionKind,
 ) -> Result<Option<Judgment>, Failure> {
-    let Some((held, evidence, deadline)) = inputs(context)? else {
+    let Some((held, evidence, deadline, shared)) = inputs(context)? else {
         return Ok(None);
     };
     only(&held, name, kind)?;
     let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-        Ok(engine.details_with(plain(&held)?, &evidence, options)?)
+        if let Some(shared) = shared {
+            Ok(
+                contextual(engine, &held, evidence, options.context(&shared))?
+                    .value()
+                    .clone(),
+            )
+        } else {
+            Ok(engine
+                .details_with(plain(&held)?, &evidence, options)?
+                .into_value()
+                .value()
+                .clone())
+        }
     })?;
-    Ok(Some(details.value().clone()))
+    Ok(Some(details))
 }
 
 fn choose(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
@@ -142,12 +203,21 @@ fn tag(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
 
 fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
     Ok(guard("thinkthen_score", || {
-        let Some((held, evidence, deadline)) = inputs(context)? else {
+        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
             return Ok(None);
         };
         only(&held, "thinkthen_score", QuestionKind::Score)?;
         let position = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            Ok(engine.score_with(plain(&held)?, &evidence, options)?)
+            if let Some(shared) = shared {
+                match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                    Judgment::Score(value) => Ok(*value),
+                    _ => Err(Failure::defect("a score answer held no score")),
+                }
+            } else {
+                Ok(engine
+                    .score_with(plain(&held)?, &evidence, options)?
+                    .into_value())
+            }
         })?;
         Ok(Some(position))
     })?)
@@ -155,18 +225,26 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
 
 fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_details", || {
-        let Some((held, evidence, deadline)) = inputs(context)? else {
+        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
             return Ok(None);
         };
         let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            Ok(match &*held {
-                LoadedQuestion::Question(asked) => {
-                    engine.details_with(asked, &evidence, options)?
-                }
-                LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options)?,
-            })
+            if let Some(shared) = shared {
+                Ok(contextual(engine, &held, evidence, options.context(&shared))?.to_scalar_json())
+            } else {
+                Ok(match &*held {
+                    LoadedQuestion::Question(asked) => engine
+                        .details_with(asked, &evidence, options)?
+                        .into_value()
+                        .to_json(),
+                    LoadedQuestion::Banded(asked) => engine
+                        .details_with(asked, &evidence, options)?
+                        .into_value()
+                        .to_json(),
+                })
+            }
         })?;
-        Ok(Some(details.to_json()))
+        Ok(Some(details))
     })?)
 }
 
@@ -176,19 +254,27 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         return Ok(None);
     }
     let result = guard("thinkthen_try_details", || {
-        let Some((held, evidence, deadline)) = inputs(context)? else {
+        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
             return Ok(None);
         };
         let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            Ok(match &*held {
-                LoadedQuestion::Question(asked) => {
-                    engine.details_with(asked, &evidence, options)?
-                }
-                LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options)?,
-            })
+            if let Some(shared) = shared {
+                Ok(contextual(engine, &held, evidence, options.context(&shared))?.to_scalar_json())
+            } else {
+                Ok(match &*held {
+                    LoadedQuestion::Question(asked) => engine
+                        .details_with(asked, &evidence, options)?
+                        .into_value()
+                        .to_json(),
+                    LoadedQuestion::Banded(asked) => engine
+                        .details_with(asked, &evidence, options)?
+                        .into_value()
+                        .to_json(),
+                })
+            }
         })?;
-        let details: serde_json::Value = serde_json::from_str(&details.to_json())
-            .map_err(|_| Failure::defect("a result is not JSON"))?;
+        let details: serde_json::Value =
+            serde_json::from_str(&details).map_err(|_| Failure::defect("a result is not JSON"))?;
         Ok(Some(
             serde_json::json!({"status":"answered","details":details}).to_string(),
         ))
@@ -252,172 +338,8 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
     })?)
 }
 
-/// One question's texts in a warm pass.
-#[derive(Debug)]
-struct Group {
-    question: Arc<LoadedQuestion>,
-    seen: HashSet<String>,
-    pending: Vec<String>,
-}
-
-/// The warm aggregate's state: groups in first-seen order, found by the
-/// question argument's text in constant time (R5-18).
-#[derive(Debug, Default)]
-pub(crate) struct WarmState {
-    groups: Vec<Group>,
-    index: HashMap<String, usize>,
-    judged: i64,
-    deadline: Option<Option<i64>>,
-    due: Option<Instant>,
-}
-
-/// A full chunk of one question's texts, ready to send.
-type Flush = (Arc<LoadedQuestion>, Vec<String>);
-
-impl WarmState {
-    /// Add one row. An equal pair in the same pass is asked once. A group
-    /// that reaches a chunk comes back to be sent.
-    fn add(
-        &mut self,
-        argument: &str,
-        parse: impl FnOnce() -> Result<Arc<LoadedQuestion>, Failure>,
-        evidence: String,
-    ) -> Result<Option<Flush>, Failure> {
-        let at = match self.index.get(argument) {
-            Some(at) => *at,
-            None => {
-                self.groups.push(Group {
-                    question: parse()?,
-                    seen: HashSet::new(),
-                    pending: Vec::new(),
-                });
-                self.index
-                    .insert(argument.to_owned(), self.groups.len() - 1);
-                self.groups.len() - 1
-            }
-        };
-        let group = self
-            .groups
-            .get_mut(at)
-            .ok_or_else(|| Failure::defect("a warm group is missing"))?;
-        if group.seen.insert(evidence.clone()) {
-            group.pending.push(evidence);
-        }
-        Ok((group.pending.len() >= CHUNK).then(|| {
-            (
-                Arc::clone(&group.question),
-                std::mem::take(&mut group.pending),
-            )
-        }))
-    }
-}
-
-/// Judge one chunk on a worker, one send per text the cache lacks. Under a
-/// process request total the chunk is cut to as many rows as requests
-/// remain, and once that part is judged the call refuses (decision 17).
-fn flush(
-    context: &Context<'_>,
-    (held, mut texts): Flush,
-    due: Option<Instant>,
-) -> Result<i64, Failure> {
-    // The cut counts rows. A cached row costs no request, so the refusal
-    // names the rows judged, not the requests spent.
-    let cut = settings::remaining()?.filter(|left| *left < texts.len());
-    if let Some(left) = cut {
-        texts.truncate(left);
-    }
-    let count =
-        i64::try_from(texts.len()).map_err(|_| Failure::defect("a warm chunk is too long"))?;
-    if count == 0 {
-        return Ok(0);
-    }
-    worker::run_until(ffi::handle_of(context), due, move |engine, options| {
-        // The band stays out of the request, so decide reads what this fills.
-        match &*held {
-            LoadedQuestion::Question(asked) => engine
-                .decide_many_with(asked, texts, options)
-                .try_for_each(|row| row.map(drop))?,
-            LoadedQuestion::Banded(asked) => engine
-                .decide_many_with(asked, texts, options)
-                .try_for_each(|row| row.map(drop))?,
-        }
-        Ok(count)
-    })?;
-    match cut {
-        Some(left) => Err(Failure::usage(format!(
-            "this warm pass stopped at the remaining total of {left} requests (thinkthen_max_requests_total)"
-        ))),
-        None => Ok(count),
-    }
-}
-
-/// Warm's question: decide only, cut or banded (ticket 0129), any other kind
-/// named to `thinkthen_decide`.
-fn warm_question(argument: &str) -> Result<Arc<LoadedQuestion>, Failure> {
-    let held = question(argument)?;
-    match &*held {
-        LoadedQuestion::Question(asked) if asked.kind() != QuestionKind::Decide => {
-            Err(Failure::usage(
-                "thinkthen_warm takes a decide question; ask others with thinkthen_decide",
-            ))
-        }
-        _ => Ok(held),
-    }
-}
-
-/// `thinkthen_warm(question, text)`: judge every distinct pair once, filling
-/// the engine's cache, and answer how many pairs it judged.
-#[derive(Debug)]
-struct Warm;
-
-impl Aggregate<WarmState, i64> for Warm {
-    fn init(&self, _: &mut Context<'_>) -> rusqlite::Result<WarmState> {
-        Ok(WarmState::default())
-    }
-
-    fn step(&self, context: &mut Context<'_>, state: &mut WarmState) -> rusqlite::Result<()> {
-        Ok(guard("thinkthen_warm", || {
-            let due = deadline(context)?;
-            if state.deadline.is_some_and(|first| first != due) {
-                return Err(Failure::usage(
-                    "thinkthen_warm takes one deadline for the whole group",
-                ));
-            }
-            if state.deadline.is_none() {
-                state.due = due
-                    .and_then(|millis| u64::try_from(millis).ok())
-                    .and_then(|millis| Instant::now().checked_add(Duration::from_millis(millis)));
-            }
-            state.deadline = Some(due);
-            let Some(argument) = text(context.get_raw(0), "the question")? else {
-                return Ok(());
-            };
-            let Some(evidence) = text(context.get_raw(1), "the text")? else {
-                return Ok(());
-            };
-            if let Some(chunk) = state.add(&argument, || warm_question(&argument), evidence)? {
-                state.judged += flush(context, chunk, state.due)?;
-            }
-            Ok(())
-        })?)
-    }
-
-    fn finalize(
-        &self,
-        context: &mut Context<'_>,
-        state: Option<WarmState>,
-    ) -> rusqlite::Result<i64> {
-        Ok(guard("thinkthen_warm", || {
-            let Some(mut state) = state else {
-                return Ok(0);
-            };
-            for group in std::mem::take(&mut state.groups) {
-                state.judged += flush(context, (group.question, group.pending), state.due)?;
-            }
-            Ok(state.judged)
-        })?)
-    }
-}
+mod warm;
+use warm::Warm;
 
 /// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
@@ -428,20 +350,23 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         volatile,
         recognize_document::recognize_document,
     )?;
-    for arity in [2, 3] {
+    for arity in [2, 3, 4] {
         connection.create_scalar_function("thinkthen_decide", arity, volatile, decide)?;
         connection.create_scalar_function("thinkthen_choose", arity, volatile, choose)?;
         connection.create_scalar_function("thinkthen_score", arity, volatile, score)?;
         connection.create_scalar_function("thinkthen_tag", arity, volatile, tag)?;
-        connection.create_scalar_function("thinkthen_annotate", arity, volatile, annotate)?;
+        if arity < 4 {
+            connection.create_scalar_function("thinkthen_annotate", arity, volatile, annotate)?;
+        }
         connection.create_scalar_function("thinkthen_details", arity, volatile, details)?;
         connection.create_scalar_function("thinkthen_try_details", arity, volatile, try_details)?;
     }
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
-    for arity in [2, 3] {
+    for arity in [2, 3, 4] {
         connection.create_aggregate_function("thinkthen_warm", arity, volatile, Warm)?;
     }
     connection.create_scalar_function("thinkthen_throttle", 1, volatile, settings::throttle)?;
+    connection.create_scalar_function("thinkthen_batch", 1, volatile, settings::batch)?;
     connection.create_scalar_function(
         "thinkthen_max_requests",
         1,
@@ -473,38 +398,4 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     connection.create_scalar_function("thinkthen_record", 1, volatile, settings::record)?;
     connection.create_scalar_function("thinkthen_replay", 1, volatile, settings::replay)?;
     Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::Arc;
-    use std::time::{Duration, Instant};
-
-    use thinkthen::{LoadedQuestion, Question};
-
-    use super::WarmState;
-
-    /// R5-18: 200,000 rows under 200,000 distinct questions group in under 1 s.
-    #[test]
-    fn warm_finds_each_group_in_constant_time() {
-        let held = Question::decide("Is this a complaint?")
-            .map(|builder| Arc::new(LoadedQuestion::Question(builder.cut())));
-        let held = held.map_err(|error| error.to_string()).unwrap();
-        let mut state = WarmState::default();
-        let started = Instant::now();
-        for at in 0..200_000 {
-            let flushed = state.add(
-                &format!("q{at}"),
-                || Ok(Arc::clone(&held)),
-                "text".to_owned(),
-            );
-            assert!(matches!(flushed, Ok(None)));
-        }
-        assert_eq!(state.groups.len(), 200_000);
-        assert!(
-            started.elapsed() < Duration::from_secs(1),
-            "{:?}",
-            started.elapsed()
-        );
-    }
 }

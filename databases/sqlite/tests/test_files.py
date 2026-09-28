@@ -93,6 +93,7 @@ def test_warm_takes_the_banded_file_decide_uses() -> None:
     (folder / "banded.json").write_text(json.dumps(banded))
     held = child(f"""
 db = connect()
+db.execute("SELECT thinkthen_batch(1)")
 db.execute("CREATE TABLE t(body TEXT)")
 db.executemany("INSERT INTO t VALUES (?)", [("a red door",), ("a blue door",), ("a red door",)])
 warm = run(db, "SELECT thinkthen_warm('@{folder / 'banded.json'}', body) FROM t")

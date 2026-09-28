@@ -83,6 +83,8 @@ The question stays the same for every record, so one run is one measurement.
 
 The method is fixed and printed in the help. The tool asks one yes/no question of each record, sorts the records by the probability of yes, and breaks exact ties by input order. It never compares two records in one question, and it never runs a tournament.
 
+When a run spans batches, `rank` compares their reported yes probabilities as-is, though the records had different request neighbours. `--batch 1` puts each record in its own request, without promising that separate replies have the same calibration or repeat identically.
+
 `rank` takes no rubric. Ordering by the probability of yes follows the vendor's own reranking method.
 
 `rank` orders and never selects. A user who wants a floor runs `filter` first, as the second example shows.

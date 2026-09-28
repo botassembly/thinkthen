@@ -5,12 +5,16 @@
 //! reaches it through the inherited address. One lock keeps the proofs from
 //! sharing the process's permits at once.
 
-use std::path::PathBuf;
-use std::process::Command;
+use std::io::{Read, Write};
+use std::net::TcpListener;
+use std::path::{Path, PathBuf};
+use std::process::{Child, Command, Stdio};
 use std::sync::Mutex;
 use std::thread;
 use std::time::{Duration, Instant};
 
+#[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
+mod child;
 #[path = "../../../../crates/thinkthen/src/test_deadline/run.rs"]
 mod run;
 #[path = "../../../../crates/thinkthen/src/test_deadline/wait.rs"]
@@ -46,6 +50,10 @@ fn decide() -> Question {
     )
 }
 
+fn answer(call: Result<thinkthen::Call<Answer>, thinkthen::Error>) -> Option<Answer> {
+    call.ok().map(thinkthen::Call::into_value)
+}
+
 #[test]
 fn a_warm_parent_engine_and_its_clone_answer_in_the_child() {
     let _one = ONE_AT_A_TIME
@@ -54,11 +62,11 @@ fn a_warm_parent_engine_and_its_clone_answer_in_the_child() {
     let backend = Backend::start().expect("backend");
     let engine =
         engine(&format!("{}/generic/v1", backend.origin()), None).expect("a loopback engine");
-    assert_eq!(engine.decide(&decide(), "warm").ok(), Some(Answer::Yes));
+    assert_eq!(answer(engine.decide(&decide(), "warm")), Some(Answer::Yes));
     let clone = engine.clone();
     in_child(|| {
         let before = engine.usage().requests_sent();
-        let answered = clone.decide(&decide(), "in the child").ok() == Some(Answer::Yes);
+        let answered = answer(clone.decide(&decide(), "in the child")) == Some(Answer::Yes);
         answered && engine.usage().requests_sent() == before + 1
     })
     .expect("the child answered, and the clone counted on its source");
@@ -68,6 +76,167 @@ fn a_warm_parent_engine_and_its_clone_answer_in_the_child() {
         1,
         "the child's send stays the child's"
     );
+}
+
+#[allow(
+    clippy::expect_used,
+    reason = "a failed local certificate fixture must stop this proof"
+)]
+fn tls_certificate_pair(home: &Path) -> (PathBuf, PathBuf, PathBuf) {
+    let (cert, key) = (home.join("cert.pem"), home.join("cert.key"));
+    let created = child::command("openssl", &[])
+        .args(["req", "-x509", "-newkey", "rsa:2048", "-nodes"])
+        .arg("-keyout")
+        .arg(&key)
+        .arg("-out")
+        .arg(&cert)
+        .args([
+            "-days",
+            "1",
+            "-subj",
+            "/CN=localhost",
+            "-addext",
+            "subjectAltName=DNS:localhost",
+        ])
+        .output()
+        .expect("OpenSSL fixture generator");
+    assert!(
+        created.status.success(),
+        "local certificate generator failed"
+    );
+    let (leaf, leaf_key, csr, san) = (
+        home.join("leaf.pem"),
+        home.join("leaf.key"),
+        home.join("leaf.csr"),
+        home.join("leaf.cnf"),
+    );
+    std::fs::write(&san, "subjectAltName=DNS:localhost\n").expect("localhost SAN");
+    let requested = child::command("openssl", &[])
+        .args(["req", "-newkey", "rsa:2048", "-nodes"])
+        .arg("-keyout")
+        .arg(&leaf_key)
+        .arg("-out")
+        .arg(&csr)
+        .args(["-subj", "/CN=localhost"])
+        .output()
+        .expect("OpenSSL leaf generator");
+    assert!(requested.status.success(), "local leaf generator failed");
+    let signed = child::command("openssl", &[])
+        .args(["x509", "-req", "-in"])
+        .arg(&csr)
+        .arg("-CA")
+        .arg(&cert)
+        .arg("-CAkey")
+        .arg(&key)
+        .args(["-set_serial", "1", "-out"])
+        .arg(&leaf)
+        .args(["-days", "1", "-extfile"])
+        .arg(&san)
+        .output()
+        .expect("OpenSSL leaf signer");
+    assert!(signed.status.success(), "local leaf signer failed");
+
+    (cert, leaf, leaf_key)
+}
+
+#[allow(
+    clippy::expect_used,
+    reason = "a failed local TLS responder must stop this proof"
+)]
+fn tls_responder(leaf: &Path, leaf_key: &Path) -> (TlsResponder, u16) {
+    let reserved = TcpListener::bind("127.0.0.1:0").expect("free TLS port");
+    let port = reserved.local_addr().expect("TLS port").port();
+    drop(reserved);
+    let address = format!("127.0.0.1:{port}");
+    let mut server = child::command("openssl", &[])
+        .args([
+            "s_server", "-quiet", "-ign_eof", "-naccept", "1", "-accept", &address,
+        ])
+        .arg("-cert")
+        .arg(leaf)
+        .arg("-key")
+        .arg(leaf_key)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::null())
+        .spawn()
+        .expect("local TLS responder");
+    let answer = "{\"model\":\"local-1\",\"answers\":{\"q1\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
+    let reply = format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{answer}",
+        answer.len()
+    );
+    server
+        .stdin
+        .as_mut()
+        .expect("responder input")
+        .write_all(reply.as_bytes())
+        .expect("fixed reply");
+    for _ in 0..100 {
+        if let Ok(probe) = TcpListener::bind(&address) {
+            drop(probe);
+            thread::sleep(Duration::from_millis(10));
+        } else {
+            break;
+        }
+    }
+
+    (TlsResponder(server), port)
+}
+
+struct TlsResponder(Child);
+
+impl Drop for TlsResponder {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
+#[test]
+fn a_forked_child_keeps_parsed_tls_roots_after_the_file_changes() {
+    let _one = ONE_AT_A_TIME
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let home = folder("tls-roots");
+    std::fs::create_dir(&home).expect("certificate fixture folder");
+    let (cert, leaf, leaf_key) = tls_certificate_pair(&home);
+    let (mut server, port) = tls_responder(&leaf, &leaf_key);
+
+    let engine = Engine::builder()
+        .base_url(&format!("https://localhost:{port}"))
+        .expect("local HTTPS base")
+        .api_key(KEY)
+        .expect("synthetic key")
+        .ca_bundle(&cert)
+        .expect("absolute certificate path")
+        .no_cache()
+        .build()
+        .expect("parsed roots in the parent");
+    std::fs::write(&cert, b"this is no longer a certificate").expect("change source file");
+    in_child(|| answer(engine.decide(&decide(), "after fork")) == Some(Answer::Yes))
+        .expect("forked child used the retained roots");
+    for _ in 0..100 {
+        if server.0.try_wait().expect("responder state").is_some() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
+    assert!(server.0.try_wait().expect("responder state").is_some());
+    let mut requests = String::new();
+    server
+        .0
+        .stdout
+        .take()
+        .expect("request capture")
+        .read_to_string(&mut requests)
+        .expect("request bytes");
+    assert_eq!(
+        requests.matches("POST /systemone").count(),
+        1,
+        "{requests:?}"
+    );
+    std::fs::remove_dir_all(home).expect("remove certificate fixture");
 }
 
 #[test]
@@ -89,10 +258,10 @@ fn a_child_of_a_busy_parent_gets_its_own_permits() {
     thread::scope(|scope| {
         // Four calls hold the process's four permits, each with its reply held.
         let calls: Vec<_> = (0..4)
-            .map(|at| scope.spawn(move || held.decide(&decide(), &format!("held {at}")).ok()))
+            .map(|at| scope.spawn(move || answer(held.decide(&decide(), &format!("held {at}")))))
             .collect();
         assert_eq!(backend.wait(4), 4, "every permit is in flight");
-        let child = in_child(|| open.decide(&decide(), "the child").ok() == Some(Answer::Yes));
+        let child = in_child(|| answer(open.decide(&decide(), "the child")) == Some(Answer::Yes));
         backend.release();
         child.expect("the child sent past the parent's full gate");
         for call in calls {
@@ -115,12 +284,13 @@ fn a_child_replays_the_parents_warm_cache_without_sending() {
         !engine
             .details(&decide(), "cached note")
             .expect("a first answer")
+            .value()
             .cached()
     );
     in_child(|| {
         engine
             .details(&decide(), "cached note")
-            .is_ok_and(|details| details.cached() && details.requests_sent() == 0)
+            .is_ok_and(|details| details.value().cached() && details.value().requests_sent() == 0)
     })
     .expect("the child read the parent's recording");
     assert_eq!(backend.count(), 1, "only the parent sent");
@@ -138,11 +308,11 @@ fn a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives() {
     let held = engine(&format!("{}/arm/held/v1", backend.origin()), Some(&cache))
         .expect("a loopback engine");
     thread::scope(|scope| {
-        let owner = scope.spawn(|| held.decide(&decide(), "one note").ok());
+        let owner = scope.spawn(|| answer(held.decide(&decide(), "one note")));
         assert_eq!(backend.wait(1), 1, "the owner holds the digest lock");
         let waiter = scope.spawn(|| {
-            let answer = held.decide(&decide(), "one note").ok();
-            (answer, Instant::now())
+            let result = answer(held.decide(&decide(), "one note"));
+            (result, Instant::now())
         });
         thread::sleep(Duration::from_millis(200));
         let child = scope.spawn(|| {
@@ -204,9 +374,9 @@ fn default_engine_child() {
         return;
     }
     assert_eq!(
-        thinkthen::decide(&decide(), "parent").ok(),
+        answer(thinkthen::decide(&decide(), "parent")),
         Some(Answer::Yes)
     );
-    in_child(|| thinkthen::decide(&decide(), "child").ok() == Some(Answer::Yes))
+    in_child(|| answer(thinkthen::decide(&decide(), "child")) == Some(Answer::Yes))
         .expect("the process engine answered in the child");
 }

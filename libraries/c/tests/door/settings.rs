@@ -31,6 +31,7 @@ fn shared_settings_reach_the_c_constructor() {
         }
         for step in case["steps"].as_array().expect("steps") {
             let mut settings = step["settings"].clone();
+            settings["batch"] = json!(1);
             for value in settings.as_object_mut().expect("settings").values_mut() {
                 if value == "$FOLDER" {
                     *value = json!(folder);
@@ -102,7 +103,7 @@ fn shared_settings_reach_the_c_constructor() {
                 );
             } else if let Some(model) = step["model"].as_str() {
                 let details: Value = serde_json::from_str(&said[1].1).expect("details");
-                assert_eq!(details["meta"]["model"], model, "{id}");
+                assert_eq!(details["value"]["meta"]["model"], model, "{id}");
             } else {
                 assert_eq!(
                     (said[1].0, said[1].1.starts_with("1 ")),
@@ -163,11 +164,14 @@ fn saved_calibration_keeps_its_digest_and_warning_through_the_c_door() {
     assert_eq!(said[1].0, 0, "call: {:?}", said[1]);
     let details: Value = serde_json::from_str(&said[1].1).expect("details");
     assert_eq!(
-        details["meta"]["question_sha256"],
+        details["value"]["meta"]["question_sha256"],
         fixture["question_sha256"]
     );
-    assert_eq!(details["meta"]["profile_warning"], fixture["warning"]);
-    assert_eq!(details["meta"]["model"], fixture["model"]);
+    assert_eq!(
+        details["value"]["meta"]["profile_warning"],
+        fixture["warning"]
+    );
+    assert_eq!(details["value"]["meta"]["model"], fixture["model"]);
     assert_eq!(backend.count(), 1);
 }
 
@@ -217,13 +221,16 @@ fn the_c_constructor_keeps_its_boundary_rules() {
 }
 
 #[test]
-fn the_c_throttle_holds_two_requests_until_release() {
+fn the_c_batch_one_stream_waits_for_a_held_request() {
     use std::io::Write;
     let backend = Backend::start().expect("held backend");
     let base = format!("{}/arm/held/v1", backend.origin());
     let question = r#"{"decide":"Does this need attention?"}"#;
     let mut script = Script::default();
-    script.ask("settings", &[&base, r#"{"throttle":2,"cache":false}"#]);
+    script.ask(
+        "settings",
+        &[&base, r#"{"throttle":2,"cache":false,"batch":1}"#],
+    );
     let records: Vec<String> = (0..8).map(|place| format!("record {place}")).collect();
     let mut fields = vec![base.as_str(), question];
     fields.extend(records.iter().map(String::as_str));
@@ -236,9 +243,9 @@ fn the_c_throttle_holds_two_requests_until_release() {
         .expect("stdin")
         .write_all(&script.0)
         .expect("script");
-    assert_eq!(backend.wait(2), 2, "two requests entered the held arm");
+    assert_eq!(backend.wait(1), 1, "one request entered the held arm");
     std::thread::sleep(std::time::Duration::from_millis(100));
-    assert_eq!(backend.count(), 2, "a third request stays queued");
+    assert_eq!(backend.count(), 1, "the next request stays queued");
     backend.release();
     let output = finished(child);
     assert!(output.status.success(), "{}", text(&output.stderr));

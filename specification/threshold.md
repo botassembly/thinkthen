@@ -49,7 +49,7 @@ Repeated calls can move an answer far enough to cross a cut. In experiment 212, 
 | Command | Single cut | Band | The cut applies to |
 | --- | --- | --- | --- |
 | `decide` | yes | yes | the probability of yes |
-| `choose` | yes, optional | no | the highest option probability; an exact top tie stays unresolved even when it reaches the cut |
+| `choose` | yes, optional | no | the highest option probability; an exact top tie returns null even when it reaches the cut |
 | `tag` | yes | no | each label's independent probability of yes; every label that reaches the cut is included |
 | `filter` | yes | no | the probability of yes for each record |
 | `recognize` | yes | no | each name's printed strength, P(kind) times P(span) rounded to four decimals |

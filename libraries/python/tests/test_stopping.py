@@ -20,7 +20,7 @@ HOLD = f"""
     # A child of a background job inherits an ignored SIGINT. Python's own
     # handler is the one an interactive user has.
     signal.signal(signal.SIGINT, signal.default_int_handler)
-    engine = tt.Engine(throttle=8, cache=False)
+    engine = tt.Engine(throttle=8, batch=1, cache=False)
     late = tt.question(decide="Is it late?")
     token = tt.CancelToken()
     def stop():
@@ -95,7 +95,7 @@ def test_a_token_cancelled_before_the_call_sends_nothing(backend, tmp_path):
     child = start(HOLD + """
     token.cancel()
     try:
-        engine.decide_many(late, texts, token=token)
+        engine.decide_many(late, texts, token=token).value
     except tt.Cancelled as error:
         print("cancelled", time.monotonic(), error)
     """, child_env(backend, tmp_path, "arm/held"))
@@ -104,20 +104,19 @@ def test_a_token_cancelled_before_the_call_sends_nothing(backend, tmp_path):
     assert backend.count() == 0
 
 
-def test_a_token_stops_a_held_batch_at_the_throttle(backend, tmp_path):
-    """R1-24: a token cancelled from another thread during a 200-text batch
-    at throttle 8 raises ``Cancelled`` within one tick, and no send follows
-    the 8 in flight."""
+def test_a_token_stops_a_held_batch_before_next_request(backend, tmp_path):
+    """R1-24: a token cancelled during a 200-text batch raises within one
+    tick, and no send follows the first held request."""
     child = start(HOLD + STOP + """
     try:
-        engine.decide_many(late, texts, token=token)
+        engine.decide_many(late, texts, token=token).value
     except tt.Cancelled as error:
         print("cancelled", time.monotonic(), error, flush=True)
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
-    assert backend.wait(8) == 8
+    assert backend.wait(1) == 1
     assert stopped(child, "cancelled", lambda: tell_child(child)) < 0.1
-    settle(backend, child, 8)
+    settle(backend, child, 1)
 
 
 def test_a_token_stops_a_held_single_send(backend, tmp_path):
@@ -125,7 +124,7 @@ def test_a_token_stops_a_held_single_send(backend, tmp_path):
     blocking send, so ``Cancelled`` arrives within 100 ms."""
     child = start(HOLD + STOP + """
     try:
-        engine.decide(late, "one note", token=token)
+        engine.decide(late, "one note", token=token).value
     except tt.Cancelled as error:
         print("cancelled", time.monotonic(), error, flush=True)
     settle()
@@ -144,7 +143,7 @@ def test_a_token_fired_as_the_reply_lands_cancels_the_call(backend, tmp_path):
         print("stopped", flush=True)
     threading.Thread(target=fire, daemon=True).start()
     try:
-        answer = engine.decide(late, "one note", token=token)
+        answer = engine.decide(late, "one note", token=token).value
         print("answer", answer, flush=True)
     except tt.Cancelled as error:
         print("cancelled", str(error), flush=True)
@@ -163,7 +162,7 @@ def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path):
     within 100 ms, and the send is not repeated."""
     child = start(HOLD + """
     try:
-        engine.decide(late, "one note")
+        engine.decide(late, "one note").value
     except tt.Cancelled as error:
         print("cancelled", time.monotonic(), error, flush=True)
     settle()
@@ -174,19 +173,18 @@ def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path):
 
 
 def test_ctrl_c_stops_a_held_batch_at_once(backend, tmp_path):
-    """Amendment change 3: ``SIGINT`` with 8 sends held raises ``Cancelled``
-    within 100 ms, the count stays at 8, and after the release every worker
-    ends with no further send."""
+    """Amendment change 3: ``SIGINT`` with a send held raises within 100 ms.
+    After release the worker ends without another send."""
     child = start(HOLD + """
     try:
-        engine.decide_many(late, texts)
+        engine.decide_many(late, texts).value
     except KeyboardInterrupt as error:
         print("cancelled", time.monotonic(), type(error).__name__, error, flush=True)
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
-    assert backend.wait(8) == 8
+    assert backend.wait(1) == 1
     assert stopped(child, "cancelled", lambda: signal_child(child)) < 0.1
-    settle(backend, child, 8)
+    settle(backend, child, 1)
 
 
 def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path):
@@ -195,32 +193,32 @@ def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path):
     child = start(HOLD + """
     signal.signal(signal.SIGINT, lambda *_: sys.exit(3))
     try:
-        engine.decide_many(late, texts)
+        engine.decide_many(late, texts).value
     except tt.Cancelled:
         print("cancelled", time.monotonic(), flush=True)
     except SystemExit as leaving:
         print("exit", time.monotonic(), leaving.code, flush=True)
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
-    assert backend.wait(8) == 8
+    assert backend.wait(1) == 1
     assert stopped(child, "exit", lambda: signal_child(child)) < 0.1
-    settle(backend, child, 8)
+    settle(backend, child, 1)
 
 
 def test_ctrl_c_stops_a_held_polars_column_at_once(backend, tmp_path):
     """R4-23, the Polars half: a column ``score`` runs on the detachable
-    worker, so ``SIGINT`` with 8 sends held raises ``Cancelled`` within
-    100 ms and the count stays at 8. Regression: a column run on the
+    worker, so ``SIGINT`` with a send held raises within 100 ms and the
+    count stays at 1. Regression: a column run on the
     calling thread, or a worker joined in place of detached."""
     child = start(HOLD + """
     import polars as pl
     urgent = tt.question(score="How urgent?", levels=["Routine.", "Soon.", "Now."])
     try:
-        engine.score(urgent, pl.Series(texts))
+        engine.score(urgent, pl.Series(texts)).value
     except tt.Cancelled as error:
         print("cancelled", time.monotonic(), error, flush=True)
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
-    assert backend.wait(8) == 8
+    assert backend.wait(1) == 1
     assert stopped(child, "cancelled", lambda: signal_child(child)) < 0.1
-    settle(backend, child, 8)
+    settle(backend, child, 1)

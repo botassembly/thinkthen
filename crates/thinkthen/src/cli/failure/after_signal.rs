@@ -40,6 +40,7 @@ impl Failure {
             | Self::ReplyTooLarge(_)
             | Self::Reply(_)
             | Self::ModelsDiffer(_)
+            | Self::RunModelsDiffer
             | Self::UsageOverflow
             | Self::PartialReply { .. }
             | Self::Recognize(recognize::Error::LogicalQuestion) => Self::Cancelled,

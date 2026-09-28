@@ -21,3 +21,8 @@ One host, one toolchain version per language, synthetic loopback replies, shared
 ## Post-J1 feedback run (2026-09-28, pin 6dbdf03f)
 
 `thinkthen_engine_new_with` bound and tested through Swift: a settings-carried `base_url` selects the backend over the environment, `{}` matches the environment constructor by equal decisions, unknown-key and wrong-type objects refuse with null-engine EUSAGE on the calling thread before any request, and construction sends nothing (counted-fixture ledgers prove zero arrivals); sequential cache coalescing observed. Result-schema parity samples pass against the bare `$defs/annotate|recognize|relate` definitions — consumer guidance for J1/J8: the schema's bare verb definitions are what bindings validate against (not the detailed root), `null` and the failed marker need a tagged branch in any Decodable-style model, and offsets are Unicode scalars, not UTF-16 indices. No product defect found. Evidence: `post-j1/POST-J1-REPORT.md` in local experiment 294.
+
+
+## ABI preflight drift note (2026-09-28, from the Dart port)
+
+The C header now exports twenty-one symbols at recent pins: `thinkthen_error_facts_json` joined `thinkthen_engine_new_with` at main `5f069321`. Any consumer ABI preflight this issue recorded with a fixed count (nineteen or twenty at its stage pins) is stale at final pins. J8 must derive the export list from the sealed header at each rebuild instead of pinning a count; the Dart stage-two gate (`exports.py` comparing header declarations against `nm -D`) is the pattern to copy. Evidence: local experiment 300, `stage2/FINDINGS.md`.

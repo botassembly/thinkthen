@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# The PostgreSQL surface's check (ticket 0111). Linux only: it builds the
-# extension against /usr/bin/pg_config, runs a local PostgreSQL 16.15 from
+# The PostgreSQL surface's check (ticket 0111). It builds the
+# extension against pinned PostgreSQL 16.15 headers and runs a local server from
 # the pinned package as this user on a socket with no TCP port, and restarts
 # it for each test with that test's own loopback backend (ticket 0117) and
 # answer cache. No test reaches a paid backend: the server gets a fake key
@@ -13,7 +13,7 @@ cd "$(dirname "$0")"
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "postgresql: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
-[ "$(uname -s)" = Linux ] || { echo "not run: check.sh runs on Linux only (uname: $(uname -s))"; exit 77; }
+case $(uname -s) in Linux|Darwin) ;; *) echo "not run: no PostgreSQL host route for $(uname -s)"; exit 77 ;; esac
 . ../../sdlc/scripts/scratch.sh
 . ./runtime.sh
 runtime_ready
@@ -33,7 +33,7 @@ BACKEND=${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend
 (cd "$REPO" && cargo build --locked --offline --quiet --package conformance-backend)
 export RUSTFLAGS="--remap-path-prefix=$HOME=/build"
 # package.sh reads the same pg_config and target folder (ticket 0128).
-PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
+PG_CONFIG=${PG_CONFIG:-$(if [ "$PG_HOST" = Darwin ]; then echo "$EXTRACTED/bin/pg_config"; else echo /usr/bin/pg_config; fi)}
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 # The shipped build, which `package.sh --reuse` packs (ticket 0128).
 SHIPPED=$EXT-shipped
@@ -41,6 +41,9 @@ SHIPPED=$EXT-shipped
 runtime_open
 cleanup() {
 	[ ! -f "$DATA/postmaster.pid" ] || "$BIN/pg_ctl" -D "$DATA" -m immediate stop >/dev/null 2>&1 || true
+	if [ "$PG_HOST" = Darwin ] && [ -n "${RUNTIME_LIBRARY_DIR:-}" ]; then
+		rm -f -- "$RUNTIME_LIBRARY_DIR"/thinkthen.so "$RUNTIME_LIBRARY_DIR"/thinkthen.dylib "$RUNTIME_EXTENSION_DIR"/thinkthen.control "$RUNTIME_EXTENSION_DIR"/thinkthen--*.sql
+	fi
 	[ -z "${BPID:-}" ] || backend_stop
 	scratch_clean
 	rm -f .runtime/last-run
@@ -117,7 +120,7 @@ shipped_lacks_probe() {
 	same "$(grep -c thinkthen_panic_probe "$SHIPPED$("$PG_CONFIG" --sharedir)/extension/thinkthen--$EXT_VERSION.sql" || true)" 0
 }
 check shipped_lacks_probe
-no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED$("$PG_CONFIG" --pkglibdir)/thinkthen.so" || true)" 0; }
+no_home_in_library() { same "$(grep -ac -- "$HOME" "$SHIPPED$("$PG_CONFIG" --pkglibdir)"/thinkthen.* || true)" 0; }
 check no_home_in_library
 no_catch_unwind() { same "$(grep -rc catch_unwind src | awk -F: '{s += $2} END {print s}')" 0; }
 check no_catch_unwind
@@ -135,20 +138,20 @@ start_refuses_other_hosts() {
 	done
 }
 check start_refuses_other_hosts
-darwin_reports_not_run() {
+darwin_runs() {
 	mkdir -p "$RUN/shim"
 	printf '#!/bin/sh\necho Darwin\n' >"$RUN/shim/uname"
 	chmod +x "$RUN/shim/uname"
 	set +e
 	# A missing toolchain folder stops a run that passes the kernel check
 	# at "not run", before it builds, sweeps, or starts a server.
-	out=$(PATH="$RUN/shim:$PATH" THINKTHEN_TOOLCHAINS="$RUN/none" sh "$LIMIT" 60 bash ./check.sh 2>&1)
+	out=$(PATH="$RUN/shim:$PATH" PG_CONFIG="$RUN/none/pg_config" sh "$LIMIT" 60 bash ./check.sh 2>&1)
 	code=$?
 	set -e
 	same "$code" 77
-	has "$out" "not run: check.sh runs on Linux only (uname: Darwin)"
+	case $out in *"not run: brew is missing"*|*"the pinned pg_config at $RUN/none/pg_config is missing"*) ;; *) echo "$out" >&2; return 1 ;; esac
 }
-check darwin_reports_not_run
+check darwin_runs
 
 echo "== the drawn SQL and the examples"
 examples() { python3 tests/examples.py "$SOCK"; }
@@ -737,7 +740,7 @@ signal_masks() {
 	brelease
 	wait "$HELD"
 }
-check signal_masks
+[ "$PG_HOST" != Linux ] || check signal_masks
 preload_forks_cleanly() {
 	fresh generic "shared_preload_libraries = 'thinkthen'"
 	same "$(q -c "SELECT thinkthen_decide('$Q', 'first')")" t
@@ -757,7 +760,7 @@ check a_panic_is_an_error
 echo "== the update path"
 an_update_cannot_grant_public() {
 	printf 'CREATE FUNCTION thinkthen_rehearsal_probe(x integer) RETURNS integer LANGUAGE sql AS %s;\n' "'SELECT \$1'" \
-		>.runtime/tree/usr/share/postgresql/16/extension/thinkthen--$EXT_VERSION--$EXT_VERSION-probe.sql
+		>"$RUNTIME_EXTENSION_DIR/thinkthen--$EXT_VERSION--$EXT_VERSION-probe.sql"
 	fresh generic
 	q -c "ALTER EXTENSION thinkthen UPDATE TO '$EXT_VERSION-probe'" >/dev/null
 	same "$(q -c "SELECT has_function_privilege('public', 'thinkthen_rehearsal_probe(integer)', 'EXECUTE')")" f

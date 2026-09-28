@@ -10,7 +10,9 @@ use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, KEY_VA
 use crate::engine::Width;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Key, Settings, Storage};
+use crate::engine::facade::{Roots, RootsError};
 use crate::engine::usage::Counters;
+use crate::public::BatchSetting;
 use crate::public::error::Error;
 
 const NO_DEFAULT_CACHE: &str =
@@ -60,6 +62,8 @@ pub struct EngineBuilder {
     width: Option<Width>,
     max_requests: Option<usize>,
     max_request_bytes: usize,
+    batch: Option<crate::core::Setting>,
+    env_batch: Option<String>,
     cache: Cache,
     seeded: Option<Seeded>,
     timeout: Duration,
@@ -67,6 +71,7 @@ pub struct EngineBuilder {
     profile: Option<Profile>,
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
+    ca_bundle: Option<PathBuf>,
 }
 
 impl fmt::Debug for EngineBuilder {
@@ -79,6 +84,8 @@ impl fmt::Debug for EngineBuilder {
             .field("width", &self.width)
             .field("max_requests", &self.max_requests)
             .field("max_request_bytes", &self.max_request_bytes)
+            .field("batch", &self.batch)
+            .field("env_batch", &self.env_batch.is_some())
             .field("cache", &self.cache)
             .field("seeded", &self.seeded)
             .field("timeout", &self.timeout)
@@ -86,6 +93,7 @@ impl fmt::Debug for EngineBuilder {
             .field("profile", &self.profile)
             .field("record", &self.record)
             .field("replay", &self.replay)
+            .field("ca_bundle", &self.ca_bundle.as_ref().map(|_| "<withheld>"))
             .finish()
     }
 }
@@ -99,6 +107,8 @@ impl EngineBuilder {
             width: None,
             max_requests: None,
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
+            batch: None,
+            env_batch: None,
             cache: Cache::Default,
             seeded: None,
             timeout: Duration::from_secs(30),
@@ -106,11 +116,13 @@ impl EngineBuilder {
             profile: None,
             record: None,
             replay: None,
+            ca_bundle: None,
         }
     }
 
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
-    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
+    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
+    /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
     /// XDG configuration file. The setters and `build` read no environment.
     ///
     /// # Errors
@@ -143,6 +155,10 @@ impl EngineBuilder {
         if let Some(key) = variable(KEY_VAR)? {
             builder.key = Some(Secret(key.into()));
         }
+        // A later explicit setter outranks this path, including an invalid one.
+        // Validate only the path selected when the engine is built.
+        builder.ca_bundle = variable("THINKTHEN_CA_BUNDLE")?.map(PathBuf::from);
+        builder.env_batch = variable("THINKTHEN_BATCH")?;
         if let Some(model) = config.model() {
             builder = builder.model(model)?;
         }
@@ -180,6 +196,23 @@ impl EngineBuilder {
             return Err(Error::usage("a key is text, not white space"));
         }
         self.key = Some(Secret(value.into()));
+        Ok(self)
+    }
+
+    /// Replace Mozilla roots with certificates from this absolute PEM file at build.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for a relative path. `build` reports unreadable
+    /// or invalid contents before any transport key use or network request.
+    pub fn ca_bundle(mut self, value: impl AsRef<Path>) -> Result<Self, Error> {
+        let path = value.as_ref();
+        if !path.is_absolute() {
+            return Err(Error::usage(
+                "THINKTHEN_CA_BUNDLE must name an absolute local file",
+            ));
+        }
+        self.ca_bundle = Some(path.to_owned());
         Ok(self)
     }
 
@@ -238,6 +271,14 @@ impl EngineBuilder {
         }
         self.max_request_bytes = value;
         Ok(self)
+    }
+
+    /// Select the default number of records in one eligible request.
+    #[must_use]
+    pub fn batch(mut self, setting: BatchSetting) -> Self {
+        self.batch = Some(setting.into());
+        self.env_batch = None;
+        self
     }
 
     /// Cache answers in the default folder: `THINKTHEN_CACHE` or the XDG
@@ -337,6 +378,13 @@ impl EngineBuilder {
     /// Returns [`Error::Usage`] when the default cache is selected and no
     /// folder is available, or when a different throttle is already active.
     pub fn build(self) -> Result<super::Engine, Error> {
+        let batch = match (self.batch, self.env_batch.as_deref()) {
+            (Some(setting), _) => Some(setting),
+            (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {
+                Error::usage("THINKTHEN_BATCH takes max or a whole number of at least 1")
+            })?),
+            (None, None) => None,
+        };
         let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
         let backend = Backend::resolve(self.base_url.as_deref(), None, model)
             .map_err(Error::refused)?
@@ -344,6 +392,15 @@ impl EngineBuilder {
         if backend.address_contains_key(self.key.as_ref().map(|Secret(value)| value.as_ref())) {
             return Err(Error::usage(KEY_IN_ADDRESS));
         }
+        let roots = self
+            .ca_bundle
+            .as_deref()
+            .map(Roots::load)
+            .transpose()
+            .map_err(|error| match error {
+                RootsError::Usage(message) => Error::usage(message),
+                RootsError::Local(message) => Error::local(message),
+            })?;
         let profile = self
             .profile
             .as_ref()
@@ -373,7 +430,7 @@ impl EngineBuilder {
             }),
             usage: Arc::new(Counters::new(None)),
         };
-        super::Engine::from_settings(settings, self.max_requests, profile)
+        super::Engine::from_settings(settings, self.max_requests, profile, roots, batch)
     }
 
     fn storage(&self) -> Result<Storage, Error> {
@@ -394,6 +451,7 @@ impl EngineBuilder {
                 replay: self.replay.clone(),
                 private_default: false,
                 cache_answers: false,
+                refresh_cache: false,
             });
         }
         let (folder, private_default) = match &self.cache {
@@ -419,6 +477,7 @@ impl EngineBuilder {
             replay: Some(folder),
             private_default,
             cache_answers: true,
+            refresh_cache: false,
         })
     }
 }

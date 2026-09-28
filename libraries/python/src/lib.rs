@@ -9,9 +9,11 @@
 
 mod arrow;
 mod asked;
+mod diagnostics;
 mod engine;
 mod frame;
 mod input;
+mod result;
 mod worker;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -126,7 +128,13 @@ pub(crate) fn raise(py: Python<'_>, kind: ErrorKind, message: &str, retryable: b
 
 /// The engine's error as the exception of its kind.
 pub(crate) fn raised(py: Python<'_>, error: &Error) -> PyErr {
-    raise(py, error.kind(), &error.to_string(), error.retryable())
+    let raised = raise(py, error.kind(), &error.to_string(), error.retryable());
+    if let Some(facts) = error.facts()
+        && let Ok(value) = result::python_facts(py, facts)
+    {
+        let _set = raised.value(py).setattr("facts", value);
+    }
+    raised
 }
 
 /// A usage error with this message.
@@ -142,13 +150,21 @@ pub(crate) fn defect(py: Python<'_>, message: &str) -> PyErr {
 /// Run a closure and report a panic as `None`: the binding's one
 /// `catch_unwind` site, shared by the module edge and the worker (R2-31).
 pub(crate) fn caught<T>(call: impl FnOnce() -> T) -> Option<T> {
-    catch_unwind(AssertUnwindSafe(call)).ok()
+    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(call)) {
+        Ok(value) => Some(value),
+        Err(payload) => {
+            std::mem::forget(payload);
+            None
+        }
+    })
 }
 
 /// The module edge: a panic in the binding raises `DefectError`, and the
 /// interpreter carries on.
 pub(crate) fn guard<T>(py: Python<'_>, call: impl FnOnce() -> PyResult<T>) -> PyResult<T> {
-    caught(call).unwrap_or_else(|| Err(defect(py, "the Python binding panicked")))
+    diagnostics::owned(|| {
+        caught(call).unwrap_or_else(|| Err(defect(py, "the Python binding panicked")))
+    })
 }
 
 #[pymodule]
@@ -162,7 +178,11 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.add(class.name()?, class)?;
     }
     module.add_class::<engine::Engine>()?;
+    module.add_class::<result::PyCall>()?;
+    module.add_class::<result::PyFacts>()?;
     module.add_class::<worker::Token>()?;
+    module.add_class::<worker::Receipt>()?;
+    module.add_class::<worker::Completion>()?;
     module.add_class::<asked::Question>()?;
     module.add_class::<asked::QuestionSet>()?;
     module.add_class::<asked::Recognize>()?;

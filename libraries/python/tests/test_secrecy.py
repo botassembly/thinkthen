@@ -41,7 +41,7 @@ def test_the_fake_key_arrives_at_a_loopback_listener(backend, tmp_path):
         threading.Thread(target=server.serve_forever, daemon=True).start()
         base = f"http://127.0.0.1:{server.server_port}/v1"
         try:
-            tt.Engine(base_url=base, cache=False).decide(tt.question(decide="Late?"), "one")
+            tt.Engine(base_url=base, cache=False).decide(tt.question(decide="Late?"), "one").value
         except tt.BackendError:
             pass
         print(seen)
@@ -69,31 +69,31 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
         token.cancel()
         shown = [repr(late), repr(token), repr(tt.Engine()), repr(tt.Entity("Ada", "person"))]
         verbs = [
-            lambda engine: engine.decide(late, "one"),
-            lambda engine: engine.decide_many(late, ["one", "two"]),
-            lambda engine: engine.filter(late, ["one", "two"]),
-            lambda engine: engine.rank("Which is late?", ["one", "two"]),
-            lambda engine: engine.find("Which is late?", ["one", "two"]),
-            lambda engine: engine.annotate(form, ["one"]),
-            lambda engine: engine.recognize("Ada is here", kinds=["person"]),
+            lambda engine: engine.decide(late, "one").value,
+            lambda engine: engine.decide_many(late, ["one", "two"]).value,
+            lambda engine: engine.filter(late, ["one", "two"]).value,
+            lambda engine: engine.rank("Which is late?", ["one", "two"]).value,
+            lambda engine: engine.find("Which is late?", ["one", "two"]).value,
+            lambda engine: engine.annotate(form, ["one"]).value,
+            lambda engine: engine.recognize("Ada is here", kinds=["person"]).value,
             lambda engine: engine.relate([("Ada", "person"), ("Bob", "person")],
-                                         relations={{"knows": ("person", "person")}}),
-            lambda engine: engine.decide(late, pd.Series(["one"])),
-            lambda engine: engine.decide_many(late, pd.Series(["one", "two"])),
-            lambda engine: engine.choose(team, pd.Series(["one"])),
-            lambda engine: engine.score(urgent, pd.Series(["one"])),
-            lambda engine: engine.tag(kinds, pd.Series(["one"])),
-            lambda engine: engine.annotate(form, frame, on="body"),
-            lambda engine: engine.recognize(frame, kinds=["person"], on="body"),
+                                         relations={{"knows": ("person", "person")}}).value,
+            lambda engine: engine.decide(late, pd.Series(["one"])).value,
+            lambda engine: engine.decide_many(late, pd.Series(["one", "two"])).value,
+            lambda engine: engine.choose(team, pd.Series(["one"])).value,
+            lambda engine: engine.score(urgent, pd.Series(["one"])).value,
+            lambda engine: engine.tag(kinds, pd.Series(["one"])).value,
+            lambda engine: engine.annotate(form, frame, on="body").value,
+            lambda engine: engine.recognize(frame, kinds=["person"], on="body").value,
         ]
         calls = [lambda: tt.Engine(base_url=f"http://user:hidden-word@127.0.0.1:{{port}}/generic/v1")]
         for arm in ("refuse", "status/401", "503"):
             engine = tt.Engine(base_url=f"http://127.0.0.1:{{port}}/arm/{{arm}}/v1", cache=False)
             calls += [lambda verb=verb, engine=engine: verb(engine) for verb in verbs]
         calls += [
-            lambda: tt.decide(late, "   "),
-            lambda: tt.decide(late, "one", token=token),
-            lambda: tt.decide(late, "one", deadline=0),
+            lambda: tt.decide(late, "   ").value,
+            lambda: tt.decide(late, "one", token=token).value,
+            lambda: tt.decide(late, "one", deadline=0).value,
             lambda: tt.question(file="/nonexistent/question.json"),
         ]
         said = []
@@ -104,7 +104,7 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
             except tt.ThinkThenError as error:
                 said.append(f"{{type(error).__name__}} {{error}}")
                 shown.append(repr(error))
-        shown.append(repr(tt.recognize("Ada is here", kinds=["person"])))
+        shown.append(repr(tt.recognize("Ada is here", kinds=["person"]).value))
         shown.append(repr(tt.details(late, "one")))
         print("\\n".join(said + ["--"] + shown))
     """, child_env(backend, tmp_path))
@@ -128,7 +128,7 @@ def test_credentials_in_the_environment_address_are_refused_unshown(backend, tmp
     printed = run("""
         import thinkthen as tt
         try:
-            tt.decide("Is it late?", "one")
+            tt.decide("Is it late?", "one").value
         except tt.ThinkThenError as error:
             print(type(error).__name__, error)
     """, {**child_env(backend, tmp_path), "THINKTHEN_BASE_URL": base})
@@ -145,7 +145,7 @@ def test_entity_and_edge_reprs_withhold_names_and_kinds(backend, tmp_path):
         import thinkthen as tt
         pair = [("MARK-Ada", "MARK-kind"), ("MARK-Bo", "MARK-kind")]
         print(repr(tt.Entity("MARK-Ada", "MARK-kind")))
-        print(repr(tt.relate(pair, relations={"knows": ("MARK-kind", "MARK-kind")})[0]))
+        print(repr(tt.relate(pair, relations={"knows": ("MARK-kind", "MARK-kind")}).value[0]))
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         "Entity(name=<8 bytes withheld>, kind=<9 bytes withheld>)",

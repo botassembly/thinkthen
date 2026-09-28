@@ -1,0 +1,7 @@
+# 0234 Ruby batching and call-facts code review
+
+Status: independent High reviewer accepted corrected candidate `c513b98a`, as reported by the coordinator. This record preserves the review disposition; it does not substitute an author's self-review for the independent review.
+
+The first candidate `43508cf8` drew three bounded findings: invalid UTF-8 context reached Ruby `strip` before `text_of` and raised a bare `ArgumentError`; the README promised a completion receipt for every post-worker error, including terminal errors that already carry final facts; and the J6 parity proof used only string descriptions. Candidate `c513b98a` validates context before normalization, limits the receipt statement to early caller stops, and pins captured bytes and an independently expected digest for ordered nested structured descriptions. The focused outside-in file passed 7 tests and 44 assertions at that candidate. The same High reviewer returned ACCEPT.
+
+Main `73932ef4` subsequently landed shared Rust and DuckDB work. The Ruby branch merged it at `f5edcde4`; accepted Ruby product files did not change. The pinned Ruby source extension rebuilt against that Rust and the focused batch/facts file passed 7/44, including a held completion case also selected alone at 1/11. The settings-table merge preserved the accepted Ruby controls and landed DuckDB controls. No new Ruby design or product correction arose from integration. Landing remains with the coordinator; installed-gem and release proofs remain separate.

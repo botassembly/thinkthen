@@ -5,7 +5,7 @@
 
 ## Decision
 
-The first write-capable use of a new or empty recording folder stores one private `.thinkthen-backend.json` marker before key lookup or network access. The marker holds a closed schema and the SHA-256 of the canonical adapter name and resolved endpoint URL. It excludes the model. Requests for several models may share one folder.
+The first write-capable use of a new or empty recording folder stores one private `.thinkthen-backend.json` marker before network access. ADR 0099 permits a read-only empty-folder probe and one key lookup before binding. A missing key leaves an unbound empty folder unchanged. The folder gate rechecks and publishes the marker before any send. The marker holds a closed schema and the SHA-256 of the canonical adapter name and resolved endpoint URL. It excludes the model. Requests for several models may share one folder.
 
 A later backend mismatch fails locally at exit 5 before entry lookup, key lookup, or network access. A nonempty folder written by an older version remains available to exact read-only replay and refuses new writes until the user chooses a new folder. Replay alone never creates a marker. Its miss message says that adapter, address, and request form the entry name.
 

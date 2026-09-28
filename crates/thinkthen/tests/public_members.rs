@@ -71,9 +71,10 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
         .details(&question, case["evidence"].as_str().expect("evidence"))
         .expect("details");
     assert_eq!(listener.count(), 1);
-    assert_eq!(details.question_sha256(), case["question_sha256"]);
-    assert_eq!(details.profile_warning(), Some(("old", "new")));
-    let row: serde_json::Value = serde_json::from_str(&details.to_json()).expect("result JSON");
+    assert_eq!(details.value().question_sha256(), case["question_sha256"]);
+    assert_eq!(details.value().profile_warning(), Some(("old", "new")));
+    let row: serde_json::Value =
+        serde_json::from_str(&details.value().to_json()).expect("result JSON");
     assert_eq!(row["meta"]["question_sha256"], case["question_sha256"]);
     assert_eq!(row["meta"]["profile_warning"], case["warning"]);
     assert_eq!(row["meta"]["model"], case["model"]);
@@ -162,19 +163,19 @@ fn details_over_runtime_labels_is_the_typed_call_with_one_send_each() {
         .details(&runtime, "The invoice is wrong.")
         .expect("details");
     assert_eq!(
-        details.value(),
+        details.value().value(),
         &Judgment::Choice(Some("billing".to_owned()))
     );
     assert_eq!(backend.count(), 1);
     let picked = engine
         .choose(&typed, "The invoice is wrong.")
         .expect("typed");
-    assert_eq!(picked, Some(Team::Billing));
+    assert_eq!(picked.into_value(), Some(Team::Billing));
     assert_eq!(backend.count(), 2);
     let bound = engine
         .details(&typed, "The invoice is wrong.")
         .expect("typed details");
-    assert_eq!(bound.requests(), details.requests());
+    assert_eq!(bound.value().requests(), details.value().requests());
 }
 
 #[test]
@@ -293,7 +294,7 @@ fn a_bulk_row_carries_the_yes_probability_details_reads() {
     assert_eq!(read, [0.3, 0.8]);
     for row in &rows {
         let details = engine.details(&question, row.input()).expect("details");
-        let Probabilities::YesNo { yes } = details.probabilities() else {
+        let Probabilities::YesNo { yes } = details.value().probabilities() else {
             panic!("a yes or no answer");
         };
         assert_eq!(*yes, row.probability());

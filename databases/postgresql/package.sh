@@ -14,7 +14,14 @@ mkdir -p -- "$1"
 out=$(CDPATH='' cd -- "$1" && pwd)
 cd -- "$(dirname -- "$0")"
 # check.sh reads the same pg_config and target folder.
-PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
+if [ "$(uname -s)" = Darwin ]; then
+	PG_CONFIG=${PG_CONFIG:-$(brew --prefix postgresql@16)/bin/pg_config}
+	clang=$(xcrun --find clang)
+	LIBCLANG_PATH=${LIBCLANG_PATH:-${clang%/bin/clang}/lib}
+	export LIBCLANG_PATH
+else
+	PG_CONFIG=${PG_CONFIG:-/usr/bin/pg_config}
+fi
 EXT=${CARGO_TARGET_DIR:-target}/release/thinkthen-pg16
 if [ -n "$reuse" ]; then
 	tree=$EXT-shipped

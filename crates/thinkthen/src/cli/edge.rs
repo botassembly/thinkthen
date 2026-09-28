@@ -11,6 +11,7 @@ use std::time::Duration;
 use crate::core::{Backend, Reading};
 
 mod key;
+mod roots;
 use key::KeySnapshot;
 
 /// The command's shared, latched observation of a closed output pipe.
@@ -81,6 +82,7 @@ pub(crate) struct Environment {
     usage: std::sync::Arc<Counters>,
     usage_path: Option<PathBuf>,
     key: KeySnapshot,
+    ca_bundle: Option<PathBuf>,
 }
 
 impl std::fmt::Debug for Environment {
@@ -120,6 +122,7 @@ impl Environment {
             usage: std::sync::Arc::new(Counters::new(usage_path.clone())),
             usage_path,
             key: KeySnapshot::default(),
+            ca_bundle: read("THINKTHEN_CA_BUNDLE").map(PathBuf::from),
         })
     }
 
@@ -181,7 +184,7 @@ impl Environment {
         self.key.reader()
     }
 
-    /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
+    /// `THINKTHEN_BATCH`, read by record-batching judging commands.
     pub(crate) fn batch(&self) -> Option<&str> {
         self.batch.as_deref()
     }

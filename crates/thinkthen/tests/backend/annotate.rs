@@ -77,6 +77,7 @@ fn a_saved_set_name_keeps_its_pinned_identity_and_warning() {
     assert_eq!(listener.connections(), 1);
 }
 
+mod batching;
 mod cache_versions;
 mod partial_failure;
 mod request_identity;

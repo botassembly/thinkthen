@@ -19,11 +19,14 @@ mod convert;
 pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
+pub(crate) use recording::ReplayContext;
 pub(crate) mod relate;
 mod status;
 mod stopped;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
+const RUN_MODELS_DIFFER: &str =
+    "the replies for one filter or rank run named different model versions; pin --model and rerun";
 
 /// What a usage error with no sentence of its own would be told.
 const UNNAMED: &str = "defect: a usage error with no sentence";
@@ -60,6 +63,8 @@ pub(crate) enum Failure {
     AnnotationCollision(String),
     /// Replies for one record named different model versions.
     ModelsDiffer(Option<(String, String)>),
+    /// Separate filter or rank replies named different model versions.
+    RunModelsDiffer,
     /// Reply token counts cannot be represented as one total.
     UsageOverflow,
     /// A command-line shape was understood but cannot act.
@@ -163,7 +168,10 @@ pub(crate) enum Failure {
     TopIsZero,
     QuietOverKept(&'static str),
     RawOverKept(&'static str),
-    ReplayMiss(String),
+    ReplayMiss {
+        name: String,
+        context: Option<ReplayContext>,
+    },
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
@@ -176,6 +184,10 @@ pub(crate) enum Failure {
     Configuration(&'static str),
     CacheEntry,
     StatusState,
+    StatusUsage {
+        name: String,
+        category: &'static str,
+    },
     Defect(&'static str),
     /// A measuring command refused its inputs or options.
     Measure(crate::cli::measure::Refusal),
@@ -251,7 +263,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
-        Failure::ReplayMiss(_)
+        Failure::ReplayMiss { .. }
         | Failure::Entry(_, _)
         | Failure::RecordingConflict(_)
         | Failure::RecordingStorage
@@ -337,6 +349,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             4,
             "the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns".to_owned(),
         ),
+        Failure::RunModelsDiffer => (4, RUN_MODELS_DIFFER.to_owned()),
         Failure::WidthActive(active) => (2, active.to_string()),
         Failure::UsageOverflow => (
             4,
@@ -361,6 +374,10 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             5,
             "status could not read the local cache or usage state; check its permissions and contents"
                 .to_owned(),
+        ),
+        Failure::StatusUsage { name, category } => (
+            5,
+            format!("status could not read local usage file {name}: {category}"),
         ),
         Failure::InvalidUtf8 { record } => (
             5,

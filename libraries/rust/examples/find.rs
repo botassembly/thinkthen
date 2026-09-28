@@ -12,6 +12,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Shipping is free on orders over $50.",
     ];
     let found = tt.find(&deadline, policy)?;
-    writeln!(std::io::stdout().lock(), "{:?}", found.selected())?;
+    writeln!(std::io::stdout().lock(), "{:?}", found.value().selected())?;
     Ok(())
 }

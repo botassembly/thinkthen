@@ -18,7 +18,7 @@ tickets |>
 - The throttle caps the requests in flight in one loaded copy of the engine. A process that loads two copies, such as this package and a database extension, can run up to twice the throttle (ADR 0047 item 5).
 - Ctrl-C stops a call at the next 100 ms tick and raises R's own `interrupt` condition (ADR 0042). Requests already sent finish on the backend.
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `tt_engine(cache = FALSE)`.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `tt_engine(cache = FALSE)`.
 
 ## Run facts
 

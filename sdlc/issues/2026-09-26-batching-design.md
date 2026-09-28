@@ -2,6 +2,8 @@
 
 Status: Sent by Ian to the main builder on 2026-09-26. Review findings and Ian's rulings of 2026-09-26 applied.
 
+Completion note, 2026-09-28: B12a Rust and B12b C are landed. B12c Python landed after independent High ACCEPT of integrated source `dfc1b5fb`; its default packing, explicit batch-one identity, context controls and per-call facts have focused installed offline proof. B12d–B12f and SQL/other port rows remain open. Marketing-owned site Python examples still consume the prior bare return shape and need an owner migration before public release.
+
 Filed 2026-09-26. This design replaces `2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md`, now in `closed/`. Its evidence comes from workspace experiments 208, 260, 261, 262, 268 and 271, and from the 2026-09-22 wire probe. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` copies every table this design cites. `2026-09-26-recognize-design.md` uses the same batch rules for many short texts.
 
 ## Ian's rulings, 2026-09-26
@@ -260,6 +262,8 @@ Ian ruled the order: the typed value, then the environment, then the question fi
 
 The SQL and frame surfaces batch the rows one call receives: a DuckDB vector of up to 2,048 rows, a PostgreSQL array, a data-frame column, or SQLite's `thinkthen_warm`. Rows with equal evidence are asked once, as DuckDB does today. Batches form by the same rule within the call. A vector's edge also closes a batch, so DuckDB can cut a table differently from the command. A plain SQLite scalar receives one row at a time and cannot batch. DuckDB's parallel scan can hand rows over in another grouping. Exact replay then needs a fixed row order, such as `SET threads = 1`.
 
+SQLite's legacy warm-then-scalar cache recipe selects `thinkthen_batch(1)` before the engine builds. Under default `max`, an identical ordered warm cohort can reuse its complete packed request, while a later singleton scalar has a different request digest, even with the same context. This follows section 3's exact-request cache key; no packed member is recorded as a different singleton request. The [coordinator clarification](../records/2026-09-28-sql-warm-cache-identity.md) pins the 0219 boundary and leaves ordinary scalar throughput open.
+
 ### 7. The batch setting is calibration identity
 
 A threshold tuned at one batch setting may not fit another, because batching shifts probabilities. In the tool's own form, false yeses rose from 16 or 17 to 32 to 34 with all 306 titles in one request (evidence section 14). The batch setting therefore joins the threshold's calibration identity under ADR 0032.
@@ -382,6 +386,7 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B8 | `choose` batches | The pick-one question per record, and `--context` for `choose`. It removes `choose` from S1's list | Test 11, plus one recorded context run reported in the ticket | B4, B7 | covered by B0 |
 | B9 | `tag` and `score` batch | One authorized run per type on a labeled set of at least 200 items, at `--batch 1` and the default. The ticket reports the cost. It removes `tag` and `score` from S1's list | Recorded runs and the report in the ticket | B4 | covered by B0 |
 | B10 | `annotate` batches per `on` group | Every group, filling to the limit. It removes `annotate` over records from S1's list | A recorded question set of yes/no and pick-one questions | B8, B9 | covered by B0 |
+
 | B11 | Moved out of batching | It is ticket J1 | none | none | none |
 | B12a | The Rust library batches and gives facts | `batch`, `context`, `.facts` on every call of the public API | Shared conformance cases for batch count, shares and `--batch 1` bytes | B5, B7 | Needs an ADR amending ADR 0017 for `.facts`, unless the run-facts ADR lands first |
 | B12b | The C door batches and gives facts | The same, on the JSON door | The shared conformance cases | B12a | covered by B12a's ADR |
@@ -397,6 +402,9 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B14 | Dropped | Ticket 0137 makes `filter` and `rank` read lines by default | none | none | none |
 | B15 | Replaced | It is ticket D1 | none | none | none |
 | D1 | The documentation page | Described below | Docs review; every number on the page names its record and build | B6, B7, S1, ticket 0137 | no |
+
+Ticket 0216 lands independently reviewed offline B10 code at accepted source `efa2cd9e`, with request-aligned `meta.batches` under accepted ADR 0092. Its separately recorded 182-case yes/no and pick-one comparison passed independent evidence review at `c61654d4`: batch one sent 364 attempts, default sent 3, and both retained exact facts, usage and answer-to-recording identities. B10 removes only annotate's exception from S1's function list; the annotate workload and S1's separate wider live measurements remain. The paired accuracy and wall-time differences are observations from this cohort, not general guarantees.
+
 
 ### C1: the settings reference
 

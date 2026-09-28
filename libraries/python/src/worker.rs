@@ -9,13 +9,19 @@
 
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, sync_channel};
-use std::time::Duration;
+use std::sync::{Arc, Condvar, Mutex};
+use std::time::{Duration, Instant};
 
-use pyo3::exceptions::PyKeyboardInterrupt;
+use crate::diagnostics::{host, host_error};
+use pyo3::exceptions::{PyKeyboardInterrupt, PyTimeoutError};
 use pyo3::prelude::*;
-use thinkthen::{CallOptions, CancelToken, Error, ErrorKind};
+use pyo3::types::PyBool;
+use thinkthen::{CallOptions, CancelToken, Error, ErrorKind, RecordObservation};
 
+use crate::result::{Completed, Observations, python_details};
+use crate::result::{OwnedFacts, python_owned_facts};
 use crate::{caught, defect, raise, raised};
+use serde_json::Value;
 
 /// How often the calling thread checks the caller's token and signals.
 const TICK: Duration = Duration::from_millis(50);
@@ -71,13 +77,196 @@ pub(crate) struct Controls {
 }
 
 /// What a worker sends back: its result, or `None` when it panicked.
-type Outcome<T> = Option<Result<T, Error>>;
+type Outcome<T, E = Error> = Option<Result<T, E>>;
+
+pub(crate) trait WorkerError: From<Error> + Send + 'static {
+    fn facts(&self) -> Option<OwnedFacts>;
+    fn raised(&self, py: Python<'_>) -> PyErr;
+    fn failure(&self) -> Failure;
+    fn details(&self) -> Option<Vec<Value>> {
+        None
+    }
+}
+
+impl WorkerError for Error {
+    fn facts(&self) -> Option<OwnedFacts> {
+        Error::facts(self).map(OwnedFacts::from)
+    }
+    fn raised(&self, py: Python<'_>) -> PyErr {
+        raised(py, self)
+    }
+    fn failure(&self) -> Failure {
+        Failure {
+            kind: self.kind().name(),
+            message: self.to_string(),
+            retryable: self.retryable(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub(crate) struct Failure {
+    pub(crate) kind: &'static str,
+    pub(crate) message: String,
+    pub(crate) retryable: bool,
+}
+
+#[derive(Clone)]
+struct Terminal {
+    outcome: &'static str,
+    facts: Option<OwnedFacts>,
+    details: Option<Vec<Value>>,
+    failure: Option<Failure>,
+}
+
+#[derive(Default)]
+struct ReceiptState(Mutex<Option<Terminal>>, Condvar);
+
+impl ReceiptState {
+    fn finish(&self, result: Terminal) {
+        *self
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(result);
+        self.1.notify_all();
+    }
+}
+
+#[pyclass(frozen, name = "CompletionReceipt", module = "thinkthen._thinkthen")]
+pub(crate) struct Receipt(Arc<ReceiptState>);
+
+#[pyclass(frozen, name = "Completion", module = "thinkthen._thinkthen")]
+pub(crate) struct Completion {
+    #[pyo3(get)]
+    outcome: &'static str,
+    #[pyo3(get)]
+    facts: Option<Py<PyAny>>,
+    #[pyo3(get)]
+    details: Option<Py<PyAny>>,
+    #[pyo3(get)]
+    kind: Option<&'static str>,
+    #[pyo3(get)]
+    message: Option<String>,
+    #[pyo3(get)]
+    retryable: Option<bool>,
+}
+
+#[pymethods]
+impl Receipt {
+    #[getter]
+    fn done(&self) -> bool {
+        self.0
+            .0
+            .lock()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_some()
+    }
+
+    #[pyo3(signature = (timeout=None))]
+    fn result(
+        &self,
+        py: Python<'_>,
+        timeout: Option<&Bound<'_, PyAny>>,
+    ) -> PyResult<Py<Completion>> {
+        let refused = || {
+            crate::usage(
+                py,
+                "completion timeout is a finite number of seconds of 0 or more",
+            )
+        };
+        let due = timeout
+            .map(|value| {
+                if value.is_instance_of::<PyBool>() {
+                    return Err(refused());
+                }
+                let seconds: f64 = host_error(host(|| value.extract()), refused)?;
+                if !seconds.is_finite() || seconds < 0.0 {
+                    return Err(refused());
+                }
+                let duration = Duration::try_from_secs_f64(seconds).map_err(|_| refused())?;
+                Instant::now().checked_add(duration).ok_or_else(refused)
+            })
+            .transpose()?;
+        loop {
+            if let Some(finished) = self
+                .0
+                .0
+                .lock()
+                .unwrap_or_else(std::sync::PoisonError::into_inner)
+                .clone()
+            {
+                return Py::new(
+                    py,
+                    Completion {
+                        outcome: finished.outcome,
+                        facts: finished
+                            .facts
+                            .as_ref()
+                            .map(|facts| python_owned_facts(py, facts))
+                            .transpose()?,
+                        details: finished
+                            .details
+                            .as_ref()
+                            .map(|details| python_details(py, details))
+                            .transpose()?,
+                        kind: finished.failure.as_ref().map(|failure| failure.kind),
+                        message: finished
+                            .failure
+                            .as_ref()
+                            .map(|failure| failure.message.clone()),
+                        retryable: finished.failure.as_ref().map(|failure| failure.retryable),
+                    },
+                );
+            }
+            let wait = due.map_or(TICK, |at| {
+                at.saturating_duration_since(Instant::now()).min(TICK)
+            });
+            if wait.is_zero() {
+                return Err(PyTimeoutError::new_err("the call has not completed"));
+            }
+            py.detach(|| {
+                let held = self
+                    .0
+                    .0
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner);
+                let _waited = self.0.1.wait_timeout(held, wait);
+            });
+            py.check_signals()?;
+        }
+    }
+}
+
+fn attach_receipt(py: Python<'_>, error: &PyErr, receipt: Option<&Arc<ReceiptState>>) {
+    if let Some(receipt) = receipt
+        && let Ok(value) = Py::new(py, Receipt(Arc::clone(receipt)))
+    {
+        let _set = error.value(py).setattr("completion", value);
+    }
+}
 
 /// Run one engine call on a detachable worker and wait for it here.
+#[cfg(test)]
 pub(crate) fn run<T, F>(py: Python<'_>, controls: Controls, job: F) -> PyResult<T>
 where
     T: Send + 'static,
     F: FnOnce(CallOptions<'_>) -> Result<T, Error> + Send + 'static,
+{
+    run_inner(py, controls, job, |_| {}, None)
+}
+
+fn run_inner<T, E, F, C>(
+    py: Python<'_>,
+    controls: Controls,
+    job: F,
+    finish: C,
+    receipt: Option<Arc<ReceiptState>>,
+) -> PyResult<T>
+where
+    T: Send + 'static,
+    E: WorkerError,
+    F: FnOnce(CallOptions<'_>) -> Result<T, E> + Send + 'static,
+    C: FnOnce(&Outcome<T, E>) + Send + 'static,
 {
     let caller = controls.token.clone();
     if caller.as_ref().is_some_and(CancelToken::is_cancelled) {
@@ -91,6 +280,7 @@ where
         .name("thinkthen-call".to_owned())
         .spawn(move || {
             let outcome = caught(|| work(&stop, controls, job));
+            finish(&outcome);
             // The caller may have left. A closed channel is not an error.
             let _left = sender.send(outcome);
             LIVE.fetch_sub(1, Ordering::SeqCst);
@@ -99,15 +289,88 @@ where
         LIVE.fetch_sub(1, Ordering::SeqCst);
         return Err(defect(py, "a call thread could not start"));
     }
-    wait(py, receiver, &internal, caller.as_ref())
+    wait(py, receiver, &internal, caller.as_ref(), receipt.as_ref())
+}
+
+/// The same worker with borrowed Rust observations copied before each callback ends.
+pub(crate) fn run_observed<T, E, F>(
+    py: Python<'_>,
+    controls: Controls,
+    job: F,
+) -> PyResult<Completed<T>>
+where
+    T: Send + 'static,
+    E: WorkerError,
+    F: FnOnce(CallOptions<'_>) -> Result<Completed<T>, E> + Send + 'static,
+{
+    let observations = Observations::default();
+    let on_worker = observations.clone();
+    let state = Arc::new(ReceiptState::default());
+    let final_state = Arc::clone(&state);
+    let final_observations = observations.clone();
+    let finished = run_inner(
+        py,
+        controls,
+        move |options| {
+            let observer = |event: RecordObservation<'_>| on_worker.push(event);
+            job(options.observe(&observer))
+        },
+        move |outcome| {
+            let details = final_observations.snapshot();
+            let terminal = match outcome {
+                Some(Ok(done)) => Terminal {
+                    outcome: "succeeded",
+                    facts: Some(done.facts.clone()),
+                    details: Some(if done.details.is_empty() {
+                        details
+                    } else {
+                        done.details.clone()
+                    }),
+                    failure: None,
+                },
+                Some(Err(error)) => Terminal {
+                    outcome: "failed",
+                    facts: error.facts(),
+                    details: error.facts().map(|_| error.details().unwrap_or(details)),
+                    failure: Some(error.failure()),
+                },
+                None => Terminal {
+                    outcome: "panicked",
+                    facts: None,
+                    details: None,
+                    failure: None,
+                },
+            };
+            final_state.finish(terminal);
+        },
+        Some(state),
+    );
+    match finished {
+        Ok(mut done) => {
+            if done.details.is_empty() {
+                done.details = observations.snapshot();
+            }
+            Ok(done)
+        }
+        Err(error) => {
+            let value = error.value(py);
+            if value.getattr("facts").is_ok()
+                && value.getattr("details").is_err()
+                && let Ok(details) = python_details(py, &observations.snapshot())
+            {
+                let _set = value.setattr("details", details);
+            }
+            Err(error)
+        }
+    }
 }
 
 /// The worker's side: the call's options, then the call.
-fn work<T>(
+fn work<T, E: From<Error>>(
     stop: &CancelToken,
     controls: Controls,
-    job: impl FnOnce(CallOptions<'_>) -> Result<T, Error>,
-) -> Result<T, Error> {
+    job: impl FnOnce(CallOptions<'_>) -> Result<T, E>,
+) -> Result<T, E> {
     let caller = controls.token;
     let check = move || caller.as_ref().is_some_and(CancelToken::is_cancelled);
     let options = CallOptions::new().cancel(stop).interrupt(&check);
@@ -120,11 +383,12 @@ fn work<T>(
 
 /// The calling thread's side: wait in ticks, and stop on the caller's token
 /// or a signal.
-fn wait<T: Send>(
+fn wait<T: Send, E: WorkerError>(
     py: Python<'_>,
-    receiver: Receiver<Outcome<T>>,
+    receiver: Receiver<Outcome<T, E>>,
     internal: &CancelToken,
     caller: Option<&CancelToken>,
+    receipt: Option<&Arc<ReceiptState>>,
 ) -> PyResult<T> {
     let mut receiver = receiver;
     loop {
@@ -133,24 +397,29 @@ fn wait<T: Send>(
         receiver = back;
         if caller.is_some_and(CancelToken::is_cancelled) {
             internal.cancel();
-            return Err(raise(py, ErrorKind::Cancelled, CANCELLED, false));
+            let error = raise(py, ErrorKind::Cancelled, CANCELLED, false);
+            attach_receipt(py, &error, receipt);
+            return Err(error);
         }
         match waited {
             Ok(Some(Ok(value))) => return Ok(value),
-            Ok(Some(Err(error))) => return Err(raised(py, &error)),
+            Ok(Some(Err(error))) => return Err(error.raised(py)),
             Ok(None) => return Err(defect(py, "the call panicked")),
             Err(RecvTimeoutError::Disconnected) => {
                 return Err(defect(py, "the call ended with no result"));
             }
             Err(RecvTimeoutError::Timeout) => {}
         }
-        if let Err(signal) = py.check_signals() {
+        if let Err(signal) = host(|| py.check_signals()) {
             internal.cancel();
-            return Err(if signal.is_instance_of::<PyKeyboardInterrupt>(py) {
+            let error = if signal.is_instance_of::<PyKeyboardInterrupt>(py) {
+                host(|| drop(signal));
                 raise(py, ErrorKind::Cancelled, INTERRUPTED, false)
             } else {
                 signal
-            });
+            };
+            attach_receipt(py, &error, receipt);
+            return Err(error);
         }
     }
 }
@@ -209,7 +478,7 @@ mod tests {
         let (sender, receiver) = sync_channel::<Outcome<u8>>(1);
         drop(sender);
         Python::attach(|py| {
-            let error = wait(py, receiver, &CancelToken::new(), None).err();
+            let error = wait(py, receiver, &CancelToken::new(), None, None).err();
             assert_eq!(
                 error.map(|error| error.value(py).to_string()).as_deref(),
                 Some("defect: the call ended with no result")
@@ -226,7 +495,7 @@ mod tests {
         let caller = CancelToken::new();
         caller.cancel();
         Python::attach(|py| {
-            let error = wait(py, receiver, &CancelToken::new(), Some(&caller)).err();
+            let error = wait(py, receiver, &CancelToken::new(), Some(&caller), None).err();
             assert_eq!(
                 error.map(|error| error.value(py).to_string()).as_deref(),
                 Some("the call was cancelled")

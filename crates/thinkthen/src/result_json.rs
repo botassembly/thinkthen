@@ -9,6 +9,7 @@ use crate::engine::facade::Judgment;
 
 /// What a detailed row names beside the judgment: the backend's address and the
 /// calibration profile the run compares.
+#[derive(Clone)]
 pub(crate) struct Run<'a> {
     pub(crate) backend: &'a Backend,
     pub(crate) tuned_for: Option<&'a ProfileName>,
@@ -33,7 +34,7 @@ pub(crate) fn decision(
 ) -> Result<(String, String), RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
     let json = decision_with_digest(
-        run, judged, question, threshold, shown, input, None, &digest,
+        run, judged, question, threshold, shown, input, None, None, &digest,
     )?;
     Ok((json, digest))
 }
@@ -53,7 +54,36 @@ pub(crate) fn decision_with_batch(
 ) -> Result<String, RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
     decision_with_digest(
-        run, judged, question, threshold, shown, input, batch, &digest,
+        run, judged, question, threshold, shown, input, batch, None, &digest,
+    )
+}
+
+/// A batch member can name both the refused parent and its answering split request.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the request list belongs to this member's result metadata"
+)]
+pub(crate) fn decision_with_batch_requests(
+    run: Run<'_>,
+    judged: &Judgment,
+    question: Question,
+    threshold: Option<Threshold>,
+    shown: Value,
+    input: Option<Record>,
+    batch: Option<BatchMeta>,
+    requests: Vec<String>,
+) -> Result<String, RenderError> {
+    let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
+    decision_with_digest(
+        run,
+        judged,
+        question,
+        threshold,
+        shown,
+        input,
+        batch,
+        Some(requests),
+        &digest,
     )
 }
 
@@ -69,6 +99,7 @@ fn decision_with_digest(
     shown: Value,
     input: Option<Record>,
     batch: Option<BatchMeta>,
+    requests: Option<Vec<String>>,
     digest: &str,
 ) -> Result<String, RenderError> {
     let answered = &judged.answered;
@@ -81,7 +112,7 @@ fn decision_with_digest(
         RequestMeta::new(
             answered.replayed,
             answered.requests_sent,
-            vec![answered.request.as_str().to_owned()],
+            requests.unwrap_or_else(|| vec![answered.request.as_str().to_owned()]),
         )
         .with_profile_warning(run.warning)
         .with_batch(batch)

@@ -4,6 +4,8 @@ Status: **Settled** for the bare value, the object, the five answer kinds, the f
 
 One internal result model feeds both views. The view never changes the request or the answer. Every probability and token count in an example here is illustrative.
 
+The C JSON door returns `{"value":VALUE,"facts":FACTS}` for every successful asking call. `VALUE` keeps the bare shape below, or the detailed object when `details:true` is requested. The four judgment verbs also accept a `records` array; their `VALUE` is an ordered array of bare judgments or full detailed record objects. Each detailed record keeps its whole original `input`, request digest, batch receipt and applicable warnings and context digest. A failed C call returns `NULL`; `thinkthen_error_facts_json` then exposes final started-call facts. The direct `{"usage":true}` response remains process counters rather than a call result.
+
 ## The bare value
 
 | Command | Default standard output |
@@ -147,7 +149,7 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 | `tag` | `tag` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `score` | `score` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `context_sha256?` |
 | `find` | `find` | `schema` `value` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `annotate` | none | `schema` `input` `value` `answers` `meta` | `tool` `questions_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
+| `annotate` | none | `schema` `input` `value` `answers` `meta` | `tool` `questions_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `batches?` `failed_questions` `profile_warning?` |
 | `recognize` | `recognize` | `schema` `value` `input?` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `relate` | `relate` | `schema` `value` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 
@@ -175,7 +177,7 @@ The preceding row is a `decide --details` example. A ranked detailed row keeps t
 
 ## `annotate`
 
-`annotate --details` prints `schema`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`.
+`annotate --details` prints `schema`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`. `meta.batches` appears only when one contributing request held several records or a split half answered the row. Its entries align one for one with `meta.requests`, including ordinary singleton chunks beside a batched chunk. Each entry has a one-based `group`, exact `request` digest and the batch fields in the table above. A split adds `split:true`; a batch-one row omits `batches` and keeps its former bytes.
 
 ```json annotate
 {"schema":"thinkthen.result/1","input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":{"open":true,"kind":"bug"},"answers":{"open":{"value":true,"question":{"verb":"decide","text":"Is this still open?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":"0.1:0.9","request":"6b1f...c4"},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8,"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
@@ -198,5 +200,7 @@ The readable `question` in each answer prints `choose` options and `tag` labels 
 ## What a high probability does not mean
 
 The model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.
+
+For `filter` and `rank`, every answered row in one run must also name the same reply model version, including rows a filter drops and rows from separate halves of a request split after status 413. The first answered row in input order fixes that version. A later difference exits 4 before that row is printed or ranked. `filter` keeps any prefix already printed; `rank` prints no ranking on refusal. A parent 413 and both answered halves still count as actual attempts even when the right row is refused after both sends. Pin `--model` and rerun to compare one model.
 
 Every reply behind one row must report the same model version. Different versions fail the record because one row cannot represent two measurements. The diagnostic safely names both short model identifiers when it can. It says that a cache or recording folder may hold answers from the other version, and it tells the user to rerun with `--no-cache` or to prune that folder with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a `--no-cache` run returns. The library says the same of its cache.
