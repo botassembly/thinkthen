@@ -15,3 +15,5 @@ The Node and Ruby named-plan cases exercised their rebuilt native modules and co
 This is a focused Linux functional checkpoint. It does not claim a four-platform package matrix, installed npm or gem package proof, a release panic injector, a host-hook lifetime guarantee, a provider call, stress behavior, or completion of the broader panic issue. Build artifacts remain isolated and untracked in this worktree. No full host suite ran.
 
 Record checks passed: `sdlc/scripts/pages` reported one coming and 22 green pages; `sdlc/scripts/tickets` reported zero evidence failures; `git diff --check` passed. The existing strict TypeScript, Ruby and bridge lint proofs were accepted on identical host source. No new feature configuration or source edit called for repeating them.
+
+The branch then merged main `eb49b1a7`. That main advance changed coordination records, issue intake and marketing files; it changed none of the DuckDB bridge/C++ source, TypeScript or Ruby source, or conformance backend source used above. The artifact and functional results therefore remain tied to the exact same host source. No host check was repeated solely for that unrelated merge.
