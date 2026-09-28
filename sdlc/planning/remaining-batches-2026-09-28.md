@@ -14,7 +14,21 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 | 8. Documentation, trust and launch usability | 7 | Continue codex-7; separate prose, runtime and external evidence. |
 | 9. Test inventory and retirement | 1 | Bounded inventory refresh after active release work. |
 | 10. New language integrations | 12 | Prepare after advertised surfaces are sound; preserve per-port evidence. |
-| **Total** | **75** | Each current to-do row appears once below. |
+| **Total** | **75** | Each original to-do row appears once below; later intake follows. |
+
+## Later intake
+
+Main through06b0803e adds three distinct issues after the75-row snapshot. The live table now has78 to do. These additions do not change completion counts.
+
+| Issue | Batch | Next action |
+| --- | --- | --- |
+| `usage-file-write-adds-50-ms-per-command` |5, accounting | Inspect the current atomic write and lock lifecycle before deciding whether the measured cost has a safe remedy. Preserve counts and old-reader compatibility; no timing campaign. |
+| `private-name-lint-fails-on-main-outside-site` |1, release readiness | Reproduce the named lint safely and remove private consumer names from the cited source/records. Coordinate public documentation with the marketing hold. |
+| `named-answers-lint-fails-on-three-database-readmes` |8, documentation | Verify the three exact alias failures and fix after the documentation hold clears. |
+
+## Current preparation
+
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 is prepared at53b28a5 and awaits review. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 
