@@ -309,3 +309,16 @@ Ian removed the one-heavy-build restriction. The [reviewed capacity guidance](qf
 
 
 The same0231 reviewer accepted corrected source `70b70041` after the post-sample epoch check and ordered regression. It initially proposed another rejection because `Invoke::begin` samples time before its count CAS. The coordinator required the accepted lifetime boundary before another rewrite. The reviewer then withdrew that finding: 0110 decision8/R6-6 starts the invocation before chunk reading, and0201 owns the C++ statement from QueryBegin through QueryEnd; neither defines the internal CAS as semantic start. Native artifact proof still follows source acceptance. Review findings need a broken accepted behavior, not an unsupported internal-boundary assumption. This intervention prevented another timestamp reorder that could reintroduce an already-corrected missed signal.
+
+
+## 0214 review and inherited consumer inventory
+
+The first Python review found three missed boundaries: Arrow validation after worker start lacked final zero-send facts, failed completion receipts dropped kind/message/retryable, and the new listener proof omitted suppressed filter accounting and exact batch-one identity. The retained builder corrected those boundaries; the same High reviewer accepted `82e359af`, reproduced the Arrow refusal, and accepted the coherent frame error extraction and measured ceilings. These were implementation and proof gaps, not machine saturation. The next Python type ticket receives those lessons before design.
+
+The child-environment Quick Fix then exposed twelve compile errors in the separate fork-probe workspace. Existing assertions still treated `Call<Answer>` as the old bare `Answer`. Earlier main-crate and Polars consumer inventories omitted that standalone conformance workspace. The correction preserves the assertions through `Call.value`; future public-result preparation inventories standalone manifests as well as ordinary examples. A command that selects zero tests supplies no test proof: the first DuckDB diagnostic command selected the bridge manifest, so the builder must rerun its exact case in the extension manifest.
+
+## 0128 review and environment lifetime
+
+The first release-safety review found that all six publishing jobs checked an environment variable before GitHub made that variable available. The correction uses a mode-only job condition and an arming check as the first step inside the release environment. The same High reviewer accepted `3b540d19`, including the 17 planted workflow checks. Preparation must trace when configuration is available as well as where it is named.
+
+A separate child-environment review found that the packed-crate replay removed only two variables and still inherited application settings. The corrected child uses a clean environment, fresh HOME/XDG folders and named runtime paths. The native package proof remains separate from the contaminated-parent fixture. Phase3a landed at `e97d0342`; no dispatch, publication or four-runner completion is inferred.
