@@ -27,7 +27,7 @@ After accepted 0248 correctness and measurement and the private-name cleanup, th
 | Recognition, relations and batching |11| Preparation accepted; retain distinct measurement, text-cost and record-batching outcomes. |
 | Cache and replay |6| Preparation accepted; 0246 landed the demonstrated zero-budget first-use correction. Broader post-admission and diagnostic criteria remain. |
 | Accounting, timing and budgets |8| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
-| Record failure handling |4| One related preparation pass still needed before a design. |
+| Record failure handling |4| Preparation accepted64749d91. A numbered design must settle the error carrier, recoverable classes, exit precedence and failed-batch policy. |
 | Question controls and uncertainty |4| Refresh accepted rank and environment decisions before proposing new grammar. |
 | Documentation, trust and launch usability |8| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
@@ -46,7 +46,7 @@ Main through06b0803e adds three distinct issues after the75-row snapshot. The th
 
 ## Current preparation
 
-Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 36 rows including the newer usage-write preflight; six have closed and 30 remain open. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 40 rows including the newer usage-write preflight and four record-failure rows accepted64749d91; six have closed and 34 remain open. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 
