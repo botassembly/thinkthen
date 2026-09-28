@@ -2,12 +2,16 @@
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::time::{Duration, SystemTime};
 
-use crate::core::recording::Entry;
 use crate::engine::cache_lock;
 use crate::engine::error::Error;
+
+mod scan;
+#[cfg(test)]
+use scan::allocated;
+use scan::{Found, Scanned, Temporary, same_identity, scan_final, scan_temporary};
 
 /// A model the requests asked for and no reply named is the alias, and
 /// pruning by it would remove every entry.
@@ -34,6 +38,8 @@ pub(crate) struct Pruned {
     pub(crate) remaining_entries: u64,
     pub(crate) remaining_bytes: u64,
     pub(crate) bad_names: Vec<String>,
+    pub(crate) temporary_entries: u64,
+    pub(crate) temporary_bytes: u64,
 }
 
 #[derive(Debug)]
@@ -41,6 +47,8 @@ pub(crate) struct Inspected {
     pub(crate) entries: u64,
     pub(crate) bytes: u64,
     pub(crate) bad_entries: u64,
+    pub(crate) temporary_entries: u64,
+    pub(crate) temporary_bytes: u64,
 }
 
 pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> {
@@ -50,6 +58,8 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
                 entries: 0,
                 bytes: 0,
                 bad_entries: 0,
+                temporary_entries: 0,
+                temporary_bytes: 0,
             });
         }
         Err(error) => return Err(storage(error)),
@@ -71,7 +81,7 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
     if current.file_type().is_symlink() || !current.is_dir() || !same_identity(&current, &opened) {
         return Err(Error::CacheEntry);
     }
-    let found = scan(folder)?;
+    let found = scan_final(folder)?;
     let entries = u64::try_from(found.good.len()).map_err(|_| Error::RecordingStorage)?;
     let bytes = found
         .good
@@ -79,27 +89,94 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
         .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
         .ok_or(Error::RecordingStorage)?;
     let bad_entries = u64::try_from(found.bad.len()).map_err(|_| Error::RecordingStorage)?;
+    let temporary = scan_temporary(folder)?;
+    let temporary_entries = u64::try_from(temporary.len()).map_err(|_| Error::RecordingStorage)?;
+    let temporary_bytes = temporary
+        .iter()
+        .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
+        .ok_or(Error::RecordingStorage)?;
     Ok(Inspected {
         entries,
         bytes,
         bad_entries,
+        temporary_entries,
+        temporary_bytes,
     })
 }
 
-struct Scanned {
-    good: Vec<Found>,
-    bad: Vec<String>,
+#[derive(Debug)]
+pub(crate) struct Preview {
+    pub(crate) selected_entries: u64,
+    pub(crate) selected_bytes: u64,
+    pub(crate) unselected_entries: u64,
+    pub(crate) unselected_bytes: u64,
+    pub(crate) selected_names: Vec<String>,
+    pub(crate) temporary_entries: u64,
+    pub(crate) temporary_bytes: u64,
+    pub(crate) temporary_names: Vec<String>,
+    pub(crate) bad_names: Vec<String>,
 }
 
-#[derive(Debug)]
-struct Found {
-    path: PathBuf,
-    name: String,
-    bytes: u64,
-    modified: SystemTime,
-    model: String,
-    requested: Option<String>,
-    remove: bool,
+struct Plan {
+    good: Vec<Found>,
+    bad: Vec<String>,
+    temporary: Vec<Temporary>,
+}
+
+impl Plan {
+    fn selected(&self) -> Vec<&Found> {
+        let mut selected: Vec<_> = self.good.iter().filter(|entry| entry.remove).collect();
+        selected.sort_by(|left, right| {
+            left.modified
+                .cmp(&right.modified)
+                .then_with(|| left.name.cmp(&right.name))
+        });
+        selected
+    }
+}
+
+pub(crate) fn preview(folder: &Path, options: &Prune) -> Result<Preview, Error> {
+    let _gate = cache_lock::exclusive_folder(folder).map_err(storage)?;
+    let plan = plan(folder, options, SystemTime::now())?;
+    let selected = plan.selected();
+    let selected_entries = u64::try_from(selected.len()).map_err(|_| Error::RecordingStorage)?;
+    let selected_bytes = selected
+        .iter()
+        .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
+        .ok_or(Error::RecordingStorage)?;
+    let unselected_entries = u64::try_from(plan.good.len())
+        .map_err(|_| Error::RecordingStorage)?
+        .checked_sub(selected_entries)
+        .ok_or(Error::RecordingStorage)?;
+    let total_bytes = plan
+        .good
+        .iter()
+        .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
+        .ok_or(Error::RecordingStorage)?;
+    let temporary_entries =
+        u64::try_from(plan.temporary.len()).map_err(|_| Error::RecordingStorage)?;
+    let temporary_bytes = plan
+        .temporary
+        .iter()
+        .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
+        .ok_or(Error::RecordingStorage)?;
+    Ok(Preview {
+        selected_entries,
+        selected_bytes,
+        unselected_entries,
+        unselected_bytes: total_bytes
+            .checked_sub(selected_bytes)
+            .ok_or(Error::RecordingStorage)?,
+        selected_names: selected.iter().map(|entry| entry.name.clone()).collect(),
+        temporary_entries,
+        temporary_bytes,
+        temporary_names: plan
+            .temporary
+            .iter()
+            .map(|entry| entry.name.clone())
+            .collect(),
+        bad_names: plan.bad,
+    })
 }
 
 pub(crate) fn run(folder: &Path, options: &Prune) -> Result<Pruned, Error> {
@@ -107,8 +184,8 @@ pub(crate) fn run(folder: &Path, options: &Prune) -> Result<Pruned, Error> {
     run_at(folder, options, SystemTime::now())
 }
 
-fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Error> {
-    let Scanned { mut good, bad } = scan(folder)?;
+fn plan(folder: &Path, options: &Prune, now: SystemTime) -> Result<Plan, Error> {
+    let Scanned { mut good, bad } = scan_final(folder)?;
     if let Some(model) = options.answered_by_other_than.as_deref()
         && !good.is_empty()
         && !good.iter().any(|entry| entry.model == model)
@@ -150,15 +227,20 @@ fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Err
             .ok_or(Error::RecordingStorage)?;
     }
 
-    let mut selected: Vec<_> = good.iter().filter(|entry| entry.remove).collect();
-    selected.sort_by(|left, right| {
-        left.modified
-            .cmp(&right.modified)
-            .then_with(|| left.name.cmp(&right.name))
-    });
+    // Refusal and full final-entry inspection precede temporary classification and every unlink.
+    let temporary = scan_temporary(folder)?;
+    Ok(Plan {
+        good,
+        bad,
+        temporary,
+    })
+}
+
+fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Error> {
+    let plan = plan(folder, options, now)?;
     let mut removed_entries = 0u64;
     let mut removed_bytes = 0u64;
-    for entry in selected {
+    for entry in plan.selected() {
         let lock = match cache_lock::try_acquire(folder, entry.name.trim_end_matches(".json"))
             .map_err(storage)?
         {
@@ -174,14 +256,24 @@ fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Err
             .checked_add(entry.bytes)
             .ok_or(Error::RecordingStorage)?;
     }
-    if removed_entries > 0 {
+    let mut temporary_entries = 0u64;
+    let mut temporary_bytes = 0u64;
+    for entry in &plan.temporary {
+        fs::remove_file(&entry.path).map_err(storage)?;
+        temporary_entries += 1;
+        temporary_bytes = temporary_bytes
+            .checked_add(entry.bytes)
+            .ok_or(Error::RecordingStorage)?;
+    }
+    if removed_entries > 0 || temporary_entries > 0 {
         cache_lock::sync_directory(folder).map_err(storage)?;
     }
-    let remaining_entries = u64::try_from(good.len())
+    let remaining_entries = u64::try_from(plan.good.len())
         .map_err(|_| Error::RecordingStorage)?
         .checked_sub(removed_entries)
         .ok_or(Error::RecordingStorage)?;
-    let total = good
+    let total = plan
+        .good
         .iter()
         .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
         .ok_or(Error::RecordingStorage)?;
@@ -192,7 +284,9 @@ fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Err
         remaining_bytes: total
             .checked_sub(removed_bytes)
             .ok_or(Error::RecordingStorage)?,
-        bad_names: bad,
+        bad_names: plan.bad,
+        temporary_entries,
+        temporary_bytes,
     })
 }
 
@@ -216,127 +310,6 @@ fn maybe_fail(removed: u64) -> Result<(), Error> {
 #[cfg(not(test))]
 const fn maybe_fail(_removed: u64) -> Result<(), Error> {
     Ok(())
-}
-
-fn scan(folder: &Path) -> Result<Scanned, Error> {
-    let mut found = Scanned {
-        good: Vec::new(),
-        bad: Vec::new(),
-    };
-    for item in fs::read_dir(folder).map_err(storage)? {
-        let item = item.map_err(storage)?;
-        let name = item.file_name().to_string_lossy().into_owned();
-        if !digest_name(&name) {
-            continue;
-        }
-        match read_entry(&item.path(), &name) {
-            Ok(Some(entry)) => found.good.push(entry),
-            Ok(None) => {}
-            Err(()) => found.bad.push(name),
-        }
-    }
-    found.bad.sort();
-    Ok(found)
-}
-
-fn read_entry(path: &Path, name: &str) -> Result<Option<Found>, ()> {
-    let metadata = match fs::symlink_metadata(path) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(_) => return Err(()),
-    };
-    if !metadata.file_type().is_file() {
-        return Err(());
-    }
-    let file = match open_entry(path) {
-        Ok(file) => file,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(_) => return Err(()),
-    };
-    let opened = file.metadata().map_err(|_| ())?;
-    if !same_identity(&metadata, &opened) {
-        return Err(());
-    }
-    let bytes = {
-        use std::io::Read as _;
-        let mut file = file;
-        let mut bytes = Vec::new();
-        file.read_to_end(&mut bytes).map_err(|_| ())?;
-        bytes
-    };
-    let final_metadata = match fs::symlink_metadata(path) {
-        Ok(metadata) => metadata,
-        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
-        Err(_) => return Err(()),
-    };
-    if final_metadata.file_type().is_symlink() || !same_identity(&opened, &final_metadata) {
-        return Err(());
-    }
-    let (digest, model, requested) = Entry::inspected(&bytes).map_err(|_| ())?;
-    if digest.file_name() != name {
-        return Err(());
-    }
-    Ok(Some(Found {
-        path: path.to_path_buf(),
-        name: name.to_owned(),
-        bytes: allocated(&metadata),
-        modified: metadata.modified().map_err(|_| ())?,
-        model,
-        requested,
-        remove: false,
-    }))
-}
-
-fn open_entry(path: &Path) -> io::Result<fs::File> {
-    let mut options = fs::OpenOptions::new();
-    options.read(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt as _;
-        // The path can change after symlink_metadata. Reject a new symlink at
-        // open, and never wait for a replacement FIFO before checking identity.
-        options.custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK);
-    }
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::OpenOptionsExt as _;
-        // Open a reparse point itself, so a replaced link cannot redirect the read.
-        const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
-        options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
-    }
-    options.open(path)
-}
-
-#[cfg(unix)]
-fn same_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    use std::os::unix::fs::MetadataExt as _;
-    (left.dev(), left.ino()) == (right.dev(), right.ino())
-}
-
-#[cfg(not(unix))]
-fn same_identity(left: &fs::Metadata, right: &fs::Metadata) -> bool {
-    left.len() == right.len() && left.file_type() == right.file_type()
-}
-
-fn digest_name(name: &str) -> bool {
-    name.len() == 69
-        && name.ends_with(".json")
-        && name.as_bytes().get(..64).is_some_and(|bytes| {
-            bytes
-                .iter()
-                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte))
-        })
-}
-
-#[cfg(unix)]
-fn allocated(metadata: &fs::Metadata) -> u64 {
-    use std::os::unix::fs::MetadataExt as _;
-    metadata.blocks().saturating_mul(512)
-}
-
-#[cfg(not(unix))]
-fn allocated(metadata: &fs::Metadata) -> u64 {
-    metadata.len()
 }
 
 fn storage(_error: io::Error) -> Error {
