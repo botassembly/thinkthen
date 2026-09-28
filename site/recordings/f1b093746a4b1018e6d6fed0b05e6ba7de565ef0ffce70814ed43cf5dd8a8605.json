@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"You charged me twice and the package still has not shipped.\nI need this fixed today.\n","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Which topics does this cover?\n\nDetermine whether the label \"billing\" applies to this item."},"q2":{"type":"noul","instructions":"Which topics does this cover?\n\nDetermine whether the label \"shipping\" applies to this item."},"q3":{"type":"noul","instructions":"Which topics does this cover?\n\nDetermine whether the label \"urgent\" applies to this item."},"q4":{"type":"noul","instructions":"Which topics does this cover?\n\nDetermine whether the label \"praise\" applies to this item."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.95},"q2":{"type":"noul","noul":0.93},"q3":{"type":"noul","noul":0.92},"q4":{"type":"noul","noul":0.01}},"usage":{"input_tokens":390,"output_tokens":72}}
+}

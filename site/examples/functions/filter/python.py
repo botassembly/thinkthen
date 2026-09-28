@@ -7,5 +7,5 @@ reviews = [
     "Does this come in blue?",
     "The strap snapped on day two.",
 ]
-complaints = tt.filter(question, reviews)
+complaints = tt.filter(question, reviews).value
 assert complaints == [reviews[1], reviews[3]]

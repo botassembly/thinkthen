@@ -1,0 +1,6 @@
+Proposed command:
+
+    rm -rf build/ && git clean -fdx
+
+Reason given: the assistant was asked to start the build again from nothing,
+because the last one left files behind that it could not explain.

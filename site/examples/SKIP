@@ -1,9 +1,9 @@
-# Samples the smoke run cannot replay yet: a glob, then the reason.
-**/*.py       The Python and Polars libraries have no replay option yet.
-**/*.ts       The TypeScript library has no replay option yet.
-**/*.rb       The Ruby library has no replay option yet.
-**/*.R        The R library has no replay option yet.
-**/*.rs       The Rust library has no replay option yet.
-**/*.c        The C library has no replay option yet.
-**/*.sql      The database extensions have no replay option yet.
-**/*.sql.out  A database printed this when a branch build ran the sample.
+# Files outside the CLI smoke runner: a glob, then the reason.
+**/*.py       Host library sample; check against the Python/Polars package.
+**/*.ts       Host library sample; check against the TypeScript package.
+**/*.rb       Host library sample; check against the Ruby package.
+**/*.R        Host library sample; check against the R package.
+**/*.rs       Host library sample; check against the Rust crate.
+**/*.c        Native sample; compile against the current C header.
+**/*.sql      SQL sample; check against the matching installed extension.
+**/*.sql.out  Saved output from a checked database sample.

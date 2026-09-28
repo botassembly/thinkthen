@@ -23,7 +23,10 @@ let texts = [
 ];
 let teams = texts
     .iter()
-    .map(|text| tt.choose(&owner, text))
+    .map(|text| {
+        tt.choose(&owner, text)
+            .map(|call| call.into_value())
+    })
     .collect::<Result<Vec<_>, _>>()?;
 let expected = [
     Some(Team::Billing),

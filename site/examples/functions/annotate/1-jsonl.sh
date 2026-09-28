@@ -4,6 +4,7 @@ cat <<'EOF' |
 {"id": "B-9", "body": "Steps: click Export. It is very slow."}
 EOF
 thinkthen annotate form.json \
+  --batch 1 \
   --jsonl \
   --field /body \
   --jobs 8 |

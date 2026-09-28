@@ -12,7 +12,7 @@ let inbox = [
     "Reminder: your invoice is due in 30 days",
     "Please send the signed quote by 5 pm today",
 ];
-let by_urgency = tt.rank(&urgent, inbox)?;
+let by_urgency = tt.rank(&urgent, inbox)?.into_value();
 let order: Vec<&str> = by_urgency
     .iter()
     .map(|one| *one.input())

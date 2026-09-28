@@ -6,6 +6,7 @@ cat <<'EOF' |
 {"id": "B-3", "title": "Logo looks blurry on large screens"}
 EOF
 thinkthen rank "$question" \
+  --batch 1 \
   --jsonl \
   --field /title \
   --top 1 |

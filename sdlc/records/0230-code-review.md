@@ -6,4 +6,4 @@ The first review found lost parent closure metadata after 413 splitting, an empt
 
 The review covered whole structured input under Evidence plus Serialize, dynamic labels, ordered stopping and final joined facts, split request lists and usage shares, borrowed per-engine/thread failure facts, typed C ABI and direct process usage preservation, consumer/schema changes, and the measured root/C growth with shared planner/serializer reuse. No further concrete product code or API defect remained.
 
-The site migration is still required before public 0.1 under [the marketing-owned issue](../issues/2026-09-28-site-c-examples-need-json-value-wrapper.md). Acceptance of this implementation does not close that dependency. Root integration changes records and lane/status entries only; product source remains the reviewed candidate.
+The site migration is still required before public 0.1 under [the marketing-owned issue](../issues/closed/2026-09-28-site-c-examples-need-json-value-wrapper.md). Acceptance of this implementation does not close that dependency. Root integration changes records and lane/status entries only; product source remains the reviewed candidate.

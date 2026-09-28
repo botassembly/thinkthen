@@ -8,5 +8,5 @@ inbox = [
   "Reminder: your invoice is due in 30 days",
   "Please send the signed quote by 5 pm today"
 ]
-by_urgency = ThinkThen.rank(question, inbox)
+by_urgency = ThinkThen.rank(question, inbox).value
 raise unless by_urgency.map(&:index) == [1, 3, 2, 0]

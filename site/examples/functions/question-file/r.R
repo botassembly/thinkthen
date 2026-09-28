@@ -10,5 +10,5 @@ texts <- c(
   "Thanks for the quick help yesterday!",
   "I want to send this back."
 )
-is_refund <- tt_decide(refund, texts)
+is_refund <- tt_decide(refund, texts)$value
 stopifnot(identical(is_refund, c(TRUE, FALSE, NA)))

@@ -1,0 +1,1 @@
+{"relation":"calls","source":{"name":"gateway","kind":"service"},"target":{"name":"billing","kind":"service"}}

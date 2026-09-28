@@ -88,15 +88,15 @@ Every line of code stays at 60 characters or fewer. Code reads down the page, no
 
 `scripts/check-samples.mjs` fails on a longer line. Its `EXEMPT` list names each kind of line that cannot break, with the reason: one JSON string, one JSON Lines record, a record `filter` printed whole, and the `diff` warning. Keep that list short. Add to it only for a line a program really prints wider, or a line the format cannot break.
 
-### Show the details whole
+### Keep full details on the reference route
 
-`--details` asks for the whole result. Show it whole. For a stream, show the first record:
+Ordinary function and how-to examples show the command, its value, and its exit code. Put a full `--details` example under `examples/reference/details/` and show it whole. For a stream, show the first record:
 
 ```bash
 ... --details | head -n 1 | jq .
 ```
 
-For one document, `| jq .` is enough. Never cut the details down with a `jq` filter. If the page needs only the answer, drop `--details`. The check fails a script that asks for `--details` and does not end in `jq .`.
+For one document, `| jq .` is enough. Never cut the details down with a `jq` filter. The dedicated reference links to `specification/result.md`, the normative result contract. Beatles Bench analysis may retain full historical detail output when it is the evidence being discussed. The check fails an ordinary script that asks for `--details`, and any full details script that does not end in `jq .`.
 
 ### Output in its own block
 
@@ -109,11 +109,11 @@ Library examples assert the answer. They never print it. Pick the form below for
 | Language | Form |
 | --- | --- |
 | Bash | `test "$team" = "account"` |
-| Python | `assert is_refund` |
-| TypeScript | `assert.equal(isRefund, true);` after `import assert from "node:assert/strict";` |
-| Ruby | `raise unless is_refund == true` |
-| R | `stopifnot(identical(is_refund, TRUE))` |
-| Rust | `assert_eq!(is_refund, Answer::Yes);` |
+| Python | `assert is_refund is True` after reading `.value` |
+| TypeScript | `assert.equal(isRefund, true);` after reading `.value` and importing `node:assert/strict` |
+| Ruby | `raise unless is_refund == true` after reading `.value` |
+| R | `stopifnot(identical(is_refund, TRUE))` after reading `$value` |
+| Rust | `assert_eq!(is_refund, Answer::Yes);` after taking `.into_value()` |
 | C | `assert(is_refund.outcome == THINKTHEN_YES);` after `#include <assert.h>` |
 
 Ruby has no built-in assert, so `raise unless` stands in for one. SQL has no assert. A SQL example shows the query and then what the database printed.
@@ -152,11 +152,12 @@ The build fails when a script has no caption, a caption has no script, or a scri
 ### How the smoke run works
 
 - The scripts of one page run in name order in one fresh folder, as a reader would run them. The folder starts with a copy of the page's `files/`.
+- A page may keep a small strict-replay folder under `files/recording/` and its exact recorded input under `files/proposed/`. Smoke copies them; the page and sample-style checker omit those immutable data files from the visible list. JSON Lines input under `files/` is data, not code.
 - A Beatles Bench page runs in a copy of `examples/beatles/bench/`, in the folder `examples/beatles/folders.json` names for the page. Its scripts name `--replay recording` themselves.
 - Every other `thinkthen` function call answers from `recordings/`. The runner adds `--replay recordings/` to a call that names no replay folder and no `--dry-run`.
 - The run has no key and no base address. It sends nothing and costs nothing.
 - A line that starts with `test` is an assert. When it fails, the example fails.
-- A file under `examples/` that is neither run nor kept must match a line in `examples/SKIP`, with its reason. Today that list holds the library and database samples. No library replays yet. The run counts them.
+- A file under `examples/` that is neither run nor kept must match a line in `examples/SKIP`, with its reason. The site smoke runner does not invoke installed library or SQL samples; it counts them as skipped. Their libraries have strict replay controls, which are separate from this site runner.
 
 ### Add an example
 
@@ -175,8 +176,8 @@ After a change to the command or to a script, run `node scripts/smoke.mjs --upda
 ### Which build the site runs
 
 - The smoke run uses the command built from the same commit, `../target/release/thinkthen`. `cargo build --release` makes it. `THINKTHEN_BIN` names another build.
-- The Beatles Bench files come from the bench commit in `examples/beatles/BENCH`. `BEATLES_BENCH=path npm run pull-bench` copies the files the Beatles scripts read from a checkout at that commit.
-- The Beatles Bench slides come from the talk's deck. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files, and stops unless the deck's `BENCH_AT` names the commit in `examples/beatles/BENCH`. The slide check fails when `src/data/slides.json` names another bench or an image differs from its record.
+- The Beatles Bench files come from the bench commit in `examples/beatles/bench-pin`. `BEATLES_BENCH=path npm run pull-bench` copies the files the Beatles scripts read from a checkout at that commit.
+- The Beatles Bench slides come from the talk's deck. `DECK=path npm run export-slides` exports them from the deck's committed `slide.png` files, and stops unless the deck's `BENCH_AT` names the commit in `examples/beatles/bench-pin`. The slide check fails when `src/data/slides.json` names another bench or an image differs from its record.
 - `jq` must be on the path.
 
 ### What runs on each change

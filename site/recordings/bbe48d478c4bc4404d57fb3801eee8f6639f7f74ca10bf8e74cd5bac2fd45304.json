@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Card charges fail at checkout. / INC-2 nightly export queue backed up","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Do these two describe the same problem?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.18}},"usage":{"input_tokens":289,"output_tokens":21}}
-}

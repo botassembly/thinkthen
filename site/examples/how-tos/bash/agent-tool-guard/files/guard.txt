@@ -1,0 +1,22 @@
+question='Does this command only read, and leave every file'
+question+=' and every setting on the machine unchanged?'
+set -o pipefail
+jq -erj '.tool_input.command |
+  select(type == "string" and length > 0)' |
+  thinkthen decide \
+    "$question" \
+    --threshold 0.1:0.8 --quiet \
+    --replay recording && rc=0 || rc=$?
+case $rc in
+  0) decision=allow; reason='Read-only proposal' ;;
+  1) decision=deny; reason='Changes the machine' ;;
+  3) decision=ask; reason='A person should decide' ;;
+  *) decision=deny; reason='The judge did not answer' ;;
+esac
+jq -cn --arg decision "$decision" \
+  --arg reason "$reason" \
+  '{hookSpecificOutput:{
+    hookEventName:"PreToolUse",
+    permissionDecision:$decision,
+    permissionDecisionReason:$reason
+  }}'

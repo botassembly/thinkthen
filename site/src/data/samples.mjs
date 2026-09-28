@@ -62,7 +62,7 @@ export function run(page, name) {
 export function files(page) {
   const prefix = `/examples/${page}/files/`;
   return Object.keys(raw)
-    .filter((k) => k.startsWith(prefix))
+    .filter((k) => k.startsWith(prefix) && !/^(recording|proposed)\//.test(k.slice(prefix.length)))
     .sort()
     .map((k) => ({ name: k.slice(prefix.length), text: raw[k].replace(/\n+$/, '') }));
 }

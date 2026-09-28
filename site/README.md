@@ -45,7 +45,7 @@ The names, the order, the captions, the one line for each function, and the opti
 
 ## Where the Beatles Bench pages come from
 
-The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words. The slides sit in `public/learn/beatles-bench/`. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/BENCH`. To copy those files again from a checkout at that commit:
+The pages under `/learn/beatles-bench/` follow the talk "Analyzing the Beatles using Jev". `src/data/beatles.mjs` holds each page's words. The slides sit in `public/learn/beatles-bench/`. The scripts sit in `examples/beatles/`, and `examples/beatles/bench/` holds the files they read from the bench commit in `examples/beatles/bench-pin`. To copy those files again from a checkout at that commit:
 
 ```
 BEATLES_BENCH=path/to/beatles-bench npm run pull-bench
@@ -57,7 +57,7 @@ The slides come from the talk's deck, which quotes one bench commit. The deck's 
 DECK=path/to/deck npm run export-slides
 ```
 
-The export stops unless the deck's `BENCH_AT` names the bench in `examples/beatles/BENCH`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded bench differs from `examples/beatles/BENCH`, or when an image differs from its recorded SHA-256. Move the pin and the build fails until the slides are exported again.
+The export stops unless the deck's `BENCH_AT` names the bench in `examples/beatles/bench-pin`. It trusts the deck's build to have rendered the slides after that pin moved. `scripts/check-slides.mjs` runs in the build. It fails when the recorded bench differs from `examples/beatles/bench-pin`, or when an image differs from its recorded SHA-256. Move the pin and the build fails until the slides are exported again.
 
 ## The Bash techniques
 
@@ -111,4 +111,4 @@ The tabs on the home page and the cross-view on every function page share one ch
 ## What is not here yet
 
 - A pandas page, and a page for any serve mode.
-- Replay for the library and database samples. They are listed in `examples/SKIP` until each library can answer from a recording.
+- An installed-host smoke runner for library and database samples. `examples/SKIP` identifies the samples the CLI replay runner does not execute; each changed sample needs its own checked-package or source-example proof.

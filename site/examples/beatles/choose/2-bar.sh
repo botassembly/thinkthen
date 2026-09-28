@@ -16,6 +16,7 @@ Octopus's Garden
 She Loves You
 EOF
 thinkthen choose "$question" "${singers[@]}" \
+  --batch 1 \
   --lines \
   --threshold 0.5 \
   --replay recording

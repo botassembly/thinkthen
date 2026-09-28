@@ -22,7 +22,7 @@ texts = [
     ),
 ]
 owners = [
-    tt.choose(team_question, text)
+    tt.choose(team_question, text).value
     for text in texts
 ]
 assert owners == ["billing", "shipping", "account", None]

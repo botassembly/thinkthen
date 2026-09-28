@@ -4,7 +4,7 @@
 //
 //   - No line over 60 characters, apart from the exempt lines below.
 //   - A library sample asserts. It never prints.
-//   - A script that asks for --details shows it whole: it ends in jq .
+//   - Full --details examples live on the dedicated reference route.
 //   - Code carries no comments.
 //   - Every page and article starts with its goal: a `// Goal:` line in
 //     an Astro page, and a `goal:` field or a `<!-- Goal: -->` comment in
@@ -74,7 +74,7 @@ const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c']);
 // does not accept. That throw fails the build, so a mistyped fence tag or
 // a new kind of file never passes unread.
 export const NO_CALL = new Set([
-  '.json', '.out', '.txt', '.exit', '.diff', '.jq',
+  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq',
   'text', 'json', 'console', 'output',
 ]);
 const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.sql': 'sql' };
@@ -93,7 +93,9 @@ function namedAnswers(label, text, kind, language, offset = 0) {
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) return p === bench ? [] : walk(p);
+    // Recorded wire bodies are machine data checked by the replay smoke run,
+    // not a code block a reader copies from the page.
+    if (e.isDirectory()) return p === bench || ['recording', 'proposed'].includes(e.name) ? [] : walk(p);
     return [p];
   });
 }
@@ -145,12 +147,13 @@ function main() {
   const problems = [];
   for (const file of walk(root)) {
     const rel = path.relative(root, file);
-    if (['SKIP', 'beatles/BENCH', 'beatles/folders.json'].includes(rel)) continue;
+    if (['SKIP', 'beatles/bench-pin', 'beatles/folders.json'].includes(rel)) continue;
     const ext = path.extname(file);
     const text = fs.readFileSync(file, 'utf8').replace(/\n+$/, '');
     problems.push(...checkLines(`examples/${rel}`, rel, text.split('\n'), ext));
     problems.push(...namedAnswers(`examples/${rel}`, text, ext || '(no extension)', FILE_LANGUAGE[ext] ?? ext));
     if (ext === '.sh' && /--details\b/.test(text)) {
+      if (!rel.startsWith('reference/details/') && !rel.startsWith('beatles/')) problems.push(`examples/${rel}: move the full --details run to reference/details`);
       const last = text.split('\n').at(-1).trim();
       if (last !== 'jq .') problems.push(`examples/${rel}: asks for --details and does not end in jq . Show the details whole.`);
     }

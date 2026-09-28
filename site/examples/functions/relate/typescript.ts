@@ -12,12 +12,14 @@ const rules = [
   "Meals are reimbursed up to 60 dollars a day.",
   "Use the company travel portal for all bookings.",
 ];
-const entities = rules.map((rule) => [rule, "rule"]);
-const contradictions = await tt.relate(entities, {
+const entities = rules.map(
+  (rule): readonly [string, string] => [rule, "rule"],
+);
+const contradictions = (await tt.relate(entities, {
   relations: ["contradicts"],
   either: ["contradicts"],
   threshold: 0.5,
-});
+})).value;
 const pairs = contradictions.map((edge) => [
   edge.source.name,
   edge.target.name,

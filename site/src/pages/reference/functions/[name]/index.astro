@@ -1,0 +1,30 @@
+---
+// Goal: keep one function's full option list and extra examples together.
+import Base from '../../../../layouts/Base.astro';
+import Terminal from '../../../../components/Terminal.astro';
+import { FUNCTIONS } from '../../../../data/catalog.mjs';
+import { captioned } from '../../../../data/samples.mjs';
+
+export function getStaticPaths() {
+  return FUNCTIONS.map((fn) => ({
+    params: { name: fn.name }, props: { fn },
+  }));
+}
+
+const { fn } = Astro.props;
+const runs = captioned(`functions/${fn.name}`, fn.see, true);
+const extra = runs.slice(1);
+---
+<Base title={`${fn.name} options`} description={`Arguments and options for ${fn.name}.`}>
+  <h1><code>{fn.name}</code> options</h1>
+  <p class="lede">The command takes <code>{fn.args}</code>{fn.args.endsWith('.') ? '' : '.'} <a href={`/functions/${fn.name}/`}>Start with its value and exit code</a>.</p>
+  <table>
+    <tr><th>Option</th><th>What it does</th></tr>
+    {fn.options.map(([opt, what]) => (
+      <tr><td><code>{opt}</code></td><td>{what}</td></tr>
+    ))}
+  </table>
+  {extra.length > 0 && <h2>More examples</h2>}
+  {extra.map((run) => <Terminal run={run} caption={run.see} />)}
+  <p class="pagelinks"><a href="/reference/details/">Detailed results</a> · <a href="/install/settings/">Every surface's settings</a></p>
+</Base>

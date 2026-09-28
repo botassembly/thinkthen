@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // A slide image from another bench run fails the build. export-slides.mjs
 // records in src/data/slides.json the bench the deck quoted and each image's
-// SHA-256. The recorded bench must be the one examples/beatles/BENCH pins, and
+// SHA-256. The recorded bench must be the one examples/beatles/bench-pin pins, and
 // every image in public/learn/beatles-bench/ must match its record. Moving the
 // pin, or replacing an image by hand, then fails until the slides are
 // exported again from a deck that quotes the new bench.
@@ -13,7 +13,7 @@ import crypto from 'node:crypto';
 const site = path.resolve(path.dirname(new URL(import.meta.url).pathname), '..');
 const dir = path.join(site, 'public', 'learn', 'beatles-bench');
 const manifest = JSON.parse(fs.readFileSync(path.join(site, 'src', 'data', 'slides.json'), 'utf8'));
-const pin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'BENCH'), 'utf8').trim();
+const pin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'bench-pin'), 'utf8').trim();
 
 const problems = [];
 if (manifest.bench !== pin) {

@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Blackbird","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is the title of a song by the Beatles. Who sings the lead vocal on it?","criteria":{"John":"John Lennon","Paul":"Paul McCartney","George":"George Harrison","Ringo":"Ringo Starr"}},"q2":{"type":"choice","instructions":"The text is the title of a song by the Beatles. On which album did it first appear?","criteria":{"Help!":"Help! (1965)","Rubber Soul":"Rubber Soul (1965)","Revolver":"Revolver (1966)","White Album":"The Beatles, the White Album (1968)","Abbey Road":"Abbey Road (1969)"}},"q3":{"type":"choice","instructions":"The text is the title of a song by the Beatles. In which year was it first released?","criteria":{"1965":null,"1966":null,"1967":null,"1968":null,"1969":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Paul","confidence":0.77,"probabilities":{"Ringo":0.0,"Paul":0.83,"John":0.15,"George":0.02}},"q2":{"type":"choice","choice":"White Album","confidence":0.97,"probabilities":{"Revolver":0.01,"Help!":0.0,"White Album":0.99,"Rubber Soul":0.0,"Abbey Road":0.0}},"q3":{"type":"choice","choice":"1968","confidence":0.83,"probabilities":{"1966":0.01,"1969":0.03,"1968":0.87,"1967":0.09,"1965":0.0}}},"usage":{"input_tokens":578,"output_tokens":174}}
+}

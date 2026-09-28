@@ -9,6 +9,6 @@ const inbox = [
   "Reminder: your invoice is due in 30 days",
   "Please send the signed quote by 5 pm today",
 ];
-const byUrgency = await tt.rank(question, inbox);
+const byUrgency = (await tt.rank(question, inbox)).value;
 const order = byUrgency.map((one) => one.index);
 assert.deepEqual(order, [1, 3, 2, 0]);

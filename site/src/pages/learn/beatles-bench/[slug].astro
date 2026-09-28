@@ -18,7 +18,7 @@ const { page } = Astro.props;
 for (const field of ['goal', 'lesson', 'takeaway']) {
   if (!page[field]) throw new Error(`beatles: ${page.slug} has no ${field}`);
 }
-const runs = captioned(`beatles/${page.slug}`, page.see);
+const runs = captioned(`beatles/${page.slug}`, page.see, page.historical);
 const inputs = (page.files || []).map((name) => benchFile(folders[page.slug], name));
 // Prose marks code with backticks.
 const parts = (text) => text.split('`').map((p, i) => ({ code: i % 2 === 1, text: p }));
@@ -33,6 +33,7 @@ const [first, ...rest] = page.title.split(' ');
   </figure>
   {page.idea.map((para) => <p>{parts(para).map((p) => p.code ? <code>{p.text}</code> : p.text)}</p>)}
   {page.source && <p>The numbers come from {[page.source].flat().map((s, i, all) => <Fragment>{i > 0 && (i === all.length - 1 ? ' and ' : ', ')}<a href={s.href}>{s.text}</a></Fragment>)}.</p>}
+  {page.historical && <p>These slide results measure the pinned bench method. For the current command, see <a href={`/functions/${page.slug}/`}>{page.slug}</a>.</p>}
 
   {inputs.map((file) => <Code code={file.text} caption={`${file.name}, the question set`} />)}
   {runs.map((run, i) => (

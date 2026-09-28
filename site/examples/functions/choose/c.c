@@ -1,6 +1,6 @@
 #include <assert.h>
 #include <stdio.h>
-#include <string.h>
+#include <json-c/json.h>
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
@@ -28,7 +28,27 @@ const char *teams[] = {
 char request[320];
 for (int i = 0; i < 4; i++) {
     snprintf(request, sizeof request, choose, texts[i]);
-    char *team = thinkthen_call(tt, request);
-    assert(team && strcmp(team, teams[i]) == 0);
-    thinkthen_free_string(team);
+    char *team_call = thinkthen_call(tt, request);
+    assert(team_call);
+    enum json_tokener_error parse_error;
+    struct json_object *result =
+        json_tokener_parse_verbose(team_call, &parse_error);
+    assert(parse_error == json_tokener_success);
+    assert(result && json_object_get_type(result)
+        == json_type_object);
+    struct json_object *value;
+    assert(json_object_object_get_ex(
+        result, "value", &value));
+    struct json_object *facts;
+    assert(json_object_object_get_ex(
+        result, "facts", &facts));
+    assert(facts && json_object_get_type(facts)
+        == json_type_object);
+    struct json_object *wanted =
+        json_tokener_parse_verbose(teams[i], &parse_error);
+    assert(parse_error == json_tokener_success);
+    assert(json_object_equal(value, wanted));
+    if (wanted) json_object_put(wanted);
+    json_object_put(result);
+    thinkthen_free_string(team_call);
 }

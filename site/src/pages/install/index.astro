@@ -3,6 +3,7 @@
 import Base from '../../layouts/Base.astro';
 import InstallLine from '../../components/InstallLine.astro';
 import { SURFACES, KEY_VARIABLE } from '../../data/catalog.mjs';
+import { REPO } from '../../data/repo.mjs';
 
 const shell = SURFACES.find((s) => s.slug === 'shell');
 const DATABASES = new Set(['duckdb', 'sqlite', 'postgresql']);
@@ -16,6 +17,7 @@ const tables = [['Languages', 'Language', languages], ['Databases', 'Database', 
 <Base title="Install" description="Install ThinkThen for the command line, each language, and each database, and point it at a backend.">
   <h1>Install</h1>
   <p class="lede">ThinkThen runs from the command line, from your language, and from your database.</p>
+  <p>These are the planned 0.1 install channels. Release packages and the download script are still being prepared. For a working offline first run today, follow the <a href={`${REPO}/blob/main/README.md#first-run`}>source checkout example</a>.</p>
 
   <h2><a href="/install/shell/">The command line</a></h2>
   <InstallLine line={shell.install[0][0]} caption="The download script" />

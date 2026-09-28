@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"You charged me twice and the package still has not shipped.\n","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"Which team owns this?","criteria":{"billing":null,"shipping":null,"account":null}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.78,"probabilities":{"account":0.05,"shipping":0.1,"billing":0.85}}},"usage":{"input_tokens":305,"output_tokens":39}}
-}
