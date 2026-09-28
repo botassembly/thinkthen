@@ -16,6 +16,8 @@ Python and Ruby calls now raise cancellation when the caller's token fires befor
 
 `recognize` finds names in three steps, as ADR 0056 decides. Each name prints `text`, `start`, `end`, `length`, `kind` and `strength` on every surface. The default kinds are gone, so a run with no kinds prints every name as `ENTITY`. `--max-text-bytes` refuses a text over 600,000 bytes before any request (ticket 0147).
 
+`relate` asks one yes/no question per allowed pair and keeps every edge at the cut. All rules share one entity state and requests of at most 400 questions; this changes relate request bodies and recording digests. Its version-one plan keeps one entry per rule with the requests carrying that rule's questions. Wildcard edges now print in question order (ticket 0167).
+
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
 
 ### Breaking changes
