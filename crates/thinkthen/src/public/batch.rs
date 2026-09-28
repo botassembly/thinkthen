@@ -5,10 +5,8 @@
 //! is read at most one throttle ahead of the rows returned. The caller's
 //! interrupt check runs here, on the calling thread, at every tick.
 
-use std::collections::VecDeque;
 use std::fmt;
-use std::sync::Arc;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
@@ -84,77 +82,14 @@ impl<T> Source<T> for Option<Error> {
     }
 }
 
-/// One record's answer, computed on an engine worker.
-pub(crate) type Answer<V> = dyn Fn(&str) -> Result<Completed<V, Error>, Error> + Send + Sync;
 type ScheduledAnswer<'a, W, V> =
     dyn Fn(&W) -> Result<Completed<V, Error>, Error> + Send + Sync + 'a;
-type Observe<V> = for<'a> fn(&V, usize, &Stop<'a>) -> Result<(), Error>;
 
 pub(super) enum Event<W, V> {
     Port(InputPort<W, V, Error>),
     Ask,
     Row(V),
     End(Result<(), Error>),
-}
-
-/// The caller's records, the rows the scheduler returns, and the stop.
-struct Stream<'a, I: Iterator, V, T> {
-    items: I,
-    held: VecDeque<I::Item>,
-    pair: fn(I::Item, V) -> Option<T>,
-    observe: Observe<V>,
-    events: Receiver<Event<String, V>>,
-    port: Option<InputPort<String, V, Error>>,
-    stop: Stop<'a>,
-    facts: Option<Facts>,
-    fed: usize,
-    returned: usize,
-    most: Option<usize>,
-    scheduler: Option<JoinHandle<()>>,
-}
-
-/// Start the scheduler for these records. Nothing is read or sent until the
-/// first pull.
-#[allow(
-    clippy::too_many_arguments,
-    reason = "one annotation stream selects its worker, row pairing, and caller observation"
-)]
-pub(crate) fn start<'a, I, V, T>(
-    engine: Arc<facade::Engine>,
-    records: I,
-    stop: Stop<'a>,
-    most: Option<usize>,
-    answer: Arc<Answer<V>>,
-    pair: fn(I::Item, V) -> Option<T>,
-    observe: Observe<V>,
-) -> Batch<'a, T>
-where
-    I: Iterator + 'a,
-    I::Item: super::Evidence,
-    V: Send + 'static,
-    T: 'a,
-{
-    let (sender, events) = channel::<Event<String, V>>();
-    let cancel = stop.shared();
-    let scheduler = thread::spawn(move || {
-        schedule::<String, V>(&engine, &cancel, &|work: &String| answer(work), &sender);
-    });
-    Batch {
-        source: Box::new(Stream {
-            items: records,
-            held: VecDeque::new(),
-            pair,
-            observe,
-            events,
-            port: None,
-            stop,
-            facts: None,
-            fed: 0,
-            returned: 0,
-            most,
-            scheduler: Some(scheduler),
-        }),
-    }
 }
 
 /// The scheduler thread: run the engine's ordered scheduler, relay its asks
@@ -195,119 +130,6 @@ fn relay_asks<W: Send + 'static, V: Send + 'static>(
     thread::spawn(move || while asks.recv().is_ok() && sender.send(Event::Ask).is_ok() {})
 }
 
-impl<I, V, T> Source<T> for Stream<'_, I, V, T>
-where
-    I: Iterator,
-    I::Item: super::Evidence,
-{
-    fn pull(&mut self) -> Option<Result<T, Error>> {
-        self.scheduler.as_ref()?;
-        loop {
-            if self.stop.interrupted() {
-                self.stop.fire();
-            }
-            let event = match self.events.recv_timeout(TICK) {
-                Ok(event) => event,
-                Err(RecvTimeoutError::Timeout) => continue,
-                Err(RecvTimeoutError::Disconnected) => {
-                    Event::End(Err(Error::defect("the scheduler ended early")))
-                }
-            };
-            if let Some(pulled) = self.take(event) {
-                return pulled;
-            }
-        }
-    }
-
-    fn facts(&self) -> Option<&Facts> {
-        self.facts.as_ref()
-    }
-}
-
-impl<I, V, T> Stream<'_, I, V, T>
-where
-    I: Iterator,
-    I::Item: super::Evidence,
-{
-    /// Act on one event; `Some` is what this pull returns.
-    fn take(&mut self, event: Event<String, V>) -> Option<Option<Result<T, Error>>> {
-        match event {
-            Event::Port(port) => self.port = Some(port),
-            Event::Ask => self.feed(),
-            Event::Row(value) => {
-                let Some(item) = self.held.pop_front() else {
-                    return Some(Some(Err(
-                        self.end(Error::defect("a row arrived with no record"))
-                    )));
-                };
-                if let Err(error) = (self.observe)(&value, self.returned, &self.stop) {
-                    return Some(Some(Err(self.end(error))));
-                }
-                self.returned += 1;
-                return (self.pair)(item, value).map(|row| Some(Ok(row)));
-            }
-            Event::End(ended) => {
-                let ended = self.join().and(ended);
-                let ended = self.stop.finish(ended);
-                let facts = self.stop.facts();
-                self.facts = Some(facts.clone());
-                return Some(ended.err().map(|error| Err(error.with_facts(facts))));
-            }
-        }
-        None
-    }
-
-    /// Answer one ask with the next record, the end, or the spent limit.
-    fn feed(&mut self) {
-        let input = match self.items.next() {
-            None => Input::End,
-            Some(_) if self.most.is_some_and(|most| self.fed >= most) => {
-                Input::Failed(Error::usage(format!(
-                    "this engine answers at most {} records in one call",
-                    self.fed
-                )))
-            }
-            Some(item) => {
-                let text = super::Evidence::evidence(&item).to_owned();
-                self.held.push_back(item);
-                self.fed += 1;
-                Input::Item(text)
-            }
-        };
-        self.send(input);
-    }
-
-    /// Stop and join the scheduler, then report this error.
-    fn end(&mut self, error: Error) -> Error {
-        let _ended = self.join();
-        let error = match self.stop.finish::<()>(Err(error)) {
-            Err(error) => error,
-            Ok(()) => Error::defect("a failed stream returned a value"),
-        };
-        let facts = self.stop.facts();
-        self.facts = Some(facts.clone());
-        error.with_facts(facts)
-    }
-}
-
-impl<I: Iterator, V, T> Stream<'_, I, V, T> {
-    fn send(&self, input: Input<String, Error>) {
-        if let Some(port) = &self.port {
-            let _sent = port.send(input);
-        }
-    }
-
-    /// Stop the scheduler, answer its last asks with the end, and join it.
-    fn join(&mut self) -> Result<(), Error> {
-        join_scheduler(
-            &mut self.scheduler,
-            &self.stop,
-            &self.events,
-            &mut self.port,
-        )
-    }
-}
-
 /// Stop one typed scheduler, answer its final asks, and join every worker.
 pub(super) fn join_scheduler<W, V>(
     scheduler: &mut Option<JoinHandle<()>>,
@@ -334,10 +156,4 @@ pub(super) fn join_scheduler<W, V>(
     scheduler
         .join()
         .map_err(|_| Error::defect("the record scheduler panicked"))
-}
-
-impl<I: Iterator, V, T> Drop for Stream<'_, I, V, T> {
-    fn drop(&mut self) {
-        let _joined = self.join();
-    }
 }

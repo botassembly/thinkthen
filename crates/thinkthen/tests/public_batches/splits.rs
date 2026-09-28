@@ -254,6 +254,132 @@ fn named_group_failed_left_half_does_not_send_right() {
 }
 
 #[test]
+fn profile_splits_each_incompatible_named_group_before_sending() {
+    let _serial = serial();
+    let (alpha_sender, alpha_answered) = std::sync::mpsc::channel();
+    let (beta_sender, beta_answered) = std::sync::mpsc::channel();
+    let listener = Listener::answering(move |body| {
+        let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+        assert_eq!(
+            request["questions"].as_object().expect("questions").len(),
+            1
+        );
+        let text = String::from_utf8_lossy(body);
+        if text.contains("alpha") && text.contains("First?") {
+            Canned::ok(DECIDED)
+                .after(150)
+                .notifying(alpha_sender.clone())
+        } else if text.contains("beta") && text.contains("First?") {
+            Canned::ok(DECIDED).notifying(beta_sender.clone())
+        } else {
+            Canned::ok(DECIDED)
+        }
+    })
+    .expect("listener");
+    let completion = thread::spawn(move || {
+        beta_answered
+            .recv_timeout(Duration::from_secs(2))
+            .expect("later row answered");
+        alpha_answered.try_recv().is_err()
+    });
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-batches")
+        .expect("key")
+        .throttle(THROTTLE)
+        .expect("throttle")
+        .profile_json(
+            r#"{"schema":"thinkthen.backend-profile/1","name":"one-question","max_questions":1}"#,
+        )
+        .expect("profile")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+    )
+    .expect("set");
+    let mut rows = engine.annotate_with(&set, ["alpha", "beta"], packed());
+    assert_eq!(
+        rows.by_ref()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("rows")
+            .len(),
+        2
+    );
+    assert_eq!(
+        rows.facts()
+            .map(|facts| (facts.records(), facts.requests_sent())),
+        Some((2, 4))
+    );
+    assert_eq!(listener.requests().len(), 4);
+    assert!(
+        completion.join().expect("completion order"),
+        "later row answered before the held earlier chunk"
+    );
+}
+
+#[test]
+fn compatible_profile_group_still_packs_multiple_rows() {
+    let _serial = serial();
+    let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9},"q3":{"type":"noul","noul":0.9},"q4":{"type":"noul","noul":0.9}}}"#;
+    let listener = Listener::serving(vec![Canned::ok(reply)]).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-batches")
+        .expect("key")
+        .profile_json(r#"{"schema":"thinkthen.backend-profile/1","name":"four","max_questions":4}"#)
+        .expect("profile")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"First?"},"second":{"decide":"Second?"}}}"#,
+    )
+    .expect("set");
+    let mut rows = engine.annotate(&set, ["alpha", "beta"]);
+    assert_eq!(
+        rows.by_ref()
+            .collect::<Result<Vec<_>, _>>()
+            .expect("rows")
+            .len(),
+        2
+    );
+    assert_eq!(rows.facts().map(|facts| facts.requests_sent()), Some(1));
+    assert_eq!(listener.requests().len(), 1);
+}
+
+#[test]
+fn a_later_profile_group_refuses_before_any_request() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-batches")
+        .expect("key")
+        .profile_json(
+            r#"{"schema":"thinkthen.backend-profile/1","name":"tiny","max_evidence_bytes":1}"#,
+        )
+        .expect("profile")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let set = QuestionSet::from_json(
+        r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/a"},"second":{"decide":"Second?","on":"/b"}}}"#,
+    ).expect("set");
+    let mut rows = engine.annotate(&set, [r#"{"a":"x","b":"long"}"#]);
+    assert_eq!(
+        rows.next().expect("refusal").expect_err("profile").kind(),
+        ErrorKind::Usage
+    );
+    assert!(rows.next().is_none());
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
 fn a_refused_parent_and_both_halves_keep_exact_request_shares() {
     let _serial = serial();
     let listener = Listener::serving(vec![

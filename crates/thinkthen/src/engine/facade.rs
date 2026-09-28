@@ -28,8 +28,8 @@ use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
 
 pub(crate) use crate::engine::annotate_schedule::{
-    GroupPlanError, GroupPlanner, GroupWork, InputPort as GroupPort, Outcome as GroupOutcome,
-    Prepared,
+    GroupPlanError, GroupPlanner, GroupRequest, GroupWork, InputPort as GroupPort,
+    Outcome as GroupOutcome, Prepared,
 };
 pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};

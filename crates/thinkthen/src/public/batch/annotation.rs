@@ -32,6 +32,7 @@ fn plan_error(error: GroupPlanError) -> Error {
         }
         GroupPlanError::Batch(error) => Error::refused(error),
         GroupPlanError::Defect(message) => Error::defect(message),
+        GroupPlanError::Engine(error) => Error::from(error),
     }
 }
 
@@ -229,7 +230,7 @@ where
                 let prepared = annotation_record(&self.set, item.evidence());
                 let pushed = prepared.and_then(|record| {
                     self.planner
-                        .push(&self.set, &record, self.fed)
+                        .push(&self.engine, &self.set, &record, self.fed)
                         .map_err(plan_error)
                 });
                 match pushed {

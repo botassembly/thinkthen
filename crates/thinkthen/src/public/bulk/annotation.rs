@@ -1,53 +1,10 @@
 //! Grouped annotation of one input record.
 
 use super::{Values, evidence};
-use crate::core::{self, Plan};
+use crate::core;
 use crate::engine::facade::{self, Completed};
 use crate::public::error::Error;
 use crate::public::results::{ObservedQuestion, Written};
-
-/// Answer every question of the set for one record.
-pub(super) fn annotated(
-    engine: &facade::Engine,
-    set: &core::QuestionSet,
-    text: &str,
-    cancel: &crate::engine::Cancel<'_>,
-    observing: bool,
-) -> Result<Completed<Values, Error>, Error> {
-    let record = record(set, text)?;
-    let parts = set
-        .groups()
-        .into_iter()
-        .map(|places| Ok((set.group_evidence(&places, &record)?, places)))
-        .collect::<Result<Vec<_>, core::PartError>>()
-        .map_err(|error| match error {
-            core::PartError::Record(error) => Error::usage(error.to_string()),
-            core::PartError::Reading(_) => {
-                Error::defect("a checked question set could not read its parts")
-            }
-        })?;
-    let model = engine.backend().model();
-    let plan = |places: &[usize]| {
-        let part = parts
-            .iter()
-            .find(|(_, held)| held == places)
-            .map(|(part, _)| part.clone())
-            .ok_or(crate::engine::error::Error::Defect(
-                "an annotate group has no part",
-            ))?;
-        let questions = places
-            .iter()
-            .filter_map(|place| set.questions().get(*place));
-        Plan::new(
-            part,
-            model.clone(),
-            questions.map(|named| named.question().clone()).collect(),
-        )
-        .map_err(|_| crate::engine::error::Error::Defect("an annotate group asks nothing"))
-    };
-    let annotation = engine.annotate(set, plan, cancel)?;
-    rendered(set, engine, annotation, observing)
-}
 
 /// Render a row after all its request-aligned group fragments arrive.
 pub(crate) fn rendered(

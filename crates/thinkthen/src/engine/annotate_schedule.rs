@@ -8,7 +8,7 @@ use crate::engine::schedule::{Completed, Input};
 use crate::engine::workers;
 
 mod batching;
-pub(crate) use batching::{GroupPlanError, GroupPlanner, GroupWork};
+pub(crate) use batching::{GroupPlanError, GroupPlanner, GroupRequest, GroupWork};
 
 pub(crate) struct Prepared<S, A, W> {
     pub(crate) seed: S,

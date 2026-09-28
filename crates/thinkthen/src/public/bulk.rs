@@ -7,7 +7,6 @@ use observation::observe_find;
 mod annotate_observation;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
 mod annotation;
-use annotation::annotated;
 pub(crate) use annotation::{record as annotation_record, rendered as render_annotation};
 
 use crate::core::{self, Find, Value, ranking};
@@ -412,31 +411,8 @@ impl Engine {
                 .or(self.batch)
                 .unwrap_or(core::Setting::Max);
             let stop = Stop::begin(options)?;
-            let (engine, set, cancel) =
-                (Arc::clone(&self.inner), questions.0.clone(), stop.shared());
-            if engine.profile().is_none() {
-                return batch::start_annotation(
-                    engine,
-                    set,
-                    records.into_iter(),
-                    stop,
-                    self.most,
-                    setting,
-                );
-            }
-            let worker = Arc::clone(&engine);
-            let observing = stop.observing();
-            let answer: Arc<batch::Answer<_>> =
-                Arc::new(move |text: &str| annotated(&worker, &set, text, &cancel, observing));
-            Ok(batch::start(
-                engine,
-                records.into_iter(),
-                stop,
-                self.most,
-                answer,
-                |item, value: Values| Some(AnnotatedRecord::new(item, value.values, value.json)),
-                observe_annotated,
-            ))
+            let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
+            batch::start_annotation(engine, set, records.into_iter(), stop, self.most, setting)
         })())
     }
 

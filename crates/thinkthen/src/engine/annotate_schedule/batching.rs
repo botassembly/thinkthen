@@ -1,16 +1,27 @@
 //! Bounded, request-aligned planning for annotation groups.
 
 use std::collections::{BTreeMap, VecDeque};
+use std::sync::Mutex;
 
 use crate::core::batch::BatchError;
-use crate::core::{Batch, BatchRecord, GroupBatcher, PartError, Question, QuestionSet, Setting};
-use crate::engine::facade::Engine;
+use crate::core::{
+    Batch, BatchRecord, GroupBatcher, PartError, Plan, Question, QuestionSet, Setting,
+};
+use crate::engine::error::Error;
+use crate::engine::facade::{Engine, PreparedGroup};
+
+pub(crate) enum GroupRequest {
+    Packed {
+        batch: Box<Batch>,
+        records: Vec<BatchRecord>,
+        questions: Vec<Question>,
+    },
+    Legacy(Mutex<Option<PreparedGroup>>),
+}
 
 /// One closed request and the input rows its logical members answer.
 pub(crate) struct GroupWork {
-    pub(crate) batch: Batch,
-    pub(crate) records: Vec<BatchRecord>,
-    pub(crate) questions: Vec<Question>,
+    pub(crate) request: GroupRequest,
     pub(crate) places: Vec<usize>,
     pub(crate) rows: Vec<usize>,
     pub(crate) group: usize,
@@ -22,6 +33,7 @@ pub(crate) enum GroupPlanError {
     Part(PartError),
     Batch(BatchError),
     Defect(&'static str),
+    Engine(Error),
 }
 
 struct Group {
@@ -36,6 +48,7 @@ pub(crate) struct GroupPlanner {
     groups: Vec<Group>,
     ready: BTreeMap<(usize, usize, usize), GroupWork>,
     sequence: usize,
+    setting: Setting,
 }
 
 impl GroupPlanner {
@@ -78,12 +91,14 @@ impl GroupPlanner {
             groups,
             ready: BTreeMap::new(),
             sequence: 0,
+            setting,
         })
     }
 
     /// Validate every selection before adding any group work for this row.
     pub(crate) fn push(
         &mut self,
+        engine: &Engine,
         set: &QuestionSet,
         record: &BatchRecord,
         row: usize,
@@ -95,13 +110,73 @@ impl GroupPlanner {
                 let evidence = set
                     .group_evidence(&group.places, record)
                     .map_err(GroupPlanError::Part)?;
-                Ok(BatchRecord {
+                let selected = BatchRecord {
                     value: evidence.as_json(),
                     evidence,
-                })
+                };
+                let prepared = if engine.profile().is_some() {
+                    let plan = Plan::new(
+                        selected.evidence.clone(),
+                        engine.backend().model().clone(),
+                        group.questions.clone(),
+                    )
+                    .map_err(|_| GroupPlanError::Defect("an annotate group asks nothing"))?;
+                    let prepared = engine
+                        .prepare_group(&plan, group.places.clone())
+                        .map_err(GroupPlanError::Engine)?;
+                    (prepared.chunks.len() > 1).then_some(prepared)
+                } else {
+                    None
+                };
+                Ok((selected, prepared))
             })
             .collect::<Result<Vec<_>, GroupPlanError>>()?;
-        for (group, selected) in selected.into_iter().enumerate() {
+        for (group, (selected, prepared)) in selected.into_iter().enumerate() {
+            self.add(engine, group, selected, prepared, row)?;
+        }
+        Ok(())
+    }
+
+    fn add(
+        &mut self,
+        engine: &Engine,
+        group: usize,
+        selected: BatchRecord,
+        prepared: Option<PreparedGroup>,
+        row: usize,
+    ) -> Result<(), GroupPlanError> {
+        if let Some(prepared) = prepared {
+            let held = self
+                .groups
+                .get_mut(group)
+                .ok_or(GroupPlanError::Defect("an annotate group disappeared"))?;
+            let closed = held.planner.finish().map_err(GroupPlanError::Batch)?;
+            if let Some(batch) = closed {
+                self.queue(group, batch).map_err(GroupPlanError::Defect)?;
+            }
+            let held = self
+                .groups
+                .get_mut(group)
+                .ok_or(GroupPlanError::Defect("an annotate group disappeared"))?;
+            held.planner = GroupBatcher::new(
+                engine.backend().clone(),
+                engine.profile().cloned(),
+                held.questions.clone(),
+                self.setting,
+            )
+            .map_err(GroupPlanError::Batch)?;
+            self.ready.insert(
+                (row, group, self.sequence),
+                GroupWork {
+                    request: GroupRequest::Legacy(Mutex::new(Some(prepared))),
+                    places: held.places.clone(),
+                    rows: vec![row],
+                    group,
+                    sole_group: self.groups.len() == 1,
+                },
+            );
+            self.sequence += 1;
+        } else {
             let held = self
                 .groups
                 .get_mut(group)
@@ -154,9 +229,11 @@ impl GroupPlanner {
         self.ready.insert(
             (first, group, self.sequence),
             GroupWork {
-                batch,
-                records,
-                questions: held.questions.clone(),
+                request: GroupRequest::Packed {
+                    batch: Box::new(batch),
+                    records,
+                    questions: held.questions.clone(),
+                },
                 places: held.places.clone(),
                 rows,
                 group,

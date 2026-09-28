@@ -34,7 +34,7 @@ pub(crate) struct GroupAnswer {
 /// One group's chunks, prepared once, and the question places each chunk asks.
 pub(crate) struct PreparedGroup {
     places: Vec<Vec<usize>>,
-    chunks: Vec<Chunk>,
+    pub(crate) chunks: Vec<Chunk>,
 }
 
 /// One record's named values and details, in set order, with the metadata.
@@ -72,10 +72,26 @@ impl Engine {
         cancel: &Cancel,
     ) -> Result<crate::engine::schedule::Completed<Vec<GroupAnswer>, PublicError>, PublicError>
     {
-        let batch = &work.batch;
+        let super::GroupRequest::Packed {
+            batch,
+            records,
+            questions,
+        } = &work.request
+        else {
+            let super::GroupRequest::Legacy(prepared) = &work.request else {
+                return Err(PublicError::defect("an annotate group lost its request"));
+            };
+            let prepared = prepared
+                .lock()
+                .map_err(|_| PublicError::defect("an annotate preparation was poisoned"))?
+                .take()
+                .ok_or_else(|| PublicError::defect("an annotate preparation ran twice"))?;
+            return Ok(group_completion(
+                vec![self.answer_group(prepared, cancel)?],
+                work.sole_group,
+            ));
+        };
         let places = &work.places;
-        let questions = &work.questions;
-        let records = &work.records;
         let sole_group = work.sole_group;
         let attempted = AtomicU64::new(0);
         match self.ask_batch_with_attempts(batch, cancel, Some(&attempted)) {
