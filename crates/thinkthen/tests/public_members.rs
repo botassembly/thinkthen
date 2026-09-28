@@ -79,6 +79,32 @@ fn a_saved_calibration_name_reaches_the_public_digest_and_warning() {
     assert_eq!(row["meta"]["model"], case["model"]);
 }
 
+#[test]
+fn a_runtime_profile_limit_refuses_the_saved_question_before_sending() {
+    let listener = Listener::answering(|_| Canned::ok("{}")).expect("listener");
+    let question = loaded(r#"{"decide":"Is this a request?","profile":"old"}"#);
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-profile-local")
+        .expect("key")
+        .profile_json(
+            r#"{"schema":"thinkthen.backend-profile/1","name":"new","max_evidence_bytes":1}"#,
+        )
+        .expect("running profile")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let error = engine.details(&question, "two").expect_err("profile limit");
+    assert_eq!(error.kind(), ErrorKind::Usage);
+    assert!(
+        error
+            .to_string()
+            .contains("allows at most 1 evidence bytes")
+    );
+    assert_eq!(listener.count(), 0);
+}
+
 fn message<T: std::fmt::Debug>(result: Result<T, thinkthen::Error>) -> (ErrorKind, String) {
     let error = result.expect_err("a refusal");
     (error.kind(), error.to_string())

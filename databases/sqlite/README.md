@@ -65,6 +65,8 @@ The check rejects another non-`NULL` label. A stored `NULL` can represent a choi
 
 `thinkthen_details(question, text)` returns the command's `--details` line for one text, schema `thinkthen.result/1`. Read a member with `json_extract`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
+The details digest includes a question's saved calibration `profile`. When `thinkthen_profile(json)` selects a different runtime name, `meta.profile_warning` names both values. The selected runtime profile checks limits before sending.
+
 `thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
 ## The engine and its settings

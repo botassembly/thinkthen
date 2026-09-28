@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/question.rs crates/thinkthen/src/public/build
 
 # 0203: Preserve calibration profiles across libraries
 
-Status: building. Owner: Codex. Design accepted; the saved-name public writer slice is under construction. Wrapper and SQL proof remain open.
+Status: candidate under focused verification. Owner: Codex. The saved-name public writer, wrapper routes, selected SQL details adapters and shared fixture are implemented. Fresh code review and landing remain. The three retained DuckDB C API platform packages remain outside this staged Linux C++ parity claim.
 
 ## Outcome
 
@@ -77,6 +77,16 @@ At the earlier main revision, near-cap Rust parents included `public/question.rs
 ## Deferred gaps
 
 No automatic profile discovery, tokenizer estimate, request reshaping beyond the existing limits, threshold recalibration, new model-version pin, new warning channel for bare values, or retroactive rewriting of cached/recorded answers. A saved profile name alone cannot prove that a backend has those limits; when no runtime profile was selected, ADR 0032 emits no mismatch warning. Document that accurately.
+
+## What the build taught us
+
+The public parser retained the core question but discarded `Resolved::profile`; the public details writer then supplied `None` for both digest and warning. One carrier and one shared writer fixed the single-result path. `QuestionSetBuilder` needed an explicit refusal because a member cannot own the set's profile. The R file reader needed to keep the original checked JSON for its per-row fallback. Ruby and R text-only ordering calls needed early refusal; TypeScript already had the refusal but its declarations omitted the accepted key and warning. Python's column route needed a real Polars Series in the proof; a plain list failed at evidence validation and masked the profile check.
+
+Preparation identified the parser, writer, set and wrapper routes. It missed that the first R unreadable-file witness emitted an incidental host warning and that Python's first column witness used the wrong evidence shape. The independently pinned canonical question includes the default `0.5` threshold, and a version key does not belong in a single-question file. Those fixture details were corrected before counting a pass. The C, SQL, Polars, command and language checks now consume one shared saved-name case. Recognize and relate have separate command planners, so their profiled digests and warning metadata received focused command checks rather than an assumption from the single-result writer.
+
+The prior 0157 landing checked only the root source counter. It left 17 of 21 named source counters stale. Quick Fix `qf-settings-source-counters` corrected their inherited baselines before this ticket measured its own growth. The three retained DuckDB C API platform packages still lack the staged Linux C++ settings and calibration parity; 0201 migration remains their prerequisite. Selected proof here does not close that platform work.
+
+The cross-surface command proof also pushed `backend/profile.rs` past its 500-line cap. Moving the new parity case to the existing warning-test child kept both files under the cap and preserved the same assertion. Preparation should have assigned a test home before adding another command case to a near-cap parent.
 
 ## What Ian can overturn
 
