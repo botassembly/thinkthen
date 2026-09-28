@@ -5,7 +5,7 @@ Status: green
 Use a saved question set when every assistant reply needs the same factual checks, failure label, and severity score. One detailed JSON line keeps the case, every probability, and the request that produced each answer.
 
 ```bash
-env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --details \
+env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --batch 1 --details \
   --replay recording --input cases.jsonl \
   | jq -s -c '{rows:length, checks:(.[0].value|keys)}' \
   | mustmatch '{"rows":6,"checks":["complete","correct","failure_kind","grounded","severity"]}'
@@ -17,10 +17,12 @@ Verbs: `annotate`
 
 `cases.jsonl` holds six cases with the request, source, reference answer, assistant answer, and a human verdict. `checks.json` holds three decisions, one choice, and one score. `grounded` sees only `/context` and `/output`. The other four checks share `/input`, `/gold`, and `/output`, so mixed question types ride in one request without exposing the reference to the grounding check.
 
+The saved replies use one record per request. These examples set `--batch 1` to replay those exact requests; the default packs records differently.
+
 ## Prove the disclosure boundary
 
 ```bash
-env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --dry-run \
+env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --batch 1 --dry-run \
   --input cases.jsonl \
   | jq -c '.on' \
   | mustmatch '{"correct":["/input","/gold","/output"],"grounded":["/context","/output"],"complete":["/input","/gold","/output"],"failure_kind":["/input","/gold","/output"],"severity":["/input","/gold","/output"]}'
@@ -32,7 +34,7 @@ env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --dry-run \
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 for run in a b; do
-  env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --details \
+  env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --batch 1 --details \
     --replay recording --input cases.jsonl > "$work/run-$run.jsonl"
 done
 jq -s -c '{rows:length, definition:([.[].meta.questions_sha256]|unique|length), request_groups:([.[0].answers[].request]|unique|length)}' "$work/run-a.jsonl" \
@@ -50,7 +52,7 @@ The comparison pairs the six records once, then compares `correct` and every oth
 ```bash
 work=$(mktemp)
 trap 'rm -f -- "$work"' EXIT
-env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --details \
+env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --batch 1 --details \
   --replay recording --input cases.jsonl \
   > "$work"
 jq -n --argjson truth '{"correct":"/input/human_correct"}' \

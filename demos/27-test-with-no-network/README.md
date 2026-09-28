@@ -96,7 +96,8 @@ set -euo pipefail
 said=$(env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --quiet --replay recording/ < vague.txt 2>&1 >/dev/null) && rc=0 || rc=$?
-printf 'rc=%s %s\n' "$rc" "$said" | mustmatch like "rc=5 thinkthen: the replay folder holds no entry named"
+printf 'rc=%s %s\n' "$rc" "$said" \
+  | mustmatch 'rc=5 thinkthen: the decide request for one document: the replay folder holds no entry named `dea1ce71382c9fcdd7d5264af9c50a829560117db81a6df8cded39c164fb25ae.json`; the entry name covers the backend interface, address, and request'
 ```
 
 Record the missing case and the test passes again. A recording is grown one case at a time.
