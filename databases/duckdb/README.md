@@ -8,7 +8,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | --- | --- |
 | `thinkthen_decide(question, text)` | `BOOLEAN`; `NULL` is "not sure" |
 | `thinkthen_probability(question, text)` | `DOUBLE`, the yes probability |
-| `thinkthen_choose(question, text, options)` | `VARCHAR`, or `NULL` when the choice is not sure (below the cut or an exact tie); `NULL` arguments also propagate `NULL` |
+| `thinkthen_choose(question, text, options)` | `VARCHAR`, or `NULL` when the choice is not sure (below the cut or an exact tie) |
 | `thinkthen_score(question, text, levels)` | `DOUBLE`, the position from 0 for the first level |
 | `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
 | `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
@@ -44,7 +44,7 @@ SELECT id, CAST(thinkthen_choose('Which team owns this?', body, ['billing', 'shi
 FROM tickets;
 ```
 
-The cast refuses a label outside the enum. With non-`NULL` arguments, `choose` returns `NULL` when the winner falls below the cut or the top two options tie exactly. A SQL `NULL` argument also propagates `NULL` without a judgment. The cast and column admit either `NULL`. A failed ThinkThen call raises its named error and does not produce a row to cast. Do not catch that error and store `NULL` as if it were uncertainty. This is a constraint on the stored answer, not a change to the function's return type.
+The cast refuses a label outside the enum. A stored `NULL` can represent a choice below the cut or an exact tie. The cast and column admit `NULL`; input-`NULL` behavior follows the function's argument rules. A failed ThinkThen call raises its named error and does not produce a row to cast. Do not catch that error and store `NULL` as if it were uncertainty. This is a constraint on the stored answer, not a change to the function's return type.
 
 ## Run facts
 

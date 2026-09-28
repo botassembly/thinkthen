@@ -47,7 +47,7 @@ SELECT id, thinkthen_choose('Which team owns this?', body, ARRAY['billing', 'shi
 FROM tickets;
 ```
 
-The domain rejects a different non-`NULL` label. With non-`NULL` arguments, `choose` returns `NULL` when the winner falls below the cut or the top two options tie exactly. A SQL `NULL` argument also propagates `NULL` without a judgment. The domain permits either `NULL`. A failed ThinkThen call raises its named error; do not replace the error with `NULL` merely to pass the domain. The constraint belongs to the stored column, and the function keeps its existing `text` result.
+The domain rejects a different non-`NULL` label. A stored `NULL` can represent a choice below the cut or an exact tie. The domain permits `NULL`. With a valid question, `NULL` evidence also returns SQL `NULL` without a judgment; a `NULL` question instead raises `usage` during question parsing. A failed ThinkThen call raises its named error; do not replace the error with `NULL` merely to pass the domain. The constraint belongs to the stored column, and the function keeps its existing `text` result.
 
 ## Run facts
 
