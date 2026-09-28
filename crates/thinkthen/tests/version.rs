@@ -259,11 +259,11 @@ fn the_long_help_names_connections_conflicts_paid_requests_and_models() {
         ),
         (
             "decide",
-            " A folder that already holds an answer stops at exit 5 when the backend answers that request differently.\n",
+            " A different fresh answer exits 5 without printing it; the old entry stays.",
         ),
         (
             "recognize",
-            "\n\nEach record makes paid requests: a detection question for every word, a kind question for every word when two or more kinds are given, and relation questions when rules are given. --dry-run prints the exact requests for the first record.\n\n",
+            "\n\nEach record can make paid requests in three steps: one boundary question per text piece; one kind question per found name when kinds are given, plus an edge question when its span can change; then questions for the relation pairs allowed by rules. --dry-run prints the first record's exact boundary requests and upper bounds for later requests.\n\n",
         ),
         (
             "check",
