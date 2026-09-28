@@ -22,6 +22,8 @@ Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JS
 
 `rank` holds every record until the input ends, because a final order needs the whole set. An endless stream has to be cut into windows upstream.
 
+It also prints no order while an earlier record or batch is still waiting for a slow reply or retry. Later answers may be ready, but `rank` needs every answer before it can sort. [records.md](records.md) explains the ordered window, attempt timeout and absence of a whole-run deadline.
+
 ## Options
 
 | Option | Meaning | Default |
