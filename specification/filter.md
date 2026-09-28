@@ -65,6 +65,8 @@ thinkthen filter 'This mentions an open action.' --threshold 0.9 < notes.txt
 thinkthen filter 'It appears on the album Abbey Road.' --threshold 0.7 --context catalog.txt < songs.txt
 ```
 
+Ticket 0172's [live record](../sdlc/records/2026-09-27-0172-shared-context-build.md) used `decide` to expose all 306 answers for audit under this question and cut. Each of three shared-catalog runs sent one request, scored 306 right with no false yeses or misses, and reported 19,634 input and 5,710 output tokens. This measures the shared request form, not a separate `filter` run.
+
 ```sh
 thinkthen decide 'This reports a payment failure.' --jsonl --field /body --details < tickets.jsonl |
   jq -c 'select(.answer.probability < 0.9)'

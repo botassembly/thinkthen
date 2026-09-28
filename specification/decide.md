@@ -77,6 +77,8 @@ thinkthen decide 'Does this report a payment failure?' --jsonl --field /body --d
 thinkthen decide 'It appears on the album Abbey Road.' --lines --context catalog.txt < songs.txt
 ```
 
+Ticket 0172's [live record](../sdlc/records/2026-09-27-0172-shared-context-build.md) measured this question with a shared catalog on 306 Beatles titles. Each of three runs sent one request, scored 306 right with no false yeses or misses, and reported 19,634 input and 5,710 output tokens. This result describes that catalog and build.
+
 ## Reading the exit code
 
 The help shows a `case` block on the named exit code. It separates a no from a not sure answer and from a failure, and a script that acts on the answer reads all four outcomes.

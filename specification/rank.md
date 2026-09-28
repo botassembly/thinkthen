@@ -59,6 +59,8 @@ thinkthen rank 'This helps diagnose the login timeout.' --jsonl --field /body --
 thinkthen rank 'It appears on the album Abbey Road.' --context catalog.txt < songs.txt
 ```
 
+Ticket 0172's [live record](../sdlc/records/2026-09-27-0172-shared-context-build.md) used `decide` to expose all 306 answers for audit under this question and a 0.7 cut. Each of three shared-catalog runs sent one request, scored 306 right with no false yeses or misses, and reported 19,634 input and 5,710 output tokens. This measures the shared request form, not a separate `rank` order.
+
 ```sh
 thinkthen filter 'This describes a reproducible bug.' --jsonl --field /body < issues.jsonl |
   thinkthen rank 'This affects many users.' --jsonl --field /body --top 10
