@@ -1,0 +1,5 @@
+# 0243 Rust choice descriptions design review
+
+Status: **Accepted design, not implemented.** A fresh independent Sol Medium reviewer read pushed `7d8664319209dbc187beef6c52a1913c38b5fa7a` in read-only mode, session `01a0e8fe-a8e2-7561-9253-89fd983100b6`, and returned **ACCEPT** with no required correction. The exact prompt, session log and final verdict are under `target/codex-builds/0243/design-review/` in the codex1 lane. No build or test ran during review.
+
+The reviewer checked the existing `Listing::next` selection point, default trait method compatibility, `Description` constructors, loaded map/null binding and the reachable Usage refusal for an extra or reordered mapped label. It accepted the downstream compile and listener proof plan. Its one implementation proof detail is to pin old bare-choice request bytes and digest from the prechange behavior, not derive the expected result from new code; the ticket now says this explicitly. The review did not authorize source edits or close J4. After the coordinator grants exact runtime claims, a separate fresh code/API review must inspect the public macro/trait implementation and measured ceiling.
