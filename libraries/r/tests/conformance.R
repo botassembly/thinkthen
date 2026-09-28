@@ -29,8 +29,7 @@ unreachable <- c(
   "20-usage-fault" = "an injection point inside the engine, which no R call reaches",
   "22-local-fault" = "an injection point inside the engine, which no R call reaches",
   "23-cancelled-fault" = "R raises its own interrupt; tests/interrupt.R proves the batch stop",
-  "25-defect-fault" = "an injection point inside the engine, which no R call reaches",
-  "30-local-question-file" = "the R verbs take no decide question file"
+  "25-defect-fault" = "an injection point inside the engine, which no R call reaches"
 )
 
 sha <- function(url, request) {
@@ -96,7 +95,7 @@ run_case <- function(case, served) {
   file <- tempfile(fileext = ".json")
   asked <- case$question %||% case$question_set
   writeLines(jsonlite::toJSON(asked, auto_unbox = TRUE, digits = NA), file)
-  if (!is.null(case$expect$error)) return(refused(case))
+  if (!is.null(case$expect$error)) return(refused(case, file))
   switch(case$verb,
     decide = , choose = , score = , tag = {
       question <- thinkthen:::.tt_built(asked)
@@ -178,12 +177,20 @@ run_case <- function(case, served) {
 }
 
 # An error case: the kind the R call raises.
-refused <- function(case) {
+refused <- function(case, file) {
   question <- function() thinkthen:::.tt_built(case$question)
   kind <- switch(case$id,
     "21-backend-fault" = kind_of(tt_decide(question(), "any text")$value),
     "24-deadline-fault" = kind_of(tt_decide(question(), "any text", deadline = 0)$value),
     "29-usage-json-text" = kind_of(tt_decide(question(), case$evidence)$value),
+    "30-local-question-file" = {
+      before <- tt_usage()$requests_sent
+      error <- tryCatch(tt_question(file = file), thinkthen_error = function(e) e)
+      check("a bad named question is a non-retryable local error",
+            inherits(error, "thinkthen_local") && isFALSE(error$retryable))
+      same("question-file sends", tt_usage()$requests_sent - before, 0L)
+      error$kind
+    },
     "31-usage-rank-blank-question" = kind_of(tt_rank(case$question$decide, strsplit(case$evidence, "\n")[[1]])$value),
     stop("no R call for this error case", call. = FALSE))
   same("kind", kind, case$expect$error$kind)
