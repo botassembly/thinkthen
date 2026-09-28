@@ -7,7 +7,7 @@
 
 Ian's original outcome says library results carry `facts` on every call, with no setting and no second call. ADR 0089 implements immutable Rust `Call<T>` facts and final `Batch::facts()`. Ticket 0230 puts `value` and `facts` in each successful C JSON-door reply and keeps started-failure facts in `thinkthen_error_facts_json`. The four typed C families, each with plain and `_opts` spelling, still discard success facts. The 0.1 C ABI freezes the two-field `thinkthen_answer`, exported argument types and six error codes. Existing C, Zig, Swift and Objective-C consumers call typed symbols, so changing those symbols in place would break real callers.
 
-## Alternatives and proposed interpretation
+## Alternatives and decision
 
 | Route | Benefit | Limit |
 | --- | --- | --- |
@@ -16,9 +16,9 @@ Ian's original outcome says library results carry `facts` on every call, with no
 | Route typed callers through the existing `thinkthen_call` JSON door | Already returns call-owned facts in one call; flexible callers can use it now. | Requires input JSON construction, response parsing and consumer migration. It is not a drop-in typed hot path or a fix for existing typed symbols. |
 | Grow `thinkthen_answer` or append parameters to the old exports | Direct results on the old names. | Breaks compiled callers and the frozen struct/signature ABI. Declined. |
 
-**Recommend for review:** add the owned-output symbols and state the legacy exception explicitly. The exception is limited to the eight pre-0.1 typed exports retained for binary compatibility; it is not a finding that the original every-call criterion is fully met. An issue owner must accept the compatibility interpretation before closing the typed C portion. If the reviewer rejects it, keep the issue open and return the API trade-off; do not silently use a process total or borrowed last-result accessor as equivalent.
+**Decision:** add the owned-output symbols and explicitly retain the old eight symbols as bare compatibility forms. The coordinator accepts that narrow legacy exception, as recorded below. It is not a claim that old calls satisfy the literal every-call criterion. The original broader issue retains its other unmatched criteria; a process total or borrowed last-result accessor is not an equivalent substitute.
 
-## Proposed public contract
+## Public contract
 
 Add `thinkthen_decide_with_facts`, `thinkthen_decide_with_facts_opts`, `thinkthen_decide_many_with_facts`, `thinkthen_decide_many_with_facts_opts`, `thinkthen_recognize_with_facts`, `thinkthen_recognize_with_facts_opts`, `thinkthen_relate_with_facts`, and `thinkthen_relate_with_facts_opts`. Each keeps its existing counterpart's arguments and result outputs, followed by `char **facts_json, size_t *facts_len`. A plain spelling delegates to its `_opts` twin with `THINKTHEN_NO_DEADLINE` and a null token. The new outputs are required even for an empty successful batch; its `facts.records` is zero and it sends nothing. The result and facts strings, where returned, are independent owned NUL-terminated allocations. Their byte lengths exclude the terminator. The caller frees every returned string exactly once with `thinkthen_free_string`. No borrowed pointer crosses a successful return.
 
