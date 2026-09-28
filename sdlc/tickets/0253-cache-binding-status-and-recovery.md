@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.m
 
 # 0253: Show cache binding and teach safe recovery
 
-Status: proposed design for fresh independent High review; no runtime or public documentation is claimed. The issue remains open and post-0.1. [Preflight](../records/0253-cache-binding-preflight.md) traces main `4fc01f40`, source boundaries, states and proof. Root owns implementation claims and issue movement.
+Status: fresh independent High design review accepted `b88799641d2a95b70dc4364abfc2e88399d08b48`. The coordinator approves implementation under the Lanes claim. Public documentation remains held. Ian can overturn these routine choices within the original outcome. The issue remains open and post-0.1. [Preflight](../records/0253-cache-binding-preflight.md) traces main `4fc01f40`, source boundaries, states and proof. Root owns implementation claims and issue movement.
 
 ## Outcome
 
@@ -28,7 +28,7 @@ The existing marker reader's plain `File::open` can follow a replacement symlink
 
 The refusal must direct users to stop **all** users of that folder before moving it; otherwise path replacement can split active directory/digest lock inodes. Moving the whole folder preserves old entries and marker together. Pruning or deleting only the marker is not recovery. Use one fixed message and keep the requested URL already checked for key collision; do not print the bound URL. The preflight gives proposed exact words and later specification copy. No source or public-doc file is claimed for this design pass.
 
-After implementation and focused proof of **both** status and recovery wording, root may close only the named source issue. Neither the accepted register 10 disposition nor broader no-touch claims change. Before building, obtain High design acceptance and source claims; after building, record actual file growth, deleted/retained tests and any revised assumptions here.
+After implementation and focused proof of **both** status and recovery wording, root may close only the named source issue. Neither the accepted register 10 disposition nor broader no-touch claims change. The High design acceptance and source claims are recorded on main. After building, record actual file growth, deleted/retained tests and any revised assumptions here.
 
 ## What the build taught us
 
