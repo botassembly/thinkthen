@@ -1,6 +1,6 @@
 # Site Python examples need the approved Call value
 
-Status: open, required before public 0.1. Owner: the marketing lead under sdlc/planning/ownership.md. Ticket0214's approved result contract is implemented in candidate79723fd2, integratedc9579b02, and awaits fresh code review. This issue records the required consumer migration before that contract ships; it does not claim the candidate is landed.
+Status: open, required before public 0.1. Owner: the marketing lead under sdlc/planning/ownership.md. Ticket 0214's approved result contract landed at `1ab24371` after High acceptance of integrated source `dfc1b5fb`. This issue records the required consumer migration before public release.
 
 Every successful Python asking method and module function returns Call with value, facts and details. question() and usage() retain their existing local contracts. The library's examples have migrated, but these thirteen site files still consume the old bare values on main3b96e720:
 
