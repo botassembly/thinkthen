@@ -1,5 +1,5 @@
 ---
-opens: sdlc/tickets/0232-macos-sqlite-checks.md sdlc/records/0226-macos-arm64-package-proof.md databases/sqlite/setup.sh databases/sqlite/check.sh databases/sqlite/tests/host_sqlite.sh databases/sqlite/tests/helper.py databases/sqlite/tests/test_schema.py databases/sqlite/tests/load_probe.c databases/sqlite/amalgamation-3490000.sha256
+opens: sdlc/tickets/0232-macos-sqlite-checks.md sdlc/records/0226-macos-arm64-package-proof.md databases/sqlite/setup.sh databases/sqlite/check.sh databases/sqlite/build.rs databases/sqlite/tests/host_sqlite.sh databases/sqlite/tests/helper.py databases/sqlite/tests/test_schema.py databases/sqlite/tests/load_probe.c databases/sqlite/amalgamation-3490000.sha256 sdlc/scripts/release-smoke
 ---
 
 # 0232: Check installed SQLite packages on macOS ARM64
@@ -20,11 +20,13 @@ Keep the existing `test_schema.py` functions `test_pinned_host_keeps_a_successfu
 
 `check.sh` selects the `.dylib` archive member and the configured Python 3.10+ executable on macOS. It passes the two probe paths into the selected `test_schema.py` assertions. `helper.py` chooses the `.dylib` default in source mode; installed mode continues to use the explicit unpacked archive path. Do not depend on `LD_LIBRARY_PATH` or `DYLD_LIBRARY_PATH` to change the managed Python's built-in SQLite. Avoid writing a second test harness or duplicating the ordinary examples and conformance.
 
+The built macOS SQLite dylib currently has an absolute `LC_ID_DYLIB` under the builder's home. The packaged bytes contain that path once, even though macOS `/usr/bin/strings` does not show load-command strings. Give the cdylib a relative install name through a narrow `databases/sqlite/build.rs`, following the C binding's existing build script, and inspect the packaged Mach-O ID plus raw bytes. `release-smoke` already scans unpacked files with byte-oriented `grep -rlaF`, so no new scan is needed. Its checksum helper selects M5's `/sbin/sha256sum` and then calls unsupported `-c`; choose a hash verifier that actually supports checking on each host. Keep the Linux archive verification working.
+
 ## Evidence and limits
 
 The [0226 M5 record](../records/0226-macos-arm64-package-proof.md) holds the pushed archive hashes and focused source outcomes. An exploratory native C probe at `/tmp/thinkthen-m5-sqlite-load-probe.c`, compiled directly with checked 3.50.0 and 3.49.0 `sqlite3.c`, loaded the packaged dylib. At 3.50.0 it returned success, zero requests, later `7`, and residency `1`. At 3.49.0 it returned the exact floor refusal, later `7`, and residency `1`. The installed CLI built from each source independently showed the same load and later-call results. The M5's observed failed-load residency does not mean the extension explicitly pins a failed load; no pin is proposed. The packaged dylib has a local `std::panicking::HOOK` symbol and ordinary ARM64 Mach-O dylib flags. Recheck the exact package through the maintained driver after the checker lands; do not infer universal macOS loader behavior from one host.
 
-The smallest reviewable validation is: hash-check both source trees; compile the two native probes; run the selected installed `test_schema.py` cases; run installed `examples.py` and `conformance.py`; run focused formatting, script checks and affected ratchets. Run the accepted SQLite worker child tests only if implementation changes that source, which this ticket does not propose. Preserve exact archive SHA and host versions in the build record. macOS Intel, Linux ARM64, retained DuckDB C API packages, and other binding panic issues remain outside this ticket.
+The smallest reviewable validation is: hash-check both source trees; compile the two native probes; run the selected installed `test_schema.py` cases; run installed `examples.py` and `conformance.py`; inspect the repacked Mach-O ID and raw home-path scan; run focused formatting, script checks and affected ratchets. Exercise the release checksum helper on the two archives without a broad release smoke. Run the accepted SQLite worker child tests only if implementation changes that source, which this ticket does not propose. Preserve exact archive SHA and host versions in the build record. macOS Intel, Linux ARM64, retained DuckDB C API packages, and other binding panic issues remain outside this ticket.
 
 ## What the build taught us
 
