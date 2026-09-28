@@ -134,7 +134,7 @@ fn schedule<V: Send + 'static>(
     let mut relay = None;
     let ended = guarded(|| {
         let outcome = engine.records(
-            false,
+            crate::engine::schedule::RecordFlow::Streaming,
             cancel,
             |asks: Receiver<()>, port| {
                 let _sent = sender.send(Event::Port(port));

@@ -1,6 +1,6 @@
 # `rank --top` holds every record it will never print
 
-Status: Open. Filed 2026-09-26 by the coordinator after a read-only review of how each command uses memory on long files.
+Status: Closed by ticket 0220, reviewed runtime `a8fb831d`, final record `970971e8`. Filed 2026-09-26 by the coordinator after a read-only review of how each command uses memory on long files.
 
 ## Problem
 
@@ -18,3 +18,7 @@ With `--top N`, `rank` keeps only the N best rows seen so far. A row that cannot
 ## Not in scope
 
 Ranking without `--top` still holds every record. A bound there needs the records written somewhere other than memory, and no demo needs that yet.
+
+## Resolution
+
+The top-N output sink keeps at most N winning rows and the held scheduler limits completed, un-emitted batches to the configured jobs window. Stable ties, completed finite-input output and accurate stopped metadata remain. Focused edge and acknowledged-stall proof passed independent High review. The bound counts rows; it does not promise fixed RSS or unchanged speculative sends and timed pipe cuts. See [the build record](../../records/0220-build.md).
