@@ -4,7 +4,7 @@ opens: sdlc/tickets/0224-sql-group-find.md sdlc/records/0224-sql-find-preflight.
 
 # 0224: Find one best unit from an ordered SQL group
 
-Status: design accepted at `e648e35f` by independent review, with Ian's recommended SQL spellings approved in the [current work plan](../planning/work-plan-2026-09-27.md). The SQLite-first implementation is pushed at `785c5e7e` after merging main `dd9d7758`. Its exact installed Linux x86-64 package and selected proof are recorded in the [build record](../records/0224-sql-find-build.md); this is a candidate for new independent native/host review, not a landed or whole-ticket result. The [issue](../issues/2026-09-27-sql-find-is-missing-from-three-databases.md) stays open until PostgreSQL and all DuckDB packages also pass. ADR 0096's older “awaits Ian” wording is historical and superseded by the plan's approval.
+Status: **SQLite slice complete; PostgreSQL and DuckDB remain open.** Fresh High code review accepted SQLite candidate `d482ed6a630271fdf71ae7fb7cde115dae392a6a`, including independent installed cases 18/19 and edge checks. The coordinator integrated unchanged SQLite runtime and focused compilation. Ian already approved ADR 0096; the remaining hosts follow the same accepted contract. See the [SQLite build record](../records/0224-sql-find-build.md) and [review](../records/0224-sqlite-code-review.md). This is not whole-ticket or new-platform completion.
 
 ## Outcome and retained behavior
 

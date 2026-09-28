@@ -23,3 +23,7 @@ SQLite `cargo fmt --check`, strict offline `cargo clippy --all-targets --all-fea
 ## Remaining review and targets
 
 New review should inspect SQL type/null/error safety, `Indexed` lifetime and mapping, strict none tie, one-worker cancellation and process admission, and the installed request-body capture/digest route. This record proves one Linux SQLite target at the stated source and hashes only. PostgreSQL, DuckDB Linux x86-64 and the retained Linux ARM64/Apple C API packages, plus actual platform release criteria, remain separate work. Scalar throughput remains open.
+
+## Coordinator integration
+
+Fresh High review accepted `d482ed6a` and independently repeated the selected installed check with the recorded archive. The coordinator integrated unchanged SQLite runtime/tests with newer PostgreSQL and shared policy work, measured root Rust at 94,593, and passed focused offline SQLite compilation. The inherited five policy failures are separately fixed by accepted Quick Fix `10628785`; they are no longer a blocker on main. This closes the SQLite host slice only.
