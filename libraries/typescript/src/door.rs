@@ -13,7 +13,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use serde_json::{Map, Value, json};
 use thinkthen::{
     BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, Facts,
-    Question,
+    Question, Recognize, Relate,
 };
 
 /// The most milliseconds a deadline takes: 4,294,967,295 seconds (ADR 0041).
@@ -94,23 +94,45 @@ pub(crate) fn guarded(body: impl FnOnce() -> Answered) -> String {
 /// Return the original validated JSON as an envelope for a named question.
 pub(crate) fn question_file(path: &str) -> String {
     guarded(|| {
-        const LIMIT: u64 = 1_048_576;
-        let file = std::fs::File::open(path)
-            .map_err(|_| Failure::local("the question file could not be read"))?;
-        let mut bytes = Vec::new();
-        file.take(LIMIT + 1)
-            .read_to_end(&mut bytes)
-            .map_err(|_| Failure::local("the question file could not be read"))?;
-        if bytes.len() as u64 > LIMIT {
-            return Err(Failure::local("the question file is too large"));
-        }
-        let source = String::from_utf8(bytes)
-            .map_err(|_| Failure::local("the question file is not UTF-8"))?;
+        let source = bounded_file(path, "question")?;
         Question::from_json(&source)
             .map_err(|_| Failure::local("the question file has invalid question content"))?;
         serde_json::to_string(&source)
             .map_err(|_| Failure::defect("the question could not be encoded"))
     })
+}
+
+/// Validate one named recognition or relation plan and retain its source.
+pub(crate) fn plan_file(path: &str, verb: &str) -> String {
+    guarded(|| {
+        let source = bounded_file(path, "plan")?;
+        match verb {
+            "recognize" => {
+                Recognize::from_json(&source)
+                    .map_err(|_| Failure::local("the plan file has invalid plan content"))?;
+            }
+            "relate" => {
+                Relate::from_json(&source)
+                    .map_err(|_| Failure::local("the plan file has invalid plan content"))?;
+            }
+            _ => return Err(Failure::usage("the plan file needs recognize or relate")),
+        }
+        serde_json::to_string(&source).map_err(|_| Failure::defect("the plan could not be encoded"))
+    })
+}
+
+fn bounded_file(path: &str, role: &str) -> Result<String, Failure> {
+    const LIMIT: u64 = 1_048_576;
+    let unreadable = || Failure::local(format!("the {role} file could not be read"));
+    let file = std::fs::File::open(path).map_err(|_| unreadable())?;
+    let mut bytes = Vec::new();
+    file.take(LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|_| unreadable())?;
+    if bytes.len() as u64 > LIMIT {
+        return Err(Failure::local(format!("the {role} file is too large")));
+    }
+    String::from_utf8(bytes).map_err(|_| Failure::local(format!("the {role} file is not UTF-8")))
 }
 
 /// The binding's one panic guard: a panic in `body` becomes `defect`, so no

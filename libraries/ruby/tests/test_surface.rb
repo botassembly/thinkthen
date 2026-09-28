@@ -3,11 +3,53 @@
 # Every verb's Ruby shape through the real engine on the generic arm, which
 # gives the first option, level, or yes 0.9 and shares the rest.
 require "minitest/autorun"
+require "digest"
 require_relative "backend"
 
 class TestSurface < Minitest::Test
   def run_child(script, arm: "generic")
     TestBackend.run(script, arm: arm)
+  end
+
+  def test_named_recognition_and_relation_plans_retain_source_model_and_bounded_answers
+    recognition = '{"version":1,"recognize":{"kinds":{"person":"A person"},"relations":[{"name":"knows","source":"person","target":"person","reads":"knows","either":false}]},"threshold":0.95,"relation_threshold":0.65,"model":"fixture-recognize-model","profile":"recognize-calibration"}'
+    relation = '{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization","reads":"works for","either":false}]},"threshold":0.95,"model":"fixture-relate-model","profile":"relate-calibration"}'
+    TestBackend.with(<<~RUBY, arm: "arm/full/capture") do |backend, child, _root|
+      first = File.join(ENV.fetch("HOME"), "recognize.json")
+      second = File.join(ENV.fetch("HOME"), "relate.json")
+      File.write(first, #{recognition.inspect})
+      File.write(second, #{relation.inspect})
+      native = T.const_get(:Native)
+      source = [native.plan_file(first, "recognize") == #{recognition.inspect},
+                native.plan_file(second, "relate") == #{relation.inspect}]
+      engine = T::Engine.new(model: "engine-default-0252", cache: false)
+      recognized = engine.recognize("Ana Bob", file: first)
+      related = engine.relate([["Ana", "person"], ["Acme", "organization"]], file: second)
+      say [source, recognized.value.entities.size, recognized.value.relations.size, related.value.size,
+           recognized.details.map { |detail| detail.fetch(:model) },
+           related.details.map { |detail| detail.fetch(:model) }, related.details.first.fetch(:question_sha256)]
+      hear
+      inline_names = engine.recognize("Ana Bob", kinds: %w[person])
+      inline_edges = engine.relate([["Ana", "person"], ["Acme", "organization"]], relations: %w[works_for=person:organization])
+      say [inline_names.value.entities.size, inline_edges.value.size]
+    RUBY
+      observed = child.hear
+      assert_equal [[true, true], 0, 0, 0,
+                    ["fixture-recognize-model"] * 3, ["fixture-relate-model"],
+                    "6a7c109d0897d85c579046930f83ec063b51b526e1155b42c092b627a12e6fda"], observed
+      bodies = backend.capture
+      assert_equal %w[500ade25b0ef5826b8823bca242b4540dd1d8d0a061efc37457011e3f33aae4b
+                      3745ebe527887293996e6cc7d1bc12e94b7fec31f2ed42ef6d4e3141da445f28
+                      526b75c58f1c5921c7b313c2c059c6622d8926ce167c129d9ee9b36fc259480e],
+                   bodies.first(3).map { |body| Digest::SHA256.hexdigest(body) }
+      assert_equal %w[fixture-recognize-model fixture-recognize-model fixture-relate-model],
+                   bodies.first(3).map { |body| JSON.parse(body).fetch("model") }
+      child.tell
+      assert_equal [1, 2], child.hear, "the default cut admits the same generic answers"
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 6, backend.count, "the two named plans send three requests before inline calls"
+    end
   end
 
   def test_the_single_verbs_answer_in_their_ruby_shapes

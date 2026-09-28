@@ -61,6 +61,11 @@ module TestBackend
       Integer(@out.gets)
     end
 
+    def capture
+      order("capture")
+      JSON.parse(@out.gets).fetch("bodies")
+    end
+
     # The count once it reads at least n, or at 5 s.
     def wait(count)
       order("wait #{count}")

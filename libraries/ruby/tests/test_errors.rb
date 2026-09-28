@@ -94,6 +94,48 @@ class TestErrors < Minitest::Test
     assert_equal 0, count
   end
 
+  def test_named_plans_refuse_unsafe_sources_and_mixed_inline_options_without_sends
+    lines, count = TestBackend.run(<<~RUBY)
+      folder = ENV.fetch("HOME")
+      marker = "SYNTHETIC_PRIVATE_MARKER_0252"
+      paths = %w[missing unknown wrong large utf8 malformed relation-unknown].map { |name| File.join(folder, "\#{name}.json") }
+      File.write(paths[1], JSON.generate({ version: 1, recognize: { kinds: { person: "Person" } }, marker => 1 }))
+      File.write(paths[2], '{"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person","reads":"knows"}]}}')
+      File.binwrite(paths[3], "x" * 1_048_577)
+      File.binwrite(paths[4], [255].pack("C"))
+      File.write(paths[5], '{"version":')
+      File.write(paths[6], JSON.generate({ version: 1, relate: { relations: [{ name: "knows", source: "person", target: "person" }] }, marker => 1 }))
+      seen = paths.map do |file|
+        begin
+          T.recognize("Ana", file: file)
+          "accepted"
+        rescue T::Error => error
+          [error.kind, error.retryable, error.message.include?(file) || error.message.include?(marker)]
+        end
+      end
+      begin
+        T.relate([["Ana", "person"]], file: paths[6])
+        seen << "accepted"
+      rescue T::Error => error
+        seen << [error.kind, error.retryable, error.message.include?(paths[6]) || error.message.include?(marker)]
+      end
+      [-> { T.recognize("Ana", file: paths[2], kinds: %w[person]) },
+       -> { T.relate([["Ana", "person"]], file: paths[2], relations: %w[knows]) },
+       -> { T.recognize("Ana", file: [255].pack("C")) },
+       -> { T.relate([["Ana", "person"]], file: 4) }].each do |call|
+        begin
+          call.call
+          seen << "accepted"
+        rescue T::Error => error
+          seen << [error.kind, error.retryable]
+        end
+      end
+      say seen
+    RUBY
+    assert_equal [["local", false, false]] * 8 + [["usage", false]] * 4, lines.fetch(0)
+    assert_equal 0, count
+  end
+
   def test_no_message_or_inspect_line_holds_the_key_or_the_address_credentials
     lines, count, errors = TestBackend.run(<<~RUBY)
       base = ENV.fetch("THINKTHEN_BASE_URL").delete_suffix("/generic/v1")

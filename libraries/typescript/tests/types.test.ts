@@ -19,6 +19,10 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const refund = tt.question({ decide: 'Does the customer ask for a refund?', threshold: [0.2, 0.8] });
   const second: boolean | null = (await tt.decide(refund, 'I was charged twice. Can you fix this?')).value;
   const fromFile: tt.Question = tt.questionFile('question.json');
+  const recognition = tt.recognize('Ana Bob', { file: 'recognize.json' });
+  const relation = tt.relate([{ name: 'Ana', kind: 'person' }], { file: 'relate.json' });
+  void recognition;
+  void relation;
   const fileAnswer: tt.Answer = (await tt.decide(fromFile, text)).value;
   void fileAnswer;
   const level: number = (await tt.score('How urgent?', text, { levels: ['low', 'mid', 'high'] })).value;

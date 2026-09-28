@@ -108,10 +108,18 @@ function builtQuestion(source) {
 
 /** Load one named local question; ordinary strings remain literal questions. */
 function questionFile(path) {
+  return builtQuestion(opened(native.questionFile(filePath(path, 'questionFile'))));
+}
+
+function planFile(path, verb) {
+  return opened(native.planFile(filePath(path, `${verb} file`), verb));
+}
+
+function filePath(path, label) {
   if (typeof path !== 'string' || path.length === 0 || !path.isWellFormed() || path.includes('\0')) {
-    throw usageError('questionFile takes a valid text path');
+    throw usageError(`${label} takes a valid text path`);
   }
-  return builtQuestion(opened(native.questionFile(path)));
+  return path;
 }
 
 // The ruled shape of 2026-09-21: the last object carries the question's
@@ -126,8 +134,8 @@ const QUESTION_KEYS = {
   tag_many: ['labels'],
   rank: ['top'],
   find: ['none'],
-  recognize: ['kinds', 'relations', 'threshold', 'relationThreshold'],
-  relate: ['relations', 'either', 'threshold'],
+  recognize: ['kinds', 'relations', 'threshold', 'relationThreshold', 'file'],
+  relate: ['relations', 'either', 'threshold', 'file'],
 };
 
 function splitLast(verb, last) {
@@ -261,6 +269,10 @@ function utf16(text) {
 }
 
 function recognizeSpec(inputs) {
+  if (has(inputs, 'file')) {
+    if (Object.keys(inputs).length !== 1) throw usageError('recognize file takes no inline plan options');
+    return planFile(inputs.file, 'recognize');
+  }
   const kinds = has(inputs, 'kinds') ? inputs.kinds : [];
   if (!Array.isArray(kinds) && !isObject(kinds)) throw usageError('options.kinds is an array or object');
   if (Array.isArray(kinds) && !kinds.every((kind) => typeof kind === 'string')) throw usageError('options.kinds is an array of names');
@@ -283,6 +295,10 @@ function recognizeSpec(inputs) {
 
 // A rule is a name, which relates any kind to any kind, or "name=source:target".
 function relateSpec(inputs) {
+  if (has(inputs, 'file')) {
+    if (Object.keys(inputs).length !== 1) throw usageError('relate file takes no inline plan options');
+    return planFile(inputs.file, 'relate');
+  }
   const names = (key) => {
     const held = has(inputs, key) ? inputs[key] : [];
     if (!Array.isArray(held) || !held.every((name) => typeof name === 'string')) throw usageError(`options.${key} is an array of relation names`);
