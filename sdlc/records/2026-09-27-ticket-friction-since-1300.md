@@ -218,3 +218,6 @@ The 0228 Medium review found that its proposed second-address listener cannot ob
 
 
 The missing-key Quick Fix passed its first Linux proof, but the coordinator’s suggested direct 127.0.0.2 bind assumed that all hosts assign that address. Apple’s source showed the unsupported assumption before landing; the same reviewer withdrew its initial acceptance. The corrected source079708e7 binds ordinary127.0.0.1, verifies that the command’s short IPv4 spelling resolves there, and preserves the exact missing-key cases. The reviewer accepted the correction with platform evidence accurately limited to source and the actual Linux run. The coordinator owns the initial fixture recommendation. Check address assignment and the actual resolver path before treating a local fixture as portable; an unguarded test must not silently require privileged host setup.
+
+
+The 0227 freeze receives fresh High code review because its caught-panic scopes cross interpreter callbacks, opaque-payload destruction and installed-library hook ownership. Its Python proof also edits the existing arrow/probe/ffi.rs parent; the coordinator explicitly adds that path before review and further edits. No other lane holds it. Future claims must name an existing test parent even when a new private test child is already included. Linux installed checks and other-platform proof remain separate.
