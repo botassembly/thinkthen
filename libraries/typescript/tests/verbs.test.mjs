@@ -30,28 +30,30 @@ test('a named rich question preserves source order and its captured request', as
 
 test('named question files refuse bounded local failures before any send', async (t) => {
   const backend = await captured(t);
-  const files = ['missing.json', 'blank.json', 'large.json', 'utf8.json', 'choose.json'].map((name) => join(backend.folder, name));
+  const marker = 'SYNTHETIC_PRIVATE_MARKER_0244';
+  const files = ['missing.json', 'blank.json', 'large.json', 'utf8.json', 'unknown.json', 'choose.json'].map((name) => join(backend.folder, name));
   writeFileSync(files[1], '{"decide":"   "}');
   writeFileSync(files[2], Buffer.alloc(1_048_577, 120));
   writeFileSync(files[3], Buffer.from([0xff]));
-  writeFileSync(files[4], '{"choose":"Which?","options":["a","b"]}');
+  writeFileSync(files[4], JSON.stringify({ decide: 'Question?', [marker]: 1 }));
+  writeFileSync(files[5], '{"choose":"Which?","options":["a","b"]}');
   const { value, error } = await ask(backend, `
     const files = ${JSON.stringify(files)};
     const observed = [];
-    for (const file of files.slice(0, 4)) {
+    for (const file of files.slice(0, 5)) {
       try { tt.questionFile(file); observed.push('accepted'); }
-      catch (failure) { observed.push([failure.kind, failure.retryable, failure.message.includes(file)]); }
+      catch (failure) { observed.push([failure.kind, failure.retryable, failure.message.includes(file) || failure.message.includes(${JSON.stringify(marker)})]); }
     }
     try { tt.questionFile(42); observed.push('accepted'); }
     catch (failure) { observed.push([failure.kind, failure.retryable]); }
-    try { await tt.decide(tt.questionFile(files[4]), 'text'); observed.push('accepted'); }
+    try { await tt.decide(tt.questionFile(files[5]), 'text'); observed.push('accepted'); }
     catch (failure) { observed.push([failure.kind, failure.retryable]); }
     try { await tt.decide(tt.question({ decide: '   ' }), 'text'); observed.push('accepted'); }
     catch (failure) { observed.push([failure.kind, failure.retryable]); }
     return observed;`);
   assert.equal(error, undefined, JSON.stringify(error));
   assert.deepEqual(value, [
-    ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false],
+    ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false], ['local', false, false],
     ['usage', false], ['usage', false], ['usage', false],
   ]);
   assert.deepEqual(backend.bodies, []);

@@ -407,7 +407,10 @@ module ThinkThen
         raise UsageError.new("question file takes no other question keys", "usage") unless keywords.size == 1
 
         path = keywords[:file]
-        raise UsageError.new("question file path is valid text", "usage") unless path.is_a?(String) && path.valid_encoding? && !path.include?("\0") && !path.empty?
+        raise UsageError.new("question file path is valid text", "usage") unless path.is_a?(String)
+
+        path = path.dup.force_encoding(Encoding::UTF_8) unless path.encoding == Encoding::UTF_8
+        raise UsageError.new("question file path is valid text", "usage") unless path.valid_encoding? && !path.include?("\0") && !path.empty?
 
         return Native.question_file(path)
       end

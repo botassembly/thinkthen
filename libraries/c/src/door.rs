@@ -65,7 +65,8 @@ pub(crate) fn question_file(path: &str) -> Result<String, Failure> {
     }
     let source =
         String::from_utf8(bytes).map_err(|_| Failure::local("the question file is not UTF-8"))?;
-    Question::from_json(&source).map_err(|error| Failure::local(error.detail().message()))?;
+    Question::from_json(&source)
+        .map_err(|_| Failure::local("the question file has invalid question content"))?;
     Ok(source)
 }
 

@@ -22,7 +22,11 @@ pub(super) fn read(path: &str) -> Result<(String, LoadedQuestion), Fault> {
     }
     let json = String::from_utf8(bytes)
         .map_err(|_| Fault::of(ErrorKind::Local, "the question file is not UTF-8"))?;
-    let loaded = Question::from_json(&json)
-        .map_err(|error| Fault::of(ErrorKind::Local, error.detail().message()))?;
+    let loaded = Question::from_json(&json).map_err(|_| {
+        Fault::of(
+            ErrorKind::Local,
+            "the question file has invalid question content",
+        )
+    })?;
     Ok((json, loaded))
 }
