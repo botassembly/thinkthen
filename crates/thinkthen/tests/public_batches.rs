@@ -28,6 +28,9 @@ mod interactive;
 #[path = "public_batches/details.rs"]
 mod details;
 
+#[path = "public_batches/tiers.rs"]
+mod tiers;
+
 #[path = "../src/test_deadline/wait.rs"]
 #[allow(dead_code, reason = "only the child deadline bounds the churn here")]
 mod wait;

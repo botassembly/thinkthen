@@ -18,7 +18,7 @@ from conftest import child_env, run, start
 
 @contextmanager
 def capturing_filter_listener(answer=None):
-    """Keep actual wire bodies; optionally answer other question kinds."""
+    """Keep wire bodies; a callback's None retains the normal decision answer."""
     bodies = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -30,8 +30,9 @@ def capturing_filter_listener(answer=None):
             request = json.loads(body)
             answers = {}
             for name, question in request["questions"].items():
-                if answer is not None:
-                    answers[name] = answer(question)
+                chosen = answer(question) if answer is not None else None
+                if chosen is not None:
+                    answers[name] = chosen
                     continue
                 first = request["state"] == "one" or 'The text is "one"' in question["instructions"]
                 answers[name] = {"type": "noul", "noul": 0.1 if first else 0.9}
