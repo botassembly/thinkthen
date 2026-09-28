@@ -404,7 +404,7 @@ pub(crate) struct StatusArguments {
     pub(crate) json: bool,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct CheckArguments {
     /// The base the requests are posted under, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
@@ -415,7 +415,20 @@ pub(crate) struct CheckArguments {
     /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
-    /// Print the four request bodies and stop. No key is read and nothing is sent.
+    /// Print the four request bodies and stop. An optional key is checked
+    /// against the address; no key is required and nothing is sent.
     #[arg(long)]
     pub(crate) dry_run: bool,
+}
+
+impl std::fmt::Debug for CheckArguments {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("CheckArguments")
+            .field("url", &self.url.as_ref().map(|_| "<withheld>"))
+            .field("model", &self.model)
+            .field("timeout", &self.timeout)
+            .field("dry_run", &self.dry_run)
+            .finish()
+    }
 }
