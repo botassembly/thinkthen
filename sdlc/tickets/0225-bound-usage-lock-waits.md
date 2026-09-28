@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-recording-page-omits-the-exit-wait-on-the-usage-lo
 
 # 0225: Bound the advisory usage-lock wait at exit
 
-Status: proposed for fresh independent design review. Owner: Codex. [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md) proposes the policy change; [the source preflight](../records/0225-usage-lock-preflight.md) confirms register 31 against main `4e0505a9`. The 0163 page fix closed only the separate recording-page issue. This ticket would close register 31's remaining runtime defect after a reviewed build, without touching the paid live ledger.
+Status: design **ACCEPT** at `1e4936a7` by fresh Medium reviewer session `01a0e695-9381-7070-a807-bcc3be1f739f`; coordinator approved routine implementation. Build and code review remain. Owner: Codex. [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md) proposes the policy change; [the source preflight](../records/0225-usage-lock-preflight.md) confirms register 31 against main `4e0505a9`. The 0163 page fix closed only the separate recording-page issue. This ticket would close register 31's remaining runtime defect after a reviewed build, without touching the paid live ledger.
 
 ## Outcome and retained behavior
 
