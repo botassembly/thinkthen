@@ -6,7 +6,7 @@ opens: sdlc/tickets/0209-stable-frame-columns.md sdlc/records/0209-frame-preflig
 
 # 0209: Keep frame answer columns typed
 
-Status: implementation candidate on `ticket/0209-stable-frame-columns`; focused host proof passes, and fresh code and dependency review remains. Ian approved the native fixed-field Polars Struct and pandas dictionary in main `a2c9057a`. Owner: Codex. The [type-contract issue](../issues/2026-09-27-one-type-contract-for-every-surface.md), ADR 0082, and landed J1 ticket 0204 set the outcome. Ian can overturn the frame representation.
+Status: code, dependency, growth, and focused proof accepted by a fresh independent reviewer at `1c6ec416`; pending landing. Ian approved the native fixed-field Polars Struct and pandas dictionary in main `a2c9057a`. Owner: Codex. The [type-contract issue](../issues/2026-09-27-one-type-contract-for-every-surface.md), ADR 0082, and landed J1 ticket 0204 set the outcome. Ian can overturn the frame representation.
 
 ## Outcome
 

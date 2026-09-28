@@ -275,8 +275,8 @@ pub(crate) fn decided(values: &[Answer]) -> Cells {
 }
 
 /// One question's answers across the records, in the kind's own column. A
-/// failed answer never reaches here: a one-question call ends with the
-/// engine's error, and `frame::answered` widens a failed question's column.
+/// failed frame answer becomes null here; the companion column carries its
+/// marker. A one-question Series call still ends with the engine's error.
 pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
     match kind {
         QuestionKind::Decide => Cells::Bools(

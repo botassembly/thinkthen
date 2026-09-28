@@ -1,6 +1,6 @@
 # 0209 design review brief
 
-Status: corrected design `6862615d` passed fresh review, and Ian approved the recommended fixed-field Polars Struct and pandas dictionary in main `a2c9057a`. This record describes design acceptance only; implementation review remains pending. Initial draft was read against main `30d340d1` without runtime edits.
+Status: corrected design `6862615d` passed fresh review, and Ian approved the recommended fixed-field Polars Struct and pandas dictionary in main `a2c9057a`. A separate fresh High review accepted implementation `1c6ec416` after the focused checks. Initial draft was read against main `30d340d1` without runtime edits.
 
 Review `sdlc/tickets/0209-stable-frame-columns.md` against the authoritative type-contract issue, ADR 0082, `specification/types.md`, and current frame constructors. Check that typed answer null plus one failure column keeps not-sure distinct from failed, that a successful empty tag stays an empty list, and that a whole-call failure still raises. Check pre-send `failed` name and input-column collisions, all-success and empty frame schemas, the three host adapters, and the existing tests that currently require widening. Assess the proposed Polars fixed-key struct as the map representation and the explicit optional categorical deferral. Require exact runtime file claims and measured ratchets before implementation; do not treat this brief as code acceptance.
 
