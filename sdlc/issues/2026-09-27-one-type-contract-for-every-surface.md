@@ -9,7 +9,7 @@ The Codex coordinator wrote a type-system review on 2026-09-27 for the language-
 Add batch J to `sdlc/planning/work-plan-2026-09-27.md`. Leave the existing tickets as they are.
 
 - **J1** is ready now. It edits only `specification/`, a new ADR and a fixture corpus, so it collides with no running lane.
-- **J2** is a defect and is ready now. It edits the Python frame code and the Rust Polars door before B12d starts.
+- **J2** has an implementation candidate on ticket 0209. The approved Polars Struct and pandas dictionary now pass selected host boundaries; fresh code and dependency review remains before this defect closes. It edits the Python frame code and the Rust Polars door before B12d starts.
 - **J3 to J6** each run in the same lane right after that library's batching ticket, B12b to B12f, because they edit the same files.
 - **J7** is done: reviewed SQL constraint recipes and literal host proof are recorded in [the Quick Fix record](../records/qf-sql-answer-constraints.md).
 - **J8** is one integration ticket per port, after J1. Rule 2 gates each one.

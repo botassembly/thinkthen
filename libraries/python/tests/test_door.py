@@ -143,7 +143,7 @@ def test_annotate_on_a_frame_keeps_every_row_and_column(backend, tmp_path):
 
 def test_a_frame_keeps_types_and_nested_failures():
     """The two-row listener mixes answered and failed score cells. The score
-    stays Float64, the tag stays a list, and only the failed row has a marker."""
+    stays Float64, a successful empty tag stays a list, and failed tags are null."""
     printed = run("""
     import http.server, json, threading, polars as pl, thinkthen as tt
     seen = []
@@ -152,10 +152,13 @@ def test_a_frame_keeps_types_and_nested_failures():
             asked = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             seen.append(asked["state"])
             level = {"a": {"0": 0.25, "1": 0.5, "2": 0.25}, "b": {"1": 0.5, "2": 0.5}}
-            answers = {name: {"type": "score", "probabilities": level[asked["state"]]}
-                       if one["type"] == "score" else
-                       {"type": "noul", "noul": 0.1 if '"ship"' in one["instructions"] else 0.9}
-                       for name, one in asked["questions"].items()}
+            def reply(one):
+                if one["type"] == "score":
+                    return {"type": "score", "probabilities": level[asked["state"]]}
+                if asked["state"] == "b" and '"bill"' in one["instructions"]:
+                    return {"type": "noul"}
+                return {"type": "noul", "noul": 0.1}
+            answers = {name: reply(one) for name, one in asked["questions"].items()}
             body = json.dumps({"model": asked["model"], "answers": answers}).encode()
             self.send_response(200)
             self.send_header("Content-Length", str(len(body)))
@@ -177,9 +180,10 @@ def test_a_frame_keeps_types_and_nested_failures():
     print(empty.schema == got.schema, empty.height, len(seen))
     """, clean_env(THINKTHEN_API_KEY=FAKE))
     assert printed.splitlines() == [
-        "True", "True", "True", "[1.0, None]", "[['bill'], ['bill']]",
+        "True", "True", "True", "[1.0, None]", "[[], None]",
         "[None, {'late': None, 'urgent': {'failed': {'kind': 'backend', "
-        "'cause': 'missing_probability'}}, 'kinds': None}]", "2", "True 0 2"]
+        "'cause': 'missing_probability'}}, 'kinds': {'failed': {'kind': 'backend', "
+        "'cause': 'missing_probability'}}}]", "2", "True 0 2"]
 
 
 def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):
