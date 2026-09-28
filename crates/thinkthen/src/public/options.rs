@@ -318,7 +318,7 @@ mod tests {
 
     #[test]
     fn diagnostic_boundary_child() {
-        if std::env::var_os("THINKTHEN_DIAGNOSTIC_CHILD").is_none() {
+        if std::env::var_os("THINKTHEN_TEST_DIAGNOSTIC_CHILD").is_none() {
             return;
         }
         std::panic::set_hook(Box::new(|info| {
@@ -412,7 +412,7 @@ mod tests {
                 "public::options::tests::diagnostic_boundary_child",
                 "--nocapture",
             ])
-            .env("THINKTHEN_DIAGNOSTIC_CHILD", "1")
+            .env("THINKTHEN_TEST_DIAGNOSTIC_CHILD", "1")
             .output()
             .expect("run diagnostic child");
         assert!(
