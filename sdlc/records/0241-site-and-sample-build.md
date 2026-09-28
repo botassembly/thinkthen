@@ -96,7 +96,7 @@ and observed the 130-page link check pass. The red log is under
 
 After merging main `2f274076`, I rebuilt the isolated release binary and ran
 the offline site build again with Node 22. The final log is
-`target/codex-builds/0241/site-build-latest-main.log`: 95 CLI examples replayed,
+`target/codex-builds/0241/site-build-final-corrected.log`: 95 CLI examples replayed,
 92 Astro pages and 92 Markdown twins built, the 50-row settings check passed,
 and all 130 internal routes linked. `sdlc/scripts/settings --self-test` kept
 its 10 planted failures. The HTML guard's planted failure and recovery are
@@ -127,3 +127,6 @@ does not promise a fixed API-input retention period, so the copy gives none.
 The six public error kinds are linked to the normative type contract; advice
 messages are not presented as stable identifiers. Register 117's runtime
 catalog criterion and register 124's external-terms criterion remain open.
+The final contract read caught an imprecise draft description of answer kinds
+and probability shape on the details route; I corrected it against
+`specification/result.md` before the last site build.
