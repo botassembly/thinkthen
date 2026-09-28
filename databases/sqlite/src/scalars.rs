@@ -3,6 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use rusqlite::Connection;
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
@@ -92,7 +93,8 @@ fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
                 LoadedQuestion::Question(asked) => engine.decide_with(asked, &evidence, options)?,
                 LoadedQuestion::Banded(asked) => engine.decide_with(asked, &evidence, options)?,
             })
-        })?;
+        })?
+        .into_value();
         Ok(match answer {
             Answer::Yes => Some(1),
             Answer::No => Some(0),
@@ -113,7 +115,8 @@ fn judged(
     only(&held, name, kind)?;
     let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
         Ok(engine.details_with(plain(&held)?, &evidence, options)?)
-    })?;
+    })?
+    .into_value();
     Ok(Some(details.value().clone()))
 }
 
@@ -147,7 +150,8 @@ fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
         only(&held, "thinkthen_score", QuestionKind::Score)?;
         let position = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
             Ok(engine.score_with(plain(&held)?, &evidence, options)?)
-        })?;
+        })?
+        .into_value();
         Ok(Some(position))
     })?)
 }
@@ -164,7 +168,8 @@ fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
                 }
                 LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options)?,
             })
-        })?;
+        })?
+        .into_value();
         Ok(Some(details.to_json()))
     })?)
 }
@@ -185,7 +190,8 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
                 }
                 LoadedQuestion::Banded(asked) => engine.details_with(asked, &evidence, options)?,
             })
-        })?;
+        })?
+        .into_value();
         let details: serde_json::Value = serde_json::from_str(&details.to_json())
             .map_err(|_| Failure::defect("a result is not JSON"))?;
         Ok(Some(
@@ -266,6 +272,8 @@ pub(crate) struct WarmState {
     groups: Vec<Group>,
     index: HashMap<String, usize>,
     judged: i64,
+    deadline: Option<Option<i64>>,
+    due: Option<Instant>,
 }
 
 /// A full chunk of one question's texts, ready to send.
@@ -312,7 +320,11 @@ impl WarmState {
 /// Judge one chunk on a worker, one send per text the cache lacks. Under a
 /// process request total the chunk is cut to as many rows as requests
 /// remain, and once that part is judged the call refuses (decision 17).
-fn flush(context: &Context<'_>, (held, mut texts): Flush) -> Result<i64, Failure> {
+fn flush(
+    context: &Context<'_>,
+    (held, mut texts): Flush,
+    due: Option<Instant>,
+) -> Result<i64, Failure> {
     // The cut counts rows. A cached row costs no request, so the refusal
     // names the rows judged, not the requests spent.
     let cut = settings::remaining()?.filter(|left| *left < texts.len());
@@ -324,7 +336,7 @@ fn flush(context: &Context<'_>, (held, mut texts): Flush) -> Result<i64, Failure
     if count == 0 {
         return Ok(0);
     }
-    worker::run(ffi::handle_of(context), None, move |engine, options| {
+    worker::run_until(ffi::handle_of(context), due, move |engine, options| {
         // The band stays out of the request, so decide reads what this fills.
         match &*held {
             LoadedQuestion::Question(asked) => engine
@@ -370,6 +382,18 @@ impl Aggregate<WarmState, i64> for Warm {
 
     fn step(&self, context: &mut Context<'_>, state: &mut WarmState) -> rusqlite::Result<()> {
         Ok(guard("thinkthen_warm", || {
+            let due = deadline(context)?;
+            if state.deadline.is_some_and(|first| first != due) {
+                return Err(Failure::usage(
+                    "thinkthen_warm takes one deadline for the whole group",
+                ));
+            }
+            if state.deadline.is_none() {
+                state.due = due
+                    .and_then(|millis| u64::try_from(millis).ok())
+                    .and_then(|millis| Instant::now().checked_add(Duration::from_millis(millis)));
+            }
+            state.deadline = Some(due);
             let Some(argument) = text(context.get_raw(0), "the question")? else {
                 return Ok(());
             };
@@ -377,7 +401,7 @@ impl Aggregate<WarmState, i64> for Warm {
                 return Ok(());
             };
             if let Some(chunk) = state.add(&argument, || warm_question(&argument), evidence)? {
-                state.judged += flush(context, chunk)?;
+                state.judged += flush(context, chunk, state.due)?;
             }
             Ok(())
         })?)
@@ -393,7 +417,7 @@ impl Aggregate<WarmState, i64> for Warm {
                 return Ok(0);
             };
             for group in std::mem::take(&mut state.groups) {
-                state.judged += flush(context, (group.question, group.pending))?;
+                state.judged += flush(context, (group.question, group.pending), state.due)?;
             }
             Ok(state.judged)
         })?)
@@ -419,7 +443,9 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         connection.create_scalar_function("thinkthen_try_details", arity, volatile, try_details)?;
     }
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
-    connection.create_aggregate_function("thinkthen_warm", 2, volatile, Warm)?;
+    for arity in [2, 3] {
+        connection.create_aggregate_function("thinkthen_warm", arity, volatile, Warm)?;
+    }
     connection.create_scalar_function("thinkthen_throttle", 1, volatile, settings::throttle)?;
     connection.create_scalar_function(
         "thinkthen_max_requests",
@@ -428,12 +454,29 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         settings::max_requests,
     )?;
     connection.create_scalar_function(
+        "thinkthen_max_request_bytes",
+        1,
+        volatile,
+        settings::max_request_bytes,
+    )?;
+    connection.create_scalar_function(
         "thinkthen_max_requests_total",
         1,
         volatile,
         settings::max_requests_total,
     )?;
     connection.create_scalar_function("thinkthen_cache", 1, volatile, settings::cache)?;
+    connection.create_scalar_function("thinkthen_model", 1, volatile, settings::model)?;
+    connection.create_scalar_function("thinkthen_timeout", 1, volatile, settings::timeout)?;
+    connection.create_scalar_function(
+        "thinkthen_max_retries",
+        1,
+        volatile,
+        settings::max_retries,
+    )?;
+    connection.create_scalar_function("thinkthen_profile", 1, volatile, settings::profile)?;
+    connection.create_scalar_function("thinkthen_record", 1, volatile, settings::record)?;
+    connection.create_scalar_function("thinkthen_replay", 1, volatile, settings::replay)?;
     Ok(())
 }
 

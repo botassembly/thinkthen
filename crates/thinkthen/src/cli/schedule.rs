@@ -9,7 +9,7 @@ use std::thread;
 use crate::core::{Outcome, Withheld, ranking};
 use crate::edge;
 use crate::engine::error::Error as EngineError;
-use crate::engine::facade::{Completed, Engine, Input, InputPort, RunOutcome};
+use crate::engine::facade::{Completed, Engine, Input, InputPort, RecordFlow, RunOutcome};
 use crate::engine::usage::Counters;
 use crate::engine::{Width, Widths};
 use crate::failure::Failure;
@@ -106,8 +106,28 @@ enum Mode<'a> {
     Ordered {
         held: Vec<Judged>,
         top: Option<usize>,
+        missing_probability: bool,
         writer: &'a mut dyn Write,
     },
+}
+
+fn keep_top(held: &mut Vec<Judged>, limit: usize, judged: Judged, missing: &mut bool) {
+    let Some(probability) = judged.probability else {
+        *missing = true;
+        return;
+    };
+    let place = held.partition_point(|earlier| {
+        earlier
+            .probability
+            .is_some_and(|score| score.total_cmp(&probability).is_ge())
+    });
+    if place >= limit {
+        return;
+    }
+    if held.len() == limit {
+        held.pop();
+    }
+    held.insert(place, judged);
 }
 
 impl fmt::Debug for Output<'_> {
@@ -140,6 +160,7 @@ impl Output<'_> {
             mode: Mode::Ordered {
                 held: Vec::new(),
                 top,
+                missing_probability: false,
                 writer,
             },
             usage,
@@ -157,8 +178,16 @@ impl Output<'_> {
                     None => Ok(true),
                 }
             }
-            Mode::Ordered { held, .. } => {
-                held.push(judged);
+            Mode::Ordered {
+                held,
+                top,
+                missing_probability,
+                ..
+            } => {
+                match top {
+                    Some(limit) => keep_top(held, *limit, judged, missing_probability),
+                    None => held.push(judged),
+                }
                 Ok(true)
             }
         };
@@ -169,9 +198,18 @@ impl Output<'_> {
     }
 
     pub(crate) fn ended(&mut self) -> Result<(), Failure> {
-        let Mode::Ordered { held, top, writer } = &mut self.mode else {
+        let Mode::Ordered {
+            held,
+            top,
+            missing_probability,
+            writer,
+        } = &mut self.mode
+        else {
             return Ok(());
         };
+        if *missing_probability {
+            return Err(Failure::Defect("a ranked row carries no probability"));
+        }
         let odds = held
             .iter()
             .map(|judged| {
@@ -203,8 +241,12 @@ impl Output<'_> {
         }
     }
 
-    pub(crate) const fn holds(&self) -> bool {
-        matches!(self.mode, Mode::Ordered { .. })
+    pub(crate) const fn flow(&self) -> RecordFlow {
+        match self.mode {
+            Mode::Streaming(_) => RecordFlow::Streaming,
+            Mode::Ordered { top: None, .. } => RecordFlow::HeldAll,
+            Mode::Ordered { top: Some(_), .. } => RecordFlow::HeldWindowed,
+        }
     }
 }
 
@@ -243,9 +285,9 @@ where
     I: Iterator<Item = Result<(usize, T), Placed>> + Send + 'static,
 {
     let recording = engine.recording();
-    let held = output.holds();
+    let flow = output.flow();
     let outcome = engine.records(
-        held,
+        flow,
         cancel,
         |requests, events| {
             thread::spawn(move || read_records(chunks, &requests, &events));
@@ -306,5 +348,7 @@ fn read_records<T, I>(
     }
 }
 
+#[cfg(test)]
+mod top_tests;
 #[cfg(test)]
 pub(crate) mod width_tests;

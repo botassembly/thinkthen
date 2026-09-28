@@ -1,21 +1,23 @@
-//! The JSON door's grammar and its bare-value writer.
+//! The JSON door's grammar and its call-value writer.
 //!
-//! A request names one verb of ten and up to five envelope keys. Every other
+//! A request names one verb of ten and up to six envelope keys. Every other
 //! key forms the question object, which the public `from_json` readers
-//! validate, so the door holds no question grammar of its own. Each answer
-//! is the bare value the command prints, and `tests/door/` holds the
-//! writer to the command's bytes on the shared cases.
+//! validate, so the door holds no question grammar of its own. The wrapper's
+//! value is the command's bare answer, and `tests/door/` compares its bytes.
 
 use std::collections::BTreeMap;
 
 use serde_json::json;
 use serde_json::value::RawValue;
 use thinkthen::{
-    CallOptions, CancelToken, Engine, Judgment, LoadedQuestion, Question, QuestionSet,
+    BatchSetting, CallOptions, CancelToken, Engine, Facts, Judgment, LoadedQuestion, Question,
+    QuestionSet,
 };
 
 use crate::door;
 use crate::failures::Failure;
+
+mod records;
 
 const VERBS: [&str; 10] = [
     "decide",
@@ -31,15 +33,21 @@ const VERBS: [&str; 10] = [
 ];
 
 /// Each envelope key and the verbs it goes with.
-const ENVELOPE: [(&str, &[&str]); 5] = [
+const ENVELOPE: [(&str, &[&str]); 6] = [
     (
         "evidence",
         &["decide", "choose", "score", "tag", "recognize"],
     ),
-    ("records", &["filter", "rank", "annotate", "relate"]),
+    (
+        "records",
+        &[
+            "decide", "choose", "score", "tag", "filter", "rank", "annotate", "relate",
+        ],
+    ),
     ("units", &["find"]),
     ("details", &["decide", "choose", "score", "tag"]),
     ("usage", &[]),
+    ("call", &VERBS),
 ];
 
 type Members = BTreeMap<String, Box<RawValue>>;
@@ -49,6 +57,12 @@ struct Request {
     verb: String,
     envelope: Members,
     question: Members,
+    call: Option<Controls>,
+}
+
+struct Controls {
+    batch: Option<BatchSetting>,
+    context: Option<String>,
 }
 
 /// Answer one JSON request.
@@ -66,16 +80,36 @@ pub(crate) fn call(
         }
         let counts = engine.usage();
         return Ok(format!(
-            "{{\"requests_sent\":{},\"input_tokens\":{},\"output_tokens\":{},\"cache_answers\":{}}}",
+            "{{\"requests_sent\":{},\"retries\":{},\"input_tokens\":{},\"output_tokens\":{},\"cache_answers\":{}}}",
             counts.requests_sent(),
+            counts.retries(),
             counts.input_tokens(),
             counts.output_tokens(),
             counts.cache_answers()
         ));
     }
     let request = split(members)?;
-    let options = door::options(deadline_ms, token)?;
-    answer(engine, &request, options)
+    let options = controls(&request, door::options(deadline_ms, token)?)?;
+    let (value, facts) = answer(engine, &request, options)?;
+    Ok(format!(
+        "{{\"value\":{value},\"facts\":{}}}",
+        crate::failures::facts_json(&facts)
+    ))
+}
+
+fn controls<'a>(
+    request: &'a Request,
+    mut options: CallOptions<'a>,
+) -> Result<CallOptions<'a>, Failure> {
+    if let Some(call) = request.call.as_ref() {
+        if let Some(batch) = call.batch {
+            options = options.batch(batch);
+        }
+        if let Some(context) = call.context.as_deref() {
+            options = options.context(context);
+        }
+    }
+    Ok(options)
 }
 
 fn split(members: Members) -> Result<Request, Failure> {
@@ -104,28 +138,77 @@ fn split(members: Members) -> Result<Request, Failure> {
             return Err(Failure::usage(format!("{verb} takes no {key} key")));
         }
     }
+    let call = envelope
+        .get("call")
+        .map(|raw| {
+            let value: serde_json::Value = serde_json::from_str(raw.get())
+                .map_err(|_| Failure::usage("call is one JSON object"))?;
+            let object = value
+                .as_object()
+                .ok_or_else(|| Failure::usage("call is one JSON object"))?;
+            let many = envelope.contains_key("records")
+                && matches!(
+                    verb.as_str(),
+                    "decide" | "choose" | "score" | "tag" | "filter" | "rank" | "annotate"
+                );
+            if !many {
+                return Err(Failure::usage(format!("{verb} takes no call key")));
+            }
+            let mut call = Controls {
+                batch: None,
+                context: None,
+            };
+            for (key, value) in object {
+                match key.as_str() {
+                    "batch" if many => call.batch = Some(crate::settings::batch(value)?),
+                    "context" if many && verb != "annotate" => {
+                        call.context = Some(
+                            value
+                                .as_str()
+                                .ok_or_else(|| Failure::usage("call context is text"))?
+                                .to_owned(),
+                        );
+                    }
+                    "batch" | "context" => {
+                        return Err(Failure::usage(format!("{verb} takes no call {key}")));
+                    }
+                    _ => return Err(Failure::usage(format!("call has unknown key {key}"))),
+                }
+            }
+            Ok(call)
+        })
+        .transpose()?;
     Ok(Request {
         verb,
         envelope,
         question,
+        call,
     })
 }
 
-fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Result<String, Failure> {
+fn answer(
+    engine: &Engine,
+    request: &Request,
+    options: CallOptions<'_>,
+) -> Result<(String, Facts), Failure> {
     let verb = request.verb.as_str();
     match verb {
         "decide" | "choose" | "score" | "tag" => {
+            let detailed = flag(&request.envelope, "details")?;
+            if request.envelope.contains_key("records") {
+                return records::judgments(engine, request, options, detailed);
+            }
             let evidence = member(request, "evidence", |raw| {
                 serde_json::from_str::<String>(raw)
             })?;
-            let details = match Question::from_json(&object(&request.question)?)? {
+            let call = match Question::from_json(&object(&request.question)?)? {
                 LoadedQuestion::Question(asked) => engine.details_with(&asked, &evidence, options),
                 LoadedQuestion::Banded(asked) => engine.details_with(&asked, &evidence, options),
             }?;
-            if flag(&request.envelope, "details")? {
-                return Ok(details.to_json());
+            if detailed {
+                return Ok((call.value().to_json(), call.facts().clone()));
             }
-            bare(details.value())
+            Ok((bare(call.value().value())?, call.facts().clone()))
         }
         "filter" => {
             let mut question = request.question.clone();
@@ -138,10 +221,13 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
-            let kept: Result<Vec<&str>, _> = engine
-                .filter_with(&asked, records.iter().map(String::as_str), options)
-                .collect();
-            write(&json!(kept?))
+            let mut batch = engine.filter_with(&asked, records.iter().map(String::as_str), options);
+            let kept = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
+            let facts = batch
+                .facts()
+                .cloned()
+                .ok_or_else(|| Failure::defect("completed filter has no facts"))?;
+            Ok((write(&json!(kept))?, facts))
         }
         "rank" => {
             let asked = Question::rank(&alone(&request.verb, &request.question)?)?;
@@ -149,8 +235,15 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
             let ranked = engine.rank_with(&asked, records.iter().map(String::as_str), options)?;
-            write(&json!(
-                ranked.iter().map(|row| *row.input()).collect::<Vec<_>>()
+            Ok((
+                write(&json!(
+                    ranked
+                        .value()
+                        .iter()
+                        .map(|row| *row.input())
+                        .collect::<Vec<_>>()
+                ))?,
+                ranked.facts().clone(),
             ))
         }
         "find" => {
@@ -165,7 +258,10 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
             let found = engine.find_with(&asked, units.iter().map(String::as_str), options)?;
-            write(&json!(found.selected()))
+            Ok((
+                write(&json!(found.value().selected()))?,
+                found.facts().clone(),
+            ))
         }
         "annotate" => annotate(engine, request, options),
         "recognize" => {
@@ -189,7 +285,7 @@ fn annotate(
     engine: &Engine,
     request: &Request,
     options: CallOptions<'_>,
-) -> Result<String, Failure> {
+) -> Result<(String, Facts), Failure> {
     let set = match request.question.get("annotate") {
         Some(set) if request.question.len() == 1 => QuestionSet::from_json(set.get())?,
         _ => return Err(Failure::usage("annotate takes its question set alone")),
@@ -197,11 +293,16 @@ fn annotate(
     let records = member(request, "records", |raw| {
         serde_json::from_str::<Vec<String>>(raw)
     })?;
-    let rows: Result<Vec<String>, _> = engine
-        .annotate_with(&set, records.iter().map(String::as_str), options)
+    let mut batch = engine.annotate_with(&set, records.iter().map(String::as_str), options);
+    let rows = batch
+        .by_ref()
         .map(|row| row.map(|row| row.value_json()))
-        .collect();
-    Ok(format!("[{}]", rows?.join(",")))
+        .collect::<Result<Vec<_>, _>>()?;
+    let facts = batch
+        .facts()
+        .cloned()
+        .ok_or_else(|| Failure::defect("completed annotate has no facts"))?;
+    Ok((format!("[{}]", rows.join(",")), facts))
 }
 
 /// The question text of `rank` or `find`, which read no other key.

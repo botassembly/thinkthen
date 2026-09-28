@@ -52,6 +52,25 @@ pub(super) fn check(folder: &Path, expected: &BackendIdentity, writing: bool) ->
     }
 }
 
+/// Observe whether a writable folder has no published identity or final entry.
+/// The folder gate repeats this check before it may publish an identity.
+pub(super) fn unbound_empty(folder: &Path) -> Result<bool, Error> {
+    match fs::symlink_metadata(folder) {
+        Ok(_) => match fs::metadata(folder) {
+            Ok(metadata) if metadata.is_dir() => {}
+            Ok(_) => return Err(Error::RecordingStorage),
+            Err(error) => return Err(storage(error)),
+        },
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(true),
+        Err(error) => return Err(storage(error)),
+    }
+    match fs::symlink_metadata(folder.join(NAME)) {
+        Ok(_) => Ok(false),
+        Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(!has_entry(folder)?),
+        Err(error) => Err(storage(error)),
+    }
+}
+
 fn match_identity(
     folder: &Path,
     found: &BackendIdentity,

@@ -4,24 +4,13 @@
     reason = "the scalar bridge copies C++ byte ranges before its worker runs"
 )]
 
-use thinkthen::{Answer, CallOptions, CancelToken, Engine, LoadedQuestion, QuestionSet};
+use thinkthen::{Answer, Engine, LoadedQuestion, QuestionSet};
 
 use super::{
-    BridgeSettings, BridgeStop, BridgeText, Reply, asked, copied_texts, probe, question_typed,
-    reply_boundary, run_detached, set_typed, text,
+    BridgeSettings, BridgeStop, BridgeText, CallScope, Reply, asked, copied_texts, probe,
+    question_typed, reply_boundary, run_detached, set_typed, text,
 };
 use crate::{engines, errors};
-
-fn options<'a>(deadline_ms: i64, token: &'a CancelToken) -> Result<CallOptions<'a>, String> {
-    if deadline_ms == -1 {
-        Ok(CallOptions::new().cancel(token))
-    } else {
-        CallOptions::new()
-            .deadline_millis(deadline_ms)
-            .map(|options| options.cancel(token))
-            .map_err(|error| errors::RowError::from(error).text)
-    }
-}
 
 fn frame(bytes: &mut Vec<u8>, json: &str) -> Result<(), String> {
     let len = u32::try_from(json.len())
@@ -35,13 +24,16 @@ fn annotate(
     engine: &Engine,
     set: &QuestionSet,
     texts: Vec<String>,
-    due: i64,
-    token: &CancelToken,
+    scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
     let rows = engine
-        .annotate_with(set, texts, options(due, token)?)
+        .annotate_with(
+            set,
+            texts,
+            engines::options(scope.due, scope.token, scope.total)?,
+        )
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| errors::RowError::from(error).text)?;
+        .map_err(|error| engines::call_error(error, scope.total).text)?;
     let mut bytes = Vec::new();
     for row in rows {
         frame(&mut bytes, &row.value_json())?;
@@ -53,19 +45,24 @@ fn details(
     engine: &Engine,
     question: &LoadedQuestion,
     texts: Vec<String>,
-    due: i64,
-    token: &CancelToken,
+    scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
     for text in texts {
         let result = match question {
-            LoadedQuestion::Question(held) => {
-                engine.details_with(held, &text, options(due, token)?)
-            }
-            LoadedQuestion::Banded(held) => engine.details_with(held, &text, options(due, token)?),
+            LoadedQuestion::Question(held) => engine.details_with(
+                held,
+                &text,
+                engines::options(scope.due, scope.token, scope.total)?,
+            ),
+            LoadedQuestion::Banded(held) => engine.details_with(
+                held,
+                &text,
+                engines::options(scope.due, scope.token, scope.total)?,
+            ),
         }
-        .map_err(|error| errors::RowError::from(error).text)?;
-        frame(&mut bytes, &result.to_json())?;
+        .map_err(|error| engines::call_error(error, scope.total).text)?;
+        frame(&mut bytes, &result.into_value().to_json())?;
     }
     Ok(bytes)
 }
@@ -74,21 +71,28 @@ fn decisions(
     engine: &Engine,
     question: &LoadedQuestion,
     texts: Vec<String>,
-    due: i64,
     kind: i32,
-    token: &CancelToken,
+    scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
     let answers: Vec<(Answer, f64)> = match question {
         LoadedQuestion::Question(held) => engine
-            .decide_many_with(held, texts, options(due, token)?)
+            .decide_many_with(
+                held,
+                texts,
+                engines::options(scope.due, scope.token, scope.total)?,
+            )
             .map(|row| row.map(|row| (*row.value(), row.probability())))
             .collect::<Result<Vec<_>, _>>(),
         LoadedQuestion::Banded(held) => engine
-            .decide_many_with(held, texts, options(due, token)?)
+            .decide_many_with(
+                held,
+                texts,
+                engines::options(scope.due, scope.token, scope.total)?,
+            )
             .map(|row| row.map(|row| (*row.value(), row.probability())))
             .collect::<Result<Vec<_>, _>>(),
     }
-    .map_err(|error| errors::RowError::from(error).text)?;
+    .map_err(|error| engines::call_error(error, scope.total).text)?;
     if kind == 1 {
         Ok(answers
             .into_iter()
@@ -115,16 +119,13 @@ fn scalar_bytes(
     engine: &Engine,
     ask: ScalarAsk,
     texts: Vec<String>,
-    due: i64,
     kind: i32,
-    token: &CancelToken,
+    scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
     match (kind, ask) {
-        (7, ScalarAsk::Set(set)) => annotate(engine, &set, texts, due, token),
-        (2, ScalarAsk::Question(question)) => details(engine, &question, texts, due, token),
-        (0 | 1, ScalarAsk::Question(question)) => {
-            decisions(engine, &question, texts, due, kind, token)
-        }
+        (7, ScalarAsk::Set(set)) => annotate(engine, &set, texts, scope),
+        (2, ScalarAsk::Question(question)) => details(engine, &question, texts, scope),
+        (0 | 1, ScalarAsk::Question(question)) => decisions(engine, &question, texts, kind, scope),
         _ => Err("thinkthen defect: the bridge got an unknown scalar kind".to_owned()),
     }
 }
@@ -156,10 +157,16 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_scalar_group(
         };
         let copied = copied_texts(texts, count)?;
         let asked = asked(&settings)?;
-        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
+        let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         let (copied, cut) = engines::within_total(&asked, copied)?;
+        let total = asked.max_requests_total;
         run_detached(stop, move |token| {
-            let bytes = scalar_bytes(&engine, ask, copied, deadline_ms, kind, &token)?;
+            let scope = CallScope {
+                due: deadline_ms,
+                token: &token,
+                total,
+            };
+            let bytes = scalar_bytes(&engine, ask, copied, kind, scope)?;
             if let Some(error) = cut {
                 return Err(error);
             }
@@ -172,23 +179,22 @@ fn try_answer(
     engine: &Engine,
     question: &LoadedQuestion,
     evidence: &str,
-    due: i64,
-    token: &CancelToken,
     cut: Option<errors::RowError>,
+    scope: CallScope<'_>,
 ) -> Result<String, errors::RowError> {
-    let options = options(due, token)
+    let options = engines::options(scope.due, scope.token, scope.total)
         .map_err(|_| errors::RowError::usage("the deadline is outside the supported range"))?;
     let details = match question {
         LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
         LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
     }
-    .map_err(errors::RowError::from)?;
+    .map_err(|error| engines::call_error(error, scope.total))?;
     if let Some(error) = cut {
         return Err(error);
     }
     Ok(format!(
         "{{\"status\":\"answered\",\"details\":{}}}",
-        details.to_json()
+        details.into_value().to_json()
     ))
 }
 
@@ -216,21 +222,25 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_try_details_row(
             let question = question_typed(argument, from_file != 0)?;
             let asked = asked(&settings)
                 .map_err(|_| errors::RowError::usage("a cache folder is not UTF-8 text"))?;
-            let engine = engines::engine_for_typed(&asked, |_| probe(&settings))?;
+            let engine = engines::engine_for_typed(&asked, |path| probe(&settings, path))?;
             let (_, cut) = engines::within_total_typed(&asked, vec![evidence.to_owned()])?;
-            Ok((question, engine, evidence.to_owned(), cut))
+            Ok((
+                question,
+                engine,
+                evidence.to_owned(),
+                cut,
+                asked.max_requests_total,
+            ))
         })();
         let result = match prepared {
             Err(error) => Err(error),
-            Ok((question, engine, evidence, cut)) => run_detached(stop, move |token| {
-                Ok(try_answer(
-                    &engine,
-                    &question,
-                    &evidence,
-                    deadline_ms,
-                    &token,
-                    cut,
-                ))
+            Ok((question, engine, evidence, cut, total)) => run_detached(stop, move |token| {
+                let scope = CallScope {
+                    due: deadline_ms,
+                    token: &token,
+                    total,
+                };
+                Ok(try_answer(&engine, &question, &evidence, cut, scope))
             })?,
         };
         match result {

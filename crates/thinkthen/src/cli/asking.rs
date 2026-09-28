@@ -1,5 +1,5 @@
 //! One record to one request, and one reply to one row. `batched.rs` sends
-//! `decide`, `filter` and `rank` over a stream in batches.
+//! `decide`, `filter`, `rank` and `choose` over a stream in batches.
 //!
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
@@ -10,18 +10,16 @@ use std::time::Duration;
 
 use crate::core::{
     Backend, BackendProfile, BatchMeta, Evidence, Framing, Outcome, Pointer, Question,
-    QuestionText, Reading, Record, RecordValue, Resolved, Setting, Sources, Threshold, Value,
-    json_line,
+    QuestionText, Reading, Record, Resolved, Setting, Sources, Threshold,
 };
 
 use crate::args::Common;
 use crate::edge::{self, Environment};
 use crate::engine::Width;
-use crate::engine::facade::{Engine, Judgment, Settings, Storage};
+use crate::engine::facade::{Engine, Settings, Storage};
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
-use crate::result_json::{Run, decision_with_batch};
 use crate::schedule::{self, Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
@@ -30,10 +28,13 @@ mod batched;
 mod context;
 mod folders;
 mod plan;
+mod reading;
+mod row;
 
 use context::Context;
 pub(crate) use folders::Folders;
 use plan::{plan, plan_record, print_plan};
+use reading::read_by;
 
 struct RowContext<'a> {
     arrived: Option<&'a [u8]>,
@@ -52,22 +53,26 @@ pub(crate) fn engine(
     width: Option<u8>,
 ) -> Result<Engine, Failure> {
     let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
-    Ok(Engine::new(Settings {
-        backend,
-        profile,
-        timeout: Duration::from_secs(common.timeout),
-        max_retries: common.max_retries,
-        retry_wait: environment.retry_wait(),
-        width,
-        storage: Storage {
-            record: folders.record,
-            replay: folders.replay,
-            private_default: folders.private_default,
-            cache_answers: folders.cache_answers,
+    let roots = environment.roots()?;
+    Ok(Engine::with_roots(
+        Settings {
+            backend,
+            profile,
+            timeout: Duration::from_secs(common.timeout),
+            max_retries: common.max_retries,
+            retry_wait: environment.retry_wait(),
+            width,
+            storage: Storage {
+                record: folders.record,
+                replay: folders.replay,
+                private_default: folders.private_default,
+                cache_answers: folders.cache_answers,
+            },
+            key: environment.key_reader(),
+            usage: environment.counters(),
         },
-        key: std::sync::Arc::new(edge::key),
-        usage: environment.counters(),
-    })?)
+        roots,
+    )?)
 }
 
 /// Where one record's question comes from.
@@ -75,7 +80,7 @@ pub(crate) fn engine(
 /// Every verb but `choose --options` asks the same question of every record.
 /// `--options` names a pointer, and each record holds its own candidate list
 /// there, so the question is built again for each one.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum Asks {
     /// One question, asked of every record.
     Fixed(Question),
@@ -151,17 +156,19 @@ pub(crate) fn run(
     } = asked;
     let threshold = settled.threshold();
     let view = view.checked()?;
-    let folders = Folders::of(common, environment)?;
-    if common.dry_run && folders.named() {
-        return Err(Failure::DryRunWithRecording);
-    }
     let configured_model = settled
         .sources()
         .model_is_default()
         .then(|| environment.model())
         .flatten();
+    let per_document = matches!(
+        asks,
+        Asks::Fixed(Question::Choose { .. } | Question::Tag { .. } | Question::Score { .. })
+            | Asks::FromRecord { .. }
+    );
     let request_size = batch
         .as_ref()
+        .filter(|_| !per_document || common.framing() != Framing::Document)
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
     let backend = Backend::resolve(
@@ -170,6 +177,11 @@ pub(crate) fn run(
         configured_model.unwrap_or_else(|| settled.model().as_str()),
     )?
     .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    environment.check_key(&backend)?;
+    let folders = Folders::of(common, environment)?;
+    if common.dry_run && folders.named() {
+        return Err(Failure::DryRunWithRecording);
+    }
     if request_size.is_some() {
         environment.warn_request_size(&backend)?;
     }
@@ -314,22 +326,6 @@ fn over_table(
     )
 }
 
-/// Read the framing the command line asked for, over the settled pointers.
-/// With no flag, `filter` and `rank` read lines, or JSON Lines under a pointer.
-fn read_by(common: &Common, settled: &Resolved, keeping: Keeping) -> Result<Reading, Failure> {
-    let on = settled.on().to_vec();
-    let asked = common.framing();
-    if asked != Framing::Document || !keeping.streams_only() {
-        return Ok(Reading::new(asked, on)?);
-    }
-    let framing = if on.is_empty() {
-        Framing::Lines
-    } else {
-        Framing::Jsonl
-    };
-    Ok(Reading::new(framing, on)?.by_default())
-}
-
 fn table_kind(common: &Common) -> Option<TableKind> {
     common
         .csv
@@ -418,107 +414,6 @@ impl Judging<'_> {
 
     fn typed_row(&self, reading: &Reading, record: &Record) -> Result<Judged, Failure> {
         self.finish_row(reading, record.clone(), None)
-    }
-
-    fn finish_row(
-        &self,
-        reading: &Reading,
-        record: Record,
-        arrived: Option<&[u8]>,
-    ) -> Result<Judged, Failure> {
-        let sending = asked_of(reading, record, &self.asks)?;
-        let judged = self.engine.judge(
-            &sending.question,
-            self.threshold,
-            sending.evidence,
-            self.environment.cancel(),
-        )?;
-        self.row_of(
-            reading,
-            sending.record,
-            sending.question,
-            &judged,
-            RowContext {
-                arrived,
-                batch: None,
-            },
-        )
-    }
-
-    /// Build the line one answered record prints. Both paths share it.
-    fn row_of(
-        &self,
-        reading: &Reading,
-        record: Record,
-        question: Question,
-        judged: &Judgment,
-        context: RowContext<'_>,
-    ) -> Result<Judged, Failure> {
-        let (outcome, replayed) = (judged.outcome, judged.answered.replayed);
-        let probability = judged.answer.yes();
-        let printed =
-            if self.view.details && (self.keeping != Keeping::Passing || outcome == Outcome::Yes) {
-                // `rank` orders and never selects, so a ranked row carries no
-                // value. A value here would be a cut at 0.5 that nobody named.
-                let shown = if self.keeping == Keeping::Ordered {
-                    Value::YesNo(None)
-                } else {
-                    judged.value.clone()
-                };
-                let run = Run {
-                    backend: self.engine.backend(),
-                    tuned_for: self.tuned_for_profile(),
-                    warning: self.mismatch.warning(),
-                    batch_warning: self.mismatch.batch_warning(),
-                    context_sha256: self
-                        .context
-                        .as_ref()
-                        .map(|context| context.digest().to_owned()),
-                };
-                let input = self.streams.then_some(record);
-                Some(decision_with_batch(
-                    run,
-                    judged,
-                    question,
-                    self.threshold,
-                    shown,
-                    input,
-                    context.batch,
-                )?)
-            } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
-                None
-            } else if self.keeping.streams_only() {
-                Some(match context.arrived {
-                    Some(bytes) => reading.as_it_arrived(bytes)?.to_owned(),
-                    None => json_line(&record)?,
-                })
-            } else if self.view.raw {
-                // One line stands for one record, so an unresolved record prints
-                // an empty line. On one document it prints nothing at all.
-                match judged.value.label() {
-                    Some(label) => Some(label.to_owned()),
-                    None if self.streams => Some(String::new()),
-                    None => None,
-                }
-            } else if self.view.quiet {
-                None
-            } else if self.streams {
-                Some(json_line(&RecordValue::new(record, judged.value.clone()))?)
-            } else {
-                Some(json_line(&judged.value)?)
-            };
-        Ok(Judged {
-            printed,
-            outcome,
-            replayed,
-            probability,
-            partial_failure: false,
-            profile_mismatch: self.mismatch.notice(),
-        })
-    }
-
-    fn tuned_for_profile(&self) -> Option<&crate::core::ProfileName> {
-        self.mismatch.tuned_for()
     }
 }
 

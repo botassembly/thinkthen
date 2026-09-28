@@ -10,6 +10,7 @@
 //! detached worker's sent requests finish, and its result is dropped.
 
 mod call;
+mod diagnostics;
 mod ffi;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -74,11 +75,15 @@ const fn class_name(kind: ErrorKind) -> &'static str {
 /// The one panic guard. A panic in the binding's own code becomes the
 /// defect kind. `thinkthen` already stops engine panics at its doors.
 fn guarded<T>(body: impl FnOnce() -> Result<T, Fault>) -> Result<T, Fault> {
-    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|_| {
-        Err(Fault::of(
-            ErrorKind::Defect,
-            "defect: the Ruby binding panicked",
-        ))
+    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
+        Ok(value) => value,
+        Err(payload) => {
+            std::mem::forget(payload);
+            Err(Fault::of(
+                ErrorKind::Defect,
+                "defect: the Ruby binding panicked",
+            ))
+        }
     })
 }
 
@@ -171,8 +176,10 @@ fn start(
     std::thread::Builder::new()
         .name("thinkthen-call".to_owned())
         .spawn(move || {
-            prepare();
-            feed.put(guarded(|| call::run(&engine, ask, &own, deadline)));
+            feed.put(guarded(|| {
+                prepare();
+                call::run(&engine, ask, &own, deadline)
+            }));
         })
         .map_err(|_| Fault::of(ErrorKind::Local, "the call's worker thread could not start"))?;
     Ok(handoff)
@@ -185,6 +192,7 @@ struct Settings {
     model: Option<String>,
     throttle: Option<i64>,
     max_requests: Option<i64>,
+    max_request_bytes: Option<i64>,
     cache_at: Option<String>,
     no_cache: bool,
     timeout: Option<i64>,
@@ -213,6 +221,11 @@ impl Settings {
             let value = usize::try_from(value)
                 .map_err(|_| Fault::usage("a request limit is a whole number of 1 or more"))?;
             builder = builder.max_requests(Some(value))?;
+        }
+        if let Some(value) = self.max_request_bytes {
+            let value = usize::try_from(value)
+                .map_err(|_| Fault::usage("max_request_bytes is a whole number of at least 1"))?;
+            builder = builder.max_request_bytes(value)?;
         }
         if let Some(folder) = &self.cache_at {
             builder = builder.cache_at(folder)?;

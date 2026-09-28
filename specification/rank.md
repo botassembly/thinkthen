@@ -20,7 +20,9 @@ By default a stream of records shares requests, filling each to the smaller of t
 
 Each line or JSONL record as it arrived, and each CSV or TSV row as a compact JSON object, most likely yes first. Ties keep input order. `--details` prints the object in [result.md](result.md) for the same records in the same order.
 
-`rank` holds every record until the input ends, because a final order needs the whole set. An endless stream has to be cut into windows upstream.
+`rank` prints only after the input ends. Without `--top`, it holds every scored record for the final order. With `--top N`, it keeps at most N winning output rows while it judges every record; a bounded number of input and completed batches may also be in flight. This bounds retained row count, not the bytes of a large individual record. An endless stream has to be cut into windows upstream, because it never reaches a final order.
+
+It also prints no order while an earlier record or batch is still waiting for a slow reply or retry. Later answers may be ready, but `rank` needs every answer before it can sort. [records.md](records.md) explains the ordered window, attempt timeout and absence of a whole-run deadline.
 
 ## Options
 
@@ -80,6 +82,8 @@ The question stays the same for every record, so one run is one measurement.
 ## Cautions
 
 The method is fixed and printed in the help. The tool asks one yes/no question of each record, sorts the records by the probability of yes, and breaks exact ties by input order. It never compares two records in one question, and it never runs a tournament.
+
+When a run spans batches, `rank` compares their reported yes probabilities as-is, though the records had different request neighbours. `--batch 1` puts each record in its own request, without promising that separate replies have the same calibration or repeat identically.
 
 `rank` takes no rubric. Ordering by the probability of yes follows the vendor's own reranking method.
 

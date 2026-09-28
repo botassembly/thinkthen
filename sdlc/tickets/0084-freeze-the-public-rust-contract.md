@@ -102,12 +102,14 @@ impl EngineBuilder {
     pub fn model(self, value: &str) -> Result<Self, Error>;
     pub fn width(self, value: u8) -> Result<Self, Error>;
     pub fn max_requests(self, value: Option<usize>) -> Result<Self, Error>;
+    pub fn max_request_bytes(self, value: usize) -> Result<Self, Error>;
     pub fn default_cache(self) -> Self;
     pub fn cache_at(self, value: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn no_cache(self) -> Self;
     pub fn timeout(self, value: std::time::Duration) -> Result<Self, Error>;
     pub fn max_retries(self, value: u32) -> Self;
     pub fn profile(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
+    pub fn profile_json(self, value: &str) -> Result<Self, Error>;
     pub fn record(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn replay(self, path: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn build(self) -> Result<Engine, Error>;
@@ -231,6 +233,7 @@ impl<'a> Default for CallOptions<'a> {}
 impl<'a> CallOptions<'a> {
     pub const fn new() -> Self;
     pub const fn cancel(self, value: &'a CancelToken) -> Self;
+    pub const fn send_budget(self, value: &'a SendBudget, limit: Option<u64>) -> Self;
     pub fn deadline_at(self, value: std::time::Instant) -> Self;
     pub fn deadline_after(self, value: std::time::Duration) -> Result<Self, Error>;
 }
@@ -239,6 +242,12 @@ impl Clone for CancelToken {}
 impl std::fmt::Debug for CancelToken {}
 impl Default for CancelToken {}
 impl CancelToken { pub fn new() -> Self; pub fn cancel(&self); pub fn is_cancelled(&self) -> bool; }
+pub struct SendBudget { /* private, process-scoped, shared across engines */ }
+impl Clone for SendBudget {}
+impl std::fmt::Debug for SendBudget {}
+impl Default for SendBudget {}
+impl SendBudget { pub fn new() -> Self; }
+pub enum SendBudgetDenial { BeforeFirstSend, BeforeRetry { last_status: u16 } }
 pub struct Batch<'a, T> { /* private */ }
 impl<T> std::fmt::Debug for Batch<'_, T> {}
 impl<T> Iterator for Batch<'_, T> { type Item = Result<T, Error>; }
@@ -251,7 +260,7 @@ pub enum Probabilities { YesNo { yes: f64 }, Named(Vec<NamedProbability>) }
 pub struct Usage { /* provider-reported counts */ }
 impl Usage { pub fn input_tokens(&self) -> u64; pub fn output_tokens(&self) -> u64; }
 pub struct Counters { /* process counts */ }
-impl Counters { pub fn requests_sent(&self) -> u64; pub fn cache_answers(&self) -> u64; pub fn input_tokens(&self) -> u64; pub fn output_tokens(&self) -> u64; }
+impl Counters { pub fn requests_sent(&self) -> u64; pub fn retries(&self) -> u64; pub fn cache_answers(&self) -> u64; pub fn input_tokens(&self) -> u64; pub fn output_tokens(&self) -> u64; }
 pub struct Details { /* private */ }
 impl Details {
     pub fn value(&self) -> &Judgment;
@@ -328,7 +337,7 @@ pub enum Error { Usage(ErrorDetail), Backend(ErrorDetail), Local(ErrorDetail), C
 pub enum ErrorKind { Usage, Backend, Local, Cancelled, Deadline, Defect }
 pub struct ErrorDetail { /* private */ }
 impl ErrorDetail { pub fn message(&self) -> &str; }
-impl Error { pub const fn kind(&self) -> ErrorKind; pub const fn retryable(&self) -> bool; pub const fn detail(&self) -> &ErrorDetail; }
+impl Error { pub const fn kind(&self) -> ErrorKind; pub const fn retryable(&self) -> bool; pub const fn detail(&self) -> &ErrorDetail; pub const fn send_budget_denial(&self) -> Option<SendBudgetDenial>; }
 impl std::fmt::Display for Error {}
 impl std::fmt::Debug for Error {}
 impl std::error::Error for Error {}
@@ -406,3 +415,11 @@ The optional `polars` feature adds two root names, `PolarsEngine` and the re-exp
 ## Amended 2026-09-27 (ticket 0148)
 
 The frozen `EngineBuilder` inventory above removes the ineffective `cache_bytes` setter and adds `timeout(Duration)`, `max_retries(u32)`, `profile(path)`, `record(path)`, and strict `replay(path)`. The builder applies the command's folder conflicts and passes the settings to the existing facade. No engine module changes. Ian can overturn these setters.
+
+## Amended 2026-09-28 (ticket 0211)
+
+`EngineBuilder::ca_bundle(self, path: impl AsRef<Path>) -> Result<Self, Error>` adds explicit replacement TLS roots. An absolute path is required at the setter; `build` reads and validates the bounded certificate-only PEM. `EngineBuilder::from_env` captures optional `THINKTHEN_CA_BUNDLE`, and a later explicit setter overrides that path. A bare builder reads no ambient setting. The engine retains parsed roots across clone, model selection and fork reconstruction while certificate and hostname verification remain enabled. This adds no new public error kind. The accepted [0211 design](0211-private-tls-roots.md) owns the outcome; Ian can overturn it.
+
+## Amended 2026-09-28 (ticket 0212)
+
+The historical 0.1 inventory above predates the accepted [0212 contract](0212-rust-library-batching.md) and [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md). Eager engine calls now return `Call<T>` with `value()`, `into_value()` and `facts()`. A started failed call exposes facts through `Error::facts()`. Lazy `Batch<T>` keeps its iterator shape and exposes final facts after exhaustion or its terminal error. `EngineBuilder::batch`, `CallOptions::batch` and `CallOptions::context` select eligible many-record requests; `choose_many`, `score_many` and `tag_many` join the bulk methods. Borrowed question and row observations expose bounded detail. The original code block remains a dated inventory, not the current signature reference. The Rust [README](../../libraries/rust/README.md) and source define the current spelling. Ticket 0212's default-Max iterator-pause amendment and code review remain open at this checkpoint; this dated pointer does not close them or change another surface.

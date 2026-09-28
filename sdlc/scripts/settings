@@ -40,7 +40,8 @@ NAMES = (re.compile(r"[\"'](THINKTHEN_[A-Z0-9_]+)[\"']"), re.compile(r"\benv\.(T
 SOURCE = {".rs", ".py", ".pyi", ".ts", ".js", ".mjs", ".cjs", ".rb", ".R", ".r", ".c", ".h", ".sql"}
 ENGINE_CELLS = {
     "Address": ("base_url",), "Model": ("model",), "Throttle": ("throttle",),
-    "Request limit": ("max_requests",), "Answer cache": ("cache_at",),
+    "Request limit": ("max_requests",), "Request size": ("max_request_bytes",),
+    "Answer cache": ("cache_at",),
     "Backend profile": ("profile",), "Timeout": ("timeout",),
     "Retries": ("max_retries",), "Recording": ("record", "replay"),
 }
@@ -48,7 +49,7 @@ ENGINE_SOURCES = {
     "Rust": "crates/thinkthen/src/public/settings.rs", "Python": "libraries/python/src/engine.rs",
     "TypeScript": "libraries/typescript/src/door.rs", "Ruby": "libraries/ruby/src/lib.rs",
     "R": "libraries/r/thinkthen/src/rust/src/lib.rs", "C": "libraries/c/src/settings.rs",
-    "DuckDB": "databases/duckdb/src/engines.rs", "PostgreSQL": "databases/postgresql/src/call.rs",
+    "DuckDB": "databases/duckdb/src/engines.rs", "PostgreSQL": "databases/postgresql/src/call/settings.rs",
     "SQLite": "databases/sqlite/src/settings.rs",
 }
 
@@ -150,13 +151,12 @@ def engine_cells(page, rows):
             out.append(f'{page}: engine setting "{name}" has no row')
             continue
         for surface, path in ENGINE_SOURCES.items():
-            if name == "Model" and surface in ("DuckDB", "PostgreSQL", "SQLite"):
-                continue  # those cells describe question JSON, not an engine setter
             source = (REPO / path).read_text(encoding="utf-8")
             cell = row[COLUMNS.index(surface)]
             for setter in setters:
+                method = "profile_json" if setter == "profile" and surface in ("DuckDB", "PostgreSQL", "SQLite") else setter
                 code = (f"pub fn {setter}(" in source if surface == "Rust" else
-                        re.search(rf"\bbuilder\s*\.\s*{re.escape(setter)}\s*\(", source) is not None)
+                        re.search(rf"\bbuilder\s*\.\s*{re.escape(method)}\s*\(", source) is not None)
                 page_has = not cell.startswith("not on this surface") and setter.split("_")[0] in cell
                 if code != page_has:
                     side = "source has no setter" if page_has else "source setter has no cell"
@@ -247,8 +247,8 @@ def cases(text):
         ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Threshold" has two rows']),
         ("a missing engine cell", edit(text, COLUMNS.index("Python"), "`Engine(timeout=)`", "not on this surface"),
          [page + "Python Timeout source setter has no cell: timeout"]),
-        ("a stale SQL cell", cell_edit(text, "Timeout", COLUMNS.index("SQLite"), "`thinkthen_timeout(n)`"),
-         [page + "SQLite Timeout source has no setter: timeout"]),
+        ("a stale SQL cell", cell_edit(text, "Address", COLUMNS.index("DuckDB"), "`SET thinkthen_base_url`"),
+         [page + "DuckDB Address source has no setter: base_url"]),
         ("the real page", text, []),
     ]
 

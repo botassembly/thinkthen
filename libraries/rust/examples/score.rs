@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Please update my mailing address when you can.",
         "Nobody can log in to the site right now.",
     ] {
-        writeln!(out, "{} {text}", tt.score(&urgency, text)?)?;
+        writeln!(out, "{} {text}", tt.score(&urgency, text)?.into_value())?;
     }
     Ok(())
 }

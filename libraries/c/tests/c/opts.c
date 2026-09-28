@@ -28,7 +28,9 @@ static int said(const thinkthen_engine *tt, int code, const char *message) {
 
 /* One JSON-door answer, compared with `expected` and freed. */
 static int replies(const thinkthen_engine *tt, char *reply, const char *expected) {
-    int same = reply != NULL && strcmp(reply, expected) == 0;
+    char value[80];
+    snprintf(value, sizeof value, "\"value\":%s", expected);
+    int same = reply != NULL && strstr(reply, value) != NULL && strstr(reply, "\"facts\":{") != NULL;
     if (!same) {
         fprintf(stderr, "got %s\n", reply == NULL ? thinkthen_error_message(tt) : reply);
     }
@@ -131,9 +133,10 @@ int main(void) {
     check(replies(tt, thinkthen_call(tt, "{\"decide\":\"Q?\",\"evidence\":\"x\",\"details\":false}"), "true"),
           "details false answers the bare value");
     char *audit = thinkthen_call(tt, "{\"decide\":\"Q?\",\"evidence\":\"x\",\"details\":true}");
-    const char *head = "{\"schema\":\"thinkthen.result/1\",\"value\":true,";
-    check(audit != NULL && strncmp(audit, head, strlen(head)) == 0, "details true answers the audit line");
-    if (audit != NULL && strncmp(audit, head, strlen(head)) != 0) {
+    const char *head = "\"value\":{\"schema\":\"thinkthen.result/1\",\"value\":true,";
+    check(audit != NULL && strstr(audit, head) != NULL && strstr(audit, "\"facts\":{") != NULL,
+          "details true answers the audit line");
+    if (audit != NULL && strstr(audit, head) == NULL) {
         fprintf(stderr, "got %s\n", audit);
     }
     thinkthen_free_string(audit);

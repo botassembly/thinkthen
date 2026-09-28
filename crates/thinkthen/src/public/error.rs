@@ -1,6 +1,8 @@
 //! The one public error: six kinds, a safe message, and the retry signal.
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
+use crate::public::SendBudgetDenial;
+use crate::public::results::Facts;
 
 /// What stopped a call, as one of six stable kinds.
 ///
@@ -66,6 +68,8 @@ impl ErrorKind {
 pub struct ErrorDetail {
     message: String,
     retryable: bool,
+    send_budget_denial: Option<SendBudgetDenial>,
+    facts: Option<Box<Facts>>,
 }
 
 impl ErrorDetail {
@@ -111,10 +115,36 @@ impl Error {
         }
     }
 
+    /// The typed reason a process send budget refused this live attempt.
+    #[must_use]
+    pub const fn send_budget_denial(&self) -> Option<SendBudgetDenial> {
+        self.detail().send_budget_denial
+    }
+
+    /// Final facts for a started call, including one that sent nothing.
+    #[must_use]
+    pub fn facts(&self) -> Option<&Facts> {
+        self.detail().facts.as_deref()
+    }
+
+    pub(crate) fn with_facts(mut self, facts: Facts) -> Self {
+        match &mut self {
+            Self::Usage(detail)
+            | Self::Backend(detail)
+            | Self::Local(detail)
+            | Self::Cancelled(detail)
+            | Self::Deadline(detail)
+            | Self::Defect(detail) => detail.facts = Some(Box::new(facts)),
+        }
+        self
+    }
+
     pub(crate) fn of(kind: ErrorKind, message: impl Into<String>) -> Self {
         let detail = ErrorDetail {
             message: message.into(),
             retryable: false,
+            send_budget_denial: None,
+            facts: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),
@@ -168,7 +198,16 @@ impl From<EngineError> for Error {
             | Self::Local(detail)
             | Self::Cancelled(detail)
             | Self::Deadline(detail)
-            | Self::Defect(detail) => detail.retryable = error.retryable(),
+            | Self::Defect(detail) => {
+                detail.retryable = error.retryable();
+                detail.send_budget_denial = match error {
+                    EngineError::SendBudgetFirst => Some(SendBudgetDenial::BeforeFirstSend),
+                    EngineError::SendBudgetRetry(last_status) => {
+                        Some(SendBudgetDenial::BeforeRetry { last_status })
+                    }
+                    _ => None,
+                };
+            }
         }
         public
     }
@@ -184,6 +223,10 @@ fn message(error: &EngineError) -> String {
                 .to_owned();
         }
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
+        EngineError::SendBudgetFirst => "the process send budget was spent before a request",
+        EngineError::SendBudgetRetry(status) => {
+            return format!("the process send budget was spent before retrying status {status}");
+        }
         EngineError::TokenLimit => "the backend answered with status 400",
         EngineError::ReplyTooLarge(limit) => return reply_too_large(*limit),
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),

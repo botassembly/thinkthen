@@ -16,7 +16,7 @@ use crate::args::{
 use crate::asking::{Asks, fixed, run};
 use crate::cli::asked::{self, FileTier};
 use crate::edge::Environment;
-use crate::failure::Failure;
+use crate::failure::{Failure, ReplayContext};
 use crate::schedule::Output;
 
 /// One question, its rule, and the view its answer prints in.
@@ -27,7 +27,7 @@ pub(crate) struct Asked<'a> {
     pub(crate) settled: &'a Resolved,
     pub(crate) view: View,
     pub(crate) keeping: Keeping,
-    /// Where `decide`, `filter` and `rank` read their batch setting, or `None`.
+    /// Where record verbs read their batch setting, or `None`.
     pub(crate) batch: Option<Tiers<'a>>,
 }
 
@@ -156,6 +156,7 @@ pub(crate) fn decide(
         details: arguments.common.details,
     };
     judging(
+        ReplayContext::Decide,
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,
@@ -282,6 +283,11 @@ fn over_kept(
         Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
         _ => Output::streaming(writer, environment.usage()),
     };
+    let context = match keeping {
+        Keeping::Passing => ReplayContext::Filter,
+        Keeping::Ordered => ReplayContext::Rank,
+        Keeping::Answers => ReplayContext::Decide,
+    };
     run(
         Asked {
             common,
@@ -299,10 +305,12 @@ fn over_kept(
         input,
         &mut output,
     )
+    .map_err(|error| error.with_replay_context(context))
 }
 
 /// Run one judging verb, whose rows print as their places come.
 fn judging(
+    context: ReplayContext,
     asked: Asked<'_>,
     environment: &Environment,
     input: impl Read + Send + 'static,
@@ -315,6 +323,7 @@ fn judging(
         input,
         &mut Output::streaming(writer, environment.usage()),
     )
+    .map_err(|error| error.with_replay_context(context))
 }
 
 /// Pick one label from the options, and set the exit code from the answer.
@@ -332,7 +341,7 @@ pub(crate) fn choose(
     if arguments.raw && (arguments.common.csv || arguments.common.tsv) {
         return Err(Failure::TableRaw);
     }
-    let settled = asked::choose(arguments)?;
+    let (settled, file) = asked::choose(arguments)?;
     let asks = match arguments.options_pointer.as_deref() {
         Some(typed) => {
             if !arguments.common.jsonl {
@@ -352,13 +361,14 @@ pub(crate) fn choose(
         details: arguments.common.details,
     };
     judging(
+        ReplayContext::Choose,
         Asked {
             common: &arguments.common,
             asks,
             settled: &settled,
             view,
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,
@@ -379,8 +389,9 @@ pub(crate) fn tag(
     if arguments.quiet {
         return Err(Failure::TagQuiet);
     }
-    let settled = asked::tag(arguments)?;
+    let (settled, file) = asked::tag(arguments)?;
     judging(
+        ReplayContext::Tag,
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,
@@ -391,7 +402,7 @@ pub(crate) fn tag(
                 details: arguments.common.details,
             },
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,
@@ -422,20 +433,21 @@ pub(crate) fn score(
             "`score` has no answer exit code, so --quiet would discard its result",
         ));
     }
-    let settled = asked::score(arguments)?;
+    let (settled, file) = asked::score(arguments)?;
     let view = View {
         quiet: false,
         raw: false,
         details: arguments.common.details,
     };
     judging(
+        ReplayContext::Score,
         Asked {
             common: &arguments.common,
             asks: fixed(&settled)?,
             settled: &settled,
             view,
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,

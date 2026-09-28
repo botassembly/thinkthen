@@ -88,7 +88,7 @@ fn cancelled_batch_leaves_no_send(engine: &Engine, loopback: &conformance_backen
     let outcome = thread::scope(|scope| {
         let run = scope.spawn(|| {
             engine.records(
-                false,
+                crate::engine::schedule::RecordFlow::Streaming,
                 &batch,
                 |requests, events| {
                     thread::spawn(move || feed(&requests, &events));

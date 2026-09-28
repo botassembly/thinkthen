@@ -2,6 +2,8 @@
 
 Status: Open. Steps 1 and 2 landed, and ticket 0119 holds steps 3 and 4. Filed from the workspace on Ian's request. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the workspace's decisions folder.
 
+Preparation update, 2026-09-27: the numbered remedy below records the original 2026-09-24 mutation design. Ian's later functional-gate ruling makes repeated whole-scope mutants, load and timing runs opt-in rather than ordinary validation. Ticket 0119 now proposes a bounded assertion-by-assertion deletion audit, with each removed test mapped to a stronger routine proof and the actual line reduction reported. Its amended design awaits fresh independent review; no test has been removed by this preparation. The original counts below remain historical measurements at `ffb8fb79`.
+
 `AGENTS.md` asks for red-green development and says nothing about the red-green tests afterward. Each one pins a step while the code is written. After green, many guard nothing that a stronger test misses, and they break on behavior-preserving refactors. The OpenClaw project deleted about 400,000 lines of such tests with little change in coverage, using its `test-audit` skill (https://github.com/openclaw/openclaw/tree/main/.agents/skills/test-audit).
 
 Measured on main at `ffb8fb79`:
