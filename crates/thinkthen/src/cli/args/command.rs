@@ -285,6 +285,17 @@ pub(crate) struct CacheArguments {
 pub(crate) enum CacheCommand {
     /// Remove selected entries, then the oldest entries until the folder fits the size target.
     Prune(PruneArguments),
+    /// Report valid entries absent from a complete caller-supplied digest list.
+    Unused(UnusedArguments),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct UnusedArguments {
+    /// The existing cache or recording folder to inspect.
+    pub(crate) directory: PathBuf,
+    /// A UTF-8 file with one lowercase request digest per line.
+    #[arg(long, value_name = "DIGESTS")]
+    pub(crate) used: PathBuf,
 }
 
 #[derive(Args, Debug)]

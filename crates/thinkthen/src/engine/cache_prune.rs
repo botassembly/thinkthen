@@ -1,5 +1,6 @@
 //! Explicit maintenance for a bounded recording cache.
 
+use std::collections::HashSet;
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -102,6 +103,37 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
         temporary_entries,
         temporary_bytes,
     })
+}
+
+/// Compare validated final entries with one caller-certified complete run list.
+pub(crate) fn unused(folder: &Path, used: &HashSet<String>) -> Result<Vec<String>, Error> {
+    let metadata = fs::symlink_metadata(folder).map_err(storage)?;
+    if metadata.file_type().is_symlink() || !metadata.is_dir() {
+        return Err(Error::CacheEntry);
+    }
+    let gate = cache_lock::shared_folder(folder).map_err(storage)?;
+    let current = fs::symlink_metadata(folder).map_err(storage)?;
+    let opened = gate.file().metadata().map_err(storage)?;
+    if current.file_type().is_symlink() || !current.is_dir() || !same_identity(&current, &opened) {
+        return Err(Error::CacheEntry);
+    }
+    let scanned = scan_final(folder)?;
+    if !scanned.bad.is_empty() {
+        return Err(Error::CacheEntry);
+    }
+    let mut names: Vec<String> = scanned
+        .good
+        .into_iter()
+        .filter(|entry| {
+            entry
+                .name
+                .strip_suffix(".json")
+                .is_some_and(|digest| !used.contains(digest))
+        })
+        .map(|entry| entry.name)
+        .collect();
+    names.sort();
+    Ok(names)
 }
 
 #[derive(Debug)]

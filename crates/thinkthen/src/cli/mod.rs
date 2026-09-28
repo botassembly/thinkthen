@@ -189,6 +189,7 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
         Some(Command::Relate(arguments)) => relate::run(arguments, environment, input, writer),
         Some(Command::Cache(arguments)) => match &arguments.command {
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
+            args::CacheCommand::Unused(arguments) => cache::unused(arguments, writer),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
         Some(Command::Check(arguments)) => check::run(arguments, environment, writer),
