@@ -76,6 +76,8 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     said(lambda: engine.annotate(form, frame, on="missing"))
     clash = pl.DataFrame({"body": texts, "late": texts})
     said(lambda: engine.annotate(form, clash, on="body"))
+    said(lambda: engine.annotate(form, frame.with_columns(pl.lit(1).alias("failed")), on="body"))
+    said(lambda: engine.annotate({"version": 1, "questions": {"failed": {"decide": "Late?"}}}, frame, on="body"))
     said(lambda: engine.annotate(form, clash, on="missing"))
     deep = pl.Series("deep", [1])
     for _ in range(70):
@@ -94,6 +96,8 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on=",
         "UsageError the frame has no column named 'missing'",
         "UsageError the frame already has a column named 'late'; rename it first",
+        "UsageError the frame already has a column named 'failed'; rename it first",
+        "UsageError the question name failed is reserved for frame failures",
         "UsageError the frame has no column named 'missing'",
         "UsageError a column's schema nests deeper than 64 levels",
         "UsageError recognize with on= takes no relations; ask them of one text",
@@ -124,21 +128,22 @@ def test_annotate_on_a_frame_keeps_every_row_and_column(backend, tmp_path):
     for given, expected in ((chunked, wanted), (whole.slice(2, 5), wanted[:5])):
         before = cached.usage()["requests_sent"]
         got = cached.annotate(form, given, on="body")
-        print(got.columns, got.schema == {**given.schema, "late": pl.Boolean, "team": pl.String},
+        print(got.columns, got.schema == {**given.schema, "late": pl.Boolean, "team": pl.String,
+                                          "failed": got.schema["failed"]},
+              got.schema["failed"].base_type() == pl.Struct, got["failed"].is_null().all(),
               got.select(given.columns).equals(given),
               got.select("late", "team").to_dicts() == expected,
               cached.usage()["requests_sent"] - before)
     """, child_env(backend, tmp_path, MALLOC_PERTURB_="165"))
-    columns = "['body', 'cat', 'kind', 'pair', 'list', 'late', 'team']"
+    columns = "['body', 'cat', 'kind', 'pair', 'list', 'late', 'team', 'failed']"
     # The backend answers every text alike. The list call cached every row's
     # text, so a frame call that reads its own rows sends nothing.
-    assert printed.splitlines() == ["3"] + 2 * [f"{columns} True True True 0"]
+    assert printed.splitlines() == ["3"] + 2 * [f"{columns} True True True True True 0"]
 
 
-def test_a_frame_writes_cells_as_value_json_holds():
-    """Ticket 0136, ADR 0047 item 10: widened and tag cells hold ``value_json``'s
-    text, as in Rust. The listener mixes a failed and an answered ``urgent``.
-    Regression: a score of 1.0 widened as ``1``, or a tag column left a list."""
+def test_a_frame_keeps_types_and_nested_failures():
+    """The two-row listener mixes answered and failed score cells. The score
+    stays Float64, the tag stays a list, and only the failed row has a marker."""
     printed = run("""
     import http.server, json, threading, polars as pl, thinkthen as tt
     seen = []
@@ -165,13 +170,16 @@ def test_a_frame_writes_cells_as_value_json_holds():
             "urgent": {"score": "How urgent?", "levels": ["Routine.", "Soon.", "Now."]},
             "kinds": {"tag": "Which kinds?", "labels": ["bill", "ship"]}}}
     got = engine.annotate(form, pl.DataFrame({"body": ["a", "b"]}), on="body")
-    print(got.schema, got["urgent"].to_list(), got["kinds"].to_list(), len(seen), sep="\\n")
+    print(got.schema["urgent"] == pl.Float64, got.schema["kinds"] == pl.List(pl.String),
+          got.schema["failed"].base_type() == pl.Struct, got["urgent"].to_list(),
+          got["kinds"].to_list(), got["failed"].to_list(), len(seen), sep="\\n")
+    empty = engine.annotate(form, pl.DataFrame({"body": []}, schema={"body": pl.String}), on="body")
+    print(empty.schema == got.schema, empty.height, len(seen))
     """, clean_env(THINKTHEN_API_KEY=FAKE))
-    marker = '{"failed":{"kind":"backend","cause":"missing_probability"}}'
     assert printed.splitlines() == [
-        "Schema({'body': String, 'late': Boolean, 'urgent': String, 'kinds': String})",
-        str(["1.0", marker]),
-        str(['["bill"]', '["bill"]']), "2"]
+        "True", "True", "True", "[1.0, None]", "[['bill'], ['bill']]",
+        "[None, {'late': None, 'urgent': {'failed': {'kind': 'backend', "
+        "'cause': 'missing_probability'}}, 'kinds': None}]", "2", "True 0 2"]
 
 
 def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):
