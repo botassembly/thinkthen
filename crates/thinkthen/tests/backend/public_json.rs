@@ -116,7 +116,7 @@ fn compare(backend: &Backend, case: &Case) -> Compared {
             let text = case.text.as_deref().unwrap_or_default();
             let found = engine.recognize(&ask, text).map_err(|e| e.to_string())?;
             same(
-                found.to_json() + "\n",
+                found.value().to_json() + "\n",
                 &command(case, &path, &base, text, false)?,
             )
         }
@@ -130,9 +130,13 @@ fn compare(backend: &Backend, case: &Case) -> Compared {
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|error| error.to_string())?;
             let edges = engine.relate(&ask, entities).map_err(|e| e.to_string())?;
-            let lines: String = edges.iter().map(|edge| edge.to_json() + "\n").collect();
+            let lines: String = edges
+                .value()
+                .iter()
+                .map(|edge| edge.to_json() + "\n")
+                .collect();
             // Each edge counts, so a case whose edges all vanished shows in the total.
-            same(lines, &command(case, &path, &base, given, false)?).map(|_| edges.len())
+            same(lines, &command(case, &path, &base, given, false)?).map(|_| edges.value().len())
         }
         _ => Ok(0),
     }
@@ -153,7 +157,7 @@ fn details(
     };
     let details = details.map_err(|error| error.to_string())?;
     same(
-        details.to_json() + "\n",
+        details.value().to_json() + "\n",
         &command(case, path, base, text, true)?,
     )
 }

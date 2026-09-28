@@ -10,7 +10,7 @@ Status: landed
 
 ## Outcome
 
-A cache or recording folder cannot silently become cold because the backend interface or address changed. The first write-capable use binds the folder to one canonical backend identity before the tool reads a key or sends a request. A later mismatch fails locally with an action a stranger can follow. Exact replay from an older folder remains read-only and compatible.
+A cache or recording folder cannot silently become cold because the backend interface or address changed. The first write-capable use binds the folder to one canonical backend identity before it sends a request. ADR 0099 and ticket 0228 permit one key lookup first when a read-only probe finds an unbound empty folder. A later mismatch fails locally with an action a stranger can follow. Exact replay from an older folder remains read-only and compatible.
 
 ## Current facts
 
@@ -30,7 +30,7 @@ Every newly bound folder has one private `.thinkthen-backend.json` file. Its clo
 
 Before its first entry lookup, every default-cache, `--cache`, `--record`, and paired `--record`/`--replay` run compares this identity with the request. A mismatch exits 5 before key lookup or network access and prints exactly `thinkthen: the recording folder belongs to another backend interface or address; restore its backend settings or choose another folder`. It repeats no path, address, file bytes, or evidence.
 
-A new or empty folder gets the identity before key lookup or network access. The tool writes and syncs a private temporary file, publishes the final name without replacing a winner, compares a concurrent winner, syncs the folder after a successful publication, and attempts to remove its temporary name on every returned path. A killed process may leave only a private dot-prefixed temporary file or one complete parseable final identity. Concurrent first users with different identities produce one winner and one local refusal; they never send under both identities.
+A new or empty folder gets the identity before network access. ADR 0099 permits a read-only empty-folder probe and one key lookup first; a missing key leaves an unbound empty folder unchanged. The gate still rechecks and binds before any send. The tool writes and syncs a private temporary file, publishes the final name without replacing a winner, compares a concurrent winner, syncs the folder after a successful publication, and attempts to remove its temporary name on every returned path. A killed process may leave only a private dot-prefixed temporary file or one complete parseable final identity. Concurrent first users with different identities produce one winner and one local refusal; they never send under both identities.
 
 An identity read accepts at most 256 bytes. The directory entry and opened handle must name the same regular, non-symlink file before and after the bounded read. A symlink, non-regular object, oversized file, replacement during inspection, malformed JSON, foreign schema, missing field, extra field, wrong field type, or value that is not exactly 64 lowercase hexadecimal characters is a safe local storage failure. No untrusted marker byte reaches a diagnostic.
 
