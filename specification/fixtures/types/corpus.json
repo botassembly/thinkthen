@@ -108,6 +108,7 @@
       "request": {
         "filter": "Does this ask for a refund?",
         "threshold": 0.5,
+        "call": {"batch": 1},
         "records": [
           "row 0",
           "row 1",
@@ -125,6 +126,7 @@
       "definition": "rank",
       "request": {
         "rank": "How relevant is this?",
+        "call": {"batch": 1},
         "records": [
           "item 0",
           "item 1",
@@ -206,7 +208,8 @@
         },
         "records": [
           "Refund requested for a failed payment."
-        ]
+        ],
+        "call": {"batch": 1}
       },
       "response": [
         {
@@ -350,6 +353,7 @@
       },
       "expect_keys": [
         "requests_sent",
+        "retries",
         "input_tokens",
         "output_tokens",
         "cache_answers"
@@ -450,6 +454,8 @@
     {"name":"detailed-kind-mismatch","definition":"details","response":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"choose","text":"Which?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}},"response_valid":false},
     {"name":"find-details","definition":"details","response":{"schema":"thinkthen.result/1","value":null,"question":{"verb":"find","text":"Which?","none":true},"answer":{"kind":"find","pick":"none","probabilities":{"u001":0.1,"none":0.9}},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {"name":"annotate-details","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":true},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Ready?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"request":"x"}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
+    {"name":"annotate-details-batches","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":true},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Ready?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"request":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"batches":[{"group":1,"request":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","setting":"max","records":2,"position":1,"closed":"end","usage":{"input_tokens":5,"output_tokens":3},"requests_sent":1}],"failed_questions":0}}},
+    {"name":"annotate-details-batches-bad-position","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":true},"answers":{"ready":{"value":true,"question":{"verb":"decide","text":"Ready?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"request":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"],"batches":[{"group":1,"request":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","setting":"max","records":2,"position":0,"closed":"end","requests_sent":1}],"failed_questions":0}},"response_valid":false},
     {"name":"annotate-details-empty-success","definition":"annotateDetails","response":{"schema":"thinkthen.result/1","input":"note","value":{"ready":{"failed":{"kind":"backend","cause":"missing_answer"}}},"answers":{"ready":{}},"meta":{"tool":"thinkthen","questions_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":1}},"response_valid":false},
     {"name":"annotate-success-missing-answer","definition":"annotateEntry","response":{"value":true,"question":{"verb":"decide","text":"Ready?"},"threshold":0.5,"request":"x"},"response_valid":false},
     {"name":"annotate-failed-entry","definition":"annotateEntry","response":{"question":{"verb":"decide","text":"Ready?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"}},
@@ -457,6 +463,19 @@
     {"name":"annotate-find-not-a-member","definition":"annotateEntry","response":{"question":{"verb":"find","text":"Which?"},"failure":{"kind":"backend","cause":"missing_answer"},"request":"x"},"response_valid":false},
     {"name":"recognize-details","definition":"recognizeDetails","response":{"schema":"thinkthen.result/1","value":{"entities":[]},"question":{"verb":"recognize"},"answer":{"pieces":[],"names":[],"pairs":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
     {"name":"relate-details","definition":"relateDetails","response":{"schema":"thinkthen.result/1","value":[],"question":{"verb":"relate"},"answer":{"questions":[]},"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":[],"failed_questions":0}}},
+    {"name":"c-call-success","definition":"callSuccess","response":{"value":[true,null],"facts":{"records":2,"requests_sent":1,"cache_answers":0,"seconds":0.01,"input_tokens":5,"output_tokens":3,"model":"jev-latest"}}},
+    {"name":"c-call-success-missing-facts","definition":"callSuccess","response":{"value":true},"response_valid":false},
+    {"name":"c-detailed-record","definition":"callRecordDetails","response":{"schema":"thinkthen.result/1","input":{"id":"one","body":"alpha"},"value":"first","question":{"verb":"choose","text":"Which label?"},"answer":{"kind":"choice","pick":"first","probabilities":{"first":0.9,"second":0.1}},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["x"],"failed_questions":0,"batch":{"setting":2,"records":2,"position":1,"closed":"size","requests_sent":1,"usage":{"input_tokens":5,"output_tokens":3}}}}},
+    {"name":"c-detailed-record-missing-input","definition":"callRecordDetails","response":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Q?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["x"],"failed_questions":0}},"response_valid":false},
+    {"name":"c-detailed-record-invalid-batch","definition":"callRecordDetails","response":{"schema":"thinkthen.result/1","input":"alpha","value":true,"question":{"verb":"decide","text":"Q?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":null,"meta":{"tool":"thinkthen","question_sha256":"x","url":"local","model":"test","requests_sent":1,"cached":false,"requests":["x"],"failed_questions":0,"batch":{"setting":0,"records":2,"position":1,"closed":"size","requests_sent":1}}},"response_valid":false},
+    {"name":"c-record-call-options","definition":"doorRequest","schema_only":true,"request":{"choose":"Which?","options":["first","second"],"records":["alpha","beta"],"call":{"batch":2,"context":"Shared facts."}}},
+    {"name":"c-call-unknown-option","definition":"doorRequest","request":{"decide":"Q?","records":["alpha"],"call":{"jobs":2}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-call-on-scalar","definition":"doorRequest","request":{"decide":"Q?","evidence":"alpha","call":{"batch":2}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-scalar","definition":"doorRequest","request":{"decide":"Q?","evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-find","definition":"doorRequest","request":{"find":"Which?","units":["alpha"],"call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-recognize","definition":"doorRequest","request":{"recognize":{"version":1,"recognize":{"kinds":{"person":"A person."}}},"evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-relate","definition":"doorRequest","request":{"relate":{"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}},"records":[{"name":"alpha","kind":"person"}],"call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-annotate-context-refused","definition":"doorRequest","request":{"annotate":{"version":1,"questions":{"ready":{"decide":"Ready?"}}},"records":["alpha"],"call":{"context":"Shared facts."}},"request_valid":false,"expected_error":"usage"},
     {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}}
   ]
 }

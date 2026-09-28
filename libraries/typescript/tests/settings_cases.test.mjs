@@ -25,12 +25,12 @@ for (const entry of corpus.cases) {
       const body = `
         const engine = new tt.Engine(${JSON.stringify(options)});
         ${step.verb === 'relate'
-          ? `return (await engine.relate(${JSON.stringify(entry.entities)}, { relations: [${JSON.stringify(entry.relation)}] })).length;`
+          ? `return (await engine.relate(${JSON.stringify(entry.entities)}, { relations: [${JSON.stringify(entry.relation)}] })).value.length;`
           : step.verb === 'decide_many'
-          ? `return await engine.decide_many(${JSON.stringify(corpus.question)}, ${JSON.stringify(step.records)});`
+          ? `return (await engine.decide_many(${JSON.stringify(corpus.question)}, ${JSON.stringify(step.records)}, { batch: 1 })).value;`
           : step.model
-            ? `const details = await engine.details(${JSON.stringify(corpus.question)}, ${JSON.stringify(step.text)}); return { value: details.value, model: details.meta.model };`
-            : `return await engine.decide(${JSON.stringify(corpus.question)}, ${JSON.stringify(step.text)});`}`;
+            ? `const details = await engine.details(${JSON.stringify(corpus.question)}, ${JSON.stringify(step.text)}); return { value: details.value.value, model: details.value.meta.model };`
+            : `return (await engine.decide(${JSON.stringify(corpus.question)}, ${JSON.stringify(step.text)})).value;`}`;
       const result = await ask(backend, body, { arm: entry.arm.replace(/\/v1$/, ''), env: { THINKTHEN_CACHE: folder } });
       if (step.error) assert.equal(result.error?.kind, step.error, entry.id);
       else if (step.verb === 'relate') assert.equal(result.value, step.edges, entry.id);

@@ -28,6 +28,16 @@ case(shared_settings_corpus)
 
 
 @case
+def b13c_warm_zero_budget():
+    """Warm finalization reads the caller's already spent query budget."""
+    with Backend() as backend:
+        got = run(["SET thinkthen_query_budget_ms = 0",
+                   "SELECT thinkthen_warm('Is it a refund?', 'refund now')"], backend.base())
+        expect(said(got[1]), "thinkthen deadline: the query has spent its time budget", "warm deadline")
+        expect(backend.count(), 0, "spent warm budget sends nothing")
+
+
+@case
 def saved_calibration_details_keep_the_shared_digest_and_warning():
     """The staged C++ scalar keeps the saved question identity in details."""
     shared = json.loads((Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())
@@ -140,14 +150,34 @@ def request_limit_range():
 
 @case
 def the_process_request_total_holds_across_calls():
-    """Ian's ruling of 2026-09-25: a total per process, checked before each call."""
+    """A concurrent row failure stays below the total; separate calls spend it exactly."""
     with Backend() as backend:
         ten = "SELECT thinkthen_decide('Is it a refund?', 'refund ' || i) FROM range(10) t(i)"
-        got = run(["SET thinkthen_max_requests_total = 3", ten, ASK], backend.base())
-        expect(said(got[1]), SPENT, "ten rows under a total of 3")
-        expect(backend.count(), 3, "counted sends")
-        expect(said(got[2]), SPENT, "the next call")
-        expect(backend.count(), 3, "counted sends after the refusal")
+        got = run(["SET thinkthen_max_requests_total = 3", "SET thinkthen_batch = '1'", ten,
+                   "SELECT metric, value FROM thinkthen_usage()", ASK,
+                   "SELECT metric, value FROM thinkthen_usage()"], backend.base())
+        expect(said(got[2]), SPENT, "ten batch-one rows under a total of 3")
+        before = dict(rows(got[3]))["requests_sent"]
+        after = dict(rows(got[5]))["requests_sent"]
+        expect(0 < before <= after <= 3, True, "a failing concurrent row batch stays within the total")
+        expect(backend.count(), after, "usage and observed sends agree")
+        if "error" in got[4]:
+            expect(said(got[4]), SPENT, "a refused next call")
+            expect(after, before, "a refusal sends nothing")
+        else:
+            expect(rows(got[4]), [[True]], "an available next call answers")
+            expect(after, before + 1, "an available next call sends once")
+        if before == 3:
+            expect(said(got[4]), SPENT, "a fully spent total refuses the next call")
+    with Backend() as backend:
+        statements = ["SET thinkthen_max_requests_total = 3"] + [
+            f"SELECT thinkthen_decide('Is it a refund?', 'refund {number}')" for number in range(4)
+        ]
+        got = run(statements, backend.base())
+        for result in got[1:4]:
+            expect(rows(result), [[True]], "an available request slot answers")
+        expect(said(got[4]), SPENT, "the fourth separate call is refused")
+        expect(backend.count(), 3, "three separate calls send exactly three requests")
 
 
 @case

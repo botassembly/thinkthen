@@ -14,7 +14,7 @@ test('a saved profile keeps its digest and reports a runtime name mismatch', asy
   const { value } = await ask(backend, `
     const engine = new tt.Engine({ profile: ${JSON.stringify(profile)}, cache: false });
     const found = await engine.details(tt.question(${JSON.stringify(fixture.question)}), ${JSON.stringify(fixture.evidence)});
-    return { digest: found.meta.question_sha256, warning: found.meta.profile_warning, model: found.meta.model };`);
+    return { digest: found.value.meta.question_sha256, warning: found.value.meta.profile_warning, model: found.value.meta.model };`);
   assert.deepEqual(value, {
     digest: fixture.question_sha256,
     warning: fixture.warning,

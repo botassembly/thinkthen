@@ -6,16 +6,17 @@ The shape: one engine value built from the environment, one JSON door that carri
 
 ## The header table
 
-The header declares 20 functions. The port kept its 19, and ticket 0148 added one settings constructor before 0.1 shipped.
+The header adds a borrowed failure-facts accessor beside its existing error functions. Ticket 0148 added the settings constructor before 0.1 shipped.
 
 | Symbol | Verdict | Change |
 |---|---|---|
-| `thinkthen_engine_new` | changed | Builds through `Engine::from_env`, the constructor `default_engine` uses. It reads the variables that constructor reads. `THINKTHEN_TIMEOUT_SECS` and `THINKTHEN_MAX_RETRIES` are not read. NULL means the environment settings are invalid. A cache folder or configuration file the engine cannot read also returns NULL, as the local kind. The calling thread keeps that failure in its own slot, and the three error functions called with NULL name it until the thread's next engine builds. No throttle argument and no throttle variable exist. |
-| `thinkthen_engine_new_with` | added | Reads one closed JSON settings object over `EngineBuilder::from_env`. The keys are `base_url`, `model`, `throttle`, `max_requests`, `cache`, `timeout`, `max_retries`, `profile`, `record`, and `replay`; `api_key` is refused. Null or `{}` matches `thinkthen_engine_new`. Wrong types, unknown or repeated keys, and builder refusals enter the calling thread's null-engine error slot. |
+| `thinkthen_engine_new` | changed | Builds through `Engine::from_env`, the constructor `default_engine` uses. It reads the variables that constructor reads. `THINKTHEN_TIMEOUT_SECS` and `THINKTHEN_MAX_RETRIES` are not read. NULL means the environment settings are invalid. A cache folder or configuration file the engine cannot read also returns NULL, as the local kind. The calling thread keeps that failure in its own slot; the error accessors called with NULL name it until the thread's next engine builds. No throttle argument and no throttle variable exist. |
+| `thinkthen_engine_new_with` | added | Reads one closed JSON settings object over `EngineBuilder::from_env`. The keys include `base_url`, `model`, `throttle`, `max_requests`, `max_request_bytes`, `cache`, `timeout`, `max_retries`, `profile`, `batch`, `record`, and `replay`; `api_key` is refused. Null or `{}` matches `thinkthen_engine_new`. Wrong types, unknown or repeated keys, and builder refusals enter the calling thread's null-engine error slot. |
 | `thinkthen_engine_free` | kept | |
 | `thinkthen_error_message` | kept | Messages come from the engine's `Error` display text. |
 | `thinkthen_error_code` | kept | Codes 1 to 6 map from `ErrorKind` in the header's order. |
 | `thinkthen_error_retryable` | changed | Returns the engine's retryable signal under ticket 0089's rule: a retried status earns 1, and a transport failure, a 401, and every kind but backend earn 0. |
+| `thinkthen_error_facts_json` | added | Borrows the last started failure's final facts on this thread and engine; NULL means absent. Its pointer follows the message accessor's lifetime. |
 | `thinkthen_cancel_token_new`, `thinkthen_cancel`, `thinkthen_cancel_token_free` | kept | The handle wraps `CancelToken` and fires from any thread. |
 | `thinkthen_decide`, `thinkthen_decide_opts` | kept | `question_json` goes through `Question::from_json`. `deadline_ms` stays `int64_t` and goes through `CallOptions::deadline_millis` (ADR 0041). |
 | `thinkthen_decide_many`, `thinkthen_decide_many_opts` | kept | A cancelled or expired call still returns no rows. |
@@ -28,19 +29,20 @@ The version macros equal the `thinkthen-c` crate version. `tests/door/main.rs` c
 
 ## The JSON door's envelope
 
-A request names one verb of ten: `decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find`, `annotate`, `recognize`, or `relate`. Beside the verb, the door reads five envelope keys:
+A request names one verb of ten: `decide`, `choose`, `score`, `tag`, `filter`, `rank`, `find`, `annotate`, `recognize`, or `relate`. Beside the verb, the door reads six envelope keys:
 
 | Key | Verbs | Value |
 |---|---|---|
 | `evidence` | `decide`, `choose`, `score`, `tag`, `recognize` | One string |
-| `records` | `filter`, `rank`, `annotate`, `relate` | An array of strings; for `relate`, an array of JSON records |
+| `records` | Four judgments, `filter`, `rank`, `annotate`, `relate` | An array of strings; for `relate`, an array of JSON records |
 | `units` | `find` | An array of strings |
-| `details` | the four single judgments | `true` or `false` |
+| `details` | the four judgments | `true` or `false` |
 | `usage` | alone | `true` |
+| `call` | eligible record arrays | A closed object with `batch` (`"max"` or a positive integer) and optional shared text `context` where supported |
 
 Every other key forms the question object. `Question::from_json` validates it, so an unknown question key is a usage failure there. `filter` asks its text as a `decide` question at a single cut. `rank` takes its text alone. `find` takes its text and an optional `"none": true`, which offers a none candidate. `annotate` carries the question set as its value, and a member's `on` reads that part of each record as JSON text.
 
-The replies are bare values:
+The `value` inside a successful `{"value":VALUE,"facts":FACTS}` reply has the prior bare shape:
 
 - `decide`: `true`, `false`, or `null`.
 - `choose`: a label or `null`.
@@ -54,9 +56,9 @@ The replies are bare values:
 - `relate`: `{"edges":[...]}`.
 - `usage`: `{"requests_sent","retries","input_tokens","output_tokens","cache_answers"}`, this process's totals.
 
-With `"details": true`, a single judgment replies with the `thinkthen.result/1` line from `Details::to_json`.
+With `"details": true`, a single judgment puts the `thinkthen.result/1` object under `value`. A record array holds one full detailed object per input. The four record-array verbs use the shared Rust stopping-details bridge, preserving runtime labels and descriptions. A failed row returns NULL and no partial array. `facts` is scoped to this call; `{"usage":true}` remains a direct process-counter object.
 
-The door writes the bare `decide`, `choose`, `score`, `tag`, `filter`, `rank`, and `find` values and the usage object itself. `tests/door/bytes.rs` holds them to the command's output byte for byte on the shared cases.
+The door writes the `value` for `decide`, `choose`, `score`, `tag`, `filter`, `rank`, and `find` with the existing result writer. `tests/door/bytes.rs` compares that value with the command's output on the shared cases.
 
 ## 1. Cancellation
 
@@ -102,6 +104,7 @@ The door checks its pointers before it asks the engine, so a refusal sends nothi
 - The token is freed with `thinkthen_cancel_token_free` after every call that carried it has returned.
 - The engine is freed with `thinkthen_engine_free` after every call on it has returned.
 - The message from `thinkthen_error_message` is borrowed. It stays valid until the calling thread records its next failure on that engine, the thread exits, or the engine is freed.
+- The JSON text from `thinkthen_error_facts_json` is borrowed under the same rule and is NULL when the last failure has no started-call facts.
 - Every buffer the caller passes is borrowed for the call and never kept.
 
 ## 6. Concurrent callers

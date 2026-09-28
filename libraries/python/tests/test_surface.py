@@ -53,9 +53,9 @@ def test_saved_profile_details_and_column_refusal(backend, tmp_path):
     printed = run(f"""
         import json, polars as pl, thinkthen as tt
         engine = tt.Engine(profile={str(running)!r}, cache=False)
-        details = engine.details(tt.question(file={str(question)!r}), {case['evidence']!r})
+        details = engine.details(tt.question(file={str(question)!r}), {case['evidence']!r}).value
         try:
-            engine.score(tt.question(file={str(scored)!r}), pl.Series(["one", "two"]))
+            engine.score(tt.question(file={str(scored)!r}), pl.Series(["one", "two"])).value
         except tt.UsageError as error:
             print(json.dumps({{"digest": details["meta"]["question_sha256"],
                                "warning": details["meta"]["profile_warning"],
@@ -77,9 +77,9 @@ def test_wrong_questions_are_usage_errors_that_name_the_verb(backend, tmp_path):
     printed = run("""
         import thinkthen as tt
         score = tt.question(score="How bad?", levels=["low", "high"])
-        for call in (lambda: tt.decide(42, "x"), lambda: tt.decide({"bad": 1}, "x"),
-                     lambda: tt.choose(score, "x"), lambda: tt.score(score, "x", levels=["a"]),
-                     lambda: tt.find("Which?", ["a", "b"], none="yes")):
+        for call in (lambda: tt.decide(42, "x").value, lambda: tt.decide({"bad": 1}, "x").value,
+                     lambda: tt.choose(score, "x").value, lambda: tt.score(score, "x", levels=["a"]).value,
+                     lambda: tt.find("Which?", ["a", "b"], none="yes").value):
             try:
                 call()
             except tt.UsageError as error:
@@ -110,18 +110,18 @@ def test_the_module_functions_equal_an_explicit_engine(backend, tmp_path):
         texts = ["one note", "two notes", "three notes"]
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}, "day": {{"choose": "Day?", "options": ["Mon", "Tue"]}}}}}}
         calls = [
-            lambda on: on.decide(late, "a note"),
-            lambda on: on.decide_many(late, texts),
-            lambda on: on.choose("Which day?", "a note", options=["Mon", "Tue"]),
-            lambda on: on.score(level, "a note"),
-            lambda on: on.tag(labels, "a note"),
-            lambda on: on.details(late, "a note")["value"],
-            lambda on: on.filter("Is it late?", texts),
-            lambda on: on.rank("Which is most urgent?", texts, top=2),
-            lambda on: on.find("Which says two?", texts),
-            lambda on: on.annotate(form, texts[:1]),
-            lambda on: [(e.text, e.start, e.end, e.length, e.kind) for e in on.recognize("Maria Chen arrived.", kinds=["person"]).entities],
-            lambda on: [(e.relation, e.source.name, e.target.name) for e in on.relate([("Ada", "person"), ("Bo", "person")], relations={{"knows": ("person", "person")}})],
+            lambda on: on.decide(late, "a note").value,
+            lambda on: on.decide_many(late, texts).value,
+            lambda on: on.choose("Which day?", "a note", options=["Mon", "Tue"]).value,
+            lambda on: on.score(level, "a note").value,
+            lambda on: on.tag(labels, "a note").value,
+            lambda on: on.details(late, "a note").value["value"],
+            lambda on: on.filter("Is it late?", texts).value,
+            lambda on: on.rank("Which is most urgent?", texts, top=2).value,
+            lambda on: on.find("Which says two?", texts).value,
+            lambda on: on.annotate(form, texts[:1]).value,
+            lambda on: [(e.text, e.start, e.end, e.length, e.kind) for e in on.recognize("Maria Chen arrived.", kinds=["person"]).value.entities],
+            lambda on: [(e.relation, e.source.name, e.target.name) for e in on.relate([("Ada", "person"), ("Bo", "person")], relations={{"knows": ("person", "person")}}).value],
         ]
         for call in calls:
             print(json.dumps(call(tt)))
@@ -155,9 +155,9 @@ def test_relate_reads_pairs_dicts_and_entities_alike(backend, tmp_path):
         forms = [[("Ada", "person"), ("Bo", "person")],
                  [{"name": "Ada", "kind": "person"}, {"name": "Bo", "kind": "person"}],
                  [tt.Entity("Ada", "person"), tt.Entity("Bo", "person")]]
-        print(len({repr(tt.relate(form, relations=rules)) for form in forms}))
+        print(len({repr(tt.relate(form, relations=rules).value) for form in forms}))
         try:
-            tt.relate([("Ada", "person"), 7], relations=rules)
+            tt.relate([("Ada", "person"), 7], relations=rules).value
         except tt.UsageError as error:
             print(error)
     """, child_env(backend, tmp_path))
@@ -173,13 +173,13 @@ def test_relate_reads_what_recognize_found(backend, tmp_path):
     printed = run("""
         import thinkthen as tt
         rules = {"knows": ("person", "person")}
-        found = tt.recognize("Maria Chen arrived.", kinds=["person"]).entities
+        found = tt.recognize("Maria Chen arrived.", kinds=["person"]).value.entities
         forms = [found,
                  [{"text": one.text, "kind": one.kind} for one in found],
                  [{"name": one.text, "text": "not this", "kind": one.kind} for one in found],
                  [("Maria Chen", "person"), ("arrived.", "person")]]
-        print(len({repr(tt.relate(form, relations=rules)) for form in forms}))
-        print([(e.source.name, e.target.name) for e in tt.relate(found, relations=rules)])
+        print(len({repr(tt.relate(form, relations=rules).value) for form in forms}))
+        print([(e.source.name, e.target.name) for e in tt.relate(found, relations=rules).value])
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         "1",
@@ -193,11 +193,11 @@ def test_a_forked_child_answers_and_the_parent_counts_nothing(backend, tmp_path)
     printed = run("""
         import os, thinkthen as tt
         late = tt.question(decide="Is it late?")
-        tt.decide(late, "warm")
+        tt.decide(late, "warm").value
         before = tt.usage()
         child = os.fork()
         if child == 0:
-            os._exit(0 if tt.decide(late, "in the child") is True else 1)
+            os._exit(0 if tt.decide(late, "in the child").value is True else 1)
         _, status = os.waitpid(child, 0)
         print(os.waitstatus_to_exitcode(status), tt.usage() == before)
     """, child_env(backend, tmp_path), timeout=30)

@@ -10,10 +10,10 @@ require "rbconfig"
 require_relative "../../../conformance/children/children"
 
 class TestPublicNames < Minitest::Test
-  CONSTANTS = %i[BackendError Cancel CancelledError DeadlineError DefectError Edge Engine Entity Error Found
+  CONSTANTS = %i[BackendError Call Cancel CancelledError Completion DeadlineError DefectError Edge Engine Entity Error Found
                  LocalError Question QuestionSet Ranked Recognized RecognizedEntity Relation UsageError VERSION].freeze
-  VERBS = %i[annotate choose decide decide_many decide_many_with_probabilities details filter find rank
-             recognize relate score score_with_level tag usage with_tick].freeze
+  VERBS = %i[annotate choose choose_many decide decide_many decide_many_with_probabilities details filter find rank
+             recognize relate score score_many score_with_level tag tag_many usage with_tick].freeze
 
   def test_the_loaded_module_shows_only_the_pinned_names
     out, errors, status = Open3.capture3(Children.env(keep: %w[LD_LIBRARY_PATH]), RbConfig.ruby, "-I", File.expand_path("../lib", __dir__),

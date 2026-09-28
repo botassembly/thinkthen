@@ -12,13 +12,13 @@ class TestSurface < Minitest::Test
 
   def test_the_single_verbs_answer_in_their_ruby_shapes
     lines, count = run_child(<<~RUBY)
-      say T.decide("Is it urgent?", "text")
-      say T.decide(T.question(decide: "Is it urgent?", threshold: 0.2..0.95), "text")
-      say T.decide(T.question(decide: "Is it urgent?", threshold: 0.95), "text")
-      say T.choose("Which team?", "text", options: %w[billing shipping])
-      say T.score("How urgent?", "text", levels: %w[low mid high])
-      say T.score_with_level("How urgent?", "text", levels: %w[low mid high])
-      say T.tag("Which labels?", "text", labels: %w[money shipping])
+      say T.decide("Is it urgent?", "text").value
+      say T.decide(T.question(decide: "Is it urgent?", threshold: 0.2..0.95), "text").value
+      say T.decide(T.question(decide: "Is it urgent?", threshold: 0.95), "text").value
+      say T.choose("Which team?", "text", options: %w[billing shipping]).value
+      say T.score("How urgent?", "text", levels: %w[low mid high]).value
+      say T.score_with_level("How urgent?", "text", levels: %w[low mid high]).value
+      say T.tag("Which labels?", "text", labels: %w[money shipping]).value
     RUBY
     assert_equal [true, nil, false, "billing", 0.15, [0.15, "low"], %w[money shipping]], lines
     # The three decide questions send the same request, and so do the two
@@ -28,7 +28,7 @@ class TestSurface < Minitest::Test
 
   def test_details_is_the_commands_details_document
     lines, = run_child(<<~RUBY)
-      found = T.details("Is it urgent?", "text")
+      found = T.details("Is it urgent?", "text").value
       say [found["schema"], found["value"], found["answer"], found["meta"]["requests_sent"], found["meta"]["requests"].size]
     RUBY
     assert_equal [["thinkthen.result/1", true, { "kind" => "yes_no", "probability" => 0.9 }, 1, 1]], lines
@@ -43,7 +43,7 @@ class TestSurface < Minitest::Test
         engine = T::Engine.new(profile: #{profile.inspect}, cache: false)
         question = T.question(decide: #{fixture.fetch("question").fetch("decide").inspect},
                               profile: #{fixture.fetch("question").fetch("profile").inspect})
-        found = engine.details(question, #{fixture.fetch("evidence").inspect})
+        found = engine.details(question, #{fixture.fetch("evidence").inspect}).value
         say [found["meta"]["question_sha256"], found["meta"]["profile_warning"], found["meta"]["model"]]
       RUBY
       assert_equal [[fixture.fetch("question_sha256"), fixture.fetch("warning"), fixture.fetch("model")]], lines
@@ -54,11 +54,11 @@ class TestSurface < Minitest::Test
   def test_the_bulk_verbs_keep_input_order_and_map_places_back
     lines, count = run_child(<<~RUBY)
       records = ["one", { note: "two" }, "three"]
-      say T.decide_many("Is it urgent?", records)
-      say T.filter("Is it urgent?", records.lazy)
-      say T.filter(T.question(decide: "Is it urgent?", threshold: 0.95), records)
-      say T.rank("Is it urgent?", records, top: 2).map(&:to_a)
-      say T.find("Which line?", %w[first second]).to_a
+      say T.decide_many("Is it urgent?", records, batch: 1).value
+      say T.filter("Is it urgent?", records.lazy, batch: 1).value
+      say T.filter(T.question(decide: "Is it urgent?", threshold: 0.95), records, batch: 1).value
+      say T.rank("Is it urgent?", records, top: 2, batch: 1).value.map(&:to_a)
+      say T.find("Which line?", %w[first second]).value.to_a
     RUBY
     assert_equal [true, true, true], lines[0]
     assert_equal ["one", { "note" => "two" }, "three"], lines[1]
@@ -72,7 +72,7 @@ class TestSurface < Minitest::Test
   # G4: the probabilities come from the same requests as the answers.
   def test_decide_many_with_probabilities_sends_one_request_a_record
     lines, count = run_child(<<~RUBY)
-      rows = T.decide_many_with_probabilities("Is it urgent?", (1..20).map { |n| "record \#{n}" })
+      rows = T.decide_many_with_probabilities("Is it urgent?", (1..20).map { |n| "record \#{n}" }, batch: 1).value
       say [rows.size, rows.first]
     RUBY
     assert_equal [[20, { "answer" => true, "probability" => 0.9 }]], lines
@@ -83,8 +83,8 @@ class TestSurface < Minitest::Test
     lines, = run_child(<<~RUBY)
       set = T.set(#{File.expand_path("fixture/form.json", __dir__).inspect})
       say set.names
-      say T.annotate(set, ["a refund please"])
-      say T.annotate(set, [{ "body" => "a refund please", "id" => 7 }], on: "body")
+      say T.annotate(set, ["a refund please"]).value
+      say T.annotate(set, [{ "body" => "a refund please", "id" => 7 }], on: "body").value
     RUBY
     assert_equal [%w[refund complaint], [{ "refund" => true, "complaint" => true }],
                   [{ "body" => "a refund please", "id" => 7, "refund" => true, "complaint" => true }]], lines
@@ -153,18 +153,18 @@ class TestSurface < Minitest::Test
   # 17th character.
   def test_a_hash_record_crosses_as_its_json_text
     lines, = run_child(<<~RUBY)
-      say T.recognize({ note: "refund" }, kinds: %w[thing]).entities.map { |one| [one.text, one.start, one.end] }
+      say T.recognize({ note: "refund" }, kinds: %w[thing]).value.entities.map { |one| [one.text, one.start, one.end] }
     RUBY
     assert_equal [[['"}', 15, 17]]], lines
   end
 
   def test_recognize_and_relate_return_entity_ends
     lines, = run_child(<<~RUBY)
-      found = T.recognize("Ana Lima", kinds: { "person" => "A person's name." }, relations: { knows: %w[person person] })
+      found = T.recognize("Ana Lima", kinds: { "person" => "A person's name." }, relations: { knows: %w[person person] }).value
       say [found.entities.map(&:to_a), found.relations]
-      found = T.recognize("Ana Lima", kinds: %w[person])
+      found = T.recognize("Ana Lima", kinds: %w[person]).value
       say found.relations
-      edges = T.relate([["Ana", "person"], { name: "Acme", kind: "organization" }], relations: { works_for: %w[person organization] })
+      edges = T.relate([["Ana", "person"], { name: "Acme", kind: "organization" }], relations: { works_for: %w[person organization] }).value
       say edges.map { |edge| [edge.relation, edge.source.to_a, edge.target.to_a, edge.probability] }
     RUBY
     assert_equal [[["Ana Lima", 0, 8, 8, "person", 0.81]], []], lines[0]
@@ -177,11 +177,11 @@ class TestSurface < Minitest::Test
   def test_relate_reads_what_recognize_found
     lines, = run_child(<<~RUBY)
       rules = { knows: %w[person person] }
-      found = T.recognize("Maria Chen arrived.", kinds: %w[person]).entities
+      found = T.recognize("Maria Chen arrived.", kinds: %w[person]).value.entities
       forms = [found, found.map { |one| { text: one.text, kind: one.kind } },
                found.map { |one| { "name" => one.text, "text" => "not this", "kind" => one.kind } },
                [["Maria Chen", "person"], ["arrived.", "person"]]]
-      say(forms.map { |form| T.relate(form, relations: rules).map { |edge| [edge.source.to_a, edge.target.to_a] } }.uniq)
+      say(forms.map { |form| T.relate(form, relations: rules).value.map { |edge| [edge.source.to_a, edge.target.to_a] } }.uniq)
     RUBY
     assert_equal [[[["Maria Chen", "person"], ["arrived.", "person"]], [["arrived.", "person"], ["Maria Chen", "person"]]]], lines[0]
   end

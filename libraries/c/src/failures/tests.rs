@@ -61,6 +61,7 @@ fn a_caught_payload_never_reaches_native_diagnostics() {
         native_panic_child();
     } else {
         let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+            .env_clear()
             .args([
                 "--exact",
                 "failures::tests::a_caught_payload_never_reaches_native_diagnostics",

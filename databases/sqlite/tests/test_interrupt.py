@@ -108,9 +108,10 @@ db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(n, f'Person {n}', 'person') f
 
 
 def test_a_warm_is_cancelled_mid_batch() -> None:
-    """Case 18: at throttle 8, a held 20-row warm stops at 8 sends and stays there."""
+    """Case 18: eight packed sends are held; cancellation starts no ninth."""
     backend = Backend()
     setup = """db.execute("SELECT thinkthen_throttle(8)")
+db.execute("SELECT thinkthen_batch(2)")
 db.execute("CREATE TABLE t(body TEXT)")
 db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(20)])"""
     result = interrupted(backend, "SELECT thinkthen_warm('Is it red?', body) FROM t", 8, setup)

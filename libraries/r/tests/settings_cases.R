@@ -15,6 +15,7 @@ for (case in corpus$cases) {
     settings <- lapply(settings, function(value) {
       if (identical(value, "$FOLDER")) folder else if (identical(value, "$PROFILE")) profile else value
     })
+    if (identical(step$verb, "decide_many")) settings$batch <- 1L
     body <- sprintf('settings <- jsonlite::fromJSON(%s, simplifyVector = FALSE)',
                     literal(literal(settings)))
     # R's JSON reader returns scalar numbers as doubles; tt_engine checks whole numbers.
@@ -23,13 +24,13 @@ for (case in corpus$cases) {
       'tryCatch({',
       'do.call(tt_engine, settings)',
       if (identical(step$verb, "relate"))
-        sprintf('value <- nrow(tt_relate(jsonlite::fromJSON(%s), relations = %s))',
+        sprintf('value <- nrow(tt_relate(jsonlite::fromJSON(%s), relations = %s)$value)',
                 literal(literal(case$entities)), literal(case$relation))
       else if (identical(step$verb, "decide_many"))
-        sprintf('value <- tt_decide(%s, c("refund one", "refund two", "refund three"))', literal(corpus$question))
+        sprintf('value <- tt_decide(%s, c("refund one", "refund two", "refund three"))$value', literal(corpus$question))
       else if (!is.null(step$model))
-        sprintf('value <- tt_details(%s, %s)', literal(corpus$question), literal(step$text))
-      else sprintf('value <- tt_decide(%s, %s)', literal(corpus$question), literal(step$text)),
+        sprintf('value <- tt_details(%s, %s)$value', literal(corpus$question), literal(step$text))
+      else sprintf('value <- tt_decide(%s, %s)$value', literal(corpus$question), literal(step$text)),
       'cat(jsonlite::toJSON(list(value = value), auto_unbox = TRUE), "\\n")',
       '}, thinkthen_error = function(e) cat(jsonlite::toJSON(list(error = e$kind), auto_unbox = TRUE), "\\n"))'
     )

@@ -84,13 +84,77 @@
       ]}}
     },
     "usage": {
-      "type": "object", "required": ["requests_sent", "input_tokens", "output_tokens", "cache_answers"],
+      "type": "object", "required": ["requests_sent", "retries", "input_tokens", "output_tokens", "cache_answers"],
       "additionalProperties": false,
       "properties": {
         "requests_sent": {"type": "integer", "minimum": 0},
+        "retries": {"type": "integer", "minimum": 0},
         "input_tokens": {"type": "integer", "minimum": 0},
         "output_tokens": {"type": "integer", "minimum": 0},
         "cache_answers": {"type": "integer", "minimum": 0}
+      }
+    },
+    "facts": {
+      "type": "object", "required": ["records", "requests_sent", "cache_answers", "seconds"],
+      "additionalProperties": false,
+      "properties": {
+        "records": {"type": "integer", "minimum": 0},
+        "requests_sent": {"type": "integer", "minimum": 0},
+        "cache_answers": {"type": "integer", "minimum": 0},
+        "seconds": {"type": "number", "minimum": 0},
+        "input_tokens": {"type": "integer", "minimum": 0},
+        "output_tokens": {"type": "integer", "minimum": 0},
+        "model": {"type": "string"}
+      }
+    },
+    "callSuccess": {
+      "type": "object", "required": ["value", "facts"], "additionalProperties": false,
+      "properties": {"value": {}, "facts": {"$ref": "#/$defs/facts"}}
+    },
+    "callRecordDetails": {
+      "allOf": [{"$ref": "#/$defs/details"}], "required": ["input"],
+      "properties": {"meta": {"allOf": [{"$ref": "#/$defs/meta"}],
+        "properties": {"batch": {"$ref": "#/$defs/batchMeta"},
+          "batch_warning": {"$ref": "#/$defs/batchWarning"},
+          "context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}}
+    },
+    "batchWarning": {
+      "type": "object", "required": ["tuned_for", "running"], "additionalProperties": false,
+      "properties": {"tuned_for": {"$ref": "#/$defs/batchSetting"},
+        "running": {"$ref": "#/$defs/batchSetting"}}
+    },
+    "batchSetting": {"oneOf": [{"const": "max"}, {"type": "integer", "minimum": 1}]},
+    "batchMeta": {
+      "type": "object", "required": ["setting", "records", "position", "closed", "requests_sent"],
+      "additionalProperties": false,
+      "properties": {
+        "setting": {"$ref": "#/$defs/batchSetting"},
+        "records": {"type": "integer", "minimum": 1},
+        "position": {"type": "integer", "minimum": 1},
+        "closed": {"enum": ["content", "size", "limit", "pause", "end"]},
+        "requests_sent": {"type": "integer", "minimum": 0},
+        "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
+          "properties": {"input_tokens": {"type": "integer", "minimum": 0},
+            "output_tokens": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
+        "split": {"const": true}
+      }
+    },
+    "annotateBatchMeta": {
+      "type": "object",
+      "required": ["group", "request", "setting", "records", "position", "closed", "requests_sent"],
+      "additionalProperties": false,
+      "properties": {
+        "group": {"type": "integer", "minimum": 1},
+        "request": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "setting": {"$ref": "#/$defs/batchSetting"},
+        "records": {"type": "integer", "minimum": 1},
+        "position": {"type": "integer", "minimum": 1},
+        "closed": {"enum": ["content", "size", "limit", "pause", "end"]},
+        "requests_sent": {"type": "integer", "minimum": 0},
+        "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
+          "properties": {"input_tokens": {"type": "integer", "minimum": 0},
+            "output_tokens": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
+        "split": {"const": true}
       }
     },
     "meta": {
@@ -198,7 +262,9 @@
         "schema": {"const": "thinkthen.result/1"},
         "value": {"$ref": "#/$defs/annotatedRow"},
         "answers": {"type": "object", "additionalProperties": {"$ref": "#/$defs/annotateEntry"}},
-        "meta": {"$ref": "#/$defs/meta"}
+        "meta": {"allOf": [{"$ref": "#/$defs/meta"}],
+          "properties": {"batches": {"type": "array", "minItems": 1,
+            "items": {"$ref": "#/$defs/annotateBatchMeta"}}}}
       }, "additionalProperties": true
     },
     "recognizeDetails": {
@@ -231,6 +297,8 @@
         "evidence": {"type": "string"}, "records": {"type": "array"},
         "units": {"type": "array", "items": {"type": "string"}},
         "details": {"type": "boolean"}, "usage": {"const": true},
+        "call": {"type": "object", "additionalProperties": false,
+          "properties": {"batch": {"$ref": "#/$defs/batchSetting"}, "context": {"type": "string", "minLength": 1}}},
         "rank": {"type": "string"}, "find": {"type": "string"},
         "annotate": {"type": "object"}, "recognize": {"type": "object"},
         "relate": {"type": "object"}, "none": {"type": "boolean"},
@@ -250,16 +318,18 @@
       ],
       "allOf": [
         {"if": {"required": ["usage"]}, "then": {"maxProperties": 1}},
+        {"if": {"required": ["recognize"]}, "then": {"required": ["evidence"]}},
         {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["recognize"]}]},
-          "then": {"required": ["evidence"]}},
+          {"required": ["tag"]}, {"required": ["score"]}]},
+          "then": {"oneOf": [{"required": ["evidence"]}, {"required": ["records"]}]}},
         {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
           {"required": ["annotate"]}, {"required": ["relate"]}]},
           "then": {"required": ["records"]}},
         {"if": {"required": ["find"]}, "then": {"required": ["units"]}},
         {"if": {"required": ["none"]}, "then": {"required": ["find"]}},
-        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
-          {"required": ["annotate"]}]},
+        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
+          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["filter"]},
+          {"required": ["rank"]}, {"required": ["annotate"]}]},
           "then": {"properties": {"records": {"items": {"type": "string"}}}}},
         {"if": {"required": ["relate"]},
           "then": {"properties": {"records": {"items": {"type": "object"}}}}},
@@ -267,9 +337,12 @@
           {"required": ["decide"]}, {"required": ["choose"]},
           {"required": ["tag"]}, {"required": ["score"]}
         ]}},
-        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["recognize"]}]},
+        {"if": {"required": ["recognize"]},
           "then": {"not": {"anyOf": [{"required": ["records"]}, {"required": ["units"]}]}}},
+        {"if": {"required": ["call"]}, "then": {"required": ["records"],
+          "not": {"anyOf": [{"required": ["find"]}, {"required": ["recognize"]}, {"required": ["relate"]}]}}},
+        {"if": {"required": ["annotate"]},
+          "then": {"properties": {"call": {"not": {"required": ["context"]}}}}},
         {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
           {"required": ["annotate"]}, {"required": ["relate"]}]},
           "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["units"]}]}}},

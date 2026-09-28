@@ -38,6 +38,7 @@ int main(void) {
         thinkthen_recognize(NULL, "{}", "x", 1, &out, &out_len) != THINKTHEN_EUSAGE ||
         thinkthen_relate(NULL, "{}", texts, lengths, 1, &out, &out_len) != THINKTHEN_EUSAGE ||
         thinkthen_call(NULL, "{}") != NULL || thinkthen_error_code(NULL) != THINKTHEN_EUSAGE ||
+        thinkthen_error_facts_json(NULL) != NULL ||
         thinkthen_error_retryable(NULL) != 0 ||
         strcmp(thinkthen_error_message(NULL), "no engine came, so no failure is named") != 0) {
         fprintf(stderr, "FAIL a null engine\n");
@@ -54,6 +55,10 @@ int main(void) {
         return 1;
     }
     row(tt, "no failure yet", THINKTHEN_OK, THINKTHEN_OK, "no failure yet");
+    if (thinkthen_error_facts_json(tt) != NULL) {
+        fprintf(stderr, "FAIL a new engine has failure facts\n");
+        failed = 1;
+    }
 
     row(tt, "decide null question", thinkthen_decide(tt, NULL, "x", 1, &kept), 1, "a null question");
     row(tt, "decide question not UTF-8", thinkthen_decide(tt, bad, "x", 1, &kept), 1, "the question is not UTF-8");
@@ -72,6 +77,10 @@ int main(void) {
     }
 
     row(tt, "call null request", thinkthen_call(tt, NULL) == NULL, 1, "a null request");
+    if (thinkthen_error_facts_json(tt) != NULL) {
+        fprintf(stderr, "FAIL a parser refusal gained call facts\n");
+        failed = 1;
+    }
     row(tt, "call request not UTF-8", thinkthen_call(tt, bad) == NULL, 1, "the request is not UTF-8");
     row(tt, "find none not a boolean",
         thinkthen_call(tt, "{\"find\":\"Which?\",\"none\":\"yes\",\"units\":[\"a\",\"b\"]}") == NULL, 1,

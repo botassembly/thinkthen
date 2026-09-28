@@ -351,6 +351,7 @@ fn one_details(
             engine.details_with(question, evidence, options)
         }
     }
+    .map(thinkthen::Call::into_value)
 }
 
 /// One group of a verb whose question is a single argument: decide,

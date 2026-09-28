@@ -9,7 +9,7 @@ require_relative "backend"
 
 class TestInterruptBatch < Minitest::Test
   BATCH = <<~RUBY
-    engine = T::Engine.new(throttle: 8)
+    engine = T::Engine.new(throttle: 8, batch: 2)
     before = threads
     records = (1..200).map { |n| "record \#{n}" }
   RUBY
@@ -51,16 +51,17 @@ class TestInterruptBatch < Minitest::Test
         engine.decide_many("Is it urgent?", records)
         say ["answered"]
       rescue RuntimeError => e
-        say [e.message, ms_since(raised_at)]
+        say [e.message, ms_since(raised_at), !e.completion.nil?]
       end
       raiser.join
     RUBY
     TestBackend.with(script, arm: "arm/held") do |backend, child|
       assert_equal 8, backend.wait(8)
       child.tell
-      message, elapsed = child.hear
+      message, elapsed, receipt = child.hear
       assert_equal "a test raise", message
       assert_operator elapsed, :<, 150
+      assert receipt
       after_release(backend, child)
     end
   end
@@ -74,16 +75,17 @@ class TestInterruptBatch < Minitest::Test
         engine.decide_many("Is it urgent?", records)
         say ["answered"]
       rescue T::CancelledError => e
-        say [e.class.name, e.cause.class.name, ms_since(sent_at)]
+        say [e.class.name, e.cause.class.name, ms_since(sent_at), !e.completion.nil?]
       end
       signaller.join
     RUBY
     TestBackend.with(script, arm: "arm/held") do |backend, child|
       assert_equal 8, backend.wait(8)
       child.tell
-      name, cause, elapsed = child.hear
+      name, cause, elapsed, receipt = child.hear
       assert_equal ["ThinkThen::CancelledError", "Interrupt"], [name, cause]
       assert_operator elapsed, :<, 150
+      assert receipt
       after_release(backend, child)
     end
   end
@@ -93,13 +95,13 @@ class TestInterruptBatch < Minitest::Test
   # caller token answering, and the shared token stays unfired.
   def test_harmless_wakeups_and_a_sibling_raise_leave_calls_running
     script = <<~RUBY
-      engine = T::Engine.new(throttle: 16)
+      engine = T::Engine.new(throttle: 16, batch: 2)
       Signal.trap("USR1") {}
       shared = T::Cancel.new
-      records = (1..8).map { |n| "record \#{n}" }
+      records = (1..16).map { |n| "record \#{n}" }
       calls = Array.new(2) do |n|
         Thread.new do
-          engine.decide_many("Is it urgent?", records.map { |one| "\#{one} of \#{n}" }, cancel: shared).size
+          engine.decide_many("Is it urgent?", records.map { |one| "\#{one} of \#{n}" }, cancel: shared).value.size
         rescue RuntimeError => e
           e.message
         end
@@ -119,7 +121,7 @@ class TestInterruptBatch < Minitest::Test
       assert_equal ["a raise on one call", true], child.hear
       backend.release
       child.tell
-      assert_equal [8, false], child.hear
+      assert_equal [16, false], child.hear
       status, errors = child.finish
       assert status.success?, errors
     end

@@ -15,7 +15,7 @@ class TestFork < Minitest::Test
       reader, writer = IO.pipe
       pid = Process.fork do
         reader.close
-        writer.write(JSON.generate([T.decide("Is it urgent?", "in the forked child"), T.usage[:requests_sent]]))
+        writer.write(JSON.generate([T.decide("Is it urgent?", "in the forked child").value, T.usage[:requests_sent]]))
         writer.close
         exit!(0)
       end

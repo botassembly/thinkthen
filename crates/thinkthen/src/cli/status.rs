@@ -143,7 +143,10 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
         .usage_path()
         .map(|path| crate::engine::usage::read(path, &month))
         .transpose()
-        .map_err(|_| Failure::StatusState)?;
+        .map_err(|error| Failure::StatusUsage {
+            name: error.name.clone(),
+            category: error.category(),
+        })?;
     Ok(Status {
         schema: "thinkthen.status/1",
         version: env!("CARGO_PKG_VERSION"),

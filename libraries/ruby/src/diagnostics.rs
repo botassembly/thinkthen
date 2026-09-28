@@ -46,7 +46,7 @@ mod tests {
 
     use super::super::{ErrorKind, Fault, guarded};
 
-    const CHILD: &str = "THINKTHEN_RUBY_PANIC_CHILD";
+    const CHILD: &str = "THINKTHEN_TEST_RUBY_PANIC_CHILD";
     const STRING: &str = "ruby-owned-string-payload-marker";
     const DROP: &str = "ruby-owned-drop-payload-marker";
 
@@ -62,27 +62,33 @@ mod tests {
     fn a_caught_panic_stays_out_of_ruby_diagnostics() {
         if std::env::var_os(CHILD).is_some() {
             child();
-            return;
+        } else {
+            let mut child =
+                std::process::Command::new(std::env::current_exe().expect("test binary"));
+            child.env_clear();
+            if let Some(path) = std::env::var_os("LD_LIBRARY_PATH") {
+                child.env("LD_LIBRARY_PATH", path);
+            }
+            let output = child
+                .args([
+                    "--exact",
+                    "diagnostics::tests::a_caught_panic_stays_out_of_ruby_diagnostics",
+                    "--nocapture",
+                ])
+                .env(CHILD, "1")
+                .output()
+                .expect("isolated Ruby proof");
+            assert!(output.status.success());
+            for stream in [&output.stdout, &output.stderr] {
+                let text = String::from_utf8_lossy(stream);
+                assert!(!text.contains(STRING), "{text}");
+                assert!(!text.contains(DROP), "{text}");
+            }
+            assert_eq!(
+                String::from_utf8_lossy(&output.stderr),
+                "host-thread-marker\n"
+            );
         }
-        let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
-            .args([
-                "--exact",
-                "diagnostics::tests::a_caught_panic_stays_out_of_ruby_diagnostics",
-                "--nocapture",
-            ])
-            .env(CHILD, "1")
-            .output()
-            .expect("isolated Ruby proof");
-        assert!(output.status.success());
-        for stream in [&output.stdout, &output.stderr] {
-            let text = String::from_utf8_lossy(stream);
-            assert!(!text.contains(STRING), "{text}");
-            assert!(!text.contains(DROP), "{text}");
-        }
-        assert_eq!(
-            String::from_utf8_lossy(&output.stderr),
-            "host-thread-marker\n"
-        );
     }
 
     fn child() {

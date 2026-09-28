@@ -3,6 +3,14 @@
 
 use std::fmt;
 
+mod call;
+pub use call::{Call, Facts};
+mod member;
+pub(crate) use member::{Member, ParentReceipt};
+mod observation;
+pub(crate) use observation::{ObservedQuestion, observe_chunk};
+pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
+
 use serde::Serialize;
 
 use crate::core::{self, Backend, BackendProfile, ProfileWarning, Value, Withheld, json_line};
@@ -191,27 +199,7 @@ pub struct Details {
     confidence: Option<f64>,
     url: String,
     json: Written,
-}
-
-impl fmt::Debug for Details {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        formatter
-            .debug_struct("Details")
-            .field("value", &self.value)
-            .field("probabilities", &self.probabilities)
-            .field("nearest", &self.nearest)
-            .field("model", &self.model)
-            .field("question_sha256", &self.question_sha256)
-            .field("profile_warning", &self.profile_warning)
-            .field("requests", &self.requests)
-            .field("requests_sent", &self.requests_sent)
-            .field("cached", &self.cached)
-            .field("usage", &self.usage)
-            .field("confidence", &self.confidence)
-            .field("url", &"<withheld>")
-            .field("json", &self.json)
-            .finish()
-    }
+    scalar_json: Option<Written>,
 }
 
 impl Details {
@@ -268,6 +256,7 @@ impl Details {
             confidence: answer.confidence().map(|held| held.as_f64()),
             url: backend.url().as_str().to_owned(),
             json: Written(json),
+            scalar_json: None,
         })
     }
 
@@ -375,7 +364,7 @@ pub(crate) fn judgment(value: &Value) -> Judgment {
     }
 }
 
-const fn usage(counts: core::Usage) -> Usage {
+pub(crate) const fn usage(counts: core::Usage) -> Usage {
     let (input_tokens, output_tokens) = counts.token_counts();
     Usage {
         input_tokens,

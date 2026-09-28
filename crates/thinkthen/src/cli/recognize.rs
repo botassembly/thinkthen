@@ -213,6 +213,7 @@ fn judged_record(
         json_line(&value)?
     };
     Ok(schedule::Judged {
+        model: None,
         printed: Some(line),
         outcome: Outcome::Yes,
         replayed: !aggregate.live,

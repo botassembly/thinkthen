@@ -190,7 +190,7 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    const CHILD: &str = "THINKTHEN_DUCKDB_PANIC_CHILD";
+    const CHILD: &str = "THINKTHEN_TEST_DUCKDB_PANIC_CHILD";
     const STRING_MARKER: &str = "duckdb-owned-string-payload-marker";
     const DROP_MARKER: &str = "duckdb-owned-drop-payload-marker";
 
@@ -234,6 +234,7 @@ mod tests {
             native_panic_child();
         } else {
             let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+                .env_clear()
                 .args([
                     "--exact",
                     "errors::tests::callback_and_worker_payloads_stay_out_of_diagnostics",

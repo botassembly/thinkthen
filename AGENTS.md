@@ -9,6 +9,7 @@ Read `README.md`, `specification/README.md`, and `sdlc/planning/rust-standards.m
 - The gate ladder is `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused format, lint and functional checks per change. The coordinator names the related-ticket checkpoint before a full test, spec or surfaces run. Run load, churn, timing and contention only through `test-stress --run`; retain all functional cases in `test-full-cases --run`.
 - `sdlc/ratchet.json` equals the measured source total. A raised ceiling records growth, why it earns its lines, and where duplication was sought for deletion.
 - A second agent reviews raised ceilings, wider public surfaces, and dependencies, naming what it checked.
+- Independent Linux and M5 builds may overlap when load, memory and I/O have room. Use isolated worktree outputs and lane-specific rung locks; retain real shared toolchain/cache mutation locks. Inspect capacity before substantial work and reduce jobs or defer only under pressure. The work plan records Ian’s capacity ruling.
 - A ticket that turns a demo green writes its page in ADR 0011's how-to form, and `sdlc/scripts/demos` checks it.
 - Prepare related tickets per `sdlc/planning/ticket-preparation.md`; preserve outcomes. Before landing, add `## What the build taught us` to the ticket. Review its lessons and improve the next brief.
 - Commit each whole change and push it at once.

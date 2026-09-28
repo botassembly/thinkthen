@@ -236,6 +236,7 @@ pub struct Question {
     pub(crate) threshold: Option<Threshold>,
     pub(crate) model: Option<ModelName>,
     pub(crate) profile: Option<ProfileName>,
+    pub(crate) batch: Option<Json>,
     pub(crate) kind: Kind,
 }
 
@@ -413,8 +414,7 @@ impl Question {
     ///
     /// Returns [`Error::Usage`] naming what the file breaks.
     pub fn from_json(value: &str) -> Result<LoadedQuestion, Error> {
-        // The command reads a `decide` file's `batch`. The library ignores it until B12a.
-        let (file, _batch) = QuestionFile::parse_top(value).map_err(Error::refused)?;
+        let (file, batch) = QuestionFile::parse_top(value).map_err(Error::refused)?;
         let resolved =
             resolve(file.verb(), None, Some(&file), &Typed::default()).map_err(Error::refused)?;
         if resolved
@@ -445,6 +445,7 @@ impl Question {
             threshold,
             model,
             profile,
+            batch,
             kind,
         };
         Ok(if kind == Kind::Banded {
@@ -522,6 +523,7 @@ impl Question {
             threshold,
             model: None,
             profile: None,
+            batch: None,
             kind,
         }
     }

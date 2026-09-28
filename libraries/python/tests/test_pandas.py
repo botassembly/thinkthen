@@ -8,6 +8,8 @@ index test's row on shared case 27, whose answers differ by text, show values
 paired to the wrong rows.
 """
 
+import hashlib
+import json
 import pathlib
 import time
 
@@ -15,6 +17,7 @@ import pandas
 import pytest
 
 from conftest import Backend, child_env, run, start
+from test_call import capturing_filter_listener
 
 THREE = pandas.__version__.startswith("3.")
 TESTS = str(pathlib.Path(__file__).resolve().parent)
@@ -26,7 +29,7 @@ SETUP = f"""
     import sys
     sys.path.insert(0, {TESTS!r})
     import pandas as pd, pyarrow as pa, thinkthen as tt
-    engine = tt.Engine(cache=False)
+    engine = tt.Engine(batch=1, cache=False)
     late = tt.question(decide="Is it late?")
     team = tt.question(choose="Which team?", options=["billing", "shipping"])
     urgent = tt.question(score="How urgent?", levels=["Routine.", "Soon.", "Now."])
@@ -49,13 +52,122 @@ SETUP = f"""
         return [None if value is pd.NA else value for value in values]
     def listed(verb, asked, rows):
         if verb == "decide_many":
-            return engine.decide_many(asked, rows)
-        return [getattr(engine, verb)(asked, text) for text in rows]
+            return engine.decide_many(asked, rows).value
+        return [getattr(engine, verb)(asked, text).value for text in rows]
     def names(rows):
         return [[{{"text": one.text, "start": one.start, "end": one.end, "length": one.length,
-                  "kind": one.kind, "strength": one.strength}} for one in engine.recognize(text, kinds=["bill", "ship"]).entities]
+                  "kind": one.kind, "strength": one.strength}} for one in engine.recognize(text, kinds=["bill", "ship"]).value.entities]
                 for text in rows]
 """
+
+
+def _packed_partial(question):
+    instructions = question["instructions"]
+    if instructions.endswith("Partial?") and 'The text is "two"' in instructions:
+        return {"type": "noul"}
+    return None
+
+
+def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
+    """One captured listener proves frame packing and the saved set tier on both pandas lanes."""
+    with capturing_filter_listener(_packed_partial) as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import json, pandas as pd, thinkthen as tt
+        engine = tt.Engine(model="jev-latest", cache=False)
+        observed = []
+        question = tt.question(decide="Is it late?")
+        rows = pd.Series(["one", "two", "three"], index=[9, 5, 7], name="body")
+        for setting in (None, 1):
+            call = engine.decide(question, rows, **({} if setting is None else {"batch": setting}))
+            print("series", call.value.index.tolist(), call.value.name, call.value.dtype.name,
+                  call.value.tolist(), call.facts.records, call.facts.requests_sent,
+                  [detail["index"] for detail in call.details])
+            observed.append([list(detail["request_digests"]) for detail in call.details])
+        frame = rows.to_frame().assign(number=[4, 6, 8])
+        saved = {"version": 1, "batch": 1,
+                 "questions": {"late": {"decide": "Is it late?"}}}
+        plain = {"version": 1, "questions": saved["questions"]}
+        for label, form, controls in (("default", plain, {}), ("saved", saved, {}),
+                                      ("typed", saved, {"batch": "max"})):
+            call = engine.annotate(form, frame, on="body", **controls)
+            value = call.value
+            print("frame", label, value.index.tolist(), list(value.columns), value["number"].tolist(),
+                  value["late"].dtype.name, value["late"].tolist(),
+                  value["failed"].isna().all(), call.facts.records,
+                  call.facts.requests_sent, [detail["index"] for detail in call.details])
+            observed.append([list(detail["request_digests"]) for detail in call.details])
+        engine_max = tt.Engine(model="jev-latest", batch="max", cache=False)
+        overridden = engine_max.annotate(saved, frame, on="body")
+        print("engine", overridden.facts.records, overridden.facts.requests_sent)
+        observed.append([list(detail["request_digests"]) for detail in overridden.details])
+        partial = {"version": 1, "questions": {
+            "late": {"decide": "Is it late?"}, "partial": {"decide": "Partial?"}}}
+        mixed = engine.annotate(partial, frame, on="body")
+        print("partial", mixed.value["partial"].dtype.name,
+              [None if pd.isna(cell) else bool(cell) for cell in mixed.value["partial"]],
+              mixed.value["failed"].tolist(), mixed.facts.records, mixed.facts.requests_sent)
+        print("partial details", [(detail["index"], detail["member"], detail.get("answer"),
+                                   dict(detail["failed"]) if "failed" in detail else None,
+                                   detail["requests_sent"]) for detail in mixed.details])
+        observed.append([list(detail["request_digests"]) for detail in mixed.details])
+        context = engine.decide(question, rows, context="review this claim")
+        print("context", context.facts.records, context.facts.requests_sent)
+        observed.append([list(detail["request_digests"]) for detail in context.details])
+        before = engine.usage()["requests_sent"]
+        try:
+            engine.annotate(saved, frame, on="body", context="forbidden")
+        except tt.UsageError as error:
+            print("refused", str(error), engine.usage()["requests_sent"] - before)
+        else:
+            raise AssertionError("annotate context was accepted")
+        print(json.dumps(observed))
+        """, env)
+        *lines, captured = printed.splitlines()
+        assert lines == [
+            "series [9, 5, 7] body boolean [False, True, True] 3 1 [0, 1, 2]",
+            "series [9, 5, 7] body boolean [False, True, True] 3 3 [0, 1, 2]",
+            "frame default [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
+            "[False, True, True] True 3 1 [0, 1, 2]",
+            "frame saved [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
+            "[False, True, True] True 3 3 [0, 1, 2]",
+            "frame typed [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
+            "[False, True, True] True 3 1 [0, 1, 2]",
+            "engine 3 1",
+            "partial boolean [False, None, True] [None, {'partial': {'failed': "
+            "{'kind': 'backend', 'cause': 'missing_probability'}}}, None] 3 1",
+            "partial details [(0, 'late', False, None, 1), (0, 'partial', False, None, 0), "
+            "(1, 'late', True, None, 0), (1, 'partial', None, "
+            "{'cause': 'missing_probability', 'kind': 'backend'}, 0), "
+            "(2, 'late', True, None, 0), (2, 'partial', True, None, 0)]",
+            "context 3 1",
+            "refused annotate does not take a shared context 0",
+        ]
+        requests = [json.loads(body) for body in bodies]
+        assert [len(request["questions"]) for request in requests] == [
+            3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 6, 3]
+        singleton = (b'{"state":"one","model":"jev-latest","questions":'
+                     b'{"q1":{"type":"noul","instructions":"Is it late?"}}}')
+        assert singleton in bodies[1:4]
+        digest = lambda body: hashlib.sha256(
+            b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
+        def by_state(items):
+            return {json.loads(body)["state"]: digest(body) for body in items}
+        states = ["one", "two", "three"]
+        expected_digests = [
+            [[digest(bodies[0])]] * 3,
+            [[by_state(bodies[1:4])[state]] for state in states],
+            [[digest(bodies[4])]] * 3,
+            [[by_state(bodies[5:8])[state]] for state in states],
+            [[digest(bodies[8])]] * 3,
+            [[digest(bodies[9])]] * 3,
+            [[digest(bodies[10])]] * 6,
+            [[digest(bodies[11])]] * 3,
+        ]
+        assert json.loads(captured) == expected_digests
+        assert bodies[0] != bodies[-1]
+    assert backend.count() == 0
 
 
 def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):
@@ -70,7 +182,7 @@ def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):
         series = pd.Series(texts, dtype=dtype, name="body")
         for verb, asked, want in VERBS + (("decide_many", late, "boolean"),):
             before = sent()
-            got = getattr(engine, verb)(asked, series)
+            got = getattr(engine, verb)(asked, series).value
             sends = sent() - before
             print(dtype, verb, type(got) is pd.Series, got.name, got.dtype.name == want,
                   plain(got.tolist()) == listed(verb, asked, texts), sends)
@@ -84,17 +196,17 @@ def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):
 
 def test_a_failed_question_keeps_its_dtype_and_a_separate_marker(backend, tmp_path):
     """On the malformed arm, the failed answer stays null in a typed column.
-    The companion holds the exact marker. A Series verb still raises."""
+    The companion holds the exact marker. A Series stops after its first failed batch."""
     printed = run(SETUP + """
-    got = engine.annotate(form, pd.DataFrame({"body": texts[:2]}), on="body")
+    got = engine.annotate(form, pd.DataFrame({"body": texts[:2]}), on="body").value
     print(got["late"].dtype.name, got["team"].dtype.name, got["team"].isna().all(),
           got["failed"].dtype.name, got["failed"].tolist())
-    said(lambda: engine.choose(team, pd.Series(texts[:2])))
+    said(lambda: engine.choose(team, pd.Series(texts[:2])).value)
     """, child_env(backend, tmp_path, "arm/malformed/missing_answer"))
     marker = {"team": {"failed": {"kind": "backend", "cause": "missing_answer"}}}
     assert printed.splitlines() == [
         f"boolean string True object {[marker, marker]}",
-        "BackendError the reply was refused: the response carries no answer for question `q1` 2"]
+        "BackendError the reply was refused: the response carries no answer for question `q1` 1"]
 
 
 def test_a_frame_gains_answer_columns_and_keeps_its_own(backend, tmp_path):
@@ -106,14 +218,14 @@ def test_a_frame_gains_answer_columns_and_keeps_its_own(backend, tmp_path):
     frame = pd.DataFrame({"body": texts, "n": [1, 2, 3],
                           "cat": pd.Series(["x", "y", "x"], dtype="category")})
     copy = frame.copy()
-    got = engine.annotate(form, frame, on="body")
-    wanted = engine.annotate(form, texts)
+    got = engine.annotate(form, frame, on="body").value
+    wanted = engine.annotate(form, texts).value
     print(list(got.columns), got[list(frame.columns)].equals(frame),
           [got[name].dtype.name for name in ("late", "team")],
           [dict(zip(("late", "team"), plain(row))) for row in
            zip(got["late"].tolist(), got["team"].tolist())] == wanted,
           got["failed"].isna().all())
-    found = engine.recognize(frame, kinds=["bill", "ship"], on="body")
+    found = engine.recognize(frame, kinds=["bill", "ship"], on="body").value
     print(list(found.columns), found["names"].dtype.name, found["names"].tolist() == names(texts),
           sum(map(len, names(texts))) > 0, frame.equals(copy))
     """, child_env(backend, tmp_path))
@@ -139,7 +251,7 @@ def test_the_callers_index_survives(backend, tmp_path):
     records = pd.Series([one["evidence"] for one in case["exchanges"]], index=[50, 40, 30, 20, 10])
     base = os.environ["THINKTHEN_BASE_URL"].replace("/generic/", "/case/27-decide-many/")
     for verb in ("decide", "decide_many"):
-        got = getattr(tt.Engine(base_url=base, cache=False), verb)(refund, records)
+        got = getattr(tt.Engine(base_url=base, batch=1, cache=False), verb)(refund, records).value
         print("case 27", verb, got.index.equals(records.index), got.tolist())
     indexes = {"labels": [5, 7, 9], "rows": pd.MultiIndex.from_tuples(
         [("a", 1), ("a", 2), ("b", 1)]), "repeated": [1, 1, 2], "empty": []}
@@ -149,18 +261,18 @@ def test_the_callers_index_survives(backend, tmp_path):
         frame = series.to_frame()
         joins = kind in ("labels", "rows")
         for verb, asked, _ in VERBS + (("decide_many", late, "boolean"),):
-            got = getattr(engine, verb)(asked, series)
+            got = getattr(engine, verb)(asked, series).value
             joined = frame.join(got.rename("x"))["x"].notna().all() if joins else "-"
             print(kind, verb, got.index.equals(series.index), got.name,
                   plain(got.tolist()) == listed(verb, asked, rows), joined)
         before = sent()
-        got = engine.annotate(form, frame, on="body")
-        wanted = engine.annotate(form, rows)
+        got = engine.annotate(form, frame, on="body").value
+        wanted = engine.annotate(form, rows).value
         joined = frame.join(got[["late"]])["late"].notna().all() if joins else "-"
         print(kind, "annotate", got.index.equals(frame.index), [
             dict(zip(("late", "team"), plain(row))) for row in
             zip(got["late"].tolist(), got["team"].tolist())] == wanted, joined)
-        found = engine.recognize(frame, kinds=["bill", "ship"], on="body")
+        found = engine.recognize(frame, kinds=["bill", "ship"], on="body").value
         print(kind, "recognize", found.index.equals(frame.index),
               found["names"].tolist() == names(rows), sent() - before > 0)
     """, child_env(backend, tmp_path))
@@ -181,18 +293,18 @@ def test_the_edge_rows_that_answer(backend, tmp_path):
     keyword ``assign`` would refuse after every send."""
     printed = run(SETUP + """
     before = sent()
-    got = engine.decide(late, pd.Series([], dtype=object, name="body", index=[]))
+    got = engine.decide(late, pd.Series([], dtype=object, name="body", index=[])).value
     print("empty", type(got).__name__, got.name, got.dtype.name, len(got), sent() - before)
     frame = pd.DataFrame({"body": []})
-    got = engine.annotate(form, frame, on="body")
+    got = engine.annotate(form, frame, on="body").value
     print("empty frame", frame["body"].dtype.name, list(got.columns),
           [got[name].dtype.name for name in got.columns], len(got), sent() - before)
     before = sent()
-    got = engine.annotate(form, pd.DataFrame({3: texts}), on=3)
+    got = engine.annotate(form, pd.DataFrame({3: texts}), on=3).value
     print("label 3", list(got.columns), got[3].tolist() == texts, sent() - before)
     before = sent()
     got = engine.annotate({"version": 1, "questions": {"self": {"decide": "Late?"}}},
-                          pd.DataFrame({"body": texts}), on="body")
+                          pd.DataFrame({"body": texts}), on="body").value
     print("self", list(got.columns), got["self"].dtype.name, sent() - before)
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
@@ -211,36 +323,36 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     printed = run(SETUP + """
     column = pd.Series(texts)
     frame = pd.DataFrame({"body": texts})
-    said(lambda: engine.decide(late, pd.Series([1, 2])))
-    said(lambda: engine.decide(late, pd.Series(["a", 1], dtype=object)))
+    said(lambda: engine.decide(late, pd.Series([1, 2])).value)
+    said(lambda: engine.decide(late, pd.Series(["a", 1], dtype=object)).value)
     for hole in (None, float("nan"), pd.NA):
-        said(lambda: engine.tag(kinds, pd.Series(["a", hole, "b"], dtype=object)))
-    said(lambda: engine.decide(late, pd.Series([None, None], dtype=object)))
-    said(lambda: engine.filter(late, column))
+        said(lambda: engine.tag(kinds, pd.Series(["a", hole, "b"], dtype=object)).value)
+    said(lambda: engine.decide(late, pd.Series([None, None], dtype=object)).value)
+    said(lambda: engine.filter(late, column).value)
     class Mine(pd.Series):
         pass
-    said(lambda: engine.filter(late, Mine(texts)))
-    said(lambda: engine.rank("Late?", column))
-    said(lambda: engine.find("Late?", column))
-    said(lambda: engine.relate(column, relations={"r": ("a", "b")}))
-    said(lambda: engine.annotate(form, column))
-    said(lambda: engine.recognize(column, kinds=["x"]))
-    said(lambda: engine.details(late, column))
-    said(lambda: engine.decide(late, frame))
-    said(lambda: engine.annotate(form, frame))
-    said(lambda: engine.annotate(form, frame, on="missing"))
+    said(lambda: engine.filter(late, Mine(texts)).value)
+    said(lambda: engine.rank("Late?", column).value)
+    said(lambda: engine.find("Late?", column).value)
+    said(lambda: engine.relate(column, relations={"r": ("a", "b")}).value)
+    said(lambda: engine.annotate(form, column).value)
+    said(lambda: engine.recognize(column, kinds=["x"]).value)
+    said(lambda: engine.details(late, column).value)
+    said(lambda: engine.decide(late, frame).value)
+    said(lambda: engine.annotate(form, frame).value)
+    said(lambda: engine.annotate(form, frame, on="missing").value)
     said(lambda: engine.annotate(form, pd.DataFrame([texts, texts], index=["body", "body"]).T,
-                                 on="body"))
+                                 on="body").value)
     said(lambda: engine.annotate(form, pd.DataFrame(
-        {("body", "x"): texts}), on=("body", "x")))
-    said(lambda: engine.annotate(form, frame.assign(late=1), on="body"))
-    said(lambda: engine.annotate(form, frame.assign(failed=1), on="body"))
-    said(lambda: engine.annotate({"version": 1, "questions": {"failed": {"decide": "Late?"}}}, frame, on="body"))
-    said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body"))
-    said(lambda: engine.annotate(form, frame, on=["body"]))
-    said(lambda: engine.recognize(frame.assign(names=1), kinds=["x"], on="body"))
-    said(lambda: engine.decide_many(late, pd.Index(texts)))
-    said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body"))
+        {("body", "x"): texts}), on=("body", "x")).value)
+    said(lambda: engine.annotate(form, frame.assign(late=1), on="body").value)
+    said(lambda: engine.annotate(form, frame.assign(failed=1), on="body").value)
+    said(lambda: engine.annotate({"version": 1, "questions": {"failed": {"decide": "Late?"}}}, frame, on="body").value)
+    said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body").value)
+    said(lambda: engine.annotate(form, frame, on=["body"]).value)
+    said(lambda: engine.recognize(frame.assign(names=1), kinds=["x"], on="body").value)
+    said(lambda: engine.decide_many(late, pd.Index(texts)).value)
+    said(lambda: engine.annotate(form, pa.table({"body": texts}), on="body").value)
     """, child_env(backend, tmp_path))
     route = ["UsageError the column's Arrow format is 'l', not text 0"] if THREE else [
         "UsageError record 0 is not a str 0"]
@@ -277,11 +389,11 @@ def test_a_series_runs_at_the_lists_throttle(backend, tmp_path):
     routes = '["str", "category"]' if THREE else '["object"]'
     printed = run(SETUP + f"""
     import time
-    engine = tt.Engine(throttle=8, cache=False)
+    engine = tt.Engine(throttle=8, batch=1, cache=False)
     rows = [f"note {{n}}" for n in range(200)]
     def timed(records):
         began = time.monotonic()
-        answers = engine.decide_many(late, records)
+        answers = engine.decide_many(late, records).value
         return time.monotonic() - began, plain(list(answers))
     wall, answers = timed(rows)
     print(wall)
@@ -297,22 +409,21 @@ def test_a_series_runs_at_the_lists_throttle(backend, tmp_path):
     assert backend.count() == 200 * (1 + len(routes))
 
 
-def test_a_series_holds_the_throttle_in_flight(tmp_path):
-    """Proof 3, the held arm: a list and each Series route reach exactly 8
-    sends in flight and no more. The held arm opens once, so each form gets
-    its own backend."""
+def test_a_series_stops_at_the_held_request(tmp_path):
+    """Proof 3: a list and each Series route stop pulling after their first
+    held request. Each form gets its own backend."""
     forms = ["rows", "pd.Series(rows, dtype='category')"] + (
         ["pd.Series(rows, dtype='str')"] if THREE else ["pd.Series(rows, dtype=object)"])
     for records in forms:
         backend = Backend()
         try:
-            child = start(SETUP + "    engine = tt.Engine(throttle=8, cache=False)\n"
+            child = start(SETUP + "    engine = tt.Engine(throttle=8, batch=1, cache=False)\n"
                           "    rows = [f'note {n}' for n in range(20)]\n"
-                          f"    engine.decide_many(late, {records})\n",
+                          f"    engine.decide_many(late, {records}).value\n",
                           child_env(backend, tmp_path, "arm/held"))
-            assert backend.wait(8) == 8
+            assert backend.wait(1) == 1
             time.sleep(0.3)
-            assert backend.count() == 8, records
+            assert backend.count() == 1, records
             backend.release()
             assert child.wait(timeout=10) == 0, child.stderr.read()
         finally:

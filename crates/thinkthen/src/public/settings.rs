@@ -12,6 +12,7 @@ use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Key, Settings, Storage};
 use crate::engine::facade::{Roots, RootsError};
 use crate::engine::usage::Counters;
+use crate::public::BatchSetting;
 use crate::public::error::Error;
 
 const NO_DEFAULT_CACHE: &str =
@@ -61,6 +62,8 @@ pub struct EngineBuilder {
     width: Option<Width>,
     max_requests: Option<usize>,
     max_request_bytes: usize,
+    batch: Option<crate::core::Setting>,
+    env_batch: Option<String>,
     cache: Cache,
     seeded: Option<Seeded>,
     timeout: Duration,
@@ -81,6 +84,8 @@ impl fmt::Debug for EngineBuilder {
             .field("width", &self.width)
             .field("max_requests", &self.max_requests)
             .field("max_request_bytes", &self.max_request_bytes)
+            .field("batch", &self.batch)
+            .field("env_batch", &self.env_batch.is_some())
             .field("cache", &self.cache)
             .field("seeded", &self.seeded)
             .field("timeout", &self.timeout)
@@ -102,6 +107,8 @@ impl EngineBuilder {
             width: None,
             max_requests: None,
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
+            batch: None,
+            env_batch: None,
             cache: Cache::Default,
             seeded: None,
             timeout: Duration::from_secs(30),
@@ -114,7 +121,8 @@ impl EngineBuilder {
     }
 
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
-    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
+    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
+    /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
     /// XDG configuration file. The setters and `build` read no environment.
     ///
     /// # Errors
@@ -150,6 +158,7 @@ impl EngineBuilder {
         // A later explicit setter outranks this path, including an invalid one.
         // Validate only the path selected when the engine is built.
         builder.ca_bundle = variable("THINKTHEN_CA_BUNDLE")?.map(PathBuf::from);
+        builder.env_batch = variable("THINKTHEN_BATCH")?;
         if let Some(model) = config.model() {
             builder = builder.model(model)?;
         }
@@ -264,6 +273,14 @@ impl EngineBuilder {
         Ok(self)
     }
 
+    /// Select the default number of records in one eligible request.
+    #[must_use]
+    pub fn batch(mut self, setting: BatchSetting) -> Self {
+        self.batch = Some(setting.into());
+        self.env_batch = None;
+        self
+    }
+
     /// Cache answers in the default folder: `THINKTHEN_CACHE` or the XDG
     /// cache home, as captured by [`EngineBuilder::from_env`].
     #[must_use]
@@ -361,6 +378,13 @@ impl EngineBuilder {
     /// Returns [`Error::Usage`] when the default cache is selected and no
     /// folder is available, or when a different throttle is already active.
     pub fn build(self) -> Result<super::Engine, Error> {
+        let batch = match (self.batch, self.env_batch.as_deref()) {
+            (Some(setting), _) => Some(setting),
+            (None, Some(value)) => Some(crate::core::Setting::parse(value).ok_or_else(|| {
+                Error::usage("THINKTHEN_BATCH takes max or a whole number of at least 1")
+            })?),
+            (None, None) => None,
+        };
         let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
         let backend = Backend::resolve(self.base_url.as_deref(), None, model)
             .map_err(Error::refused)?
@@ -406,7 +430,7 @@ impl EngineBuilder {
             }),
             usage: Arc::new(Counters::new(None)),
         };
-        super::Engine::from_settings(settings, self.max_requests, profile, roots)
+        super::Engine::from_settings(settings, self.max_requests, profile, roots, batch)
     }
 
     fn storage(&self) -> Result<Storage, Error> {
@@ -427,6 +451,7 @@ impl EngineBuilder {
                 replay: self.replay.clone(),
                 private_default: false,
                 cache_answers: false,
+                refresh_cache: false,
             });
         }
         let (folder, private_default) = match &self.cache {
@@ -452,6 +477,7 @@ impl EngineBuilder {
             replay: Some(folder),
             private_default,
             cache_answers: true,
+            refresh_cache: false,
         })
     }
 }

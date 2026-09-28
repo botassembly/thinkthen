@@ -13,6 +13,8 @@ mod response;
 
 use thiserror::Error;
 
+use crate::core::text::ModelName;
+
 pub(crate) use crate::core::adapters::systemone::request::encode;
 pub(crate) use crate::core::adapters::systemone::request::encode_raw;
 pub(crate) use crate::core::adapters::systemone::response::{decode, decode_observed};
@@ -33,6 +35,12 @@ pub(crate) const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
 
 /// The model this adapter names when `--model` and the question file name none.
 pub(crate) const DEFAULT_MODEL: &str = "jev-1.13.0";
+
+/// The built-in mutable name whose current target cannot be known offline.
+#[must_use]
+pub(crate) fn is_mutable_alias(model: &ModelName) -> bool {
+    model.as_str() == "jev-latest"
+}
 
 /// The path under a base that this adapter's endpoint sits at.
 ///

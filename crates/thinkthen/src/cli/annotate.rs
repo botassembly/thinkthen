@@ -7,8 +7,8 @@ use std::process::ExitCode;
 
 use crate::core::adapters::built_in;
 use crate::core::{
-    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, Reading, ReadingError,
-    Record,
+    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, QuestionSetError, Reading,
+    ReadingError, Record, Setting,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -21,6 +21,7 @@ use crate::schedule::{Judged, Output};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod aggregation;
+mod batching;
 mod plan;
 
 pub(crate) use crate::engine::facade::{GroupAnswer, PreparedGroup, check_model};
@@ -73,6 +74,16 @@ pub(crate) fn run(
     let profile = profile::read(&arguments.common)?;
     let mismatch = Mismatch::new(set.profile(), profile.as_ref());
     let reading = reading(&arguments.common)?;
+    let setting = batch_setting(arguments, environment, &set, reading.streams())?;
+    let request_size = if reading.streams() {
+        Some(environment.request_size(arguments.batching.max_request_bytes.as_deref())?)
+    } else {
+        None
+    };
+    let backend = backend.with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    if request_size.is_some_and(|size| size > Backend::DEFAULT_REQUEST_SIZE) {
+        environment.warn_request_size(&backend)?;
+    }
     if let (Framing::Lines, Some(name)) = (arguments.common.framing(), set.first_part()) {
         return Err(Failure::Reading(ReadingError::LinesPart(name.to_owned())));
     }
@@ -104,16 +115,31 @@ pub(crate) fn run(
             set,
             mismatch,
         );
-        return crate::annotate_schedule::run(
-            &judging,
-            &reading,
-            rows.enumerate().map(|(place, row)| {
-                row.map(|record| crate::annotate_schedule::Input::Record(place + 1, record))
-                    .map_err(|error| crate::schedule::Placed::at(error, place + 1))
-            }),
-            environment.cancel(),
-            &mut Output::streaming(&mut writer, environment.usage()),
-        );
+        let inputs = rows.enumerate().map(|(place, row)| {
+            row.map(|record| crate::annotate_schedule::Input::Record(place + 1, record))
+                .map_err(|error| crate::schedule::Placed::at(error, place + 1))
+        });
+        let mut output = Output::streaming(&mut writer, environment.usage());
+        return if setting
+            .is_some_and(|setting| setting != Setting::Records(std::num::NonZeroUsize::MIN))
+        {
+            batching::run(
+                &judging,
+                &reading,
+                inputs,
+                setting.unwrap_or(Setting::Max),
+                environment.cancel(),
+                &mut output,
+            )
+        } else {
+            crate::annotate_schedule::run(
+                &judging,
+                &reading,
+                inputs,
+                environment.cancel(),
+                &mut output,
+            )
+        };
     }
     let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
     if arguments.common.dry_run {
@@ -141,16 +167,29 @@ pub(crate) fn run(
         set,
         mismatch,
     );
-    crate::annotate_schedule::run(
-        &judging,
-        &reading,
-        chunks.map(|(at, row)| {
-            row.map(|bytes| crate::annotate_schedule::Input::Bytes(at, bytes))
-                .map_err(|error| crate::schedule::Placed::at(error, at))
-        }),
-        environment.cancel(),
-        &mut Output::streaming(&mut writer, environment.usage()),
-    )
+    let inputs = chunks.map(|(at, row)| {
+        row.map(|bytes| crate::annotate_schedule::Input::Bytes(at, bytes))
+            .map_err(|error| crate::schedule::Placed::at(error, at))
+    });
+    let mut output = Output::streaming(&mut writer, environment.usage());
+    if setting.is_some_and(|setting| setting != Setting::Records(std::num::NonZeroUsize::MIN)) {
+        batching::run(
+            &judging,
+            &reading,
+            inputs,
+            setting.unwrap_or(Setting::Max),
+            environment.cancel(),
+            &mut output,
+        )
+    } else {
+        crate::annotate_schedule::run(
+            &judging,
+            &reading,
+            inputs,
+            environment.cancel(),
+            &mut output,
+        )
+    }
 }
 
 fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
@@ -174,7 +213,48 @@ fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
             "--raw prints one bare label; `annotate` always prints one JSON object",
         ));
     }
+    if arguments.batching.context.is_some() {
+        return Err(Failure::Usage(
+            "--context does not act on annotate; each question's `on` selects its evidence",
+        ));
+    }
     Ok(())
+}
+
+fn batch_setting(
+    arguments: &AnnotateArguments,
+    environment: &Environment,
+    set: &QuestionSet,
+    streams: bool,
+) -> Result<Option<Setting>, Failure> {
+    if !streams {
+        return if arguments.batching.batch.is_some() {
+            Err(Failure::Usage(
+                "--batch groups the records of a stream, and a single text is one record",
+            ))
+        } else {
+            Ok(None)
+        };
+    }
+    let flag = arguments.batching.batch.as_deref();
+    let selected = flag.or_else(|| environment.batch());
+    if let Some(text) = selected {
+        return Setting::parse(text)
+            .map(Some)
+            .ok_or(Failure::Usage(if flag.is_some() {
+                "--batch takes max or a whole number of at least 1"
+            } else {
+                "THINKTHEN_BATCH takes max or a whole number of at least 1"
+            }));
+    }
+    set.batch().map_or(Ok(Some(Setting::Max)), |value| {
+        Setting::of_json(value)
+            .map(Some)
+            .ok_or(Failure::QuestionSet(QuestionSetError::Shape {
+                path: "batch".to_owned(),
+                wanted: "takes max or a whole number of at least 1",
+            }))
+    })
 }
 
 fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
@@ -234,6 +314,14 @@ impl<'a> Judging<'a> {
 
     pub(crate) const fn engine(&self) -> &Engine {
         &self.engine
+    }
+
+    pub(crate) const fn set(&self) -> &QuestionSet {
+        &self.set
+    }
+
+    pub(crate) fn cancel(&self) -> &crate::engine::Cancel<'static> {
+        self.environment.cancel()
     }
 
     pub(crate) fn record(
