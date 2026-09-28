@@ -17,3 +17,7 @@ Note: Tarball provenance recorded without an upstream sidecar hash.
 ## Limits
 
 One host, one toolchain version per language, synthetic loopback replies, shared-C library linkage, no runtime ABI identity handshake, no sanitizer coverage of Rust allocations, no live-model quality. See each stage's FINDINGS for the full list.
+
+## Post-J1 feedback run (2026-09-28, pin 6dbdf03f)
+
+`thinkthen_engine_new_with` bound and tested through Swift: a settings-carried `base_url` selects the backend over the environment, `{}` matches the environment constructor by equal decisions, unknown-key and wrong-type objects refuse with null-engine EUSAGE on the calling thread before any request, and construction sends nothing (counted-fixture ledgers prove zero arrivals); sequential cache coalescing observed. Result-schema parity samples pass against the bare `$defs/annotate|recognize|relate` definitions — consumer guidance for J1/J8: the schema's bare verb definitions are what bindings validate against (not the detailed root), `null` and the failed marker need a tagged branch in any Decodable-style model, and offsets are Unicode scalars, not UTF-16 indices. No product defect found. Evidence: `post-j1/POST-J1-REPORT.md` in local experiment 294.
