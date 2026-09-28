@@ -15,6 +15,10 @@ use super::{
     recognized_month, year_month,
 };
 
+#[cfg(unix)]
+#[path = "tests/sidecar_optimization.rs"]
+mod sidecar_optimization;
+
 static FOLDERS: AtomicU64 = AtomicU64::new(0);
 /// Exercise the production update with a fresh queue before finalization.
 fn update(path: &std::path::Path, month: &str, delta: Counts) -> std::io::Result<()> {
@@ -116,7 +120,7 @@ fn concurrent_updates_keep_every_count_in_one_monthly_aggregate() {
     let totals = read(&folder, &month_now()).expect("usage reads");
     assert_eq!(totals.month.requests_sent, 40);
     assert_eq!(totals.total.requests_sent, 40);
-    assert_eq!(fs::read_dir(&folder).expect("folder").count(), 3);
+    assert_eq!(fs::read_dir(&folder).expect("folder").count(), 2);
     let bytes = fs::read(folder.join(format!("{}.json", month_now()))).expect("month");
     let row: Counts = serde_json::from_slice(&bytes).expect("closed row");
     assert_eq!(row.requests_sent, 40);
@@ -211,7 +215,7 @@ fn one_write_migrates_every_contaminated_month_without_losing_totals() {
             format!("{{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":{requests},\"retries\":{retries},\"input_tokens\":7,\"output_tokens\":4,\"cache_answers\":0}}\n"),
         )
         .expect("contaminated month");
-        fs::remove_file(folder.join(format!("retries-{month}.json"))).expect("old layout");
+        assert!(!folder.join(format!("retries-{month}.json")).exists());
     }
     // A crash after migration's sidecar sync leaves both copies with one total.
     fs::write(
@@ -275,7 +279,7 @@ fn an_invalid_older_month_refuses_the_whole_migration_before_any_projection() {
     let folder = folder("invalid-old-month");
     for month in ["2026-07", "2026-08"] {
         update(&folder, month, Counts::default()).expect("baseline");
-        fs::remove_file(folder.join(format!("retries-{month}.json"))).expect("old layout");
+        assert!(!folder.join(format!("retries-{month}.json")).exists());
     }
     let july = folder.join("2026-07.json");
     let august = folder.join("2026-08.json");
@@ -300,6 +304,7 @@ fn checked_month_and_total_addition_refuse_overflow_without_replacing_good_state
         "2026-08",
         Counts {
             requests_sent: u64::MAX,
+            retries: 1,
             ..Counts::default()
         },
     )
@@ -363,12 +368,13 @@ fn current_month_overflow_refuses_before_migrating_an_older_month() {
         "2026-09",
         Counts {
             requests_sent: u64::MAX,
+            retries: 1,
             ..Counts::default()
         },
     )
     .expect("current maximum");
     let old = folder.join("2026-08.json");
-    fs::remove_file(folder.join("retries-2026-08.json")).expect("old layout");
+    assert!(!folder.join("retries-2026-08.json").exists());
     let contaminated = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":0,\"retries\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
     fs::write(&old, contaminated).expect("retry-extended older month");
     let current = folder.join("2026-09.json");
@@ -414,7 +420,11 @@ fn every_update_stage_warns_once_and_disables_later_persistence() {
         }
         let counters = Counters::new(Some(folder.clone()));
         FAILURE.with(|failure| failure.set(Some(stage)));
-        counters.request_sent();
+        if stage == Stage::RetryWrite {
+            counters.attempt_sent(true);
+        } else {
+            counters.request_sent();
+        }
         assert!(counters.finish(), "{stage:?}");
         let after_failure = read(&folder, "2026-09")
             .map(|totals| totals.month.requests_sent)
@@ -458,7 +468,15 @@ fn strict_reader_refuses_symlink_nonregular_and_unsafe_modes() {
         "folder-mode",
     ] {
         let folder = folder(case);
-        update(&folder, "2026-09", Counts::default()).expect("baseline");
+        update(
+            &folder,
+            "2026-09",
+            Counts {
+                retries: 1,
+                ..Counts::default()
+            },
+        )
+        .expect("baseline with a real sidecar");
         let month = folder.join("2026-09.json");
         match case {
             "symlink" => {
