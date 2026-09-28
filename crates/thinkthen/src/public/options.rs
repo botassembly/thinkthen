@@ -16,6 +16,7 @@ use std::time::{Duration, Instant};
 
 use crate::engine::{CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
+use crate::public::results::{Call, Facts};
 
 /// How many records one model request may contain.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -343,6 +344,22 @@ impl<'a> Stop<'a> {
         self.finish(result)
     }
 
+    /// Run an eager call, then retain its final receipts on success or failure.
+    pub(crate) fn run_call<T>(
+        &self,
+        records: usize,
+        call: impl FnOnce(&Cancel<'_>) -> Result<T, Error>,
+    ) -> Result<Call<T>, Error> {
+        let result = self.run(call);
+        if result.is_ok() {
+            self.facts.finished_records(records);
+        }
+        let facts = Facts::of(self.facts.snapshot());
+        result
+            .map(|value| Call::new(value, facts.clone()))
+            .map_err(|error| error.with_facts(facts))
+    }
+
     /// Resume a check's panic, once every worker of the call has joined, then
     /// return the call's result, or cancellation when the token has fired.
     pub(crate) fn finish<T>(&self, result: Result<T, Error>) -> Result<T, Error> {
@@ -355,6 +372,10 @@ impl<'a> Stop<'a> {
             return Err(Error::cancelled());
         }
         result
+    }
+
+    pub(crate) fn facts(&self) -> Facts {
+        Facts::of(self.facts.snapshot())
     }
 }
 

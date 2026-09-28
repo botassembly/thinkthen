@@ -10,7 +10,7 @@ use crate::engine::facade::{self, Completed, Input, InputPort};
 use crate::public::Evidence;
 use crate::public::error::Error;
 use crate::public::options::Stop;
-use crate::public::results::{self, Answer};
+use crate::public::results::{self, Answer, Facts};
 
 use super::{Batch, Event, Source, TICK, join_scheduler, schedule};
 
@@ -32,6 +32,7 @@ struct Stream<'a, I: Iterator, T> {
     events: Receiver<Event<Work, Vec<Decided>>>,
     port: Option<InputPort<Work, Vec<Decided>, Error>>,
     stop: Stop<'a>,
+    facts: Option<Facts>,
     fed: usize,
     most: Option<usize>,
     refusal: Option<Error>,
@@ -99,6 +100,7 @@ where
             events,
             port: None,
             stop,
+            facts: None,
             fed: 0,
             most,
             refusal: None,
@@ -240,6 +242,10 @@ where
             }
         }
     }
+
+    fn facts(&self) -> Option<&Facts> {
+        self.facts.as_ref()
+    }
 }
 
 impl<I, T> Stream<'_, I, T>
@@ -258,7 +264,10 @@ where
             }
             Event::End(ended) => {
                 let ended = self.join().and(ended);
-                return Some(self.stop.finish(ended).err().map(Err));
+                let ended = self.stop.finish(ended);
+                let facts = self.stop.facts();
+                self.facts = Some(facts.clone());
+                return Some(ended.err().map(|error| Err(error.with_facts(facts))));
             }
         }
         None
@@ -350,7 +359,13 @@ where
 
     fn end(&mut self, error: Error) -> Error {
         let _joined = self.join();
-        error
+        let error = match self.stop.finish::<()>(Err(error)) {
+            Err(error) => error,
+            Ok(()) => Error::defect("a failed stream returned a value"),
+        };
+        let facts = self.stop.facts();
+        self.facts = Some(facts.clone());
+        error.with_facts(facts)
     }
 }
 

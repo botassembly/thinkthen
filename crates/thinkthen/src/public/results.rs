@@ -3,6 +3,9 @@
 
 use std::fmt;
 
+mod call;
+pub use call::{Call, Facts};
+
 use serde::Serialize;
 
 use crate::core::{self, Backend, BackendProfile, ProfileWarning, Value, Withheld, json_line};

@@ -404,7 +404,7 @@ fn each_named(
     let named = |text: &&str| engine.recognize_with(ask, text, options);
     texts
         .iter()
-        .map(|text| Ok(named(text)?.entities().to_vec()))
+        .map(|text| Ok(named(text)?.value().entities().to_vec()))
         .collect()
 }
 

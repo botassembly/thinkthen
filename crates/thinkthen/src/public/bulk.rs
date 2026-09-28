@@ -10,7 +10,7 @@ use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evide
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
-use crate::public::results::{Answer, Found, Ranked, Row, Written};
+use crate::public::results::{Answer, Call, Found, Ranked, Row, Written};
 use crate::public::set::QuestionSet;
 
 /// One record's named values, in set order, and their bare JSON line.
@@ -107,7 +107,15 @@ impl Engine {
     ///
     /// The first record's [`Error`], and [`Error::Usage`] for another kind of
     /// question or more records than the engine's request limit.
-    pub fn rank<I>(&self, question: &Question, records: I) -> Result<Vec<Ranked<I::Item>>, Error>
+    #[allow(
+        clippy::type_complexity,
+        reason = "the public return carries ranked rows and facts"
+    )]
+    pub fn rank<I>(
+        &self,
+        question: &Question,
+        records: I,
+    ) -> Result<Call<Vec<Ranked<I::Item>>>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -120,32 +128,42 @@ impl Engine {
     /// # Errors
     ///
     /// As [`Engine::rank`].
+    #[allow(
+        clippy::type_complexity,
+        reason = "the public return carries ranked rows and facts"
+    )]
     pub fn rank_with<I>(
         &self,
         question: &Question,
         records: I,
         options: CallOptions<'_>,
-    ) -> Result<Vec<Ranked<I::Item>>, Error>
+    ) -> Result<Call<Vec<Ranked<I::Item>>>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
     {
         only(question, &[Kind::Rank], "rank")?;
         let records = self.within_limit(records)?;
-        let rows = self
-            .decisions(question, records, options, |item, (_, yes)| {
-                Some(Ranked::new(item, yes))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
+        let mut batch = self.decisions(question, records, options, |item, (_, yes)| {
+            Some(Ranked::new(item, yes))
+        })?;
+        let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
+        let facts = batch
+            .facts()
+            .cloned()
+            .ok_or_else(|| Error::defect("a completed rank has no facts"))?;
         let order = ranking(
             &rows.iter().map(Ranked::probability).collect::<Vec<_>>(),
             None,
         );
         let mut rows: Vec<Option<Ranked<I::Item>>> = rows.into_iter().map(Some).collect();
-        Ok(order
-            .into_iter()
-            .filter_map(|place| rows.get_mut(place).and_then(Option::take))
-            .collect())
+        Ok(Call::new(
+            order
+                .into_iter()
+                .filter_map(|place| rows.get_mut(place).and_then(Option::take))
+                .collect(),
+            facts,
+        ))
     }
 
     /// Select the one unit that best answers the question, from 2 to 255.
@@ -156,7 +174,7 @@ impl Engine {
     ///
     /// As [`Engine::decide`], and [`Error::Usage`] for another kind of
     /// question or a unit count outside its range.
-    pub fn find<I>(&self, question: &Question, units: I) -> Result<Found<I::Item>, Error>
+    pub fn find<I>(&self, question: &Question, units: I) -> Result<Call<Found<I::Item>>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -174,7 +192,7 @@ impl Engine {
         question: &Question,
         units: I,
         options: CallOptions<'_>,
-    ) -> Result<Found<I::Item>, Error>
+    ) -> Result<Call<Found<I::Item>>, Error>
     where
         I: IntoIterator,
         I::Item: Evidence,
@@ -199,8 +217,8 @@ impl Engine {
                 })
             })?;
         let stop = Stop::begin(options)?;
-        let found = stop.run(|cancel| engine.find(&find, cancel).map_err(Error::from))?;
-        Found::new(units, none, &found)
+        stop.run_call(1, |cancel| engine.find(&find, cancel).map_err(Error::from))?
+            .try_map(|found| Found::new(units, none, &found))
     }
 
     /// Each record with every value of the set, lazily, in input order. A

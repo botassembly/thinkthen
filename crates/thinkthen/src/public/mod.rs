@@ -41,8 +41,8 @@ pub use recognize::{
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::{
-    Answer, Candidate, Counters, Details, Found, Judgment, NamedProbability, Probabilities, Ranked,
-    Row, Usage,
+    Answer, Call, Candidate, Counters, Details, Facts, Found, Judgment, NamedProbability,
+    Probabilities, Ranked, Row, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
@@ -74,7 +74,10 @@ pub fn default_engine() -> Result<&'static Engine, Error> {
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::decide`].
-pub fn decide<Q: DecisionQuestion + ?Sized>(question: &Q, evidence: &str) -> Result<Answer, Error> {
+pub fn decide<Q: DecisionQuestion + ?Sized>(
+    question: &Q,
+    evidence: &str,
+) -> Result<Call<Answer>, Error> {
     default_engine()?.decide(question, evidence)
 }
 
@@ -87,7 +90,7 @@ pub fn decide_with<Q: DecisionQuestion + ?Sized>(
     question: &Q,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Answer, Error> {
+) -> Result<Call<Answer>, Error> {
     default_engine()?.decide_with(question, evidence, options)
 }
 
@@ -96,7 +99,10 @@ pub fn decide_with<Q: DecisionQuestion + ?Sized>(
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::choose`].
-pub fn choose<C: Choice>(question: &ChooseQuestion<C>, evidence: &str) -> Result<Option<C>, Error> {
+pub fn choose<C: Choice>(
+    question: &ChooseQuestion<C>,
+    evidence: &str,
+) -> Result<Call<Option<C>>, Error> {
     default_engine()?.choose(question, evidence)
 }
 
@@ -109,7 +115,7 @@ pub fn choose_with<C: Choice>(
     question: &ChooseQuestion<C>,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Option<C>, Error> {
+) -> Result<Call<Option<C>>, Error> {
     default_engine()?.choose_with(question, evidence, options)
 }
 
@@ -118,7 +124,7 @@ pub fn choose_with<C: Choice>(
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::score`].
-pub fn score(question: &Question, evidence: &str) -> Result<f64, Error> {
+pub fn score(question: &Question, evidence: &str) -> Result<Call<f64>, Error> {
     default_engine()?.score(question, evidence)
 }
 
@@ -131,7 +137,7 @@ pub fn score_with(
     question: &Question,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<f64, Error> {
+) -> Result<Call<f64>, Error> {
     default_engine()?.score_with(question, evidence, options)
 }
 
@@ -140,7 +146,7 @@ pub fn score_with(
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::tag`].
-pub fn tag<C: Choice>(question: &TagQuestion<C>, evidence: &str) -> Result<Vec<C>, Error> {
+pub fn tag<C: Choice>(question: &TagQuestion<C>, evidence: &str) -> Result<Call<Vec<C>>, Error> {
     default_engine()?.tag(question, evidence)
 }
 
@@ -153,7 +159,7 @@ pub fn tag_with<C: Choice>(
     question: &TagQuestion<C>,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Vec<C>, Error> {
+) -> Result<Call<Vec<C>>, Error> {
     default_engine()?.tag_with(question, evidence, options)
 }
 
@@ -187,7 +193,11 @@ where
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::rank`].
-pub fn rank<I>(question: &Question, records: I) -> Result<Vec<Ranked<I::Item>>, Error>
+#[allow(
+    clippy::type_complexity,
+    reason = "the public return carries ranked rows and facts"
+)]
+pub fn rank<I>(question: &Question, records: I) -> Result<Call<Vec<Ranked<I::Item>>>, Error>
 where
     I: IntoIterator,
     I::Item: Evidence,
@@ -200,11 +210,15 @@ where
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::rank`].
+#[allow(
+    clippy::type_complexity,
+    reason = "the public return carries ranked rows and facts"
+)]
 pub fn rank_with<I>(
     question: &Question,
     records: I,
     options: CallOptions<'_>,
-) -> Result<Vec<Ranked<I::Item>>, Error>
+) -> Result<Call<Vec<Ranked<I::Item>>>, Error>
 where
     I: IntoIterator,
     I::Item: Evidence,
@@ -217,7 +231,7 @@ where
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::find`].
-pub fn find<I>(question: &Question, units: I) -> Result<Found<I::Item>, Error>
+pub fn find<I>(question: &Question, units: I) -> Result<Call<Found<I::Item>>, Error>
 where
     I: IntoIterator,
     I::Item: Evidence,
@@ -234,7 +248,7 @@ pub fn find_with<I>(
     question: &Question,
     units: I,
     options: CallOptions<'_>,
-) -> Result<Found<I::Item>, Error>
+) -> Result<Call<Found<I::Item>>, Error>
 where
     I: IntoIterator,
     I::Item: Evidence,
@@ -275,7 +289,7 @@ where
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::recognize`].
-pub fn recognize(ask: &Recognize, evidence: &str) -> Result<Recognized, Error> {
+pub fn recognize(ask: &Recognize, evidence: &str) -> Result<Call<Recognized>, Error> {
     default_engine()?.recognize(ask, evidence)
 }
 
@@ -288,7 +302,7 @@ pub fn recognize_with(
     ask: &Recognize,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Recognized, Error> {
+) -> Result<Call<Recognized>, Error> {
     default_engine()?.recognize_with(ask, evidence, options)
 }
 
@@ -297,7 +311,7 @@ pub fn recognize_with(
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::relate`].
-pub fn relate<I>(ask: &Relate, entities: I) -> Result<Vec<Edge>, Error>
+pub fn relate<I>(ask: &Relate, entities: I) -> Result<Call<Vec<Edge>>, Error>
 where
     I: IntoIterator<Item = Entity>,
 {
@@ -313,7 +327,7 @@ pub fn relate_with<I>(
     ask: &Relate,
     entities: I,
     options: CallOptions<'_>,
-) -> Result<Vec<Edge>, Error>
+) -> Result<Call<Vec<Edge>>, Error>
 where
     I: IntoIterator<Item = Entity>,
 {
@@ -353,7 +367,10 @@ where
 /// # Errors
 ///
 /// As [`default_engine`] and [`Engine::details`].
-pub fn details<Q: DetailQuestion + ?Sized>(question: &Q, evidence: &str) -> Result<Details, Error> {
+pub fn details<Q: DetailQuestion + ?Sized>(
+    question: &Q,
+    evidence: &str,
+) -> Result<Call<Details>, Error> {
     default_engine()?.details(question, evidence)
 }
 
@@ -366,7 +383,7 @@ pub fn details_with<Q: DetailQuestion + ?Sized>(
     question: &Q,
     evidence: &str,
     options: CallOptions<'_>,
-) -> Result<Details, Error> {
+) -> Result<Call<Details>, Error> {
     default_engine()?.details_with(question, evidence, options)
 }
 

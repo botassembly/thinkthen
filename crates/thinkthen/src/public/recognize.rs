@@ -397,7 +397,11 @@ impl Engine {
     /// # Errors
     ///
     /// Returns the call's [`Error`]; a failed answer is [`Error::Backend`].
-    pub fn recognize(&self, ask: &Recognize, evidence: &str) -> Result<Recognized, Error> {
+    pub fn recognize(
+        &self,
+        ask: &Recognize,
+        evidence: &str,
+    ) -> Result<crate::public::Call<Recognized>, Error> {
         self.recognize_with(ask, evidence, CallOptions::new())
     }
 
@@ -411,31 +415,32 @@ impl Engine {
         ask: &Recognize,
         evidence: &str,
         options: CallOptions<'_>,
-    ) -> Result<Recognized, Error> {
+    ) -> Result<crate::public::Call<Recognized>, Error> {
         let engine = self.for_model(ask.0.model.as_ref())?;
         let stop = Stop::begin(options)?;
-        let found = stop
-            .run(|cancel| {
-                engine
-                    .recognize(&ask.0, evidence, MAX_TEXT_BYTES, cancel)
-                    .map_err(Error::from)
-            })?
-            .value;
-        let json = Written::of(&found)?;
-        Ok(Recognized {
-            json,
-            entities: found.entities.into_iter().map(RecognizedEntity).collect(),
-            relations: found.relations.map(|edges| {
-                edges
-                    .into_iter()
-                    .map(|edge| Relation {
-                        relation: edge.relation,
-                        source: RecognizedEntity(edge.source),
-                        target: RecognizedEntity(edge.target),
-                        probability: edge.probability,
-                    })
-                    .collect()
-            }),
+        stop.run_call(1, |cancel| {
+            engine
+                .recognize(&ask.0, evidence, MAX_TEXT_BYTES, cancel)
+                .map_err(Error::from)
+        })?
+        .try_map(|found| {
+            let found = found.value;
+            let json = Written::of(&found)?;
+            Ok(Recognized {
+                json,
+                entities: found.entities.into_iter().map(RecognizedEntity).collect(),
+                relations: found.relations.map(|edges| {
+                    edges
+                        .into_iter()
+                        .map(|edge| Relation {
+                            relation: edge.relation,
+                            source: RecognizedEntity(edge.source),
+                            target: RecognizedEntity(edge.target),
+                            probability: edge.probability,
+                        })
+                        .collect()
+                }),
+            })
         })
     }
 }

@@ -105,19 +105,19 @@ pub(crate) fn run(
     }
     Ok(match ask {
         Ask::Decide(LoadedQuestion::Question(question), text) => {
-            Output::Answer(answer(engine.decide_with(&question, &text, options)?))
+            Output::Answer(answer(engine.decide_with(&question, &text, options)?.into_value()))
         }
         Ask::Decide(LoadedQuestion::Banded(question), text) => {
-            Output::Answer(answer(engine.decide_with(&question, &text, options)?))
+            Output::Answer(answer(engine.decide_with(&question, &text, options)?.into_value()))
         }
         Ask::Details(LoadedQuestion::Question(question), text) => {
-            details(&engine.details_with(&question, &text, options)?)
+            details(engine.details_with(&question, &text, options)?.value())
         }
         Ask::Details(LoadedQuestion::Banded(question), text) => {
-            details(&engine.details_with(&question, &text, options)?)
+            details(engine.details_with(&question, &text, options)?.value())
         }
         Ask::Score(question, text) => {
-            Output::Score(engine.score_with(&unbanded(question, "score")?, &text, options)?)
+            Output::Score(engine.score_with(&unbanded(question, "score")?, &text, options)?.into_value())
         }
         Ask::DecideMany(LoadedQuestion::Question(question), records) => Output::Rows(
             engine
@@ -147,6 +147,7 @@ pub(crate) fn run(
         Ask::Rank(text, records) => Output::Ranked(
             engine
                 .rank_with(&Question::rank(&text)?, texts(records), options)?
+                .into_value()
                 .into_iter()
                 .map(|ranked| (ranked.input().0, ranked.probability()))
                 .collect(),
@@ -154,7 +155,7 @@ pub(crate) fn run(
         Ask::Find(text, none, units) => {
             let asked = Question::find(&text)?;
             let asked = if none { asked.offering_none()? } else { asked };
-            let found = engine.find_with(&asked, texts(units), options)?;
+            let found = engine.find_with(&asked, texts(units), options)?.into_value();
             Output::Found(found.selected().and_then(|Text(place, _)| {
                 let candidate = found.candidates().get(*place)?;
                 Some((*place, candidate.probability()))
@@ -167,11 +168,12 @@ pub(crate) fn run(
                 .collect::<Result<_, _>>()?,
         ),
         Ask::Recognize(ask, text) => {
-            Output::Json(engine.recognize_with(&ask, &text, options)?.to_json())
+            Output::Json(engine.recognize_with(&ask, &text, options)?.into_value().to_json())
         }
         Ask::Relate(ask, entities) => Output::JsonRows(
             engine
                 .relate_with(&ask, entities, options)?
+                .into_value()
                 .iter()
                 .map(thinkthen::Edge::to_json)
                 .collect(),

@@ -6,7 +6,7 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
-mod call_facts;
+pub(crate) mod call_facts;
 pub(crate) use call_facts::CallFacts;
 
 const CANCEL_POLL: Duration = Duration::from_millis(50);

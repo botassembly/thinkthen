@@ -85,11 +85,19 @@ fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
     let engine = engine(listener.base());
     let options = CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
-    let decided = engine
-        .decide_many_with(&question(), ["alpha", "beta"], options)
+    let asked = question();
+    let mut batch = engine.decide_many_with(&asked, ["alpha", "beta"], options);
+    assert!(
+        batch.facts().is_none(),
+        "facts wait for the final ordered row"
+    );
+    let decided = batch
+        .by_ref()
         .collect::<Result<Vec<_>, _>>()
         .expect("explicit batch one");
     assert_eq!(decided.len(), 2);
+    let facts = batch.facts().expect("the completed batch has final facts");
+    assert_eq!((facts.records(), facts.requests_sent()), (2, 2));
     assert_eq!(listener.count(), 2);
 
     let thinkthen::LoadedQuestion::Question(saved) =
@@ -265,6 +273,7 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
     let by_slice: Vec<String> = engine
         .rank(&ranked, texts)
         .expect("rank")
+        .into_value()
         .into_iter()
         .map(|row| row.into_input().to_owned())
         .collect();
@@ -273,15 +282,21 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
     assert_eq!(
         by_slice,
         by_cursor
+            .into_value()
             .into_iter()
             .map(Ranked::into_input)
             .collect::<Vec<_>>()
     );
     let found = Question::find("Which asks for a refund?").expect("find");
-    let by_slice = engine.find(&found, texts).expect("find").into_selected();
+    let by_slice = engine
+        .find(&found, texts)
+        .expect("find")
+        .into_value()
+        .into_selected();
     let by_cursor = engine
         .find(&found, cursor(&texts))
         .expect("find")
+        .into_value()
         .into_selected();
     assert_eq!(by_slice.map(str::to_owned), by_cursor);
 

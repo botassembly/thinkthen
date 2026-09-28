@@ -212,14 +212,17 @@ fn ask(engine: &Engine) -> String {
         .expect("a question")
         .cut();
     match engine.details(&question, EVIDENCE) {
-        Ok(details) => format!(
-            "sent {} cached {} model {} digests {:?} sha {}",
-            details.requests_sent(),
-            details.cached(),
-            details.model(),
-            details.requests(),
-            details.question_sha256()
-        ),
+        Ok(call) => {
+            let details = call.value();
+            format!(
+                "sent {} cached {} model {} digests {:?} sha {}",
+                details.requests_sent(),
+                details.cached(),
+                details.model(),
+                details.requests(),
+                details.question_sha256()
+            )
+        }
         Err(error) => format!("{:?}: {error}", error.kind()),
     }
 }

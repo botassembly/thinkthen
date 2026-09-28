@@ -235,7 +235,11 @@ impl Engine {
     ///
     /// Returns [`Error::Usage`] for a repeated entity or more than 255, before
     /// any send, and [`Error::Backend`] when the backend fails any question.
-    pub fn relate<I>(&self, ask: &Relate, entities: I) -> Result<Vec<Edge>, Error>
+    pub fn relate<I>(
+        &self,
+        ask: &Relate,
+        entities: I,
+    ) -> Result<crate::public::Call<Vec<Edge>>, Error>
     where
         I: IntoIterator<Item = Entity>,
     {
@@ -252,7 +256,7 @@ impl Engine {
         ask: &Relate,
         entities: I,
         options: CallOptions<'_>,
-    ) -> Result<Vec<Edge>, Error>
+    ) -> Result<crate::public::Call<Vec<Edge>>, Error>
     where
         I: IntoIterator<Item = Entity>,
     {
@@ -262,41 +266,43 @@ impl Engine {
             .map(|entity| (entity.name, entity.kind))
             .collect();
         let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
-        let stop = Stop::begin(options)?;
         if admitted.is_empty() {
-            return Ok(Vec::new());
+            return Stop::begin(options)?.run_call(0, |_| Ok(Vec::new()));
         }
         let engine = self.for_model(ask.0.model.as_ref())?;
         let prepared =
             facade::relations(&admitted, &ask.0, engine.backend(), self.profile.as_ref())?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
-        let execution = stop.run(|cancel| {
+        let stop = Stop::begin(options)?;
+        stop.run_call(1, |cancel| {
             engine
                 .relate(prepared, &admitted, threshold, cancel)
                 .map_err(Error::from)
-        })?;
-        if execution.failed > 0 {
-            return Err(Error::of(
-                ErrorKind::Backend,
-                format!(
-                    "the backend failed {} of {} relation questions",
-                    execution.failed,
-                    execution.logical.len()
-                ),
-            ));
-        }
-        execution
-            .edges
-            .into_iter()
-            .map(|edge| {
-                Ok(Edge {
-                    json: Written::of(&edge)?,
-                    source: Entity::of(&edge.source),
-                    target: Entity::of(&edge.target),
-                    probability: edge.probability,
-                    relation: edge.relation,
+        })?
+        .try_map(|execution| {
+            if execution.failed > 0 {
+                return Err(Error::of(
+                    ErrorKind::Backend,
+                    format!(
+                        "the backend failed {} of {} relation questions",
+                        execution.failed,
+                        execution.logical.len()
+                    ),
+                ));
+            }
+            execution
+                .edges
+                .into_iter()
+                .map(|edge| {
+                    Ok(Edge {
+                        json: Written::of(&edge)?,
+                        source: Entity::of(&edge.source),
+                        target: Entity::of(&edge.target),
+                        probability: edge.probability,
+                        relation: edge.relation,
+                    })
                 })
-            })
-            .collect()
+                .collect()
+        })
     }
 }

@@ -2,6 +2,7 @@
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
 use crate::public::SendBudgetDenial;
+use crate::public::results::Facts;
 
 /// What stopped a call, as one of six stable kinds.
 ///
@@ -68,6 +69,7 @@ pub struct ErrorDetail {
     message: String,
     retryable: bool,
     send_budget_denial: Option<SendBudgetDenial>,
+    facts: Option<Facts>,
 }
 
 impl ErrorDetail {
@@ -119,11 +121,30 @@ impl Error {
         self.detail().send_budget_denial
     }
 
+    /// Final facts for a started call, including one that sent nothing.
+    #[must_use]
+    pub const fn facts(&self) -> Option<&Facts> {
+        self.detail().facts.as_ref()
+    }
+
+    pub(crate) fn with_facts(mut self, facts: Facts) -> Self {
+        match &mut self {
+            Self::Usage(detail)
+            | Self::Backend(detail)
+            | Self::Local(detail)
+            | Self::Cancelled(detail)
+            | Self::Deadline(detail)
+            | Self::Defect(detail) => detail.facts = Some(facts),
+        }
+        self
+    }
+
     pub(crate) fn of(kind: ErrorKind, message: impl Into<String>) -> Self {
         let detail = ErrorDetail {
             message: message.into(),
             retryable: false,
             send_budget_denial: None,
+            facts: None,
         };
         match kind {
             ErrorKind::Usage => Self::Usage(detail),

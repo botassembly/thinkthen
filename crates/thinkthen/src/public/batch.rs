@@ -15,6 +15,7 @@ use std::time::Duration;
 use crate::engine::facade::{self, Completed, Input, InputPort, RunOutcome};
 use crate::public::error::Error;
 use crate::public::options::{Stop, guarded};
+use crate::public::results::Facts;
 
 mod planned;
 
@@ -48,6 +49,12 @@ impl<T> Iterator for Batch<'_, T> {
 }
 
 impl<'a, T: 'a> Batch<'a, T> {
+    /// Final facts after exhaustion or the one terminal error.
+    #[must_use]
+    pub fn facts(&self) -> Option<&Facts> {
+        self.source.facts()
+    }
+
     /// A batch that yields one error, then nothing.
     pub(crate) fn failed(error: Error) -> Self {
         Self {
@@ -62,11 +69,16 @@ impl<'a, T: 'a> Batch<'a, T> {
 
 trait Source<T> {
     fn pull(&mut self) -> Option<Result<T, Error>>;
+    fn facts(&self) -> Option<&Facts>;
 }
 
 impl<T> Source<T> for Option<Error> {
     fn pull(&mut self) -> Option<Result<T, Error>> {
         self.take().map(Err)
+    }
+
+    fn facts(&self) -> Option<&Facts> {
+        None
     }
 }
 
@@ -90,6 +102,7 @@ struct Stream<'a, I: Iterator, V, T> {
     events: Receiver<Event<String, V>>,
     port: Option<InputPort<String, V, Error>>,
     stop: Stop<'a>,
+    facts: Option<Facts>,
     fed: usize,
     most: Option<usize>,
     scheduler: Option<JoinHandle<()>>,
@@ -124,6 +137,7 @@ where
             events,
             port: None,
             stop,
+            facts: None,
             fed: 0,
             most,
             scheduler: Some(scheduler),
@@ -192,6 +206,10 @@ where
             }
         }
     }
+
+    fn facts(&self) -> Option<&Facts> {
+        self.facts.as_ref()
+    }
 }
 
 impl<I, V, T> Stream<'_, I, V, T>
@@ -215,7 +233,9 @@ where
             Event::End(ended) => {
                 let ended = self.join().and(ended);
                 let ended = self.stop.finish(ended);
-                return Some(ended.err().map(Err));
+                let facts = self.stop.facts();
+                self.facts = Some(facts.clone());
+                return Some(ended.err().map(|error| Err(error.with_facts(facts))));
             }
         }
         None
@@ -244,7 +264,13 @@ where
     /// Stop and join the scheduler, then report this error.
     fn end(&mut self, error: Error) -> Error {
         let _ended = self.join();
-        error
+        let error = match self.stop.finish::<()>(Err(error)) {
+            Err(error) => error,
+            Ok(()) => Error::defect("a failed stream returned a value"),
+        };
+        let facts = self.stop.facts();
+        self.facts = Some(facts.clone());
+        error.with_facts(facts)
     }
 }
 
