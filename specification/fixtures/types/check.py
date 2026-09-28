@@ -146,14 +146,18 @@ def check_runtime(cases, checks, conformance):
     try:
         with tempfile.TemporaryDirectory(prefix="thinkthen-types-") as folder:
             for index, case in enumerate(cases):
-                if "request" not in case:
+                if "request" not in case or case.get("schema_only", False):
                     continue
                 if "case_id" in case and case["case_id"] != "generic":
                     assert case["case_id"] in conformance, f"{case['name']}: missing source case"
                 actual = call(door, port, case, Path(folder) / str(index))
                 if "expected_error" in case:
                     continue
-                assert checks[case["definition"]].is_valid(actual), f"{case['name']}: actual result schema"
+                if case["definition"] != "usage":
+                    assert checks["callSuccess"].is_valid(actual), f"{case['name']}: call envelope schema"
+                    actual = actual["value"]
+                if case["definition"] != "doorRequest":
+                    assert checks[case["definition"]].is_valid(actual), f"{case['name']}: actual result schema"
                 if "response" in case:
                     assert actual == case["response"], f"{case['name']}: wrong C result: {actual!r}"
                 if "expect_fields" in case:

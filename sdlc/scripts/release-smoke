@@ -15,7 +15,7 @@ REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 unset THINKTHEN_API_KEY
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
-sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 
 # The conformance loopback backend, as the surfaces rung starts it.
 backend_start

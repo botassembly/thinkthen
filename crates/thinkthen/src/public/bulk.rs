@@ -5,6 +5,7 @@ use std::sync::Arc;
 mod observation;
 use observation::observe_find;
 mod annotate_observation;
+mod details;
 pub(crate) use annotate_observation::{observe_annotated, observe_annotated_questions};
 mod annotation;
 pub(crate) use annotation::{record as annotation_record, rendered as render_annotation};
