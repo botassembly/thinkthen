@@ -328,6 +328,47 @@ def opens(trace: Path, name: str) -> int:
     return sum(1 for line in trace.read_text().splitlines() if "openat(" in line and f'/{name}"' in line)
 
 
+@case
+def prepared_file_arguments_recheck_current_permissions():
+    """A prepared plan cannot spend a file read authorized only at bind."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        question, names, rules = (root / name for name in ("q.json", "names.json", "rules.json"))
+        question.write_text('{"decide":"Is it a refund?"}')
+        names.write_text('{"version":1,"recognize":{"kinds":{"person":"A person."}}}')
+        rules.write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
+        statements = [
+            "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization')) v(id, name, kind)",
+            f"PREPARE scalar AS SELECT thinkthen_decide('@{question}', 'refund now')",
+            f"PREPARE relations AS SELECT thinkthen_relations('Ada', '@{names}')",
+            f"PREPARE relate AS SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{rules}')",
+            "SET enable_external_access = false",
+            "EXECUTE scalar", "EXECUTE relations", "EXECUTE relate",
+        ]
+        got = run(statements, backend.base())
+        for index in (1, 2, 3, 4):
+            expect(rows(got[index]), [], f"prepared setup {index}")
+        for index, role, path in ((5, "question", question), (6, "question", names), (7, "rules", rules)):
+            expect(said(got[index]),
+                   f"thinkthen local: the {role} file {path} was not read: this database's file settings refuse it",
+                   f"prepared {role} access after revoke")
+        expect(backend.count(), 0, "prepared file refusals send nothing")
+
+
+@case
+def prepared_relate_uses_executing_session_settings():
+    with Backend() as backend:
+        got = run([
+            "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization')) v(id, name, kind)",
+            "PREPARE relate AS SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'])",
+            "SET thinkthen_max_requests_total = 0",
+            "EXECUTE relate",
+        ], backend.base())
+        expect(rows(got[1]), [], "relate prepares with its prior settings")
+        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 0; raise SET thinkthen_max_requests_total or RESET it", "relate uses the executing session's total")
+        expect(backend.count(), 0, "the current total refuses before a send")
+
+
 def file_opens_under_strace(count: int):
     """A refused file stays shut and repeated rows share one file open."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:

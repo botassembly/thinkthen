@@ -60,6 +60,7 @@ struct RelateBind : FunctionData {
 	weak_ptr<ClientContext> context;
 	std::shared_ptr<RelateDatabase> held;
 	string query;
+	Value rule_input;
 	Rules rules;
 	SessionSettings settings;
 	std::optional<string> search_path;
@@ -89,7 +90,8 @@ unique_ptr<FunctionData> BindRelate(ClientContext &context, TableFunctionBindInp
 	if (bound->query.find_first_not_of(" \t\r\n") == string::npos) {
 		throw InvalidInputException("thinkthen usage: the relate query is NULL or blank");
 	}
-	bound->rules = ReadRules(context, input.inputs[1]);
+	bound->rule_input = input.inputs[1];
+	bound->rules = ReadRules(context, bound->rule_input);
 	bound->seconds = CountSetting(context, "thinkthen_relate_seconds", 60,
 	                              "a relate time limit is a whole number of seconds, 0 for none");
 	bound->holding = CountSetting(context, "thinkthen_relate_holding_rows", 1000000,
@@ -201,8 +203,33 @@ void ScanRelate(ClientContext &context, TableFunctionInput &input, DataChunk &ou
 	auto &state = input.global_state->Cast<RelateState>();
 	if (!state.ready) {
 		state.ready = true;
-		auto found = ReadRelateRows(*bound.held, context, bound.query, bound.seconds, bound.holding, bound.search_path);
-		state.rows = Answer(bound, context, std::move(found));
+		// Prepared plans retain bind data when the caller changes file access.
+		// Resolve and validate rules against the executing session before any send.
+		auto current = bound;
+		current.rules = ReadRules(context, bound.rule_input);
+		current.settings = Settings(context);
+		auto members = Texts(current.rules.members);
+		RustReply validated(thinkthen_cpp_relate_validate(reinterpret_cast<const uint8_t *>(current.rules.text.data()),
+		                                                  current.rules.text.size(), members.data(), members.size(),
+		                                                  current.rules.list ? 1 : 0, current.rules.from_file ? 1 : 0,
+		                                                  current.settings.Bridge()));
+		Checked(validated.value);
+		if (!validated.value.bytes || validated.value.len != 1) {
+			throw InvalidInputException("thinkthen defect: the bridge returned no relate rule kind");
+		}
+		current.wildcard = validated.value.bytes[0] != 0;
+		current.seconds = CountSetting(context, "thinkthen_relate_seconds", 60,
+		                              "a relate time limit is a whole number of seconds, 0 for none");
+		current.holding = CountSetting(context, "thinkthen_relate_holding_rows", 1000000,
+		                              "a relate holding limit is a whole number of rows");
+		Value path;
+		current.search_path.reset();
+		if (context.TryGetCurrentSetting("search_path", path) && !path.IsNull()) {
+			auto text = path.GetValue<string>();
+			if (text.find_first_not_of(" \t\r\n") != string::npos) { current.search_path = std::move(text); }
+		}
+		auto found = ReadRelateRows(*current.held, context, current.query, current.seconds, current.holding, current.search_path);
+		state.rows = Answer(current, context, std::move(found));
 	}
 	const auto count = std::min<idx_t>(STANDARD_VECTOR_SIZE, state.rows.size() - state.at);
 	for (idx_t row = 0; row < count; ++row) {

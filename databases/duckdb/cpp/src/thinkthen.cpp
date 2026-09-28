@@ -55,7 +55,6 @@ void ValidateListed(const string &question, const vector<string> &members, int32
 struct ScalarBind : FunctionData {
 	weak_ptr<ClientContext> context;
 	std::optional<string> constant_question;
-	std::optional<ResolvedQuestion> resolved_question;
 	std::optional<int64_t> constant_deadline;
 	int32_t kind = 0;
 
@@ -64,7 +63,6 @@ struct ScalarBind : FunctionData {
 	unique_ptr<FunctionData> Copy() const override {
 		auto copy = make_uniq<ScalarBind>(context);
 		copy->constant_question = constant_question;
-		copy->resolved_question = resolved_question;
 		copy->constant_deadline = constant_deadline;
 		copy->kind = kind;
 		return copy;
@@ -72,7 +70,6 @@ struct ScalarBind : FunctionData {
 	bool Equals(const FunctionData &other) const override {
 		auto &held = other.Cast<ScalarBind>();
 		return context.lock() == held.context.lock() && constant_question == held.constant_question &&
-		       resolved_question == held.resolved_question &&
 		       constant_deadline == held.constant_deadline && kind == held.kind;
 	}
 };
@@ -98,8 +95,7 @@ unique_ptr<FunctionData> BindDecide(ClientContext &context, ScalarFunction &func
 			bound->constant_question = value.GetValue<string>();
 			auto &text = *bound->constant_question;
 			if (bound->kind == 0 || bound->kind == 1 || bound->kind == 2 || bound->kind == 7) {
-				bound->resolved_question = ResolveQuestion(context, text);
-				ValidateQuestion(*bound->resolved_question, bound->kind == 7);
+				ValidateQuestion(ResolveQuestion(context, text), bound->kind == 7);
 			}
 		}
 	}
@@ -193,8 +189,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		auto question_text = question.GetValue<string>();
 		if (checked_questions.insert(question_text).second) {
-			auto resolved = bound.constant_question && *bound.constant_question == question_text && bound.resolved_question
-				                    ? *bound.resolved_question : owner->Resolve(*context, question_text);
+			auto resolved = owner->Resolve(*context, question_text);
 			ValidateQuestion(resolved, bound.kind == 7);
 			resolved_questions.emplace(question_text, std::move(resolved));
 		}

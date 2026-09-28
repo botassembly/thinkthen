@@ -33,20 +33,18 @@ struct NestedBind : FunctionData {
 	weak_ptr<ClientContext> context;
 	int32_t kind;
 	std::optional<string> constant_argument;
-	std::optional<ResolvedQuestion> resolved_argument;
 
 	NestedBind(weak_ptr<ClientContext> context, int32_t kind) : context(std::move(context)), kind(kind) {
 	}
 	unique_ptr<FunctionData> Copy() const override {
 		auto copy = make_uniq<NestedBind>(context, kind);
 		copy->constant_argument = constant_argument;
-		copy->resolved_argument = resolved_argument;
 		return copy;
 	}
 	bool Equals(const FunctionData &other) const override {
 		auto &held = other.Cast<NestedBind>();
 		return context.lock() == held.context.lock() && kind == held.kind &&
-		       constant_argument == held.constant_argument && resolved_argument == held.resolved_argument;
+		       constant_argument == held.constant_argument;
 	}
 };
 
@@ -64,8 +62,7 @@ unique_ptr<FunctionData> BindNested(ClientContext &context, ScalarFunction &func
 				}
 			} else {
 				bound->constant_argument = value.GetValue<string>();
-				bound->resolved_argument = ResolveQuestion(context, *bound->constant_argument);
-				ValidateNested(kind, *bound->resolved_argument, {});
+				ValidateNested(kind, ResolveQuestion(context, *bound->constant_argument), {});
 			}
 		}
 	}
@@ -114,9 +111,7 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		const auto raw = bound.kind == 8 ? string() : argument.GetValue<string>();
 		if (validated.emplace(raw, *members).second) {
-			auto named = bound.constant_argument && *bound.constant_argument == raw && bound.resolved_argument
-			                 ? *bound.resolved_argument : bound.kind == 8 ? ResolvedQuestion {"", false}
-			                                                              : owner->Resolve(*context, raw);
+			auto named = bound.kind == 8 ? ResolvedQuestion {"", false} : owner->Resolve(*context, raw);
 			ValidateNested(bound.kind, named, *members);
 			resolved.emplace(raw, std::move(named));
 		}
