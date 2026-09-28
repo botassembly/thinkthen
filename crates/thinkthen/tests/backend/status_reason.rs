@@ -43,6 +43,11 @@ fn a_status_names_its_fixed_action_and_only_the_known_reason() {
             NAMED,
             "thinkthen: the backend answered with status 422: the backend refused the request as malformed or too large\n",
         ),
+        (
+            429,
+            "{}",
+            "thinkthen: the backend answered with status 429: the backend's rate limit was reached after the allowed attempts; try again later or change --max-retries\n",
+        ),
     ];
     for (status, said) in &retried {
         cases.push((*status, marked.as_str(), said.as_str()));
