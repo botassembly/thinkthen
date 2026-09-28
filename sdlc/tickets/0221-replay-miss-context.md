@@ -6,7 +6,7 @@ opens: sdlc/tickets/0221-replay-miss-context.md sdlc/records/0221-replay-miss-pr
 
 # 0221: Explain which request missed strict replay
 
-Status: design accepted at `9458b445` by a fresh independent reviewer; the coordinator approved the safe ordinal/count/digest choice. Owner: Codex. This is register 102's diagnostic improvement, not a change to replay identity, answer behavior, or exit status. The [preflight](../records/0221-replay-miss-preflight.md) distinguishes what current main `0685cfaa` already reports from missing context. No runtime implementation or register closure is claimed.
+Status: design accepted at `9458b445` by a fresh independent reviewer; the coordinator approved the safe ordinal/count/digest choice. Owner: Codex. This is register 102's diagnostic improvement, not a change to replay identity, answer behavior, or exit status. The [preflight](../records/0221-replay-miss-preflight.md) refreshes the accepted design against main `73a9fa84` after tickets 0220 and 0210. No runtime implementation or register closure is claimed.
 
 ## Outcome
 
@@ -25,7 +25,7 @@ Reuse the loopback/recording helpers in `crates/thinkthen/tests/backend/{recordi
 
 ## Prospective files and stop condition
 
-The smallest likely mutation is `cli/failure/{recording,stopped}.rs` plus an internal context carrier in `cli/failure.rs`, `cli/asking{,/batched}.rs`, `cli/annotate_schedule.rs`, `cli/find.rs`, `cli/recognize.rs`, `cli/relate.rs`, and only the engine facade/chunk path needed for a proved stage. The preflight measures tight parents and identifies existing tests. Exact source claims precede implementation. The safe group-ordinal outcome is settled; do not replace it with raw member or file text.
+The refreshed small mutation is `cli/failure/{recording,convert}.rs` plus a private context carrier in `cli/failure.rs`, command selection in `cli/judge.rs`, and call-boundary context in `cli/asking.rs`, `cli/asking/batched.rs`, `cli/annotate_schedule.rs`, `cli/find.rs`, `cli/recognize.rs` and `cli/relate.rs`. Keep `cli/failure/stopped.rs` unchanged if its existing wrapper already prints the context once. No engine facade, planner, public result, recording format or command-help edit is needed: recognize and relate can report only their command and the existing digest when stage/chunk provenance is unavailable at the CLI boundary. The preflight measures current headroom and names a bounded proof. Exact runtime source and test claims precede implementation. The safe group-ordinal outcome is settled; do not replace it with raw member or file text.
 
 ## Evidence
 
