@@ -315,7 +315,7 @@ const ARTICLES = {
     goal: "audit grades saved answers against answers you already know and suggests the bar that gets the most right.",
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers and suggests the bar that gets the most right. It sends no request.",
-      "Here Jev was asked of 70 songs whether each is on Abbey Road, from the title alone. The slide shows the same 12 songs as the [diff page](/learn/beatles-bench/diff/), before Jev gets context. At the band 0.2:0.8, its misses stand out: the wrong answers and the not-sure ones.",
+      "Here Jev was asked of 70 songs whether each is on Abbey Road, from the title alone. The slide shows the same 12 songs as the [diff page](/learn/beatles-bench/diff/), before Jev gets context. At the band 0.2:0.8, the slide brightens Jev's misses. They are the wrong answers and the not-sure answers.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 20 are right, 3 are wrong, and 47 are not sure.",
