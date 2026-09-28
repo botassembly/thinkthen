@@ -24,3 +24,6 @@ The child tests had to cover the nested C `built` catch and each detached worker
 
 
 Integration retains the reviewed native source and changed artifact evidence. Later main changes are records and the independently reviewed width-test helper cleanup; they do not alter native package code. The combined tree passes exact root/native ratchets, pages, ticket evidence and diff checks. No repeated package build or full suite was needed.
+
+
+A post-landing integration audit found the SQLite Python counter omitted from the author and reviewer counter lists. The already reviewed installed-load assertions add 22 nonblank Python lines (1,692 to 1,714). The counter correction changes no test or product source. Checking all repository counter configurations, with the root configuration invoked in its default repository-relative mode, found no other mismatch. Future native integration must enumerate every declared counter instead of selecting only Rust counters. The added Python lines earn their space by selecting exact successful and refused installed loads, later host operation and library residency; no repeated fixture or load campaign was added.
