@@ -6,7 +6,7 @@ opens: sdlc/tickets/0229-identify-unused-fixture-entries.md sdlc/records/0229-un
 
 # 0229: Report unused entries in an explicit recording folder
 
-Status: proposed for fresh independent design review. Owner: Codex. The [preflight](../records/0229-unused-fixture-preflight.md) pins main `e182b546` and the current boundaries. No runtime or settled specification edit is authorized by this note. The coordinator owns source claims and register closure.
+Status: technical design ACCEPT at `97abffa6` by fresh independent Medium reviewer `/root/unused_fixture_design_review`; the public CLI and manifest choice is pending Ian. Owner: Codex. The [preflight](../records/0229-unused-fixture-preflight.md) pins main `e182b546` and the current boundaries. No runtime or settled specification edit is authorized by this acceptance. The coordinator owns source claims and register closure.
 
 ## Outcome and authority
 
@@ -38,7 +38,7 @@ The outside-in case must prove that a single completed replay's detailed `meta.r
 
 ## Deferred gaps and routing
 
-This ticket may complete the **reporting utility** after the proof and fresh code review. Register 107 remains open until a complete suite manifest route and the bench's lean-folder workflow are demonstrated by their owner; a partial list must not be labeled a full pass. The settled removal rule in ADR 0017 section 5 and `recording.md:107` remains intact because this command does not remove. Ticket 0208 is precedent for a read-only cache report, not blanket authority for new CLI syntax. Fresh design review must assess the additive public form and whether Ian or a new ADR is needed; no ADR number is reserved. The coordinator claims exact source files only after that decision and review. Ian can overturn the proposed syntax, manifest precondition or reporting scope before build.
+This ticket may complete the **reporting utility** after the proof and fresh code review. Register 107 remains open until a complete suite manifest route and the bench's lean-folder workflow are demonstrated by their owner; a partial list must not be labeled a full pass. The settled removal rule in ADR 0017 section 5 and `recording.md:107` remains intact because this command does not remove. Ticket 0208 is precedent for a read-only cache report, not blanket authority for new CLI syntax. The fresh Medium reviewer accepted the technical design at `97abffa6`, including the dedicated executable page and the settled prune-only removal boundary; it found no substantive new ADR requirement. Root has asked Ian to decide the outward CLI and manifest form. The coordinator claims exact source files only after that choice is recorded. Ian can overturn the proposed syntax, manifest precondition or reporting scope before build. No ADR number is reserved.
 
 ## What preparation taught us
 
