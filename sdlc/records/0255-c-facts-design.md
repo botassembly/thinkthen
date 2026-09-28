@@ -1,6 +1,6 @@
 # 0255 typed C facts design record
 
-Status: candidate for fresh High design review. Source pin: main `e920ae28`; no runtime, header, test or public-page changes were made. Original criteria: `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md` asks that every library result carry facts without a setting or second call. ADR 0089 and ticket 0230 are accepted prerequisites. Experiment 273's Zig direct C call, experiment 294's Swift installed package and experiment 295's Objective-C wrapper establish existing typed consumers; they are retained consumer evidence, not proof that a new symbol is in any installed package.
+Status: accepted by fresh High design review at `d97f2735`; coordinator approval and exact runtime claim landed on main `430a8758`. Preparation source pin: main `e920ae28`; no runtime, header, test or public-page changes were made during design. Original criteria: `sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md` asks that every library result carry facts without a setting or second call. ADR 0089 and ticket 0230 are accepted prerequisites. Experiment 273's Zig direct C call, experiment 294's Swift installed package and experiment 295's Objective-C wrapper establish existing typed consumers; they are retained consumer evidence, not proof that a new symbol is in any installed package.
 
 ## Source trace that drives the choice
 

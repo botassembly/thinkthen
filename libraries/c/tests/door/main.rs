@@ -293,6 +293,32 @@ fn every_c_row_holds_under_the_sanitizer() {
     }
 }
 
+/// Ticket 0255: one installed C driver exercises all owned-facts typed exports.
+#[test]
+fn typed_facts_are_owned_and_refusals_leave_outputs_untouched() {
+    let backend = Backend::start().expect("a loopback backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let source = crate_dir().join("tests/c/typed_facts.c");
+    let output = run(&compile(&source), &base, b"");
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(
+        backend.count(),
+        9,
+        "the driver counts actual scalar, bulk, recognition and relation sends"
+    );
+    let refusal = Backend::start().expect("a loopback backend");
+    let status_base = format!("{}/arm/status/401/v1", refusal.origin());
+    let output = run(&compile(&source), &status_base, b"E");
+    assert_eq!(
+        (output.status.code(), text(&output.stderr)),
+        (Some(0), String::new())
+    );
+    assert_eq!(refusal.count(), 1, "only the started failure sent");
+}
+
 /// Ticket 0166: a token fired while the reply is held cancels the typed
 /// scalar, the JSON scalar, and the bulk door, and nothing new is sent. The
 /// program says when each token has fired, so each release follows its fire.

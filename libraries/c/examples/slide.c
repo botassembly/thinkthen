@@ -37,11 +37,18 @@ int main(void) {
     /* every call returns 0, or one of six error kinds.
        one text: a.outcome is THINKTHEN_YES, at 0.99 */
     thinkthen_answer a;
-    int rc = thinkthen_decide(tt, q, text, strlen(text), &a);
+    char *facts = NULL;
+    size_t facts_len = 0;
+    int rc = thinkthen_decide_with_facts(tt, q, text, strlen(text), &a,
+                                        &facts, &facts_len);
+    thinkthen_free_string(facts);
 
     /* many texts cross once and run 32 at a time */
     thinkthen_answer out[COUNT];
-    rc |= thinkthen_decide_many(tt, q, texts, lens, COUNT, out);
+    facts = NULL;
+    rc |= thinkthen_decide_many_with_facts(tt, q, texts, lens, COUNT, out,
+                                           &facts, &facts_len);
+    thinkthen_free_string(facts);
 
     thinkthen_engine_free(tt);
     /* End of the sample. */

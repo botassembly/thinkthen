@@ -77,14 +77,27 @@ pub(crate) fn decide(
     text: &str,
     options: CallOptions<'_>,
 ) -> Result<Reply, Failure> {
+    decide_with_facts(engine, question, text, options, None)
+}
+
+pub(crate) fn decide_with_facts(
+    engine: &Engine,
+    question: &LoadedQuestion,
+    text: &str,
+    options: CallOptions<'_>,
+    completed: Option<&mut Option<Facts>>,
+) -> Result<Reply, Failure> {
     let details = match question {
         LoadedQuestion::Question(asked) if asked.kind() != thinkthen::QuestionKind::Decide => {
             return Err(Failure::usage("decide takes a decide question"));
         }
         LoadedQuestion::Question(asked) => engine.details_with(asked, text, options)?,
         LoadedQuestion::Banded(asked) => engine.details_with(asked, text, options)?,
+    };
+    if let Some(completed) = completed {
+        *completed = Some(details.facts().clone());
     }
-    .into_value();
+    let details = details.into_value();
     match (details.value(), details.probabilities()) {
         (Judgment::Decision(answer), Probabilities::YesNo { yes }) => Ok(reply(*answer, *yes)),
         _ => Err(Failure::defect(
@@ -100,15 +113,39 @@ pub(crate) fn decide_many(
     texts: &[&str],
     options: CallOptions<'_>,
 ) -> Result<Vec<Reply>, Failure> {
+    decide_many_with_facts(engine, question, texts, options, None)
+}
+
+pub(crate) fn decide_many_with_facts(
+    engine: &Engine,
+    question: &LoadedQuestion,
+    texts: &[&str],
+    options: CallOptions<'_>,
+    completed: Option<&mut Option<Facts>>,
+) -> Result<Vec<Reply>, Failure> {
     let rows: Result<Vec<_>, _> = match question {
-        LoadedQuestion::Question(asked) => engine
-            .decide_many_with(asked, texts.iter().copied(), options)
-            .map(|row| row.map(|row| reply(*row.value(), row.probability())))
-            .collect(),
-        LoadedQuestion::Banded(asked) => engine
-            .decide_many_with(asked, texts.iter().copied(), options)
-            .map(|row| row.map(|row| reply(*row.value(), row.probability())))
-            .collect(),
+        LoadedQuestion::Question(asked) => {
+            let mut batch = engine.decide_many_with(asked, texts.iter().copied(), options);
+            let rows = batch
+                .by_ref()
+                .map(|row| row.map(|row| reply(*row.value(), row.probability())))
+                .collect();
+            if let Some(completed) = completed {
+                *completed = batch.facts().cloned();
+            }
+            rows
+        }
+        LoadedQuestion::Banded(asked) => {
+            let mut batch = engine.decide_many_with(asked, texts.iter().copied(), options);
+            let rows = batch
+                .by_ref()
+                .map(|row| row.map(|row| reply(*row.value(), row.probability())))
+                .collect();
+            if let Some(completed) = completed {
+                *completed = batch.facts().cloned();
+            }
+            rows
+        }
     };
     let rows = rows?;
     if rows.len() == texts.len() {
@@ -127,9 +164,25 @@ pub(crate) fn recognize(
     text: &str,
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
+    let mut completed = None;
+    let json = recognize_with_facts(engine, spec, text, options, &mut completed)?;
+    Ok((
+        json,
+        completed.ok_or_else(|| Failure::defect("a completed recognition held no facts"))?,
+    ))
+}
+
+pub(crate) fn recognize_with_facts(
+    engine: &Engine,
+    spec: &str,
+    text: &str,
+    options: CallOptions<'_>,
+    completed: &mut Option<Facts>,
+) -> Result<String, Failure> {
     let ask = Recognize::from_json(spec)?;
     let call = engine.recognize_with(&ask, text, options)?;
-    Ok((call.value().to_json(), call.facts().clone()))
+    *completed = Some(call.facts().clone());
+    Ok(call.value().to_json())
 }
 
 /// Refuse a relate call past [`MOST_RELATED`] records.
@@ -168,13 +221,26 @@ pub(crate) fn relate(
     entities: Vec<Entity>,
     options: CallOptions<'_>,
 ) -> Result<(String, Facts), Failure> {
+    let mut completed = None;
+    let json = relate_with_facts(engine, spec, entities, options, &mut completed)?;
+    Ok((
+        json,
+        completed.ok_or_else(|| Failure::defect("a completed relation held no facts"))?,
+    ))
+}
+
+pub(crate) fn relate_with_facts(
+    engine: &Engine,
+    spec: &str,
+    entities: Vec<Entity>,
+    options: CallOptions<'_>,
+    completed: &mut Option<Facts>,
+) -> Result<String, Failure> {
     let ask = Relate::from_json(spec)?;
     let call = engine.relate_with(&ask, entities, options)?;
+    *completed = Some(call.facts().clone());
     let edges: Vec<String> = call.value().iter().map(thinkthen::Edge::to_json).collect();
-    Ok((
-        format!("{{\"edges\":[{}]}}", edges.join(",")),
-        call.facts().clone(),
-    ))
+    Ok(format!("{{\"edges\":[{}]}}", edges.join(",")))
 }
 
 /// Refuse a null `out` or `out_len`, which success always writes.

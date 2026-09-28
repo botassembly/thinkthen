@@ -21,6 +21,7 @@ The header adds a borrowed failure-facts accessor beside its existing error func
 | `thinkthen_decide`, `thinkthen_decide_opts` | kept | `question_json` goes through `Question::from_json`. `deadline_ms` stays `int64_t` and goes through `CallOptions::deadline_millis` (ADR 0041). |
 | `thinkthen_question_file` | added | A bounded named-file read validates through `Question::from_json`, returns owned original JSON through two unchanged-on-error outputs, and records non-retryable Local on a file failure. It sends nothing. |
 | `thinkthen_decide_many`, `thinkthen_decide_many_opts` | kept | A cancelled or expired call still returns no rows. |
+| Four typed `*_with_facts` pairs | added | Decide, decide-many, recognize and relate each have plain and options forms. A successful call returns a separate owned final-facts JSON string beside its unchanged typed result. Existing typed names remain bare compatibility calls. A nonzero code changes no output slot; started failures keep the borrowed error-facts accessor. |
 | `thinkthen_call`, `thinkthen_call_opts` | changed | The envelope grammar below replaces the branch's eight verbs. |
 | `thinkthen_recognize`, `thinkthen_recognize_opts` | changed | The spec is a version-one question file. Entities take the engine's `{text, start, end, length, kind, strength}` through `Recognized::to_json`. Recognize follows the engine's cache and replay settings like every call. |
 | `thinkthen_relate`, `thinkthen_relate_opts` | changed | The spec is a version-one relate file read by `Relate::from_json`. Each text is one JSON record with `name` and `kind` at the default fields. A record with `text` and no `name`, as `recognize` writes, is read by its `text`. A non-default `fields` pointer is refused as usage. Edges take `Edge::to_json`'s shape inside `{"edges":[...]}`. The 255 cap stays. |
@@ -102,6 +103,7 @@ The door checks its pointers before it asks the engine, so a refusal sends nothi
 ## 5. Allocated results
 
 - A string from `thinkthen_call`, `thinkthen_recognize`, or `thinkthen_relate` is freed with `thinkthen_free_string`, once.
+- Each new typed facts string, and each new recognition or relation result string, is independently owned and freed with `thinkthen_free_string` once.
 - The token is freed with `thinkthen_cancel_token_free` after every call that carried it has returned.
 - The engine is freed with `thinkthen_engine_free` after every call on it has returned.
 - The message from `thinkthen_error_message` is borrowed. It stays valid until the calling thread records its next failure on that engine, the thread exits, or the engine is freed.
@@ -128,7 +130,7 @@ Every exported symbol runs behind one guard. A panic from the engine or the door
 
 Version 0.0.1 freezes:
 
-- the 19 symbol names,
+- the prior 19 symbol names and eight additive facts-returning typed names,
 - the `thinkthen_answer` layout, `int` then `double`,
 - the return codes 0 through 6, with new kinds appended and none renumbered,
 - `THINKTHEN_NO_DEADLINE` and the `thinkthen_` prefix,
