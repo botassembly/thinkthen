@@ -18,6 +18,7 @@ use crate::core::{
 use crate::edge;
 use crate::engine::facade::{Answered, Completed, Input, InputPort, Judgment};
 use crate::failure::Failure;
+use crate::failure::context::Limits;
 use crate::schedule::{self, Judged, Output, Placed};
 use crate::table::Rows as TableRows;
 
@@ -81,14 +82,15 @@ pub(super) fn run(
         return Err(Failure::Defect("a batched verb asks one question"));
     };
     let question = question.clone();
+    let limits = Limits::new(configuration.profile.as_ref());
     let batcher = Batcher::new(
         configuration.backend.clone(),
         configuration.profile.clone(),
         question.clone(),
         setting,
-        None,
+        configuration.context.as_ref().map(super::Context::evidence),
     )
-    .map_err(refused)?;
+    .map_err(|error| limits.refused(error, true))?;
     let downstream = edge::Downstream::default();
     let former = Former {
         batcher,
@@ -97,6 +99,7 @@ pub(super) fn run(
         downstream: downstream.clone(),
         cancel: configuration.environment.cancel().clone(),
         queue: VecDeque::new(),
+        limits,
     };
     if configuration.common.dry_run {
         return planned(former, records, &configuration, output);
@@ -176,6 +179,7 @@ struct Former {
     downstream: edge::Downstream,
     cancel: crate::engine::Cancel<'static>,
     queue: VecDeque<Input<Item, Placed>>,
+    limits: Limits,
 }
 
 impl Former {
@@ -245,8 +249,9 @@ impl Former {
         }
         if let Err(error) = pushed {
             self.held.clear();
-            self.queue
-                .push_back(Input::Failed(Placed::from(refused(error))));
+            self.queue.push_back(Input::Failed(Placed::from(
+                self.limits.refused(error, false),
+            )));
         }
     }
 
@@ -259,9 +264,9 @@ impl Former {
         match batch {
             Ok(Some(batch)) => self.queue_batch(batch),
             Ok(None) => {}
-            Err(error) => self
-                .queue
-                .push_back(Input::Failed(Placed::from(refused(error)))),
+            Err(error) => self.queue.push_back(Input::Failed(Placed::from(
+                self.limits.refused(error, false),
+            ))),
         }
     }
 
@@ -304,7 +309,7 @@ fn answered(
                 batch,
                 records,
                 whole,
-                Description::new(setting, batch.closed, false),
+                Description::new(setting, batch.closed, false, judging.context.is_some()),
             );
         }
         Err(error)
@@ -333,7 +338,7 @@ fn split_answered(
         first,
         records,
     } = item;
-    let description = Description::new(setting, batch.closed, true);
+    let description = Description::new(setting, batch.closed, true, judging.context.is_some());
     let count = records.len();
     let last = records.last().map_or(*first, |held| held.at);
     let cancel = judging.environment.cancel();
@@ -346,14 +351,20 @@ fn split_answered(
                 .map_err(|error| Placed::at(error.into(), held.at))
         })
         .collect::<Result<Vec<_>, _>>()?;
+    let context = judging.context.as_ref().map(super::Context::evidence);
     let [left, right] = halves(
         judging.engine.backend(),
         judging.engine.profile(),
         question,
-        None,
+        context.as_ref(),
         values,
     )
-    .map_err(|error| Placed::at(refused(error), *first))?;
+    .map_err(|error| {
+        Placed::at(
+            Limits::new(judging.engine.profile()).refused(error, false),
+            *first,
+        )
+    })?;
     let middle = count.div_ceil(2);
     let (left_records, right_records) = records.split_at(middle);
     let left_last = left_records.last().map_or(*first, |held| held.at);
@@ -496,17 +507,5 @@ fn failed(cause: Failure, first: usize, last: usize) -> Failure {
             }
         }
         other => other,
-    }
-}
-
-/// The failure a planner refusal stops the run with. The command passes no
-/// context, so only a profile limit or a defect can arise.
-fn refused(error: BatchError) -> Failure {
-    match error {
-        BatchError::Profile(limit) => Failure::ProfileLimit(limit),
-        BatchError::Defect(what) => Failure::Defect(what),
-        BatchError::StructuredQuestionWithContext | BatchError::ContextOverLimit { .. } => {
-            Failure::Defect("a context reached the command's batches")
-        }
     }
 }

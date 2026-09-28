@@ -27,9 +27,11 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod batch_meta;
 mod batched;
+mod context;
 mod folders;
 mod plan;
 
+use context::Context;
 pub(crate) use folders::Folders;
 use plan::{plan, plan_record, print_plan};
 
@@ -177,6 +179,11 @@ pub(crate) fn run(
         return Err(Failure::QuietOverRecords);
     }
     schedule::jobs_of(common.jobs, reading.streams())?;
+    let context = context::for_run(
+        batch.as_ref().and_then(|tiers| tiers.context),
+        reading.streams(),
+        settled.text().as_json().as_str().is_some(),
+    )?;
     let tuned_for = batch
         .as_ref()
         .filter(|tiers| tiers.tuned)
@@ -211,6 +218,7 @@ pub(crate) fn run(
         streams: reading.streams(),
         profile,
         mismatch,
+        context,
         sources: (settled.sources().question_is_from_file() || configured_model.is_some()).then(
             || {
                 if configured_model.is_some() {
@@ -348,6 +356,7 @@ struct Judging<'a> {
     keeping: Keeping,
     streams: bool,
     mismatch: Mismatch,
+    context: Option<Context>,
 }
 
 struct JudgingInput<'a> {
@@ -363,6 +372,7 @@ struct JudgingInput<'a> {
     sources: Option<Sources>,
     profile: Option<BackendProfile>,
     mismatch: Mismatch,
+    context: Option<Context>,
 }
 
 impl Judging<'_> {
@@ -380,6 +390,7 @@ impl Judging<'_> {
             sources: _,
             profile,
             mismatch,
+            context,
         } = input;
         Ok(Judging {
             environment,
@@ -390,6 +401,7 @@ impl Judging<'_> {
             keeping,
             streams,
             mismatch,
+            context,
         })
     }
 
@@ -458,6 +470,10 @@ impl Judging<'_> {
                     tuned_for: self.tuned_for_profile(),
                     warning: self.mismatch.warning(),
                     batch_warning: self.mismatch.batch_warning(),
+                    context_sha256: self
+                        .context
+                        .as_ref()
+                        .map(|context| context.digest().to_owned()),
                 };
                 let input = self.streams.then_some(record);
                 Some(decision_with_batch(

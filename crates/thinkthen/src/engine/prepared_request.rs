@@ -2,10 +2,7 @@
 
 use crate::core::adapters::built_in;
 use crate::core::recording::{Digest, Exchange as Recorded};
-use crate::core::{
-    Backend, BackendProfile, LimitKind, Plan, Question, RelationEntityView, RelationPlan, Reply,
-    plan_pairs, relation_evidence,
-};
+use crate::core::{Backend, BackendProfile, PairPlan, Plan, Reply};
 
 use crate::engine::error::Error;
 
@@ -73,63 +70,30 @@ pub(crate) fn relation_ceiling(
     )
 }
 
-/// One concrete relation after the only relation fallback decision.
-pub(crate) struct SettledRelation {
-    pub(crate) planned: RelationPlan,
-    pub(crate) requests: PreparedRequests,
-    /// The backend-profile limit that turned a choice into yes/no questions.
-    pub(crate) fallback: Option<LimitKind>,
-}
-
-impl SettledRelation {
-    /// Prepare one planned concrete relation for `relate`.
-    ///
-    /// A choice refused by a backend-profile option or request-byte limit
-    /// becomes yes/no questions for this concrete relation alone.
-    pub(crate) fn settle<E: RelationEntityView>(
-        backend: &Backend,
-        profile: Option<&BackendProfile>,
-        source: Option<&str>,
-        entities: &[E],
-        planned: RelationPlan,
-    ) -> Result<Self, Error> {
-        let ceiling = relation_ceiling(backend, profile);
-        let plan = relation_request(backend, source, entities, &planned)?;
-        match PreparedRequests::with_profile(backend, &plan, profile, ceiling) {
-            Ok(requests) => Ok(Self {
-                planned,
-                requests,
-                fallback: None,
-            }),
-            Err(Error::ProfileLimit(limit))
-                if matches!(planned.questions.first(), Some(Question::Choose { .. }))
-                    && limit.permits_relation_fallback() =>
-            {
-                let planned = plan_pairs(entities, &planned.relation)
-                    .map_err(|_| Error::Defect("relation fallback planning failed"))?;
-                let plan = relation_request(backend, source, entities, &planned)?;
-                let requests = PreparedRequests::with_profile(backend, &plan, profile, ceiling)?;
-                Ok(Self {
-                    planned,
-                    requests,
-                    fallback: Some(limit.kind),
-                })
-            }
-            Err(error) => Err(error),
-        }
-    }
-}
-
-fn relation_request<E: RelationEntityView>(
+/// Prepare the ordered pair questions under the shared 400-question bound and
+/// the request-size and backend-profile limits.
+pub(crate) fn pair_chunks(
     backend: &Backend,
-    source: Option<&str>,
-    entities: &[E],
-    planned: &RelationPlan,
-) -> Result<Plan, Error> {
-    let evidence = relation_evidence(source, entities, &planned.relation)
-        .map_err(|_| Error::Defect("relation state could not be built"))?;
-    Plan::new(evidence, backend.model().clone(), planned.questions.clone())
-        .map_err(|_| Error::Defect("relation planned no questions"))
+    profile: Option<&BackendProfile>,
+    planned: &PairPlan,
+) -> Result<Vec<PreparedChunk>, Error> {
+    let most = profile
+        .and_then(|profile| profile.max_questions)
+        .map_or(400, |limit| limit.min(400));
+    let ceiling = relation_ceiling(backend, profile);
+    let mut chunks = Vec::new();
+    for questions in planned.questions.chunks(most) {
+        let plan = Plan::new(
+            planned.evidence.clone(),
+            backend.model().clone(),
+            questions.to_vec(),
+        )
+        .map_err(|_| Error::Defect("relation planned no questions"))?;
+        chunks.extend(
+            PreparedRequests::with_profile(backend, &plan, profile, ceiling)?.into_chunks(),
+        );
+    }
+    Ok(chunks)
 }
 
 type Candidate = (Plan, Vec<u8>);

@@ -14,6 +14,7 @@ pub(crate) struct Run<'a> {
     pub(crate) tuned_for: Option<&'a ProfileName>,
     pub(crate) warning: Option<ProfileWarning>,
     pub(crate) batch_warning: Option<BatchWarning>,
+    pub(crate) context_sha256: Option<String>,
 }
 
 /// One `thinkthen.result/1` line. `shown` is the value the row prints, and
@@ -60,7 +61,8 @@ pub(crate) fn decision_with_batch(
         )
         .with_profile_warning(run.warning)
         .with_batch(batch)
-        .with_batch_warning(run.batch_warning),
+        .with_batch_warning(run.batch_warning)
+        .with_context_sha256(run.context_sha256),
     );
     let row = DecisionResult::new(shown, question, judged.answer.clone(), threshold, meta);
     json_line(&match input {

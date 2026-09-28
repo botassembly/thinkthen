@@ -45,7 +45,7 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "arc-swap", "clap", "csv-core", "polars", "serde", "serde_json", "sha2", "signal-hook",
+        "arc-swap", "clap", "csv-core", "polars", "polars-core", "serde", "serde_json", "sha2", "signal-hook",
         "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
@@ -306,17 +306,20 @@ def check_crates() -> None:
         fail("dependencies", failure)
     for plant in (
         {"default": ["cli", "polars"]},
-        {"polars": ["dep:polars", "dep:clap"]},
+        {"polars": ["dep:polars", "dep:polars-core", "dep:clap"]},
+        {"polars": ["dep:polars"]},
     ):
         if not feature_failures({**manifest, "features": {**manifest.get("features", {}), **plant}}):
             fail("dependencies", f"the planted features {plant} are refused")
     dependencies = manifest.get("dependencies", {})
-    for plant in (
-        {**dependencies, "polars": {**dependencies.get("polars", {}), "optional": False}},
-        {**dependencies, "polars": {**dependencies.get("polars", {}), "default-features": True}},
-    ):
-        if not feature_failures({**manifest, "dependencies": plant}):
-            fail("dependencies", "a planted Polars that is not optional, or keeps its defaults, is refused")
+    for name in ("polars", "polars-core"):
+        for changed in ({"optional": False}, {"default-features": True}):
+            plant = {**dependencies, name: {**dependencies.get(name, {}), **changed}}
+            if not feature_failures({**manifest, "dependencies": plant}):
+                fail("dependencies", f"a planted {name} that is not optional, or keeps its defaults, is refused")
+    plant = {**dependencies, "polars-core": {**dependencies["polars-core"], "features": []}}
+    if not feature_failures({**manifest, "dependencies": plant}):
+        fail("dependencies", "a planted polars-core without dtype-struct is refused")
     if not feature_failures({**manifest, "dev-dependencies": {**manifest.get("dev-dependencies", {}), "polars-core": "0.55.2"}}):
         fail("dependencies", "a planted polars-core dev-dependency is refused")
 
@@ -330,14 +333,20 @@ def feature_failures(manifest: dict) -> list[str]:
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "signal-hook", "polars"}:
-        held.append("exactly the command dependencies and polars are optional")
+    if optional != {"clap", "csv-core", "signal-hook", "polars", "polars-core"}:
+        held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
-        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"], "polars": ["dep:polars"],
+        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
+        "polars": ["dep:polars", "dep:polars-core"],
     }:
-        held.append("the default cli feature selects only command dependencies, and polars only Polars")
+        held.append("the default cli feature selects only command dependencies, and polars selects only its two pinned crates")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")
+    if manifest.get("dependencies", {}).get("polars-core") != {
+        "version": "0.55.2", "default-features": False, "optional": True,
+        "features": ["dtype-struct"],
+    }:
+        held.append("polars-core activates only dtype-struct, under the optional Polars feature")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES["thinkthen"]:
         held.append("thinkthen declares the accepted development dependency set")
     return held
@@ -1740,6 +1749,8 @@ def graph_failures(direct: set[str]) -> list[str]:
     held = []
     if direct & COMMAND_ONLY:
         held.append("the default-features-off graph excludes command dependencies")
+    if direct & {"polars", "polars-core"}:
+        held.append("the default-features-off graph excludes Polars and its Struct feature")
     if sys.platform != "win32" and "nix" not in direct:
         held.append("the default-features-off graph holds nix on Unix")
     return held
