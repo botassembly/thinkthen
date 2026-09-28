@@ -1,0 +1,45 @@
+---
+flow: build
+priority: 211
+opens: sdlc/tickets/0211-private-tls-roots.md sdlc/records/0211-tls-preflight.md sdlc/records/0211-design-review.md
+---
+
+# 0211: Let a named backend trust a private CA bundle
+
+Status: proposed design for fresh independent review. Owner: Codex. No runtime file is claimed or changed by this draft. Ian has not accepted a new TLS setting or its public shape.
+
+## Outcome and authority
+
+Register 118 reports that the bundled Mozilla roots do not trust a private backend certificate. Its certificate diagnostic half was built and independently accepted in 0155. This ticket proposes a bounded way for the person who launches a process to name additional trust for that process's backend without disabling certificate or hostname verification. It does not change the six public error kinds, the accepted 0149 SQL settings, or 0157's size and retry scope. The original finding is `/home/ian/workspace/experiments/284-issue-register/118-no-private-tls-roots.md`; the exact file and source comparison are in the [preflight](../records/0211-tls-preflight.md).
+
+## Proposed behavior for review
+
+1. **Explicit root source.** Unset means ureq's current rustls plus bundled Mozilla `WebPki` roots. `THINKTHEN_CA_BUNDLE=/absolute/local/file.pem` selects a readable PEM CA bundle for environment-built engines and CLI commands. An explicit Rust `EngineBuilder::ca_bundle(path)` selects it for a bare builder or overrides the environment value on a seeded builder. The named bundle **replaces** Mozilla roots for that engine because ureq's `RootCerts::Specific` does so; it is not a silent union. A caller may omit the setting to retain current public roots. `SSL_CERT_FILE` is not read implicitly. No `--insecure`, skip-verification switch, HTTP exception, client certificate, or new key source is proposed.
+2. **Validation and lifetime.** Accept only an absolute filesystem path with no URI. Read at most 2 MiB at the CLI or library build edge, before the first key read or send. Reuse one private loader that returns typed roots or a safe typed refusal; the CLI maps it to existing `Failure::Configuration` (`Local`, exit 5) or `Failure::Usage` (exit 2), and the Rust builder maps it to existing public `Local` or `Usage`. No message table or seventh error kind is needed. Parse every recognized PEM item through ureq's public parser, refuse malformed input and private-key items, and require 1–256 certificates. An unreadable file is `Local`; invalid path shape, empty/no-certificate PEM, an oversized file, or too many certificates is `Usage`. Diagnostics name the setting and cause, never the file contents, certificate names, key, or evidence. A syntactically valid but unusable certificate can still fail the TLS handshake; it must fail closed with the existing TLS diagnostic, with no fallback to Mozilla. Retain the parsed certificate snapshot in immutable engine settings; a new engine reads a changed file, while an existing engine and fork rebuild keep their original roots. `with_model` retains the same TLS state. A replay-only engine still validates an explicitly named bundle at construction; review this proposed cost to offline replay.
+3. **Surface reach.** The CLI's ordinary engine builder and `check` use the same parsed root selection; `status` reports no certificate contents and need not open the bundle. `EngineBuilder::from_env` propagates the process environment to Rust and the Python, TypeScript, Ruby, R and C constructors that already use it. DuckDB, PostgreSQL and SQLite currently build through `EngineBuilder::from_env`, so an operator-supplied process environment applies to their engines, subject to the host process's file access. A SQL caller gets no `SET`/GUC/function for this path; it cannot name an arbitrary server CA file. Bare Rust `Engine::builder()` remains environment-free unless `ca_bundle` is called. Native per-instance wrapper options, a SQL setting and platform-root mode are outside this first proposal. Review whether this reach is enough before accepting register 118's closure criterion. Do not insert a third setting into 0149 or 0157.
+4. **Failure and trust rules.** Keep 0155's `TransportKind::Tls`, fixed command/public certificate messages, Backend error kind and command exit 4 for a failed handshake. A bad named file fails locally before transport. The existing HTTPS opening-phase `Io(InvalidData)` classification ambiguity accepted in 0155 remains; do not match vendor text or add a seventh public kind. TLS verifies chain and hostname as before. An invalid bundle never makes the client trust all certificates.
+
+| Option considered | Benefit | Cost and disposition |
+| --- | --- | --- |
+| Named PEM bundle with current rustls | Works with ureq 3.4.2 `RootCerts::Specific` and `parse_pem`; explicit process authority; no platform-verifier feature | Replaces Mozilla for that engine; file validation, size limit and constructor propagation are required. Recommended **proposal**, subject to review/Ian's public-setting ruling. |
+| OS platform verifier | Picks up managed host roots and may fit enterprise machines without a file | ureq requires `platform-verifier` with rustls, adds a dependency/policy and lock review, and platform behavior varies. Keep as a separate design choice, not an implicit default or fallback. |
+
+## Prospective implementation claims, not yet granted
+
+The narrow source set is `crates/thinkthen/src/{engine/http.rs,engine/facade.rs,public/settings.rs,cli/edge.rs,cli/asking.rs,cli/check.rs}` plus one private root-loader module if the parser does not fit locally; existing `Settings` initializers in private tests must be counted before a source claim. Root documentation belongs in `specification/{backends,settings}.md`, the Rust/API inventory (`sdlc/tickets/0084-freeze-the-public-rust-contract.md`) and applicable README cells only after the shape is accepted. A new product environment name must enter `sdlc/scripts/settings` source/row checks. Test fixtures/helpers belong under existing backend/public boundaries. `sdlc/ratchet.json` must equal measured growth. No edit to `cli/failure.rs` (held by 0172), `public/error.rs`, `engine/error.rs`, `sdlc/scripts/policy.py` (held by 0201), SQL implementation, site files or accepted 0149/0157 tickets is proposed. If a direct dependency or platform verifier becomes necessary, get its exact policy claim and independent dependency review first.
+
+## Small outside-in proof
+
+Use a bounded local TLS responder with a temporary test CA and localhost leaf whose SAN is `localhost`; generate both outside the public source tree and delete them afterward. Pin the host OpenSSL version/capability or provide a checked test-only generator before making it a rung. With a synthetic key and one fixed System One reply, the unset default must fail the genuine certificate handshake with the existing fixed TLS sentence and no HTTP request. The named CA must make one HTTPS request and return the fixed answer; a wrong CA and a CA-signed leaf for another hostname must fail with the same TLS kind and no HTTP request. A missing/empty/oversized bundle must fail before the listener sees any request and without reading the key. Repeat only the setting transfer through one Rust `from_env`, one explicit/bare builder, one CLI `check`, and one selected SQL env-built host after its exact artifact is rebuilt. The SQL call establishes process-env reach, not a new SQL setting. No paid endpoint, production/private certificate, broad host matrix, load or timing campaign belongs here. Keep 0155's TLS/redirect/secrecy cases; do not reimplement their message tables.
+
+## Evidence
+
+- Starts from: Main `5d15138e`; register 118; accepted 0155 ticket, build record and code review; packaged ureq 3.4.2/rustls 0.23.45 API; [preflight](../records/0211-tls-preflight.md). No build or TLS run occurred in this design pass.
+- Keeps: Bundled Mozilla trust by default, verified HTTPS and hostname checks, six public kinds, fixed certificate diagnostics, no redirected key, and each existing constructor's environment authority.
+- Changes: Proposed explicit PEM trust source for one engine, its process-environment and Rust-builder reach, bounded local validation and documentation after acceptance.
+- Proof: Local CA/leaf handshake matrix, exact no-HTTP-request refusals, caller-path checks and focused settings/policy/size checks on a later implementation candidate.
+- Defers: Platform verifier, native wrapper per-instance options and SQL session settings until a separate reviewed decision; 0149/0157 outcomes and the accepted 0155 `InvalidData` limit remain unchanged.
+
+## What preparation taught us
+
+The original report's generic-network diagnostic is historical: 0155 already fixed the message and reviewed its structured-error limit. The recent configuration-owner Quick Fix showed that a settings file needs explicit authority, safe diagnostics and a real boundary proof. This brief keeps bundle ownership at the process or explicit Rust builder, marks the absence of a retained cross-host TLS fixture, and checks all engine constructors plus fork and model reuse before proposing source growth.
