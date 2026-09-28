@@ -140,6 +140,59 @@ say(total=run(db, "SELECT thinkthen_max_requests_total(1)"),
     expect(backend.close(), 1, "one attempt, no retry")
 
 
+def test_record_and_replay_share_a_folder_without_a_replay_send() -> None:
+    backend = Backend()
+    env = environment(backend)
+    folder = env["SCRATCH"] + "/saved"
+    recorded = child(f"""
+db = connect()
+db.execute("SELECT thinkthen_cache(NULL)")
+say(record=run(db, "SELECT thinkthen_record(?)", ({folder!r},)),
+    first=run(db, "SELECT thinkthen_decide('Is it red?', 'a red door')"),
+    second=run(db, "SELECT thinkthen_decide('Is it red?', 'a red door')"))
+""", env)
+    expect(recorded, {"record": [[folder]], "first": [[1]], "second": [[1]]}, "record every call")
+    expect(backend.count(), 2, "record sends twice")
+    replayed = child(f"""
+db = connect()
+db.execute("SELECT thinkthen_cache(NULL)")
+say(replay=run(db, "SELECT thinkthen_replay(?)", ({folder!r},)),
+    saved=run(db, "SELECT thinkthen_decide('Is it red?', 'a red door')"),
+    missing=run(db, "SELECT thinkthen_decide('Is it red?', 'another door')"))
+""", env)
+    expect(replayed["replay"], [[folder]], "replay folder")
+    expect(replayed["saved"], [[1]], "saved answer")
+    expect(replayed["missing"].startswith("thinkthen local:"), True, "strict miss")
+    expect(backend.close(), 2, "replay sends nothing")
+
+
+def test_inline_profile_refuses_an_over_limit_request_before_sending() -> None:
+    backend = Backend()
+    profile = '{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":4}'
+    held = child(f"""
+db = connect()
+say(profile=run(db, "SELECT thinkthen_profile(?)", ({profile!r},)),
+    refused=run(db, "SELECT thinkthen_decide('Is it red?', 'a red door')"))
+""", environment(backend))
+    expect(held["profile"], [[profile]], "valid JSON profile")
+    expect(held["refused"].startswith("thinkthen usage: profile small allows at most 4 evidence bytes"), True, "profile refusal")
+    expect(backend.close(), 0, "profile refuses before send")
+
+
+def test_timeout_setting_limits_a_slow_attempt() -> None:
+    backend = Backend()
+    held = child("""
+db = connect()
+say(timeout=run(db, "SELECT thinkthen_timeout(1)"),
+    retries=run(db, "SELECT thinkthen_max_retries(0)"),
+    result=run(db, "SELECT thinkthen_decide('Is it red?', 'slow')"))
+""", environment(backend, "arm/delay/2000"))
+    expect(held["timeout"], [[1]], "one-second timeout")
+    expect(held["retries"], [[0]], "no retry")
+    expect(held["result"].startswith("thinkthen backend: the backend timed out"), True, "timeout refusal")
+    expect(backend.close(), 1, "one slow attempt")
+
+
 def test_the_request_total_holds_across_one_row_calls() -> None:
     """Decision 17: a WHERE over 10 rows is 10 one-record calls, and a total of 3 stops the fourth."""
     backend = Backend()

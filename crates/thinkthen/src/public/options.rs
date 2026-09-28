@@ -33,7 +33,8 @@ pub struct SendBudget(Arc<BudgetCount>);
 
 #[derive(Debug)]
 struct BudgetCount {
-    pid: AtomicU32,
+    owner: AtomicU32,
+    resetting: AtomicU32,
     sent: AtomicU64,
 }
 
@@ -48,7 +49,8 @@ impl SendBudget {
     #[must_use]
     pub fn new() -> Self {
         Self(Arc::new(BudgetCount {
-            pid: AtomicU32::new(std::process::id()),
+            owner: AtomicU32::new(std::process::id()),
+            resetting: AtomicU32::new(0),
             sent: AtomicU64::new(0),
         }))
     }
@@ -56,20 +58,22 @@ impl SendBudget {
     fn reset_after_fork(&self) {
         let pid = std::process::id();
         loop {
-            let previous = self.0.pid.load(Ordering::Acquire);
+            let previous = self.0.owner.load(Ordering::Acquire);
             if previous == pid {
                 return;
             }
-            if previous == 0 {
+            let marker = self.0.resetting.load(Ordering::Acquire);
+            if marker == pid {
                 std::hint::spin_loop();
             } else if self
                 .0
-                .pid
-                .compare_exchange(previous, 0, Ordering::AcqRel, Ordering::Acquire)
+                .resetting
+                .compare_exchange(marker, pid, Ordering::AcqRel, Ordering::Acquire)
                 .is_ok()
             {
                 self.0.sent.store(0, Ordering::Release);
-                self.0.pid.store(pid, Ordering::Release);
+                self.0.owner.store(pid, Ordering::Release);
+                self.0.resetting.store(0, Ordering::Release);
                 return;
             }
         }
@@ -127,6 +131,21 @@ impl Drop for SendReservation {
             self.count.sent.fetch_sub(1, Ordering::AcqRel);
         }
     }
+}
+
+#[cfg(test)]
+#[test]
+fn inherited_budget_and_reset_marker_do_not_block_a_child() {
+    let budget = SendBudget::new();
+    budget.reserve(None, None).expect("parent send").commit();
+    let other_pid = std::process::id().wrapping_add(1);
+    budget.0.owner.store(other_pid, Ordering::Release);
+    budget.0.resetting.store(other_pid, Ordering::Release);
+    budget
+        .reserve(Some(1), None)
+        .expect("fresh child total")
+        .commit();
+    assert!(budget.reserve(Some(1), None).is_err());
 }
 
 /// A number plain up to 20 characters, the width of `u64::MAX`, else as `1e300`.

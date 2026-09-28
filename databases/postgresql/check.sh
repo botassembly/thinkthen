@@ -632,10 +632,35 @@ sql_settings_and_retry_total() {
 		-c "SET thinkthen.max_retries = 0" -c "SELECT thinkthen_decide('$Q', 'one')")
 	same "$out" t
 	same "$(bcount)" 1
+	fresh arm/delay/2000
+	out=$(q -c "SET thinkthen.timeout = '1s'" -c "SET thinkthen.max_retries = 0" \
+		-c "SELECT thinkthen_decide('$Q', 'slow')")
+	has "$out" "thinkthen backend: the backend timed out"
+	same "$(bcount)" 1
 	fresh generic
 	out=$(q -c "SET thinkthen.profile = '{}'" -c "SELECT thinkthen_decide('$Q', 'one')")
 	has "$out" "thinkthen usage: the profile JSON"
 	same "$(bcount)" 0
+	fresh generic
+	out=$(q -c 'SET thinkthen.profile = '\''{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":4}'\''' \
+		-c "SELECT thinkthen_decide('$Q', 'a red door')")
+	has "$out" "thinkthen usage: profile small allows at most 4 evidence bytes"
+	same "$(bcount)" 0
+	fresh generic
+	out=$(q -c "SET thinkthen.cache = 'off'" -c "SELECT thinkthen_decide('$Q', 'same')" \
+		-c "SELECT thinkthen_decide('$Q', 'same')")
+	same "$out" $'t\nt'
+	same "$(bcount)" 2
+	fresh generic
+	out=$(q -c "SET thinkthen.cache = 'off'" -c "SET thinkthen.record = '$RUN/saved'" \
+		-c "SELECT thinkthen_decide('$Q', 'saved')" -c "SET thinkthen.record = ''" \
+		-c "SET thinkthen.replay = '$RUN/saved'" -c "SELECT thinkthen_decide('$Q', 'saved')" \
+		-c "SELECT thinkthen_decide('$Q', 'missing')")
+	has "$out" "thinkthen local: the replay folder holds no reply for this request"
+	same "$(bcount)" 1
+	q -c "CREATE ROLE tt_setting LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_usage() TO tt_setting" >/dev/null
+	has "$(PGUSER_AS=tt_setting q -c "SELECT count(*) FROM thinkthen_usage()" -c "SET thinkthen.record = '$RUN/other'")" \
+		'permission denied to set parameter "thinkthen.record"'
 }
 check sql_settings_and_retry_total
 a_cancelled_send_counts_toward_the_total() {

@@ -23,11 +23,11 @@ The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a
 | `thinkthen_details(question, text[, deadline])` | the command's `--details` JSON document |
 | `thinkthen_try_details(question, text[, deadline])` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
 | `thinkthen_annotate(questions, text[, deadline])` | a JSON object keyed by question name |
-| `thinkthen_warm(question, text)` | an aggregate: judges each distinct pair and returns the count |
+| `thinkthen_warm(question, text[, deadline])` | an aggregate: judges each distinct pair and returns the count |
 | `thinkthen_usage()` | JSON totals: `requests_sent`, `cache_answers`, `input_tokens`, `output_tokens` |
-| `thinkthen_recognize(text, kinds)` | a table of `text, start, end, length, kind, strength` |
+| `thinkthen_recognize(text, kinds[, deadline])` | a table of `text, start, end, length, kind, strength` |
 | `thinkthen_recognize_document(text, spec)` | complete recognize JSON with entities and any relation edges |
-| `thinkthen_relate(table, id, name, kind, rule, …)` | a table of `relation, source, target, probability` |
+| `thinkthen_relate(table, id, name, kind, rule, …[, deadline])` | a table of `relation, source, target, probability`; the deadline follows the fourth rule slot |
 
 A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_details`, and `thinkthen_warm` only. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question.
 
@@ -71,14 +71,19 @@ The check rejects another non-`NULL` label. A stored `NULL` can represent a choi
 
 The extension holds one engine for the process, shared by every connection. It builds on the first call that can send, from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`, as the command reads them. SQL cannot name an address or a key. `thinkthen_usage()` does not build the engine. Before the first call every total reads 0.
 
-Five setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
+Eleven setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
 
 `thinkthen_budget_ms(n)` is separate from those engine settings. Set it in a separate statement immediately before the query. It starts one monotonic budget on that connection: `-1` clears it, `0` is spent, and a positive whole number sets milliseconds. Every ThinkThen call on that connection uses the remaining time, or its shorter per-call deadline. Expiry during a held send returns a deadline error promptly; the sent attempt stays counted. The budget remains in force across later statements until reset. It bounds ThinkThen work only; SQLite work after the last ThinkThen call remains the host's responsibility. Other connections have independent budgets.
 
 - `thinkthen_throttle(n)`: requests in flight at once, from 1 through 32. The default is 4.
 - `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows, so this limit does not cap a statement's spending. Use the total below for that.
-- `thinkthen_max_requests_total(n)`: the most requests this process may send, summed over every call. It is unset by default, and `NULL` unsets it. Before each call the extension adds up the requests sent so far. Once the total is spent, every call raises `usage` and sends nothing, even a call the cache could answer. Otherwise a warm pass judges at most as many rows as requests remain, then raises `usage` saying it stopped at the remaining total. The cut counts rows, and a cached row costs no request, so a cut warm can spend less than what remained. The judged part of a cut warm stays in the cache, so a later process reads those rows with no send. Settings apply before the first call, so the total is lifted only in a new process. It holds to within one call's retries for the scalars and `thinkthen_warm`. A `thinkthen_recognize`, `thinkthen_recognize_document`, or `thinkthen_relate` call counts as one record but may send several requests, so it can pass the total by that call's own requests as well. Calls running at the same time can each spend what remains, so the total can be exceeded by one call per thread in flight, plus retries. A forked child starts again from zero. `thinkthen status` never sees this spend, because it counts only what the command sends.
+- `thinkthen_max_requests_total(n)`: the most live requests this process may attempt across calls and retries. It is unset by default, and `NULL` unsets it. An atomic reservation checks every attempt before sending, including retries and requests within recognize or relate. Concurrent calls cannot exceed the total. The existing before-call check still refuses a spent total, even for a cache answer. A warm pass cuts its rows to what remains and reports its partial result as before. A forked child starts a new count. `thinkthen status` counts only command sends.
 - `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
+- `thinkthen_model(text)`: the backend model; `NULL` keeps the environment value.
+- `thinkthen_timeout(n)`: a positive whole number of seconds for an attempt; `NULL` keeps the environment value.
+- `thinkthen_max_retries(n)`: a whole number of retries from 0 through 4294967295; `NULL` keeps the environment value.
+- `thinkthen_profile(json)`: a version-one backend profile in JSON text, never a path; `NULL` keeps the environment value.
+- `thinkthen_record(path)` and `thinkthen_replay(path)`: a plain folder path for live recording or strict offline replay; `NULL` keeps the environment value. A record always sends, and a replay miss sends nothing.
 
 The throttle holds per loaded copy of the engine. A process that also loads another surface's native package, such as a Python wheel, holds two copies and can run up to twice the throttle (ADR 0047 item 5).
 
