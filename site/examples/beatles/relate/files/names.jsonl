@@ -1,0 +1,12 @@
+{"name":"John Lennon","kind":"person"}
+{"name":"Paul McCartney","kind":"person"}
+{"name":"George Harrison","kind":"person"}
+{"name":"Ringo Starr","kind":"person"}
+{"name":"Come Together","kind":"song"}
+{"name":"Yesterday","kind":"song"}
+{"name":"Something","kind":"song"}
+{"name":"Taxman","kind":"song"}
+{"name":"Octopus's Garden","kind":"song"}
+{"name":"Help!","kind":"album"}
+{"name":"Revolver","kind":"album"}
+{"name":"Abbey Road","kind":"album"}
