@@ -1,6 +1,6 @@
 # Batching and the envelope changed the C door contract on main
 
-Status: open, consolidated drift record from the pre-merge re-pin wave. Filed 2026-09-28. The queue owner confirms intent per change and folds the fixture/example updates into the language merge. Not a defect claim: every change has specification authority at pin `71f25087`.
+Status: intended changes confirmed by the queue owner; remaining integration work is tracked under J8 and the existing per-port package issues. This is a consolidated drift record from the pre-merge re-pin wave. Filed 2026-09-28. The queue owner confirms intent per change and folds the fixture/example updates into the language merge. Not a defect claim: every change has specification authority at pin `71f25087`.
 
 ## What changed, with authority
 
@@ -19,3 +19,13 @@ Every re-pin preserved its unchanged-gate FAIL receipt as drift evidence, then p
 1. Confirm each numbered change is intended (1, 2, 4, 5 are new confirmations; 3 is already ruled intentional).
 2. Decide whether an explicit `batch=1` reverse-completion scenario belongs in a product stress test, since default packing removed the old one (JVM report).
 3. Fold the repin package copies (updated READMEs, fixed packaged examples — JVM's Kotlin/Scala mains and Swift's example asserted the old bare values) into the language merge rather than the sealed stage-two folders.
+
+## Queue-owner disposition
+
+The numbered changes are intended under the cited accepted contracts. Packed bulk requests, the C success envelope, shared relation state, one initial attempt plus the default three retries, and complete request identity already have specification and ticket authority. No new API decision or Ian approval is needed to adapt the package copies to those contracts.
+
+Each integration ticket must retain the exact pinned re-run receipts and update its packaged examples at the final core pin. Do not edit the sealed experiment evidence. The integration reviewer checks literal request bodies, public values and facts, typed failures, and the original planted negatives. A changed count must follow the selected source path, not a tolerance that hides unexpected sends.
+
+Do not add a stress campaign to recreate the old reverse-completion setup. Where a port-specific ordering or cancellation boundary still lacks proof, use one small controlled functional case with explicit batch one and held replies, or cite the equivalent existing boundary proof. Default packing and split-request concurrency are separate behaviors.
+
+This record adds no independent item-table row. J8 and each existing consumer-package issue own the remaining copy, pin and installed-consumer outcomes. The new C++ package handoff is supporting evidence for the existing add-a-C++-binding row, not another independent implementation.
