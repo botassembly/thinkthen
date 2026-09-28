@@ -184,7 +184,7 @@ impl Environment {
         self.key.reader()
     }
 
-    /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
+    /// `THINKTHEN_BATCH`, read by record-batching judging commands.
     pub(crate) fn batch(&self) -> Option<&str> {
         self.batch.as_deref()
     }

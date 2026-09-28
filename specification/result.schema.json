@@ -139,6 +139,24 @@
         "split": {"const": true}
       }
     },
+    "annotateBatchMeta": {
+      "type": "object",
+      "required": ["group", "request", "setting", "records", "position", "closed", "requests_sent"],
+      "additionalProperties": false,
+      "properties": {
+        "group": {"type": "integer", "minimum": 1},
+        "request": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "setting": {"$ref": "#/$defs/batchSetting"},
+        "records": {"type": "integer", "minimum": 1},
+        "position": {"type": "integer", "minimum": 1},
+        "closed": {"enum": ["content", "size", "limit", "pause", "end"]},
+        "requests_sent": {"type": "integer", "minimum": 0},
+        "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
+          "properties": {"input_tokens": {"type": "integer", "minimum": 0},
+            "output_tokens": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
+        "split": {"const": true}
+      }
+    },
     "meta": {
       "type": "object", "required": ["tool", "url", "model", "requests_sent", "cached", "requests", "failed_questions"],
       "anyOf": [{"required": ["question_sha256"]}, {"required": ["questions_sha256"]}],
@@ -244,7 +262,9 @@
         "schema": {"const": "thinkthen.result/1"},
         "value": {"$ref": "#/$defs/annotatedRow"},
         "answers": {"type": "object", "additionalProperties": {"$ref": "#/$defs/annotateEntry"}},
-        "meta": {"$ref": "#/$defs/meta"}
+        "meta": {"allOf": [{"$ref": "#/$defs/meta"}],
+          "properties": {"batches": {"type": "array", "minItems": 1,
+            "items": {"$ref": "#/$defs/annotateBatchMeta"}}}}
       }, "additionalProperties": true
     },
     "recognizeDetails": {

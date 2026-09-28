@@ -534,6 +534,10 @@ pub(crate) struct AnnotateArguments {
     #[arg(long, hide = true)]
     pub(crate) raw: bool,
 
+    /// The record-batch size and request-size limit.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options shared with record-oriented judging commands.
     #[command(flatten)]
     pub(crate) common: Common,
