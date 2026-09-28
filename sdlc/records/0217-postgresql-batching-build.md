@@ -21,3 +21,7 @@ The PostgreSQL Rust ratchet moved from 2,099 to 2,464 nonblank lines; its Python
 ## What the build taught us
 
 The old `within` shortcut encoded a false equation between records and sends. The transport `SendBudget` already reserves real attempts, so the PostgreSQL adapter only needs to prevalidate distinct-record `max_requests`. The new worker owns resolved strings, and warm calls it once across groups to keep one SQL deadline. The raw recording entry, not a parsed-and-reserialized JSON object, is the digest input; the selected proof checks that distinction. PostgreSQL's blank-context step error leaves no warm finalizer send in the installed case, so the SQLite finalizer lesson did not justify a second framework workaround here. The retained eight-held tests exposed the batch-one interactive admission rule; functional concurrency proof needs bounded multi-member requests. The cache's key is one exact request, so packed warm cannot claim it prefilled scalar singleton answers.
+
+## Coordinator landing
+
+Fresh High code review accepted the documentation-corrected candidate `3a73b7e4`. PostgreSQL files integrated unchanged with newer main. The intervening shared product change is the separately reviewed CLI folder warning, outside the library build; no PostgreSQL rebuild or repeated installed matrix was required. The current-binary settings checker passed all 46 rows. Source growth and installed artifact identity retain the exact values above. B13d closes; register 73 remains open.

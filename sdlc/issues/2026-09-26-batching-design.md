@@ -399,6 +399,8 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B13c | DuckDB batches | Vectors, `SET thinkthen_batch`, the `context` argument | A DuckDB query over the 306 rows sends the command's 1 request at `SET threads = 1`; conformance cases | B12a | covered by B0 |
 | B13d | PostgreSQL batches | Arrays, `SET thinkthen.batch`, the `context` argument | The shared conformance cases | B12a | covered by B0 |
 | B13e | SQLite batches | `thinkthen_warm`, the settings call, the `context` argument | The shared conformance cases | B12a | covered by B0 |
+
+B13d PostgreSQL and B13e SQLite are implemented in reviewed tickets 0217 (`3a73b7e4`) and 0219 (`139f41d6`). Their selected installed Linux proof covers packing, context, deadlines and actual transport attempts. Ordinary scalar throughput in register 73 and broader platform/release proof remain separate.
 | B14 | Dropped | Ticket 0137 makes `filter` and `rank` read lines by default | none | none | none |
 | B15 | Replaced | It is ticket D1 | none | none | none |
 | D1 | The documentation page | Described below | Docs review; every number on the page names its record and build | B6, B7, S1, ticket 0137 | no |
