@@ -301,7 +301,7 @@ const ARTICLES = {
     goal: "One question adds an answer column to a database table or a data frame.",
     idea: [
       "One SQL query adds an answer column to a table of songs. The query holds the question as JSON.",
-      "Polars, pandas, and R take a column and give a column back. Each one writes not sure its own way: NULL in SQL, null in Polars, <NA> in pandas, and NA in R.",
+      "The slide marks each answer right, wrong, or not sure. Polars, pandas, and R take a column and give a column back. SQLite runs this query. DuckDB and PostgreSQL ask questions inside SQL too.",
       "To set one up, start at [Install](/install/).",
     ],
     takeaway: "Ask the question where your data already lives.",
@@ -309,9 +309,10 @@ const ARTICLES = {
   },
 
   audit: {
-    title: "audit finds your bar.",
+    title: "audit grades a run.",
     goal: "audit grades saved answers against answers you already know and suggests the bar that gets the most right.",
     idea: [
+      "The slide grades 12 of the songs at the band 0.2:0.8. It counts each answer right, wrong, or not sure, and it dims the right answers. The examples below find the bar.",
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers at every bar and suggests the bar that gets the most right. It sends no request.",
       "Here Jev was asked of 70 songs whether each is on Abbey Road.",
     ],
@@ -367,7 +368,7 @@ const ARTICLES = {
     goal: "Putting the facts in the text fixes a sure miss that no bar can fix.",
     idea: [
       "Give Jev the facts in the text. Look up the record, put it in front of the question, and ask. We call it retrieval-augmented decisions.",
-      "The bench drew 196 questions, mostly from Jev's misses. From memory, Jev got 68 right. With the song catalog in the text, it got 184. Context costs input tokens.",
+      "The bench drew 196 questions, mostly from Jev's misses. From memory, Jev got 68 of 196 right. With the song catalog in the text, it got 184 of 196. The first run measured Jev at 68% from memory on all 1,075 questions the catalog covers. The report weights that run back to the whole set and estimates about 97% with the catalog. Context costs input tokens.",
     ],
     source: record('open-book'),
     see: {
@@ -397,12 +398,12 @@ const ARTICLES = {
   retrieval: {
     title: "Four ways to retrieve.",
     label: "Retrieval",
-    goal: "Decision search asks Jev your question about each record, and it adds a fourth way to retrieve.",
+    goal: "Classification asks Jev your question about each record, and it adds a fourth way to retrieve.",
     idea: [
       "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings and cosine similarity work this way. Hybrid search blends the two.",
-      "Decision search asks Jev your question about each record. `filter`, `rank`, and `find` do the asking. Decision search can also query the names, kinds, and edges that `recognize` and `relate` pull out.",
+      "Classification asks Jev a question about each record: keep or drop, how well it fits, which tags apply. `decide`, `score`, and `tag` answer, and each answer carries a probability. `filter` and `rank` keep and order the records on those answers. Classification can also ask about the names that `recognize` pulls out.",
     ],
-    takeaway: "Search finds text like your question. Decision search answers it.",
+    takeaway: "Search finds text like your question. Classification answers it.",
     link: REPO,
   },
 

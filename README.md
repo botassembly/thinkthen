@@ -1,6 +1,6 @@
 # thinkthen
 
-`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a level on a scale. A command names the job, asks the question, and reads the evidence on standard input.
+`thinkthen` puts a System One model in the shell. The model never writes text. It reads a state, answers a typed question, and returns probabilities that a script can branch on. The question is a yes/no, one pick, every applicable label, or a level on a scale.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
@@ -10,9 +10,9 @@ thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --fi
 thinkthen find 'Which line answers the question?' --lines < handbook.txt
 ```
 
-The first prints `true`, `false`, or `null`, and its exit code works in a shell `if`. The second prints one label. The third prints every applicable label as a JSON array. The fourth prints the records that pass. The fifth sends the bounded set together and returns the best original unit. The [type contract](specification/types.md) names their meanings; the [result contract](specification/result.md) fixes detailed fields.
+Each command names the job, asks the question, and reads the evidence on standard input. It prints the answer and sets its exit code, so a shell `if` can branch on it. The first prints `true`, `false`, or `null`; the second one label; the third every applicable label as a JSON array; the fourth the records that pass; the fifth the one line that answers. The [type contract](specification/types.md) names what an answer means, and the [result contract](specification/result.md) fixes the fields behind `--details`, which adds the probabilities to any answer.
 
-Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on the same input.
+Those commands are the design. `specification/` is the contract, and code follows it. `annotate` reads a saved question set when several questions belong on one input.
 
 ## First run
 
@@ -33,18 +33,28 @@ It prints `true`. `demos/27-test-with-no-network` shows how a test replays a rec
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the question, the options, and the evidence.
 - A yes, a no, a not sure answer, and a broken run stay four different outcomes in the output and in the exit code.
+- One request can carry many records. `--batch max` fills each request and is the default; `--batch 1` sends one record per request. Records that share a request can affect each other's answers, and a threshold tuned at one setting warns when it runs at another.
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first System One model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - The default address sends the question and evidence to TypeSafe. Its [customer agreement](https://typesafe.ai/legal/mca), [data processing addendum](https://typesafe.ai/legal/data-processing), and [privacy policy](https://typesafe.ai/legal/privacy-policy) describe data handling. The published privacy policy, checked 2026-09-28, gives no fixed API-input retention period. Check the terms governing your account before sending sensitive text.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
 
-The answer cache is on by default. Cache entries contain the complete request and response, including the evidence being judged. Filesystem access and backups can copy that evidence. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. A platform-default cache is created for its owner alone and an existing Unix folder must already have mode `0700`; an explicitly named `--cache` folder keeps its user-owned mode. The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells the user to restore the old settings or choose another folder. No key enters an entry. Use `--no-cache` for a run that must neither read nor write cached answers.
+## The answer cache
 
-`thinkthen status` reports the resolved configuration, cache size, and local request, retry, token, and cache-answer counts for the current UTC month and in total. It counts only what the command sends. A library, SQL extension, or data frame keeps its counts in memory for its own process, and `status` never sees them. The count-only usage files live beside the platform cache and contain no judged evidence or key. Older builds can read the monthly files; newer builds keep retry totals in separate sidecars. They are local conservative statistics rather than an account bill.
+The cache is on by default.
+
+- An entry holds the complete request and response, the judged evidence included. Filesystem access and backups can copy that evidence. No key enters an entry.
+- Whoever can write the cache or recording folder controls the answers read from it, so keep that folder private to people whose answers you trust. A platform-default cache is created for its owner alone, and an existing Unix folder must already have mode `0700`. An explicitly named `--cache` folder keeps its user-owned mode.
+- The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells you to restore the old settings or choose another folder.
+- `--no-cache` runs a job that neither reads nor writes cached answers. `cache prune` is the only thing that removes entries.
+
+## Usage counts
+
+`thinkthen status` reports the resolved configuration, cache size, and request, retry, token, and cache-answer counts for the current UTC month and in total. It counts only what the command sends. A library, SQL extension, or data frame keeps its own counts in memory, and `status` never sees them. The count-only usage files live beside the platform cache and hold no judged evidence and no key. Older builds read the monthly files; newer builds keep retry totals in separate sidecars. They are local conservative statistics, not an account bill.
 
 ## What it is not for
 
-- **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. A pipeline of separate processes pays both for every decision. For a `coproc` loop that sends one line and waits for one reply, use `decide --lines --batch 1`: it prints one result per nonblank input line and flushes it. `filter` prints only kept records, so a dropped line gives the loop no reply. `rank` waits for the complete input before it prints an order. Record mode keeps one process alive for the loop, but each decision still waits on the model.
-- **A call from inside a program written in another language.** Rust, Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`. Their APIs return a value and run facts within the host program.
+- **A loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. For a `coproc` loop that sends one line and waits for one reply, use `decide --lines --batch 1`: it prints one result per nonblank input line and flushes it. `filter` prints only kept records, so a dropped line gives the loop no reply. `rank` waits for the complete input before it prints an order. Record mode keeps one process alive for the loop, but each decision still waits on the model.
+- **A call from inside a program written in another language.** Records, recordings, transforms, and exit codes buy a program nothing, because the program already holds its data. Rust, Python, TypeScript, Ruby, R, C, and Polars have libraries under `libraries/`. DuckDB, PostgreSQL, and SQLite have extensions under `databases/`. Their APIs return a value and run facts within the host program.
 
 `sdlc/planning/ten-use-cases.md` measured both against ten real uses.
 
@@ -60,7 +70,7 @@ for row in engine.filter(&question, ["Please refund my order.", "Where is my par
 }
 ```
 
-`Engine::from_env` reads the same variables and configuration file as the command, including `cache: false`. A bare `Engine::builder()` starts with library defaults and does not read that file. Call its `no_cache()` setter to turn the cache off. `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
+`Engine::from_env` reads the same variables and configuration file as the command, including `cache: false`. A bare `Engine::builder()` starts with library defaults and does not read that file; call its `no_cache()` setter to turn the cache off. `throttle(n)` caps the requests in flight for the whole process. The bulk calls `filter`, `decide_many`, and `annotate` read any iterator lazily and return rows in input order. `sdlc/planning/libraries/rust.md` holds the goals, and ticket 0084 holds the frozen declarations.
 
 ## Four names
 
@@ -73,15 +83,13 @@ These four words name the four things a user writes or runs. ADR 0015 fixed them
 | A whole worked example that can be run again | how-to | A folder under `demos/`: the page, the inputs, the question, the transform, the recording | The spec rung |
 | A user's own job over the user's own input | pipeline | A Bash script | Bash |
 
-A transform is one of two kinds. A metric reads a whole run and prints numbers. A policy reads one row and names an action.
-
-A question file holds one question. A question set holds several named questions, and each entry has the shape of a question file. `annotate` reads a question set.
+A transform is one of two kinds. A metric reads a whole run and prints numbers. A policy reads one row and names an action. A question file holds one question. A question set holds several named questions, and `annotate` reads one.
 
 ## Where to read
 
 The documentation has three kinds of page. [`demos/README.md`](demos/README.md) is the list of how-tos, and each green one is a real shell job that the gate runs. `specification/` is the reference. This README is the tutorial and the explanation.
 
-The flagship leads these seven pages. The remaining pages move from the simplest command to its supporting details. ADR 0018 chose the original twenty, and accepted ticket 0088 added the `relate` how-to as page 45.
+Seven how-tos lead the list. The rest move from the simplest command to its supporting details.
 
 | How to | The job | |
 | --- | --- | --- |
@@ -97,7 +105,10 @@ The how-to list also has a section on evals: grading answers against a written r
 
 - [`demos/`](demos/README.md): the how-tos. Small real shell jobs as executable pages. They drive the design.
 - `specification/`: the contract. Channels and exit codes, the threshold, the result, backends, and one page per command.
-- `sdlc/planning/design-study.md`: what the tool is, what version one holds, how it fits with botassembly, and the questions waiting on Ian.
+
+## Contributing
+
+- `sdlc/planning/design-study.md`: what the tool is, what version one holds, and how it fits with botassembly.
 - `sdlc/planning/rust-standards.md`: how the code is judged. Every rule names the tool that enforces it.
 - `sdlc/planning/plan.md`: the build order and its state.
 - `sdlc/planning/adr/`: decisions made.

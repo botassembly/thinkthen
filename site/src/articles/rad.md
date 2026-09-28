@@ -26,7 +26,7 @@ Put the song's catalog entry in front of the question and ask again. The entry n
 
 <!-- example: beatles/rad/2-context -->
 
-The bench asked the same way at scale. It drew 196 questions, mostly from Jev's misses, and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. From memory, Jev got 68 right. With the catalog, it got 184, in the [run of 2026-09-26](https://github.com/botassembly/beatles-bench#results).
+The bench asked the same way at scale. It drew 196 questions, mostly from Jev's misses, and asked each one twice. The first time, Jev answered from memory. The second time, the whole song catalog sat in front of the question, one line per song, with its singer, writers, length, and release date. From memory, Jev got 68 of 196 right. With the catalog, it got 184 of 196, in the [run of 2026-09-26](https://github.com/botassembly/beatles-bench#results). That sample leans on misses. The first run, of 2026-09-23, measured Jev at 68% from memory on all 1,075 questions the catalog covers. The [open-book report](https://github.com/botassembly/beatles-bench/blob/main/reports/open-book.md) weights that run back to the whole set and estimates about 97% with the catalog.
 
 The catalog broke an answer on "The Ballad of John and Yoko". Asked whether two Beatles share the lead, Jev said no from memory, and that is right. With the catalog, it said yes at 0.82, in the [open-book run](https://github.com/botassembly/beatles-bench/tree/main/results/runs/2026-09-26-thinkthen-jev-open-book). The line says Lennon. The title names two people. That may have fooled it.
 
