@@ -138,3 +138,16 @@ The 0203 wrapper checks found inherited 0157 metadata drift on main `1d056e7e`: 
 
 
 The bounded follow-up measured all 21 named source configurations and found 17 stale counters, including earlier landed SQL host tests as well as 0157. The metadata-only correction passed independent review at `69d18b68`; the reviewer corrected the coordinator’s initial attribution of all growth to 0157. SQLite Python’s +240 and PostgreSQL Python’s +95 included earlier host work, while 0157 added nine net test lines to each. The exact current totals now pass without changed source or scope. This correction repairs lint metadata immediately rather than waiting for 0203.
+
+
+## Rank and DuckDB design corrections before implementation
+
+Fresh 0220 design review found that a bounded dispatch window cannot preserve the old speculative send count on failed or cancelled runs, and timed input can change pause-based batch boundaries. Corrected design `52f0864b` limits exact request parity to completed finite input with stable boundaries, preserves accurate held-output failure metadata, and inventories three missed direct scheduler test calls. Proposed ADR 0093 makes the settled retention-page change explicit. These are overbroad proof and source-inventory claims, caught before runtime work.
+
+Fresh 0222 DuckDB review found three concrete preparation gaps. A permanent row-isolated try_details exception would narrow the accepted maximal-vector outcome, so the designer is investigating a bounded carrier that can keep recoverable row failures without waiving that outcome. Warm’s remaining query deadline needs a real C++/Rust bridge field and a zero-budget no-send proof; cancellation alone cannot prove it. Proposed standalone verifier scripts were absent from check.sh, so new assertions must live in a selected suite that the rung actually invokes. No implementation or completion is claimed from that draft.
+
+
+The next 0222 review found that “private carrier below the stopping stream” was not yet an implementable cross-crate design: DuckDB’s Rust bridge cannot call ThinkThen’s private core or engine. It also required a good/failed/good reply inside one packed request, since a failed whole request followed by a good request would miss partial-member loss. The coordinator reserves ADR 0094 for the concrete reachable surface and raises this designer correction to High because it changes the public/native boundary and recoverable-failure semantics. The warm deadline bridge and routine-rung fixes already passed review and stay fixed. Future port preparation must trace crate visibility as well as the function call graph and distinguish member failures from request failures.
+
+
+Fresh code review uses Sol High for the frozen 0203 candidate `001c8f7f` because profile identity crosses public Rust, native wrappers and SQL result contracts. It uses Sol High for 0220 candidate `a8fb831d` because bounded admission changes scheduler concurrency and held-output failure behavior. These are recorded review risks; focused passing evidence remains valid. The 0210 builder found two more copied no-key-read promises in the settings and relate reference pages. Its shared-page claim now includes both, so the earlier snapshot ruling updates every affected public promise.
