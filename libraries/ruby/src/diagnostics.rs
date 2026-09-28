@@ -46,7 +46,7 @@ mod tests {
 
     use super::super::{ErrorKind, Fault, guarded};
 
-    const CHILD: &str = "THINKTHEN_RUBY_PANIC_CHILD";
+    const CHILD: &str = "THINKTHEN_TEST_RUBY_PANIC_CHILD";
     const STRING: &str = "ruby-owned-string-payload-marker";
     const DROP: &str = "ruby-owned-drop-payload-marker";
 

@@ -46,7 +46,7 @@ mod tests {
 
     use super::super::guarded;
 
-    const CHILD: &str = "THINKTHEN_NODE_PANIC_CHILD";
+    const CHILD: &str = "THINKTHEN_TEST_NODE_PANIC_CHILD";
     const STRING: &str = "node-owned-string-payload-marker";
     const DROP: &str = "node-owned-drop-payload-marker";
 
