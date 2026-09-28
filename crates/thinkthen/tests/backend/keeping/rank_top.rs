@@ -129,12 +129,8 @@ fn a_held_first_answer_bounds_top_dispatch_until_release() -> io::Result<()> {
     answered_recv
         .recv_timeout(Duration::from_secs(2))
         .expect("second answer completed");
-    assert!(
-        events_recv
-            .recv_timeout(Duration::from_millis(200))
-            .is_err(),
-        "a third request passed the two-batch ordered window"
-    );
+    let next = events_recv.recv_timeout(Duration::from_millis(200));
+    assert!(matches!(next, Err(mpsc::RecvTimeoutError::Timeout)));
     release.wait();
     let output = run.join().expect("command thread")?;
     assert_eq!(code(&output), 0, "{}", said(&output));
