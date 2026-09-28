@@ -10,7 +10,7 @@ use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evide
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{Kind, Question};
-use crate::public::results::{self, Answer, Found, Ranked, Row, Written};
+use crate::public::results::{Answer, Found, Ranked, Row, Written};
 use crate::public::set::QuestionSet;
 
 /// One record's named values, in set order, and their bare JSON line.
@@ -18,6 +18,21 @@ type Values = (Vec<(String, core::AnnotatedValue)>, Written);
 
 /// One record's answer and its probability of yes.
 type Decided = (Answer, f64);
+
+fn selected_batch(question: &Question, options: &CallOptions<'_>) -> Result<core::Setting, Error> {
+    if let Some(typed) = options.batch_setting() {
+        return Ok(typed.into());
+    }
+    let Some(file) = question.batch.as_ref() else {
+        return Ok(core::Setting::Max);
+    };
+    core::Setting::of_json(file).ok_or_else(|| {
+        Error::refused(core::QuestionFileError::Shape {
+            key: "batch",
+            wanted: "takes max or a whole number of at least 1",
+        })
+    })
+}
 
 impl Engine {
     /// The records whose answer is yes, lazily, in input order.
@@ -250,33 +265,21 @@ impl Engine {
         I: IntoIterator + 'a,
         I::Item: Evidence,
     {
+        let setting = selected_batch(question, &options)?;
+        let context = options.context_text().map(evidence).transpose()?;
         let stop = Stop::begin(options)?;
         let engine = self.asking(question)?;
-        let (worker, core, threshold, cancel) = (
-            Arc::clone(&engine),
-            question.core.clone(),
-            question.threshold,
-            stop.shared(),
-        );
-        let answer: Arc<batch::Answer<Decided>> = Arc::new(move |text: &str| {
-            let judged = worker.judge(&core, threshold, evidence(text)?, &cancel)?;
-            Ok(Completed::one(
-                (
-                    results::answer(&judged.value),
-                    judged.answer.yes().unwrap_or_default(),
-                ),
-                judged.answered.replayed,
-                false,
-            ))
-        });
-        Ok(batch::start(
+        batch::start_planned(
             engine,
             records.into_iter(),
             stop,
             self.most,
-            answer,
+            question.core.clone(),
+            question.threshold,
+            setting,
+            context,
             pair,
-        ))
+        )
     }
 }
 

@@ -7,6 +7,7 @@ pub use budget::{SendBudget, SendBudgetDenial};
 
 use std::any::Any;
 use std::fmt;
+use std::num::NonZeroUsize;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -15,6 +16,24 @@ use std::time::{Duration, Instant};
 
 use crate::engine::{Cancel, Deadline, workers};
 use crate::public::error::Error;
+
+/// How many records one model request may contain.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BatchSetting {
+    /// Fill each request to its applicable limits.
+    Max,
+    /// Close a request after this many records at most.
+    Records(NonZeroUsize),
+}
+
+impl From<BatchSetting> for crate::core::batch::Setting {
+    fn from(value: BatchSetting) -> Self {
+        match value {
+            BatchSetting::Max => Self::Max,
+            BatchSetting::Records(count) => Self::Records(count),
+        }
+    }
+}
 
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
 const MOST_SECONDS: u64 = 4_294_967_295;
@@ -82,6 +101,8 @@ pub struct CallOptions<'a> {
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     send_budget: Option<(&'a SendBudget, Option<u64>)>,
+    batch: Option<BatchSetting>,
+    context: Option<&'a str>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -92,6 +113,8 @@ impl fmt::Debug for CallOptions<'_> {
             .field("deadline", &self.due)
             .field("interrupt", &self.check.is_some())
             .field("send_budget", &self.send_budget.is_some())
+            .field("batch", &self.batch)
+            .field("context", &self.context.is_some())
             .finish()
     }
 }
@@ -105,6 +128,8 @@ impl<'a> CallOptions<'a> {
             due: None,
             check: None,
             send_budget: None,
+            batch: None,
+            context: None,
         }
     }
 
@@ -121,6 +146,28 @@ impl<'a> CallOptions<'a> {
     pub const fn send_budget(mut self, value: &'a SendBudget, limit: Option<u64>) -> Self {
         self.send_budget = Some((value, limit));
         self
+    }
+
+    /// Select the number of records one eligible many-record request holds.
+    #[must_use]
+    pub const fn batch(mut self, setting: BatchSetting) -> Self {
+        self.batch = Some(setting);
+        self
+    }
+
+    /// Share nonblank text as context for an eligible many-record request.
+    #[must_use]
+    pub const fn context(mut self, value: &'a str) -> Self {
+        self.context = Some(value);
+        self
+    }
+
+    pub(crate) const fn batch_setting(&self) -> Option<BatchSetting> {
+        self.batch
+    }
+
+    pub(crate) const fn context_text(&self) -> Option<&'a str> {
+        self.context
     }
 
     /// Stop the call at this instant. A past instant sends nothing.

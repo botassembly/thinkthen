@@ -16,6 +16,10 @@ use crate::engine::facade::{self, Completed, Input, InputPort, RunOutcome};
 use crate::public::error::Error;
 use crate::public::options::{Stop, guarded};
 
+mod planned;
+
+pub(crate) use planned::start_planned;
+
 /// How often a waiting batch runs the caller's controls, as the engine's poll.
 const TICK: Duration = Duration::from_millis(50);
 
