@@ -6,7 +6,7 @@ opens: sdlc/tickets/0215-tag-and-score-record-batching.md sdlc/records/0215-batc
 
 # 0215: Batch tag and score records
 
-Status: Design ACCEPT at `70dc1755` by fresh independent reviewer `01a0e5f3-6946-7342-9544-34b9352902db`. Runtime and a bounded paid helper are implemented on the ticket branch; fresh code/helper review and the separate paid proof remain. Owner: Codex.
+Status: Design ACCEPT at `70dc1755`; runtime `ff76e9e7` and corrected helper `0a707849` independently ACCEPTED. The one authorized four-arm paid comparison completed on the ticket branch; its evidence awaits the same reviewer's completion check before landing. Owner: Codex.
 
 ## Outcome and authority
 
@@ -40,8 +40,8 @@ For the **later authorized** B9 paid proof, the clean Beatles Bench checkout at 
 - Keeps: Fixed tag/score question and description order, empty tag versus failure, score number/no threshold, one-document and batch-one bytes, all six error kinds, ordered prefix, cache/replay, calibration, halving and final facts.
 - Changes: Record-mode tag/score gain the existing batch/context/request-size tiers, top-level file `batch`, multi-record wire packing and logical-answer mapping; later measured B9 cost removes their S1 exception.
 - Proof: Focused exact body/digest and listener table, tag expansion and score descriptions, singleton/soft/hard boundaries, partial answer, 413/facts, shared schema/parser corpus, then separately authorized pinned 219-row live comparison.
-- Defers: B10 annotate, B12a Rust API and other ports, B6 accuracy page, and paid execution until fresh code/helper review and a concrete delegated reservation.
+- Defers: B10 annotate, B12a Rust API and other ports, B6 accuracy page, and review of the one completed paid result before landing. No additional paid invocation is authorized.
 
 ## What the build taught us
 
-The corrected inventory prevented a false tag-shape refusal and preserved the nested-set negative test. The landed 0213 planner already measured expanded tag wire counts; B9 needed a separate logical outcome index for row decoding. The 158/171 case suites miss the 200-item paid minimum, so the helper pins a clean 219-title intersection with exact IDs, truth, input and suite arguments. A first listener assertion repeated `requests()` after it drained its channel, and concurrent jobs returned split batches out of send order; the corrected tests observe persistent counts or set one job when order itself is the contract. The result schema allows additional `meta`, so the new batch and context fields require documentation and compiled row proof, not a schema shape change. Fresh review and paid execution remain separate.
+The corrected inventory prevented a false tag-shape refusal and preserved the nested-set negative test. The landed 0213 planner already measured expanded tag wire counts; B9 needed a separate logical outcome index for row decoding. The 158/171 case suites miss the 200-item paid minimum, so the helper pins a clean 219-title intersection with exact IDs, truth, input and suite arguments. A first listener assertion repeated `requests()` after it drained its channel, and concurrent jobs returned split batches out of send order; the corrected tests observe persistent counts or set one job when order itself is the contract. The result schema allows additional `meta`, so the new batch and context fields require documentation and compiled row proof, not a schema shape change. Fresh review accepted source and the corrected helper separately; [the one paid result](../records/0215-build.md#one-paid-comparison-pending-evidence-review) now awaits completion review.
