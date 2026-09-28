@@ -3,7 +3,58 @@
 use super::Failure;
 use crate::core::RecordError;
 
+/// Closed, command-owned labels for a request that strict replay could not find.
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ReplayContext {
+    Decide,
+    Filter,
+    Rank,
+    Choose,
+    Tag,
+    Score,
+    AnnotateGroup { ordinal: usize, members: usize },
+    FindSet(usize),
+    Recognize,
+    Relate,
+}
+
+impl ReplayContext {
+    fn description(self) -> String {
+        match self {
+            Self::Decide => "the decide request".to_owned(),
+            Self::Filter => "the filter request".to_owned(),
+            Self::Rank => "the rank request".to_owned(),
+            Self::Choose => "the choose request".to_owned(),
+            Self::Tag => "the tag request".to_owned(),
+            Self::Score => "the score request".to_owned(),
+            Self::AnnotateGroup { ordinal, members } => {
+                format!("annotate group {ordinal} with {members} members")
+            }
+            Self::FindSet(units) => format!("the complete find set of {units} units"),
+            Self::Recognize => "the recognize request".to_owned(),
+            Self::Relate => "the relate request".to_owned(),
+        }
+    }
+}
+
 impl Failure {
+    /// Add only a command-proved label to an actual replay miss. Existing stop
+    /// and batch wrappers keep their one record position or full request range.
+    pub(crate) fn with_replay_context(mut self, source: ReplayContext) -> Self {
+        self.attach_replay_context(source);
+        self
+    }
+
+    fn attach_replay_context(&mut self, source: ReplayContext) {
+        match self {
+            Self::ReplayMiss { context, .. } => *context = Some(source),
+            Self::Stopped { cause, .. } | Self::BatchFailed { cause, .. } => {
+                cause.attach_replay_context(source);
+            }
+            _ => {}
+        }
+    }
+
     /// Name invalid text by its framing while preserving every other record error.
     pub(crate) fn record(error: RecordError, streamed: bool) -> Self {
         match error {
@@ -15,11 +66,12 @@ impl Failure {
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
     Some(match failure {
-        Failure::ReplayMiss(name) => (
+        Failure::ReplayMiss { name, context } => (
             5,
             format!(
-                "the replay folder holds no entry named `{name}`; \
-                 the entry name covers the backend interface, address, and request"
+                "{}the replay folder holds no entry named `{name}`; \
+                 the entry name covers the backend interface, address, and request",
+                context.map(|source| format!("{}: ", source.description())).unwrap_or_default()
             ),
         ),
         Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),

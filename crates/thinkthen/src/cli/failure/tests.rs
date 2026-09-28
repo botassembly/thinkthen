@@ -271,7 +271,10 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         Failure::Transport(TransportKind::Refused),
         Failure::Record(RecordError::NotUtf8),
         Failure::Record(RecordError::TooLarge),
-        Failure::ReplayMiss("abc.json".to_owned()),
+        Failure::ReplayMiss {
+            name: "abc.json".to_owned(),
+            context: None,
+        },
         Failure::Entry("abc.json".to_owned(), "it records another".to_owned()),
         Failure::Stopped {
             at: 2,

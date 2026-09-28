@@ -8,6 +8,8 @@ use std::process::Output;
 use crate::harness::{Canned, Listener, spawn};
 use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
 
+mod replay_context;
+
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
     r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,

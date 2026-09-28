@@ -6,7 +6,7 @@ opens: sdlc/tickets/0221-replay-miss-context.md sdlc/records/0221-replay-miss-pr
 
 # 0221: Explain which request missed strict replay
 
-Status: design accepted at `9458b445` by a fresh independent reviewer; the coordinator approved the safe ordinal/count/digest choice. Owner: Codex. This is register 102's diagnostic improvement, not a change to replay identity, answer behavior, or exit status. The [preflight](../records/0221-replay-miss-preflight.md) refreshes the accepted design against main `73a9fa84` after tickets 0220 and 0210. No runtime implementation or register closure is claimed.
+Status: design accepted at `9458b445` by a fresh independent reviewer; the coordinator approved the safe ordinal/count/digest choice. Implementation is in progress on the ticket branch; its first CLI-only slice is recorded in [the build record](../records/0221-build.md). Owner: Codex. This is register 102's diagnostic improvement, not a change to replay identity, answer behavior, or exit status. The [preflight](../records/0221-replay-miss-preflight.md) refreshes the accepted design against main `73a9fa84` after tickets 0220 and 0210. No final implementation, fresh code review, or register closure is claimed yet.
 
 ## Outcome
 
@@ -37,4 +37,4 @@ The refreshed small mutation is `cli/failure/{recording,convert}.rs` plus a priv
 
 ## What preparation taught us
 
-`Stopped` and `BatchFailed` already solve much of register 102's row/range complaint. The actual gap is source identity where one request has several logical questions or no row number. The old phrase “question set's name” does not match the parsed file's structure: it has named members and no top-level set name. Its member alphabet is safe for a terminal but not a guarantee that names contain no secret. Fresh review accepted group ordinal/member count instead. The build should record which context values were actually needed to locate a fixture and which were redundant with the digest.
+`Stopped` and `BatchFailed` already solve much of register 102's row/range complaint. The actual gap is source identity where one request has several logical questions or no row number. The old phrase “question set's name” does not match the parsed file's structure: it has named members and no top-level set name. Its member alphabet is safe for a terminal but not a guarantee that names contain no secret. Fresh review accepted group ordinal/member count instead. The first build slice found that an ordinary one-record stream prints the replay cause before its separate stopped line, while a failed batch embeds cause and range in one stopped line. Both retain the existing output order. The final build must add the exact one-document label after `asking.rs` transfers, then record which context values locate a fixture and which remain redundant with the digest.
