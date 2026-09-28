@@ -77,7 +77,10 @@ impl Failure {
 
 impl From<thinkthen::Error> for Failure {
     fn from(error: thinkthen::Error) -> Self {
-        if matches!(error.send_budget_denial(), Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })) {
+        if matches!(
+            error.send_budget_denial(),
+            Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })
+        ) {
             return settings::spent(settings::send_budget().1.unwrap_or(0));
         }
         Self {

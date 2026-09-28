@@ -4,14 +4,16 @@
 
 use std::ffi::CString;
 use std::path::PathBuf;
-use std::sync::{Mutex, OnceLock};
 use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
+use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use pgrx::prelude::*;
 use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
-use thinkthen::{CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget, SendBudgetDenial};
+use thinkthen::{
+    CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget, SendBudgetDenial,
+};
 
 use crate::ffi;
 
@@ -66,7 +68,10 @@ impl Refusal {
 
 impl From<Error> for Refusal {
     fn from(error: Error) -> Self {
-        if matches!(error.send_budget_denial(), Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })) {
+        if matches!(
+            error.send_budget_denial(),
+            Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })
+        ) {
             return spent(u64::try_from(MAX_REQUESTS_TOTAL.get()).unwrap_or_default());
         }
         Self {
@@ -157,15 +162,26 @@ impl Plan {
     /// Read the four raw values. The throttle's check already holds it to
     /// -1 or 1..=32, and PostgreSQL's range checks hold the others to -1 or more.
     fn of(raw: Raw<'_>) -> Result<Self, Refusal> {
-        let cache = if raw.cache == Some("off") { Some(None) } else { folder(raw.cache)?.map(Some) };
+        let cache = if raw.cache == Some("off") {
+            Some(None)
+        } else {
+            folder(raw.cache)?.map(Some)
+        };
         Ok(Self {
-            throttle: (raw.throttle != UNSET).then(|| u8::try_from(raw.throttle).unwrap_or(u8::MAX)),
+            throttle: (raw.throttle != UNSET)
+                .then(|| u8::try_from(raw.throttle).unwrap_or(u8::MAX)),
             max_requests: usize::try_from(raw.max_requests).ok(),
             cache,
-            model: raw.model.filter(|value| !value.is_empty()).map(str::to_owned),
+            model: raw
+                .model
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned),
             timeout: u64::try_from(raw.timeout).ok().map(Duration::from_secs),
             max_retries: u32::try_from(raw.max_retries).ok(),
-            profile: raw.profile.filter(|value| !value.is_empty()).map(str::to_owned),
+            profile: raw
+                .profile
+                .filter(|value| !value.is_empty())
+                .map(str::to_owned),
             record: folder(raw.record)?,
             replay: folder(raw.replay)?,
         })
@@ -188,12 +204,24 @@ fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBuilder, Error
         Some(None) => builder = builder.no_cache(),
         None => {}
     }
-    if let Some(model) = &plan.model { builder = builder.model(model)?; }
-    if let Some(timeout) = plan.timeout { builder = builder.timeout(timeout)?; }
-    if let Some(retries) = plan.max_retries { builder = builder.max_retries(retries); }
-    if let Some(profile) = &plan.profile { builder = builder.profile_json(profile)?; }
-    if let Some(record) = &plan.record { builder = builder.record(record)?; }
-    if let Some(replay) = &plan.replay { builder = builder.replay(replay)?; }
+    if let Some(model) = &plan.model {
+        builder = builder.model(model)?;
+    }
+    if let Some(timeout) = plan.timeout {
+        builder = builder.timeout(timeout)?;
+    }
+    if let Some(retries) = plan.max_retries {
+        builder = builder.max_retries(retries);
+    }
+    if let Some(profile) = &plan.profile {
+        builder = builder.profile_json(profile)?;
+    }
+    if let Some(record) = &plan.record {
+        builder = builder.record(record)?;
+    }
+    if let Some(replay) = &plan.replay {
+        builder = builder.replay(replay)?;
+    }
     Ok(builder)
 }
 
@@ -472,6 +500,65 @@ pub(crate) fn file_directory() -> Option<String> {
     text_of(&FILE_DIRECTORY)
 }
 
+fn register_new_engine_settings() {
+    let int = |name, about, setting, flags| {
+        GucRegistry::define_int_guc(
+            name,
+            about,
+            c"",
+            setting,
+            -1,
+            i32::MAX,
+            GucContext::Userset,
+            flags,
+        );
+    };
+    int(
+        c"thinkthen.timeout",
+        c"backend timeout in seconds; -1 keeps the environment default",
+        &TIMEOUT,
+        GucFlags::UNIT_S,
+    );
+    int(
+        c"thinkthen.max_retries",
+        c"backend status retries; -1 keeps the environment default",
+        &MAX_RETRIES,
+        GucFlags::default(),
+    );
+    GucRegistry::define_string_guc(
+        c"thinkthen.model",
+        c"backend model; empty keeps the environment default",
+        c"",
+        &MODEL,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+    GucRegistry::define_string_guc(
+        c"thinkthen.profile",
+        c"backend limits profile as JSON",
+        c"",
+        &PROFILE,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
+    GucRegistry::define_string_guc(
+        c"thinkthen.record",
+        c"recording folder",
+        c"",
+        &RECORD,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+    GucRegistry::define_string_guc(
+        c"thinkthen.replay",
+        c"strict replay folder",
+        c"",
+        &REPLAY,
+        GucContext::Suset,
+        GucFlags::default(),
+    );
+}
+
 /// Register the settings with PostgreSQL. `_PG_init` calls this alone.
 pub(crate) fn register() {
     let int = |name, about, setting, most, context, flags| {
@@ -502,12 +589,7 @@ pub(crate) fn register() {
         GucContext::Suset,
         GucFlags::default(),
     );
-    int(c"thinkthen.timeout", c"backend timeout in seconds; -1 keeps the environment default", &TIMEOUT, i32::MAX, GucContext::Userset, GucFlags::UNIT_S);
-    int(c"thinkthen.max_retries", c"backend status retries; -1 keeps the environment default", &MAX_RETRIES, i32::MAX, GucContext::Userset, GucFlags::default());
-    GucRegistry::define_string_guc(c"thinkthen.model", c"backend model; empty keeps the environment default", c"", &MODEL, GucContext::Userset, GucFlags::default());
-    GucRegistry::define_string_guc(c"thinkthen.profile", c"backend limits profile as JSON", c"", &PROFILE, GucContext::Userset, GucFlags::default());
-    GucRegistry::define_string_guc(c"thinkthen.record", c"recording folder", c"", &RECORD, GucContext::Suset, GucFlags::default());
-    GucRegistry::define_string_guc(c"thinkthen.replay", c"strict replay folder", c"", &REPLAY, GucContext::Suset, GucFlags::default());
+    register_new_engine_settings();
     GucRegistry::define_string_guc(
         c"thinkthen.cache",
         c"answer cache folder; empty leaves the environment's",
@@ -544,16 +626,40 @@ mod tests {
     /// value reaches the plan. PostgreSQL's `'1MB'` arrives as bytes.
     #[test]
     fn the_registered_defaults_plan_nothing_and_set_values_carry() {
-        let default = Raw { throttle: UNSET, max_requests: UNSET, cache: None, model: None, timeout: UNSET, max_retries: UNSET, profile: None, record: None, replay: None };
+        let default = Raw {
+            throttle: UNSET,
+            max_requests: UNSET,
+            cache: None,
+            model: None,
+            timeout: UNSET,
+            max_retries: UNSET,
+            profile: None,
+            record: None,
+            replay: None,
+        };
         assert_eq!(Plan::of(default), Ok(Plan::default()));
-        assert_eq!(Plan::of(Raw { cache: Some(""), ..default }), Ok(Plan::default()));
+        assert_eq!(
+            Plan::of(Raw {
+                cache: Some(""),
+                ..default
+            }),
+            Ok(Plan::default())
+        );
         let set = Plan {
             throttle: Some(8),
             max_requests: Some(3),
             cache: Some(Some(PathBuf::from("/srv/cache"))),
             ..Plan::default()
         };
-        assert_eq!(Plan::of(Raw { throttle: 8, max_requests: 3, cache: Some("/srv/cache"), ..default }), Ok(set));
+        assert_eq!(
+            Plan::of(Raw {
+                throttle: 8,
+                max_requests: 3,
+                cache: Some("/srv/cache"),
+                ..default
+            }),
+            Ok(set)
+        );
     }
 
     /// R1-31 and R2-31: the one table maps every kind to its SQLSTATE.

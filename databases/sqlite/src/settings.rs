@@ -182,7 +182,9 @@ pub(crate) fn timeout(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
                     .ok()
                     .filter(|value| *value > 0)
                     .map(Duration::from_secs)
-                    .ok_or_else(|| Failure::usage("a timeout is a whole number of seconds above zero"))
+                    .ok_or_else(|| {
+                        Failure::usage("a timeout is a whole number of seconds above zero")
+                    })
             })
             .transpose()?;
         set(|held| held.timeout = seconds)?;
@@ -195,8 +197,9 @@ pub(crate) fn max_retries(context: &Context<'_>) -> rusqlite::Result<Option<i64>
         let value = whole(context, "thinkthen_max_retries")?;
         let retries = value
             .map(|value| {
-                u32::try_from(value)
-                    .map_err(|_| Failure::usage("a retry count is a whole number from 0 through 4294967295"))
+                u32::try_from(value).map_err(|_| {
+                    Failure::usage("a retry count is a whole number from 0 through 4294967295")
+                })
             })
             .transpose()?;
         set(|held| held.max_retries = retries)?;

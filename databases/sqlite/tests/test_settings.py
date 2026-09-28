@@ -98,6 +98,48 @@ say(limit=run(db, "SELECT thinkthen_max_requests(2)"), clear=run(db, "SELECT thi
 SPENT = "thinkthen usage: this process has sent its total of {} requests (thinkthen_max_requests_total)"
 
 
+def test_new_settings_and_deadline_overloads_refuse_before_sending() -> None:
+    backend = Backend()
+    profile = '{"schema":"thinkthen.backend-profile/1","name":"tiny","max_evidence_bytes":3}'
+    held = child(f"""
+db = connect()
+db.execute("CREATE TABLE e(id, name, kind)")
+db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, "Ada", "person"), (2, "Bo", "person")])
+say(model=run(db, "SELECT thinkthen_model('jev-1.13.0')"),
+    timeout=run(db, "SELECT thinkthen_timeout(2)"),
+    retries=run(db, "SELECT thinkthen_max_retries(0)"),
+    profile=run(db, "SELECT thinkthen_profile(?)", ({profile!r},)),
+    clear_profile=run(db, "SELECT thinkthen_profile(NULL)"),
+    record=run(db, "SELECT thinkthen_record(NULL)"),
+    replay=run(db, "SELECT thinkthen_replay(NULL)"),
+    warm=run(db, "SELECT thinkthen_warm('Is it red?', 'red', 0)"),
+    recognize=run(db, "SELECT * FROM thinkthen_recognize('Ada', 'person', 0)"),
+    relate=run(db, "SELECT * FROM thinkthen_relate('e', 'id', 'name', 'kind', 'knows=person:person', NULL, NULL, NULL, 0)"))
+""", environment(backend))
+    expect(held["model"], [["jev-1.13.0"]], "model setter")
+    expect(held["timeout"], [[2]], "timeout setter")
+    expect(held["retries"], [[0]], "retry setter")
+    expect(held["profile"], [[profile]], "JSON profile setter")
+    expect(held["clear_profile"], [[None]], "profile clear")
+    expect(held["record"], [[None]], "record NULL")
+    expect(held["replay"], [[None]], "replay NULL")
+    for name in ("warm", "recognize", "relate"):
+        expect(held[name].startswith("thinkthen deadline:"), True, name)
+    expect(backend.close(), 0, "deadline zero sends nothing")
+
+
+def test_retry_spends_the_process_total_before_a_second_send() -> None:
+    backend = Backend()
+    held = child("""
+db = connect()
+say(total=run(db, "SELECT thinkthen_max_requests_total(1)"),
+    retries=run(db, "SELECT thinkthen_max_retries(1)"),
+    refused=run(db, "SELECT thinkthen_decide('Is it red?', 'a red door')"))
+""", environment(backend, "arm/503"))
+    expect(held, {"total": [[1]], "retries": [[1]], "refused": SPENT.format(1)}, "one retry refused")
+    expect(backend.close(), 1, "one attempt, no retry")
+
+
 def test_the_request_total_holds_across_one_row_calls() -> None:
     """Decision 17: a WHERE over 10 rows is 10 one-record calls, and a total of 3 stops the fourth."""
     backend = Backend()

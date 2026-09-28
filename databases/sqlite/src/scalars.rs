@@ -313,7 +313,11 @@ impl WarmState {
 /// Judge one chunk on a worker, one send per text the cache lacks. Under a
 /// process request total the chunk is cut to as many rows as requests
 /// remain, and once that part is judged the call refuses (decision 17).
-fn flush(context: &Context<'_>, (held, mut texts): Flush, deadline: Option<i64>) -> Result<i64, Failure> {
+fn flush(
+    context: &Context<'_>,
+    (held, mut texts): Flush,
+    deadline: Option<i64>,
+) -> Result<i64, Failure> {
     // The cut counts rows. A cached row costs no request, so the refusal
     // names the rows judged, not the requests spent.
     let cut = settings::remaining()?.filter(|left| *left < texts.len());
@@ -373,7 +377,9 @@ impl Aggregate<WarmState, i64> for Warm {
         Ok(guard("thinkthen_warm", || {
             let due = deadline(context)?;
             if state.deadline.is_some_and(|first| first != due) {
-                return Err(Failure::usage("thinkthen_warm takes one deadline for the whole group"));
+                return Err(Failure::usage(
+                    "thinkthen_warm takes one deadline for the whole group",
+                ));
             }
             state.deadline = Some(due);
             let Some(argument) = text(context.get_raw(0), "the question")? else {
@@ -445,7 +451,12 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     connection.create_scalar_function("thinkthen_cache", 1, volatile, settings::cache)?;
     connection.create_scalar_function("thinkthen_model", 1, volatile, settings::model)?;
     connection.create_scalar_function("thinkthen_timeout", 1, volatile, settings::timeout)?;
-    connection.create_scalar_function("thinkthen_max_retries", 1, volatile, settings::max_retries)?;
+    connection.create_scalar_function(
+        "thinkthen_max_retries",
+        1,
+        volatile,
+        settings::max_retries,
+    )?;
     connection.create_scalar_function("thinkthen_profile", 1, volatile, settings::profile)?;
     connection.create_scalar_function("thinkthen_record", 1, volatile, settings::record)?;
     connection.create_scalar_function("thinkthen_replay", 1, volatile, settings::replay)?;

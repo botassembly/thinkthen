@@ -621,6 +621,23 @@ ERROR:  thinkthen usage: thinkthen.max_requests_total allows 3 requests in this 
 	same "$(bcount)" 6
 }
 check the_total_holds_across_rows
+sql_settings_and_retry_total() {
+	fresh arm/503
+	out=$(q -c "SET thinkthen.max_requests_total = 1" -c "SET thinkthen.max_retries = 1" \
+		-c "SELECT thinkthen_decide('$Q', 'one')")
+	has "$out" "thinkthen usage: thinkthen.max_requests_total allows 1 requests in this backend, and they are spent (retryable: no)"
+	same "$(bcount)" 1
+	fresh generic
+	out=$(q -c "SET thinkthen.model = 'jev-1.13.0'" -c "SET thinkthen.timeout = '2s'" \
+		-c "SET thinkthen.max_retries = 0" -c "SELECT thinkthen_decide('$Q', 'one')")
+	same "$out" t
+	same "$(bcount)" 1
+	fresh generic
+	out=$(q -c "SET thinkthen.profile = '{}'" -c "SELECT thinkthen_decide('$Q', 'one')")
+	has "$out" "thinkthen usage: the profile JSON"
+	same "$(bcount)" 0
+}
+check sql_settings_and_retry_total
 a_cancelled_send_counts_toward_the_total() {
 	fresh arm/held "thinkthen.max_requests_total = 1"
 	q -c "SELECT thinkthen_decide('$Q', 'held')" -c "SELECT thinkthen_decide('$Q', 'next')" >"$RUN/held.out" 2>&1 &

@@ -108,8 +108,16 @@ fn deadline(arguments: &[Value], at: usize) -> Result<Option<i64>, Failure> {
         ValueRef::Real(real)
             if real.is_finite()
                 && real.fract() == 0.0
-                && (i64::MIN as f64..-(i64::MIN as f64)).contains(&real) => real as i64,
-        _ => return Err(Failure::usage(format!("a deadline of {} is not a whole number of milliseconds", shown(value)))),
+                && (i64::MIN as f64..-(i64::MIN as f64)).contains(&real) =>
+        {
+            real as i64
+        }
+        _ => {
+            return Err(Failure::usage(format!(
+                "a deadline of {} is not a whole number of milliseconds",
+                shown(value)
+            )));
+        }
     };
     CallOptions::new().deadline_millis(millis)?;
     Ok(Some(millis))
