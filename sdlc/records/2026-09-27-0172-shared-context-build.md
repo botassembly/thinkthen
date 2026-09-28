@@ -1,6 +1,6 @@
 # 0172: shared context build
 
-Status: product code, growth, helper and prose corrections accepted by fresh High review at `7bd7e9a2`; the named local 0170–0172 command checkpoint and authorized three-call live proof passed. Awaiting coordinator landing. Base: `0dcc48a4` (landed 0171). Ticket: [0172](../tickets/0172-a-shared-context.md). ADR: [0087](../planning/adr/0087-a-shared-context-stops-at-the-record-that-overflows.md).
+Status: product code, growth, helper and prose corrections accepted by fresh High review at `7bd7e9a2`; the named local 0170–0172 command checkpoint and authorized three-call live proof passed. Complete in the reviewed coordinator merge; the landing checks passed. Base: `0dcc48a4` (landed 0171). Ticket: [0172](../tickets/0172-a-shared-context.md). ADR: [0087](../planning/adr/0087-a-shared-context-stops-at-the-record-that-overflows.md).
 
 ## Result and proof
 
@@ -45,3 +45,5 @@ The 150,000-token wrapper value was a durable precharge reservation, not a runti
 ## Landing review
 
 The same independent High reviewer checked the completed paid artifact and local checkpoint, retained the earlier code, helper and growth acceptance, and found only three stale historical statements in this record. The landing identifies their original stage and the final measured total. The candidate’s runtime and test source are unchanged by this integration; documentation, policy, exact ratchet and diff checks cover the merged tree. The count-only accuracy record does not establish accuracy outside this one corpus and selected model.
+
+The final record-only review found a remaining stale status sentence after confirming the earlier corrections. The coordinator corrected it and checked Status, Evidence, outcome and plan together. This bookkeeping correction changes no proof or product source.
