@@ -17,6 +17,9 @@ use std::time::Duration;
 
 use thinkthen::{Engine, EngineBuilder, ErrorKind, Question};
 
+#[path = "../src/test_deadline/child.rs"]
+mod child;
+
 const KEY: &str = "sk-local-ca-0211";
 const RESPONSE: &str = "{\"model\":\"local-1\",\"answers\":{\"q1\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
 const RESPONSE_ALT: &str = "{\"model\":\"local-2\",\"answers\":{\"q1\":{\"type\":\"noul\",\"noul\":0.92}},\"usage\":{\"input_tokens\":1,\"output_tokens\":1}}";
@@ -105,7 +108,7 @@ impl Drop for Fixture {
 }
 
 fn openssl(args: &[&str]) {
-    let output = Command::new("openssl")
+    let output = child::command("openssl", &[])
         .args(args)
         .output()
         .expect("OpenSSL 3 available");
@@ -123,7 +126,7 @@ impl Server {
         let port = address.local_addr().expect("bound address").port();
         drop(address);
         let accept = format!("127.0.0.1:{port}");
-        let mut child = Command::new("openssl")
+        let mut child = child::command("openssl", &[])
             .args([
                 "s_server", "-quiet", "-ign_eof", "-naccept", "1", "-accept", &accept,
             ])

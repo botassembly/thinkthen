@@ -1,0 +1,23 @@
+# Child environment isolation Quick Fix
+
+Status: Candidate for fresh independent review on main `65c66cab`. This fixes the 20 inherited child environments reported by `sdlc/scripts/children`. It changes no production command, public result, policy exception, paid-run budget, or release script.
+
+## What the build taught us
+
+The 20 findings were six local OpenSSL fixture and responder calls, eight self-reexec diagnostic tests, two DuckDB packaging commands, two stock-host proof commands, and two B9 benchmark Git checks. The OpenSSL callers now use the existing Rust test-child helper, which clears the environment and keeps only PATH. Diagnostic children clear their environment and set their exact child marker. The Python test also keeps named `LD_LIBRARY_PATH` and `PYTHONHOME` for its linked interpreter. Ruby and SQLite keep named `LD_LIBRARY_PATH` for their pinned runtime. They copy those names only when present. Each original stdout, stderr, panic secrecy, host-hook, certificate, listener, and cache assertion remains. No test was deleted or consolidated.
+
+The DuckDB notice command reuses the shared Python `child_env(CARGO)` allowlist for offline Cargo metadata. The native macOS strip and both stock 0201 verifier commands use `child_env()` with PATH only. The B9 Git checks use the already established `speed.plain()` environment. The paid-arm environment, evidence files, hashes, ceilings, and stop rules are unchanged. The Python helper remains in `conformance/children/children.py`; no second helper or scanner exception was added.
+
+The first focused fork build exposed a separate inherited Call migration gap: `conformance/consumer/fork-probe/tests/fork.rs` still compared `Call<Answer>` with `Answer` and called `Details` methods on `Call<Details>`. The file was already claimed for its OpenSSL fixes. A local value adapter now unwraps only the completed `Answer` in the existing fork assertions; the cache assertions read `Call::value()`. All six active fork tests pass, including retained TLS roots, warm cache, permit and digest-lock behavior. This prerequisite correction changes no public API and should be reviewed separately from the child environment changes.
+
+After the accepted 0216 annotation slice landed, the root Rust counter was remeasured at **91,819** nonblank lines, up eight from 91,811. Other affected counters now equal: DuckDB Rust 5,916 (+1), DuckDB Python 3,016 (+4), SQLite Rust 2,169 (+6), C Rust 3,194 (+1), Python Rust 5,313 (+7), R Rust 1,222 (+1), Ruby Rust 913 (+6), TypeScript Rust 668 (+1). The changes use the established helpers and existing diagnostic tests; no additional environment builder, state machine, or runtime branch was duplicated. `public/options.rs` remains at its 500-line source limit after consolidating two adjacent imports.
+
+## Focused proof
+
+`sdlc/scripts/children` reports **0 findings**; its self-test passes 38/38 planted cases, and all four existing child-helper checks pass. The core, DuckDB, SQLite, C, Python, R, Ruby, and TypeScript exact diagnostic tests each selected one test and passed. Python used `--no-default-features --features probe` with the pinned Python 3.13 interpreter's `PYTHONHOME` and `LD_LIBRARY_PATH`; Ruby used the pinned Ruby 3.4.11 prefix's `LD_LIBRARY_PATH`. The two `ca_bundle` boundary cases passed. The fork target passed 6/6 active tests; its child entrypoint remains intentionally ignored and is exercised by its parent.
+
+DuckDB `package_notices.py` produced a temporary dependency inventory and copied Rust/DuckDB legal files under offline metadata. The retained stock 0201 CLI/Python verifier passed nested values, prepared settings, two caller sessions, redacted panic output and prior host-hook output. The B9 offline self-test retained its 219-row cohort and pinned hashes; its local loopback plan retained all four request/body/question counts. No provider call ran.
+
+On M5, the changed strip script and shared Python helper ran from an automatically cleaned temporary tree against a **copy** of the retained unstripped DuckDB artifact. Its source hash stayed `bedbf44c48f5e4a03ed60925124dd2aaf2edc2557087ae869d01615c72313f69`; the new output hash matched the accepted stripped artifact `53e33d51276bf2431892e3b6bfcd55d579327ef2ec77b86e417a15eb44d3f9bc`. The native worktree and artifacts were untouched.
+
+Strict affected Clippy passed for the core CA target, fork target, and C, DuckDB, SQLite, Python, R, Ruby and TypeScript test targets. Ruff passed the four changed Python files; rustfmt passed the ten changed Rust files. All nine affected ratchet checks, Python syntax compilation, and `git diff --check` passed. The full test/spec/surfaces ladder, release rehearsal, stress tests and paid comparison were outside this Quick Fix.
