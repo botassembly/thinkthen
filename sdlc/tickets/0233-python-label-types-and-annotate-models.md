@@ -6,7 +6,7 @@ opens: sdlc/tickets/0233-python-label-types-and-annotate-models.md sdlc/records/
 
 # 0233: Type Python labels and annotate rows
 
-Status: Design accepted at `3d44d4dd`; the coordinator approved implementation under ADR 0082 and main `f261fd11` granted the runtime claims. Fresh review of `f88e3162` found two required product corrections, and the same independent reviewer accepted corrected source `8faa901b`. The branch cleanly integrated main `73932ef4` and passed focused native Python consumer proof; root landing remains pending. The verified integration completes J5; the inherited frame fixture and settings checker are assigned as a separate Quick Fix. Owner: Codex. This is the existing Batch J5 item, not a new Every-item outcome.
+Status: Design accepted at `3d44d4dd`; the coordinator approved implementation under ADR 0082 and main `f261fd11` granted the runtime claims. Fresh review of `f88e3162` found two required product corrections, and the same independent reviewer accepted corrected source `8faa901b`. The branch cleanly integrated main `73932ef4` and passed focused native Python consumer proof; the reviewed source landed at `1e985b34`. The verified integration completes J5; the inherited frame fixture and settings checker are assigned as a separate Quick Fix. Owner: Codex. This is the existing Batch J5 item, not a new Every-item outcome.
 
 ## Outcome and authority
 

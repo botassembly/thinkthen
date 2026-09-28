@@ -191,10 +191,11 @@ pub(crate) enum Command {
     /// Relations are beta. `--threshold` gates computed name strength;
     /// `--relation-threshold` gates a relation's model probability.
     ///
-    /// Each record makes paid requests: a detection question for every word, a
-    /// kind question for every word when two or more kinds are given, and
-    /// relation questions when rules are given. --dry-run prints the exact
-    /// requests for the first record.
+    /// Each record can make paid requests in three steps: one boundary question
+    /// per text piece; one kind question per found name when kinds are given,
+    /// plus an edge question when its span can change; then questions for the
+    /// relation pairs allowed by rules. --dry-run prints the first record's
+    /// exact boundary requests and upper bounds for later requests.
     ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.

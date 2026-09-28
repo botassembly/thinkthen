@@ -118,13 +118,12 @@ pub(crate) fn read(path: &Path, month: &str) -> Result<Totals, ReadFailure> {
     let directory = open_verified(path, true, 0o700)
         .map_err(|error| ReadFailure::at("usage directory", error))?;
     let lock_path = path.join(".lock");
-    let lock = open_verified(&lock_path, false, 0o600)
-        .map_err(|error| ReadFailure::at("usage directory", error))?;
-    File::lock_shared(&lock).map_err(|error| ReadFailure::at("usage directory", error))?;
+    let lock =
+        open_verified(&lock_path, false, 0o600).map_err(|error| ReadFailure::at(".lock", error))?;
+    File::lock_shared(&lock).map_err(|error| ReadFailure::at(".lock", error))?;
     verify_identity(path, &directory, true)
         .map_err(|error| ReadFailure::at("usage directory", error))?;
-    verify_identity(&lock_path, &lock, false)
-        .map_err(|error| ReadFailure::at("usage directory", error))?;
+    verify_identity(&lock_path, &lock, false).map_err(|error| ReadFailure::at(".lock", error))?;
     let mut current = Counts::default();
     let mut total = Counts::default();
     for entry in scan(path)? {
