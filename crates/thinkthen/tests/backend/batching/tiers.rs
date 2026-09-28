@@ -134,13 +134,15 @@ fn a_file_batch_leaves_the_question_digest_and_stays_off_other_files() {
     )
     .expect("a choose file");
     let chosen = spawn(
-        &["choose", &format!("@{choose}"), "--dry-run"],
+        &["choose", &format!("@{choose}"), "--lines", "--dry-run"],
         &[],
-        b"line 1",
+        b"line 1\nline 2\n",
     )
     .expect("the command runs");
+    assert_eq!(chosen.status.code(), Some(0), "{}", text(&chosen.stderr));
+    let plan: Value = serde_json::from_slice(&chosen.stdout).expect("a choose plan");
     assert_eq!(
-        (chosen.status.code(), text(&chosen.stderr).as_str()),
-        (Some(5), "thinkthen: a question file takes no key `batch`\n")
+        plan["request"]["questions"].as_object().map(Map::len),
+        Some(2)
     );
 }

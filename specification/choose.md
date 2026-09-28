@@ -5,12 +5,14 @@ Status: **Settled** for version one, by ADR 0007 and ADR 0010.
 Picks one label from a fixed list.
 
 ```text
-thinkthen choose QUESTION|@FILE [OPTION...] [--option LABEL=DESCRIPTION] [--threshold T] [--raw] [--quiet] [--details] [RECORD] [BACKEND]
+thinkthen choose QUESTION|@FILE [OPTION...] [--option LABEL=DESCRIPTION] [--threshold T] [--batch N] [--context FILE] [--raw] [--quiet] [--details] [RECORD] [BACKEND]
 ```
 
 ## What it reads
 
 One text document on standard input, read to its end as UTF-8. `--input FILE` reads a file instead. `--lines`, `--jsonl`, `--csv`, and `--tsv` turn the input into records, and [records.md](records.md) gives the rules. An empty document is a usage error.
+
+In record mode, `choose` fills each request with pick-one questions up to the batch and backend limits. `--batch N` caps its records per request; `--batch 1` keeps the existing single-record request bytes. `--context FILE` sends that file's text once as shared evidence per batch. Both typed options require record mode. `THINKTHEN_BATCH` and a question file's `batch` are ignored for one document. See [records.md](records.md) for cuts, size limits, and output order.
 
 `QUESTION` comes first and states what decides the pick. Each `OPTION` is one argument. `choose` takes 2 to 255 options. A duplicate option name is a usage error, and so is an option that is empty or holds only white space. An option holding a control character is a usage error too, because `--raw` prints a label byte for byte and a label with a line feed in it would write a line of its own into the caller's output. The tool sends the options in the order the user gave and never reorders them. `@FILE` reads the question and its options from a question file instead, and [question-file.md](question-file.md) holds the grammar, the defaults, and the precedence.
 
@@ -31,6 +33,7 @@ On one document, a JSON string or `null` when the answer is not sure. In the def
 | `--quiet` | On one document, prints nothing on standard output. Record mode refuses it | Off |
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
+| `--batch N`, `--context FILE` | Bound a record batch or give it shared evidence. See [records.md](records.md) | Fill to the backend limits; no shared context |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 

@@ -407,6 +407,10 @@ pub(crate) struct ChooseArguments {
     #[arg(long)]
     pub(crate) quiet: bool,
 
+    /// The record-batch size, context, and request-size limit.
+    #[command(flatten)]
+    pub(crate) batching: Batching,
+
     /// The options every judging verb takes.
     #[command(flatten)]
     pub(crate) common: Common,
