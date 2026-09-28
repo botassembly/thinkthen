@@ -104,3 +104,6 @@ Keep the approval work proportional too. A small internal cleanup within an alre
 
 
 For interpreter boundaries, inventory host callbacks separately on the caller, worker and cleanup paths. A guarded wait can dispatch a signal handler, and dropping a moved source can invoke a foreign release callback before the catch returns. One caller-side hook observation and an existing release-order test do not prove worker-side hook delegation. Select one representative observation at each distinct ownership boundary. For admission-order changes, compare the settled contract with the reported side effect before calling current behavior accidental; preserve the full issue criterion when a ticket fixes only one case.
+
+
+For Python host scopes, include ownership and release of returned iterator, item and exception references. Their final reference release can invoke user cleanup after the explicit method call ends. For isolated package validation, carry the pinned host and compiler into installation and execution as well as the build wrapper; system Node or Rust outside the repository may differ from the required toolchain.
