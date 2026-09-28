@@ -8,12 +8,23 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 
 | Option | Meaning |
 | --- | --- |
-| `--record DIR` | Call the backend, then write the exchange into `DIR`. `DIR` is created when absent |
+| `--record DIR` | Call the backend for every request, even one already held in `DIR`, then write the exchange. `DIR` is created when absent |
 | `--replay DIR` | Answer from `DIR` alone. Open no connection and read no key. A request that `DIR` lacks is a local failure, exit code 5, and the message names the missing entry and says what forms its name |
 | Both, with the same `DIR` | A cache. An entry that exists is replayed, unless it holds a partial reply, one that failed a question beside a good answer. Such an entry counts as a miss. A request that is absent or missed goes to the backend, and its reply is recorded when it is complete. A complete reply answers every question |
 | `--cache DIR` | The row above, written once. It stands beside neither `--record` nor `--replay`, because one run keeps one folder |
 
 Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads nothing.
+
+`--record` alone does not reuse a held answer. Recording the same request into a used folder sends it to the backend again and may incur another charge. An equal stored response leaves the entry as it was. If the fresh response differs, the run exits 5 with a recording conflict before printing that fresh answer; the old entry stays. Use `--cache DIR` or both `--record DIR --replay DIR` to reuse complete held answers.
+
+For a deliberate new measurement, copy the old folder for safekeeping, then direct the new run to another empty folder. In this example, neither destination exists yet:
+
+```sh
+cp -a runs/first runs/first-backup
+thinkthen decide 'Does this need review?' --record runs/second < case.txt
+```
+
+The command creates `runs/second`. Recording into the populated backup instead would re-send and could conflict too.
 
 With none of these options, normal commands use the platform answer cache: `$XDG_CACHE_HOME/thinkthen`, then `$HOME/.cache/thinkthen` on Linux, and `$HOME/Library/Caches/thinkthen` on macOS. `THINKTHEN_CACHE` selects another folder. `--no-cache` disables answer-cache lookup and writing for one run. Explicit `--record` or `--replay` suppresses the default cache. Dry runs, help, version, `status`, `check`, and `cache prune` create no default cache.
 
@@ -44,6 +55,8 @@ Both options on one folder are also the resume for a record run. A resumed run a
 ## An entry
 
 One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowercase hex, of the adapter name, a newline, the URL, a newline, and the request body exactly as the adapter encoded it. An adapter encodes the same plan to the same bytes every time, so the same command finds the same entry.
+
+Keep the JSON value under `request` byte for byte, including its key order and whitespace. Replay compares those inner request bytes with the request the current command encoded; reformatting that value can make the entry fail as a different exchange even when its parsed values look equal. Formatting around the valid version-one envelope, outside the `request` and `response` JSON values, is accepted. This is distinct from changing the inner request.
 
 ```json
 {
