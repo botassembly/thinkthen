@@ -180,3 +180,8 @@ The corrected 0224 design e648e35f passed the same reviewer. It reuses bounded s
 
 
 Fresh 0211 code review found that validating the environment CA path inside from_env prevents a later explicit builder override. It also found that a bare builder with the same CA in the environment does not prove precedence, and dry-run does not prove live refusal before a send. The retained builder corrects the selected-value validation and adds conflicting override, live no-send and real fork-after-file-change proof through the existing fork helper. The 0226 bounded scan separately confirmed R’s worker copies caught panic text; the coordinator filed its own R issue on main rather than quietly expanding the three-host ticket.
+
+
+The first 0221 code review found two existing exact-prefix checks outside the author’s chosen recording slice: cache_identity.rs and default_cache.rs still expected the old one-document miss prefix. The diagnostic change itself matched the accepted context design. The correction must update the complete expected sentence while retaining the distinct legacy-entry, missing-directory and read-only guarantees; weakening these assertions or deleting them would lose coverage. The reviewer could inspect the mismatch but its filesystem read-only sandbox blocked Cargo’s lock, so the author must supply the focused runtime proof. Review evidence must state that limit rather than claim the test ran.
+
+The 0212 settings inventory initially lacked a thinkthen executable on PATH. It passed after using the already verified main CLI for unchanged help while inspecting the draft’s source and settings page. No extra build or broad rung was needed. The check record distinguishes those inputs; runtime source tests remain tied to the branch binary.
