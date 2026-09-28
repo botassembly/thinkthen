@@ -106,7 +106,7 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample recognize_and_relate_as_drawn conformance the_fake_key_stays_in_the_environment}
+	STEPS=${STEPS:-examples slide_sample recognize_and_relate_as_drawn conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -211,6 +211,17 @@ batch_signatures_are_extension_owned_and_private() {
 	same "$(q -c "SELECT prokind FROM pg_proc WHERE oid = 'thinkthen_warm(text,text,text)'::regprocedure")" a
 }
 check batch_signatures_are_extension_owned_and_private
+find_signatures_are_owned_and_private() {
+	fresh generic
+	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_find(text,text[])', 'thinkthen_find(text,text[],boolean)']) AND p.provolatile = 'v' AND p.proparallel = 'r' AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 2
+	grep -q 'thinkthen_find' "$RUNTIME_EXTENSION_DIR/thinkthen--$EXT_VERSION.sql"
+	q -c "CREATE ROLE tt_find_app LOGIN" >/dev/null
+	has "$(PGUSER_AS=tt_find_app q -c "SELECT thinkthen_find('Which?', ARRAY[]::text[])")" 'permission denied for function thinkthen_find'
+	q -c "GRANT EXECUTE ON FUNCTION thinkthen_find(text,text[]) TO tt_find_app" >/dev/null
+	same "$(PGUSER_AS=tt_find_app q -c "SELECT thinkthen_find('Which?', ARRAY[]::text[]) IS NULL")" t
+	same "$(bcount)" 0
+}
+check find_signatures_are_owned_and_private
 readme_grant_is_the_fixture() {
 	awk '/^The narrowed grant, byte for byte/ {on = 1; next} on && /^```/ {if (++fence == 2) exit; next} on && fence == 1' README.md |
 		cmp -s - fixtures/grant.sql
@@ -323,6 +334,17 @@ single_cancel() {
 	same "$(bcount)" 1
 }
 check single_cancel
+find_cancel() {
+	fresh arm/held
+	held "SELECT thinkthen_find('Which?', ARRAY['one','two'])"
+	bwait 1
+	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
+	wait "$HELD" || true
+	has "$(cat "$RUN/held.out")" "canceling statement due to user request"
+	brelease
+	same "$(bcount)" 1
+}
+check find_cancel
 single_statement_timeout() {
 	fresh arm/held
 	start=$(now_ms)
@@ -867,6 +889,37 @@ a_panic_is_an_error() {
 }
 check a_panic_is_an_error
 
+find_inputs() {
+	fresh generic
+	python3 tests/find_cases.py invalid "$SOCK"
+	same "$(bcount)" 0
+}
+check find_inputs
+find_proxy_cases() {
+	for mode in duplicate real_tie none_tie max_units max_none; do
+		fresh generic
+		pg_stop
+		rm -f "$RUN/find-proxy.in"
+		mkfifo "$RUN/find-proxy.in"
+		python3 tests/find_cases.py proxy "http://127.0.0.1:$BPORT/generic/v1" "$mode" \
+			<"$RUN/find-proxy.in" >"$RUN/find-proxy.out" 2>"$RUN/find-proxy.err" &
+		PROXYPID=$!
+		exec {PROXYFD}>"$RUN/find-proxy.in"
+		trap 'if [ -n "${PROXYPID:-}" ]; then printf "quit\n" >&"$PROXYFD"; wait "$PROXYPID" || true; fi' EXIT
+		for _ in $(seq 100); do [ -s "$RUN/find-proxy.out" ] && break; sleep 0.05; done
+		proxyport=$(head -1 "$RUN/find-proxy.out")
+		[ -n "$proxyport" ]
+		pg_start "http://127.0.0.1:$proxyport/v1" "$CACHEDIR"
+		python3 tests/find_cases.py verify "$SOCK" "$mode"
+		printf 'quit\n' >&"$PROXYFD"
+		wait "$PROXYPID"
+		PROXYPID=
+		exec {PROXYFD}>&-
+		same "$(tail -1 "$RUN/find-proxy.out")" 1
+	done
+}
+check find_proxy_cases
+
 echo "== the update path"
 an_update_cannot_grant_public() {
 	printf 'CREATE FUNCTION thinkthen_rehearsal_probe(x integer) RETURNS integer LANGUAGE sql AS %s;\n' "'SELECT \$1'" \
@@ -892,12 +945,17 @@ conformance() {
 			fresh "$arm" ${setting:+"${setting//@SCRATCH@/$SCRATCH}"}
 		fi
 		line=$(BPORT=${BPORT:-} SCRATCH=$SCRATCH python3 tests/runner.py "$SOCK" "$id")
+		if [ "$line" = "pass $id" ] && { [ "$id" = 18-find-second ] || [ "$id" = 19-find-none ]; }; then
+			bcapture >"$RUN/$id.capture.json"
+			line=$(BPORT=$BPORT python3 tests/runner.py capture "$id" "$RUN/$id.capture.json")
+		fi
 		echo "         $line"
 		case $line in
 		"pass $id")
 			case $id in
 			13-filter-records|15-rank-records|16-rank-stable-tie) same "$(bcount)" 3 ;;
 			14-filter-none) same "$(bcount)" 2 ;;
+			18-find-second|19-find-none) same "$(bcount)" 1 ;;
 			26-filter-empty-list|31-usage-rank-blank-question) same "$(bcount)" 0 ;;
 			esac
 			pass=$((pass + 1)) ;;

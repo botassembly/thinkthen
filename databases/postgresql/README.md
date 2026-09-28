@@ -1,6 +1,6 @@
 # The PostgreSQL surface
 
-`CREATE EXTENSION thinkthen` adds the engine's verbs to SQL. The extension is the unpublished crate `thinkthen-postgresql`, built with pgrx 0.17 over the public `thinkthen` API (ticket 0111, ADR 0047). Every call reaches the real engine. `WHERE` and `ORDER BY` do the work of filter, rank, and find.
+`CREATE EXTENSION thinkthen` adds the engine's verbs to SQL. The extension is the unpublished crate `thinkthen-postgresql`, built with pgrx 0.17 over the public `thinkthen` API (ticket 0111, ADR 0047). Every call reaches the real engine. `WHERE` and `ORDER BY` do the work of filter and rank. An ordered array gives find one complete set.
 
 ## Functions
 
@@ -12,6 +12,7 @@
 | `thinkthen_choose(question, evidence, options text[])` | the picked option, or `NULL` |
 | `thinkthen_score(question, evidence, levels text[])` | the position on the levels |
 | `thinkthen_tag(question, evidence, labels text[])` | the labels that apply, as `text[]` |
+| `thinkthen_find(question, units text[])` or `(question, units text[], none boolean)` | `jsonb` with selected original `index`, `value`, `probability`, and ordered `{index, probability}` candidates |
 | `thinkthen_annotate(set, evidence)` | each question's value, as `jsonb` |
 | `thinkthen_details(question, evidence)` | the engine's detailed result, as `jsonb` |
 | `thinkthen_try_details(question, evidence)` | an answered details envelope or a safe typed failure, as `jsonb` |
@@ -24,6 +25,8 @@
 `thinkthen_decide`, `thinkthen_probability`, `thinkthen_choose`, `thinkthen_score`, `thinkthen_tag`, `thinkthen_details`, `thinkthen_try_details`, and `thinkthen_warm` also accept a final literal `context text` argument. This includes the array form of `thinkthen_decide`. `NULL` context keeps the historical request; blank non-`NULL` context raises usage. A context-bearing scalar uses the record wire form and remains one SQL call per row. Arrays pack distinct evidence in first-occurrence order, while preserving every original zero-based slot and SQL `NULL` element in their result. Warm groups by question and context, then packs each group's first-seen distinct evidence. Give an aggregate `ORDER BY` when its visit order must reproduce the same request bytes.
 
 A question, set, or spec is JSON text in the file grammar, or a file named with the `'@refund.json'` spelling. Bare text is never a path. For `choose`, `score`, and `tag`, the array joins the question as its options, levels, or labels. Pass `NULL` when the question already names them.
+
+Find is different: its question is nonblank literal text, including a literal `@`, and its ordered `text[]` is one set, not independent records. Use `array_agg(unit ORDER BY ordinal)` to preserve the caller's positions and duplicates. Omitted `none` is false; true offers a final none candidate. An empty array or a SQL NULL argument returns SQL NULL without a send. A selected none returns a non-NULL object with null index and value. A NULL array member, blank text, one unit, more than 255 units (254 with none), or more than 16 MiB of combined unit text raises usage before a send. Find uses the existing `thinkthen.deadline_ms` GUC and statement cancellation; it has no per-call deadline or context argument.
 
 `start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
