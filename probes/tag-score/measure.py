@@ -7,6 +7,7 @@ import hashlib
 import io
 import json
 import os
+import signal
 import subprocess
 import sys
 import tempfile
@@ -46,6 +47,34 @@ def digest(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, separators=(',', ':')).encode()).hexdigest()
 
 
+def sync_dir(path):
+    directory = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(directory)
+    finally:
+        os.close(directory)
+
+
+def durable_bytes(path, payload):
+    """Create one named artifact and sync it before another paid action starts."""
+    with path.open('xb') as stream:
+        stream.write(payload)
+        stream.flush()
+        os.fsync(stream.fileno())
+    sync_dir(path.parent)
+
+
+def durable_json(path, value):
+    durable_bytes(path, (json.dumps(value, ensure_ascii=False, separators=(',', ':')) + '\n').encode())
+
+
+def append_json(path, value):
+    with path.open('a', encoding='utf-8') as stream:
+        stream.write(json.dumps(value, ensure_ascii=False, separators=(',', ':')) + '\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def sample(bench):
     if subprocess.check_output(['git', '-C', str(bench), 'rev-parse', '--short=8', 'HEAD'], text=True).strip() != BENCH_SHA:
         refuse('the benchmark revision changed')
@@ -78,8 +107,16 @@ def sample(bench):
     return cohort, data, dict(zip(('tag', 'score'), args))
 
 
-def totals(binary, env):
-    done = subprocess.run([str(binary), 'status', '--json'], capture_output=True, env=env, check=True)
+def totals(binary, env, evidence=None):
+    command = [str(binary), 'status', '--json']
+    done = subprocess.run(command, capture_output=True, env=env)
+    if evidence is not None:
+        durable_json(evidence.parent / f'{evidence.name}-command.json',
+                     {'command': command, 'returncode': done.returncode})
+        durable_bytes(evidence.parent / f'{evidence.name}-stdout.json', done.stdout)
+        durable_bytes(evidence.parent / f'{evidence.name}-stderr.txt', done.stderr)
+    if done.returncode:
+        refuse('status failed; retain the named raw status evidence')
     total = json.loads(done.stdout)['usage']['total']
     if any(type(total.get(key)) is not int or total[key] < 0
            for key in ('requests_sent', 'input_tokens', 'output_tokens')):
@@ -90,7 +127,11 @@ def totals(binary, env):
 def checked_usage(delta, rows):
     """Require reported input and output token totals and exact row shares."""
     for key in ('input_tokens', 'output_tokens'):
-        shares = [row.get('meta', {}).get('usage', {}).get(key) for row in rows]
+        shares = []
+        for row in rows:
+            meta = row.get('meta') if isinstance(row, dict) else None
+            usage = meta.get('usage') if isinstance(meta, dict) else None
+            shares.append(usage.get(key) if isinstance(usage, dict) else None)
         if type(delta.get(key)) is not int or delta[key] < 0 or any(type(x) is not int or x < 0 for x in shares):
             refuse('a sent arm has missing usage')
         if sum(shares) != delta[key]:
@@ -98,6 +139,15 @@ def checked_usage(delta, rows):
     if delta['input_tokens'] + delta['output_tokens'] == 0:
         refuse('a sent arm reported zero combined tokens')
     return delta['input_tokens'] + delta['output_tokens']
+
+
+def checked_facts(facts, delta):
+    """A status delta alone cannot prove a command's complete reported usage."""
+    if not isinstance(facts, dict) or facts.get('schema') != 'thinkthen.run/1' or facts.get('records') != 219:
+        refuse('the final facts are missing or incomplete')
+    for key in ('requests_sent', 'input_tokens', 'output_tokens'):
+        if type(facts.get(key)) is not int or facts[key] != delta[key]:
+            refuse(f'final facts lack matching {key}; usage is unknown')
 
 
 def ranks(values):
@@ -125,27 +175,78 @@ def spearman(left, right):
     return sum((a - xbar) * (b - ybar) for a, b in zip(x, y)) / (xx * yy) ** 0.5
 
 
-def arm(binary, cohort, data, args, verb, setting, home):
+def arm(binary, cohort, data, args, verb, setting, folder):
+    """Keep raw output and status even when an arm fails before it can be scored."""
+    arm_name = f'{verb}/{setting}'
+    folder.mkdir()
+    sync_dir(folder.parent)
+    home = folder / 'home'
+    home.mkdir()
+    sync_dir(folder)
     env = {**speed.plain(), 'HOME': str(home), 'THINKTHEN_API_KEY': os.environ['THINKTHEN_API_KEY']}
-    before = totals(binary, env)
+    before = totals(binary, env, folder / 'before-status')
+    durable_json(folder / 'before.json', before)
     command = [str(binary), verb, *args[verb], '--details', '--facts', '--batch', setting,
                '--max-retries', '0', '--no-cache', '--model', MODEL]
-    started = time.monotonic()
-    done = subprocess.run(command, input=data, capture_output=True, env=env)
-    elapsed = time.monotonic() - started
-    if done.returncode:
-        refuse(f'{verb}/{setting} exited {done.returncode}; preserve local output for diagnosis')
-    rows = [json.loads(line) for line in done.stdout.splitlines()]
-    if len(rows) != len(cohort) or any(row.get('input') != {'input': item['title']}
+    durable_bytes(folder / 'input.jsonl', data)
+    durable_json(folder / 'started.json', {'arm': arm_name, 'command': command,
+                                         'cohort_sha256': COHORT_SHA,
+                                         'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest()})
+    stdout_path, stderr_path = folder / 'stdout.jsonl', folder / 'stderr.txt'
+    interrupted = False
+    with (folder / 'input.jsonl').open('rb') as input_stream, stdout_path.open('xb') as stdout, stderr_path.open('xb') as stderr:
+        sync_dir(folder)
+        started = time.monotonic()
+        child = subprocess.Popen(command, stdin=input_stream, stdout=stdout, stderr=stderr, env=env)
+        try:
+            returncode = child.wait()
+        except (KeyboardInterrupt, InterruptedError):
+            interrupted = True
+            child.terminate()
+            try:
+                returncode = child.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                child.kill()
+                returncode = child.wait()
+        elapsed = time.monotonic() - started
+        stdout.flush()
+        stderr.flush()
+        os.fsync(stdout.fileno())
+        os.fsync(stderr.fileno())
+    facts_raw = b'\n'.join(line for line in stderr_path.read_bytes().splitlines() if line.startswith(b'{'))
+    durable_bytes(folder / 'final-facts-raw.jsonl', facts_raw + (b'\n' if facts_raw else b''))
+    try:
+        after = totals(binary, env, folder / 'after-status')
+        status_error = None
+    except (Exception, SystemExit) as error:
+        after = None
+        status_error = type(error).__name__
+    delta = ({key: after[key] - before[key] for key in ('requests_sent', 'input_tokens', 'output_tokens')}
+             if after is not None else None)
+    unknown_refusal_cost = (delta is None or returncode != 0 or interrupted
+                            or delta['requests_sent'] > LOCAL_PLAN[arm_name][0])
+    durable_json(folder / 'completion.json', {'arm': arm_name, 'returncode': returncode,
+                 'interrupted': interrupted, 'seconds': round(elapsed, 3), 'after_status': after,
+                 'status_error': status_error, 'reported_delta': delta,
+                 'attempts_observed': None if delta is None else delta['requests_sent'],
+                 'usage_validated': False, 'usage_scope': 'reported_tokens_only',
+                 'unknown_refusal_cost': unknown_refusal_cost})
+    if interrupted or returncode != 0 or delta is None:
+        refuse(f'{arm_name} did not complete; retain the named arm directory and do not retry')
+    try:
+        rows = [json.loads(line) for line in stdout_path.read_bytes().splitlines()]
+        facts = [json.loads(line) for line in facts_raw.splitlines()]
+    except (ValueError, TypeError):
+        refuse(f'{arm_name} has malformed output; retain the named arm directory')
+    durable_json(folder / 'facts.json', facts)
+    if len(rows) != len(cohort) or any(not isinstance(row, dict) or row.get('input') != {'input': item['title']}
                                        for row, item in zip(rows, cohort)):
-        refuse(f'{verb}/{setting} lost or reordered a result')
-    facts = [json.loads(line) for line in done.stderr.splitlines() if line.startswith(b'{')]
-    if len(facts) != 1 or facts[0].get('records') != 219:
-        refuse(f'{verb}/{setting} has no complete final facts')
-    after = totals(binary, env)
-    delta = {key: after[key] - before[key] for key in ('requests_sent', 'input_tokens', 'output_tokens')}
-    if not 1 <= delta['requests_sent'] <= ATTEMPT_LIMIT[f'{verb}/{setting}'] or facts[0].get('requests_sent') != delta['requests_sent']:
-        refuse(f'{verb}/{setting} sent an unexpected number of requests')
+        refuse(f'{arm_name} lost or reordered a result; retain the named arm directory')
+    if len(facts) != 1:
+        refuse(f'{arm_name} has no complete final facts; retain the named arm directory')
+    checked_facts(facts[0], delta)
+    if not 1 <= delta['requests_sent'] <= ATTEMPT_LIMIT[arm_name]:
+        refuse(f'{arm_name} sent an unexpected number of requests; retain the named arm directory')
     combined = checked_usage(delta, rows)
     answers = [row['value'] for row in rows]
     if verb == 'tag':
@@ -157,13 +258,19 @@ def arm(binary, cohort, data, args, verb, setting, home):
         if any(type(value) not in (float, int) for value in answers):
             refuse('score did not return numbers')
         metric = {'spearman_views_proxy': spearman(answers, [item['views'] for item in cohort])}
-    return {'arm': f'{verb}/{setting}', 'records': 219, **delta, 'combined_tokens': combined,
+    result = {'arm': arm_name, 'records': 219, 'requests_sent': delta['requests_sent'],
+            'reported_input_tokens': delta['input_tokens'],
+            'reported_output_tokens': delta['output_tokens'],
+            'reported_combined_tokens': combined, 'unknown_refusal_cost': unknown_refusal_cost,
+            'usage_scope': 'reported_tokens_only',
             'seconds': round(elapsed, 3), **metric,
             'answers_sha256': digest([[item['id'], value] for item, value in zip(cohort, answers)]),
             'request_ids_sha256': digest([row['meta']['requests'] for row in rows]),
             'cohort_sha256': COHORT_SHA, 'input_sha256': INPUT_SHA,
             'build': speed.git('rev-parse', 'HEAD'),
             'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(), 'bench': BENCH_SHA}
+    durable_json(folder / 'validated.json', result)
+    return result
 
 
 def self_test(bench):
@@ -173,6 +280,8 @@ def self_test(bench):
     rows = [{'meta': {'usage': {'input_tokens': 3, 'output_tokens': 2}}},
             {'meta': {'usage': {'input_tokens': 4, 'output_tokens': 1}}}]
     assert checked_usage({'input_tokens': 7, 'output_tokens': 3}, rows) == 10
+    checked_facts({'schema': 'thinkthen.run/1', 'records': 219, 'requests_sent': 2, 'input_tokens': 7,
+                   'output_tokens': 3}, {'requests_sent': 2, 'input_tokens': 7, 'output_tokens': 3})
     for bad in ({'input_tokens': 7}, {'input_tokens': 7, 'output_tokens': 4}):
         try:
             with contextlib.redirect_stderr(io.StringIO()):
@@ -182,6 +291,61 @@ def self_test(bench):
         else:
             raise AssertionError('missing or mismatched usage passed')
     assert spearman([1, 2, 3], [10, 20, 30]) == 1.0
+    for bad in ({'schema': 'thinkthen.run/1', 'records': 219, 'requests_sent': 2, 'input_tokens': 7},
+                {'schema': 'thinkthen.run/1', 'records': 219, 'requests_sent': 2,
+                 'input_tokens': 7, 'output_tokens': 4}):
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                checked_facts(bad, {'requests_sent': 2, 'input_tokens': 7, 'output_tokens': 3})
+        except SystemExit as error:
+            assert error.code == 2
+        else:
+            raise AssertionError('missing or mismatched facts passed')
+    with tempfile.TemporaryDirectory(prefix='thinkthen-b9-helper-') as temporary:
+        folder = Path(temporary)
+        fake = folder / 'fake.py'
+        fake.write_text('''#!/usr/bin/env python3
+import json, os, pathlib, sys
+sent = pathlib.Path(os.environ['HOME']) / 'sent'
+if sys.argv[1] == 'status':
+    n = int(sent.exists())
+    print(json.dumps({'usage': {'total': {'requests_sent': n, 'input_tokens': 0, 'output_tokens': 0}}}))
+else:
+    sent.write_text('attempted')
+    print('{"partial":true}')
+    print('synthetic refusal', file=sys.stderr)
+    raise SystemExit(4)
+''')
+        fake.chmod(0o700)
+        former_key = os.environ.get('THINKTHEN_API_KEY')
+        os.environ['THINKTHEN_API_KEY'] = 'sk-synthetic-only'
+        try:
+            with contextlib.redirect_stderr(io.StringIO()):
+                try:
+                    arm(fake, cohort, data, args, 'tag', '1', folder / 'failed-arm')
+                except SystemExit as error:
+                    assert error.code == 2
+                else:
+                    raise AssertionError('a failed arm passed')
+        finally:
+            if former_key is None:
+                del os.environ['THINKTHEN_API_KEY']
+            else:
+                os.environ['THINKTHEN_API_KEY'] = former_key
+        saved = folder / 'failed-arm'
+        assert (saved / 'started.json').exists() and (saved / 'stdout.jsonl').read_text().strip() == '{"partial":true}'
+        assert 'synthetic refusal' in (saved / 'stderr.txt').read_text()
+        assert json.loads((saved / 'completion.json').read_text())['attempts_observed'] == 1
+        assert (saved / 'before-status-stdout.json').exists()
+        assert (saved / 'after-status-stdout.json').exists()
+        assert (saved / 'final-facts-raw.jsonl').exists()
+        assert (saved / 'home/sent').exists()
+        try:
+            saved.mkdir()
+        except FileExistsError:
+            pass
+        else:
+            raise AssertionError('a started arm allowed a blind rerun')
     print(json.dumps({'records': len(cohort), 'ids_sha256': IDS_SHA, 'truth_sha256': COHORT_SHA,
                       'input_sha256': INPUT_SHA, 'suite_args_sha256': ARGS_SHA}))
 
@@ -264,30 +428,46 @@ def main(bench, name):
     if binary.stat().st_mtime < source_head:
         refuse('the compiled binary predates its source commit')
     output = HERE / 'runs' / f'{name}.jsonl'
-    progress = ROOT / 'target/tag-score' / f'{name}-progress.jsonl'
-    if output.exists() or progress.exists():
-        refuse('the named result or progress record already exists')
+    run_state = ROOT / 'target/tag-score' / name
+    legacy_progress = ROOT / 'target/tag-score' / f'{name}-progress.jsonl'
+    if output.exists() or run_state.exists() or legacy_progress.exists():
+        refuse('the named result or started run already exists; inspect its saved state before any repeat')
     local_plan(bench)
     cohort, data, args = sample(bench)
     output.parent.mkdir(parents=True, exist_ok=True)
-    progress.parent.mkdir(parents=True, exist_ok=True)
+    run_state.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        run_state.mkdir()
+    except FileExistsError:
+        refuse('the named run started elsewhere; inspect its saved state before any repeat')
+    sync_dir(run_state.parent)
+    durable_json(run_state / 'started.json', {'name': name, 'arms': [f'{verb}/{setting}' for verb, setting in ARMS],
+                 'cohort_sha256': COHORT_SHA, 'build': speed.git('rev-parse', 'HEAD'),
+                 'binary_sha256': hashlib.sha256(binary.read_bytes()).hexdigest(),
+                 'stop_reported_tokens': STOP_TOKENS})
+
+    def interrupt(signum, unused):
+        raise InterruptedError(f'signal {signum}')
+
+    signal.signal(signal.SIGINT, interrupt)
+    signal.signal(signal.SIGTERM, interrupt)
     spent = 0
-    with tempfile.TemporaryDirectory(prefix='thinkthen-tag-score-') as temporary:
-        for verb, setting in ARMS:
-            arm_name = f'{verb}/{setting}'
-            if spent + NEXT_ARM_BOUND[arm_name] > STOP_TOKENS:
-                refuse(f'stopped at {spent} combined reported tokens before {arm_name}; '
-                       f'its conservative next-arm bound is {NEXT_ARM_BOUND[arm_name]}')
-            home = Path(temporary) / f'{verb}-{setting}'
-            home.mkdir()
-            result = arm(binary, cohort, data, args, verb, setting, home)
-            spent += result['combined_tokens']
-            with progress.open('a', encoding='utf-8') as stream:
-                stream.write(json.dumps({'arm': result['arm'], 'combined_tokens': result['combined_tokens'],
-                                         'spent': spent, 'requests_sent': result['requests_sent']}) + '\n')
-            with output.open('a', encoding='utf-8') as stream:
-                stream.write(json.dumps(result) + '\n')
-            print(json.dumps(result))
+    for verb, setting in ARMS:
+        arm_name = f'{verb}/{setting}'
+        if spent + NEXT_ARM_BOUND[arm_name] > STOP_TOKENS:
+            durable_json(run_state / 'stopped.json', {'before_arm': arm_name,
+                         'reported_tokens_spent': spent, 'next_arm_estimate': NEXT_ARM_BOUND[arm_name]})
+            refuse(f'stopped at {spent} reported combined tokens before {arm_name}; '
+                   f'its conservative next-arm estimate is {NEXT_ARM_BOUND[arm_name]}')
+        result = arm(binary, cohort, data, args, verb, setting, run_state / f'{verb}-{setting}')
+        spent += result['reported_combined_tokens']
+        append_json(run_state / 'progress.jsonl', {'arm': arm_name,
+                    'reported_combined_tokens': result['reported_combined_tokens'],
+                    'reported_spent': spent, 'requests_sent': result['requests_sent'],
+                    'unknown_refusal_cost': result['unknown_refusal_cost']})
+        append_json(output, result)
+        print(json.dumps(result))
+    durable_json(run_state / 'complete.json', {'arms': len(ARMS), 'reported_combined_tokens': spent})
 
 
 if __name__ == '__main__':
