@@ -8,6 +8,11 @@
       "sql": "SELECT thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
       "expected": "t"
     },
+    "batch_context": {
+      "setup": ["SET thinkthen.batch = '2'"],
+      "sql": "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', ARRAY['refund one', 'refund two'], 'Use this policy note.');",
+      "expected": "2"
+    },
     "probability": {
       "sql": "SELECT thinkthen_probability('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
       "expected": "0.9"

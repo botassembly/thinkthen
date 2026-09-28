@@ -1,6 +1,10 @@
 # 0217 PostgreSQL batching preflight
 
-Status: B13d design preparation accepted by independent review of `3e8dde23484872f6d779e8032c4f34abd143e8c9`; source snapshot remains main `0da697c3`. No B13d product proof or register 73 closure. The [ticket](../tickets/0217-postgresql-record-batching.md) and [review handoff](0217-design-review.md) preserve B0's accepted final-context reach across eligible judgment forms. The first review corrected the narrower draft.
+Status: B13d design preparation accepted by independent review of `3e8dde23484872f6d779e8032c4f34abd143e8c9`; runtime work starts from main `49aa831c`. No B13d product proof or register 73 closure yet. The [ticket](../tickets/0217-postgresql-record-batching.md) and [review handoff](0217-design-review.md) preserve B0's accepted final-context reach across eligible judgment forms. The first review corrected the narrower draft.
+
+## Runtime refresh at `49aa831c`
+
+B12a and 0157 are now on main. The public `EngineBuilder::batch(BatchSetting)` setter, `CallOptions::context`, `Engine::decide_many_with`, `Engine::details_many_with`, `Call::into_value`, and `Details::to_scalar_json` are available. Many-record rows expose `value()` and `into_parts()`; the lazy batch must be fully consumed inside the worker. The PostgreSQL plan already applies `max_request_bytes` before build and attaches `SendBudget` to each call. Its old `Call::within` still truncates distinct rows by remaining attempts; remove that shortcut while retaining the distinct-record `max_requests` precheck. The backend must own its question, evidence, and context strings before spawning, and it must make one `run` call per array or aggregate finalization to retain one deadline. The existing warm state and finalizer are still the old two-column form. PostgreSQL's aggregate error behavior must be proved at its installed boundary instead of inferred from SQLite's step/finalizer behavior. These observations replace the historical prerequisite rows below; the historical design evidence remains retained.
 
 ## Pinned sources and seams
 
