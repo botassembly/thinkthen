@@ -1,5 +1,5 @@
 {
-  "deck": "943f9da570f37b99c1e57c727b4c91bea5897290",
+  "deck": "33f51e85d09e543d50eff88551b21e09368c4263",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
@@ -84,8 +84,8 @@
     },
     "bash": {
       "slide": "18-bash",
-      "sha256": "1a0e9309062673aad2540fe38fbf88b03f973644ece24c71c0bddcbcef9808ab",
-      "card": "09b1b7423b5017326db7ce6381d93d555af24611bdbf9c1a90e840ce6907328d"
+      "sha256": "7395bfe97c11fb3c01ebd9df6d24f5511424aa6875292484add43c28f8b14c0c",
+      "card": "5808273712550216d4b54692b4c71010d32e61bbec70dbd4adc341d064370d77"
     },
     "languages": {
       "slide": "19-languages",
