@@ -1,23 +1,23 @@
 # thinkthen
 
-`thinkthen` puts a model's judgment in a shell script. You hand it text and a typed question; it prints an answer a program can branch on. The model never writes text, so a yes, a no, a not sure, and a broken run stay four different outcomes in the output and in the exit code.
+ThinkThen answers typed questions about text. Use the command in a shell script or a binding inside a program. The model returns structured judgments, not generated prose. A failed call stays separate from an answer.
 
 ## The ten functions
 
 | Function | It asks | It prints |
 | --- | --- | --- |
 | `decide` | one yes/no question about one text | `true`, `false`, or `null` |
-| `choose` | which one option fits best | the label |
+| `choose` | which one option fits best | a label, or `null` when none wins |
 | `tag` | which labels apply | a JSON array of labels |
 | `score` | where the text falls on a scale | a number on that scale |
 | `filter` | the same yes/no of each record in a stream | the records that pass, byte for byte, in input order |
 | `rank` | the same question of each record | the records, best fit first |
-| `find` | which one line answers the question | that line, or nothing when none fits |
-| `annotate` | a saved set of named questions of each record | the records with one new field per question |
-| `recognize` | which words name a thing, and what kind | the names with their kinds and offsets |
-| `relate` | which relations hold between named entities | the pairs and their relations |
+| `find` | which unit best answers the question | that unit, or `null` when an offered none wins |
+| `annotate` | a saved set of named questions of each record | records with named answers or failure markers |
+| `recognize` | which words name a thing, and what kind | names, kinds, offsets, and optional relations |
+| `relate` | which relations hold between named entities | the edges that pass the rule |
 
-Every answer carries a probability, and a threshold turns it into the printed value. `null` means not sure, never failed. `--details` adds the probabilities and the request digest behind any answer. The [type contract](specification/types.md) names what an answer means, and the [result contract](specification/result.md) fixes the fields.
+Some functions use a threshold; others rank or select without one. A `null` value is a valid outcome where the function allows it, never a failed call. The [type contract](specification/types.md) names the answers and failures; the [result contract](specification/result.md) gives their full fields.
 
 ```sh
 thinkthen decide 'Does the customer ask for a refund?' < message.txt
@@ -25,15 +25,17 @@ thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --fi
 thinkthen annotate triage.json --jsonl < issues.jsonl
 ```
 
-A command names the job, asks the question, and reads the evidence on standard input. `specification/` is the contract, and code follows it.
+A command names the job, asks the question, and reads text on standard input.
 
 ## Install the command
 
 Build it from a checkout and put it on your `PATH`:
 
 ```sh
-cargo build --release -p thinkthen --bin thinkthen
-cp target/release/thinkthen ~/.local/bin/
+cargo build --locked --release -p thinkthen --bin thinkthen
+mkdir -p "$HOME/.local/bin"
+install -m 755 target/release/thinkthen "$HOME/.local/bin/thinkthen"
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 Then check it on a recorded answer. This sample needs no key and no network; `--replay` reads the answer from disk.
@@ -48,35 +50,31 @@ It prints `true`. `demos/27-test-with-no-network` shows how a test replays a rec
 
 ## Languages and bindings
 
-One engine sits behind every surface. Rust and the Polars feature link it natively, the other languages bind one C door, and each database runs the engine inside the server. Every binding has its own README: what it is, install, from source, the archive rule, platforms, one example, and the contract notes.
+The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R each have a native Rust adapter. C exposes a separate C API. The database extensions call the engine inside their hosts. Each linked README shows how to use that binding from source.
 
 | Language or surface | What it is | README |
 | --- | --- | --- |
 | Rust | the crate; the command is one consumer of it | [libraries/rust](libraries/rust/README.md) |
 | Python | the package, with pandas and Polars doors | [libraries/python](libraries/python/README.md) |
-| TypeScript | the npm package | [libraries/typescript](libraries/typescript/README.md) |
-| Ruby | the gem | [libraries/ruby](libraries/ruby/README.md) |
+| TypeScript | a Node binding with a native addon | [libraries/typescript](libraries/typescript/README.md) |
+| Ruby | a Ruby binding with a native extension | [libraries/ruby](libraries/ruby/README.md) |
 | R | the package | [libraries/r](libraries/r/README.md) |
-| C | one header and one shared library, the door every other language uses | [libraries/c](libraries/c/README.md) |
+| C | a header and a library for C callers | [libraries/c](libraries/c/README.md) |
 | Polars | the Rust feature | [libraries/polars](libraries/polars/README.md) |
 | DuckDB | the extension | [databases/duckdb](databases/duckdb/README.md) |
 | SQLite | the extension | [databases/sqlite](databases/sqlite/README.md) |
 | PostgreSQL | the extension | [databases/postgresql](databases/postgresql/README.md) |
 
-Zig, Go, Kotlin, Scala, C#, PHP, COBOL, Ada, Swift, Objective-C, Dart, and C++ bindings carry the same README shape and join this table as they merge.
-
-## What it will and will not do
+## How it works
 
 - The shell sequences programs. `jq` reshapes data. `thinkthen` judges meaning and does nothing else.
 - Code parses the command line. The model reads only the question, the options, and the evidence.
-- One request can carry many records. `--batch max` fills each request and is the default; `--batch 1` sends one record per request. Records that share a request can affect each other's answers, and a threshold tuned at one setting warns when it runs at another.
+- Eligible record commands can send many records in one request. `--batch max` is their default; `--batch 1` sends one record per request. Records sharing a request can affect each other's answers, and a threshold tuned at one setting warns when it runs at another.
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first System One model. `THINKTHEN_API_KEY` holds the key and `THINKTHEN_BASE_URL` names the address. A local model is reached by a small server that presents the same shape.
 - The default address sends the question and evidence to TypeSafe. Its [customer agreement](https://typesafe.ai/legal/mca), [data processing addendum](https://typesafe.ai/legal/data-processing), and [privacy policy](https://typesafe.ai/legal/privacy-policy) describe data handling. The published privacy policy, checked 2026-09-28, gives no fixed API-input retention period. Check the terms governing your account before sending sensitive text.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
 
-**Not for a loop that needs many decisions a second.** Each decision waits on a network round trip to a model, and a shell tool adds a process start to each one. For a `coproc` loop that sends one line and waits for one reply, use `decide --lines --batch 1`: it prints one result per nonblank input line and flushes it. `filter` prints only kept records, so a dropped line gives the loop no reply. `rank` waits for the complete input before it prints an order.
-
-**Not for a call from inside a program written in another language.** A program already holds its data, so use the binding for your language above. `sdlc/planning/ten-use-cases.md` measured both limits against ten real uses.
+For a long-lived shell loop, `decide --lines --batch 1` prints and flushes one answer per nonblank input line. `filter` prints only kept records; `rank` waits for the complete input before printing an order. A separate command process for every item adds startup time. Inside a program, use its language binding above.
 
 ## The answer cache
 

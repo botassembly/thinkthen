@@ -1,0 +1,19 @@
+# Quick Fix: README claims and steering budget
+
+Status: candidate for fresh independent Medium review. Ian authorized a narrow correction of `README.md` and temporarily delegated `AGENTS.md` on main `a88cc8b0` (the reordered README entered at `ca6e6625`). No runtime, other public page, site, or held 0248/0241 branch changed.
+
+## What changed
+
+- The README keeps Ian's function → source install → binding order. Its opening now describes both CLI and program use. The function table follows [types](../../specification/types.md) and [threshold](../../specification/threshold.md): `choose` and optional-none `find` may yield null, `annotate` may hold failed members, and score/rank/find do not share one threshold rule. A failed call is separate from an allowed null. The opening links [results](../../specification/result.md) instead of explaining `--details` there.
+- The architecture sentence now matches the built source. Python's [Cargo package](../../libraries/python/Cargo.toml) depends on `thinkthen` and uses PyO3; TypeScript's [Cargo package](../../libraries/typescript/Cargo.toml) uses napi-rs; Ruby's [Cargo package](../../libraries/ruby/Cargo.toml) uses Magnus; R's [Rust adapter](../../libraries/r/thinkthen/src/rust/Cargo.toml) uses extendr. Their operation modules call the public Rust engine. The [C package](../../libraries/c/Cargo.toml) is a separate C ABI over that engine; DuckDB bridge, SQLite and PostgreSQL each depend on the Rust crate. The C table row no longer says it is every language's door.
+- The checkout install command uses `cargo build --locked`, creates `$HOME/.local/bin`, installs the binary there, and adds that directory to the current shell's `PATH`. Only directories and binding READMEs present on main get table rows. The [language merge runbook](../issues/2026-09-28-language-merge-runbook.md) supplies re-pin inputs for later merges, with C++ using its corrected stage-two package; each actual merge adds one library directory/README and one root row. Rehearsal copies are not installed bindings. Release downloads, registries, supported platform claims and any persistent shell-profile edit remain with [release and install for 0.1](../issues/2026-09-25-release-and-install-for-0-1.md); this Quick Fix invents none.
+- `AGENTS.md` went from the reported 5,532 to **4,524 Unicode characters**, read through the unchanged `CLAUDE.md` symlink. It keeps the 500 nonblank-line source cap, exact ratchet, focused proof and full-rung checkpoint, fresh reviews, preparation lessons, paid ledger and key restrictions, claimed lanes, and capacity-based Linux/M5 overlap. Long test examples are condensed with pointers to ticket preparation and the workspace test decision. No approval gate or product rule was loosened.
+
+## Focused proof and limits
+
+- The exact `sdlc/scripts/lint` Python character check prints `agents file: CLAUDE.md 4524/5000 characters` and exits 0. `python3 sdlc/scripts/pages` exits 0 with `1 coming, 22 green`. All 22 local README links resolve. `git diff --check` passes.
+- The unchanged recorded example in `demos/27-test-with-no-network` ran with no key or base URL and isolated `XDG_CACHE_HOME`, using retained `target/debug/thinkthen` SHA-256 `74a5f56500f56ab796dd17958d995a582c0a65129e07b138c605ad92e0220965`; it printed `true` at exit 0 from `--replay recording`. This proves the shown question/input/recording pair, not the newly written source-build and install commands. No project rebuild, provider call, publication, release artifact check, or broad gate ran for this prose change.
+
+## What the build taught us
+
+The prior README record's claimed lint pass was hidden by a pipeline; running lint's exact character expression exposed the steering overage. The source packages also disprove its blanket C-door architecture claim. A root binding index should follow merged source and link each current README; release installation text waits for an actual release channel.
