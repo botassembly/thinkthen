@@ -20,6 +20,11 @@
       "python": "tt.choose(\"Which team owns this?\", \"please route this ticket\", options=[\"billing\", \"shipping\", \"account\"]).value",
       "expected": "'billing'"
     },
+    "choose_enum": {
+      "imports": "from enum import Enum\nTeam = Enum(\"Team\", {\"billing\": \"billing\", \"shipping\": \"shipping\"})",
+      "python": "tt.choose(\"Which team owns this?\", \"please route this ticket\", options=Team).value",
+      "expected": "'billing'"
+    },
     "tag": {
       "python": "tt.tag(\"Which words appear?\", \"the refund and the shipping\", labels=[\"refund\", \"shipping\"]).value",
       "expected": "['refund', 'shipping']"
