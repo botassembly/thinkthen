@@ -13,7 +13,7 @@
 // there. check-slides.mjs checks that record in the build.
 //
 // It stops unless the deck folder is clean and its BENCH_AT names the commit
-// examples/beatles/BENCH pins. It trusts the deck's build to have rendered
+// examples/beatles/bench-pin pins. It trusts the deck's build to have rendered
 // the committed slides after BENCH_AT moved. It needs ImageMagick's convert
 // with WebP.
 
@@ -34,7 +34,7 @@ const commit = git('rev-parse', 'HEAD').toString().trim();
 const prefix = git('rev-parse', '--show-prefix').toString().trim();
 const show = (rel) => git('show', `${commit}:${prefix}${rel}`);
 
-const pin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'BENCH'), 'utf8').trim();
+const pin = fs.readFileSync(path.join(site, 'examples', 'beatles', 'bench-pin'), 'utf8').trim();
 const at = /^BENCH_AT = "([0-9a-f]+)"$/m.exec(show('common.py').toString());
 if (!at) { console.error('export-slides: the deck names no BENCH_AT in common.py'); process.exit(1); }
 if (!pin.startsWith(at[1])) {

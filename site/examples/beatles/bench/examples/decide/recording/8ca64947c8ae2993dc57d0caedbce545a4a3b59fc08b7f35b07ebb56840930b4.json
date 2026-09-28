@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Catalog:\nSgt. Pepper's Lonely Hearts Club Band (1967-05-26)\nA Day in the Life (lead: Lennon; written: Lennon–McCartney; 5:38; released 1967-05-26; first album: Sgt. Pepper's Lonely Hearts Club Band)\nText: A Day in the Life","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text gives a catalog entry and then names a song by the Beatles. It appears on the album Abbey Road."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04}},"usage":{"input_tokens":368,"output_tokens":21}}
+}

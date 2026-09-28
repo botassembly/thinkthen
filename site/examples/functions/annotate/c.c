@@ -19,6 +19,13 @@ const char *expected =
     "[{\"steps\":true,\"area\":\"export\"},"
     "{\"steps\":false,\"area\":\"login\"},"
     "{\"steps\":false,\"area\":\"billing\"}]";
-char *triage = thinkthen_call(tt, annotate);
-assert(triage && strcmp(triage, expected) == 0);
-thinkthen_free_string(triage);
+char *triage_call = thinkthen_call(tt, annotate);
+assert(triage_call);
+assert(strncmp(triage_call, "{\"value\":", 9) == 0);
+const char *triage = triage_call + 9;
+size_t triage_len = strlen(expected);
+assert(strncmp(triage, expected, triage_len) == 0);
+assert(strncmp(
+    triage + triage_len, ",\"facts\":{", 10
+) == 0);
+thinkthen_free_string(triage_call);

@@ -11,5 +11,6 @@ Invoice 8 for Contoso. Page 1 of 1. Total due $310.
 Notice to all customers. Page 1 of 1. New terms from May 1.
 EOF
 thinkthen choose "$question" "${kinds[@]}" \
+  --batch 1 \
   --lines \
   --raw

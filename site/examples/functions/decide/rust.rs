@@ -5,7 +5,9 @@ let question = "Does the customer ask for a refund?";
 let refund = Question::decide(question)?.cut();
 let broken = "Please refund my order. It arrived broken.";
 let thanks = "Thanks for the quick help yesterday!";
-let broken_is_refund = tt.decide(&refund, broken)?;
-let thanks_is_refund = tt.decide(&refund, thanks)?;
+let broken_is_refund = tt.decide(&refund, broken)?
+    .into_value();
+let thanks_is_refund = tt.decide(&refund, thanks)?
+    .into_value();
 assert_eq!(broken_is_refund, Answer::Yes);
 assert_eq!(thanks_is_refund, Answer::No);

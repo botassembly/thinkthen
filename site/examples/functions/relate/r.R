@@ -18,7 +18,7 @@ contradictions <- tt_relate(
   entities,
   either = "contradicts",
   threshold = 0.5
-)
+)$value
 stopifnot(identical(contradictions$source, rules[c(1, 2)]))
 stopifnot(identical(contradictions$target, rules[c(4, 6)]))
 stopifnot(identical(

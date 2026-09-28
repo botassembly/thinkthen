@@ -88,8 +88,8 @@ function cellsOf(line) {
 // a ruling. The rest splits into clauses. A clause that starts with a source
 // is a source. A clause with a source later keeps its words before it as a
 // note, such as "SQL cannot name one, by tickets 0109 and 0110".
-const SOURCE_START = /\[[^\]]+\]\([^)]+\)|`[^`\s]*\/[^`\s]*\.[a-z]+`|\bADR \d|\btickets? \d|\bIan's ruling/;
-const SOURCE_ANY = new RegExp(`${SOURCE_START.source}|\\bNo reason recorded`);
+const SOURCE_START = /\[[^\]]+\]\([^)]+\)|`[^`\s]*\/[^`\s]*\.[a-z]+`|\bADR \d|\btickets? \d|\bIan's ruling/i;
+const SOURCE_ANY = new RegExp(`${SOURCE_START.source}|\\bNo reason recorded`, 'i');
 const LINK_WORDS = /[\s,;]*\b(by|in)?\s*$/;
 
 const letters = (s) => plain(s).replace(/[^A-Za-z0-9]/g, '');
@@ -129,7 +129,7 @@ export function splitDefault(cell) {
 
 // The page shows the prose, not where each rule is written. A sentence that
 // only cites a record goes, and so does a trailing clause that cites an ADR.
-const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Tickets? \d|Ian's ruling)/;
+const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Tickets? \d|Ian's ruling)/i;
 const CITE_CLAUSE = /,\s*(by|as) ADR \d+( states)?(?=[.,])/g;
 // A setting's meaning drops a record cited in brackets, such as "(ticket 0143)".
 const CITE_BRACKET = /\s*\((?:ADR|tickets?) \d+(?:(?:,| and) \d+)*\)/g;
@@ -138,7 +138,9 @@ function uncited(text) {
   return text.split(/(?<=\.)\s+(?=[A-Z`'])/)
     .filter((s) => !CITE_SENTENCE.test(s.trim()))
     .join(' ')
-    .replace(CITE_CLAUSE, '');
+    .replace(CITE_CLAUSE, '')
+    .replace(/\s+(?:\[ADR \d+\]\([^)]+\)|ADR \d+(?: item \d+)?)(?=\.|$)/g, '')
+    .replace(/\s+The batching design's section \d+ puts them there\./g, '');
 }
 
 function uncitedBlocks(blocks) {
@@ -171,7 +173,7 @@ export function parseSettings(text) {
     return {
       name,
       id: slug(name),
-      does: does.replace(CITE_BRACKET, ''),
+      does: does.replace(CITE_BRACKET, '').replace(/, (?:ADR|ticket) \d+$/i, ''),
       default: { ...def, note: def.note.split(/(?<=\.)\s+/).filter((n) => !NO_EFFECT.test(n)).join(' ') },
       allowed,
       on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : surfaces[j]])),
@@ -186,7 +188,7 @@ export function parseSettings(text) {
   return {
     whatCounts: blocksOf(parts.get('What counts as a setting')),
     precedence: uncitedBlocks(blocksOf(parts.get('Precedence'))),
-    howToRead: blocksOf(parts.get('How to read a cell')),
+    howToRead: uncitedBlocks(blocksOf(parts.get('How to read a cell'))),
     rows,
   };
 }

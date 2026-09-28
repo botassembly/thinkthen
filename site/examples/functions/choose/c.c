@@ -28,7 +28,14 @@ const char *teams[] = {
 char request[320];
 for (int i = 0; i < 4; i++) {
     snprintf(request, sizeof request, choose, texts[i]);
-    char *team = thinkthen_call(tt, request);
-    assert(team && strcmp(team, teams[i]) == 0);
-    thinkthen_free_string(team);
+    char *team_call = thinkthen_call(tt, request);
+    assert(team_call);
+    assert(strncmp(team_call, "{\"value\":", 9) == 0);
+    const char *team = team_call + 9;
+    size_t team_len = strlen(teams[i]);
+    assert(strncmp(team, teams[i], team_len) == 0);
+    assert(strncmp(
+        team + team_len, ",\"facts\":{", 10
+    ) == 0);
+    thinkthen_free_string(team_call);
 }

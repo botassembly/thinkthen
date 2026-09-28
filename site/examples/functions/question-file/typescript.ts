@@ -7,5 +7,5 @@ const refund = tt.question({
   threshold: [0.2, 0.8],
 });
 const sendBack = "I want to send this back.";
-const isRefund = await tt.decide(refund, sendBack);
+const isRefund = (await tt.decide(refund, sendBack)).value;
 assert.equal(isRefund, null);

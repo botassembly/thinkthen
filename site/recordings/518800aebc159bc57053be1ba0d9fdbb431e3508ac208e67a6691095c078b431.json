@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"[{\"id\":\"u001\",\"evidence\":\"Returns need the original receipt.\"},{\"id\":\"u002\",\"evidence\":\"Refunds are issued within 30 days of purchase.\"},{\"id\":\"u003\",\"evidence\":\"Shipping is free on orders over $50.\"},{\"id\":\"u004\",\"evidence\":\"Gift cards cannot be exchanged for cash.\"}]","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which line says how to cancel an order?","criteria":{"u001":null,"u002":null,"u003":null,"u004":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"none","confidence":1.0,"probabilities":{"u001":0.0,"u002":0.0,"u004":0.0,"u003":0.0,"none":1.0}}},"usage":{"input_tokens":407,"output_tokens":65}}
+}

@@ -22,12 +22,12 @@ let ask = Recognize::builder()
     .relation(works_for)?
     .relation(based_in)?
     .build()?;
-let facts = tt.recognize(&ask, text)?;
+let facts = tt.recognize(&ask, text)?.into_value();
 
 let names: Vec<_> = facts
     .entities()
     .iter()
-    .map(|one| (one.name(), one.kind()))
+    .map(|one| (one.text(), one.kind()))
     .collect();
 let expected = [
     ("Maria Chen", "person"),
@@ -41,8 +41,8 @@ let links: Vec<_> = facts
     .unwrap_or_default()
     .iter()
     .map(|one| {
-        let source = one.source().name();
-        let target = one.target().name();
+        let source = one.source().text();
+        let target = one.target().text();
         (one.relation(), source, target)
     })
     .collect();

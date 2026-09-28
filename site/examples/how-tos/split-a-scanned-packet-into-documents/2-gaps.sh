@@ -7,5 +7,5 @@ Invoice 8 for Contoso. Page 1 of 1. Total due $310.
 Notice to all customers. Page 1 of 1. New terms from May 1.
 EOF
 awk 'NR > 1 { print last " | " $0 } { last = $0 }' |
-thinkthen decide "$question" --lines |
+thinkthen decide "$question" --batch 1 --lines |
 jq .value

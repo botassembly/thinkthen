@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Yesterday","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"The text is the title of a song by the Beatles. Who sings the lead vocal on it?","criteria":{"John":null,"Paul":null,"George":null,"Ringo":null,"John and Paul duet":null}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Paul","confidence":0.97,"probabilities":{"John":0.02,"Paul":0.98,"Ringo":0.0,"George":0.0,"John and Paul duet":0.0}}},"usage":{"input_tokens":325,"output_tokens":57}}
-}

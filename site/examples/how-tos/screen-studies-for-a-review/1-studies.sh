@@ -6,6 +6,7 @@ Opinion essay on open-plan offices.
 Title only: Remote work and output.
 EOF
 thinkthen decide "$question" \
+  --batch 1 \
   --lines \
   --threshold 0.1:0.9 |
 jq .

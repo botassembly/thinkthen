@@ -74,27 +74,6 @@ const ENVS = [
   ['ALL_PROXY, HTTPS_PROXY, HTTP_PROXY, NO_PROXY', 'Read in upper and in lower case. Under https:// the named proxy carries the request and sees only the host. Under http:// every one of them is cancelled.', 'none'],
 ];
 
-const ANSWERS = [
-  ['yes_no', 'decide, filter, rank', '{"kind":"yes_no","probability":FLOAT}', 'The probability of yes, and nothing else. There is no confidence field on this kind.'],
-  ['choice', 'choose', '{"kind":"choice","pick":STRING,"probabilities":{LABEL:FLOAT},"confidence":FLOAT}', 'pick is the highest option before any threshold. probabilities holds one entry per option, in send order. confidence is the vendor’s number and shows only when the backend sends it.'],
-  ['tag', 'tag', '{"kind":"tag","probabilities":{LABEL:FLOAT}}', 'One entry per label, in send order.'],
-  ['score', 'score', '{"kind":"score","level":STRING,"probabilities":{LEVEL:FLOAT}}', 'level is the highest level. probabilities follows your level order, lowest first.'],
-  ['find', 'find', '{"kind":"find","pick":STRING,"probabilities":{UNIT:FLOAT,"none":FLOAT}}', 'probabilities follows unit order and puts none last.'],
-];
-
-const META = [
-  ['tool', 'The name and version of the binary.'],
-  ['question_sha256', 'The digest of the exact question this row answers. On annotate it is questions_sha256.'],
-  ['url', 'The address that answered.'],
-  ['model', 'The model that answered, as the backend reported it.'],
-  ['usage', '{"input_tokens":INT,"output_tokens":INT}. Absent when the backend reports none.'],
-  ['requests_sent', 'The HTTP attempts behind this result. A saved answer reports zero. Each retry adds one.'],
-  ['cached', 'true when a saved answer served the row, from the cache or from --replay.'],
-  ['requests', 'The digests of the logical requests, in the order they were built.'],
-  ['failed_questions', 'How many logical questions failed. Always present, including zero.'],
-  ['profile_warning', '{"tuned_for":NAME,"running":NAME}. The first name is the profile saved in the question file with its threshold. The second is the profile this run named with --profile. Absent unless both exist and differ.'],
-];
-
 const BARE = [
   ['decide', 'true, false, or null.'],
   ['choose', 'A JSON string, or null. --raw prints the bare label.'],
@@ -205,37 +184,7 @@ const COUNTS = [
   <p>In record mode, a <code>decide</code>, <code>choose</code>, <code>tag</code>, or <code>score</code> row is <code>{'{"input":RECORD,"value":ANSWER}'}</code>, in that key order. <code>filter</code>, <code>rank</code>, and <code>find</code> keep returning records. Every result is compact and sits on one line.</p>
   <p><code>annotate</code> in record mode adds one top-level field per question to an object record. A line, a JSON scalar, or a JSON array keeps its parsed record under <code>input</code> and its named answers under <code>value</code>. CSV and TSV rows are objects, and they stay flat.</p>
 
-  <h3>With <code>--details</code></h3>
-  <p>One JSON object per row, with its fields in this order.</p>
-  <table>
-    <tr><th>Field</th><th>Holds</th></tr>
-    <tr><td><code>schema</code></td><td>Always <code>"thinkthen.result/1"</code>.</td></tr>
-    <tr><td><code>value</code></td><td>The bare judgment. Under <code>filter</code> it is the cut's boolean. Under <code>rank</code> it is <code>null</code>.</td></tr>
-    <tr><td><code>input</code></td><td>Record mode only, between <code>value</code> and <code>question</code>. The whole original record, including the parts never sent.</td></tr>
-    <tr><td><code>question</code></td><td><code>verb</code> and <code>text</code>, then <code>options</code>, <code>labels</code>, <code>levels</code>, or <code>none</code>, by the kind. <code>filter</code> and <code>rank</code> ask a <code>decide</code> question. Their <code>question.verb</code> is <code>"decide"</code>.</td></tr>
-    <tr><td><code>answer</code></td><td>One of the five answer kinds below. No vendor field name appears in it.</td></tr>
-    <tr><td><code>threshold</code></td><td>A number for a cut, the string <code>"LOW:HIGH"</code> for a band, and <code>null</code> when none applies. <code>decide</code> never prints <code>null</code> here.</td></tr>
-    <tr><td><code>meta</code></td><td>The run, below.</td></tr>
-  </table>
-
-  <h3>The five answer kinds</h3>
-  <table>
-    <tr><th>Kind</th><th>From</th><th>Shape</th><th>Notes</th></tr>
-    {ANSWERS.map(([kind, from, shape, note]) => (
-      <tr><td><code>{kind}</code></td><td><code>{from}</code></td><td><code>{shape}</code></td><td>{note}</td></tr>
-    ))}
-  </table>
-  <p>Every number in <code>probabilities</code> is the model's own, passed through unchanged. The tool computes one number only: the position <code>score</code> prints. It is the average of the level probabilities.</p>
-
-  <h3><code>meta</code></h3>
-  <table>
-    <tr><th>Field</th><th>Holds</th></tr>
-    {META.map(([field, holds]) => (<tr><td><code>{field}</code></td><td>{holds}</td></tr>))}
-  </table>
-
-  <h3><code>annotate --details</code></h3>
-  <p>The top level is <code>schema</code>, <code>input</code>, <code>value</code>, <code>answers</code>, <code>meta</code>. <code>value</code> holds the named answers. Each entry under <code>answers</code> that succeeded carries <code>value</code>, <code>question</code>, <code>answer</code>, <code>threshold</code>, and <code>request</code>.</p>
-  <p>A failed question is never turned into <code>null</code>. Its bare value is <code>{'{"failed":{"kind":"backend","cause":CAUSE}}'}</code>, and its detailed entry carries <code>question</code>, <code>failure</code>, and <code>request</code> and leaves out <code>value</code>, <code>answer</code>, and <code>threshold</code>. The causes are a closed list: <code>missing_answer</code>, <code>wrong_kind</code>, <code>missing_probability</code>, <code>invalid_probability</code>, <code>invalid_distribution</code>, <code>unexpected_probability</code>. <code>meta.usage</code> is the sum over the record's requests.</p>
+  <p>For full probabilities and run fields, see <a href="/reference/details/"><code>--details</code></a>. The ordinary examples show the value and exit code.</p>
 
   <h2>Exit codes</h2>
   <table>

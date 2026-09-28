@@ -11,7 +11,7 @@ reports = pl.DataFrame({
         "The Pay button on the billing page is too blue.",
     ],
 })
-triage = tt.annotate("form.json", reports, on="body")
+triage = tt.annotate("form.json", reports, on="body").value
 assert triage.drop("body").rows() == [
     (True, "export", 1.99),
     (False, "login", 2.0),

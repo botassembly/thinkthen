@@ -19,7 +19,7 @@ contradictions = tt.relate(
     relations={"contradicts": ("rule", "rule")},
     either=["contradicts"],
     threshold=0.5,
-)
+).value
 pairs = [
     (edge.source.name, edge.target.name, edge.probability)
     for edge in contradictions

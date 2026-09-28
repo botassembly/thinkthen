@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Octopus's Garden","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is the title of a song by the Beatles. Which of these describe it?\n\nDetermine whether the label \"love song\" applies to this item."},"q2":{"type":"noul","instructions":"The text is the title of a song by the Beatles. Which of these describe it?\n\nDetermine whether the label \"sad\" applies to this item."},"q3":{"type":"noul","instructions":"The text is the title of a song by the Beatles. Which of these describe it?\n\nDetermine whether the label \"psychedelic\" applies to this item."},"q4":{"type":"noul","instructions":"The text is the title of a song by the Beatles. Which of these describe it?\n\nDetermine whether the label \"about a place\" applies to this item."},"q5":{"type":"noul","instructions":"The text is the title of a song by the Beatles. Which of these describe it?\n\nDetermine whether the label \"about the sea\" applies to this item."}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.42},"q2":{"type":"noul","noul":0.12},"q3":{"type":"noul","noul":0.68},"q4":{"type":"noul","noul":0.86},"q5":{"type":"noul","noul":0.9}},"usage":{"input_tokens":471,"output_tokens":89}}
-}

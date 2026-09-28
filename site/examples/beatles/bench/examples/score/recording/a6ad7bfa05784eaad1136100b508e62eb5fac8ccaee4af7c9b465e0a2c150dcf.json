@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"A Day in the Life","model":"jev-latest","questions":{"q1":{"type":"score","instructions":"The text is the title of a song by the Beatles. How long is the recording?","criteria":["about 0 minutes","about 1 minute","about 2 minutes","about 3 minutes","about 4 minutes","about 5 minutes","about 6 minutes","about 7 minutes","about 8 minutes","about 9 minutes"]}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":4.87,"confidence":0.83,"legend":{"0":"about 0 minutes","1":"about 1 minute","2":"about 2 minutes","3":"about 3 minutes","4":"about 4 minutes","5":"about 5 minutes","6":"about 6 minutes","7":"about 7 minutes","8":"about 8 minutes","9":"about 9 minutes"},"probabilities":{"0":0.0,"1":0.0,"2":0.0,"3":0.07,"4":0.12,"5":0.68,"6":0.11,"7":0.01,"8":0.0,"9":0.0}}},"usage":{"input_tokens":385,"output_tokens":18}}
-}

@@ -13,7 +13,7 @@ facts = tt.recognize(
     text,
     kinds=kinds,
     relations=relations,
-)
+).value
 names = [(one.name, one.kind) for one in facts.entities]
 assert names == [
     ("Maria Chen", "person"),

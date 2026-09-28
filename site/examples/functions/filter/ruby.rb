@@ -7,5 +7,5 @@ reviews = [
   "Does this come in blue?",
   "The strap snapped on day two."
 ]
-complaints = ThinkThen.filter(question, reviews)
+complaints = ThinkThen.filter(question, reviews).value
 raise unless complaints == [reviews[1], reviews[3]]

@@ -14,6 +14,6 @@ urgency = tt.score(
     question,
     tickets["body"],
     levels=levels,
-)
+).value
 tickets = tickets.with_columns(urgency=urgency)
 assert tickets["urgency"].to_list() == [0.06, 0.99, 2.0]

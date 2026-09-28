@@ -95,7 +95,6 @@ export const FUNCTIONS = [
       '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8 as null.",
       '2-case': "The send-back line lands in the band. decide exits 3, and the case sends it to a person. The script then exits 0.",
       '3-one': "The ticket asks for a refund. decide prints true and exits 0.",
-      '4-details': "The details put yes at 0.99 for this ticket.",
       '5-means': "Under these words, a cancellation is not money back. decide says false and exits 1.",
     },
   },
@@ -143,7 +142,6 @@ export const FUNCTIONS = [
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The message praises the dashboard, reports a crash, and names a double charge. It gets praise, bug, and billing.",
-      '2-details': "praise, bug, and billing each clear 0.5.",
       '3-labels': "At 0.9, each line gets the one label its description fits.",
     },
   },
@@ -164,7 +162,6 @@ export const FUNCTIONS = [
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
-      '2-details': "The details put all of the weight on Immediate.",
       '3-lines': "The address change lands near 0, the Friday deadline near 1, and the login outage at 2.",
     },
   },
@@ -238,7 +235,6 @@ export const FUNCTIONS = [
     howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
     see: {
       '1-find': "find prints the line with the 30 day refund deadline.",
-      '2-details': "The second line holds all of the weight.",
       '3-none': "No line says how to cancel. find prints nothing and exits 3.",
       '4-jsonl': "Q1 holds the reset steps, and the whole record comes back.",
     },
@@ -271,7 +267,7 @@ export const FUNCTIONS = [
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
-    requests: 'It asks one question about every word, and one more about its kind when you allow two or more kinds. --dry-run prints the exact requests for the first record.',
+    requests: 'It finds candidate spans, assigns kinds, then tests requested relations. --dry-run prints the request plan for the first record.',
     args: 'KIND..., or one @FILE question file',
     options: [
       ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
@@ -283,16 +279,8 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'The model only picks from options. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
-    how: {
-      steps: [
-        'One call asks two questions of every word. Is it part of a name? And which of your kinds is it? Both questions go out together.',
-        'Each run of words in a name becomes one name. Its kind is the kind most of its words picked. Its strength is its weakest word\'s answer to the first question times the average answer for that kind.',
-        'With `--relation`, more calls follow. They ask how the names connect.',
-      ],
-      script: '1-details',
-    },
     see: {
-      '1-details': 'This sentence cost one call. `requests` lists one request, and `usage` counts 8092 tokens in. Under `answer.tokens`, each word carries `detection_probability`, its answer to the first question. A word above 0.5 is part of a name. `kind_probabilities` answers the second question, in the order person, song, album, place. Ringo and Starr both answer 1.0, so they join into one name. Both pick person, so the name is a person. The word "wrote" answers 0.0 and joins no name. `--threshold 0.5` then keeps the names with a strength of 0.5 or more. `--dry-run` prints the call count before you send anything.',
+      '1-names': 'The command returns the names, kinds, offsets, and strengths. Recognition uses candidate spans, kind selection, then relation checks when requested.',
     },
   },
   {
@@ -314,6 +302,9 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
+    see: {
+      '1-pair': 'The current pair question links gateway to billing. The edge comes from the model answer for these two named services.',
+    },
   },
   {
     name: 'question-file',
@@ -417,18 +408,18 @@ export const SURFACES = [
   {
     slug: 'python', name: 'Python', deckHeading: 'Python',
     lang: 'python', tab: 'Python',
-    blurb: 'Pass a string or a list, and get `True`, `False`, or `None` back. Build a question once and reuse it.',
+    blurb: 'Pass a string or a list. Read the answer from `Call.value`; `None` means not sure.',
     unsureWord: 'None',
     install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: [
-      'A list goes in and a list comes out. The list crosses into the engine once.',
+      'A list goes in and `Call.value` holds the answered list. The list crosses into the engine once.',
       '`tt.question()` builds a question that carries its own threshold. Reuse it wherever you ask.',
     ],
   },
   {
     slug: 'polars', name: 'Polars', deckHeading: 'Polars',
     lang: 'python', tab: 'Python',
-    blurb: 'A Polars frame goes in, and it comes back with one new column for each question.',
+    blurb: 'A Polars frame goes in. Read the frame with its new columns from `Call.value`.',
     unsureWord: 'None',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
@@ -439,18 +430,18 @@ export const SURFACES = [
   {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
     lang: 'ts', tab: 'TypeScript',
-    blurb: 'Ten async functions. Pass one options object and await the answer.',
+    blurb: 'Pass one options object. Await the call, then read its `.value`.',
     unsureWord: 'null',
     install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
     particular: [
       'An AbortSignal cancels the call, and the promise rejects at once.',
-      'Every call returns a promise. An array crosses once.',
+      'Every call returns a promise for a `Call`. An array crosses once.',
     ],
   },
   {
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
     lang: 'ruby', tab: 'Ruby',
-    blurb: 'Ten module methods. Any Enumerable goes in.',
+    blurb: 'Any Enumerable goes in. Read the answer from `Call#value`.',
     unsureWord: 'nil',
     install: [['gem install thinkthen', null]],
     particular: ['Any Enumerable crosses to the engine once.'],
@@ -458,11 +449,11 @@ export const SURFACES = [
   {
     slug: 'r', name: 'R', deckHeading: 'R',
     lang: 'r', tab: 'R',
-    blurb: 'Ten `tt_` functions that work inside dplyr.',
+    blurb: 'Ten asking verbs work inside dplyr. Read the answer from `$value`.',
     unsureWord: 'NA',
     install: [['install.packages("thinkthen")', null]],
     particular: [
-      'A column goes in and a column comes out.',
+      'A column goes in and the answered column is in `$value`.',
       'dplyr\'s `filter()` drops NA rows. A not-sure answer leaves the pipeline on its own.',
     ],
   },
@@ -685,7 +676,6 @@ export const RECIPES = [
     said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date ride through. Run it again, and the saved answers come back at no cost.',
     see: {
       '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
-      '2-again': 'The same command again, with the first ticket in full. `cached` is true and `requests_sent` is 0.',
     },
   },
   {

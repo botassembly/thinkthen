@@ -21,7 +21,8 @@ const texts = [
     "I cannot log in to track it.",
 ];
 const owners = await Promise.all(
-  texts.map((text) => tt.choose(teamQuestion, text)),
+  texts.map(async (text) =>
+    (await tt.choose(teamQuestion, text)).value),
 );
 assert.deepEqual(owners, [
   "billing",

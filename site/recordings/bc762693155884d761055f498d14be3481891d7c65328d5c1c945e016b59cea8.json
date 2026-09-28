@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"The Pay button on billing is too blue.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the report give steps to reproduce?"},"q2":{"type":"choice","instructions":"Which part of the app is this?","criteria":{"export":null,"login":null,"billing":null}},"q3":{"type":"score","instructions":"How much does this block the user?","criteria":["None.","Slows them.","Blocks work."]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.04},"q2":{"type":"choice","choice":"billing","confidence":1.0,"probabilities":{"billing":1.0,"export":0.0,"login":0.0}},"q3":{"type":"score","score":0.1,"confidence":0.85,"legend":{"0":"None.","1":"Slows them.","2":"Blocks work."},"probabilities":{"0":0.91,"1":0.09,"2":0.0}}},"usage":{"input_tokens":365,"output_tokens":71}}
+}

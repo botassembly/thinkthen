@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"This take is lazy and the author should quit.\n","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Which rule is in question here?\n\nDetermine whether the label \"insults\" applies to this item."},"q2":{"type":"noul","instructions":"Which rule is in question here?\n\nDetermine whether the label \"spam\" applies to this item."},"q3":{"type":"noul","instructions":"Which rule is in question here?\n\nDetermine whether the label \"offtopic\" applies to this item."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92},"q2":{"type":"noul","noul":0.24},"q3":{"type":"noul","noul":0.34}},"usage":{"input_tokens":359,"output_tokens":55}}
+}

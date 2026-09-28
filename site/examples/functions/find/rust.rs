@@ -9,5 +9,6 @@ let policy = [
     "Shipping is free on orders over $50.",
     "Gift cards cannot be exchanged for cash.",
 ];
-let refund_deadline = tt.find(&deadline, policy)?;
+let refund_deadline = tt.find(&deadline, policy)?
+    .into_value();
 assert_eq!(refund_deadline.selected(), Some(&policy[1]));

@@ -9,10 +9,10 @@ const relations = {
   works_for: ["person", "organization"],
   based_in: ["organization", "place"],
 };
-const facts = await tt.recognize(text, {
+const facts = (await tt.recognize(text, {
   kinds,
   relations,
-});
+})).value;
 const names = facts.entities.map((one) => [
   one.name,
   one.kind,
