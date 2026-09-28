@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 250
-opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/request.rs crates/thinkthen/src/public/error.rs crates/thinkthen/src/engine/request/tests.rs crates/thinkthen/tests/backend/cache_identity.rs crates/thinkthen/tests/public_env/cache_budget.rs specification/recording.md sdlc/ratchet.json sdlc/records sdlc/tickets
+opens: crates/thinkthen/src/engine/http.rs crates/thinkthen/src/engine/request.rs crates/thinkthen/src/public/error.rs crates/thinkthen/src/engine/request/tests.rs crates/thinkthen/tests/backend/cache_identity.rs crates/thinkthen/tests/public_env/cache_budget.rs sdlc/ratchet.json sdlc/records sdlc/tickets
 ---
 
 # 0250: Refuse a line-break key before first cache binding
 
-Status: design candidate for fresh independent review. No runtime claim or issue closure yet. This is a bounded remainder of [register 10](/home/ian/workspace/experiments/284-issue-register/10-d5-default-cache-binds-address.md) after accepted [0228](0228-cache-first-use-binding.md) and [0246](0246-cache-binding-before-send.md). The [preflight](../records/0250-cache-remainder-preflight.md) records the current source trace. ADR 0035, ADR 0099, ticket 0065 and the version-one marker remain authoritative; no new ADR is needed for moving this existing deterministic refusal earlier.
+Status: fresh independent High design review accepted `25939814`. The [build](../records/0250-cache-binding-build.md) is a focused source candidate awaiting a new High code review; no issue closure yet. This is a bounded remainder of register 10 (`experiments/284-issue-register/10-d5-default-cache-binds-address.md`) after accepted [0228](0228-cache-first-use-binding.md) and [0246](0246-cache-binding-before-send.md). The [preflight](../records/0250-cache-remainder-preflight.md) records the source trace. ADR 0035, ADR 0099, ticket 0065 and the version-one marker remain authoritative; no new ADR is needed for moving this existing deterministic refusal earlier.
 
 ## Outcome and exact limit
 

@@ -29,6 +29,14 @@ impl Key {
         &self.0
     }
 
+    pub(crate) fn check_line_break(&self) -> Result<(), Error> {
+        if self.0.bytes().any(|byte| byte == b'\n' || byte == b'\r') {
+            Err(Error::Usage("the API key contains a line break"))
+        } else {
+            Ok(())
+        }
+    }
+
     #[cfg(test)]
     pub(crate) fn of(value: &str) -> Self {
         Self(value.to_owned())
@@ -206,14 +214,7 @@ impl Client {
         before_attempt: impl Fn(bool),
         marked: impl Fn(),
     ) -> Result<HttpAnswer, Error> {
-        if exchange
-            .key
-            .as_str()
-            .bytes()
-            .any(|byte| byte == b'\n' || byte == b'\r')
-        {
-            return Err(Error::Usage("the API key contains a line break"));
-        }
+        exchange.key.check_line_break()?;
         let gates = backoff::process_gates(cancel)?;
         let mut wait = exchange.retry_wait;
         let mut retries = 0;

@@ -227,6 +227,73 @@ fn a_missing_key_leaves_an_unbound_folder_for_the_next_address() {
     assert_eq!(second.requests().len(), 3);
 }
 
+#[test]
+fn a_line_break_key_leaves_an_unbound_folder_for_the_next_address() {
+    const REFUSAL: &str = "thinkthen: the API key contains a line break\n";
+    let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
+    let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
+    for (row, named, present, key) in [
+        ("default-lf", false, false, "first\nsecond"),
+        ("named-cr", true, true, "first\rsecond"),
+    ] {
+        let home = folder(&format!("line-break-{row}-home"));
+        let cache = if named {
+            folder(&format!("line-break-{row}-cache"))
+        } else {
+            default_cache(&home)
+        };
+        if present {
+            fs::create_dir_all(&cache).expect("empty folder");
+        }
+        let before = present.then(|| files(&cache).expect("empty folder snapshot"));
+        let mut arguments = vec![
+            "decide",
+            QUESTION,
+            "--url",
+            first.base(),
+            "--model",
+            "local-1",
+        ];
+        let cache_text = cache.to_str().expect("cache path");
+        if named {
+            arguments.extend(["--cache", cache_text]);
+        }
+        let home_text = home.to_str().expect("home path");
+        let failed = spawn(
+            &arguments,
+            &[("HOME", home_text), ("THINKTHEN_API_KEY", key)],
+            EVIDENCE.as_bytes(),
+        )
+        .expect("line-break-key run");
+        assert_eq!(failed.status.code(), Some(2), "{row}");
+        assert!(failed.stdout.is_empty(), "{row}");
+        assert_eq!(String::from_utf8_lossy(&failed.stderr), REFUSAL, "{row}");
+        assert_eq!(cache.exists(), present, "{row}: folder presence");
+        if let Some(before) = before {
+            assert_eq!(files(&cache).expect("unchanged empty folder"), before);
+            assert_eq!(fs::read_dir(&cache).expect("folder").count(), 0);
+        }
+        arguments[3] = second.base();
+        let answered = spawn(
+            &arguments,
+            &[("HOME", home_text), ("THINKTHEN_API_KEY", "sk-test-value")],
+            EVIDENCE.as_bytes(),
+        )
+        .expect("second-address run");
+        assert_eq!(answered.status.code(), Some(0), "{row}");
+        assert!(cache.join(".thinkthen-backend.json").is_file(), "{row}");
+        let hit = spawn(
+            &arguments,
+            &[("HOME", home_text), ("THINKTHEN_API_KEY", key)],
+            EVIDENCE.as_bytes(),
+        )
+        .expect("bound hit with line-break key");
+        assert_eq!(hit.status.code(), Some(0), "{row}");
+    }
+    assert_eq!(first.requests().len(), 0);
+    assert_eq!(second.requests().len(), 2);
+}
+
 #[cfg(unix)]
 #[test]
 fn a_dangling_cache_path_is_storage_failure_before_key_lookup() {
