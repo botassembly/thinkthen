@@ -20,6 +20,11 @@ pub(crate) fn fail_cleanup() {
     fault::STORAGE_FAULT.with(|value| value.set(Some(fault::StorageStage::Cleanup)));
 }
 
+#[cfg(test)]
+pub(crate) fn fail_install() {
+    fault::STORAGE_FAULT.with(|value| value.set(Some(fault::StorageStage::Install)));
+}
+
 static WRITES: AtomicU64 = AtomicU64::new(0);
 
 /// Which folders `--record` and `--replay` named, once they agree.
@@ -30,6 +35,7 @@ pub(crate) struct Recorder {
     replaying: bool,
     private_default: bool,
     cache_answers: bool,
+    force_refresh: bool,
     /// Whether the folder's backend identity has matched once. The folder
     /// gate itself belongs to each operation, so no lock outlives a request.
     checked: AtomicBool,
@@ -103,8 +109,19 @@ impl Recorder {
             replaying: replay.is_some(),
             private_default,
             cache_answers,
+            force_refresh: false,
             checked: AtomicBool::new(false),
         })
+    }
+
+    /// Select a live replacement for every cache exchange in this engine.
+    pub(crate) fn with_refresh(mut self, refresh: bool) -> Self {
+        self.force_refresh = refresh;
+        self
+    }
+
+    pub(crate) const fn force_refresh(&self) -> bool {
+        self.force_refresh
     }
 
     pub(crate) const fn counts_cache_answers(&self) -> bool {
@@ -193,12 +210,24 @@ impl Recorder {
     }
 
     /// Prepare as `prepare_cancelled` does, reading an entry `complete` refuses as damaged.
+    #[cfg(test)]
     pub(crate) fn prepare_checked(
         &self,
         exchange: &Exchange<'_>,
         digest: &Digest,
         cancel: &crate::engine::Cancel,
         complete: &dyn Fn(&[u8]) -> bool,
+    ) -> Result<PreparedRecording, Error> {
+        self.prepare_checked_refresh(exchange, digest, cancel, complete, false)
+    }
+
+    pub(crate) fn prepare_checked_refresh(
+        &self,
+        exchange: &Exchange<'_>,
+        digest: &Digest,
+        cancel: &crate::engine::Cancel,
+        complete: &dyn Fn(&[u8]) -> bool,
+        refresh: bool,
     ) -> Result<PreparedRecording, Error> {
         let Some(folder) = self.folder.as_ref() else {
             return Ok(PreparedRecording::Live(WritePermit {
@@ -208,7 +237,7 @@ impl Recorder {
         };
         let gate = self.gate(exchange, &digest.file_name(), cancel)?;
         Ok(
-            match self.prepare_in(folder, exchange, digest, cancel, complete)? {
+            match self.prepare_in(folder, exchange, digest, cancel, complete, refresh)? {
                 PreparedRecording::Live(permit) => PreparedRecording::Live(permit.under(gate)),
                 replay @ PreparedRecording::Replay(_) => replay,
             },
@@ -216,6 +245,10 @@ impl Recorder {
     }
 
     /// Decide replay or prepare the write while the folder gate is held.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the exchange, cancellation, completeness and refresh policy stay explicit at storage preparation"
+    )]
     fn prepare_in(
         &self,
         folder: &Path,
@@ -223,9 +256,17 @@ impl Recorder {
         digest: &Digest,
         cancel: &crate::engine::Cancel,
         complete: &dyn Fn(&[u8]) -> bool,
+        refresh: bool,
     ) -> Result<PreparedRecording, Error> {
         let name = digest.file_name();
         let entry = folder.join(&name);
+        if refresh && self.caches() {
+            let lock = cache_lock::acquire_cancelled(folder, digest.as_str(), cancel)
+                .map_err(storage)??;
+            let found = existing(&entry, exchange)?;
+            let replace = !matches!(found, Existing::Missing);
+            return prepared_write(folder, entry, replace, Some(lock));
+        }
         let first = existing(&entry, exchange)?;
 
         if !self.recording {

@@ -4,6 +4,7 @@
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
 use std::io::Read;
+use std::io::{self, Write as _};
 use std::num::NonZeroUsize;
 use std::process::ExitCode;
 use std::time::Duration;
@@ -54,6 +55,17 @@ pub(crate) fn engine(
 ) -> Result<Engine, Failure> {
     let width = width.map(|jobs| Width::new(u64::from(jobs))).transpose()?;
     let roots = environment.roots()?;
+    if folders.record.is_some()
+        && folders.replay.is_some()
+        && (folders.refresh_cache
+            || crate::core::adapters::built_in::is_mutable_alias(backend.model()))
+    {
+        writeln!(
+            io::stderr().lock(),
+            "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge"
+        )
+        .map_err(Failure::Output)?;
+    }
     Ok(Engine::with_roots(
         Settings {
             backend,
@@ -67,6 +79,7 @@ pub(crate) fn engine(
                 replay: folders.replay,
                 private_default: folders.private_default,
                 cache_answers: folders.cache_answers,
+                refresh_cache: folders.refresh_cache,
             },
             key: environment.key_reader(),
             usage: environment.counters(),
