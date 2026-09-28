@@ -1,0 +1,36 @@
+opens: sdlc/tickets/0218-root-container-functional-checks.md sdlc/records/0218-root-gate-preflight.md sdlc/records/0218-design-review.md
+
+# 0218: Make root-container functional checks honest
+
+Status: proposed for fresh design review. Owner: Codex. The [preflight](../records/0218-root-gate-preflight.md) records the current gate paths and bounded local proof. This ticket authorizes no live ledger access or provider call. Ian may overturn the proposed full-gate root boundary after review.
+
+## Outcome and boundary
+
+Close items 1 and 3 of [the root-container issue](../issues/2026-09-25-two-gate-failures-in-a-root-container.md). The routine Linux `sdlc/scripts/test` gate should run its existing `sdlc/live-test` cases under root or an ordinary user. Its storage-failure case must reach the append of an initialized, regular *scratch* ledger and prove the existing uncertain-charge refusal and no job execution. The opt-in `sdlc/scripts/test-full-cases --run` should refuse early with one plain sentence when its Linux `RLIMIT_NPROC` case cannot bind, rather than spend the gate and report a misleading product failure. `--list` remains read-only and available to root.
+
+The supported full-functional Linux environment is a nonroot real UID without `CAP_SYS_ADMIN` or `CAP_SYS_RESOURCE`, with `prlimit` available. Real UID 0 is exempt from `RLIMIT_NPROC` even after a capability drop. A privileged nonroot process with either named capability is exempt too. The full gate must check both conditions before taking the heavy lock or starting Cargo. A Linux `/proc/self/status` capability read is appropriate for the Linux-only case; if that prerequisite cannot be read or parsed, refuse clearly. Do not silently skip the interrupt case. The direct focused `cargo test` invocation can retain its assertion, but its failure explanation should name both UID 0 and the two capabilities if that diagnostic is touched. Other operating systems do not compile this test and should keep their current gate path.
+
+## Retained behavior and prospective files
+
+- `sdlc/live-test`: replace only the `chmod 400` storage-failure trigger. Run the copied `sdlc/scripts/live` in a child-only file-size limit equal to the initialized scratch ledger's current byte length, with `SIGXFSZ` ignored in that child so its `os.write` returns `EFBIG`. The ledger remains a valid regular, private file and the command reaches its normal append error handler. Use an existing Linux `prlimit` prerequisite, or an equally small child-only limit wrapper; do not add a product flag or alter `sdlc/scripts/live`. Assert exit 1, the existing exact uncertain-charge sentence, unchanged scratch-ledger bytes, and absence of the job marker. Keep the other dummy-key and local-job cases intact.
+- `sdlc/scripts/test-full-cases`: add the preflight only to `--run` on Linux. Refuse UID 0, either effective capability, or an unavailable capability check with a plain message naming the unsupported `RLIMIT_NPROC` boundary. Leave `--list`, the routine `sdlc/scripts/test`, conformance selection and the full functional test set intact. A small shell preflight here avoids a new helper or a test-only product setting.
+- `crates/thinkthen/tests/backend/interrupt.rs`: keep the existing outside-in exit 70, exact stderr, empty stdout and zero-connection assertions. Change its prerequisite diagnostic only if the full-gate preflight leaves an inaccurate direct-test message. Do not replace this functional case with a skip or simulated spawn error.
+- `sdlc/records/0218-build.md` and the ticket's `What the build taught us`: record the accepted implementation, focused root/nonroot results and any corrected assumptions. No production source, live ledger, schema or public contract changes are proposed.
+
+## Focused proof and stopping rule
+
+1. In a throwaway copy, run the revised `sdlc/live-test` as an ordinary user and as UID 0 in an already available local container, with dummy keys and no network. A valid ledger must be present before the induced append failure; its bytes must remain unchanged. A directory at the ledger path would only prove an earlier type check and is insufficient.
+2. Run `sdlc/scripts/test-full-cases --list` under root and the `--run` preflight under root. The latter must refuse before Cargo and before taking the heavy lock. Check the same preflight under an ordinary, capability-free UID, then run only `cargo test --locked --offline -p thinkthen --test backend interrupt::a_carrier_that_cannot_spawn_is_a_defect_and_sends_nothing -- --exact` under that UID, inside `flock -o "$THINKTHEN_HEAVY_LOCK"` if it compiles. A capability-bearing nonroot probe needs only to establish the preflight refusal, not a whole gate.
+3. Run shell syntax, the focused scratch-ledger check, `sdlc/scripts/pages`, `sdlc/scripts/tickets` and `git diff --check`; use the smallest affected formatting/lint check if Rust changes. No broad gate, repeated or high-load campaign, provider call or real live-ledger run belongs to this ticket. Item 2's `ETXTBSY` correction is already closed by `qf-flaky-gate-tests`.
+
+## Evidence
+
+- Starts from: Main at the ticket's creation, the open items 1 and 3 of `sdlc/issues/2026-09-25-two-gate-failures-in-a-root-container.md`, current `sdlc/live-test`, `sdlc/scripts/{test,test-full-cases,live}` and `backend/interrupt.rs`, and the bounded UID/file-size proof in the preflight record.
+- Keeps: The routine functional case set, the opt-in full functional case set, the real append-failure warning, the no-send SIGINT-carrier assertion, dummy-only scratch-ledger tests, and every product/runtime behavior.
+- Changes: One root-independent scratch-ledger failure trigger and one explicit Linux full-gate privilege preflight; possibly one direct-test diagnostic sentence if necessary.
+- Proof: Focused ordinary-user and root-container scratch-ledger cases, root `--list` and early `--run` refusal, nonroot preflight plus the exact focused interrupt test, shell syntax and ticket/page/diff checks. Inspect actual exit, ledger bytes, job marker and listener connections rather than infer success from a shell status alone.
+- Defers: Running the entire full-functional gate, any provider or real live-ledger use, capability/UID provisioning inside a root container, and the issue's historical 20-run C campaign. Ian's later opt-in ruling supersedes that campaign as routine validation.
+
+## What the build taught us
+
+Preparation found that the two failures are in different gates: the routine gate selects `sdlc/live-test`, while only the opt-in full gate selects the `RLIMIT_NPROC` interrupt test through `--all-targets`. The ledger write is a raw `os.write` after a valid-ledger read; a directory substitution would miss the append branch. A child file-size limit returned `EFBIG` and preserved a tiny scratch file under both UID 1000 and UID 0. The first buffered-write probe did not flush and therefore could not establish failure; the corrected probe used raw `os.write`. `RLIMIT_NPROC` bound an ordinary UID but did not bind UID 0 in the available local container, so dropping capabilities alone would not establish equivalent root coverage. These are preflight findings, not completed build results. The builder must update this section after implementation and review.
