@@ -2,9 +2,7 @@
 
 use std::fmt;
 
-use crate::core::{
-    self, AnswerOutcome, Backend, ModelName, ProfileName, Threshold,
-};
+use crate::core::{self, AnswerOutcome, Backend, ModelName, ProfileName, Threshold};
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::Answered;
 use crate::public::annotated::{FailureCause, NamedAnnotation};
