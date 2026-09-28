@@ -8,7 +8,7 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 | --- | --- |
 | `thinkthen_decide(question, text)` | `BOOLEAN`; `NULL` is "not sure" |
 | `thinkthen_probability(question, text)` | `DOUBLE`, the yes probability |
-| `thinkthen_choose(question, text, options)` | `VARCHAR`, or `NULL` when no option clears the cut |
+| `thinkthen_choose(question, text, options)` | `VARCHAR`, or `NULL` when the choice is not sure (below the cut or an exact tie) |
 | `thinkthen_score(question, text, levels)` | `DOUBLE`, the position from 0 for the first level |
 | `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
 | `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
@@ -32,6 +32,20 @@ SELECT id FROM (
 SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team FROM tickets;
 ```
 
+## Constrain a stored answer
+
+`thinkthen_choose` returns plain `VARCHAR`. Cast its result to a caller-owned DuckDB `ENUM` when storing a fixed label set:
+
+```sql
+CREATE TYPE team_label AS ENUM ('billing', 'shipping');
+CREATE TABLE judged (id BIGINT, team team_label);
+INSERT INTO judged
+SELECT id, CAST(thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team_label)
+FROM tickets;
+```
+
+The cast refuses a label outside the enum. A stored `NULL` can represent a choice below the cut or an exact tie. The cast and column admit `NULL`; input-`NULL` behavior follows the function's argument rules. A failed ThinkThen call raises its named error and does not produce a row to cast. Do not catch that error and store `NULL` as if it were uncertainty. This is a constraint on the stored answer, not a change to the function's return type.
+
 ## Run facts
 
 `thinkthen_details(question, text)` returns the command's `--details` line for one text as JSON text, schema `thinkthen.result/1`. Read a member with DuckDB's JSON functions, such as `thinkthen_details(q, t) ->> '$.meta.usage.input_tokens'`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
@@ -48,6 +62,8 @@ The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY
 - `SET thinkthen_max_requests = N` caps one call's requests. One call covers one chunk of at most 2,048 rows, so the cap does not bound a whole query. `sdlc/issues/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md` names the lever.
 - `SET thinkthen_cache = '/absolute/folder'` moves the cache. The folder must be an absolute local path with no scheme, and the calling database's own file settings must allow it. Each call checks both before it asks anything.
 - `SET thinkthen_max_requests_total = N` caps the requests this process sends. Before each call the extension adds up what its engines have sent. A spent total reads `thinkthen usage: this process has spent its request total of N; raise SET thinkthen_max_requests_total or RESET it` and sends nothing. A call with more texts than remain sends only the first ones that fit, then raises the same sentence. Calls running at the same time can each spend what remains, so the total can be passed by one call per thread in flight, plus retries. A forked child starts from zero. `thinkthen_warm` reads no session setting, so the total does not bind it. `thinkthen status` never sees this spend, because it counts only what the command sends.
+
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. There is no off switch on this surface. `SET thinkthen_cache = '/absolute/folder'` moves the folder, and `THINKTHEN_CACHE` moves the folder `thinkthen_warm` uses.
 
 A bad value's `SET` succeeds, since DuckDB has no check step for an extension setting, and the next call refuses it. The refusal uses the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps at most 16 resident engines, one per distinct throttle, request limit, and cache folder. A new plan retires the least recently used idle engine and keeps its requests and tokens in the process total. When all 16 plans are held, the new plan refuses: `16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process`.
 

@@ -1,6 +1,6 @@
 # Surfaces write judged text to disk without saying so
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 12, finding 2.1. Blocks 0.1: it is a data-boundary claim, and every library and SQL reader meets it. Owner for the documentation items: ticket 0163 on `ticket/0163-the-cache-folder-and-its-pages`, ready for review.
+Status: open. The disclosure and off/move instructions landed with reviewed 0163 source `0292cba2`. SQL cache defaults and expiry decisions remain open; SQL off switches belong to 0149.
 
 ## What happens
 

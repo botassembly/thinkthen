@@ -12,8 +12,12 @@ Add concise investigation notes to the ticket. A shared record may hold facts co
 
 - What the code does, where it does it, and how the reported problem arises.
 - The agreed outcome, retained behavior, prerequisites, exact files and live lane conflicts.
+- Inventory every completion adapter, copied argument conversion and private parent export that the change mutates. A call path alone can omit files needed at the final handoff.
+- Measure existing nonblank lines against each enforced file ceiling before treating a ticket's estimated growth as headroom. If a file is close, plan reuse or one coherent private extraction and review the actual growth.
 - Reusable code, experiments, fixtures and test helpers. Name fixture hashing, copied examples, serialized fields or host contracts that can surprise the build.
+- Keep one intended failure per fixture. Preserve valid digest names and inputs when testing a schema or file-open error, so an earlier failure cannot mask the target boundary.
 - Check each host's accepted value ranges and NULL rules before reusing a proof across ports; a value valid in one host may be refused in another.
+- For port settings, inspect every current constructor and overload before copying an accepted ticket's sentence. A later landed adapter may already support a value that older prose called absent.
 - The smallest relevant validation commands and what each proves. Keep setup, compile, execution and lock wait separate when measured. No load campaign belongs in preparation.
 - Unresolved questions and missing evidence. Distinguish a proposed solution from an accepted decision; seek design review before changing the contract.
 
@@ -47,5 +51,13 @@ The 0170 preparation review caught another overstatement: a hook named `attempt_
 Use the [incident log](../records/2026-09-27-ticket-friction-since-1300.md) when briefing the next agent. Add each new substantive review rejection, misunderstanding or build surprise with its evidence and known or unknown cause. Send the retained preparation agent to check the named upcoming tickets for the same failure pattern, claim those note files, and record what it corrected or left unresolved. Keep the pass limited to the affected family.
 
 The first batching pass found complete argument paths and the mixed replay/live counter constraint. Review caught its mistaken assertion that an attempt hook necessarily counts a started transport: current code still checks the deadline after that hook. Check side-effect order through the final operation, not just method names. Pin accepted branch evidence to a commit so later branch cleanup cannot remove the reference. The corrected notes name the existing 0149 owner and a narrow prerequisite for 0170; they do not invent another issue or count the gap as fixed.
+
+The 0171 build found two gaps in an otherwise useful handoff: a shared `Run` value had a library initializer outside the CLI files, and the existing JSON splice helper could not remove a stale member while preserving other bytes. For the next ticket, search all constructors of each changed shared value and list the exact edit operations a file mutation needs before treating the source inventory as complete. Preparation value is checked against the later build and review; these catches alone do not establish a speed gain.
+
+The 0207 SQLite build found that a shared JSON round trip sorted `recognize` kinds and changed strict captured request bytes. The correction landed on main `30d340d1`. Before reusing a JSON adapter, trace order-sensitive fields through parse and serialization and compare the final request body and digest where order matters. This is a bounded preparation check, not a claim that all JSON member order is significant.
+
+The 0171 builder started a full `surfaces` run for its own CLI warning change. It rebuilt the unchanged R package and held the shared heavy lock while DuckDB waited. The builder stopped the run; its exit 130 is not a passing gate, even though completed library segments passed. Require an explicitly named related-ticket checkpoint in the coordinator brief before a full `test`, `spec`, or `surfaces` run. Use focused commands freely for the ticket's changed behavior, and retain completed broad segments only as partial evidence.
+
+Fresh review of 0171 caught two proof holes: the shared saved-setting reader dropped a present invalid `meta.batch.setting` as if it were absent, and a per-row assertion did not first establish how many rows existed. For future metadata readers, separate absent legacy fields from present malformed fields before applying a default. In outside-in row tests, assert the expected count before testing every row's contents. The 0171 correction has a numbered audit refusal and unchanged-file proof; its follow-up review is pending.
 
 For retained CLI workers, launch each resume from its explicit assigned worktree with the intended approval and sandbox settings. Verify cwd and branch before editing. After a scripted completion edit, assert that the target matched and read the resulting status; a no-op replacement can otherwise leave a landed ticket marked pending.

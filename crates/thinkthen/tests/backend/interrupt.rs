@@ -13,6 +13,8 @@ use std::time::Duration;
 
 use crate::harness::{Canned, Listener, Observed, finish};
 
+mod facts_flush;
+
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 const PICKED: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u002","#,
@@ -263,6 +265,46 @@ fn a_signal_after_a_hung_request_is_the_stop() {
 }
 
 #[test]
+fn the_facts_line_follows_the_stop_line_before_sigterm() {
+    let output = held_with_signal(
+        signal_hook::consts::signal::SIGTERM,
+        1,
+        &[
+            "decide",
+            "Accepted?",
+            "--lines",
+            "--jobs",
+            "1",
+            "--batch",
+            "1",
+            "--max-retries",
+            "0",
+            "--facts",
+        ],
+        b"first\nsecond\n",
+        || Canned::status(503, "busy"),
+    )
+    .expect("interrupted facts run");
+    assert!(output.stdout.is_empty());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let mut lines = stderr.lines();
+    assert_eq!(
+        lines.next(),
+        Some("thinkthen: stopped by a signal; 0 records finished")
+    );
+    let facts: serde_json::Value =
+        serde_json::from_str(lines.next().expect("facts line")).expect("run facts JSON");
+    assert!(lines.next().is_none());
+    assert_eq!(facts["records"], 0);
+    assert_eq!(facts["requests_sent"], 1);
+    assert!(facts.get("model").is_none());
+    assert_eq!(
+        facts["stopped"],
+        serde_json::json!({"cause":"cancelled","retryable":false})
+    );
+}
+
+#[test]
 fn a_second_signal_of_either_kind_ends_the_run_at_once() {
     for (first, second, exited) in [
         ("-INT", "-TERM", signal_hook::consts::signal::SIGTERM),
@@ -279,6 +321,7 @@ fn a_second_signal_of_either_kind_ends_the_run_at_once() {
                 "4",
                 "--max-retries",
                 "0",
+                "--facts",
             ],
             b"first\n",
             first,

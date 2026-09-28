@@ -1,6 +1,6 @@
 # Run facts ticket B5 owes a cause, a retryable flag and the stop record
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 11, issue 2, with report 01, issue 6. An amendment to batching ticket B5, run facts, which is in 0.1. It blocks 0.1 only as part of B5.
+Status: Closed by ticket 0170 on 2026-09-27. The `thinkthen.run/1` line names the cause, retry rule and stop record. Filed 2026-09-26 by the queue owner from local experiment 273, report 11, issue 2, with report 01, issue 6. An amendment to batching ticket B5, run facts, which is in 0.1.
 
 ## What happens
 

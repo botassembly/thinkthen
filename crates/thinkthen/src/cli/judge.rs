@@ -13,7 +13,7 @@ use crate::args::{
     ScoreArguments, TagArguments,
 };
 use crate::asking::{Asks, fixed, run};
-use crate::cli::asked;
+use crate::cli::asked::{self, FileTier};
 use crate::edge::Environment;
 use crate::failure::Failure;
 use crate::schedule::Output;
@@ -37,6 +37,7 @@ pub(crate) struct Tiers<'a> {
     pub(crate) flag: Option<&'a str>,
     pub(crate) request_size: Option<&'a str>,
     pub(crate) file: Option<Json>,
+    pub(crate) tuned: bool,
 }
 
 impl Tiers<'_> {
@@ -235,11 +236,12 @@ pub(crate) fn rank(
     )
 }
 
-fn tiers(batching: &Batching, file: Option<Json>) -> Tiers<'_> {
+fn tiers(batching: &Batching, file: FileTier) -> Tiers<'_> {
     Tiers {
         flag: batching.batch.as_deref(),
         request_size: batching.max_request_bytes.as_deref(),
-        file,
+        file: file.batch,
+        tuned: file.tuned,
     }
 }
 
@@ -274,12 +276,8 @@ fn over_kept(
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
     let mut output = match keeping {
-        Keeping::Ordered => Output::Ordered {
-            held: Vec::new(),
-            top,
-            writer,
-        },
-        _ => Output::Streaming(writer),
+        Keeping::Ordered => Output::ordered(writer, top, environment.usage()),
+        _ => Output::streaming(writer, environment.usage()),
     };
     run(
         Asked {
@@ -308,7 +306,12 @@ fn judging(
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let writer: &mut dyn Write = &mut writer;
-    run(asked, environment, input, &mut Output::Streaming(writer))
+    run(
+        asked,
+        environment,
+        input,
+        &mut Output::streaming(writer, environment.usage()),
+    )
 }
 
 /// Pick one label from the options, and set the exit code from the answer.

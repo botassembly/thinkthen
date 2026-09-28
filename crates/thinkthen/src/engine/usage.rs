@@ -13,6 +13,8 @@ use crate::core::Usage;
 mod counts;
 pub(crate) use counts::Counts;
 mod attempt;
+mod facts;
+pub(crate) use facts::Snapshot as RunSnapshot;
 
 const SCHEMA: &str = "thinkthen.usage/1";
 
@@ -33,6 +35,7 @@ struct Shared {
 struct Queue {
     /// The process totals, which the command, library, and SQL surfaces read.
     totals: Counts,
+    facts: facts::State,
     /// Deltas not yet written, one sum for each month they were counted in.
     pending: Vec<(String, Counts)>,
     writing: bool,

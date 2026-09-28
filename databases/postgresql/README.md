@@ -35,6 +35,20 @@ SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency
 FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;
 ```
 
+## Constrain a stored answer
+
+`thinkthen_choose` returns plain `text`. A caller-owned PostgreSQL domain constrains a stored answer without changing that function:
+
+```sql
+CREATE DOMAIN team_label AS text CHECK (VALUE IN ('billing', 'shipping'));
+CREATE TABLE judged (id bigint, team team_label);
+INSERT INTO judged
+SELECT id, thinkthen_choose('Which team owns this?', body, ARRAY['billing', 'shipping'])
+FROM tickets;
+```
+
+The domain rejects a different non-`NULL` label. A stored `NULL` can represent a choice below the cut or an exact tie. The domain permits `NULL`. With a valid question, `NULL` evidence also returns SQL `NULL` without a judgment; a `NULL` question instead raises `usage` during question parsing. A failed ThinkThen call raises its named error; do not replace the error with `NULL` merely to pass the domain. The constraint belongs to the stored column, and the function keeps its existing `text` result.
+
 ## Run facts
 
 `thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
@@ -54,6 +68,10 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency 
 | `thinkthen.cache` | superuser | the answer cache folder. Empty keeps `THINKTHEN_CACHE` or the platform folder |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
+
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. There is no off switch on this surface. `thinkthen.cache` moves the folder, and an empty value keeps `THINKTHEN_CACHE` or the platform folder.
+
+The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 

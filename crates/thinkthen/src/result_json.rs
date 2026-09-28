@@ -2,8 +2,8 @@
 //! and the library's `Details::to_json` both write it here, so their bytes agree.
 
 use crate::core::{
-    Backend, DecisionResult, Meta, ProfileName, ProfileWarning, Question, Record, RenderError,
-    RequestMeta, Threshold, Value, json_line, question_sha256_with_profile,
+    Backend, BatchMeta, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning, Question,
+    Record, RenderError, RequestMeta, Threshold, Value, json_line, question_sha256_with_profile,
 };
 use crate::engine::facade::Judgment;
 
@@ -13,6 +13,7 @@ pub(crate) struct Run<'a> {
     pub(crate) backend: &'a Backend,
     pub(crate) tuned_for: Option<&'a ProfileName>,
     pub(crate) warning: Option<ProfileWarning>,
+    pub(crate) batch_warning: Option<BatchWarning>,
 }
 
 /// One `thinkthen.result/1` line. `shown` is the value the row prints, and
@@ -29,6 +30,22 @@ pub(crate) fn decision(
     shown: Value,
     input: Option<Record>,
 ) -> Result<String, RenderError> {
+    decision_with_batch(run, judged, question, threshold, shown, input, None)
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the optional batch belongs to the same result document"
+)]
+pub(crate) fn decision_with_batch(
+    run: Run<'_>,
+    judged: &Judgment,
+    question: Question,
+    threshold: Option<Threshold>,
+    shown: Value,
+    input: Option<Record>,
+    batch: Option<BatchMeta>,
+) -> Result<String, RenderError> {
     let answered = &judged.answered;
     let meta = Meta::new(
         env!("CARGO_PKG_VERSION"),
@@ -41,7 +58,9 @@ pub(crate) fn decision(
             answered.requests_sent,
             vec![answered.request.as_str().to_owned()],
         )
-        .with_profile_warning(run.warning),
+        .with_profile_warning(run.warning)
+        .with_batch(batch)
+        .with_batch_warning(run.batch_warning),
     );
     let row = DecisionResult::new(shown, question, judged.answer.clone(), threshold, meta);
     json_line(&match input {

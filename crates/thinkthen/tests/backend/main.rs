@@ -44,6 +44,12 @@ mod default_cache;
 mod default_cache_storage;
 mod distribution_total;
 mod exchange;
+#[allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "a missing compiled-command fact or loopback fixture stops the boundary proof"
+)]
+mod facts;
 mod find;
 mod from_record;
 #[cfg(unix)]

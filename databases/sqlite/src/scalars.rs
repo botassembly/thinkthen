@@ -10,7 +10,7 @@ use rusqlite::types::ValueRef;
 use thinkthen::{Answer, CallOptions, Judgment, LoadedQuestion, Question, QuestionKind};
 
 use crate::question::{question, set, shown, text};
-use crate::{Failure, ffi, guard, settings, worker};
+use crate::{Failure, ffi, guard, recognize_document, settings, worker};
 
 /// Warm sends each question's texts in chunks of this many rows.
 const CHUNK: usize = 256;
@@ -403,6 +403,12 @@ impl Aggregate<WarmState, i64> for Warm {
 /// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
+    connection.create_scalar_function(
+        "thinkthen_recognize_document",
+        2,
+        volatile,
+        recognize_document::recognize_document,
+    )?;
     for arity in [2, 3] {
         connection.create_scalar_function("thinkthen_decide", arity, volatile, decide)?;
         connection.create_scalar_function("thinkthen_choose", arity, volatile, choose)?;

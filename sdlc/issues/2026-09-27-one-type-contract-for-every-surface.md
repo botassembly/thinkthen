@@ -11,7 +11,7 @@ Add batch J to `sdlc/planning/work-plan-2026-09-27.md`. Leave the existing ticke
 - **J1** is ready now. It edits only `specification/`, a new ADR and a fixture corpus, so it collides with no running lane.
 - **J2** is a defect and is ready now. It edits the Python frame code and the Rust Polars door before B12d starts.
 - **J3 to J6** each run in the same lane right after that library's batching ticket, B12b to B12f, because they edit the same files.
-- **J7** is ready after J1.
+- **J7** is done: reviewed SQL constraint recipes and literal host proof are recorded in [the Quick Fix record](../records/qf-sql-answer-constraints.md).
 - **J8** is one integration ticket per port, after J1. Rule 2 gates each one.
 - Add J1 to J8 to the "Every item" table as to do, and update the Counts line.
 
@@ -110,7 +110,7 @@ Each form maps to the same ordered set of labels with optional descriptions.
 | J4 | Rust `choices!` carries descriptions. | Libraries | S |
 | J5 | Python accepts `Enum` and `Literal`, the stub gains `Literal` kinds and a typed annotate row, and the `[pydantic]` extra is added. | Libraries | M |
 | J6 | Check Ruby and R for maps, structured descriptions, the failure marker and named kinds. Fix what fails. | Libraries | S |
-| J7 | A SQL recipe for constraining answer columns, one per database. | Databases / Pages | S |
+| J7 | A SQL recipe for constraining answer columns, one per database. Done after fresh review of `be25a5c9`; valid, invalid and NULL literals checked on all three pinned hosts. See [the Quick Fix record](../records/qf-sql-answer-constraints.md). | Databases / Pages | S |
 | J8 | Each port integration ticket meets rule 2 and passes the J1 corpus. | Libraries | one per port |
 
 ## 7. Note to the language-port team

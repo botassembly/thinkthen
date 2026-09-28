@@ -33,12 +33,14 @@ pub(crate) struct Pruned {
     pub(crate) removed_bytes: u64,
     pub(crate) remaining_entries: u64,
     pub(crate) remaining_bytes: u64,
+    pub(crate) bad_names: Vec<String>,
 }
 
 #[derive(Debug)]
 pub(crate) struct Inspected {
     pub(crate) entries: u64,
     pub(crate) bytes: u64,
+    pub(crate) bad_entries: u64,
 }
 
 pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> {
@@ -47,6 +49,7 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
             return Ok(Inspected {
                 entries: 0,
                 bytes: 0,
+                bad_entries: 0,
             });
         }
         Err(error) => return Err(storage(error)),
@@ -69,12 +72,23 @@ pub(crate) fn inspect(folder: &Path, private: bool) -> Result<Inspected, Error> 
         return Err(Error::CacheEntry);
     }
     let found = scan(folder)?;
-    let entries = u64::try_from(found.len()).map_err(|_| Error::RecordingStorage)?;
+    let entries = u64::try_from(found.good.len()).map_err(|_| Error::RecordingStorage)?;
     let bytes = found
+        .good
         .iter()
         .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
         .ok_or(Error::RecordingStorage)?;
-    Ok(Inspected { entries, bytes })
+    let bad_entries = u64::try_from(found.bad.len()).map_err(|_| Error::RecordingStorage)?;
+    Ok(Inspected {
+        entries,
+        bytes,
+        bad_entries,
+    })
+}
+
+struct Scanned {
+    good: Vec<Found>,
+    bad: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -94,17 +108,17 @@ pub(crate) fn run(folder: &Path, options: &Prune) -> Result<Pruned, Error> {
 }
 
 fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Error> {
-    let mut found = scan(folder)?;
+    let Scanned { mut good, bad } = scan(folder)?;
     if let Some(model) = options.answered_by_other_than.as_deref()
-        && !found.is_empty()
-        && !found.iter().any(|entry| entry.model == model)
+        && !good.is_empty()
+        && !good.iter().any(|entry| entry.model == model)
     {
-        let alias = found
+        let alias = good
             .iter()
             .any(|entry| entry.requested.as_deref() == Some(model));
         return Err(Error::Usage(if alias { ALIAS } else { UNKNOWN }));
     }
-    for entry in &mut found {
+    for entry in &mut good {
         let old = options.older_than.is_some_and(|age| {
             now.checked_sub(age)
                 .is_some_and(|edge| entry.modified < edge)
@@ -115,12 +129,12 @@ fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Err
             .is_some_and(|model| entry.model != model);
         entry.remove = old || other;
     }
-    let mut kept_bytes = found
+    let mut kept_bytes = good
         .iter()
         .filter(|entry| !entry.remove)
         .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
         .ok_or(Error::RecordingStorage)?;
-    let mut oldest: Vec<_> = found.iter_mut().filter(|entry| !entry.remove).collect();
+    let mut oldest: Vec<_> = good.iter_mut().filter(|entry| !entry.remove).collect();
     oldest.sort_by(|left, right| {
         left.modified
             .cmp(&right.modified)
@@ -136,7 +150,7 @@ fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Err
             .ok_or(Error::RecordingStorage)?;
     }
 
-    let mut selected: Vec<_> = found.iter().filter(|entry| entry.remove).collect();
+    let mut selected: Vec<_> = good.iter().filter(|entry| entry.remove).collect();
     selected.sort_by(|left, right| {
         left.modified
             .cmp(&right.modified)
@@ -163,11 +177,11 @@ fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Err
     if removed_entries > 0 {
         cache_lock::sync_directory(folder).map_err(storage)?;
     }
-    let remaining_entries = u64::try_from(found.len())
+    let remaining_entries = u64::try_from(good.len())
         .map_err(|_| Error::RecordingStorage)?
         .checked_sub(removed_entries)
         .ok_or(Error::RecordingStorage)?;
-    let total = found
+    let total = good
         .iter()
         .try_fold(0u64, |sum, entry| sum.checked_add(entry.bytes))
         .ok_or(Error::RecordingStorage)?;
@@ -178,6 +192,7 @@ fn run_at(folder: &Path, options: &Prune, now: SystemTime) -> Result<Pruned, Err
         remaining_bytes: total
             .checked_sub(removed_bytes)
             .ok_or(Error::RecordingStorage)?,
+        bad_names: bad,
     })
 }
 
@@ -203,49 +218,93 @@ const fn maybe_fail(_removed: u64) -> Result<(), Error> {
     Ok(())
 }
 
-fn scan(folder: &Path) -> Result<Vec<Found>, Error> {
-    let mut found = Vec::new();
+fn scan(folder: &Path) -> Result<Scanned, Error> {
+    let mut found = Scanned {
+        good: Vec::new(),
+        bad: Vec::new(),
+    };
     for item in fs::read_dir(folder).map_err(storage)? {
         let item = item.map_err(storage)?;
         let name = item.file_name().to_string_lossy().into_owned();
         if !digest_name(&name) {
             continue;
         }
-        let metadata = fs::symlink_metadata(item.path()).map_err(storage)?;
-        if !metadata.file_type().is_file() {
-            return Err(Error::CacheEntry);
+        match read_entry(&item.path(), &name) {
+            Ok(Some(entry)) => found.good.push(entry),
+            Ok(None) => {}
+            Err(()) => found.bad.push(name),
         }
-        let file = fs::File::open(item.path()).map_err(storage)?;
-        let opened = file.metadata().map_err(storage)?;
-        if !same_identity(&metadata, &opened) {
-            return Err(Error::CacheEntry);
-        }
-        let bytes = {
-            use std::io::Read as _;
-            let mut file = file;
-            let mut bytes = Vec::new();
-            file.read_to_end(&mut bytes).map_err(storage)?;
-            bytes
-        };
-        let final_metadata = fs::symlink_metadata(item.path()).map_err(storage)?;
-        if final_metadata.file_type().is_symlink() || !same_identity(&opened, &final_metadata) {
-            return Err(Error::CacheEntry);
-        }
-        let (digest, model, requested) = Entry::inspected(&bytes).map_err(|_| Error::CacheEntry)?;
-        if digest.file_name() != name {
-            return Err(Error::CacheEntry);
-        }
-        found.push(Found {
-            path: item.path(),
-            name,
-            bytes: allocated(&metadata),
-            modified: metadata.modified().map_err(storage)?,
-            model,
-            requested,
-            remove: false,
-        });
     }
+    found.bad.sort();
     Ok(found)
+}
+
+fn read_entry(path: &Path, name: &str) -> Result<Option<Found>, ()> {
+    let metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(()),
+    };
+    if !metadata.file_type().is_file() {
+        return Err(());
+    }
+    let file = match open_entry(path) {
+        Ok(file) => file,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(()),
+    };
+    let opened = file.metadata().map_err(|_| ())?;
+    if !same_identity(&metadata, &opened) {
+        return Err(());
+    }
+    let bytes = {
+        use std::io::Read as _;
+        let mut file = file;
+        let mut bytes = Vec::new();
+        file.read_to_end(&mut bytes).map_err(|_| ())?;
+        bytes
+    };
+    let final_metadata = match fs::symlink_metadata(path) {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(_) => return Err(()),
+    };
+    if final_metadata.file_type().is_symlink() || !same_identity(&opened, &final_metadata) {
+        return Err(());
+    }
+    let (digest, model, requested) = Entry::inspected(&bytes).map_err(|_| ())?;
+    if digest.file_name() != name {
+        return Err(());
+    }
+    Ok(Some(Found {
+        path: path.to_path_buf(),
+        name: name.to_owned(),
+        bytes: allocated(&metadata),
+        modified: metadata.modified().map_err(|_| ())?,
+        model,
+        requested,
+        remove: false,
+    }))
+}
+
+fn open_entry(path: &Path) -> io::Result<fs::File> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt as _;
+        // The path can change after symlink_metadata. Reject a new symlink at
+        // open, and never wait for a replacement FIFO before checking identity.
+        options.custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt as _;
+        // Open a reparse point itself, so a replaced link cannot redirect the read.
+        const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+        options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+    options.open(path)
 }
 
 #[cfg(unix)]
