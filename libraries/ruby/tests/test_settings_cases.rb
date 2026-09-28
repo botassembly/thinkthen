@@ -49,14 +49,14 @@ class TestSettingsCases < Minitest::Test
         engine = T::Engine.new(**settings)
         value = if #{step["verb"] == "relate"}
                   engine.relate(#{entry.fetch("entities", []).map { |one| [one.fetch("name"), one.fetch("kind")] }.inspect},
-                    relations: { linked: %w[item item] }).length
+                    relations: { linked: %w[item item] }).value.length
                 elsif #{step["verb"] == "decide_many"}
-                  engine.decide_many(#{CASES.fetch("question").inspect}, #{step.fetch("records", []).inspect})
+                  engine.decide_many(#{CASES.fetch("question").inspect}, #{step.fetch("records", []).inspect}, batch: 1).value
                 elsif #{step.key?("model")}
-                  details = engine.details(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect})
+                  details = engine.details(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect}).value
                   { "value" => details["value"], "model" => details["meta"]["model"] }
                 else
-                  engine.decide(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect})
+                  engine.decide(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect}).value
                 end
         say(value.is_a?(Hash) ? value : { "value" => value })
       rescue T::Error => error

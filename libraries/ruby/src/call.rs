@@ -1,11 +1,14 @@
 //! The calls a worker runs: owned inputs in, plain Rust values out.
 
+use std::sync::{Mutex, PoisonError};
+
 use thinkthen::{
-    Answer, CallOptions, CancelToken, Details, Engine, Entity, Evidence, Judgment, LoadedQuestion,
-    Question, QuestionSet, Recognize, Relate,
+    Answer, Batch, CallOptions, CancelToken, Details, Engine, Entity, Evidence, Facts, Judgment,
+    LoadedQuestion, Question, QuestionSet, Recognize, Relate,
 };
 
-use crate::Fault;
+use crate::result::{Completed, Detail};
+use crate::{Controls, Fault};
 
 /// One text and its place in the caller's input.
 #[derive(Debug)]
@@ -32,6 +35,7 @@ pub(crate) enum Ask {
     Details(LoadedQuestion, String),
     Score(LoadedQuestion, String),
     DecideMany(LoadedQuestion, Vec<String>),
+    Many(LoadedQuestion, Vec<String>),
     Filter(LoadedQuestion, Vec<String>),
     Rank(String, Vec<String>),
     /// The question text, whether it offers none, and the units.
@@ -57,6 +61,7 @@ pub(crate) enum Output {
     Score(f64),
     Details(String, Value, Option<String>),
     Rows(Vec<(Option<bool>, f64)>),
+    Many(Vec<Value>),
     Places(Vec<usize>),
     Ranked(Vec<(usize, f64)>),
     Found(Option<(usize, f64)>),
@@ -72,14 +77,21 @@ const fn answer(value: Answer) -> Option<bool> {
     }
 }
 
-fn details(found: &Details) -> Output {
-    let value = match found.value() {
+fn value_of(found: &Judgment) -> Value {
+    match found {
         Judgment::Decision(held) => Value::Decision(answer(*held)),
         Judgment::Choice(pick) => Value::Choice(pick.clone()),
         Judgment::Score(position) => Value::Score(*position),
         Judgment::Tags(labels) => Value::Tags(labels.clone()),
-    };
-    Output::Details(found.to_json(), value, found.nearest().map(str::to_owned))
+    }
+}
+
+fn details(found: &Details) -> Output {
+    Output::Details(
+        found.to_json(),
+        value_of(found.value()),
+        found.nearest().map(str::to_owned),
+    )
 }
 
 /// A question that reads one cut, for the calls that refuse a band.
@@ -93,90 +105,185 @@ fn unbanded(question: LoadedQuestion, call: &str) -> Result<Question, Fault> {
 }
 
 /// Run one call to its end on the calling thread, the worker.
+fn collected<T, V>(
+    mut batch: Batch<'_, T>,
+    map: impl Fn(T) -> V,
+) -> Result<(Vec<V>, Facts), Fault> {
+    let mut values = Vec::new();
+    for row in batch.by_ref() {
+        values.push(map(row?));
+    }
+    let facts = batch.facts().cloned().ok_or_else(|| {
+        Fault::of(
+            thinkthen::ErrorKind::Defect,
+            "a completed batch has no facts",
+        )
+    })?;
+    Ok((values, facts))
+}
+
 pub(crate) fn run(
     engine: &Engine,
     ask: Ask,
     own: &CancelToken,
-    deadline: Option<f64>,
-) -> Result<Output, Fault> {
+    controls: Controls,
+) -> Result<Completed, Fault> {
+    let observed = Mutex::new(Vec::new());
+    let observe = |event: thinkthen::RecordObservation<'_>| {
+        if let Some(detail) = Detail::copy(event) {
+            observed
+                .lock()
+                .unwrap_or_else(PoisonError::into_inner)
+                .push(detail);
+        }
+    };
     let mut options = CallOptions::new().cancel(own);
-    if let Some(seconds) = deadline {
+    if let Some(seconds) = controls.deadline {
         options = options.deadline_seconds(seconds)?;
     }
+    if let Some(setting) = controls.batch {
+        options = options.batch(setting);
+    }
+    if let Some(text) = controls.context.as_deref() {
+        options = options.context(text);
+    }
+    options = options.observe(&observe);
+    let result = run_inner(engine, ask, options);
+    let details = observed
+        .into_inner()
+        .unwrap_or_else(PoisonError::into_inner);
+    match result {
+        Ok((value, facts)) => Ok(Completed {
+            value,
+            facts,
+            details,
+        }),
+        Err(mut fault) => {
+            fault.details = details;
+            Err(fault)
+        }
+    }
+}
+
+#[expect(
+    clippy::too_many_lines,
+    reason = "one dispatch matches the owned Ask variants without parallel tables"
+)]
+fn run_inner(
+    engine: &Engine,
+    ask: Ask,
+    options: CallOptions<'_>,
+) -> Result<(Output, Facts), Fault> {
     Ok(match ask {
         Ask::Decide(LoadedQuestion::Question(question), text) => {
-            Output::Answer(answer(engine.decide_with(&question, &text, options)?.into_value()))
+            let call = engine.decide_with(&question, &text, options)?;
+            let facts = call.facts().clone();
+            (Output::Answer(answer(call.into_value())), facts)
         }
         Ask::Decide(LoadedQuestion::Banded(question), text) => {
-            Output::Answer(answer(engine.decide_with(&question, &text, options)?.into_value()))
+            let call = engine.decide_with(&question, &text, options)?;
+            let facts = call.facts().clone();
+            (Output::Answer(answer(call.into_value())), facts)
         }
         Ask::Details(LoadedQuestion::Question(question), text) => {
-            details(engine.details_with(&question, &text, options)?.value())
+            let call = engine.details_with(&question, &text, options)?;
+            (details(call.value()), call.facts().clone())
         }
         Ask::Details(LoadedQuestion::Banded(question), text) => {
-            details(engine.details_with(&question, &text, options)?.value())
+            let call = engine.details_with(&question, &text, options)?;
+            (details(call.value()), call.facts().clone())
         }
         Ask::Score(question, text) => {
-            Output::Score(engine.score_with(&unbanded(question, "score")?, &text, options)?.into_value())
+            let call = engine.score_with(&unbanded(question, "score")?, &text, options)?;
+            let facts = call.facts().clone();
+            (Output::Score(call.into_value()), facts)
         }
-        Ask::DecideMany(LoadedQuestion::Question(question), records) => Output::Rows(
-            engine
-                .decide_many_with(&question, records, options)
-                .map(|row| row.map(|row| (answer(*row.value()), row.probability())))
-                .collect::<Vec<_>>()
-                .into_iter()
-                .collect::<Result<_, _>>()?,
-        ),
-        Ask::DecideMany(LoadedQuestion::Banded(question), records) => Output::Rows(
-            engine
-                .decide_many_with(&question, records, options)
-                .map(|row| row.map(|row| (answer(*row.value()), row.probability())))
-                .collect::<Vec<_>>()
-                .into_iter()
-                .collect::<Result<_, _>>()?,
-        ),
+        Ask::DecideMany(LoadedQuestion::Question(question), records) => {
+            let (rows, facts) = collected(
+                engine.decide_many_with(&question, records, options),
+                |row| (answer(*row.value()), row.probability()),
+            )?;
+            (Output::Rows(rows), facts)
+        }
+        Ask::DecideMany(LoadedQuestion::Banded(question), records) => {
+            let (rows, facts) = collected(
+                engine.decide_many_with(&question, records, options),
+                |row| (answer(*row.value()), row.probability()),
+            )?;
+            (Output::Rows(rows), facts)
+        }
+        Ask::Many(LoadedQuestion::Question(question), records) => {
+            let (rows, facts) = collected(
+                engine.details_many_with(&question, records, options),
+                |row| value_of(row.value().value()),
+            )?;
+            (Output::Many(rows), facts)
+        }
+        Ask::Many(LoadedQuestion::Banded(question), records) => {
+            let (rows, facts) = collected(
+                engine.details_many_with(&question, records, options),
+                |row| value_of(row.value().value()),
+            )?;
+            (Output::Many(rows), facts)
+        }
         Ask::Filter(question, records) => {
             let question = unbanded(question, "filter")?;
-            Output::Places(
-                engine
-                    .filter_with(&question, texts(records), options)
-                    .map(|kept| kept.map(|Text(place, _)| place))
-                    .collect::<Result<_, _>>()?,
+            let (places, facts) = collected(
+                engine.filter_with(&question, texts(records), options),
+                |Text(place, _)| place,
+            )?;
+            (Output::Places(places), facts)
+        }
+        Ask::Rank(text, records) => {
+            let call = engine.rank_with(&Question::rank(&text)?, texts(records), options)?;
+            let facts = call.facts().clone();
+            (
+                Output::Ranked(
+                    call.into_value()
+                        .into_iter()
+                        .map(|ranked| (ranked.input().0, ranked.probability()))
+                        .collect(),
+                ),
+                facts,
             )
         }
-        Ask::Rank(text, records) => Output::Ranked(
-            engine
-                .rank_with(&Question::rank(&text)?, texts(records), options)?
-                .into_value()
-                .into_iter()
-                .map(|ranked| (ranked.input().0, ranked.probability()))
-                .collect(),
-        ),
         Ask::Find(text, none, units) => {
             let asked = Question::find(&text)?;
             let asked = if none { asked.offering_none()? } else { asked };
-            let found = engine.find_with(&asked, texts(units), options)?.into_value();
-            Output::Found(found.selected().and_then(|Text(place, _)| {
-                let candidate = found.candidates().get(*place)?;
-                Some((*place, candidate.probability()))
-            }))
+            let call = engine.find_with(&asked, texts(units), options)?;
+            let facts = call.facts().clone();
+            let found = call.into_value();
+            (
+                Output::Found(found.selected().and_then(|Text(place, _)| {
+                    let candidate = found.candidates().get(*place)?;
+                    Some((*place, candidate.probability()))
+                })),
+                facts,
+            )
         }
-        Ask::Annotate(set, records) => Output::JsonRows(
-            engine
-                .annotate_with(&set, records, options)
-                .map(|record| record.map(|record| record.value_json()))
-                .collect::<Result<_, _>>()?,
-        ),
+        Ask::Annotate(set, records) => {
+            let (rows, facts) = collected(engine.annotate_with(&set, records, options), |row| {
+                row.value_json()
+            })?;
+            (Output::JsonRows(rows), facts)
+        }
         Ask::Recognize(ask, text) => {
-            Output::Json(engine.recognize_with(&ask, &text, options)?.into_value().to_json())
+            let call = engine.recognize_with(&ask, &text, options)?;
+            let facts = call.facts().clone();
+            (Output::Json(call.into_value().to_json()), facts)
         }
-        Ask::Relate(ask, entities) => Output::JsonRows(
-            engine
-                .relate_with(&ask, entities, options)?
-                .into_value()
-                .iter()
-                .map(thinkthen::Edge::to_json)
-                .collect(),
-        ),
+        Ask::Relate(ask, entities) => {
+            let call = engine.relate_with(&ask, entities, options)?;
+            let facts = call.facts().clone();
+            (
+                Output::JsonRows(
+                    call.into_value()
+                        .iter()
+                        .map(thinkthen::Edge::to_json)
+                        .collect(),
+                ),
+                facts,
+            )
+        }
     })
 }

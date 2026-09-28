@@ -42,7 +42,7 @@ class TestInterruptSingle < Minitest::Test
   # tick's own error surfaces within 150 ms of its raise. The tick raises only
   # after the backend has counted the held send and the parent says so.
   def test_a_raising_tick_stops_a_held_decide_at_once
-    message, elapsed = held_stop(<<~RUBY)
+    message, elapsed, receipt = held_stop(<<~RUBY)
       held = false
       raised_at = nil
       Thread.new { hear; held = true }
@@ -55,11 +55,12 @@ class TestInterruptSingle < Minitest::Test
       begin
         T.decide("Is it urgent?", "text")
       rescue ArgumentError => e
-        say [e.message, ms_since(raised_at)]
+        say [e.message, ms_since(raised_at), !e.completion.nil?]
       end
     RUBY
     assert_equal "the tick stops the call", message
     assert_operator elapsed, :<, 150
+    assert receipt
   end
 
   def test_the_callers_token_cancels_a_held_decide_at_once

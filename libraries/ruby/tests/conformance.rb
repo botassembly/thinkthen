@@ -14,6 +14,10 @@ NOT_RUN = {
   "30-local-question-file" => "the surface has no question-file loader; ThinkThen.question takes keywords"
 }.freeze
 
+LEGACY_BATCH_ONE = %w[13-filter-records 14-filter-none 15-rank-records 16-rank-stable-tie
+                      27-decide-many 28-decide-many-repeated-texts 34-annotate-repeated-texts
+                      35-annotate-score-repeated-texts].freeze
+
 require "digest"
 require "json"
 require "pathname"
@@ -102,13 +106,13 @@ end
 
 def single(engine, asked, text, success, base)
   expected = success["answers"][0]
-  document = engine.details(asked, text)
+  document = engine.details(asked, text).value
   detailed(document, expected, base)
   typed = case document["answer"]["kind"]
-          when "yes_no" then engine.decide(asked, text)
-          when "score" then engine.score(asked, text)
-          when "choice" then engine.choose(asked, text)
-          when "tag" then engine.tag(asked, text)
+          when "yes_no" then engine.decide(asked, text).value
+          when "score" then engine.score(asked, text).value
+          when "choice" then engine.choose(asked, text).value
+          when "tag" then engine.tag(asked, text).value
           end
   same("typed", typed, expected["bare"])
   counters = success["counters"] or return
@@ -125,7 +129,7 @@ end
 def annotated(engine, set, texts, success, one)
   records = Dir.mktmpdir do |folder|
     File.write(File.join(folder, "set.json"), JSON.generate(set))
-    engine.annotate(T.set(File.join(folder, "set.json")), texts)
+    engine.annotate(T.set(File.join(folder, "set.json")), texts).value
   end
   failed = 0
   success["answers"].each do |expected|
@@ -145,13 +149,13 @@ def check(one)
   renamed = exchanges.to_h { |exchange| [digest(CANONICAL, exchange["request"]), digest("#{base}/systemone", exchange["request"])] }
   success = swap(one["expect"]["success"], renamed)
   texts = exchanges.map { |exchange| exchange["evidence"] }
-  engine = engine(base)
+  engine = engine(base, batch: LEGACY_BATCH_ONE.include?(id) ? 1 : nil)
   held = one["question"]
   case [one["verb"], success["kind"]]
   in ["recognize", _]
     rules = held["recognize"]
     found = engine.recognize(one["text"], kinds: rules["kinds"], relations: rules["relations"],
-                                          threshold: held["threshold"], relation_threshold: held["relation_threshold"])
+                                          threshold: held["threshold"], relation_threshold: held["relation_threshold"]).value
     bare = { "entities" => found.entities.map { |e| entity(e) } }
     unless found.relations.nil?
       bare["relations"] = found.relations.map do |r|
@@ -161,26 +165,26 @@ def check(one)
     same("result", bare, success["answers"][0]["bare"])
   in ["relate", _]
     pair = ->(e) { { "name" => e.name, "kind" => e.kind } }
-    edges = engine.relate(one["entities"], relations: held["relate"]["relations"], threshold: held["threshold"])
+    edges = engine.relate(one["entities"], relations: held["relate"]["relations"], threshold: held["threshold"]).value
     same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability } },
          success["answers"][0]["bare"])
   in ["annotate", _]
     whole = one.key?("record")
     annotated(engine, one["question_set"], whole ? [JSON.generate(one["record"])] : texts, success, whole)
   in ["find", _]
-    found = engine.find(held["find"], held["units"], none: held["none"])
+    found = engine.find(held["find"], held["units"], none: held["none"]).value
     selected = success["operation"]["selected"]
     picked = success["operation"]["probabilities"].find { |row| row["index"] == selected }
     want = selected.nil? ? nil : [selected, held["units"][selected], picked["probability"]]
     same("found", found.index.nil? ? nil : found.to_a, want)
   in ["rank", _]
-    ranked = engine.rank(held["decide"], texts)
+    ranked = engine.rank(held["decide"], texts).value
     same("ranking", ranked.map { |row| { "index" => row.index, "probability" => row.probability } }, success["operation"]["ranking"])
   in [_, "filter"]
-    kept = engine.filter(question(held), texts)
+    kept = engine.filter(question(held), texts).value
     same("indexes", kept.map { |text| texts.index { |held_text| held_text.equal?(text) } }, success["operation"]["indexes"])
   in [_, "decide_many"]
-    same("bare", engine.decide_many(question(held), texts), success["answers"].map { |answer| answer["bare"] })
+    same("bare", engine.decide_many(question(held), texts).value, success["answers"].map { |answer| answer["bare"] })
   else
     single(engine, question(held), texts[0], success, base)
   end
