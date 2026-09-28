@@ -130,7 +130,7 @@ fn a_stall_past_the_timeout_is_sent_once() {
 }
 
 #[test]
-fn a_stalled_two_record_batch_names_size_levers() {
+fn a_stalled_two_record_batch_names_timeout_advice() {
     let listener =
         Listener::answering(|_| Canned::ok(ANSWERED).after(2_500)).expect("a loopback listener");
     let output = decide(
@@ -146,7 +146,7 @@ fn a_stalled_two_record_batch_names_size_levers() {
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: stopped at record 1; the request for records 1 to 2 failed: the backend timed out; lower --batch or --max-request-bytes, or increase --timeout; 0 records finished\n"
+        "thinkthen: stopped at record 1; the request for records 1 to 2 failed: the backend timed out; increase --timeout or try again; 0 records finished\n"
     );
 }
 
