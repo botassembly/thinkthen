@@ -17,7 +17,8 @@ pub(crate) enum Input<T, E> {
 /// scheduler owns. A `stop` ends the run at the record after those.
 pub(crate) struct Completed<R, E> {
     pub(crate) value: R,
-    pub(crate) replayed: bool,
+    /// Number of finished records answered from a recording.
+    pub(crate) replayed: usize,
     pub(crate) partial_failure: bool,
     pub(crate) records: usize,
     pub(crate) stop: Option<E>,
@@ -28,7 +29,7 @@ impl<R, E> Completed<R, E> {
     pub(crate) const fn one(value: R, replayed: bool, partial_failure: bool) -> Self {
         Self {
             value,
-            replayed,
+            replayed: if replayed { 1 } else { 0 },
             partial_failure,
             records: 1,
             stop: None,
@@ -179,9 +180,7 @@ impl<R, E> Run<R, E> {
                     self.printing = false;
                 }
                 Ok(completed) => {
-                    if completed.replayed {
-                        self.replayed += completed.records;
-                    }
+                    self.replayed += completed.replayed;
                     let more = emit(completed.value)?;
                     self.finished += completed.records;
                     self.next += 1;

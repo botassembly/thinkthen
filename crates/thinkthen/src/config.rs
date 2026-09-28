@@ -160,14 +160,21 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
     "the configuration file is not valid closed JSON"
 }
 
-/// Whether any user can change a file because others may write it. A group
-/// bit alone stays quiet, because the usual 002 umask sets it on every file a
-/// user saves. Checking the owner needs `nix`'s `user` feature, which the
-/// dependency policy does not accept.
+/// Whether another user owns or may write this file. A group bit alone stays
+/// quiet, because the usual 002 umask sets it on every file a user saves.
 #[cfg(unix)]
 pub(crate) fn writable_by_another(metadata: &fs::Metadata) -> bool {
-    use std::os::unix::fs::PermissionsExt as _;
-    metadata.permissions().mode() & 0o002 != 0
+    use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
+    metadata_writable_by_another(
+        metadata.permissions().mode(),
+        metadata.uid(),
+        nix::unistd::geteuid().as_raw(),
+    )
+}
+
+#[cfg(unix)]
+fn metadata_writable_by_another(mode: u32, owner: u32, effective: u32) -> bool {
+    owner != effective || mode & 0o002 != 0
 }
 
 #[cfg(not(unix))]
@@ -260,6 +267,20 @@ mod tests {
     use std::path::PathBuf;
 
     use super::{Config, Platform, resolve_cache, resolve_config, resolve_usage};
+
+    #[cfg(unix)]
+    #[test]
+    fn a_different_owner_can_change_a_readable_configuration() {
+        use super::metadata_writable_by_another;
+
+        for (mode, owner, effective, warned) in [
+            (0o644, 1001, 1000, true),
+            (0o600, 1000, 1000, false),
+            (0o664, 1000, 1000, false),
+        ] {
+            assert_eq!(metadata_writable_by_another(mode, owner, effective), warned);
+        }
+    }
 
     #[test]
     fn each_refusal_names_its_field_and_never_its_value() {

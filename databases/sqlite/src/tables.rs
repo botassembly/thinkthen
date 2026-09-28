@@ -99,14 +99,26 @@ fn argument(arguments: &[Value], at: usize, what: &str) -> Result<Option<String>
         .map_or(Ok(None), |value| text(ValueRef::from(value), what))
 }
 
-/// A JSON argument or file read as a version-one file, wrapping a bare section.
-fn file_json(argument: &str, section: &str) -> Result<(serde_json::Value, bool), Failure> {
+/// Validate a JSON argument or file while retaining its original member order.
+fn json_source(
+    argument: &str,
+    section: &str,
+) -> Result<(String, serde_json::Value, bool), Failure> {
     let (source, file) = match argument.strip_prefix('@') {
         Some(_) => (named_file(argument, &format!("{section} spec"))?.0, true),
         None => (argument.to_owned(), false),
     };
     let value: serde_json::Value = serde_json::from_str(&source)
         .map_err(|error| Failure::usage(format!("the {section} argument is not JSON: {error}")))?;
+    Ok((source, value, file))
+}
+
+/// A JSON argument or file read as a version-one file, wrapping a bare section.
+pub(crate) fn file_json(
+    argument: &str,
+    section: &str,
+) -> Result<(serde_json::Value, bool), Failure> {
+    let (_, value, file) = json_source(argument, section)?;
     let whole = if value.get(section).is_some() {
         value
     } else {
@@ -115,8 +127,19 @@ fn file_json(argument: &str, section: &str) -> Result<(serde_json::Value, bool),
     Ok((whole, file))
 }
 
+/// The same wrapper, preserving object order for recognition's request identity.
+pub(crate) fn ordered_file_json(argument: &str, section: &str) -> Result<(String, bool), Failure> {
+    let (source, value, file) = json_source(argument, section)?;
+    let whole = if value.get(section).is_some() {
+        source
+    } else {
+        format!(r#"{{"version":1,"{section}":{source}}}"#)
+    };
+    Ok((whole, file))
+}
+
 /// Read a JSON spec, where a broken rule in a file is `local` (0095, Q16).
-fn read<T>(
+pub(crate) fn read<T>(
     whole: &serde_json::Value,
     file: bool,
     parse: fn(&str) -> Result<T, thinkthen::Error>,

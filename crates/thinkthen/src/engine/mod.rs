@@ -139,6 +139,18 @@ impl<'a> Cancel<'a> {
         self.remaining()
     }
 
+    /// Final send check while the usage guard is held. Never calls a host callback.
+    pub(crate) fn remaining_without_check(&self) -> Result<Option<Duration>, error::Error> {
+        let token = self
+            .token
+            .as_ref()
+            .is_some_and(|token| token.load(Ordering::Acquire));
+        if self.fired() || token {
+            return Err(error::Error::Cancelled);
+        }
+        self.remaining()
+    }
+
     /// Run the host check on its calling thread. A `true` return fires this
     /// call's stop. A panic fires it too, then resumes unchanged, so every
     /// worker stops before the unwinding scope joins it.
@@ -358,7 +370,7 @@ impl Widths {
             let width = state.selected.unwrap_or(Width::FALLBACK).get();
             if state.active < width {
                 state.active += 1;
-                return Ok(Permit(self));
+                return Ok(Permit(self, true));
             }
             if !observed {
                 observed = true;
@@ -379,10 +391,30 @@ impl Widths {
 
 /// Room for one live attempt, given back when dropped.
 #[derive(Debug)]
-pub(crate) struct Permit<'a>(&'a Widths);
+pub(crate) struct Permit<'a>(&'a Widths, bool);
+
+impl Permit<'_> {
+    /// Close the provider gate before another request can take this send slot.
+    pub(crate) fn release_closing(
+        mut self,
+        gates: &backoff::Gates,
+        url: &str,
+        wait: Duration,
+        server_floor: bool,
+    ) {
+        let mut state = self.0.lock();
+        gates.close(url, wait, server_floor);
+        state.active = state.active.saturating_sub(1);
+        self.1 = false;
+        self.0.freed.notify_all();
+    }
+}
 
 impl Drop for Permit<'_> {
     fn drop(&mut self) {
+        if !self.1 {
+            return;
+        }
         let mut state = self.0.lock();
         state.active = state.active.saturating_sub(1);
         self.0.freed.notify_all();
@@ -437,6 +469,7 @@ pub(crate) fn client_width(process: &'static Widths) -> &'static Widths {
 }
 
 pub(crate) mod annotate_schedule;
+pub(crate) mod backoff;
 pub(crate) mod cache_lock;
 pub(crate) mod cache_prune;
 #[cfg(test)]

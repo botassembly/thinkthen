@@ -1,4 +1,4 @@
-//! `choose`: one team for each text, or a person when the pick is unresolved.
+//! `choose`: one team for each text, or a person when the answer is not sure.
 
 use std::io::Write;
 

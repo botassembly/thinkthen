@@ -13,6 +13,7 @@ pub(crate) enum TransportKind {
     NameLookup,
     Refused,
     PrematureClose,
+    Tls,
     Other,
 }
 
@@ -83,6 +84,10 @@ pub(crate) enum Error {
 /// The statuses a backend is asked again after.
 const RETRIED: [u16; 6] = [429, 500, 502, 503, 504, 529];
 
+pub(crate) fn retried_status(status: u16) -> bool {
+    RETRIED.contains(&status)
+}
+
 /// The whole-call budget a spent deadline was made from.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) struct Budget(pub(crate) Duration);
@@ -107,6 +112,11 @@ impl fmt::Display for Budget {
     reason = "the command runner reads kinds while normal command paths preserve exact causes"
 )]
 impl Error {
+    /// A refusal that a smaller batch may answer.
+    pub(crate) const fn too_large(&self) -> bool {
+        matches!(self, Self::TokenLimit | Self::Status(413))
+    }
+
     pub(crate) const fn kind(&self) -> Kind {
         match self {
             Self::Transport(_)
@@ -142,7 +152,7 @@ impl Error {
     /// failing backend status. A transport failure may already have reached
     /// the backend, so it is never retried.
     pub(crate) fn retryable(&self) -> bool {
-        matches!(self, Self::Status(status) if RETRIED.contains(status))
+        matches!(self, Self::Status(status) if retried_status(*status))
     }
 }
 

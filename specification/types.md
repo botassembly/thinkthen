@@ -21,16 +21,16 @@ Every surface that accepts a description string also accepts its structured form
 
 ## Answers and failures
 
-| Function | Successful answer | Unresolved form |
+| Function | Successful answer | Not sure form |
 | --- | --- | --- |
 | `decide` | Boolean | `null` |
 | `choose` | One caller label | `null` |
-| `tag` | Ordered labels above the cut; `[]` is success | No separate unresolved form |
+| `tag` | Ordered labels above the cut; `[]` is success | No separate not sure form |
 | `score` | Number from 0 to K−1, possibly fractional | None |
 | `filter` | Kept records | None |
 | `rank` | Every record, most likely yes first | None |
 | `find` | Selected unit | `null` when `none` wins |
-| `annotate` | Named answers per input record | `null` for an unresolved member |
+| `annotate` | Named answers per input record | `null` for a not sure member |
 | `recognize` | Entities with `text`, `start`, `end`, `length`, `kind`, `strength`, plus optional relations | Empty `entities` is success |
 | `relate` | Edges with `relation`, `source`, `target`, `probability` | Empty edges are success |
 

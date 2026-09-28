@@ -9,7 +9,9 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender, sync_channel};
 use std::thread;
 use std::time::Duration;
 
-use super::{Asks, Judging, JudgingInput, print_plan, table_kind};
+use super::batch_meta::Description;
+use super::{Asks, Judging, JudgingInput, RowContext, print_plan, table_kind};
+use crate::core::batch::halves;
 use crate::core::{
     AnswerOutcome, Batch, BatchError, Batcher, Question, Reading, Record, Reply, Setting, share,
 };
@@ -109,7 +111,7 @@ pub(super) fn run(
             thread::spawn(move || feed(records, &sender));
             thread::spawn(move || former.answer(&raw, &asks, &events));
         },
-        &|item| answered(&judging, reading, &question, item),
+        &|item| answered(&judging, reading, &question, setting, item),
         |rows| {
             for row in rows {
                 if !output.take(row).map_err(Placed::from)? {
@@ -282,6 +284,7 @@ fn answered(
     judging: &Judging<'_>,
     reading: &Reading,
     question: &Question,
+    setting: Setting,
     item: &Item,
 ) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
     let Item {
@@ -291,22 +294,147 @@ fn answered(
     } = item;
     let count = records.len();
     let last = records.last().map_or(*first, |held| held.at);
-    let whole = judging
-        .engine
-        .ask_batch(batch, judging.environment.cancel())
-        .map_err(|error| Placed::at(failed(error.into(), *first, last), *first))?;
+    let cancel = judging.environment.cancel();
+    let whole = match judging.engine.ask_batch(batch, cancel) {
+        Ok(whole) => {
+            return answer_rows(
+                judging,
+                reading,
+                question,
+                batch,
+                records,
+                whole,
+                Description::new(setting, batch.closed, false),
+            );
+        }
+        Err(error)
+            if count > 1
+                && (error.too_large()
+                    || matches!(error, crate::engine::error::Error::ReplayMiss(_))) =>
+        {
+            error
+        }
+        Err(error) => return Err(Placed::at(failed(error.into(), *first, last), *first)),
+    };
+    split_answered(judging, reading, question, setting, item, whole)
+}
+
+/// Rebuild the two halves within the refused batch's scheduled place.
+fn split_answered(
+    judging: &Judging<'_>,
+    reading: &Reading,
+    question: &Question,
+    setting: Setting,
+    item: &Item,
+    whole: crate::engine::error::Error,
+) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
+    let Item {
+        batch,
+        first,
+        records,
+    } = item;
+    let description = Description::new(setting, batch.closed, true);
+    let count = records.len();
+    let last = records.last().map_or(*first, |held| held.at);
+    let cancel = judging.environment.cancel();
+    let refused_attempts = u64::from(whole.too_large());
+    let values = records
+        .iter()
+        .map(|held| {
+            reading
+                .batch_record(&held.record)
+                .map_err(|error| Placed::at(error.into(), held.at))
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    let [left, right] = halves(
+        judging.engine.backend(),
+        judging.engine.profile(),
+        question,
+        None,
+        values,
+    )
+    .map_err(|error| Placed::at(refused(error), *first))?;
+    let middle = count.div_ceil(2);
+    let (left_records, right_records) = records.split_at(middle);
+    let left_last = left_records.last().map_or(*first, |held| held.at);
+    if let Some(stop) = cancel.stop() {
+        return Err(Placed::at(stop.into(), *first));
+    }
+    let mut first_answer = judging.engine.ask_batch(&left, cancel).map_err(|error| {
+        let range_last = if matches!(error, crate::engine::error::Error::ReplayMiss(_)) {
+            last
+        } else {
+            left_last
+        };
+        Placed::at(failed(error.into(), *first, range_last), *first)
+    })?;
+    first_answer.requests_sent += refused_attempts;
+    let mut first_done = answer_rows(
+        judging,
+        reading,
+        question,
+        &left,
+        left_records,
+        first_answer,
+        description,
+    )?;
+    if first_done.stop.is_some() {
+        return Ok(first_done);
+    }
+    let right_first = right_records.first().map_or(last, |held| held.at);
+    if let Some(stop) = cancel.stop() {
+        first_done.stop = Some(Placed::at(stop.into(), right_first));
+        return Ok(first_done);
+    }
+    let second_answer = match judging.engine.ask_batch(&right, cancel) {
+        Ok(answer) => answer,
+        Err(error) => {
+            first_done.stop = Some(Placed::at(
+                failed(error.into(), right_first, last),
+                right_first,
+            ));
+            return Ok(first_done);
+        }
+    };
+    let second_done = answer_rows(
+        judging,
+        reading,
+        question,
+        &right,
+        right_records,
+        second_answer,
+        description,
+    )?;
+    first_done.records += second_done.records;
+    first_done.replayed += second_done.replayed;
+    first_done.value.extend(second_done.value);
+    first_done.stop = second_done.stop;
+    Ok(first_done)
+}
+
+/// Turn one answered request into rows, sharing its attempts over its members.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one batch reply and its accepted run setting make each row"
+)]
+fn answer_rows(
+    judging: &Judging<'_>,
+    reading: &Reading,
+    question: &Question,
+    batch: &Batch,
+    records: &[Held],
+    whole: Answered,
+    description: Description,
+) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
+    let count = records.len();
+    let first = records.first().map_or(1, |held| held.at);
+    let last = records.last().map_or(first, |held| held.at);
     let reply = &whole.reply;
     let mut rows = Vec::with_capacity(count);
     let mut stop = None;
     for (position, (held, &asked)) in records.iter().zip(&batch.questions).enumerate() {
         let Some(AnswerOutcome::Answered(answer)) = reply.outcomes().get(asked) else {
-            stop = Some(Placed::at(
-                Failure::PartialReply {
-                    first: *first,
-                    last,
-                },
-                held.at,
-            ));
+            stop = Some(Placed::at(Failure::PartialReply { first, last }, held.at));
             break;
         };
         let (value, outcome) = answer.read(judging.threshold);
@@ -326,6 +454,7 @@ fn answered(
             outcome,
             answered: own,
         };
+        let batch_meta = description.row(count, position + 1, reply.usage(), whole.requests_sent);
         rows.push(
             judging
                 .row_of(
@@ -333,15 +462,18 @@ fn answered(
                     held.record.clone(),
                     question.clone(),
                     &judgment,
-                    held.arrived.as_deref(),
+                    RowContext {
+                        arrived: held.arrived.as_deref(),
+                        batch: batch_meta,
+                    },
                 )
                 .map_err(|error| Placed::at(error, held.at))?,
         );
     }
     Ok(Completed {
         records: rows.len(),
+        replayed: if whole.replayed { rows.len() } else { 0 },
         value: rows,
-        replayed: whole.replayed,
         partial_failure: false,
         stop,
     })

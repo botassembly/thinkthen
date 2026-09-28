@@ -10,6 +10,8 @@ The feature adds one trait, `thinkthen::PolarsEngine`, to your own `thinkthen::E
 
 Build that engine with `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
 
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. The column calls use your own `thinkthen::Engine`, so turn it off with `EngineBuilder::no_cache` when you build that engine.
+
 The door takes Polars 0.55. Polars changes its Rust API between minor versions. `thinkthen::polars` re-exports the Polars the door was built with, so it names the version your `Series` must come from. The throttle is the most requests in flight at once. It holds per loaded copy of the library, so a program that loads two copies can run up to twice the throttle.
 
 A column call returns values only. Read its run facts with `Engine::details` for one text and `Engine::usage` for the totals.

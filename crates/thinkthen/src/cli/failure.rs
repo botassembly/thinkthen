@@ -15,6 +15,7 @@ use crate::table;
 
 mod after_signal;
 mod convert;
+pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
 pub(crate) mod relate;
@@ -498,6 +499,9 @@ const fn transport_message(kind: TransportKind) -> &'static str {
         }
         TransportKind::PrematureClose => {
             "the backend closed the connection before a reply and may have received the request; it was not sent again"
+        }
+        TransportKind::Tls => {
+            "the TLS connection or certificate check failed; check --url and the backend's certificate trust"
         }
         TransportKind::Other => "the backend could not be reached; check --url and the network",
     }

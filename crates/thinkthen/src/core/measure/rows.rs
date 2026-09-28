@@ -66,7 +66,7 @@ pub(crate) fn row(
         threshold: settings.shown.clone(),
         right: counts.right,
         wrong: counts.wrong,
-        unresolved: counts.unresolved,
+        unsure: counts.unresolved,
         tied: counts.tied,
         tied_holding_key: ties.then(|| shares.iter().filter(|held| **held > 0.0).count()),
         tie_share: ties.then(|| python_sum(shares.iter().copied())),

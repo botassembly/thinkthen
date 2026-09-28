@@ -2,7 +2,7 @@
 {"schema":"thinkthen.result/1","input":{"id":"P-02","body":"urgent"},"value":{"credential_request":false,"queue":"shipping","urgency":1},"answers":{},"meta":{}}
 {"schema":"thinkthen.result/1","input":{"id":"P-03","body":"credential and urgent"},"value":{"credential_request":true,"queue":"account","urgency":2},"answers":{},"meta":{}}
 {"schema":"thinkthen.result/1","input":{"id":"P-04","body":"other and urgent"},"value":{"credential_request":false,"queue":"other","urgency":2},"answers":{},"meta":{}}
-{"schema":"thinkthen.result/1","input":{"id":"P-05","body":"credential unresolved"},"value":{"credential_request":null,"queue":"billing","urgency":0},"answers":{},"meta":{}}
-{"schema":"thinkthen.result/1","input":{"id":"P-06","body":"queue unresolved"},"value":{"credential_request":false,"queue":null,"urgency":0},"answers":{},"meta":{}}
-{"schema":"thinkthen.result/1","input":{"id":"P-07","body":"urgency unresolved"},"value":{"credential_request":false,"queue":"billing","urgency":null},"answers":{},"meta":{}}
+{"schema":"thinkthen.result/1","input":{"id":"P-05","body":"credential unsure"},"value":{"credential_request":null,"queue":"billing","urgency":0},"answers":{},"meta":{}}
+{"schema":"thinkthen.result/1","input":{"id":"P-06","body":"queue unsure"},"value":{"credential_request":false,"queue":null,"urgency":0},"answers":{},"meta":{}}
+{"schema":"thinkthen.result/1","input":{"id":"P-07","body":"urgency unsure"},"value":{"credential_request":false,"queue":"billing","urgency":null},"answers":{},"meta":{}}
 {"schema":"thinkthen.result/1","input":{"id":"P-08","body":"hostile } ] \\ \" $(touch no)"},"value":{"credential_request":false,"queue":"account","urgency":0.999999},"answers":{},"meta":{},"extra":"kept"}

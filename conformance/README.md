@@ -12,7 +12,7 @@ The mixed `annotate` case keeps successful `decide`, `choose`, `score`, and `tag
 
 `rank` expectations name zero-based input indexes in output order beside their yes probabilities. `find` expectations name the selected zero-based input index, or `null`, and list every candidate probability in input order. Its `none` candidate appears last with a null index. A host maps these indexes back to its own container.
 
-Cases 26 and above came from the retired surfaces branch through ticket 0091. Each names its branch case under `provenance.branch`. A case that waits on a ruling names it under `provenance.pending`, and it still runs and must pass. Case names say `unsure`, per ADR 0017 section 6 item 4. The specification grammar keeps unresolved.
+Cases 26 and above came from the retired surfaces branch through ticket 0091. Each names its branch case under `provenance.branch`. A case that waits on a ruling names it under `provenance.pending`, and it still runs and must pass. Case names say `unsure`, per ADR 0017 section 6 item 4. The specification uses that machine word and says "not sure" in prose.
 
 A `single` answer's `details` also carry the run facts: `usage`, the exchange reply's counts, absent when the reply has none; `requests_sent` of 1; and `cached` of `false`. Each surface runner makes its details call the text's first send, so these hold. The command's own runner is the exception. It replays in process, so it sees `requests_sent` of 0, and it leaves these run facts to the command's spec pages. A choice or score answer carries `confidence` when its reply does, and is absent otherwise. The file holds no `url`, because the loopback port changes each run. Each surface runner compares `meta.url` with the address it served, `BASE/systemone`.
 

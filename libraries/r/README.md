@@ -17,6 +17,8 @@ tickets |>
 - The throttle caps the requests in flight in one loaded copy of the engine. A process that loads two copies, such as this package and a database extension, can run up to twice the throttle (ADR 0047 item 5).
 - Ctrl-C stops a call at the next 100 ms tick and raises R's own `interrupt` condition (ADR 0042). Requests already sent finish on the backend.
 
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `tt_engine(cache = FALSE)`.
+
 ## Run facts
 
 `tt_details(question, text)` returns the command's `--details` line for one text as a list, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.

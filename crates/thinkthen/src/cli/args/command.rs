@@ -43,9 +43,9 @@ pub(crate) enum Command {
     ///
     /// A script that acts on the answer reads all four outcomes:
     ///
-    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt
+    /// thinkthen decide 'The customer asks for a refund.' --threshold 0.1:0.9 --quiet < m.txt && refund_code=0 || refund_code=$?
     ///
-    /// case $? in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
+    /// case $refund_code in 0) route refunds ;; 1) route support ;; 3) route triage ;; *) exit 4 ;; esac
     ///
     /// Word the question in the form where yes permits the action. A broken run
     /// then never permits anything, because every outcome other than 0 leaves
@@ -109,11 +109,11 @@ pub(crate) enum Command {
     /// and an empty string is no option, so only the exit code tells a not
     /// sure pick from a broken run:
     ///
-    /// pick=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && rc=0 || rc=$?
+    /// team=$(thinkthen choose 'Which team owns this?' billing shipping other --raw < m.txt) && team_code=0 || team_code=$?
     ///
-    /// case $rc in 0) ;; 3) pick=not_sure ;; *) exit "$rc" ;; esac
+    /// case $team_code in 0) ;; 3) team=not_sure ;; *) exit "$team_code" ;; esac
     ///
-    /// case $pick in billing) pay ;; not_sure) triage ;; *) exit 2 ;; esac
+    /// case $team in billing) pay ;; not_sure) triage ;; *) exit 2 ;; esac
     ///
     /// "Not stated" is a different answer from "false". "Does the text
     /// establish X?" and "Is X true?" are different questions. When the

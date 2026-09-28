@@ -1,6 +1,35 @@
 #![allow(clippy::expect_used, reason = "a failed row stops the table")]
 
-use super::splice;
+use super::{remove, splice};
+
+#[test]
+fn removing_a_batch_key_keeps_the_other_file_bytes() {
+    let cases = [
+        (
+            r#"{"batch":"max","decide":"q"}"#,
+            r#"{"decide":"q"}"#,
+            r#""max""#,
+        ),
+        (
+            r#"{"decide":"q","batch":10,"on":["/a"]}"#,
+            r#"{"decide":"q","on":["/a"]}"#,
+            "10",
+        ),
+        (
+            "{\r\n  \"decide\": \"q\",\r\n  \"batch\": \"max\"\r\n}\r\n",
+            "{\r\n  \"decide\": \"q\"\r\n}\r\n",
+            r#""max""#,
+        ),
+        (r#"{"batch":1}"#, "{}", "1"),
+    ];
+    for (input, expected, old) in cases {
+        assert_eq!(
+            remove(input, &["batch"]),
+            Some((expected.to_owned(), old.to_owned()))
+        );
+    }
+    assert_eq!(remove(r#"{"decide":"q"}"#, &["batch"]), None);
+}
 
 /// Each row sets `threshold` to 0.5. `⟨OLD→NEW⟩` marks the bytes that change,
 /// and an empty OLD marks an insert. A row that opens with `a/` or `b/` sets

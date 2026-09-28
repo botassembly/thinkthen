@@ -25,7 +25,7 @@ judge() {
 		printf '%s' "$body" | thinkthen decide "$question" \
 			--threshold 0.2:0.8 --details --record recording/ >row.json &&
 			exit=0 || exit=$?
-		# 0 is yes, 1 is no, and 3 is unresolved. Anything else is a failure
+		# 0 is yes, 1 is no, and 3 is not sure. Anything else is a failure
 		# about the run rather than an answer about a case, so the job stops.
 		case "$exit" in
 		0 | 1 | 3) ;;

@@ -25,7 +25,6 @@ from helper import ROOT, Backend, child, environment
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
     "find": "no SQL find function yet",
-    "relations": "no SQL form: thinkthen_recognize takes no relations, and thinkthen_relate reads rows",
     "defect": "no SQL form: no outside boundary reaches an internal invariant failure",
 }
 TYPED = {"decide": "thinkthen_decide", "choose": "thinkthen_choose", "tag": "thinkthen_tag", "score": "thinkthen_score"}
@@ -37,8 +36,6 @@ def form(case: dict) -> str | None:
     """The NOT_RUN key for a case with no SQL spelling, or None."""
     if case["verb"] == "find":
         return case["verb"]
-    if "relations" in case.get("question", {}).get("recognize", {}):
-        return "relations"
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "defect"
     return None
@@ -146,7 +143,8 @@ def refused(case: dict, backend: Backend) -> None:
 def check(case: dict, backend: Backend) -> None:
     if "error" in case["expect"]:
         return refused(case, backend)
-    arm = f"case/{case['id']}"
+    relations = "relations" in case.get("question", {}).get("recognize", {})
+    arm = f"case/{case['id']}" + ("/capture" if relations else "")
     served = backend.base(arm) + "/systemone"
     exchanges = case.get("exchanges", [])
     renamed = {digest(CANONICAL, one["request"]): digest(served, one["request"]) for one in exchanges}
@@ -199,10 +197,18 @@ def check(case: dict, backend: Backend) -> None:
         failed = sum(isinstance(value, dict) and "failed" in value for record in records for value in record.values())
         same("failed", failed, success.get("failed_questions", 0))
     elif kind == "recognize":
-        sql = 'SELECT text, start, "end", length, kind, strength FROM thinkthen_recognize(?, ?)'
-        rows = asked([[sql, [case["text"], question]]], env)[0]
-        names = ("text", "start", "end", "length", "kind", "strength")
-        same("result", {"entities": [dict(zip(names, row)) for row in rows]}, answers[0]["bare"])
+        if relations:
+            rows = asked([["SELECT thinkthen_recognize_document(?, ?)", [case["text"], question]]], env)[0]
+            if isinstance(rows, str):
+                raise AssertionError(f"SQL recognize failed: {rows}")
+            same("result", json.loads(rows[0][0]), answers[0]["bare"])
+            same("request bodies", backend.capture(), [one["request"] for one in exchanges])
+            same("request count", backend.count(), len(exchanges))
+        else:
+            sql = 'SELECT text, start, "end", length, kind, strength FROM thinkthen_recognize(?, ?)'
+            rows = asked([[sql, [case["text"], question]]], env)[0]
+            names = ("text", "start", "end", "length", "kind", "strength")
+            same("result", {"entities": [dict(zip(names, row)) for row in rows]}, answers[0]["bare"])
     elif kind == "relate":
         entities = case["entities"]
         setup = f"db.execute('CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)')\ndb.executemany('INSERT INTO e VALUES (?, ?, ?)', [(at, one['name'], one['kind']) for at, one in enumerate({entities!r})])"

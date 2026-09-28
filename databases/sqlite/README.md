@@ -5,7 +5,9 @@ A loadable SQLite extension over the public `thinkthen` Rust API. It is the unpu
 ```sql
 .load ./thinkthen
 SELECT thinkthen_warm('Is this a complaint?', body) FROM reviews;
-SELECT id, body FROM reviews WHERE thinkthen_decide('Is this a complaint?', body);
+SELECT id, body FROM (
+  SELECT id, body, thinkthen_decide('Is this a complaint?', body) AS is_complaint FROM reviews
+) WHERE is_complaint;
 ```
 
 The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a database file from somewhere else can reach a volatile function, so the load refuses and names the host's version.
@@ -24,6 +26,7 @@ The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a
 | `thinkthen_warm(question, text)` | an aggregate: judges each distinct pair and returns the count |
 | `thinkthen_usage()` | JSON totals: `requests_sent`, `cache_answers`, `input_tokens`, `output_tokens` |
 | `thinkthen_recognize(text, kinds)` | a table of `text, start, end, length, kind, strength` |
+| `thinkthen_recognize_document(text, spec)` | complete recognize JSON with entities and any relation edges |
 | `thinkthen_relate(table, id, name, kind, rule, …)` | a table of `relation, source, target, probability` |
 
 A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_details`, and `thinkthen_warm` only. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question.
@@ -33,6 +36,8 @@ A NULL text answers NULL and sends nothing. A BLOB, a number, text holding a NUL
 The deadline is milliseconds under ADR 0041. `-1` means none. `0` is already spent and sends nothing. A REAL is accepted when it is finite and whole. Any other value raises `usage` and names the value.
 
 `thinkthen_recognize` takes its kinds as a comma list, a JSON recognize section, or `'@name'`. A spec with relations raises `usage`, because relations come from `thinkthen_relate`. `start`, `end`, and `length` count Unicode characters, as SQLite's `substr` does, so `substr(text, start + 1, length)` returns the name. With no kinds, every name has the kind `ENTITY`.
+
+`thinkthen_recognize_document(text, spec)` takes the original text and a full version-one recognize JSON question file, a bare JSON recognize section, or `'@name'` for either form. It returns the public recognize object as JSON text: complete entities and, when rules were given, a `relations` array with complete source and target entities. The array is empty when no edge reaches the relation cut; it is absent when no rule was given. A SQL NULL argument returns SQL NULL and sends nothing. Invalid SQL types and inline specs raise `usage` before a send; an invalid rule in a file raises `local`. The call may send several requests as recognition finds names, assigns kinds, then tests relations. It remains direct-only and volatile like the other functions.
 
 `thinkthen_relate` reads the named table's id, name, and kind columns with a nested read-only SELECT. Each rule is `NAME`, `NAME=SOURCE:TARGET`, or either one with an `either:` prefix, up to four rules. A single JSON relate section or `'@name'` also works. Rows with the same name and kind count as one entity, and each edge comes back once for every row holding its two ends. `source` and `target` carry the id column's values, so the result joins back to the table. At most 255 distinct name and kind pairs go in one call. A NULL or blank name or kind raises `usage` naming the row's id.
 
@@ -56,7 +61,7 @@ Five setting functions change the engine before it builds. Each returns its argu
 
 - `thinkthen_throttle(n)`: requests in flight at once, from 1 through 32. The default is 4.
 - `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows, so this limit does not cap a statement's spending. Use the total below for that.
-- `thinkthen_max_requests_total(n)`: the most requests this process may send, summed over every call. It is unset by default, and `NULL` unsets it. Before each call the extension adds up the requests sent so far. Once the total is spent, every call raises `usage` and sends nothing, even a call the cache could answer. Otherwise a warm pass judges at most as many rows as requests remain, then raises `usage` saying it stopped at the remaining total. The cut counts rows, and a cached row costs no request, so a cut warm can spend less than what remained. The judged part of a cut warm stays in the cache, so a later process reads those rows with no send. Settings apply before the first call, so the total is lifted only in a new process. It holds to within one call's retries for the scalars and `thinkthen_warm`. A `thinkthen_recognize` or `thinkthen_relate` call counts as one record but may send several requests, so it can pass the total by that call's own requests as well. Calls running at the same time can each spend what remains, so the total can be exceeded by one call per thread in flight, plus retries. A forked child starts again from zero. `thinkthen status` never sees this spend, because it counts only what the command sends.
+- `thinkthen_max_requests_total(n)`: the most requests this process may send, summed over every call. It is unset by default, and `NULL` unsets it. Before each call the extension adds up the requests sent so far. Once the total is spent, every call raises `usage` and sends nothing, even a call the cache could answer. Otherwise a warm pass judges at most as many rows as requests remain, then raises `usage` saying it stopped at the remaining total. The cut counts rows, and a cached row costs no request, so a cut warm can spend less than what remained. The judged part of a cut warm stays in the cache, so a later process reads those rows with no send. Settings apply before the first call, so the total is lifted only in a new process. It holds to within one call's retries for the scalars and `thinkthen_warm`. A `thinkthen_recognize`, `thinkthen_recognize_document`, or `thinkthen_relate` call counts as one record but may send several requests, so it can pass the total by that call's own requests as well. Calls running at the same time can each spend what remains, so the total can be exceeded by one call per thread in flight, plus retries. A forked child starts again from zero. `thinkthen status` never sees this spend, because it counts only what the command sends.
 - `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
 
 The throttle holds per loaded copy of the engine. A process that also loads another surface's native package, such as a Python wheel, holds two copies and can run up to twice the throttle (ADR 0047 item 5).
@@ -64,6 +69,8 @@ The throttle holds per loaded copy of the engine. A process that also loads anot
 ## The cache
 
 Answers go to the engine's disk cache and outlive the process. A warm pass fills the cache, and the queries after it read it. With `thinkthen_cache(NULL)` a warm pass still judges every row, and the queries after it send again.
+
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_cache(NULL)`.
 
 ## Authority: who may do what
 

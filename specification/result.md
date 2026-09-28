@@ -35,7 +35,7 @@ Every result is compact and sits on one line, so one answer is also one record f
 - `question` names the question kind and the text the model received. `filter` and `rank` ask a `decide` question, so their `question.verb` is `decide`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
-- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. The other fields are always present. Not built yet, by ADR 0048 item 9: `batch` and `context_sha256` may be absent too, and item 8's `batch_warning` appears only for a batch-setting mismatch.
+- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. `batch` appears under `--details` for a batch of two or more records, or a split half. `batch_warning` follows `batch` when a file's tuned setting differs from the run. The other fields are always present. Not built yet, by ADR 0048 item 9: `context_sha256` may be absent too.
 
 ## A detailed result keeps everything
 
@@ -59,7 +59,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 `answer.pick` is the option with the highest probability, before any threshold. `answer.probabilities` holds one entry per option sent, in the order the options were sent. `value` is the label that cleared the cut.
 
-`value` is `null` when the answer is unresolved, and `answer.pick` still names the option that led. A script reads `value` and never `pick`. A person reading an unresolved row learns from `pick` what the model was leaning toward.
+`value` is `null` when the answer is not sure, and `answer.pick` still names the option that led. A script reads `value` and never `pick`. A person reading a not sure row learns from `pick` what the model was leaning toward.
 
 **`tag`**, from `tag`.
 
@@ -100,14 +100,20 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 | `url` | The URL that answered |
 | `model` | The model that answered, as the backend reported it |
 | `usage` | The token counts the backend reported. Absent when the backend reports none. A batched row carries an even share of each of the batch's counts, and the earliest records of the batch carry the remainder, by ADR 0048 item 9 |
-| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one. A batched row carries its share of the batch's attempts by the same rule, by ADR 0048 item 9 |
+| `requests_sent` | The HTTP attempts that produced this result. A replay or cache hit reports zero. Each retry of a retried status adds one. When a too-large batch halves, the refused whole request counts in the first half. A batched row carries its share of its request's attempts by the same rule, by ADR 0048 item 9 |
 | `cached` | `true` when the answer came entirely from stored exchanges — a recording or a cache — rather than a live backend |
 | `requests` | The recording digests of the logical requests that produced the result, in construction order. Retries add nothing, and equal logical requests keep separate positions |
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
-| `batch` | Not built yet, by ADR 0048 item 9: the batch this row rode in, with `setting`, `records`, `position`, `closed`, and the batch's own `usage` and `requests_sent`. Absent for a batch of one record with no context |
-| `batch_warning` | Not built yet, by ADR 0048 item 8: the file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise |
+| `batch` | The batch this row rode in, with `setting`, `records`, one-based `position`, `closed` (`content`, `size`, `limit`, `pause` or `end`), and the batch's whole `usage` when reported and `requests_sent`. Absent for a batch of one record with no context. A row answered by a half of a refused batch also has `split:true`, even when that half holds one record. The half's counts and position describe that half; `closed` keeps the whole batch's reason |
+| `batch_warning` | The file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise. A file with a threshold and no batch key was tuned at 1, without changing the run's setting |
 | `context_sha256` | Not built yet, by ADR 0048 item 11: the SHA-256 of the `--context` file's bytes. Absent without a context |
+
+## The run facts line
+
+On an asking command, `--facts` prints one compact `thinkthen.run/1` JSON object as the last standard-error line. Without the flag, a finished run stays silent there. The line follows a stop diagnostic and any usage-counter warning, and precedes a stopping signal's re-raise. `records` counts finished input records, including filtered rows and rows dropped by `rank --top`; a one-document success and one finished `find` or `relate` set count one, while a dry run counts zero. `requests_sent`, `retries`, and `cache_answers` come from this process's counters. `seconds` is elapsed wall time in seconds, rounded to three decimals. `input_tokens` and `output_tokens` appear only if at least one live reply arrived and every live reply reported usage. `model` appears only if at least one reply arrived and all live or stored replies named the same model.
+
+A failed run adds `stopped` with `cause` and `retryable`, plus `at` when the stop line names a record. A signal stop has no `at`. `status` appears only for the `status` cause. The stable causes are `usage` for exit 2, `local` for exit 5, `no_key`, `transport`, `status`, `too_large`, `reply`, and `backend` for exit 4, `cancelled` for a stopping signal, and `defect` for exit 70. `too_large` covers status 413 and status 400 naming `max_tokens_exceeded`. Only `status` with 429, 500, 502, 503, 504, or 529 has `retryable:true`; transport has false because the request may have arrived. Exit 6 is a finished partial result and has no `stopped`.
 
 ## Compatibility
 
@@ -117,9 +123,9 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 
 | Command | `question.verb` | Members | `meta` members |
 | --- | --- | --- | --- |
-| `decide` | `decide` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `filter` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `rank` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
+| `decide` | `decide` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` |
+| `filter` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` |
+| `rank` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` |
 | `choose` | `choose` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `tag` | `tag` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `score` | `score` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
@@ -155,7 +161,7 @@ The preceding row is a `decide --details` example. A ranked detailed row keeps t
 `annotate --details` prints `schema`, `input`, `value` holding the named answers, `answers` holding the result for each name, and `meta`.
 
 ```json annotate
-{"schema":"thinkthen.result/1","input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":{"unresolved":true,"kind":"bug"},"answers":{"unresolved":{"value":true,"question":{"verb":"decide","text":"Is this still unresolved?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":"0.1:0.9","request":"6b1f...c4"},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8,"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
+{"schema":"thinkthen.result/1","input":{"id":"T-91","body":"Payouts have failed for 3 days."},"value":{"open":true,"kind":"bug"},"answers":{"open":{"value":true,"question":{"verb":"decide","text":"Is this still open?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":"0.1:0.9","request":"6b1f...c4"},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind of request is this?","options":["bug","feature","other"]},"answer":{"kind":"choice","pick":"bug","probabilities":{"bug":0.94,"feature":0.04,"other":0.02}},"threshold":0.8,"request":"6b1f...c4"}},"meta":{"tool":"thinkthen 0.4.0","questions_sha256":"9ad3...7e","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":402,"output_tokens":60},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
 ```
 
 Each successful entry under `answers` carries the same `value`, `question`, `answer`, and `threshold` that a single judgment prints. A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. Its detailed entry carries `question`, `failure`, and `request`, and omits `value`, `answer`, and `threshold`. The closed causes are `missing_answer`, `wrong_kind`, `missing_probability`, `invalid_probability`, `invalid_distribution`, and `unexpected_probability`. A failed `tag` counts once even when one of its wire members failed. `null` remains a valid not sure answer.

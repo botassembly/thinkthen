@@ -51,7 +51,7 @@ Different-kind relations use a choice from the larger side to the smaller side p
 
 Each relation carries `name`, `source`, `target`, `reads`, `either`, `method`, nullable `fallback`, `logical_questions`, and `request_count`. Each request carries its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. The plan makes no token or price claim.
 
-A plan at the built-in address splits each relation under the built-in ceiling of `specification/backends.md`, so `request_count` can exceed one with no profile. `backend_profile` is the resolved runtime profile name or null. `fields` is null for lines. Inline rules omit `from`. A file-backed run writes `question`, `threshold`, `model`, `field`, `kind_field`, and optional saved `profile`, each as `file`, `command line`, or `default`.
+`--max-request-bytes N` sets the request size for relation plans, with `THINKTHEN_MAX_REQUEST_BYTES` next and 96,000 bytes at every address by default. A plan splits each relation at the smaller of that size and a profile limit, so `request_count` can exceed one with no profile. `backend_profile` is the resolved runtime profile name or null. `fields` is null for lines. Inline rules omit `from`. A file-backed run writes `question`, `threshold`, `model`, `field`, `kind_field`, and optional saved `profile`, each as `file`, `command line`, or `default`.
 
 ## Detailed result
 

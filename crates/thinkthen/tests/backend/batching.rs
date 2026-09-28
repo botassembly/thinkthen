@@ -17,7 +17,10 @@ use serde_json::{Map, Value, json};
 
 use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
+mod ceiling;
 mod tiers;
+mod too_large;
+mod warning;
 
 pub(super) const QUESTION: &str = "It names a place.";
 const QUOTED: &str = "Each question quotes the text it asks about.";
@@ -54,7 +57,7 @@ fn rows(places: impl Iterator<Item = usize>) -> String {
 
 /// Each wire question's name and the line it asks about. A batch of one
 /// sends the line as the evidence and the question unquoted.
-fn places(body: &[u8]) -> Vec<(String, usize)> {
+pub(super) fn places(body: &[u8]) -> Vec<(String, usize)> {
     let request: Value = serde_json::from_slice(body).unwrap_or(Value::Null);
     let state = request["state"].as_str().unwrap_or_default();
     let Some(questions) = request["questions"].as_object() else {
@@ -443,7 +446,16 @@ fn each_row_carries_its_share() {
         let sent = listener.requests();
         assert_eq!(sent.len(), 1);
         assert_eq!(text(&sent[0].body), expected.trim_end_matches('\n'));
-        let shares: Vec<(Value, Value)> = details(&output)
+        let printed = details(&output);
+        for (index, row) in printed.iter().enumerate() {
+            let mut expected = json!({"setting":3,"records":3,"position":index + 1,
+                "closed":"size","requests_sent":1});
+            if usage.is_some() {
+                expected["usage"] = json!({"input_tokens":100,"output_tokens":10});
+            }
+            assert_eq!(row["meta"]["batch"], expected);
+        }
+        let shares: Vec<(Value, Value)> = printed
             .iter()
             .map(|row| {
                 (
@@ -466,4 +478,17 @@ fn each_row_carries_its_share() {
         };
         assert_eq!(shares, wanted, "usage {usage:?}");
     }
+    let one = Listener::answering(answering).expect("one-record batches");
+    let output = decide(
+        one.base(),
+        &["--batch", "1", "--details", "--no-cache"],
+        &[],
+        input,
+    );
+    assert_eq!(output.status.code(), Some(0));
+    assert!(
+        details(&output)
+            .iter()
+            .all(|row| row["meta"].get("batch").is_none())
+    );
 }

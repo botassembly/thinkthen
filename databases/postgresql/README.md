@@ -25,12 +25,14 @@ A question, set, or spec is JSON text in the file grammar, or a file named with 
 
 `start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
-The slide sample runs as drawn:
+`check.sh` runs this sample:
 
 ```sql
-SELECT id FROM tickets WHERE thinkthen_decide('@refund.json', body) IS NULL;
-SELECT id, a->>'team', (a->>'urgency')::float AS urgency
-FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
+SELECT id FROM (
+  SELECT id, thinkthen_decide('@refund.json', body) AS asks_refund FROM tickets
+) AS judged WHERE asks_refund IS NULL;
+SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency
+FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;
 ```
 
 ## Run facts
@@ -52,6 +54,10 @@ FROM tickets, thinkthen_annotate('@form.json', body) AS a ORDER BY urgency DESC;
 | `thinkthen.cache` | superuser | the answer cache folder. Empty keeps `THINKTHEN_CACHE` or the platform folder |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
+
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. There is no off switch on this surface. `thinkthen.cache` moves the folder, and an empty value keeps `THINKTHEN_CACHE` or the platform folder.
+
+The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 

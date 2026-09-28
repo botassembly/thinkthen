@@ -26,8 +26,10 @@ A question is plain text, `'@path.json'`, or the question file's JSON. Choose, s
 
 ```sql
 LOAD 'build/thinkthen.duckdb_extension';
-SELECT id FROM tickets WHERE thinkthen_decide('Does the writer ask for a refund?', body);
-SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) FROM tickets;
+SELECT id FROM (
+  SELECT id, thinkthen_decide('Does the writer ask for a refund?', body) AS asks_refund FROM tickets
+) WHERE asks_refund;
+SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team FROM tickets;
 ```
 
 ## Run facts
@@ -47,6 +49,8 @@ The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY
 - `SET thinkthen_cache = '/absolute/folder'` moves the cache. The folder must be an absolute local path with no scheme, and the calling database's own file settings must allow it. Each call checks both before it asks anything.
 - `SET thinkthen_max_requests_total = N` caps the requests this process sends. Before each call the extension adds up what its engines have sent. A spent total reads `thinkthen usage: this process has spent its request total of N; raise SET thinkthen_max_requests_total or RESET it` and sends nothing. A call with more texts than remain sends only the first ones that fit, then raises the same sentence. Calls running at the same time can each spend what remains, so the total can be passed by one call per thread in flight, plus retries. A forked child starts from zero. `thinkthen_warm` reads no session setting, so the total does not bind it. `thinkthen status` never sees this spend, because it counts only what the command sends.
 
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. There is no off switch on this surface. `SET thinkthen_cache = '/absolute/folder'` moves the folder, and `THINKTHEN_CACHE` moves the folder `thinkthen_warm` uses.
+
 A bad value's `SET` succeeds, since DuckDB has no check step for an extension setting, and the next call refuses it. The refusal uses the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps at most 16 resident engines, one per distinct throttle, request limit, and cache folder. A new plan retires the least recently used idle engine and keeps its requests and tokens in the process total. When all 16 plans are held, the new plan refuses: `16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process`.
 
 The current C scalar API has no shared query clock across expressions and chunks. Ticket 0201 moves this extension to DuckDB's C++ API and adds `SET thinkthen_query_budget_ms`; this release of the C scalar does not yet enforce that query budget.
@@ -56,7 +60,7 @@ The current C scalar API has no shared query clock across expressions and chunks
 `thinkthen_relate(query, rules)` runs `query` on the calling database and asks the engine how its rows relate. The query returns `id, name, kind` or `id, name`. Rows with the same name and kind become one entity, and each edge returns one row for every pair of their ids. A two-column query reads every kind as `*`, so each rule must be bare or `*:*`. The rules are a list such as `['works_for=person:organization', 'same_as']`, a rules file's JSON, or `'@rules.json'`, read through the caller's own file system.
 
 ```sql
-SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=person:organization']);
+SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=person:organization']) AS works_for;
 ```
 
 - The query runs read-only as one `SELECT`. A statement that writes, attaches, loads, or changes a setting reads `thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions`.

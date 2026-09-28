@@ -74,11 +74,14 @@ pub(crate) fn run(
         .as_ref()
         .map(ModelName::as_str)
         .or_else(|| environment.model());
+    let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
     let backend = Backend::resolve(
         arguments.common.url.as_deref(),
         environment.base_url(),
         configured.unwrap_or(crate::core::DEFAULT_MODEL),
-    )?;
+    )?
+    .with_request_size(request_size);
+    environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
     let mismatch = profile::Mismatch::new(spec.profile.as_ref(), selected_profile.as_ref());
 
@@ -128,7 +131,7 @@ pub(crate) fn run(
                     .map_err(|error| schedule::Placed::at(error, place + 1))
             }),
             environment.cancel(),
-            &mut schedule::Output::Streaming(&mut writer),
+            &mut schedule::Output::streaming(&mut writer, environment.usage()),
         );
     }
     let streams = reading.streams();
@@ -143,7 +146,7 @@ pub(crate) fn run(
             .record(&bytes)
             .map_err(|error| Failure::record(error, streams))?;
         let judged = judged_record(&running, &reading, &spec, record, streams)?;
-        schedule::Output::Streaming(&mut writer).take(judged)?;
+        schedule::Output::streaming(&mut writer, environment.usage()).take(judged)?;
         return Ok(ExitCode::SUCCESS);
     }
     schedule::over_records(
@@ -159,7 +162,7 @@ pub(crate) fn run(
                 .map_err(|error| schedule::Placed::at(error, at))
         }),
         environment.cancel(),
-        &mut schedule::Output::Streaming(&mut writer),
+        &mut schedule::Output::streaming(&mut writer, environment.usage()),
     )
 }
 

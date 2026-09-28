@@ -33,6 +33,10 @@ pub(crate) struct Cli {
 /// The options every judging verb takes.
 #[derive(Args, Debug)]
 pub(crate) struct Common {
+    /// Print one machine-readable run-facts line last on standard error.
+    #[arg(long, hide_short_help = true)]
+    pub(crate) facts: bool,
+
     /// Print the full result object in place of the bare value.
     ///
     /// In record mode the object also carries `input`, the whole record as it
@@ -169,7 +173,7 @@ pub(crate) struct Common {
     pub(crate) jobs: Option<u8>,
 
     /// How many times a retried status is sent again. A transport failure is never sent again.
-    #[arg(long, value_name = "N", default_value_t = 2, hide_short_help = true)]
+    #[arg(long, value_name = "N", default_value_t = 3, hide_short_help = true)]
     pub(crate) max_retries: u32,
 }
 
@@ -241,6 +245,15 @@ pub(crate) struct Batching {
     /// beats a question file's `batch`.
     #[arg(long, value_name = "N|max", hide_short_help = true)]
     pub(crate) batch: Option<String>,
+
+    /// Close a batch before its request exceeds N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
 }
 
 /// The two texts that say what a yes and a no mean, which every yes/no verb takes.
@@ -486,6 +499,15 @@ pub(crate) struct RecognizeArguments {
         hide_short_help = true
     )]
     pub(crate) max_text_bytes: Option<usize>,
+
+    /// Split relation plans before a request exceeds N bytes. [default: 96000]
+    #[arg(
+        long,
+        value_name = "N",
+        hide_short_help = true,
+        allow_negative_numbers = true
+    )]
+    pub(crate) max_request_bytes: Option<String>,
 
     /// The options every judging verb takes.
     #[command(flatten)]

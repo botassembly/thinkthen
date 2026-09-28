@@ -10,6 +10,7 @@ use crate::core::{Outcome, Withheld, ranking};
 use crate::edge;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Completed, Engine, Input, InputPort, RunOutcome};
+use crate::engine::usage::Counters;
 use crate::engine::{Width, Widths};
 use crate::failure::Failure;
 use crate::profile::Mismatch;
@@ -76,13 +77,31 @@ impl fmt::Debug for Judged {
             .field("replayed", &self.replayed)
             .field("probability", &self.probability)
             .field("partial_failure", &self.partial_failure)
-            .field("profile_warning", &self.profile_mismatch.is_some())
+            .field(
+                "profile_warning",
+                &self
+                    .profile_mismatch
+                    .as_ref()
+                    .is_some_and(|mismatch| mismatch.warning().is_some()),
+            )
+            .field(
+                "batch_warning",
+                &self
+                    .profile_mismatch
+                    .as_ref()
+                    .is_some_and(|mismatch| mismatch.batch_warning().is_some()),
+            )
             .finish()
     }
 }
 
 /// Where the command sends engine results in their ordered callback.
-pub(crate) enum Output<'a> {
+pub(crate) struct Output<'a> {
+    mode: Mode<'a>,
+    usage: &'a Counters,
+}
+
+enum Mode<'a> {
     Streaming(&'a mut dyn Write),
     Ordered {
         held: Vec<Judged>,
@@ -93,9 +112,9 @@ pub(crate) enum Output<'a> {
 
 impl fmt::Debug for Output<'_> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Streaming(_) => formatter.write_str("Streaming"),
-            Self::Ordered { held, top, .. } => formatter
+        match &self.mode {
+            Mode::Streaming(_) => formatter.write_str("Streaming"),
+            Mode::Ordered { held, top, .. } => formatter
                 .debug_struct("Ordered")
                 .field("held", &format_args!("<{} rows withheld>", held.len()))
                 .field("top", top)
@@ -105,9 +124,31 @@ impl fmt::Debug for Output<'_> {
 }
 
 impl Output<'_> {
+    pub(crate) fn streaming<'a>(writer: &'a mut dyn Write, usage: &'a Counters) -> Output<'a> {
+        Output {
+            mode: Mode::Streaming(writer),
+            usage,
+        }
+    }
+
+    pub(crate) fn ordered<'a>(
+        writer: &'a mut dyn Write,
+        top: Option<usize>,
+        usage: &'a Counters,
+    ) -> Output<'a> {
+        Output {
+            mode: Mode::Ordered {
+                held: Vec::new(),
+                top,
+                writer,
+            },
+            usage,
+        }
+    }
+
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
-        match self {
-            Self::Streaming(writer) => {
+        let result = match &mut self.mode {
+            Mode::Streaming(writer) => {
                 if let Some(mismatch) = &judged.profile_mismatch {
                     mismatch.print_once()?;
                 }
@@ -116,15 +157,19 @@ impl Output<'_> {
                     None => Ok(true),
                 }
             }
-            Self::Ordered { held, .. } => {
+            Mode::Ordered { held, .. } => {
                 held.push(judged);
                 Ok(true)
             }
+        };
+        if result.is_ok() {
+            self.usage.record_done();
         }
+        result
     }
 
     pub(crate) fn ended(&mut self) -> Result<(), Failure> {
-        let Self::Ordered { held, top, writer } = self else {
+        let Mode::Ordered { held, top, writer } = &mut self.mode else {
             return Ok(());
         };
         let odds = held
@@ -153,13 +198,13 @@ impl Output<'_> {
     }
 
     pub(crate) fn writer(&mut self) -> &mut dyn Write {
-        match self {
-            Self::Streaming(writer) | Self::Ordered { writer, .. } => *writer,
+        match &mut self.mode {
+            Mode::Streaming(writer) | Mode::Ordered { writer, .. } => *writer,
         }
     }
 
     pub(crate) const fn holds(&self) -> bool {
-        matches!(*self, Self::Ordered { .. })
+        matches!(self.mode, Mode::Ordered { .. })
     }
 }
 
