@@ -429,13 +429,16 @@ fn answer_rows(
     let reply = &whole.reply;
     let mut rows = Vec::with_capacity(count);
     let mut stop = None;
-    if batch.questions.len() != count || batch.row_questions.len() != count {
+    if batch.questions.len() != count
+        || batch.outcomes.len() != count
+        || batch.row_questions.len() != count
+    {
         return Err(Placed::at(
             Failure::Defect("a batch lost a row question"),
             first,
         ));
     }
-    for (position, (held, &asked)) in records.iter().zip(&batch.questions).enumerate() {
+    for (position, (held, &asked)) in records.iter().zip(&batch.outcomes).enumerate() {
         let Some(AnswerOutcome::Answered(answer)) = reply.outcomes().get(asked) else {
             stop = Some(Placed::at(Failure::PartialReply { first, last }, held.at));
             break;

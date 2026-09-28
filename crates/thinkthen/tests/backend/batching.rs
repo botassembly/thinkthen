@@ -20,6 +20,7 @@ use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 mod ceiling;
 mod choose;
 mod context;
+mod tag_score;
 mod tiers;
 mod too_large;
 mod warning;

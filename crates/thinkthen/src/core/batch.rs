@@ -91,6 +91,8 @@ pub(crate) struct Batch {
     pub(crate) digest: Digest,
     /// Each record's first wire question, in input order. Copies share one.
     pub(crate) questions: Vec<usize>,
+    /// Each record's logical decoded outcome. Copies share one.
+    pub(crate) outcomes: Vec<usize>,
     /// The complete question of each logical row, before record quoting.
     pub(crate) row_questions: Vec<Question>,
     pub(crate) closed: Closed,
@@ -335,6 +337,7 @@ impl Batcher {
                 .iter()
                 .filter_map(|&place| firsts.get(place).copied())
                 .collect(),
+            outcomes: members.clone(),
             row_questions: members
                 .iter()
                 .filter_map(|&place| distinct.get(place).map(|held| held.base.clone()))

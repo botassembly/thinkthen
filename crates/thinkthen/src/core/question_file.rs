@@ -340,8 +340,8 @@ impl QuestionFile {
         Self::parsed(Json::parse(text)?)
     }
 
-    /// Read one whole question file, taking `batch` off the top of a `decide`
-    /// or `choose` file first and returning its raw value. A question set's entries use
+    /// Read one whole question file, taking `batch` off the top of a judging
+    /// question first and returning its raw value. A question set's entries use
     /// [`Self::parse`], so they still refuse `batch`.
     ///
     /// # Errors
@@ -351,7 +351,10 @@ impl QuestionFile {
         let mut value = Json::parse(text)?;
         let mut batch = None;
         if let Json::Object(members) = &mut value
-            && matches!(verb_of(members), Ok(Verb::Decide | Verb::Choose))
+            && matches!(
+                verb_of(members),
+                Ok(Verb::Decide | Verb::Choose | Verb::Tag | Verb::Score)
+            )
             && let Some(at) = members.iter().position(|(name, _)| name == "batch")
         {
             batch = Some(members.remove(at).1);
