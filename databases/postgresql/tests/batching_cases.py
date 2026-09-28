@@ -38,18 +38,33 @@ def body(records: list[str], shared: str | None = None) -> str:
                       separators=(",", ":"), ensure_ascii=False)
 
 
+def singleton_body(record: str) -> str:
+    return json.dumps({"state": record, "model": MODEL, "questions":
+                       {"q1": {"type": "noul", "instructions": QUESTION}}},
+                      separators=(",", ":"), ensure_ascii=False)
+
+
 def main() -> None:
     mode, folder = sys.argv[1:]
     saved = entries(folder)
     if mode == "packed":
         expected = {body(["b", "a"]), body(["c", "d"])}
         assert len(saved) == 2 and {raw for _, raw in saved} == expected, saved
+    elif mode == "max":
+        expected = {body(["b", "a", "c", "d"])}
+        assert len(saved) == 1 and {raw for _, raw in saved} == expected, saved
+    elif mode == "singleton":
+        expected = {singleton_body(record) for record in ["b", "a", "c", "d"]}
+        assert len(saved) == 4 and {raw for _, raw in saved} == expected, saved
     elif mode == "one_of_packed":
         expected = {body(["b", "a"]), body(["c", "d"])}
         assert len(saved) == 1 and saved[0][1] in expected, saved
     elif mode == "context":
         expected = {body(["b", "a"], "shared reference")}
         assert len(saved) == 1 and {raw for _, raw in saved} == expected, saved
+    elif mode == "warm":
+        expected = {body(["b", "a"], "first"), body(["c", "d"], "second")}
+        assert len(saved) == 2 and {raw for _, raw in saved} == expected, saved
     else:
         raise ValueError(f"unknown batching proof: {mode}")
     print(f"pass {mode}")

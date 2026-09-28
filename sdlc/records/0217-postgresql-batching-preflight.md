@@ -1,6 +1,6 @@
 # 0217 PostgreSQL batching preflight
 
-Status: B13d design preparation accepted by independent review of `3e8dde23484872f6d779e8032c4f34abd143e8c9`; runtime work starts from main `49aa831c`. No B13d product proof or register 73 closure yet. The [ticket](../tickets/0217-postgresql-record-batching.md) and [review handoff](0217-design-review.md) preserve B0's accepted final-context reach across eligible judgment forms. The first review corrected the narrower draft.
+Status: B13d design preparation accepted by independent review of `3e8dde23484872f6d779e8032c4f34abd143e8c9`; runtime work started from main `49aa831c` and later merged main `681a1d59`. The [build record](0217-postgresql-batching-build.md) now names the focused installed proof; fresh High code review remains. Register 73 is not closed. The [ticket](../tickets/0217-postgresql-record-batching.md) and [review handoff](0217-design-review.md) preserve B0's accepted final-context reach across eligible judgment forms. The first review corrected the narrower draft.
 
 ## Runtime refresh at `49aa831c`
 

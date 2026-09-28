@@ -159,7 +159,13 @@ fn combine(one: String, two: String) -> String {
     if warm_count(&one) + warm_count(&two) > WARM_ROW_CAP {
         over_cap();
     }
-    warm_merge(&one, &two)
+    let merged = warm_merge(&one, &two);
+    if merged.len() > WARM_STATE_CAP {
+        call::raise(Refusal::usage(format!(
+            "thinkthen_warm holds at most {WARM_STATE_CAP} bytes of questions and evidence per call"
+        )));
+    }
+    merged
 }
 
 fn finalize(current: String) -> i64 {
@@ -246,7 +252,7 @@ impl Aggregate<WarmContext> for WarmContext {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{warm_count, warm_groups, warm_merge, warm_step};
 
     /// The warm state round-trips separators and slashes, counts from its
     /// head, merges by adding counts, and groups distinct pairs.
