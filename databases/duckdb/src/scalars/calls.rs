@@ -130,11 +130,11 @@ pub(super) fn recognized(
     texts
         .iter()
         .map(|text| {
-            Ok(read(engine.recognize_with(
-                ask,
-                text,
-                options(token, due)?,
-            )?.value()))
+            Ok(read(
+                engine
+                    .recognize_with(ask, text, options(token, due)?)?
+                    .value(),
+            ))
         })
         .collect()
 }
