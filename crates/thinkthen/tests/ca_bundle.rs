@@ -190,7 +190,7 @@ impl Drop for Server {
     }
 }
 
-fn command(url: &str, ca: Option<&Path>, home: &Path) -> Output {
+fn command(url: &str, ca: Option<&Path>, home: &Path, key: Option<&str>) -> Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     child
         .args([
@@ -204,10 +204,12 @@ fn command(url: &str, ca: Option<&Path>, home: &Path) -> Output {
         ])
         .env_clear()
         .env("HOME", home)
-        .env("THINKTHEN_API_KEY", KEY)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
+    if let Some(key) = key {
+        child.env("THINKTHEN_API_KEY", key);
+    }
     if let Some(ca) = ca {
         child.env("THINKTHEN_CA_BUNDLE", ca);
     }
@@ -239,6 +241,7 @@ fn genuine_tls_trust_replaces_default_and_keeps_hostname_verification() {
             &server.url,
             bundle.map(|name| fixture.at(name)).as_deref(),
             &fixture.0,
+            Some(KEY),
         );
         let requests = server.finish();
         let said = String::from_utf8_lossy(&output.stderr);
@@ -339,6 +342,24 @@ fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
     assert_eq!(output.status.code(), Some(5));
     assert!(output.stdout.is_empty());
     assert!(String::from_utf8_lossy(&output.stderr).contains("THINKTHEN_CA_BUNDLE"));
+
+    // This is an ordinary live decide path with no key, not a dry-run path.
+    // The invalid bundle must win before either the key reader or a socket.
+    let listener = TcpListener::bind("127.0.0.1:0").expect("counted local socket");
+    listener
+        .set_nonblocking(true)
+        .expect("nonblocking listener");
+    let url = format!(
+        "https://127.0.0.1:{}",
+        listener.local_addr().expect("address").port()
+    );
+    let output = command(&url, Some(&missing), &fixture.0, None);
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+    assert!(String::from_utf8_lossy(&output.stderr).contains("THINKTHEN_CA_BUNDLE"));
+    assert!(
+        matches!(listener.accept(), Err(error) if error.kind() == std::io::ErrorKind::WouldBlock)
+    );
 }
 
 #[test]
@@ -358,8 +379,15 @@ fn public_environment_and_explicit_builder_share_the_loaded_roots() {
             .env_clear()
             .env("HOME", &fixture.0)
             .env("THINKTHEN_TEST_CA_MODE", mode)
-            .env("THINKTHEN_TEST_CA_URL", &server.url)
-            .env("THINKTHEN_CA_BUNDLE", fixture.at("ca.pem"))
+            .env(
+                "THINKTHEN_CA_BUNDLE",
+                if mode == "explicit" {
+                    PathBuf::from("invalid-relative-ca.pem")
+                } else {
+                    fixture.at("ca.pem")
+                },
+            )
+            .env("THINKTHEN_TEST_SELECTED_CA", fixture.at("ca.pem"))
             .env("THINKTHEN_BASE_URL", &server.url)
             .env("THINKTHEN_API_KEY", KEY)
             .output()
@@ -386,18 +414,14 @@ fn public_tls_child() {
     let Ok(mode) = std::env::var("THINKTHEN_TEST_CA_MODE") else {
         return;
     };
-    let url = std::env::var("THINKTHEN_TEST_CA_URL").expect("test URL");
-    let ca = PathBuf::from(std::env::var("THINKTHEN_CA_BUNDLE").expect("test CA"));
+    let ca = PathBuf::from(std::env::var("THINKTHEN_TEST_SELECTED_CA").expect("test CA"));
     let builder = if mode == "env" {
         EngineBuilder::from_env().expect("env settings")
     } else {
-        Engine::builder()
-            .base_url(&url)
-            .expect("base")
-            .api_key(KEY)
-            .expect("key")
+        EngineBuilder::from_env()
+            .expect("invalid environment CA remains overridable")
             .ca_bundle(&ca)
-            .expect("CA path")
+            .expect("explicit CA path")
     };
     let engine = builder.no_cache().build().expect("private CA engine");
     let mut question = Question::decide("Does this ask for a refund?").expect("question");

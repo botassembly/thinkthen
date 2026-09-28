@@ -147,9 +147,9 @@ impl EngineBuilder {
         if let Some(key) = variable(KEY_VAR)? {
             builder.key = Some(Secret(key.into()));
         }
-        if let Some(path) = variable("THINKTHEN_CA_BUNDLE")? {
-            builder = builder.ca_bundle(path)?;
-        }
+        // A later explicit setter outranks this path, including an invalid one.
+        // Validate only the path selected when the engine is built.
+        builder.ca_bundle = variable("THINKTHEN_CA_BUNDLE")?.map(PathBuf::from);
         if let Some(model) = config.model() {
             builder = builder.model(model)?;
         }
