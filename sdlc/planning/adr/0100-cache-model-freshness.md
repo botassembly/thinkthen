@@ -1,6 +1,6 @@
 # ADR 0100: Refresh mutable model aliases through requested cache work
 
-Status: **Proposed for fresh design review.** Ticket [0238](../../tickets/0238-cache-model-freshness-and-refresh.md) owns implementation. This decision amends ADR 0020 only for answer-cache replacement. It does not amend strict recording or replay.
+Status: **Accepted for ticket 0238.** Fresh High design re-review accepted source `2e101ded583f639dffa601df2e502931e077c43c`; the coordinator approved implementation within the delegated register 09/23 outcome. Ticket [0238](../../tickets/0238-cache-model-freshness-and-refresh.md) and its [build record](../../records/0238-cache-model-build.md) own implementation and proof. This decision amends ADR 0020 only for answer-cache replacement. It does not amend strict recording or replay.
 
 ## Decision
 
