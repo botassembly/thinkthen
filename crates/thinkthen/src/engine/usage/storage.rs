@@ -154,6 +154,17 @@ pub(super) fn update(path: &Path, month: &str, delta: Counts, shared: &Shared) -
     verify_identity(&lock_path, &lock, false)?;
     maybe_fail(Stage::Validation)?;
     let months = scan(path).map_err(|error| io::Error::new(error.source.kind(), error))?;
+    let name = format!("{month}.json");
+    let mut total = Counts::default();
+    let mut old = Counts::default();
+    for entry in &months {
+        total = total.checked_add(entry.counts).ok_or_else(overflow)?;
+        if entry.name == name {
+            old = entry.counts;
+        }
+    }
+    let next = old.checked_add(delta).ok_or_else(overflow)?;
+    let _prospective_total = total.checked_add(delta).ok_or_else(overflow)?;
     for entry in &months {
         if entry.contaminated {
             if !entry.sidecar {
@@ -162,18 +173,12 @@ pub(super) fn update(path: &Path, month: &str, delta: Counts, shared: &Shared) -
             write_legacy(path, &directory, &entry.name, entry.counts)?;
         }
     }
-    let name = format!("{month}.json");
-    let old = months
-        .iter()
-        .find(|entry| entry.name == name)
-        .map_or(Counts::default(), |entry| entry.counts);
     if !months.iter().any(|entry| entry.name == name) {
         lock.sync_all()?;
         directory.sync_all()?;
         note_initial_sync();
         note_initial_sync();
     }
-    let next = old.checked_add(delta).ok_or_else(overflow)?;
     write_legacy(path, &directory, &name, next)?;
     write_retry(path, &directory, &name, next.retries)
 }

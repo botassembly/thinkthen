@@ -322,16 +322,78 @@ fn checked_month_and_total_addition_refuse_overflow_without_replacing_good_state
             .requests_sent,
         u64::MAX
     );
+    let august = folder.join("2026-08.json");
+    let sidecar = folder.join("retries-2026-08.json");
+    let before_month = fs::read(&august).expect("last good bytes");
+    let before_sidecar = fs::read(&sidecar).expect("last good retry bytes");
+    assert!(
+        update(
+            &folder,
+            "2026-09",
+            Counts {
+                requests_sent: 1,
+                ..Counts::default()
+            },
+        )
+        .is_err(),
+        "individually valid month would overflow the aggregate"
+    );
+    assert_eq!(fs::read(august).expect("unchanged month"), before_month);
+    assert_eq!(
+        fs::read(sidecar).expect("unchanged sidecar"),
+        before_sidecar
+    );
+    assert!(!folder.join("2026-09.json").exists());
+    assert!(!folder.join("retries-2026-09.json").exists());
+    assert_eq!(
+        read(&folder, "2026-08")
+            .expect("readable total")
+            .total
+            .requests_sent,
+        u64::MAX
+    );
+}
+
+#[test]
+fn current_month_overflow_refuses_before_migrating_an_older_month() {
+    let folder = folder("overflow-before-migration");
+    update(&folder, "2026-08", Counts::default()).expect("old baseline");
     update(
         &folder,
         "2026-09",
         Counts {
-            requests_sent: 1,
+            requests_sent: u64::MAX,
             ..Counts::default()
         },
     )
-    .expect("other month");
-    assert!(read(&folder, "2026-09").is_err(), "total overflow");
+    .expect("current maximum");
+    let old = folder.join("2026-08.json");
+    fs::remove_file(folder.join("retries-2026-08.json")).expect("old layout");
+    let contaminated = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":0,\"retries\":1,\"input_tokens\":0,\"output_tokens\":0,\"cache_answers\":0}\n";
+    fs::write(&old, contaminated).expect("retry-extended older month");
+    let current = folder.join("2026-09.json");
+    let current_sidecar = folder.join("retries-2026-09.json");
+    let current_before = fs::read(&current).expect("current bytes");
+    let retry_before = fs::read(&current_sidecar).expect("current retry bytes");
+
+    assert!(
+        update(
+            &folder,
+            "2026-09",
+            Counts {
+                requests_sent: 1,
+                ..Counts::default()
+            }
+        )
+        .is_err()
+    );
+    assert_eq!(fs::read(old).expect("old bytes"), contaminated);
+    assert!(!folder.join("retries-2026-08.json").exists());
+    assert_eq!(fs::read(current).expect("current bytes"), current_before);
+    assert_eq!(
+        fs::read(current_sidecar).expect("current retry bytes"),
+        retry_before
+    );
 }
 
 #[test]

@@ -1,0 +1,9 @@
+# 0235 first code review correction
+
+Status: fresh High code review of `e7ca7197` returned one finding. The corrected source awaits the same reviewer's recheck; this builder record does not accept it.
+
+The reviewer found that `storage.rs::update` migrated retry-extended older months before it checked whether the current delta overflowed. A refused update could therefore change an older month and create its retry sidecar. It also did not check all-month aggregate overflow before publication, while read-only `status` did. Individually valid monthly files could become unreadable as a total.
+
+The correction computes the current-month result and the aggregate of every recognized month plus the proposed delta under the existing exclusive lock, before any migration, initial sync or replacement. Either overflow refuses the entire update. The existing migration and base-before-sidecar write order then proceeds unchanged. One regression starts with a retry-extended older month and a maximum current month; a current-month overflow leaves exact older and current bytes intact and creates no older sidecar. The adjusted aggregate regression starts with one maximum month and proposes an individually valid new month; it refuses before publication, preserves the existing month and sidecar bytes, and leaves both new names absent. The focused usage library tests pass.
+
+The real pinned-reader interoperability sequence and the 520–524 and timeout listener checks remain valid evidence because this correction changes only pre-mutation overflow validation. The tester's first candidate hash remains a record of the reviewed input, not the corrected build. Send a new source revision and binary hash after the focused checks and commit. Do not close either issue until the fresh High recheck and external acceptance resolve.
