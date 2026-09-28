@@ -54,17 +54,27 @@ def labels(value):
 def _field_kind(annotation):
     """The four supported authoring types and their labels, if any."""
     args = get_args(annotation)
+    optional = False
     if get_origin(annotation) in (types.UnionType, __import__("typing").Union):
         if len(args) != 2 or type(None) not in args:
             raise UsageError("question-set fields take one supported answer type")
         annotation = next(item for item in args if item is not type(None))
+        optional = True
     if annotation is bool:
+        if not optional:
+            raise UsageError("decide question fields take bool | None")
         return "decide", None
     if annotation is float:
+        if optional:
+            raise UsageError("score question fields take float without None")
         return "score", None
     if get_origin(annotation) is Literal:
+        if not optional:
+            raise UsageError("choose question fields take Literal[...] | None")
         return "choose", _literal(annotation)
     if get_origin(annotation) is list:
+        if optional:
+            raise UsageError("tag question fields take list[Literal[...]] without None")
         members = get_args(annotation)
         if len(members) != 1:
             raise UsageError("tag question fields take list[Literal[...]]")

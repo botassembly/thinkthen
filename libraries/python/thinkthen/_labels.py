@@ -37,7 +37,7 @@ def _enum(value):
     return labels, meanings
 
 
-def normalize(value, descriptions=None):
+def normalize(value, descriptions=None, *, bare_level_names=False):
     """Return an old list/map unchanged, or an ordered new list/map."""
     if isinstance(value, type) and issubclass(value, Enum):
         labels, meanings = _enum(value)
@@ -67,4 +67,7 @@ def normalize(value, descriptions=None):
         if unknown:
             raise UsageError("descriptions= names an unknown label")
         meanings.update(descriptions)
-    return {label: meanings.get(label) for label in labels} if meanings else labels
+    if not meanings:
+        return labels
+    return {label: meanings[label] if label in meanings else
+            (label if bare_level_names else None) for label in labels}

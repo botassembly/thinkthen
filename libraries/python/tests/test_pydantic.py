@@ -31,6 +31,15 @@ def test_optional_authoring_and_strict_row_validation(backend, tmp_path):
         class WrongLabels(BaseModel):
             kind: Literal["first", "second"] | None = Field(
                 description="Which kind?", json_schema_extra={"options": ["third", "fourth"]})
+        class OptionalScore(BaseModel):
+            score: float | None = Field(description="Severity?", json_schema_extra={
+                "levels": ["low", "high"]})
+        class OptionalTags(BaseModel):
+            tags: list[Literal["first", "second"]] | None = Field(description="What tags?")
+        class BareDecide(BaseModel):
+            open: bool = Field(description="Open?")
+        class BareChoose(BaseModel):
+            kind: Literal["first", "second"] = Field(description="Which kind?")
         engine = tt.Engine(cache=False)
         taken = []
         def hold(call):
@@ -71,7 +80,15 @@ def test_optional_authoring_and_strict_row_validation(backend, tmp_path):
         for invalid in (lambda: engine.choose("Which?", "Alice", options=Labels(first=1, second=2)),
                         lambda: engine.annotate(Annotated[Questions,
                              Field(description="root")], ["Alice"]),
-                        lambda: engine.annotate(WrongLabels, ["Alice"])):
+                        lambda: engine.annotate(WrongLabels, ["Alice"]),
+                        lambda: engine.annotate(OptionalScore, ["Alice"]),
+                        lambda: row_model(OptionalScore),
+                        lambda: engine.annotate(OptionalTags, ["Alice"]),
+                        lambda: row_model(OptionalTags),
+                        lambda: engine.annotate(BareDecide, ["Alice"]),
+                        lambda: row_model(BareDecide),
+                        lambda: engine.annotate(BareChoose, ["Alice"]),
+                        lambda: row_model(BareChoose)):
             try:
                 invalid()
             except tt.UsageError:

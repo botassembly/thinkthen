@@ -92,7 +92,8 @@ def question(*, decide=None, choose=None, score=None, tag=None, threshold=None,
     body = {verbs[0][0]: verbs[0][1]}
     for key, value in given.items():
         body[_PARTS[key]] = (_threshold(value) if key == "threshold" else
-                             _labels(value, descriptions) if key in ("options", "labels", "levels") else
+                             _labels(value, descriptions, bare_level_names=key == "levels")
+                             if key in ("options", "labels", "levels") else
                              value)
     if descriptions is not None and not any(key in given for key in ("options", "labels", "levels")):
         raise UsageError("descriptions= needs a label set")

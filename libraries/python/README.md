@@ -25,6 +25,8 @@ engine.choose_many("Which team?", reviews, options=["billing", "shipping"]).valu
 
 `options=`, `labels=`, `levels=`, and recognition `kinds=` take the existing ordered list/map forms, an `Enum` class, or a direct standard-library `Literal[...]`. A string-valued Enum member supplies its value; another member supplies its name. Canonical declaration order is kept. An Enum member's `description` or distinct member docstring supplies its meaning; `descriptions={"name": ...}` replaces one member's meaning. Unknown override names and observable Enum aliases are usage errors before a request. Python can collapse a repeated `Literal` argument before runtime inspection; a resulting one-label `choose` set is refused by the native question grammar.
 
+For typed `score` levels, a bare member keeps its name as its criterion even when another level has a description. An explicit map or override value of `None` still means the native empty criterion `{}`. A Pydantic question-set field uses `bool | None` for decide, `Literal[...] | None` for choose, bare `float` for score, or bare `list[Literal[...]]` for tag; nullable scores and tags are refused before a request.
+
 ```python
 from enum import Enum
 from typing import Literal

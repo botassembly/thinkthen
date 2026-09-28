@@ -1,5 +1,6 @@
 """Python label forms preserve the existing native request identity."""
 
+import hashlib
 import json
 
 from conftest import child_env, run
@@ -48,6 +49,12 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         class Alias(Enum):
             first = "same"
             second = "same"
+        class MixedScore(Enum):
+            low = "low"
+            high = "high"
+            @property
+            def description(self):
+                return None if self.name == "low" else "very high"
         engine = tt.Engine(cache=False)
         digests = []
         def hold(call):
@@ -82,6 +89,13 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         hold(engine.recognize("Alice")).entities
         hold(engine.recognize("Alice", ask={"version": 1,
                     "recognize": {"kinds": {}}})).entities
+        assert hold(engine.score("Urgency?", "Alice", levels=MixedScore)) == 0.0
+        assert hold(engine.score("Urgency?", "Alice", levels={
+            "low": "low", "high": "very high"})) == 0.0
+        assert hold(engine.score("Urgency?", "Alice", levels={
+            "low": None, "high": "very high"})) == 0.0
+        assert hold(engine.score("Urgency?", "Alice", levels=MixedScore,
+                                 descriptions={"low": None})) == 0.0
         for invalid in (lambda: engine.choose("Who?", "Alice", options=Kind,
                                              descriptions={"unknown": "x"}),
                         lambda: engine.choose("Who?", "Alice", options=Alias),
@@ -97,7 +111,7 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         print(json.dumps(digests))
         ''', env)
         digests = json.loads(printed)
-        assert len(digests) == 16
+        assert len(digests) == 20
         groups, offset = [], 0
         for _, count in digests:
             groups.append(bodies[offset:offset + count])
@@ -113,4 +127,13 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
             "person": {"what": "a person"}, "company": ["a company"]}
         assert b'"what":"a person"' in b"".join(groups[12])
         assert requests[0]["state"] == "Alice"
+        expected = (b'{"state":"Alice","model":"jev-1.13.0","questions":'
+                    b'{"q1":{"type":"score","instructions":"Urgency?",'
+                    b'"criteria":["low","very high"]}}}')
+        assert groups[16] == groups[17] == [expected]
+        digest = hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + expected).hexdigest()
+        assert digests[16] == digests[17] == [[digest], 1]
+        assert json.loads(groups[18][0])["questions"]["q1"]["criteria"] == [{}, "very high"]
+        assert digests[18][0] != [digest]
+        assert groups[18] == groups[19] and digests[18] == digests[19]
         assert backend.count() == 0
