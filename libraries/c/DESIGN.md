@@ -19,6 +19,7 @@ The header adds a borrowed failure-facts accessor beside its existing error func
 | `thinkthen_error_facts_json` | added | Borrows the last started failure's final facts on this thread and engine; NULL means absent. Its pointer follows the message accessor's lifetime. |
 | `thinkthen_cancel_token_new`, `thinkthen_cancel`, `thinkthen_cancel_token_free` | kept | The handle wraps `CancelToken` and fires from any thread. |
 | `thinkthen_decide`, `thinkthen_decide_opts` | kept | `question_json` goes through `Question::from_json`. `deadline_ms` stays `int64_t` and goes through `CallOptions::deadline_millis` (ADR 0041). |
+| `thinkthen_question_file` | added | A bounded named-file read validates through `Question::from_json`, returns owned original JSON through two unchanged-on-error outputs, and records non-retryable Local on a file failure. It sends nothing. |
 | `thinkthen_decide_many`, `thinkthen_decide_many_opts` | kept | A cancelled or expired call still returns no rows. |
 | `thinkthen_call`, `thinkthen_call_opts` | changed | The envelope grammar below replaces the branch's eight verbs. |
 | `thinkthen_recognize`, `thinkthen_recognize_opts` | changed | The spec is a version-one question file. Entities take the engine's `{text, start, end, length, kind, strength}` through `Recognized::to_json`. Recognize follows the engine's cache and replay settings like every call. |

@@ -74,6 +74,16 @@ impl Failure {
         }
     }
 
+    /// A named local question file could not supply a valid question.
+    pub(crate) fn local(message: impl Into<String>) -> Self {
+        Self {
+            code: code_of(ErrorKind::Local),
+            retryable: false,
+            message: message.into(),
+            facts: None,
+        }
+    }
+
     /// A broken promise of the door or the engine beneath it.
     pub(crate) fn defect(message: &str) -> Self {
         Self {

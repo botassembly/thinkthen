@@ -403,6 +403,15 @@ module ThinkThen
     # (decide, choose, score, or tag) and its text, and threshold, options,
     # levels, labels, or meanings. A Range threshold is the band.
     def question(**keywords)
+      if keywords.key?(:file)
+        raise UsageError.new("question file takes no other question keys", "usage") unless keywords.size == 1
+
+        path = keywords[:file]
+        raise UsageError.new("question file path is valid text", "usage") unless path.is_a?(String) && path.valid_encoding? && !path.include?("\0") && !path.empty?
+
+        return Native.question_file(path)
+      end
+
       body = keywords.transform_keys(&:to_s)
       threshold = body["threshold"]
       body["threshold"] = "#{threshold.begin}:#{threshold.end}" if threshold.is_a?(Range)

@@ -16,6 +16,8 @@ const rows = (await tt.annotate("form.json", tickets, { signal, batch: 2 })).val
 
 `null` means unsure. The verbs are `decide`, `decide_many`, `choose`, `choose_many`, `score`, `score_many`, `tag`, `tag_many`, `filter`, `rank`, `find`, `annotate`, `details`, `recognize`, and `relate`. `usage()` returns the counters. Each verb is also a method of `new tt.Engine(options)`.
 
+`tt.questionFile(path)` synchronously reads one named UTF-8 question file of at most 1 MiB and returns a frozen question value for the same verbs as `tt.question(spec)`. Its validated source JSON preserves described-label order. An unreadable or invalid named file throws a non-retryable `ThinkThenError` of kind `local` before any request. `tt.question(spec)` and ordinary strings, including strings beginning with `@`, keep their existing typed and literal meanings. `rank` and `find` still accept only plain decide text.
+
 ## Settings
 
 The module-level verbs use the engine the environment describes: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest. `new tt.Engine({ baseUrl, model, throttle, maxRequests, maxRequestBytes, cache, timeoutSeconds, maxRetries, profile, record, replay, batch })` starts from the same environment, and each given key overrides one setting. `cache: false` keeps no cache. A refused setting throws `ThinkThenError` of kind `usage`. An engine counts its own usage.

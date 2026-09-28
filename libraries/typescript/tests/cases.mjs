@@ -11,7 +11,6 @@ const CANONICAL = 'https://api.typesafe.ai/v1/systemone';
 /** Cases this surface cannot express, each with its reason. */
 const NOT_RUN = {
   '25-defect-fault': 'no input makes the engine panic; the Rust unit test covers the binding guard',
-  '30-local-question-file': 'this surface reads a question file only as an annotate set',
 };
 
 const digest = (url, request) => createHash('sha256').update(`systemone\n${url}\n${request}`).digest('hex');
@@ -43,6 +42,11 @@ function fault(tt, one, engine, folder) {
     case '23-cancelled-fault': return engine.decide(question, 'any text', { signal: AbortSignal.abort() });
     case '24-deadline-fault': return engine.decide(question, 'any text', { deadlineMs: 0 });
     case '29-usage-json-text': return engine.decide(question, one.evidence);
+    case '30-local-question-file': {
+      const file = join(folder, 'question.json');
+      writeFileSync(file, JSON.stringify(question));
+      return engine.decide(tt.questionFile(file), one.evidence);
+    }
     case '31-usage-rank-blank-question': return engine.rank(question.decide, one.evidence.split('\n').filter(Boolean));
     default: throw new Error(`no fault form for ${one.id}`);
   }
@@ -53,7 +57,15 @@ async function check(tt, one, origin, folder) {
   const engine = new tt.Engine({ baseUrl: base, cache: false });
   engine.base = base;
   if (one.expect.error) {
-    const kind = await Promise.resolve().then(() => fault(tt, one, engine, folder)).then(() => 'resolved', (error) => error.kind);
+    let retryable;
+    const kind = await Promise.resolve().then(() => fault(tt, one, engine, folder)).then(() => 'resolved', (error) => {
+      retryable = error.retryable;
+      return error.kind;
+    });
+    if (one.id === '30-local-question-file') {
+      same('named-file retryable', retryable, false);
+      same('named-file sends', engine.usage().requests_sent, 0);
+    }
     return same('kind', kind, one.expect.error.kind);
   }
   const success = one.expect.success;
@@ -72,6 +84,15 @@ async function check(tt, one, origin, folder) {
       same('requests', details.meta.requests, expected.requests.map((held) => renamed.get(held)));
       for (const name of ['usage', 'requests_sent', 'cached']) same(name, details.meta[name], expected[name]);
       same('url', details.meta.url, served);
+      if (one.id === '01-decide-yes-captured') {
+        const file = join(folder, 'captured-question.json');
+        writeFileSync(file, JSON.stringify(one.question));
+        const before = engine.usage().requests_sent;
+        const loaded = await engine.details(tt.questionFile(file), texts[0]);
+        same('named-file answer', loaded.value.answer, expected.answer);
+        same('named-file digest', loaded.value.meta.requests, expected.requests.map((held) => renamed.get(held)));
+        same('named-file sends', engine.usage().requests_sent - before, 1);
+      }
       if (success.counters) {
         const cached = new tt.Engine({ baseUrl: base, cache: join(folder, one.id) });
         for (let call = 0; call < success.counters.calls; call += 1) await cached.decide(one.question, texts[0]);

@@ -23,3 +23,8 @@ The port notes of ticket 0107. The tag `surfaces-wave7-frozen-2026-09-24b` keeps
 - **Saw:** a bare score list stays a string list in the request. An object map with a null description becomes an explicit empty-object level in the request. The two forms cannot share one normalization.
 - **Saw:** recognition accepts a structured kind description through its parser, but its token-position request names the kind without quoting that description. The test checks the real body and its digest instead of assuming the description appears in the prompt.
 - **Saw:** a worker may start before a Rust account exists. A pre-account usage error has no facts; a failed sent request has final facts with zero completed records. A prompt abort carries one receipt, and observing it keeps the same worker alive for its final report.
+
+## 2026-09-28: one named question file
+
+- **Tried:** `questionFile(path)` through the native file edge and the existing question value. It bounds the actual read to 1 MiB plus one byte and maps named-file failures to non-retryable Local without a send.
+- **Saw:** passing the validated source directly from the branded question avoids JavaScript's parse/stringify reordering of numeric description keys. A captured rich-question request and the shared case-01 digest protect that path; selected case 30 protects Local refusal. Literal strings and typed objects remain separate.

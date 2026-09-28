@@ -7,6 +7,7 @@ export const {
   ThinkThenError,
   Engine,
   question,
+  questionFile,
   usage,
   decide,
   decide_many,

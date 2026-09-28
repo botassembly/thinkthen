@@ -1,6 +1,6 @@
 # Ticket 0244: Load one named question in C, TypeScript and Ruby
 
-Status: **Accepted for implementation.** Fresh independent design review accepted `48ad825e`; the coordinator approves the reviewed design within the plan's file claims. This advances Q1–Q3 and the three remaining case-30 skips in the open shared-conformance issue. DuckDB Q5 and the equivalence study's broader E4 wording remain open. The [preflight](../records/0244-named-question-file-forms-preflight.md) pins the starting source and the [design review](../records/0244-named-question-file-forms-design-review.md) records acceptance. Implementation and fresh code review remain due.
+Status: **Implementation candidate awaiting fresh High code review.** Fresh independent design review accepted `48ad825e`; the coordinator approved the reviewed design within the plan's file claims. This advances Q1–Q3 and the three remaining case-30 skips in the open shared-conformance issue. DuckDB Q5 and the equivalence study's broader E4 wording remain open. The [preflight](../records/0244-named-question-file-forms-preflight.md) pins the starting source, the [design review](../records/0244-named-question-file-forms-design-review.md) records acceptance, and the [build record](../records/0244-named-question-file-forms-build.md) records selected proof. Fresh code review remains due.
 
 ## Outcome
 
@@ -48,3 +48,7 @@ After selected checks pass, update the shared issue and 0205 coverage record wit
 ## Routing and limits
 
 The equivalence study's E4 paragraph also mentions recognize and relate file forms and Q5. This ticket proves the three named single-question boundaries and does not relabel that whole paragraph complete. The original shared issue asks for equivalent host-boundary evidence, not identical API spelling or zero skips. A public loader is the recommended choice here because it makes Local origin observable without inventing a caller-specific error adapter; a caller-owned loader would need the same real consumer and failure proof before replacing this design. No new ADR is needed: the current question-file, error and host ownership contracts govern these additions. The accepted design governs runtime claims; fresh code review must verify the resulting implementation.
+
+## What the build taught us
+
+The C loader fits the existing owned-string ABI when it validates before assigning either output. Reusing the current output validator kept the exported unsafe edge in `ffi.rs`, inside its line cap and binding policy. TypeScript's branded file question must retain its original JSON source: parsing and serializing it again changes numeric object-key order and therefore the request digest. Ruby's question-file path belongs to the question loader; the existing set loader remains separate. Selected case 01 and case 30 runs establish the public host boundary, while the broader shared issue still needs its remaining DuckDB and equivalence mapping work.

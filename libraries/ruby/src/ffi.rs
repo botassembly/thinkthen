@@ -25,6 +25,7 @@ use thinkthen::{
 
 use crate::call::Ask;
 
+mod question_file;
 mod result;
 use crate::{Controls, Crossing, Fault, Handoff, Settings, Taken, class_name, guarded, start};
 use result::{attach_completion, details_array, facts_hash, output, protected_completion};
@@ -451,6 +452,11 @@ fn question(ruby: &Ruby, json: String) -> Result<QuestionValue, Error> {
     Ok(QuestionValue { json, loaded })
 }
 
+fn file_question(ruby: &Ruby, path: String) -> Result<QuestionValue, Error> {
+    let (json, loaded) = checked(ruby, question_file::read(&path))?;
+    Ok(QuestionValue { json, loaded })
+}
+
 fn set_json(ruby: &Ruby, json: String) -> Result<SetValue, Error> {
     checked(ruby, QuestionSet::from_json(&json).map_err(Fault::from)).map(SetValue)
 }
@@ -482,6 +488,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     native.define_module_function("default_engine", function!(default_engine, 0))?;
     native.define_module_function("engine", function!(new_engine, 1))?;
     native.define_module_function("question", function!(question, 1))?;
+    native.define_module_function("question_file", function!(file_question, 1))?;
     native.define_module_function("set_json", function!(set_json, 1))?;
     native.define_module_function("set_file", function!(set_file, 1))?;
     Ok(())

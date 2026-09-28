@@ -291,6 +291,35 @@ plain!(thinkthen_decide => thinkthen_decide_opts(
     engine: *const Door, question_json: *const c_char, text: *const c_char, text_len: usize;
     out: *mut Judgment) -> i32);
 
+/// Read one named question into an owned validated JSON string.
+///
+/// # Safety
+///
+/// Every pointer follows the header's argument and lifetime rules.
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn thinkthen_question_file(
+    engine: *const Door,
+    path: *const c_char,
+    out: *mut *mut c_char,
+    out_len: *mut usize,
+) -> i32 {
+    // SAFETY: checked pointers are read or written only under the header rules.
+    unsafe {
+        typed(
+            engine,
+            |_| {
+                door::outs(out, out_len)?;
+                let path = string(path, "question file path")?;
+                if path.is_empty() {
+                    return Err(Failure::usage("an empty question file path"));
+                }
+                door::question_file(path)
+            },
+            |held, json| hand_over(held, json, out, out_len),
+        )
+    }
+}
+
 /// One yes-or-no question over one text; the judgment lands in `out`.
 ///
 /// # Safety
