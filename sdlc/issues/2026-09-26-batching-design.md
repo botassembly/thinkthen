@@ -204,7 +204,7 @@ The content hash is the SHA-256 of the record's evidence in compact JSON, the sa
 
 ### 3. Order, jobs, cache and replay
 
-- **Order.** Output keeps input order, as today. A batch's rows print when its reply arrives and every earlier row has printed.
+- **Order.** Output keeps input order, as today. On `decide` and `filter`, a batch's rows print when its reply arrives and every earlier row has printed. `rank` waits for the complete run to order its rows.
 - **Jobs.** `--jobs N` means N batches in flight. It takes 1 to 32, and the default stays 4, as `specification/records.md` fixes. The output buffer holds at most N batches of rows. The throttle is not the speed lever. A full batch is.
 - **Cache key.** The cache key is the batch's request digest, the same digest rule as today. A record's answer depends on its neighbours, so a per-record key would serve an answer made beside other records.
 - **Replay.** The same records under the same settings form the same batches and the same digests, because a file never pauses. `--replay` then answers every batch from disk. An inserted, removed or changed record changes the batches section 2 names. `--cache` pays only for those batches. `--replay` stops at the first missing batch at exit 5.
@@ -212,13 +212,13 @@ The content hash is the SHA-256 of the record's evidence in compact JSON, the sa
 
 ### 4. Failure
 
-One request carries one batch, so one failed request fails every record in it. The run stops at the batch's first record, as `specification/records.md` stops at the first failed record. Rows before it stay printed. The stop line names the range and echoes no record:
+One request carries one batch, so one failed request fails every record in it. The run stops at the batch's first record, as `specification/records.md` stops at the first failed record. `decide` and `filter` keep rows already printed; `rank` withholds rows on a stop. The stop line names the range and echoes no record:
 
 ```text
 thinkthen: stopped at record 41; the request for records 41 to 50 failed: the backend answered with status 503; 40 records finished
 ```
 
-A reply that answers some questions and not others fails only the records with missing or bad answers. The run stops at the first such record, and the earlier records of that batch print. `annotate` keeps its exit 6 rule for a failed question beside good answers.
+A reply that answers some questions and not others fails only the records with missing or bad answers. The run stops at the first such record, and `decide` and `filter` print the earlier records of that batch, while `rank` withholds them on a stop. `annotate` keeps its exit 6 rule for a failed question beside good answers.
 
 A retried status (429, 500, 502, 503, 504 or 529) resends the whole batch as one request, as `specification/backends.md` fixes. Ticket 0089's premise holds here: a retried status means the backend answered, and it may have billed the first attempt. A batch can therefore be paid twice, as a single record can today. ADR 0051 amends this: a batch of at least two records refused as too large halves once. Other retried statuses still resend the whole batch.
 
@@ -330,11 +330,11 @@ The fields are `records`, `requests_sent`, `cache_answers`, `input_tokens`, `out
 | 10,000 records of 5 distinct values, none a content cut | Three batches of 4,096, 4,096 and 1,808 members |
 | `--replay` with another `--batch` than the recording | Exit 5 at the first missing batch |
 | An old folder recorded one record a request | Replays under `--batch 1`. Under the default, `--replay` stops at exit 5 and `--cache` pays again |
-| One batch fails | The run stops at its first record. Earlier rows stay printed. The stop line names the range |
-| One question in a reply is missing | That record fails. Earlier records of the batch print |
+| One batch fails | The run stops at its first record. `decide` and `filter` keep earlier printed rows; `rank` prints none. The stop line names the range |
+| One question in a reply is missing | That record fails. `decide` and `filter` print earlier records of the batch; `rank` withholds them |
 | A recorded reply missing one answer | Every replay fails at that record the same way. Replay never resends to fill it |
 | A 429 or 5xx | The whole batch is resent as one request. After a 5xx the backend may bill both attempts |
-| An interrupt mid-batch | No new batch starts. Batches in flight finish and print in order, as `specification/channels.md` fixes for SIGINT. They are billed |
+| An interrupt mid-batch | No new batch starts. Batches in flight finish and are billed. `decide` and `filter` print finished rows in order; `rank` withholds a partial order, as `specification/channels.md` fixes for SIGINT |
 | The reader downstream closes the pipe | No new batch starts. Batches in flight may be billed |
 | `rank --top 5` | Every record is judged in batches. Five print |
 | DuckDB parallel scan | Batches may differ between runs. The cache misses those batches |
