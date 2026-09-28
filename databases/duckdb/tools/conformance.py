@@ -19,7 +19,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from harness import HOOKS, ROOT, Backend, rows, run, said
+from harness import ROOT, Backend, rows, run, said
 from signal_suite import CANCELLED, held_cancel
 
 CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / "conformance" / "cases.json"))
@@ -28,10 +28,13 @@ CANONICAL_CASES = ROOT.parent.parent / "conformance" / "cases.json"
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
     "find": "no SQL find function yet",
+    "internal_invariant_failure": "the private shared panic-boundary proof replaces the retired C API test hook",
 }
 
 
 def reason(case: dict) -> str | None:
+    if case.get("operation", {}).get("injection") == "internal_invariant_failure":
+        return NOT_RUN["internal_invariant_failure"]
     return NOT_RUN.get(case["verb"])
 
 
@@ -216,9 +219,6 @@ def fault(case: dict, backend: Backend) -> str:
             statement = ask.format(quoted(f"@{folder}/missing.json"))
         elif injection == "expired_deadline":
             statement = "SELECT thinkthen_decide('Does this need attention?', 'evidence text', 0)"
-        elif injection == "internal_invariant_failure":
-            got = run([ask.format(quoted(question["decide"]))], backend.base(), extension=HOOKS, extra={"thinkthen_test_hook_panic": "scalar"})
-            return said(got[0]).split(":")[0].removeprefix("thinkthen ")
         else:
             raise LookupError(f"no runner for the injection {injection!r}")
         got = run([statement], backend.base())
@@ -272,11 +272,7 @@ def main() -> int:
         if case["id"] not in selected:
             continue
         if case["id"] not in by_id:
-            if case["id"] != "25-defect-fault":
-                raise ValueError(f"selected case is absent from the executable file: {case['id']}")
-            skipped += 1
-            print("not run 25-defect-fault: installed extension has no invariant-failure test hook")
-            continue
+            raise ValueError(f"selected case is absent from the executable file: {case['id']}")
         case = by_id[case["id"]]
         why = reason(case)
         if why:
