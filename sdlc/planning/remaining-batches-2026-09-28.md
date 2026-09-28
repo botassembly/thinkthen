@@ -16,13 +16,13 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 | 10. New language integrations | 12 | Prepare after advertised surfaces are sound; preserve per-port evidence. |
 | **Total** | **75** | Each original to-do row appears once below; later intake follows. |
 
-## Current open counts after 0248
+## Current open counts after the release hygiene fix
 
-After accepted 0248 correctness and measurement, the live queue has 72 to-do rows. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
+After accepted 0248 correctness and measurement and the private-name cleanup, the live queue has 71 to-do rows. The original private-name tracked-tree issue also moved from blocked to done; its go-live history reset remains with 0128 Phase 4. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |
-| Platform qualification and release checks |13| Reuse accepted artifact proof; qualify actual runners separately. Investigate the new private-name lint finding. |
+| Platform qualification and release checks |12| Reuse accepted artifact proof; qualify actual runners separately. Private-name recurrence is fixed and independently verified. |
 | Cross-surface contracts and replay |5| Reviewed preparation; 0247 landed DuckDB complete choose/score/tag with Linux installed proof. All four target routes now have selected installed evidence; native Intel/macOS15 qualification and the broader file-form map remain. |
 | Recognition, relations and batching |11| Preparation accepted; retain distinct measurement, text-cost and record-batching outcomes. |
 | Cache and replay |6| Preparation accepted; 0246 landed the demonstrated zero-budget first-use correction. Broader post-admission and diagnostic criteria remain. |
@@ -32,7 +32,7 @@ After accepted 0248 correctness and measurement, the live queue has 72 to-do row
 | Documentation, trust and launch usability |8| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
 | New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
-| **Total** |**72**| Counts are tracked rows, not 72 independent builds. |
+| **Total** |**71**| Counts are tracked rows, not 72 independent builds. |
 
 ## Later intake
 

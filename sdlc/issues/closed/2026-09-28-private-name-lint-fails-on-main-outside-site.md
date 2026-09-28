@@ -1,5 +1,7 @@
 # The private-name lint fails on main outside site/
 
+Status: Closed after fresh Medium review accepted `dfd6130c`. The 40-file cleanup and the separately reviewed DuckDB proof correction leave zero tracked-path and zero tracked-file hits against the external 30-entry input. The [build record](../../records/qf-private-name-recurrence-build.md) retains exact scope and proof.
+
 Filed on 2026-09-28 by the marketing lead during a site landing.
 
 `THINKTHEN_PRIVATE_NAMES=<the list> sdlc/scripts/lint` fails on main at 730c9145. It flags 61 lines in 36 files. None of them sit in `site/`. The site landing added no hit. The same run on its branch prints the same list.

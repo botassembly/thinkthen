@@ -1,6 +1,6 @@
 # The sdlc history names private repositories
 
-Status: Open. Quick Fix qf-private-names (`sdlc/records/qf-private-names.md`) cleared every file outside `site/` and added the lint guard. Four lines in `site/` remain for the website agent: `site/README.md` lines 35 and 51, `site/scripts/pull-examples.mjs` line 22, and `site/src/pages/blog/code-that-understands.astro` line 3. Close this when they go. Git history still holds the names. The launch step decides whether that matters, and nothing here rewrites history.
+Status: Closed for the tracked-tree cleanup after fresh Medium review of `dfd6130c`. The external 30-entry private-name guard found zero tracked-path and zero tracked-file hits, including the website. Exact source pins and artifact evidence remain intact. The go-live history reset below remains an unperformed release step in ticket 0128 Phase 4; this closure does not authorize or claim it.
 Ian's ruling of 2026-09-26: the repository's git history is wiped before it goes public. A fresh history starts from one commit of the cleaned tree, so no rewrite of old commits is needed. The ruling covers the workspace path that ticket 0142 carried in history. The owner runs the wipe as a release step, after `lint` passes with the private-name list, and after Ian names the go-live commit.
 
 

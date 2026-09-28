@@ -24,6 +24,10 @@ Earlier rulings still hold. The first release is 0.1 on every surface. One crate
 
 The coordinator's rulings of 2026-09-25 on the first review also govern it. The work runs as four phases inside this ticket. GitHub's macOS runners give the macOS proof of record. Ian's later 2026-09-28 authorization allows native M5 build checks; it supersedes the former no-M5 restriction without replacing the runner proof of record. Release mode is dispatched from the tag.
 
+## Retained history step
+
+The tracked-tree private-name cleanup passed fresh review at `dfd6130c`; the external 30-entry guard found no tracked-path or tracked-file hit. The original issue is closed for that cleanup. Ian's 2026-09-26 ruling still requires a fresh one-commit history before public release, after the configured guard passes and Ian names the go-live commit. This unperformed step belongs to Phase 4. Closing the cleanup issue does not authorize the reset or public release.
+
 ## The one rule on outward steps
 
 No agent step in this ticket publishes a package, pushes a tag, creates a GitHub release that is not a draft, claims a name, creates a repository, sets a secret or a setting, or pushes a workflow with any trigger but `workflow_dispatch`. Each outward step is a manual trigger that Ian starts or approves. "Ian's setup list" names every one. A builder who reaches an outward step stops and hands it to Ian.

@@ -1,6 +1,6 @@
 # Quick Fix: private-name recurrence outside the website
 
-Status: candidate for fresh independent Medium review. Based on main `e4ccf486bca315815d52af519a3a16a0fb49f0fb`, then merged main `ef91dc75950ee740a3b138df27ad4bb932b2bf1c` for the final whole-tree check. The exact 40-file claim is in [the claim record](qf-private-name-recurrence-claim.md). The older [issue](../issues/2026-09-28-private-name-lint-fails-on-main-outside-site.md) described 61 lines in 36 files; the external 30-entry guard found **70 lines in 41 files** at `8afb260a`. This change normalizes the 66 matching lines in the 40 claimed files. The other four lines belonged to codex-6's 0247 build record and were untouched by this author; codex-6's correction is now integrated on main.
+Status: fresh independent Medium review accepted `dfd6130c182a2f6a355d93592bf32a39db8ca910`; the coordinator integrated the unchanged correction. Based on main `e4ccf486bca315815d52af519a3a16a0fb49f0fb`, then merged main `ef91dc75950ee740a3b138df27ad4bb932b2bf1c` for the final whole-tree check. The exact 40-file claim is in [the claim record](qf-private-name-recurrence-claim.md). The older [issue](../issues/closed/2026-09-28-private-name-lint-fails-on-main-outside-site.md) described 61 lines in 36 files; the external 30-entry guard found **70 lines in 41 files** at `8afb260a`. This change normalizes the 66 matching lines in the 40 claimed files. The other four lines belonged to codex-6's 0247 build record and were untouched by this author; codex-6's correction is now integrated on main.
 
 ## Change and preserved evidence
 
@@ -17,3 +17,7 @@ Status: candidate for fresh independent Medium review. Based on main `e4ccf486bc
 ## What the build taught us
 
 A mechanical home-prefix swap can make an artifact claim false (“searched `$HOME` bytes”) or make Python treat `$HOME` as a literal path. Review each changed line as prose, shell or Python before counting a guard pass. The 0247 correction has merged and the final standalone guard is zero-hit; root may close the issue after fresh Medium review. Root owns the plan and issue counts.
+
+## Independent review and closure
+
+The reviewer independently reran the standalone 30-entry path/file guard and found zero hits. All 40- and 64-hex pins in the claimed files remained unchanged; the changed shell and Python blocks parsed. The probe still resolves the same existing input and matches its pinned ID hash. Diff whitespace passed. Both the recurrence issue and the original tracked-tree cleanup criterion are met. The original issue's go-live history reset stays with ticket 0128 Phase 4 after Ian names the commit; it has not run. No full lint or provider run is claimed.
