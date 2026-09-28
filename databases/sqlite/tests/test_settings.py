@@ -56,6 +56,24 @@ def test_throttle_holds_eight_before_the_ninth() -> None:
     warm_at_throttle(9)
 
 
+def test_warm_deadline_spans_a_completed_chunk_and_later_row() -> None:
+    """A pause after row 256 cannot grant the next flush a fresh deadline."""
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("CREATE TABLE t(id INTEGER PRIMARY KEY, body TEXT)")
+db.executemany("INSERT INTO t VALUES (?, ?)", [(n, f"door {n}") for n in range(1, 258)])
+def paused(body, number):
+    if number == 257:
+        time.sleep(4.1)
+    return body
+db.create_function("paused", 2, paused)
+say(warm=run(db, "SELECT thinkthen_warm('Is it red?', paused(body,id), 4000) FROM t"))
+""", environment(backend))
+    expect(held["warm"].startswith("thinkthen deadline:"), True, "one warm deadline")
+    expect(backend.close(), 256, "only the completed chunk sent")
+
+
 def test_throttle_is_checked_and_caps_a_warm() -> None:
     """The original 200-row warm checks sustained throttle behavior."""
     warm_at_throttle(200)

@@ -3,6 +3,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 
 use rusqlite::Connection;
 use rusqlite::functions::{Aggregate, Context, FunctionFlags};
@@ -267,6 +268,7 @@ pub(crate) struct WarmState {
     index: HashMap<String, usize>,
     judged: i64,
     deadline: Option<Option<i64>>,
+    due: Option<Instant>,
 }
 
 /// A full chunk of one question's texts, ready to send.
@@ -316,7 +318,7 @@ impl WarmState {
 fn flush(
     context: &Context<'_>,
     (held, mut texts): Flush,
-    deadline: Option<i64>,
+    due: Option<Instant>,
 ) -> Result<i64, Failure> {
     // The cut counts rows. A cached row costs no request, so the refusal
     // names the rows judged, not the requests spent.
@@ -329,7 +331,7 @@ fn flush(
     if count == 0 {
         return Ok(0);
     }
-    worker::run(ffi::handle_of(context), deadline, move |engine, options| {
+    worker::run_until(ffi::handle_of(context), due, move |engine, options| {
         // The band stays out of the request, so decide reads what this fills.
         match &*held {
             LoadedQuestion::Question(asked) => engine
@@ -381,6 +383,11 @@ impl Aggregate<WarmState, i64> for Warm {
                     "thinkthen_warm takes one deadline for the whole group",
                 ));
             }
+            if state.deadline.is_none() {
+                state.due = due
+                    .and_then(|millis| u64::try_from(millis).ok())
+                    .and_then(|millis| Instant::now().checked_add(Duration::from_millis(millis)));
+            }
             state.deadline = Some(due);
             let Some(argument) = text(context.get_raw(0), "the question")? else {
                 return Ok(());
@@ -389,7 +396,7 @@ impl Aggregate<WarmState, i64> for Warm {
                 return Ok(());
             };
             if let Some(chunk) = state.add(&argument, || warm_question(&argument), evidence)? {
-                state.judged += flush(context, chunk, due)?;
+                state.judged += flush(context, chunk, state.due)?;
             }
             Ok(())
         })?)
@@ -404,9 +411,8 @@ impl Aggregate<WarmState, i64> for Warm {
             let Some(mut state) = state else {
                 return Ok(0);
             };
-            let due = state.deadline.flatten();
             for group in std::mem::take(&mut state.groups) {
-                state.judged += flush(context, (group.question, group.pending), due)?;
+                state.judged += flush(context, (group.question, group.pending), state.due)?;
             }
             Ok(state.judged)
         })?)
