@@ -401,9 +401,9 @@ fn group_request_shape(body: &[u8]) -> (usize, usize) {
 }
 
 fn initial_group_requests(
-    listener: &Listener,
+    listener: Listener,
     held: &conformance_backend::Rendezvous,
-) -> Vec<conformance_backend::Recorded> {
+) -> Result<(Listener, Vec<conformance_backend::Recorded>), &'static str> {
     let began = Instant::now();
     let mut seen = Vec::new();
     while seen.len() < 2 && began.elapsed() < Duration::from_secs(3) {
@@ -412,9 +412,13 @@ fn initial_group_requests(
             thread::sleep(Duration::from_millis(5));
         }
     }
-    assert!(held.wait(), "release both initial replies");
-    assert_eq!(seen.len(), 2, "two requests arrived before either reply");
-    seen
+    if seen.len() != 2 {
+        return Err("two requests did not arrive before either reply");
+    }
+    if !held.wait() {
+        return Err("the listener retired before releasing both replies");
+    }
+    Ok((listener, seen))
 }
 
 #[test]
@@ -463,10 +467,14 @@ fn unequal_group_closes_send_the_oldest_open_fragment_first() {
         r#"{"a":"a4","b":"b4"}"#,
     ];
     let mut rows = engine.annotate(&set, records);
-    let (values, first_two) = thread::scope(|scope| {
-        let helper = scope.spawn(|| initial_group_requests(&listener, &held));
-        let values = rows.by_ref().collect::<Result<Vec<_>, _>>().expect("rows");
-        (values, helper.join().expect("release helper"))
+    let (values, listener, first_two) = thread::scope(|scope| {
+        let helper = scope.spawn(move || initial_group_requests(listener, &held));
+        let values = rows.by_ref().collect::<Result<Vec<_>, _>>();
+        let (listener, first_two) = helper
+            .join()
+            .expect("release helper")
+            .expect("two requests");
+        (values.expect("rows"), listener, first_two)
     });
     assert_eq!(
         values.iter().map(|row| row.input()).collect::<Vec<_>>(),
