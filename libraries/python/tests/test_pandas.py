@@ -61,9 +61,16 @@ SETUP = f"""
 """
 
 
+def _packed_partial(question):
+    instructions = question["instructions"]
+    if instructions.endswith("Partial?") and 'The text is "two"' in instructions:
+        return {"type": "noul"}
+    return None
+
+
 def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
     """One captured listener proves frame packing and the saved set tier on both pandas lanes."""
-    with capturing_filter_listener() as (url, bodies):
+    with capturing_filter_listener(_packed_partial) as (url, bodies):
         env = child_env(backend, tmp_path)
         env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
         printed = run("""
@@ -95,6 +102,16 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
         overridden = engine_max.annotate(saved, frame, on="body")
         print("engine", overridden.facts.records, overridden.facts.requests_sent)
         observed.append([list(detail["request_digests"]) for detail in overridden.details])
+        partial = {"version": 1, "questions": {
+            "late": {"decide": "Is it late?"}, "partial": {"decide": "Partial?"}}}
+        mixed = engine.annotate(partial, frame, on="body")
+        print("partial", mixed.value["partial"].dtype.name,
+              [None if pd.isna(cell) else bool(cell) for cell in mixed.value["partial"]],
+              mixed.value["failed"].tolist(), mixed.facts.records, mixed.facts.requests_sent)
+        print("partial details", [(detail["index"], detail["member"], detail.get("answer"),
+                                   dict(detail["failed"]) if "failed" in detail else None,
+                                   detail["requests_sent"]) for detail in mixed.details])
+        observed.append([list(detail["request_digests"]) for detail in mixed.details])
         context = engine.decide(question, rows, context="review this claim")
         print("context", context.facts.records, context.facts.requests_sent)
         observed.append([list(detail["request_digests"]) for detail in context.details])
@@ -118,11 +135,18 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             "frame typed [9, 5, 7] ['body', 'number', 'late', 'failed'] [4, 6, 8] boolean "
             "[False, True, True] True 3 1 [0, 1, 2]",
             "engine 3 1",
+            "partial boolean [False, None, True] [None, {'partial': {'failed': "
+            "{'kind': 'backend', 'cause': 'missing_probability'}}}, None] 3 1",
+            "partial details [(0, 'late', False, None, 1), (0, 'partial', False, None, 0), "
+            "(1, 'late', True, None, 0), (1, 'partial', None, "
+            "{'cause': 'missing_probability', 'kind': 'backend'}, 0), "
+            "(2, 'late', True, None, 0), (2, 'partial', True, None, 0)]",
             "context 3 1",
             "refused annotate does not take a shared context 0",
         ]
         requests = [json.loads(body) for body in bodies]
-        assert [len(request["questions"]) for request in requests] == [3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 3]
+        assert [len(request["questions"]) for request in requests] == [
+            3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 6, 3]
         singleton = (b'{"state":"one","model":"jev-latest","questions":'
                      b'{"q1":{"type":"noul","instructions":"Is it late?"}}}')
         assert singleton in bodies[1:4]
@@ -138,7 +162,8 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             [[by_state(bodies[5:8])[state]] for state in states],
             [[digest(bodies[8])]] * 3,
             [[digest(bodies[9])]] * 3,
-            [[digest(bodies[10])]] * 3,
+            [[digest(bodies[10])]] * 6,
+            [[digest(bodies[11])]] * 3,
         ]
         assert json.loads(captured) == expected_digests
         assert bodies[0] != bodies[-1]
