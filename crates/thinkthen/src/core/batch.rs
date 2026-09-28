@@ -225,11 +225,11 @@ impl Batcher {
             self.open.members.push(place);
         } else {
             let joined = self.joined(record, &line)?;
-            if self.context.is_some() {
-                self.context_fits(joined.share, joined.wire)?;
-            }
             if !self.open.distinct.is_empty() && !self.fits(&joined) {
                 closed.push(self.close(Closed::Limit)?);
+            }
+            if self.context.is_some() {
+                self.context_fits(joined.share, joined.wire)?;
             }
             self.add(joined, line);
             if self.profile.is_some()

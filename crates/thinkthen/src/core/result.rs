@@ -88,6 +88,7 @@ pub(crate) struct RequestMeta {
     profile_warning: Option<ProfileWarning>,
     batch: Option<BatchMeta>,
     batch_warning: Option<BatchWarning>,
+    context_sha256: Option<String>,
 }
 
 impl RequestMeta {
@@ -102,6 +103,7 @@ impl RequestMeta {
             profile_warning: None,
             batch: None,
             batch_warning: None,
+            context_sha256: None,
         }
     }
 
@@ -125,6 +127,11 @@ impl RequestMeta {
 
     pub(crate) fn with_batch_warning(mut self, warning: Option<BatchWarning>) -> Self {
         self.batch_warning = warning;
+        self
+    }
+
+    pub(crate) fn with_context_sha256(mut self, digest: Option<String>) -> Self {
+        self.context_sha256 = digest;
         self
     }
 }
@@ -283,6 +290,7 @@ impl AnnotateMeta {
             profile_warning,
             batch: _,
             batch_warning: _,
+            context_sha256: _,
         } = request_meta;
         Self {
             tool: crate::core::version_line(version),
@@ -375,6 +383,8 @@ pub(crate) struct Meta {
     batch: Option<BatchMeta>,
     #[serde(skip_serializing_if = "Option::is_none")]
     batch_warning: Option<BatchWarning>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    context_sha256: Option<String>,
 }
 
 impl Meta {
@@ -399,6 +409,7 @@ impl Meta {
             profile_warning,
             batch,
             batch_warning,
+            context_sha256,
         } = request_meta;
         Self {
             tool: crate::core::version_line(version),
@@ -413,6 +424,7 @@ impl Meta {
             profile_warning,
             batch,
             batch_warning,
+            context_sha256,
         }
     }
 }

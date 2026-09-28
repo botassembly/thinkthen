@@ -29,6 +29,7 @@ On one document, `true`, `false`, or `null`. `null` is a not sure answer, and it
 | `--threshold T\|LOW:HIGH` | The rule in [threshold.md](threshold.md). `decide` is the one verb that takes both forms | `0.5` |
 | `--quiet` | On one document, prints nothing on standard output. Record mode refuses it because no record's answer sets the exit code | Off |
 | `--details` | Prints the full result object in place of the bare value | Off |
+| `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
@@ -71,6 +72,12 @@ fi
 ```sh
 thinkthen decide 'Does this report a payment failure?' --jsonl --field /body --details < tickets.jsonl
 ```
+
+```sh
+thinkthen decide 'It appears on the album Abbey Road.' --lines --context catalog.txt < songs.txt
+```
+
+Ticket 0172's [live record](../sdlc/records/2026-09-27-0172-shared-context-build.md) measured this question with a shared catalog on 306 Beatles titles. Each of three runs sent one request, scored 306 right with no false yeses or misses, and reported 19,634 input and 5,710 output tokens. This result describes that catalog and build.
 
 ## Reading the exit code
 
