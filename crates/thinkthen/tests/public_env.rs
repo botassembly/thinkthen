@@ -14,6 +14,8 @@
 
 #[path = "public_env/batch.rs"]
 mod batch;
+#[path = "public_env/cache_budget.rs"]
+mod cache_budget;
 
 #[path = "../src/test_deadline/run.rs"]
 mod run;
@@ -313,6 +315,7 @@ fn run(case: &str, argument: &str) -> Vec<String> {
                 engine.usage().requests_sent()
             )]
         }
+        "zero-budget-default-cache" => cache_budget::run_default_cache(argument),
         _ => panic!("no child case {case}"),
     }
 }
