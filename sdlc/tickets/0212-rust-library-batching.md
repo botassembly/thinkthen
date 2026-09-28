@@ -6,7 +6,7 @@ opens: sdlc/tickets/0212-rust-library-batching.md sdlc/records/0212-rust-batchin
 
 # 0212: Batch Rust library records and return run facts
 
-Status: design accepted at `a713e462`; the coordinator approved the routine `Call<T>` choice. Owner: Codex. The 0149, 0157, 0203, 0210 and 0225 source has landed. The 0212 implementation branch is unlanded. Fresh High source review of `b3bc33cc` requested three bounded corrections to annotation dispatch, context refusal and observer panic handling. Those corrections are under focused proof and follow-up review. The default-`Max` iterator pause proposal remains pending Ian's choice. [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) fixes the Rust public return choice. No completed 0212 implementation or register closure is claimed. The [post-settings preflight](../records/0212-post-settings-preflight.md) and [build record](../records/0212-build.md) supersede the historical source status below without changing the accepted outcome.
+Status: design accepted at `a713e462`; the coordinator approved the routine `Call<T>` choice. Owner: Codex. The 0149, 0157, 0203, 0210 and 0225 source has landed. The 0212 source, documentation and proof candidate `c6647de8` has fresh independent High technical ACCEPT in [the code review](../records/0212-code-review.md), but remains unlanded. The default-`Max` iterator pause proposal remains pending Ian's choice. [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) fixes the Rust public return choice. No B12a or register closure is claimed. The [post-settings preflight](../records/0212-post-settings-preflight.md) and [build record](../records/0212-build.md) supersede the historical source status below without changing the accepted outcome.
 
 ## Outcome and authority
 
