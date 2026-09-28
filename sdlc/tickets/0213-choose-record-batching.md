@@ -2,7 +2,7 @@ opens: sdlc/tickets/0213-choose-record-batching.md sdlc/records/0213-choose-batc
 
 # 0213: Batch choose records
 
-Status: proposed B8 design and [ADR 0090](../planning/adr/0090-choose-batches-preserve-row-options.md) for fresh independent review. Owner: Codex. This branch changes design records only. 0172 landed on main at `2e1f0d88`; runtime work still needs this design review and exact source claims. The [preflight](../records/0213-choose-batching-preflight.md) separates landed main `1e771675` from 0212's proposed Rust library contract. Ian can overturn the batching rulings in [the design issue](../issues/2026-09-26-batching-design.md); this draft preserves them.
+Status: B8 design and [ADR 0090](../planning/adr/0090-choose-batches-preserve-row-options.md) accepted by fresh independent review of `02e60bc6`; implementation and exact source claims remain pending. Owner: Codex. This branch changes design records only. 0172 landed on main at `2e1f0d88`. The [preflight](../records/0213-choose-batching-preflight.md) separates landed main `1e771675` from 0212's proposed Rust library contract. Ian can overturn the batching rulings in [the design issue](../issues/2026-09-26-batching-design.md); this design preserves them.
 
 ## Outcome
 
@@ -43,7 +43,7 @@ The issue's test 11 requires 200 `choose` items at default and `--batch 10`, rep
 - Keeps: Settled choose option/threshold/tie/null/raw semantics, input-order rows, typed failures, content cuts, singleton wire bytes, recording identity, existing 0170 facts and 0171 warning behavior.
 - Changes: Command choose record-mode batching and shared context, choose file batch tier in parser and schema, per-record question-aware planner/deduplication, and its affected command reference pages after review.
 - Proof: Captured request/digest and listener-count cases for fixed/dynamic/singleton options; shared schema/parser corpus and the replaced choose file-tier command case; distinct context, refusal, halving and output/facts edges; then separately authorized nongating live test 11 and one context recording.
-- Defers: `tag`/`score` B9, `annotate` B10, Rust-library B12a and other host batching, the B6 accuracy-cost page, and any paid measurement until a reviewed build and concrete delegated-budget job. Proposed ADR 0090 and the shared-file claim need independent design review before runtime work.
+- Defers: `tag`/`score` B9, `annotate` B10, Rust-library B12a and other host batching, the B6 accuracy-cost page, and any paid measurement until a reviewed build and concrete delegated-budget job. Design review accepted ADR 0090; exact source claims and product proof remain pending.
 
 ## What the build taught us
 

@@ -1,13 +1,13 @@
 # ADR 0090: Choose batches preserve each record's options
 
-- Status: Proposed for independent design review under ticket [0213](../../tickets/0213-choose-record-batching.md). This ADR changes no runtime behavior until accepted and built. Ian can overturn it.
+- Status: Accepted by fresh independent design review of ticket [0213](../../tickets/0213-choose-record-batching.md) at `02e60bc6`. This ADR changes no runtime behavior until built. Ian can overturn it.
 - Date: 2026-09-27
 
 ## Problem
 
 [ADR 0048 item 1](0048-records-batch-into-full-requests.md) says equal evidence inside a batch is asked once, and each copy receives that answer. `choose --options POINTER` already takes its ordered candidate labels and descriptions from each whole JSON record. `--field /note` can select equal evidence from two records whose `/codes` differ. Main `1e771675` `cli/asking.rs::Asks::FromRecord` builds a separate `Question::Choose` for each row, while `core/batch.rs::Batcher` currently deduplicates by the selected record JSON alone and keeps one fixed question. Applying that key to `choose` would give one row an answer to the other row's candidate list. The fixed-options [batch-choose fixture](../../../specification/fixtures/systemone/batch-choose.request.json) does not exercise this collision.
 
-## Proposed decision
+## Decision
 
 Amend ADR 0048 item 1's equal-evidence sentence for a verb whose complete question can vary by record: an answer is shared only when the selected record's compact JSON bytes **and the complete resolved question** are equal. For `choose`, question equality includes the text, the ordered label names and each optional description. Two equal selected records with different options occupy two positions in the no-context `{"records":[…]}` evidence and two separately named wire questions. Their answers may differ. Repeating both the same selected record and the same resolved question remains one wire question whose answer is copied to each logical member. A context batch likewise asks both differing questions over one shared context.
 
@@ -23,4 +23,4 @@ One outside-in loopback case supplies three JSONL rows with equal selected `/not
 
 ## What Ian can overturn
 
-Ian may choose to stop deduplicating `choose` records altogether or change the batch evidence form. Either changes the cost/identity rule and needs a revised accepted decision and matching exact-wire proof. This proposal recommends retaining sharing only for identical record/question pairs.
+Ian may choose to stop deduplicating `choose` records altogether or change the batch evidence form. Either changes the cost/identity rule and needs a revised accepted decision and matching exact-wire proof. This decision retains sharing only for identical record/question pairs.

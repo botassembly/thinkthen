@@ -1,8 +1,8 @@
 # 0213 design review handoff
 
-Status: proposed for fresh independent design review. The [ticket](../tickets/0213-choose-record-batching.md), [preflight](0213-choose-batching-preflight.md) and proposed [ADR 0090](../planning/adr/0090-choose-batches-preserve-row-options.md) are notes only. Main `1e771675` contains landed 0172 at `2e1f0d88` but lacks choose batching. Codex-5's 0212 B12a at `bcf588b4` remains a proposed library design with its public shape under review; do not call it a prerequisite already chosen.
+Status: fresh independent reviewer accepted the design at `02e60bc6` with no remaining finding after the schema and old negative-test path were added to the build inventory. The [ticket](../tickets/0213-choose-record-batching.md), [preflight](0213-choose-batching-preflight.md) and [ADR 0090](../planning/adr/0090-choose-batches-preserve-row-options.md) are design records only. Main `1e771675` contains landed 0172 at `2e1f0d88` but lacks choose batching. Codex-5's 0212 B12a remains a separate proposed library design; do not call it a prerequisite already chosen.
 
-Please answer the following before runtime claims:
+The reviewer accepted these questions as the implementation contract; the builder must still prove the behavior before a runtime claim:
 
 1. Does the proposed ADR 0090 clarification of ADR 0048 item 1 preserve its intended duplicate sharing while ensuring `choose --options` never reuses an answer across differing candidate lists? Is selected-record-plus-complete-question identity sufficient, with content cuts still based only on selected record bytes? If the accepted “equal evidence” sentence must remain literal even when questions differ, name that contract conflict explicitly.
 2. Does the proposed fixed and per-record `Batcher` path preserve exact no-context singleton body/digest, order and descriptions, actual per-question size limits, the earlier open batch on a later local refusal, and each original question in one 413 halving? Inspect the existing `Asks::FromRecord` guard, `Batcher` template assumptions and the chosen proof fixture, not merely the happy-path `batch-choose` body.
