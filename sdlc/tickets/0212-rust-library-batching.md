@@ -6,7 +6,7 @@ opens: sdlc/tickets/0212-rust-library-batching.md sdlc/records/0212-rust-batchin
 
 # 0212: Batch Rust library records and return run facts
 
-Status: design accepted at `a713e462` by the same independent Sol reviewer; the coordinator approved the routine `Call<T>` choice. Owner: Codex. The 0149, 0157 and 0203 source has landed. Ticket 0210 still edits shared settings/results files. [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) fixes the Rust public return choice. No 0212 implementation or register closure is claimed. The [post-settings preflight](../records/0212-post-settings-preflight.md) supersedes the historical source status below without changing this accepted outcome.
+Status: design accepted at `a713e462` by the same independent Sol reviewer; the coordinator approved the routine `Call<T>` choice. Owner: Codex. The 0149, 0157, 0203, 0210 and 0225 source has landed. The unlanded 0212 branch `8a77656d` has an explicit `batch 1` bridge and shared scheduler; its default-`Max` iterator pause proposal remains pending Ian's choice. [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) fixes the Rust public return choice. No completed 0212 implementation or register closure is claimed. The [post-settings preflight](../records/0212-post-settings-preflight.md) and [build record](../records/0212-build.md) supersede the historical source status below without changing the accepted outcome.
 
 ## Outcome and authority
 
