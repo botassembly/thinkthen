@@ -167,6 +167,10 @@ Quick Fix qf-command-edges-and-prune changed two rules that `site/src/pages/refe
 
 Done when: both lines match the specification.
 
+## 9. Migrate Ruby samples with ticket 0234
+
+Preparation against main `79244123` found direct bare-result consumers under `site/examples/functions/{decide,question-file,filter,rank,choose,score,annotate,recognize,relate}/`, `site/examples/install/ruby/first-call.rb`, and syntax expectations in `site/scripts/named-answers.test.mjs`. Proposed ticket 0234 adds a Ruby `Call` with value, facts and details. Its design is under independent review; the runtime has not landed. The marketing owner must update these consumers and generated copies against the final accepted package before public 0.1. A truth test on a wrapper can pass while its contained answer is false or nil. Preserve named answers and inspect `.value` for actual scalar, list, rank, annotate, recognition and relation assertions. Keep nil, false, empty collections and failed answers distinct. Reuse the existing offline examples and recordings, with explicit batch one where historical request bodies require it; do not spend new provider calls just to change accessors. Ticket 0234 migrates Ruby-owned examples and tests, while this existing site issue owns site edits. The C and Python wrapper migrations remain in their existing specific issues and can share the same marketing batch.
+
 ## Order
 
 Items 1, 2, 3, 4, 7, and 8 can go now. Item 5 can repoint the pull script now for every landed surface. Its final run waits for DuckDB 0110 and pandas 0122. Item 6 waits for Beatles Bench ticket 0006. Regenerate every sample once, after DuckDB and pandas land, before the site publishes.
