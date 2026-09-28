@@ -1,6 +1,6 @@
 # 0227 language panic diagnostics build
 
-Status: four-binding source candidate in progress. High design ACCEPT at `582a2941`; no code review or issue closure yet. TypeScript and R transfers were recorded on main `83770a93`. This record separates selected source children from later installed-package evidence.
+Status: four-binding source and selected Linux package candidate at `3d898893`. High design ACCEPT at `582a2941`; fresh High code review and issue closure remain pending. TypeScript and R transfers were recorded on main `83770a93`. Selected source children and installed-package checks are separate evidence.
 
 ## First coherent source slice
 
@@ -16,6 +16,19 @@ TypeScript's existing `caught` converts every opaque panic into its fixed Node d
 
 The selected TypeScript and R child each observed fixed non-retryable defect, no owned string/Drop markers on stdout or stderr, later success, and prior-hook delivery for an unrelated host thread. Strict all-feature/all-target Clippy and the selected children passed for both bindings; R's retained worker-edge regression also passed. TypeScript measured 561→665 (+104) and R Rust measured 1120→1218 (+98) nonblank lines. `door.rs` ends at 448 and `calls.rs` at 461, below the 500-line root convention. One private diagnostic child per crate keeps the catch and unrelated-host proof together. I checked for a duplicate panic conversion table and retained each binding's existing conversion point.
 
+## Selected installed Linux packages
+
+All four packages were built from the committed `3d898893` tree with their existing wrapper/toolchain, installed into isolated ignored `target/codex-builds/0227/packages/` directories, then loaded from those installs. A single deadline-zero `decide` call in each installed host returned its existing Deadline kind before transport; a later usage call still worked and reported zero sends. The selected package proof checks that path and the loaded library mapping, not a synthetic panic in a distributed package. The private source children above supply the synthetic-panic hook and payload observations. No paid service was contacted.
+
+| Installed package | Package SHA-256 | Installed native library SHA-256 | Selected host result |
+| --- | --- | --- | --- |
+| Python ABI3 wheel, `libraries/python/target/wheels/thinkthen-0.0.1-cp310-abi3-manylinux_2_34_x86_64.whl` | `a8079b0b556f7fa0df1a5bddeb17bf2baed9495b87fd30020d3159b632a8960b` | `_thinkthen.abi3.so` `df8f5c4c627483f82cec46a1da936227f6f6d8b8b92dd8a546100c9f1de7a684` | Isolated CPython 3.14 wheel install, Deadline, later usage, zero sends, DSO mapped. |
+| Ruby pinned 3.4.11 gem, `libraries/ruby/thinkthen-0.0.1-x86_64-linux.gem` | `9ff0582967e3125c592c44dd05f13a5d2974fce43de0498e978e006386102e93` | `thinkthen.so` `1f46b005911ff7093777a14420bbc7250c05d1d2b9afd6afed48b76482fa05b7` | Isolated gem install, Deadline, later usage, zero sends, DSO mapped. |
+| Node 22.22.3 package, `target/codex-builds/0227/packages/typescript/thinkthen-0.0.1.tgz` | `3547c04857e50ebb3eac06f75cdc732ce3a4949d2d45642759df3cc6be650043` | `thinkthen-linux-x64.node` `03ad87f1d12802a235fe52d59137ad49df57844899e7560e14646aa6333f3448` | Isolated package install, Deadline, later usage, zero sends, addon mapped. System Node 18 fails the package's existing `String.isWellFormed` requirement; the pinned Node host passed. |
+| R source tarball, `target/codex-builds/0227/packages/r/out/thinkthen_0.0.1.tar.gz` | `881524c944f4a54a82c7900675c8b0b861594b1b75f0466504b8e811e6a81da0` | `thinkthen.so` `6d0b70260175c68a6bda8cfdf3342a17dd820a9a6fe587a9f1823218eb22f637` | Fresh R library install, Deadline, later usage, zero sends, DSO mapped. The first install used the system Rust 1.93.1 and failed; setting `RUSTUP_TOOLCHAIN` to the repository's pinned 1.95 made the same package install pass. |
+
+`readelf` and `nm` show local `std::panicking::HOOK` state in the Python, Ruby and Node libraries. None links a separate Rust runtime. Python and Ruby show no ELF `NODELETE`; Node shows `NOW NODELETE`. The installed R library exports `std::panicking::HOOK` as `GLOBAL DEFAULT`, with no ELF `NODELETE`. Two older R workspace artifacts export the same symbol, so this visibility predates 0227. R's `NAMESPACE` uses `useDynLib`, and `dyn.load` defaults to `local=TRUE, now=TRUE`; the installed package loaded normally. A bounded R child called `detach(..., unload=TRUE)` after the Deadline path: the DLL remained registered and mapped. Explicit `dyn.unload(path)` unregistered it, but `/proc/self/maps` still showed that DSO mapped. Those observations neither demonstrate cross-DSO interposition nor explain why the final mapping remains; they do not justify a new pin or export policy. Fresh code review should assess this precise linkage and lifetime limit.
+
 ## Remaining work
 
-Merge 0212's frozen Call conversions when it lands, review all four binding implementations together, and check every derived ratchet. Then run selected installed-host package/load proofs using each pinned wrapper where the host exists; list unavailable target packages explicitly. Do not treat the old 0226 artifact-loader observation as changed-binary proof.
+Merge 0212's frozen Call conversions when its accepted source lands, review all four binding implementations and these installed Linux observations together, then verify all 22 named ratchet configurations and the root default at freeze. Available Linux wheel/gem/addon/R package checks do not prove macOS or other target package linkage, loading or hook lifetime. Keep those target checks open. Do not treat the old 0226 artifact-loader observation as proof of these newly built packages.
