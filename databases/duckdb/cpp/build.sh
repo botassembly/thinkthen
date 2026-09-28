@@ -27,7 +27,7 @@ cmake -S "$SOURCE" -B "$BUILD" -G 'Unix Makefiles' -DCMAKE_BUILD_TYPE=Release \
 	-DTHINKTHEN_RUST_STATICLIB="$TARGET/release/libthinkthen_duckdb_bridge.a" \
 	-DTHINKTHEN_DUCKDB_STATIC_DIR="$STATIC"
 cmake --build "$BUILD" --target thinkthen_loadable_extension -j 2
-mkdir -p "$ROOT/build/artifacts/cpp"
+mkdir -p "$ROOT/build/artifacts/cpp/x86_64-unknown-linux-gnu"
 cp -- "$BUILD/extension/thinkthen/thinkthen.duckdb_extension" "$ROOT/build/thinkthen.duckdb_extension"
 chmod 644 "$ROOT/build/thinkthen.duckdb_extension"
-cp -- "$ROOT/build/thinkthen.duckdb_extension" "$ROOT/build/artifacts/cpp/thinkthen.duckdb_extension"
+cp -- "$ROOT/build/thinkthen.duckdb_extension" "$ROOT/build/artifacts/cpp/x86_64-unknown-linux-gnu/thinkthen.duckdb_extension"

@@ -29,7 +29,7 @@ def slow(value: bool) -> bool:
     print(json.dumps({"inside_slow": True}), flush=True)
     time.sleep(0.2)
     return value
-con.create_function("slow", slow)
+con.create_function("slow", slow, [duckdb.sqltypes.BOOLEAN], duckdb.sqltypes.BOOLEAN)
 print(json.dumps({"loaded": True}), flush=True)
 for line in sys.stdin:
     try:
@@ -42,7 +42,9 @@ for line in sys.stdin:
 def line(child: subprocess.Popen[str]) -> dict:
     ready, _, _ = select.select([child.stdout], [], [], 3)
     assert ready, "the late-signal child did not answer in three seconds"
-    return json.loads(child.stdout.readline())
+    answer = child.stdout.readline()
+    assert answer, f"the late-signal child exited {child.poll()}: {child.stderr.read()[:500]}"
+    return json.loads(answer)
 
 
 def late(extension: Path) -> None:

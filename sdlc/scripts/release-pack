@@ -117,14 +117,14 @@ part_duckdb() {
 			esac
 			printf '%s' "$platform" >"$stage/platform.txt"
 			printf '%s' "$V" >"$stage/version.txt"
-			mkdir -p databases/duckdb/build/artifacts/c-api
+			mkdir -p "databases/duckdb/build/artifacts/c-api/$TARGET"
 			python3 databases/duckdb/vendor/append_extension_metadata.py \
-				-l "$(built databases/duckdb)/release/libthinkthen_duckdb.$dl" -o databases/duckdb/build/artifacts/c-api/thinkthen.duckdb_extension \
+				-l "$(built databases/duckdb)/release/libthinkthen_duckdb.$dl" -o "databases/duckdb/build/artifacts/c-api/$TARGET/thinkthen.duckdb_extension" \
 				-n thinkthen -dv "$DUCKDB_VERSION" -evf "$stage/version.txt" -pf "$stage/platform.txt" \
 				--abi-type C_STRUCT_UNSTABLE >/dev/null
 		fi
 		folder=$(fresh duckdb)
-		cp databases/duckdb/build/artifacts/c-api/thinkthen.duckdb_extension "$folder/"
+		cp "databases/duckdb/build/artifacts/c-api/$TARGET/thinkthen.duckdb_extension" "$folder/"
 		pack "thinkthen-duckdb-$V-$TARGET.tar.gz" "$folder"
 		return
 		;;
@@ -133,7 +133,7 @@ part_duckdb() {
 		sh databases/duckdb/cpp/build.sh
 	fi
 	folder=$(fresh duckdb)
-	cp databases/duckdb/build/artifacts/cpp/thinkthen.duckdb_extension "$folder/"
+	cp "databases/duckdb/build/artifacts/cpp/$TARGET/thinkthen.duckdb_extension" "$folder/"
 	cp LICENSE "$folder/LICENSE.thinkthen"
 	. databases/duckdb/tools/version.env
 	tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION

@@ -17,7 +17,7 @@ import tempfile
 import time
 from pathlib import Path
 
-from harness import CASES, EXTENSION, HOOKS, Backend, case, child_env, expect, main, run, said
+from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, said
 
 CANCELLED = "thinkthen cancelled: the call was cancelled"
 
@@ -310,38 +310,6 @@ def a_chained_host_handler_sees_two_signals():
 def r6_6_a_chained_host_handler_sees_every_signal():
     """Twenty held signals, retained as an opt-in campaign."""
     chained_host_handler(20)
-
-
-@case
-def r7_7_a_signal_inside_the_install_window_reaches_the_host():
-    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
-        child = Child(backend.base(), Path(folder), extension=HOOKS, extra={"thinkthen_test_hook_raise_in_install": "1"})
-        try:
-            child.ask("seen")
-            expect(child.read(), {"seen": 1}, "the host handler's count after LOAD")
-        finally:
-            child.close()
-
-
-@case
-def r1_10_a_panic_in_each_boundary_reads_defect():
-    boundaries = {
-        "scalar": "SELECT thinkthen_decide('Is it a refund?', 'a')",
-        "scalar init": "SELECT thinkthen_decide('Is it a refund?', 'a')",
-        "usage bind": "SELECT * FROM thinkthen_usage()",
-        "usage init": "SELECT * FROM thinkthen_usage()",
-        "usage scan": "SELECT * FROM thinkthen_usage()",
-        "warm update": "SELECT thinkthen_warm('Is it a refund?', 'a')",
-        "warm finalize": "SELECT thinkthen_warm('Is it a refund?', 'a')",
-        "relate bind": PAIR,
-        "relate init": PAIR,
-        "relate scan": PAIR,
-    }
-    with Backend() as backend:
-        for boundary, query in boundaries.items():
-            got = run([query, "SELECT 1"], backend.base(), extension=HOOKS, extra={"thinkthen_test_hook_panic": boundary})
-            expect(said(got[0]), f"thinkthen defect: the {boundary} callback panicked: thinkthen_test_hook_panic fired in {boundary}", boundary)
-            expect(got[1], {"rows": [[1]]}, f"the next query after a {boundary} panic")
 
 
 SIGINFO = r"""

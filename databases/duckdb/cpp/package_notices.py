@@ -35,7 +35,8 @@ def main() -> None:
         "cargo", "metadata", "--format-version", "1", "--locked", "--offline",
         "--manifest-path", str(BRIDGE),
     ]))
-    inventory = ["Bundled Rust crates (name version | declared license):"]
+    archives = [line.split(maxsplit=1)[1] for line in (HERE / "archive-sha256.txt").read_text().splitlines()]
+    inventory = ["Pinned DuckDB static archives:", *archives, "", "Bundled Rust crates (name version | declared license):"]
     for package in sorted(metadata["packages"], key=lambda value: (value["name"], value["version"])):
         folder = Path(package["manifest_path"]).parent
         if "/registry/" not in str(folder):

@@ -51,11 +51,9 @@ stock_cli() {
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the stock CLI and the shared cases load the
 	# extension unpacked from the release archive, by its path.
-	# A release file carries no test hook, so the full check alone runs the one hook case.
 	. "$REPO/sdlc/scripts/installed.sh"
 	installed_unpack
-	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension" THINKTHEN_CONFORMANCE_CASES="$scratch/cases.json"
-	jq '.cases |= map(select(.operation.injection != "internal_invariant_failure"))' "$REPO/conformance/cases.json" >"$THINKTHEN_CONFORMANCE_CASES"
+	export THINKTHEN_DUCKDB_EXTENSION="$scratch/thinkthen.duckdb_extension"
 	stock_cli
 	"$PY" cpp/verify_package.py --extension "$THINKTHEN_DUCKDB_EXTENSION" --different-host "$TOOLS/older-host/duckdb"
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
