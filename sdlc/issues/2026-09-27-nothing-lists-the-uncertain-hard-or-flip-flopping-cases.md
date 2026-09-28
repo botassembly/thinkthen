@@ -44,4 +44,4 @@ The follow-up reading adds three selection signals beyond distance from the cut.
 - **The criterion, not only the record.** A decision model grades a whole rubric in one request (AutoRubric), and ThinkThen's `tag` and `annotate` return a probability for each label or each named question. The unit to select is the uncertain criterion as well as the uncertain record.
 - **The shortlist.** The truth sits in Jev's top two on 70% of the chained album-year cases against 37% for the top pick, and 95% on the single-hop song-to-album question. A second-position answer is a case worth a label or a stronger judge.
 
-Evidence: `~/workspace/experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13.
+Evidence: `experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13.
