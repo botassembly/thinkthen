@@ -1,6 +1,7 @@
 //! The two variables at the edge: where a request goes, and the key it carries.
 
 use std::io;
+use std::net::{TcpListener, ToSocketAddrs};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
@@ -370,16 +371,22 @@ fn a_variable_that_holds_nothing_counts_as_absent() {
 }
 
 /// With no key, an address the rules cannot prove is this machine stops at
-/// exit 4 before any connection. `https://127.0.0.2` is such an address: the
-/// rule reads text, and the listener behind 127.0.0.1 refuses it, so a key
-/// check that let it through would print the refused-connection sentence.
+/// exit 4 before any connection. The short address resolves to the socket we
+/// count, but the backend's textual loopback rule does not admit its spelling.
 #[test]
 fn a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback() {
     const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";
-    let listener = Listener::serving(Vec::new()).expect("a loopback listener");
-    let elsewhere = listener
-        .base()
-        .replace("http://127.0.0.1", "https://127.0.0.2");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("a loopback listener");
+    listener
+        .set_nonblocking(true)
+        .expect("nonblocking listener");
+    let bound = listener.local_addr().expect("bound address");
+    let resolved = ("127.1", bound.port())
+        .to_socket_addrs()
+        .expect("the short address resolves")
+        .collect::<Vec<_>>();
+    assert_eq!(resolved, [bound], "the named address reaches this listener");
+    let elsewhere = format!("https://127.1:{}/v1", bound.port());
     for key in [None, Some(""), Some("   ")] {
         let mut environment = vec![("THINKTHEN_BASE_URL", elsewhere.as_str())];
         environment.extend(key.map(|key| ("THINKTHEN_API_KEY", key)));
@@ -387,8 +394,11 @@ fn a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback() {
         assert_eq!(output.status.code(), Some(4), "{key:?}");
         assert_eq!(String::from_utf8_lossy(&output.stderr), NO_KEY, "{key:?}");
         assert!(output.stdout.is_empty(), "{key:?}");
+        assert!(
+            matches!(listener.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock),
+            "{key:?}: no connection reached the named address"
+        );
     }
-    assert_eq!(listener.connections(), 0, "no key, no connection");
 }
 
 /// A loopback server that checks no key needs none: with the variable unset
