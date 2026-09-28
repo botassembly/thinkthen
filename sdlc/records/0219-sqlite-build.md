@@ -1,6 +1,6 @@
 # 0219 SQLite runtime checkpoint
 
-Status: SQLite B13e Linux x86-64 source and selected installed package proof complete; candidate awaits fresh High code review. The WIP library checkpoint below began from merge `0656b469` with main `2b388453`; its local release library is `databases/sqlite/target/release/libthinkthen0.so`, SHA-256 `a9476dd4bec05ffeb445125b8e30e46344152214740df030004059b8fa60f01d`. That is development evidence, separate from the final archive below.
+Status: SQLite B13e Linux x86-64 source and selected installed package proof complete; fresh High code review accepted `139f41d6` after the correction below. The WIP library checkpoint below began from merge `0656b469` with main `2b388453`; its local release library is `databases/sqlite/target/release/libthinkthen0.so`, SHA-256 `a9476dd4bec05ffeb445125b8e30e46344152214740df030004059b8fa60f01d`. That is development evidence, separate from the final archive below.
 
 ## Passing slice
 
@@ -66,3 +66,7 @@ flock -o /run/user/1000/thinkthen-codex-3.lock env CARGO_NET_OFFLINE=true CARGO_
 ```
 
 The **review archive** is `/tmp/thinkthen-0219-ed7bc306/package/thinkthen-sqlite-0.0.1-x86_64-unknown-linux-gnu.tar.gz`, SHA-256 `665618d00448f5c933073fd2ea878a92d1b4a0492d097990bf7ab7104ccbba9f`. Its extracted `libthinkthen0.so` is SHA-256 `e303a37c83b2c9420fa77f3d84220914b633b04db6219c66b577bea3cfc26dd6`, equal to the packaged release output. The archive holds that one library, exports only `sqlite3_thinkthen_init`, and has no raw `/home/ian` bytes. With the extracted library and pinned SQLite 3.50.0 host, six focused installed checks passed: failed-step zero-send, completed-chunk deadline, warm total-one, safe spent-total try value, pinned load and stock below-floor refusal. The earlier 39 host cases and eight conformance cases belong to the intermediate archive and are retained as unaffected evidence, not restated as a new full installed run. Main merge `c2114623` before this source commit changed no SQLite or shared Rust runtime. The same High reviewer should recheck this correction and the exact new artifact; no self-landing or wider platform claim follows.
+
+## Integration
+
+The coordinator merged accepted candidate `139f41d6` into main `49aa831c`. SQLite runtime, tests, documentation and counters match the accepted candidate exactly. A focused offline SQLite `cargo check --locked` passed against the newer shared runtime. The installed package hashes and selected proof above retain their original source identity; no new platform claim follows from integration. B13e is complete, while register 73 and other-platform release proof stay open.

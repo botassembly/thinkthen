@@ -1,6 +1,6 @@
 # Ticket 0242: Warn before trusting a writable named answer folder
 
-Status: **Proposed for fresh design review.** Severity 2, register 40's remaining warning. Ticket 0163 completed the writer-authority pages. This ticket does not authenticate an entry or change a recording format. The coordinator scheduled this warning after the 0238 cache correctness landing, superseding the older post-0.1 priority note without changing its criterion.
+Status: **Accepted for implementation.** Fresh Medium design review accepted `c14f06ae`; the coordinator approves the bounded policy and claimed runtime scope. Severity 2, register 40's remaining warning. Ticket 0163 completed the writer-authority pages. This ticket does not authenticate an entry or change a recording format. The coordinator scheduled this warning after the 0238 cache correctness landing, superseding the older post-0.1 priority note without changing its criterion.
 
 ## Outcome
 

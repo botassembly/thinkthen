@@ -6,7 +6,7 @@ opens: sdlc/tickets/0219-sqlite-record-batching.md sdlc/records/0219-sqlite-batc
 
 # 0219: Batch SQLite warm records and expose context
 
-Status: B13e design accepted by independent reviewer session `01a0e63f-e8d5-7db1-9c02-81da1d161d55` at `6456ab23bc5bae7c0198e27f7cd264c4332984c3`; the required failed-step correction and new Linux x86-64 installed package are ready for the **same High code reviewer** `01a0e8d7-fbc8-7e73-8a25-ae90df32d301`. Owner: Codex. This is not yet code-review acceptance or register 73 closure. The [build record](../records/0219-sqlite-build.md) separates the WIP library, intermediate archive and corrected review archive.
+Status: **Complete for B13e.** Fresh High code review accepted `139f41d693565fd615d0de86b0360a0b07174c0f` after the failed-step correction. The coordinator integrated unchanged SQLite source and checked compilation against current main. Linux x86-64 selected installed proof is recorded separately from earlier evidence. Register 73 and other-platform release proof remain open. See the [code review](../records/0219-code-review.md).
 
 ## Accepted outcome and retained behavior
 
