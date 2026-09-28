@@ -90,3 +90,6 @@ For a timeout, trace every join and destructor after the apparent wait. The 0225
 
 
 Name the exact setting when checking accepted values: SQLite’s connection time budget accepts zero, while its process request total refuses zero. Do not copy a domain restriction between them. When a proof compares an emitted request with a corpus, name the actual capture route and derive observations from the bytes the listener received; hashing the expected body alone is no observation of the adapter.
+
+
+For layered builder configuration, trace when each candidate value is validated and which one is finally selected. An invalid environment value must not preclude an accepted explicit override. Prove precedence with conflicting values through the environment-aware builder; a bare builder or identical values cannot distinguish the paths. The 0211 review supplied that counterexample. Retain 0212’s existing selected-tier validation rule through the later consumer migration.
