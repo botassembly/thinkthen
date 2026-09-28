@@ -3,7 +3,8 @@
 use polars::prelude::{Column, DataFrame, NamedFrom, Series};
 
 use super::{
-    Answer, CallOptions, DecisionQuestion, Engine, Error, Question, QuestionKind, QuestionSet,
+    Answer, Batch, Call, CallOptions, DecisionQuestion, Engine, Error, Question, QuestionKind,
+    QuestionSet,
 };
 
 mod column;
@@ -34,7 +35,8 @@ const MEMBER: &str = "answer";
 ///     let notes = Series::new("note".into(), ["Please refund my order.", "Thanks, all good."]);
 ///     let refund = Question::decide("Does the writer ask for a refund?")?.cut();
 ///     let asked = engine.decide_series(&refund, &notes, CallOptions::new())?;
-///     assert_eq!(asked.len(), 2);
+///     assert_eq!(asked.value().len(), 2);
+///     assert_eq!(asked.facts().records(), 2);
 ///     Ok(())
 /// }
 /// ```
@@ -52,7 +54,7 @@ pub trait PolarsEngine {
         question: &Q,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error>;
+    ) -> Result<Call<Series>, Error>;
 
     /// Pick one option for every text: a `String` series with a null where
     /// nothing fits.
@@ -66,7 +68,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error>;
+    ) -> Result<Call<Series>, Error>;
 
     /// Place every text on the levels: a `Float64` series of positions from
     /// 0 to one less than the number of levels.
@@ -79,7 +81,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error>;
+    ) -> Result<Call<Series>, Error>;
 
     /// Test every label on every text: a `List(String)` series.
     ///
@@ -91,7 +93,7 @@ pub trait PolarsEngine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error>;
+    ) -> Result<Call<Series>, Error>;
 
     /// Ask every question of the text column `on`: the caller's frame with
     /// one typed column per question, followed by nullable `failed` markers.
@@ -107,7 +109,7 @@ pub trait PolarsEngine {
         frame: &DataFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<DataFrame, Error>;
+    ) -> Result<Call<DataFrame>, Error>;
 }
 
 impl PolarsEngine for Engine {
@@ -116,19 +118,20 @@ impl PolarsEngine for Engine {
         question: &Q,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error> {
+    ) -> Result<Call<Series>, Error> {
         let rows = column::texts(texts)?;
-        let answers = self
-            .decide_many_with(question, rows, options)
+        let answers = completed(self.decide_many_with(question, rows, options))?
             .map(|row| {
-                row.map(|row| match row.value() {
-                    Answer::Yes => Some(true),
-                    Answer::No => Some(false),
-                    Answer::Unsure => None,
-                })
+                row.into_iter()
+                    .map(|row| match row.value() {
+                        Answer::Yes => Some(true),
+                        Answer::No => Some(false),
+                        Answer::Unsure => None,
+                    })
+                    .collect::<Vec<_>>()
             })
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(Series::new(texts.name().clone(), answers))
+            .map(|answers| Series::new(texts.name().clone(), answers));
+        Ok(answers)
     }
 
     fn choose_series(
@@ -136,7 +139,7 @@ impl PolarsEngine for Engine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error> {
+    ) -> Result<Call<Series>, Error> {
         single(self, QuestionKind::Choose, question, texts, options)
     }
 
@@ -145,7 +148,7 @@ impl PolarsEngine for Engine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error> {
+    ) -> Result<Call<Series>, Error> {
         single(self, QuestionKind::Score, question, texts, options)
     }
 
@@ -154,7 +157,7 @@ impl PolarsEngine for Engine {
         question: &Question,
         texts: &Series,
         options: CallOptions<'_>,
-    ) -> Result<Series, Error> {
+    ) -> Result<Call<Series>, Error> {
         single(self, QuestionKind::Tag, question, texts, options)
     }
 
@@ -164,7 +167,7 @@ impl PolarsEngine for Engine {
         frame: &DataFrame,
         on: &str,
         options: CallOptions<'_>,
-    ) -> Result<DataFrame, Error> {
+    ) -> Result<Call<DataFrame>, Error> {
         let held = frame
             .column(on)
             .map_err(|_| Error::usage(format!("the frame holds no column {on}")))?;
@@ -184,22 +187,21 @@ impl PolarsEngine for Engine {
             }
         }
         let rows = texts(held.as_materialized_series())?;
-        let records = self
-            .annotate_with(questions, rows, options)
-            .collect::<Result<Vec<_>, _>>()?;
-        let mut columns = questions
-            .members()
-            .enumerate()
-            .map(|(place, (name, kind))| answered(name, kind, &records, place).map(Into::into))
-            .collect::<Result<Vec<Column>, Error>>()?;
-        let names = questions
-            .members()
-            .map(|(name, _)| name)
-            .collect::<Vec<_>>();
-        columns.push(failed(&names, &records)?.into());
-        frame
-            .hstack(&columns)
-            .map_err(|error| Error::defect(&format!("the frame refused a new column: {error}")))
+        completed(self.annotate_with(questions, rows, options))?.try_map(|records| {
+            let mut columns = questions
+                .members()
+                .enumerate()
+                .map(|(place, (name, kind))| answered(name, kind, &records, place).map(Into::into))
+                .collect::<Result<Vec<Column>, Error>>()?;
+            let names = questions
+                .members()
+                .map(|(name, _)| name)
+                .collect::<Vec<_>>();
+            columns.push(failed(&names, &records)?.into());
+            frame
+                .hstack(&columns)
+                .map_err(|error| Error::defect(&format!("the frame refused a new column: {error}")))
+        })
     }
 }
 
@@ -210,7 +212,7 @@ fn single(
     question: &Question,
     texts: &Series,
     options: CallOptions<'_>,
-) -> Result<Series, Error> {
+) -> Result<Call<Series>, Error> {
     if question.kind() != wanted {
         let word = kind_word(wanted);
         return Err(Error::usage(format!(
@@ -222,8 +224,16 @@ fn single(
     let set = QuestionSet::builder()
         .question(MEMBER, question.clone())?
         .build()?;
-    let records = engine
-        .annotate_with(&set, rows, options)
-        .collect::<Result<Vec<_>, _>>()?;
-    answered(texts.name().as_str(), wanted, &records, 0)
+    completed(engine.annotate_with(&set, rows, options))?
+        .try_map(|records| answered(texts.name().as_str(), wanted, &records, 0))
+}
+
+/// Consume the one call before a host conversion can fail.
+fn completed<T>(mut batch: Batch<'_, T>) -> Result<Call<Vec<T>>, Error> {
+    let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
+    let facts = batch
+        .facts()
+        .cloned()
+        .ok_or_else(|| Error::defect("a completed Polars call has no final facts"))?;
+    Ok(Call::new(rows, facts))
 }

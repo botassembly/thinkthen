@@ -16,7 +16,7 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 The door takes Polars 0.55. Polars changes its Rust API between minor versions. `thinkthen::polars` re-exports the Polars the door was built with, so it names the version your `Series` must come from. The throttle is the most requests in flight at once. It holds per loaded copy of the library, so a program that loads two copies can run up to twice the throttle.
 
-A column call returns values only. Read its run facts with `Engine::details` for one text and `Engine::usage` for the totals.
+Each method returns `Call<Series>` or `Call<DataFrame>`. Read its Polars value with `call.value()` or take it with `call.into_value()`. `call.facts()` holds that completed invocation's record, request, cache, token, duration, and model facts, including when one column takes several requests. A started failure carries the same final account on its error. `Engine::usage()` remains a process total, and `Engine::details` still describes one asked text.
 
 ## The five methods
 
@@ -42,7 +42,7 @@ Each refusal happens before any request and returns `thinkthen::Error::Usage`:
 - `the frame already holds a column named {name}`
 - `{method} needs a {verb} question, and this one is a {kind} question`
 
-An empty column returns an empty column of the method's type and sends nothing. No message or `Debug` line holds a text from your column.
+An empty column returns a `Call` with an empty value of the method's type and zero records and sends. No message or `Debug` line holds a text from your column.
 
 ## Checks
 

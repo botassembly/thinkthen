@@ -6,6 +6,8 @@ One internal result model feeds both views. The view never changes the request o
 
 The C JSON door returns `{"value":VALUE,"facts":FACTS}` for every successful asking call. `VALUE` keeps the bare shape below, or the detailed object when `details:true` is requested. The four judgment verbs also accept a `records` array; their `VALUE` is an ordered array of bare judgments or full detailed record objects. Each detailed record keeps its whole original `input`, request digest, batch receipt and applicable warnings and context digest. A failed C call returns `NULL`; `thinkthen_error_facts_json` then exposes final started-call facts. The direct `{"usage":true}` response remains process counters rather than a call result.
 
+The optional Rust Polars door returns `Call<Series>` or `Call<DataFrame>` for every completed column or frame call. Its value keeps the typed Polars shape and its facts count that invocation after all of its batches finish. A started failure returns an error with final facts; a refusal before work starts has no invented account. The existing observer supplies row details when requested.
+
 ## The bare value
 
 | Command | Default standard output |
