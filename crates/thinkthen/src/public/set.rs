@@ -86,6 +86,11 @@ impl QuestionSetBuilder {
                 "a question set member takes no model; the engine names it",
             ));
         }
+        if value.profile.is_some() {
+            return Err(Error::usage(
+                "a question set member takes no profile; name it on the set",
+            ));
+        }
         core::check_name(name).map_err(Error::refused)?;
         if self.0.iter().any(|(held, _)| held == name) {
             return Err(Error::refused(core::QuestionSetError::Duplicate(

@@ -385,8 +385,8 @@ pub(crate) fn column(
     Ok(List::from_values(cells.collect::<Crossed<Vec<Robj>>>()?))
 }
 
-/// One judgment a row. It runs on any set-builder refusal; today only a named model
-/// reaches it, because `.tt_settled` keeps rank and find out. Rows go one at a time.
+/// One judgment a row after a set-builder refusal, including a saved profile
+/// on a question. Rows go one at a time and keep the original question.
 fn one_by_one(
     asked: Question,
     texts: Vec<String>,

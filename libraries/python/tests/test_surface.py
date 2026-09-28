@@ -1,6 +1,7 @@
 """The public names, the question builder, and the verbs' result shapes."""
 
 import ast
+import json
 import pathlib
 
 import pytest
@@ -38,6 +39,35 @@ def test_parts_and_a_file_make_the_same_question(tmp_path):
     with pytest.raises(tt.LocalError):
         (tmp_path / "bad.json").write_text('{"decide": "  "}')
         tt.question(file=tmp_path / "bad.json")
+
+
+def test_saved_profile_details_and_column_refusal(backend, tmp_path):
+    """A file question keeps identity, while a column refuses before its first send."""
+    case = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())
+    question = tmp_path / "question.json"
+    question.write_text(json.dumps(case["question"]))
+    running = tmp_path / "running.json"
+    running.write_text(json.dumps(case["runtime_profile"]))
+    scored = tmp_path / "scored.json"
+    scored.write_text(json.dumps({"score": "How urgent?", "levels": ["low", "high"], "profile": "old"}))
+    printed = run(f"""
+        import json, polars as pl, thinkthen as tt
+        engine = tt.Engine(profile={str(running)!r}, cache=False)
+        details = engine.details(tt.question(file={str(question)!r}), {case['evidence']!r})
+        try:
+            engine.score(tt.question(file={str(scored)!r}), pl.Series(["one", "two"]))
+        except tt.UsageError as error:
+            print(json.dumps({{"digest": details["meta"]["question_sha256"],
+                               "warning": details["meta"]["profile_warning"],
+                               "model": details["meta"]["model"],
+                               "kind": error.kind, "message": str(error)}}))
+    """, child_env(backend, tmp_path))
+    assert json.loads(printed) == {
+        "digest": case["question_sha256"], "warning": case["warning"],
+        "model": case["model"], "kind": "usage",
+        "message": "a question set member takes no profile; name it on the set",
+    }
+    assert backend.count() == 1
 
 
 def test_wrong_questions_are_usage_errors_that_name_the_verb(backend, tmp_path):

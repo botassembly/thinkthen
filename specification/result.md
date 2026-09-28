@@ -108,6 +108,8 @@ ADR 0036 names the stored-answer field `cached`, replacing `replayed` without ch
 
 ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the explicitly selected run profile differ. Its value is `{"tuned_for":NAME,"running":NAME}`. The command prints the same mismatch once on standard error at the first successful logical result. `filter` still warns when it rejects every result and prints no records. A failure on the first logical record warns nobody, even when a later parallel worker completed. A missing name on either side and equal names add no field. The run profile itself stays out of metadata because the field records a warning, not backend selection.
 
+Library and SQL details forms carry the same optional warning in `meta`. The public Rust `Details::profile_warning()` returns the saved and running names in that order. Bare values have no warning channel; a caller that needs the comparison asks for details.
+
 | Field | Holds |
 | --- | --- |
 | `tool` | The name and version of the binary that made the row |
