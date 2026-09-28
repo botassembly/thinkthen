@@ -309,7 +309,7 @@ const ARTICLES = {
     label: "Bash scripts",
     goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
     idea: [
-      "The script reads one song per line from `setlist.jsonl` and asks whether a Beatle wrote each one. It passes the question and its options on the command line. `--true` and `--false` say what yes and no mean. `--threshold 0.2:0.8` sets the band. The two `--field` pointers send the title and the album as one JSON object. Without them, `decide` sends the whole line as text. The last page keeps the same question in a file. The script plays a yes, skips a no, and hands a not sure to a person.",
+      "The script reads one song per line from `setlist.jsonl` and asks whether a Beatle wrote each one. It passes the question and its options on the command line. `--true` and `--false` say what yes and no mean. `--threshold 0.2:0.8` sets the band. An answer of 0.8 or more is yes, and an answer under 0.2 is no. Between them is not sure. The two `--field` pointers send the title and the album as one JSON object. Without them, `decide` sends the whole line as text. The last page keeps the same question in a file. The script plays a yes, skips a no, and hands a not sure to a person.",
       "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means. `code=$?` names the code, and `case` picks the step. Any other code is a failure, and the script stops. [Handle not sure](/how-tos/bash/not-sure/) teaches the same form.",
     ],
     files: {
