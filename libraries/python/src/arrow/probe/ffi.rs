@@ -85,6 +85,13 @@ unsafe extern "C" fn diagnostic_array_release(array: *mut ArrowArray) {
 static OFFSETS: [i32; 2] = [0, 1];
 static VALUES: [u8; 1] = *b"x";
 
+#[cfg(test)]
+fn interrupt_for_diagnostic() {
+    // SAFETY: the isolated CPython test owns the interpreter. The binding's
+    // real waiting caller dispatches this pending signal.
+    unsafe { ffi::PyErr_SetInterrupt() };
+}
+
 unsafe extern "C" fn get_next(stream: *mut ArrowArrayStream, out: *mut ArrowArray) -> c_int {
     // SAFETY: the stream's private data is this producer's `State`, and
     // `get_next` runs on the consumer's attached thread.

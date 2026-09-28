@@ -88,9 +88,8 @@ impl Producer {
 fn a_caught_python_panic_delegates_each_host_callback() {
     if std::env::var_os(CHILD).is_some() {
         child();
-        return;
-    }
-    let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+    } else {
+        let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
         .args([
             "--exact",
             "arrow::probe::diagnostics_tests::a_caught_python_panic_delegates_each_host_callback",
@@ -99,30 +98,31 @@ fn a_caught_python_panic_delegates_each_host_callback() {
         .env(CHILD, "1")
         .output()
         .expect("isolated Python proof");
-    assert!(
-        output.status.success(),
-        "stdout: {} stderr: {}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    for stream in [&output.stdout, &output.stderr] {
-        let text = String::from_utf8_lossy(stream);
-        assert!(!text.contains(STRING), "{text}");
-        assert!(!text.contains(DROP), "{text}");
-    }
-    let stderr = String::from_utf8_lossy(&output.stderr);
-    for marker in [
-        CONVERSION,
-        NEXT,
-        ITEM_DROP,
-        BAD_DROP,
-        ITER_DROP,
-        SIGNAL,
-        INGRESS,
-        RELEASE,
-        "host-thread-marker",
-    ] {
-        assert!(stderr.contains(&format!("{marker}\n")), "{stderr}");
+        assert!(
+            output.status.success(),
+            "stdout: {} stderr: {}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
+        for stream in [&output.stdout, &output.stderr] {
+            let text = String::from_utf8_lossy(stream);
+            assert!(!text.contains(STRING), "{text}");
+            assert!(!text.contains(DROP), "{text}");
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        for marker in [
+            CONVERSION,
+            NEXT,
+            ITEM_DROP,
+            BAD_DROP,
+            ITER_DROP,
+            SIGNAL,
+            INGRESS,
+            RELEASE,
+            "host-thread-marker",
+        ] {
+            assert!(stderr.contains(&format!("{marker}\n")), "{stderr}");
+        }
     }
 }
 
@@ -233,9 +233,7 @@ fn child() {
             let held = Imported::column(producer.bind(py).as_any())?;
             let worker = std::thread::spawn(move || crate::caught(|| drop(held)));
             assert!(py.detach(|| worker.join()).is_ok());
-            // SAFETY: this CPython test owns the interpreter. The binding's
-            // real waiting caller dispatches this pending signal.
-            unsafe { pyo3::ffi::PyErr_SetInterrupt() };
+            super::interrupt_for_diagnostic();
             crate::worker::run(py, crate::worker::Controls::default(), |_options| {
                 std::thread::sleep(std::time::Duration::from_millis(150));
                 Ok(7)
