@@ -179,7 +179,10 @@ pub(super) fn update(path: &Path, month: &str, delta: Counts, shared: &Shared) -
         note_initial_sync();
     }
     write_legacy(path, &directory, &name, next)?;
-    write_retry(path, &directory, &name, next.retries)
+    if next.retries != old.retries {
+        write_retry(path, &directory, &name, next.retries)?;
+    }
+    Ok(())
 }
 
 fn scan(path: &Path) -> Result<Vec<Month>, ReadFailure> {

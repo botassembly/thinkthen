@@ -1,6 +1,6 @@
 # 0248 independent design review request
 
-Status: **pending fresh High review**. This author prepared the request and has not reviewed or accepted their own design. Read pushed `ticket/0248-skip-unchanged-retry-sidecar` at the exact SHA supplied with the handoff, read [ticket 0248](../tickets/0248-skip-unchanged-retry-sidecar.md), [preflight](0248-preflight.md), accepted [0235](../tickets/0235-usage-compatibility-and-transient-backend-failures.md) and current `engine/usage/storage.rs`, `usage/tests.rs` on base `6fd7b170`. Return ACCEPT or concrete findings before root grants a runtime file claim.
+Status: **ACCEPT** from fresh independent High reviewer `/root/usage_sidecar_design_review` for pushed design `dcfe07f8b2d158fda65af2a18dee970d54c0fd0c`. Root then granted the runtime file claim on main `16f06251b1f28cd21117ca86d2e1f5aaf14a28e0`. This author prepared the request and did not review their own design. Read [ticket 0248](../tickets/0248-skip-unchanged-retry-sidecar.md), [preflight](0248-preflight.md), accepted [0235](../tickets/0235-usage-compatibility-and-transient-backend-failures.md) and current `engine/usage/storage.rs`, `usage/tests.rs` on base `6fd7b170`.
 
 Review the one proposed amendment: after validating every recognized month/sidecar, checked current and aggregate arithmetic, all contaminated-month migrations and the atomic base write, omit only the **ordinary** retry-sidecar replacement when `next.retries == old.retries`. Verify the state table for a clean missing sidecar, a clean positive sidecar, contaminated current and prior months, a retry-only delta, changed retries, an old writer under the stable lock, overflow before month/sidecar mutation, interruption at every durability checkpoint, unsafe or corrupt sidecar, and preserved file identity. Directory/lock creation may precede overflow refusal. A first-call no-sidecar saving requires no retries and no migration sidecar work.
 
@@ -10,4 +10,4 @@ This review decides only the design. It does not establish a current latency imp
 
 ## Result
 
-Pending independent reviewer, exact reviewed SHA, verdict and corrections. Preserve findings here rather than replacing this request with an unverified acceptance claim.
+Independent High **ACCEPT**, exact design SHA `dcfe07f8b2d158fda65af2a18dee970d54c0fd0c`, no findings. The reviewer checked candidate source and 0235: a skip after all validation, checked arithmetic, all-month migration and the synced base preserves ordering; absent-zero and positive-inode proof are coherent; real old-reader 100/7 → 101/7 → 102/7 remains required. This acceptance covers design only; a new independent High code review is still required.

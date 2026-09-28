@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/engine/usage/storage.rs crates/thinkthen/src/engine/
 
 # 0248: Skip an unchanged retry-sidecar replacement
 
-Status: **design proposed; no runtime claim or implementation yet**. Owner: retained codex-7 after fresh High design acceptance and root's source-file claim. Based on main `6fd7b1709e87a6f4d8aee80eb00df4a8363acf6d`. The [preflight](../records/0248-preflight.md) traces source and old-reader proof. A fresh independent High reviewer must accept this protocol amendment before a build.
+Status: **approved and implemented on the ticket branch; awaiting fresh independent High code review**. Owner: retained codex-7. The design at `dcfe07f8b2d158fda65af2a18dee970d54c0fd0c` received fresh High ACCEPT, and root granted the runtime claim on main `16f06251b1f28cd21117ca86d2e1f5aaf14a28e0`. The [preflight](../records/0248-preflight.md) traces source and old-reader proof.
 
 ## Outcome and boundary
 
@@ -53,4 +53,6 @@ Stop and return to design review if skipping the sidecar requires bypassing `sca
 
 ## What the build taught us
 
-Pending implementation and independent code review. Record assumptions corrected, exact focused proof, and remaining measurement after the build; do not treat design acceptance as an issue closure.
+Two outside-in filesystem cases first failed on the previous code: a clean zero-retry call created a sidecar, and an unrelated call reached the retry-write fault despite an unchanged retry total. The conditional after the synced base write makes both pass without bypassing scan or migration. Existing tests had assumed every zero-retry update created a sidecar; their fixtures now assert absence or seed a real retry where they test sidecar identity, corruption or fault behavior. A separate update refusal proves an invalid sidecar is still examined before a no-retry base mutation. Keep fixture setup aligned with the actual persistence rule rather than weakening the named assertion.
+
+The focused proof is recorded in [the build record](../records/0248-build.md): 18 usage unit cases and six status integration cases pass, including changed-retry, migration, overflow, unsafe-state and injected-failure paths. The immutable old reader and current binary, against one loopback fake in an isolated folder, retain the accepted 100/7 → 101/7 → 102/7 sequence. This establishes file and old-reader behavior, not a current command-latency gain. The original timing question remains open.
