@@ -27,6 +27,7 @@ Issues = "https://github.com/botassembly/thinkthen/issues"
 [project.optional-dependencies]
 # 1.44.2 is the tested pin, and it exports the Series Arrow stream the door reads.
 polars = ["polars>=1.44.2,<2"]
+pydantic = ["pydantic>=2.11,<3"]
 
 [tool.maturin]
 module-name = "thinkthen._thinkthen"

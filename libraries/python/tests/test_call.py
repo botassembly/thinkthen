@@ -17,8 +17,8 @@ from conftest import child_env, run, start
 
 
 @contextmanager
-def capturing_filter_listener():
-    """Keep the actual wire bodies while one listener answers both filter calls."""
+def capturing_filter_listener(answer=None):
+    """Keep actual wire bodies; optionally answer other question kinds."""
     bodies = []
 
     class Handler(BaseHTTPRequestHandler):
@@ -30,6 +30,9 @@ def capturing_filter_listener():
             request = json.loads(body)
             answers = {}
             for name, question in request["questions"].items():
+                if answer is not None:
+                    answers[name] = answer(question)
+                    continue
                 first = request["state"] == "one" or 'The text is "one"' in question["instructions"]
                 answers[name] = {"type": "noul", "noul": 0.1 if first else 0.9}
             reply = json.dumps({"model": "jev-latest", "answers": answers,

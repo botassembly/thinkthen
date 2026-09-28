@@ -21,6 +21,29 @@ engine.choose_many("Which team?", reviews, options=["billing", "shipping"]).valu
 
 `None` means "not sure". A call reads one `str`, or a list, tuple, or other iterable of `str`, whole before its first request. `examples.json` holds one checked example for each function.
 
+### Typed labels and annotation rows
+
+`options=`, `labels=`, `levels=`, and recognition `kinds=` take the existing ordered list/map forms, an `Enum` class, or a direct standard-library `Literal[...]`. A string-valued Enum member supplies its value; another member supplies its name. Canonical declaration order is kept. An Enum member's `description` or distinct member docstring supplies its meaning; `descriptions={"name": ...}` replaces one member's meaning. Unknown override names and observable Enum aliases are usage errors before a request. Python can collapse a repeated `Literal` argument before runtime inspection; a resulting one-label `choose` set is refused by the native question grammar.
+
+For typed `score` levels, a bare member keeps its name as its criterion even when another level has a description. An explicit map or override value of `None` still means the native empty criterion `{}`. A Pydantic question-set field uses `bool | None` for decide, `Literal[...] | None` for choose, bare `float` for score, or bare `list[Literal[...]]` for tag; nullable scores and tags are refused before a request.
+
+```python
+from enum import Enum
+from typing import Literal
+
+class Team(Enum):
+    billing = "billing"
+    shipping = "shipping"
+
+tt.choose("Which team?", text, options=Team).value
+tt.tag("Which tags?", text, labels=Literal["billing", "shipping"]).value
+tt.recognize(text, kinds=Team, descriptions={"shipping": {"what": "Delivery team"}}).value
+```
+
+The stub types an annotation row as `dict[str, AnnotatedValue]`, where a value may be a bool, chosen string, numeric score, tag list, unresolved `None`, or a distinct `{"failed":{"kind","cause"}}` marker. `Call.value`, `Call.facts`, and `Call.details` keep their existing meaning. `Question.kind` and errors use the finite `QuestionKind` and `ErrorKind` stub aliases.
+
+`thinkthen[pydantic]` is optional. Import `thinkthen.pydantic` only to use a `BaseModel` class with ordered `Field(description=...)` labels or question fields, `Annotated[Literal[...], Field(...)]` labels, or `row_model(question_set)`. A question-set model field uses `bool | None`, `Literal[...] | None`, `float`, or `list[Literal[...]]`; its Field description is the question text, and `json_schema_extra` carries existing question-file settings. `row_model` accepts a validated model, version-one dict, or file and returns a strict Pydantic model for explicit `Row.model_validate(call.value[0])`. It does not alter the returned row. Ordinary `import thinkthen` and core calls import no Pydantic package.
+
 `decide`, `decide_many`, `choose`, `score`, and `tag` also read a Polars `Series` or another Arrow column in place, with no copy, in one engine call. A `Series` gets a `Series` back, and any other column gets a list. `annotate` and `recognize` read a Polars `DataFrame` with `on=`, the name of the text column:
 
 ```python

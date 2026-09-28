@@ -152,6 +152,38 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
 
 #[cfg(unix)]
 #[test]
+fn a_missing_usage_lock_names_the_lock_without_creating_or_changing_state() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let home =
+        std::env::temp_dir().join(format!("thinkthen-status-no-lock-{}", std::process::id()));
+    let _absent = fs::remove_dir_all(&home);
+    let usage = home.join(".cache/thinkthen-usage");
+    fs::create_dir_all(&usage).expect("usage folder");
+    fs::set_permissions(&usage, fs::Permissions::from_mode(0o700)).expect("private folder");
+    let month = usage.join("2026-09.json");
+    let bytes = b"{\"schema\":\"thinkthen.usage/1\",\"requests_sent\":1,\"input_tokens\":2,\"output_tokens\":3,\"cache_answers\":0}\n";
+    fs::write(&month, bytes).expect("month");
+    fs::set_permissions(&month, fs::Permissions::from_mode(0o600)).expect("private month");
+
+    let output = run::output(command(&home).args(["status", "--json"])).expect("status");
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: status could not read local usage file .lock: unsafe or unreadable state\n"
+    );
+    assert_eq!(fs::read(&month).expect("unchanged month"), bytes);
+    assert_eq!(
+        fs::read_dir(&usage).expect("unchanged directory").count(),
+        1
+    );
+    assert!(!usage.join(".lock").exists());
+    assert!(!usage.join(".update.tmp").exists());
+}
+
+#[cfg(unix)]
+#[test]
 fn a_malformed_recognized_usage_month_fails_without_partial_output_or_repair() {
     use std::os::unix::fs::PermissionsExt as _;
 
