@@ -1,6 +1,6 @@
 # Restore the settings surfaces’ measured source counters
 
-Status: candidate correction awaiting the same independent settings reviewer. Source baseline: main `e99da4a1`, with accepted 0157 source `85180c3f` landed at `1d056e7e`. No product source, host behavior, dependency or test selection changes.
+Status: accepted by the same independent settings reviewer at `69d18b68`, then landed. Source baseline: main `e99da4a1`, with accepted 0157 source `85180c3f` landed at `1d056e7e`. No product source, host behavior, dependency or test selection changes.
 
 The 0157 landing checked the root Rust total but missed separate native source configurations. The 0203 builder noticed three stale Rust totals. A bounded check of all 21 named library/database configurations found 17 stale limits. This is a validation omission; passing functional checks do not establish these source totals. The correction sets each limit to the current measured total, with no spare capacity. The root remains 81,886.
 
@@ -29,3 +29,8 @@ The current totals incorporate earlier landed SQL settings and host work as well
 ## What the correction taught us
 
 A cross-library landing needs every affected source configuration, including host-language tests, SQL scripts and generated declarations. Root-only verification misses excluded binding workspaces. The named counters take seconds and do not require the expensive surfaces rung. Check them before acceptance and after integration, preserving functional proof at its original source. Later 0203 metadata must merge this correction and measure only its additional growth.
+
+
+## Independent review
+
+The reviewer independently ran all 21 named source readers and the root reader and confirmed exact totals, unchanged counting scopes and clean diff. It corrected the initial growth attribution; the revised record at `69d18b68` passed follow-up review. This landing contains no product or test-source changes.
