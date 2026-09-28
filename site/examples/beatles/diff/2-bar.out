@@ -1,0 +1,9 @@
+thinkthen: diff: warning: the question digest differs in 12 of 12 paired answers. A different question, threshold, or profile gives a different digest.
+["A Day in the Life","yes","no","gained"]
+["Get Back","yes","no","gained"]
+["Glass Onion","yes","no","gained"]
+["In My Life","yes","no","gained"]
+["Taxman","yes","no","gained"]
+["The Long and Winding Road","yes","no","gained"]
+["Ticket to Ride","yes","no","gained"]
+{"changed":7,"right_a":5,"right_b":12,"lost":0}
