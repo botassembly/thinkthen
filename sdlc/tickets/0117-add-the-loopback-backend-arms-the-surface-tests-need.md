@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 117
-opens: conformance/backend conformance/README.md sdlc/ratchet.json sdlc/issues/2026-09-25-test-harness-and-review-leftovers.md
+opens: conformance/backend conformance/README.md sdlc/ratchet.json sdlc/issues/closed/2026-09-25-test-harness-and-review-leftovers.md
 ---
 
 # 0117: Add the loopback backend arms the surface tests need

@@ -186,12 +186,25 @@ impl Client {
         self.post_observed_with_retry(exchange, cancel, &usage, |_| before_attempt())
     }
 
+    #[cfg(test)]
     pub(crate) fn post_observed_with_retry(
         &self,
         exchange: &Exchange<'_>,
         cancel: &crate::engine::Cancel,
         usage: &Counters,
         before_attempt: impl Fn(bool),
+    ) -> Result<HttpAnswer, Error> {
+        self.post_marked_with_retry(exchange, cancel, usage, before_attempt, || ())
+    }
+
+    /// Also report each actual transport start to one private request owner.
+    pub(crate) fn post_marked_with_retry(
+        &self,
+        exchange: &Exchange<'_>,
+        cancel: &crate::engine::Cancel,
+        usage: &Counters,
+        before_attempt: impl Fn(bool),
+        marked: impl Fn(),
     ) -> Result<HttpAnswer, Error> {
         if exchange
             .key
@@ -223,6 +236,8 @@ impl Client {
             if let Some(reservation) = reservation {
                 reservation.commit();
             }
+            cancel.sent();
+            marked();
             let sending = cancel.sending();
             let sent = send(&self.agent, exchange, limit);
             drop(sending);

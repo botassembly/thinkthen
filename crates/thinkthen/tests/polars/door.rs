@@ -57,8 +57,11 @@ fn a_profiled_question_keeps_its_identity_through_a_series() {
         .expect("series");
     assert_eq!(answered.bool().expect("boolean series").get(0), Some(true));
     let details = engine.details(&question, evidence).expect("details");
-    assert_eq!(details.question_sha256(), fixture["question_sha256"]);
-    assert_eq!(details.profile_warning(), Some(("old", "new")));
+    assert_eq!(
+        details.value().question_sha256(),
+        fixture["question_sha256"]
+    );
+    assert_eq!(details.value().profile_warning(), Some(("old", "new")));
     assert_eq!(backend.count(), 1);
 }
 

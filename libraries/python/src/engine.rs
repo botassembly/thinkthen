@@ -4,6 +4,7 @@
 //! the detachable worker. The package names the verb, so one method serves
 //! each shape: one text, many texts, an ordering, and the three set calls.
 
+use crate::diagnostics::{host, host_error};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict};
 use thinkthen::{
@@ -113,7 +114,7 @@ fn cached(builder: EngineBuilder, cache: &Bound<'_, PyAny>) -> PyResult<EngineBu
             builder.no_cache()
         });
     }
-    let folder: std::path::PathBuf = cache.extract().map_err(|_| usage(py, CACHE))?;
+    let folder: std::path::PathBuf = host_error(host(|| cache.extract()), || usage(py, CACHE))?;
     builder.cache_at(folder).map_err(|error| raised(py, &error))
 }
 
@@ -146,7 +147,7 @@ fn folder_path(
     refusal: &'static str,
 ) -> PyResult<Option<std::path::PathBuf>> {
     value
-        .map(|value| value.extract().map_err(|_| usage(py, refusal)))
+        .map(|value| host_error(host(|| value.extract()), || usage(py, refusal)))
         .transpose()
 }
 
@@ -248,7 +249,7 @@ fn order(
         .enumerate()
         .map(|(at, text)| Indexed(at, text));
     if find {
-        let found = engine.find_with(asked, records, options)?;
+        let found = engine.find_with(asked, records, options)?.into_value();
         let probability = |at: usize| {
             found
                 .candidates()
@@ -261,7 +262,7 @@ fn order(
             .into_iter()
             .collect());
     }
-    let ranked = engine.rank_with(asked, records, options)?;
+    let ranked = engine.rank_with(asked, records, options)?.into_value();
     Ok(ranked
         .into_iter()
         .map(|row| (row.probability(), row.into_input()))
@@ -322,7 +323,10 @@ impl Engine {
                     model,
                     throttle: checked_throttle(throttle)?,
                     most: setting(max_requests, MAX_REQUESTS)?,
-                    max_request_bytes: setting(max_request_bytes, "max_request_bytes is a whole number")?,
+                    max_request_bytes: setting(
+                        max_request_bytes,
+                        "max_request_bytes is a whole number",
+                    )?,
                     timeout: setting(timeout, "a timeout is a whole number of seconds above zero")?,
                     retries: setting(max_retries, "max_retries is a whole number")?,
                     record: folder_path(py, record, "record is a folder path")?,
@@ -368,7 +372,8 @@ impl Engine {
             let (evidence, controls) = (text(evidence)?, controls(py, deadline, token)?);
             let found = run(py, controls, move |options| {
                 engine.details_with(asked.detail(), &evidence, options)
-            })?;
+            })?
+            .into_value();
             if verb == "details" {
                 return Ok(found.to_json().into_pyobject(py)?.into_any().unbind());
             }
@@ -472,7 +477,7 @@ impl Engine {
             let found = run(py, controls, move |options| {
                 engine.recognize_with(&ask, &evidence, options)
             })?;
-            Ok(Recognized::from(&found))
+            Ok(Recognized::from(found.value()))
         })
     }
 
@@ -490,7 +495,7 @@ impl Engine {
             let edges = run(py, controls, move |options| {
                 engine.relate_with(&ask, given, options)
             })?;
-            Ok(edges.iter().map(Edge::from).collect())
+            Ok(edges.value().iter().map(Edge::from).collect())
         })
     }
 

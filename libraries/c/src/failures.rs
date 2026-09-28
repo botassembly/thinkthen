@@ -10,7 +10,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Mutex, Once, PoisonError, Weak};
 use std::thread::ThreadId;
 
-use thinkthen::{Engine, ErrorKind};
+use thinkthen::{Engine, ErrorKind, Facts};
 
 /// The header's success code.
 pub(crate) const OK: i32 = 0;
@@ -38,6 +38,29 @@ pub(crate) struct Failure {
     code: i32,
     retryable: bool,
     message: String,
+    facts: Option<String>,
+}
+
+/// The count-only report for one completed asking call.
+pub(crate) fn facts_json(facts: &Facts) -> String {
+    let mut value = serde_json::json!({
+        "records": facts.records(),
+        "requests_sent": facts.requests_sent(),
+        "cache_answers": facts.cache_answers(),
+        "seconds": facts.seconds(),
+    });
+    if let Some(object) = value.as_object_mut() {
+        if let Some(input) = facts.input_tokens() {
+            object.insert("input_tokens".to_owned(), serde_json::json!(input));
+        }
+        if let Some(output) = facts.output_tokens() {
+            object.insert("output_tokens".to_owned(), serde_json::json!(output));
+        }
+        if let Some(model) = facts.model() {
+            object.insert("model".to_owned(), serde_json::json!(model));
+        }
+    }
+    value.to_string()
 }
 
 impl Failure {
@@ -47,6 +70,7 @@ impl Failure {
             code: USAGE,
             retryable: false,
             message: message.into(),
+            facts: None,
         }
     }
 
@@ -56,6 +80,7 @@ impl Failure {
             code: DEFECT,
             retryable: false,
             message: format!("defect: {message}"),
+            facts: None,
         }
     }
 }
@@ -66,6 +91,7 @@ impl From<thinkthen::Error> for Failure {
             code: code_of(error.kind()),
             retryable: error.retryable(),
             message: error.to_string(),
+            facts: error.facts().map(facts_json),
         }
     }
 }
@@ -75,6 +101,7 @@ pub(crate) struct Last {
     code: i32,
     retryable: bool,
     message: CString,
+    facts: Option<CString>,
 }
 
 impl Last {
@@ -85,6 +112,7 @@ impl Last {
             code: failure.code,
             retryable: failure.retryable,
             message,
+            facts: failure.facts.and_then(|facts| CString::new(facts).ok()),
         }
     }
 }
@@ -268,6 +296,13 @@ pub(crate) fn message(held: Option<&Held>) -> *const std::ffi::c_char {
         }
         .as_ptr()
     })
+}
+
+/// Borrow the calling thread's last started-failure facts, if present.
+pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
+    last(held, |last| last.facts.as_ref().map(|facts| facts.as_ptr()))
+        .flatten()
+        .unwrap_or(std::ptr::null())
 }
 
 /// Run one door body so no panic unwinds into the host. A panic records the

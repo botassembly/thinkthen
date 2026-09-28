@@ -21,3 +21,7 @@ Replace or extend the closest private child boundary with one synthetic string p
 ## Routing
 
 The R worker payload copy has its own issue, `2026-09-28-r-worker-panic-can-copy-payload-text.md`. Ticket 0226 covers C, SQLite and retained DuckDB C API only. This family follows its reviewed implementation lessons. Coordinate exact files with 0212's TypeScript adapter conversion and subsequent port batching tickets before building. Keep per-host source and installed-package proof distinct and leave unavailable targets open.
+
+## Reviewed implementation and remaining proof
+
+Ticket 0227 source and the evidenced Linux package subset landed from corrected candidate `e52c1604` after fresh High code review. The source children prove fixed non-retryable Defect, both synthetic payload forms, later success and unrelated prior-hook delivery. Installed Linux packages separately prove loading and no-fault later use. Python's reviewed correction also covers implicit reference cleanup. See [the build evidence](../records/0227-language-panic-build.md) and [code acceptance](../records/0227-code-review.md). Other target packages and the later 0212 Call conversion integration remain open; this issue is not counted complete from the Linux subset alone.

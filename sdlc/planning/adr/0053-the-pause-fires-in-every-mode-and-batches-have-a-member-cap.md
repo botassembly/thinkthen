@@ -64,3 +64,13 @@ The coordinator's rulings of 2026-09-26:
 ## Amendment, 2026-09-26: ADR 0055 narrows item 5
 
 ADR 0055 takes the records list out of the evidence of `decide`, `filter` and `rank` batches. Without a context, their records are no longer evidence for each other, so item 5's caution no longer applies to them. It still applies to `choose` and `tag`. Ian can overturn it.
+
+## Amendment for ticket 0212: caller-owned Rust iterators
+
+Status: Ian approved this exception on 2026-09-28 after independent technical review. The accepted 50 ms command rule above remains in force. This amendment narrows its application to the Rust library's ordinary synchronous `Iterator` input.
+
+`Batch::next()` reads a caller-owned iterator on the calling thread. An ordinary `Iterator::next()` has no nonblocking or idle signal, and its item need not be `Send`. When `next()` blocks waiting for another record, the library cannot both preserve caller-thread iteration and observe a 50 ms idle interval. A background reader would require `Send` and could run caller code on another thread, changing the existing Rust contract. A fixed small read-ahead cap would change the accepted `Max` batch shape and request identity.
+
+**Rule:** The 50 ms pause continues for command inputs and any future source whose own API reports that it is idle. For an ordinary Rust iterator, `Max` closes a batch only at a content cut, size/profile limit, 4,096-member cap, source exhaustion, or local refusal. A caller that produces one record and waits for its answer selects `BatchSetting::Records(1)`; that preserves today's single-record request bytes and prompt output. `BatchSetting::Records(N)` closes at N records or an earlier accepted cut/limit. The library keeps input order, bounded batch memory, one first error, worker joining, and per-call facts. Ticket 0212 adds no public asynchronous source or timeout switch.
+
+The cost is visible: `Max` over a blocking or unending synchronous iterator may wait for another record or a closing boundary before yielding its first row. A finite source groups until its accepted close, which can read as many as 4,096 records before the first row. This differs from the old one-record throttle-ahead test; that test uses explicit batch 1, while the separate Max test pins its actual batch-window bound. A held-input witness must prove that a one-record interactive iterator progresses under batch 1, while Max resumes only when the caller supplies a closing record or ends input.

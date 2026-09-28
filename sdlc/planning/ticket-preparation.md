@@ -2,6 +2,14 @@
 
 Ian requested this process on 2026-09-27 to reduce repeated discovery and rework. Preparation investigates the code and adds useful notes. It does not implement the feature, change an accepted outcome, or close a product gap. Ian can overturn this process.
 
+## Search scope and handoff
+
+The retained preparer may read and search the entire remaining queue, accepted branches, records and current source to find related work. A deep pass stays near three to five related tickets. Correct factual notes only under the coordinator's file claims; keep runtime and other owners' branches read-only. The coordinator chooses the build scope, closure, consolidation and lane ownership. Send genuinely undelegated material decisions to the coordinator for Ian. Routine choices within approved outcomes need no new Ian question.
+
+Answer the questions that change a build: what outcome remains on current main, what behavior callers already inherit, which prerequisite is real, which files and helpers overlap, what smallest proof distinguishes the claim, and which recent failure could recur. Trace a native or binding call through its actual builder, options and shared defaults before declaring a feature absent. Classify overlap as an exact duplicate, an issue or plan alias, shared implementation with distinct acceptance, or separate work. If consolidation is recommended, name the surviving ticket and every unresolved criterion it must retain. Move those criteria after the coordinator approves consolidation. Remove superseded blockers while retaining historical evidence; an approved API is not shipped code.
+
+The handoff ranks ready related batches and states what makes each ready or blocked before public 0.1. Search candidates include cache and replay 0228/0229 with remaining correctness, annotation facts 0216, existing TypeScript/Ruby/R/Polars and type parity, SQL find 0224, test retirement 0119 and uninvoked verifiers, and docs/how-tos/release claims. Release 0128 has a preparation record. These are candidates for coordinator ranking, not an authorized build order; experimental new ports and optional cleanup follow public 0.1 correctness. Run a minimal offline proof only when it resolves a named uncertainty. Preparation does not start a broad rebuild, stress or provider campaign.
+
 ## Before the build
 
 The coordinator assigns the next ready ticket or a related family, such as the database tickets. Keep the implementation builder working where file claims permit. Reuse a preparation agent for related investigations; reviewers remain independent of authors. Claim the note and ticket files on main before editing.
@@ -47,7 +55,7 @@ When a review changes a shared behavioral promise, inventory and read every appl
 
 ## Improve the next preparation
 
-After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Use that evidence to give the retained agent a specific next brief. Do not measure success by note length or by counting prepared tickets as completed issues.
+After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons and fresh review. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Give the same retained agent a narrow follow-up for a demonstrated miss. Do not claim a speed gain from note count or count prepared tickets as completed issues.
 
 The first database pass caught useful SQL budget and warm-settings dependencies. It also incorrectly flagged an old main sentence about `LIMIT` as an unresolved DuckDB design defect; the active accepted branch had already corrected it. The coordinator verified the branch and the preparer withdrew the finding. This is why the source comparison above is required. Independent review also caught a shared zero-total proof that SQLite cannot run because it refuses zero. The corrected notes use a spent positive SQL total there and keep a direct typed-budget proof separate. Future briefs must check each host's input domain before copying a test across ports. The first build-usefulness evaluation is still pending.
 
@@ -101,3 +109,21 @@ Before declaring a proof complete, match each promised property to its actual as
 
 
 Keep the approval work proportional too. A small internal cleanup within an already accepted method needs its exact claim, preservation evidence and fresh code review. Use another design review when it changes the outcome, shared fixture contract or material safety assumption; do not repeat design approval just because another helper is selected. The one-helper 0119 slice retained useful evidence, but its additional planning and review records must not become the default cost of every small cleanup.
+
+
+For interpreter boundaries, inventory host callbacks separately on the caller, worker and cleanup paths. A guarded wait can dispatch a signal handler, and dropping a moved source can invoke a foreign release callback before the catch returns. One caller-side hook observation and an existing release-order test do not prove worker-side hook delegation. Select one representative observation at each distinct ownership boundary. For admission-order changes, compare the settled contract with the reported side effect before calling current behavior accidental; preserve the full issue criterion when a ticket fixes only one case.
+
+
+For Python host scopes, include ownership and release of returned iterator, item and exception references. Their final reference release can invoke user cleanup after the explicit method call ends. For isolated package validation, carry the pinned host and compiler into installation and execution as well as the build wrapper; system Node or Rust outside the repository may differ from the required toolchain.
+
+
+For a new command, identify the executable user workflow before proposing its syntax. An outside-in test proves behavior but does not replace the repository's requirement that a demo needs the command. For fixture maintenance, distinguish result retention from request use: filtered rows and bare output cannot supply a complete access manifest. Name the exact complete route being proved and keep broader harness integration open.
+
+
+For a foreign-language batch, inspect the Rust method's type bounds. A method with the right verb name may require compile-time labels and cannot accept a host's runtime label set. Map every accepted input combination, including records with detailed output, to a real route. Trace serialized fields through their constructor even when no observer is installed. A carrier named `Details` does not by itself promise the record metadata or context required by that host's contract. Preserve each host's stopping and recoverable-error policy when sharing the route.
+
+
+For a shared batch coordinator, choose one proof whose evidence groups close at different profile limits; equal close points cannot expose a missing oldest-row frontier. For each new call option, classify every public entry point as consuming or rejecting it before handing the setting to wrappers. Trace callback termination after a caught panic, including the next event on the same eager path. When a public error gains private state, run the relevant consumer lint as well as compilation; unchanged caller source can still expose a newly oversized error.
+
+
+Map changed consumers to Cargo `required-features` before naming compilation complete: no-default tests omit Polars targets even when their source changed. For a scheduling regression, ensure the input crosses the failing boundary before end-of-input flushes pending work. A controlled request witness must distinguish scheduler admission from concurrent socket arrival. When a new regression case could also pass the old behavior, use one focused counterfactual against the known bad source, then restore the correction; this is not a broad mutation campaign. Pin the expected error kind and sentence so another refusal cannot satisfy the test accidentally.

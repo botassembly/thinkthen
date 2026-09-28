@@ -12,7 +12,7 @@ ThinkThen.score("How urgent is this?", outage, levels: ["Routine.", "Soon.", "Im
 
 The module methods use one engine built on first use from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest that the command reads. `ThinkThen::Engine.new(base_url:, model:, throttle:, max_requests:, max_request_bytes:, cache:, timeout:, max_retries:, profile:, record:, replay:)` builds another. Each omitted keyword comes from the environment. `cache: false` turns the cache off. There is no key keyword, and the key never enters a Ruby object.
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `ThinkThen::Engine.new(cache: false)`.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `ThinkThen::Engine.new(cache: false)`.
 
 ## The verbs
 

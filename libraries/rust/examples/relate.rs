@@ -14,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         Entity::new("Employees may book business class on any flight.", "rule")?,
     ];
     let mut out = std::io::stdout().lock();
-    for edge in tt.relate(&ask, rules)? {
+    for edge in tt.relate(&ask, rules)?.into_value() {
         let (name, probability) = (edge.relation(), edge.probability());
         let (source, target) = (edge.source().name(), edge.target().name());
         writeln!(out, "{name} {probability:.2} {source} | {target}")?;
