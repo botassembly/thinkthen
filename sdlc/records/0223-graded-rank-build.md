@@ -1,0 +1,32 @@
+# 0223 graded rank source build
+
+Status: source candidate for fresh independent code review. Ian approved the command's `rank @score-file` route, truthful score metadata and unchanged library rank semantics in the [work plan](../planning/work-plan-2026-09-27.md#ians-approval-and-release-priority-2026-09-28), item 5. The accepted technical design is [ticket 0223](../tickets/0223-graded-relevance-reranking.md) and [ADR 0095](../planning/adr/0095-rank-graded-score-questions.md). This record does not close the [open issue](../issues/2026-09-24-rank-by-graded-relevance-for-search-reranking.md): optional level weights and reciprocal rank fusion remain.
+
+## Built behavior
+
+The command now accepts a saved `score` question through `rank @FILE`. It resolves the existing score question, including its described levels, model, `on` and file batch tier. It refuses typed `--true` or `--false` with that file before any request. Plain rank and saved `decide` files continue through the yes/no question contract; wrong-kind files retain their existing refusal. The existing score decoder computes the normalized twelve-decimal weighted position. The ordered sink sorts by that value with stable input-order ties and the existing top-N bound. Graded details keep the numeric score `value`, score answer, score verb, input and null threshold. Ordinary rank still orders by yes probability and prints null `value`.
+
+The source location changed since the design base: `Judging::row_of` now lives in `cli/asking/row.rs`, so the build edits that child rather than adding to near-cap `cli/asking.rs`. The private ordered-row field is named `order_value` across its constructors and sink. No public Rust or host rank result changed. No duplicate score arithmetic, parser grammar, request planner or scheduler was added.
+
+## Functional evidence and limits
+
+The compiled loopback cases use four distinct records and literal three-level distributions with independently expected weighted positions `1.5, 1, 1, 0.3`. They pin original line-record bytes, a separate original JSONL byte order, the top-2 boundary tie, four judged rows and four sends despite top dropping rows, score-kind detailed values, all-row ordering and null threshold. At explicit `--batch 1`, captured graded rank requests match `score @FILE` byte for byte, with matching detailed request digests and values. The dry-run request has the exact described criteria and sends nothing. A score file plus either typed yes/no meaning exits 2 without sending. A later status-500 response under top exits 4, sends exactly two requests, leaves stdout empty and prints the exact stopped-run sentence. Existing ordinary rank, score batching and wrong-kind cases are reused. A deliberate counterfactual run with the pre-change rank resolver failed at the score-file refusal before a send, confirming the principal test distinguishes the change.
+
+The focused cases prove a finite four-row run at one batch per request. They do not promise speculative send parity after a stop, identical pause cuts on timed input, fixed RSS, new library/binding behavior, or optional weights and RRF. No provider, stress or full-suite run belongs to this build.
+
+## Held documentation handoff
+
+The public documentation and site are held by the marketing lane. This source branch edits none of `specification/`, `README.md`, samples or site. After that hold clears, the documentation owner should update the following exact promises together:
+
+- `specification/rank.md`: intro, question-file input, output/details, options and method currently say rank only asks yes/no and orders by yes probability. State that `rank @FILE` also accepts a saved score question, orders by the score command's weighted value with stable ties and top, prints original records, and refuses typed yes/no meanings beside the score file. Keep the yes/no examples and public library explanation scoped to their existing paths.
+- `specification/score.md`: add the command reranking route next to the weighted-value explanation. State that the score command itself still prints rows in input order and graded rank uses the same score question and request identity at equal framing and batch boundaries.
+- `specification/question-file.md`: the command compatibility and precedence descriptions should say that `rank` accepts saved `decide` or `score`; score files keep their existing grammar and file batch tier. No schema or corpus change is needed.
+- `specification/result.md`: its `rank` statements that all rank details are `decide`/yes-no must distinguish graded score-file rank, whose details carry `question.verb: score`, `answer.kind: score`, numeric `value`, original `input` and null threshold. The result schema does not change.
+- `specification/records.md`: any yes-only rank wording needs the same bounded score-file distinction. The existing top-N retention and stopped-run limits remain.
+- Audit `README.md`, executable rank/score examples and samples for claims that rank is exclusively yes/no. Update only examples that currently misstate the accepted command route; retain all current yes/no examples. Coordinate site text and cards with marketing rather than changing them here.
+
+## Source and checks
+
+The primary edits are `cli/asked.rs`, `cli/asking/row.rs`, `cli/schedule.rs` and CLI help; the other claimed `Judged` constructors take the private rename. The compiled cases live in `tests/backend/keeping/graded_rank.rs`. The ratchet rises from 96,250 to 96,499 nonblank Rust lines, a 249-line increase dominated by the focused compiled-command proof. I looked for duplication in the existing score arithmetic, request planning, rank-top cases and batch tests: each already supplies reusable behavior, so this build adds no copy of them. The one new child proves the command seam they did not exercise.
+
+`cargo fmt --all -- --check`, policy, the exact ratchet, ticket evidence and changed-record link checks passed. Strict Clippy passed for the affected binary and backend test target with `-D warnings`. Focused compiled cases passed: 21 keeping cases, eight refusal cases, eleven score/tag batching cases, six scheduler cases, the two selected core answer cases and the four new graded cases after the final JSONL addition. The final four graded cases passed separately after that addition. A full-target Clippy attempt found an unrelated pre-existing five-line overage in `engine/request/tests.rs`; the affected target passed strictly without that library-test target. No full test suite or provider run was made.

@@ -217,7 +217,7 @@ fn judged_record(
         printed: Some(line),
         outcome: Outcome::Yes,
         replayed: !aggregate.live,
-        probability: None,
+        order_value: None,
         partial_failure: false,
         profile_mismatch: running.mismatch.notice(),
     })

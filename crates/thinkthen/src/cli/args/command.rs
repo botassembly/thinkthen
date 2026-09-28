@@ -73,11 +73,11 @@ pub(crate) enum Command {
     /// failure. The printed values carry the individual answers.
     Filter(FilterArguments),
 
-    /// Sort records by how likely the answer is yes. `rank` asks one yes/no
-    /// question of each record and sorts locally; it never compares two
-    /// records.
+    /// Sort records by how likely the answer is yes, or give `rank` a saved
+    /// score question to order by its weighted level value. It judges each
+    /// record separately and sorts locally; it never compares two records.
     ///
-    /// The printed order puts the most likely yes first. An exact tie keeps
+    /// The printed order puts the highest value first. An exact tie keeps
     /// input order. `rank` never runs a tournament.
     ///
     /// It prints only after the input ends. Without `--top`, it holds every
