@@ -53,7 +53,7 @@ fn a_none_question_takes_2_to_254_units() {
     usage(&engine.find(&none, units(255)).expect_err("255"), limit);
     usage(&engine.find(&none, units(1)).expect_err("1"), limit);
     assert_eq!(backend.count(), 0);
-    let found = engine.find(&none, units(254)).expect("254");
+    let found = engine.find(&none, units(254)).expect("254").into_value();
     let last = found.candidates().last().expect("a candidate");
     assert!(last.is_none() && found.candidates().len() == 255);
     assert_eq!(found.selected().map(String::as_str), Some("unit 0"));
@@ -147,7 +147,7 @@ pub(crate) fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked 
         .flatten()
         .filter_map(Value::as_str)
         .collect();
-    let found = engine.find(&question, units.clone()).map_err(said)?;
+    let found = engine.find(&question, units.clone()).map_err(said)?.into_value();
     let rows = found.candidates().iter().map(|candidate| {
         let index = candidate.input().and_then(|unit| at(&units, unit));
         json!({"index": index, "probability": candidate.probability()})
