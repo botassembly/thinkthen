@@ -1,13 +1,13 @@
 # ADR 0091: Python call results and facts after an early stop
 
-- Status: Proposed pending Ian's public receipt versus blocking decision. Independent 0214 design-quality review ACCEPTED `1d3e750b`; this is not architectural approval or implementation authorization.
+- Status: Accepted by Ian for 0214: prompt raise plus completion receipt. Independent design-quality review ACCEPTED `1d3e750b`; implementation remains subject to fresh code/API review.
 - Date: 2026-09-27
 
 ## Context
 
 Ian requires facts on every started library call without another model call. Accepted ADR 0089 supplies final Rust facts after a call joins. Python `src/worker.rs::wait` currently releases the GIL during a 50 ms receive tick, then promptly raises when its caller token fires or a signal interrupts, while a sent request may remain held. Waiting for that worker before raising would break the existing under-100-ms held-call stop proof. An immediate counter snapshot cannot include its later joined replies. A pre-start argument refusal, pre-fired token or failed thread spawn has no call facts and no receipt.
 
-## Proposed choice requiring Ian's ruling
+## Accepted choice
 
 Recommend **prompt raise plus a completion receipt**. Once a worker has started, its `Cancelled` exception has `.completion`, never an incomplete `.facts`. `completion.done` is a nonblocking boolean. `completion.result(timeout: float | None = None)` waits for the one existing worker to terminate, releases the GIL while blocking and returns a frozen `Completion` with `outcome` (`"succeeded"`, `"failed"`, or `"panicked"`), `facts: Facts | None`, and `details: tuple[...] | None`. Success and returned error have final facts and ordered completed details; a failure retains the existing six-kind error kind, safe message and retryable flag. A genuinely unaccounted panic reports a safe Defect outcome with `facts=None` and `details=None`. The receipt contains **no returned value**: a success discarded by cancellation stays discarded. It starts no second worker, provider request or reader; the original worker still owns and releases imported Arrow. Dropping the receipt does not prevent worker cleanup. The receiver/slot stores at most one terminal outcome per already-started call; there is no process-wide history or caller-created background polling task. Callers can keep arbitrarily many receipts only by starting arbitrarily many calls, as with existing worker calls.
 
@@ -15,7 +15,7 @@ The existing worker runs `caught(|| work(...))` and sends `None` on unwind. A pa
 
 `result(timeout=None)` may wait indefinitely for an already sent request. A finite nonnegative timeout bounds that wait; zero polls. Expiry raises Python `TimeoutError`, leaves the receipt usable, and neither cancels the worker nor changes its outcome. Invalid timeout is rejected before waiting. After completion, repeated `result()` returns the same immutable terminal account. During its wait, `SystemExit` propagates unchanged, preserves the receipt for a later retry, and does not turn into Cancelled or a worker result. A signal handler's `SystemExit` in the original call also propagates with its type and exit code unchanged and receives this completion receipt after worker start; the worker's internal cancellation still runs. `KeyboardInterrupt` follows the existing Cancelled path. A result already queued when the caller token fires remains a prompt cancellation under current precedence; the receipt reads that terminal account without exposing the discarded value. A worker failure before any send still yields a final zero-send account. A truly pre-start failure has neither `.facts` nor `.completion`.
 
-The alternative is to wait for the worker to join and then raise `Cancelled` with immediate final `.facts` and `.details` for a normal terminal success/error; a genuinely unaccounted panic still cannot invent them. Waiting revises the under-100-ms held-call behavior and may block until the existing send finishes. The recommended receipt preserves prompt cancellation and truthful final accounting. This is an outward exception to immediate facts on a started call, so review does not itself authorize implementation; Ian chooses after a corrected design review. A partial snapshot must never be labelled final.
+The alternative considered was to wait for the worker to join and then raise `Cancelled` with immediate final `.facts` and `.details` for a normal terminal success/error; a genuinely unaccounted panic still could not invent them. Waiting would revise the under-100-ms held-call behavior and could block until the existing send finished. Ian chose the receipt to preserve prompt cancellation and truthful final accounting. A partial snapshot must never be labelled final.
 
 ## Other successful and failed calls
 
@@ -23,4 +23,4 @@ Every successful Python verb, including `details`, returns `Call[T]` with read-o
 
 ## Scope
 
-This decision concerns Python's return carrier and early-stop receipt. ADR 0089 owns Rust facts, ordered observations and joined accounting. ADRs 0048, 0053 and 0055 own request bytes and batching; landed 0209 owns stable frame columns. J5 owns later Enum/Literal, typed `annotate` rows and optional Pydantic. No source is changed by this proposal.
+This decision concerns Python's return carrier and early-stop receipt. ADR 0089 owns Rust facts, ordered observations and joined accounting. ADRs 0048, 0053 and 0055 own request bytes and batching; landed 0209 owns stable frame columns. J5 owns later Enum/Literal, typed `annotate` rows and optional Pydantic. Ticket 0214 implements this accepted choice.

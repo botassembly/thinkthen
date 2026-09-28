@@ -36,19 +36,19 @@ def test_extents_past_readable_memory_are_refused(backend, tmp_path):
     printed = run(SETUP + """
     keep, offsets = address((60000000).to_bytes(4, "little") + (60000001).to_bytes(4, "little"))
     region, values = guarded(b"abc")
-    said(lambda: engine.decide(late, Column("u", [None, offsets, values], 1)))
+    said(lambda: engine.decide(late, Column("u", [None, offsets, values], 1)).value)
     view = (40).to_bytes(4, "little") + b"head" + bytes(4) + bytes(4)
     held, views = address(view)
     data, data_at = address(b"x" * 100)
     table, table_at = guarded(bytes(8) + views.to_bytes(8, "little") + data_at.to_bytes(8, "little"))
-    said(lambda: engine.decide(late, Column("vu", [], 1, n_buffers=4, table=table_at)))
+    said(lambda: engine.decide(late, Column("vu", [], 1, n_buffers=4, table=table_at)).value)
     tail, tail_at = guarded(b"y" * 20)
     view = (13).to_bytes(4, "little") + b"head" + bytes(4) + (10).to_bytes(4, "little")
     held2, views2 = address(view)
     sizes, sizes_at = address((200).to_bytes(8, "little"))
-    said(lambda: engine.decide(late, Column("vu", [None, views2, tail_at, sizes_at], 1)))
+    said(lambda: engine.decide(late, Column("vu", [None, views2, tail_at, sizes_at], 1)).value)
     keep2, offsets = address((0).to_bytes(4, "little") + (3).to_bytes(4, "little"))
-    print(engine.decide(late, Column("u", [None, offsets, values], 1)) == [engine.decide(late, "abc")])
+    print(engine.decide(late, Column("u", [None, offsets, values], 1)).value == [engine.decide(late, "abc").value])
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == 3 * [f"UsageError {UNREADABLE}"] + ["True"]
     assert backend.count() == 2
@@ -61,7 +61,7 @@ def test_refused_inputs_release_their_batches(backend, tmp_path):
     printed = run(SETUP + """
     import resource
     def once(n):
-        said(lambda: engine.decide(late, pl.int_range(n, n + 1_000_000, eager=True)))
+        said(lambda: engine.decide(late, pl.int_range(n, n + 1_000_000, eager=True)).value)
     for n in range(5):
         once(n)
     before = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
@@ -88,7 +88,7 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     form = tt._thinkthen._QuestionSet._from_json(json.dumps(spec))
     rows = [f"note {n}" for n in range(50)]
     frame = pl.DataFrame({"body": rows})
-    wanted = [one["team"] for one in engine.annotate(spec, rows)]
+    wanted = [one["team"] for one in engine.annotate(spec, rows).value]
     out = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None)
     stream, schema, [batch] = pull(out.__arrow_c_stream__())
     child = batch.children[1].contents
@@ -107,7 +107,7 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     table = pa.table(column)
     print(table.column("team").to_pylist() == wanted)
     del table
-    answers = engine.choose("Which team?", pl.Series(rows), options=["a", "b"])
+    answers = engine.choose("Which team?", pl.Series(rows), options=["a", "b"]).value
     print(answers.to_list() == wanted)
     """, child_env(backend, tmp_path, MALLOC_PERTURB_="165"))
     assert printed.splitlines() == ["False False False", "True", "True", "True"]

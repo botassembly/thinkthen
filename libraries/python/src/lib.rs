@@ -13,6 +13,7 @@ mod diagnostics;
 mod engine;
 mod frame;
 mod input;
+mod result;
 mod worker;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
@@ -127,7 +128,13 @@ pub(crate) fn raise(py: Python<'_>, kind: ErrorKind, message: &str, retryable: b
 
 /// The engine's error as the exception of its kind.
 pub(crate) fn raised(py: Python<'_>, error: &Error) -> PyErr {
-    raise(py, error.kind(), &error.to_string(), error.retryable())
+    let raised = raise(py, error.kind(), &error.to_string(), error.retryable());
+    if let Some(facts) = error.facts()
+        && let Ok(value) = result::python_facts(py, facts)
+    {
+        let _set = raised.value(py).setattr("facts", value);
+    }
+    raised
 }
 
 /// A usage error with this message.
@@ -171,7 +178,11 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
         module.add(class.name()?, class)?;
     }
     module.add_class::<engine::Engine>()?;
+    module.add_class::<result::PyCall>()?;
+    module.add_class::<result::PyFacts>()?;
     module.add_class::<worker::Token>()?;
+    module.add_class::<worker::Receipt>()?;
+    module.add_class::<worker::Completion>()?;
     module.add_class::<asked::Question>()?;
     module.add_class::<asked::QuestionSet>()?;
     module.add_class::<asked::Recognize>()?;

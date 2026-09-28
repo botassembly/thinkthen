@@ -1,6 +1,6 @@
 # Every surface should give back what Jev tells us about each run
 
-Status: Sent by Ian to the main builder on 2026-09-26. Review findings and Ian's rulings of 2026-09-26 applied. Ticket 0151 settled ask 5 and the README part of ask 6 on 2026-09-26. Ticket 0170 settles the command total in gap 5 with opt-in `--facts`; the library and SQL parts remain open. The site part of ask 6 is `2026-09-26-site-run-facts-after-0151.md`. Asks 1 to 4 stay open.
+Status: Sent by Ian to the main builder on 2026-09-26. Review findings and Ian's rulings of 2026-09-26 applied. Ticket 0151 settled ask 5 and the README part of ask 6 on 2026-09-26. Ticket 0170 settles the command total in gap 5 with opt-in `--facts`; 0212 and 0230 added Rust and C library facts, and 0214 is the Python candidate pending fresh review. Other libraries and SQL remain open. The site part of ask 6 is `2026-09-26-site-run-facts-after-0151.md`; direct site Python result consumers also need owner migration. Asks 1 to 4 remain open across all surfaces.
 
 Filed 2026-09-26 from an audit of ThinkThen main at `cc51986b`, read-only, with no paid calls.
 

@@ -2,6 +2,8 @@
 
 Status: Sent by Ian to the main builder on 2026-09-26. Review findings and Ian's rulings of 2026-09-26 applied.
 
+Completion note, 2026-09-28: B12a Rust and B12b C are landed. B12c Python is a build candidate pending fresh review; its default packing, explicit batch-one identity, context controls and per-call facts have focused offline proof. B12d–B12f and SQL/other port rows remain open. Marketing-owned site Python examples still consume the prior bare return shape and need an owner migration before public release.
+
 Filed 2026-09-26. This design replaces `2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md`, now in `closed/`. Its evidence comes from workspace experiments 208, 260, 261, 262, 268 and 271, and from the 2026-09-22 wire probe. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` copies every table this design cites. `2026-09-26-recognize-design.md` uses the same batch rules for many short texts.
 
 ## Ian's rulings, 2026-09-26
