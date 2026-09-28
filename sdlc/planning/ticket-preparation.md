@@ -78,3 +78,9 @@ For a paid helper, prepare interrupted and invalid-result behavior before spendi
 
 
 For SQL batching proofs, distinguish ordered results from concurrent request arrival. A one-send budget test may accept one of independently pinned packed bodies when transport order is unspecified; keep the attempt count, error and absence of partial results exact. Before adding a gate preflight, inventory both privilege rules and the actual external executable prerequisites. Refuse an unsupported environment before compilation when that is the accepted boundary.
+
+
+When a host gains maximal batching, search its existing tests for asserted request counts and classify them before implementation. Keep independent deadline, throttle or per-row compatibility proofs at explicit batch 1 when appropriate; test packing with separate exact body and attempt expectations. When a scheduler has streaming and held-output modes, trace each mode’s window and retained completed rows before stating a memory or dispatch bound.
+
+
+For cross-library work, list each changed surface’s source counters with its build prerequisites. Verify the root total and every affected named native/source total; the root ratchet excludes binding workspaces. Separate inherited metadata drift from the current ticket’s growth and preserve passing functional evidence while correcting it.
