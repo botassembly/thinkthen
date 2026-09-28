@@ -6,7 +6,7 @@ opens: sdlc/tickets/0239-frame-batching-and-call-facts.md sdlc/records/0239-fram
 
 # 0239: Finish frame batching and call facts
 
-Status: Design accepted at `521a7208` by the same independent Sol reviewer; the coordinator approved its routine B13a/B13b choices and main `fcf7bbef` granted the runtime claim. Implementation is a code-review candidate, not an accepted or landed B13 closure. The [frame audit](../records/2026-09-28-frame-batching-completion-audit.md) remains the source inventory.
+Status: **Complete for B13a and B13b.** Fresh Medium code/API review accepted corrected `0e150a2bd8ede4d4ccb07ce6ccbeb83237b9cb77`. The coordinator integrated the accepted source, preserving newer cache result guidance and rechecking the shared selector and optional-feature consumers. See the [build record](../records/0239-build.md) for platform limits.
 
 ## Starts from
 

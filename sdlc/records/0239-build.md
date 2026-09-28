@@ -1,6 +1,6 @@
 # 0239 build evidence
 
-Status: correction candidate for the same Medium code/API reviewer; B13a and B13b remain open. Source starts from accepted design `521a7208` merged with main `fcf7bbef`; current main `8360a6e6` merged cleanly without a 0239 product or listener change. The first whole shared selector slice was pushed as `688aff0d`. No full surface, wheel, stress or provider run was used.
+Status: corrected candidate `0e150a2b` accepted by the same independent Medium reviewer; B13a and B13b complete after coordinator integration. Source starts from accepted design `521a7208` merged with main `fcf7bbef`; current main `8360a6e6` merged cleanly without a 0239 product or listener change. The first whole shared selector slice was pushed as `688aff0d`. No full surface, wheel, stress or provider run was used.
 
 ## Red, green, and the actual boundary
 
@@ -17,3 +17,7 @@ Status: correction candidate for the same Medium code/API reviewer; B13a and B13
 ## Growth and reuse
 
 Measured Rust crates/conformance ceiling is **93,484/93,484**, up 306 nonblank lines from 93,178, primarily one public tier case, one optional-feature listener case, trait consumer migration and the small call wrapper. Python source/tests are **3,540/3,540**, up 109 from 3,431 for the same pandas listener case and its optional answer fallback; Python Rust remains **6,353/6,353**. The old `contracts.rs` was close to its cap, so the distinct selector proof went in a coherent `public_batches/tiers.rs` child. The Polars door likewise uses one child for captured listener proof. The existing planner, observer, `Call`, typed frame column writer, and Python listener were reused; no duplicate scheduler, parser, result writer or receipt was introduced. The review lesson is that a packed success count cannot stand in for a packed partial-failure marker; pin both the typed cell and the ordered failing member detail at the same host boundary.
+
+## Coordinator integration
+
+The coordinator integrated accepted `0e150a2b` with newer cache, DuckDB, SQLite and R work. The affected frame and selector implementation is unchanged; the result page retains the cache contract addition. The saved-set selector regression passed on the combined source, and all four optional Polars feature consumers passed offline compilation. Measured combined Rust is 94,353 after R's separate 14-line backend capture addition. Existing installed pandas proof remains tied to its original artifact and interpreters; no repeated matrix or platform claim was needed.

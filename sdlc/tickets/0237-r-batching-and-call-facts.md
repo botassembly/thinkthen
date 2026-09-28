@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-batching-design.md sdlc/issues/2026-09-26-every-su
 
 # 0237: Batch R calls and return their call facts
 
-Status: the same independent High reviewer accepted corrected design `e24f2c29`, and the coordinator approved implementation within B12f/J6. Fresh High code review of `aeef39c3` found one original-index defect in errors and completion receipts; this branch carries its focused correction for the same reviewer. It has source-installed offline proof but is not landed. Owner: Codex. The [preflight](../records/0237-r-batching-preflight.md) names the native path and consumers, the [design review](../records/0237-design-review.md) records acceptance, and the [build record](../records/0237-r-batching-build.md) names the actual proof and its limits.
+Status: **Complete for B12f and the R half of J6.** Fresh High code review accepted corrected `96749c136b2975203ed4019cff540c35c83e2744`. The coordinator integrated unchanged R runtime and tests with current main. Installed Linux source proof is recorded; R site and package/platform release proof remain separate. See the [build record](../records/0237-r-batching-build.md) and [code review](../records/0237-code-review.md).
 
 ## Outcome and retained behavior
 
@@ -43,3 +43,7 @@ The current direct site R consumers live in `site/examples/functions/{decide,que
 ## Review route
 
 A fresh read-only reviewer checks the completion-handle ownership against R's real interrupt, all ten native asking verbs, full JSON description grammar, actual inherited defaults, named-error boundaries and focused proof before runtime claims are added. The coordinator accepts the routine R API details within Ian's approved B12f/J6 outcomes, claims files, reviews code and lands only verified source. This design itself closes no product issue.
+
+## What the build taught us
+
+Original positions must cross into worker-owned account state before any success, error or completion snapshot is published. The first implementation only corrected the returned success in R; fresh review exposed compacted indexes in the other two paths. The installed regression now compares all three and covers a dynamic-label receipt too. Preparation also had to separate batch-one interactive progress from held-width batch-two tests, preserve explicit JSON null, and retain main-thread R ownership. The existing bounded conformance capture route supplied exact observed-body proof without headers or a second backend. Source-installed Linux acceptance does not establish release tarball or other-platform support.

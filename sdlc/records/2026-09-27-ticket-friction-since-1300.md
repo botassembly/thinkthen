@@ -373,3 +373,7 @@ The bounded independent DuckDB re-audit confirmed that the same blanket fatal-bu
 ## Cache refresh lock lifecycle, 0238
 
 Fresh High code review of `56ec112c` found an inode-lifetime race in the proposed refresh path. A waiting caller can open an old digest lock before the owner unlinks it, while a third caller creates and locks a new inode. The two waiters can then send concurrently. Correct serialization requires tracing the lock namespace across successful writers, failed writers and valid-entry rechecks, with prune's exclusive folder gate treated separately. The retained builder is correcting the live-path lifecycle and adding one controlled three-caller proof; no completion is claimed here. Review also found that dry-run bypassed the accepted active-cache validation. These are implementation boundary gaps, not resource saturation.
+
+## Corrections retained from 0219, 0237 and 0239
+
+SQLite invokes aggregate finalize after a step error. The builder and next SQL preparer must check each host's actual failure lifecycle and stop unsent pending work without erasing earlier completed sends. R observation indexes must be mapped before publishing success, error or receipt snapshots; a host-only success transform leaves the other routes wrong. A packed frame proof must include a partial failure and pin both the typed null cell and the member's failure marker. The corrected cases reuse the existing listener and installed boundary; no stress run or duplicate framework was required.
