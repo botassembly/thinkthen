@@ -18,13 +18,13 @@ For `decide`, let p be the probability of yes. The other verbs that accept a cut
 
 The high boundary is inclusive. The low boundary belongs to the not sure side, so a value below LOW is no and a value at LOW is not sure.
 
-A cut of 0 is refused because every probability would reach it and every answer would be yes. A band low of 0 is accepted because a probability of exactly 0 is not sure unless it also reaches HIGH.
+A cut of 0 is refused because every probability would reach it. For `decide`, that would make every answer yes. A band low of 0 is accepted because a probability of exactly 0 is not sure unless it also reaches HIGH.
 
-A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. `--threshold 0.5` and no threshold at all name the same rule.
+A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. On `decide`, `--threshold 0.5` and no threshold at all name the same rule. `choose` has no default cut, as the command table below shows.
 
 The rule has a second home. A question file holds it under `threshold`, and a `--threshold` typed beside `@FILE` replaces it. [question-file.md](question-file.md) gives the precedence and what each source is named in a message.
 
-## Worked boundaries
+## Worked `decide` boundaries
 
 | p | none given | `--threshold 0.9` | `--threshold 0.1:0.9` |
 | --- | --- | --- | --- |
@@ -80,4 +80,4 @@ The landed code carries `--min-prob P`, a symmetric pass mark above 0.5. It is g
 | `--min-prob 0.8` | `--threshold 0.2:0.8` |
 | no mark, and an `unassessed` result | `--threshold 0.5`, or nothing at all |
 
-The old rule could not express an uneven band, and it could not express a single cut. The new rule expresses both. The `unassessed` outcome is gone, because a rule always exists.
+The old `decide` rule could not express an uneven band or a single cut. The new `decide` rule expresses both. Its `unassessed` outcome is gone, because `decide` always has a rule.

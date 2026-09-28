@@ -87,11 +87,11 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 The canonical `find` question is compact JSON with keys in this order: `{"verb":"find","text":TEXT,"none":BOOL}`. Generated unit ids, evidence, and unit count are absent. For `Which unit answers?` without `--none`, the canonical bytes are `{"verb":"find","text":"Which unit answers?","none":false}` and their SHA-256 is `01456d0e17c98c801c2ad9b2a9b56e47aeb33ff0eacde8d44bd6f55e4d0ab9ef`. Question text or the `none` policy changes the digest; changing only the units does not.
 
-## Exact ties by command
+## Ties by command
 
-An exact tie uses equal reported probabilities. The bare `value` and a detailed answer field can differ because they serve different purposes.
+For `choose`, `score`, `find`, `rank`, and `recognize` step-2 options, a tie means equal reported probabilities. `recognize` step 1 instead compares accumulated scores of valid tag paths. Those paths can tie even when individual tag probabilities differ. Its duplicate-name rule compares printed strengths. The bare `value` and a detailed answer field can differ because they serve different purposes.
 
-| Command | Result of an exact top tie | Existing proof |
+| Command | Result at a tie | Existing proof |
 | --- | --- | --- |
 | `choose` | `value` is `null`; on one document the command exits 3. `answer.pick` still names the first tied option in caller order | `crates/thinkthen/src/core/answer_tests.rs::the_leader_is_the_first_of_a_tie_and_a_tie_is_still_unresolved`; `crates/thinkthen/tests/backend/choosing.rs::a_winner_under_the_cut_and_an_exact_tie_are_both_unresolved` |
 | `score` | `value` is the probability-weighted position, not a selected level. `answer.level` names the first tied level, which is the lowest tied level | `crates/thinkthen/src/core/answer_tests.rs::a_score_is_the_weighted_position_on_the_levels_it_was_given` proves the value; `crates/thinkthen/src/core/answer.rs::Distribution::leader` defines the detailed level |
