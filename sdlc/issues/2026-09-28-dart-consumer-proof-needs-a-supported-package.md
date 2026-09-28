@@ -12,7 +12,7 @@ Review 1 found a real leak: invalid input with an embedded NUL thrown after part
 
 ## Handoff to J8
 
-Copy only `stage2/package/` into `libraries/dart/`. Then: rebuild at the final release pin and rerun the gate; run the full J1 runtime corpus through the public binding; run the Flutter embedder and decide platform packaging (pubspec assets vs. runtime download of the native archive — the README must stay honest that the native library installs separately); adopt trusted publishing per Ian's registration to-do. Note for every port: derive export lists per pin; `thinkthen_error_facts_json` exists since pin `5f069321`.
+Copy only `stage2/package/` into `libraries/dart/`. Then: rebuild at the final release pin and rerun the gate; run the full J1 runtime corpus through the public binding; run a real Flutter-embedder test — an actual Flutter application calling through the binding on a Flutter target, per Ian's ruling 2026-09-28 ('flutter yes') — and decide platform packaging (pubspec assets vs. runtime download of the native archive — the README must stay honest that the native library installs separately); adopt trusted publishing per Ian's registration to-do. Ian's compute grant covers installing the Flutter SDK on the Linux host and the M5 Mac for this. Note for every port: derive export lists per pin; `thinkthen_error_facts_json` exists since pin `5f069321`.
 
 ## Evidence
 
