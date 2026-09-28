@@ -16,9 +16,27 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 | 10. New language integrations | 12 | Prepare after advertised surfaces are sound; preserve per-port evidence. |
 | **Total** | **75** | Each original to-do row appears once below; later intake follows. |
 
+## Current open counts after 0245
+
+At main `e679f569`, the live queue has73 to-do rows. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. Matching every current open ID to its original family plus the three intake rows gives:
+
+| Batch | Open rows | Next preparation or action |
+| --- | ---: | --- |
+| Platform qualification and release checks |13| Reuse accepted artifact proof; qualify actual runners separately. Investigate the new private-name lint finding. |
+| Cross-surface contracts and replay |5| Reviewed preparation;0247 now designs the remaining DuckDB complete-question form. |
+| Recognition, relations and batching |11| Preparation accepted; retain distinct measurement, text-cost and record-batching outcomes. |
+| Cache and replay |6| Preparation accepted;0246 builds the demonstrated zero-send first-use correction. |
+| Accounting, timing and budgets |9| Eight reviewed rows plus the new usage-write-cost investigation. Keep optional pacing behind release correctness. |
+| Record failure handling |4| One related preparation pass still needed before a design. |
+| Question controls and uncertainty |4| Refresh accepted rank and environment decisions before proposing new grammar. |
+| Documentation, trust and launch usability |8| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
+| Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
+| New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
+| **Total** |**73**| Counts are tracked rows, not73 independent builds. |
+
 ## Later intake
 
-Main through06b0803e adds three distinct issues after the75-row snapshot. The three additions raised the original75 to78. Reviewed relation proof then retired four already-fixed rows, leaving74 to do. These additions do not change completion counts.
+Main through06b0803e adds three distinct issues after the75-row snapshot. The three additions raised the original75 to78. Reviewed relation proof then retired four already-fixed rows, leaving74 to do before0245. These additions do not change completion counts.
 
 | Issue | Batch | Next action |
 | --- | --- | --- |
@@ -185,4 +203,4 @@ Twelve rows include the J8 umbrella, ten consumer-proof issues and C++. They are
 
 ## Reviewed closure after this snapshot
 
-Fresh review798cbaef accepts the compiled proof for register110,112,113 and the shared-rule issue. The live table retires all four as already-fixed non-issues, without claiming four new runtime fixes. Recognition/batching therefore has12 open rows from the original16. No other original row is removed by this update. The three intake rows remain open.
+Fresh review798cbaef accepts the compiled proof for register110,112,113 and the shared-rule issue. The live table retires all four as already-fixed non-issues, without claiming four new runtime fixes. 0245 then fixes register111 in code. Recognition/batching now has11 open rows from the original16, and the live queue has73 to do. No other original row is removed by this update. The three intake rows remain open.

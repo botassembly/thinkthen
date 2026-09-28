@@ -99,6 +99,18 @@ impl From<EngineError> for Failure {
             EngineError::TextTooLong { bytes, limit } => {
                 Self::Recognize(super::recognize::Error::TextTooLong { bytes, limit })
             }
+            EngineError::RecognizeRelationNames { count, limit } => {
+                Self::Recognize(super::recognize::Error::RelationLimit(
+                    crate::engine::error::relation_names_message(count, limit),
+                ))
+            }
+            EngineError::RecognizeRelationQuestions {
+                names,
+                count,
+                limit,
+            } => Self::Recognize(super::recognize::Error::RelationLimit(
+                crate::engine::error::relation_questions_message(names, count, limit),
+            )),
         }
     }
 }

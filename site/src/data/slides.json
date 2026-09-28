@@ -1,5 +1,5 @@
 {
-  "deck": "8276218e68057527253f195061c7610f19885996",
+  "deck": "681004887830a47bf482625ac52a3df8c16b8ea6",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
@@ -84,8 +84,8 @@
     },
     "data": {
       "slide": "18-data",
-      "sha256": "79b79e42e84b5d92700b0d7075612ff3baa5bbbe61c968addb0de82f04c68894",
-      "card": "5251f5451efa22aa0757e3322896f3cefbcb9f885c5ed639ab64a11f1e3dc760"
+      "sha256": "0aecdd2b8679c500c031295419d489af63ddbb15cacc11c31327195fb6f585ed",
+      "card": "7fb3c3f4aaa9ba7a96c7813fb461ca6238941557f4e519cb4c06e162e27823ec"
     },
     "blind-spots": {
       "slide": "19-catches",
@@ -94,13 +94,13 @@
     },
     "rad": {
       "slide": "20-open-book",
-      "sha256": "5280e25477309cd2a6dcb73308e81731fcde82e7eb5fc15da2869c1324a12b57",
-      "card": "2b1e03a89ecaa8819fa697998a67ae43550a431c137d8f4c2f5afc19330c46f0"
+      "sha256": "0b6f1989af709bd5fe46f30263e6d855b211e6e9be235ef54d3c066c6c02fabe",
+      "card": "107ad54938fce6995d74130f3ab6e49594ca9c6aedc60e29dd12d0091d942307"
     },
     "audit": {
       "slide": "21-audit",
-      "sha256": "3d1ea7b745d81624e78871437190bbf30655bff7470cd74c0e7d963eaa02112b",
-      "card": "964bbaf5beeb922c188104ea6a008e631bdd09b2d6f6bb1351d43d0538f9c097"
+      "sha256": "bd0f3d01d9fc0eadd01ce3af1ef2acc956f34744c12e0221bd1e35e79d92375b",
+      "card": "c645acbf39ff954f26cc66ca62d79d53f4dfa859899adf73e07f007a8d5ae4af"
     },
     "diff": {
       "slide": "22-diff",
@@ -114,8 +114,8 @@
     },
     "retrieval": {
       "slide": "24-retrieval",
-      "sha256": "86e8d534ed3025a38e77fbd2bd9e2648c7e8536b57dde03ddbf2ed92e9351aa5",
-      "card": "37fd08a5442ac3b56dc47681d276e8363fcfc3cd90c4da5abb8f65d05929d712"
+      "sha256": "595f6897948a7fa31bb98beaec42f808d4e582e2f734eeda528e38e86e9cfd13",
+      "card": "b075fa6107c92e5dafa283e01311c0a43aa26afee4f7b10bfbec6914e4830c1b"
     },
     "bench-run": {
       "slide": "25-bench-run",
