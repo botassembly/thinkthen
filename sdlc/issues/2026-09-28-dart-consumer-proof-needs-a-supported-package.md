@@ -25,3 +25,8 @@ One Linux host and SDK, synthetic loopback, shared-library loading only (no stat
 ## Flutter surface proven (2026-09-28, stage three)
 
 The ruling "flutter yes" now has executed evidence in local experiment 300 `stage3/`: the Flutter host test toolchain runs the full strict contract (17 exact arrivals, isolate cancellation, planted negatives), and a real Flutter engine app — `flutter build linux` under xvfb — decides through the binding with one counted backend arrival and the literal `FLUTTER_EMBEDDER_PASS` marker. Ian installed `ninja-build` and `libgtk-3-dev` to unblock the Linux build. The J8 ticket inherits the sharpened packaging decisions: no `path:` dependencies at publish, per-platform native archives (a Linux `.so` satisfies no other target), no untested runtime download, README names archive/version/discovery/platforms. Flutter 3.47.5 hash in the experiment's `inputs/flutter-toolchain.json`.
+
+
+## Pre-merge re-pin (2026-09-28, pin 71f25087)
+
+UNCHANGED-PASS (pin already postdated the contract changes; take the repin README). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
