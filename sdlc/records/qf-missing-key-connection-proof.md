@@ -1,0 +1,11 @@
+# Quick Fix: Observe the named address in the missing-key case
+
+Source base `8b0e7534`. The existing `address::a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback` test asserted zero connections on a listener bound to `127.0.0.1`, while its command named `https://127.0.0.2`. That listener could not observe a connection to the destination under test. The exact exit 4, `NoKey` sentence, empty stdout, unset/empty/blank key cases and `--no-cache` command were already useful and remain unchanged.
+
+The test now binds one nonblocking `TcpListener` directly to `127.0.0.2:0` and constructs the command's HTTPS base from that socket's local address. After each command exits, `accept` must report `WouldBlock`; a queued connection to the named address would instead be accepted. A small local bind probe succeeded on this host before the edit. The test changes no product code, backend loopback classification or shared harness API. It does not claim that a listener on another address can observe this route.
+
+The selected test passed before and after the edit: `cargo test --locked --offline -p thinkthen --test backend address::a_key_that_is_unset_or_empty_is_exit_four_away_from_loopback -- --exact`, under the shared heavy lock. Focused `cargo clippy --locked --offline -p thinkthen --test backend -- -D warnings` and `cargo fmt --all -- --check` pass. The root ratchet measures `84145/84145`, up from `84139`: the test file grows from 406 to 412 nonblank lines after rustfmt. The six lines buy a direct socket observation for three distinct key states. I searched the adjacent address tests and the shared `Listener` helper; neither can bind to the requested nonloopback-qualified literal without changing a shared API. Keeping this socket local to the one case avoids that duplication and preserves all other regressions. No full gate, provider call or new suite ran.
+
+## What the build taught us
+
+An assertion about a listener is only a send proof if the command names that listener's address. The previous test's exact refusal stayed valuable, but its connection count observed the wrong socket. The local socket makes the observation relevant without a product hook or another test matrix.
