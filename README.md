@@ -12,7 +12,7 @@ ThinkThen answers typed questions about text. Use the command in a shell script 
 | `score` | where the text falls on a scale | a number on that scale |
 | `filter` | the same yes/no of each record in a stream | the records that pass, byte for byte, in input order |
 | `rank` | the same question of each record | the records, best fit first |
-| `find` | which unit best answers the question | that unit, or `null` when an offered none wins |
+| `find` | which unit best answers the question | that unit, or no output (exit 3) when `--none` wins or ties |
 | `annotate` | a saved set of named questions of each record | records with named answers or failure markers |
 | `recognize` | which words name a thing, and what kind | names, kinds, offsets, and optional relations |
 | `relate` | which relations hold between named entities | the edges that pass the rule |
