@@ -1,6 +1,6 @@
 # 0248 build: retain unchanged retry sidecars
 
-Status: candidate for fresh independent High code review. Based on main `16f06251b1f28cd21117ca86d2e1f5aaf14a28e0` after design ACCEPT at `dcfe07f8b2d158fda65af2a18dee970d54c0fd0c`. No latency claim or original issue closure follows from this build.
+Status: accepted after fresh independent High code review of `557d01a7f856ff9d261df69fef10c3ec0cf5d6bb` and integrated with unchanged runtime and tests. Based on main `16f06251b1f28cd21117ca86d2e1f5aaf14a28e0` after design ACCEPT at `dcfe07f8b2d158fda65af2a18dee970d54c0fd0c`. No latency claim or original issue closure follows from this build.
 
 ## Change and protocol
 
@@ -16,3 +16,7 @@ Status: candidate for fresh independent High code review. Based on main `16f0625
 ## Limits and learning
 
 The inode proof is a Unix filesystem observation. It establishes skipped replacement at that boundary, not a measured 50 ms saving. The original issue's current-binary timing attribution remains open. The build exposed setup assumptions in older tests: a zero-retry baseline no longer manufactures a sidecar, so a sidecar fault or corruption test must deliberately seed one. No test was deleted or consolidated; existing distinct regressions remain. The earlier preflight correctly warned about these fixtures, which kept the implementation local to the accepted protocol.
+
+## Independent review
+
+The fresh High reviewer traced the conditional write after full scan, checked arithmetic, all-month migration and synced base. Changed retries keep the accepted order, and locking, parser, faults and join remain unchanged. The reviewer checked the distinct absence/inode/retry-only proofs and fixture changes, then independently passed policy, 18 usage cases, six status cases, formatting and the exact 96,075 source ratchet. The retained transcript and immutable old binary hash support the 100/7 → 101/7 → 102/7 sequence. No speed improvement is claimed. Root integration preserves accepted source and tests.
