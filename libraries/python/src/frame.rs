@@ -190,23 +190,28 @@ pub(crate) fn _annotate_frame(
         on_worker(py, controls, held, move |held, options| {
             let (hold, memory) = (Arc::new(held), Readable::snapshot()?);
             let read = arrow::frame(&hold, &on, &memory)?;
-            let kept = arrow::kept(&hold, &memory, &read, set.members().map(|(name, _)| name))?;
-            let columns = answered(&engine, &set, &read.texts, options, true)?;
+            reserved(&set)?;
+            let kept = arrow::kept(
+                &hold,
+                &memory,
+                &read,
+                set.members()
+                    .map(|(name, _)| name)
+                    .chain(std::iter::once("failed")),
+            )?;
+            let columns = answered(&engine, &set, &read.texts, options)?;
             Ok(arrow::frame_out(&hold, kept, &read, &columns)?)
         })
         .map(Arrow::new)
     })
 }
 
-/// One answer column per question of the set, in set order. A failed
-/// question's column, and with `tag_text` a tag column, holds each answer's
-/// text from `value_json`, as the Rust door writes it (ADR 0047 item 10).
+/// Typed answer columns and a separate fixed-schema failure column.
 fn answered(
     engine: &thinkthen::Engine,
     set: &QuestionSet,
     texts: &[&str],
     options: CallOptions<'_>,
-    tag_text: bool,
 ) -> Result<Vec<(String, Cells)>, Stop> {
     let rows = engine
         .annotate_with(set, texts.iter().copied(), options)
@@ -217,34 +222,65 @@ fn answered(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| format!("the engine wrote a record the door cannot read: {error}"))?;
     let mut columns = Vec::new();
+    let mut failed = vec![Vec::new(); rows.len()];
+    let mut names = Vec::new();
     for (place, (name, kind)) in set.members().enumerate() {
+        names.push(name.to_owned());
         let values: Option<Vec<&Annotated>> = rows
             .iter()
             .map(|row| row.values().get(place).map(|one| one.value()))
             .collect();
         let values = values.ok_or("the engine answered a record with no value")?;
-        let failed = values.iter().any(|one| matches!(one, Annotated::Failed(_)));
-        let cells = if failed || (tag_text && kind == QuestionKind::Tag) {
-            let text = |(value, members): (&&Annotated, &Members)| match value {
-                Annotated::Choice(label) => Ok(label.clone()),
-                _ => members
-                    .get(name)
-                    .map(|raw| (raw.get() != "null").then(|| raw.get().to_owned()))
-                    .ok_or(format!("the engine's record has no member {name}")),
-            };
-            Cells::Texts(
-                values
-                    .iter()
-                    .zip(&json)
-                    .map(text)
-                    .collect::<Result<_, _>>()?,
-            )
-        } else {
-            arrow::annotated(kind, &values)
-        };
+        for (failures, (value, members)) in failed.iter_mut().zip(values.iter().zip(&json)) {
+            failures.push(failure_cell(value, members, name)?);
+        }
+        let cells = arrow::annotated(kind, &values);
         columns.push((name.to_owned(), cells));
     }
+    columns.push((
+        "failed".to_owned(),
+        Cells::Failures {
+            names,
+            rows: failed,
+        },
+    ));
     Ok(columns)
+}
+
+fn failure_cell(
+    value: &Annotated,
+    members: &Members,
+    name: &str,
+) -> Result<Option<arrow::FailureMarker>, Stop> {
+    if !matches!(value, Annotated::Failed(_)) {
+        return Ok(None);
+    }
+    let raw = members
+        .get(name)
+        .ok_or(format!("the engine's record has no member {name}"))?;
+    let marker: serde_json::Value = serde_json::from_str(raw.get())
+        .map_err(|error| format!("the engine's failure marker did not parse: {error}"))?;
+    let marker = marker
+        .get("failed")
+        .ok_or("the engine's failure marker is missing")?;
+    let field = |key| {
+        marker
+            .get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+            .ok_or(format!("the engine's failure marker has no {key}"))
+    };
+    Ok(Some(arrow::FailureMarker {
+        kind: field("kind")?,
+        cause: field("cause")?,
+    }))
+}
+
+fn reserved(set: &QuestionSet) -> Result<(), Stop> {
+    if set.members().any(|(name, _)| name == "failed") {
+        return Err("the question name failed is reserved for frame failures".into());
+    }
+    Ok(())
 }
 
 /// One record's members as the engine wrote them, raw JSON text by name.
@@ -265,9 +301,13 @@ pub(crate) fn _annotate_column<'py>(
     guard(py, || {
         let controls = controls(py, deadline, token)?;
         let (engine, set) = (engine.get().0.clone(), questions.get().0.clone());
+        reserved(&set).map_err(|stop| match stop {
+            Stop::Said(sentence) => usage(py, &sentence),
+            Stop::Engine(error) => raised(py, &error),
+        })?;
         let source = Source::read(series)?.0;
         let columns = over_texts(py, controls, source, move |texts, options| {
-            answered(&engine, &set, texts, options, false)
+            answered(&engine, &set, texts, options)
         })?;
         let named = PyDict::new(py);
         for (name, cells) in columns {

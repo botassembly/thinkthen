@@ -38,7 +38,9 @@ pub(crate) use memory::Readable;
 #[cfg(feature = "probe")]
 pub(crate) use probe::_raw_producer;
 pub(crate) use read::{frame, series};
-pub(crate) use write::{Arrow, Cells, Output, annotated, column, decided, kept, table};
+pub(crate) use write::{
+    Arrow, Cells, FailureMarker, Output, annotated, column, decided, kept, table,
+};
 
 /// The caller's frame with its new columns, from `write`.
 pub(crate) use write::frame as frame_out;
@@ -53,6 +55,32 @@ pub(crate) fn pandas(py: pyo3::Python<'_>, cells: Cells) -> pyo3::PyResult<pyo3:
         Cells::Counts(values) => (values.into_pyobject(py)?, "Int64"),
         Cells::Texts(values) => (values.into_pyobject(py)?, "string"),
         Cells::Lists(values) => (values.into_pyobject(py)?, "object"),
+        Cells::Failures { names, rows } => {
+            let values = rows
+                .into_iter()
+                .map(|row| failure_dict(py, &names, row))
+                .collect::<pyo3::PyResult<Vec<_>>>()?;
+            (values.into_pyobject(py)?, "object")
+        }
     };
     Ok((values, dtype).into_pyobject(py)?.into_any().unbind())
+}
+
+fn failure_dict(
+    py: pyo3::Python<'_>,
+    names: &[String],
+    row: Vec<Option<FailureMarker>>,
+) -> pyo3::PyResult<Option<pyo3::Py<pyo3::types::PyDict>>> {
+    use pyo3::types::{PyDict, PyDictMethods};
+    let cell = PyDict::new(py);
+    for (name, marker) in names.iter().zip(row) {
+        let Some(marker) = marker else { continue };
+        let fields = PyDict::new(py);
+        fields.set_item("kind", marker.kind)?;
+        fields.set_item("cause", marker.cause)?;
+        let nested = PyDict::new(py);
+        nested.set_item("failed", fields)?;
+        cell.set_item(name, nested)?;
+    }
+    Ok((!cell.is_empty()).then(|| cell.unbind()))
 }

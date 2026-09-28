@@ -33,6 +33,10 @@ The second review found further defects in this area — two in-memory databases
 
 Landed at `0345a42` ("Route DuckDB's relate to the caller's database, respect its file switch, and contain callback panics"). The fix's suites run from `check.sh`: `tools/two_databases.py` proves each database's relate runs on its own connection, `tools/security_suite.sh` proves the boundary message and the raw-error pass-through, and the conformance slice exits 0 with no stub.
 
+## Amendment of 2026-09-27: C++ migration wording (ticket 0201)
+
+The C++ extension can reach the caller's `ClientContext`, so the stable C API is no longer the reason for the temporary-table boundary. Ticket 0201 retains the settled committed-data behavior by running relate SQL on a separate connection. Its current boundary message says `relate runs on a separate connection`; the older C API wording above records the shipped implementation's historical proof, not the C++ candidate's behavior. Fresh read-only review accepted the C++ route's read-only-file behavior after a focused regression proved committed rows, caller file permissions, temporary-table isolation, mutating-query refusal, and zero sends on refusals. The C++ bind selects the caller's database directly, so the old probe refusal no longer applies. The coordinator approved this routine amendment within ticket 0201; wider platform release scope remains undecided.
+
 ## Amendment of 2026-09-25: the ported extension, part one (ticket 0110)
 
 Ticket 0110 ports the extension onto `thinkthen`'s public API and carries this ADR's rule past relate: every call runs on the caller's database. Ticket 0118 writes part two, for relate. Ian can overturn each point.

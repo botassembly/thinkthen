@@ -35,3 +35,7 @@ Two inputs landed today. A third-party extension over the same backend (colliber
 The fork, stated for the build team: stay on the stable C API with the first-row check and a settings-or-environment key, or move to the C++ API and gain bind-time typing, the secret manager, and the parallel controls, paying a rebuild per DuckDB release and one binary per version. Also adopted from the comparison regardless of the fork: token counters parsed from the reply's usage block, failure injection at the wire seam in the test stub, sqllogictests with DESCRIBE type assertions, and the README line the guidance requires - persistent secrets are stored unencrypted.
 
 Two independent implementations now state one text per request as the API's floor; see 2026-09-21-one-state-per-request-caps-table-scale-classification.md.
+
+## Staged Linux resolution, 2026-09-27
+
+Ticket0201 implements the C++ bind and statement-lifetime path on Linux x86-64. Independent High review accepted final source `493a1461` and the rebuilt, unpacked stock-host proofs in `sdlc/records/0201-duckdb-cpp-api-prerequisite.md`. Ian approved staging that target while retaining the other packages. This issue remains open for Linux aarch64 and both macOS targets, which still use the C API and lack their pinned C++ archive and host proofs. This is no longer a pending choice from Ian.

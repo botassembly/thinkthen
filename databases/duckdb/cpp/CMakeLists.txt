@@ -1,0 +1,56 @@
+cmake_minimum_required(VERSION 3.15)
+project(thinkthen LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(NOT EXISTS "${THINKTHEN_RUST_STATICLIB}")
+  message(FATAL_ERROR "Set THINKTHEN_RUST_STATICLIB to the checked Rust bridge archive")
+endif()
+if(NOT EXISTS "${THINKTHEN_DUCKDB_STATIC_DIR}/libduckdb_static.a")
+  message(FATAL_ERROR "Set THINKTHEN_DUCKDB_STATIC_DIR to the verified v1.5.5 release archives")
+endif()
+
+execute_process(COMMAND git -C "${CMAKE_SOURCE_DIR}" rev-parse HEAD
+  OUTPUT_VARIABLE DUCKDB_SOURCE_COMMIT OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE DUCKDB_SOURCE_STATUS)
+if(NOT DUCKDB_SOURCE_STATUS EQUAL 0 OR
+   NOT DUCKDB_SOURCE_COMMIT STREQUAL "d8cdaa33fda8df955cc76ef58a280f68f4cd43fa")
+  message(FATAL_ERROR "DuckDB C++ source must be the pinned v1.5.5 commit")
+endif()
+
+file(STRINGS "${CMAKE_CURRENT_LIST_DIR}/archive-sha256.txt" ARCHIVE_MANIFEST)
+file(GLOB ARCHIVE_FILES "${THINKTHEN_DUCKDB_STATIC_DIR}/lib*.a")
+list(LENGTH ARCHIVE_FILES ARCHIVE_FILE_COUNT)
+list(LENGTH ARCHIVE_MANIFEST ARCHIVE_MANIFEST_COUNT)
+if(NOT ARCHIVE_FILE_COUNT EQUAL ARCHIVE_MANIFEST_COUNT)
+  message(FATAL_ERROR "DuckDB static archive set differs from the fixed manifest")
+endif()
+set(DUCKDB_ARCHIVES)
+foreach(LINE IN LISTS ARCHIVE_MANIFEST)
+  string(REPLACE " " ";" PARTS "${LINE}")
+  list(LENGTH PARTS PART_COUNT)
+  if(NOT PART_COUNT EQUAL 2)
+    message(FATAL_ERROR "Malformed DuckDB archive manifest line")
+  endif()
+  list(GET PARTS 0 EXPECTED)
+  list(GET PARTS 1 NAME)
+  set(ARCHIVE "${THINKTHEN_DUCKDB_STATIC_DIR}/${NAME}")
+  if(NOT EXISTS "${ARCHIVE}")
+    message(FATAL_ERROR "DuckDB archive ${NAME} is missing")
+  endif()
+  file(SHA256 "${ARCHIVE}" OBSERVED)
+  if(NOT OBSERVED STREQUAL EXPECTED)
+    message(FATAL_ERROR "DuckDB archive ${NAME} differs from the pinned release")
+  endif()
+  list(APPEND DUCKDB_ARCHIVES "${ARCHIVE}")
+endforeach()
+
+build_loadable_extension(thinkthen " " src/thinkthen.cpp src/scalar_owner.cpp src/scalar_settings.cpp
+  src/listed_result.cpp src/nested.cpp src/nested_result.cpp src/usage.cpp src/warm.cpp
+  src/relate.cpp src/relate_query.cpp)
+target_link_libraries(thinkthen_loadable_extension "${THINKTHEN_RUST_STATICLIB}")
+target_link_libraries(thinkthen_loadable_extension
+  -Wl,--start-group ${DUCKDB_ARCHIVES} -Wl,--end-group dl pthread)
+target_link_options(thinkthen_loadable_extension PRIVATE
+  -Wl,--gc-sections -Wl,--exclude-libs,ALL)

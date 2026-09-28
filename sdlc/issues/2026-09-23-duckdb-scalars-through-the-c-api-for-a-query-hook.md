@@ -27,3 +27,7 @@ None from Ian. The steering session schedules it when an embedding host reports 
 ## Update 2026-09-25
 
 Ticket 0110 registers every scalar through the raw C API with `duckdb_scalar_function_set_init`, so each execution now has a state with a destroy callback. The state holds the caller's client context and file system. The late-signal spend this issue proposes is not built yet: the interrupt predicate still reads signals by time, and this issue stays open as the lever R5-23 names.
+
+## Staged Linux resolution, 2026-09-27
+
+Ticket0201 implements the C++ bind and statement-lifetime path on Linux x86-64. Independent High review accepted final source `493a1461` and the rebuilt, unpacked stock-host proofs in `sdlc/records/0201-duckdb-cpp-api-prerequisite.md`. Ian approved staging that target while retaining the other packages. This issue remains open for Linux aarch64 and both macOS targets, which still use the C API and lack their pinned C++ archive and host proofs. This is no longer a pending choice from Ian.
