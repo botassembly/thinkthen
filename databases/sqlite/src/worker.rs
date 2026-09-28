@@ -164,7 +164,7 @@ mod tests {
     use super::{spawn, wait};
     use crate::{Failure, guard};
 
-    const CHILD: &str = "THINKTHEN_SQLITE_PANIC_CHILD";
+    const CHILD: &str = "THINKTHEN_TEST_SQLITE_PANIC_CHILD";
     const STRING_MARKER: &str = "sqlite-owned-string-payload-marker";
     const DROP_MARKER: &str = "sqlite-owned-drop-payload-marker";
 

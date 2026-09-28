@@ -47,7 +47,7 @@ mod tests {
     use super::super::{Crossed, on_worker};
     use thinkthen::CancelToken;
 
-    const CHILD: &str = "THINKTHEN_R_PANIC_CHILD";
+    const CHILD: &str = "THINKTHEN_TEST_R_PANIC_CHILD";
     const STRING: &str = "r-owned-string-payload-marker";
     const DROP: &str = "r-owned-drop-payload-marker";
 
