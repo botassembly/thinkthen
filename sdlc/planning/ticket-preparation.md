@@ -127,3 +127,10 @@ For a shared batch coordinator, choose one proof whose evidence groups close at 
 
 
 Map changed consumers to Cargo `required-features` before naming compilation complete: no-default tests omit Polars targets even when their source changed. For a scheduling regression, ensure the input crosses the failing boundary before end-of-input flushes pending work. A controlled request witness must distinguish scheduler admission from concurrent socket arrival. When a new regression case could also pass the old behavior, use one focused counterfactual against the known bad source, then restore the correction; this is not a broad mutation campaign. Pin the expected error kind and sentence so another refusal cannot satisfy the test accidentally.
+
+
+For typed host inputs, distinguish an absent description from an explicit null through the selected native grammar. A mixed bare/described score set can change request identity when normalized to a map. Validate each accepted optional field form rather than stripping nullability from every type. Check encoding and type before host operations that can throw an unclassified exception. Match a structured-description proof to actual nested data, not just a test name.
+
+For held-request functional tests, verify whether batch one selects an interactive one-request path before promising simultaneous admission. Keep exact compatibility fixtures at batch one and use a small explicit larger batch where the retained stop or ownership boundary requires several held sends. For safe row-error adapters, preserve fatal metadata such as a process send-budget denial even when it shares a public error kind with recoverable rows.
+
+For persistent migrations, compute and validate the whole proposed state before the first mutation when refusal promises unchanged files. Include aggregate overflow and other cross-file constraints. When an external acceptance summary conflicts with source and existing evidence, request or inspect the observed bytes and reproduce only that disputed boundary in an isolated fixture. Keep the original report and record the verified correction; do not repeat the complete matrix by default.
