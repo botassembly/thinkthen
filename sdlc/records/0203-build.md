@@ -1,6 +1,6 @@
 # 0203 calibration profile build checkpoint
 
-Status: focused 0203 source accepted by fresh High review at `37e3d067`; ready to land. Owner: Codex. This record does not claim the three retained DuckDB C API platform packages.
+Status: focused 0203 source accepted by fresh High review at `37e3d067`; landed on main at `5261cb93`. Owner: Codex. This record does not claim the three retained DuckDB C API platform packages.
 
 The first outside-in Rust proof supplied a saved `profile` to `Question::from_json` and observed that `Details` lacked a warning accessor. The public parser now carries the validated `ProfileName`. Programmatic questions remain unprofiled. A profiled member gets the accepted early `Usage` refusal from `QuestionSetBuilder`, before any send. `Details` compares the saved name with the selected runtime profile and passes both the warning and name to the shared result writer. The writer computes the question digest once and returns the same value for typed `Details` and serialized JSON.
 

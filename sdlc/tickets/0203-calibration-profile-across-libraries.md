@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/question.rs crates/thinkthen/src/public/build
 
 # 0203: Preserve calibration profiles across libraries
 
-Status: source accepted by fresh High review; ready to land. Owner: Codex. The saved-name public writer, wrapper routes, selected SQL details adapters and shared fixture are implemented and checked. Landing remains. The three retained DuckDB C API platform packages remain outside this staged Linux C++ parity claim.
+Status: landed on main at `5261cb93` after fresh High source acceptance. Owner: Codex. The saved-name public writer, wrapper routes, selected SQL details adapters and shared fixture are implemented and checked. Register 24 and its matching issue are closed. The three retained DuckDB C API platform packages remain outside this staged Linux C++ parity claim.
 
 ## Outcome
 
