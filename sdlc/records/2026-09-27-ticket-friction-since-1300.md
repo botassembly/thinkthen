@@ -154,3 +154,6 @@ Fresh code review uses Sol High for the frozen 0203 candidate `001c8f7f` because
 
 
 The fresh 0203 code review found one accepted-message mismatch: implementation and its two new assertions agreed with each other but differed from the ticket sentence. The author corrected the source and Rust/Python boundary assertions at `37e3d067`, with focused replacement proof. Independent agreement with the contract matters more than matching two copied expectations. The 0220 source review accepted `a8fb831d` without findings; its earlier preparation correctly separated winner retention from pending scheduler retention. Both findings feed the next public batching and graded-ranking briefs.
+
+
+The 0203 and 0220 authors froze accepted source before the coordinator merged it. Their records still said landing was pending after the item rows closed. The coordinator corrected those status sentences with the exact main commits. Future integration includes ticket and review/build status text alongside the item table; it retains the original checked source revision. Final 0210 review uses Sol High because it changes credential inspection, public Debug output and multiple command secrecy boundaries.
