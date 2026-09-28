@@ -3,6 +3,12 @@
 
 use std::fmt;
 
+mod call;
+pub use call::{Call, Facts};
+mod observation;
+pub(crate) use observation::{ObservedQuestion, observe_chunk};
+pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
+
 use serde::Serialize;
 
 use crate::core::{self, Backend, BackendProfile, ProfileWarning, Value, Withheld, json_line};
@@ -375,7 +381,7 @@ pub(crate) fn judgment(value: &Value) -> Judgment {
     }
 }
 
-const fn usage(counts: core::Usage) -> Usage {
+pub(crate) const fn usage(counts: core::Usage) -> Usage {
     let (input_tokens, output_tokens) = counts.token_counts();
     Usage {
         input_tokens,

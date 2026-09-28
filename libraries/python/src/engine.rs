@@ -249,7 +249,7 @@ fn order(
         .enumerate()
         .map(|(at, text)| Indexed(at, text));
     if find {
-        let found = engine.find_with(asked, records, options)?;
+        let found = engine.find_with(asked, records, options)?.into_value();
         let probability = |at: usize| {
             found
                 .candidates()
@@ -262,7 +262,7 @@ fn order(
             .into_iter()
             .collect());
     }
-    let ranked = engine.rank_with(asked, records, options)?;
+    let ranked = engine.rank_with(asked, records, options)?.into_value();
     Ok(ranked
         .into_iter()
         .map(|row| (row.probability(), row.into_input()))
@@ -372,7 +372,8 @@ impl Engine {
             let (evidence, controls) = (text(evidence)?, controls(py, deadline, token)?);
             let found = run(py, controls, move |options| {
                 engine.details_with(asked.detail(), &evidence, options)
-            })?;
+            })?
+            .into_value();
             if verb == "details" {
                 return Ok(found.to_json().into_pyobject(py)?.into_any().unbind());
             }
@@ -476,7 +477,7 @@ impl Engine {
             let found = run(py, controls, move |options| {
                 engine.recognize_with(&ask, &evidence, options)
             })?;
-            Ok(Recognized::from(&found))
+            Ok(Recognized::from(found.value()))
         })
     }
 
@@ -494,7 +495,7 @@ impl Engine {
             let edges = run(py, controls, move |options| {
                 engine.relate_with(&ask, given, options)
             })?;
-            Ok(edges.iter().map(Edge::from).collect())
+            Ok(edges.value().iter().map(Edge::from).collect())
         })
     }
 

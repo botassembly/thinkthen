@@ -19,15 +19,25 @@ impl Batcher {
         question: Question,
         closed: &mut Vec<Batch>,
     ) -> Result<(), BatchError> {
+        self.push_slice(record, vec![question], closed)
+    }
+
+    /// Add one selected record with every logical question of its group slice.
+    pub(super) fn push_slice(
+        &mut self,
+        record: BatchRecord,
+        questions: Vec<Question>,
+        closed: &mut Vec<Batch>,
+    ) -> Result<(), BatchError> {
         let line = json_line(&record.value).map_err(|_| defect())?;
         let cut = Sha256::digest(line.as_bytes())
             .first_chunk::<8>()
             .is_some_and(|head| u64::from_be_bytes(*head) % CUT == 0);
-        let key = (line.clone(), json_line(&question).map_err(|_| defect())?);
+        let key = (line.clone(), json_line(&questions).map_err(|_| defect())?);
         if let Some(&place) = self.open.seen.get(&key) {
             self.open.members.push(place);
         } else {
-            let joined = self.joined(record, &line, question)?;
+            let joined = self.joined(record, &line, questions)?;
             if !self.open.distinct.is_empty() && !self.fits(&joined) {
                 closed.push(self.close(Closed::Limit)?);
             }
@@ -58,12 +68,12 @@ impl Batcher {
         &self,
         record: BatchRecord,
         line: &str,
-        base: Question,
+        base: Vec<Question>,
     ) -> Result<Joined, BatchError> {
         let question = self.quoted(line, &base)?;
         let (wire, alone) = match &question {
             Some(asked) => self.measured(&[(&record.value, asked)])?,
-            None => (1, self.skeleton),
+            None => (base.len(), self.skeleton),
         };
         let share = alone.checked_sub(self.skeleton).ok_or_else(defect)?;
         Ok(Joined {
@@ -80,15 +90,17 @@ impl Batcher {
     pub(super) fn quoted(
         &self,
         line: &str,
-        base: &Question,
-    ) -> Result<Option<Question>, BatchError> {
-        let mut question = base.clone();
-        let Some(asked) = text(&mut question).as_json().as_str().map(str::to_owned) else {
-            return Ok(None);
-        };
-        *text(&mut question) =
-            QuestionText::new(format!("The text is {line}. {asked}")).map_err(|_| defect())?;
-        Ok(Some(question))
+        base: &[Question],
+    ) -> Result<Option<Vec<Question>>, BatchError> {
+        let mut questions = base.to_vec();
+        for question in &mut questions {
+            let Some(asked) = text(question).as_json().as_str().map(str::to_owned) else {
+                return Ok(None);
+            };
+            *text(question) =
+                QuestionText::new(format!("The text is {line}. {asked}")).map_err(|_| defect())?;
+        }
+        Ok(Some(questions))
     }
 }
 

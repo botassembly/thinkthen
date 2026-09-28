@@ -146,7 +146,8 @@ fn relate(query: &str, ask: impl FnOnce(bool) -> Result<Relate, Refusal>) -> Edg
     }
     let edges = call::run(call::read(), move |engine, options| {
         engine.relate_with(&ask, entities, options)
-    });
+    })
+    .into_value();
     let pair = |entity: &Entity| {
         ids.get(&(entity.name().to_owned(), entity.kind().to_owned()))
             .cloned()

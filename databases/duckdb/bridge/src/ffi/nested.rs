@@ -67,6 +67,7 @@ pub(super) fn run(
         let found = engine
             .recognize_with(ask, &text, options)
             .map_err(|error| crate::engines::call_error(error, scope.total).text)?;
+        let found = found.into_value();
         if kind == 8 {
             count(&mut bytes, found.entities().len())?;
             for entity in found.entities() {

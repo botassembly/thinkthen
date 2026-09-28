@@ -6,6 +6,9 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
+pub(crate) mod call_facts;
+pub(crate) use call_facts::CallFacts;
+
 const CANCEL_POLL: Duration = Duration::from_millis(50);
 
 /// One call's budget and the one instant made from it when the call began.
@@ -38,6 +41,7 @@ pub(crate) struct Cancel<'a> {
     check: Option<Check<'a>>,
     sends: Arc<AtomicUsize>,
     send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    facts: Option<CallFacts>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
     #[cfg(test)]

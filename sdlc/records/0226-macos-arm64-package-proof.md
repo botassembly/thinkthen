@@ -21,3 +21,7 @@ The retained M5 logs are `/tmp/thinkthen-m5-c-tests.log`, `/tmp/thinkthen-m5-sql
 ## SQLite remainder
 
 The SQLite archive `thinkthen-sqlite-0.0.1-aarch64-apple-darwin.tar.gz` has SHA-256 `05cf525d3fac5f3a45d409320b6e17ea76a33d9ec65954b71d69490fe532690a`; its packaged `libthinkthen0.dylib` has SHA-256 `df57a85b8194c3377f81cb97783156ddaeaa3113bef957a3883eaa640a770adf`. The current installed checker uses the Linux `.so` name, `LD_LIBRARY_PATH`, and a Linux host builder. The M5's stock SQLite is 3.51.0, above the 3.50.0 safety floor, so it cannot prove the required below-floor refusal. Ticket 0232 will adapt the existing installed regression entry points for a pinned native host, a genuinely older host, successful and refused load outcomes, later host operations, and DSO residency. No installed SQLite load or diagnostic result is claimed yet.
+
+## Independent evidence review
+
+Fresh independent Sol Medium reviewer `01a0e7b1-7833-7bd0-8cd4-e036596115c8` accepted this limited C macOS ARM64 record after the `564d6e1c` wording correction. It verified the archive and build hashes, both focused source logs, the installed C runner and three loopback sends; it replayed only the three retained small loader probes. The empty packaging log establishes no command or exit by itself. The artifact checks support identity, and loader observations remain host-specific. SQLite installed proof and other targets remain open. The reviewer made no source edits or broad reruns.

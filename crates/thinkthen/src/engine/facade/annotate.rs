@@ -6,11 +6,13 @@
 use super::{Chunk, Engine};
 use crate::core::adapters::built_in;
 use crate::core::{
-    AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, AnswerOutcome, FailedValue,
-    ModelName, Plan, QuestionSet, Reply, Usage,
+    AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure, AnnotatedValue, AnswerOutcome, Batch,
+    FailedValue, ModelName, Plan, QuestionSet, Reply, Usage,
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
+use crate::public::{Error as PublicError, ErrorKind};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 /// One sent chunk's reply and the set places its questions fill.
 pub(crate) struct ChunkAnswer {
@@ -19,6 +21,8 @@ pub(crate) struct ChunkAnswer {
     digest: String,
     requests_sent: u64,
     replayed: bool,
+    parent_request: Option<String>,
+    parent_sent: u64,
 }
 
 /// Every chunk of one question group, and the one model they reported.
@@ -30,13 +34,14 @@ pub(crate) struct GroupAnswer {
 /// One group's chunks, prepared once, and the question places each chunk asks.
 pub(crate) struct PreparedGroup {
     places: Vec<Vec<usize>>,
-    chunks: Vec<Chunk>,
+    pub(crate) chunks: Vec<Chunk>,
 }
 
 /// One record's named values and details, in set order, with the metadata.
 pub(crate) struct Annotation {
     pub(crate) values: Vec<(String, AnnotatedValue)>,
     pub(crate) details: Vec<(String, AnnotatedEntry)>,
+    pub(crate) receipts: Vec<MemberReceipt>,
     pub(crate) model: Option<ModelName>,
     pub(crate) usage: Option<Usage>,
     pub(crate) requests: Vec<String>,
@@ -45,7 +50,106 @@ pub(crate) struct Annotation {
     pub(crate) failed_questions: usize,
 }
 
+/// One set member's even share of the request chunk that answered it.
+pub(crate) struct MemberReceipt {
+    pub(crate) usage: Option<Usage>,
+    pub(crate) requests_sent: u64,
+    pub(crate) replayed: bool,
+    pub(crate) parent_request: Option<String>,
+}
+
+struct ParentAttempt {
+    digest: String,
+    sent: u64,
+    total: usize,
+}
+
 impl Engine {
+    /// Send one packed group slice and return one bounded fragment per input row.
+    pub(crate) fn answer_group_batch(
+        &self,
+        work: &super::GroupWork,
+        cancel: &Cancel,
+    ) -> Result<crate::engine::schedule::Completed<Vec<GroupAnswer>, PublicError>, PublicError>
+    {
+        let super::GroupRequest::Packed {
+            batch,
+            records,
+            questions,
+        } = &work.request
+        else {
+            let super::GroupRequest::Legacy(prepared) = &work.request else {
+                return Err(PublicError::defect("an annotate group lost its request"));
+            };
+            let prepared = prepared
+                .lock()
+                .map_err(|_| PublicError::defect("an annotate preparation was poisoned"))?
+                .take()
+                .ok_or_else(|| PublicError::defect("an annotate preparation ran twice"))?;
+            return Ok(group_completion(
+                vec![self.answer_group(prepared, cancel)?],
+                work.sole_group,
+            ));
+        };
+        let places = &work.places;
+        let sole_group = work.sole_group;
+        let attempted = AtomicU64::new(0);
+        match self.ask_batch_with_attempts(batch, cancel, Some(&attempted)) {
+            Ok(answered) => Ok(group_completion(
+                project_group(batch, places, answered, None)?,
+                sole_group,
+            )),
+            Err(error) if error.too_large() && records.len() > 1 => {
+                let [left, right] =
+                    crate::core::group_halves(self.backend(), self.profile(), questions, records)
+                        .map_err(PublicError::refused)?;
+                let parent = ParentAttempt {
+                    digest: batch.digest.as_str().to_owned(),
+                    sent: attempted.load(Ordering::Relaxed),
+                    total: records.len(),
+                };
+                let left_answer = self.ask_batch(&left, cancel)?;
+                let left = group_completion(
+                    project_group(&left, places, left_answer, Some((&parent, 0)))?,
+                    sole_group,
+                );
+                if left.stop.is_some() {
+                    return Ok(left);
+                }
+                let mut value = left.value;
+                if let Some(stop) = cancel.stop() {
+                    return Ok(crate::engine::schedule::Completed {
+                        value,
+                        records: 0,
+                        replayed: 0,
+                        partial_failure: false,
+                        stop: Some(stop.into()),
+                    });
+                }
+                let right_answer = match self.ask_batch(&right, cancel) {
+                    Ok(answered) => answered,
+                    Err(error) => {
+                        return Ok(crate::engine::schedule::Completed {
+                            value,
+                            records: 0,
+                            replayed: 0,
+                            partial_failure: false,
+                            stop: Some(error.into()),
+                        });
+                    }
+                };
+                value.extend(project_group(
+                    &right,
+                    places,
+                    right_answer,
+                    Some((&parent, value.len())),
+                )?);
+                Ok(group_completion(value, sole_group))
+            }
+            Err(error) => Err(error.into()),
+        }
+    }
+
     /// Split one group's plan under the backend limits and name each chunk's places.
     pub(crate) fn prepare_group(
         &self,
@@ -81,14 +185,16 @@ impl Engine {
                 digest: result.request.as_str().to_owned(),
                 requests_sent: result.requests_sent,
                 replayed: result.replayed,
+                parent_request: None,
+                parent_sent: 0,
             });
             Ok::<(), Error>(())
         })?;
         Ok(GroupAnswer { answered, model })
     }
 
-    /// Prepare every group of one text before sending any, as the command
-    /// does, then answer them in set order and assemble the record.
+    /// Keep the original single-record seam for its focused engine tests.
+    #[cfg(test)]
     pub(crate) fn annotate(
         &self,
         set: &QuestionSet,
@@ -113,6 +219,92 @@ impl Engine {
     }
 }
 
+fn project_group(
+    batch: &Batch,
+    places: &[usize],
+    answered: super::Answered,
+    parent: Option<(&ParentAttempt, usize)>,
+) -> Result<Vec<GroupAnswer>, Error> {
+    let members = batch
+        .group_members
+        .as_ref()
+        .ok_or(Error::Defect("an annotate batch has no group members"))?;
+    let mut fragments = Vec::with_capacity(members.len());
+    for (position, member) in members.iter().enumerate() {
+        if member.outcomes.len() != places.len() {
+            return Err(Error::Defect("an annotate batch lost its group slice"));
+        }
+        let outcomes = member
+            .outcomes
+            .iter()
+            .map(|&at| {
+                answered
+                    .reply
+                    .outcomes()
+                    .get(at)
+                    .cloned()
+                    .ok_or(Error::Defect("an annotate batch lost an answer"))
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        let reply = Reply::new(
+            answered.reply.model().clone(),
+            outcomes,
+            answered
+                .reply
+                .usage()
+                .map(|usage| usage.share(members.len(), position)),
+        );
+        let parent_sent = parent.map_or(0, |(attempt, offset)| {
+            crate::core::share(attempt.sent, attempt.total, offset + position)
+        });
+        fragments.push(GroupAnswer {
+            answered: vec![ChunkAnswer {
+                places: places.to_vec(),
+                reply,
+                digest: answered.request.as_str().to_owned(),
+                requests_sent: crate::core::share(answered.requests_sent, members.len(), position),
+                replayed: answered.replayed,
+                parent_request: parent.map(|(attempt, _)| attempt.digest.clone()),
+                parent_sent,
+            }],
+            model: Some(answered.reply.model().clone()),
+        });
+    }
+    Ok(fragments)
+}
+
+fn group_completion(
+    mut value: Vec<GroupAnswer>,
+    sole_group: bool,
+) -> crate::engine::schedule::Completed<Vec<GroupAnswer>, PublicError> {
+    let stop = if sole_group {
+        value
+            .iter()
+            .position(|one| {
+                one.answered.iter().all(|chunk| {
+                    chunk
+                        .reply
+                        .outcomes()
+                        .iter()
+                        .all(|answer| matches!(answer, AnswerOutcome::Failed(_)))
+                })
+            })
+            .map(|index| {
+                value.truncate(index + 1);
+                PublicError::of(ErrorKind::Backend, "a backend question failed in a batch")
+            })
+    } else {
+        None
+    };
+    crate::engine::schedule::Completed {
+        value,
+        records: 0,
+        replayed: 0,
+        partial_failure: false,
+        stop,
+    }
+}
+
 /// Fold every group's replies into one record's values, in set order.
 pub(crate) fn assemble(
     set: &QuestionSet,
@@ -122,9 +314,11 @@ pub(crate) fn assemble(
     let size = set.questions().len();
     let mut values: Vec<Option<AnnotatedValue>> = vec![None; size];
     let mut details: Vec<Option<AnnotatedEntry>> = vec![None; size];
+    let mut receipts: Vec<Option<MemberReceipt>> = (0..size).map(|_| None).collect();
     let mut annotation = Annotation {
         values: Vec::new(),
         details: Vec::new(),
+        receipts: Vec::new(),
         model: None,
         usage: Some(Usage::new(0, 0)),
         requests: Vec::new(),
@@ -134,6 +328,9 @@ pub(crate) fn assemble(
     };
     for chunk in answered.into_iter().flat_map(|group| group.answered) {
         check_model(&mut annotation.model, chunk.reply.model(), requested)?;
+        if let Some(parent) = &chunk.parent_request {
+            annotation.requests.push(parent.clone());
+        }
         annotation.requests.push(chunk.digest.clone());
         annotation.usage = match (annotation.usage, chunk.reply.usage()) {
             (Some(total), Some(next)) => {
@@ -145,11 +342,17 @@ pub(crate) fn assemble(
         annotation.requests_sent = annotation
             .requests_sent
             .checked_add(chunk.requests_sent)
+            .and_then(|total| total.checked_add(chunk.parent_sent))
             .ok_or(Error::Defect("a request count overflowed"))?;
-        annotation.failed_questions += take_answers(set, &chunk, &mut values, &mut details)?;
+        annotation.failed_questions +=
+            take_answers(set, &chunk, &mut values, &mut details, &mut receipts)?;
     }
     annotation.values = pair(set, values, "a question has no value")?;
     annotation.details = pair(set, details, "a question has no detailed answer")?;
+    annotation.receipts = receipts
+        .into_iter()
+        .map(|receipt| receipt.ok_or(Error::Defect("a question has no request receipt")))
+        .collect::<Result<Vec<_>, _>>()?;
     Ok(annotation)
 }
 
@@ -158,6 +361,7 @@ fn take_answers(
     chunk: &ChunkAnswer,
     values: &mut [Option<AnnotatedValue>],
     details: &mut [Option<AnnotatedEntry>],
+    receipts: &mut [Option<MemberReceipt>],
 ) -> Result<usize, Error> {
     if chunk.places.len() != chunk.reply.outcomes().len() {
         return Err(Error::Defect(
@@ -165,7 +369,8 @@ fn take_answers(
         ));
     }
     let mut failed = 0;
-    for (place, outcome) in chunk.places.iter().zip(chunk.reply.outcomes()) {
+    for (position, (place, outcome)) in chunk.places.iter().zip(chunk.reply.outcomes()).enumerate()
+    {
         let question = set
             .questions()
             .get(*place)
@@ -175,6 +380,19 @@ fn take_answers(
         else {
             return Err(Error::Defect("an answer points outside its set"));
         };
+        let Some(receipt_slot) = receipts.get_mut(*place) else {
+            return Err(Error::Defect("a receipt points outside its set"));
+        };
+        *receipt_slot = Some(MemberReceipt {
+            usage: chunk
+                .reply
+                .usage()
+                .map(|whole| whole.share(chunk.places.len(), position)),
+            requests_sent: crate::core::share(chunk.requests_sent, chunk.places.len(), position)
+                + crate::core::share(chunk.parent_sent, chunk.places.len(), position),
+            replayed: chunk.replayed,
+            parent_request: chunk.parent_request.clone(),
+        });
         let digest = chunk.digest.clone();
         match outcome {
             AnswerOutcome::Answered(answer) => {

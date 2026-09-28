@@ -122,7 +122,8 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             let details = match Question::from_json(&object(&request.question)?)? {
                 LoadedQuestion::Question(asked) => engine.details_with(&asked, &evidence, options),
                 LoadedQuestion::Banded(asked) => engine.details_with(&asked, &evidence, options),
-            }?;
+            }?
+            .into_value();
             if flag(&request.envelope, "details")? {
                 return Ok(details.to_json());
             }
@@ -149,7 +150,9 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             let records = member(request, "records", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
-            let ranked = engine.rank_with(&asked, records.iter().map(String::as_str), options)?;
+            let ranked = engine
+                .rank_with(&asked, records.iter().map(String::as_str), options)?
+                .into_value();
             write(&json!(
                 ranked.iter().map(|row| *row.input()).collect::<Vec<_>>()
             ))
@@ -165,7 +168,9 @@ fn answer(engine: &Engine, request: &Request, options: CallOptions<'_>) -> Resul
             let units = member(request, "units", |raw| {
                 serde_json::from_str::<Vec<String>>(raw)
             })?;
-            let found = engine.find_with(&asked, units.iter().map(String::as_str), options)?;
+            let found = engine
+                .find_with(&asked, units.iter().map(String::as_str), options)?
+                .into_value();
             write(&json!(found.selected()))
         }
         "annotate" => annotate(engine, request, options),

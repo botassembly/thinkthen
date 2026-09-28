@@ -21,7 +21,8 @@ pub(crate) fn recognize_document(context: &Context<'_>) -> rusqlite::Result<Opti
         let ask = Recognize::from_json(&whole).map_err(|error| from_file(error, file))?;
         let result = worker::run(ffi::handle_of(context), None, move |engine, options| {
             Ok(engine.recognize_with(&ask, &evidence, options)?)
-        })?;
+        })?
+        .into_value();
         Ok(Some(result.to_json()))
     })?)
 }

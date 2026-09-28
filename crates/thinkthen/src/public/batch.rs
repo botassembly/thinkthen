@@ -5,16 +5,21 @@
 //! is read at most one throttle ahead of the rows returned. The caller's
 //! interrupt check runs here, on the calling thread, at every tick.
 
-use std::collections::VecDeque;
 use std::fmt;
-use std::sync::Arc;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
 use crate::engine::facade::{self, Completed, Input, InputPort, RunOutcome};
 use crate::public::error::Error;
 use crate::public::options::{Stop, guarded};
+use crate::public::results::Facts;
+
+mod annotation;
+mod planned;
+
+pub(crate) use annotation::start_annotation;
+pub(crate) use planned::start_planned;
 
 /// How often a waiting batch runs the caller's controls, as the engine's poll.
 const TICK: Duration = Duration::from_millis(50);
@@ -44,6 +49,12 @@ impl<T> Iterator for Batch<'_, T> {
 }
 
 impl<'a, T: 'a> Batch<'a, T> {
+    /// Final facts after exhaustion or the one terminal error.
+    #[must_use]
+    pub fn facts(&self) -> Option<&Facts> {
+        self.source.facts()
+    }
+
     /// A batch that yields one error, then nothing.
     pub(crate) fn failed(error: Error) -> Self {
         Self {
@@ -58,78 +69,36 @@ impl<'a, T: 'a> Batch<'a, T> {
 
 trait Source<T> {
     fn pull(&mut self) -> Option<Result<T, Error>>;
+    fn facts(&self) -> Option<&Facts>;
 }
 
 impl<T> Source<T> for Option<Error> {
     fn pull(&mut self) -> Option<Result<T, Error>> {
         self.take().map(Err)
     }
+
+    fn facts(&self) -> Option<&Facts> {
+        None
+    }
 }
 
-/// One record's answer, computed on an engine worker.
-pub(crate) type Answer<V> = dyn Fn(&str) -> Result<Completed<V, Error>, Error> + Send + Sync;
+type ScheduledAnswer<'a, W, V> =
+    dyn Fn(&W) -> Result<Completed<V, Error>, Error> + Send + Sync + 'a;
 
-enum Event<V> {
-    Port(InputPort<String, V, Error>),
+pub(super) enum Event<W, V> {
+    Port(InputPort<W, V, Error>),
     Ask,
     Row(V),
     End(Result<(), Error>),
 }
 
-/// The caller's records, the rows the scheduler returns, and the stop.
-struct Stream<'a, I: Iterator, V, T> {
-    items: I,
-    held: VecDeque<I::Item>,
-    pair: fn(I::Item, V) -> Option<T>,
-    events: Receiver<Event<V>>,
-    port: Option<InputPort<String, V, Error>>,
-    stop: Stop<'a>,
-    fed: usize,
-    most: Option<usize>,
-    scheduler: Option<JoinHandle<()>>,
-}
-
-/// Start the scheduler for these records. Nothing is read or sent until the
-/// first pull.
-pub(crate) fn start<'a, I, V, T>(
-    engine: Arc<facade::Engine>,
-    records: I,
-    stop: Stop<'a>,
-    most: Option<usize>,
-    answer: Arc<Answer<V>>,
-    pair: fn(I::Item, V) -> Option<T>,
-) -> Batch<'a, T>
-where
-    I: Iterator + 'a,
-    I::Item: super::Evidence,
-    V: Send + 'static,
-    T: 'a,
-{
-    let (sender, events) = channel();
-    let cancel = stop.shared();
-    let scheduler = thread::spawn(move || schedule(&engine, &cancel, answer.as_ref(), &sender));
-    Batch {
-        source: Box::new(Stream {
-            items: records,
-            held: VecDeque::new(),
-            pair,
-            events,
-            port: None,
-            stop,
-            fed: 0,
-            most,
-            scheduler: Some(scheduler),
-        }),
-    }
-}
-
 /// The scheduler thread: run the engine's ordered scheduler, relay its asks
 /// and rows, and report how it ended once its relay has joined.
-fn schedule<V: Send + 'static>(
+pub(super) fn schedule<W: Send + 'static, V: Send + 'static>(
     engine: &facade::Engine,
     cancel: &crate::engine::Cancel<'static>,
-    answer: &Answer<V>,
-    sender: &Sender<Event<V>>,
+    answer: &ScheduledAnswer<'_, W, V>,
+    sender: &Sender<Event<W, V>>,
 ) {
     let mut relay = None;
     let ended = guarded(|| {
@@ -140,7 +109,7 @@ fn schedule<V: Send + 'static>(
                 let _sent = sender.send(Event::Port(port));
                 relay = Some(relay_asks(asks, sender.clone()));
             },
-            &|text: &String| answer(text),
+            &|work: &W| answer(work),
             |row| Ok(sender.send(Event::Row(row)).is_ok()),
         )?;
         match outcome {
@@ -154,118 +123,37 @@ fn schedule<V: Send + 'static>(
 }
 
 /// Turn each scheduler ask into one event for the calling thread.
-fn relay_asks<V: Send + 'static>(asks: Receiver<()>, sender: Sender<Event<V>>) -> JoinHandle<()> {
+fn relay_asks<W: Send + 'static, V: Send + 'static>(
+    asks: Receiver<()>,
+    sender: Sender<Event<W, V>>,
+) -> JoinHandle<()> {
     thread::spawn(move || while asks.recv().is_ok() && sender.send(Event::Ask).is_ok() {})
 }
 
-impl<I, V, T> Source<T> for Stream<'_, I, V, T>
-where
-    I: Iterator,
-    I::Item: super::Evidence,
-{
-    fn pull(&mut self) -> Option<Result<T, Error>> {
-        self.scheduler.as_ref()?;
-        loop {
-            if self.stop.interrupted() {
-                self.stop.fire();
-            }
-            let event = match self.events.recv_timeout(TICK) {
-                Ok(event) => event,
-                Err(RecvTimeoutError::Timeout) => continue,
-                Err(RecvTimeoutError::Disconnected) => {
-                    Event::End(Err(Error::defect("the scheduler ended early")))
+/// Stop one typed scheduler, answer its final asks, and join every worker.
+pub(super) fn join_scheduler<W, V>(
+    scheduler: &mut Option<JoinHandle<()>>,
+    stop: &Stop<'_>,
+    events: &Receiver<Event<W, V>>,
+    port: &mut Option<InputPort<W, V, Error>>,
+) -> Result<(), Error> {
+    let Some(scheduler) = scheduler.take() else {
+        return Ok(());
+    };
+    stop.fire();
+    while !scheduler.is_finished() {
+        match events.recv_timeout(TICK) {
+            Ok(Event::Port(next)) => *port = Some(next),
+            Ok(Event::Ask) => {
+                if let Some(port) = port {
+                    let _sent = port.send(Input::End);
                 }
-            };
-            if let Some(pulled) = self.take(event) {
-                return pulled;
             }
+            Ok(Event::Row(_) | Event::End(_)) | Err(RecvTimeoutError::Timeout) => {}
+            Err(RecvTimeoutError::Disconnected) => break,
         }
     }
-}
-
-impl<I, V, T> Stream<'_, I, V, T>
-where
-    I: Iterator,
-    I::Item: super::Evidence,
-{
-    /// Act on one event; `Some` is what this pull returns.
-    fn take(&mut self, event: Event<V>) -> Option<Option<Result<T, Error>>> {
-        match event {
-            Event::Port(port) => self.port = Some(port),
-            Event::Ask => self.feed(),
-            Event::Row(value) => {
-                let Some(item) = self.held.pop_front() else {
-                    return Some(Some(Err(
-                        self.end(Error::defect("a row arrived with no record"))
-                    )));
-                };
-                return (self.pair)(item, value).map(|row| Some(Ok(row)));
-            }
-            Event::End(ended) => {
-                let ended = self.join().and(ended);
-                let ended = self.stop.finish(ended);
-                return Some(ended.err().map(Err));
-            }
-        }
-        None
-    }
-
-    /// Answer one ask with the next record, the end, or the spent limit.
-    fn feed(&mut self) {
-        let input = match self.items.next() {
-            None => Input::End,
-            Some(_) if self.most.is_some_and(|most| self.fed >= most) => {
-                Input::Failed(Error::usage(format!(
-                    "this engine answers at most {} records in one call",
-                    self.fed
-                )))
-            }
-            Some(item) => {
-                let text = super::Evidence::evidence(&item).to_owned();
-                self.held.push_back(item);
-                self.fed += 1;
-                Input::Item(text)
-            }
-        };
-        self.send(input);
-    }
-
-    /// Stop and join the scheduler, then report this error.
-    fn end(&mut self, error: Error) -> Error {
-        let _ended = self.join();
-        error
-    }
-}
-
-impl<I: Iterator, V, T> Stream<'_, I, V, T> {
-    fn send(&self, input: Input<String, Error>) {
-        if let Some(port) = &self.port {
-            let _sent = port.send(input);
-        }
-    }
-
-    /// Stop the scheduler, answer its last asks with the end, and join it.
-    fn join(&mut self) -> Result<(), Error> {
-        let Some(scheduler) = self.scheduler.take() else {
-            return Ok(());
-        };
-        self.stop.fire();
-        while !scheduler.is_finished() {
-            match self.events.recv_timeout(TICK) {
-                Ok(Event::Port(port)) => self.port = Some(port),
-                Ok(Event::Ask) => self.send(Input::End),
-                Ok(Event::Row(_) | Event::End(_)) | Err(RecvTimeoutError::Timeout) => {}
-                Err(RecvTimeoutError::Disconnected) => break,
-            }
-        }
-        scheduler
-            .join()
-            .map_err(|_| Error::defect("the record scheduler panicked"))
-    }
-}
-
-impl<I: Iterator, V, T> Drop for Stream<'_, I, V, T> {
-    fn drop(&mut self) {
-        let _joined = self.join();
-    }
+    scheduler
+        .join()
+        .map_err(|_| Error::defect("the record scheduler panicked"))
 }

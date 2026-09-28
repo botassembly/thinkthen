@@ -1,20 +1,43 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
 mod budget;
+mod observer;
 
 pub(crate) use budget::SendReservation;
 pub use budget::{SendBudget, SendBudgetDenial};
 
 use std::any::Any;
 use std::fmt;
+use std::num::NonZeroUsize;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::engine::{Cancel, Deadline, workers};
+use crate::engine::{CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
+use crate::public::results::{Call, Facts, RecordObservation};
+
+type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
+
+/// How many records one model request may contain.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BatchSetting {
+    /// Fill each request to its applicable limits.
+    Max,
+    /// Close a request after this many records at most.
+    Records(NonZeroUsize),
+}
+
+impl From<BatchSetting> for crate::core::batch::Setting {
+    fn from(value: BatchSetting) -> Self {
+        match value {
+            BatchSetting::Max => Self::Max,
+            BatchSetting::Records(count) => Self::Records(count),
+        }
+    }
+}
 
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
 const MOST_SECONDS: u64 = 4_294_967_295;
@@ -82,6 +105,9 @@ pub struct CallOptions<'a> {
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     send_budget: Option<(&'a SendBudget, Option<u64>)>,
+    batch: Option<BatchSetting>,
+    context: Option<&'a str>,
+    observer: Option<Observer<'a>>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -92,6 +118,9 @@ impl fmt::Debug for CallOptions<'_> {
             .field("deadline", &self.due)
             .field("interrupt", &self.check.is_some())
             .field("send_budget", &self.send_budget.is_some())
+            .field("batch", &self.batch)
+            .field("context", &self.context.is_some())
+            .field("observer", &self.observer.is_some())
             .finish()
     }
 }
@@ -105,6 +134,9 @@ impl<'a> CallOptions<'a> {
             due: None,
             check: None,
             send_budget: None,
+            batch: None,
+            context: None,
+            observer: None,
         }
     }
 
@@ -121,6 +153,47 @@ impl<'a> CallOptions<'a> {
     pub const fn send_budget(mut self, value: &'a SendBudget, limit: Option<u64>) -> Self {
         self.send_budget = Some((value, limit));
         self
+    }
+
+    /// Select the number of records one eligible many-record request holds.
+    #[must_use]
+    pub const fn batch(mut self, setting: BatchSetting) -> Self {
+        self.batch = Some(setting);
+        self
+    }
+
+    /// Share nonblank text as context for an eligible many-record request.
+    #[must_use]
+    pub const fn context(mut self, value: &'a str) -> Self {
+        self.context = Some(value);
+        self
+    }
+
+    /// Observe each completed logical question and row on this caller thread.
+    /// Borrowed detail remains valid only during the callback.
+    #[must_use]
+    pub const fn observe(
+        mut self,
+        observer: &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync),
+    ) -> Self {
+        self.observer = Some(observer);
+        self
+    }
+
+    pub(crate) const fn batch_setting(&self) -> Option<BatchSetting> {
+        self.batch
+    }
+
+    pub(crate) const fn context_text(&self) -> Option<&'a str> {
+        self.context
+    }
+
+    pub(crate) fn without_context(&self, call: &str) -> Result<(), Error> {
+        self.context.map_or(Ok(()), |_| {
+            Err(Error::usage(format!(
+                "{call} does not take a shared context"
+            )))
+        })
     }
 
     /// Stop the call at this instant. A past instant sends nothing.
@@ -222,14 +295,17 @@ impl<'a> CallOptions<'a> {
 /// token and check, and a check's panic held until the call has joined.
 pub(crate) struct Stop<'a> {
     base: Cancel<'static>,
+    facts: CallFacts,
     token: Option<&'a CancelToken>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
+    observer: Option<Observer<'a>>,
     panic: Mutex<Option<Box<dyn Any + Send>>>,
 }
 
 impl<'a> Stop<'a> {
     /// Fix the deadline and refuse a call whose token already fired.
     pub(crate) fn begin(options: CallOptions<'a>) -> Result<Self, Error> {
+        let facts = CallFacts::new();
         let stop = Self {
             base: Cancel::default()
                 .with_deadline(options.deadline()?)
@@ -238,9 +314,12 @@ impl<'a> Stop<'a> {
                     options
                         .send_budget
                         .map(|(budget, limit)| (budget.clone(), limit)),
-                ),
+                )
+                .with_facts(facts.clone()),
+            facts,
             token: options.cancel,
             check: options.check,
+            observer: options.observer,
             panic: Mutex::new(None),
         };
         if stop.token.is_some_and(CancelToken::is_cancelled) {
@@ -292,9 +371,26 @@ impl<'a> Stop<'a> {
         self.finish(result)
     }
 
+    /// Run an eager call, then retain its final receipts on success or failure.
+    pub(crate) fn run_call<T>(
+        &self,
+        records: usize,
+        call: impl FnOnce(&Cancel<'_>) -> Result<T, Error>,
+    ) -> Result<Call<T>, Error> {
+        let result = self.run(call);
+        if result.is_ok() {
+            self.facts.finished_records(records);
+        }
+        let facts = Facts::of(self.facts.snapshot());
+        result
+            .map(|value| Call::new(value, facts.clone()))
+            .map_err(|error| error.with_facts(facts))
+    }
+
     /// Resume a check's panic, once every worker of the call has joined, then
     /// return the call's result, or cancellation when the token has fired.
     pub(crate) fn finish<T>(&self, result: Result<T, Error>) -> Result<T, Error> {
+        self.facts.finish();
         let held = self.panic.lock().ok().and_then(|mut held| held.take());
         if let Some(payload) = held {
             resume_unwind(payload);
@@ -303,6 +399,10 @@ impl<'a> Stop<'a> {
             return Err(Error::cancelled());
         }
         result
+    }
+
+    pub(crate) fn facts(&self) -> Facts {
+        Facts::of(self.facts.snapshot())
     }
 }
 
