@@ -1,8 +1,4 @@
-//! Relation plans split under the request size at every address (ADR 0051).
-//!
-//! Every run is a dry run: it reads no key and sends nothing. With no `--url`
-//! the plan resolves to the built-in address. `http://127.0.0.1:9/v1` stands
-//! for any other address.
+//! Shared pair plans obey 400 questions and the request-size limit at every address.
 
 use std::{fs, path::PathBuf};
 
@@ -13,7 +9,6 @@ use crate::harness::spawn;
 const ELSEWHERE: &str = "http://127.0.0.1:9/v1";
 const BEATLES: [&str; 2] = ["sung_by=song:person", "appears_on=song:album"];
 
-/// The committed Beatles set: 184 songs, 13 albums, and 4 people.
 fn beatles() -> Vec<u8> {
     let path = concat!(
         env!("CARGO_MANIFEST_DIR"),
@@ -23,16 +18,35 @@ fn beatles() -> Vec<u8> {
     serde_json::to_vec(&fixture["entities"]).expect("entities")
 }
 
+fn entities(groups: &[(&str, usize)]) -> Vec<u8> {
+    let values = groups
+        .iter()
+        .flat_map(|(kind, count)| {
+            (0..*count).map(move |n| serde_json::json!({"name":format!("{kind} {n}"),"kind":kind}))
+        })
+        .collect::<Vec<_>>();
+    serde_json::to_vec(&values).expect("entities")
+}
+
+fn lines(count: usize) -> Vec<u8> {
+    (1..=count)
+        .map(|n| format!("entity {n}\n"))
+        .collect::<String>()
+        .into_bytes()
+}
+
 fn profile(name: &str, limit: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-ceiling");
     fs::create_dir_all(&folder).expect("profile folder");
     let path = folder.join(format!("{name}.json"));
-    let text = format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{limit}}}"#);
-    fs::write(&path, text).expect("profile");
+    fs::write(
+        &path,
+        format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"{name}",{limit}}}"#),
+    )
+    .expect("profile");
     path
 }
 
-/// The plan of one dry run, after checking it succeeded.
 fn plan(options: &[&str], input: &[u8]) -> Value {
     let mut arguments = vec!["relate", "--dry-run", "--no-cache"];
     arguments.extend_from_slice(options);
@@ -64,158 +78,137 @@ fn bytes(plan: &Value) -> Vec<u64> {
         .collect()
 }
 
+fn questions(plan: &Value) -> Vec<usize> {
+    plan["requests"]
+        .as_array()
+        .expect("requests")
+        .iter()
+        .map(|item| {
+            serde_json::from_str::<Value>(item["body_utf8"].as_str().expect("body"))
+                .expect("request")["questions"]
+                .as_object()
+                .expect("questions")
+                .len()
+        })
+        .collect()
+}
+
 #[test]
-fn the_beatles_set_splits_at_every_address() {
+fn the_beatles_set_uses_one_state_and_the_same_bound_at_every_address() {
     let input = beatles();
     let hosted = plan(&BEATLES, &input);
-    assert_eq!(hosted["url"], "https://api.typesafe.ai/v1/systemone");
-    assert_eq!(hosted["backend_profile"], Value::Null);
-    assert_eq!(counts(&hosted), [1, 2]);
-    assert_eq!(bytes(&hosted), [81_943, 95_779, 76_411]);
-
     let elsewhere = plan(&[BEATLES[0], BEATLES[1], "--url", ELSEWHERE], &input);
-    assert_eq!(counts(&elsewhere), [1, 2]);
-    assert_eq!(bytes(&elsewhere), [81_943, 95_779, 76_411]);
+    assert_eq!(counts(&hosted), [2, 7]);
+    assert_eq!(hosted["request_count"], 8);
+    assert_eq!(questions(&hosted), [400, 400, 400, 400, 400, 400, 400, 328]);
+    assert_eq!(bytes(&hosted), bytes(&elsewhere));
+    assert!(bytes(&hosted).iter().all(|size| *size <= 96_000));
+    let first: Value =
+        serde_json::from_str(hosted["requests"][0]["body_utf8"].as_str().expect("body"))
+            .expect("body");
+    assert!(first["state"].get("relation").is_none());
+}
 
-    let raised = plan(
-        &[
-            BEATLES[0],
-            BEATLES[1],
-            "--url",
-            ELSEWHERE,
-            "--max-request-bytes",
-            "200000",
-        ],
+#[test]
+fn four_hundred_and_profile_limits_split_shared_rule_requests() {
+    let input = entities(&[("person", 5), ("song", 180)]);
+    let one = plan(&["wrote=person:song", "--url", ELSEWHERE], &input);
+    assert_eq!(one["logical_questions"], 900);
+    assert_eq!(questions(&one), [400, 400, 100]);
+    assert_eq!(counts(&one), [3]);
+    let two = plan(
+        &["sang=person:song", "wrote=person:song", "--url", ELSEWHERE],
         &input,
     );
-    assert_eq!(counts(&raised), [1, 1]);
-    assert_eq!(bytes(&raised), [81_943, 161_252]);
-    assert_eq!(
-        raised["requests"][1]["digest"],
-        "5fb2630212ea2666c1eff52b3baec2158c9e983c0e6974117fc59dbfe084d279"
-    );
-}
-
-#[test]
-fn a_trailing_slash_and_another_version_keep_the_default() {
-    let input = beatles();
-    let cases = [
-        ("https://api.typesafe.ai/v1/", [1, 2]),
-        ("https://api.typesafe.ai/v2", [1, 2]),
-    ];
-    for (base, expected) in cases {
-        let run = plan(&[BEATLES[0], BEATLES[1], "--url", base], &input);
-        assert_eq!(counts(&run), expected, "{base}");
-    }
-}
-
-#[test]
-fn a_profile_byte_limit_lowers_the_size_and_other_limits_join_it() {
-    let input = beatles();
-    let wide = profile("wide", r#""max_request_bytes":200000"#);
-    let replaced = plan(
+    assert_eq!(two["logical_questions"], 1_800);
+    assert_eq!(questions(&two), [400, 400, 400, 400, 200]);
+    assert_eq!(counts(&two), [3, 3]);
+    assert_eq!(two["request_count"], 5);
+    let low = profile("hundred", r#""max_questions":100"#);
+    let low = plan(
         &[
-            BEATLES[0],
-            BEATLES[1],
+            "wrote=person:song",
             "--profile",
-            wide.to_str().expect("path"),
+            low.to_str().expect("path"),
         ],
         &input,
     );
-    assert_eq!(counts(&replaced), [1, 2]);
-    assert_eq!(bytes(&replaced), [81_943, 95_779, 76_411]);
-    let raised = plan(
+    assert_eq!(questions(&low), [100; 9]);
+    let high = profile("thousand", r#""max_questions":1000"#);
+    let high = plan(
         &[
-            BEATLES[0],
-            BEATLES[1],
+            "wrote=person:song",
             "--profile",
-            wide.to_str().expect("path"),
-            "--max-request-bytes",
-            "200000",
+            high.to_str().expect("path"),
         ],
         &input,
     );
-    assert_eq!(counts(&raised), [1, 1]);
-    assert_eq!(bytes(&raised), [81_943, 161_252]);
-
-    let questions = profile("sixty-four", r#""max_questions":64"#);
-    let joined = plan(
-        &[
-            BEATLES[0],
-            BEATLES[1],
-            "--profile",
-            questions.to_str().expect("path"),
-        ],
-        &input,
-    );
-    assert_eq!(counts(&joined), [3, 3]);
-    assert_eq!(
-        bytes(&joined),
-        [35_565, 35_631, 32_688, 63_154, 63_220, 56_829]
-    );
+    assert_eq!(questions(&high), [400, 400, 100]);
 }
 
 #[test]
-fn one_question_over_the_ceiling_goes_alone_and_is_not_refused() {
-    let album = "a".repeat(100_000);
-    let input = serde_json::json!([
-        {"name":"one","kind":"song"},
-        {"name":"two","kind":"song"},
-        {"name":album,"kind":"album"}
-    ]);
-    let input = serde_json::to_vec(&input).expect("input");
-    let hosted = plan(&["appears_on=song:album"], &input);
-    assert_eq!(bytes(&hosted), [200_493, 200_493]);
-    let elsewhere = plan(&["appears_on=song:album", "--url", ELSEWHERE], &input);
-    assert_eq!(bytes(&elsewhere), [200_493, 200_493]);
-}
-
-fn lines(count: usize) -> Vec<u8> {
-    (1..=count)
-        .map(|item| format!("entity {item}\n"))
-        .collect::<String>()
-        .into_bytes()
+fn the_largest_cross_kind_rule_keeps_every_request_bounded() {
+    let input = entities(&[("person", 127), ("organization", 128)]);
+    let run = plan(
+        &["works_for=person:organization", "--url", ELSEWHERE],
+        &input,
+    );
+    assert_eq!(run["logical_questions"], 16_256);
+    assert_eq!(run["request_count"], 41);
+    assert_eq!(counts(&run), [41]);
+    assert_eq!(questions(&run).last(), Some(&256));
+    assert!(questions(&run).iter().all(|count| *count <= 400));
+    assert!(bytes(&run).iter().all(|size| *size <= 96_000));
 }
 
 #[test]
-fn the_splitter_keeps_the_longest_fitting_prefix_the_old_loop_chose() {
+fn a_profile_lowers_the_byte_size_and_one_question_still_goes_alone() {
     let limit = profile("twenty-thousand", r#""max_request_bytes":20000"#);
-    let options = [
-        "linked",
-        "--lines",
-        "--url",
-        ELSEWHERE,
-        "--model",
-        "local-1",
-        "--profile",
-        limit.to_str().expect("path"),
-    ];
-    // Printed by main at 08a8e754, before the splitter changed.
-    let expected = [19_938, 19_966, 19_923, 19_923, 19_923, 19_924, 16_660];
-    assert_eq!(bytes(&plan(&options, &lines(40))), expected);
-}
-
-/// 255 line entities ask 64,770 yes/no questions. The prefix loop encoded every
-/// prefix of them, and the harness's child deadline would kill it.
-#[test]
-fn a_full_line_set_plans_inside_the_child_deadline() {
-    let input = lines(255);
-    let elsewhere = plan(
+    let small = plan(
         &[
             "linked",
             "--lines",
             "--url",
             ELSEWHERE,
-            "--model",
-            "local-1",
+            "--profile",
+            limit.to_str().expect("path"),
+        ],
+        &lines(40),
+    );
+    assert!(bytes(&small).len() > 1);
+    assert!(bytes(&small).iter().all(|size| *size <= 20_000));
+    assert_eq!(questions(&small).iter().sum::<usize>(), 40 * 39);
+
+    let long = "a".repeat(100_000);
+    let input = serde_json::to_vec(&serde_json::json!([
+        {"name":"one","kind":"song"}, {"name":"two","kind":"song"},
+        {"name":long,"kind":"album"}
+    ]))
+    .expect("input");
+    for options in [
+        &["appears_on=song:album"][..],
+        &["appears_on=song:album", "--url", ELSEWHERE][..],
+    ] {
+        let run = plan(options, &input);
+        assert_eq!(questions(&run), [1, 1]);
+        assert!(bytes(&run).iter().all(|size| *size > 96_000));
+    }
+}
+
+#[test]
+fn a_full_line_set_plans_inside_the_child_deadline() {
+    let run = plan(
+        &[
+            "linked",
+            "--lines",
+            "--url",
+            ELSEWHERE,
             "--max-request-bytes",
             "6000000",
         ],
-        &input,
+        &lines(255),
     );
-    assert_eq!(bytes(&elsewhere), [5_386_112]);
-    let hosted = plan(&["linked", "--lines"], &input);
-    let sizes = bytes(&hosted);
-    assert_eq!(sizes.len(), 63);
-    assert!(sizes.iter().all(|size| *size <= 96_000), "{sizes:?}");
+    assert_eq!(run["logical_questions"], 64_770);
+    assert_eq!(run["request_count"], 162);
+    assert_eq!(questions(&run).last(), Some(&370));
 }

@@ -10,11 +10,14 @@ use crate::harness::{Canned, Gathering, Listener};
 
 /// The relation whose request carries this body.
 fn relation(body: &[u8]) -> String {
-    let text = String::from_utf8_lossy(body);
-    text.split_once(r#""relation":{"name":""#)
-        .and_then(|(_, rest)| rest.split_once('"'))
-        .map(|(name, _)| name.to_owned())
-        .unwrap_or_default()
+    let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+    request["questions"]["q1"]["instructions"]
+        .as_str()
+        .expect("words")
+        .split_whitespace()
+        .nth(5)
+        .expect("relation word")
+        .to_owned()
 }
 
 fn said(output: &Output) -> String {
@@ -29,13 +32,12 @@ fn relate_requests_reach_the_throttle_and_no_further() {
         answered(body)
     })
     .expect("listener");
-    let options = [
-        "r1", "r2", "r3", "r4", "r5", "r6", "r7", "r8", "r9", "--lines", "--jobs", "3",
-    ];
-    let output = run(&listener, &options, b"ada\nbob\ncy\n");
+    let names = (0..36).map(|n| format!("name {n}\n")).collect::<String>();
+    let options = ["r", "--lines", "--jobs", "3"];
+    let output = run(&listener, &options, names.as_bytes());
 
     assert_eq!(output.status.code(), Some(0), "{}", said(&output));
-    assert_eq!(listener.requests().len(), 9);
+    assert_eq!(listener.requests().len(), 4);
     assert_eq!(listener.peak(), 3);
 }
 
@@ -94,6 +96,14 @@ fn split_relations_print_what_one_job_prints() {
 /// One run of six one-request rules where `fail` scripts each relation's reply.
 fn failing(jobs: &str, fail: fn(&str) -> Canned) -> (Output, usize) {
     let listener = Listener::answering(move |body| fail(&relation(body))).expect("listener");
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-at-once");
+    fs::create_dir_all(&folder).expect("profile folder");
+    let profile = folder.join("two.json");
+    fs::write(
+        &profile,
+        r#"{"schema":"thinkthen.backend-profile/1","name":"two","max_questions":2}"#,
+    )
+    .expect("profile");
     let options = [
         "alpha",
         "bravo",
@@ -102,6 +112,8 @@ fn failing(jobs: &str, fail: fn(&str) -> Canned) -> (Output, usize) {
         "echo",
         "foxtrot",
         "--lines",
+        "--profile",
+        profile.to_str().expect("path"),
         "--max-retries",
         "0",
         "--jobs",
