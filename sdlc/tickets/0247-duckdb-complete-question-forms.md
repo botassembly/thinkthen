@@ -1,6 +1,6 @@
 # Ticket 0247: Complete choose, score and tag questions in DuckDB
 
-Status: **Proposed for fresh design review.** This ticket changes no runtime, package or public page. The [preflight](../records/0247-duckdb-complete-question-forms-preflight.md) pins the current source. The [design review](../records/0247-duckdb-complete-question-forms-design-review.md) is pending. The coordinator may approve routine API details within the already approved question-file outcome after that review.
+Status: **Design accepted; implementation active.** The fresh High [design review](../records/0247-duckdb-complete-question-forms-design-review.md) accepted `4f0f93e5`, and the coordinator approved the exact runtime claim at main `6fd7b170`. The [preflight](../records/0247-duckdb-complete-question-forms-preflight.md) pins the starting source. Runtime and installed-package acceptance require a separate fresh High review.
 
 ## Outcome
 
