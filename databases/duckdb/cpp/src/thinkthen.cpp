@@ -131,7 +131,7 @@ struct DecisionGroup {
 	std::map<string, idx_t> seen;
 };
 
-std::optional<string> LiteralContext(DataChunk &args, idx_t row, idx_t column) {
+std::optional<string> LiteralContext(DataChunk &args, idx_t row, idx_t column, bool recoverable = false) {
 	if (args.ColumnCount() <= column) {
 		return std::nullopt;
 	}
@@ -140,7 +140,7 @@ std::optional<string> LiteralContext(DataChunk &args, idx_t row, idx_t column) {
 		return std::nullopt;
 	}
 	auto text = value.GetValue<string>();
-	if (text.find_first_not_of(" \t\r\n\f\v") == string::npos) {
+	if (!recoverable && text.find_first_not_of(" \t\r\n\f\v") == string::npos) {
 		throw InvalidInputException("thinkthen usage: context is text, not white space");
 	}
 	return text;
@@ -185,7 +185,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (bound.kind != 3 && (due < -1 || due > 4294967295000LL)) {
 			throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
 		}
-		auto literal_context = LiteralContext(args, row, 3);
+		auto literal_context = LiteralContext(args, row, 3, bound.kind == 3);
 		auto key = std::make_tuple(question_text, due, literal_context);
 		auto [place, new_group] = known_groups.emplace(key, groups.size());
 		if (new_group) {

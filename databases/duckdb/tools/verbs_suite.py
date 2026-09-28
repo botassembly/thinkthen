@@ -413,6 +413,29 @@ def b13c_try_details_prepared():
 
 
 @case
+def b13c_try_details_blank_context_keeps_good_siblings():
+    """A bad literal context is one safe Usage row without a transport attempt."""
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1",
+                   "SELECT thinkthen_try_details('Is it a refund?', x, -1, c) FROM "
+                   "(VALUES (1,'alpha','shared'),(2,'private evidence','   '),"
+                   "(3,'gamma','shared'),(4,NULL,'   ')) t(i,x,c) ORDER BY i",
+                   "SELECT thinkthen_details('Is it a refund?', 'ordinary', -1, '   ')"], backend.base)
+        values = [json.loads(value) if value else None for value in column(got[1])]
+        expect([value["status"] if value else None for value in values],
+               ["answered", "failed", "answered", None], "context row outcomes and NULL skip")
+        expect(values[1]["error"], {"kind": "usage", "message":
+               "check the row's question and arguments, or raise the process request total when it is spent",
+               "retryable": False}, "safe context Usage")
+        expect("private evidence" in json.dumps(values[1]), False, "failed context row hides evidence")
+        expect(said(got[2]), "thinkthen usage: context is text, not white space", "ordinary scalar still throws")
+        expect(backend.bodies, [b'{"state":"shared","model":"jev-1.13.0","questions":'
+                              b'{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},'
+                              b'"q2":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}'],
+               "only the good siblings share one exact attempt")
+
+
+@case
 def b13c_try_details_whole_request_failure():
     """A refused packed request fails only its own members and admits the next batch."""
     with PackedReplies(fail_first_pair=True) as backend:

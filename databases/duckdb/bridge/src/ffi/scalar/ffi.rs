@@ -102,15 +102,29 @@ impl TryGroup {
             }
             return Ok(());
         };
-        let answered = match &self.question {
+        let answered = match match &self.question {
             LoadedQuestion::Question(held) => self
                 .engine
                 .details_many_recoverable_with(held, valid, options),
             LoadedQuestion::Banded(held) => self
                 .engine
                 .details_many_recoverable_with(held, valid, options),
-        }
-        .map_err(|error| engines::call_error(error, self.total).text)?;
+        } {
+            Ok(answered) => answered,
+            Err(error)
+                if matches!(
+                    error.kind(),
+                    ErrorKind::Usage | ErrorKind::Local | ErrorKind::Backend
+                ) =>
+            {
+                let failed = safe_failure(error.kind(), error.retryable())?;
+                for place in places {
+                    put(values, place, failed.clone())?;
+                }
+                return Ok(());
+            }
+            Err(error) => return Err(engines::call_error(error, self.total).text),
+        };
         for (place, row) in places.into_iter().zip(answered.into_value()) {
             let value = match row {
                 RecoverableDetails::Answered(details) => format!(
