@@ -1,6 +1,6 @@
 # Quick Fix: README claims and steering budget
 
-Status: candidate for fresh independent Medium review. Ian authorized a narrow correction of `README.md` and temporarily delegated `AGENTS.md` on main `a88cc8b0` (the reordered README entered at `ca6e6625`). No runtime, other public page, site, or held 0248/0241 branch changed.
+Status: accepted after fresh independent Medium review of `2561a681e6eaee2fa37716a7c2be5fd5747062c5`, then integrated without changes to README or AGENTS. Ian authorized a narrow correction of `README.md` and temporarily delegated `AGENTS.md` on main `a88cc8b0` (the reordered README entered at `ca6e6625`). No runtime, other public page, site, or held 0248/0241 branch changed.
 
 ## What changed
 
@@ -17,3 +17,7 @@ Status: candidate for fresh independent Medium review. Ian authorized a narrow c
 ## What the build taught us
 
 The prior README record's claimed lint pass was hidden by a pipeline; running lint's exact character expression exposed the steering overage. The source packages also disprove its blanket C-door architecture claim. Fresh Medium review of the first Quick Fix candidate caught a separate output-contract mistake: `find` has an internal null value when offered none wins or ties, but the default CLI prints nothing and exits 3. A reader-facing “It prints” table must follow the CLI result contract, not infer printed text from the typed value. A root binding index should follow merged source and link each current README; release installation text waits for an actual release channel.
+
+## Independent review
+
+The reviewer checked the CLI output contract, source installation claims, native adapter dependencies, all 22 local links and preservation of the steering requirements. The first review corrected the find table: the default CLI prints no output and exits 3 when the offered none wins or ties; its typed null is not printed there. The same reviewer accepted the corrected candidate and retained the unchanged replay and character proof. Root integration leaves both reviewed files byte-for-byte unchanged. No full lint or source build is claimed; the failing instruction-budget subcheck now passes.
