@@ -10,7 +10,13 @@ use crate::harness::{Canned, Listener, spawn_one as spawn};
 
 const INPUT: &str = "delta\nbeta  \nalpha\ngamma\n";
 const FILE: &str = r#"{"score":"How relevant?","levels":{"low":"Unrelated.","middle":"Some relevance.","high":"Perfect match."}}"#;
-const BODY: &str = r#"{"state":"delta","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#;
+const BODIES: [&str; 4] = [
+    r#"{"state":"delta","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+    r#"{"state":"beta  ","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+    r#"{"state":"alpha","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+    r#"{"state":"gamma","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+];
+const QUESTION_SHA256: &str = "d20f78e3abbb54d4e8b083e27797cccfd25e673723eb952206f5d69035e221d6";
 
 fn question() -> io::Result<String> {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("graded-rank-question.json");
@@ -70,6 +76,27 @@ fn rows(output: &[u8]) -> io::Result<Vec<Value>> {
         .map_err(Into::into)
 }
 
+fn assert_literal_bodies(requests: &[conformance_backend::Recorded]) {
+    assert_eq!(requests.len(), BODIES.len());
+    for (actual, expected) in requests.iter().zip(BODIES) {
+        assert_eq!(actual.body, expected.as_bytes());
+    }
+}
+
+fn assert_present_fixture_digest(row: &Value, body: &str, url: &str) {
+    let digests = row.pointer("/meta/requests").and_then(Value::as_array);
+    assert_eq!(digests.map(Vec::len), Some(1));
+    let expected = crate::support::digest(url, body.as_bytes());
+    assert_eq!(
+        row.pointer("/meta/requests/0").and_then(Value::as_str),
+        Some(expected.as_str())
+    );
+    assert_eq!(
+        row.pointer("/meta/question_sha256").and_then(Value::as_str),
+        Some(QUESTION_SHA256)
+    );
+}
+
 fn compare_score_requests(
     file: &str,
     listener: &Listener,
@@ -80,11 +107,21 @@ fn compare_score_requests(
     assert_eq!(scored.status.code(), Some(0), "{:?}", scored.stderr);
     let scored_rows = rows(&scored.stdout)?;
     assert_eq!(scored_rows.len(), 4);
-    for ranked in ranked_rows {
+    for (ranked, (input, body)) in ranked_rows.iter().zip([
+        ("alpha", BODIES[2]),
+        ("beta  ", BODIES[1]),
+        ("gamma", BODIES[3]),
+        ("delta", BODIES[0]),
+    ]) {
+        assert_eq!(ranked["input"], input);
+        assert_present_fixture_digest(ranked, body, listener.url());
         let scored = scored_rows
             .iter()
             .find(|scored| scored["input"] == ranked["input"]);
         assert_eq!(scored.map(|row| &row["value"]), Some(&ranked["value"]));
+        if let Some(scored) = scored {
+            assert_present_fixture_digest(scored, body, listener.url());
+        }
         assert_eq!(
             scored.and_then(|row| row.pointer("/meta/requests")),
             ranked.pointer("/meta/requests")
@@ -92,7 +129,10 @@ fn compare_score_requests(
     }
     let requests = listener.requests();
     assert_eq!(requests.len(), 8);
-    assert_eq!(first_requests.len(), 4);
+    assert_literal_bodies(first_requests);
+    for group in requests.chunks_exact(4) {
+        assert_literal_bodies(group);
+    }
     for (ranked, scored) in requests.iter().take(4).zip(requests.iter().skip(4)) {
         assert_eq!(ranked.body, scored.body);
     }
@@ -118,8 +158,7 @@ fn graded_rank_orders_weighted_positions_and_keeps_the_earlier_top_tie() -> io::
     assert_eq!(facts["records"], 4);
     assert_eq!(facts["requests_sent"], 4);
     let first_requests = listener.requests();
-    assert_eq!(first_requests.len(), 4);
-    assert_eq!(first_requests[0].body, BODY.as_bytes());
+    assert_literal_bodies(&first_requests);
 
     let detail = run("rank", &file, listener.base(), &["--details"])?;
     assert_eq!(detail.status.code(), Some(0), "{:?}", detail.stderr);
@@ -167,7 +206,8 @@ fn graded_rank_refuses_typed_meanings_and_dry_run_sends_nothing() -> io::Result<
     assert_eq!(plan.status.code(), Some(0), "{:?}", plan.stderr);
     assert!(plan.stderr.is_empty());
     let value: Value = serde_json::from_slice(&plan.stdout)?;
-    assert_eq!(value["request"], serde_json::from_str::<Value>(BODY)?);
+    assert_eq!(value["request"], serde_json::from_str::<Value>(BODIES[0])?);
+    assert_eq!(value["from"]["question"], "file");
     assert_eq!(value["from"]["levels"], "file");
     assert!(listener.requests().is_empty());
     Ok(())
