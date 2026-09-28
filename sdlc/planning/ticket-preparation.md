@@ -116,3 +116,6 @@ For a foreign-language batch, inspect the Rust method's type bounds. A method wi
 
 
 For a shared batch coordinator, choose one proof whose evidence groups close at different profile limits; equal close points cannot expose a missing oldest-row frontier. For each new call option, classify every public entry point as consuming or rejecting it before handing the setting to wrappers. Trace callback termination after a caught panic, including the next event on the same eager path. When a public error gains private state, run the relevant consumer lint as well as compilation; unchanged caller source can still expose a newly oversized error.
+
+
+Map changed consumers to Cargo `required-features` before naming compilation complete: no-default tests omit Polars targets even when their source changed. For a scheduling regression, ensure the input crosses the failing boundary before end-of-input flushes pending work. A controlled request witness must distinguish scheduler admission from concurrent socket arrival. When a new regression case could also pass the old behavior, use one focused counterfactual against the known bad source, then restore the correction; this is not a broad mutation campaign. Pin the expected error kind and sentence so another refusal cannot satisfy the test accidentally.
