@@ -1,6 +1,6 @@
 # Quick Fix: align answer pages and name cache eviction order
 
-Status: candidate for fresh independent review. Branch: `ticket/qf-contract-pages-and-eviction`, based on `origin/main` at `106d3e4c`. Scope: experiment 284 registers 86 and 97. No runtime, schema, or site source changed.
+Status: accepted and landed at `86b7924e` after fresh independent review of `f34e3995`. Branch: `ticket/qf-contract-pages-and-eviction`, based on `origin/main` at `106d3e4c`. Scope: experiment 284 registers 86 and 97. No runtime, schema, or site source changed.
 
 ## Findings on current main
 
@@ -27,3 +27,7 @@ Recommend closing register 86 after review and landing: three named instances we
 ## What the build taught us
 
 The register preserved historical defects after some pages had moved on. Checking all six against one current main avoided rewriting examples and vocabulary that were already correct. A tie has both a detailed leader and an unresolved public value; the leader follows supplied order without granting that order decision authority. A plural annotate digest identifies a resolved set, so a blanket singular-digest sentence fails even while the canonical digest explanation remains valid. Modification time is a cheap deterministic eviction input, but it measures writes and repairs rather than cache usefulness. A true recency policy needs new hit state, not a prose rename.
+
+## Accepted review and landing
+
+Fresh independent review accepted `f34e3995`. It checked all six register86 disagreements against current pages and producer source, including all nine detailed examples. It checked cache-hit and prune paths for register97 and found the write/repair versus last-hit distinction accurate. The coordinator preserved staged0149 settings while merging unchanged reviewed prose. Pages, tickets and diff checks pass. Registers86 and97 close as page defects fixed here; no runtime, schema, site or LRU change is claimed.
