@@ -4,7 +4,7 @@ opens: sdlc/tickets/0232-macos-sqlite-checks.md sdlc/records/0226-macos-arm64-pa
 
 # 0232: Check installed SQLite packages on macOS ARM64
 
-Status: proposed checker design for fresh review. Owner: Codex. This ticket serves the macOS ARM64 SQLite package remainder of ticket 0226. Its product source is read-only; it changes only setup and verification code after design review. The isolated M5 checkout is based on pushed `10f85fa7` and visibly reports the unrelated `site/examples/beatles/BENCH` case collision.
+Status: design ACCEPT at `ba45d60e` by a fresh independent reviewer; checker implementation underway. Owner: Codex. This ticket serves the macOS ARM64 SQLite package remainder of ticket 0226. Its product source is read-only; it changes setup, packaging and verification code after design review. The first isolated M5 checkout was based on pushed `10f85fa7` and visibly reported the unrelated `site/examples/beatles/BENCH` case collision.
 
 ## Outcome and retained behavior
 

@@ -1,11 +1,12 @@
 #!/bin/sh
 # One-time setup of the SQLite 3.50.0 amalgamation this surface tests on.
-# `setup.sh FOLDER` copies sqlite3.c, shell.c, sqlite3.h, and sqlite3ext.h
-# from FOLDER. With no argument it fetches the zip from sqlite.org once.
-# Either way it refuses unless both pinned hashes match, then builds the host.
+# `setup.sh [FOLDER [OLD_FOLDER]]` copies checked amalgamations or fetches
+# them from sqlite.org once. macOS also needs a real 3.49.0 host for the floor.
 set -eu
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 target=${SQLITE_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3500000}
+old_target=${SQLITE_OLD_AMALGAMATION:-$HOME/.cache/thinkthen-toolchains/sqlite-amalgamation-3490000}
+command -v shasum >/dev/null 2>&1 || { echo 'setup: shasum is required to check source hashes' >&2; exit 77; }
 . "$here/../../sdlc/scripts/scratch.sh"
 scratch_dir work
 if [ $# -ge 1 ]; then
@@ -17,10 +18,29 @@ else
 fi
 mkdir -p -- "$work/checked"
 cp -- "$from/sqlite3.c" "$from/shell.c" "$from/sqlite3.h" "$from/sqlite3ext.h" "$work/checked/"
-if ! (cd -- "$work/checked" && sha256sum --check --quiet) <"$here/amalgamation.sha256"; then
+if ! (cd -- "$work/checked" && shasum -a 256 -c "$here/amalgamation.sha256" >/dev/null); then
 	echo "setup: the amalgamation in $from does not match the pinned hashes" >&2
 	exit 1
 fi
 mkdir -p -- "$target"
 cp -- "$work/checked/"* "$target/"
-SQLITE_AMALGAMATION=$target sh "$here/tests/host_sqlite.sh"
+if [ "$(uname -s)" = Darwin ]; then
+	if [ $# -ge 2 ]; then
+		old_from=$2
+	elif [ -f "$old_target/sqlite3.c" ] && [ -f "$old_target/shell.c" ]; then
+		old_from=$old_target
+	else
+		curl -fsSL -o "$work/old-amalgamation.zip" https://sqlite.org/2025/sqlite-amalgamation-3490000.zip
+		unzip -q "$work/old-amalgamation.zip" -d "$work"
+		old_from=$work/sqlite-amalgamation-3490000
+	fi
+	mkdir -p -- "$work/old-checked"
+	cp -- "$old_from/sqlite3.c" "$old_from/shell.c" "$old_from/sqlite3.h" "$old_from/sqlite3ext.h" "$work/old-checked/"
+	if ! (cd -- "$work/old-checked" && shasum -a 256 -c "$here/amalgamation-3490000.sha256" >/dev/null); then
+		echo "setup: the 3.49.0 amalgamation in $old_from does not match the pinned hashes" >&2
+		exit 1
+	fi
+	mkdir -p -- "$old_target"
+	cp -- "$work/old-checked/"* "$old_target/"
+fi
+SQLITE_AMALGAMATION=$target SQLITE_OLD_AMALGAMATION=$old_target sh "$here/tests/host_sqlite.sh"
