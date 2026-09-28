@@ -1,9 +1,13 @@
 //! One strict replay miss at each distinct command-owned request shape.
 
 use std::fs;
+use std::io;
 use std::path::Path;
 
 use crate::harness::{Listener, spawn};
+use crate::support::{ENDPOINT_PATH, digest, encoded_decide};
+
+use super::{EVIDENCE, folder, judge, recorded};
 
 type Case<'a> = (&'static str, Vec<&'a str>, &'static [u8], &'static str);
 
@@ -114,4 +118,79 @@ fn cases<'a>(base: &'a str, folder: &'a str, set: &'a str) -> [Case<'a>; 7] {
             "the relate request: the replay folder holds no entry",
         ),
     ]
+}
+
+#[test]
+fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
+    let folder = folder("missed");
+    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
+    assert_eq!(
+        listener.requests().len(),
+        1,
+        "the recording run called once"
+    );
+    let snapshot = || {
+        let mut pending = vec![folder.clone()];
+        let mut entries = Vec::new();
+        while let Some(path) = pending.pop() {
+            let metadata = fs::metadata(&path)?;
+            let contents = if metadata.is_dir() {
+                pending.extend(
+                    fs::read_dir(&path)?
+                        .map(|entry| entry.map(|entry| entry.path()))
+                        .collect::<io::Result<Vec<_>>>()?,
+                );
+                None
+            } else {
+                Some(fs::read(&path)?)
+            };
+            entries.push((
+                path.strip_prefix(&folder)
+                    .expect("snapshot stays in folder")
+                    .to_path_buf(),
+                contents,
+                metadata.modified()?,
+                metadata.permissions().readonly(),
+            ));
+        }
+        entries.sort_by(|left, right| left.0.cmp(&right.0));
+        Ok::<_, io::Error>(entries)
+    };
+    let before = snapshot().expect("folder before miss");
+
+    // Another question makes other request bytes, so the digest names a file
+    // this folder does not hold.
+    let question = "asks for something else";
+    let output = judge(
+        question,
+        listener.base(),
+        &["--replay", &folder.to_string_lossy()],
+        None,
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+    let message = String::from_utf8_lossy(&output.stderr);
+    assert!(message.contains("no entry named"), "{message}");
+    let expected = format!(
+        "{}.json",
+        digest(
+            &format!("{}/{ENDPOINT_PATH}", listener.base()),
+            &encoded_decide(EVIDENCE, "local-1", question)
+        )
+    );
+    assert!(message.contains(&expected), "{message}");
+    assert!(!message.contains(&name), "{message}");
+    for secret in [
+        question,
+        EVIDENCE,
+        "sk-test-value",
+        listener.base(),
+        folder.to_str().expect("UTF-8 folder"),
+    ] {
+        assert!(!message.contains(secret), "{message}");
+    }
+    assert_eq!(listener.requests().len(), 0, "a replay opens no connection");
+    assert_eq!(snapshot().expect("folder after miss"), before);
 }
