@@ -134,7 +134,7 @@ sdlc/scripts/spec
 sdlc/scripts/surfaces
 ```
 
-Cheapest rung first. No gate touches the network. `.github/workflows/gate.yml` runs the first four rungs on every push and every pull request.
+Cheapest rung first. No gate touches the network. Run the first four rungs in GitHub Actions by starting `.github/workflows/gate.yml` manually.
 
 ## License
 
