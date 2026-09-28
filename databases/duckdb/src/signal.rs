@@ -197,38 +197,43 @@ mod tests {
         // The old 32/32 event's fetch_max would retain the pre-wrap epoch.
         let before = next_active((u64::from(u32::MAX) - 1) << 16);
         assert_eq!(before >> 16, u64::from(u32::MAX));
+        let invoking = AtomicU64::new(before);
+        let time = AtomicU64::new(0);
+        let old_ms = u64::from(u32::MAX) - 2;
+        let new_ms = u64::from(u32::MAX) + 3;
+        publish_signal_to(&invoking, &time, before, old_ms);
         let after = next_active(before & !0x7fff);
         assert_eq!(after >> 16, u64::from(u32::MAX) + 1);
-        let invoking = AtomicU64::new(next_active(after));
-        let time = AtomicU64::new(0);
-        publish_signal_to(&invoking, &time, after, 100);
+        invoking.store(next_active(after), Ordering::SeqCst);
+        publish_signal_to(&invoking, &time, after, new_ms);
+        assert_eq!(time.load(Ordering::SeqCst), new_ms);
         assert!(observes_signal(
-            99,
+            old_ms,
             after >> 16,
             invoking.load(Ordering::SeqCst),
             time.load(Ordering::SeqCst)
         ));
         assert!(observes_signal(
-            105,
+            new_ms + 5,
             after >> 16,
             invoking.load(Ordering::SeqCst),
             time.load(Ordering::SeqCst)
         ));
         let later = next_active((after >> 16) << 16);
         invoking.store(later, Ordering::SeqCst);
-        publish_signal_to(&invoking, &time, after, 100);
+        publish_signal_to(&invoking, &time, after, new_ms);
         assert!(!observes_signal(
-            101,
+            new_ms + 1,
             later >> 16,
             invoking.load(Ordering::SeqCst),
             time.load(Ordering::SeqCst)
         ));
 
-        // A live query can span the former 32-bit millisecond rollover.
-        let old_ms = u64::from(u32::MAX) - 2;
-        let new_ms = u64::from(u32::MAX) + 3;
-        assert!(observes_signal(old_ms, 7, (7 << 16) | 0x8001, new_ms));
-        assert!(observes_signal(new_ms + 5, 7, (7 << 16) | 0x8001, new_ms));
-        assert!(!observes_signal(new_ms + 10, 7, (7 << 16) | 0x8001, new_ms));
+        assert!(!observes_signal(
+            new_ms + 10,
+            after >> 16,
+            (after & !0x7fff) | 0x8001,
+            new_ms
+        ));
     }
 }
