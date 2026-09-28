@@ -10,6 +10,7 @@ use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, KEY_VA
 use crate::engine::Width;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Key, Settings, Storage};
+use crate::engine::facade::{Roots, RootsError};
 use crate::engine::usage::Counters;
 use crate::public::error::Error;
 
@@ -67,6 +68,7 @@ pub struct EngineBuilder {
     profile: Option<Profile>,
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
+    ca_bundle: Option<PathBuf>,
 }
 
 impl fmt::Debug for EngineBuilder {
@@ -86,6 +88,7 @@ impl fmt::Debug for EngineBuilder {
             .field("profile", &self.profile)
             .field("record", &self.record)
             .field("replay", &self.replay)
+            .field("ca_bundle", &self.ca_bundle.as_ref().map(|_| "<withheld>"))
             .finish()
     }
 }
@@ -106,11 +109,12 @@ impl EngineBuilder {
             profile: None,
             record: None,
             replay: None,
+            ca_bundle: None,
         }
     }
 
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
-    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
+    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
     /// XDG configuration file. The setters and `build` read no environment.
     ///
     /// # Errors
@@ -142,6 +146,9 @@ impl EngineBuilder {
         }
         if let Some(key) = variable(KEY_VAR)? {
             builder.key = Some(Secret(key.into()));
+        }
+        if let Some(path) = variable("THINKTHEN_CA_BUNDLE")? {
+            builder = builder.ca_bundle(path)?;
         }
         if let Some(model) = config.model() {
             builder = builder.model(model)?;
@@ -180,6 +187,23 @@ impl EngineBuilder {
             return Err(Error::usage("a key is text, not white space"));
         }
         self.key = Some(Secret(value.into()));
+        Ok(self)
+    }
+
+    /// Replace Mozilla roots with certificates from this absolute PEM file at build.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for a relative path. `build` reports unreadable
+    /// or invalid contents before any transport key use or network request.
+    pub fn ca_bundle(mut self, value: impl AsRef<Path>) -> Result<Self, Error> {
+        let path = value.as_ref();
+        if !path.is_absolute() {
+            return Err(Error::usage(
+                "THINKTHEN_CA_BUNDLE must name an absolute local file",
+            ));
+        }
+        self.ca_bundle = Some(path.to_owned());
         Ok(self)
     }
 
@@ -344,6 +368,15 @@ impl EngineBuilder {
         if backend.address_contains_key(self.key.as_ref().map(|Secret(value)| value.as_ref())) {
             return Err(Error::usage(KEY_IN_ADDRESS));
         }
+        let roots = self
+            .ca_bundle
+            .as_deref()
+            .map(Roots::load)
+            .transpose()
+            .map_err(|error| match error {
+                RootsError::Usage(message) => Error::usage(message),
+                RootsError::Local(message) => Error::local(message),
+            })?;
         let profile = self
             .profile
             .as_ref()
@@ -373,7 +406,7 @@ impl EngineBuilder {
             }),
             usage: Arc::new(Counters::new(None)),
         };
-        super::Engine::from_settings(settings, self.max_requests, profile)
+        super::Engine::from_settings(settings, self.max_requests, profile, roots)
     }
 
     fn storage(&self) -> Result<Storage, Error> {

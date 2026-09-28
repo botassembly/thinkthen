@@ -5,12 +5,15 @@
 
 use std::fmt;
 use std::io;
+use std::path::Path;
 use std::time::{Duration, Instant};
 
 use ureq::Agent;
+use ureq::tls::{PemItem, RootCerts};
 
 use crate::core::{Json, Withheld};
 use crate::engine::error::{Error, TransportKind};
+use crate::engine::roots::{self, Error as RootsError};
 use crate::engine::usage::Counters;
 use crate::engine::{Permit, Width, Widths, backoff};
 
@@ -35,6 +38,35 @@ impl Key {
 impl fmt::Debug for Key {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter.write_str("Key(<withheld>)")
+    }
+}
+
+/// Parsed replacement trust roots, retained without their source file.
+#[derive(Clone)]
+pub(crate) struct Roots(RootCerts);
+
+impl Roots {
+    pub(crate) fn load(path: &Path) -> Result<Self, RootsError> {
+        let bundle = roots::read(path)?;
+        let mut certs = Vec::with_capacity(bundle.count);
+        for item in ureq::tls::parse_pem(&bundle.bytes) {
+            let Ok(PemItem::Certificate(cert)) = item else {
+                return Err(RootsError::Usage(
+                    "THINKTHEN_CA_BUNDLE has a malformed PEM certificate",
+                ));
+            };
+            certs.push(cert);
+        }
+        if certs.len() != bundle.count {
+            return Err(RootsError::Usage(
+                "THINKTHEN_CA_BUNDLE has a malformed PEM certificate",
+            ));
+        }
+        Ok(Self(RootCerts::new_with_certs(&certs)))
+    }
+
+    pub(crate) fn configured(&self) -> RootCerts {
+        self.0.clone()
     }
 }
 
@@ -92,12 +124,29 @@ impl Client {
     /// clear text. `ureq` reads `ALL_PROXY`, `HTTPS_PROXY`, `HTTP_PROXY`, and
     /// `NO_PROXY` on its own, and `proxy(None)` cancels all four.
     pub(crate) fn new(timeout: Duration, secure: bool, widths: &'static Widths) -> Self {
+        Self::with_roots(timeout, secure, widths, None)
+    }
+
+    /// Build a pool with one parsed replacement trust snapshot when selected.
+    pub(crate) fn with_roots(
+        timeout: Duration,
+        secure: bool,
+        widths: &'static Widths,
+        roots: Option<&Roots>,
+    ) -> Self {
         let mut config = Agent::config_builder()
             .timeout_global(Some(timeout))
             .http_status_as_error(false)
             .max_redirects(0)
             .max_idle_connections(Width::MOST.get())
             .max_idle_connections_per_host(Width::MOST.get());
+        if let Some(roots) = roots {
+            config = config.tls_config(
+                ureq::tls::TlsConfig::builder()
+                    .root_certs(roots.configured())
+                    .build(),
+            );
+        }
         if !secure {
             config = config.proxy(None);
         }
