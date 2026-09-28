@@ -26,6 +26,11 @@ pub(crate) fn hex(bytes: &[u8]) -> String {
         .collect()
 }
 
+/// The digest of exact file bytes, before a text value is parsed or displayed.
+pub(crate) fn bytes_sha256(bytes: &[u8]) -> String {
+    hex(&Sha256::digest(bytes))
+}
+
 /// Write one half of a byte as its hexadecimal figure.
 fn nibble(value: u8) -> char {
     char::from(if value < 10 {
