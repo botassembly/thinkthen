@@ -138,7 +138,7 @@ where
     I::Item: crate::public::Evidence,
 {
     fn pull(&mut self) -> Option<Result<T, Error>> {
-        if self.deferred_ask {
+        if self.deferred_ask && self.scheduler.is_some() {
             self.deferred_ask = false;
             self.feed();
         }
@@ -187,6 +187,7 @@ where
             Event::Row(rows) => self.take_rows(rows),
             Event::End(ended) => {
                 let ended = self.join().and(ended);
+                self.deferred_ask = false;
                 let ended = self.stop.finish(ended);
                 let facts = self.stop.facts();
                 self.facts = Some(facts.clone());
@@ -325,6 +326,7 @@ where
 
     fn end(&mut self, error: Error) -> Error {
         let _joined = self.join();
+        self.deferred_ask = false;
         let error = match self.stop.finish::<()>(Err(error)) {
             Err(error) => error,
             Ok(()) => Error::defect("a failed stream returned a value"),
