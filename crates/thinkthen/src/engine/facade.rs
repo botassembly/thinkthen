@@ -321,9 +321,20 @@ impl Engine {
         cancel: &Cancel,
         mut each: impl FnMut(Answered) -> Result<(), E>,
     ) -> Result<(), E> {
+        self.ask_chunks_with_plan(chunks, cancel, |_, answered| each(answered))
+    }
+
+    /// Retain each already prepared plan beside its ordered reply for a
+    /// caller that must name the actual logical questions it answered.
+    pub(crate) fn ask_chunks_with_plan<E: From<Error>>(
+        &self,
+        chunks: Vec<Chunk>,
+        cancel: &Cancel,
+        mut each: impl FnMut(&Plan, Answered) -> Result<(), E>,
+    ) -> Result<(), E> {
         let state = self.state(cancel)?;
         let send = |chunk: Chunk| {
-            request::ask_sent(
+            let answered = request::ask_sent(
                 &self.backend,
                 &chunk.plan,
                 chunk.request,
@@ -331,16 +342,20 @@ impl Engine {
                 cancel,
                 self.transport(&state),
                 || self.key(),
-            )
+            )?;
+            Ok::<_, Error>((chunk.plan, answered))
         };
         let jobs = state.width.min(chunks.len());
         if jobs < 2 {
             for chunk in chunks {
-                each(send(chunk)?)?;
+                let (plan, answered) = send(chunk)?;
+                each(&plan, answered)?;
             }
             return Ok(());
         }
-        crate::engine::workers::ordered(jobs, chunks, cancel, &send, each)
+        crate::engine::workers::ordered(jobs, chunks, cancel, &send, |(plan, answered)| {
+            each(&plan, answered)
+        })
     }
 
     /// Answer framed inputs over this engine's width and emit them in input order.

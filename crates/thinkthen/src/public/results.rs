@@ -6,7 +6,7 @@ use std::fmt;
 mod call;
 pub use call::{Call, Facts};
 mod observation;
-pub(crate) use observation::ObservedQuestion;
+pub(crate) use observation::{ObservedQuestion, observe_chunk};
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
 
 use serde::Serialize;

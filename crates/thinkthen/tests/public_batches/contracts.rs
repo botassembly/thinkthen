@@ -335,3 +335,114 @@ fn annotation_observer_keeps_named_success_and_failure_in_set_order() {
         ]
     );
 }
+
+#[test]
+fn recognition_observer_names_boundary_then_kind_requests() {
+    let _serial = serial();
+    let listener = Listener::answering(|body| {
+        let request: serde_json::Value = serde_json::from_slice(body).expect("request");
+        let mut answers = serde_json::Map::new();
+        for (name, question) in request["questions"].as_object().expect("questions") {
+            let labels = question["criteria"].as_object().expect("labels");
+            let picked = if labels.contains_key("SINGLE") {
+                "SINGLE"
+            } else {
+                "person"
+            };
+            let probabilities = labels
+                .keys()
+                .map(|label| (label.clone(), serde_json::json!(u8::from(label == picked))))
+                .collect::<serde_json::Map<_, _>>();
+            answers.insert(
+                name.clone(),
+                serde_json::json!({"type":"choice","choice":picked,"probabilities":probabilities}),
+            );
+        }
+        Canned::ok(
+            &serde_json::json!({"model":"jev-latest","answers":answers,"usage":{"input_tokens":3,"output_tokens":1}})
+                .to_string(),
+        )
+    })
+    .expect("listener");
+    let engine = engine(listener.base());
+    let asked = thinkthen::Recognize::builder()
+        .kind(thinkthen::Kind::new("person", None).expect("kind"))
+        .and_then(thinkthen::RecognizeBuilder::build)
+        .expect("recognize");
+    let seen = Mutex::new(Vec::new());
+    let observe = |event: RecordObservation<'_>| match event {
+        RecordObservation::Question {
+            stage,
+            position,
+            detail,
+            ..
+        } => {
+            assert_eq!(detail.question_sha256().len(), 64);
+            assert_eq!(detail.requests().len(), 1);
+            assert_eq!(detail.requests_sent(), 1);
+            seen.lock()
+                .expect("observations")
+                .push((stage.expect("stage"), position));
+        }
+        RecordObservation::Row { value, .. } => {
+            assert!(matches!(value, ObservedRow::Recognized(_)));
+            seen.lock().expect("observations").push(("row", 0));
+        }
+    };
+    let recognized = engine
+        .recognize_with(&asked, "Ada", CallOptions::new().observe(&observe))
+        .expect("recognized");
+    assert_eq!(recognized.value().entities().len(), 1);
+    assert_eq!(listener.count(), 2);
+    assert_eq!(
+        *seen.lock().expect("observations"),
+        [("boundary", 0), ("kind", 0), ("row", 0)]
+    );
+}
+
+#[test]
+fn relation_observer_names_actual_pair_before_final_edges() {
+    let _serial = serial();
+    let backend = Backend::start().expect("backend");
+    let engine = engine(&format!("{}/generic/v1", backend.origin()));
+    let asked = thinkthen::Relate::builder()
+        .relation(
+            thinkthen::RelationRule::one_way("works_with", "person", "organization").expect("rule"),
+        )
+        .and_then(thinkthen::RelateBuilder::build)
+        .expect("relate");
+    let entities = [
+        thinkthen::Entity::new("Ada", "person").expect("person"),
+        thinkthen::Entity::new("Acme", "organization").expect("organization"),
+    ];
+    let seen = Mutex::new(Vec::new());
+    let observe = |event: RecordObservation<'_>| match event {
+        RecordObservation::Question {
+            stage,
+            position,
+            detail,
+            ..
+        } => {
+            assert_eq!(stage, Some("relation"));
+            assert_eq!(position, 0);
+            assert_eq!(detail.question_sha256().len(), 64);
+            assert_eq!(detail.requests().len(), 1);
+            assert_eq!(detail.requests_sent(), 1);
+            seen.lock().expect("observations").push("question");
+        }
+        RecordObservation::Row { value, .. } => {
+            let ObservedRow::Relations(edges) = value else {
+                panic!("relation row");
+            };
+            assert_eq!(edges.len(), 1);
+            assert_eq!(edges[0].relation(), "works_with");
+            seen.lock().expect("observations").push("row");
+        }
+    };
+    let edges = engine
+        .relate_with(&asked, entities, CallOptions::new().observe(&observe))
+        .expect("related");
+    assert_eq!(edges.value().len(), 1);
+    assert_eq!(backend.count(), 1);
+    assert_eq!(*seen.lock().expect("observations"), ["question", "row"]);
+}

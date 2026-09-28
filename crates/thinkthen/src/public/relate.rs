@@ -13,6 +13,10 @@ use crate::public::options::{CallOptions, Stop};
 use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
+mod observation;
+use crate::public::results::observe_chunk;
+use observation::observe_row;
+
 /// The most entities one `relate` call takes.
 const MOST_ENTITIES: usize = 255;
 
@@ -267,7 +271,12 @@ impl Engine {
             .collect();
         let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
         if admitted.is_empty() {
-            return Stop::begin(options)?.run_call(0, |_| Ok(Vec::new()));
+            let stop = Stop::begin(options)?;
+            return stop.run_call(0, |_| {
+                let edges = Vec::new();
+                observe_row(&stop, &edges);
+                Ok(edges)
+            });
         }
         let engine = self.for_model(ask.0.model.as_ref())?;
         let prepared =
@@ -275,11 +284,19 @@ impl Engine {
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
         let stop = Stop::begin(options)?;
         stop.run_call(1, |cancel| {
-            engine
-                .relate(prepared, &admitted, threshold, cancel)
-                .map_err(Error::from)
-        })?
-        .try_map(|execution| {
+            let mut positions = [0; 4];
+            let execution = engine
+                .relate_observed(prepared, &admitted, threshold, cancel, |plan, answered| {
+                    observe_chunk(
+                        &stop,
+                        engine.backend(),
+                        plan,
+                        answered,
+                        std::iter::repeat_n("relation", plan.questions().len()),
+                        &mut positions,
+                    )
+                })
+                .map_err(Error::from)?;
             if execution.failed > 0 {
                 return Err(Error::of(
                     ErrorKind::Backend,
@@ -290,7 +307,7 @@ impl Engine {
                     ),
                 ));
             }
-            execution
+            let edges = execution
                 .edges
                 .into_iter()
                 .map(|edge| {
@@ -302,7 +319,9 @@ impl Engine {
                         relation: edge.relation,
                     })
                 })
-                .collect()
+                .collect::<Result<Vec<_>, Error>>()?;
+            observe_row(&stop, &edges);
+            Ok(edges)
         })
     }
 }

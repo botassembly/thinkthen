@@ -3,10 +3,13 @@
 use std::fmt;
 
 use crate::core::{
-    self, AnswerOutcome, Backend, BackendProfile, ModelName, ProfileName, Threshold, Value,
+    self, AnswerOutcome, Backend, ModelName, ProfileName, Threshold,
 };
+use crate::engine::error::Error as EngineError;
+use crate::engine::facade::Answered;
 use crate::public::annotated::{FailureCause, NamedAnnotation};
 use crate::public::error::Error;
+use crate::public::options::Stop;
 use crate::public::recognize::Recognized;
 use crate::public::relate::Edge;
 
@@ -296,4 +299,71 @@ impl ObservedQuestion {
             failed_questions: 0,
         }
     }
+}
+
+fn stage_slot(stage: &str) -> Option<usize> {
+    match stage {
+        "boundary" => Some(0),
+        "kind" => Some(1),
+        "edge" => Some(2),
+        "relation" => Some(3),
+        _ => None,
+    }
+}
+
+/// Name each logical question in one actual ordered request chunk.
+pub(crate) fn observe_chunk(
+    stop: &Stop<'_>,
+    backend: &Backend,
+    plan: &core::Plan,
+    answered: &Answered,
+    stages: impl ExactSizeIterator<Item = &'static str>,
+    positions: &mut [usize; 4],
+) -> Result<(), EngineError> {
+    if !stop.observing() {
+        return Ok(());
+    }
+    let rows = plan.questions().len();
+    if stages.len() != rows || answered.reply.outcomes().len() != rows {
+        return Err(EngineError::Defect(
+            "an observed chunk has unequal questions",
+        ));
+    }
+    for (within_chunk, ((stage, question), outcome)) in stages
+        .zip(plan.questions())
+        .zip(answered.reply.outcomes())
+        .enumerate()
+    {
+        let place = stage_slot(stage).ok_or(EngineError::Defect("an observed stage is unknown"))?;
+        let current = positions
+            .get_mut(place)
+            .ok_or(EngineError::Defect("an observed stage has no counter"))?;
+        let position = *current;
+        *current += 1;
+        let detail = ObservedQuestion::from_reply(
+            question,
+            None,
+            None,
+            backend,
+            outcome,
+            &answered.reply,
+            answered.request.as_str(),
+            answered.requests_sent,
+            answered.replayed,
+            rows,
+            within_chunk,
+        )
+        .map_err(|_| EngineError::Defect("an observed question digest could not be written"))?;
+        stop.observe(RecordObservation::Question {
+            index: 0,
+            member: None,
+            stage: Some(stage),
+            position,
+            detail: QuestionDetail::of(&detail),
+        });
+        if stop.observer_panicked() {
+            return Err(EngineError::Defect("the question observer panicked"));
+        }
+    }
+    Ok(())
 }

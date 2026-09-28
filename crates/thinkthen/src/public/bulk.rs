@@ -9,8 +9,7 @@ use annotate_observation::observe_annotated;
 mod annotation;
 use annotation::annotated;
 
-use crate::core::{self, Find, Plan, Value, ranking};
-use crate::engine::facade::{self, Completed};
+use crate::core::{self, Find, Value, ranking};
 use crate::public::annotated::AnnotatedRecord;
 use crate::public::batch::{self, Batch};
 use crate::public::choice::Choice;

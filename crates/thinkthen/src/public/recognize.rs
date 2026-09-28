@@ -12,6 +12,10 @@ use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{self, Description};
 use crate::public::results::Written;
 
+mod observation;
+use crate::public::results::observe_chunk;
+use observation::observe_row;
+
 fn nonblank(value: &str, what: &str) -> Result<String, Error> {
     if value.trim().is_empty() || value.chars().any(char::is_control) {
         return Err(Error::usage(format!(
@@ -419,14 +423,28 @@ impl Engine {
         let engine = self.for_model(ask.0.model.as_ref())?;
         let stop = Stop::begin(options)?;
         stop.run_call(1, |cancel| {
-            engine
-                .recognize(&ask.0, evidence, MAX_TEXT_BYTES, cancel)
-                .map_err(Error::from)
-        })?
-        .try_map(|found| {
+            let mut positions = [0; 4];
+            let found = engine
+                .recognize_observed(
+                    &ask.0,
+                    evidence,
+                    MAX_TEXT_BYTES,
+                    cancel,
+                    |stages, plan, answered| {
+                        observe_chunk(
+                            &stop,
+                            engine.backend(),
+                            plan,
+                            answered,
+                            stages.iter().copied(),
+                            &mut positions,
+                        )
+                    },
+                )
+                .map_err(Error::from)?;
             let found = found.value;
             let json = Written::of(&found)?;
-            Ok(Recognized {
+            let row = Recognized {
                 json,
                 entities: found.entities.into_iter().map(RecognizedEntity).collect(),
                 relations: found.relations.map(|edges| {
@@ -440,7 +458,9 @@ impl Engine {
                         })
                         .collect()
                 }),
-            })
+            };
+            observe_row(&stop, &row);
+            Ok(row)
         })
     }
 }
