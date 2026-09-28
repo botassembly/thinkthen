@@ -11,6 +11,7 @@ use std::time::Duration;
 use crate::{engines, errors, signal};
 use thinkthen::{CancelToken, LoadedQuestion, Question, QuestionSet};
 
+#[path = "ffi/complete_listed/ffi.rs"]
 mod complete_listed;
 mod find;
 mod listed;
