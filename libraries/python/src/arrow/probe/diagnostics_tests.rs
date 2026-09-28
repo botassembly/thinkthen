@@ -152,10 +152,14 @@ fn child() {
             let held = Imported::column(producer.bind(py).as_any())?;
             let worker = std::thread::spawn(move || crate::caught(|| drop(held)));
             assert!(py.detach(|| worker.join()).is_ok());
-            // SAFETY: this CPython test owns the interpreter; the pending
-            // signal is dispatched by the same check the binding's wait uses.
+            // SAFETY: this CPython test owns the interpreter. The binding's
+            // real waiting caller dispatches this pending signal.
             unsafe { pyo3::ffi::PyErr_SetInterrupt() };
-            crate::diagnostics::host(|| py.check_signals())
+            crate::worker::run(py, crate::worker::Controls::default(), |_options| {
+                std::thread::sleep(std::time::Duration::from_millis(150));
+                Ok(7)
+            })
+            .map(|_| ())
         });
         assert!(observed.is_err());
     });
