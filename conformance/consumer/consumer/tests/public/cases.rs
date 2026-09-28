@@ -181,6 +181,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let engine = engine(&base)?;
     let raw = |held: &Option<Box<RawValue>>| held.as_ref().map_or("", |raw| raw.get()).to_owned();
     let question = raw(&verbatim.question);
+    let sent_before = backend.count();
     match (
         case["verb"].as_str().unwrap_or_default(),
         success["kind"].as_str(),
@@ -215,7 +216,15 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
             same("ranking", &rows.collect(), &success["operation"]["ranking"])
         }
         (_, kind) => loaded(&engine, &question, kind, &texts, &success, &base),
+    }?;
+    if matches!(case["verb"].as_str(), Some("filter" | "rank")) {
+        same(
+            "request count",
+            &json!(backend.count() - sent_before),
+            &json!(exchanges.len()),
+        )?;
     }
+    Ok(())
 }
 
 /// A question file: one judgment, `filter`, or `decide_many`.
