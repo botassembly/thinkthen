@@ -119,7 +119,7 @@ pub(super) fn run(
     let judging = Judging::new(configuration)?;
     let recording = judging.engine.recording();
     let outcome = judging.engine.records(
-        output.holds(),
+        output.flow(),
         judging.environment.cancel(),
         |asks, events| {
             let (sender, raw) = sync_channel(AHEAD);
