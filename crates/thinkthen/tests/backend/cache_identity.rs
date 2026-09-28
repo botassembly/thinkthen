@@ -242,7 +242,9 @@ fn an_old_exact_replay_stays_read_only_and_a_miss_explains_the_digest() {
     let missed = decide("http://127.0.0.1:2/v1", &recording, "--replay", false).expect("miss runs");
     assert_eq!(missed.status.code(), Some(5));
     let message = String::from_utf8_lossy(&missed.stderr);
-    assert!(message.starts_with("thinkthen: the replay folder holds no entry named `"));
+    assert!(message.starts_with(
+        "thinkthen: the decide request for one document: the replay folder holds no entry named `"
+    ));
     assert!(
         message.ends_with("`; the entry name covers the backend interface, address, and request\n")
     );

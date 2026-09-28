@@ -13,7 +13,7 @@ use crate::core::{
 };
 use crate::edge::{self, Environment};
 use crate::engine::facade::{Engine, MAX_TEXT_BYTES, Probabilities, Recognized};
-use crate::failure::Failure;
+use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 use crate::schedule;
 use crate::table::Rows as TableRows;
@@ -176,12 +176,15 @@ fn judged_record(
 ) -> Result<schedule::Judged, Failure> {
     let evidence = reading.evidence(&record)?;
     let text = evidence.as_text()?.into_owned();
-    let recognition = running.engine.recognize(
-        spec,
-        &text,
-        running.max_text_bytes,
-        running.environment.cancel(),
-    )?;
+    let recognition = running
+        .engine
+        .recognize(
+            spec,
+            &text,
+            running.max_text_bytes,
+            running.environment.cancel(),
+        )
+        .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Recognize))?;
     let (value, details, aggregate) = (recognition.value, recognition.details, recognition.meta);
     let line = if running.common.details {
         let model = aggregate
