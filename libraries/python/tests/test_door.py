@@ -175,7 +175,7 @@ def test_a_frame_keeps_types_and_nested_failures():
             pass
     server = http.server.HTTPServer(("127.0.0.1", 0), Listener)
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    engine = tt.Engine(base_url=f"http://127.0.0.1:{server.server_port}/v1", cache=False)
+    engine = tt.Engine(base_url=f"http://127.0.0.1:{server.server_port}/v1", cache=False, batch=1)
     form = {"version": 1, "questions": {"late": {"decide": "Late?"},
             "urgent": {"score": "How urgent?", "levels": ["Routine.", "Soon.", "Now."]},
             "kinds": {"tag": "Which kinds?", "labels": ["bill", "ship"]}}}

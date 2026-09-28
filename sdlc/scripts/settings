@@ -46,7 +46,7 @@ ENGINE_CELLS = {
     "Retries": ("max_retries",), "Recording": ("record", "replay"),
 }
 ENGINE_SOURCES = {
-    "Rust": "crates/thinkthen/src/public/settings.rs", "Python": "libraries/python/src/engine.rs",
+    "Rust": "crates/thinkthen/src/public/settings.rs", "Python": "libraries/python/src/engine/settings.rs",
     "TypeScript": "libraries/typescript/src/door.rs", "Ruby": "libraries/ruby/src/lib.rs",
     "R": "libraries/r/thinkthen/src/rust/src/lib.rs", "C": "libraries/c/src/settings.rs",
     "DuckDB": "databases/duckdb/src/engines.rs", "PostgreSQL": "databases/postgresql/src/call/settings.rs",
