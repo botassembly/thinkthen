@@ -37,6 +37,17 @@ One document prints one object:
 
 `start` is inclusive and `end` is exclusive. Both count Unicode scalar values, and `length` is `end - start`. Names print in order of `start`, then `end`. Equal names at different offsets remain separate. No name is a successful result: `{"entities":[]}`.
 
+The recognized span is named `text` on every current surface. Offset units vary with the host:
+
+| Surface | Recognized span field | `start`, `end`, and `length` |
+| --- | --- | --- |
+| Command, C JSON door, Rust, Ruby, Python scalar and frames | `text`; Python Polars frames add `row`, and pandas frames put spans in each row's `names` list | Zero-based Unicode scalar positions; `end` is exclusive |
+| TypeScript | `text` | Zero-based UTF-16 code units; `end` is exclusive |
+| R data frames | `text` | One-based Unicode character positions; `end` is inclusive |
+| SQLite, PostgreSQL, DuckDB recognition rows | `text` | Zero-based Unicode character positions; `end` is exclusive |
+
+`relate` reads a different entity shape with `name` and `kind`. It also accepts a recognized `text` when `name` is absent, so a recognized span can feed `relate` without renaming. [Shared case 41](../conformance/cases.json) fixes the offset difference for `Le café 😀 Maria Chen arrived.`; the recognized `Maria Chen` spans scalar positions `[10,20)`, TypeScript UTF-16 positions `[11,21)`, and R positions 11 through 20 inclusive.
+
 `strength` is P(kind) times P(span), rounded to four decimal places. P(kind) is step 2's probability of the chosen kind. With no kinds, P(kind) is 1. P(span) is the share of the valid tag paths, weighted by their floored probabilities, that tag exactly the stretch step 1 found as one name. One forward-backward pass computes it from the probabilities the decode already holds. A widened name keeps its step-1 P(span). `strength` ranks names. It is not itself a probability.
 
 `--threshold` keeps a name whose printed strength is at or above the cut, so `audit` rescoring a saved line matches a live run. The default is `0.5`, and the cut stays above 0. A name under the cut leaves before step 3.

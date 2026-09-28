@@ -195,16 +195,25 @@ def test_a_frame_keeps_types_and_nested_failures():
 
 def test_recognize_on_a_frame_equals_each_text_alone(backend, tmp_path):
     """Decision 4: one row per name, with its source row counted from 1,
-    equal to ``recognize`` of each text."""
+    equal to ``recognize`` of each text; its span rows feed ``relate``."""
     printed = run(SETUP + """
     frame = pl.DataFrame({"body": texts})
     got = engine.recognize(frame, kinds=["bill", "ship"], on="body").value
     alone = [(row, one.text, one.start, one.end, one.length, one.kind, one.strength)
              for row, text in enumerate(texts, 1)
              for one in engine.recognize(text, kinds=["bill", "ship"]).value.entities]
-    print(got.columns, got.rows() == alone, len(alone) > 0)
+    spans = list({(span["text"], span["kind"]): span
+                  for span in got.select("text", "kind").to_dicts()}.values())
+    rules = {"knows": ("*", "*")}
+    direct = engine.relate([(span["text"], span["kind"]) for span in spans],
+                           relations=rules).value
+    handed = engine.relate(spans, relations=rules).value
+    edges = lambda rows: [(one.relation, one.source.name, one.target.name) for one in rows]
+    print(got.columns == ["row", "text", "start", "end", "length", "kind", "strength"],
+          got.rows() == alone, len(spans) > 1, len(edges(handed)) > 0,
+          edges(handed) == edges(direct))
     """, child_env(backend, tmp_path))
-    assert printed.split("]")[1].split() == ["True", "True"]
+    assert printed.strip() == "True True True True True"
 
 
 def test_importing_the_package_leaves_polars_and_pandas_out(backend, tmp_path):
