@@ -6,7 +6,7 @@ use crate::asking::{self, Folders};
 use crate::core::{Backend, ModelName};
 use crate::edge::Environment;
 use crate::engine::facade;
-use crate::failure::Failure;
+use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 
 mod config;
@@ -71,7 +71,9 @@ pub(crate) fn run(
         arguments.common.jobs,
     )?;
     let threshold = settled.spec.threshold.cut_value().unwrap_or(0.5);
-    let execution = engine.relate(prepared, &entities, threshold, environment.cancel())?;
+    let execution = engine
+        .relate(prepared, &entities, threshold, environment.cancel())
+        .map_err(|error| Failure::from(error).with_replay_context(ReplayContext::Relate))?;
     let partial = execution.failed > 0;
     let output = result::Output {
         details: arguments.common.details,
