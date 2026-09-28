@@ -22,6 +22,7 @@ struct ThinkThenText {
 struct ThinkThenSettings {
 	int64_t throttle;
 	int64_t max_requests;
+	int64_t max_request_bytes;
 	int64_t max_requests_total;
 	const uint8_t *cache_bytes;
 	size_t cache_len;

@@ -52,7 +52,7 @@ The replies are bare values:
 - `annotate`: an array holding each record's `value_json` object.
 - `recognize`: the `Recognized::to_json` object.
 - `relate`: `{"edges":[...]}`.
-- `usage`: `{"requests_sent","input_tokens","output_tokens","cache_answers"}`, this process's totals.
+- `usage`: `{"requests_sent","retries","input_tokens","output_tokens","cache_answers"}`, this process's totals.
 
 With `"details": true`, a single judgment replies with the `thinkthen.result/1` line from `Details::to_json`.
 

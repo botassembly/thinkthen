@@ -22,7 +22,10 @@ for (case in corpus$cases) {
       'library(jsonlite)', body,
       'tryCatch({',
       'do.call(tt_engine, settings)',
-      if (identical(step$verb, "decide_many"))
+      if (identical(step$verb, "relate"))
+        sprintf('value <- nrow(tt_relate(jsonlite::fromJSON(%s), relations = %s))',
+                literal(literal(case$entities)), literal(case$relation))
+      else if (identical(step$verb, "decide_many"))
         sprintf('value <- tt_decide(%s, c("refund one", "refund two", "refund three"))', literal(corpus$question))
       else if (!is.null(step$model))
         sprintf('value <- tt_details(%s, %s)', literal(corpus$question), literal(step$text))
@@ -34,6 +37,7 @@ for (case in corpus$cases) {
     check(paste(case$id, "child status"), out$status == 0L)
     got <- jsonlite::fromJSON(out$text, simplifyVector = FALSE)
     if (!is.null(step$error)) check(paste(case$id, "error"), identical(got$error, step$error))
+    else if (identical(step$verb, "relate")) check(paste(case$id, "edges"), identical(got$value, step$edges))
     else if (!is.null(step$model)) {
       check(paste(case$id, "model"), identical(got$value$meta$model, step$model))
       check(paste(case$id, "value"), isTRUE(got$value$value))

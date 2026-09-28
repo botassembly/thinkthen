@@ -156,6 +156,7 @@ struct Settings<'a> {
     model: Option<&'a str>,
     throttle: Option<u8>,
     most: Option<usize>,
+    max_request_bytes: Option<usize>,
     timeout: Option<u64>,
     retries: Option<u32>,
     record: Option<std::path::PathBuf>,
@@ -175,6 +176,9 @@ impl Settings<'_> {
         }
         if self.most.is_some() {
             builder = builder.max_requests(self.most).map_err(refused)?;
+        }
+        if let Some(size) = self.max_request_bytes {
+            builder = builder.max_request_bytes(size).map_err(refused)?;
         }
         if let Some(seconds) = self.timeout {
             builder = builder
@@ -293,16 +297,17 @@ impl Engine {
     /// Start from what `thinkthen` reads from the environment, then apply
     /// each given setting (amendment changes 11 to 13).
     #[new]
-    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, max_requests=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
+    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, max_requests=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
     #[expect(
         clippy::too_many_arguments,
-        reason = "PyO3's keyword-only constructor exposes the ten engine settings"
+        reason = "PyO3's keyword-only constructor exposes the engine settings"
     )]
     fn new(
         base_url: Option<&str>,
         model: Option<&str>,
         throttle: Arg<'_, '_>,
         max_requests: Arg<'_, '_>,
+        max_request_bytes: Arg<'_, '_>,
         cache: Arg<'_, '_>,
         timeout: Arg<'_, '_>,
         max_retries: Arg<'_, '_>,
@@ -317,6 +322,7 @@ impl Engine {
                     model,
                     throttle: checked_throttle(throttle)?,
                     most: setting(max_requests, MAX_REQUESTS)?,
+                    max_request_bytes: setting(max_request_bytes, "max_request_bytes is a whole number")?,
                     timeout: setting(timeout, "a timeout is a whole number of seconds above zero")?,
                     retries: setting(max_retries, "max_retries is a whole number")?,
                     record: folder_path(py, record, "record is a folder path")?,
@@ -493,6 +499,7 @@ impl Engine {
         let counts = self.0.usage();
         let totals = PyDict::new(py);
         totals.set_item("requests_sent", counts.requests_sent())?;
+        totals.set_item("retries", counts.retries())?;
         totals.set_item("cache_answers", counts.cache_answers())?;
         totals.set_item("input_tokens", counts.input_tokens())?;
         totals.set_item("output_tokens", counts.output_tokens())?;

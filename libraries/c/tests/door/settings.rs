@@ -43,7 +43,21 @@ fn shared_settings_reach_the_c_constructor() {
             script.ask("env", &["THINKTHEN_CACHE", &folder.to_string_lossy()]);
             script.ask("settings", &[&base, &settings.to_string()]);
             let question = json!({"decide": corpus["question"]}).to_string();
-            if step["verb"] == "decide_many" {
+            if step["verb"] == "relate" {
+                let relation = case["relation"].as_str().expect("relation");
+                let (name, ends) = relation.split_once('=').expect("rule name");
+                let (source, target) = ends.split_once(':').expect("rule ends");
+                let rule = json!({"version":1,"relate":{"relations":[{"name":name,"source":source,"target":target}]}}).to_string();
+                let entities: Vec<String> = case["entities"]
+                    .as_array()
+                    .expect("entities")
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect();
+                let mut fields = vec![base.as_str(), rule.as_str()];
+                fields.extend(entities.iter().map(String::as_str));
+                script.ask("relate", &fields);
+            } else if step["verb"] == "decide_many" {
                 let records = step["records"].as_array().expect("records");
                 let mut fields = vec![base.as_str(), question.as_str()];
                 fields.extend(
@@ -78,6 +92,14 @@ fn shared_settings_reach_the_c_constructor() {
                     4
                 };
                 assert_eq!(said[1].0, code, "{id}: {:?}", said[1]);
+            } else if step["verb"] == "relate" {
+                let edges: Value = serde_json::from_str(&said[1].1).expect("edges");
+                assert_eq!(said[1].0, 0, "{id}: {:?}", said[1]);
+                assert_eq!(
+                    edges["edges"].as_array().map(Vec::len),
+                    step["edges"].as_u64().map(|n| n as usize),
+                    "{id}"
+                );
             } else if let Some(model) = step["model"].as_str() {
                 let details: Value = serde_json::from_str(&said[1].1).expect("details");
                 assert_eq!(details["meta"]["model"], model, "{id}");
@@ -126,6 +148,7 @@ fn the_c_settings_object_refuses_bad_shapes_and_keys() {
         (r#"{"timeout":1,"timeout":2}"#, "timeout"),
         (r#"{"throttle":8.0}"#, "throttle"),
         (r#"{"max_retries":-1}"#, "max_retries"),
+        (r#"{"max_request_bytes":0}"#, "max_request_bytes"),
     ] {
         let mut script = Script::default();
         script.ask("settings", &[&base, given]);

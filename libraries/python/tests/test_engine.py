@@ -45,6 +45,7 @@ def test_bad_settings_are_usage_errors_that_send_nothing(backend, tmp_path):
         said(throttle=throttle)
     said("rank", max_requests=2)
     said(max_requests=0)
+    said(max_request_bytes=0)
     said(timeout=0)
     said(timeout=True)
     said(max_retries=-1)
@@ -54,6 +55,7 @@ def test_bad_settings_are_usage_errors_that_send_nothing(backend, tmp_path):
     assert printed.splitlines() == 6 * [throttle] + [
         "UsageError this engine answers at most 2 records in one call",
         "UsageError a request limit is a whole number of 1 or more",
+        "UsageError max_request_bytes is a whole number of at least 1",
         "UsageError a timeout is a time above zero",
         "UsageError a timeout is a whole number of seconds above zero",
         "UsageError max_retries is a whole number",

@@ -298,13 +298,14 @@ fn tt_relate_frame(
 #[extendr]
 #[expect(
     clippy::too_many_arguments,
-    reason = "R's engine constructor passes all ten public settings through this binding"
+    reason = "R's engine constructor passes its public settings through this binding"
 )]
 fn tt_engine_set(
     base_url: Robj,
     model: Robj,
     throttle: Robj,
     max_requests: Robj,
+    max_request_bytes: Robj,
     cache: Robj,
     timeout: Robj,
     max_retries: Robj,
@@ -324,6 +325,7 @@ fn tt_engine_set(
         model: optional(&model, "model")?,
         throttle: whole_of(&throttle, "throttle")?,
         max_requests: whole_of(&max_requests, "max_requests")?,
+        max_request_bytes: whole_of(&max_request_bytes, "max_request_bytes")?,
         cache,
         timeout: whole_of(&timeout, "timeout")?,
         max_retries: whole_of(&max_retries, "max_retries")?,

@@ -202,6 +202,7 @@ export interface RelateOptions extends CallOptions {
 /** This process's totals. Failed calls and retries count, and nothing resets them. */
 export interface Usage {
   requests_sent: number;
+  retries: number;
   cache_answers: number;
   input_tokens: number;
   output_tokens: number;
@@ -221,6 +222,8 @@ export interface EngineOptions {
   throttle?: number;
   /** Refuse a call over more records than this. */
   maxRequests?: number;
+  /** Request-byte ceiling for a split plan; a lone question still goes alone. */
+  maxRequestBytes?: number;
   /** `false` reads and writes no cache; a string names the cache folder. */
   cache?: false | string;
   timeoutSeconds?: number;

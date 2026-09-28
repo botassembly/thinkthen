@@ -102,6 +102,7 @@ impl EngineBuilder {
     pub fn model(self, value: &str) -> Result<Self, Error>;
     pub fn width(self, value: u8) -> Result<Self, Error>;
     pub fn max_requests(self, value: Option<usize>) -> Result<Self, Error>;
+    pub fn max_request_bytes(self, value: usize) -> Result<Self, Error>;
     pub fn default_cache(self) -> Self;
     pub fn cache_at(self, value: impl AsRef<std::path::Path>) -> Result<Self, Error>;
     pub fn no_cache(self) -> Self;
@@ -259,7 +260,7 @@ pub enum Probabilities { YesNo { yes: f64 }, Named(Vec<NamedProbability>) }
 pub struct Usage { /* provider-reported counts */ }
 impl Usage { pub fn input_tokens(&self) -> u64; pub fn output_tokens(&self) -> u64; }
 pub struct Counters { /* process counts */ }
-impl Counters { pub fn requests_sent(&self) -> u64; pub fn cache_answers(&self) -> u64; pub fn input_tokens(&self) -> u64; pub fn output_tokens(&self) -> u64; }
+impl Counters { pub fn requests_sent(&self) -> u64; pub fn retries(&self) -> u64; pub fn cache_answers(&self) -> u64; pub fn input_tokens(&self) -> u64; pub fn output_tokens(&self) -> u64; }
 pub struct Details { /* private */ }
 impl Details {
     pub fn value(&self) -> &Judgment;

@@ -460,6 +460,17 @@ fn a_malformed_variable_is_usage_and_an_unreadable_configuration_is_local() {
     fs::create_dir_all(config.join("thinkthen/config.json")).unwrap();
     let said = in_child("refused", &[("XDG_CONFIG_HOME", config.to_str().unwrap())]);
     assert_eq!(said, "Local: the configuration file could not be read");
+    for value in ["0", "-1", "1.5", "abc"] {
+        let said = in_child("refused", &[("THINKTHEN_MAX_REQUEST_BYTES", value)]);
+        assert_eq!(
+            said,
+            "Usage: THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1"
+        );
+    }
+    assert!(matches!(
+        Engine::builder().max_request_bytes(0),
+        Err(Error::Usage(_))
+    ));
 }
 
 #[test]
