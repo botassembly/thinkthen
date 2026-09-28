@@ -22,12 +22,11 @@ def main() -> None:
         raise SystemExit("usage: package_notices.py DUCKDB_SOURCE PACKAGE_FOLDER")
     source, destination = (Path(value).resolve(strict=True) for value in sys.argv[1:])
     licenses = destination / "LICENSES"
-    third_party = source / "third_party"
-    duckdb = sorted(p for p in third_party.rglob("*") if p.is_file() and p.name.lower().startswith(LEGAL))
+    duckdb = sorted(p for p in source.rglob("*") if p.is_file() and p.name.lower().startswith(LEGAL) and p != source / "LICENSE")
     if not duckdb:
         raise SystemExit("the pinned DuckDB source contains no third-party notices")
     for path in duckdb:
-        target = licenses / "duckdb" / path.relative_to(third_party)
+        target = licenses / "duckdb" / path.relative_to(source)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
 
@@ -50,8 +49,8 @@ def main() -> None:
         target.mkdir(parents=True, exist_ok=True)
         for path in files:
             shutil.copyfile(path, target / path.name)
-    inventory.extend(("", "Pinned DuckDB third-party license and notice files:"))
-    inventory.extend(str(path.relative_to(third_party)) for path in duckdb)
+    inventory.extend(("", "Pinned DuckDB source license and notice files:"))
+    inventory.extend(str(path.relative_to(source)) for path in duckdb)
     (destination / "DEPENDENCIES.txt").write_text("\n".join(inventory) + "\n")
 
 

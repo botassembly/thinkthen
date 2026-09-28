@@ -167,7 +167,7 @@ def relate_setting_ranges():
 def a_temporary_table_names_the_adr_0038_boundary():
     with Backend() as backend:
         got = run([TABLE.replace("CREATE TABLE t", "CREATE TEMP TABLE tt"), RELATE.format(WORKS).replace("FROM t'", "FROM tt'")], backend.base())
-        expect(said(got[1]).split(";")[0], "thinkthen local: the relate query names the temporary table tt, and the stable C API cannot run a query on the calling connection, so relate cannot see temporary tables", "a temp table")
+        expect(said(got[1]).split(";")[0], "thinkthen local: the relate query names the temporary table tt, and relate runs on a separate connection, so it cannot see temporary tables", "a temp table")
         expect(backend.count(), 0, "counted sends")
 
 
