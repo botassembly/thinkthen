@@ -112,10 +112,11 @@ impl TryGroup {
         } {
             Ok(answered) => answered,
             Err(error)
-                if matches!(
-                    error.kind(),
-                    ErrorKind::Usage | ErrorKind::Local | ErrorKind::Backend
-                ) =>
+                if error.send_budget_denial().is_none()
+                    && matches!(
+                        error.kind(),
+                        ErrorKind::Usage | ErrorKind::Local | ErrorKind::Backend
+                    ) =>
             {
                 let failed = safe_failure(error.kind(), error.retryable())?;
                 for place in places {

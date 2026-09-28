@@ -489,25 +489,40 @@ def b13c_warm_first_seen_context():
         expect(backend.bodies[0], expected, "first-seen warm body")
 
 
+PACKED_PAIR_BODIES = {
+    b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
+    b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
+}
+
+
 @case
 def b13c_packed_total_admits_one_attempt():
     """The process total counts packed sends, independent of SQL row count or arrival order."""
     query = ("SELECT thinkthen_decide('Is it a refund?', x) FROM "
              "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i")
-    expected = {
-        b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
-        b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
-    }
     with PackedReplies() as backend:
         got = run(["SET threads = 1", "SET thinkthen_batch = '2'", query], backend.base)
         expect(column(got[2]), [True, True, True, True], "four packed answers")
-        expect(set(backend.bodies), expected, "both independently pinned packed bodies")
+        expect(set(backend.bodies), PACKED_PAIR_BODIES, "both independently pinned packed bodies")
     with PackedReplies() as backend:
         got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
                    "SET thinkthen_max_requests_total = 1", query], backend.base)
         expect(said(got[3]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it", "spent total")
         expect(len(backend.bodies), 1, "only one actual attempt is admitted")
-        expect(backend.bodies[0] in expected, True, "either packed request may arrive first")
+        expect(backend.bodies[0] in PACKED_PAIR_BODIES, True, "either packed request may arrive first")
+
+
+@case
+def b13c_try_details_total_one_stops_the_vector():
+    """A send-budget denial stays fatal even though its public kind is Usage."""
+    query = ("SELECT thinkthen_try_details('Is it a refund?', x) FROM "
+             "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i")
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
+                   "SET thinkthen_max_requests_total = 1", query], backend.base)
+        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it", "fatal spent total leaves no completed vector")
+        expect(len(backend.bodies), 1, "one real request was admitted")
+        expect(backend.bodies[0] in PACKED_PAIR_BODIES, True, "the sole send is a complete packed request")
 
 
 if __name__ == "__main__":
