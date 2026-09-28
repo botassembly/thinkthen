@@ -449,6 +449,12 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         settings::max_requests,
     )?;
     connection.create_scalar_function(
+        "thinkthen_max_request_bytes",
+        1,
+        volatile,
+        settings::max_request_bytes,
+    )?;
+    connection.create_scalar_function(
         "thinkthen_max_requests_total",
         1,
         volatile,

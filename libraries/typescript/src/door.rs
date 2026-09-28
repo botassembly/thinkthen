@@ -374,6 +374,10 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
         ("maxRequests", _) => {
             builder.max_requests(Some(usize::try_from(whole()?).unwrap_or(usize::MAX)))?
         }
+        ("maxRequestBytes", _) => builder.max_request_bytes(
+            usize::try_from(whole()?)
+                .map_err(|_| Failure::usage("options.maxRequestBytes is a whole number"))?,
+        )?,
         ("cache", Value::Bool(false)) => builder.no_cache(),
         ("cache", Value::String(folder)) => builder.cache_at(folder)?,
         ("cache", _) => return Err(Failure::usage("options.cache is false or a folder path")),
@@ -389,7 +393,7 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
     })
 }
 
-/// The engine's four counters as one JSON object.
+/// The engine's counters as one JSON object.
 pub(crate) fn usage(engine: Option<&Engine>) -> String {
     guarded(|| {
         let counters = match engine {
@@ -398,6 +402,7 @@ pub(crate) fn usage(engine: Option<&Engine>) -> String {
         };
         Ok(json!({
             "requests_sent": counters.requests_sent(),
+            "retries": counters.retries(),
             "cache_answers": counters.cache_answers(),
             "input_tokens": counters.input_tokens(),
             "output_tokens": counters.output_tokens(),

@@ -9,6 +9,7 @@ use crate::engines;
 pub(crate) struct BridgeSettings {
     throttle: i64,
     max_requests: i64,
+    max_request_bytes: i64,
     max_requests_total: i64,
     cache_bytes: *const u8,
     cache_len: usize,
@@ -38,6 +39,7 @@ pub(crate) fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String>
     Ok(engines::Asked {
         throttle: present(settings.throttle),
         max_requests: present(settings.max_requests),
+        max_request_bytes: present(settings.max_request_bytes),
         max_requests_total: present(settings.max_requests_total),
         cache,
         model: optional(settings.model_bytes, settings.model_len)?,

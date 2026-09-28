@@ -16,6 +16,7 @@ use crate::{Failure, guard};
 struct Stored {
     throttle: Option<u8>,
     max_requests: Option<Option<usize>>,
+    max_request_bytes: Option<usize>,
     cache: Option<Option<PathBuf>>,
     total: Option<u64>,
     model: Option<String>,
@@ -33,6 +34,9 @@ impl Stored {
         }
         if let Some(value) = self.max_requests {
             builder = builder.max_requests(value)?;
+        }
+        if let Some(value) = self.max_request_bytes {
+            builder = builder.max_request_bytes(value)?;
         }
         match &self.cache {
             Some(Some(folder)) => builder = builder.cache_at(folder)?,
@@ -64,6 +68,7 @@ impl Stored {
 static STORED: Mutex<Stored> = Mutex::new(Stored {
     throttle: None,
     max_requests: None,
+    max_request_bytes: None,
     cache: None,
     total: None,
     model: None,
@@ -249,6 +254,16 @@ pub(crate) fn max_requests(context: &Context<'_>) -> rusqlite::Result<Option<i64
         let value = whole(context, "thinkthen_max_requests")?;
         let most = value.map(|value| usize::try_from(value).unwrap_or(0));
         set(|held| held.max_requests = Some(most))?;
+        Ok(value)
+    })?)
+}
+
+/// `thinkthen_max_request_bytes(n)`: the positive request-byte ceiling; NULL keeps the environment.
+pub(crate) fn max_request_bytes(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
+    Ok(guard("thinkthen_max_request_bytes", || {
+        let value = whole(context, "thinkthen_max_request_bytes")?;
+        let bytes = value.map(|value| usize::try_from(value).unwrap_or(0));
+        set(|held| held.max_request_bytes = bytes)?;
         Ok(value)
     })?)
 }

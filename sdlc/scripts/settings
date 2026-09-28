@@ -40,7 +40,8 @@ NAMES = (re.compile(r"[\"'](THINKTHEN_[A-Z0-9_]+)[\"']"), re.compile(r"\benv\.(T
 SOURCE = {".rs", ".py", ".pyi", ".ts", ".js", ".mjs", ".cjs", ".rb", ".R", ".r", ".c", ".h", ".sql"}
 ENGINE_CELLS = {
     "Address": ("base_url",), "Model": ("model",), "Throttle": ("throttle",),
-    "Request limit": ("max_requests",), "Answer cache": ("cache_at",),
+    "Request limit": ("max_requests",), "Request size": ("max_request_bytes",),
+    "Answer cache": ("cache_at",),
     "Backend profile": ("profile",), "Timeout": ("timeout",),
     "Retries": ("max_retries",), "Recording": ("record", "replay"),
 }

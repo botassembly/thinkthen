@@ -355,6 +355,7 @@ tt_usage <- function() .tt_call(tt_usage_counters())
 # The engine settings (ADR 0017 section 5). NULL keeps what the environment
 # gives. The key stays on THINKTHEN_API_KEY alone.
 tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
+                      max_request_bytes = NULL,
                       cache = NULL, timeout = NULL, max_retries = NULL,
                       record = NULL, replay = NULL, profile = NULL) {
   string <- function(x) is.null(x) || (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x))
@@ -362,6 +363,7 @@ tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_reques
     length(x) == 1L && !is.na(x) && x == round(x))
   checks <- list(base_url = string(base_url), model = string(model),
                  throttle = whole(throttle), max_requests = whole(max_requests),
+                 max_request_bytes = whole(max_request_bytes),
                  cache = identical(cache, FALSE) || string(cache),
                  timeout = whole(timeout), max_retries = whole(max_retries),
                  record = string(record), replay = string(replay), profile = string(profile))
@@ -369,7 +371,7 @@ tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_reques
   if (length(refused)) {
     .tt_usage(paste0(refused[[1L]], " is one string, one whole number, or FALSE for cache"))
   }
-  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, cache,
+  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_request_bytes, cache,
                          timeout, max_retries, record, replay, profile))
   invisible(NULL)
 }

@@ -437,6 +437,7 @@ pub(crate) fn counters() -> Crossed<List> {
     let as_double = |value: u64| value as f64;
     Ok(list!(
         requests_sent = as_double(counted.requests_sent()),
+        retries = as_double(counted.retries()),
         cache_answers = as_double(counted.cache_answers()),
         input_tokens = as_double(counted.input_tokens()),
         output_tokens = as_double(counted.output_tokens())

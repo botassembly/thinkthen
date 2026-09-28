@@ -112,7 +112,7 @@ def test_the_module_functions_equal_an_explicit_engine(backend, tmp_path):
         '[{"late": true, "day": "Mon"}]',
         '[["Maria Chen", 0, 10, 10, "person"], ["arrived.", 11, 19, 8, "person"]]',
         '[["knows", "Ada", "Bo"], ["knows", "Bo", "Ada"]]',
-        '["cache_answers", "input_tokens", "output_tokens", "requests_sent"]',
+        '["cache_answers", "input_tokens", "output_tokens", "requests_sent", "retries"]',
     ]
 
 
