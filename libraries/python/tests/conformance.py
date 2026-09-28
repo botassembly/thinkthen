@@ -113,10 +113,11 @@ def annotated(engine, case, texts, success):
     same("failed", failed, success.get("failed_questions", 0))
     frame = engine.annotate(case["question_set"], pl.DataFrame({"record": texts}), on="record")
     for got, listed in zip(frame.drop("record").to_dicts(), records):
+        markers = {name: value if isinstance(value, dict) and "failed" in value else None
+                   for name, value in listed.items()}
+        same("frame failed", got["failed"], markers if any(markers.values()) else None)
         for name, value in listed.items():
-            # A failed question's column holds each answer as text.
-            widened = isinstance(got[name], str) and not isinstance(value, str)
-            same("frame", json.loads(got[name]) if widened else got[name], value)
+            same("frame", got[name], None if markers[name] else value)
 
 
 def entity(one):
