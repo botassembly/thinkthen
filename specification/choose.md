@@ -76,7 +76,7 @@ thinkthen choose 'Which team owns this request?' $(jq -r '.[]' teams.json) < mes
 
 ## Not sure
 
-The answer is not sure when the winning option's probability falls under the cut, and when the top two options tie exactly. An exact tie is not sure with or without a threshold, because alphabetical order is no evidence. `--details` still names the option that led, in `answer.pick`.
+The answer is not sure when the winning option's probability falls under the cut, and when the top two options tie exactly. An exact tie is not sure with or without a threshold. The options keep the user's order, and that order does not settle a tie. `--details` still names the first tied option in `answer.pick`.
 
 ## Examples
 
