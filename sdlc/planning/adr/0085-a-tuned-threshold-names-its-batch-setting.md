@@ -1,6 +1,6 @@
 # ADR 0085: A tuned threshold names its batch setting
 
-- Status: Accepted design in ticket 0171; implementation awaits fresh code review
+- Status: Accepted design in ticket 0171; corrected implementation awaits follow-up code review
 - Date: 2026-09-27
 
 ## Context

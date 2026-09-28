@@ -6,7 +6,7 @@ opens: sdlc/planning/adr crates/thinkthen/src/core/result.rs crates/thinkthen/sr
 
 # 0171: A tuned threshold warns at another batch setting
 
-Status: candidate built; fresh code review pending. The coordinator accepted the design on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
+Status: corrected candidate built; same-reviewer follow-up pending. The coordinator accepted the design on 2026-09-27 after a fresh read-only review, with the fixes that review named. Owner: Codex.
 
 Review route: a fresh read-only Codex session reviews the final diff.
 
@@ -233,8 +233,8 @@ No issue file holds local experiment 284 file 14 alone. The build records file 1
 - The shared `result_json.rs::Run` also has a library initializer in `public/results.rs`. The CLI warning is absent there, so existing library result bytes remain unchanged. Search every initializer when extending a shared result carrier.
 - The existing splice helper could insert or replace a JSON member but could not remove a stale top-level `batch` without rewriting unrelated file bytes. A small byte-preserving removal helper and focused position/CRLF table supplied that missing operation.
 - A draft test helper parsed and reserialized saved `annotate` rows merely to add metadata; it reordered nested answer names and broke an existing exact report. That fixture change was reverted. Exact saved bytes remain the better boundary for order-sensitive results.
-- The measured Rust delta is 545 nonblank lines against `f7080025`: 235 product and 310 tests. This exceeds the original 332-line estimate. The [build record](../records/2026-09-27-0171-tuned-batch-warning-build.md) gives the growth and duplication check for fresh review; no behavior was removed to satisfy a stale estimate.
-- The coordinator authorized a measured amendment to the old estimate before the build finished. The enforced 500-line file cap and ratchet equality still apply. Fresh code review decides whether the measured 545-line increase earns its cost before landing.
+- The corrected Rust delta is 592 nonblank lines against `f7080025`: 246 product and 346 tests. The first candidate was +545; fresh review accepted that measured growth and required 47 more lines to reject invalid saved metadata and close the detailed-row proof gap. This exceeds the original 332-line estimate. The [build record](../records/2026-09-27-0171-tuned-batch-warning-build.md) gives the growth and duplication check; no behavior was removed to satisfy a stale estimate.
+- The coordinator authorized a measured amendment to the old estimate before the build finished. The enforced 500-line file cap and ratchet equality still apply. Same-reviewer follow-up decides the correction before landing.
 
 ## Build preflight, 2026-09-27
 

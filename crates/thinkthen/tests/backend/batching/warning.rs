@@ -74,7 +74,9 @@ fn a_tuned_file_warns_at_another_batch() {
             },
             "{name}"
         );
-        for row in details(&output) {
+        let rows = details(&output);
+        assert_eq!(rows.len(), 2, "{name}: two detailed rows");
+        for row in rows {
             match &warning {
                 Some(value) => assert_eq!(&row["meta"]["batch_warning"], value, "{name}"),
                 None => assert!(row["meta"].get("batch_warning").is_none(), "{name}"),

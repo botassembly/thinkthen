@@ -28,18 +28,22 @@ impl From<Setting> for BatchSetting {
 impl BatchSetting {
     /// The settings named by result metadata; absent metadata means batch one
     /// only when no line names a batched setting.
-    pub(crate) fn in_results(lines: &[(usize, Json)]) -> BTreeSet<Self> {
-        let mut settings: BTreeSet<_> = lines
-            .iter()
-            .filter_map(|(_, row)| {
-                let value = row.member("meta")?.member("batch")?.member("setting")?;
-                Setting::of_json(value).map(Into::into)
-            })
-            .collect();
+    pub(crate) fn in_results(lines: &[(usize, Json)]) -> Result<BTreeSet<Self>, usize> {
+        let mut settings = BTreeSet::new();
+        for (line, row) in lines {
+            let Some(batch) = row.member("meta").and_then(|meta| meta.member("batch")) else {
+                continue;
+            };
+            let setting = batch
+                .member("setting")
+                .and_then(Setting::of_json)
+                .ok_or(*line)?;
+            settings.insert(setting.into());
+        }
         if settings.is_empty() {
             settings.insert(Self::Records(1));
         }
-        settings
+        Ok(settings)
     }
 
     pub(crate) fn listed(settings: &BTreeSet<Self>) -> String {

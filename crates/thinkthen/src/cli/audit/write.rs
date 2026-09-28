@@ -40,6 +40,7 @@ pub(super) fn bars(
     results: &[Line],
     answers: &[Answer],
     rows: &[Row],
+    batch_settings: &BTreeSet<BatchSetting>,
 ) -> Result<String, Cause> {
     let bytes = std::fs::read(path).map_err(|_| Cause::Unreadable)?;
     let text = String::from_utf8(bytes).map_err(|_| Cause::NotQuestions)?;
@@ -81,7 +82,6 @@ pub(super) fn bars(
     }
     let mut new = text.clone();
     let mut report = String::new();
-    let batch_settings = BatchSetting::in_results(results);
     for row in rows.iter().filter(|row| row.kind != Kind::Label) {
         let (target, place) = match (&row.name, set) {
             (Some(name), true) => (
@@ -121,7 +121,7 @@ pub(super) fn bars(
         update_batch(
             &mut new,
             &json,
-            &batch_settings,
+            batch_settings,
             wrote_threshold,
             &mut report,
         )?;

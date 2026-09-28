@@ -36,7 +36,7 @@ thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--i
 
 audit reads saved result lines only. A recording reaches audit through a replay: `decide ... --details --replay DIR` with the key unset, piped to `audit`. A recording holds no record ids, so it cannot be graded alone.
 
-audit reads the set of `meta.batch.setting` values in the results. A line without `meta.batch` adds no setting when another line names one; when no line names a setting, the set is `{1}`. If the set holds more than one value, audit prints `thinkthen: audit: warning: the results ran at more than one batch setting (1 and max); a bar tuned over both may fit neither` on standard error before its write report. The values appear in ascending order, numbers before `max`.
+audit reads the set of `meta.batch.setting` values in the results. A line without `meta.batch` adds no setting when another line names one; when no line names a setting, the set is `{1}`. A line that has `meta.batch` but no valid number-or-`max` setting is refused with its line number, before `--write` changes a file. If the set holds more than one value, audit prints `thinkthen: audit: warning: the results ran at more than one batch setting (1 and max); a bar tuned over both may fit neither` on standard error before its write report. The values appear in ascending order, numbers before `max`.
 
 ## Inputs
 

@@ -95,6 +95,41 @@ fn audit_reads_and_writes_the_batch_setting() {
     assert_eq!(scratch.read("decide.json"), before);
 }
 
+#[test]
+fn audit_refuses_an_invalid_saved_batch_without_writing() {
+    let scratch = Scratch::new("invalid-batch-setting");
+    let file = scratch.write("decide.json", &fixture("write/decide.json"));
+    let rows = at_batch(
+        &payment_rows(&scratch.0, "decide.json"),
+        Some(serde_json::json!("max")),
+    );
+    let mut changed = false;
+    let invalid: String = rows
+        .lines()
+        .enumerate()
+        .map(|(at, line)| {
+            let line = if at == 1 {
+                changed = true;
+                line.replacen("\"setting\":\"max\"", "\"setting\":\"bogus\"", 1)
+            } else {
+                line.to_owned()
+            };
+            format!("{line}\n")
+        })
+        .collect();
+    assert!(changed && invalid.contains("\"setting\":\"bogus\""));
+    let results = scratch.write("invalid.jsonl", &invalid);
+    let before = scratch.read("decide.json");
+    let (code, stdout, stderr) = audit(&[&results, &key(), "--write", &file], b"");
+    assert_eq!(code, 2);
+    assert!(stdout.is_empty());
+    assert_eq!(
+        stderr,
+        "thinkthen: audit: results line 2 has invalid meta.batch.setting; expected max or a whole number of at least 1\n"
+    );
+    assert_eq!(scratch.read("decide.json"), before);
+}
+
 /// The payment question of `transforms/rows`, pretty-printed with CRLF line
 /// ends and an escaped `threshold` key, as `write/decide.json` holds it.
 const HEAD: &str = "{\r\n  \"decide\": \"Does the message report a payment failure?\",\r\n";

@@ -43,6 +43,8 @@ pub(crate) enum Cause {
     Rule(&'static str, ThresholdError),
     /// The core refused the input's contents.
     Measure(MeasureError),
+    /// A result named a batch setting outside the documented number-or-max form.
+    BatchSetting(usize),
     /// `--write` names standard input.
     WriteDash,
     /// `--write` beside `--threshold`.
@@ -96,6 +98,10 @@ impl fmt::Display for Refusal {
             Cause::Pointer => formatter.write_str("--id takes a JSON pointer such as /id or ''"),
             Cause::Rule(option, error) => write!(formatter, "{option}: {error}"),
             Cause::Measure(error) => said(formatter, command, role, *error),
+            Cause::BatchSetting(line) => write!(
+                formatter,
+                "{role} line {line} has invalid meta.batch.setting; expected max or a whole number of at least 1"
+            ),
             Cause::WriteDash => formatter.write_str("--write needs a file path"),
             Cause::WriteThreshold => {
                 formatter.write_str("--write reads each answer as it ran; drop --threshold")
