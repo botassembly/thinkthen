@@ -24,6 +24,13 @@ enum Cache {
     Off,
 }
 
+/// One profile source; each later setter replaces the previous one.
+#[derive(Debug)]
+enum Profile {
+    File(PathBuf),
+    Inline(BackendProfile),
+}
+
 /// The default cache folder, resolved once when a builder is seeded.
 #[derive(Clone, Debug)]
 struct Seeded {
@@ -57,7 +64,7 @@ pub struct EngineBuilder {
     seeded: Option<Seeded>,
     timeout: Duration,
     max_retries: u32,
-    profile: Option<PathBuf>,
+    profile: Option<Profile>,
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
 }
@@ -235,10 +242,21 @@ impl EngineBuilder {
     /// # Errors
     /// Returns [`Error::Usage`] for an empty path.
     pub fn profile(mut self, value: impl AsRef<Path>) -> Result<Self, Error> {
-        self.profile = Some(folder(
+        self.profile = Some(Profile::File(folder(
             value.as_ref(),
             "a profile file is a path, not empty",
-        )?);
+        )?));
+        Ok(self)
+    }
+
+    /// Parse one closed version-one backend profile without reading a file.
+    /// # Errors
+    /// Returns [`Error::Usage`] for an invalid profile object.
+    pub fn profile_json(mut self, value: &str) -> Result<Self, Error> {
+        self.profile = Some(Profile::Inline(
+            BackendProfile::parse(value)
+                .map_err(|error| Error::usage(format!("the profile JSON {error}")))?,
+        ));
         Ok(self)
     }
 
@@ -274,11 +292,14 @@ impl EngineBuilder {
         let profile = self
             .profile
             .as_ref()
-            .map(|path| {
-                let text = std::fs::read_to_string(path)
-                    .map_err(|_| Error::local("the profile file could not be read"))?;
-                BackendProfile::parse(&text)
-                    .map_err(|error| Error::local(format!("the profile file {error}")))
+            .map(|source| match source {
+                Profile::File(path) => {
+                    let text = std::fs::read_to_string(path)
+                        .map_err(|_| Error::local("the profile file could not be read"))?;
+                    BackendProfile::parse(&text)
+                        .map_err(|error| Error::local(format!("the profile file {error}")))
+                }
+                Profile::Inline(profile) => Ok(profile.clone()),
             })
             .transpose()?;
         let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);

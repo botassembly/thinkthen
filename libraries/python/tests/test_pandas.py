@@ -82,18 +82,18 @@ def test_each_verb_answers_a_series_as_its_list_does(backend, tmp_path):
                             ("decide_many", 3))]
 
 
-def test_a_failed_question_widens_its_column_to_text(backend, tmp_path):
-    """Proof 1: on the malformed arm, the set's last question fails, and its
-    new column widens to ``string`` holding the failed marker text for every
-    row. A one-question Series verb raises instead, as the list form does."""
+def test_a_failed_question_keeps_its_dtype_and_a_separate_marker(backend, tmp_path):
+    """On the malformed arm, the failed answer stays null in a typed column.
+    The companion holds the exact marker. A Series verb still raises."""
     printed = run(SETUP + """
     got = engine.annotate(form, pd.DataFrame({"body": texts[:2]}), on="body")
-    print(got["late"].dtype.name, got["team"].dtype.name, got["team"].tolist())
+    print(got["late"].dtype.name, got["team"].dtype.name, got["team"].isna().all(),
+          got["failed"].dtype.name, got["failed"].tolist())
     said(lambda: engine.choose(team, pd.Series(texts[:2])))
     """, child_env(backend, tmp_path, "arm/malformed/missing_answer"))
-    marker = '{"failed":{"kind":"backend","cause":"missing_answer"}}'
+    marker = {"team": {"failed": {"kind": "backend", "cause": "missing_answer"}}}
     assert printed.splitlines() == [
-        f"boolean string {[marker, marker]}",
+        f"boolean string True object {[marker, marker]}",
         "BackendError the reply was refused: the response carries no answer for question `q1` 2"]
 
 
@@ -111,13 +111,14 @@ def test_a_frame_gains_answer_columns_and_keeps_its_own(backend, tmp_path):
     print(list(got.columns), got[list(frame.columns)].equals(frame),
           [got[name].dtype.name for name in ("late", "team")],
           [dict(zip(("late", "team"), plain(row))) for row in
-           zip(got["late"].tolist(), got["team"].tolist())] == wanted)
+           zip(got["late"].tolist(), got["team"].tolist())] == wanted,
+          got["failed"].isna().all())
     found = engine.recognize(frame, kinds=["bill", "ship"], on="body")
     print(list(found.columns), found["names"].dtype.name, found["names"].tolist() == names(texts),
           sum(map(len, names(texts))) > 0, frame.equals(copy))
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
-        "['body', 'n', 'cat', 'late', 'team'] True ['boolean', 'string'] True",
+        "['body', 'n', 'cat', 'late', 'team', 'failed'] True ['boolean', 'string'] True True",
         "['body', 'n', 'cat', 'names'] object True True True",
     ]
 
@@ -196,9 +197,9 @@ def test_the_edge_rows_that_answer(backend, tmp_path):
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         "empty Series body boolean 0 0",
-        "empty frame float64 ['body', 'late', 'team'] ['float64', 'boolean', 'string'] 0 0",
-        "label 3 [3, 'late', 'team'] True 3",
-        "self ['body', 'self'] boolean 3",
+        "empty frame float64 ['body', 'late', 'team', 'failed'] ['float64', 'boolean', 'string', 'object'] 0 0",
+        "label 3 [3, 'late', 'team', 'failed'] True 3",
+        "self ['body', 'self', 'failed'] boolean 3",
     ]
 
 
@@ -233,6 +234,8 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     said(lambda: engine.annotate(form, pd.DataFrame(
         {("body", "x"): texts}), on=("body", "x")))
     said(lambda: engine.annotate(form, frame.assign(late=1), on="body"))
+    said(lambda: engine.annotate(form, frame.assign(failed=1), on="body"))
+    said(lambda: engine.annotate({"version": 1, "questions": {"failed": {"decide": "Late?"}}}, frame, on="body"))
     said(lambda: engine.recognize(frame, kinds=["x"], relations={"r": ("x", "x")}, on="body"))
     said(lambda: engine.annotate(form, frame, on=["body"]))
     said(lambda: engine.recognize(frame.assign(names=1), kinds=["x"], on="body"))
@@ -253,6 +256,8 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
         "UsageError the frame has more than one column named 'body' 0",
         "UsageError on= reads a frame whose column labels have one level 0",
         "UsageError the frame already has a column named 'late'; rename it first 0",
+        "UsageError the frame already has a column named 'failed'; rename it first 0",
+        "UsageError the question name failed is reserved for frame failures 0",
         "UsageError recognize with on= takes no relations; ask them of one text 0",
         "UsageError on= takes one column label, such as \"body\" 0",
         "UsageError the frame already has a column named 'names'; rename it first 0",

@@ -24,11 +24,11 @@ A column call returns values only. Read its run facts with `Engine::details` for
 | `choose_series` | a choose `Question` | `String`, null where nothing fits |
 | `score_series` | a score `Question` | `Float64`, the position from 0 to one less than the number of levels |
 | `tag_series` | a tag `Question` | `List(String)` |
-| `annotate_frame` | a `QuestionSet` and the name of the text column | your frame plus one column per question, in set order |
+| `annotate_frame` | a `QuestionSet` and the name of the text column | your frame plus one column per question, then `failed` |
 
 Every method takes `CallOptions`. One deadline, cancel token, and interrupt check cover the whole column. The call runs on your thread and starts no worker of its own.
 
-In a frame, a decide column is `Boolean`, a choose column `String`, a score column `Float64`, and a tag column `String` holding the JSON array text, as the Python door writes it (ADR 0047 item 10). When any row's answer to one question failed, that question's whole column becomes `String`. Each cell then holds the member's text from `AnnotatedRecord::value_json`, unchanged, and a failed cell holds the engine's marker. Your own columns come back unchanged. A failed row in a series call ends the call with the engine's `Backend` error.
+In a frame, a decide column is nullable `Boolean`, a choose column `String`, a score column nullable `Float64`, and a tag column `List(String)`. These dtypes stay fixed when a question fails. A failed answer is null in its question column; the final `failed` column holds a nullable Struct with one field per question and the full nested `failed: {kind, cause}` marker. A row with no failures has a null outer `failed` cell. A not-sure `decide` or `choose` has a null answer without a marker. Your own columns come back unchanged. A failed row in a series call ends the call with the engine's `Backend` error.
 
 ## Refusals
 

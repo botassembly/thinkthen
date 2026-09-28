@@ -14,7 +14,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use rusqlite::ffi::{
     self as sqlite, SQLITE_CANTOPEN, SQLITE_CONSTRAINT, SQLITE_ERROR, SQLITE_INTERRUPT,
 };
-use thinkthen::ErrorKind;
+use thinkthen::{ErrorKind, SendBudgetDenial};
 
 mod budget;
 #[allow(
@@ -77,6 +77,12 @@ impl Failure {
 
 impl From<thinkthen::Error> for Failure {
     fn from(error: thinkthen::Error) -> Self {
+        if matches!(
+            error.send_budget_denial(),
+            Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })
+        ) {
+            return settings::spent(settings::send_budget().1.unwrap_or(0));
+        }
         Self {
             kind: error.kind(),
             message: error.detail().message().to_owned(),

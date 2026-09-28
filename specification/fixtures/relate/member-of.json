@@ -1,0 +1,1 @@
+{"version":1,"relate":{"relations":[{"name":"member_of","source":"person","target":"band","reads":"is a member of"}]}}

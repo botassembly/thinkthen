@@ -14,12 +14,14 @@ use crate::engine::error::{TransportKind, reply_too_large};
 use crate::table;
 
 mod after_signal;
+pub(crate) mod context;
 mod convert;
 pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
 pub(crate) mod relate;
 mod status;
+mod stopped;
 
 const NOT_TEXT: &str = "the evidence is not valid UTF-8";
 
@@ -40,6 +42,8 @@ pub(crate) enum Failure {
         error: ProfileError,
     },
     ProfileLimit(ProfileLimit),
+    /// A shared context file or its batch could not be used.
+    Context(context::Error),
     Relate(relate::Error),
     Recognize(recognize::Error),
     QuietWithDetails,
@@ -200,7 +204,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     if matches!(failure, Failure::Cancelled) {
         return 130;
     }
-    if let Some(code) = stopped(failure, writer) {
+    if let Some(code) = stopped::report(failure, writer) {
         return code;
     }
     if let Some((code, message)) = recording::message(failure) {
@@ -290,65 +294,8 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     code
 }
 
-fn stopped(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
-    let Failure::Stopped {
-        at,
-        finished,
-        replayed,
-        recording,
-        held,
-        cause,
-    } = failure
-    else {
-        return None;
-    };
-    if matches!(cause.as_ref(), Failure::Cancelled) {
-        return Some(after_signal::stopped(
-            *finished, *replayed, *recording, *held, writer,
-        ));
-    }
-    let (code, reason) = match cause.as_ref() {
-        Failure::BatchFailed { last, cause } => {
-            let mut said = Vec::new();
-            let code = say(cause, &mut said);
-            let said = String::from_utf8_lossy(&said);
-            let prefix = format!("{}: ", crate::core::NAME);
-            let said = said.trim_end();
-            let said = said.strip_prefix(&prefix).unwrap_or(said);
-            (
-                code,
-                format!("the request for records {at} to {last} failed: {said}; "),
-            )
-        }
-        Failure::PartialReply { first, last } => (
-            4,
-            format!("the reply for records {first} to {last} gave record {at} no usable answer; "),
-        ),
-        Failure::RecordingStorage => return Some(say(cause, writer)),
-        _ => (say(cause, writer), String::new()),
-    };
-    let withheld = if *held {
-        ", and nothing was printed because an order needs every record"
-    } else {
-        ""
-    };
-    let finished_noun = if *finished == 1 { "record" } else { "records" };
-    let recording_clause = if *recording {
-        let replayed_noun = if *replayed == 1 { "record" } else { "records" };
-        format!(", {replayed} {replayed_noun} from a recording")
-    } else {
-        String::new()
-    };
-    let _unwritten = writeln!(
-        writer,
-        "{}: stopped at record {at}; {reason}{finished} {finished_noun} finished{recording_clause}{withheld}",
-        crate::core::NAME
-    );
-    Some(code)
-}
-
 fn special_failure(failure: &Failure) -> Option<(u8, String)> {
-    if let Some(message) = relate::message(failure) {
+    if let Some(message) = relate::message(failure).or_else(|| context::message(failure)) {
         return Some(message);
     }
     Some(match failure {

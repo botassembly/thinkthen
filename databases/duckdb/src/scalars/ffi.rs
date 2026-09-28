@@ -15,7 +15,7 @@ use crate::signal::Invoke;
 
 enum State {
     Pending(Option<Files>),
-    Ready(Caller),
+    Ready(Box<Caller>),
     Failed(RowError),
 }
 
@@ -35,11 +35,11 @@ unsafe extern "C" fn scalar_init(info: sys::duckdb_init_info) {
             State::Pending(Some(files))
         } else {
             let asked = files.settings();
-            State::Ready(Caller::new(
+            State::Ready(Box::new(Caller::new(
                 engines::engine_for(&asked, |path| files.probe(path))?,
                 asked,
                 files,
-            ))
+            )))
         };
         Ok(Box::new(state))
     });
@@ -127,13 +127,15 @@ fn answer(
             .ok_or_else(|| defect("the scalar lost its init files"))?;
         let asked = files.settings();
         *state = match engines::engine_for_typed(&asked, |path| files.probe(path)) {
-            Ok(engine) => State::Ready(Caller::new(engine, asked, files)),
+            Ok(engine) => State::Ready(Box::new(Caller::new(engine, asked, files))),
             Err(error) if error.recoverable() => State::Failed(error),
             Err(error) => return Err(error.text),
         };
     }
     let values = match state {
-        State::Ready(caller) => crate::scalars::run(scalar.verb, caller, &invoke, &columns, rows)?,
+        State::Ready(caller) => {
+            crate::scalars::run(scalar.verb, caller.as_mut(), &invoke, &columns, rows)?
+        }
         State::Failed(error) if scalar.verb == Verb::TryDetails => {
             let value = error.value().ok_or_else(|| error.text.clone())?.to_string();
             (0..rows)

@@ -6,143 +6,22 @@
 //! frame. Their schemas are deep-copied, byte for byte with their metadata,
 //! so a Polars `Enum` or a field's own keys ride through (R4-15).
 
-use std::ffi::{CString, c_char};
 use std::sync::Arc;
 
 use pyo3::prelude::*;
 use thinkthen::{Annotated, Answer, QuestionKind};
 
-use super::ffi::{Alias, ArrowSchema, Imported, copied, record};
+use super::ffi::{Alias, Imported};
 use super::memory::Readable;
 use super::out;
-use super::read::{self, Frame, UNREADABLE};
+use super::read::Frame;
 
-pub(super) const BAD_METADATA: &str =
-    "a column's Arrow metadata names lengths past its readable bytes or past 16 MiB";
-const MAX_METADATA: usize = 16 * 1024 * 1024;
-/// The deepest schema tree the copy follows, so a cycle is refused.
-const MAX_DEPTH: usize = 64;
+mod schema;
+#[cfg(test)]
+pub(crate) use schema::BAD_METADATA;
+pub(crate) use schema::{SchemaNode, metadata};
+
 const TOO_LONG: &str = "an answer column's text passes the 2 GiB a text column's offsets can name";
-/// The nullable flag.
-const NULLABLE: i64 = 2;
-
-/// One schema node, owned.
-#[derive(Debug)]
-pub(crate) struct SchemaNode {
-    pub(super) format: CString,
-    pub(super) name: Option<CString>,
-    pub(super) metadata: Option<Vec<u8>>,
-    pub(super) flags: i64,
-    pub(super) children: Vec<SchemaNode>,
-    pub(super) dictionary: Option<Box<SchemaNode>>,
-}
-
-fn c_string(text: &str) -> Result<CString, String> {
-    CString::new(text).map_err(|_| format!("the name '{text}' holds a NUL byte"))
-}
-
-impl SchemaNode {
-    fn leaf(name: &str, format: &str, children: Vec<Self>) -> Result<Self, String> {
-        Ok(Self {
-            format: c_string(format)?,
-            name: Some(c_string(name)?),
-            metadata: None,
-            flags: NULLABLE,
-            children,
-            dictionary: None,
-        })
-    }
-
-    fn frame(children: Vec<Self>, metadata: Option<Vec<u8>>) -> Result<Self, String> {
-        Ok(Self {
-            format: c_string("+s")?,
-            name: None,
-            metadata,
-            flags: 0,
-            children,
-            dictionary: None,
-        })
-    }
-
-    /// Deep-copy a producer's schema tree: names, formats, metadata,
-    /// children, and a dictionary when one is attached.
-    pub(super) fn copy(
-        memory: &Readable,
-        at: *const ArrowSchema,
-        depth: usize,
-    ) -> Result<Self, String> {
-        if depth > MAX_DEPTH {
-            return Err("a column's schema nests deeper than 64 levels".to_owned());
-        }
-        let source = record(memory, at).ok_or(UNREADABLE)?;
-        let text = |at| -> Result<Option<CString>, String> {
-            Ok(read::c_text(memory, at)?.map(|held| CString::new(held).unwrap_or_default()))
-        };
-        let count = usize::try_from(source.n_children).unwrap_or(0);
-        let children = if count == 0 {
-            Vec::new()
-        } else {
-            let table = copied(
-                memory,
-                source.children.cast_const().cast(),
-                count * size_of::<usize>(),
-            )
-            .ok_or(UNREADABLE)?;
-            let mut children = Vec::with_capacity(count);
-            for word in table.chunks_exact(size_of::<usize>()) {
-                let mut held = [0_u8; size_of::<usize>()];
-                held.copy_from_slice(word);
-                let child = std::ptr::with_exposed_provenance(usize::from_le_bytes(held));
-                children.push(Self::copy(memory, child, depth + 1)?);
-            }
-            children
-        };
-        let dictionary = if source.dictionary.is_null() {
-            None
-        } else {
-            Some(Box::new(Self::copy(memory, source.dictionary, depth + 1)?))
-        };
-        Ok(Self {
-            format: text(source.format)?.ok_or("an Arrow schema carries no format")?,
-            name: text(source.name)?,
-            metadata: metadata(memory, source.metadata)?,
-            flags: source.flags,
-            children,
-            dictionary,
-        })
-    }
-}
-
-/// Copy one metadata blob: an i32 pair count, then each key and value as an
-/// i32 length and its bytes. Each length word is checked readable before it
-/// is read, and the blob is capped.
-pub(super) fn metadata(
-    memory: &Readable,
-    at: *const c_char,
-) -> Result<Option<Vec<u8>>, &'static str> {
-    if at.is_null() {
-        return Ok(None);
-    }
-    let at = at.cast::<u8>();
-    let length = |place: usize| -> Result<usize, &'static str> {
-        let word = copied(memory, at.wrapping_add(place), 4).ok_or(BAD_METADATA)?;
-        let mut four = [0_u8; 4];
-        four.copy_from_slice(&word);
-        usize::try_from(i32::from_le_bytes(four)).map_err(|_| BAD_METADATA)
-    };
-    let pairs = length(0)?;
-    if pairs > MAX_METADATA / 8 {
-        return Err(BAD_METADATA);
-    }
-    let mut end = 4_usize;
-    for _ in 0..pairs * 2 {
-        end = end + 4 + length(end)?;
-        if end > MAX_METADATA {
-            return Err(BAD_METADATA);
-        }
-    }
-    Ok(Some(copied(memory, at, end).ok_or(BAD_METADATA)?))
-}
 
 /// One array node: this binding's own buffers, or one of the caller's.
 #[derive(Debug)]
@@ -168,6 +47,16 @@ pub(crate) enum Cells {
     Counts(Vec<i64>),
     Texts(Vec<Option<String>>),
     Lists(Vec<Option<Vec<String>>>),
+    Failures {
+        names: Vec<String>,
+        rows: Vec<Vec<Option<FailureMarker>>>,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct FailureMarker {
+    pub(crate) kind: String,
+    pub(crate) cause: String,
 }
 
 fn count(value: usize) -> i64 {
@@ -191,6 +80,41 @@ fn bitmap(bits: impl ExactSizeIterator<Item = bool>) -> Vec<u8> {
         }
     }
     packed
+}
+
+fn struct_node(present: &[bool], children: Vec<ArrayNode>) -> ArrayNode {
+    let (validity, null_count) = validity(present);
+    ArrayNode::Owned(Owned {
+        length: count(present.len()),
+        null_count,
+        buffers: vec![validity],
+        children,
+    })
+}
+
+fn failure_field(
+    values: &[Vec<Option<FailureMarker>>],
+    place: usize,
+    outer: &mut [bool],
+) -> Result<ArrayNode, &'static str> {
+    let mut present = Vec::with_capacity(values.len());
+    let mut kind = Vec::with_capacity(values.len());
+    let mut cause = Vec::with_capacity(values.len());
+    for (outer_cell, fields) in outer.iter_mut().zip(values) {
+        let marker = fields.get(place).and_then(Option::as_ref);
+        present.push(marker.is_some());
+        *outer_cell |= marker.is_some();
+        kind.push(marker.map(|one| one.kind.clone()));
+        cause.push(marker.map(|one| one.cause.clone()));
+    }
+    let marker = struct_node(
+        &present,
+        vec![
+            Cells::Texts(kind).array(0, values.len())?,
+            Cells::Texts(cause).array(0, values.len())?,
+        ],
+    );
+    Ok(struct_node(&present, vec![marker]))
 }
 
 /// A `u` array's offsets and values.
@@ -220,6 +144,7 @@ impl Cells {
             Self::Counts(values) => values.len(),
             Self::Texts(values) => values.len(),
             Self::Lists(values) => values.len(),
+            Self::Failures { rows, .. } => rows.len(),
         }
     }
 
@@ -232,6 +157,27 @@ impl Cells {
             Self::Lists(_) => {
                 SchemaNode::leaf(name, "+l", vec![SchemaNode::leaf("item", "u", Vec::new())?])
             }
+            Self::Failures { names, .. } => SchemaNode::leaf(
+                name,
+                "+s",
+                names
+                    .iter()
+                    .map(|question| {
+                        SchemaNode::leaf(
+                            question,
+                            "+s",
+                            vec![SchemaNode::leaf(
+                                "failed",
+                                "+s",
+                                vec![
+                                    SchemaNode::leaf("kind", "u", Vec::new())?,
+                                    SchemaNode::leaf("cause", "u", Vec::new())?,
+                                ],
+                            )?],
+                        )
+                    })
+                    .collect::<Result<Vec<_>, _>>()?,
+            ),
         }
     }
 
@@ -300,6 +246,17 @@ impl Cells {
                 let ends = ends.iter().flat_map(|one| one.to_le_bytes()).collect();
                 owned(&present, vec![Some(ends)], vec![item])
             }
+            Self::Failures {
+                names,
+                rows: values,
+            } => {
+                let values = values.get(cut(values.len())).unwrap_or_default();
+                let mut outer = vec![false; values.len()];
+                let children = (0..names.len())
+                    .map(|place| failure_field(values, place, &mut outer))
+                    .collect::<Result<Vec<_>, _>>()?;
+                struct_node(&outer, children)
+            }
         })
     }
 }
@@ -318,8 +275,8 @@ pub(crate) fn decided(values: &[Answer]) -> Cells {
 }
 
 /// One question's answers across the records, in the kind's own column. A
-/// failed answer never reaches here: a one-question call ends with the
-/// engine's error, and `frame::answered` widens a failed question's column.
+/// failed frame answer becomes null here; the companion column carries its
+/// marker. A one-question Series call still ends with the engine's error.
 pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
     match kind {
         QuestionKind::Decide => Cells::Bools(
@@ -521,7 +478,8 @@ impl Arrow {
 mod tests {
     use super::super::ffi::{ArrowSchema, EMPTY_SCHEMA};
     use super::super::memory::Readable;
-    use super::{BAD_METADATA, SchemaNode, TOO_LONG, metadata, utf8_offset};
+    use super::schema::{BAD_METADATA, metadata};
+    use super::{SchemaNode, TOO_LONG, utf8_offset};
 
     fn words(parts: &[i32]) -> Vec<u8> {
         parts.iter().flat_map(|one| one.to_le_bytes()).collect()

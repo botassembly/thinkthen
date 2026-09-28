@@ -60,6 +60,9 @@ impl From<EngineError> for Failure {
         match error {
             EngineError::Transport(message) => Self::Transport(message),
             EngineError::Status(status) => Self::Status(status),
+            EngineError::SendBudgetFirst | EngineError::SendBudgetRetry(_) => {
+                Self::Usage("the process send budget was spent")
+            }
             EngineError::TokenLimit => Self::TokenLimit,
             EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
             EngineError::Reply(error) => Self::Reply(error),

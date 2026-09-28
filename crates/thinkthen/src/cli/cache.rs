@@ -12,7 +12,7 @@ use crate::failure::Failure;
 pub(crate) fn prune(
     arguments: &PruneArguments,
     environment: &Environment,
-    writer: impl Write,
+    mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let max_size = positive(arguments.max_size.as_deref(), "--max-size")?
         .unwrap_or_else(|| environment.cache_bytes());
@@ -26,16 +26,44 @@ pub(crate) fn prune(
             "--answered-by-other-than takes a nonblank model",
         ));
     }
-    let result = crate::engine::cache_prune::run(
-        &arguments.directory,
-        &crate::engine::cache_prune::Prune {
-            max_size,
-            older_than,
-            answered_by_other_than: arguments.answered_by_other_than.clone(),
-        },
-    )?;
+    let options = crate::engine::cache_prune::Prune {
+        max_size,
+        older_than,
+        answered_by_other_than: arguments.answered_by_other_than.clone(),
+    };
+    if arguments.dry_run {
+        let preview = crate::engine::cache_prune::preview(&arguments.directory, &options)?;
+        edge::write_line(
+            &mut writer,
+            &format!(
+                "selected {} entries and {} bytes; {} entries and {} bytes unselected",
+                preview.selected_entries,
+                preview.selected_bytes,
+                preview.unselected_entries,
+                preview.unselected_bytes
+            ),
+        )?;
+        for name in preview.selected_names {
+            edge::write_line(&mut writer, &format!("selected {name}"))?;
+        }
+        if preview.temporary_entries > 0 {
+            edge::write_line(
+                &mut writer,
+                &format!(
+                    "selected {} temporary files and {} bytes",
+                    preview.temporary_entries, preview.temporary_bytes
+                ),
+            )?;
+            for name in preview.temporary_names {
+                edge::write_line(&mut writer, &format!("selected temporary {name}"))?;
+            }
+        }
+        diagnostics(preview.bad_names)?;
+        return Ok(ExitCode::SUCCESS);
+    }
+    let result = crate::engine::cache_prune::run(&arguments.directory, &options)?;
     edge::write_line(
-        writer,
+        &mut writer,
         &format!(
             "removed {} entries and {} bytes; {} entries and {} bytes remain",
             result.removed_entries,
@@ -44,15 +72,29 @@ pub(crate) fn prune(
             result.remaining_bytes
         ),
     )?;
+    if result.temporary_entries > 0 {
+        edge::write_line(
+            &mut writer,
+            &format!(
+                "removed {} temporary files and {} bytes",
+                result.temporary_entries, result.temporary_bytes
+            ),
+        )?;
+    }
+    diagnostics(result.bad_names)?;
+    Ok(ExitCode::SUCCESS)
+}
+
+fn diagnostics(bad_names: Vec<String>) -> Result<(), Failure> {
     let stderr = std::io::stderr();
     let mut diagnostic = stderr.lock();
-    for name in result.bad_names {
+    for name in bad_names {
         edge::write_line(
             &mut diagnostic,
             &format!("thinkthen: cache prune: left `{name}` in place; it is not a valid entry"),
         )?;
     }
-    Ok(ExitCode::SUCCESS)
+    Ok(())
 }
 
 fn positive(value: Option<&str>, option: &'static str) -> Result<Option<u64>, Failure> {

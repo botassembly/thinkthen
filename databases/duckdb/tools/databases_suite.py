@@ -1,6 +1,6 @@
-"""Relate on the caller's own database: the registry, the identity probe,
-and the reaper (ticket 0118 decisions 1 and 2, rows R1-16, R2-13, R3-6,
-R4-3, R4-5, R4-4, R5-26, R3-23, and R3-1).
+"""Relate on the caller's own database: routing, file access, and cleanup
+(ticket 0118 decisions 1 and 2, rows R1-16, R2-13, R3-6, R4-3, R4-5,
+and R3-23; ticket 0201's read-only file route).
 
 Each case runs one Python script in a child that loads the extension into
 several databases in one process. The script prints one JSON line per
@@ -16,7 +16,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-from harness import CASES, EXTENSION, HOOKS, Backend, case, child_env, expect, main
+from harness import CASES, EXTENSION, Backend, case, child_env, expect, main
 
 PRELUDE = r"""
 import json, os, sys, time
@@ -85,6 +85,45 @@ say([edges(a), edges(b)])
 
 
 @case
+def a_read_only_file_keeps_caller_permissions_and_committed_data():
+    """The C++ route opens a separate read-only connection to a read-only file."""
+    with Backend() as backend:
+        got = script(
+            """
+path = sys.argv[2] + "/a.db"
+a = db(path); staff(a, 2); a.close()
+a = duckdb.connect(path, read_only=True, config={"allow_unsigned_extensions": "true"})
+a.execute(f"LOAD '{EXT}'")
+allowed = edges(a)
+a.execute("CREATE TEMP TABLE only_here AS SELECT 9 AS id, 'Uncommitted' AS name, 'person' AS kind")
+hidden = edges(a, "only_here")
+try:
+    a.execute("SELECT count(*) FROM thinkthen_relate('DELETE FROM t', ['works_for=person:organization'])")
+    mutation = "answered"
+except Exception as error:
+    mutation = str(error).split("\\n")[0]
+rules = sys.argv[2] + "/r.json"
+open(rules, "w").write('{"version": 1, "relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}')
+file_edges = a.execute(f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{rules}')").fetchone()[0]
+a.execute("SET enable_external_access = false")
+try:
+    a.execute(f"SELECT count(*) FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{rules}')")
+    denied = "answered"
+except Exception as error:
+    denied = str(error).split("\\n")[0]
+say([allowed, hidden, mutation, file_edges, denied])
+""",
+            backend.base(),
+        )
+        allowed, hidden, mutation, file_edges, denied = got[0]
+        expect([allowed, file_edges], [2, 2], "committed rows in the read-only file")
+        expect("relate runs on a separate connection, so it cannot see temporary tables" in hidden, True, "temporary rows remain invisible")
+        expect("the relate query must be a SELECT" in mutation, True, "mutating query refusal")
+        expect("this database's file settings refuse it" in denied, True, "caller file permissions")
+        expect(backend.count(), 1, "one allowed send; the equivalent file rule reused the answer and refusals sent none")
+
+
+@case
 def r3_6_no_setting_names_the_identity_and_b_cannot_read_a():
     with Backend() as backend:
         got = script(
@@ -105,16 +144,14 @@ say([said, edges(b)])
 
 @case
 def r4_3_a_released_database_reconnects_to_its_own_table():
-    """A closes, the reaper drops A and frees its file, B loads, and A
-    reconnects. A's relate reads A's table, and with external access off
-    it refuses a rules file (R4-5's proof)."""
+    """A closes and frees its file, B loads, and A reconnects. A's relate
+    reads A's table, and caller settings refuse a rules file."""
     with Backend() as backend:
         got = script(
             """
 import subprocess
 path = sys.argv[2] + "/a.db"
 a = db(path); staff(a, 4); a.close()
-time.sleep(4.5)
 freed = subprocess.run([sys.executable, "-c", f"import duckdb; duckdb.connect({path!r}).close()"]).returncode
 b = db(); staff(b, 11)
 a = db(path)
@@ -132,35 +169,6 @@ say([freed, edges(a), edges(b), refused])
         expect([freed, a_edges, b_edges], [0, 4, 11], "freed, A's edges, B's edges")
         said_text = refused.split("thinkthen ", 1)[1]
         expect(said_text.replace(said_text.split(" ")[4], "PATH", 1), "local: the rules file PATH was not read: this database's file settings refuse it", "the rules file with access off")
-
-
-@case
-def r4_4_a_forged_probe_is_refused():
-    with Backend() as backend:
-        got = script(
-            """
-a = db(); staff(a, 4)
-probe = a.execute("SELECT database_name FROM duckdb_databases() WHERE database_name LIKE 'thinkthen_instance_%'").fetchall()
-name = probe[0][0]
-a.execute(f"DETACH {name}"); a.execute(f"ATTACH ':memory:' AS {name}")
-say([len(probe), len(name), edges(a)])
-""",
-            backend.base(),
-        )
-        count, length, forged = got[0]
-        expect([count, length], [1, len("thinkthen_instance_") + 32], "one probe of 32 hex characters")
-        expect(forged.split(": ", 1)[1], "thinkthen usage: this connection's database answers no loaded identity probe, so relate cannot find its own connection; reopen the database writable and LOAD the extension, since a read-only database cannot carry a probe and a released one lost it", "the forged relate")
-
-
-@case
-def r5_26_two_processes_mint_distinct_identities():
-    with Backend() as backend:
-        body = """
-a = db()
-say(a.execute("SELECT database_name FROM duckdb_databases() WHERE database_name LIKE 'thinkthen_instance_%'").fetchone()[0])
-"""
-        first, second = script(body, backend.base()), script(body, backend.base())
-        expect(first != second and len(first[0]) == len(second[0]) == 51, True, f"{first} and {second}")
 
 
 @case
@@ -206,36 +214,6 @@ say(round((after - before) / 10 * 100, 2))
         expect(got[0] < 5.0, True, f"500 idle databases took {got[0]} percent of one core")
 
 
-def bound_relate_survives_reaper(rounds: int):
-    with Backend() as backend:
-        got = script(
-            f"""
-answered = 0
-for _ in range({rounds}):
-    a = db(); staff(a, 2)
-    a.execute("PREPARE r AS " + RELATE.format("t"))
-    a.execute("SELECT * FROM thinkthen_test_hook_reap()").fetchall()
-    answered += a.execute("EXECUTE r").fetchone()[0] == 2
-    a.close()
-say(answered)
-""",
-            backend.base(),
-            extension=HOOKS,
-            timeout=600,
-        )
-        expect(got, [rounds], "rounds answered")
-
-
-@case
-def one_bound_relate_outlives_a_forced_reaper_pass():
-    bound_relate_survives_reaper(1)
-
-
-@case
-def r3_1_a_bound_relate_outlives_a_forced_reaper_pass():
-    bound_relate_survives_reaper(200)
-
-
 @case
 def warm_inside_a_relate_query_refuses_and_never_hangs():
     """Ticket 0129 decision 4: relate holds the gate its nested warm would wait on."""
@@ -259,29 +237,24 @@ say(said)
 
 
 @case
-def warm_after_a_release_names_a_fix_that_works():
-    """Ticket 0129 decision 6: a released kept connection reads no '@file'."""
+def warm_after_reopen_uses_the_new_callers_file_settings():
+    """A new caller owns file access after the previous connection closes."""
     with Backend() as backend:
         got = script(
             """
 open(sys.argv[2] + "/q.json", "w").write('{"decide": "Is it a refund?"}')
-a = db()
-a.execute("SELECT * FROM thinkthen_test_hook_reap()").fetchall()
-try:
-    said = a.execute(f"SELECT thinkthen_warm('@{sys.argv[2]}/q.json', 'refund now')").fetchone()[0]
-except Exception as error:
-    said = str(error).split("\\n")[0]
-say(said)
+a = db(sys.argv[2] + "/a.db"); a.close()
+a = db(sys.argv[2] + "/a.db")
+say(a.execute(f"SELECT thinkthen_warm('@{sys.argv[2]}/q.json', 'refund now')").fetchone()[0])
 """,
             backend.base(),
-            extension=HOOKS,
         )
-        expect(got[0].split(": ", 1)[-1], "thinkthen usage: thinkthen_warm cannot read '@file' here, because this database's kept connection was released when its last connection closed; reopen the database and LOAD the extension, or pass the file's JSON text", "the released warm")
-        expect(backend.count(), 0, "counted sends")
+        expect(got, [1], "the reopened caller's file answers")
+        expect(backend.count(), 1, "one send after reopening")
 
 
 if __name__ == "__main__":
-    stress = {"r3_23_idle_databases_cost_little", "r3_1_a_bound_relate_outlives_a_forced_reaper_pass"}
+    stress = {"r3_23_idle_databases_cost_little"}
     only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
     CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
     sys.exit(main())

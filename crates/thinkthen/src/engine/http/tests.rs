@@ -216,6 +216,96 @@ fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
     assert!(matches!(listener.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock));
 }
 
+#[test]
+fn a_deadline_while_width_is_held_reserves_no_send() {
+    static WIDTH: crate::engine::Widths = crate::engine::Widths::new();
+    WIDTH
+        .select(Some(crate::engine::Width::new(1).expect("width")))
+        .expect("select");
+    let held = WIDTH
+        .acquire(&crate::engine::Cancel::default())
+        .expect("hold width");
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    listener.set_nonblocking(true).expect("nonblocking");
+    let url = format!(
+        "http://{}/v1/systemone",
+        listener.local_addr().expect("address")
+    );
+    let key = Key::of("sk-test-value");
+    let exchange = Exchange {
+        url: &url,
+        body: b"{}",
+        key: &key,
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+    };
+    let budget = crate::public::SendBudget::new();
+    let cancel = crate::engine::Cancel::default()
+        .with_deadline(crate::engine::Deadline::after(Duration::from_millis(60)))
+        .with_send_budget(Some((budget.clone(), Some(1))));
+    let counts = Counters::new(None);
+    let client = Client::new(
+        Duration::from_secs(1),
+        false,
+        crate::engine::process_width(),
+    )
+    .gated(&WIDTH);
+    let refused = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
+    drop(held);
+    assert!(matches!(refused, Err(Error::Deadline(_))));
+    assert_eq!(counts.snapshot().requests_sent, 0);
+    assert!(matches!(listener.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock));
+    budget
+        .reserve(Some(1), None)
+        .expect("the wait did not spend the send")
+        .commit();
+}
+
+#[test]
+fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    let url = format!(
+        "http://{}/v1/systemone",
+        listener.local_addr().expect("address")
+    );
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("first request");
+        let mut body = [0_u8; 1024];
+        let _read = stream.read(&mut body).expect("request bytes");
+        stream
+            .write_all(b"HTTP/1.1 503 Unavailable\r\nContent-Length: 0\r\n\r\n")
+            .expect("response");
+    });
+    let key = Key::of("sk-test-value");
+    let exchange = Exchange {
+        url: &url,
+        body: b"{}",
+        key: &key,
+        max_retries: 1,
+        retry_wait: Duration::from_secs(1),
+    };
+    let budget = crate::public::SendBudget::new();
+    let cancel = crate::engine::Cancel::default()
+        .with_deadline(crate::engine::Deadline::after(Duration::from_millis(200)))
+        .with_send_budget(Some((budget.clone(), Some(2))));
+    let counts = Counters::new(None);
+    let client = Client::new(
+        Duration::from_secs(1),
+        false,
+        crate::engine::process_width(),
+    );
+    let refused = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
+    server.join().expect("server");
+    assert!(matches!(refused, Err(Error::Deadline(_))));
+    assert_eq!(counts.snapshot().requests_sent, 1);
+    assert_eq!(counts.snapshot().retries, 0);
+    budget
+        .reserve(Some(2), None)
+        .expect("only the first send spent a unit")
+        .commit();
+    assert!(budget.reserve(Some(2), None).is_err());
+}
+
 /// Port zero can never listen, so the refusal is deterministic.
 #[test]
 fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {

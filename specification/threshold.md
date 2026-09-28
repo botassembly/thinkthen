@@ -8,7 +8,7 @@ Every probability on this page is illustrative.
 
 ## The rule
 
-Let p be the probability of yes.
+For `decide`, let p be the probability of yes. The other verbs that accept a cut use the same inclusive boundary on the quantity named in the table below. Only `decide` accepts a band and returns yes, no, or not sure from it.
 
 | Form | Accepted values | Yes | No | Not sure |
 | --- | --- | --- | --- | --- |
@@ -18,13 +18,13 @@ Let p be the probability of yes.
 
 The high boundary is inclusive. The low boundary belongs to the not sure side, so a value below LOW is no and a value at LOW is not sure.
 
-A cut of 0 is refused because every probability would reach it and every answer would be yes. A band low of 0 is accepted because a probability of exactly 0 is not sure unless it also reaches HIGH.
+A cut of 0 is refused because every probability would reach it. For `decide`, that would make every answer yes. A band low of 0 is accepted because a probability of exactly 0 is not sure unless it also reaches HIGH.
 
-A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. `--threshold 0.5` and no threshold at all name the same rule.
+A value is a decimal fraction. A percent such as `90`, a reversed band such as `0.9:0.1`, an empty side, and a number that is not finite are usage errors before any request goes out. On `decide`, `--threshold 0.5` and no threshold at all name the same rule. `choose` has no default cut, as the command table below shows.
 
 The rule has a second home. A question file holds it under `threshold`, and a `--threshold` typed beside `@FILE` replaces it. [question-file.md](question-file.md) gives the precedence and what each source is named in a message.
 
-## Worked boundaries
+## Worked `decide` boundaries
 
 | p | none given | `--threshold 0.9` | `--threshold 0.1:0.9` |
 | --- | --- | --- | --- |
@@ -49,14 +49,20 @@ Repeated calls can move an answer far enough to cross a cut. In experiment 212, 
 | Command | Single cut | Band | The cut applies to |
 | --- | --- | --- | --- |
 | `decide` | yes | yes | the probability of yes |
-| `choose` | yes | no | the winning option's probability |
+| `choose` | yes, optional | no | the highest option probability; an exact top tie stays unresolved even when it reaches the cut |
+| `tag` | yes | no | each label's independent probability of yes; every label that reaches the cut is included |
 | `filter` | yes | no | the probability of yes for each record |
-| `score` | no | no | |
-| `rank` | no | no | |
-| `annotate` | no | no | |
-| `find` | no | no | |
+| `recognize` | yes | no | each name's printed strength, P(kind) times P(span) rounded to four decimals |
+| `recognize --relation-threshold` | yes, under its separate flag | no | each stated relation edge's probability of yes |
+| `relate` | yes | no | each relation edge's probability of yes |
+| `score` | no | no | its value is a weighted position on levels, with no command threshold |
+| `rank` | no | no | it orders by probability of yes and takes no threshold |
+| `annotate` | no command flag | no command flag | each saved `decide`, `choose`, or `tag` question keeps its own rule; `score` has none |
+| `find` | no | no | it selects one unit and takes no threshold |
 
 `--threshold` on a command that takes none is a usage error. A question inside an `annotate` file carries its own threshold, and [annotate.md](annotate.md) gives the rule there.
+
+On `choose`, no cut means the sole top option can be returned at any probability. `decide`, `tag`, `filter`, `recognize`, and `relate` default to a cut of 0.5. A tuned cut therefore means a mark on that row's quantity: yes probability, leading option probability, each label's yes probability, printed name strength, or each edge's yes probability. `audit` tunes `score`'s weighted position with level boundaries instead of writing a command threshold; [audit.md](audit.md) gives that separate rule.
 
 An exact tie for first place in `choose` is not sure with or without a threshold. With no threshold and one strict winner, `choose` returns that label.
 
@@ -74,4 +80,4 @@ The landed code carries `--min-prob P`, a symmetric pass mark above 0.5. It is g
 | `--min-prob 0.8` | `--threshold 0.2:0.8` |
 | no mark, and an `unassessed` result | `--threshold 0.5`, or nothing at all |
 
-The old rule could not express an uneven band, and it could not express a single cut. The new rule expresses both. The `unassessed` outcome is gone, because a rule always exists.
+The old `decide` rule could not express an uneven band or a single cut. The new `decide` rule expresses both. Its `unassessed` outcome is gone, because `decide` always has a rule.

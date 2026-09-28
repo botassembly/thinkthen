@@ -9,7 +9,7 @@ use rusqlite::ffi::sqlite3;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::{Filters, IndexConstraintOp, IndexInfo};
 use serde_json::json;
-use thinkthen::{Entity, Kind, Recognize, Relate};
+use thinkthen::{CallOptions, Entity, Kind, Recognize, Relate};
 
 use crate::question::{from_file, named_file, shown, text};
 use crate::{Failure, ffi, worker};
@@ -99,6 +99,30 @@ fn argument(arguments: &[Value], at: usize, what: &str) -> Result<Option<String>
         .map_or(Ok(None), |value| text(ValueRef::from(value), what))
 }
 
+/// A trailing hidden deadline is milliseconds; an absent or NULL value leaves it unset.
+fn deadline(arguments: &[Value], at: usize) -> Result<Option<i64>, Failure> {
+    let value = arguments.get(at).map_or(ValueRef::Null, ValueRef::from);
+    let millis = match value {
+        ValueRef::Null => return Ok(None),
+        ValueRef::Integer(millis) => millis,
+        ValueRef::Real(real)
+            if real.is_finite()
+                && real.fract() == 0.0
+                && (i64::MIN as f64..-(i64::MIN as f64)).contains(&real) =>
+        {
+            real as i64
+        }
+        _ => {
+            return Err(Failure::usage(format!(
+                "a deadline of {} is not a whole number of milliseconds",
+                shown(value)
+            )));
+        }
+    };
+    CallOptions::new().deadline_millis(millis)?;
+    Ok(Some(millis))
+}
+
 /// Validate a JSON argument or file while retaining its original member order.
 fn json_source(
     argument: &str,
@@ -179,9 +203,9 @@ impl Recognizer {
 impl Table for Recognizer {
     const NAME: &'static str = "thinkthen_recognize";
     const SCHEMA: &'static CStr =
-        c"CREATE TABLE x(text, start, end, length, kind, strength, body HIDDEN, kinds HIDDEN)";
+        c"CREATE TABLE x(text, start, end, length, kind, strength, body HIDDEN, kinds HIDDEN, deadline HIDDEN)";
     const FIRST_HIDDEN: usize = 6;
-    const COLUMNS: usize = 8;
+    const COLUMNS: usize = 9;
     const REQUIRED: usize = 1;
 
     fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
@@ -189,7 +213,8 @@ impl Table for Recognizer {
             return Ok(Vec::new());
         };
         let ask = Self::ask(argument(arguments, 1, "the kinds")?.as_deref())?;
-        let found = worker::run(db, None, move |engine, options| {
+        let deadline = deadline(arguments, 2)?;
+        let found = worker::run(db, deadline, move |engine, options| {
             Ok(engine.recognize_with(&ask, &evidence, options)?)
         })?;
         found
@@ -315,9 +340,9 @@ impl Relater {
 
 impl Table for Relater {
     const NAME: &'static str = "thinkthen_relate";
-    const SCHEMA: &'static CStr = c"CREATE TABLE x(relation, source, target, probability, table_name HIDDEN, id_column HIDDEN, name_column HIDDEN, kind_column HIDDEN, rule_1 HIDDEN, rule_2 HIDDEN, rule_3 HIDDEN, rule_4 HIDDEN)";
+    const SCHEMA: &'static CStr = c"CREATE TABLE x(relation, source, target, probability, table_name HIDDEN, id_column HIDDEN, name_column HIDDEN, kind_column HIDDEN, rule_1 HIDDEN, rule_2 HIDDEN, rule_3 HIDDEN, rule_4 HIDDEN, deadline HIDDEN)";
     const FIRST_HIDDEN: usize = 4;
-    const COLUMNS: usize = 12;
+    const COLUMNS: usize = 13;
     const REQUIRED: usize = 4;
 
     fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
@@ -344,8 +369,9 @@ impl Table for Relater {
             return Err(Failure::usage("thinkthen_relate needs one to four rules"));
         }
         let ask = Self::ask(&rules)?;
+        let deadline = deadline(arguments, 8)?;
         let (entities, ids) = Self::entities(db, &names)?;
-        let edges = worker::run(db, None, move |engine, options| {
+        let edges = worker::run(db, deadline, move |engine, options| {
             Ok(engine.relate_with(&ask, entities, options)?)
         })?;
         let mut rows = Vec::new();
