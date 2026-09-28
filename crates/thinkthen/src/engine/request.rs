@@ -160,6 +160,28 @@ where
     let complete = |response: &[u8]| {
         !caches || !built_in::decode(plan, response).is_ok_and(|reply| reply.failed_any())
     };
+    let mut read_key = Some(key);
+    let early_key = if recorder.unbound_empty().map_err(E::from)? {
+        if let Some(stop) = cancel.stop() {
+            return Err(E::from(stop));
+        }
+        cancel.key_lookup();
+        let read = read_key
+            .take()
+            .ok_or_else(|| E::from(Error::Defect("key lookup was already used")))?;
+        let result = read();
+        match result {
+            Err(error) => {
+                if recorder.unbound_empty().map_err(E::from)? {
+                    return Err(error);
+                }
+                Some(Err(error))
+            }
+            Ok(key) => Some(Ok(key)),
+        }
+    } else {
+        None
+    };
     let operation = recorder
         .prepare_checked(&recorded, &prepared.digest, cancel, &complete)
         .map_err(E::from)?;
@@ -180,8 +202,17 @@ where
             0,
         ),
         PreparedRecording::Live(permit) => {
-            cancel.key_lookup();
-            let (permit, key) = finish_or_cancel(permit, key())?;
+            let found_key = match early_key {
+                Some(result) => result,
+                None => {
+                    cancel.key_lookup();
+                    let read = read_key
+                        .take()
+                        .ok_or_else(|| E::from(Error::Defect("key lookup was already used")))?;
+                    read()
+                }
+            };
+            let (permit, key) = finish_or_cancel(permit, found_key)?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
             usage.live_reply(decoded.usage);

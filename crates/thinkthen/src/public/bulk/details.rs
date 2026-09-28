@@ -4,7 +4,7 @@ use serde::Serialize;
 
 use crate::core;
 use crate::public::batch::{self, Batch};
-use crate::public::engine::{DetailQuestion, Engine, Evidence, Sealed, evidence, only};
+use crate::public::engine::{DetailQuestion, Engine, Evidence, evidence, only};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::Kind;
 use crate::public::results::{Details, Row};
