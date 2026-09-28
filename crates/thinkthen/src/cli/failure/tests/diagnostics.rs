@@ -58,6 +58,7 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         }),
         Failure::Recognize(super::super::recognize::Error::LogicalQuestion),
         Failure::RecordingStorage,
+        Failure::UsedManifestUnreadable,
         Failure::Defect("a ranked row carries no probability"),
     ];
 
