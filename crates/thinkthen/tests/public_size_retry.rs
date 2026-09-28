@@ -13,13 +13,16 @@ use thinkthen::{Engine, Entity, Question, Relate};
 fn relation_listener() -> Listener {
     Listener::answering(|body| {
         let request: Value = serde_json::from_slice(body).expect("request JSON");
-        let answers = request["questions"]
+        let answers = request
+            .get("questions")
+            .expect("relation questions")
             .as_object()
             .expect("relation questions")
             .keys()
             .map(|name| (name.clone(), serde_json::json!({"type":"noul","noul":0.9})))
             .collect::<serde_json::Map<_, _>>();
-        Canned::ok(&serde_json::json!({"model":request["model"],"answers":answers}).to_string())
+        let model = request.get("model").expect("request model");
+        Canned::ok(&serde_json::json!({"model":model,"answers":answers}).to_string())
     })
     .expect("listener")
 }
