@@ -5,6 +5,7 @@
 #include "scalar_settings.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
 #include "duckdb/function/aggregate_function.hpp"
+#include "duckdb/function/function_set.hpp"
 
 #include <cstring>
 #include <limits>
@@ -186,13 +187,15 @@ void WarmDestroy(Vector &states, AggregateInputData &, idx_t count) {
 } // namespace
 
 void RegisterWarm(ExtensionLoader &loader) {
+	AggregateFunctionSet overloads("thinkthen_warm");
 	for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR}}) {
 		AggregateFunction function("thinkthen_warm", parameters, LogicalType::BIGINT, WarmSize, WarmInit,
 		                           WarmUpdate, WarmCombine, WarmFinalize, FunctionNullHandling::SPECIAL_HANDLING,
 		                           nullptr, BindWarm, WarmDestroy);
-		loader.RegisterFunction(function);
+		overloads.AddFunction(function);
 	}
+	loader.RegisterFunction(overloads);
 }
 
 } // namespace duckdb
