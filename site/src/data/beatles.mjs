@@ -29,6 +29,7 @@ const record = (name) => ({ text: `the bench's record for this slide`, href: tre
 export const GROUPS = [
   ['Start', ['strings', 'jev', 'runs-in']],
   ['The ten functions', ['decide', 'choose', 'tag', 'score', 'score-bands', 'filter', 'rank', 'find', 'annotate', 'recognize', 'relate']],
+  ['Scripts', ['question-file', 'bash']],
   ['Bindings', ['languages', 'data']],
   ['What Jev knows', ['blind-spots', 'rad']],
   ['Tune your bar', ['audit', 'diff']],
@@ -283,6 +284,46 @@ const ARTICLES = {
     link: tree('relate'),
   },
 
+  "question-file": {
+    title: "A question file is a recipe.",
+    label: "Question files",
+    goal: "A question file says what yes and no mean, when to answer not sure, and which fields to read, and decide runs it on one song.",
+    idea: [
+      "A [question file](/functions/question-file/) is a small recipe. `decide` holds the question. `true` and `false` say what yes and no mean. `threshold` sets the band 0.2:0.8. An answer of 0.8 or more is yes, and an answer under 0.2 is no. `on` picks the title and the album from each record. The request sends only those two fields.",
+      "Here a band plays only songs the Beatles wrote. The file asks whether a Beatle wrote a song. `decide @original.json` runs the recipe on one song.",
+    ],
+    files: {
+      'original.json': "original.json, the question file",
+    },
+    see: {
+      '1-something': "`decide` prints `true` for Something and exits 0.",
+    },
+    source: { text: "the bench's songwriter list", href: `${REPO}/blob/main/data/songs.tsv` },
+    lesson: "George Harrison wrote Something. The answer is right. The exit code carries the answer too: 0 for yes, 1 for no, and 3 for not sure. The next page puts that code to work in a script.",
+    takeaway: "Write the question once in a file, and every run asks it the same way.",
+    link: REPO,
+  },
+
+  bash: {
+    title: "Answers drive a Bash script.",
+    label: "Bash scripts",
+    goal: "A Bash script reads the exit code of decide, and each answer picks the next step.",
+    idea: [
+      "The script reads one song per line from `setlist.jsonl`. It asks `original.json` from the last page about each song. The script plays a yes, skips a no, and hands a not sure to a person. The [question file page](/functions/question-file/) lists every key a file can hold.",
+      "`decide --quiet` prints nothing. Its exit code is the answer: 0 for yes, 1 for no, and 3 for not sure. The function `is_original` names what the code means, and `if` reads it directly. `code=$?` names the code, and `case` tells a no from a not sure. Any other code is a failure, and the script stops. [Handle not sure](/how-tos/bash/not-sure/) teaches the same form.",
+    ],
+    files: {
+      'setlist.jsonl': "setlist.jsonl, the songs the script reads",
+    },
+    see: {
+      '1-setlist': "Four songs play, two are skipped, and one goes to a person.",
+    },
+    source: { text: "the bench's songwriter list", href: `${REPO}/blob/main/data/songs.tsv` },
+    lesson: "Five of the six sure answers are right. Jev says a Beatle wrote Words of Love. Buddy Holly wrote it. Mr. Moonlight falls inside the band, and a person checks it. Roy Lee Johnson wrote it.",
+    takeaway: "The exit code is the answer, and an ordinary `if` and `case` act on it.",
+    link: REPO,
+  },
+
   languages: {
     title: "Scripting and systems languages",
     label: "Languages",
@@ -315,7 +356,7 @@ const ARTICLES = {
     goal: "audit grades saved answers against answers you already know and suggests the bar that gets the most right.",
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers and suggests the bar that gets the most right. It sends no request.",
-      "Here Jev was asked of 70 songs whether each is on Abbey Road, from the title alone. The slide shows the same 12 songs as the [diff page](/learn/beatles-bench/diff/), before Jev gets context. At the band 0.2:0.8, the slide brightens Jev's misses. They are the wrong answers and the not-sure answers.",
+      "Here Jev was asked of 70 songs whether each is on Abbey Road, from the title alone. The slide shows 12 of them at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The [diff page](/learn/beatles-bench/diff/) asks about the same 12 songs again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 20 are right, 3 are wrong, and 47 are not sure.",
@@ -330,19 +371,19 @@ const ARTICLES = {
 
   diff: {
     title: "diff shows what changed.",
-    goal: "diff counts the answers that changed between two runs, and how many turned right or wrong.",
+    goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
-      "Ask the same question twice and `diff` lists every answer that changed. With an answer key, it says whether each change fixed a mistake or made one.",
-      "Here the first run asks about 70 song titles from memory. The second gives Jev each song's catalog entry too. The `jq` lines key both runs by song title. The warning is right: the two runs asked different questions.",
+      "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
+      "Here the page reads two saved runs for the 12 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The warning is right. The two runs asked different questions.",
     ],
     see: {
-      '1-bar': "At 0.5, 20 answers changed, and every one became right.",
-      '2-band': "Inside the band 0.2:0.8, 48 changed.",
+      '1-band': "At the band 0.2:0.8, 9 of the 12 answers changed, and all 12 end right.",
+      '2-bar': "At a bar of 0.5, 7 changed. Each was a wrong yes that turned right.",
     },
-    headings: { '2-band': "Change the bar" },
-    lesson: "The band reads the middle as not sure. From memory, only 20 answers clear it and are right. With context, 68 do, and none went wrong.",
-    takeaway: "diff counts what a change fixed and what it broke.",
-    link: tree('diff'),
+    headings: { '2-bar': "Change the bar" },
+    lesson: "`gained` marks a wrong answer that turned right. `resolved` marks a not-sure answer that turned right. `lost` counts right answers that turned wrong, and none did. At the band 0.2:0.8, Come Together, Here Comes the Sun, and Octopus's Garden kept their answers. `diff` leaves them out.",
+    takeaway: "diff shows what a change fixed and what it broke.",
+    link: tree('audit'),
   },
 
   "blind-spots": {
