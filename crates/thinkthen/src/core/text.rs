@@ -366,6 +366,15 @@ mod tests {
     use crate::core::json::Json;
 
     #[test]
+    fn raw_url_debug_withholds_the_address() {
+        let url = Url::new("http://localhost/url-marker-0210").expect("URL");
+        assert_eq!(url.as_str(), "http://localhost/url-marker-0210");
+        let shown = format!("{url:?}");
+        assert!(shown.contains("<withheld>"));
+        assert!(!shown.contains("url-marker-0210"));
+    }
+
+    #[test]
     fn new_keeps_the_text_it_was_given() {
         let question = QuestionText::new("asks for a refund").expect("not blank");
         assert_eq!(question.as_json().as_str(), Some("asks for a refund"));

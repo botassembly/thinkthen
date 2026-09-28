@@ -7,8 +7,8 @@
 use std::fs;
 use std::process::Command;
 
-use conformance_backend::Listener;
-use thinkthen::{Engine, EngineBuilder, ErrorKind};
+use conformance_backend::{Canned, Listener};
+use thinkthen::{Engine, EngineBuilder, ErrorKind, Question};
 
 const REFUSAL: &str = "the backend address contains the API key; keep the key out of the address";
 
@@ -99,6 +99,36 @@ fn captured_key_is_checked_and_an_explicit_key_overrides_it() {
 }
 
 #[test]
+fn safe_gateway_url_keeps_result_identity_but_not_debug_text() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":1,"output_tokens":1}}"#)
+    })
+    .expect("loopback listener");
+    let base = format!("{}/gateway-marker-0210", listener.base());
+    let engine = Engine::builder()
+        .base_url(&base)
+        .expect("base")
+        .api_key("different-key-0210")
+        .expect("key")
+        .no_cache()
+        .build()
+        .expect("safe gateway");
+    let question = Question::decide("a benign question")
+        .expect("question")
+        .cut();
+    let details = engine
+        .details(&question, "benign evidence")
+        .expect("details");
+    let posting = format!("{base}/systemone");
+    assert_eq!(details.url(), posting);
+    assert!(details.to_json().contains(&posting));
+    let debug = format!("{details:?}");
+    assert!(debug.contains("url: \"<withheld>\""), "{debug}");
+    assert!(!debug.contains("gateway-marker-0210"), "{debug}");
+    assert_eq!(listener.count(), 1);
+}
+
+#[test]
 fn command_refuses_before_plan_status_or_recording_output() {
     let home = std::env::temp_dir().join(format!(
         "thinkthen-key-address-{}-{:?}",
@@ -115,6 +145,8 @@ fn command_refuses_before_plan_status_or_recording_output() {
     for args in [
         vec!["decide", "a question", "--url", &base, "--dry-run"],
         vec!["decide", "a question", "--url", &base, "--record", &record],
+        vec!["decide", "a question", "--url", &base, "--cache", &record],
+        vec!["decide", "a question", "--url", &base, "--replay", &record],
         vec!["find", "a question", "--url", &base, "--dry-run"],
         vec![
             "recognize",
@@ -133,6 +165,7 @@ fn command_refuses_before_plan_status_or_recording_output() {
         ],
         vec!["check", "--url", &base, "--dry-run"],
         vec!["status", "--json"],
+        vec!["status"],
     ] {
         let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .args(&args)

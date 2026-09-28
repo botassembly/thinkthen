@@ -410,10 +410,21 @@ mod deadline_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{Chunks, opened, write_line};
+    use super::{Chunks, Environment, opened, write_line};
     use crate::failure::Failure;
     use std::fs::{self, File};
     use std::io::{Error, ErrorKind, Read as _, Write};
+
+    #[test]
+    fn raw_environment_debug_withholds_the_address() {
+        let environment = Environment {
+            base_url: Some("http://localhost/environment-marker-0210".to_owned()),
+            ..Environment::default()
+        };
+        let shown = format!("{environment:?}");
+        assert!(shown.contains("base_url: Some(\"<withheld>\")"));
+        assert!(!shown.contains("environment-marker-0210"));
+    }
 
     /// A writer that fails every write with the kind the case names.
     struct Failing(ErrorKind);

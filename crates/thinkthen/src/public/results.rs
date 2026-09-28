@@ -176,7 +176,7 @@ impl Counters {
 }
 
 /// One judgment with the probabilities and request facts behind it.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Details {
     value: Judgment,
     probabilities: Probabilities,
@@ -191,6 +191,27 @@ pub struct Details {
     confidence: Option<f64>,
     url: String,
     json: Written,
+}
+
+impl fmt::Debug for Details {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Details")
+            .field("value", &self.value)
+            .field("probabilities", &self.probabilities)
+            .field("nearest", &self.nearest)
+            .field("model", &self.model)
+            .field("question_sha256", &self.question_sha256)
+            .field("profile_warning", &self.profile_warning)
+            .field("requests", &self.requests)
+            .field("requests_sent", &self.requests_sent)
+            .field("cached", &self.cached)
+            .field("usage", &self.usage)
+            .field("confidence", &self.confidence)
+            .field("url", &"<withheld>")
+            .field("json", &self.json)
+            .finish()
+    }
 }
 
 impl Details {

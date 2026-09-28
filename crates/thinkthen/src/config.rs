@@ -283,6 +283,17 @@ mod tests {
 
     use super::{Config, Platform, resolve_cache, resolve_config, resolve_usage};
 
+    #[test]
+    fn raw_configuration_debug_withholds_the_address() {
+        let config = Config::parse(
+            br#"{"schema":"thinkthen.config/1","url":"http://localhost/config-marker-0210"}"#,
+        )
+        .expect("valid configuration");
+        let shown = format!("{config:?}");
+        assert!(shown.contains("url: Some(\"<withheld>\")"));
+        assert!(!shown.contains("config-marker-0210"));
+    }
+
     #[cfg(unix)]
     #[test]
     fn a_different_owner_can_change_a_readable_configuration() {
