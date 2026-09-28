@@ -47,3 +47,7 @@ Order the work after a fresh contract review: settle the safe row schema, status
 - The plan's “one ticket settles four” shorthand could hide register 68's page criterion or register 43's batch isolation. The whole-batch choice affects paid attempts and cannot be inferred from the existing one-split-on-413 rule.
 - A new error row must never contain backend response or evidence text in a diagnostic, and must never print a key. Name only safe user-supplied pointer syntax, record position and fixed failure metadata. A zero-send assertion needs the loopback listener count.
 - The failed request may have consumed tokens that the backend did not report. Keep run facts and per-row metadata truthful. Existing partial exit 6 and a later terminal exit 4 retain their precedence until a reviewed contract changes it.
+
+## Independent preparation review
+
+Fresh Medium review accepted `64749d91` after checking the four original findings, accepted contracts, prerequisites, schedulers, command paths and existing tests. This is preparation acceptance only. A numbered I1 design still needs to settle the error carrier, recoverable failures, exit precedence and failed-batch policy before implementation. The coordinator keeps default fail-fast behavior and every distinct criterion; no public option or issue closure is approved by these notes.
