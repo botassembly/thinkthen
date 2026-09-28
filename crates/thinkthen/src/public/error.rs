@@ -240,7 +240,7 @@ fn message(error: &EngineError) -> String {
         EngineError::RecordingStorage => "the recording folder could not be written",
         EngineError::RecordingPathIsFile => "the recording folder names a file",
         EngineError::RecordingBackendMismatch(..) => {
-            "the recording folder belongs to another backend address"
+            "the recording folder belongs to another backend address; restore its backend settings or choose another folder"
         }
         EngineError::RecordingFolderLegacy => {
             "the recording folder predates backend binding; replay it read-only or choose a new folder"

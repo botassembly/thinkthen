@@ -272,6 +272,14 @@ where
         }
     };
     if !cancel.has_zero_send_limit() {
+        if let Err(error) = key.check_line_break()
+            && recorder.unbound_empty().map_err(E::from)?
+        {
+            if let Some(stop) = cancel.stop() {
+                return Err(E::from(stop));
+            }
+            return Err(E::from(error));
+        }
         return Ok(FirstUse {
             key: Some(Ok(key)),
             zero_limit: false,
