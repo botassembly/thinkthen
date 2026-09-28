@@ -8,7 +8,7 @@ use crate::core::{
 use crate::engine::facade::Judgment;
 
 /// What a detailed row names beside the judgment: the backend's address and the
-/// calibration profile the command compares. The library compares none.
+/// calibration profile the run compares.
 pub(crate) struct Run<'a> {
     pub(crate) backend: &'a Backend,
     pub(crate) tuned_for: Option<&'a ProfileName>,
@@ -30,8 +30,12 @@ pub(crate) fn decision(
     threshold: Option<Threshold>,
     shown: Value,
     input: Option<Record>,
-) -> Result<String, RenderError> {
-    decision_with_batch(run, judged, question, threshold, shown, input, None)
+) -> Result<(String, String), RenderError> {
+    let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
+    let json = decision_with_digest(
+        run, judged, question, threshold, shown, input, None, &digest,
+    )?;
+    Ok((json, digest))
 }
 
 #[expect(
@@ -47,10 +51,30 @@ pub(crate) fn decision_with_batch(
     input: Option<Record>,
     batch: Option<BatchMeta>,
 ) -> Result<String, RenderError> {
+    let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
+    decision_with_digest(
+        run, judged, question, threshold, shown, input, batch, &digest,
+    )
+}
+
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the digest and optional batch belong to the same result document"
+)]
+fn decision_with_digest(
+    run: Run<'_>,
+    judged: &Judgment,
+    question: Question,
+    threshold: Option<Threshold>,
+    shown: Value,
+    input: Option<Record>,
+    batch: Option<BatchMeta>,
+    digest: &str,
+) -> Result<String, RenderError> {
     let answered = &judged.answered;
     let meta = Meta::new(
         env!("CARGO_PKG_VERSION"),
-        question_sha256_with_profile(&question, threshold, run.tuned_for)?,
+        digest.to_owned(),
         run.backend.url().clone(),
         answered.reply.model().clone(),
         answered.reply.usage(),
