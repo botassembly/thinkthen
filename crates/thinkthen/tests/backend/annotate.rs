@@ -37,6 +37,47 @@ fn questions() -> PathBuf {
         .clone()
 }
 
+#[test]
+fn a_saved_set_name_keeps_its_pinned_identity_and_warning() {
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../conformance/calibration.json"))
+            .expect("shared calibration fixture");
+    let set_file = set("shared-calibration", &fixture["set"].to_string());
+    let profile = set(
+        "shared-runtime-profile",
+        &fixture["runtime_profile"].to_string(),
+    );
+    let listener = Listener::serving(vec![Canned::ok(
+        r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
+    )])
+    .expect("listener");
+    let output = spawn(
+        &[
+            "annotate",
+            &set_file.to_string_lossy(),
+            "--details",
+            "--profile",
+            &profile.to_string_lossy(),
+            "--url",
+            listener.base(),
+        ],
+        &[("THINKTHEN_API_KEY", "key")],
+        br#"{"body":"Please help me."}"#,
+    )
+    .expect("command");
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("result JSON");
+    assert_eq!(row["meta"]["questions_sha256"], fixture["questions_sha256"]);
+    assert_eq!(row["meta"]["profile_warning"], fixture["warning"]);
+    assert_eq!(listener.connections(), 1);
+}
+
+mod batching;
 mod cache_versions;
 mod partial_failure;
 mod request_identity;

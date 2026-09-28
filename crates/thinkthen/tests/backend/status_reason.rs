@@ -22,7 +22,7 @@ fn a_status_names_its_fixed_action_and_only_the_known_reason() {
         "more input tokens than the backend takes; shorten the text, or set a lower ",
         "--max-request-bytes or max_request_bytes with --profile\n"
     );
-    let retried = [500, 502, 503, 504, 529].map(|status| {
+    let retried = [500, 502, 503, 504, 520, 521, 522, 523, 524, 529].map(|status| {
         let said = format!("thinkthen: the backend answered with status {status}: {RETRIED_OUT}");
         (status, said)
     });

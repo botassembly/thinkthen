@@ -12,12 +12,21 @@ what arrives from somewhere else anyway.
 from __future__ import annotations
 
 import os
+import json
 import subprocess
 import sys
 
 from helper import LIB, Backend, NotRun, child, environment, expect, main
 
 DECIDE = "thinkthen_decide('@/etc/hostname', body)"
+
+
+def native_probe(which: str) -> dict[str, str]:
+    """Run the pinned macOS SQLite host against the installed extension."""
+    program = os.environ[f"THINKTHEN_SQLITE_PROBE_{which}"]
+    result = subprocess.run([program, str(LIB)], env=environment(None), capture_output=True, text=True, check=True)
+    expect(result.stderr, "", "native host diagnostics on stderr")
+    return dict(line.split("=", 1) for line in result.stdout.splitlines())
 ATTACK = """
 import pathlib
 def craft(name, steps):
@@ -73,24 +82,65 @@ def test_every_schema_object_refuses_and_top_level_sql_answers() -> None:
 
 def test_a_host_below_the_floor_refuses_the_load() -> None:
     """R2-1: the stock library, with the floor host off the path."""
-    stock = {name: value for name, value in environment(None).items() if name != "LD_LIBRARY_PATH"}
-    version = subprocess.run([sys.executable, "-c", "import sqlite3; print(sqlite3.sqlite_version)"], env=stock,
-                             capture_output=True, text=True, check=True).stdout.strip()
-    if tuple(map(int, version.split("."))) >= (3, 50, 0):
-        raise NotRun(f"the stock host is {version}, at or above the floor")
-    held = child(f"""
+    if sys.platform == "darwin":
+        held = native_probe("OLD")
+        version = held["version"]
+        expect((version, held["load"]), ("3.49.0", "1"), "genuine below-floor host and refused load")
+        said, later = held["error"], held["later"]
+        expect(held["later_call"], "0", "later SQL after a refused load")
+        expect(held["resident"] in ("0", "1"), True, "a measured macOS residency result")
+        print(f"native SQLite 3.49.0 failed-load resident={held['resident']}")
+    else:
+        stock = {name: value for name, value in environment(None).items() if name != "LD_LIBRARY_PATH"}
+        version = subprocess.run([sys.executable, "-c", "import sqlite3; print(sqlite3.sqlite_version)"], env=stock,
+                                 capture_output=True, text=True, check=True).stdout.strip()
+        if tuple(map(int, version.split("."))) >= (3, 50, 0):
+            raise NotRun(f"the stock host is {version}, at or above the floor")
+        held = child(f"""
 db = sqlite3.connect(":memory:")
 db.enable_load_extension(True)
 try:
     db.load_extension({str(LIB)!r})
-    say(said="loaded")
+    said = "loaded"
 except sqlite3.Error as failure:
-    say(said=str(failure))
+    said = str(failure)
+db.close()
+later = sqlite3.connect(":memory:")
+say(said=said, later=later.execute("SELECT 7").fetchone()[0],
+    resident={str(LIB)!r} in __import__("pathlib").Path("/proc/self/maps").read_text()
+    if sys.platform.startswith("linux") else None)
 """, stock)
+        said, later = held["said"], held["later"]
     number = sum(int(part) * scale for part, scale in zip(version.split("."), (1_000_000, 1_000, 1)))
-    expect(held["said"], "error during initialization: thinkthen needs SQLite 3.50.0 or newer (below 3.50.0 a CHECK constraint in an untrusted"
+    expect(said, "error during initialization: thinkthen needs SQLite 3.50.0 or newer (below 3.50.0 a CHECK constraint in an untrusted"
            " database reaches the functions, so a schema could spend money or read files); this host is"
            f" {version} ({number})", "the refusal")
+    expect(later, "7" if sys.platform == "darwin" else 7, "the host still works after a failed load")
+    if sys.platform.startswith("linux"):
+        expect(held["resident"], False, "a failed load leaves no pinned Linux DSO")
+
+
+def test_pinned_host_keeps_a_successful_registration_available() -> None:
+    """A close after a successful load keeps registered worker code mapped."""
+    if sys.platform == "darwin":
+        held = native_probe("PINNED")
+        expect((held["version"], held["load"], held["call"]), ("3.50.0", "0", "0"), "pinned host load and call")
+        expect(json.loads(held["usage"])["requests_sent"], 0, "no send from thinkthen_usage")
+        expect((held["later_call"], held["later"], held["resident"]), ("0", "7", "1"),
+               "later SQL and observed macOS residency")
+        return
+    held = child(f"""
+db = connect()
+usage = json.loads(db.execute("SELECT thinkthen_usage()").fetchone()[0])
+db.close()
+later = sqlite3.connect(":memory:")
+say(count=usage["requests_sent"], later=later.execute("SELECT 7").fetchone()[0],
+    resident={str(LIB)!r} in __import__("pathlib").Path("/proc/self/maps").read_text()
+    if sys.platform.startswith("linux") else None)
+""", environment(None))
+    expect((held["count"], held["later"]), (0, 7), "successful installed load and later use")
+    if sys.platform.startswith("linux"):
+        expect(held["resident"], True, "successful load retains worker code on Linux")
 
 
 def test_every_function_is_direct_only_and_volatile() -> None:

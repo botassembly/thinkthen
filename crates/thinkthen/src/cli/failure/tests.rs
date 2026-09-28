@@ -43,8 +43,8 @@ fn no_debug_line_shows_the_key_or_the_evidence() {
         profile_mismatch: None,
     };
     let client = Client::new(Duration::from_secs(1), false, process_width());
-    // `rank` holds every record in memory until the input ends, so the
-    // sink that holds them is the one new place a whole record could leak.
+    // `rank --top` retains winning records until the input ends, so the
+    // sink that holds them is a place where a whole record could leak.
     let mut written = Vec::new();
     let usage = crate::engine::usage::Counters::new(None);
     let mut ordered = crate::schedule::Output::ordered(&mut written, Some(2), &usage);
@@ -271,7 +271,10 @@ fn no_diagnostic_holds_the_key_or_the_evidence() {
         Failure::Transport(TransportKind::Refused),
         Failure::Record(RecordError::NotUtf8),
         Failure::Record(RecordError::TooLarge),
-        Failure::ReplayMiss("abc.json".to_owned()),
+        Failure::ReplayMiss {
+            name: "abc.json".to_owned(),
+            context: None,
+        },
         Failure::Entry("abc.json".to_owned(), "it records another".to_owned()),
         Failure::Stopped {
             at: 2,

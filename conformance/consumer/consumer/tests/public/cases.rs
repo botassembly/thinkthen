@@ -186,7 +186,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
             );
             same(
                 "result",
-                &recognized(&found.map_err(said)?),
+                &recognized(&found.map_err(said)?.into_value()),
                 &success["answers"][0]["bare"],
             )
         }
@@ -203,7 +203,7 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
             let ranked = engine
                 .rank(&asked.map_err(said)?, texts.clone())
                 .map_err(said)?;
-            let rows = ranked.iter().map(
+            let rows = ranked.value().iter().map(
                 |row| json!({"index": at(&texts, row.input()), "probability": row.probability()}),
             );
             same("ranking", &rows.collect(), &success["operation"]["ranking"])
@@ -227,8 +227,8 @@ fn loaded(
             let details = engine.details(&banded, texts[0]).map_err(said)?;
             let answer = engine.decide(&banded, texts[0]).map_err(said)?;
             let bare = &success["answers"][0]["bare"];
-            same("decide", &json!(decision(answer)), bare)?;
-            return detailed(&details, &success["answers"][0], base);
+            same("decide", &json!(decision(answer.into_value())), bare)?;
+            return detailed(details.value(), &success["answers"][0], base);
         }
     };
     match kind {
@@ -260,21 +260,21 @@ fn loaded(
 fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: &str) -> Checked {
     let expected = &success["answers"][0];
     let details = engine.details(asked, text).map_err(said)?;
-    same("bare", &judgment(details.value()), &expected["bare"])?;
-    detailed(&details, expected, base)?;
-    let typed = match details.value() {
-        Judgment::Decision(_) => json!(decision(engine.decide(asked, text).map_err(said)?)),
-        Judgment::Score(_) => json!(engine.score(asked, text).map_err(said)?),
+    same("bare", &judgment(details.value().value()), &expected["bare"])?;
+    detailed(details.value(), expected, base)?;
+    let typed = match details.value().value() {
+        Judgment::Decision(_) => json!(decision(engine.decide(asked, text).map_err(said)?.into_value())),
+        Judgment::Score(_) => json!(engine.score(asked, text).map_err(said)?.into_value()),
         Judgment::Choice(_) => {
             let typed = asked.clone().into_choose::<Team>().map_err(said)?;
             let pick = engine.choose(&typed, text).map_err(said)?;
-            json!(pick.map(|team| team.label()))
+            json!(pick.into_value().map(|team| team.label()))
         }
         Judgment::Tags(_) => match asked.clone().into_tag::<Mark>() {
-            Ok(typed) => tags(engine.tag(&typed, text).map_err(said)?),
+            Ok(typed) => tags(engine.tag(&typed, text).map_err(said)?.into_value()),
             Err(_) => {
                 let typed = asked.clone().into_tag::<Word>().map_err(said)?;
-                tags(engine.tag(&typed, text).map_err(said)?)
+                tags(engine.tag(&typed, text).map_err(said)?.into_value())
             }
         },
     };
@@ -406,7 +406,7 @@ fn related(engine: &Engine, question: &str, case: &Value, success: &Value) -> Ch
         .relate(&builder.build().map_err(said)?, entities.map_err(said)?)
         .map_err(said)?;
     let pair = |entity: &Entity| json!({"name": entity.name(), "kind": entity.kind()});
-    let edges = edges.iter().map(|edge| {
+    let edges = edges.value().iter().map(|edge| {
         json!({"relation": edge.relation(), "source": pair(edge.source()), "target": pair(edge.target()), "probability": edge.probability()})
     });
     same("result", &edges.collect(), &success["answers"][0]["bare"])

@@ -24,9 +24,11 @@ case $TARGET in
 *-linux-gnu) dl=so command_target=${TARGET%-gnu}-musl ;;
 *) echo "release-pack: no release for $TARGET" >&2; exit 2 ;;
 esac
-# A built file never names the builder's home, as each surface check requires.
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
-CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
+# The source and Cargo cache can sit outside HOME in a release container.
+# Remap all three origins before packaging a library's panic/debug locations.
+cargo_home=${CARGO_HOME:-$HOME/.cargo}
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$REPO=/build/source --remap-path-prefix=$cargo_home=/build/cargo --remap-path-prefix=$HOME=/build/home"
+CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=/build/home"
 export RUSTFLAGS CFLAGS
 . sdlc/scripts/scratch.sh
 scratch_dir stage
@@ -104,10 +106,10 @@ part_sqlite() {
 # DuckDB reads its footer: the platform, the DuckDB version, and the extension's version.
 part_duckdb() {
 	case $TARGET in
-	x86_64-unknown-linux-gnu) ;;
+	x86_64-unknown-linux-gnu | aarch64-apple-darwin) ;;
 	*)
-		# Keep the existing C API package on other targets until the C++ input
-		# and host proofs are reviewed for each platform.
+		# Keep the existing C API package on Linux ARM64 and Intel macOS until
+		# their C++ input and native host proofs are reviewed.
 		if [ -z "$reuse" ]; then
 			(cd databases/duckdb && cargo build --locked --quiet --release)
 			. databases/duckdb/tools/version.env
@@ -132,8 +134,13 @@ part_duckdb() {
 	if [ -z "$reuse" ]; then
 		sh databases/duckdb/cpp/build.sh
 	fi
+	extension="databases/duckdb/build/artifacts/cpp/$TARGET/thinkthen.duckdb_extension"
+	[ -f "$extension" ] || { echo "release-pack: $extension is missing; build it first" >&2; exit 1; }
+	if [ "$TARGET" = aarch64-apple-darwin ]; then
+		[ "$(lipo -archs "$extension")" = arm64 ] || { echo "release-pack: $extension is not a single arm64 Mach-O" >&2; exit 1; }
+	fi
 	folder=$(fresh duckdb)
-	cp "databases/duckdb/build/artifacts/cpp/$TARGET/thinkthen.duckdb_extension" "$folder/"
+	cp "$extension" "$folder/"
 	cp LICENSE "$folder/LICENSE.thinkthen"
 	. databases/duckdb/tools/version.env
 	tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION

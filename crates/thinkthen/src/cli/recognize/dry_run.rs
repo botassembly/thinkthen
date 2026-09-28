@@ -1,5 +1,6 @@
 //! Exact recognition work known before asking the backend.
 
+use std::fmt;
 use std::io::Write;
 use std::process::ExitCode;
 
@@ -10,7 +11,7 @@ use crate::edge;
 use crate::engine::facade;
 use crate::failure::Failure;
 
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct DryRun<'a> {
     schema: &'static str,
     url: &'a str,
@@ -28,8 +29,33 @@ struct DryRun<'a> {
     requests: Vec<Request>,
 }
 
+impl fmt::Debug for DryRun<'_> {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DryRun")
+            .field("schema", &self.schema)
+            .field("url", &"<withheld>")
+            .field("model", &self.model)
+            .field("key_env", &self.key_env)
+            .field("from", &self.from)
+            .field("pieces", &self.pieces)
+            .field("request_count", &self.request_count)
+            .field("name_requests_upper_bound", &self.name_requests_upper_bound)
+            .field(
+                "relation_pairs_upper_bound",
+                &self.relation_pairs_upper_bound,
+            )
+            .field(
+                "relation_requests_upper_bound",
+                &self.relation_requests_upper_bound,
+            )
+            .field("requests", &self.requests.len())
+            .finish()
+    }
+}
+
 /// One exact split request, as the relate plan prints it.
-#[derive(Debug, Serialize)]
+#[derive(Serialize)]
 struct Request {
     digest: String,
     bytes: usize,
@@ -94,4 +120,44 @@ fn relation_upper_bound(spec: &RecognizeSpec, tokens: usize) -> Option<usize> {
             total.saturating_add(if rule.either { directed / 2 } else { directed })
         })
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{DryRun, Request};
+    use crate::core::{KEY_VAR, json_line};
+
+    #[test]
+    #[allow(
+        clippy::expect_used,
+        reason = "a broken serialization fixture stops the Debug boundary proof"
+    )]
+    fn plan_debug_withholds_raw_url_and_request_while_json_keeps_them() {
+        let url = "http://localhost/plan-marker-0210";
+        let body = "request-marker-0210";
+        let plan = DryRun {
+            schema: "thinkthen.recognize-plan/2",
+            url,
+            model: "local-1",
+            key_env: KEY_VAR,
+            from: None,
+            pieces: 1,
+            request_count: 1,
+            name_requests_upper_bound: 1,
+            relation_pairs_upper_bound: None,
+            relation_requests_upper_bound: None,
+            requests: vec![Request {
+                digest: "one".to_owned(),
+                bytes: body.len(),
+                body_utf8: body.to_owned(),
+            }],
+        };
+        let shown = format!("{plan:?}");
+        assert!(shown.contains("url: \"<withheld>\""), "{shown}");
+        assert!(!shown.contains("plan-marker-0210"), "{shown}");
+        assert!(!shown.contains(body), "{shown}");
+        let serialized = json_line(&plan).expect("exact serialized plan");
+        assert!(serialized.contains(url));
+        assert!(serialized.contains(body));
+    }
 }

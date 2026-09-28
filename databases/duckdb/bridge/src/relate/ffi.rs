@@ -213,7 +213,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
             let edges = engine
                 .relate_with(&ask, entities, options)
                 .map_err(|error| engines::call_error(error, total).text)?;
-            encoded_edges(edges, &mapped)
+            encoded_edges(edges.into_value(), &mapped)
         })
     })
 }

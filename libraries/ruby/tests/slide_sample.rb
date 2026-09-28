@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-# The slide sample, exactly as drawn, in a scrubbed child against its own
-# loopback backend on 0092's generic arm. The drawn block is copied
-# verbatim from the product deck's surfaces page. The fixtures around it
+# The Ruby slide example in a scrubbed child against its own loopback
+# backend on 0092's generic arm. The site deck needs its separately owned
+# migration to the public Call shape. The fixtures around this example
 # only pick the data. After the drawn block, the harness checks what the
 # generic arm makes checkable: every text answers yes at 0.9, and every
 # score lands nearest the first level.
@@ -31,24 +31,24 @@ lines, count = TestBackend.run(<<~'RUBY')
   require "stringio"
   $stdout = StringIO.new
 
-  # === the slide, as drawn ===
+  # === the Ruby example ===
   # keep the records where the answer is yes
-  upset = ThinkThen.filter("Is this a complaint?", reviews)
+  upset = ThinkThen.filter("Is this a complaint?", reviews, batch: 1).value
   puts "#{upset.size} of #{reviews.size} are complaints"
 
   # any Enumerable works, and it crosses to the engine once
-  urgent = ThinkThen.rank("Is this urgent?", inbox, top: 5)
+  urgent = ThinkThen.rank("Is this urgent?", inbox, top: 5, batch: 1).value
   urgent.each { |mail| puts mail }
 
   # place a text on your own scale: 2.0 is "Immediate."
   levels = ["Routine.", "Soon.", "Immediate."]
-  ThinkThen.score("How urgent is this?", outage, levels:)
-  # === end of the slide ===
+  ThinkThen.score("How urgent is this?", outage, levels:).value
+  # === end of the Ruby example ===
 
   printed = $stdout.string
   $stdout = STDOUT
   say [printed, upset == reviews, urgent.map(&:record) == inbox.first(5),
-       ThinkThen.score_with_level("How urgent is this?", outage, levels:)]
+       ThinkThen.score_with_level("How urgent is this?", outage, levels:).value]
 RUBY
 
 printed, kept, ranked, (scored, nearest) = lines.fetch(0)

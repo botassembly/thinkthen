@@ -1,0 +1,7 @@
+# 0225 code review
+
+Status: **ACCEPT** and complete. Fresh independent Sol Medium reviewer session `01a0e69f-78dc-7041-85b2-f61a87d91d74` accepted clean candidate `cebe945fc9f9a9f827a5c8b9affa91935d062a25` with no blocking finding. This integration lands that source. See the [ticket](../tickets/0225-bound-usage-lock-waits.md), [build record](0225-build.md), and [ADR 0097](../planning/adr/0097-bound-advisory-usage-lock-acquisition.md).
+
+The reviewer traced one shared deadline from finish and Drop through every month's contended acquisition. The writer releases the queue mutex during file work; expiration retains completed writes and in-memory facts, clears unwritten deltas and wakes finish. An immediately available lock may still be acquired near expiry because the bound concerns foreign-lock waiting, not all filesystem operations. The paid ledger, status reader and public API are unchanged.
+
+The compiled held-lock case keeps the foreign lock held through child exit and independently pins answer, exit, warning order, facts, one listener request, and absent month/temporary files. Existing successful persistence and warning cases remain. The reviewer accepted the +135-line growth after checking coherent child modules and the named duplication search; the root total is exactly 83,083 and affected files remain within 500 nonblank lines. Read-only ratchet and diff checks passed. Existing focused compiled tests and strict Clippy evidence were retained; no broader gate was repeated.

@@ -39,6 +39,7 @@ fn the_doors_bare_values_are_the_commands_bytes() {
         // A cache folder answers one backend address, so each case gets its own.
         let cache = folder.join(format!("cache-{id}")).display().to_string();
         script.ask("env", &["THINKTHEN_CACHE", &cache]);
+        script.ask("env", &["THINKTHEN_BATCH", "1"]);
         script.ask("call", &[&base, &request]);
         printed.push((id, said));
     }
@@ -61,6 +62,7 @@ fn the_doors_bare_values_are_the_commands_bytes() {
     let request = json!({"find": "Which line asks for money back?", "units": units}).to_string();
     let cache = folder.join("cache-find").display().to_string();
     script.ask("env", &["THINKTHEN_CACHE", &cache]);
+    script.ask("env", &["THINKTHEN_BATCH", "1"]);
     script.ask("call", &[&generic, &request]);
     printed.push(("find".to_owned(), said));
 
@@ -75,7 +77,13 @@ fn the_doors_bare_values_are_the_commands_bytes() {
     let differ: Vec<String> = printed
         .iter()
         .zip(&answered)
-        .filter(|((_, said), (code, reply))| *code != 0 || format!("{reply}\n") != *said)
+        .filter(|((_, said), (code, reply))| {
+            let value = serde_json::from_str::<serde_json::Value>(reply)
+                .ok()
+                .and_then(|wrapped| wrapped.get("value").cloned())
+                .map(|value| value.to_string());
+            *code != 0 || value.is_none_or(|value| format!("{value}\n") != *said)
+        })
         .map(|((id, said), (code, reply))| {
             format!("{id}: the door wrote {code} {reply}, the command printed {said}")
         })
@@ -175,7 +183,7 @@ fn print(command: &Path, arguments: &[&str], input: &str) -> String {
         .env_clear()
         .env("HOME", scratch("bytes-home"))
         .env("THINKTHEN_API_KEY", KEY)
-        // The library asks one record a request until B12a, so the command matches it at one.
+        // This byte corpus records one request per record on the command side.
         .env("THINKTHEN_BATCH", "1")
         .args(arguments)
         .arg("--no-cache")

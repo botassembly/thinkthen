@@ -58,7 +58,7 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
     for (cancel, stop) in [(spent(), "deadline"), (cancelled, "cancelled")] {
         let outcome = schedule::run_cancelled(
             2,
-            false,
+            schedule::RecordFlow::Streaming,
             &cancel,
             reader(Vec::<usize>::new(), &asks),
             &|_: &usize| -> Result<Completed<usize, &'static str>, &'static str> {
@@ -125,7 +125,7 @@ fn one_deadline_spans_every_record_and_starts_no_undispatched_request() {
         });
         schedule::run_cancelled(
             1,
-            false,
+            schedule::RecordFlow::Streaming,
             &within(budget),
             reader(vec![0, 1, 2], &asks),
             &|item: &usize| {
@@ -182,7 +182,7 @@ fn queued_before_the_check(
         });
         schedule::run_cancelled(
             2,
-            false,
+            schedule::RecordFlow::Streaming,
             &within(budget),
             reader(vec![0, 1, 2], &asks),
             &|item: &usize| {

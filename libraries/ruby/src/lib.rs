@@ -2,33 +2,39 @@
 //!
 //! This crate holds no rule. It reads a call's inputs into owned Rust values
 //! on the Ruby thread, runs the call on a worker thread that never touches
-//! Ruby, and hands back plain values. `ffi.rs` is the only module that
+//! Ruby, and hands back plain values. The `ffi` module alone
 //! touches Ruby. It waits for the worker in 50 ms slices with the
 //! interpreter lock released, and between slices it reads Ruby's pending
 //! interrupts, the caller's token, and the call's own token. On any stop it
 //! fires the call's own token, detaches the worker, and raises at once. The
-//! detached worker's sent requests finish, and its result is dropped.
+//! detached worker's sent requests finish; its result remains in an owned
+//! completion receipt when an exception can carry one.
 
 mod call;
+mod diagnostics;
 mod ffi;
+mod result;
 
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use thinkthen::{CancelToken, Engine, EngineBuilder, ErrorKind};
+use thinkthen::{BatchSetting, CancelToken, Engine, EngineBuilder, ErrorKind, Facts};
 
-use crate::call::{Ask, Output};
+use crate::call::Ask;
+use crate::result::{Completed, Detail};
 
 /// How long one wait holds before the Ruby thread reads its interrupts.
 const SLICE: Duration = Duration::from_millis(50);
 
 /// One failure: its kind, its safe message, and the retry signal.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Debug)]
 struct Fault {
     kind: ErrorKind,
     message: String,
     retryable: bool,
+    facts: Option<Box<Facts>>,
+    details: Vec<Detail>,
 }
 
 impl Fault {
@@ -37,6 +43,8 @@ impl Fault {
             kind,
             message: message.into(),
             retryable: false,
+            facts: None,
+            details: Vec::new(),
         }
     }
 
@@ -55,6 +63,8 @@ impl From<thinkthen::Error> for Fault {
             kind: error.kind(),
             message: error.detail().message().to_owned(),
             retryable: error.retryable(),
+            facts: error.facts().cloned().map(Box::new),
+            details: Vec::new(),
         }
     }
 }
@@ -74,11 +84,15 @@ const fn class_name(kind: ErrorKind) -> &'static str {
 /// The one panic guard. A panic in the binding's own code becomes the
 /// defect kind. `thinkthen` already stops engine panics at its doors.
 fn guarded<T>(body: impl FnOnce() -> Result<T, Fault>) -> Result<T, Fault> {
-    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|_| {
-        Err(Fault::of(
-            ErrorKind::Defect,
-            "defect: the Ruby binding panicked",
-        ))
+    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
+        Ok(value) => value,
+        Err(payload) => {
+            std::mem::forget(payload);
+            Err(Fault::of(
+                ErrorKind::Defect,
+                "defect: the Ruby binding panicked",
+            ))
+        }
     })
 }
 
@@ -86,7 +100,7 @@ fn guarded<T>(body: impl FnOnce() -> Result<T, Fault>) -> Result<T, Fault> {
 #[derive(Debug)]
 enum Taken {
     Waiting,
-    Ready(Result<Output, Fault>),
+    Ready(Arc<Result<Completed, Fault>>),
     Closed,
 }
 
@@ -98,9 +112,19 @@ struct Handoff {
     changed: Condvar,
 }
 
+struct Controls {
+    deadline: Option<f64>,
+    batch: Option<BatchSetting>,
+    context: Option<String>,
+}
+
+type WorkerResult = Result<Completed, Fault>;
+type SharedResult = Arc<WorkerResult>;
+type Crossing = Result<SharedResult, Fault>;
+
 #[derive(Debug, Default)]
 struct Slot {
-    answer: Option<Result<Output, Fault>>,
+    answer: Option<SharedResult>,
     woken: bool,
     closed: bool,
 }
@@ -129,9 +153,9 @@ impl Handoff {
     }
 
     fn take(&self) -> Taken {
-        let mut state = self.lock();
-        match state.answer.take() {
-            Some(answer) => Taken::Ready(answer),
+        let state = self.lock();
+        match state.answer.as_ref() {
+            Some(answer) => Taken::Ready(Arc::clone(answer)),
             None if state.closed => Taken::Closed,
             None => Taken::Waiting,
         }
@@ -144,8 +168,8 @@ impl Handoff {
 struct Feed(Arc<Handoff>);
 
 impl Feed {
-    fn put(self, answer: Result<Output, Fault>) {
-        self.0.lock().answer = Some(answer);
+    fn put(self, answer: WorkerResult) {
+        self.0.lock().answer = Some(Arc::new(answer));
         self.0.changed.notify_all();
     }
 }
@@ -163,7 +187,7 @@ fn start(
     engine: Engine,
     ask: Ask,
     own: CancelToken,
-    deadline: Option<f64>,
+    controls: Controls,
     prepare: fn(),
 ) -> Result<Arc<Handoff>, Fault> {
     let handoff = Arc::new(Handoff::default());
@@ -171,8 +195,10 @@ fn start(
     std::thread::Builder::new()
         .name("thinkthen-call".to_owned())
         .spawn(move || {
-            prepare();
-            feed.put(guarded(|| call::run(&engine, ask, &own, deadline)));
+            feed.put(guarded(|| {
+                prepare();
+                call::run(&engine, ask, &own, controls)
+            }));
         })
         .map_err(|_| Fault::of(ErrorKind::Local, "the call's worker thread could not start"))?;
     Ok(handoff)
@@ -185,6 +211,7 @@ struct Settings {
     model: Option<String>,
     throttle: Option<i64>,
     max_requests: Option<i64>,
+    max_request_bytes: Option<i64>,
     cache_at: Option<String>,
     no_cache: bool,
     timeout: Option<i64>,
@@ -192,6 +219,7 @@ struct Settings {
     record: Option<String>,
     replay: Option<String>,
     profile: Option<String>,
+    batch: Option<BatchSetting>,
 }
 
 impl Settings {
@@ -213,6 +241,11 @@ impl Settings {
             let value = usize::try_from(value)
                 .map_err(|_| Fault::usage("a request limit is a whole number of 1 or more"))?;
             builder = builder.max_requests(Some(value))?;
+        }
+        if let Some(value) = self.max_request_bytes {
+            let value = usize::try_from(value)
+                .map_err(|_| Fault::usage("max_request_bytes is a whole number of at least 1"))?;
+            builder = builder.max_request_bytes(value)?;
         }
         if let Some(folder) = &self.cache_at {
             builder = builder.cache_at(folder)?;
@@ -238,6 +271,9 @@ impl Settings {
         }
         if let Some(path) = self.profile {
             builder = builder.profile(path)?;
+        }
+        if let Some(setting) = self.batch {
+            builder = builder.batch(setting);
         }
         Ok(builder.build()?)
     }
@@ -300,7 +336,7 @@ mod tests {
         let handoff = Arc::new(Handoff::default());
         let feed = Feed(Arc::clone(&handoff));
         drop(handoff);
-        let worker = std::thread::spawn(move || feed.put(Ok(Output::Score(0.5))));
+        let worker = std::thread::spawn(move || feed.put(Err(Fault::usage("done"))));
         assert!(
             worker.join().is_ok(),
             "the worker's send on a gone caller must not panic"

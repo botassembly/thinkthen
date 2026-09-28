@@ -20,8 +20,11 @@ struct ThinkThenText {
 	size_t len;
 };
 struct ThinkThenSettings {
+	const uint8_t *batch_bytes;
+	size_t batch_len;
 	int64_t throttle;
 	int64_t max_requests;
+	int64_t max_request_bytes;
 	int64_t max_requests_total;
 	const uint8_t *cache_bytes;
 	size_t cache_len;
@@ -53,15 +56,21 @@ ThinkThenReply thinkthen_cpp_validate_listed(const uint8_t *question, size_t que
                                              const ThinkThenText *members, size_t member_count, int32_t kind);
 ThinkThenReply thinkthen_cpp_scalar_group(const uint8_t *question, size_t question_len, const ThinkThenText *texts,
                                           size_t count, int64_t deadline_ms, int32_t kind,
-                                          ThinkThenSettings settings, int32_t from_file, ThinkThenStop stop);
+                                          ThinkThenSettings settings, int32_t from_file,
+                                          const uint8_t *context, size_t context_len, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_try_details_row(const uint8_t *question, size_t question_len,
                                              const uint8_t *evidence, size_t evidence_len,
                                              int64_t deadline_ms, ThinkThenSettings settings, int32_t from_file,
                                              ThinkThenStop stop);
+ThinkThenReply thinkthen_cpp_try_details_group(const uint8_t *question, size_t question_len,
+                                               const ThinkThenText *texts, size_t count, int64_t deadline_ms,
+                                               ThinkThenSettings settings, int32_t from_file,
+                                               const uint8_t *context, size_t context_len, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_listed_group(const uint8_t *question, size_t question_len,
                                           const ThinkThenText *members, size_t member_count,
                                           const ThinkThenText *texts, size_t text_count,
-                                          int64_t deadline_ms, int32_t kind, ThinkThenSettings settings, ThinkThenStop stop);
+                                          int64_t deadline_ms, int32_t kind, ThinkThenSettings settings,
+                                          const uint8_t *context, size_t context_len, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_validate_nested(const uint8_t *argument, size_t argument_len,
                                              const ThinkThenText *members, size_t member_count,
                                              int32_t kind, int32_t from_file);
@@ -73,7 +82,8 @@ ThinkThenReply thinkthen_cpp_nested_group(const uint8_t *argument, size_t argume
 void thinkthen_cpp_free(uint8_t *bytes, size_t len);
 ThinkThenReply thinkthen_cpp_usage();
 ThinkThenReply thinkthen_cpp_warm(const uint8_t *question, size_t question_len,
-                                 const ThinkThenText *texts, size_t count, int32_t from_file,
+                                 const ThinkThenText *texts, size_t count, int32_t from_file, int64_t deadline_ms,
+                                 const uint8_t *context, size_t context_len,
                                  ThinkThenSettings settings, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_relate_validate(const uint8_t *rule, size_t rule_len,
                                             const ThinkThenText *members, size_t member_count,

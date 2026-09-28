@@ -126,9 +126,25 @@ struct DecisionGroup {
 	string question;
 	int64_t deadline;
 	bool from_file;
+	std::optional<string> context;
 	vector<string> texts;
 	std::map<string, idx_t> seen;
 };
+
+std::optional<string> LiteralContext(DataChunk &args, idx_t row, idx_t column, bool recoverable = false) {
+	if (args.ColumnCount() <= column) {
+		return std::nullopt;
+	}
+	auto value = args.data[column].GetValue(row);
+	if (value.IsNull()) {
+		return std::nullopt;
+	}
+	auto text = value.GetValue<string>();
+	if (!recoverable && text.find_first_not_of(" \t\r\n\f\v") == string::npos) {
+		throw InvalidInputException("thinkthen usage: context is text, not white space");
+	}
+	return text;
+}
 
 void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &bound = Bound(state);
@@ -137,43 +153,8 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		throw InvalidInputException("thinkthen defect: the caller session ended");
 	}
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
-	if (bound.kind == 3) {
-		const auto settings = Settings(*context);
-		for (idx_t row = 0; row < args.size(); ++row) {
-			auto question = args.data[0].GetValue(row);
-			auto evidence = args.data[1].GetValue(row);
-			if (question.IsNull() || evidence.IsNull() ||
-			    (args.ColumnCount() == 3 && args.data[2].GetValue(row).IsNull())) {
-				result.SetValue(row, Value(LogicalType::VARCHAR));
-				continue;
-			}
-			const auto budget = owner->Remaining(*context);
-			const auto trailing = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
-			const auto due = trailing < -1 || budget < 0 ? trailing
-			                 : trailing < 0 ? budget : std::min(trailing, budget);
-			auto question_text = question.GetValue<string>();
-			auto evidence_text = evidence.GetValue<string>();
-			ResolvedQuestion resolved;
-			try {
-				resolved = owner->Resolve(*context, question_text);
-			} catch (const InvalidInputException &) {
-				resolved = {question_text, false}; // Rust turns an unreadable @file into a safe local value.
-			}
-			RustReply answered(thinkthen_cpp_try_details_row(reinterpret_cast<const uint8_t *>(resolved.text.data()),
-			                                                 resolved.text.size(),
-			                                                 reinterpret_cast<const uint8_t *>(evidence_text.data()),
-			                                                 evidence_text.size(), due, settings.Bridge(),
-			                                                 resolved.from_file ? 1 : 0, StopFor(*context)));
-			Checked(answered.value);
-			if (!answered.value.bytes) {
-				throw InvalidInputException("thinkthen defect: the bridge returned no try-details value");
-			}
-			result.SetValue(row, Value(ReplyText(answered.value)));
-		}
-		return;
-	}
 	vector<DecisionGroup> groups;
-	std::map<std::pair<string, int64_t>, idx_t> known_groups;
+	std::map<std::tuple<string, int64_t, std::optional<string>>, idx_t> known_groups;
 	std::set<string> checked_questions;
 	std::map<string, ResolvedQuestion> resolved_questions;
 	vector<std::optional<std::pair<idx_t, idx_t>>> slots(args.size());
@@ -184,24 +165,32 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (question.IsNull() || evidence.IsNull()) {
 			continue;
 		}
-		if (args.ColumnCount() == 3 && args.data[2].GetValue(row).IsNull()) {
+		if (bound.kind != 3 && args.ColumnCount() >= 3 && args.data[2].GetValue(row).IsNull()) {
 			continue;
 		}
 		auto question_text = question.GetValue<string>();
 		if (checked_questions.insert(question_text).second) {
-			auto resolved = owner->Resolve(*context, question_text);
-			ValidateQuestion(resolved, bound.kind == 7);
+			ResolvedQuestion resolved;
+			try {
+				resolved = owner->Resolve(*context, question_text);
+			} catch (const InvalidInputException &) {
+				if (bound.kind != 3) { throw; }
+				resolved = {question_text, false};
+			}
+			if (bound.kind != 3) { ValidateQuestion(resolved, bound.kind == 7); }
 			resolved_questions.emplace(question_text, std::move(resolved));
 		}
-		auto due = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
-		if (due < -1 || due > 4294967295000LL) {
+		auto due = args.ColumnCount() >= 3 && !args.data[2].GetValue(row).IsNull()
+		               ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
+		if (bound.kind != 3 && (due < -1 || due > 4294967295000LL)) {
 			throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
 		}
-		auto key = std::make_pair(question_text, due);
+		auto literal_context = LiteralContext(args, row, 3, bound.kind == 3);
+		auto key = std::make_tuple(question_text, due, literal_context);
 		auto [place, new_group] = known_groups.emplace(key, groups.size());
 		if (new_group) {
 			auto &resolved = resolved_questions.at(question_text);
-			groups.push_back({resolved.text, due, resolved.from_file, {}, {}});
+			groups.push_back({resolved.text, due, resolved.from_file, literal_context, {}, {}});
 		}
 		auto &group = groups[place->second];
 		auto evidence_text = evidence.GetValue<string>();
@@ -223,14 +212,21 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		for (auto &text : group.texts) {
 			texts.push_back({reinterpret_cast<const uint8_t *>(text.data()), text.size()});
 		}
-		RustReply answered(thinkthen_cpp_scalar_group(reinterpret_cast<const uint8_t *>(group.question.data()),
+		RustReply answered(bound.kind == 3 ? thinkthen_cpp_try_details_group(reinterpret_cast<const uint8_t *>(group.question.data()),
+		                                             group.question.size(), texts.data(), texts.size(), due,
+		                                             settings.Bridge(), group.from_file ? 1 : 0,
+		                                             group.context ? reinterpret_cast<const uint8_t *>(group.context->data()) : nullptr,
+		                                             group.context ? group.context->size() : 0, StopFor(*context))
+		                              : thinkthen_cpp_scalar_group(reinterpret_cast<const uint8_t *>(group.question.data()),
 		                                             group.question.size(), texts.data(), texts.size(), due, bound.kind,
-		                                             settings.Bridge(), group.from_file ? 1 : 0, StopFor(*context)));
+		                                             settings.Bridge(), group.from_file ? 1 : 0,
+		                                             group.context ? reinterpret_cast<const uint8_t *>(group.context->data()) : nullptr,
+		                                             group.context ? group.context->size() : 0, StopFor(*context)));
 		Checked(answered.value);
 		if (!answered.value.bytes) {
 			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");
 		}
-		if (bound.kind == 2 || bound.kind == 7) {
+		if (bound.kind == 2 || bound.kind == 3 || bound.kind == 7) {
 			vector<string> values;
 			size_t at = 0;
 			for (idx_t index = 0; index < texts.size(); ++index) {
@@ -260,12 +256,12 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	}
 	for (idx_t row = 0; row < args.size(); ++row) {
 		if (!slots[row]) {
-			result.SetValue(row, Value(bound.kind == 2 || bound.kind == 7 ? LogicalType::VARCHAR
+			result.SetValue(row, Value(bound.kind == 2 || bound.kind == 3 || bound.kind == 7 ? LogicalType::VARCHAR
 			                                      : bound.kind == 1 ? LogicalType::DOUBLE : LogicalType::BOOLEAN));
 			continue;
 		}
 		auto [group, text] = *slots[row];
-		if (bound.kind == 2 || bound.kind == 7) {
+		if (bound.kind == 2 || bound.kind == 3 || bound.kind == 7) {
 			if (group >= details.size() || text >= details[group].size()) {
 				throw InvalidInputException("thinkthen defect: a details row lost its answer");
 			}
@@ -302,11 +298,12 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		string question;
 		vector<string> members;
 		int64_t deadline;
+		std::optional<string> context;
 		vector<string> texts;
 		std::map<string, idx_t> seen;
 	};
 	vector<Group> groups;
-	std::map<std::tuple<string, vector<string>, int64_t>, idx_t> known;
+	std::map<std::tuple<string, vector<string>, int64_t, std::optional<string>>, idx_t> known;
 	std::set<std::pair<string, vector<string>>> validated;
 	vector<std::optional<std::pair<idx_t, idx_t>>> slots(args.size());
 	for (idx_t row = 0; row < args.size(); ++row) {
@@ -314,20 +311,21 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		auto evidence = args.data[1].GetValue(row);
 		auto members = Members(args.data[2].GetValue(row));
 		if (question.IsNull() || evidence.IsNull() || !members ||
-		    (args.ColumnCount() == 4 && args.data[3].GetValue(row).IsNull())) {
+		    (args.ColumnCount() >= 4 && args.data[3].GetValue(row).IsNull())) {
 			continue;
 		}
 		auto question_text = question.GetValue<string>();
 		if (validated.emplace(question_text, *members).second) {
 			ValidateListed(question_text, *members, bound.kind);
 		}
-		auto due = args.ColumnCount() == 4 ? args.data[3].GetValue(row).GetValue<int64_t>() : -1;
+		auto due = args.ColumnCount() >= 4 ? args.data[3].GetValue(row).GetValue<int64_t>() : -1;
 		if (due < -1 || due > 4294967295000LL) {
 			throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
 		}
-		auto [place, fresh] = known.emplace(std::make_tuple(question_text, *members, due), groups.size());
+		auto literal_context = LiteralContext(args, row, 4);
+		auto [place, fresh] = known.emplace(std::make_tuple(question_text, *members, due, literal_context), groups.size());
 		if (fresh) {
-			groups.push_back({question_text, *members, due, {}, {}});
+			groups.push_back({question_text, *members, due, literal_context, {}, {}});
 		}
 		auto &group = groups[place->second];
 		auto [position, first] = group.seen.emplace(evidence.GetValue<string>(), group.texts.size());
@@ -350,7 +348,9 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		}
 		RustReply reply(thinkthen_cpp_listed_group(reinterpret_cast<const uint8_t *>(group.question.data()),
 		                                           group.question.size(), members.data(), members.size(), texts.data(),
-		                                           texts.size(), due, bound.kind, settings.Bridge(), StopFor(*context)));
+		                                           texts.size(), due, bound.kind, settings.Bridge(),
+		                                           group.context ? reinterpret_cast<const uint8_t *>(group.context->data()) : nullptr,
+		                                           group.context ? group.context->size() : 0, StopFor(*context)));
 		Checked(reply.value);
 		answered.push_back(DecodeListed(reply.value.bytes, reply.value.len, texts.size(), bound.kind));
 	}
@@ -375,8 +375,10 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
 	config.AddExtensionOption("thinkthen_query_budget_ms", "Whole-statement ThinkThen time budget in milliseconds",
 	                          LogicalType::BIGINT, Value::BIGINT(-1));
+	config.AddExtensionOption("thinkthen_batch", "Maximum records in one ThinkThen request, or max", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_throttle", "Maximum concurrent ThinkThen requests", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_requests", "Maximum ThinkThen requests in one call", LogicalType::BIGINT);
+	config.AddExtensionOption("thinkthen_max_request_bytes", "Positive ThinkThen request-byte ceiling", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
 	                          LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);
@@ -390,8 +392,13 @@ void LoadThinkThen(ExtensionLoader &loader) {
 		const auto result = string(name) == "thinkthen_details" || string(name) == "thinkthen_try_details" || string(name) == "thinkthen_annotate" ? LogicalType::VARCHAR
 		                    : string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
-		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT}}) {
+		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT},
+		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT, LogicalType::VARCHAR}}) {
+			if (parameters.size() == 4 && string(name) == "thinkthen_annotate") { continue; }
 			ScalarFunction function(name, parameters, result, Decide, BindDecide);
+			if (string(name) == "thinkthen_try_details") {
+				function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+			}
 			function.SetStability(FunctionStability::VOLATILE);
 			loader.RegisterFunction(function);
 		}
@@ -403,7 +410,9 @@ void LoadThinkThen(ExtensionLoader &loader) {
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                                                 LogicalType::LIST(LogicalType::VARCHAR)},
 		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,
-		                                                 LogicalType::LIST(LogicalType::VARCHAR), LogicalType::BIGINT}}) {
+		                                                 LogicalType::LIST(LogicalType::VARCHAR), LogicalType::BIGINT},
+		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,
+		                                                 LogicalType::LIST(LogicalType::VARCHAR), LogicalType::BIGINT, LogicalType::VARCHAR}}) {
 			ScalarFunction function(name, parameters, result, Listed, BindDecide);
 			function.SetStability(FunctionStability::VOLATILE);
 			loader.RegisterFunction(function);

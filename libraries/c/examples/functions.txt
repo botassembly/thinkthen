@@ -8,4 +8,4 @@ find: "good morning"
 annotate: [{"refund":true,"complaint":true}]
 recognize: {"entities":[{"text":"Maria Chen","start":0,"end":10,"length":10,"kind":"person","strength":0.5781},{"text":"spring.","start":52,"end":59,"length":7,"kind":"person","strength":0.5781}]}
 relate: {"edges":[{"relation":"caused_by","source":{"name":"Checkout returns 500 at the payment step.","kind":"alert"},"target":{"name":"The payments database ran out of disk space.","kind":"alert"},"probability":0.9},{"relation":"caused_by","source":{"name":"The payments database ran out of disk space.","kind":"alert"},"target":{"name":"Checkout returns 500 at the payment step.","kind":"alert"},"probability":0.9}]}
-usage: {"requests_sent":10,"input_tokens":0,"output_tokens":0,"cache_answers":3}
+usage: {"requests_sent":10,"retries":0,"input_tokens":0,"output_tokens":0,"cache_answers":3}

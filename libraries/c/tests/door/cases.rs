@@ -20,6 +20,9 @@ use sha2::{Digest, Sha256};
 
 use crate::{compile, crate_dir, run, scratch, text};
 
+#[path = "batching.rs"]
+mod batching;
+
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
 const SKIPPED: [&str; 2] = ["25-defect-fault", "30-local-question-file"];
@@ -72,6 +75,7 @@ fn every_applicable_shared_case_passes_through_the_door() {
         }
         ran += 1;
         let mut script = Script::default();
+        script.ask("env", &["THINKTHEN_BATCH", "1"]);
         let checked =
             plan(&backend, case, &mut script).and_then(|judge| driven(&driver, &script, &judge));
         if let Err(why) = checked {
@@ -544,7 +548,14 @@ fn parsed((code, body): &Reply) -> Checked<Value> {
     if *code != 0 {
         return Err(format!("code {code}: {body}"));
     }
-    serde_json::from_str(body).map_err(|error| format!("{error}: {body}"))
+    let value: Value = serde_json::from_str(body).map_err(|error| format!("{error}: {body}"))?;
+    if value.get("facts").is_some() {
+        return value
+            .get("value")
+            .cloned()
+            .ok_or("a call wrapper has no value".to_owned());
+    }
+    Ok(value)
 }
 
 /// A judgment reply's `OUTCOME PROBABILITY` pairs.

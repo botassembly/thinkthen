@@ -119,7 +119,7 @@ pub(super) fn run(
     let judging = Judging::new(configuration)?;
     let recording = judging.engine.recording();
     let outcome = judging.engine.records(
-        output.holds(),
+        output.flow(),
         judging.environment.cancel(),
         |asks, events| {
             let (sender, raw) = sync_channel(AHEAD);
@@ -497,7 +497,7 @@ fn failed(cause: Failure, first: usize, last: usize) -> Failure {
         | Failure::Status(_)
         | Failure::TokenLimit
         | Failure::Reply(_)
-        | Failure::ReplayMiss(_)
+        | Failure::ReplayMiss { .. }
             if last > first =>
         {
             Failure::BatchFailed {

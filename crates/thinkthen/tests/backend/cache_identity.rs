@@ -83,6 +83,92 @@ fn default_cache(home: &Path) -> PathBuf {
 }
 
 #[test]
+fn a_missing_key_leaves_an_unbound_folder_for_the_next_address() {
+    const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";
+    let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
+    for (row, named, present) in [
+        ("default-absent", false, false),
+        ("cache-absent", true, false),
+        ("cache-empty", true, true),
+    ] {
+        let home = folder(&format!("no-key-{row}-home"));
+        let cache = if named {
+            folder(&format!("no-key-{row}-cache"))
+        } else {
+            default_cache(&home)
+        };
+        if present {
+            fs::create_dir_all(&cache).expect("empty folder");
+        }
+        let before = if present {
+            Some(fs::read_dir(&cache).expect("folder").count())
+        } else {
+            None
+        };
+        let mut arguments = vec![
+            "decide",
+            QUESTION,
+            "--url",
+            "https://example.invalid/v1",
+            "--model",
+            "local-1",
+        ];
+        let cache_text = cache.to_str().expect("cache path");
+        if named {
+            arguments.extend(["--cache", cache_text]);
+        }
+        let home_text = home.to_str().expect("home path");
+        let failed = spawn(&arguments, &[("HOME", home_text)], EVIDENCE.as_bytes())
+            .expect("missing-key run");
+        assert_eq!(failed.status.code(), Some(4), "{row}");
+        assert!(failed.stdout.is_empty(), "{row}");
+        assert_eq!(String::from_utf8_lossy(&failed.stderr), NO_KEY, "{row}");
+        assert_eq!(
+            cache.exists(),
+            present,
+            "{row}: the failed run changed folder presence"
+        );
+        if let Some(count) = before {
+            assert_eq!(
+                fs::read_dir(&cache).expect("folder").count(),
+                count,
+                "{row}"
+            );
+        }
+
+        arguments[3] = second.base();
+        let answered = spawn(
+            &arguments,
+            &[("HOME", home_text), ("THINKTHEN_API_KEY", "sk-test-value")],
+            EVIDENCE.as_bytes(),
+        )
+        .expect("second-address run");
+        assert_eq!(answered.status.code(), Some(0), "{row}");
+        assert!(cache.join(".thinkthen-backend.json").is_file(), "{row}");
+    }
+    assert_eq!(second.requests().len(), 3);
+}
+
+#[cfg(unix)]
+#[test]
+fn a_dangling_cache_path_is_storage_failure_before_key_lookup() {
+    use std::os::unix::fs::symlink;
+
+    let cache = folder("dangling-cache-admission");
+    let _absent = fs::remove_file(&cache);
+    symlink(cache.with_extension("missing"), &cache).expect("dangling cache link");
+    let refused =
+        decide("https://example.invalid/v1", &cache, "--cache", false).expect("dangling-path run");
+    assert_eq!(refused.status.code(), Some(5));
+    assert_eq!(
+        String::from_utf8_lossy(&refused.stderr),
+        "thinkthen: the recording folder could not be read or written; check its permissions and free space\n"
+    );
+    assert!(refused.stdout.is_empty());
+    assert!(fs::symlink_metadata(&cache).is_ok());
+}
+
+#[test]
 fn a_mismatch_names_the_folder_and_the_address() {
     let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
@@ -242,7 +328,9 @@ fn an_old_exact_replay_stays_read_only_and_a_miss_explains_the_digest() {
     let missed = decide("http://127.0.0.1:2/v1", &recording, "--replay", false).expect("miss runs");
     assert_eq!(missed.status.code(), Some(5));
     let message = String::from_utf8_lossy(&missed.stderr);
-    assert!(message.starts_with("thinkthen: the replay folder holds no entry named `"));
+    assert!(message.starts_with(
+        "thinkthen: the decide request for one document: the replay folder holds no entry named `"
+    ));
     assert!(
         message.ends_with("`; the entry name covers the backend interface, address, and request\n")
     );
@@ -263,7 +351,7 @@ fn a_write_capable_old_folder_refuses_before_send() {
     .expect("legacy entry");
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
 
-    let refused = decide(listener.base(), &recording, "--cache", true).expect("refusal runs");
+    let refused = decide(listener.base(), &recording, "--cache", false).expect("refusal runs");
     assert_eq!(refused.status.code(), Some(5));
     assert_eq!(String::from_utf8_lossy(&refused.stderr), LEGACY);
     assert!(listener.requests().is_empty());
@@ -281,7 +369,7 @@ fn malformed_identity_is_a_secret_safe_storage_failure() {
     .expect("marker");
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
 
-    let refused = decide(listener.base(), &cache, "--cache", true).expect("refusal runs");
+    let refused = decide(listener.base(), &cache, "--cache", false).expect("refusal runs");
     assert_eq!(refused.status.code(), Some(5));
     assert_eq!(
         String::from_utf8_lossy(&refused.stderr),

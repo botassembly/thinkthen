@@ -23,6 +23,7 @@ test('an engine starts from the environment: THINKTHEN_CACHE holds its answers',
   { env: { THINKTHEN_CACHE: folderA, HOME: scratch, XDG_CACHE_HOME: scratch } });
   assert.deepEqual(value, [true, true]);
   assert.equal(await backend.count(), 1);
+  assert.equal((await ask(backend, `return new tt.Engine({ cache: false }).usage();`)).value.retries, 0);
   assert.equal(files(folderA).length, 1, 'the answer lands in folder A');
   assert.deepEqual(readdirSync(scratch), [], 'nothing lands under the scratch cache home');
 });
@@ -51,7 +52,7 @@ test('a refused setting throws usage from the constructor and sends nothing', as
   const backend = await startBackend(t);
   const { value } = await ask(backend, `
     const out = [];
-    for (const options of [{ timeoutSeconds: 0 }, { maxRetries: 1.5 }, { throttle: 33 }, { throttle: '4' }, { nope: 1 }, { cache: true }, 'fast']) {
+    for (const options of [{ timeoutSeconds: 0 }, { maxRetries: 1.5 }, { maxRequestBytes: 0 }, { throttle: 33 }, { throttle: '4' }, { nope: 1 }, { cache: true }, 'fast']) {
       try { new tt.Engine(options); out.push('built'); } catch (error) { out.push([error.name, error.kind, error.message]); }
     }
     return out;`);
@@ -59,6 +60,7 @@ test('a refused setting throws usage from the constructor and sends nothing', as
   assert.deepEqual(value, [
     usage('a timeout is a time above zero'),
     usage('options.maxRetries is a whole number'),
+    usage('max_request_bytes is a whole number of at least 1'),
     usage('a throttle is a whole number from 1 through 32'),
     usage('options.throttle is a whole number'),
     usage('new Engine takes no option nope'),

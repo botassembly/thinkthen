@@ -30,13 +30,33 @@ repo() {
 	printf '%s\n' "$dir"
 }
 
-run() {
+run_command() {
 	dir=$1
 	shift
 	set +e
-	output=$(cd "$dir" && "$dir/sdlc/scripts/live" "$@" 2>&1)
+	output=$(cd "$dir" && "$@" 2>&1)
 	status=$?
 	set -e
+}
+
+run() {
+	dir=$1
+	shift
+	run_command "$dir" "$dir/sdlc/scripts/live" "$@"
+}
+
+run_with_file_limit() {
+	dir=$1
+	shift
+	ledger=$dir/.git/thinkthen-live/ledger
+	limit=$(wc -c <"$ledger")
+	run_command "$dir" /usr/bin/python3 -c '
+import os, resource, signal, sys
+size = int(sys.argv[1])
+resource.setrlimit(resource.RLIMIT_FSIZE, (size, size))
+signal.signal(signal.SIGXFSZ, signal.SIG_IGN)
+os.execv(sys.argv[2], sys.argv[2:])
+' "$limit" "$dir/sdlc/scripts/live" "$@"
 }
 
 assert_status() {
@@ -166,10 +186,12 @@ storage=$(repo storage)
 run "$storage" --init
 printf '#!/bin/sh\ntouch should-not-run\n' >"$storage/job.sh"
 chmod 755 "$storage/job.sh"
-chmod 400 "$storage/.git/thinkthen-live/ledger"
-THINKTHEN_API_KEY=dummy run "$storage" --max-tokens 1 job.sh
+cp "$storage/.git/thinkthen-live/ledger" "$storage/ledger.before"
+THINKTHEN_API_KEY=dummy run_with_file_limit "$storage" --max-tokens 1 job.sh
 assert_status 1
-assert_has 'charge may have been recorded; inspect --status before retry'
+[ "$output" = 'live: the charge may have been recorded; inspect --status before retry' ] ||
+	fail "unexpected storage refusal: $output"
+cmp -s "$storage/ledger.before" "$storage/.git/thinkthen-live/ledger" || fail 'failed append changed the ledger'
 [ ! -e "$storage/should-not-run" ] || fail 'job ran after storage failure'
 
 status_repo=$(repo statuses)

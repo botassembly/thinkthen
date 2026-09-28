@@ -9,6 +9,9 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parents[2] / "conformance" / "children"))
+from children import CARGO, child_env  # noqa: E402
+
 BRIDGE = HERE.parent / "bridge" / "Cargo.toml"
 LEGAL = ("license", "notice", "copying", "authors", "copyright", "patents")
 
@@ -33,7 +36,7 @@ def main() -> None:
     metadata = json.loads(subprocess.check_output([
         "cargo", "metadata", "--format-version", "1", "--locked", "--offline",
         "--manifest-path", str(BRIDGE),
-    ]))
+    ], env=child_env(CARGO)))
     archives = [line.split(maxsplit=1)[1] for line in (HERE / "archive-sha256.txt").read_text().splitlines()]
     inventory = ["Pinned DuckDB static archives:", *archives, "", "Bundled Rust crates (name version | declared license):"]
     for package in sorted(metadata["packages"], key=lambda value: (value["name"], value["version"])):

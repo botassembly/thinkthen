@@ -19,6 +19,7 @@ mod convert;
 pub(crate) mod facts;
 pub(crate) mod recognize;
 mod recording;
+pub(crate) use recording::ReplayContext;
 pub(crate) mod relate;
 mod status;
 mod stopped;
@@ -163,7 +164,10 @@ pub(crate) enum Failure {
     TopIsZero,
     QuietOverKept(&'static str),
     RawOverKept(&'static str),
-    ReplayMiss(String),
+    ReplayMiss {
+        name: String,
+        context: Option<ReplayContext>,
+    },
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
@@ -176,6 +180,10 @@ pub(crate) enum Failure {
     Configuration(&'static str),
     CacheEntry,
     StatusState,
+    StatusUsage {
+        name: String,
+        category: &'static str,
+    },
     Defect(&'static str),
     /// A measuring command refused its inputs or options.
     Measure(crate::cli::measure::Refusal),
@@ -251,7 +259,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
-        Failure::ReplayMiss(_)
+        Failure::ReplayMiss { .. }
         | Failure::Entry(_, _)
         | Failure::RecordingConflict(_)
         | Failure::RecordingStorage
@@ -361,6 +369,10 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
             5,
             "status could not read the local cache or usage state; check its permissions and contents"
                 .to_owned(),
+        ),
+        Failure::StatusUsage { name, category } => (
+            5,
+            format!("status could not read local usage file {name}: {category}"),
         ),
         Failure::InvalidUtf8 { record } => (
             5,

@@ -141,6 +141,6 @@ check("a named-model choose answers every row", identical(tt_choose(named, c("n1
 before <- tt_usage()
 invisible(tt_decide("Q?", c("u1-new", "u2-new")))
 check("two judgments are two sends", identical(tt_usage()$requests_sent - before$requests_sent, 2))
-check("the counters are the four doubles", identical(names(before), c("requests_sent", "cache_answers", "input_tokens", "output_tokens")))
+check("the counters are five doubles", identical(names(before), c("requests_sent", "retries", "cache_answers", "input_tokens", "output_tokens")))
 
 finish("verbs", 29L)

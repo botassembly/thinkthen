@@ -53,7 +53,10 @@ fn a_spent_request_closes_the_address_for_other_engines_but_not_cache_or_another
     let question = Question::decide("Is it?").expect("question").cut();
 
     assert_eq!(
-        cached.decide(&question, "cached").expect("warm answer"),
+        cached
+            .decide(&question, "cached")
+            .expect("warm answer")
+            .into_value(),
         Answer::Yes
     );
     let overloaded = live.decide(&question, "overload").expect_err("503");
@@ -63,14 +66,16 @@ fn a_spent_request_closes_the_address_for_other_engines_but_not_cache_or_another
     assert_eq!(
         cached
             .decide_with(&question, "cached", quick_call())
-            .expect("cache hit"),
+            .expect("cache hit")
+            .into_value(),
         Answer::Yes
     );
     assert_eq!(a.count(), 2, "cache sent nothing through the closed gate");
     assert_eq!(
         other
             .decide_with(&question, "elsewhere", quick_call())
-            .expect("other address"),
+            .expect("other address")
+            .into_value(),
         Answer::Yes
     );
     assert_eq!(b.count(), 1);

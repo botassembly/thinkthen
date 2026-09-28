@@ -15,13 +15,15 @@ class TestSettingsCases < Minitest::Test
         Dir.mkdir(folder)
         profile = File.join(ENV.fetch("HOME"), "profile.json")
         File.write(profile, #{JSON.generate(entry["profile"]).inspect}) if #{entry.key?("profile")}
-        #{steps.map { |step| step_script(step) }.join("\n")}
+        #{steps.map { |step| step_script(step, entry) }.join("\n")}
       RUBY
       TestBackend.with(script, arm: entry.fetch("arm").delete_suffix("/v1")) do |backend, child, root|
         steps.each do |step|
           got = child.hear(8)
           if step.key?("error")
             assert_equal step.fetch("error"), got.fetch("error"), entry.fetch("id")
+          elsif step["verb"] == "relate"
+            assert_equal step.fetch("edges"), got.fetch("value"), entry.fetch("id")
           else
             assert_equal step.fetch("value"), got.fetch("value"), entry.fetch("id")
             assert_equal step.fetch("model"), got.fetch("model"), entry.fetch("id") if step.key?("model")
@@ -39,19 +41,22 @@ class TestSettingsCases < Minitest::Test
     end
   end
 
-  def step_script(step)
+  def step_script(step, entry)
     <<~RUBY
       settings = JSON.parse(#{JSON.generate(step.fetch("settings")).inspect}).transform_keys(&:to_sym)
       settings.transform_values! { |value| value == "$FOLDER" ? folder : value == "$PROFILE" ? profile : value }
       begin
         engine = T::Engine.new(**settings)
-        value = if #{step["verb"] == "decide_many"}
-                  engine.decide_many(#{CASES.fetch("question").inspect}, #{step.fetch("records", []).inspect})
+        value = if #{step["verb"] == "relate"}
+                  engine.relate(#{entry.fetch("entities", []).map { |one| [one.fetch("name"), one.fetch("kind")] }.inspect},
+                    relations: { linked: %w[item item] }).value.length
+                elsif #{step["verb"] == "decide_many"}
+                  engine.decide_many(#{CASES.fetch("question").inspect}, #{step.fetch("records", []).inspect}, batch: 1).value
                 elsif #{step.key?("model")}
-                  details = engine.details(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect})
+                  details = engine.details(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect}).value
                   { "value" => details["value"], "model" => details["meta"]["model"] }
                 else
-                  engine.decide(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect})
+                  engine.decide(#{CASES.fetch("question").inspect}, #{step.fetch("text", "").inspect}).value
                 end
         say(value.is_a?(Hash) ? value : { "value" => value })
       rescue T::Error => error

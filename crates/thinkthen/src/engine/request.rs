@@ -78,6 +78,36 @@ pub(crate) fn ask_sent<E>(
 where
     E: From<Error>,
 {
+    ask_sent_observed(
+        backend,
+        plan,
+        prepared,
+        recorder,
+        cancel,
+        transport,
+        key,
+        || (),
+    )
+}
+
+/// The same prepared request with one private after-mark attempt receipt.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "one prepared request keeps its existing boundary plus a private attempt receipt"
+)]
+pub(crate) fn ask_sent_observed<E>(
+    backend: &Backend,
+    plan: &Plan,
+    prepared: PreparedRequest,
+    recorder: &Recorder,
+    cancel: &crate::engine::Cancel,
+    transport: Transport<'_>,
+    key: impl FnOnce() -> Result<Key, E>,
+    marked: impl Fn() + Sync,
+) -> Result<Answered, E>
+where
+    E: From<Error>,
+{
     ask_prepared(
         backend,
         plan,
@@ -95,11 +125,12 @@ where
                 retry_wait: transport.retry_wait,
             };
             crate::engine::workers::on_worker(cancel, || {
-                transport.client.post_observed_with_retry(
+                transport.client.post_marked_with_retry(
                     &exchange,
                     cancel,
                     transport.usage,
                     |_| (),
+                    &marked,
                 )
             })
             .map_err(E::from)
@@ -129,6 +160,28 @@ where
     let complete = |response: &[u8]| {
         !caches || !built_in::decode(plan, response).is_ok_and(|reply| reply.failed_any())
     };
+    let mut read_key = Some(key);
+    let early_key = if recorder.unbound_empty().map_err(E::from)? {
+        if let Some(stop) = cancel.stop() {
+            return Err(E::from(stop));
+        }
+        cancel.key_lookup();
+        let read = read_key
+            .take()
+            .ok_or_else(|| E::from(Error::Defect("key lookup was already used")))?;
+        let result = read();
+        match result {
+            Err(error) => {
+                if recorder.unbound_empty().map_err(E::from)? {
+                    return Err(error);
+                }
+                Some(Err(error))
+            }
+            Ok(key) => Some(Ok(key)),
+        }
+    } else {
+        None
+    };
     let operation = recorder
         .prepare_checked(&recorded, &prepared.digest, cancel, &complete)
         .map_err(E::from)?;
@@ -141,6 +194,7 @@ where
                     .map_err(E::from)?;
                 if recorder.counts_cache_answers() {
                     usage.cache_answer();
+                    cancel.cache_answer();
                 }
                 reply
             },
@@ -148,11 +202,21 @@ where
             0,
         ),
         PreparedRecording::Live(permit) => {
-            cancel.key_lookup();
-            let (permit, key) = finish_or_cancel(permit, key())?;
+            let found_key = match early_key {
+                Some(result) => result,
+                None => {
+                    cancel.key_lookup();
+                    let read = read_key
+                        .take()
+                        .ok_or_else(|| E::from(Error::Defect("key lookup was already used")))?;
+                    read()
+                }
+            };
+            let (permit, key) = finish_or_cancel(permit, found_key)?;
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
             usage.live_reply(decoded.usage);
+            cancel.live_reply(decoded.usage);
             let reply = match decoded.reply {
                 Ok(reply) => reply,
                 Err(error) => {
@@ -170,6 +234,7 @@ where
         }
     };
     usage.answered_by(reply.model());
+    cancel.answered_by(reply.model().as_str());
     Ok(Answered {
         reply,
         replayed,
@@ -376,5 +441,39 @@ mod tests {
         assert!(has_partial(&folder));
         assert!(lock.exists());
         fs::remove_dir_all(folder).expect("fixture removed");
+    }
+
+    #[test]
+    fn a_received_usage_report_survives_a_refused_logical_reply() {
+        let (backend, plan, prepared) = request();
+        let facts = crate::engine::CallFacts::new();
+        let cancel = crate::engine::Cancel::default().with_facts(facts.clone());
+        let recorder = Recorder::of(None, None).expect("uncached recorder");
+        let usage = Counters::new(None);
+        let result: Result<Answered, Error> = super::ask_prepared(
+            &backend,
+            &plan,
+            prepared,
+            &recorder,
+            &cancel,
+            &usage,
+            || Ok(Key::of("sk-test")),
+            |_, _| {
+                Ok(crate::engine::http::HttpAnswer {
+                    body: br#"{"model":"jev-latest","answers":{},"usage":{"input_tokens":7,"output_tokens":3}}"#.to_vec(),
+                    requests_sent: 1,
+                })
+            },
+        );
+        assert!(result.is_err(), "the reply has no answer for q1");
+        assert_eq!(
+            facts
+                .snapshot()
+                .tokens
+                .map(crate::core::Usage::token_counts),
+            Some((7, 3))
+        );
+        assert_eq!(usage.snapshot().input_tokens, 7);
+        assert_eq!(usage.snapshot().output_tokens, 3);
     }
 }

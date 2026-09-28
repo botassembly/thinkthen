@@ -12,6 +12,9 @@
     reason = "a failed fixture or child stops the proof"
 )]
 
+#[path = "public_env/batch.rs"]
+mod batch;
+
 #[path = "../src/test_deadline/run.rs"]
 mod run;
 #[path = "../src/test_deadline/wait.rs"]
@@ -25,7 +28,8 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::{Canned, Listener};
 use thinkthen::{
-    CallOptions, Engine, EngineBuilder, Error, ErrorKind, Question, SendBudget, SendBudgetDenial,
+    BatchSetting, CallOptions, Engine, EngineBuilder, Error, ErrorKind, Question, SendBudget,
+    SendBudgetDenial,
 };
 
 #[test]
@@ -211,14 +215,17 @@ fn ask(engine: &Engine) -> String {
         .expect("a question")
         .cut();
     match engine.details(&question, EVIDENCE) {
-        Ok(details) => format!(
-            "sent {} cached {} model {} digests {:?} sha {}",
-            details.requests_sent(),
-            details.cached(),
-            details.model(),
-            details.requests(),
-            details.question_sha256()
-        ),
+        Ok(call) => {
+            let details = call.value();
+            format!(
+                "sent {} cached {} model {} digests {:?} sha {}",
+                details.requests_sent(),
+                details.cached(),
+                details.model(),
+                details.requests(),
+                details.question_sha256()
+            )
+        }
         Err(error) => format!("{:?}: {error}", error.kind()),
     }
 }
@@ -255,29 +262,48 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         ],
         "overrides" => overrides(argument),
         "refused" => vec![shown(EngineBuilder::from_env())],
+        "batch-env" => {
+            let engine = seed().no_cache().build().expect("environment batch");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["alpha", "beta"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("two rows");
+            vec![format!("rows {}", rows.len())]
+        }
+        "batch-override" => {
+            let refused = shown(seed().no_cache().build());
+            let engine = seed()
+                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+                .no_cache()
+                .build()
+                .expect("explicit batch overrides an invalid environment");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["gamma"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("explicit batch row");
+            vec![refused, format!("rows {}", rows.len())]
+        }
+        "batch-conflict" => {
+            let engine = seed()
+                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+                .no_cache()
+                .build()
+                .expect("explicit batch outranks environment max");
+            let question = Question::decide("Refund?").unwrap().cut();
+            let rows = engine
+                .decide_many(&question, ["delta", "epsilon"])
+                .collect::<Result<Vec<_>, _>>()
+                .expect("two explicit batch rows");
+            vec![format!("rows {}", rows.len())]
+        }
         "no-home" => vec![
             shown(seed().no_cache().build()),
             shown(seed().build()),
             shown(Engine::from_env()),
         ],
-        "secrecy" => {
-            let seeded = seed();
-            let mut lines = vec![format!("{seeded:?}"), format!("{seeded:#?}")];
-            let builder = seeded.api_key(argument).unwrap();
-            lines.extend([format!("{builder:?}"), format!("{builder:#?}")]);
-            let engine = builder.no_cache().build().unwrap();
-            lines.extend([format!("{engine:?}"), format!("{engine:#?}")]);
-            let question = Question::decide("asks for a refund").unwrap().cut();
-            let error = engine
-                .decide(&question, EVIDENCE)
-                .expect_err("the backend refuses");
-            lines.extend([
-                format!("{error}"),
-                format!("{error:?}"),
-                format!("{error:#?}"),
-            ]);
-            lines
-        }
+        "secrecy" => secrecy(argument),
         "effects" => {
             let builder = seed();
             let seeded = entries(Path::new(argument));
@@ -289,6 +315,25 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         }
         _ => panic!("no child case {case}"),
     }
+}
+
+fn secrecy(argument: &str) -> Vec<String> {
+    let seeded = EngineBuilder::from_env().expect("a seed");
+    let mut lines = vec![format!("{seeded:?}"), format!("{seeded:#?}")];
+    let builder = seeded.api_key(argument).unwrap();
+    lines.extend([format!("{builder:?}"), format!("{builder:#?}")]);
+    let engine = builder.no_cache().build().unwrap();
+    lines.extend([format!("{engine:?}"), format!("{engine:#?}")]);
+    let question = Question::decide("asks for a refund").unwrap().cut();
+    let error = engine
+        .decide(&question, EVIDENCE)
+        .expect_err("the backend refuses");
+    lines.extend([
+        format!("{error}"),
+        format!("{error:?}"),
+        format!("{error:#?}"),
+    ]);
+    lines
 }
 
 /// Each setting after the seed, observed through a call.
@@ -447,60 +492,4 @@ fn settings_after_the_seed_take_effect() {
         4,
         "one limited row, two uncached asks, one default-cache ask"
     );
-}
-
-#[test]
-fn a_malformed_variable_is_usage_and_an_unreadable_configuration_is_local() {
-    let said = in_child("refused", &[("THINKTHEN_BASE_URL", "ftp://127.0.0.1/v1")]);
-    assert!(
-        said.starts_with("Usage: THINKTHEN_BASE_URL: a base address"),
-        "{said}"
-    );
-    let config = folder("unreadable");
-    fs::create_dir_all(config.join("thinkthen/config.json")).unwrap();
-    let said = in_child("refused", &[("XDG_CONFIG_HOME", config.to_str().unwrap())]);
-    assert_eq!(said, "Local: the configuration file could not be read");
-}
-
-#[test]
-fn with_home_unset_only_the_default_cache_fails_and_at_build() {
-    let said = in_child("no-home", &[]);
-    let refused =
-        "Usage: no default cache folder is available; set THINKTHEN_CACHE or use no_cache";
-    assert_eq!(said, ["ok", refused, refused].join("\n"));
-}
-
-#[test]
-fn no_key_reaches_a_debug_line_or_a_later_error() {
-    let refusing = Listener::answering(|_| Canned::status(401, "{}")).expect("a listener");
-    let said = in_child(
-        "secrecy",
-        &[
-            ("THINKTHEN_BASE_URL", refusing.base()),
-            ("THINKTHEN_API_KEY", "sk-sentinel-from-variable"),
-            (ARGUMENT, "sk-sentinel-from-setter"),
-        ],
-    );
-    assert_eq!(said.lines().count(), 9, "{said}");
-    assert!(!said.contains("sk-sentinel"), "{said}");
-    assert_eq!(refusing.count(), 1, "the error came from a real send");
-}
-
-#[test]
-fn seeding_and_building_send_nothing_and_seeding_creates_no_file() {
-    let served = listener();
-    let cache = folder("untouched");
-    fs::create_dir_all(&cache).unwrap();
-    let said = in_child(
-        "effects",
-        &[
-            ("THINKTHEN_BASE_URL", served.base()),
-            ("THINKTHEN_API_KEY", "sk-fake-loopback"),
-            ("THINKTHEN_CACHE", cache.to_str().unwrap()),
-            ("XDG_CACHE_HOME", cache.to_str().unwrap()),
-            (ARGUMENT, cache.to_str().unwrap()),
-        ],
-    );
-    assert_eq!(said, "seeded 0 built 0");
-    assert_eq!(served.count(), 0);
 }

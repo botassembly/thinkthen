@@ -66,6 +66,13 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	unset PYTHONPATH
 	"$scratch/venv/bin/python" -c 'import sys, thinkthen; sys.exit(not thinkthen.__file__.startswith(sys.argv[1]))' "$scratch/venv/" ||
 		{ echo "libraries/python: thinkthen loaded from outside the fresh venv" >&2; exit 1; }
+	"$scratch/venv/bin/python" -c 'import importlib.util, importlib.metadata
+assert importlib.util.find_spec("thinkthen._labels")
+assert importlib.util.find_spec("thinkthen.pydantic")
+assert any(need.startswith("pydantic") and "2.11" in need and "<3" in need
+           for need in importlib.metadata.requires("thinkthen"))' ||
+		{ echo "libraries/python: the installed wheel lacks its label modules or optional extra" >&2; exit 1; }
+	"$scratch/venv/bin/python" -m mypy --strict tests/type_contract.py
 	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 THINKTHEN_BASE_URL="http://127.0.0.1:$port/generic/v1" \
 		THINKTHEN_CACHE="$scratch/cache" "$scratch/venv/bin/python" tests/conformance.py "$port"
 	THINKTHEN_API_KEY=sk-fake-loopback-python-0105 "$scratch/venv/bin/python" tests/examples.py "$port"
@@ -108,6 +115,7 @@ VIRTUAL_ENV=$venv maturin develop --quiet --locked --offline --features probe
 
 echo "== the Python tests, each engine call in a child on its own backend: the door,"
 echo "   Arrow safety, bounded exit/release, throttle, and the address proof"
+"$python" -m mypy --strict tests/type_contract.py
 precondition "$python" True "pandas 3"
 if [ "$profile" = stress ]; then
 	"$python" -m pytest -q -p no:cacheprovider --tb=short -m stress \

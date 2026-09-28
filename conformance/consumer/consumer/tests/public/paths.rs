@@ -79,24 +79,24 @@ fn convenience_child() {
     // Twice, so the second round comes from each path's own cache.
     for _ in 0..2 {
         assert_eq!(
-            explicit.decide(&decide, "a note").ok(),
+            explicit.decide(&decide, "a note").ok().map(thinkthen::Call::into_value),
             Some(thinkthen::Answer::Yes)
         );
         assert_eq!(
-            thinkthen::decide(&decide, "a note").ok(),
+            thinkthen::decide(&decide, "a note").ok().map(thinkthen::Call::into_value),
             Some(thinkthen::Answer::Yes)
         );
         assert_eq!(
             explicit
                 .details(&score, "a note")
-                .expect("the engine detailss"),
-            thinkthen::details(&score, "a note").expect("the convenience detailss")
+                .expect("the engine detailss").into_value(),
+            thinkthen::details(&score, "a note").expect("the convenience detailss").into_value()
         );
         assert_eq!(
             explicit
                 .choose(&team, "a note")
-                .expect("the engine chooses"),
-            thinkthen::choose(&team, "a note").expect("the convenience chooses")
+                .expect("the engine chooses").into_value(),
+            thinkthen::choose(&team, "a note").expect("the convenience chooses").into_value()
         );
         assert_eq!(
             rows(explicit.filter(&decide, records), |kept| kept),
@@ -108,8 +108,8 @@ fn convenience_child() {
             rows(thinkthen::decide_many(&decide, records), parts)
         );
         assert_eq!(
-            explicit.rank(&rank, records).expect("the engine ranks"),
-            thinkthen::rank(&rank, records).expect("the convenience ranks")
+            explicit.rank(&rank, records).expect("the engine ranks").into_value(),
+            thinkthen::rank(&rank, records).expect("the convenience ranks").into_value()
         );
         let values = |record: thinkthen::AnnotatedRecord<&str>| record.values().to_vec();
         assert_eq!(
