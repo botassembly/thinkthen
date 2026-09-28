@@ -32,6 +32,20 @@ SELECT id FROM (
 SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team FROM tickets;
 ```
 
+## Constrain a stored answer
+
+`thinkthen_choose` returns plain `VARCHAR`. Cast its result to a caller-owned DuckDB `ENUM` when storing a fixed label set:
+
+```sql
+CREATE TYPE team_label AS ENUM ('billing', 'shipping');
+CREATE TABLE judged (id BIGINT, team team_label);
+INSERT INTO judged
+SELECT id, CAST(thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team_label)
+FROM tickets;
+```
+
+The cast refuses a label outside the enum. A `NULL` choose answer means no option cleared the cut; the cast and column keep that valid uncertainty as `NULL`. A failed ThinkThen call raises its named error and does not produce a row to cast. Do not catch that error and store `NULL` as if it were uncertainty. This is a constraint on the stored answer, not a change to the function's return type.
+
 ## Run facts
 
 `thinkthen_details(question, text)` returns the command's `--details` line for one text as JSON text, schema `thinkthen.result/1`. Read a member with DuckDB's JSON functions, such as `thinkthen_details(q, t) ->> '$.meta.usage.input_tokens'`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.

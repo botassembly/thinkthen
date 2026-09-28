@@ -1,0 +1,23 @@
+# SQL answer-column constraint recipes
+
+Status: documentation Quick Fix candidate on `ticket/qf-sql-answer-constraints`, from main `bf228948`. J7 of `sdlc/issues/2026-09-27-one-type-contract-for-every-surface.md` is already ruled: SQL functions keep their plain return types and callers constrain stored labels. No runtime source, public function signature, provider call, or extension binary changed. J7 remains open until independent review and landing.
+
+## Source and literal proof
+
+The recipes use `thinkthen_choose` because it returns a label or `NULL` for no fit. Current source pins the shown calls: `databases/postgresql/src/lib.rs::thinkthen_choose` takes `(question, evidence, options text[])`; `databases/duckdb/src/scalars.rs` registers `(text, text, list(text))`; `databases/sqlite/src/scalars.rs` registers two or three arguments, with the choose members in its question JSON. The SQLite JSON form is already exercised in `databases/sqlite/tests/test_values.py`. The function calls in the pages were source-checked, not run here. Literal-only SQL isolates the host constraint from ThinkThen and any backend.
+
+Disposable files and the PostgreSQL cluster live under `target/codex-builds/qf-sql-answer-constraints/`; its Unix socket used `target/pg-j7-sock` because the first longer socket path exceeded PostgreSQL's 107-byte limit. The server listened on that Unix socket and no TCP address. It was stopped after the proof. Logs are `literal-proof.log`, `pg-literal-proof.log`, `pg-init.log`, `pg-start.log`, and `pg-server.log`. The shared heavy lock covered the PostgreSQL start and proof. The exact literal statements and exit codes are in those logs. The tools were the pinned `~/.cache/thinkthen-toolchains/sqlite-3500000-host/sqlite3` (3.50.0), `~/.cache/thinkthen-toolchains/duckdb/v1.5.5/duckdb` (1.5.5), and `~/.cache/thinkthen-toolchains/postgresql/16.15-0ubuntu0.24.04.1/usr/lib/postgresql/16/bin/{initdb,pg_ctl,postgres}` with `psql` 16.15. Each accepted definition and good/`NULL` insert exited 0; invalid inserts returned the errors below.
+
+| Pinned host | Valid label | Invalid label | `NULL` | Evidence |
+| --- | --- | --- | --- | --- |
+| SQLite 3.50.0 stock host | `'billing'` inserted | `'other'` refused, exit 19, CHECK constraint | inserted and read as SQL `NULL` | `literal-proof.log` |
+| DuckDB 1.5.5 stock CLI | `'billing'` cast and inserted | `'other'` enum cast refused, exit 1 | cast and inserted as SQL `NULL` | `literal-proof.log` |
+| PostgreSQL 16.15 pinned local server | `'billing'` inserted into domain | `'other'` refused, `psql` exit 1, domain check | inserted and read as SQL `NULL` | `pg-literal-proof.log` |
+
+Each host retained just the valid and `NULL` rows after the refused insert. The tested constraints are the same definitions as the three pages, with a one-column `judged` table in the literal proof. Failure behavior comes from each extension's existing contract: ordinary function errors do not return a SQL `NULL`, and `try_details` exposes a distinct failed envelope. The recipes do not turn an error into a valid uncertain answer.
+
+## What the build taught us
+
+The existing SQLite extension marks its functions direct-only, so the recipe checks a stored value rather than calling ThinkThen inside a schema CHECK. The initial PostgreSQL socket path under the build folder was too long; a short socket path under `target` preserved the isolated cluster. The pinned host tools were already available, so no extension rebuild or new test framework was needed. The source review prevented copying one host's `choose` argument form to another: SQLite carries options in the question JSON, while DuckDB and PostgreSQL take a separate list or array. The exact SQL function calls remain unexecuted in this Quick Fix; the existing surface tests own their behavior. No unrelated J1 type or neighboring settings rule changed.
+
+`python3 sdlc/scripts/tickets` reported zero evidence failures; `python3 sdlc/scripts/pages` reported one coming and 21 green; `git diff --check` passed. A read-only local Markdown link pass over the six changed pages and records checked 16 relative links and anchors with zero failures, including all three new recipe links. The first pass incorrectly treated an existing directory link as a missing file; the corrected pass accepted existing directories and checked file anchors separately. Independent review and any final item closure still follow this candidate.

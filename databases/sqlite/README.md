@@ -43,6 +43,22 @@ The deadline is milliseconds under ADR 0041. `-1` means none. `0` is already spe
 
 An error reads `thinkthen <kind>: <message>`, with ` (retryable)` after the kind when a retry could succeed. `cancelled` is `SQLITE_INTERRUPT`, `usage` is `SQLITE_CONSTRAINT`, `local` is `SQLITE_CANTOPEN`, and every other kind is `SQLITE_ERROR`.
 
+## Constrain a stored answer
+
+`thinkthen_choose` returns plain text. Put a `CHECK` on the caller's stored answer column:
+
+```sql
+CREATE TABLE judged (
+  id INTEGER,
+  team TEXT CHECK (team IN ('billing', 'shipping'))
+);
+INSERT INTO judged
+SELECT id, thinkthen_choose('{"choose":"Which team owns this?","options":["billing","shipping"]}', body)
+FROM tickets;
+```
+
+The check rejects another non-`NULL` label. SQLite permits `NULL` through this check, preserving a choose answer for which no option cleared the cut. A failed ThinkThen call raises an error; it is not that valid `NULL`. Do not turn the error into `NULL` to pass the check. The check reads only the stored `team` value. It does not invoke a ThinkThen function inside the schema, which this extension refuses.
+
 `thinkthen_try_details` lets a query keep later good rows after a usage, local, or backend failure. Its JSON is `{"status":"answered","details":...}` or `{"status":"failed","error":{"kind":"usage","message":"check the row's question and arguments, or raise the process request total when it is spent","retryable":false}}`. The answered `details` is the full `thinkthen.result/1` object. A SQL NULL question or text returns SQL NULL. An unresolved answer returns an answered envelope with JSON `null` in its details. Failed values use fixed advice and omit the question, evidence, key, file path, cache path, and backend address. Interrupts, deadlines, and defects still raise SQL errors.
 
 ## Run facts

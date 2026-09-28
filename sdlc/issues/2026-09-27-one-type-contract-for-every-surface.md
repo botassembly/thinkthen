@@ -110,7 +110,7 @@ Each form maps to the same ordered set of labels with optional descriptions.
 | J4 | Rust `choices!` carries descriptions. | Libraries | S |
 | J5 | Python accepts `Enum` and `Literal`, the stub gains `Literal` kinds and a typed annotate row, and the `[pydantic]` extra is added. | Libraries | M |
 | J6 | Check Ruby and R for maps, structured descriptions, the failure marker and named kinds. Fix what fails. | Libraries | S |
-| J7 | A SQL recipe for constraining answer columns, one per database. | Databases / Pages | S |
+| J7 | A SQL recipe for constraining answer columns, one per database. Candidate in `qf-sql-answer-constraints`; literal constraint checks passed on the pinned hosts. Pending independent review before this item closes. | Databases / Pages | S |
 | J8 | Each port integration ticket meets rule 2 and passes the J1 corpus. | Libraries | one per port |
 
 ## 7. Note to the language-port team
