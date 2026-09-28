@@ -1,3 +1,5 @@
 # 0228 design review
 
-Pending fresh independent Medium review. Candidate is the notes-only ticket and preflight from source `76a3bc7c`. No ADR, runtime change, test run, acceptance or register closure is recorded yet.
+Fresh independent Medium review of notes candidate `66594827` returned two proof/contract findings; the same reviewer session is `01a0e6fb-edd7-7b83-aff5-e699476d7021`. It accepted the bounded probe/gate/race design as coherent but did **not** accept the candidate. The first planned listener at the second address cannot count sends to the first nonloopback address. Accepted ADR 0035 also says publication precedes key lookup and was missing from the proposed amendment inventory. The reviewer additionally asked that a saved key error on the concurrent path yield to existing cancellation or permit-cleanup precedence.
+
+The corrected notes pin the first run's exact local `NoKey` exit/message and absent or unchanged directory names, then count only the second address's accepted request. ADR 0099 stays **Proposed** and now names ADR 0035 for a future amendment after acceptance; no settled page or runtime changed. The ticket and ADR qualify key-error precedence. Same-reviewer follow-up is pending. No build, provider call or register closure occurred.
