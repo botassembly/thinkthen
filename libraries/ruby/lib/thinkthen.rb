@@ -166,7 +166,7 @@ module ThinkThen
 
     def rank(question, records, top: nil, cancel: nil, deadline: nil)
       list = records.to_a
-      placed = crossing("rank", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
+      placed = crossing("rank", ThinkThen.__send__(:question_text, "rank", question), ThinkThen.__send__(:texts, list), cancel, deadline)
       ranked = placed.map { |place, probability| Ranked.new(place, list[place], probability) }
       top ? ranked.first(top) : ranked
     end
@@ -176,7 +176,7 @@ module ThinkThen
       raise UsageError.new("none is true or false", "usage") unless [true, false].include?(none)
 
       list = units.to_a
-      place, probability = crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
+      place, probability = crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, "find", question), ThinkThen.__send__(:texts, list), cancel, deadline)
       Found.new(place, place.nil? ? nil : list[place], probability)
     end
 
@@ -384,9 +384,15 @@ module ThinkThen
     end
 
     # rank and find read one question text and no rule.
-    def question_text(value)
+    def question_text(verb, value)
       return value if value.is_a?(String)
-      return JSON.parse(value.json).fetch("decide") { refuse("rank and find take a decide question") } if value.is_a?(Question)
+      if value.is_a?(Question)
+        spec = JSON.parse(value.json)
+        refuse("#{verb} takes a decide question") unless spec.key?("decide")
+        extra = spec.keys.find { |key| key != "decide" }
+        refuse("#{verb} takes a decide question with no #{extra}") if extra
+        return spec.fetch("decide")
+      end
 
       refuse("a question is a built question or its text")
     end

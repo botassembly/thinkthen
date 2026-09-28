@@ -56,6 +56,10 @@
   stop(.tt_condition(paste("usage", "false", message, sep = "\u{1f}")))
 }
 
+.tt_local <- function(message) {
+  stop(.tt_condition(paste("local", "false", message, sep = "\u{1f}")))
+}
+
 # R's own interrupt, delivered for real: the guarded check consumed the
 # pending signal, so the process sends itself SIGINT and sleeps, and the
 # jump lands in R's own machinery with no Rust frame under it. If the
@@ -124,7 +128,24 @@
 
 tt_question <- function(decide = NULL, choose = NULL, options = NULL,
                         score = NULL, levels = NULL, tag = NULL, labels = NULL,
-                        threshold = NULL, model = NULL) {
+                        threshold = NULL, model = NULL, file = NULL) {
+  if (!is.null(file)) {
+    if (any(!vapply(list(decide, choose, options, score, levels, tag, labels,
+                         threshold, model), is.null, logical(1)))) {
+      .tt_usage("a question file stands alone; it takes no question keywords")
+    }
+    if (!is.character(file) || length(file) != 1L || is.na(file) || !nzchar(file)) {
+      .tt_usage("a question file is one path")
+    }
+    json <- tryCatch(suppressWarnings(readChar(file, file.info(file)$size, useBytes = TRUE)),
+                     error = function(e) .tt_local("the question file could not be read"))
+    kind <- tryCatch(.tt_call(tt_question_check(json)),
+                     thinkthen_error = function(e) .tt_local(conditionMessage(e)))
+    body <- jsonlite::fromJSON(json, simplifyVector = FALSE)
+    return(structure(list(json = json, kind = kind, text = body[[kind]],
+                          members = body$options %||% body$levels %||% body$labels),
+                     class = "thinkthen_question"))
+  }
   kinds <- list(decide = decide, choose = choose, score = score, tag = tag)
   given <- !vapply(kinds, is.null, logical(1))
   if (sum(given) != 1L) {
@@ -149,8 +170,15 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
 }
 
 # The question text rank and find read; a built question gives its own.
-.tt_text <- function(question) {
-  if (inherits(question, "thinkthen_question")) question$text else as.character(question)[[1L]]
+.tt_text <- function(question, verb) {
+  if (inherits(question, "thinkthen_question")) {
+    spec <- jsonlite::fromJSON(question$json, simplifyVector = FALSE)
+    if (is.null(spec$decide)) .tt_usage(paste0(verb, " takes a decide question"))
+    extra <- setdiff(names(spec), "decide")
+    if (length(extra)) .tt_usage(paste0(verb, " takes a decide question with no ", extra[[1L]]))
+    return(spec$decide)
+  }
+  as.character(question)[[1L]]
 }
 
 tt_decide <- function(question, evidence, threshold = NULL, deadline = NULL) {
@@ -202,7 +230,7 @@ tt_filter <- function(question, records, threshold = NULL, deadline = NULL) {
 tt_rank <- function(question, records, top = NULL, deadline = NULL) {
   records <- as.character(records)
   if (anyNA(records)) .tt_usage("rank takes no NA records")
-  ranked <- .tt_call(tt_rank_all(.tt_text(question), records, deadline))
+  ranked <- .tt_call(tt_rank_all(.tt_text(question, "rank"), records, deadline))
   held <- data.frame(place = ranked$place, record = records[ranked$place],
                      probability = ranked$probability, stringsAsFactors = FALSE)
   if (!is.null(top)) utils::head(held, top) else held
@@ -211,7 +239,7 @@ tt_rank <- function(question, records, top = NULL, deadline = NULL) {
 tt_find <- function(question, units, none = FALSE, deadline = NULL) {
   units <- as.character(units)
   if (!is.logical(none) || length(none) != 1L || is.na(none)) .tt_usage("none is TRUE or FALSE")
-  found <- .tt_call(tt_find_one(.tt_text(question), units, none, deadline))
+  found <- .tt_call(tt_find_one(.tt_text(question, "find"), units, none, deadline))
   place <- if (is.null(found$place)) NA_integer_ else as.integer(found$place)
   list(place = place, unit = if (is.na(place)) NA_character_ else units[[place]],
        probability = if (is.null(found$probability)) NA_real_ else found$probability)

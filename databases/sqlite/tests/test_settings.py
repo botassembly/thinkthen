@@ -16,6 +16,25 @@ from helper import Backend, Child, child, environment, expect, main
 AFTER_BUILD = "thinkthen usage: settings apply before the first call; this process already built its engine"
 
 
+def test_saved_calibration_identity_in_sql_details() -> None:
+    """The public SQL details route keeps the shared saved name and warning."""
+    case = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())
+    backend = Backend()
+    question = json.dumps(case["question"], separators=(",", ":"))
+    profile = json.dumps(case["runtime_profile"], separators=(",", ":"))
+    def quote(value: str) -> str:
+        return "'" + value.replace("'", "''") + "'"
+    setup = f"SELECT thinkthen_profile({quote(profile)})"
+    sql = f"SELECT thinkthen_details({quote(question)}, {quote(case['evidence'])})"
+    held = child(f"db = connect()\nrun(db, {setup!r})\n"
+                 f"say(details=run(db, {sql!r}))\n", environment(backend))
+    details = json.loads(held["details"][0][0])
+    expect(details["meta"]["question_sha256"], case["question_sha256"], "saved profile digest")
+    expect(details["meta"]["profile_warning"], case["warning"], "saved profile mismatch")
+    expect(details["meta"]["model"], case["model"], "actual backend model")
+    expect(backend.close(), 1, "one SQL details request")
+
+
 def test_shared_settings_corpus() -> None:
     """Run the shared nine setting cases through SQLite's public SQL functions."""
     corpus = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance" / "settings.json").read_text())

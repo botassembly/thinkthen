@@ -164,6 +164,7 @@ impl Listing {
             core,
             threshold,
             model: self.model,
+            profile: None,
             kind,
         })
     }
@@ -382,6 +383,7 @@ impl ScoreBuilder {
             },
             threshold: None,
             model: self.0.model,
+            profile: None,
             kind: Kind::Score,
         })
     }

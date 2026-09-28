@@ -54,10 +54,6 @@ pub(crate) fn run(
         Err(error) => return Err(error.into()),
     };
     crate::schedule::width(arguments.common.jobs)?;
-    let folders = Folders::of(&arguments.common, environment)?;
-    if arguments.common.dry_run && folders.named() {
-        return Err(Failure::DryRunWithRecording);
-    }
     let model = arguments
         .common
         .model
@@ -69,6 +65,11 @@ pub(crate) fn run(
         environment.base_url(),
         model,
     )?;
+    environment.check_key(&backend)?;
+    let folders = Folders::of(&arguments.common, environment)?;
+    if arguments.common.dry_run && folders.named() {
+        return Err(Failure::DryRunWithRecording);
+    }
     let profile = profile::read(&arguments.common)?;
     let mismatch = Mismatch::new(set.profile(), profile.as_ref());
     let reading = reading(&arguments.common)?;

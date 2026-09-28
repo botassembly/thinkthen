@@ -65,6 +65,20 @@ impl<T, R, E> InputPort<T, R, E> {
 
 type Done<R, E> = Result<Completed<R, E>, E>;
 
+/// Output retention and the scheduler's admission window are separate choices.
+#[derive(Clone, Copy)]
+pub(crate) enum RecordFlow {
+    Streaming,
+    HeldAll,
+    HeldWindowed,
+}
+
+impl RecordFlow {
+    const fn held(self) -> bool {
+        !matches!(self, Self::Streaming)
+    }
+}
+
 struct Run<R, E> {
     pending: BTreeMap<usize, Done<R, E>>,
     next: usize,
@@ -100,10 +114,10 @@ impl<R, E> Run<R, E> {
         &mut self,
         ask: &Sender<()>,
         jobs: usize,
-        held: bool,
+        flow: RecordFlow,
         defect: fn(&'static str) -> E,
     ) {
-        if !self.reading && !self.halted && !self.exhausted && self.waiting(held) < jobs {
+        if !self.reading && !self.halted && !self.exhausted && self.waiting(flow) < jobs {
             self.reading = ask.send(()).is_ok();
             if !self.reading {
                 self.refuse(defect("the record reader ended early"));
@@ -141,8 +155,8 @@ impl<R, E> Run<R, E> {
         self.in_flight == 0 && (self.halted || self.exhausted)
     }
 
-    const fn waiting(&self, held: bool) -> usize {
-        if held {
+    const fn waiting(&self, flow: RecordFlow) -> usize {
+        if matches!(flow, RecordFlow::HeldAll) {
             self.in_flight
         } else {
             self.dispatched - self.next
@@ -195,12 +209,12 @@ impl<R, E> Run<R, E> {
         Ok(())
     }
 
-    fn finish(self, held: bool) -> Outcome<E> {
+    fn finish(self, flow: RecordFlow) -> Outcome<E> {
         match self.stop {
             Some(cause) => Outcome::Stopped {
                 finished: self.finished,
                 replayed: self.replayed,
-                held,
+                held: flow.held(),
                 cause,
             },
             None => Outcome::Complete,
@@ -215,7 +229,7 @@ impl<R, E> Run<R, E> {
 )]
 pub(crate) fn run_cancelled<T, R, E>(
     jobs: usize,
-    held: bool,
+    flow: RecordFlow,
     cancel: &crate::engine::Cancel,
     start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
     answer: &(impl Fn(&T) -> Result<Completed<R, E>, E> + Sync),
@@ -230,7 +244,7 @@ where
 {
     run_observed(
         jobs,
-        held,
+        flow,
         cancel,
         start_reader,
         answer,
@@ -247,7 +261,7 @@ where
 )]
 fn run_observed<T, R, E, G>(
     jobs: usize,
-    held: bool,
+    flow: RecordFlow,
     cancel: &crate::engine::Cancel,
     start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
     answer: &(impl Fn(&T) -> Result<Completed<R, E>, E> + Sync),
@@ -289,7 +303,7 @@ where
                 if state.done() {
                     break;
                 }
-                state.request(&ask, jobs, held, defect);
+                state.request(&ask, jobs, flow, defect);
                 cancel.observed_block();
                 match received.recv_timeout(crate::engine::Cancel::poll()) {
                     Ok(event) => state.accept(event, &work, defect),
@@ -300,14 +314,14 @@ where
                 }
             }
             drop(ask);
-            Ok(state.finish(held))
+            Ok(state.finish(flow))
         },
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{Completed, Input, Outcome, run_observed};
+    use super::{Completed, Input, Outcome, RecordFlow, run_observed};
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Barrier};
     use std::thread;
@@ -330,7 +344,7 @@ mod tests {
         let run = thread::spawn(move || {
             let outcome = super::run_cancelled(
                 1,
-                false,
+                RecordFlow::Streaming,
                 &run_cancel,
                 move |asked, _events| asked_send.send(asked).expect("input requests"),
                 &|_: &()| -> Result<Completed<(), &'static str>, &'static str> {
@@ -393,7 +407,7 @@ mod tests {
         let run = thread::spawn(move || {
             let result = super::run_cancelled(
                 2,
-                false,
+                RecordFlow::Streaming,
                 &run_cancel,
                 move |asked, events| {
                     thread::spawn(move || {
@@ -463,7 +477,7 @@ mod tests {
         };
         let outcome = run_observed(
             3,
-            true,
+            RecordFlow::HeldAll,
             &crate::engine::Cancel::default(),
             |requests, events| {
                 thread::spawn(move || {

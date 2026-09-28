@@ -309,9 +309,9 @@ impl Engine {
         let judged = self.judge(question, evidence, options)?;
         Details::of(
             &judged,
-            &question.core,
-            question.threshold,
+            question,
             self.inner.backend(),
+            self.profile.as_ref(),
         )
     }
 

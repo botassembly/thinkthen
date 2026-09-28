@@ -5,11 +5,10 @@ use std::fmt;
 
 use serde::Serialize;
 
-use crate::core::{
-    self, Backend, Threshold, Value, Withheld, json_line, question_sha256_with_profile,
-};
+use crate::core::{self, Backend, BackendProfile, ProfileWarning, Value, Withheld, json_line};
 use crate::engine::facade;
 use crate::public::error::Error;
+use crate::public::question::Question;
 use crate::result_json::{Run, decision};
 
 /// A result's JSON line, written once when the result is made. `Debug`
@@ -177,13 +176,14 @@ impl Counters {
 }
 
 /// One judgment with the probabilities and request facts behind it.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Details {
     value: Judgment,
     probabilities: Probabilities,
     nearest: Option<String>,
     model: String,
     question_sha256: String,
+    profile_warning: Option<ProfileWarning>,
     requests: Vec<String>,
     requests_sent: u64,
     cached: bool,
@@ -193,12 +193,33 @@ pub struct Details {
     json: Written,
 }
 
+impl fmt::Debug for Details {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Details")
+            .field("value", &self.value)
+            .field("probabilities", &self.probabilities)
+            .field("nearest", &self.nearest)
+            .field("model", &self.model)
+            .field("question_sha256", &self.question_sha256)
+            .field("profile_warning", &self.profile_warning)
+            .field("requests", &self.requests)
+            .field("requests_sent", &self.requests_sent)
+            .field("cached", &self.cached)
+            .field("usage", &self.usage)
+            .field("confidence", &self.confidence)
+            .field("url", &"<withheld>")
+            .field("json", &self.json)
+            .finish()
+    }
+}
+
 impl Details {
     pub(crate) fn of(
         judged: &facade::Judgment,
-        question: &core::Question,
-        threshold: Option<Threshold>,
+        question: &Question,
         backend: &Backend,
+        profile: Option<&BackendProfile>,
     ) -> Result<Self, Error> {
         let answer = &judged.answer;
         let probabilities = match (answer.yes(), answer.named()) {
@@ -215,18 +236,20 @@ impl Details {
             (None, None) => return Err(Error::defect("an answer carried no probability")),
         };
         let reply = &judged.answered.reply;
+        let warning =
+            ProfileWarning::between(question.profile.as_ref(), profile.map(BackendProfile::name));
         let run = Run {
             backend,
-            tuned_for: None,
-            warning: None,
+            tuned_for: question.profile.as_ref(),
+            warning: warning.clone(),
             batch_warning: None,
             context_sha256: None,
         };
-        let json = decision(
+        let (json, question_sha256) = decision(
             run,
             judged,
-            question.clone(),
-            threshold,
+            question.core.clone(),
+            question.threshold,
             judged.value.clone(),
             None,
         )
@@ -236,8 +259,8 @@ impl Details {
             probabilities,
             nearest: answer.level().map(str::to_owned),
             model: reply.model().as_str().to_owned(),
-            question_sha256: question_sha256_with_profile(question, threshold, None)
-                .map_err(|_| Error::defect("a question could not be digested"))?,
+            question_sha256,
+            profile_warning: warning,
             requests: vec![judged.answered.request.as_str().to_owned()],
             requests_sent: judged.answered.requests_sent,
             cached: judged.answered.replayed,
@@ -282,6 +305,14 @@ impl Details {
     #[must_use]
     pub fn question_sha256(&self) -> &str {
         &self.question_sha256
+    }
+
+    /// Saved and selected runtime profile names when both exist and differ.
+    #[must_use]
+    pub fn profile_warning(&self) -> Option<(&str, &str)> {
+        self.profile_warning
+            .as_ref()
+            .map(|warning| (warning.tuned_for(), warning.running()))
     }
 
     /// The recording digest of each request behind the result.

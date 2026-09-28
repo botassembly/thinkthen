@@ -199,6 +199,10 @@ fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
     };
+    let shown = format!("{exchange:?}");
+    assert!(shown.contains("url: \"<withheld>\""), "{shown}");
+    assert!(!shown.contains(&url), "{shown}");
+    assert!(!shown.contains("sk-test-value"), "{shown}");
     let token = Arc::new(AtomicBool::new(false));
     let cancel = crate::engine::Cancel::default().with_token(Some(Arc::clone(&token)));
     let counts = Counters::new(None);

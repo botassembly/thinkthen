@@ -125,6 +125,12 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
     } else {
         "built_in"
     };
+    let resolved_backend = crate::core::Backend::resolve(
+        None,
+        environment.base_url(),
+        environment.model().unwrap_or(DEFAULT_MODEL),
+    )?;
+    environment.check_key(&resolved_backend)?;
     let cache_counts = environment
         .cache()
         .map(|path| {
@@ -138,11 +144,6 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
         .map(|path| crate::engine::usage::read(path, &month))
         .transpose()
         .map_err(|_| Failure::StatusState)?;
-    let resolved_backend = crate::core::Backend::resolve(
-        None,
-        environment.base_url(),
-        environment.model().unwrap_or(DEFAULT_MODEL),
-    )?;
     Ok(Status {
         schema: "thinkthen.status/1",
         version: env!("CARGO_PKG_VERSION"),

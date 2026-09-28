@@ -392,6 +392,44 @@ fn question_file_dry_run_attributes_source_and_sums_every_rule_bound() {
 }
 
 #[test]
+fn a_saved_recognize_name_reaches_details_identity_and_warning() {
+    let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-calibrated.json");
+    fs::write(
+        &path,
+        r#"{"version":1,"recognize":{"kinds":{"person":"A person."}},"profile":"old"}"#,
+    )
+    .expect("question file");
+    let running = profile("new", r#""max_evidence_bytes":1000"#);
+    let listener = Listener::answering(automatic).expect("listener");
+    let output = run(
+        &listener,
+        &[
+            &format!("@{}", path.display()),
+            "--details",
+            "--profile",
+            &running.to_string_lossy(),
+        ],
+        ADA,
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let row: Value = serde_json::from_slice(&output.stdout).expect("details");
+    assert_eq!(
+        row["meta"]["question_sha256"],
+        "a5514b1a486b91807b0bc90a2f7da62ac618f6a9a1c3c31a1f850d8022e1825d"
+    );
+    assert_eq!(
+        row["meta"]["profile_warning"],
+        serde_json::json!({"tuned_for":"old","running":"new"})
+    );
+    assert!(!listener.requests().is_empty());
+}
+
+#[test]
 fn local_validation_matrix_never_sends() {
     let lacking_sign: [&[&str]; 2] = [&["--kind", "PER"], &["--kind", "PER", "--kind", "ORG"]];
     for options in lacking_sign {

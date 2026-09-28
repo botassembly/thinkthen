@@ -11,6 +11,10 @@ use crate::core::text::{BlankTextError, ModelName, Url};
 /// the user's own act. `specification/backends.md` states the rule.
 pub(crate) const KEY_VAR: &str = "THINKTHEN_API_KEY";
 
+/// The same refusal at the CLI and public builder boundaries.
+pub(crate) const KEY_IN_ADDRESS: &str =
+    "the backend address contains the API key; keep the key out of the address";
+
 /// Where one request goes and which model it names.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Backend {
@@ -122,6 +126,13 @@ impl Backend {
     #[must_use]
     pub(crate) const fn url(&self) -> &Url {
         &self.url
+    }
+
+    /// Compare the final posting URL with the effective nonblank key exactly.
+    #[must_use]
+    pub(crate) fn address_contains_key(&self, key: Option<&str>) -> bool {
+        key.filter(|value| !value.trim().is_empty())
+            .is_some_and(|value| self.url.as_str().contains(value))
     }
 
     /// Read the model the request names.

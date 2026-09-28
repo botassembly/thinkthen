@@ -48,6 +48,8 @@ Every call runs on its own worker thread. Ctrl-C or the caller's token stops the
 
 `details(question, text)` returns the command's `--details` line for one text as a `dict`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
+A question read with `tt.question(file=...)` keeps its saved calibration `profile` in `meta.question_sha256`. When the engine selects a different runtime profile, details include `meta.profile_warning` with `tuned_for` and `running`. A profiled question cannot become a grouped column member for `choose`, `score`, or `tag`; those calls raise `UsageError` before sending.
+
 `usage()` returns this engine's running totals of requests sent, retries, cache answers and tokens. A call over a column or a frame returns values only, so read its facts with `details` for one text and `usage()` for the totals.
 
 `check.sh` is this folder's gate. It needs Python 3.12 or later, `uv`, and `maturin`, and it installs the pinned test packages offline from uv's cache. A missing piece reports "not run". Its last step runs the pandas tests and the secrecy test again under pandas 2.3.3 (`requirements-pandas2.txt`), over the same built extension. `build-wheel.sh` builds the release wheel and checks its contents. `NOTES.md` records the port's decisions.
