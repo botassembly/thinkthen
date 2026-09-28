@@ -86,6 +86,8 @@ Settled by ADR 0008, accepted in ADR 0010, with the `find` exception settled by 
 
 A live run sends the open batch after 50 ms with no new record, in every mode, with or without a folder. A file or a fast pipe never pauses, so it forms the same batches every run. A live pipe forms batches by its timing, so a replay fed with other timing can miss a batch and stop at exit 5 naming its range, and a cache pays for the batches that moved. A batch also closes at 4,096 records, repeats included, so a stream of a few repeated values never holds more than 4,096 records in one batch.
 
+A threshold saved in a question file was tuned at the file's `batch`, or at 1 when the file has no `batch`. A `decide`, `filter`, or `rank` record run at another setting prints one warning on standard error and carries `meta.batch_warning` in each detailed row. The warning leaves the run's batch setting and the question digest unchanged.
+
 | Command | Requests |
 | --- | --- |
 | `decide`, `choose`, `tag`, `score` on one document | 1 |

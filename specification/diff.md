@@ -106,14 +106,17 @@ diff walks the pairs in A's order. The pairing row fires on the first pair whose
 
 ## Warnings
 
-diff prints at most two warning lines on standard error, after standard output. Quick Fix `qf-diff-warnings` added them from the options in the closed issue `2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md`. A script that wants to fail on either one reads standard error.
+diff prints at most three warning lines on standard error, after standard output. Quick Fix `qf-diff-warnings` added the first two from the options in the closed issue `2026-09-25-diff-exits-0-when-nothing-pairs-and-pairs-different-questions-silently.md`. A script that wants to fail on any of them reads standard error.
 
 | Case | Standard error |
 | --- | --- |
 | No answer paired: `records` is 0 | `thinkthen: diff: warning: no answer paired; check that both runs hold the same record ids and answer names` |
 | `D` of the `N` pairs carry different question digests | `thinkthen: diff: warning: the question digest differs in D of N paired answers. A different question, threshold, or profile gives a different digest.` |
+| The union of the runs' batch settings holds more than one value | `thinkthen: diff: warning: the runs used different batch settings (1 and max); batching moves answers, so some changes may come from it` |
 
 A line's question digest is its `meta.question_sha256`. An `annotate` line carries `meta.questions_sha256` instead, one digest over all its questions. Each answer on that line takes that one digest, so one changed question flags every answer on the line. The digest check counts a pair only when both lines carry a digest. The digest covers the threshold and the profile too. Two runs of one question at different thresholds or under different profiles also warn. Two cuts on one run compare a line with itself and never warn. With no pair, the second warning cannot print. Failed answers pair with nothing, so a run of only failed answers warns that no answer paired.
+
+Each side's batch setting is the set of `meta.batch.setting` values its lines carry, or `{1}` if none carries one. A line without `meta.batch` does not add 1 beside an explicit batched setting. A present invalid `meta.batch.setting` is refused with its line number. The third warning appears when the union of both sides' sets holds more than one value, with numbers in ascending order before `max`. Two cuts on one run therefore add no batch warning unless that run itself mixed settings.
 
 ## Failures
 

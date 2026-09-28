@@ -20,6 +20,7 @@ The orders on record follow the rule:
 - The model: `--model`, then the question file's `model`, then the engine's `model`, then the configuration file's `model`, then `jev-1.13.0`. ADR 0033.
 - The answer cache: `--cache DIR` selects that folder and `--no-cache` turns caching off for the command. Otherwise a nonblank `THINKTHEN_CACHE` names a folder and enables caching, even when the configuration file says `"cache": false`. Without a named folder, the configuration file's boolean `cache` turns the platform-folder default on (`true`, omitted, or `null`) or off (`false`). The configuration file never names a cache folder. [ADR 0033](../sdlc/planning/adr/0033-bounded-default-cache-and-read-only-configuration.md).
 - The batch: `--batch`, then `THINKTHEN_BATCH`, then the question file's `batch`, then `max`. ADR 0048 item 4.
+- A threshold-bearing question file names its tuned batch setting through `batch`, or 1 when it has no `batch`. The setting still resolves by the four tiers above; another running setting warns instead of changing it. ADR 0085.
 - The request size: `--max-request-bytes`, then `THINKTHEN_MAX_REQUEST_BYTES`, then 96,000 bytes. ADR 0051.
 
 `--profile FILE` loads a backend profile and has no environment or file tier, by ADR 0032. The question file's `profile` is calibration identity, a separate setting with its own row.

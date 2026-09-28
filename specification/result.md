@@ -35,7 +35,7 @@ Every result is compact and sits on one line, so one answer is also one record f
 - `question` names the question kind and the text the model received. `filter` and `rank` ask a `decide` question, so their `question.verb` is `decide`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
-- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. `batch` appears under `--details` for a batch of two or more records, or a split half. The other fields are always present. Not built yet, by ADR 0048 item 9: `context_sha256` may be absent too, and item 8's `batch_warning` appears only for a batch-setting mismatch.
+- `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. `batch` appears under `--details` for a batch of two or more records, or a split half. `batch_warning` follows `batch` when a file's tuned setting differs from the run. The other fields are always present. Not built yet, by ADR 0048 item 9: `context_sha256` may be absent too.
 
 ## A detailed result keeps everything
 
@@ -106,7 +106,7 @@ ADR 0032 adds `meta.profile_warning` only when a saved calibration name and the 
 | `failed_questions` | The number of failed logical questions in this result. Always present, including zero |
 | `profile_warning` | The saved calibration profile and selected run profile when both exist and differ. Absent otherwise |
 | `batch` | The batch this row rode in, with `setting`, `records`, one-based `position`, `closed` (`content`, `size`, `limit`, `pause` or `end`), and the batch's whole `usage` when reported and `requests_sent`. Absent for a batch of one record with no context. A row answered by a half of a refused batch also has `split:true`, even when that half holds one record. The half's counts and position describe that half; `closed` keeps the whole batch's reason |
-| `batch_warning` | Not built yet, by ADR 0048 item 8: the file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise |
+| `batch_warning` | The file's tuned batch setting and the running one when they differ, as `{"tuned_for":1,"running":"max"}`. Absent otherwise. A file with a threshold and no batch key was tuned at 1, without changing the run's setting |
 | `context_sha256` | Not built yet, by ADR 0048 item 11: the SHA-256 of the `--context` file's bytes. Absent without a context |
 
 ## The run facts line
@@ -123,9 +123,9 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 
 | Command | `question.verb` | Members | `meta` members |
 | --- | --- | --- | --- |
-| `decide` | `decide` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `filter` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
-| `rank` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
+| `decide` | `decide` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` |
+| `filter` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` |
+| `rank` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` |
 | `choose` | `choose` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `tag` | `tag` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `score` | `score` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
