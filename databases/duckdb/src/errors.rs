@@ -190,7 +190,7 @@ mod tests {
     use super::*;
     use std::io::Write;
 
-    const CHILD: &str = "THINKTHEN_DUCKDB_PANIC_CHILD";
+    const CHILD: &str = "THINKTHEN_TEST_DUCKDB_PANIC_CHILD";
     const STRING_MARKER: &str = "duckdb-owned-string-payload-marker";
     const DROP_MARKER: &str = "duckdb-owned-drop-payload-marker";
 
