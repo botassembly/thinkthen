@@ -2,6 +2,8 @@
 
 Status: ACCEPT. The same independent Sol reviewer accepted `a713e462`: full detail fields, bounded ordered borrowed question events, filtered rows, final facts and the complete compiling-consumer migration. The coordinator approved the routine `Call<T>` shape under Ian's accepted facts-on-every-call outcome. This is design acceptance only; no runtime implementation, test result or closed register item. Read the [ticket](../tickets/0212-rust-library-batching.md), [preflight](0212-rust-batching-preflight.md) and [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md) against main `1e771675` with 0172 landed at `2e1f0d88`, accepted 0149/0157 branch `12309f56`, and proposed 0213 `7c97e2f8` separately. No pending source was merged into this branch.
 
+The [final factual preflight](0212-post-settings-preflight.md) reads landed 0203 and 0220 source at main `5261cb93`. This historical review remains the accepted design decision. The newer note updates source headroom, same-candidate consumers, 0210's active file overlap, and the scheduler's fatal-worker versus recoverable-split boundary; it does not amend the reviewed outcome.
+
 ## Questions for the reviewer
 
 1. **Public choice.** ADR 0089 now compares uniform `Call<T>`, structured-result extensions plus primitive/vector envelopes, and additive `*_call` siblings. It recommends uniform wrapping despite the compile migration, and explicitly rejects leaving bare methods without facts. Assess that recommendation and its private-`ErrorDetail` facts carrier; name a concrete correction if it cannot meet Ian's every-call ruling. The reviewer need not invent an alternative contract.
