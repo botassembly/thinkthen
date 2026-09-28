@@ -5,6 +5,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use crate::core::{self, BackendProfile, Value};
+use crate::engine::facade::Roots;
 use crate::engine::facade::{self, Settings};
 use crate::public::choice::Choice;
 use crate::public::error::Error;
@@ -132,8 +133,9 @@ impl Engine {
         settings: Settings,
         most: Option<usize>,
         profile: Option<BackendProfile>,
+        roots: Option<Roots>,
     ) -> Result<Self, Error> {
-        let inner = guarded(|| facade::Engine::new(settings).map_err(Error::from))?;
+        let inner = guarded(|| facade::Engine::with_roots(settings, roots).map_err(Error::from))?;
         Ok(Self {
             inner: Arc::new(inner),
             most,

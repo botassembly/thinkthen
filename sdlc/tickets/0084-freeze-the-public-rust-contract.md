@@ -415,3 +415,7 @@ The optional `polars` feature adds two root names, `PolarsEngine` and the re-exp
 ## Amended 2026-09-27 (ticket 0148)
 
 The frozen `EngineBuilder` inventory above removes the ineffective `cache_bytes` setter and adds `timeout(Duration)`, `max_retries(u32)`, `profile(path)`, `record(path)`, and strict `replay(path)`. The builder applies the command's folder conflicts and passes the settings to the existing facade. No engine module changes. Ian can overturn these setters.
+
+## Amended 2026-09-28 (ticket 0211)
+
+`EngineBuilder::ca_bundle(self, path: impl AsRef<Path>) -> Result<Self, Error>` adds explicit replacement TLS roots. An absolute path is required at the setter; `build` reads and validates the bounded certificate-only PEM. `EngineBuilder::from_env` captures optional `THINKTHEN_CA_BUNDLE`, and a later explicit setter overrides that path. A bare builder reads no ambient setting. The engine retains parsed roots across clone, model selection and fork reconstruction while certificate and hostname verification remain enabled. This adds no new public error kind. The accepted [0211 design](0211-private-tls-roots.md) owns the outcome; Ian can overturn it.
