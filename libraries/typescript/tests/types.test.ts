@@ -28,9 +28,11 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const related: tt.Edge[] = await tt.relate(names.entities, { relations: ['works_for'] });
   const counters: tt.Usage = tt.usage();
 
-  const engine = new tt.Engine({ throttle: 4, baseUrl: 'http://127.0.0.1:1/v1', cache: false, maxRequests: 10 });
+  const engine = new tt.Engine({ throttle: 4, baseUrl: 'http://127.0.0.1:1/v1', cache: false, maxRequests: 10, maxRequestBytes: 20_000 });
   const fromEngine: tt.Answer = await engine.decide('Refund?', text);
   const sent: number = engine.usage().requests_sent;
+  const retries: number = engine.usage().retries;
+  void retries;
 
   const field = rows[0]?.['team'];
   if (field !== null && typeof field === 'object' && 'failed' in field) {

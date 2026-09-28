@@ -12,7 +12,7 @@ cc -std=c11 -I include examples/slide.c -L lib -lthinkthen -Wl,-rpath,"$PWD/lib"
 
 A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with the soname `libthinkthen.so.0`. `thinkthen_engine_new` reads `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE` as the command does.
 
-`thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, cache, timeout, retries, profile, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
+`thinkthen_engine_new_with` accepts JSON for the address, model, throttle, request limit, request-byte ceiling, cache, timeout, retries, profile, record, and strict replay; the key stays in `THINKTHEN_API_KEY`.
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_engine_new_with("{\"cache\":false}")`. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move its folder.
 
@@ -20,7 +20,7 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 A call with `"details": true` returns the command's `--details` line for one text, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
-A call of `{"usage": true}` returns this engine's running totals of requests sent, cache answers and tokens.
+A call of `{"usage": true}` returns this engine's running totals of requests sent, retries, cache answers and tokens.
 
 ## Throttle is per loaded copy
 

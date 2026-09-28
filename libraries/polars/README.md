@@ -8,7 +8,7 @@ thinkthen = { version = "0.1", features = ["polars"] }
 
 The feature adds one trait, `thinkthen::PolarsEngine`, to your own `thinkthen::Engine`. Each method reads a text column in place and makes one engine call over the whole column. That call takes the same batch path as a slice of strings, at the same throttle, and the answers come back in input order. The trait's rustdoc holds a full example.
 
-Build that engine with `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
+Build that engine with `max_request_bytes`, `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. The column calls use your own `thinkthen::Engine`, so turn it off with `EngineBuilder::no_cache` when you build that engine.
 

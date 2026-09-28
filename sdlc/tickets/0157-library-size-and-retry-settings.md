@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/resul
 
 # 0157: Expose request size and retry counts through the libraries
 
-Status: design accepted 2026-09-27 after fresh independent review at `5f3b943e`. Owner: Codex. 0154 and 0155 have landed. Implementation waits for 0149 and its 0201 caller-session prerequisite, then needs exact runtime claims.
+Status: staged implementation landed after fresh High review accepted source `85180c3f`. Owner: Codex. Six libraries, SQLite, PostgreSQL and Linux x86-64 DuckDB passed the focused settings integration checkpoint. Full ticket completion remains open for Linux ARM64 and both macOS DuckDB C API packages.
 
 ## Outcome and authority
 
@@ -59,3 +59,13 @@ Main `30d340d1` (rechecked against `origin/main` at `9e9b9ac9`: no changes in th
 Include `crates/thinkthen/src/engine/facade.rs::Engine::with_model` in the implementation claim and proof. Main re-resolves `Backend` for a model override and clones the rest of the engine; that reconstruction currently resets `request_size` to the default, harmless while no public nondefault setter exists but wrong after this ticket adds one. Carry the selected size through model reconstruction. Add one lowered-size split/relation check with a model override to the existing fixed-body proof, without a second planner or test-only hook. A lone scalar still cannot demonstrate splitting.
 
 0157's SQL values follow 0149's final host settings and process send-budget implementation. SQLite holds settings in its pre-first-use process engine but makes deadline/cancel options per call; PostgreSQL samples GUCs into a call plan; DuckDB scalar settings are caller-session values and the warm size path requires the final 0201/0149 caller-context bridge. The active `dde0d02d` migration checkpoint captures warm's caller context but still calls an environment-only Rust warm resolver. Refresh only that C++/bridge path when 0201 lands, then refresh this ticket against the landed 0149 key/constructor inventory. Neither checkpoint proves final settings integration.
+
+## What the build taught us
+
+The accepted core and 0149 settings paths transferred cleanly. The nondefault ceiling also had to survive `Engine::with_model`, which reconstructs the backend. The fixed 18-entity relation answers 306 edges with one default request and two requests at 20,000 bytes in the selected host proofs. A single scalar call does not split. The Rust public proof also confirms that a 10,000-byte profile lowers an explicit 20,000-byte setting and that a live 503 followed by 200 reports two sends and one retry; replay reports neither.
+
+Preparation named native maps but missed public wrapper hops. Python's `thinkthen/__init__.py` fixed keyword list initially raised `TypeError` for the new option despite a compiled PyO3 constructor. Ruby's `lib/thinkthen.rb` fixed keyword list would have dropped the option. R's generated `extendr-wrappers.R` needed its document step and a matching positional argument. The C header, design page and literal example all described the old usage JSON shape. The corrected inventory traced each setting from public constructor to native builder and each usage value back through its serialized boundary. Future settings tickets should inventory generated registration and literal output examples before implementation.
+
+The DuckDB bridge required the same new `int64_t` member in the C++ session object, C ABI struct and Rust `repr(C)` struct; the unset sentinel remains `i64::MIN`. The checked engine key includes the byte ceiling. PostgreSQL's GUC is a per-backend plan member; SQLite keeps a pre-first-use process value. The staged DuckDB C API packages on Linux ARM64 and both macOS targets still lack the C++ session path and need the accepted 0201 migration. The shared settings case routes the same 18 entities through every current host and checks exact request totals. The build used local loopback arms and no paid service.
+
+The first Ruby Clippy invocation selected system Ruby headers; the pinned Ruby and libclang path passed. The first R host invocation found the system `jsonlite`; adding the pinned R library path passed. The first TypeScript shape test lacked the required command-binary environment variable; the corrected command passed. These were local check setup errors, not product failures. PostgreSQL's selected `shared_settings_cases` check still builds and installs its package before the one requested host step; a direct installed adapter would avoid that wrapper overhead in later ticket preparation.

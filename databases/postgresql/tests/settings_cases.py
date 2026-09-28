@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The eight shared settings cases through one PostgreSQL backend at a time."""
+"""The nine shared settings cases through one PostgreSQL backend at a time."""
 
 import json
 import pathlib
@@ -38,7 +38,16 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
             if name == "timeout":
                 value = f"{value}s"
             settings.append(f"SET thinkthen.{name} = {quote(str(value))}")
-        if step.get("verb") == "decide_many":
+        if step.get("verb") == "relate":
+            values = ", ".join(f"({at}, {quote(one['name'])}, {quote(one['kind'])})"
+                               for at, one in enumerate(case["entities"]))
+            source = f"SELECT * FROM (VALUES {values}) v(id, name, kind)"
+            name, ends = case["relation"].split("=", 1)
+            start, target = ends.split(":", 1)
+            rule = json.dumps({"version": 1, "relate": {"relations": [
+                {"name": name, "source": start, "target": target}]}})
+            sql = f"SELECT count(*) FROM thinkthen_relate({quote(source)}, {quote(rule)})"
+        elif step.get("verb") == "decide_many":
             records = "ARRAY[" + ", ".join(quote(value) for value in step["records"]) + "]"
             sql = f"SELECT * FROM thinkthen_decide({QUESTION}, {records})"
         elif "model" in step:
@@ -50,7 +59,7 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
             marker = f"thinkthen {step['error']}:"
             assert done.returncode and marker in done.stderr, (case["id"], done.stdout, done.stderr)
         else:
-            wanted = step.get("model", "t")
+            wanted = str(step.get("model", step.get("edges", "t")))
             assert done.returncode == 0 and done.stdout.strip() == wanted, (case["id"], done.stdout, done.stderr)
     if "entries" in case:
         saved = sum(path.suffix == ".json" and path.name != ".thinkthen-backend.json"

@@ -66,8 +66,9 @@ pub(crate) fn call(
         }
         let counts = engine.usage();
         return Ok(format!(
-            "{{\"requests_sent\":{},\"input_tokens\":{},\"output_tokens\":{},\"cache_answers\":{}}}",
+            "{{\"requests_sent\":{},\"retries\":{},\"input_tokens\":{},\"output_tokens\":{},\"cache_answers\":{}}}",
             counts.requests_sent(),
+            counts.retries(),
             counts.input_tokens(),
             counts.output_tokens(),
             counts.cache_answers()

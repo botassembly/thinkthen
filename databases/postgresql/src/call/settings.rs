@@ -27,6 +27,7 @@ pub(crate) fn throttle_refusal(value: i32) -> Option<String> {
 pub(crate) struct Plan {
     pub(super) throttle: Option<u8>,
     pub(super) max_requests: Option<usize>,
+    max_request_bytes: Option<usize>,
     cache: Option<Option<PathBuf>>,
     model: Option<String>,
     timeout: Option<Duration>,
@@ -40,6 +41,7 @@ pub(crate) struct Plan {
 struct Raw<'a> {
     throttle: i32,
     max_requests: i32,
+    max_request_bytes: i32,
     cache: Option<&'a str>,
     model: Option<&'a str>,
     timeout: i32,
@@ -73,6 +75,7 @@ impl Plan {
             throttle: (raw.throttle != UNSET)
                 .then(|| u8::try_from(raw.throttle).unwrap_or(u8::MAX)),
             max_requests: usize::try_from(raw.max_requests).ok(),
+            max_request_bytes: usize::try_from(raw.max_request_bytes).ok(),
             cache,
             model: raw
                 .model
@@ -100,6 +103,9 @@ pub(super) fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBui
     }
     if let Some(value) = plan.max_requests {
         builder = builder.max_requests(Some(value))?;
+    }
+    if let Some(value) = plan.max_request_bytes {
+        builder = builder.max_request_bytes(value)?;
     }
     match &plan.cache {
         Some(Some(folder)) => builder = builder.cache_at(folder)?,
@@ -132,6 +138,7 @@ static API_KEY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new
 static FILE_DIRECTORY: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static THROTTLE: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
+static MAX_REQUEST_BYTES: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS_TOTAL: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static CACHE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static MODEL: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
@@ -169,6 +176,7 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
     let plan = Plan::of(Raw {
         throttle: THROTTLE.get(),
         max_requests: MAX_REQUESTS.get(),
+        max_request_bytes: MAX_REQUEST_BYTES.get(),
         cache: cache.as_deref(),
         model: model.as_deref(),
         timeout: TIMEOUT.get(),
@@ -294,6 +302,14 @@ pub(crate) fn register() {
         GucContext::Suset,
         GucFlags::default(),
     );
+    int(
+        c"thinkthen.max_request_bytes",
+        c"positive request-byte ceiling; -1 keeps the environment default",
+        &MAX_REQUEST_BYTES,
+        i32::MAX,
+        GucContext::Userset,
+        GucFlags::default(),
+    );
     register_new_engine_settings();
     GucRegistry::define_string_guc(
         c"thinkthen.cache",
@@ -339,6 +355,7 @@ mod tests {
         let default = Raw {
             throttle: UNSET,
             max_requests: UNSET,
+            max_request_bytes: UNSET,
             cache: None,
             model: None,
             timeout: UNSET,
@@ -358,6 +375,7 @@ mod tests {
         let set = Plan {
             throttle: Some(8),
             max_requests: Some(3),
+            max_request_bytes: Some(20_000),
             cache: Some(Some(PathBuf::from("/srv/cache"))),
             ..Plan::default()
         };
@@ -365,6 +383,7 @@ mod tests {
             Plan::of(Raw {
                 throttle: 8,
                 max_requests: 3,
+                max_request_bytes: 20_000,
                 cache: Some("/srv/cache"),
                 ..default
             }),

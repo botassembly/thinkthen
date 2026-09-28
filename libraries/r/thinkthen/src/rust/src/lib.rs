@@ -62,6 +62,7 @@ pub(crate) struct Settings {
     pub(crate) model: Option<String>,
     pub(crate) throttle: Option<u8>,
     pub(crate) max_requests: Option<usize>,
+    pub(crate) max_request_bytes: Option<usize>,
     /// A folder, or `None` inside for `cache = FALSE`.
     pub(crate) cache: Option<Option<String>>,
     pub(crate) timeout: Option<u64>,
@@ -83,6 +84,8 @@ impl Settings {
             self.model.as_ref().map(|it| format!("model = {it:?}")),
             self.throttle.map(|it| format!("throttle = {it}")),
             self.max_requests.map(|it| format!("max_requests = {it}")),
+            self.max_request_bytes
+                .map(|it| format!("max_request_bytes = {it}")),
             cache,
             self.timeout.map(|it| format!("timeout = {it}")),
             self.max_retries.map(|it| format!("max_retries = {it}")),
@@ -116,6 +119,9 @@ impl Settings {
         }
         if self.max_requests.is_some() {
             builder = builder.max_requests(self.max_requests)?;
+        }
+        if let Some(bytes) = self.max_request_bytes {
+            builder = builder.max_request_bytes(bytes)?;
         }
         builder = match &self.cache {
             Some(Some(folder)) => builder.cache_at(folder)?,

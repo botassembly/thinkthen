@@ -184,7 +184,8 @@ impl Engine {
     /// the pool, the recorder, the counters, and the width.
     pub(crate) fn with_model(&self, model: ModelName) -> Result<Self, Error> {
         let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
-            .map_err(|_| Error::Defect("a resolved address was refused again"))?;
+            .map_err(|_| Error::Defect("a resolved address was refused again"))?
+            .with_request_size(self.backend.ceiling());
         Ok(Self {
             backend,
             ..self.clone()

@@ -64,6 +64,7 @@ The domain rejects a different non-`NULL` label. A stored `NULL` can represent a
 | `thinkthen.deadline_ms` | any role | the per-call budget in milliseconds. -1 means none, and 0 means already spent |
 | `thinkthen.throttle` | superuser | requests in flight at once, 1 to 32. -1 keeps the engine's value. PostgreSQL refuses any other value where it is set. The refusal reads `thinkthen usage: a throttle is a whole number from 1 through 32`. `SET` fails, and a configuration file's bad value draws the refusal as a warning and leaves -1 |
 | `thinkthen.max_requests` | superuser | the most records one call answers. -1 means no limit |
+| `thinkthen.max_request_bytes` | any role | positive request-byte ceiling for relation plans. -1 keeps the environment value |
 | `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
 | `thinkthen.model` | any role | backend model. Empty keeps the environment value |
 | `thinkthen.timeout` | any role | positive attempt timeout in seconds; -1 keeps the environment value |

@@ -71,12 +71,13 @@ The check rejects another non-`NULL` label. A stored `NULL` can represent a choi
 
 The extension holds one engine for the process, shared by every connection. It builds on the first call that can send, from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`, as the command reads them. SQL cannot name an address or a key. `thinkthen_usage()` does not build the engine. Before the first call every total reads 0.
 
-Eleven setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
+Twelve setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
 
 `thinkthen_budget_ms(n)` is separate from those engine settings. Set it in a separate statement immediately before the query. It starts one monotonic budget on that connection: `-1` clears it, `0` is spent, and a positive whole number sets milliseconds. Every ThinkThen call on that connection uses the remaining time, or its shorter per-call deadline. Expiry during a held send returns a deadline error promptly; the sent attempt stays counted. The budget remains in force across later statements until reset. It bounds ThinkThen work only; SQLite work after the last ThinkThen call remains the host's responsibility. Other connections have independent budgets.
 
 - `thinkthen_throttle(n)`: requests in flight at once, from 1 through 32. The default is 4.
 - `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows, so this limit does not cap a statement's spending. Use the total below for that.
+- `thinkthen_max_request_bytes(n)`: a positive request-byte ceiling for relation plans. `NULL` keeps the environment value. Set it before the first engine call.
 - `thinkthen_max_requests_total(n)`: the most live requests this process may attempt across calls and retries. It is unset by default, and `NULL` unsets it. An atomic reservation checks every attempt before sending, including retries and requests within recognize or relate. Concurrent calls cannot exceed the total. The existing before-call check still refuses a spent total, even for a cache answer. A warm pass cuts its rows to what remains and reports its partial result as before. A forked child starts a new count. `thinkthen status` counts only command sends.
 - `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
 - `thinkthen_model(text)`: the backend model; `NULL` keeps the environment value.

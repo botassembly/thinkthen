@@ -377,6 +377,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	                          LogicalType::BIGINT, Value::BIGINT(-1));
 	config.AddExtensionOption("thinkthen_throttle", "Maximum concurrent ThinkThen requests", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_requests", "Maximum ThinkThen requests in one call", LogicalType::BIGINT);
+	config.AddExtensionOption("thinkthen_max_request_bytes", "Positive ThinkThen request-byte ceiling", LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_max_requests_total", "Maximum ThinkThen requests in this process",
 	                          LogicalType::BIGINT);
 	config.AddExtensionOption("thinkthen_cache", "Local ThinkThen cache folder", LogicalType::VARCHAR);

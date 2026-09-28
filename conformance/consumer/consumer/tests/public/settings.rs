@@ -2,7 +2,28 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-use thinkthen::{Answer, Engine, ErrorKind, Judgment, Question};
+use thinkthen::{Answer, Engine, Entity, ErrorKind, Judgment, Question, Relate};
+
+fn related(engine: &Engine, case: &serde_json::Value, step: &serde_json::Value, id: &str) {
+    let entities = case["entities"]
+        .as_array()
+        .expect("entities")
+        .iter()
+        .map(|one| {
+            Entity::new(
+                one["name"].as_str().expect("name"),
+                one["kind"].as_str().expect("kind"),
+            )
+            .expect("entity")
+        })
+        .collect::<Vec<_>>();
+    let rule = Relate::from_json(
+        r#"{"version":1,"relate":{"relations":[{"name":"linked","source":"item","target":"item"}]}}"#,
+    )
+    .expect("rule");
+    let edges = engine.relate(&rule, entities).expect("relate");
+    assert_eq!(edges.len(), step["edges"].as_u64().expect("edges") as usize, "{id}");
+}
 
 #[test]
 fn builder_validates_new_settings_at_the_public_edge() {
@@ -172,6 +193,7 @@ fn the_builder_follows_the_command_folder_rules() {
 #[test]
 #[expect(
     clippy::excessive_nesting,
+    clippy::cognitive_complexity,
     clippy::too_many_lines,
     reason = "one shared corpus row maps settings, runs the engine, and checks its wire effect"
 )]
@@ -218,11 +240,16 @@ fn every_shared_setting_reaches_the_public_engine() {
                     "max_requests" => builder
                         .max_requests(Some(value.as_u64().expect("limit") as usize))
                         .expect("limit"),
+                    "max_request_bytes" => builder
+                        .max_request_bytes(value.as_u64().expect("bytes") as usize)
+                        .expect("bytes"),
                     _ => panic!("unknown shared setting {name}"),
                 };
             }
             let engine = builder.build().expect("engine");
-            if step["verb"] == "decide_many" {
+            if step["verb"] == "relate" {
+                related(&engine, case, step, id);
+            } else if step["verb"] == "decide_many" {
                 let records = step["records"].as_array().expect("records");
                 let answers: Vec<_> = engine
                     .decide_many(&question, records.iter().map(|v| v.as_str().expect("text")))
