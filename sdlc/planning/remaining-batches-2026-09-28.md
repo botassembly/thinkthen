@@ -18,7 +18,7 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Current open counts after the release hygiene fix
 
-After accepted 0248 correctness and measurement and the private-name cleanup, the live queue has 71 to-do rows after three reviewed platform issue closures, two explicit cache dispositions, separate mapping of an existing status/recovery criterion, six tuning-loop intake rows and the reviewed shared-conformance and cache-status closures. The original private-name tracked-tree issue also moved from blocked to done; its go-live history reset remains with 0128 Phase 4. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
+After accepted 0248 correctness and measurement and the private-name cleanup, the live queue has 72 to-do rows after three reviewed platform issue closures, two explicit cache dispositions, separate mapping of an existing status/recovery criterion, six tuning-loop intake rows and the reviewed shared-conformance and cache-status closures. The original private-name tracked-tree issue also moved from blocked to done; its go-live history reset remains with 0128 Phase 4. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |
@@ -29,10 +29,10 @@ After accepted 0248 correctness and measurement and the private-name cleanup, th
 | Accounting, timing and budgets |9| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
 | Record failure handling |4| Preparation accepted64749d91. A numbered design must settle the error carrier, recoverable classes, exit precedence and failed-batch policy. |
 | Question controls and uncertainty |8| Refresh accepted rank and environment decisions before proposing new grammar. |
-| Documentation, trust and launch usability |8| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
+| Documentation, trust and launch usability |9| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
 | New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
-| **Total** |**71**| Counts are tracked rows, not independent builds. |
+| **Total** |**72**| Counts are tracked rows, not independent builds. |
 
 ## Later intake
 
@@ -208,3 +208,7 @@ Fresh review798cbaef accepts the compiled proof for register110,112,113 and the 
 ## Tuning-loop intake from bbde1e9b
 
 Six newly filed issues are added to the live item table, not the historical75-row snapshot. The retained preparer owns one bounded current-source pass: legacy recording-folder binding joins cache; run cost joins accounting; repeat, per-case audit, audit output paths and uncertain-case selection join question controls. It must compare every original criterion with existing facts, audit joins, marker trust and accepted decisions before proposing duplicate closure or a new feature. All six passed preparation review at326ebef7; no product completion is claimed. Prioritize corrections required for0.1 over optional tuning features.
+
+## Pipeline-guidance intake from e8789b76
+
+The new chained-question issue adds one documentation row. It asks for an existing two-command pipeline and audit guidance, not a new sequencing engine. Marketing owns its public pages. Preparation must inspect experiment 297 and qualify its cohort result and cache-reuse claim. The same commit expands the per-case audit and uncertain-selection evidence; the prior six-row preparation needs a bounded factual refresh for those additions. This intake leaves reviewed preparation at 61 rows and adds no completion.
