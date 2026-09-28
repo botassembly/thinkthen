@@ -6,6 +6,7 @@ import hashlib
 import io
 import json
 import os
+import re
 import signal
 import subprocess
 import sys
@@ -112,9 +113,50 @@ def checked_rows(rows, selected):
             refuse('an arm has an unexpected answer type')
         meta = actual.get('meta')
         if (not isinstance(meta, dict) or not isinstance(meta.get('requests'), list)
-                or len(meta['requests']) != 2 or any(not isinstance(item, str) for item in meta['requests'])
+                or len(meta['requests']) != 2
+                or any(not isinstance(item, str) or re.fullmatch('[0-9a-f]{64}', item) is None
+                       for item in meta['requests'])
                 or not isinstance(meta.get('questions_sha256'), str)):
             refuse('an arm lacks two ordered group request identities')
+        if (answers['before_1965'].get('request') != meta['requests'][0]
+                or answers['album'].get('request') != meta['requests'][1]):
+            refuse('an answer names the wrong on-group request')
+
+
+def checked_recording(folder, rows):
+    """Match each completed answer digest to the exact request bytes kept by --record."""
+    requests = {name: {row['meta']['requests'][place] for row in rows}
+                for place, name in enumerate(('before_1965', 'album'))}
+    if requests['before_1965'] & requests['album']:
+        refuse('two selected groups share a request identity')
+    expected = set().union(*requests.values())
+    entries = {path.stem: path for path in folder.iterdir()
+               if path.is_file() and re.fullmatch('[0-9a-f]{64}\\.json', path.name)}
+    if set(entries) != expected:
+        refuse('the saved recording lacks or adds a completed request entry')
+    observed = {name: [] for name in requests}
+    for ident, path in entries.items():
+        raw = path.read_bytes()
+        entry = json.loads(raw)
+        if entry.get('schema') != 'thinkthen.recording/1' or entry.get('adapter') != 'systemone':
+            refuse('a completed recording has an unexpected envelope')
+        request_lines = [line for line in raw.splitlines() if line.startswith(b'  "request": ')]
+        if len(request_lines) != 1 or not request_lines[0].endswith(b','):
+            refuse('a completed recording lacks its exact request value')
+        body = request_lines[0][len(b'  "request": '):-1]
+        if json.loads(body) != entry['request']:
+            refuse('a saved recording request differs from its envelope')
+        identity = sha(entry['adapter'].encode() + b'\n' + entry['url'].encode() + b'\n' + body)
+        if identity != ident:
+            refuse('a saved recording filename differs from its request identity')
+        kinds = {question['type'] for question in entry['request']['questions'].values()}
+        name = 'before_1965' if kinds == {'noul'} else 'album' if kinds == {'choice'} else None
+        if name is None or ident not in requests[name]:
+            refuse('a saved request body belongs to the wrong selected group')
+        observed[name].append(body)
+    return {name: {'completed_requests': len(parts), 'encoded_body_bytes': sum(map(len, parts)),
+                   'body_sha256': digest(sorted(sha(body) for body in parts))}
+            for name, parts in observed.items()}
 
 
 def local_plan(bench, binary):
@@ -160,16 +202,19 @@ def local_plan(bench, binary):
     try:
         for arm in ARMS:
             first = len(bodies)
-            args = command(binary, arm, f'http://127.0.0.1:{server.server_port}')
-            done = subprocess.run(args, input=data, capture_output=True,
-                                  env={**speed.plain(), 'THINKTHEN_API_KEY': 'sk-loopback-only'}, timeout=180)
-            if done.returncode:
-                refuse(f'offline {arm} exited {done.returncode}: {done.stderr.decode(errors="replace")[:350]}')
-            rows = [json.loads(line) for line in done.stdout.splitlines()]
-            checked_rows(rows, selected)
-            resolved = {row['meta']['questions_sha256'] for row in rows}
-            if len(resolved) != 1:
-                refuse('the offline rows disagree on the resolved question set')
+            with tempfile.TemporaryDirectory(prefix='thinkthen-b10-plan-') as temporary:
+                recording = Path(temporary) / 'recording'
+                args = command(binary, arm, f'http://127.0.0.1:{server.server_port}', recording)
+                done = subprocess.run(args, input=data, capture_output=True,
+                                      env={**speed.plain(), 'THINKTHEN_API_KEY': 'sk-loopback-only'}, timeout=180)
+                if done.returncode:
+                    refuse(f'offline {arm} exited {done.returncode}: {done.stderr.decode(errors="replace")[:350]}')
+                rows = [json.loads(line) for line in done.stdout.splitlines()]
+                checked_rows(rows, selected)
+                saved = checked_recording(recording, rows)
+                resolved = {row['meta']['questions_sha256'] for row in rows}
+                if len(resolved) != 1:
+                    refuse('the offline rows disagree on the resolved question set')
             captured = bodies[first:]
             groups = {'before_1965': [], 'album': []}
             for body in captured:
@@ -185,6 +230,11 @@ def local_plan(bench, binary):
                 refuse('batch-one changed its one-request-per-row group shape')
             if not all(groups.values()):
                 refuse('an offline arm omitted a selected on group')
+            for name, captured_group in groups.items():
+                if (saved[name]['completed_requests'] != len(captured_group)
+                        or saved[name]['encoded_body_bytes'] != sum(map(len, captured_group))
+                        or saved[name]['body_sha256'] != digest(sorted(sha(body) for body in captured_group))):
+                    refuse('saved offline request bodies differ from listener bytes')
             if any(len(body) > 96_000 for body in captured):
                 refuse('an offline body exceeded the normal request ceiling')
             # The B9 estimate is a scheduling margin over measured wire bytes, not a runtime cap.
@@ -280,11 +330,14 @@ def arm_run(binary, selected, truth, data, arm, folder, plan, key):
     combined = evidence.checked_usage(delta, rows, refuse)
     by_group = {name: len({row['meta']['requests'][place] for row in rows})
                 for place, name in enumerate(('before_1965', 'album'))}
+    recorded = checked_recording(folder / 'recording', rows)
+    if any(recorded[name]['completed_requests'] != by_group[name] for name in by_group):
+        refuse('recorded bodies disagree with completed group counts')
     if arm == 'batch1' and by_group != {'before_1965': 182, 'album': 182}:
         refuse('batch-one changed its per-group request identities')
     answer_rows = [[item['id'], row['value']] for item, row in zip(selected, rows)]
     result = {'arm': arm, 'records': 182, 'group_requests_planned': plan['groups'],
-        'group_completed_requests': by_group,
+        'group_completed_requests': by_group, 'recorded_groups': recorded,
         'requests_sent': delta['requests_sent'], 'reported_input_tokens': delta['input_tokens'],
         'reported_output_tokens': delta['output_tokens'], 'reported_combined_tokens': combined,
         'unknown_refusal_cost': unknown, 'usage_scope': 'reported_tokens_only', 'seconds': seconds,
@@ -303,6 +356,22 @@ def arm_run(binary, selected, truth, data, arm, folder, plan, key):
 
 def self_test(bench):
     selected, truth, data = sample(bench)
+    left, right = 'a' * 64, 'b' * 64
+    valid_row = {'input': selected[0], 'value': {'before_1965': True, 'album': 'Let It Be'},
+        'answers': {'before_1965': {'value': True, 'request': left},
+                    'album': {'value': 'Let It Be', 'request': right}},
+        'meta': {'requests': [left, right], 'questions_sha256': SET_SHA}}
+    good = [{**valid_row, 'input': item} for item in selected]
+    checked_rows(good, selected)
+    swapped = [{**row, 'answers': dict(row['answers'])} for row in good]
+    swapped[0]['answers']['album'] = {'value': 'Let It Be', 'request': left}
+    with contextlib.redirect_stderr(io.StringIO()):
+        try:
+            checked_rows(swapped, selected)
+        except SystemExit as error:
+            assert error.code == 2
+        else:
+            raise AssertionError('an answer attributed to the other group passed')
     with tempfile.TemporaryDirectory(prefix='thinkthen-b10-helper-') as temporary:
         folder = Path(temporary)
         fake = folder / 'fake.py'
