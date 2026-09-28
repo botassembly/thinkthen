@@ -40,7 +40,7 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | A `models` listing | The vendor's `GET /v1/models` lists the models with a name, a description, and a release date. A listing reads no evidence and judges nothing, so it earns none of the surface this tool spends on judging | A demo that cannot pin a model without asking the backend which ones exist |
 | A `serve` command or a daemon | Declined by `sdlc/planning/ten-use-cases.md`. A process that waits for work is a service, and this tool is a command that ends. Record mode through a `coproc` already serves a loop from one long-lived process, and a how-to shows it | Nothing. A service is a different program |
 
-ADR 0048 brought two held rows in: `--context FILE`, and packing many records into one request as batching. The batching tickets build them.
+ADR 0048 brought two held rows in: `--context FILE`, now built on `decide`, `filter` and `rank`, and packing many records into one request as batching. Later batching tickets extend the remaining verbs and library surfaces.
 
 ## Held by ADR 0010
 

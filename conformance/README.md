@@ -2,9 +2,9 @@
 
 `cases.json` is the language-neutral behavior contract for the command, the Rust library, later language bindings, and database extensions. Every surface reads the same cases. The file fixes one canonical backend URL, question grammar, exact System One request bytes, decoded answers, bare values, detailed request identities, host-neutral bulk results, and the six public error kinds.
 
-`settings.json` holds eight engine-setting cases under `thinkthen.settings-cases/1`. The command, Rust, Python, TypeScript, Ruby, R, and C runners map each setting to their own public spelling, run each step against a loopback arm or a fresh folder, and compare the answer or error with the listener count. SQL joins this corpus in ticket 0149.
+`settings.json` holds nine engine-setting cases under `thinkthen.settings-cases/1`. The command, Rust, Python, TypeScript, Ruby, R, C, DuckDB, PostgreSQL and SQLite runners map each setting to their own public spelling, run each step against a loopback arm or a fresh folder, and compare the answer or error with the listener count. SQL adapter proof belongs to ticket 0149.
 
-`routine-ids.txt` selects 31 IDs from `cases.json` for ordinary checks. Each runner reads the canonical 54-case JSON and filters by the absolute path in `THINKTHEN_CONFORMANCE_IDS`; a direct runner with that name unset still checks all 54. A missing or duplicate ID fails before a case runs. Supported cases count as pass or fail, unsupported injections as not run with a reason, and unselected cases are reported separately. The eight `settings.json` cases keep their own counted replay and cache-miss proof. Stored loopback replies in `cases.json` are not cache hits. `sdlc/scripts/test-full-cases --run` chooses the full functional set at a batch checkpoint; `sdlc/scripts/test-stress --run` is the separate repeated load campaign.
+`routine-ids.txt` selects 31 IDs from `cases.json` for ordinary checks. Each runner reads the canonical 54-case JSON and filters by the absolute path in `THINKTHEN_CONFORMANCE_IDS`; a direct runner with that name unset still checks all 54. A missing or duplicate ID fails before a case runs. Supported cases count as pass or fail, unsupported injections as not run with a reason, and unselected cases are reported separately. The nine `settings.json` cases keep their own counted replay, cache-miss, and request-size relation split proof. Stored loopback replies in `cases.json` are not cache hits. `sdlc/scripts/test-full-cases --run` chooses the full functional set at a batch checkpoint; `sdlc/scripts/test-stress --run` is the separate repeated load campaign.
 
 A successful exchange has one of two provenance values. `captured` names a committed public recording, under `demos/` or `specification/`, whose request and response match the embedded exchange exactly. `synthetic_contract` says the exchange was written against the accepted wire contract. Fault cases name deterministic injection points. They are schema contracts until the private engine runner lands with the one-crate merge.
 
@@ -27,6 +27,8 @@ A fault with a `question_form` breaks a question rule instead of naming an injec
 The pure-core integration test validates this file offline through the production question grammar, request encoder, response decoder, digest, answer rules, ranking, and find selector. It does not call a command or a network service.
 
 `backend-profiles.json` adds the shared limit and calibration cases. Its exact edges cross the production profile parser and request encoder. It covers evidence bytes, request bytes, expanded tags, grouped annotate, equal and differing names, and either absent name.
+
+`calibration.json` pins one saved question's canonical bytes, full independently calculated digest and mismatch pair. It also pins a named set's canonical bytes and digest. Public library and SQL details checks use this one input at their real entry points; text-only routes assert refusal before a send.
 
 `record-values.json` fixes the host-neutral default bulk row. Typed records and bare values cross the production serializer. Command-line framing stays in compiled binary tests.
 

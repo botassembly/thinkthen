@@ -18,6 +18,34 @@ case ${1:-} in
 --run) ;;
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;
 esac
+if [ "$(uname -s)" = Linux ]; then
+    if [ "$(id -ru)" -eq 0 ]; then
+        echo 'test-full-cases: RLIMIT_NPROC does not bind real UID 0; run --run as a nonroot user' >&2
+        exit 2
+    fi
+    if ! command -v prlimit >/dev/null 2>&1; then
+        echo 'test-full-cases: prlimit is required for the Linux RLIMIT_NPROC case' >&2
+        exit 2
+    fi
+    caps=$(awk '$1 == "CapEff:" { print $2 }' /proc/self/status 2>/dev/null) || {
+        echo 'test-full-cases: cannot read Linux effective capabilities for RLIMIT_NPROC' >&2
+        exit 2
+    }
+    case $caps in
+    ????????????????)
+        case $caps in *[!0123456789abcdefABCDEF]*) caps= ;; esac ;;
+    *) caps= ;;
+    esac
+    if [ -z "$caps" ]; then
+        echo 'test-full-cases: cannot read Linux effective capabilities for RLIMIT_NPROC' >&2
+        exit 2
+    fi
+    cap_low=${caps#????????}
+    if [ "$((0x$cap_low & 0x01200000))" -ne 0 ]; then
+        echo 'test-full-cases: RLIMIT_NPROC does not bind CAP_SYS_ADMIN or CAP_SYS_RESOURCE; run --run without these capabilities' >&2
+        exit 2
+    fi
+fi
 . "$(dirname -- "$0")/heavy-lock"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"

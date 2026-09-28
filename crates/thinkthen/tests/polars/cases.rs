@@ -240,8 +240,7 @@ fn judged(door: &Engine, slice: &Engine, question: &str, texts: &[&str]) -> (Cel
     (cells(&through_door.expect("the door")), listed)
 }
 
-/// A set over the texts: each new frame column against each record's
-/// `value_json` member, read by the widened-cell rule.
+/// A set over the texts: each typed answer against its record's JSON member.
 fn annotated(door: &Engine, slice: &Engine, set: &str, texts: &[&str]) -> (Vec<Cells>, Vec<Cells>) {
     let set = QuestionSet::from_json(set).expect("the case's set");
     // Case 18's set names a member `body`, so the records ride in `record`.
@@ -269,6 +268,7 @@ fn annotated(door: &Engine, slice: &Engine, set: &str, texts: &[&str]) -> (Vec<C
                     let raw = members.get(name).expect("the member").get();
                     match raw {
                         "null" => None,
+                        _ if raw.starts_with("{\"failed\"") => None,
                         _ if raw.starts_with('"') => serde_json::from_str(raw).ok(),
                         _ => Some(raw.to_owned()),
                     }

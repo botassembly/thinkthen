@@ -1,5 +1,5 @@
 //! One record to one request, and one reply to one row. `batched.rs` sends
-//! `decide`, `filter` and `rank` over a stream in batches.
+//! `decide`, `filter`, `rank` and `choose` over a stream in batches.
 //!
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
@@ -27,11 +27,15 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod batch_meta;
 mod batched;
+mod context;
 mod folders;
 mod plan;
+mod reading;
 
+use context::Context;
 pub(crate) use folders::Folders;
 use plan::{plan, plan_record, print_plan};
+use reading::read_by;
 
 struct RowContext<'a> {
     arrived: Option<&'a [u8]>,
@@ -63,7 +67,7 @@ pub(crate) fn engine(
             private_default: folders.private_default,
             cache_answers: folders.cache_answers,
         },
-        key: std::sync::Arc::new(edge::key),
+        key: environment.key_reader(),
         usage: environment.counters(),
     })?)
 }
@@ -73,7 +77,7 @@ pub(crate) fn engine(
 /// Every verb but `choose --options` asks the same question of every record.
 /// `--options` names a pointer, and each record holds its own candidate list
 /// there, so the question is built again for each one.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) enum Asks {
     /// One question, asked of every record.
     Fixed(Question),
@@ -149,17 +153,19 @@ pub(crate) fn run(
     } = asked;
     let threshold = settled.threshold();
     let view = view.checked()?;
-    let folders = Folders::of(common, environment)?;
-    if common.dry_run && folders.named() {
-        return Err(Failure::DryRunWithRecording);
-    }
     let configured_model = settled
         .sources()
         .model_is_default()
         .then(|| environment.model())
         .flatten();
+    let per_document = matches!(
+        asks,
+        Asks::Fixed(Question::Choose { .. } | Question::Tag { .. } | Question::Score { .. })
+            | Asks::FromRecord { .. }
+    );
     let request_size = batch
         .as_ref()
+        .filter(|_| !per_document || common.framing() != Framing::Document)
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
     let backend = Backend::resolve(
@@ -168,6 +174,11 @@ pub(crate) fn run(
         configured_model.unwrap_or_else(|| settled.model().as_str()),
     )?
     .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    environment.check_key(&backend)?;
+    let folders = Folders::of(common, environment)?;
+    if common.dry_run && folders.named() {
+        return Err(Failure::DryRunWithRecording);
+    }
     if request_size.is_some() {
         environment.warn_request_size(&backend)?;
     }
@@ -177,6 +188,11 @@ pub(crate) fn run(
         return Err(Failure::QuietOverRecords);
     }
     schedule::jobs_of(common.jobs, reading.streams())?;
+    let context = context::for_run(
+        batch.as_ref().and_then(|tiers| tiers.context),
+        reading.streams(),
+        settled.text().as_json().as_str().is_some(),
+    )?;
     let tuned_for = batch
         .as_ref()
         .filter(|tiers| tiers.tuned)
@@ -211,6 +227,7 @@ pub(crate) fn run(
         streams: reading.streams(),
         profile,
         mismatch,
+        context,
         sources: (settled.sources().question_is_from_file() || configured_model.is_some()).then(
             || {
                 if configured_model.is_some() {
@@ -306,22 +323,6 @@ fn over_table(
     )
 }
 
-/// Read the framing the command line asked for, over the settled pointers.
-/// With no flag, `filter` and `rank` read lines, or JSON Lines under a pointer.
-fn read_by(common: &Common, settled: &Resolved, keeping: Keeping) -> Result<Reading, Failure> {
-    let on = settled.on().to_vec();
-    let asked = common.framing();
-    if asked != Framing::Document || !keeping.streams_only() {
-        return Ok(Reading::new(asked, on)?);
-    }
-    let framing = if on.is_empty() {
-        Framing::Lines
-    } else {
-        Framing::Jsonl
-    };
-    Ok(Reading::new(framing, on)?.by_default())
-}
-
 fn table_kind(common: &Common) -> Option<TableKind> {
     common
         .csv
@@ -348,6 +349,7 @@ struct Judging<'a> {
     keeping: Keeping,
     streams: bool,
     mismatch: Mismatch,
+    context: Option<Context>,
 }
 
 struct JudgingInput<'a> {
@@ -363,6 +365,7 @@ struct JudgingInput<'a> {
     sources: Option<Sources>,
     profile: Option<BackendProfile>,
     mismatch: Mismatch,
+    context: Option<Context>,
 }
 
 impl Judging<'_> {
@@ -380,6 +383,7 @@ impl Judging<'_> {
             sources: _,
             profile,
             mismatch,
+            context,
         } = input;
         Ok(Judging {
             environment,
@@ -390,6 +394,7 @@ impl Judging<'_> {
             keeping,
             streams,
             mismatch,
+            context,
         })
     }
 
@@ -458,6 +463,10 @@ impl Judging<'_> {
                     tuned_for: self.tuned_for_profile(),
                     warning: self.mismatch.warning(),
                     batch_warning: self.mismatch.batch_warning(),
+                    context_sha256: self
+                        .context
+                        .as_ref()
+                        .map(|context| context.digest().to_owned()),
                 };
                 let input = self.streams.then_some(record);
                 Some(decision_with_batch(

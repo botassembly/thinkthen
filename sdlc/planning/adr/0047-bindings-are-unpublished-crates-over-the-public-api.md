@@ -35,7 +35,7 @@ Main is the spine (`sdlc/planning/one-line-plan-2026-09-24.md`), and each of the
 
 Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdlc/planning/one-line-plan-2026-09-24.md`, afternoon rulings). That ruling overturns item 8's deferral of the Rust `Series` door. Ticket 0120 builds it as `thinkthen-polars` at `libraries/polars`, a binding like the others under items 1 to 7. Its `deny.toml` is the root file plus four named license exceptions, and `policy.py` checks that difference. Ticket 0130 later moved the door into `thinkthen` (below).
 
-10. **The Polars column table.** Both Polars doors, 0120 in Rust and 0106 in Python, write a frame's new columns by this table. The issue `sdlc/issues/2026-09-25-public-library-api-gaps.md` holds its history.
+10. **The Polars column table.** The original widening rule below closed the 2026-09-25 parity issue. Ian's later type-contract ruling in ADR 0082 and ticket 0209 supersedes the frame result table. Both Polars doors now keep question columns typed and append `failed`. The older issue remains history.
 
 | Question | Column | Widened cell when any row of that question failed |
 | --- | --- | --- |
@@ -45,7 +45,7 @@ Ian ruled on 2026-09-24 that Rust Polars and Python Polars are both in 0.1 (`sdl
 | tag | `String` holding the JSON array text | the array text from `value_json` |
 | failed | | the marker from `value_json`, such as `{"failed":{"kind":"backend","cause":"missing_probability"}}` |
 
-A column widens only when the same reply also holds a usable answer. The engine refuses a reply with no usable answer (`specification/annotate.md`), so a one-member set, a series call, or a request chunk whose only answer failed ends the call with a `Backend` error. A widened cell takes its text unchanged from `AnnotatedRecord::value_json`, the engine's one serializer. No door keeps its own table of failure causes. Ian can overturn the table.
+This historical table described the result before ticket 0209. The current frame result is `Boolean`, `String`, `Float64`, or `List(String)` by question kind, with a null answer on failure and one nullable `failed` Struct of nested `question -> failed -> {kind, cause}` markers. A successful row has a null outer `failed` cell. pandas exposes a sparse dict instead. A one-member set or request chunk with no usable answer still ends the call with a `Backend` error (`specification/annotate.md`), as does a failed Series call. Ian can overturn the current table.
 
 ## Amended 2026-09-25: the Rust Polars door is a feature of `thinkthen`
 

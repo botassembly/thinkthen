@@ -63,6 +63,24 @@ docker run "$@" "$IMAGE" sh -euc '
 	PG_CONFIG=/work/home/pg/usr/pgsql-16/bin/pg_config
 	mkdir -p /work/home/.pgrx && printf "[configs]\npg16 = \"%s\"\n" "$PG_CONFIG" >/work/home/.pgrx/config.toml
 	export PATH LIBCLANG_PATH BINDGEN_EXTRA_CLANG_ARGS PG_CONFIG
+	. databases/duckdb/tools/version.env
+	duckdb_source=/work/cache/duckdb-source
+	duckdb_static=/work/cache/duckdb-static-libs
+	if [ ! -d "$duckdb_source" ]; then
+		git clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$duckdb_source"
+	fi
+	[ "$(git -C "$duckdb_source" rev-parse HEAD)" = "$DUCKDB_CPP_SOURCE_COMMIT" ] || {
+		echo "release-container: DuckDB C++ source differs from its pinned commit" >&2; exit 1;
+	}
+	fetch static-libs-linux-amd64.zip \
+		"https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/static-libs-linux-amd64.zip" \
+		"$DUCKDB_STATIC_ZIP_SHA256"
+	mkdir -p "$duckdb_static"
+	python3 -m zipfile -e "$cache/static-libs-linux-amd64.zip" "$duckdb_static"
+	(cd "$duckdb_static" && sha256sum -c --quiet /work/src/databases/duckdb/cpp/archive-sha256.txt)
+	THINKTHEN_DUCKDB_CPP_SOURCE=$duckdb_source
+	THINKTHEN_DUCKDB_CPP_STATIC_DIR=$duckdb_static
+	export THINKTHEN_DUCKDB_CPP_SOURCE THINKTHEN_DUCKDB_CPP_STATIC_DIR
 	sh sdlc/scripts/release-pack x86_64-unknown-linux-gnu /work/out c sqlite duckdb postgresql python typescript
 '
 cp -- "$RUN"/out/* "$OUT/"

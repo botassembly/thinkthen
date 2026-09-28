@@ -16,12 +16,98 @@ import tempfile
 from pathlib import Path
 
 from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from settings_cases import shared_settings_corpus
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow"
 SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme"
 THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32"
 SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it"
+
+case(shared_settings_corpus)
+
+
+@case
+def saved_calibration_details_keep_the_shared_digest_and_warning():
+    """The staged C++ scalar keeps the saved question identity in details."""
+    shared = json.loads((Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())
+    def literal(value: str) -> str:
+        return "'" + value.replace("'", "''") + "'"
+    question = json.dumps(shared["question"], separators=(",", ":"))
+    profile = json.dumps(shared["runtime_profile"], separators=(",", ":"))
+    with Backend() as backend:
+        got = run([f"SET thinkthen_profile = {literal(profile)}",
+                   f"SELECT thinkthen_details({literal(question)}, {literal(shared['evidence'])})"], backend.base())
+        details = json.loads(rows(got[1])[0][0])
+        expect(details["meta"]["question_sha256"], shared["question_sha256"], "saved digest")
+        expect(details["meta"]["profile_warning"], shared["warning"], "profile mismatch")
+        expect(details["meta"]["model"], shared["model"], "actual model")
+        expect(backend.count(), 1, "one details send")
+
+@case
+def caller_settings_and_warm_share_one_engine():
+    """Warm fills only the calling session's selected cache and model plan."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        query = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
+        got = run([
+            f"SET thinkthen_cache = '{folder}'",
+            "SET thinkthen_model = 'other-model'",
+            "SELECT thinkthen_warm('Is it a refund?', 'refund now')",
+            query,
+            ["B", query],
+            "SELECT metric, value FROM thinkthen_usage()",
+        ], backend.base())
+        expect(rows(got[2]), [[1]], "warm result")
+        expect(rows(got[3]), [[True]], "same-session scalar result")
+        expect(rows(got[4]), [[True]], "other-session scalar result")
+        usage = dict(rows(got[5]))
+        expect(usage["cache_answers"], 1, "same-session warm cache hit")
+        expect(backend.count(), 2, "one warm send and one isolated-session send")
+
+
+@case
+def retry_spends_the_process_total_before_transport():
+    """A second attempt cannot pass a total of one after a 503."""
+    with Backend() as backend:
+        got = run(["SET thinkthen_max_retries = 1", "SET thinkthen_max_requests_total = 1", ASK], backend.base("arm/503"))
+        expect(said(got[2]), SPENT.replace("of 3", "of 1"), "typed retry denial")
+        expect(backend.count(), 1, "the refused retry opens no transport")
+
+
+@case
+def inline_profile_and_record_replay_respect_caller_settings():
+    """An inline profile refuses before send; record and strict replay share a folder."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        profile = json.dumps({"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 4})
+        got = run([f"SET thinkthen_profile = '{profile}'", ASK], backend.base())
+        expect(said(got[1]).startswith("thinkthen usage: profile small allows at most 4 evidence bytes"), True, "inline profile")
+        expect(backend.count(), 0, "profile sends nothing")
+        got = run([f"SET thinkthen_record = '{folder}'", ASK, "RESET thinkthen_record",
+                   f"SET thinkthen_replay = '{folder}'", ASK,
+                   "SELECT thinkthen_decide('Is it a refund?', 'another text')"], backend.base())
+        expect(rows(got[1]), [[True]], "record result")
+        expect(rows(got[4]), [[True]], "replay result")
+        expect(said(got[5]).startswith("thinkthen local:"), True, "strict replay miss")
+        expect(backend.count(), 1, "replay and miss send nothing")
+
+
+@case
+def recording_folder_obeys_current_caller_permission():
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        got = run([f"SET thinkthen_record = '{folder}'", "SET enable_external_access = false", ASK], backend.base())
+        expect(said(got[2]), "thinkthen usage: the recording folder is outside what this database's file settings allow", "recording permission")
+        expect(backend.count(), 0, "permission refusal sends nothing")
+
+
+@case
+def recording_folders_require_absolute_local_paths():
+    with Backend() as backend:
+        for name in ("record", "replay"):
+            for folder in ("off", "relative", "s3://bucket/saved"):
+                got = run([f"SET thinkthen_{name} = '{folder}'", ASK], backend.base())
+                expect(said(got[1]), "thinkthen usage: a SQL folder is an absolute local path with no scheme",
+                       f"{name} folder {folder}")
+        expect(backend.count(), 0, "invalid recording paths send nothing")
 
 
 @case
@@ -233,13 +319,14 @@ def judged(result: dict) -> str:
 
 @case
 def access_cases_match_duckdb():
-    """The 35 cache cases against COPY, then the 35 `@file` cases against
-    read_text. A refused cache case sends nothing and creates nothing."""
+    """The 35 cache cases against COPY, then caller-file cases against
+    read_text for decide, warm, and relate. Refused paths send nothing."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         paths = folders(root)
         for place in ("ok", "out"):
             (root / place / "q.json").write_text('{"decide": "Is it a refund?"}')
+            (root / place / "r.json").write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
         wrong = []
         for setting, setup in settings(root).items():
             for name, path in paths.items():
@@ -258,24 +345,25 @@ def access_cases_match_duckdb():
                 if not ours and (backend.count() != sent or before != (sorted(os.listdir(root / "out")), sorted(os.listdir(root / "ok")))):
                     wrong.append(f"cache {setting} {name}: a refused folder sent or created something")
                 sent = backend.count()
+                relate = f"SELECT count(*) FROM thinkthen_relate('SELECT 1 AS id, ''Ada'' AS name, ''person'' AS kind WHERE FALSE', '@{path}/r.json')"
                 files = run(
-                    [*setup, f"SELECT count(*) FROM read_text('{path}/q.json')", *(f"SELECT {verb}('@{path}/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm"))],
+                    [*setup, f"SELECT count(*) FROM read_text('{path}/q.json')", *(f"SELECT {verb}('@{path}/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm")), relate],
                     backend.base(),
                 )
-                oracle = judged(files[-3])
-                for verb, got in (("decide", files[-2]), ("warm", files[-1])):
+                oracle = judged(files[-4])
+                for verb, got in (("decide", files[-3]), ("warm", files[-2]), ("relate", files[-1])):
                     ours = "allowed" if "error" not in got else ("refused" if "file settings refuse it" in said(got) else "missing")
                     if oracle != ours:
                         wrong.append(f"@file {verb} {setting} {name}: read_text {oracle}, we {ours}")
                 if oracle != "allowed" and backend.count() != sent:
                     wrong.append(f"@file {setting} {name}: a file DuckDB did not read sent something")
-        # Ticket 0129 decision 7: `~` follows the session's home_directory, which warm cannot see.
+        # Ticket 0129 decision 7 retains warm's @~ refusal.
         home = root / "home"
         home.mkdir()
         (home / "q.json").write_text('{"decide": "Is it a refund?"}')
         tilde = run([f"SET home_directory = '{home}'", *(f"SELECT {verb}('@~/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm"))], backend.base())
         expect(rows(tilde[1]), [[True]], "decide reads ~ from the session's home_directory")
-        expect(said(tilde[2]), "thinkthen usage: thinkthen_warm cannot read an '@~' path, because home_directory is a session setting it cannot see; write the full path", "warm and ~")
+        expect(said(tilde[2]), "thinkthen usage: thinkthen_warm cannot read an '@~' path; write the full path", "warm and ~")
         if wrong:
             raise AssertionError("; ".join(wrong))
 
@@ -324,6 +412,47 @@ def two_databases_each_judge_their_own_access():
 def opens(trace: Path, name: str) -> int:
     """How many `openat` calls in an `strace -f` log name the file `name`."""
     return sum(1 for line in trace.read_text().splitlines() if "openat(" in line and f'/{name}"' in line)
+
+
+@case
+def prepared_file_arguments_recheck_current_permissions():
+    """A prepared plan cannot spend a file read authorized only at bind."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        question, names, rules = (root / name for name in ("q.json", "names.json", "rules.json"))
+        question.write_text('{"decide":"Is it a refund?"}')
+        names.write_text('{"version":1,"recognize":{"kinds":{"person":"A person."}}}')
+        rules.write_text('{"version":1,"relate":{"relations":[{"name":"works_for","source":"person","target":"organization"}]}}')
+        statements = [
+            "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization')) v(id, name, kind)",
+            f"PREPARE scalar AS SELECT thinkthen_decide('@{question}', 'refund now')",
+            f"PREPARE relations AS SELECT thinkthen_relations('Ada', '@{names}')",
+            f"PREPARE relate AS SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', '@{rules}')",
+            "SET enable_external_access = false",
+            "EXECUTE scalar", "EXECUTE relations", "EXECUTE relate",
+        ]
+        got = run(statements, backend.base())
+        for index in (1, 2, 3, 4):
+            expect(rows(got[index]), [], f"prepared setup {index}")
+        for index, role, path in ((5, "question", question), (6, "question", names), (7, "rules", rules)):
+            expect(said(got[index]),
+                   f"thinkthen local: the {role} file {path} was not read: this database's file settings refuse it",
+                   f"prepared {role} access after revoke")
+        expect(backend.count(), 0, "prepared file refusals send nothing")
+
+
+@case
+def prepared_relate_uses_executing_session_settings():
+    with Backend() as backend:
+        got = run([
+            "CREATE TABLE t AS SELECT * FROM (VALUES (1, 'Ada', 'person'), (2, 'Acme', 'organization')) v(id, name, kind)",
+            "PREPARE relate AS SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'])",
+            "SET thinkthen_max_requests_total = 0",
+            "EXECUTE relate",
+        ], backend.base())
+        expect(rows(got[1]), [], "relate prepares with its prior settings")
+        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 0; raise SET thinkthen_max_requests_total or RESET it", "relate uses the executing session's total")
+        expect(backend.count(), 0, "the current total refuses before a send")
 
 
 def file_opens_under_strace(count: int):

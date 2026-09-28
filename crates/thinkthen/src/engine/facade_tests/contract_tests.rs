@@ -43,7 +43,7 @@ fn bulk_and_one_question_annotate_answers_match_the_shared_cases() {
     let question = decide(many["question"]["decide"].as_str().expect("question"));
     let mut rows = Vec::new();
     let outcome = bulk_engine.records(
-        false,
+        crate::engine::schedule::RecordFlow::Streaming,
         &cancel,
         reader(texts),
         &|text: &&str| {

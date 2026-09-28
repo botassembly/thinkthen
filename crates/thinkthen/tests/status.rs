@@ -40,7 +40,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
             "version": env!("CARGO_PKG_VERSION"),
             "configuration": {"path": home.join(".config/thinkthen/config.json"), "present": false},
             "backend": {"url": "https://api.typesafe.ai/v1/systemone", "url_source": "built_in", "model": "jev-1.13.0", "model_source": "built_in", "api_key_set": false},
-            "cache": {"enabled": true, "enabled_source": "built_in", "path": home.join(".cache/thinkthen"), "path_source": "platform", "entries": 0, "bytes": 0, "bad_entries": 0, "prune_target_bytes": 100000000, "prune_target_source": "built_in"},
+            "cache": {"enabled": true, "enabled_source": "built_in", "path": home.join(".cache/thinkthen"), "path_source": "platform", "entries": 0, "bytes": 0, "bad_entries": 0, "temporary_entries": 0, "temporary_bytes": 0, "prune_target_bytes": 100000000, "prune_target_source": "built_in"},
             "usage": {"path": home.join(".cache/thinkthen-usage"), "month": month, "this_month": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}, "total": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}}
         })
     );
@@ -50,7 +50,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
     let human = run::output(command(&home).arg("status")).expect("human status");
     assert!(human.status.success());
     let expected = format!(
-        "version {}\nconfiguration_path {}\nconfiguration_present false\nurl https://api.typesafe.ai/v1/systemone\nurl_source built_in\nmodel jev-1.13.0\nmodel_source built_in\napi_key_set false\ncache_enabled true\ncache_enabled_source built_in\ncache_path {}\ncache_path_source platform\ncache_entries 0\ncache_bytes 0\ncache_bad_entries 0\ncache_prune_target_bytes 100000000\ncache_prune_target_source built_in\nusage_path {}\nusage_month {}\nmonth_requests_sent 0\nmonth_retries 0\nmonth_input_tokens 0\nmonth_output_tokens 0\nmonth_cache_answers 0\ntotal_requests_sent 0\ntotal_retries 0\ntotal_input_tokens 0\ntotal_output_tokens 0\ntotal_cache_answers 0\n",
+        "version {}\nconfiguration_path {}\nconfiguration_present false\nurl https://api.typesafe.ai/v1/systemone\nurl_source built_in\nmodel jev-1.13.0\nmodel_source built_in\napi_key_set false\ncache_enabled true\ncache_enabled_source built_in\ncache_path {}\ncache_path_source platform\ncache_entries 0\ncache_bytes 0\ncache_bad_entries 0\ncache_temporary_entries 0\ncache_temporary_bytes 0\ncache_prune_target_bytes 100000000\ncache_prune_target_source built_in\nusage_path {}\nusage_month {}\nmonth_requests_sent 0\nmonth_retries 0\nmonth_input_tokens 0\nmonth_output_tokens 0\nmonth_cache_answers 0\ntotal_requests_sent 0\ntotal_retries 0\ntotal_input_tokens 0\ntotal_output_tokens 0\ntotal_cache_answers 0\n",
         env!("CARGO_PKG_VERSION"),
         home.join(".config/thinkthen/config.json").display(),
         home.join(".cache/thinkthen").display(),
@@ -77,6 +77,8 @@ fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
     assert_eq!(value["cache"]["path"], serde_json::Value::Null);
     assert_eq!(value["cache"]["entries"], serde_json::Value::Null);
     assert_eq!(value["cache"]["bad_entries"], serde_json::Value::Null);
+    assert_eq!(value["cache"]["temporary_entries"], serde_json::Value::Null);
+    assert_eq!(value["cache"]["temporary_bytes"], serde_json::Value::Null);
     assert_eq!(value["usage"]["path"], serde_json::Value::Null);
     assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
     assert_eq!(value["usage"]["total"], serde_json::Value::Null);
@@ -84,6 +86,9 @@ fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
         .expect("human status runs");
     assert!(human.status.success());
     assert!(String::from_utf8_lossy(&human.stdout).contains("cache_bad_entries unavailable\n"));
+    assert!(
+        String::from_utf8_lossy(&human.stdout).contains("cache_temporary_entries unavailable\n")
+    );
 }
 
 #[test]
@@ -188,6 +193,17 @@ fn an_unsafe_cache_entry_is_counted_without_leaking_local_bytes() {
     fs::write(&target, b"private-cache-marker").expect("target");
     let entry = cache.join(format!("{}.json", "a".repeat(64)));
     symlink(&target, &entry).expect("entry symlink");
+    let temporary = cache.join(format!(".123.0.{}.json", "b".repeat(64)));
+    fs::write(&temporary, b"private-temporary-marker").expect("temporary file");
+    let unsafe_temporary = cache.join(format!(".123.1.{}.json", "c".repeat(64)));
+    symlink(&target, &unsafe_temporary).expect("temporary symlink");
+    let allocated = {
+        use std::os::unix::fs::MetadataExt as _;
+        fs::metadata(&temporary)
+            .expect("temporary metadata")
+            .blocks()
+            * 512
+    };
 
     let output = run::output(command(&home).args(["status", "--json"])).expect("status");
     assert_eq!(output.status.code(), Some(0));
@@ -196,7 +212,10 @@ fn an_unsafe_cache_entry_is_counted_without_leaking_local_bytes() {
     let status: serde_json::Value = serde_json::from_str(&text).expect("status JSON");
     assert_eq!(status["cache"]["entries"], 0);
     assert_eq!(status["cache"]["bad_entries"], 1);
+    assert_eq!(status["cache"]["temporary_entries"], 1);
+    assert_eq!(status["cache"]["temporary_bytes"], allocated);
     assert!(!text.contains("private-cache-marker"));
+    assert!(!text.contains("private-temporary-marker"));
     assert_eq!(
         fs::read(target).expect("target remains"),
         b"private-cache-marker"

@@ -264,7 +264,7 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * `{"entities": [...], "relations": [...]}` for recognize; and
  * `{"edges": [...]}` for relate. `"details": true` answers the command's
  * `--details` line instead. `{"usage": true}` answers this process's
- * counters as `{"requests_sent": N, "input_tokens": N, "output_tokens":
+ * counters as `{"requests_sent": N, "retries": N, "input_tokens": N, "output_tokens":
  * N, "cache_answers": N}` and takes no options.
  *
  * Returns NULL on failure; `thinkthen_error_code` and

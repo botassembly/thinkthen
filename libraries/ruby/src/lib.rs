@@ -185,6 +185,7 @@ struct Settings {
     model: Option<String>,
     throttle: Option<i64>,
     max_requests: Option<i64>,
+    max_request_bytes: Option<i64>,
     cache_at: Option<String>,
     no_cache: bool,
     timeout: Option<i64>,
@@ -213,6 +214,11 @@ impl Settings {
             let value = usize::try_from(value)
                 .map_err(|_| Fault::usage("a request limit is a whole number of 1 or more"))?;
             builder = builder.max_requests(Some(value))?;
+        }
+        if let Some(value) = self.max_request_bytes {
+            let value = usize::try_from(value)
+                .map_err(|_| Fault::usage("max_request_bytes is a whole number of at least 1"))?;
+            builder = builder.max_request_bytes(value)?;
         }
         if let Some(folder) = &self.cache_at {
             builder = builder.cache_at(folder)?;

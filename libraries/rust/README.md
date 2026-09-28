@@ -13,13 +13,13 @@ Every program builds its engine with `Engine::from_env()`, so it reads `THINKTHE
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `EngineBuilder::no_cache`.
 
-The builder also sets `timeout`, `max_retries`, `profile`, `record`, and strict `replay`; replay alone sends nothing, even on a miss.
+The builder also sets `max_request_bytes`, `timeout`, `max_retries`, `profile`, `record`, and strict `replay`; replay alone sends nothing, even on a miss. The request-byte ceiling defaults to 96,000, and a smaller profile value wins.
 
 ## Run facts
 
 `Engine::details` returns a `Details` for one text. Its `to_json()` is the command's `--details` line, schema `thinkthen.result/1`, and its accessors read the same fields: `usage()`, `requests_sent()`, `cached()`, `requests()`, `url()`, `model()`, `probabilities()` and `confidence()`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
-`Engine::usage()` returns this engine's running totals of requests sent, cache answers, input tokens and output tokens.
+`Engine::usage()` returns this engine's running totals of requests sent, retries, cache answers, input tokens and output tokens. Retries are a subset of requests sent.
 
 ## Width is per loaded copy
 

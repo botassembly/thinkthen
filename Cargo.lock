@@ -1446,6 +1446,7 @@ dependencies = [
  "csv-core",
  "nix",
  "polars",
+ "polars-core",
  "proptest",
  "serde",
  "serde_json",

@@ -44,6 +44,8 @@ struct Cache {
     entries: Option<u64>,
     bytes: Option<u64>,
     bad_entries: Option<u64>,
+    temporary_entries: Option<u64>,
+    temporary_bytes: Option<u64>,
     #[serde(rename = "prune_target_bytes")]
     target_bytes: u64,
     #[serde(rename = "prune_target_source")]
@@ -123,6 +125,12 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
     } else {
         "built_in"
     };
+    let resolved_backend = crate::core::Backend::resolve(
+        None,
+        environment.base_url(),
+        environment.model().unwrap_or(DEFAULT_MODEL),
+    )?;
+    environment.check_key(&resolved_backend)?;
     let cache_counts = environment
         .cache()
         .map(|path| {
@@ -136,11 +144,6 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
         .map(|path| crate::engine::usage::read(path, &month))
         .transpose()
         .map_err(|_| Failure::StatusState)?;
-    let resolved_backend = crate::core::Backend::resolve(
-        None,
-        environment.base_url(),
-        environment.model().unwrap_or(DEFAULT_MODEL),
-    )?;
     Ok(Status {
         schema: "thinkthen.status/1",
         version: env!("CARGO_PKG_VERSION"),
@@ -167,6 +170,8 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
             entries: cache_counts.as_ref().map(|counts| counts.entries),
             bytes: cache_counts.as_ref().map(|counts| counts.bytes),
             bad_entries: cache_counts.as_ref().map(|counts| counts.bad_entries),
+            temporary_entries: cache_counts.as_ref().map(|counts| counts.temporary_entries),
+            temporary_bytes: cache_counts.as_ref().map(|counts| counts.temporary_bytes),
             target_bytes: environment.cache_bytes(),
             target_source,
         },
@@ -229,6 +234,16 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
     optional_line(&mut writer, "cache_entries", status.cache.entries)?;
     optional_line(&mut writer, "cache_bytes", status.cache.bytes)?;
     optional_line(&mut writer, "cache_bad_entries", status.cache.bad_entries)?;
+    optional_line(
+        &mut writer,
+        "cache_temporary_entries",
+        status.cache.temporary_entries,
+    )?;
+    optional_line(
+        &mut writer,
+        "cache_temporary_bytes",
+        status.cache.temporary_bytes,
+    )?;
     edge::write_line(
         &mut writer,
         &format!("cache_prune_target_bytes {}", status.cache.target_bytes),

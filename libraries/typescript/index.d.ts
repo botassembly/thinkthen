@@ -12,6 +12,7 @@ export interface DecideSpec {
   decide: string;
   threshold?: Cut | Band;
   model?: string;
+  profile?: string;
 }
 
 export interface ChooseSpec {
@@ -19,12 +20,14 @@ export interface ChooseSpec {
   options: readonly string[];
   threshold?: Cut;
   model?: string;
+  profile?: string;
 }
 
 export interface ScoreSpec {
   score: string;
   levels: readonly string[];
   model?: string;
+  profile?: string;
 }
 
 export interface TagSpec {
@@ -32,6 +35,7 @@ export interface TagSpec {
   labels: readonly string[];
   threshold?: Cut;
   model?: string;
+  profile?: string;
 }
 
 export type QuestionSpec = DecideSpec | ChooseSpec | ScoreSpec | TagSpec;
@@ -100,6 +104,7 @@ export interface Details {
     requests: string[];
     failed_questions: number;
     usage?: { input_tokens: number; output_tokens: number };
+    profile_warning?: { tuned_for: string; running: string };
   };
 }
 
@@ -202,6 +207,7 @@ export interface RelateOptions extends CallOptions {
 /** This process's totals. Failed calls and retries count, and nothing resets them. */
 export interface Usage {
   requests_sent: number;
+  retries: number;
   cache_answers: number;
   input_tokens: number;
   output_tokens: number;
@@ -221,6 +227,8 @@ export interface EngineOptions {
   throttle?: number;
   /** Refuse a call over more records than this. */
   maxRequests?: number;
+  /** Request-byte ceiling for a split plan; a lone question still goes alone. */
+  maxRequestBytes?: number;
   /** `false` reads and writes no cache; a string names the cache folder. */
   cache?: false | string;
   timeoutSeconds?: number;

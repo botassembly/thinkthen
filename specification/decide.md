@@ -29,6 +29,7 @@ On one document, `true`, `false`, or `null`. `null` is a not sure answer, and it
 | `--threshold T\|LOW:HIGH` | The rule in [threshold.md](threshold.md). `decide` is the one verb that takes both forms | `0.5` |
 | `--quiet` | On one document, prints nothing on standard output. Record mode refuses it because no record's answer sets the exit code | Off |
 | `--details` | Prints the full result object in place of the bare value | Off |
+| `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
@@ -72,6 +73,12 @@ fi
 thinkthen decide 'Does this report a payment failure?' --jsonl --field /body --details < tickets.jsonl
 ```
 
+```sh
+thinkthen decide 'It appears on the album Abbey Road.' --lines --context catalog.txt < songs.txt
+```
+
+Ticket 0172's [live record](../sdlc/records/2026-09-27-0172-shared-context-build.md) measured this question with a shared catalog on 306 Beatles titles. Each of three runs sent one request, scored 306 right with no false yeses or misses, and reported 19,634 input and 5,710 output tokens. This result describes that catalog and build.
+
 ## Reading the exit code
 
 The help shows a `case` block on the named exit code. It separates a no from a not sure answer and from a failure, and a script that acts on the answer reads all four outcomes.
@@ -94,7 +101,7 @@ The help shows one piece of advice beside that block. Word the question in the f
 
 Writing a good question matters more than any option. A question works when it names one fact that is visible in the evidence. "Mentions a delivery date" works. "Is a good reply" does not. Measurement of the first System One model showed a narrow question of the first kind catching every planted mismatch while wrongly rejecting 2% to 3% of good work. Outcome questions of the second kind rejected 18% to 46% of work people had accepted.
 
-A claim planted in the evidence moves the answer. A live run judged twenty made-up messages twice, once clean and once with hostile text appended. The cases are few and they are made up. A command aimed at the judge moved the probability of yes by 0.04 or less, in seventeen wordings. A false claim about the case moved it by as much as 0.57, and a third planted claim moved it by 0.02. The tool cannot tell a planted claim from a true one, because both are evidence.
+A claim planted in the evidence can move the answer. [Probe 06](../probes/06-hostile-text/) judged twenty made-up messages twice, once clean and once with hostile text appended. On its one refund question, "The customer explicitly asks for money back," and the recorded `jev-1.13.0` model, commands aimed at the judge moved the probability of yes by 0.04 or less in seventeen wordings. A false claim about the case moved it by as much as 0.57, and a third planted claim moved it by 0.02. These are measurements of those cases, not a bound for other questions or models. A [later live review](../sdlc/issues/2026-09-26-architect-review-12-security-and-data-boundary.md) found a planted claim moving a different `decide` question from 0.01 to 0.64 and a `choose` answer changing from shipping to billing. Commands moved the second question from 0.01 to 0.16–0.18, though the command itself could be evidence of a security incident. Planted claims can cross the default 0.5 cut; the tool cannot tell one from a true claim because both are evidence. A per-model, multi-question benchmark refresh remains to be done.
 
 A batch keeps each record in its own question and out of the evidence. A planted claim in one record is therefore not evidence for another record, by ADR 0055 item 5.
 

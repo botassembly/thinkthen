@@ -155,6 +155,7 @@ impl Client {
         let gates = backoff::process_gates(cancel)?;
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
+        let mut last_status = None;
         loop {
             let now = Instant::now();
             let cap = now + self.timeout.min(MAX_RETRY_WAIT);
@@ -168,7 +169,11 @@ impl Client {
             // host callback while the usage lock is held.
             let budget = cancel.remaining_without_check()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
+            let reservation = cancel.reserve_send(last_status)?;
             prepared.mark(retries > 0)?;
+            if let Some(reservation) = reservation {
+                reservation.commit();
+            }
             let sending = cancel.sending();
             let sent = send(&self.agent, exchange, limit);
             drop(sending);
@@ -202,6 +207,10 @@ impl Client {
             if retries >= exchange.max_retries || !is_retried(&attempt.failure) {
                 return Err(attempt.failure);
             }
+            last_status = match attempt.failure {
+                Error::Status(status) => Some(status),
+                _ => None,
+            };
             wait = wait.saturating_mul(2);
             retries += 1;
         }
@@ -229,11 +238,11 @@ pub(crate) struct Exchange<'a> {
 }
 
 impl fmt::Debug for Exchange<'_> {
-    /// Show what an exchange does and never the evidence or the key it carries.
+    /// Name the exchange and withhold its address, evidence, and key.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Exchange")
-            .field("url", &self.url)
+            .field("url", &"<withheld>")
             .field("body", &Withheld(self.body.len()))
             .field("key", &self.key)
             .field("max_retries", &self.max_retries)

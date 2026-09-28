@@ -28,6 +28,7 @@ check("a set base_url wins over THINKTHEN_BASE_URL", sent == 1L && grepl("TRUE",
 
 # One refusal an argument, each usage and each sending nothing.
 refusals <- c('base_url = 5', 'model = ""', 'throttle = 0L', 'throttle = 33L', 'max_requests = -1',
+              'max_request_bytes = 0',
               'cache = TRUE', 'timeout = 2.5', 'replay = NA', 'throttle = 2.5', 'base_url = "ftp://example.test"')
 sent <- sent_by(out <- run(c(
   sprintf('cat(tryCatch(tt_engine(%s), thinkthen_usage = function(e) "refused"), "\\n")', refusals),

@@ -115,6 +115,7 @@ class Engine:
         model: Optional[str] = ...,
         throttle: Optional[int] = ...,
         max_requests: Optional[int] = ...,
+        max_request_bytes: Optional[int] = ...,
         cache: Union[Path, bool, None] = ...,
         timeout: Optional[int] = ...,
         max_retries: Optional[int] = ...,

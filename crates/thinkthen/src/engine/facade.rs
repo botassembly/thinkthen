@@ -31,10 +31,12 @@ pub(crate) use crate::engine::annotate_schedule::{
 };
 pub(crate) use crate::engine::http::Key;
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
-pub(crate) use crate::engine::schedule::{Completed, Input, InputPort, Outcome as RunOutcome};
+pub(crate) use crate::engine::schedule::{
+    Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
+};
 pub(crate) use annotate::{GroupAnswer, PreparedGroup, assemble, check_model};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
-pub(crate) use relate::{Execution, Logical, Method, PreparedRelation, relations};
+pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
 #[cfg(test)]
@@ -184,7 +186,8 @@ impl Engine {
     /// the pool, the recorder, the counters, and the width.
     pub(crate) fn with_model(&self, model: ModelName) -> Result<Self, Error> {
         let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
-            .map_err(|_| Error::Defect("a resolved address was refused again"))?;
+            .map_err(|_| Error::Defect("a resolved address was refused again"))?
+            .with_request_size(self.backend.ceiling());
         Ok(Self {
             backend,
             ..self.clone()
@@ -326,7 +329,7 @@ impl Engine {
     /// never holds the call open. Every engine worker has joined on return.
     pub(crate) fn records<T, R, E>(
         &self,
-        held: bool,
+        flow: RecordFlow,
         cancel: &Cancel,
         start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
         answer: &(impl Fn(&T) -> Result<Completed<R, E>, E> + Sync),
@@ -340,7 +343,7 @@ impl Engine {
         let width = self.state(cancel)?.width;
         schedule::run_cancelled(
             width,
-            held,
+            flow,
             cancel,
             start_reader,
             answer,
