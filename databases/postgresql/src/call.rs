@@ -159,9 +159,8 @@ pub(crate) fn totals() -> [u64; 4] {
 pub(crate) struct Call {
     pub(crate) plan: Plan,
     pub(crate) deadline_ms: i32,
-    /// `thinkthen.max_requests_total`, and the requests it still leaves.
+    /// `thinkthen.max_requests_total`, enforced for each actual send.
     total: Option<u64>,
-    left: Option<u64>,
 }
 
 /// The refusal once `thinkthen.max_requests_total` is spent.
@@ -172,22 +171,24 @@ fn spent(total: u64) -> Refusal {
 }
 
 impl Call {
-    /// Refuse held records over `max_requests` before any send. Return how
-    /// many of them the total leaves, when that is fewer than all.
-    pub(crate) fn within(&self, count: usize) -> Option<usize> {
-        if let Some(most) = self.plan.max_requests.filter(|most| count > *most) {
-            raise(Refusal::usage(format!(
-                "this engine answers at most {most} records in one call"
-            )));
-        }
-        let left = usize::try_from(self.left?).unwrap_or(usize::MAX);
-        (count > left).then_some(left)
+    pub(crate) fn max_requests(&self) -> Option<usize> {
+        self.plan.max_requests
     }
 
-    /// The refusal after a call that sent only what the total left.
-    pub(crate) fn spent(&self) -> Refusal {
-        spent(self.total.unwrap_or_default())
+    /// Refuse held records over `max_requests` before any send. The total
+    /// belongs to transport attempts, so it cannot truncate record input.
+    pub(crate) fn within(&self, count: usize) {
+        record_limit(count, self.plan.max_requests).or_raise();
     }
+}
+
+pub(crate) fn record_limit(count: usize, most: Option<usize>) -> Result<(), Refusal> {
+    if let Some(most) = most.filter(|most| count > *most) {
+        return Err(Refusal::usage(format!(
+            "this engine answers at most {most} records in one call"
+        )));
+    }
+    Ok(())
 }
 
 /// How often the backend thread looks at its interrupt flags and deadline.

@@ -1,12 +1,13 @@
 //! PostgreSQL GUC registration and the one validated engine-setting snapshot.
 
 use std::ffi::CString;
+use std::num::NonZeroUsize;
 use std::path::PathBuf;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
-use thinkthen::{EngineBuilder, Error};
+use thinkthen::{BatchSetting, EngineBuilder, Error};
 
 use super::{ACTIVE_THROTTLE, Call, OrRaise, Refusal, spent, totals};
 use crate::ffi;
@@ -28,6 +29,7 @@ pub(crate) struct Plan {
     pub(super) throttle: Option<u8>,
     pub(super) max_requests: Option<usize>,
     max_request_bytes: Option<usize>,
+    batch: Option<BatchSetting>,
     cache: Option<Option<PathBuf>>,
     model: Option<String>,
     timeout: Option<Duration>,
@@ -42,6 +44,7 @@ struct Raw<'a> {
     throttle: i32,
     max_requests: i32,
     max_request_bytes: i32,
+    batch: Option<&'a str>,
     cache: Option<&'a str>,
     model: Option<&'a str>,
     timeout: i32,
@@ -62,6 +65,26 @@ fn folder(value: Option<&str>) -> Result<Option<PathBuf>, Refusal> {
     Ok(Some(path))
 }
 
+fn batch(value: Option<&str>) -> Result<Option<BatchSetting>, Refusal> {
+    let Some(value) = value.filter(|value| !value.is_empty()) else {
+        return Ok(None);
+    };
+    if value == "max" {
+        return Ok(Some(BatchSetting::Max));
+    }
+    if !value.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(Refusal::usage(
+            "thinkthen.batch is max or a whole number of 1 or more",
+        ));
+    }
+    let count = value
+        .parse::<usize>()
+        .ok()
+        .and_then(NonZeroUsize::new)
+        .ok_or_else(|| Refusal::usage("thinkthen.batch is max or a whole number of 1 or more"))?;
+    Ok(Some(BatchSetting::Records(count)))
+}
+
 impl Plan {
     /// Read the four raw values. The throttle's check already holds it to
     /// -1 or 1..=32, and PostgreSQL's range checks hold the others to -1 or more.
@@ -76,6 +99,7 @@ impl Plan {
                 .then(|| u8::try_from(raw.throttle).unwrap_or(u8::MAX)),
             max_requests: usize::try_from(raw.max_requests).ok(),
             max_request_bytes: usize::try_from(raw.max_request_bytes).ok(),
+            batch: batch(raw.batch)?,
             cache,
             model: raw
                 .model
@@ -106,6 +130,9 @@ pub(super) fn apply(plan: &Plan, mut builder: EngineBuilder) -> Result<EngineBui
     }
     if let Some(value) = plan.max_request_bytes {
         builder = builder.max_request_bytes(value)?;
+    }
+    if let Some(value) = plan.batch {
+        builder = builder.batch(value);
     }
     match &plan.cache {
         Some(Some(folder)) => builder = builder.cache_at(folder)?,
@@ -139,6 +166,7 @@ static FILE_DIRECTORY: GucSetting<Option<CString>> = GucSetting::<Option<CString
 static THROTTLE: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUESTS: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static MAX_REQUEST_BYTES: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
+static BATCH: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static MAX_REQUESTS_TOTAL: GucSetting<i32> = GucSetting::<i32>::new(UNSET);
 static CACHE: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
 static MODEL: GucSetting<Option<CString>> = GucSetting::<Option<CString>>::new(None);
@@ -169,6 +197,7 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
         ));
     }
     let cache = text_of(&CACHE);
+    let batch = text_of(&BATCH);
     let model = text_of(&MODEL);
     let profile = text_of(&PROFILE);
     let record = text_of(&RECORD);
@@ -177,6 +206,7 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
         throttle: THROTTLE.get(),
         max_requests: MAX_REQUESTS.get(),
         max_request_bytes: MAX_REQUEST_BYTES.get(),
+        batch: batch.as_deref(),
         cache: cache.as_deref(),
         model: model.as_deref(),
         timeout: TIMEOUT.get(),
@@ -204,7 +234,6 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
         plan,
         deadline_ms: DEADLINE_MS.get(),
         total,
-        left,
     })
 }
 
@@ -236,6 +265,14 @@ fn register_new_engine_settings() {
         c"thinkthen.max_retries",
         c"backend status retries; -1 keeps the environment default",
         &MAX_RETRIES,
+        GucFlags::default(),
+    );
+    GucRegistry::define_string_guc(
+        c"thinkthen.batch",
+        c"record member cap: max or a decimal whole number of 1 or more; empty keeps the environment default",
+        c"",
+        &BATCH,
+        GucContext::Userset,
         GucFlags::default(),
     );
     GucRegistry::define_string_guc(
@@ -356,6 +393,7 @@ mod tests {
             throttle: UNSET,
             max_requests: UNSET,
             max_request_bytes: UNSET,
+            batch: None,
             cache: None,
             model: None,
             timeout: UNSET,
@@ -376,6 +414,7 @@ mod tests {
             throttle: Some(8),
             max_requests: Some(3),
             max_request_bytes: Some(20_000),
+            batch: Some(BatchSetting::Records(NonZeroUsize::new(2).unwrap())),
             cache: Some(Some(PathBuf::from("/srv/cache"))),
             ..Plan::default()
         };
@@ -384,10 +423,25 @@ mod tests {
                 throttle: 8,
                 max_requests: 3,
                 max_request_bytes: 20_000,
+                batch: Some("2"),
                 cache: Some("/srv/cache"),
                 ..default
             }),
             Ok(set)
         );
+        for invalid in [
+            "0",
+            "-1",
+            "+1",
+            "1.5",
+            "MAX",
+            "no",
+            "999999999999999999999999999999999999",
+        ] {
+            assert!(matches!(batch(Some(invalid)), Err(Refusal { .. })));
+        }
+        assert_eq!(batch(None), Ok(None));
+        assert_eq!(batch(Some("")), Ok(None));
+        assert_eq!(batch(Some("max")), Ok(Some(BatchSetting::Max)));
     }
 }

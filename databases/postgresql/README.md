@@ -21,6 +21,8 @@
 | `thinkthen_relate(query, rules text[])` or `(query, spec)` | `(relation, source, target, probability)` rows, with the query's ids |
 | `thinkthen_usage()` | `(requests_sent, cache_answers, input_tokens, output_tokens)` for this backend |
 
+`thinkthen_decide`, `thinkthen_probability`, `thinkthen_choose`, `thinkthen_score`, `thinkthen_tag`, `thinkthen_details`, `thinkthen_try_details`, and `thinkthen_warm` also accept a final literal `context text` argument. This includes the array form of `thinkthen_decide`. `NULL` context keeps the historical request; blank non-`NULL` context raises usage. A context-bearing scalar uses the record wire form and remains one SQL call per row. Arrays pack distinct evidence in first-occurrence order, while preserving every original zero-based slot and SQL `NULL` element in their result. Warm groups by question and context, then packs each group's first-seen distinct evidence. Give an aggregate `ORDER BY` when its visit order must reproduce the same request bytes.
+
 A question, set, or spec is JSON text in the file grammar, or a file named with the `'@refund.json'` spelling. Bare text is never a path. For `choose`, `score`, and `tag`, the array joins the question as its options, levels, or labels. Pass `NULL` when the question already names them.
 
 `start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
@@ -67,6 +69,7 @@ The details digest includes a question's saved calibration `profile`. A differen
 | `thinkthen.throttle` | superuser | requests in flight at once, 1 to 32. -1 keeps the engine's value. PostgreSQL refuses any other value where it is set. The refusal reads `thinkthen usage: a throttle is a whole number from 1 through 32`. `SET` fails, and a configuration file's bad value draws the refusal as a warning and leaves -1 |
 | `thinkthen.max_requests` | superuser | the most records one call answers. -1 means no limit |
 | `thinkthen.max_request_bytes` | any role | positive request-byte ceiling for relation plans. -1 keeps the environment value |
+| `thinkthen.batch` | any role | `max` or a decimal whole number of 1 or more records per request. Empty keeps `THINKTHEN_BATCH` or the default `max`; `1` retains historical singleton request bytes |
 | `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
 | `thinkthen.model` | any role | backend model. Empty keeps the environment value |
 | `thinkthen.timeout` | any role | positive attempt timeout in seconds; -1 keeps the environment value |
@@ -83,7 +86,7 @@ The folder belongs to the server's operating-system user. Every role whose calls
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 
-`thinkthen.max_requests_total` caps attempted live sends in one backend, including retries and requests inside annotate or relate. An atomic reservation admits every attempt before transport, so a call cannot pass the total. A call with a spent total raises 22023 before sending, including when it could read an answer from cache. Array batches and `thinkthen_warm` retain their ordered partial-row cut. A new connection forks a backend with a new total. A pool of N connections can spend up to N times its per-backend total. A cancelled call's send already on the wire remains counted. `thinkthen status` counts only command sends.
+`thinkthen.max_requests_total` caps attempted live sends in one backend, including retries and requests inside annotate or relate. An atomic reservation admits every attempt before transport, so a call cannot pass the total. A call with a spent total raises 22023 before sending, including when it could read an answer from cache. Array and warm results are materialized; a spent total raises without returning partial rows, while completed attempts remain counted. Packed warm cache entries cover the exact group cohort, so a later singleton may send again. Set `thinkthen.batch = '1'` when warm is meant to fill the historical scalar cache entries. A new connection forks a backend with a new total. A pool of N connections can spend up to N times its per-backend total. A cancelled call's send already on the wire remains counted. `thinkthen status` counts only command sends.
 
 ## Errors
 
