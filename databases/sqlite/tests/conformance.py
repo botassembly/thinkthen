@@ -184,6 +184,7 @@ def check(case: dict, backend: Backend) -> None:
         same("ranking", [{"index": row[0], "probability": row[1]} for row in rows], success["operation"]["ranking"])
         same("judgments sent", backend.count(), len(texts))
     elif kind == "decide_many":
+        env = env | {"THINKTHEN_BATCH": "1"}  # legacy exact one-record exchanges
         steps = [["SELECT thinkthen_warm(?, t) FROM r", [question]], ["SELECT thinkthen_decide(?, t) FROM r ORDER BY i", [question]]]
         results = asked(steps, env, rows_table(texts))
         same("bare", [{1: True, 0: False}.get(row[0]) for row in results[1]], [one["bare"] for one in answers])

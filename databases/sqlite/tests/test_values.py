@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import os
 import sys
 
@@ -182,6 +183,77 @@ say(warm=warm, decide=run(db, "SELECT thinkthen_decide('Is it old?', 'a red door
     expect((held["warm"], held["decide"]), ([[2]], [[1]]), "the answers")
     expect((held["usage"]["requests_sent"], held["usage"]["cache_answers"]), (2, 1), "the usage totals")
     expect(backend.close(), 2, "sends")
+
+
+def test_fourth_context_keeps_scalar_shapes_and_validation_order() -> None:
+    """Context reaches every eligible scalar; the third slot stays deadline."""
+    backend = Backend()
+    questions = {
+        "choose": {"choose": "Which team owns this?", "options": ["billing", "shipping", "other"]},
+        "tag": {"tag": "Which labels apply?", "labels": ["billing", "urgent", "security"]},
+        "score": {"score": "How severe is this?", "levels": ["low", "medium", "high"]},
+    }
+    held = child(f"""
+db = connect()
+questions = {questions!r}
+shapes = {{name: run(db, f"SELECT thinkthen_{{name}}(?, 'red door', -1, 'shared context')", (json.dumps(q),))
+          for name, q in questions.items()}}
+plain = run(db, "SELECT thinkthen_details('Is it red?', 'red door')")
+shapes['decide'] = run(db, "SELECT thinkthen_decide('Is it red?', 'red door', -1, 'shared context')")
+shapes['details'] = run(db, "SELECT thinkthen_details('Is it red?', 'red door', -1, 'shared context')")
+shapes['try'] = run(db, "SELECT thinkthen_try_details('Is it red?', 'red door', -1, 'shared context')")
+say(shapes=shapes, plain=plain,
+    null=run(db, "SELECT thinkthen_try_details(NULL, 'bad', NULL, '   ')"),
+    slot=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', NULL, 'shared context')"),
+    bad=run(db, "SELECT thinkthen_try_details('Is it red?', 'red door', -1, '   ')"),
+    bad_ordinary=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', -1, '   ')"))
+""", environment(backend))
+    shapes = held["shapes"]
+    expect({name: shapes[name] for name in ("choose", "tag", "score", "decide")},
+           {"choose": [["billing"]], "tag": [['["billing","urgent","security"]']],
+            "score": [[0.15]], "decide": [[1]]}, "scalar value shapes")
+    plain = json.loads(held["plain"][0][0])
+    details = json.loads(shapes["details"][0][0])
+    tried = json.loads(shapes["try"][0][0])
+    expect(tried, {"status": "answered", "details": details}, "try details keeps scalar JSON")
+    expect("input" in details, False, "contextual scalar does not gain record input")
+    expect(details["schema"], "thinkthen.result/1", "details schema")
+    expect(details["meta"]["question_sha256"], plain["meta"]["question_sha256"], "question identity")
+    expect(details["meta"]["context_sha256"], hashlib.sha256(b"shared context").hexdigest(), "literal context identity")
+    expect(details["meta"]["requests"] != plain["meta"]["requests"], True, "context changes request identity")
+    expect(held["null"], [[None]], "try NULL short-circuits before deadline and context")
+    expect(held["slot"], "thinkthen usage: a deadline of NULL is not a whole number of milliseconds", "third argument is deadline")
+    safe = {"status": "failed", "error": {"kind": "usage", "message":
+            "check the row's question and arguments, or raise the process request total when it is spent", "retryable": False}}
+    expect(json.loads(held["bad"][0][0]), safe, "try bad context is a safe value")
+    expect(held["bad_ordinary"], "thinkthen usage: context is text, not white space", "ordinary bad context raises")
+    expect(backend.close(), 5, "four typed questions plus old and new decide identity, with cache reuse")
+
+
+def test_warm_groups_by_question_and_context_before_scalar_cache_reads() -> None:
+    """First-seen context groups count triples and batch-one warms scalar cache."""
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("SELECT thinkthen_batch(1)")
+db.execute("CREATE TABLE t(q TEXT, e TEXT, c TEXT)")
+db.executemany("INSERT INTO t VALUES (?, ?, ?)", [
+    ("Is it red?", "red one", "alpha"),
+    ("Is it red?", "red two", "alpha"),
+    ("Is it red?", "red one", "alpha"),
+    ("Is it red?", "red one", "beta"),
+    ("Is it red?", "red two", "beta"),
+    (None, "ignored", "alpha"),
+    ("Is it red?", None, "beta")])
+warm = run(db, "SELECT thinkthen_warm(q,e,-1,c) FROM t")
+one = run(db, "SELECT thinkthen_decide('Is it red?', 'red one', -1, 'alpha')")
+two = run(db, "SELECT thinkthen_decide('Is it red?', 'red two', -1, 'beta')")
+usage = json.loads(run(db, "SELECT thinkthen_usage()")[0][0])
+say(warm=warm, one=one, two=two, usage=usage)
+""", environment(backend))
+    expect((held["warm"], held["one"], held["two"]), ([[4]], [[1]], [[1]]), "warm count and cached scalars")
+    expect((held["usage"]["requests_sent"], held["usage"]["cache_answers"]), (4, 2), "four distinct context records and two cache hits")
+    expect(backend.close(), 4, "only the distinct warm triples sent")
 
 
 def test_usage_refuses_the_reset_spelling() -> None:

@@ -61,6 +61,7 @@ def test_shared_settings_corpus() -> None:
                                   f"db.executemany('INSERT INTO e VALUES (?, ?, ?)', {entities!r})\n")
                     sql = f"SELECT count(*) FROM thinkthen_relate('e', 'id', 'name', 'kind', '{shared['relation']}')"
                 elif step.get("verb") == "decide_many":
+                    setup.append("SELECT thinkthen_batch(1)")
                     values = ", ".join("('" + value.replace("'", "''") + "')" for value in step["records"])
                     sql = f"SELECT thinkthen_warm('Is this a refund?', column1) FROM (VALUES {values})"
                 elif "model" in step:
@@ -113,6 +114,7 @@ def warm_at_throttle(rows: int) -> None:
     warm = Child("""
 db = connect()
 db.execute("SELECT thinkthen_throttle(8)")
+db.execute("SELECT thinkthen_batch(2)")
 db.execute("CREATE TABLE t(body TEXT)")
 db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(int(os.environ["ROWS"]))])
 say(warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"))
@@ -122,12 +124,12 @@ say(warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"))
     expect(backend.count(), 8, "sends after 300 ms")
     backend.release()
     expect(warm.result(), {"warm": [[rows]]}, "the warm")
-    expect(backend.close(), rows, "sends")
+    expect(backend.close(), rows // 2, "packed sends")
 
 
 def test_throttle_holds_eight_before_the_ninth() -> None:
     """A held eighth request prevents the ninth from starting."""
-    warm_at_throttle(9)
+    warm_at_throttle(18)
 
 
 def test_warm_deadline_spans_a_completed_chunk_and_later_row() -> None:
@@ -135,6 +137,7 @@ def test_warm_deadline_spans_a_completed_chunk_and_later_row() -> None:
     backend = Backend()
     held = child("""
 db = connect()
+db.execute("SELECT thinkthen_batch(1)")
 db.execute("CREATE TABLE t(id INTEGER PRIMARY KEY, body TEXT)")
 db.executemany("INSERT INTO t VALUES (?, ?)", [(n, f"door {n}") for n in range(1, 258)])
 def paused(body, number):
@@ -170,6 +173,7 @@ def test_max_requests_limits_a_warm_and_null_clears_it() -> None:
     backend = Backend()
     held = child("""
 db = connect()
+db.execute("SELECT thinkthen_batch(1)")
 rows = "SELECT thinkthen_warm('Is it red?', t) FROM (SELECT 'a' t UNION ALL SELECT 'b' UNION ALL SELECT 'c')"
 say(limit=run(db, "SELECT thinkthen_max_requests(2)"), warm=run(db, rows))
 """, environment(backend))
@@ -180,6 +184,7 @@ say(limit=run(db, "SELECT thinkthen_max_requests(2)"), warm=run(db, rows))
     backend = Backend()
     held = child("""
 db = connect()
+db.execute("SELECT thinkthen_batch(1)")
 rows = "SELECT thinkthen_warm('Is it red?', t) FROM (SELECT 'a' t UNION ALL SELECT 'b' UNION ALL SELECT 'c')"
 say(limit=run(db, "SELECT thinkthen_max_requests(2)"), clear=run(db, "SELECT thinkthen_max_requests(NULL)"), warm=run(db, rows))
 """, environment(backend))
@@ -301,27 +306,50 @@ say(total=run(db, "SELECT thinkthen_max_requests_total(3)"), rows=run(db, "SELEC
     expect(backend.close(), 3, "sends")
 
 
-def test_a_warm_flush_sends_only_the_remaining_total() -> None:
-    """Decision 17: with 100 of 103 left, a 150-row flush sends exactly 100."""
+def test_a_packed_warm_spends_one_actual_attempt_without_a_partial_count() -> None:
+    """Four records form two requests; total one admits one and returns no count."""
+    import hashlib
+
     backend = Backend()
     env = environment(backend)
-    held = child("""
+    unlimited = env["SCRATCH"] + "/unlimited"
+    limited = env["SCRATCH"] + "/limited"
+    expected = [
+        r'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"red one\". Is it red?"},"q2":{"type":"noul","instructions":"The text is \"red two\". Is it red?"}}}',
+        r'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"red three\". Is it red?"},"q2":{"type":"noul","instructions":"The text is \"red four\". Is it red?"}}}',
+    ]
+    code = """
 db = connect()
-db.execute("SELECT thinkthen_max_requests_total(103)")
-spent = [run(db, f"SELECT thinkthen_decide('Is it red?', 'door {at}')") for at in range(3)]
+db.execute("SELECT thinkthen_batch(2)")
+db.execute("SELECT thinkthen_cache(NULL)")
+db.execute("SELECT thinkthen_max_retries(0)")
+db.execute("SELECT thinkthen_record(?)", (os.environ["RECORD"],))
+if os.environ["TOTAL"] == "1":
+    db.execute("SELECT thinkthen_max_requests_total(1)")
 db.execute("CREATE TABLE t(body TEXT)")
-db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(150)])
-say(spent=spent, warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"), next=run(db, "SELECT thinkthen_decide('Is it red?', 'door 0')"))
-""", env)
-    expect(held, {"spent": [[[1]]] * 3, "warm": "thinkthen usage: this warm pass stopped at the remaining total of 100 requests (thinkthen_max_requests_total)",
-                  "next": SPENT.format(103)}, "the calls: a spent total refuses even a cached answer")
-    expect(backend.count(), 103, "sends")
-    again = child("""
-db = connect()
-say(row=run(db, "SELECT thinkthen_decide('Is it red?', 'row 0')"))
-""", env)
-    expect(again, {"row": [[1]]}, "a judged row of the cut warm, with no total in a new process")
-    expect(backend.close(), 103, "sends: the judged part stayed in the cache")
+db.executemany("INSERT INTO t VALUES (?)", [("red one",), ("red two",), ("red three",), ("red four",)])
+say(warm=run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t"),
+    usage=json.loads(run(db, "SELECT thinkthen_usage()")[0][0]))
+"""
+    def records(folder: str) -> dict[str, dict]:
+        return {path.stem: json.loads(path.read_text()) for path in pathlib.Path(folder).glob("*.json")
+                if not path.name.startswith(".")}
+    def digest(body: str) -> str:
+        url = backend.base("generic") + "/systemone"
+        return hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body.encode()).hexdigest()
+    wanted = {digest(body): json.loads(body) for body in expected}
+    first = child(code, env | {"RECORD": unlimited, "TOTAL": "0"})
+    expect(first["warm"], [[4]], "all four records answered")
+    expect(first["usage"]["requests_sent"], 2, "two packed attempts")
+    got = records(unlimited)
+    expect({name: one["request"] for name, one in got.items()}, wanted, "two exact bodies and digests")
+    second = child(code, env | {"RECORD": limited, "TOTAL": "1"})
+    expect(second["warm"], SPENT.format(1), "fatal spent-total Usage with no aggregate count")
+    expect(second["usage"]["requests_sent"], 1, "one admitted transport attempt")
+    got = records(limited)
+    expect(len(got), 1, "one recorded request")
+    expect(next(iter(got.items()))[0] in wanted, True, "admitted body is one of the two pinned requests")
+    expect(backend.close(), 3, "two unlimited and one total-limited attempts")
 
 
 def test_cache_names_a_folder_and_null_turns_it_off() -> None:

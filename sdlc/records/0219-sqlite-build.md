@@ -1,0 +1,13 @@
+# 0219 SQLite runtime checkpoint
+
+Status: WIP source checkpoint, before fresh code review or installed package acceptance. Base merge `0656b469` includes main `2b388453`. The local Linux x86-64 release library from this source is `databases/sqlite/target/release/libthinkthen0.so`, SHA-256 `a9476dd4bec05ffeb445125b8e30e46344152214740df030004059b8fa60f01d`; this is a development library, not a packaged artifact.
+
+## Passing slice
+
+The runtime registers `thinkthen_batch` and the final fourth context argument for eligible scalars and warm. Warm groups first-seen `(question, context)` pairs, deduplicates evidence, retains one absolute deadline, and lets the shared planner and transport `SendBudget` count actual attempts. Ordinary scalar `worker::run` keeps the historical spent-total preflight, including cache hits; aggregate `run_until` skips only that row-based shortcut. SQLite `try_details` keeps ADR 0080's safe Usage/Local/Backend row value, including spent total. The contextual one-member details path uses `details_many_with` and `to_scalar_json` without adding an `input` field to the scalar result.
+
+`cargo check --locked --offline`, strict SQLite Clippy with all targets/features, and a release build with the home path remapped passed under the lane lock. Selected host files passed: `test_values.py` 13, `test_settings.py` 16, `test_try_budget.py` 6, `test_files.py` 4, `test_deadline.py` 3, `test_interrupt.py` 9. These use the pinned SQLite 3.50.0 host and the development library. The new four-row total-one warm proof pins two two-member bodies and digests, observes one admitted attempt, the exact spent-total error and no aggregate count. The prior 150-row row-equals-attempt assertion was deleted in favor of that proof. The old `test_try_budget.py` safe spent-total assertion remains passing after the coordinator corrected the copied fatal-DuckDB instruction. The held throttle and cancellation fixtures now use batch two; old exact single-record cases select batch one.
+
+## Open contract conflict
+
+`test_slide.py::test_the_slide_runs_as_drawn` fails on this library: unchanged slide output is correct, but the listener counts **6**, not **5**. Default warm packing sends one request for the five rows; five subsequent singleton scalar reads send again. The accepted ticket and SQLite README promise warm-to-scalar cache reuse, while B0 caches by complete request digest and treats co-members as answer-changing evidence. Neither the old assertion nor the shared cache policy was changed. No package, full gate, provider call, cross-platform proof, or B13e completion is claimed. The follow-up investigation will pin the old and packed digests and determine a safe staged outcome with the cache lane.
