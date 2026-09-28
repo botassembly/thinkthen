@@ -9,6 +9,7 @@
 namespace duckdb {
 
 struct SessionSettings {
+	std::optional<string> batch;
 	int64_t throttle;
 	int64_t max_requests;
 	int64_t max_request_bytes;
@@ -29,7 +30,7 @@ struct SessionSettings {
 			return value ? reinterpret_cast<const uint8_t *>(value->data()) : nullptr;
 		};
 		const auto length = [](const std::optional<string> &value) { return value ? value->size() : 0; };
-		return {throttle, max_requests, max_request_bytes, max_requests_total,
+		return {bytes(batch), length(batch), throttle, max_requests, max_request_bytes, max_requests_total,
 		        cache ? reinterpret_cast<const uint8_t *>(cache->data()) : nullptr,
 		        cache ? cache->size() : 0, cache_allowed,
 		        bytes(model), length(model), timeout, max_retries, bytes(profile), length(profile),

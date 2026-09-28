@@ -4,7 +4,6 @@ use std::io::Write;
 
 use super::{Failure, after_signal, say};
 use crate::core::NAME;
-use crate::engine::error::TransportKind;
 
 pub(super) fn report(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     let Failure::Stopped {
@@ -25,23 +24,12 @@ pub(super) fn report(failure: &Failure, writer: &mut dyn Write) -> Option<u8> {
     }
     let (code, reason) = match cause.as_ref() {
         Failure::BatchFailed { last, cause } => {
-            let (code, said) = if matches!(
-                cause.as_ref(),
-                Failure::Transport(TransportKind::Timeout)
-            ) {
-                (
-                    4,
-                    "the backend timed out; lower --batch or --max-request-bytes, or increase --timeout".to_owned(),
-                )
-            } else {
-                let mut written = Vec::new();
-                let code = say(cause, &mut written);
-                let written = String::from_utf8_lossy(&written);
-                let said = written.trim_end();
-                let prefix = format!("{NAME}: ");
-                let said = said.strip_prefix(&prefix).unwrap_or(said);
-                (code, said.to_owned())
-            };
+            let mut written = Vec::new();
+            let code = say(cause, &mut written);
+            let written = String::from_utf8_lossy(&written);
+            let said = written.trim_end();
+            let prefix = format!("{NAME}: ");
+            let said = said.strip_prefix(&prefix).unwrap_or(said);
             (
                 code,
                 format!("the request for records {at} to {last} failed: {said}; "),

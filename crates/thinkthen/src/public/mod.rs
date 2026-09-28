@@ -14,6 +14,7 @@ mod engine;
 mod error;
 #[cfg(feature = "polars")]
 mod frame;
+mod native_batch;
 mod options;
 mod question;
 mod recognize;
@@ -30,6 +31,7 @@ pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
 #[cfg(feature = "polars")]
 pub use frame::PolarsEngine;
+pub use native_batch::RecoverableDetails;
 pub(crate) use options::SendReservation;
 pub use options::{BatchSetting, CallOptions, CancelToken, SendBudget, SendBudgetDenial};
 pub use question::{

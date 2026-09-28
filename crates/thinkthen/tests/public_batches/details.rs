@@ -59,6 +59,14 @@ fn dynamic_details_keep_original_input_and_one_batch_receipt() {
         );
         assert_eq!(json["meta"]["batch"]["records"], 2);
         assert_eq!(json["meta"]["batch"]["position"], position + 1);
+        let scalar: serde_json::Value =
+            serde_json::from_str(&row.value().to_scalar_json()).expect("scalar detail JSON");
+        assert!(
+            scalar.get("input").is_none(),
+            "scalar detail has no record input"
+        );
+        assert_eq!(scalar["meta"]["batch"]["records"], 2);
+        assert_eq!(scalar["meta"]["batch"]["position"], position + 1);
         assert_eq!(
             json["meta"]["requests_sent"],
             if position == 0 { 1 } else { 0 }

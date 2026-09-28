@@ -14,7 +14,8 @@
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
-use thinkthen::{CallOptions, CancelToken, Engine, EngineBuilder, Error, SendBudget};
+use std::num::NonZeroUsize;
+use thinkthen::{BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, SendBudget};
 
 use crate::errors::{RowError, usage};
 
@@ -79,6 +80,36 @@ pub(crate) fn options<'a>(
             .map_err(|error| RowError::from(error).text)?
     };
     Ok(options.cancel(token).send_budget(budget, limit))
+}
+
+/// C++ scalar and warm calls read this session's batch cap and literal context.
+pub(crate) fn options_for<'a>(
+    deadline_ms: i64,
+    token: &'a CancelToken,
+    total: Option<i64>,
+    batch: Option<&str>,
+    context: Option<&'a str>,
+) -> Result<CallOptions<'a>, String> {
+    let mut options = options(deadline_ms, token, total)?;
+    if let Some(batch) = batch {
+        let setting = if batch == "max" {
+            BatchSetting::Max
+        } else if !batch.is_empty() && batch.bytes().all(|byte| byte.is_ascii_digit()) {
+            let count = batch
+                .parse::<usize>()
+                .ok()
+                .and_then(NonZeroUsize::new)
+                .ok_or_else(|| usage("batch takes max or a whole number of at least 1"))?;
+            BatchSetting::Records(count)
+        } else {
+            return Err(usage("batch takes max or a whole number of at least 1"));
+        };
+        options = options.batch(setting);
+    }
+    if let Some(context) = context {
+        options = options.context(context);
+    }
+    Ok(options)
 }
 
 #[allow(

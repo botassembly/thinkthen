@@ -192,6 +192,43 @@ fn persistence_failure_warns_once_after_the_unchanged_judgment() {
     assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-warning-key"));
 }
 
+#[cfg(unix)]
+#[test]
+fn a_zero_byte_month_keeps_its_bytes_and_names_the_file_in_the_writer_warning() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let root = folder("zero-byte-usage-month");
+    let usage_folder = root.join("thinkthen-usage");
+    fs::create_dir_all(&usage_folder).expect("usage folder");
+    fs::set_permissions(&usage_folder, fs::Permissions::from_mode(0o700)).expect("private folder");
+    let lock = usage_folder.join(".lock");
+    let month = usage_folder.join("2026-08.json");
+    fs::write(&lock, b"").expect("stable lock");
+    fs::write(&month, b"").expect("interrupted month");
+    for file in [&lock, &month] {
+        fs::set_permissions(file, fs::Permissions::from_mode(0o600)).expect("private file");
+    }
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
+    let output = run(
+        &["decide", "asks for a refund", "--no-cache"],
+        &[
+            ("THINKTHEN_BASE_URL", listener.base()),
+            ("THINKTHEN_API_KEY", "secret-zero-byte-key"),
+            ("XDG_CACHE_HOME", root.to_str().expect("cache root")),
+        ],
+    )
+    .expect("judgment");
+    assert_eq!(output.status.code(), Some(0));
+    assert_eq!(output.stdout, b"true\n");
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: usage counters could not be updated; local usage file 2026-08.json has invalid contents\n"
+    );
+    assert_eq!(fs::read(&month).expect("unchanged month"), b"");
+    assert!(!usage_folder.join("retries-2026-08.json").exists());
+}
+
 /// Another process holding the usage lock stops no request: all 16 jobs reach
 /// the listener while the lock is held, and the totals land once it lets go.
 #[cfg(unix)]

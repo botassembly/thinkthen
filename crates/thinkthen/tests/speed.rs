@@ -90,8 +90,8 @@ fn the_speed_gate_holds_and_names_each_fault() {
             "speed: find is listed for ticket B99 but sent 1 request for 12 items. Remove its entry.\n",
         ),
         (
-            planted("choose", r#""number":null"#, r#""number":"0141""#),
-            "speed: choose is listed for ticket 0141, which has landed. Remove its entry.\n",
+            planted("recognize", r#""number":null"#, r#""number":"0141""#),
+            "speed: recognize is listed for ticket 0141, which has landed. Remove its entry.\n",
         ),
     ];
     for (list, sentence) in cases {

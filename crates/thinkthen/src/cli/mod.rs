@@ -110,8 +110,15 @@ pub fn entry() -> ExitCode {
     };
     if environment.usage().finish() {
         let mut writer = stderr.lock();
-        let _unwritten = writeln!(writer, "thinkthen: usage counters could not be updated; check the usage folder permissions and free space")
-            .and_then(|()| writer.flush());
+        let advice = environment.usage().failed_file().map_or_else(
+            || "check the usage folder permissions and free space".to_owned(),
+            |(name, category)| format!("local usage file {name} has {category}"),
+        );
+        let _unwritten = writeln!(
+            writer,
+            "thinkthen: usage counters could not be updated; {advice}"
+        )
+        .and_then(|()| writer.flush());
     }
     if wants_facts {
         let snapshot = environment.usage().run_snapshot();
