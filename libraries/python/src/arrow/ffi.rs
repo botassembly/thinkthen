@@ -17,7 +17,7 @@ use std::ffi::{CStr, c_char, c_int, c_void};
 use std::ptr;
 use std::sync::Arc;
 
-use crate::diagnostics::host;
+use crate::diagnostics::{host, host_owned};
 use pyo3::prelude::*;
 use pyo3::types::PyCapsule;
 
@@ -165,9 +165,11 @@ impl Imported {
         if host(|| value.hasattr("__arrow_c_stream__"))? {
             return Self::stream(value, true);
         }
-        let pair = host(|| value.call_method0("__arrow_c_array__"))?;
+        let pair = host_owned(host(|| value.call_method0("__arrow_c_array__"))?);
         let (schema, array): (Bound<'_, PyCapsule>, Bound<'_, PyCapsule>) =
             host(|| pair.extract())?;
+        let schema = host_owned(schema);
+        let array = host_owned(array);
         let schema = schema
             .pointer_checked(Some(SCHEMA))?
             .as_ptr()
@@ -203,7 +205,7 @@ impl Imported {
 
     fn stream(value: &Bound<'_, PyAny>, gated: bool) -> PyResult<Self> {
         let py = value.py();
-        let capsule = host(|| value.call_method0("__arrow_c_stream__"))?;
+        let capsule = host_owned(host(|| value.call_method0("__arrow_c_stream__"))?);
         let capsule = capsule.cast::<PyCapsule>()?;
         let source = capsule
             .pointer_checked(Some(STREAM))?

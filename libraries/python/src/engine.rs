@@ -4,7 +4,7 @@
 //! the detachable worker. The package names the verb, so one method serves
 //! each shape: one text, many texts, an ordering, and the three set calls.
 
-use crate::diagnostics::host;
+use crate::diagnostics::{host, host_error};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict};
 use thinkthen::{
@@ -114,7 +114,7 @@ fn cached(builder: EngineBuilder, cache: &Bound<'_, PyAny>) -> PyResult<EngineBu
             builder.no_cache()
         });
     }
-    let folder: std::path::PathBuf = host(|| cache.extract()).map_err(|_| usage(py, CACHE))?;
+    let folder: std::path::PathBuf = host_error(host(|| cache.extract()), || usage(py, CACHE))?;
     builder.cache_at(folder).map_err(|error| raised(py, &error))
 }
 
@@ -147,7 +147,7 @@ fn folder_path(
     refusal: &'static str,
 ) -> PyResult<Option<std::path::PathBuf>> {
     value
-        .map(|value| host(|| value.extract()).map_err(|_| usage(py, refusal)))
+        .map(|value| host_error(host(|| value.extract()), || usage(py, refusal)))
         .transpose()
 }
 

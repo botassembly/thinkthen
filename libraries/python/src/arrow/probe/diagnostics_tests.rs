@@ -1,6 +1,6 @@
 //! One isolated child observes owned panic secrecy and host callback delegation.
 
-use std::ffi::c_void;
+use std::ffi::{CString, c_void};
 use std::io::Write as _;
 use std::ptr;
 
@@ -16,6 +16,10 @@ const CHILD: &str = "THINKTHEN_PYTHON_PANIC_CHILD";
 const STRING: &str = "python-owned-string-payload-marker";
 const DROP: &str = "python-owned-drop-payload-marker";
 const CONVERSION: &str = "python-conversion-marker";
+const NEXT: &str = "python-next-marker";
+const ITEM_DROP: &str = "python-item-finalize-marker";
+const BAD_DROP: &str = "python-bad-item-finalize-marker";
+const ITER_DROP: &str = "python-iterator-finalize-marker";
 const SIGNAL: &str = "python-signal-marker";
 const INGRESS: &str = "arrow-ingress-marker";
 const RELEASE: &str = "arrow-release-marker";
@@ -30,6 +34,11 @@ impl Drop for Exploding {
 
 #[pyclass]
 struct HostIterable;
+
+#[pyfunction]
+fn host_callback_marker(marker: &str) {
+    let _ = std::panic::catch_unwind(|| panic!("{marker}"));
+}
 
 #[pymethods]
 impl HostIterable {
@@ -102,9 +111,72 @@ fn a_caught_python_panic_delegates_each_host_callback() {
         assert!(!text.contains(DROP), "{text}");
     }
     let stderr = String::from_utf8_lossy(&output.stderr);
-    for marker in [CONVERSION, SIGNAL, INGRESS, RELEASE, "host-thread-marker"] {
+    for marker in [
+        CONVERSION,
+        NEXT,
+        ITEM_DROP,
+        BAD_DROP,
+        ITER_DROP,
+        SIGNAL,
+        INGRESS,
+        RELEASE,
+        "host-thread-marker",
+    ] {
         assert!(stderr.contains(&format!("{marker}\n")), "{stderr}");
     }
+}
+
+fn callback_records(py: Python<'_>) {
+    let source = CString::new(
+        r#"
+class Item(str):
+    def __del__(self):
+        host_callback_marker("python-item-finalize-marker")
+class Bad:
+    def __del__(self):
+        host_callback_marker("python-bad-item-finalize-marker")
+class Iterator:
+    def __init__(self, bad):
+        self.bad = bad
+        self.used = False
+    def __iter__(self):
+        return self
+    def __next__(self):
+        if self.used:
+            raise StopIteration
+        self.used = True
+        host_callback_marker("python-next-marker")
+        return Bad() if self.bad else Item("x")
+    def __del__(self):
+        host_callback_marker("python-iterator-finalize-marker")
+class Records:
+    def __init__(self, bad):
+        self.bad = bad
+    def __iter__(self):
+        return Iterator(self.bad)
+"#,
+    )
+    .expect("callback source");
+    let callbacks =
+        PyModule::from_code(py, &source, c"callbacks.py", c"callbacks").expect("callback module");
+    callbacks
+        .add_function(wrap_pyfunction!(host_callback_marker, &callbacks).expect("marker"))
+        .expect("install marker");
+    let records = callbacks
+        .getattr("Records")
+        .expect("records class")
+        .call1((false,))
+        .expect("records");
+    assert_eq!(
+        crate::guard(py, || crate::input::texts(&records)).expect("records read"),
+        ["x"]
+    );
+    let invalid = callbacks
+        .getattr("Records")
+        .expect("records class")
+        .call1((true,))
+        .expect("invalid records");
+    assert!(crate::guard(py, || crate::input::texts(&invalid)).is_err());
 }
 
 fn child() {
@@ -133,6 +205,14 @@ fn child() {
                 error.value(py).to_string(),
                 "defect: the Python binding panicked"
             );
+            assert!(
+                !error
+                    .value(py)
+                    .getattr("retryable")
+                    .expect("retry flag")
+                    .extract::<bool>()
+                    .expect("boolean retry flag")
+            );
         }
         assert!(crate::guard(py, || Ok::<_, PyErr>(7)).is_ok());
 
@@ -148,6 +228,7 @@ fn child() {
             crate::input::texts(iterable.bind(py).as_any()).map(|_| ())
         });
         assert!(converted.is_err());
+        callback_records(py);
         let observed = crate::guard(py, || {
             let held = Imported::column(producer.bind(py).as_any())?;
             let worker = std::thread::spawn(move || crate::caught(|| drop(held)));

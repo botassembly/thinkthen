@@ -148,6 +148,7 @@ fn wait<T: Send>(
         if let Err(signal) = host(|| py.check_signals()) {
             internal.cancel();
             return Err(if signal.is_instance_of::<PyKeyboardInterrupt>(py) {
+                host(|| drop(signal));
                 raise(py, ErrorKind::Cancelled, INTERRUPTED, false)
             } else {
                 signal
