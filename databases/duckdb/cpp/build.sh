@@ -24,6 +24,17 @@ export RUSTFLAGS CFLAGS CXXFLAGS
 if [ "$HOST_TARGET" = aarch64-apple-darwin ]; then
 	MACOSX_DEPLOYMENT_TARGET=15.0
 	export MACOSX_DEPLOYMENT_TARGET
+	# A final Mach-O may report 15.0 even when prebuilt Rust objects require
+	# a newer OS. Refuse that sysroot before it can enter a release archive.
+	RUST_STDLIB=$(find "$(rustc --print sysroot)/lib/rustlib/$HOST_TARGET/lib" -name 'libstd-*.rlib' -print -quit)
+	[ -n "$RUST_STDLIB" ] || { echo 'duckdb: the pinned Rust standard library is missing' >&2; exit 77; }
+	if ! otool -l "$RUST_STDLIB" | awk '
+		$1 == "minos" { found = 1; if ($2 + 0 > 15.0) bad = 1 }
+		END { exit !found || bad }
+	'; then
+		echo 'duckdb: the Rust standard library requires macOS newer than 15.0' >&2
+		exit 1
+	fi
 fi
 VERSION=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 [ -n "$VERSION" ] || { echo 'duckdb: the ThinkThen version is missing' >&2; exit 1; }

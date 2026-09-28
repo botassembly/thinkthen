@@ -7,7 +7,7 @@
 //! call, so a signal that ended one query never reaches the next (R1-21).
 
 use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 #[path = "signal/ffi.rs"]
@@ -28,7 +28,12 @@ static SIGNAL_AT: AtomicU64 = AtomicU64::new(0);
 
 /// Scalar invokes, warm finalizes, and table scans running now. A query that
 /// is still reading its chunk counts (R6-6).
-static INVOKING: AtomicUsize = AtomicUsize::new(0);
+// The high half identifies one uninterrupted interval with live invokes.
+// The low half counts them. Changing both in one CAS prevents a new query
+// from inheriting the previous query's signal wave at the last-drop boundary.
+static INVOKING: AtomicU64 = AtomicU64::new(0);
+const COUNT_MASK: u64 = u32::MAX as u64;
+const CLOCK_MASK: u64 = (1 << 40) - 1;
 
 /// A signal landing this close before an invoke begins belongs to the query
 /// that invoke serves: its other threads were running when it landed.
@@ -55,9 +60,16 @@ pub(crate) fn start_clock() {
 
 /// The handler's work, in plain atomics.
 fn on_signal() {
+    // Capture the active interval before publishing the signal count. An
+    // invoke starting after this snapshot must not inherit this signal.
+    let active = INVOKING.load(Ordering::SeqCst);
     SIGNALS.fetch_add(1, Ordering::SeqCst);
-    if INVOKING.load(Ordering::SeqCst) > 0 {
-        SIGNAL_AT.store(now_ms(), Ordering::SeqCst);
+    if active & COUNT_MASK != 0 {
+        let epoch = active >> 32;
+        SIGNAL_AT.store(
+            ((epoch & 0x00ff_ffff) << 40) | (now_ms() & CLOCK_MASK),
+            Ordering::SeqCst,
+        );
     }
 }
 
@@ -66,15 +78,27 @@ fn on_signal() {
 pub(crate) struct Invoke {
     signals: u64,
     started: u64,
+    epoch: u64,
 }
 
 impl Invoke {
     /// Count the calling invoke as running.
     pub(crate) fn begin() -> Self {
-        INVOKING.fetch_add(1, Ordering::SeqCst);
+        let mut active = INVOKING.load(Ordering::SeqCst);
+        let epoch = loop {
+            let count = active & COUNT_MASK;
+            assert!(count < COUNT_MASK, "too many simultaneous DuckDB invokes");
+            let epoch = (active >> 32).wrapping_add(u64::from(count == 0)) & COUNT_MASK;
+            let next = (epoch << 32) | (count + 1);
+            match INVOKING.compare_exchange(active, next, Ordering::SeqCst, Ordering::SeqCst) {
+                Ok(_) => break epoch,
+                Err(observed) => active = observed,
+            }
+        };
         Self {
             signals: SIGNALS.load(Ordering::SeqCst),
             started: now_ms(),
+            epoch,
         }
     }
 
@@ -85,12 +109,23 @@ impl Invoke {
             return true;
         }
         let at = SIGNAL_AT.load(Ordering::SeqCst);
-        at != 0 && at <= self.started && self.started - at < WAVE_MS
+        at != 0
+            && (at >> 40) == (self.epoch & 0x00ff_ffff)
+            && (self.started & CLOCK_MASK).wrapping_sub(at & CLOCK_MASK) < WAVE_MS
     }
 }
 
 impl Drop for Invoke {
     fn drop(&mut self) {
-        INVOKING.fetch_sub(1, Ordering::SeqCst);
+        let mut active = INVOKING.load(Ordering::SeqCst);
+        loop {
+            let count = active & COUNT_MASK;
+            debug_assert!(count > 0);
+            let next = (active & !COUNT_MASK) | (count - 1);
+            match INVOKING.compare_exchange(active, next, Ordering::SeqCst, Ordering::SeqCst) {
+                Ok(_) => break,
+                Err(observed) => active = observed,
+            }
+        }
     }
 }
