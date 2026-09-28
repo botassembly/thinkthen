@@ -1,6 +1,6 @@
 # A run that sends nothing binds the default cache to its address
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 06, finding I-2. Does not block 0.1: ticket 0124 weighed the same trade and deferred it, and the bind order it kept needs Ian to change. Ian can overturn this placement.
+Status: closed after fresh High review accepted `2b7ca868be955e479f610e8075a84d4a4e66603d`. Filed 2026-09-26 by the queue owner from local experiment 273, report 06, finding I-2. Does not block 0.1: ticket 0124 weighed the same trade and deferred it, and the bind order it kept needs Ian to change. Ian can overturn this placement.
 
 ## What happens
 
@@ -32,3 +32,7 @@ A user whose default cache was bound by a run that sent nothing can see the bind
 ## Current reconciliation
 
 The original no-key reproduction is fixed by 0228; 0246 and 0250 fix two further deterministic pre-admission refusals. Register 10's universal no-touch and recoverable bound-address demands were explicitly declined after High review of 0327a13d. This issue remains open for its different Done when: a status binding indicator and a safe existing-binding recovery instruction. Current status has no marker comparison, and existing refusal advice names workarounds rather than clearing the marker. Fresh High source reconciliation confirmed this distinction. The work plan now gives this issue its own row; no status or unbind feature is claimed.
+
+## Closure
+
+Ticket0253 meets this issue’s distinct Done when. Read-only human and JSON status distinguish missing, unbound, legacy, matching, mismatched, unavailable and disabled caches. The default mismatch refusal tells the user to stop all folder users, preserve the entire folder by moving it aside, then retry at its former path or choose a fresh folder. It never deletes a marker from existing entries. Fresh High review accepted2b7ca868 after independently passing eight status, twelve recorder identity and fourteen cache identity cases. The writer’s binding gate remains authoritative. The source’s public documentation follow-up stays recorded with marketing; no broader register10 guarantee is inferred.

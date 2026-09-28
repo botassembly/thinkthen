@@ -18,21 +18,21 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Current open counts after the release hygiene fix
 
-After accepted 0248 correctness and measurement and the private-name cleanup, the live queue has 67 to-do rows after three reviewed platform issue closures, two explicit cache dispositions and separate mapping of an existing status/recovery criterion. The original private-name tracked-tree issue also moved from blocked to done; its go-live history reset remains with 0128 Phase 4. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
+After accepted 0248 correctness and measurement and the private-name cleanup, the live queue has 71 to-do rows after three reviewed platform issue closures, two explicit cache dispositions, separate mapping of an existing status/recovery criterion, six tuning-loop intake rows and the reviewed shared-conformance and cache-status closures. The original private-name tracked-tree issue also moved from blocked to done; its go-live history reset remains with 0128 Phase 4. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |
 | Platform qualification and release checks |9| Reuse accepted artifact proof; qualify actual runners separately. Private-name recurrence is fixed and independently verified. |
-| Cross-surface contracts and replay |5| Reviewed preparation; 0247 landed DuckDB complete choose/score/tag with Linux installed proof. All four target routes now have selected installed evidence; native Intel/macOS15 qualification and the broader file-form map remain. |
+| Cross-surface contracts and replay |4| Reviewed preparation; 0247 landed DuckDB complete choose/score/tag with Linux installed proof. All four target routes now have selected installed evidence; native Intel/macOS15 qualification and the broader file-form map remain. |
 | Recognition, relations and batching |11| Preparation accepted; retain distinct measurement, text-cost and record-batching outcomes. |
 | Cache and replay |5| Preparation accepted; 0246 landed the demonstrated zero-budget first-use correction. Broader post-admission and diagnostic criteria remain. |
-| Accounting, timing and budgets |8| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
+| Accounting, timing and budgets |9| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
 | Record failure handling |4| Preparation accepted64749d91. A numbered design must settle the error carrier, recoverable classes, exit precedence and failed-batch policy. |
-| Question controls and uncertainty |4| Refresh accepted rank and environment decisions before proposing new grammar. |
+| Question controls and uncertainty |8| Refresh accepted rank and environment decisions before proposing new grammar. |
 | Documentation, trust and launch usability |8| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
 | New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
-| **Total** |**67**| Counts are tracked rows, not 72 independent builds. |
+| **Total** |**71**| Counts are tracked rows, not independent builds. |
 
 ## Later intake
 
@@ -46,7 +46,7 @@ Main through06b0803e adds three distinct issues after the75-row snapshot. The th
 
 ## Current preparation
 
-Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 55 rows: the prior49, four question-control rows acceptedd1f429f4, the separately mapped cache status/recovery issue checked by the High reviewer, and the bounded test-retirement inventory. Eleven have closed or been explicitly retired after review; 44 remain open. Fresh review of five test groups found no safe retirement; the corrected evidence is in `../records/2026-09-28-bounded-test-retirement-inventory.md`. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers 55 rows: the prior49, four question-control rows acceptedd1f429f4, the separately mapped cache status/recovery issue checked by the High reviewer, and the bounded test-retirement inventory. Thirteen have closed or been explicitly retired after review; 42 remain open. Fresh review of five test groups found no safe retirement; the corrected evidence is in `../records/2026-09-28-bounded-test-retirement-inventory.md`. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 
@@ -204,3 +204,7 @@ Twelve rows include the J8 umbrella, ten consumer-proof issues and C++. They are
 ## Reviewed closure after this snapshot
 
 Fresh review798cbaef accepts the compiled proof for register110,112,113 and the shared-rule issue. The live table retires all four as already-fixed non-issues, without claiming four new runtime fixes. 0245 then fixes register111 in code. Recognition/batching now has11 open rows from the original16, and the live queue has73 to do. No other original row is removed by this update. The three intake rows remain open.
+
+## Tuning-loop intake from bbde1e9b
+
+Six newly filed issues are added to the live item table, not the historical75-row snapshot. The retained preparer owns one bounded current-source pass: legacy recording-folder binding joins cache; run cost joins accounting; repeat, per-case audit, audit output paths and uncertain-case selection join question controls. It must compare every original criterion with existing facts, audit joins, marker trust and accepted decisions before proposing duplicate closure or a new feature. None is yet counted as reviewed preparation. Prioritize corrections required for0.1 over optional tuning features.

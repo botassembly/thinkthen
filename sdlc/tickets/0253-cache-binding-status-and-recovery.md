@@ -1,12 +1,12 @@
 ---
-flow: design
+flow: build
 priority: 253
-opens: sdlc/issues/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md sdlc/records/0253-cache-binding-preflight.md
+opens: sdlc/issues/closed/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md sdlc/records/0253-cache-binding-preflight.md
 ---
 
 # 0253: Show cache binding and teach safe recovery
 
-Status: fresh independent High design review accepted `b88799641d2a95b70dc4364abfc2e88399d08b48`. The coordinator approves implementation under the Lanes claim. Public documentation remains held. Ian can overturn these routine choices within the original outcome. The issue remains open and post-0.1. [Preflight](../records/0253-cache-binding-preflight.md) traces main `4fc01f40`, source boundaries, states and proof. Root owns implementation claims and issue movement.
+Status: fresh independent High design review accepted `b88799641d2a95b70dc4364abfc2e88399d08b48`. The coordinator approves implementation under the Lanes claim. Public documentation remains held. Ian can overturn these routine choices within the original outcome. Fresh High code review accepted `2b7ca868be955e479f610e8075a84d4a4e66603d`; the implementation is integrated and its original issue closed. [Preflight](../records/0253-cache-binding-preflight.md) traces main `4fc01f40`, source boundaries, states and proof. Root owns implementation claims and issue movement.
 
 ## Outcome
 
@@ -14,7 +14,7 @@ Status: fresh independent High design review accepted `b88799641d2a95b70dc4364ab
 
 ## Evidence
 
-- **Starts from:** [the open issue](../issues/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md) explicitly requires a status binding indicator and a refusal that teaches how to clear an existing binding. Its no-key example is fixed by 0228, but its `Done when` is not. Experiment 284/register 10's broader literal demands were separately declined after High review of `0327a13d`.
+- **Starts from:** [the open issue](../issues/closed/2026-09-26-a-run-that-sends-nothing-binds-the-default-cache.md) explicitly requires a status binding indicator and a refusal that teaches how to clear an existing binding. Its no-key example is fixed by 0228, but its `Done when` is not. Experiment 284/register 10's broader literal demands were separately declined after High review of `0327a13d`.
 - **Keeps:** ticket 0065/ADR 0035's durable before-send, hash-only marker and first-writer rule; 0124's safely checked requested URL; ADR 0034's read-only, offline status and matching human/JSON facts; 0228/0246/0250's pre-admission refusals and gate precedence; Local/exit 5, no-send mismatch, key secrecy, existing bounded marker parse and entry bytes.
 - **Changes:** add an advisory, closed `cache_binding` human line and `cache.binding` JSON string under additive `thinkthen.status/1`, using the existing selected endpoint and shared cache-inspection gate. Before status reuses the marker reader, make its open no-follow/nonblocking against stat-to-open replacement, using the existing cache-entry pattern. Change only the default-cache mismatch sentence to teach whole-folder move after all users stop. No new mutating command, raw URL storage, marker migration, schema rename or library error change.
 - **Proof:** focused outside-in status matrix for disabled/unavailable/missing/unbound/legacy/matching/mismatched and invalid marker, exact human/JSON strings, unchanged folders and no key/network; one default-cache mismatch plus safe move-and-rebind path with counted zero sends on refusal; one controlled pre-open FIFO/symlink replacement regression at the actual shared marker reader, bounded by a child deadline. Existing post-open replacement, malformed/unsafe and first-writer tests remain. See preflight for exact state and file mapping.
@@ -32,4 +32,4 @@ After implementation and focused proof of **both** status and recovery wording, 
 
 ## What the build taught us
 
-No build has begun. Preparation found that status already resolves the effective endpoint and shares a folder-inspection path, while the marker reader is private to recorder. Fresh High review identified a missed stat-to-open FIFO/symlink hazard in that reader; its after-open identity checks alone are insufficient. The initial no-key anecdote is fixed; the status/recovery criteria remain. Read-only binding comparison, safe shared-reader open and a whole-folder operator move can satisfy them without making status a new binding authority or weakening the before-send marker. Record later build evidence here rather than treating this proposal as shipped behavior.
+The [build record](../records/0253-cache-binding-build.md) holds exact proof, source growth and remaining review work. The first outside-in JSON assertion failed on the absent binding field. A normal library build then showed that core's `Url` re-export is test-only; the implementation passes the already resolved `Backend` privately instead. Strict Clippy required a local cache-report helper when `status::gather` crossed 90 lines and `Result`-returning test helpers instead of lint suppressions. The controlled stat-to-open FIFO/symlink regression passes, while the existing after-open test remains. One parent cache-identity test pinned the old default refusal sentence outside the original file claim; main extended the claim and the exact assertion now passes with the 14-case slice. Public wording is recorded for marketing's later merge. The before-send marker, no-key first-use fix and retired register-10 disposition remain as accepted; neither this candidate nor the record closes the source issue before independent review.

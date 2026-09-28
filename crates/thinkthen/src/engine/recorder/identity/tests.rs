@@ -8,6 +8,8 @@ use crate::core::Url;
 use crate::engine::error::Error;
 use crate::engine::recorder::fault::{STORAGE_FAULT, StorageStage};
 
+#[cfg(unix)]
+use super::read_with_hooks;
 use super::{BackendIdentity, NAME, check, publish_at, read, read_after_open};
 
 static FOLDERS: AtomicU64 = AtomicU64::new(0);
@@ -209,6 +211,78 @@ fn symlink_unreadable_and_replaced_markers_are_storage_failures() {
         }),
         Err(Error::RecordingStorage)
     ));
+}
+
+#[cfg(unix)]
+#[test]
+fn replacement_between_marker_stat_and_open_never_follows_or_waits() {
+    use std::os::unix::fs::symlink;
+
+    for kind in ["fifo", "symlink"] {
+        let folder = folder(&format!("pre-open-{kind}"));
+        let path = marker(&folder);
+        let expected = identity("http://127.0.0.1:1/v1/systemone");
+        fs::write(&path, expected.written().expect("valid marker")).expect("initial marker");
+        let outside = folder.join("outside-private");
+        fs::write(&outside, b"outside-private-bytes").expect("outside bytes");
+        let replacement = folder.join("replacement");
+        if kind == "fifo" {
+            let output = crate::test_deadline::output(
+                crate::test_deadline::child::command("mkfifo", &[]).arg(&replacement),
+            )
+            .expect("mkfifo finishes");
+            assert!(output.status.success(), "mkfifo fixture");
+        } else {
+            symlink(&outside, &replacement).expect("replacement symlink");
+        }
+        let output = crate::test_deadline::output(
+            Command::new(std::env::current_exe().expect("test binary"))
+                .env_clear()
+                .args([
+                    "--ignored",
+                    "--exact",
+                    "engine::recorder::identity::tests::pre_open_replacement_child",
+                ])
+                .env("THINKTHEN_TEST_IDENTITY_FOLDER", &folder),
+        )
+        .expect("marker read did not block");
+        assert!(
+            output.status.success(),
+            "{kind}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8(output.stdout).expect("child test report");
+        assert!(stdout.contains("1 passed"), "{kind}: {stdout}");
+        assert!(
+            stdout.contains("pre_open_replacement_child"),
+            "{kind}: {stdout}"
+        );
+        assert_eq!(
+            fs::read(&outside).expect("outside unchanged"),
+            b"outside-private-bytes"
+        );
+    }
+}
+
+#[cfg(unix)]
+#[test]
+#[ignore = "run with a controlled stat-to-open replacement by the parent test"]
+fn pre_open_replacement_child() {
+    let Some(folder) = std::env::var_os("THINKTHEN_TEST_IDENTITY_FOLDER") else {
+        return;
+    };
+    let folder = PathBuf::from(folder);
+    let path = marker(&folder);
+    let result = read_with_hooks(
+        &path,
+        || {
+            fs::rename(&path, folder.join("original-marker")).expect("move original marker");
+            fs::rename(folder.join("replacement"), &path).expect("install replacement");
+        },
+        || {},
+    );
+    assert!(matches!(result, Err(Error::RecordingStorage)));
+    assert!(!format!("{result:?}").contains("outside-private-bytes"));
 }
 
 #[cfg(unix)]

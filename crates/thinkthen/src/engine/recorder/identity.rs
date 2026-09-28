@@ -93,12 +93,25 @@ fn sync_directory(folder: &Path) -> Result<(), Error> {
     cache_lock::sync_directory(folder).map_err(storage)
 }
 
-fn read(path: &Path) -> Result<Option<BackendIdentity>, Error> {
-    read_after_open(path, || {})
+pub(super) fn matches(folder: &Path, expected: &BackendIdentity) -> Result<Option<bool>, Error> {
+    read(&folder.join(NAME)).map(|found| found.map(|found| found == *expected))
 }
 
+fn read(path: &Path) -> Result<Option<BackendIdentity>, Error> {
+    read_with_hooks(path, || {}, || {})
+}
+
+#[cfg(test)]
 fn read_after_open(
     path: &Path,
+    after_open: impl FnOnce(),
+) -> Result<Option<BackendIdentity>, Error> {
+    read_with_hooks(path, || {}, after_open)
+}
+
+fn read_with_hooks(
+    path: &Path,
+    before_open: impl FnOnce(),
     after_open: impl FnOnce(),
 ) -> Result<Option<BackendIdentity>, Error> {
     let before = match fs::symlink_metadata(path) {
@@ -109,7 +122,8 @@ fn read_after_open(
     if before.file_type().is_symlink() || !before.is_file() {
         return Err(Error::RecordingStorage);
     }
-    let file = File::open(path).map_err(storage)?;
+    before_open();
+    let file = open_marker(path).map_err(storage)?;
     let opened = file.metadata().map_err(storage)?;
     if !opened.is_file() || !same_identity(&before, &opened) {
         return Err(Error::RecordingStorage);
@@ -131,6 +145,23 @@ fn read_after_open(
     BackendIdentity::read(&bytes)
         .map(Some)
         .map_err(|()| Error::RecordingStorage)
+}
+
+fn open_marker(path: &Path) -> io::Result<File> {
+    let mut options = fs::OpenOptions::new();
+    options.read(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt as _;
+        options.custom_flags(nix::libc::O_NOFOLLOW | nix::libc::O_NONBLOCK);
+    }
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt as _;
+        const FILE_FLAG_OPEN_REPARSE_POINT: u32 = 0x0020_0000;
+        options.custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+    }
+    options.open(path)
 }
 
 fn publish(folder: &Path, marker: &Path, expected: &BackendIdentity) -> Result<(), Error> {

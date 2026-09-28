@@ -1,0 +1,5 @@
+# Shared-conformance closure review
+
+Fresh independent Sol Medium review accepted `57409815eec253a92b991f0a82d5cab05f251134` for closure of the original shared-proof issue. The first pass found one citation error: the case-shape test was credited with running injected faults. The author named the private-facade replay runner for runtime fault execution and kept the inventory test’s actual role. The same reviewer accepted that sole correction.
+
+Original E4 permits a path or complete JSON. Tested complete JSON meets that alternative for the C and SQL plan routes whose optional named-file success is not separately proven. The current map accounts for retained host and internal-injection skips. It makes no full54-case result, plan-wide profile warning or native Intel/macOS15 qualification claim. Historical0205 counts remain intact. Root closes the original issue and updates the item table; public documentation stays held. No source or runtime test changed in this notes-only reconciliation.
