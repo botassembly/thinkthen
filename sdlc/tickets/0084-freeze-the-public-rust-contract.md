@@ -415,3 +415,11 @@ The optional `polars` feature adds two root names, `PolarsEngine` and the re-exp
 ## Amended 2026-09-27 (ticket 0148)
 
 The frozen `EngineBuilder` inventory above removes the ineffective `cache_bytes` setter and adds `timeout(Duration)`, `max_retries(u32)`, `profile(path)`, `record(path)`, and strict `replay(path)`. The builder applies the command's folder conflicts and passes the settings to the existing facade. No engine module changes. Ian can overturn these setters.
+
+## Amended 2026-09-28 (ticket 0211)
+
+`EngineBuilder::ca_bundle(self, path: impl AsRef<Path>) -> Result<Self, Error>` adds explicit replacement TLS roots. An absolute path is required at the setter; `build` reads and validates the bounded certificate-only PEM. `EngineBuilder::from_env` captures optional `THINKTHEN_CA_BUNDLE`, and a later explicit setter overrides that path. A bare builder reads no ambient setting. The engine retains parsed roots across clone, model selection and fork reconstruction while certificate and hostname verification remain enabled. This adds no new public error kind. The accepted [0211 design](0211-private-tls-roots.md) owns the outcome; Ian can overturn it.
+
+## Amended 2026-09-28 (ticket 0212)
+
+The historical 0.1 inventory above predates the accepted [0212 contract](0212-rust-library-batching.md) and [ADR 0089](../planning/adr/0089-rust-calls-carry-facts.md). Eager engine calls now return `Call<T>` with `value()`, `into_value()` and `facts()`. A started failed call exposes facts through `Error::facts()`. Lazy `Batch<T>` keeps its iterator shape and exposes final facts after exhaustion or its terminal error. `EngineBuilder::batch`, `CallOptions::batch` and `CallOptions::context` select eligible many-record requests; `choose_many`, `score_many` and `tag_many` join the bulk methods. Borrowed question and row observations expose bounded detail. The original code block remains a dated inventory, not the current signature reference. The Rust [README](../../libraries/rust/README.md) and source define the current spelling. Ticket 0212's default-Max iterator-pause amendment and code review remain open at this checkpoint; this dated pointer does not close them or change another surface.

@@ -62,7 +62,7 @@ fn details(
             ),
         }
         .map_err(|error| engines::call_error(error, scope.total).text)?;
-        frame(&mut bytes, &result.to_json())?;
+        frame(&mut bytes, &result.into_value().to_json())?;
     }
     Ok(bytes)
 }
@@ -194,7 +194,7 @@ fn try_answer(
     }
     Ok(format!(
         "{{\"status\":\"answered\",\"details\":{}}}",
-        details.to_json()
+        details.into_value().to_json()
     ))
 }
 

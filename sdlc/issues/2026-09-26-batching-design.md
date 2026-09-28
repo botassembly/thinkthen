@@ -382,6 +382,7 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B8 | `choose` batches | The pick-one question per record, and `--context` for `choose`. It removes `choose` from S1's list | Test 11, plus one recorded context run reported in the ticket | B4, B7 | covered by B0 |
 | B9 | `tag` and `score` batch | One authorized run per type on a labeled set of at least 200 items, at `--batch 1` and the default. The ticket reports the cost. It removes `tag` and `score` from S1's list | Recorded runs and the report in the ticket | B4 | covered by B0 |
 | B10 | `annotate` batches per `on` group | Every group, filling to the limit. It removes `annotate` over records from S1's list | A recorded question set of yes/no and pick-one questions | B8, B9 | covered by B0 |
+
 | B11 | Moved out of batching | It is ticket J1 | none | none | none |
 | B12a | The Rust library batches and gives facts | `batch`, `context`, `.facts` on every call of the public API | Shared conformance cases for batch count, shares and `--batch 1` bytes | B5, B7 | Needs an ADR amending ADR 0017 for `.facts`, unless the run-facts ADR lands first |
 | B12b | The C door batches and gives facts | The same, on the JSON door | The shared conformance cases | B12a | covered by B12a's ADR |
@@ -397,6 +398,9 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 | B14 | Dropped | Ticket 0137 makes `filter` and `rank` read lines by default | none | none | none |
 | B15 | Replaced | It is ticket D1 | none | none | none |
 | D1 | The documentation page | Described below | Docs review; every number on the page names its record and build | B6, B7, S1, ticket 0137 | no |
+
+Ticket 0216 lands independently reviewed offline B10 code at accepted source `efa2cd9e`, with request-aligned `meta.batches` under accepted ADR 0092. The separate recorded yes/no and pick-one comparison remains. S1 keeps its annotate function row and B10 exception until that comparison supplies reviewed evidence; a code build alone does not close them.
+
 
 ### C1: the settings reference
 

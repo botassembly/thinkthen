@@ -53,7 +53,7 @@ fn a_none_question_takes_2_to_254_units() {
     usage(&engine.find(&none, units(255)).expect_err("255"), limit);
     usage(&engine.find(&none, units(1)).expect_err("1"), limit);
     assert_eq!(backend.count(), 0);
-    let found = engine.find(&none, units(254)).expect("254");
+    let found = engine.find(&none, units(254)).expect("254").into_value();
     let last = found.candidates().last().expect("a candidate");
     assert!(last.is_none() && found.candidates().len() == 255);
     assert_eq!(found.selected().map(String::as_str), Some("unit 0"));
@@ -88,7 +88,7 @@ fn listening() -> (Listener, Arc<Mutex<Vec<Value>>>) {
     (listener, seen)
 }
 
-/// The `state` each request carried, in send order, after one annotate call.
+/// The `state` each request carried, in listener arrival order, after one annotate call.
 fn states(set: &str, record: &str) -> Result<Vec<Value>, Error> {
     let (listener, seen) = listening();
     let engine = engine(listener.base()).expect("engine");
@@ -119,20 +119,20 @@ fn each_group_sees_its_part_and_a_bad_part_sends_nothing() {
         assert!(!format!("{error} {error:?}").contains(NOTE), "{error:?}");
     }
     let number = states(TWO_GROUPS, r#"{"summary":12.5,"body":"Refund me."}"#);
-    assert_eq!(
-        number.expect("answered"),
-        [Value::from("12.5"), Value::from("Refund me.")]
-    );
+    let number = number.expect("answered");
+    assert_eq!(number.len(), 2);
+    assert!(number.contains(&Value::from("12.5")));
+    assert!(number.contains(&Value::from("Refund me.")));
     let root = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"}}}"#;
     assert_eq!(states(root, NOTE).expect("answered"), [Value::from(NOTE)]);
     let twice = r#"{"a":1,"a":2}"#;
     assert_eq!(states(root, twice).expect("answered"), [Value::from(twice)]);
     let mixed = r#"{"version":1,"questions":{"whole":{"decide":"Is this long?"},"body":{"decide":"Does this ask for a refund?","on":"/body"}}}"#;
     let record = r#"{"body":"Refund me."}"#;
-    assert_eq!(
-        states(mixed, record).expect("answered"),
-        [Value::from(record), Value::from("Refund me.")]
-    );
+    let mixed = states(mixed, record).expect("answered");
+    assert_eq!(mixed.len(), 2);
+    assert!(mixed.contains(&Value::from(record)));
+    assert!(mixed.contains(&Value::from("Refund me.")));
 }
 
 /// A find over the case's units, with its none candidate when asked.
@@ -147,7 +147,7 @@ pub(crate) fn found(engine: &Engine, asked: &Value, success: &Value) -> Checked 
         .flatten()
         .filter_map(Value::as_str)
         .collect();
-    let found = engine.find(&question, units.clone()).map_err(said)?;
+    let found = engine.find(&question, units.clone()).map_err(said)?.into_value();
     let rows = found.candidates().iter().map(|candidate| {
         let index = candidate.input().and_then(|unit| at(&units, unit));
         json!({"index": index, "probability": candidate.probability()})

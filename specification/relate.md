@@ -47,7 +47,7 @@ Every rule asks one yes/no question per allowed pair in rule, source, then targe
 
 ## Dry run
 
-`--dry-run` sends nothing, reads no key, and prints one compact `thinkthen.relate-plan/1` object. Keys appear in this order: `schema`, `url`, `model`, `key_env`, `backend_profile`, `framing`, `fields`, optional `from`, `entity_count`, `relations`, `logical_questions`, `request_count`, `requests`.
+`--dry-run` sends nothing, inspects an optional key for an address collision without requiring one, and prints one compact `thinkthen.relate-plan/1` object. Keys appear in this order: `schema`, `url`, `model`, `key_env`, `backend_profile`, `framing`, `fields`, optional `from`, `entity_count`, `relations`, `logical_questions`, `request_count`, `requests`.
 
 Each relation is one rule as given. It carries `name`, `source`, `target`, `reads`, `either`, `method` always `yes_no`, `fallback` always null, `logical_questions`, and `request_count`. Its request count includes each request carrying one of its questions, so per-rule counts may add to more than the run count. Each request carries its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. The plan makes no token or price claim.
 
@@ -67,4 +67,4 @@ The canonical question has keys `verb`, `fields`, `relations`, `threshold`, then
 
 ## Record and replay
 
-Every exact request uses the ordinary recording digest and folder rules. Replay opens no connection and reads no key. A recorded partial reply reproduces the same successful edges, failed entries, failure count, and exit 6. Recordings and caches contain the request evidence; protect them as the input itself.
+Every exact request uses the ordinary recording digest and folder rules. Replay opens no connection and requires no key. It inspects an optional configured key for an exact address collision before reading the recording folder. A recorded partial reply reproduces the same successful edges, failed entries, failure count, and exit 6. Recordings and caches contain the request evidence; protect them as the input itself.

@@ -20,7 +20,7 @@ The module-level verbs use the engine the environment describes: `THINKTHEN_BASE
 
 A question spec's `profile` names saved calibration. The engine's separate `profile` option selects a runtime limits file. A mismatch appears as optional `details.meta.profile_warning`; the type declarations cover both names.
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Turn it off with `new tt.Engine({ cache: false })`.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `new tt.Engine({ cache: false })`.
 
 The throttle is the most requests in flight at once. It holds per loaded copy of the engine, and the first explicit throttle holds for the process. A later engine that asks for another throttle is refused.
 

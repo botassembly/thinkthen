@@ -25,19 +25,55 @@ static const char *outcome_text(int outcome) {
     }
 }
 
-/* One JSON-door call printed as the label and the answer. */
+/* Print the value member of the successful {value,facts} envelope. This
+ * example's fixed output shows values; a host can also read the facts. */
+static const char *value_end(const char *json) {
+    int depth = 0;
+    int quoted = 0;
+    int escaped = 0;
+    for (const char *at = json; *at; at++) {
+        if (escaped) {
+            escaped = 0;
+        } else if (quoted && *at == '\\') {
+            escaped = 1;
+        } else if (*at == '"') {
+            quoted = !quoted;
+        } else if (!quoted && (*at == '[' || *at == '{')) {
+            depth++;
+        } else if (!quoted && (*at == ']' || *at == '}')) {
+            depth--;
+        } else if (!quoted && depth == 0 && *at == ',') {
+            return at;
+        }
+    }
+    return NULL;
+}
+
+/* One JSON-door call printed as the label and its answer value. */
 static void door(const thinkthen_engine *tt, const char *label, const char *request) {
     char *reply = thinkthen_call(tt, request);
     if (reply == NULL) {
         printf("%s: %s\n", label, thinkthen_error_message(tt));
         return;
     }
-    printf("%s: %s\n", label, reply);
+    if (strcmp(request, "{\"usage\":true}") == 0) {
+        printf("%s: %s\n", label, reply);
+        thinkthen_free_string(reply);
+        return;
+    }
+    const char *value = "{\"value\":";
+    const char *start = strncmp(reply, value, strlen(value)) == 0 ? reply + strlen(value) : NULL;
+    const char *end = start == NULL ? NULL : value_end(start);
+    if (end == NULL) {
+        printf("%s: invalid call envelope\n", label);
+    } else {
+        printf("%s: %.*s\n", label, (int)(end - start), start);
+    }
     thinkthen_free_string(reply);
 }
 
 int main(void) {
-    thinkthen_engine *tt = thinkthen_engine_new();
+    thinkthen_engine *tt = thinkthen_engine_new_with("{\"batch\":1}");
     if (tt == NULL) {
         fprintf(stderr, "the engine did not build\n");
         return 1;

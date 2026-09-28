@@ -148,6 +148,7 @@ impl NamedQuestion {
 pub(crate) struct QuestionSet {
     questions: Vec<NamedQuestion>,
     profile: Option<ProfileName>,
+    batch: Option<Json>,
 }
 
 impl QuestionSet {
@@ -161,7 +162,7 @@ impl QuestionSet {
             return Err(QuestionSetError::MissingQuestions);
         }
         for (key, _) in members {
-            if !["version", "threshold", "profile", "questions"].contains(&key.as_str()) {
+            if !["version", "threshold", "profile", "questions", "batch"].contains(&key.as_str()) {
                 return Err(QuestionSetError::UnknownKey(key.clone()));
             }
         }
@@ -229,7 +230,11 @@ impl QuestionSet {
                 on,
             });
         }
-        Ok(Self { questions, profile })
+        Ok(Self {
+            questions,
+            profile,
+            batch: value.member("batch").cloned(),
+        })
     }
 
     /// Name built questions, in order, each reading the whole record.
@@ -256,6 +261,7 @@ impl QuestionSet {
         Ok(Self {
             questions,
             profile: None,
+            batch: None,
         })
     }
 
@@ -268,6 +274,11 @@ impl QuestionSet {
     /// The profile this set's thresholds were tuned under, when named.
     pub(crate) const fn profile(&self) -> Option<&ProfileName> {
         self.profile.as_ref()
+    }
+
+    /// The optional top-level batch setting, outside the resolved digest.
+    pub(crate) const fn batch(&self) -> Option<&Json> {
+        self.batch.as_ref()
     }
 
     /// Group question indexes by identical normalized pointer lists.

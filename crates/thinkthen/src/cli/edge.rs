@@ -8,7 +8,11 @@ use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
-use crate::core::{Backend, KEY_VAR, Reading};
+use crate::core::{Backend, Reading};
+
+mod key;
+mod roots;
+use key::KeySnapshot;
 
 /// The command's shared, latched observation of a closed output pipe.
 #[derive(Clone, Default)]
@@ -42,8 +46,6 @@ impl Downstream {
 }
 
 use crate::config::{self, Config};
-use crate::engine::error::Error as EngineError;
-use crate::engine::facade::Key;
 use crate::engine::usage::Counters;
 use crate::failure::Failure;
 
@@ -62,8 +64,9 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 /// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
 /// variables shorten the retry wait and acknowledge SIGINT. Only a build with
 /// debug assertions reads them, so a release binary ignores them. The key
-/// itself is read later, by name, and only when a request is about to go out.
-#[derive(Debug, Default)]
+/// itself is captured once after the final address resolves. The same value
+/// governs the address check, status report, and every later request.
+#[derive(Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
     batch: Option<String>,
@@ -78,6 +81,19 @@ pub(crate) struct Environment {
     pub(super) cancel: crate::engine::Cancel<'static>,
     usage: std::sync::Arc<Counters>,
     usage_path: Option<PathBuf>,
+    key: KeySnapshot,
+    ca_bundle: Option<PathBuf>,
+}
+
+impl std::fmt::Debug for Environment {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("Environment")
+            .field("base_url", &self.base_url.as_ref().map(|_| "<withheld>"))
+            .field("config", &self.config)
+            .field("key", &self.key)
+            .finish_non_exhaustive()
+    }
 }
 
 impl Environment {
@@ -105,6 +121,8 @@ impl Environment {
             cancel: crate::engine::Cancel::default(),
             usage: std::sync::Arc::new(Counters::new(usage_path.clone())),
             usage_path,
+            key: KeySnapshot::default(),
+            ca_bundle: read("THINKTHEN_CA_BUNDLE").map(PathBuf::from),
         })
     }
 
@@ -151,11 +169,22 @@ impl Environment {
     pub(crate) fn counters(&self) -> std::sync::Arc<Counters> {
         std::sync::Arc::clone(&self.usage)
     }
-    pub(crate) fn api_key_set(&self) -> bool {
-        read(KEY_VAR).is_some()
+    /// Validate the final address against the one key this command will use.
+    pub(crate) fn check_key(&self, backend: &Backend) -> Result<(), Failure> {
+        self.key.check(backend)
     }
 
-    /// `THINKTHEN_BATCH`, which only `decide`, `filter` and `rank` read.
+    /// Report the checked snapshot, without rereading the process environment.
+    pub(crate) fn api_key_set(&self) -> bool {
+        self.key.is_set()
+    }
+
+    /// The already checked snapshot that every request from this command uses.
+    pub(crate) fn key_reader(&self) -> key::Reader {
+        self.key.reader()
+    }
+
+    /// `THINKTHEN_BATCH`, read by record-batching judging commands.
     pub(crate) fn batch(&self) -> Option<&str> {
         self.batch.as_deref()
     }
@@ -362,20 +391,6 @@ pub(crate) fn waiting(input: Option<&Path>, writer: impl Write) {
     waiting_on_terminal(input, io::stdin().is_terminal(), writer);
 }
 
-/// Read the key from the one variable that holds it.
-///
-/// # Errors
-///
-/// Returns [`EngineError::NoKey`] when the variable is unset or blank. The message
-/// names the variable and never a value.
-pub(crate) fn key() -> Result<Key, EngineError> {
-    let value = read(KEY_VAR).unwrap_or_default();
-    if value.trim().is_empty() {
-        return Err(EngineError::NoKey(KEY_VAR));
-    }
-    Ok(Key::new(value))
-}
-
 /// Write one line and flush it, saying whether the pipe downstream is still open.
 ///
 /// A reader that stops early, as `head` does, is how Unix pipelines end. The
@@ -398,10 +413,21 @@ mod deadline_tests;
 
 #[cfg(test)]
 mod tests {
-    use super::{Chunks, opened, write_line};
+    use super::{Chunks, Environment, opened, write_line};
     use crate::failure::Failure;
     use std::fs::{self, File};
     use std::io::{Error, ErrorKind, Read as _, Write};
+
+    #[test]
+    fn raw_environment_debug_withholds_the_address() {
+        let environment = Environment {
+            base_url: Some("http://localhost/environment-marker-0210".to_owned()),
+            ..Environment::default()
+        };
+        let shown = format!("{environment:?}");
+        assert!(shown.contains("base_url: Some(\"<withheld>\")"));
+        assert!(!shown.contains("environment-marker-0210"));
+    }
 
     /// A writer that fails every write with the kind the case names.
     struct Failing(ErrorKind);

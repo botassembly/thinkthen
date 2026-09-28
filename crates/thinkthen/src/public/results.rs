@@ -3,6 +3,14 @@
 
 use std::fmt;
 
+mod call;
+pub use call::{Call, Facts};
+mod member;
+pub(crate) use member::{Member, ParentReceipt};
+mod observation;
+pub(crate) use observation::{ObservedQuestion, observe_chunk};
+pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
+
 use serde::Serialize;
 
 use crate::core::{self, Backend, BackendProfile, ProfileWarning, Value, Withheld, json_line};
@@ -176,7 +184,7 @@ impl Counters {
 }
 
 /// One judgment with the probabilities and request facts behind it.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub struct Details {
     value: Judgment,
     probabilities: Probabilities,
@@ -354,7 +362,7 @@ pub(crate) fn judgment(value: &Value) -> Judgment {
     }
 }
 
-const fn usage(counts: core::Usage) -> Usage {
+pub(crate) const fn usage(counts: core::Usage) -> Usage {
     let (input_tokens, output_tokens) = counts.token_counts();
     Usage {
         input_tokens,

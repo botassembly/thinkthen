@@ -11,11 +11,15 @@ use crate::engine::error::Error;
 use crate::engine::http::{Client, Exchange, Key};
 
 use super::{
-    CREATION_PAUSE, Counters, Counts, FAILURE, INITIAL_SYNC, Stage, month_now, read,
-    recognized_month, update, year_month,
+    CREATION_PAUSE, Counters, Counts, FAILURE, INITIAL_SYNC, Shared, Stage, month_now, read,
+    recognized_month, year_month,
 };
 
 static FOLDERS: AtomicU64 = AtomicU64::new(0);
+/// Exercise the production update with a fresh queue before finalization.
+fn update(path: &std::path::Path, month: &str, delta: Counts) -> std::io::Result<()> {
+    super::update(path, month, delta, &Shared::default())
+}
 
 #[test]
 fn an_old_usage_row_without_retries_reads_as_zero() {

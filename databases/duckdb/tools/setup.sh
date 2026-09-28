@@ -1,79 +1,99 @@
 #!/bin/sh
-# One-time setup under ~/.cache/thinkthen-toolchains/duckdb/<version>/
-# (shared rule 2). With no argument it works offline: a venv from uv's
-# CPython 3.13 and tools/requirements.txt, and platform.txt. `--fetch` is
-# the one networked step: it downloads the stock CLI and refuses a binary
-# whose sha256 differs from tools/version.env.
+# Pinned stock DuckDB hosts, C++ source, archives and local test tools.
+# --inputs prints the selected native input identity without a download.
 set -eu
-HERE=$(cd -- "$(dirname -- "$0")" && pwd)
+HERE=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 . "$HERE/version.env"
+case $(uname -s):$(uname -m) in
+Linux:x86_64)
+	target=x86_64-unknown-linux-gnu platform=linux_amd64
+	cli_asset=duckdb_cli-linux-amd64.zip
+	cli_zip_hash=$DUCKDB_CLI_ZIP_SHA256 cli_hash=$DUCKDB_CLI_SHA256
+	static_asset=static-libs-linux-amd64.zip static_hash=$DUCKDB_STATIC_ZIP_SHA256
+	older_asset=duckdb_cli-linux-amd64.zip
+	older_zip_hash=$DUCKDB_OLDER_CLI_ZIP_SHA256 older_hash=$DUCKDB_OLDER_CLI_SHA256
+	manifest=archive-sha256.txt
+	;;
+Darwin:arm64)
+	target=aarch64-apple-darwin platform=osx_arm64
+	cli_asset=duckdb_cli-osx-arm64.zip
+	cli_zip_hash=$DUCKDB_OSX_ARM64_CLI_ZIP_SHA256 cli_hash=$DUCKDB_OSX_ARM64_CLI_SHA256
+	static_asset=static-libs-osx-arm64.zip static_hash=$DUCKDB_OSX_ARM64_STATIC_ZIP_SHA256
+	older_asset=duckdb_cli-osx-arm64.zip
+	older_zip_hash=$DUCKDB_OSX_ARM64_OLDER_CLI_ZIP_SHA256 older_hash=$DUCKDB_OSX_ARM64_OLDER_CLI_SHA256
+	manifest=archive-sha256-osx-arm64.txt
+	;;
+*) echo "setup: no pinned DuckDB C++ inputs for $(uname -s):$(uname -m)" >&2; exit 77 ;;
+esac
+case ${1:-} in
+--target) echo "$target"; exit 0 ;;
+--inputs) printf '%s %s %s %s %s %s %s\n' "$target" "$platform" "$cli_asset" "$cli_zip_hash" "$static_asset" "$static_hash" "$manifest"; exit 0 ;;
+--fetch|'') ;;
+*) echo 'usage: setup.sh [--fetch|--target|--inputs]' >&2; exit 2 ;;
+esac
 HOME_DIR=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 mkdir -p "$HOME_DIR"
-case $(uname -s):$(uname -m) in
-Linux:x86_64) ;;
-*) echo "setup: the pinned DuckDB C++ inputs target Linux x86_64" >&2; exit 77 ;;
-esac
-
+sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$1"; else shasum -a 256 "$1"; fi; }
+verify() {
+	[ -f "$2" ] && [ "$(sha256 "$2" | cut -d ' ' -f 1)" = "$1" ] || {
+		echo "setup: $2 differs from its pinned SHA-256" >&2
+		exit 1
+	}
+}
 if [ "${1:-}" = --fetch ]; then
-	zip="$HOME_DIR/duckdb_cli.zip"
-	curl -fsSL -o "$zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/duckdb_cli-linux-amd64.zip"
+	zip="$HOME_DIR/$cli_asset"
+	[ -f "$zip" ] || curl -fsSL -o "$zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$cli_asset"
+	verify "$cli_zip_hash" "$zip"
 	unzip -o -q "$zip" duckdb -d "$HOME_DIR"
-	rm -f -- "$zip"
-	if [ ! -d "$HOME_DIR/source" ]; then
-		git clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$HOME_DIR/source"
-	fi
-	static_zip="$HOME_DIR/static-libs-linux-amd64.zip"
-	if [ ! -f "$static_zip" ]; then
-		curl -fsSL -o "$static_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/static-libs-linux-amd64.zip"
-	fi
-	older_zip="$HOME_DIR/duckdb_cli-$DUCKDB_OLDER_VERSION.zip"
-	if [ ! -f "$older_zip" ]; then
-		curl -fsSL -o "$older_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_OLDER_VERSION/duckdb_cli-linux-amd64.zip"
-	fi
-	echo "$DUCKDB_OLDER_CLI_ZIP_SHA256  $older_zip" | sha256sum -c --quiet - || {
-		echo "setup: $older_zip differs from the pinned release" >&2
-		exit 1
-	}
-	mkdir -p "$HOME_DIR/older-host"
-	unzip -o -q "$older_zip" duckdb -d "$HOME_DIR/older-host"
-	echo "$DUCKDB_STATIC_ZIP_SHA256  $static_zip" | sha256sum -c --quiet - || {
-		echo "setup: $static_zip differs from the pinned release" >&2
-		exit 1
-	}
+	[ -d "$HOME_DIR/source" ] || git clone --quiet --depth 1 --branch "$DUCKDB_VERSION" https://github.com/duckdb/duckdb.git "$HOME_DIR/source"
+	static_zip="$HOME_DIR/$static_asset"
+	[ -f "$static_zip" ] || curl -fsSL -o "$static_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_VERSION/$static_asset"
+	verify "$static_hash" "$static_zip"
 	mkdir -p "$HOME_DIR/static-libs"
 	unzip -o -q "$static_zip" -d "$HOME_DIR/static-libs"
+	older_zip="$HOME_DIR/duckdb_cli-$DUCKDB_OLDER_VERSION-$target.zip"
+	[ -f "$older_zip" ] || curl -fsSL -o "$older_zip" "https://github.com/duckdb/duckdb/releases/download/$DUCKDB_OLDER_VERSION/$older_asset"
+	verify "$older_zip_hash" "$older_zip"
+	mkdir -p "$HOME_DIR/older-host"
+	unzip -o -q "$older_zip" duckdb -d "$HOME_DIR/older-host"
+	if [ "$target" = aarch64-apple-darwin ]; then
+		wheel=${DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL##*/}
+		[ -f "$HOME_DIR/$wheel" ] || curl -fsSL -o "$HOME_DIR/$wheel" "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL"
+		verify "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_SHA256" "$HOME_DIR/$wheel"
+	fi
 fi
-if [ -f "$HOME_DIR/duckdb" ]; then
-	echo "$DUCKDB_CLI_SHA256  $HOME_DIR/duckdb" | sha256sum -c --quiet - || {
-		echo "setup: $HOME_DIR/duckdb does not match the pinned sha256; remove it and run tools/setup.sh --fetch" >&2
+[ -x "$HOME_DIR/duckdb" ] || { echo "setup: the pinned $DUCKDB_VERSION host is missing; run tools/setup.sh --fetch" >&2; exit 77; }
+verify "$cli_hash" "$HOME_DIR/duckdb"
+[ -x "$HOME_DIR/older-host/duckdb" ] || { echo "setup: the pinned $DUCKDB_OLDER_VERSION host is missing; run tools/setup.sh --fetch" >&2; exit 77; }
+verify "$older_hash" "$HOME_DIR/older-host/duckdb"
+[ -d "$HOME_DIR/source" ] && [ -f "$HOME_DIR/static-libs/libduckdb_static.a" ] || {
+	echo 'setup: DuckDB C++ source or static archives are missing; run tools/setup.sh --fetch' >&2
+	exit 77
+}
+[ "$(git -C "$HOME_DIR/source" rev-parse HEAD)" = "$DUCKDB_CPP_SOURCE_COMMIT" ] || {
+	echo 'setup: DuckDB C++ source differs from the pinned commit' >&2
+	exit 1
+}
+expected=$(wc -l <"$HERE/../cpp/$manifest" | tr -d ' ')
+actual=$(find "$HOME_DIR/static-libs" -name 'lib*.a' -type f | wc -l | tr -d ' ')
+[ "$actual" = "$expected" ] || { echo 'setup: DuckDB static archive set differs from its manifest' >&2; exit 1; }
+while read -r hash name; do verify "$hash" "$HOME_DIR/static-libs/$name"; done <"$HERE/../cpp/$manifest"
+python3 "$HERE/source_checks.py" --requirements "$HERE/requirements.txt" >/dev/null
+if [ ! -x "$HOME_DIR/venv/bin/python" ]; then uv venv --offline --python 3.13 "$HOME_DIR/venv"; fi
+if [ "${1:-}" = --fetch ]; then
+	uv pip install --quiet --python "$HOME_DIR/venv/bin/python" -r "$HERE/requirements.txt"
+else
+	uv pip install --offline --quiet --python "$HOME_DIR/venv/bin/python" -r "$HERE/requirements.txt"
+fi
+if [ "$target" = aarch64-apple-darwin ]; then
+	wheel=${DUCKDB_OSX_ARM64_CMAKE_WHEEL_URL##*/}
+	verify "$DUCKDB_OSX_ARM64_CMAKE_WHEEL_SHA256" "$HOME_DIR/$wheel"
+	uv pip install --offline --quiet --python "$HOME_DIR/venv/bin/python" "$HOME_DIR/$wheel"
+	[ "$("$HOME_DIR/venv/bin/cmake" --version | sed -n '1s/^cmake version //p')" = "$DUCKDB_OSX_ARM64_CMAKE_VERSION" ] || {
+		echo 'setup: the project-local CMake version differs from its pin' >&2
 		exit 1
 	}
 fi
-if [ ! -x "$HOME_DIR/older-host/duckdb" ]; then
-	echo "setup: the pinned $DUCKDB_OLDER_VERSION host is missing; run tools/setup.sh --fetch" >&2
-	exit 77
-fi
-echo "$DUCKDB_OLDER_CLI_SHA256  $HOME_DIR/older-host/duckdb" | sha256sum -c --quiet - || {
-	echo "setup: the $DUCKDB_OLDER_VERSION host differs from the pinned release" >&2
-	exit 1
-}
-if [ ! -d "$HOME_DIR/source" ] || [ ! -f "$HOME_DIR/static-libs/libduckdb_static.a" ]; then
-	echo "setup: DuckDB C++ source or static archives are missing; run tools/setup.sh --fetch" >&2
-	exit 77
-fi
-[ "$(git -C "$HOME_DIR/source" rev-parse HEAD)" = "$DUCKDB_CPP_SOURCE_COMMIT" ] || {
-	echo "setup: DuckDB C++ source differs from the pinned commit" >&2
-	exit 1
-}
-(cd "$HOME_DIR/static-libs" && sha256sum -c --quiet "$HERE/../cpp/archive-sha256.txt") || {
-	echo "setup: DuckDB static archives differ from the fixed manifest" >&2
-	exit 1
-}
-
-python3 "$HERE/source_checks.py" --requirements "$HERE/requirements.txt" >/dev/null
-if [ ! -x "$HOME_DIR/venv/bin/python" ]; then
-	uv venv --offline --python 3.13 "$HOME_DIR/venv"
-fi
-uv pip install --offline --quiet --python "$HOME_DIR/venv/bin/python" -r "$HERE/requirements.txt"
 (cd "$HOME_DIR" && "$HOME_DIR/venv/bin/python" "$HERE/../vendor/configure_helper.py" -o "$HOME_DIR" -p)
+[ "$(cat "$HOME_DIR/platform.txt")" = "$platform" ] || { echo 'setup: stock DuckDB reports another platform' >&2; exit 1; }
 echo "setup: ready under $HOME_DIR"

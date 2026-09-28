@@ -3,6 +3,8 @@
 //! or `{"err": {kind, retryable, message}}`. It holds no rule of its own
 //! beyond the host's deadline spelling.
 
+mod diagnostics;
+
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use serde_json::{Map, Value, json};
@@ -66,20 +68,24 @@ type Answered = Result<String, Failure>;
 /// Run one body and write its envelope. The binding's one panic guard turns a
 /// panic into `defect`.
 pub(crate) fn guarded(body: impl FnOnce() -> Answered) -> String {
-    match caught(body) {
+    diagnostics::owned(|| match caught(body) {
         Ok(raw) => format!("{{\"ok\":{raw}}}"),
         Err(failure) => failure.envelope(),
-    }
+    })
 }
 
 /// The binding's one panic guard: a panic in `body` becomes `defect`, so no
 /// panic crosses into Node.
 pub(crate) fn caught<T>(body: impl FnOnce() -> Result<T, Failure>) -> Result<T, Failure> {
-    catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|_| {
-        Err(Failure::of(
-            ErrorKind::Defect,
-            "defect: the Node binding panicked",
-        ))
+    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
+        Ok(value) => value,
+        Err(payload) => {
+            std::mem::forget(payload);
+            Err(Failure::of(
+                ErrorKind::Defect,
+                "defect: the Node binding panicked",
+            ))
+        }
     })
 }
 
@@ -163,7 +169,7 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
     let spec = call.spec.as_deref().unwrap_or_default();
     let text = call.payload.as_str();
     Ok(match call.op.as_str() {
-        "decide" => word(engine.decide_with(decision(&question(spec)?), text, options)?),
+        "decide" => word(engine.decide_with(decision(&question(spec)?), text, options)?.into_value()),
         "decide_many" => {
             let asked = question(spec)?;
             let rows = engine.decide_many_with(decision(&asked), records(text)?, options);
@@ -174,7 +180,7 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
         }
         "choose" | "tag" => {
             let asked = kind_of(&call.op, question(spec)?)?;
-            match engine.details_with(detail(&asked), text, options)?.value() {
+            match engine.details_with(detail(&asked), text, options)?.value().value() {
                 Judgment::Choice(pick) => json!(pick).to_string(),
                 Judgment::Tags(labels) => json!(labels).to_string(),
                 _ => {
@@ -187,7 +193,7 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
         }
         "score" => match kind_of("score", question(spec)?)? {
             LoadedQuestion::Question(asked) => {
-                json!(engine.score_with(&asked, text, options)?).to_string()
+                json!(engine.score_with(&asked, text, options)?.into_value()).to_string()
             }
             LoadedQuestion::Banded(_) => {
                 return Err(Failure::usage("score does not take a banded question"));
@@ -206,7 +212,7 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
             }
         },
         "rank" => {
-            let ranked = engine.rank_with(&Question::rank(spec)?, indexed(text)?, options)?;
+            let ranked = engine.rank_with(&Question::rank(spec)?, indexed(text)?, options)?.into_value();
             let rows: Vec<Value> = ranked
                 .iter()
                 .map(|row| json!({ "index": row.input().0, "probability": row.probability() }))
@@ -223,9 +229,11 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
         "annotate" => annotated(engine, spec, text, options)?,
         "details" => engine
             .details_with(detail(&question(spec)?), text, options)?
+            .into_value()
             .to_json(),
         "recognize" => engine
             .recognize_with(&Recognize::from_json(spec)?, text, options)?
+            .into_value()
             .to_json(),
         "relate" => related(engine, spec, text, options)?,
         other => return Err(Failure::usage(format!("the door knows no op {other}"))),
@@ -234,7 +242,7 @@ fn run(engine: &Engine, call: &Call, options: CallOptions<'_>) -> Answered {
 
 /// The selected unit's index and probability, or `null` when none was selected.
 fn found(engine: &Engine, asked: Question, text: &str, options: CallOptions<'_>) -> Answered {
-    let found = engine.find_with(&asked, indexed(text)?, options)?;
+    let found = engine.find_with(&asked, indexed(text)?, options)?.into_value();
     let picked = found.candidates().iter().find_map(|candidate| {
         let unit = candidate.input()?;
         (found.selected().map(|held| held.0) == Some(unit.0))
@@ -265,7 +273,7 @@ fn related(engine: &Engine, spec: &str, text: &str, options: CallOptions<'_>) ->
         .iter()
         .map(|(name, kind)| Entity::new(name, kind))
         .collect::<Result<Vec<_>, _>>()?;
-    let edges = engine.relate_with(&Relate::from_json(spec)?, entities, options)?;
+    let edges = engine.relate_with(&Relate::from_json(spec)?, entities, options)?.into_value();
     let lines: Vec<String> = edges.iter().map(thinkthen::Edge::to_json).collect();
     Ok(format!("[{}]", lines.join(",")))
 }
