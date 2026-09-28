@@ -1,6 +1,6 @@
 # 0232 macOS SQLite package checker build
 
-Status: implementation and focused M5 native package proof passed at pushed `b1013288`; the cache-stamp correction and both selected load assertions passed again at pushed `7e712808`. A subsequent check correction allows either measured failed-load residency outcome; its focused rerun is pending. Independent code review is pending. This record does not establish a macOS 15 runner result or complete other 0226 targets.
+Status: implementation and focused M5 native package proof passed at pushed `b1013288`; the cache-stamp correction and both selected load assertions passed again at pushed `7e712808`. The corrected failed-load residency assertion passed at `da35fa31` and printed `resident=1` on this M5. Independent code review is pending. This record does not establish a macOS 15 runner result or complete other 0226 targets.
 
 ## Changed behavior
 
@@ -24,7 +24,7 @@ On M5, SQLite `cargo fmt --check` and strict all-target/all-feature offline Clip
 
 At `7e712808`, the host builder refreshed its cache because the stamp gained the probe's source hash. The stamp's last line equals `shasum -a 256 databases/sqlite/tests/load_probe.c` at `63d589770afb8b0af288817bfcaafa6d53f0b2e1971163648c2f95fac6ce12aa`. The existing two selected `test_schema.py` functions passed again against the same packaged dylib and newly built native probes. The installed examples, conformance and archive were unchanged, so they were not repeated.
 
-Retained M5 logs are `/tmp/thinkthen-m5-0232-setup.log`, `/tmp/thinkthen-m5-0232-pack.log`, `/tmp/thinkthen-m5-0232-installed.log`, `/tmp/thinkthen-m5-0232-lint.log`, `/tmp/thinkthen-m5-0232-floor-success.log`, `/tmp/thinkthen-m5-0232-floor-refusal.log`, `/tmp/thinkthen-m5-0232-stamp-recheck.log`, and `/tmp/thinkthen-m5-0232-selected-recheck.log`. The pack log is empty because successful quiet Cargo and packaging emitted no output. The archives and checksum manifest remain in `/tmp/thinkthen-m5-artifacts-0232/`, with the unpacked dylib in `/tmp/thinkthen-m5-sqlite-installed-0232/`. The source zips and exploratory first probe remain under `/tmp/thinkthen-sqlite-*`; none is committed or published.
+Retained M5 logs are `/tmp/thinkthen-m5-0232-setup.log`, `/tmp/thinkthen-m5-0232-pack.log`, `/tmp/thinkthen-m5-0232-installed.log`, `/tmp/thinkthen-m5-0232-lint.log`, `/tmp/thinkthen-m5-0232-floor-success.log`, `/tmp/thinkthen-m5-0232-floor-refusal.log`, `/tmp/thinkthen-m5-0232-stamp-recheck.log`, `/tmp/thinkthen-m5-0232-selected-recheck.log`, and `/tmp/thinkthen-m5-0232-final-selected.log`. The pack log is empty because successful quiet Cargo and packaging emitted no output. The archives and checksum manifest remain in `/tmp/thinkthen-m5-artifacts-0232/`, with the unpacked dylib in `/tmp/thinkthen-m5-sqlite-installed-0232/`. The source zips and exploratory first probe remain under `/tmp/thinkthen-sqlite-*`; none is committed or published.
 
 ## Remaining work
 
