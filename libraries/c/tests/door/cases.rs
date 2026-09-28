@@ -3,11 +3,10 @@
 //! Each case runs in its own `tests/c/driver.c` process, through the JSON door
 //! and, where one fits, a typed function. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. Two cases do not apply to the door:
+//! backend served. One case does not apply to the door:
 //!
 //! - `25-defect-fault` injects an internal invariant failure, which no outside
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
-//! - `30-local-question-file` loads a question file, and the door reads none.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::io::Write;
@@ -25,7 +24,7 @@ mod batching;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 2] = ["25-defect-fault", "30-local-question-file"];
+const SKIPPED: [&str; 1] = ["25-defect-fault"];
 
 type Checked<T = ()> = Result<T, String>;
 pub(crate) type Members = BTreeMap<String, Box<RawValue>>;
@@ -68,7 +67,7 @@ fn every_applicable_shared_case_passes_through_the_door() {
             not_run += 1;
             writeln!(
                 std::io::stderr().lock(),
-                "{id}: not run by the C door (internal injection or local question file)"
+                "{id}: not run by the C door (internal injection)"
             )
             .expect("write skipped case to stderr");
             continue;
@@ -472,6 +471,12 @@ fn refused<'a>(
                 ],
             );
         }
+        "30-local-question-file" => {
+            let path = scratch("case-30-question-file").join("question.json");
+            std::fs::write(&path, case["question"].get()).map_err(|error| error.to_string())?;
+            let name = path.to_string_lossy();
+            script.ask("file", &[&generic, &name, &string(case, "evidence")]);
+        }
         "31-usage-rank-blank-question" => {
             script.ask(
                 "call",
@@ -493,6 +498,7 @@ fn refused<'a>(
     .and_then(|at| i32::try_from(at + 1).ok())
     .ok_or("an unknown kind")?;
     let sends = matches!(id, "21-backend-fault");
+    let file_case = id == "30-local-question-file";
     // After 22's good build, a null engine's code is the usage code again.
     let after: Vec<Reply> = if id == "22-local-fault" {
         vec![(0, "1".to_owned())]
@@ -504,6 +510,9 @@ fn refused<'a>(
         let (said, message) = got.first().ok_or("no reply")?;
         if *said != code {
             return Err(format!("code {said} ({message}), expected {code}"));
+        }
+        if file_case && !message.starts_with("0 ") {
+            return Err(format!("the named-file refusal was retryable: {message}"));
         }
         if !sends && backend.count() != before {
             return Err("a refusal sent a request".to_owned());

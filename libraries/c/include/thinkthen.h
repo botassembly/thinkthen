@@ -28,7 +28,7 @@
  * once, and each caller sees the answers it would get alone.
  *
  * The lifetime rules: an engine lives until `thinkthen_engine_free`; a
- * string from `thinkthen_call`, `thinkthen_recognize`, or
+ * string from `thinkthen_call`, `thinkthen_question_file`, `thinkthen_recognize`, or
  * `thinkthen_relate` lives until `thinkthen_free_string`; a cancel token
  * lives until `thinkthen_cancel_token_free`, and no call may carry a token
  * the host has freed; the message from `thinkthen_error_message` belongs
@@ -201,6 +201,18 @@ void thinkthen_cancel_token_free(thinkthen_cancel_token *token);
  * The door checks these before it asks the engine, so a refusal sends
  * nothing.
  */
+
+/* Read one named UTF-8 question file, at most 1 MiB, through the shared
+ * single-question grammar. Success returns its validated source JSON in an
+ * owned NUL-terminated string and writes its byte length. Free the string
+ * once with `thinkthen_free_string`. Pass it to a typed question verb or use
+ * it while constructing a JSON-door request. The loader itself sends nothing.
+ * A null or invalid UTF-8 path, or null output pointer, is EUSAGE. An
+ * unreadable, overlarge, invalid UTF-8 or malformed named file is ELOCAL,
+ * non-retryable. No failure changes either output, and no diagnostic prints
+ * the path or file content. */
+int thinkthen_question_file(const thinkthen_engine *engine, const char *path,
+                            char **out, size_t *out_len);
 
 /* Ask one yes-or-no question of one text: exactly `thinkthen_decide_opts`
  * with THINKTHEN_NO_DEADLINE and a null token. `question_json` is one

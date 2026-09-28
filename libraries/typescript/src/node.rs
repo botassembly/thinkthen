@@ -42,6 +42,12 @@ pub fn usage(engine: Option<&NativeEngine>) -> String {
     door::usage(engine.map(|held| &held.engine))
 }
 
+/// Read one bounded, validated local question as an error envelope.
+#[napi]
+pub fn question_file(path: String) -> String {
+    door::question_file(&path)
+}
+
 /// The threadsafe function, held so `detach` can close it.
 struct Held(Done);
 

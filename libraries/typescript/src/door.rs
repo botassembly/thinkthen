@@ -6,12 +6,14 @@
 mod diagnostics;
 mod result;
 
+use std::io::Read;
 use std::num::NonZeroUsize;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use serde_json::{Map, Value, json};
 use thinkthen::{
     BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, Facts,
+    Question,
 };
 
 /// The most milliseconds a deadline takes: 4,294,967,295 seconds (ADR 0041).
@@ -86,6 +88,28 @@ pub(crate) fn guarded(body: impl FnOnce() -> Answered) -> String {
     diagnostics::owned(|| match caught(body) {
         Ok(raw) => format!("{{\"ok\":{raw}}}"),
         Err(failure) => failure.envelope(),
+    })
+}
+
+/// Return the original validated JSON as an envelope for a named question.
+pub(crate) fn question_file(path: &str) -> String {
+    guarded(|| {
+        const LIMIT: u64 = 1_048_576;
+        let file = std::fs::File::open(path)
+            .map_err(|_| Failure::local("the question file could not be read"))?;
+        let mut bytes = Vec::new();
+        file.take(LIMIT + 1)
+            .read_to_end(&mut bytes)
+            .map_err(|_| Failure::local("the question file could not be read"))?;
+        if bytes.len() as u64 > LIMIT {
+            return Err(Failure::local("the question file is too large"));
+        }
+        let source = String::from_utf8(bytes)
+            .map_err(|_| Failure::local("the question file is not UTF-8"))?;
+        Question::from_json(&source)
+            .map_err(|_| Failure::local("the question file has invalid question content"))?;
+        serde_json::to_string(&source)
+            .map_err(|_| Failure::defect("the question could not be encoded"))
     })
 }
 

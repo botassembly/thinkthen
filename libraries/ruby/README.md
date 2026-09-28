@@ -20,6 +20,8 @@ The answer cache is on by default. Each entry holds the complete request and rep
 
 `decide`, `decide_many`, `decide_many_with_probabilities`, `filter`, `rank`, `find`, `choose`, `choose_many`, `score`, `score_many`, `score_with_level`, `tag`, `tag_many`, `details`, `annotate`, `recognize`, `relate`, and `usage`. `ThinkThen.question(**keywords)` builds a question from the question file's keys, and a `Range` threshold is the band. `ThinkThen.set(path)` loads a question set, and `ThinkThen.set(name: spec, ...)` builds one. `nil` means unsure.
 
+`ThinkThen.question(file: path)` reads one named UTF-8 question file of at most 1 MiB, validates it, and returns the same question value as the keyword form. `file:` cannot be combined with other question keywords. A bad named file raises non-retryable `LocalError` before a send; bad typed keywords still raise `UsageError`. Ordinary question strings remain literal, including a leading `@`. `ThinkThen.set(path)` remains the separate question-set form.
+
 `rank` and `find` accept plain question text or a built `decide` question containing only its text. They refuse a built question with `profile`, `threshold`, `model`, or another extra key before sending because those text-only calls cannot retain it.
 
 A record that is not a `String` crosses as its JSON text. `nil`, invalid UTF-8, and a NUL byte refuse with `UsageError` naming the index, before any request. Every failure is a `ThinkThen::Error`. Its six kind classes are `UsageError`, `BackendError`, `LocalError`, `CancelledError`, `DeadlineError`, and `DefectError`, and each carries `kind` and `retryable`.

@@ -356,6 +356,9 @@ export class Engine implements Verbs {
 /** Build a question from parts, once, and pass it to any verb. */
 export function question(spec: QuestionSpec): Question;
 
+/** Load one named local question; invalid files raise a Local error. */
+export function questionFile(path: string): Question;
+
 export const decide: Verbs['decide'];
 export const decide_many: Verbs['decide_many'];
 export const choose_many: Verbs['choose_many'];
