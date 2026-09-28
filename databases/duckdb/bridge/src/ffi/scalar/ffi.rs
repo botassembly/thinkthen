@@ -233,11 +233,11 @@ fn details(
     let rows = match question {
         LoadedQuestion::Question(held) => engine
             .details_many_with(held, texts, options)
-            .map(|row| row.map(|row| row.value().to_json()))
+            .map(|row| row.map(|row| row.value().to_scalar_json()))
             .collect::<Result<Vec<_>, _>>(),
         LoadedQuestion::Banded(held) => engine
             .details_many_with(held, texts, options)
-            .map(|row| row.map(|row| row.value().to_json()))
+            .map(|row| row.map(|row| row.value().to_scalar_json()))
             .collect::<Result<Vec<_>, _>>(),
     }
     .map_err(|error| engines::call_error(error, scope.total).text)?;

@@ -112,7 +112,7 @@ def try_details_keeps_later_good_rows():
         for value in values[1:3]:
             for private in ("private evidence", "private-missing.json"):
                 expect(private in json.dumps(value), False, "no private text in a failed value")
-        expect(backend.count(), 2, "later good row sent")
+        expect(backend.count(), 1, "compatible good rows share one request")
 
 
 @case
@@ -122,8 +122,8 @@ def try_details_keeps_a_good_row_after_a_backend_failure():
             (1, 'Is it a refund?', 'first'),
             (2, 'Is it a refund?', 'private evidence'),
             (3, 'Is it a refund?', 'last')) t(i,q,e) ORDER BY i"""
-        got = run([sql], proxy.base)
-        values = [json.loads(value) for value in column(got[0])]
+        got = run(["SET thinkthen_batch = '1'", sql], proxy.base)
+        values = [json.loads(value) for value in column(got[1])]
         expect([value["status"] for value in values], ["answered", "failed", "answered"], "good rows after backend failure")
         expect(values[1]["error"], {"kind": "backend", "message": "the backend did not answer; retry if allowed", "retryable": False}, "typed backend failure")
         expect("private evidence" in json.dumps(values[1]), False, "failed value hides evidence")
@@ -329,7 +329,7 @@ def atfile_reads_through_the_callers_file_system():
 class PackedReplies:
     """Two deterministic loopback replies, keyed by request member count."""
 
-    def __init__(self, missing_second=True):
+    def __init__(self, missing_second=True, fail_first_pair=False):
         self.bodies = []
         owner = self
 
@@ -337,6 +337,11 @@ class PackedReplies:
             def do_POST(self):
                 body = self.rfile.read(int(self.headers["Content-Length"]))
                 owner.bodies.append(body)
+                if fail_first_pair and b'alpha' in body:
+                    self.send_response(503)
+                    self.send_header("Content-Length", "0")
+                    self.end_headers()
+                    return
                 questions = json.loads(body)["questions"]
                 if len(questions) == 3 and missing_second:
                     answers = {"q1": {"type": "noul", "noul": 0.9},
@@ -408,6 +413,23 @@ def b13c_try_details_prepared():
 
 
 @case
+def b13c_try_details_whole_request_failure():
+    """A refused packed request fails only its own members and admits the next batch."""
+    with PackedReplies(fail_first_pair=True) as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
+                   "SET thinkthen_max_retries = 0",
+                   "SELECT thinkthen_try_details('Is it a refund?', x) FROM "
+                   "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i"], backend.base)
+        values = [json.loads(value) for value in column(got[3])]
+        expect([value["status"] for value in values], ["failed", "failed", "answered", "answered"],
+               "recoverable request leaves later batch alive")
+        for value in values[:2]:
+            expect(value["error"], {"kind": "backend", "message": "the backend did not answer; retry if allowed",
+                                    "retryable": True}, "safe whole-request 503")
+        expect(len(backend.bodies), 2, "no member isolation resend")
+
+
+@case
 def b13c_context_and_batch_one_wire_identity():
     """The final literal context packs two members; batch one retains bare legacy bodies."""
     with PackedReplies() as backend:
@@ -442,6 +464,27 @@ def b13c_warm_first_seen_context():
         expect(len(backend.bodies), 1, "one warm request")
         expected = b'{"state":"shared","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"zeta\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}'
         expect(backend.bodies[0], expected, "first-seen warm body")
+
+
+@case
+def b13c_packed_total_admits_one_attempt():
+    """The process total counts packed sends, independent of SQL row count or arrival order."""
+    query = ("SELECT thinkthen_decide('Is it a refund?', x) FROM "
+             "(VALUES (1,'alpha'),(2,'beta'),(3,'gamma'),(4,'delta')) t(i,x) ORDER BY i")
+    expected = {
+        b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}',
+        b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"delta\\". Is it a refund?"}}}',
+    }
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'", query], backend.base)
+        expect(column(got[2]), [True, True, True, True], "four packed answers")
+        expect(set(backend.bodies), expected, "both independently pinned packed bodies")
+    with PackedReplies() as backend:
+        got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
+                   "SET thinkthen_max_requests_total = 1", query], backend.base)
+        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it", "spent total")
+        expect(len(backend.bodies), 1, "only one actual attempt is admitted")
+        expect(backend.bodies[0] in expected, True, "either packed request may arrive first")
 
 
 if __name__ == "__main__":

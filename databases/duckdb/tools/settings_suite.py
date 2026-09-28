@@ -153,22 +153,22 @@ def the_process_request_total_holds_across_calls():
     """A concurrent row failure stays below the total; separate calls spend it exactly."""
     with Backend() as backend:
         ten = "SELECT thinkthen_decide('Is it a refund?', 'refund ' || i) FROM range(10) t(i)"
-        got = run(["SET thinkthen_max_requests_total = 3", ten,
+        got = run(["SET thinkthen_max_requests_total = 3", "SET thinkthen_batch = '1'", ten,
                    "SELECT metric, value FROM thinkthen_usage()", ASK,
                    "SELECT metric, value FROM thinkthen_usage()"], backend.base())
-        expect(said(got[1]), SPENT, "ten rows under a total of 3")
-        before = dict(rows(got[2]))["requests_sent"]
-        after = dict(rows(got[4]))["requests_sent"]
+        expect(said(got[2]), SPENT, "ten batch-one rows under a total of 3")
+        before = dict(rows(got[3]))["requests_sent"]
+        after = dict(rows(got[5]))["requests_sent"]
         expect(0 < before <= after <= 3, True, "a failing concurrent row batch stays within the total")
         expect(backend.count(), after, "usage and observed sends agree")
-        if "error" in got[3]:
-            expect(said(got[3]), SPENT, "a refused next call")
+        if "error" in got[4]:
+            expect(said(got[4]), SPENT, "a refused next call")
             expect(after, before, "a refusal sends nothing")
         else:
-            expect(rows(got[3]), [[True]], "an available next call answers")
+            expect(rows(got[4]), [[True]], "an available next call answers")
             expect(after, before + 1, "an available next call sends once")
         if before == 3:
-            expect(said(got[3]), SPENT, "a fully spent total refuses the next call")
+            expect(said(got[4]), SPENT, "a fully spent total refuses the next call")
     with Backend() as backend:
         statements = ["SET thinkthen_max_requests_total = 3"] + [
             f"SELECT thinkthen_decide('Is it a refund?', 'refund {number}')" for number in range(4)

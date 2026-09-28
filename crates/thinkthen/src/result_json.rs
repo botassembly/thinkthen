@@ -9,6 +9,7 @@ use crate::engine::facade::Judgment;
 
 /// What a detailed row names beside the judgment: the backend's address and the
 /// calibration profile the run compares.
+#[derive(Clone)]
 pub(crate) struct Run<'a> {
     pub(crate) backend: &'a Backend,
     pub(crate) tuned_for: Option<&'a ProfileName>,

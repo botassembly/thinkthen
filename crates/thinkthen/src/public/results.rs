@@ -199,6 +199,7 @@ pub struct Details {
     confidence: Option<f64>,
     url: String,
     json: Written,
+    scalar_json: Option<Written>,
 }
 
 impl Details {
@@ -255,6 +256,7 @@ impl Details {
             confidence: answer.confidence().map(|held| held.as_f64()),
             url: backend.url().as_str().to_owned(),
             json: Written(json),
+            scalar_json: None,
         })
     }
 

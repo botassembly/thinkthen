@@ -396,6 +396,9 @@ void LoadThinkThen(ExtensionLoader &loader) {
 		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT, LogicalType::VARCHAR}}) {
 			if (parameters.size() == 4 && string(name) == "thinkthen_annotate") { continue; }
 			ScalarFunction function(name, parameters, result, Decide, BindDecide);
+			if (string(name) == "thinkthen_try_details") {
+				function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+			}
 			function.SetStability(FunctionStability::VOLATILE);
 			loader.RegisterFunction(function);
 		}

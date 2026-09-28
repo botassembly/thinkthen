@@ -29,6 +29,7 @@ impl fmt::Debug for Details {
             .field("confidence", &self.confidence)
             .field("url", &"<withheld>")
             .field("json", &self.json)
+            .field("scalar_json", &self.scalar_json)
             .finish()
     }
 }
@@ -127,6 +128,13 @@ impl Member {
 }
 
 impl Details {
+    /// The same detailed result as a scalar SQL value, without a record input.
+    #[doc(hidden)]
+    #[must_use]
+    pub fn to_scalar_json(&self) -> String {
+        self.scalar_json.as_ref().unwrap_or(&self.json).text()
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "a record detail needs its original input and selected run metadata"
@@ -212,6 +220,22 @@ impl Details {
             batch_warning: file_batch.and_then(|saved| BatchWarning::between(saved, setting)),
             context_sha256: context_sha256.map(str::to_owned),
         };
+        let scalar_json = input
+            .as_ref()
+            .map(|_| {
+                decision_with_batch_requests(
+                    run.clone(),
+                    &member.judged,
+                    question.core.clone(),
+                    question.threshold,
+                    member.judged.value.clone(),
+                    None,
+                    member.batch.clone(),
+                    member.requests.clone(),
+                )
+                .map_err(|_| Error::defect("a scalar result could not be written as JSON"))
+            })
+            .transpose()?;
         let json = decision_with_batch_requests(
             run,
             &member.judged,
@@ -224,6 +248,7 @@ impl Details {
         )
         .map_err(|_| Error::defect("a result could not be written as JSON"))?;
         details.json = Written(json);
+        details.scalar_json = scalar_json.map(Written);
         details.requests = member.requests;
         Ok(details)
     }
