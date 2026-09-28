@@ -1,6 +1,6 @@
 # The library drops a question file's calibration profile
 
-Status: Open. Filed 2026-09-26 by the queue owner from local experiment 273, report 04, finding I1. Ticket 0148's settings sweep found the same gap and promised this file. It is filed now so the gap is findable before 0148 lands. Blocks 0.1 under goal 3: a library must match the command. 0148 says the fix waits for files ticket 0146 holds.
+Status: Open pending 0203 review and landing. Filed 2026-09-26 by the queue owner from local experiment 273, report 04, finding I1. Ticket 0148's settings sweep found the same gap and promised this file. It is filed now so the gap is findable before 0148 lands. Blocks 0.1 under goal 3: a library must match the command. 0148 says the fix waits for files ticket 0146 holds.
 
 ## What happens
 
@@ -18,6 +18,8 @@ Verified by reading the code: `crates/thinkthen/src/public/results.rs:211` sets 
 ## What would fix it
 
 Carry the calibration name through the public question type into the digest and the warning. Add a shared conformance case with `profile` set, so every surface must give the command's digest.
+
+Ticket 0203 now has a frozen source candidate with one independently pinned question digest, a set digest, selected command, public, library and SQL details checks, and zero-send refusal checks. Its fresh code review is pending. Linux x86-64 DuckDB uses the staged C++ extension; the three retained C API platform packages still await their separate 0201 migration, so this issue remains open for that platform scope after the candidate lands.
 
 ## Done when
 
