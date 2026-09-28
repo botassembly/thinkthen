@@ -24,3 +24,7 @@ Experiments 296 and 297 did exactly that. The experiment's `scoring.py` restates
 One additive option or subcommand that prints one row per case: id, question text, said, truth, right or wrong, the probabilities, and the tokens. A `--cases` flag on `audit` is the smallest form. The current group output stays the default, and no exit code changes.
 
 A per-case member on the existing group row is not enough: one group holds many cases, and the row has no place for them.
+
+## Factual preparation, 2026-09-28
+
+At main `e58aceae`, `cli/audit.rs::grade_all` reads details and a separate key, while `core/measure/{answer,key}.rs` supplies identity and grading primitives. The detail row alone does not supply truth; the key join does. The command still emits aggregate groups, while `diff` emits changed cases only. A per-case view remains distinct. Reuse the existing join and refusal rules, and prove labeled, unlabeled, failed and duplicate-identity edges without new sends. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.

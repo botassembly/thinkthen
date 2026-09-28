@@ -19,3 +19,7 @@ The Optimizer gate weighs accuracy against cost: "A tuned wording grows longer a
 ## What to change
 
 A run total in the machine-readable output: the sum of `meta.usage` over the rows the run printed, and optionally the money at a named price. A new member on the audit row or a small summary line. Additive, and the result contract already allows a release to add a member to a row.
+
+## Factual preparation, 2026-09-28
+
+The “nothing reports” premise predates accepted ticket 0170. At main `e58aceae`, opt-in `--facts` prints one final `thinkthen.run/1` stderr line with whole-run request and token totals; its record count includes accepted rows omitted by filter or rank. Token members are absent if any live reply lacks usage. The original request for a sum over printed `meta.usage` rows remains a distinct, narrower scope and should be ruled on explicitly: it can be useful for score-aligned rows but cannot represent all live work. Money beside the score is still open. A user-supplied price yields an estimate, not actual billing. The broader every-surface-facts issue remains separate. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.
