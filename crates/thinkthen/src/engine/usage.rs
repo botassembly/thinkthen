@@ -6,7 +6,7 @@ use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::thread::{self, JoinHandle};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::core::Usage;
 
@@ -15,6 +15,7 @@ pub(crate) use counts::Counts;
 mod attempt;
 mod facts;
 pub(crate) use facts::Snapshot as RunSnapshot;
+mod lock;
 
 const SCHEMA: &str = "thinkthen.usage/1";
 
@@ -42,6 +43,8 @@ struct Queue {
     /// Set by the first failure. Nothing is written after it.
     failed: bool,
     closing: bool,
+    /// One deadline for every lock acquisition left after finalization starts.
+    finish_deadline: Option<Instant>,
     writer: Option<JoinHandle<()>>,
 }
 
@@ -88,14 +91,17 @@ impl Counters {
         });
     }
 
-    /// Wait until every delta counted so far is written, then say whether
-    /// persistence failed. Waits as long as another process holds the lock.
+    /// Wait for the writer, giving all remaining usage-lock acquisitions one
+    /// finalization deadline. Other filesystem operations remain unbounded.
     pub(crate) fn finish(&self) -> bool {
         let busy = |queue: &mut Queue| {
             queue.writer.is_some() && (queue.writing || !queue.pending.is_empty())
         };
-        let queue = self.shared.queue.lock();
-        let settled = queue.and_then(|queue| self.shared.changed.wait_while(queue, busy));
+        let settled = self.shared.queue.lock().and_then(|mut queue| {
+            queue.finish_deadline.get_or_insert_with(lock::deadline);
+            self.shared.changed.notify_all();
+            self.shared.changed.wait_while(queue, busy)
+        });
         settled.map_or(true, |queue| queue.failed)
     }
 
@@ -142,6 +148,7 @@ impl Drop for Counters {
     fn drop(&mut self) {
         let writer = self.shared.queue.lock().ok().and_then(|mut queue| {
             queue.closing = true;
+            queue.finish_deadline.get_or_insert_with(lock::deadline);
             queue.writer.take()
         });
         self.shared.changed.notify_all();
@@ -156,7 +163,7 @@ fn write_behind(path: &Path, shared: &Shared, carried: impl FnOnce()) {
     carried();
     let mut queue = shared.queue.lock();
     let idle = |held: &mut Queue| held.pending.is_empty() && !held.closing;
-    let write = |(month, sum): &(String, Counts)| update(path, month, *sum).is_ok();
+    let write = |(month, sum): &(String, Counts)| update(path, month, *sum, shared).is_ok();
     while let Ok(mut held) = queue {
         held = match shared.changed.wait_while(held, idle) {
             Ok(held) if !held.pending.is_empty() => held,
@@ -224,7 +231,7 @@ pub(crate) fn read(path: &Path, month: &str) -> io::Result<Totals> {
     })
 }
 
-fn update(path: &Path, month: &str, delta: Counts) -> io::Result<()> {
+fn update(path: &Path, month: &str, delta: Counts, shared: &Shared) -> io::Result<()> {
     maybe_fail(Stage::Setup)?;
     make_private_directory(path)?;
     let directory = open_verified(path, true, 0o700)?;
@@ -232,7 +239,7 @@ fn update(path: &Path, month: &str, delta: Counts) -> io::Result<()> {
     let (lock, created) = open_stable_lock(&lock_path)?;
     pause_after_creation(created);
     maybe_fail(Stage::Lock)?;
-    File::lock(&lock)?;
+    lock::acquire(&lock, shared)?;
     verify_identity(path, &directory, true)?;
     verify_identity(&lock_path, &lock, false)?;
     let monthly = path.join(format!("{month}.json"));
