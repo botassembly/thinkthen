@@ -20,7 +20,6 @@ impl Folders {
         let default_disabled =
             !environment.default_cache_enabled() && environment.cache_is_platform_default();
         if common.refresh_cache
-            && !common.dry_run
             && common.cache.is_none()
             && (common.record.is_some()
                 || common.replay.is_some()

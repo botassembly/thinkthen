@@ -122,7 +122,12 @@ fn wait_until_open(waiter: &ReapedChild, lock: &fs::Metadata) -> io::Result<()> 
 }
 
 fn start(base: &str, folder: &str) -> io::Result<ReapedChild> {
-    let child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
+    start_with_refresh(base, folder, false)
+}
+
+fn start_with_refresh(base: &str, folder: &str, refresh: bool) -> io::Result<ReapedChild> {
+    let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
+    command
         .env_clear()
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
@@ -130,8 +135,11 @@ fn start(base: &str, folder: &str) -> io::Result<ReapedChild> {
         .args(arguments(base, folder))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()?;
+        .stderr(Stdio::piped());
+    if refresh {
+        command.arg("--refresh-cache");
+    }
+    let child = command.spawn()?;
     let mut guarded = ReapedChild(Some(child));
     guarded.write_input(EVIDENCE.as_bytes())?;
     Ok(guarded)
@@ -269,7 +277,7 @@ fn two_processes_share_one_request_and_the_keyless_waiter_replays() {
 
 #[cfg(target_os = "linux")]
 #[test]
-fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
+fn waiter_blocks_on_the_owners_original_inode_before_install() {
     use conformance_backend::Rendezvous;
     use std::sync::Arc;
 
@@ -320,6 +328,94 @@ fn waiter_blocks_on_the_owners_original_inode_before_install_and_unlink() {
     assert_eq!(waiter_sent, 0);
     assert_eq!(owner_details, waiter_details);
     assert_eq!(listener.requests().len(), 1);
+}
+
+#[cfg(target_os = "linux")]
+#[test]
+fn three_refresh_callers_keep_one_digest_lock_inode_across_completed_writes() {
+    use conformance_backend::Rendezvous;
+    use std::os::unix::fs::MetadataExt as _;
+
+    let cache = folder("cache-three-refresh-callers");
+    let named = cache.to_string_lossy().into_owned();
+    let first_release = Arc::new(Rendezvous::new(2));
+    let second_release = Arc::new(Rendezvous::new(2));
+    let next = Arc::new(AtomicUsize::new(0));
+    let (events, observed) = mpsc::channel();
+    let listener = Listener::answering_with_events(
+        {
+            let first_release = Arc::clone(&first_release);
+            let second_release = Arc::clone(&second_release);
+            let next = Arc::clone(&next);
+            move |_| match next.fetch_add(1, Ordering::SeqCst) {
+                0 => Canned::ok(ANSWER).after_release(Arc::clone(&first_release)),
+                1 => Canned::ok(ANSWER).after_release(Arc::clone(&second_release)),
+                _ => Canned::ok(ANSWER),
+            }
+        },
+        events,
+    )
+    .expect("listener");
+    let first = start_with_refresh(listener.base(), &named, true).expect("first starts");
+    assert!(matches!(
+        observed.recv_timeout(Duration::from_secs(2)),
+        Ok(Observed::Request)
+    ));
+    let lock = fs::read_dir(cache.join(".locks"))
+        .expect("lock folder")
+        .find_map(Result::ok)
+        .expect("digest lock");
+    let original = lock.metadata().expect("first lock metadata");
+    let mut second = start_with_refresh(listener.base(), &named, true).expect("second starts");
+    wait_until_open(&second, &original).expect("second opened the first inode");
+    assert!(second.is_running().expect("second waits"));
+    assert!(observed.recv_timeout(Duration::from_millis(100)).is_err());
+
+    first_release.wait();
+    let first_output = first.wait().expect("first finishes");
+    assert_eq!(first_output.status.code(), Some(0));
+    assert_eq!(
+        lock.metadata()
+            .expect("lock survives first completion")
+            .ino(),
+        original.ino()
+    );
+    assert!(matches!(
+        observed.recv_timeout(Duration::from_secs(2)),
+        Ok(Observed::Request)
+    ));
+    let mut third = start_with_refresh(listener.base(), &named, true).expect("third starts");
+    wait_until_open(&third, &original).expect("third opened the same inode");
+    assert!(third.is_running().expect("third waits"));
+    assert!(observed.recv_timeout(Duration::from_millis(100)).is_err());
+
+    second_release.wait();
+    let second_output = second.wait().expect("second finishes");
+    assert_eq!(second_output.status.code(), Some(0));
+    assert!(matches!(
+        observed.recv_timeout(Duration::from_secs(2)),
+        Ok(Observed::Request)
+    ));
+    let third_output = third.wait().expect("third finishes");
+    assert_eq!(third_output.status.code(), Some(0));
+    for output in [&first_output, &second_output, &third_output] {
+        let (_details, replayed, attempts) = normalized_details(output).expect("refresh details");
+        assert!(!replayed);
+        assert_eq!(attempts, 1);
+    }
+    assert_eq!(listener.requests().len(), 3);
+    assert!(
+        fs::read(lock.path())
+            .expect("retained lock is empty")
+            .is_empty()
+    );
+    assert_eq!(
+        lock.metadata()
+            .expect("lock survives all completions")
+            .ino(),
+        original.ino()
+    );
+    assert!(one_entry(&cache).expect("one complete entry").is_file());
 }
 
 #[test]
@@ -442,7 +538,7 @@ fn lock_setup_fails_before_a_key_or_request_is_needed() {
 
 #[cfg(unix)]
 #[test]
-fn a_successful_cache_fill_removes_its_private_lock_file() {
+fn a_successful_cache_fill_retains_its_private_lock_file() {
     use std::os::unix::fs::PermissionsExt as _;
 
     let cache = folder("cache-private-lock");
@@ -458,7 +554,14 @@ fn a_successful_cache_fill_removes_its_private_lock_file() {
         .expect("lock directory")
         .filter_map(Result::ok)
         .collect::<Vec<_>>();
-    assert!(files.is_empty(), "completed locks leave: {files:?}");
+    let [lock] = files.as_slice() else {
+        panic!("one retained lock, found {files:?}");
+    };
+    assert!(fs::read(lock.path()).expect("empty lock").is_empty());
+    assert_eq!(
+        lock.metadata().expect("lock mode").permissions().mode() & 0o777,
+        0o600
+    );
     assert_eq!(
         fs::metadata(&cache)
             .expect("cache mode")
@@ -497,7 +600,7 @@ fn replay_only_creates_no_lock_directory() {
     )
     .expect("record run");
     assert_eq!(recorded.status.code(), Some(0));
-    fs::remove_dir(cache.join(".locks")).expect("empty lock folder removed for the replay check");
+    fs::remove_dir_all(cache.join(".locks")).expect("lock folder removed for the replay check");
     let replayed = spawn(
         &[
             "decide",

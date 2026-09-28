@@ -66,7 +66,8 @@ struct PreparedWrite {
     partial: PathBuf,
     file: Option<File>,
     replace_damaged: bool,
-    lock: Option<CacheLock>,
+    // Keep the inode locked through completion. Only folder-exclusive prune unlinks it.
+    _lock: Option<CacheLock>,
 }
 
 enum Existing {
@@ -291,11 +292,11 @@ impl Recorder {
                     .map_err(storage)??;
                 match checked(existing(&entry, exchange)?) {
                     Existing::Valid(response) if self.replaying => {
-                        remove_lock(lock)?;
+                        drop(lock);
                         Ok(PreparedRecording::Replay(response))
                     }
                     Existing::Valid(_) => {
-                        remove_lock(lock)?;
+                        drop(lock);
                         prepared_write(folder, entry, false, None)
                     }
                     Existing::Missing => prepared_write(folder, entry, false, Some(lock)),
@@ -382,24 +383,13 @@ impl PreparedWrite {
                 name,
             )
         };
-        let valid_final = match final_existing(&self.entry, exchange) {
-            Ok(Existing::Valid(_)) => true,
-            Ok(Existing::Missing | Existing::Damaged(_)) => false,
-            Err(error) => {
-                result = Err(error);
-                false
-            }
-        };
+        if let Err(error) = final_existing(&self.entry, exchange) {
+            result = Err(error);
+        }
         if result.is_ok()
             && let Err(error) = sync_recording_directory(&self.folder)
         {
             result = Err(storage(error));
-        }
-        if valid_final
-            && let Some(lock) = self.lock.take()
-            && let Err(error) = remove_lock(lock)
-        {
-            result = Err(error);
         }
         result
     }
@@ -461,7 +451,7 @@ fn prepared_write(
             partial,
             file: Some(file),
             replace_damaged,
-            lock,
+            _lock: lock,
         }),
         _gate: None,
     }))
@@ -517,16 +507,6 @@ fn make_folder(folder: &Path) -> Result<(), Error> {
 
 fn storage(_error: io::Error) -> Error {
     Error::RecordingStorage
-}
-
-/// Remove a completed lock file without syncing `.locks`.
-///
-/// A valid entry exists. A power loss can bring back the empty lock file. It
-/// holds no answer, and prune removes it when it removes that entry. A sync
-/// here cost one of the three per-entry syncs (`sdlc/records/qf-request-cost.md`).
-fn remove_lock(lock: CacheLock) -> Result<(), Error> {
-    maybe_fail(StorageStageName::LockRemove)?;
-    lock.unlink().map_err(storage)
 }
 
 fn sync_recording_directory(folder: &Path) -> io::Result<()> {
