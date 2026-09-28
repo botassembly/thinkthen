@@ -7,10 +7,10 @@ const reviews = [
   "The zipper broke the first time I used it.",
   "The strap snapped on day two.",
 ];
-const complaints = await tt.filter(
+const complaints = (await tt.filter(
   complaintQuestion,
   reviews,
-);
+)).value;
 assert.deepEqual(complaints, [reviews[1], reviews[2]]);
 
 const levels = ["Routine.", "Soon.", "Immediate."];
@@ -19,5 +19,7 @@ const urgencyScale = {
   levels,
 };
 const outage = "Checkout is down and nobody can pay.";
-const urgency = await tt.score(urgencyScale, outage);
+const urgency = (await tt.score(
+  urgencyScale, outage,
+)).value;
 assert.equal(urgency, 2);

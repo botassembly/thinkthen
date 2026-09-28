@@ -280,7 +280,7 @@ Fresh High review of source `360f4e7a`, integrated `6ff22a8e`, found three requi
 
 - Split halves are rebuilt with an end-of-input closure, but record metadata must retain the original batch closure reason. The first split test pinned request lists and counts without pinning this origin field. Carry the parent reason and extend that same regression.
 - C call eligibility was checked while iterating option keys, so a present empty object bypassed the route restriction. The closed schema also allowed annotation context that runtime refused. Validate the container's eligibility independently of its keys and align parser, schema and corpus.
-- Seven site C examples still consume a bare response. The library example inventory missed the public site copies. The explicit marketing ownership rule prevents this lane editing them; [the release issue](../issues/2026-09-28-site-c-examples-need-json-value-wrapper.md) retains all seven migrations and their proof. The ticket must not claim every direct consumer is migrated.
+- Seven site C examples still consume a bare response. The library example inventory missed the public site copies. The explicit marketing ownership rule prevents this lane editing them; [the release issue](../issues/closed/2026-09-28-site-c-examples-need-json-value-wrapper.md) retains all seven migrations and their proof. The ticket must not claim every direct consumer is migrated.
 
 The retained preparer received the first two patterns for the cache/replay pass and whole-queue ranking. Apply them where a ticket has optional controls or derived metadata; do not add an unrelated exhaustive checklist.
 

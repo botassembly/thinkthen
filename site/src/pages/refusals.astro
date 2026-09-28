@@ -4,7 +4,7 @@ import Base from '../layouts/Base.astro';
 ---
 <Base title="What it will not do" description="ThinkThen answers questions about text and does nothing else. Every line the tool will not cross.">
   <h1>What it will not do</h1>
-  <p class="lede">ThinkThen answers questions about text and does nothing else.</p>
+  <p class="lede">ThinkThen sends text to a model and returns a bounded answer. Turn a screen, image, or audio recording into text before asking it a question.</p>
 
   <h2>It never acts</h2>
   <ul>
@@ -15,6 +15,15 @@ import Base from '../layouts/Base.astro';
     <li><b>It never writes text.</b> Every answer is yes or no, one of your options, a set of your labels, a place on your scale, an order of your input, links between your names, or a piece of your own input. Nothing is generated.</li>
     <li><b>It never acts on the answer.</b> It hands you a typed value and an exit code. The action lives in an <code>if</code>, a <code>case</code>, or a queue. That code is yours.</li>
     <li><b>It never holds a conversation.</b> Each request stands alone. Nothing carries from one request to the next.</li>
+  </ul>
+
+  <h2>Hand other work to another tool</h2>
+  <ul>
+    <li>Use a writing model to summarize or rewrite. Pass its text through <code>thinkthen decide</code> or <code>filter</code> when you need a checked label.</li>
+    <li>Use a redaction tool to remove private spans before piping text to ThinkThen. ThinkThen can <code>recognize</code> names, but it does not redact them.</li>
+    <li>Use a clustering tool or database to group records, then ask ThinkThen to <code>choose</code> a label for a group.</li>
+    <li>Use sampling tools to choose a diverse review set. Send each selected record to ThinkThen; it does not sample for you.</li>
+    <li>Use an extraction or graph tool for free-form entities and edges. ThinkThen's <code>recognize</code> and <code>relate</code> work with the named kinds and relation rules you supply.</li>
   </ul>
 
   <h2>It never leaks the key</h2>

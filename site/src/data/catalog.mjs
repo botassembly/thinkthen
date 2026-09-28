@@ -53,7 +53,7 @@ const COMMON_OPTIONS = [
   ['--dry-run', 'Prints the plan and sends nothing. It needs no key.'],
   ['--lines, --jsonl, --csv, --tsv', 'Says how a stream of records is framed. Pick at most one.'],
   ['--field POINTER', 'Names the part of each record to judge, as a JSON Pointer. It may repeat.'],
-  ['--jobs N', `How many requests run at once, from ${THROTTLE.range.min} to ${THROTTLE.range.max}. The default is ${THROTTLE.default}. It works on a stream of records. annotate also takes it on one document.`],
+  ['--jobs N', `How many requests run at once, from ${THROTTLE.range.min} to ${THROTTLE.range.max}. The default is ${THROTTLE.default}. It works on a stream of records, annotate on one document, and relate on one entity set.`],
   ...BACKEND_OPTIONS,
 ];
 
@@ -95,7 +95,6 @@ export const FUNCTIONS = [
       '1-lines': "The refund request answers true and the thank-you note false. \"I want to send this back.\" could mean an exchange or money back. It lands inside the band 0.2:0.8 as null.",
       '2-case': "The send-back line lands in the band. decide exits 3, and the case sends it to a person. The script then exits 0.",
       '3-one': "The ticket asks for a refund. decide prints true and exits 0.",
-      '4-details': "The details put yes at 0.99 for this ticket.",
       '5-means': "Under these words, a cancellation is not money back. decide says false and exits 1.",
     },
   },
@@ -143,7 +142,6 @@ export const FUNCTIONS = [
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The message praises the dashboard, reports a crash, and names a double charge. It gets praise, bug, and billing.",
-      '2-details': "praise, bug, and billing each clear 0.5.",
       '3-labels': "At 0.9, each line gets the one label its description fits.",
     },
   },
@@ -164,7 +162,6 @@ export const FUNCTIONS = [
     howtos: ['code-open-ended-survey-answers'],
     see: {
       '1-one': "The outage scores 2.0, and 2 is Immediate on this scale.",
-      '2-details': "The details put all of the weight on Immediate.",
       '3-lines': "The address change lands near 0, the Friday deadline near 1, and the login outage at 2.",
     },
   },
@@ -238,7 +235,6 @@ export const FUNCTIONS = [
     howtos: ['group-alerts-into-incidents', 'check-an-expense-against-the-policy'],
     see: {
       '1-find': "find prints the line with the 30 day refund deadline.",
-      '2-details': "The second line holds all of the weight.",
       '3-none': "No line says how to cancel. find prints nothing and exits 3.",
       '4-jsonl': "Q1 holds the reset steps, and the whole record comes back.",
     },
@@ -271,7 +267,7 @@ export const FUNCTIONS = [
     line: 'Find every name in the evidence and say what kind it is.',
     takes: 'the evidence and the kinds of name you allow',
     gives: 'each name, its kind, where it sits, and a strength',
-    requests: 'It asks one question about every word, and one more about its kind when you allow two or more kinds. --dry-run prints the exact requests for the first record.',
+    requests: 'It finds candidate spans, assigns kinds, then tests requested relations. --dry-run prints the request plan for the first record.',
     args: 'KIND..., or one @FILE question file',
     options: [
       ['--kind KIND=DESCRIPTION', 'One kind and what it means.'],
@@ -283,37 +279,32 @@ export const FUNCTIONS = [
     exits: [[0, 'the run finished'], ...COMMON_EXITS],
     unsure: 'The model only picks from options. A name that is not in the evidence cannot come back. The number on a name is its strength. ThinkThen computes it, and it is not a probability. Your threshold decides which names you keep.',
     howtos: [],
-    how: {
-      steps: [
-        'One call asks two questions of every word. Is it part of a name? And which of your kinds is it? Both questions go out together.',
-        'Each run of words in a name becomes one name. Its kind is the kind most of its words picked. Its strength is its weakest word\'s answer to the first question times the average answer for that kind.',
-        'With `--relation`, more calls follow. They ask how the names connect.',
-      ],
-      script: '1-details',
-    },
     see: {
-      '1-details': 'This sentence cost one call. `requests` lists one request, and `usage` counts 8092 tokens in. Under `answer.tokens`, each word carries `detection_probability`, its answer to the first question. A word above 0.5 is part of a name. `kind_probabilities` answers the second question, in the order person, song, album, place. Ringo and Starr both answer 1.0, so they join into one name. Both pick person, so the name is a person. The word "wrote" answers 0.0 and joins no name. `--threshold 0.5` then keeps the names with a strength of 0.5 or more. `--dry-run` prints the call count before you send anything.',
+      '1-names': 'The command returns the names, kinds, offsets, and strengths. Recognition uses candidate spans, kind selection, then relation checks when requested.',
     },
   },
   {
     name: 'relate',
-    goal: 'relate links records that clash, repeat, or rely on each other, one edge per pair with a probability.',
-    primitive: 'Yes or no, or a direction, per pair of records',
-    line: 'Find records that clash, repeat, or rely on each other.',
-    lede: 'You give it a set of records and the relations you allow. You get back one edge for each related pair, with a probability. An edge links two records. The samples below find the rules in a travel policy that contradict each other.',
-    takes: 'a set of records and the relations you allow',
+    goal: 'relate asks the model about named entities, one possible edge per pair and rule.',
+    primitive: 'Yes or no per allowed entity pair and rule',
+    line: 'Find relationships among named entities.',
+    lede: 'You give it entity names, kinds, and relation rules. Standalone relate reads no source text; each edge reports the model’s belief about those names. The sample asks whether gateway calls billing.',
+    takes: 'one set of named entities and relation rules',
     gives: 'one edge for each related pair, with a probability',
-    requests: 'It reads the whole set at once, up to 255 records. --dry-run prints every request it would send.',
+    requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --dry-run prints the requests it would send.',
     args: 'RELATION... as NAME=SOURCE_KIND:TARGET_KIND or a bare NAME, or one @FILE',
     options: [
       ['--either', 'Treats every relation as reading the same both ways.'],
       ['--threshold T', `Keeps edges whose probability reaches this cut. The default is ${cutOn('relate')}.`],
-      ['--kind-field POINTER', 'Reads each record\'s kind from this pointer.'],
+      ['--kind-field POINTER', 'Reads each entity\'s kind from this pointer.'],
       ...COMMON_OPTIONS,
     ],
     exits: [[0, 'the run finished'], [6, 'the run finished with failed questions'], ...COMMON_EXITS],
     unsure: 'A relation has a direction, or it reads the same both ways. The number on an edge is a probability. Your threshold decides which edges you keep.',
     howtos: [],
+    see: {
+      '1-pair': 'The current pair question links gateway to billing. The edge comes from the model answer for these two named services.',
+    },
   },
   {
     name: 'question-file',
@@ -417,18 +408,18 @@ export const SURFACES = [
   {
     slug: 'python', name: 'Python', deckHeading: 'Python',
     lang: 'python', tab: 'Python',
-    blurb: 'Pass a string or a list, and get `True`, `False`, or `None` back. Build a question once and reuse it.',
+    blurb: 'Pass a string or a list. Read the answer from `Call.value`; `None` means not sure.',
     unsureWord: 'None',
     install: [['pip install thinkthen', null], ['uv add thinkthen', null]],
     particular: [
-      'A list goes in and a list comes out. The list crosses into the engine once.',
+      'A list goes in and `Call.value` holds the answered list. The list crosses into the engine once.',
       '`tt.question()` builds a question that carries its own threshold. Reuse it wherever you ask.',
     ],
   },
   {
     slug: 'polars', name: 'Polars', deckHeading: 'Polars',
     lang: 'python', tab: 'Python',
-    blurb: 'A Polars frame goes in, and it comes back with one new column for each question.',
+    blurb: 'A Polars frame goes in. Read the frame with its new columns from `Call.value`.',
     unsureWord: 'None',
     install: [['pip install thinkthen[polars]', null]],
     particular: [
@@ -439,18 +430,18 @@ export const SURFACES = [
   {
     slug: 'typescript', name: 'TypeScript', deckHeading: 'TypeScript',
     lang: 'ts', tab: 'TypeScript',
-    blurb: 'Ten async functions. Pass one options object and await the answer.',
+    blurb: 'Pass one options object. Await the call, then read its `.value`.',
     unsureWord: 'null',
     install: [['npm install thinkthen', null], ['pnpm add thinkthen', null], ['bun add thinkthen', null]],
     particular: [
       'An AbortSignal cancels the call, and the promise rejects at once.',
-      'Every call returns a promise. An array crosses once.',
+      'Every call returns a promise for a `Call`. An array crosses once.',
     ],
   },
   {
     slug: 'ruby', name: 'Ruby', deckHeading: 'Ruby',
     lang: 'ruby', tab: 'Ruby',
-    blurb: 'Ten module methods. Any Enumerable goes in.',
+    blurb: 'Any Enumerable goes in. Read the answer from `Call#value`.',
     unsureWord: 'nil',
     install: [['gem install thinkthen', null]],
     particular: ['Any Enumerable crosses to the engine once.'],
@@ -458,11 +449,11 @@ export const SURFACES = [
   {
     slug: 'r', name: 'R', deckHeading: 'R',
     lang: 'r', tab: 'R',
-    blurb: 'Ten `tt_` functions that work inside dplyr.',
+    blurb: 'Ten asking verbs work inside dplyr. Read the answer from `$value`.',
     unsureWord: 'NA',
     install: [['install.packages("thinkthen")', null]],
     particular: [
-      'A column goes in and a column comes out.',
+      'A column goes in and the answered column is in `$value`.',
       'dplyr\'s `filter()` drops NA rows. A not-sure answer leaves the pipeline on its own.',
     ],
   },
@@ -483,8 +474,8 @@ export const SURFACES = [
     unsureWord: 'an outcome of THINKTHEN_UNSURE',
     install: [['thinkthen.h + libthinkthen', 'Each release ships the header, the shared library, and the static library.']],
     particular: [
-      'Every call returns 0 or an error kind.',
-      'The answer lands in a struct: the outcome and its probability.',
+      'The JSON examples parse the `value` and `facts` members with json-c. Install its development headers and link with `pkg-config --cflags --libs json-c` beside libthinkthen.',
+      'A failed JSON call returns NULL. A successful `value` can itself be JSON null. Typed calls use a result struct and an error code.',
     ],
   },
   {
@@ -498,11 +489,11 @@ export const SURFACES = [
   {
     slug: 'sqlite', name: 'SQLite', deckHeading: 'SQLite',
     lang: 'sql', tab: 'SQL',
-    blurb: 'One warm pass answers the whole table. Every later query reads the saved answers.',
+    blurb: 'Warm can prepare saved answers for later queries with the same complete request and model.',
     unsureWord: 'NULL',
     install: [['.load ./thinkthen', null]],
     particular: [
-      'SQLite calls a function one row at a time. `thinkthen_warm` answers the whole table in one pass first.',
+      'For scalar reuse after warm, set `thinkthen_batch(1)` before the engine is created and keep the question, context, and model the same.',
     ],
   },
   {
@@ -676,6 +667,25 @@ export const TECHNIQUES = [
       '2-fail': 'One line hedges. The check prints it and exits 1.',
     },
   },
+  {
+    slug: 'long-lived-loop', title: 'Keep one process for a step loop', label: 'one process',
+    goal: 'A coproc sends each step to one choose process and reads its answer before the next step.',
+    said: '`coproc` holds one `choose` process open. `--batch 1` releases each answer while the input remains open; strict replay needs no key or network. A library is the route when the loop needs lower call overhead.',
+    see: { '1-loop': 'Three changing action lists produce three answers from one process.' },
+  },
+  {
+    slug: 'judge-paragraphs', title: 'Judge one paragraph at a time', label: 'paragraphs',
+    goal: 'awk splits a document into paragraphs, jq makes JSON records, and filter judges each paragraph.',
+    said: '`awk -v RS=` splits on blank lines. `jq` gives each paragraph a `text` field, and `filter --field /text` sends only that text. Use a sentence splitter for sentences or a parser for code functions.',
+    see: { '1-paragraphs': 'The two complaint paragraphs return as JSON records.' },
+  },
+  {
+    slug: 'agent-tool-guard', title: 'Guard a coding agent tool call', label: 'tool guard',
+    goal: 'Map a bounded decide answer to one coding agent host hook contract.',
+    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text; it runs none of the proposals. A yes yields `allow`, no yields `deny`, and not sure yields `ask`. A failed judge also denies. The hook decision is JSON, because ThinkThen exit 2 means an input error, while a hook exit 2 blocks the tool call.',
+    source: ['Claude Code hooks reference, checked 2026-09-28', 'https://code.claude.com/docs/en/hooks#pretooluse-decision-control'],
+    see: { '1-guard': 'One recorded proposal is allowed, one asks a person, and one is denied.' },
+  },
 ];
 
 export const RECIPES = [
@@ -685,7 +695,6 @@ export const RECIPES = [
     said: 'Label every ticket in a JSON array by kind and urgency. `--field /body` sends only the body. The id and the date ride through. Run it again, and the saved answers come back at no cost.',
     see: {
       '1-label': 'Each ticket keeps its id and date, and gains a kind and an urgency from 0 to 2. The double bill in September is billing.',
-      '2-again': 'The same command again, with the first ticket in full. `cached` is true and `requests_sent` is 0.',
     },
   },
   {
@@ -705,6 +714,12 @@ export const RECIPES = [
     goal: 'annotate fills a form with picks from your own lists, and no field holds model-written text.',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
     see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
+  },
+  {
+    slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'Set aside bad records',
+    goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
+    said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
+    see: { '1-split': 'The malformed line and numeric body stay aside; three text records are judged.' },
   },
 ];
 

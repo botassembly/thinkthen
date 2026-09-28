@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"[{\"id\":\"u001\",\"evidence\":\"INC-1 checkout returns 500 at payment\"},{\"id\":\"u002\",\"evidence\":\"INC-2 search results load slowly\"},{\"id\":\"u003\",\"evidence\":\"INC-3 nightly export ran late\"}]","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which incident covers: Card charges fail with 500 at checkout","criteria":{"u001":null,"u002":null,"u003":null,"none":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"u001","confidence":1.0,"probabilities":{"u002":0.0,"u003":0.0,"none":0.0,"u001":1.0}}},"usage":{"input_tokens":381,"output_tokens":58}}
+}

@@ -209,11 +209,9 @@ const ARTICLES = {
     idea: [
       "`recognize` finds every name in a text and gives each one a kind from your list. Each name carries a strength.",
     ],
-    see: {
-      '1-low': "At 0.01, all five names come back.",
-      '2-high': "At 0.98, three names are left.",
-    },
-    headings: { '2-high': "Change the bar" },
+    historical: true,
+    see: {},
+    source: record('recognize'),
     lesson: "All five names are right. The bar of 0.98 drops Abbey Road Studios and the album Abbey Road. Their strengths did not change.",
     takeaway: "The bar picks which names you keep. It never changes a strength.",
     link: tree('recognize'),
@@ -226,12 +224,9 @@ const ARTICLES = {
     idea: [
       "`relate` takes a set of names and the relations you care about, and finds each link. Here the names are songs, singers, and albums. The file names two relations: sung by and appears on. Each output line is one edge with its probability.",
     ],
-    files: ["relate.json"],
-    see: {
-      '1-low': "At 0.5, fourteen edges.",
-      '2-high': "At 0.8, twelve edges.",
-    },
-    headings: { '2-high': "Change the bar" },
+    historical: true,
+    see: {},
+    source: record('relate'),
     lesson: "Octopus's Garden first came out on Abbey Road. Jev links it to Revolver at 0.73, and the bar of 0.8 removes that wrong edge. The same bar removes Yesterday on Help! at 0.56, and that edge is right.",
     takeaway: "A higher bar removes wrong edges and right ones alike.",
     link: tree('relate'),

@@ -8,6 +8,6 @@ texts = [
   "Nobody can log in to the site right now."
 ]
 urgency = texts.map do |text|
-  ThinkThen.score(question, text, levels:)
+  ThinkThen.score(question, text, levels:).value
 end
 raise unless urgency == [0.06, 0.99, 2.0]

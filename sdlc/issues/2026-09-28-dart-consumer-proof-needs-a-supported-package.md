@@ -21,3 +21,7 @@ Local experiment 300: `FINDINGS.md` (stage one), `stage2/FINDINGS.md`, `BUILD-RE
 ## Limits
 
 One Linux host and SDK, synthetic loopback, shared-library loading only (no static-link mode), no Flutter embedder run, no publication, rehearsal archives never ship. GH Actions direction: `ubuntu-24.04`, setup-dart, offline native build from the release archive, `dart pub publish --dry-run` in CI and real publication through the release job.
+
+## Flutter surface proven (2026-09-28, stage three)
+
+The ruling "flutter yes" now has executed evidence in local experiment 300 `stage3/`: the Flutter host test toolchain runs the full strict contract (17 exact arrivals, isolate cancellation, planted negatives), and a real Flutter engine app — `flutter build linux` under xvfb — decides through the binding with one counted backend arrival and the literal `FLUTTER_EMBEDDER_PASS` marker. Ian installed `ninja-build` and `libgtk-3-dev` to unblock the Linux build. The J8 ticket inherits the sharpened packaging decisions: no `path:` dependencies at publish, per-platform native archives (a Linux `.so` satisfies no other target), no untested runtime download, README names archive/version/discovery/platforms. Flutter 3.47.5 hash in the experiment's `inputs/flutter-toolchain.json`.

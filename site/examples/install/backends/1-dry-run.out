@@ -1,10 +1,10 @@
 {
   "url": "https://api.typesafe.ai/v1/systemone",
-  "model": "jev-latest",
+  "model": "jev-1.13.0",
   "key_env": "THINKTHEN_API_KEY",
   "request": {
     "state": "I want to send this back.\n",
-    "model": "jev-latest",
+    "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",

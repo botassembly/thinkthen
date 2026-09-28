@@ -19,7 +19,7 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 PAGE = REPO / "specification" / "settings.md"
 SCHEMA = REPO / "specification" / "question-file.schema.json"
 RECOGNIZE = REPO / "crates/thinkthen/src/core/recognize_file.rs"  # its two key lists: the file, then `recognize`
-COLUMNS = ["Setting", "What it does", "Default", "Allowed values", "Command flag", "Environment variable",
+COLUMNS = ["Setting", "What it does", "Default", "Allowed values", "Source", "Command flag", "Environment variable",
            "Configuration file", "Question-file key", "Rust", "Python", "TypeScript", "Ruby", "R", "C", "DuckDB",
            "PostgreSQL", "SQLite"]
 FLAG, ENV, KEY = COLUMNS.index("Command flag"), COLUMNS.index("Environment variable"), COLUMNS.index("Question-file key")
@@ -224,7 +224,7 @@ def cell_edit(text, name, column, new):
     return "".join(out)
 
 
-PLANTED = "| Planted | x | x | x | `--planted-setting` | `THINKTHEN_PLANTED` |" + " not on this surface |" * 11 + "\n"
+PLANTED = "| Planted | x | x | x | x | `--planted-setting` | `THINKTHEN_PLANTED` |" + " not on this surface |" * 11 + "\n"
 
 
 def cases(text):

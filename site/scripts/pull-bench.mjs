@@ -4,7 +4,7 @@
 //
 //   BEATLES_BENCH=path/to/beatles-bench node scripts/pull-bench.mjs
 //
-// The checkout must sit at the commit examples/beatles/BENCH names, with no
+// The checkout must sit at the commit examples/beatles/bench-pin names, with no
 // local changes. Each example runs under strace in a copy of that commit, and
 // every file it opens inside the copy lands in examples/beatles/bench/ at the
 // same path. THINKTHEN_BIN names the command, as in smoke.mjs.
@@ -20,7 +20,7 @@ const out = path.join(root, 'bench');
 const checkout = process.env.BEATLES_BENCH;
 if (!checkout) { console.error('pull-bench: set BEATLES_BENCH to a bench checkout'); process.exit(2); }
 
-const pin = fs.readFileSync(path.join(root, 'BENCH'), 'utf8').trim();
+const pin = fs.readFileSync(path.join(root, 'bench-pin'), 'utf8').trim();
 const git = (...args) => execFileSync('git', ['-C', checkout, ...args], { encoding: 'utf8', maxBuffer: 1 << 28 }).trim();
 if (git('rev-parse', 'HEAD') !== pin) { console.error(`pull-bench: the checkout is not at ${pin}`); process.exit(1); }
 if (git('status', '--porcelain')) { console.error('pull-bench: the checkout has local changes'); process.exit(1); }

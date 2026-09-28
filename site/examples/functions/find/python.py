@@ -7,5 +7,5 @@ policy = [
     "Shipping is free on orders over $50.",
     "Gift cards cannot be exchanged for cash.",
 ]
-refund_deadline = tt.find(question, policy)
+refund_deadline = tt.find(question, policy).value
 assert refund_deadline["unit"] == policy[1]

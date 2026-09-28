@@ -17,5 +17,6 @@ Let It Be
 Maxwell's Silver Hammer
 EOF
 thinkthen filter "$question" \
+  --batch 1 \
   --threshold 0.7 \
   --replay recording

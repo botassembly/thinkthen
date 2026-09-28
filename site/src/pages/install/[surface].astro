@@ -21,11 +21,25 @@ const headline = shell
   : `${surface.name} functions that answer questions about text`;
 // Copy marks code with backticks.
 const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, part }));
+const runFacts = {
+  shell: '`--details` prints `meta.usage`, `meta.requests_sent`, `meta.cached`, and `meta.url` for one answer.',
+  python: '`Call.facts` counts this call; `Call.details` holds its question observations. `tt.details(question, text).value` gives the result schema for one text.',
+  polars: '`Call.facts` counts this frame call outside its columns. `Call.details` holds the question observations.',
+  typescript: '`Call.facts` counts this call; `Call.details` holds its question observations. `engine.details(question, text).value` gives the result schema for one text.',
+  ruby: '`Call#facts` counts this call; `Call#details` holds its question observations. `engine.details(question, text).value` gives the result schema for one text.',
+  r: '`$facts` counts this call; `$details` holds its question observations. `tt_details(question, text)$value` gives the result schema for one text.',
+  rust: '`Call::facts()` counts this call. `engine.details(question, text).value()` gives the result schema for one text.',
+  c: 'A JSON call returns `{"value":...,"facts":...}`. A detailed call puts the result schema under `value`.',
+  duckdb: '`thinkthen_details(question, text)` returns the result schema as JSON text; `thinkthen_usage()` gives process totals.',
+  sqlite: '`thinkthen_details(question, text)` returns the result schema; `thinkthen_usage()` gives process totals.',
+  postgresql: '`thinkthen_details(question, evidence)` returns the result schema as jsonb; `thinkthen_usage()` gives process totals.',
+};
 ---
 <Base title={surface.name} description={surface.blurb.replace(/`/g, '')}>
   <div class="eyebrow"><a href="/install/">Install</a></div>
   <h1>{headline}</h1>
   <p class="lede">{parts(surface.blurb).map((x) => x.code ? <code>{x.part}</code> : x.part)}</p>
+  <p>The install channel below is planned for 0.1. Use the source checkout until a release package for this surface is published and verified.</p>
 
   <h2>Install</h2>
   <table>
@@ -46,6 +60,9 @@ const parts = (text) => text.split('`').map((part, i) => ({ code: i % 2 === 1, p
     <Terminal run={decideOne} caption={decideOne.see} />
   )}
   <p>Not sure comes back as <code>{surface.unsureWord}</code>. Branch on it and send those cases to a person. Each <a href="/functions/">function page</a> shows its {surface.name} call.</p>
+
+  <h2>Run facts</h2>
+  <p>{parts(runFacts[surface.slug]).map((x) => x.code ? <code>{x.part}</code> : x.part)} The <a href="/reference/details/">result reference</a> names the fields and their source.</p>
 
   <h2>What is different in {surface.name}</h2>
   <ul>{surface.particular.map((p) => <li>{parts(p).map((x) => x.code ? <code>{x.part}</code> : x.part)}</li>)}</ul>

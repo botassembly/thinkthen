@@ -7,7 +7,7 @@ body <- c(
   "My parcel is a week late.",
   "I am locked out of my account."
 )
-team <- tt_choose(question, body, teams)
+team <- tt_choose(question, body, teams)$value
 stopifnot(identical(
   team,
   c("billing", "shipping", "account")
@@ -17,6 +17,6 @@ about_money <- tt_rank(
   "Is this about money?",
   body,
   top = 1
-)
+)$value
 stopifnot(identical(about_money$record, body[1]))
 stopifnot(identical(about_money$probability, 0.98))

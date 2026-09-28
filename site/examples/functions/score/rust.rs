@@ -14,6 +14,9 @@ let texts = [
 ];
 let urgency = texts
     .iter()
-    .map(|text| tt.score(&urgency_scale, text))
+    .map(|text| {
+        tt.score(&urgency_scale, text)
+            .map(|call| call.into_value())
+    })
     .collect::<Result<Vec<_>, _>>()?;
 assert_eq!(urgency, [0.06, 0.99, 2.0]);

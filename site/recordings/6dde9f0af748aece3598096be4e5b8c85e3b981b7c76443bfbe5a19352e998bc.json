@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Please remove me from this list.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"Is this a buying inquiry?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.02}},"usage":{"input_tokens":279,"output_tokens":21}}
-}

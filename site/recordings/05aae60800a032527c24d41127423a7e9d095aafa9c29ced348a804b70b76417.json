@@ -1,0 +1,7 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Case study of one team: before and after numbers, no comparison group.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is this close to a study with measured results?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.82}},"usage":{"input_tokens":291,"output_tokens":21}}
+}

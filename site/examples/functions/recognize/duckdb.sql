@@ -11,7 +11,7 @@ SELECT
     )) AS entity
 FROM tickets;
 
-SELECT * FROM thinkthen_relations(
-    (SELECT body FROM tickets),
-    '@names.json'
-) AS link;
+SELECT id, unnest(thinkthen_relations(
+    body, '@names.json'
+)) AS relation
+FROM tickets;

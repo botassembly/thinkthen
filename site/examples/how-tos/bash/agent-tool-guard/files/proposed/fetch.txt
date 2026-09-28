@@ -1,0 +1,6 @@
+Proposed command:
+
+    git fetch --all --prune
+
+Reason given: the assistant was asked to find out whether this branch is behind
+the one everybody else is working on.

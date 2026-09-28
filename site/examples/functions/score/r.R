@@ -7,5 +7,5 @@ texts <- c(
   "Can you send the signed contract by Friday?",
   "Nobody can log in to the site right now."
 )
-urgency <- tt_score(question, texts, levels)
+urgency <- tt_score(question, texts, levels)$value
 stopifnot(identical(urgency, c(0.06, 0.99, 2.0)))

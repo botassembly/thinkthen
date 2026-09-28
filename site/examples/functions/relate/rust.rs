@@ -24,7 +24,8 @@ let entities = rules
     .iter()
     .map(|rule| Entity::new(rule, "rule"))
     .collect::<Result<Vec<_>, _>>()?;
-let contradictions = tt.relate(&ask, entities)?;
+let contradictions = tt.relate(&ask, entities)?
+    .into_value();
 
 let pairs: Vec<_> = contradictions
     .iter()

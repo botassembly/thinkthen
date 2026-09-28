@@ -1,0 +1,28 @@
+{
+  "entities": [
+    {
+      "text": "Maria Chen",
+      "start": 0,
+      "end": 10,
+      "length": 10,
+      "kind": "PER",
+      "strength": 0.9987
+    },
+    {
+      "text": "Northwind Freight",
+      "start": 18,
+      "end": 35,
+      "length": 17,
+      "kind": "ORG",
+      "strength": 0.997
+    },
+    {
+      "text": "Chicago",
+      "start": 39,
+      "end": 46,
+      "length": 7,
+      "kind": "LOC",
+      "strength": 1.0
+    }
+  ]
+}

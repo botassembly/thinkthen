@@ -8,7 +8,7 @@ texts = [
     "Nobody can log in to the site right now.",
 ]
 urgency = [
-    tt.score(question, text, levels=levels)
+    tt.score(question, text, levels=levels).value
     for text in texts
 ]
 assert urgency == [0.06, 0.99, 2.0]

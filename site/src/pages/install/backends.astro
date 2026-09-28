@@ -7,9 +7,8 @@ import { KEY_VARIABLE } from '../../data/catalog.mjs';
 import { run } from '../../data/samples.mjs';
 import { setting } from '../../lib/settings-table.mjs';
 
-// The address stays typed here: settings.md gives its default only as "the
-// built-in address".
 const model = setting('Model').default;
+const address = setting('Address').default;
 
 const dryRun = run('install/backends', '1-dry-run');
 ---
@@ -25,10 +24,11 @@ const dryRun = run('install/backends', '1-dry-run');
   <h2>The default</h2>
   <table>
     <tr><th>Setting</th><th>Default</th><th>Set it with</th></tr>
-    <tr><td>Address</td><td><code>https://api.typesafe.ai/v1</code></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code>, then <code>url</code> in the configuration file</td></tr>
+    <tr><td>Address</td><td><code set:text={address} /></td><td><code>--url BASE</code>, then <code>THINKTHEN_BASE_URL</code>, then <code>url</code> in the configuration file</td></tr>
     <tr><td>Model</td><td><code set:text={model} /></td><td><code>--model NAME</code>, or <code>model</code> in a question file</td></tr>
   </table>
-  <p><code set:text={model} /> follows the vendor's newest model. Name a version to hold a run to one model.</p>
+  <p>The default model is a pinned name. Name another version only when you intend to change the model behind a run.</p>
+  <p>The default address sends your question and evidence to TypeSafe. Its <a href="https://typesafe.ai/legal/mca">customer agreement</a>, <a href="https://typesafe.ai/legal/data-processing">data processing addendum</a>, and <a href="https://typesafe.ai/legal/privacy-policy">privacy policy</a> describe service use and data handling. The published privacy policy, checked 2026-09-28, gives no fixed retention period for API input; check the terms that govern your account before sending sensitive text. Your local cache has its own <a href="/install/settings/#answer-cache">storage setting</a>.</p>
 
   <h2>The key</h2>
   <p>The command reads the key from <code>{KEY_VARIABLE}</code> and from nowhere else. It takes no flag and no file for it. The Rust library can also take it from <code>EngineBuilder::api_key</code>. A missing key exits 4. The message names the variable and never a value.</p>

@@ -1,5 +1,5 @@
 #include <assert.h>
-#include <string.h>
+#include <json-c/json.h>
 #include <thinkthen.h>
 
 thinkthen_engine *tt = thinkthen_engine_new();
@@ -14,6 +14,25 @@ const char *filter =
 const char *expected =
     "[\"The zipper broke the first time I used it.\","
     "\"The strap snapped on day two.\"]";
-char *complaints = thinkthen_call(tt, filter);
-assert(complaints && strcmp(complaints, expected) == 0);
-thinkthen_free_string(complaints);
+char *complaints_call = thinkthen_call(tt, filter);
+assert(complaints_call);
+enum json_tokener_error parse_error;
+struct json_object *result =
+    json_tokener_parse_verbose(
+        complaints_call, &parse_error);
+assert(parse_error == json_tokener_success);
+assert(result && json_object_get_type(result)
+    == json_type_object);
+struct json_object *value;
+assert(json_object_object_get_ex(result, "value", &value));
+struct json_object *facts;
+assert(json_object_object_get_ex(result, "facts", &facts));
+assert(facts && json_object_get_type(facts)
+    == json_type_object);
+struct json_object *wanted =
+    json_tokener_parse_verbose(expected, &parse_error);
+assert(parse_error == json_tokener_success);
+assert(json_object_equal(value, wanted));
+if (wanted) json_object_put(wanted);
+json_object_put(result);
+thinkthen_free_string(complaints_call);

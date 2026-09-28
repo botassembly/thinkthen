@@ -1,0 +1,29 @@
+{
+  "schema": "thinkthen.result/1",
+  "value": true,
+  "question": {
+    "verb": "decide",
+    "text": "Does the customer ask for a refund?"
+  },
+  "answer": {
+    "kind": "yes_no",
+    "probability": 0.99
+  },
+  "threshold": 0.5,
+  "meta": {
+    "tool": "thinkthen 0.0.1",
+    "question_sha256": "f656a245b15ad4cb960fe1f9663a4c048d16020f2da7dc050332f34fd1fb7f33",
+    "url": "https://api.typesafe.ai/v1/systemone",
+    "model": "jev-1.13.0",
+    "usage": {
+      "input_tokens": 292,
+      "output_tokens": 21
+    },
+    "requests_sent": 0,
+    "cached": true,
+    "requests": [
+      "e7acdf03a4c1f9adf2b1bc595433e6511a74bdce359eb2c92aeb3dea0b629b6d"
+    ],
+    "failed_questions": 0
+  }
+}

@@ -9,5 +9,6 @@ Does this come in blue?
 The strap snapped on day two.
 EOF
 thinkthen filter "$question" \
+  --batch 1 \
   --true "$yes" \
   --false "$no"
