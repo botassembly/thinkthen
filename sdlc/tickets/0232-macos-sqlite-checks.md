@@ -10,6 +10,8 @@ Status: design ACCEPT at `ba45d60e` by a fresh independent reviewer; checker imp
 
 The installed macOS ARM64 `libthinkthen0.dylib` must load on a real SQLite 3.50.0 host, return zero local sends from `thinkthen_usage()`, and allow a later host operation. A real SQLite 3.49.0 host must refuse the same archive with the exact safety-floor diagnostic and allow a later host operation. Record the library's dyld residency after both paths. Run the existing installed examples and shared conformance on a supported Python runtime, report its actual SQLite version, and keep their no-network assertions. The already accepted caught-panic child tests remain separate source proof. Do not add a public fault switch, product dependency, release publish, or broad surfaces run.
 
+Successful registration retains worker code, so the successful-load check expects residency. The rejected load has no explicit product pin; record whether this host retained or unloaded its image without requiring one outcome across all macOS loaders.
+
 Linux's existing pinned 3.50.0 Python host, stock below-floor test, `.so` package, and installed route remain. The macOS adaptation must not label the installed Python SQLite as pinned 3.50.0. On M5, `/usr/bin/python3` is 3.9.6 and reports SQLite 3.51.0; a managed Python 3.13 reports SQLite 3.50.4 with `_sqlite3` built in. Neither proves the exact 3.50.0 or below-floor load. `DYLD_LIBRARY_PATH` cannot replace that built-in module. The supported managed Python runs functional examples and conformance; native amalgamation-linked hosts prove the two exact version boundaries.
 
 ## Small checker change

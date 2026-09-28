@@ -1,6 +1,6 @@
 # 0232 macOS SQLite package checker build
 
-Status: implementation and focused M5 native package proof passed at pushed `b1013288`; the one-line cache-stamp correction and both selected load assertions passed again at pushed `7e712808`. Independent code review is pending. This record does not establish a macOS 15 runner result or complete other 0226 targets.
+Status: implementation and focused M5 native package proof passed at pushed `b1013288`; the cache-stamp correction and both selected load assertions passed again at pushed `7e712808`. A subsequent check correction allows either measured failed-load residency outcome; its focused rerun is pending. Independent code review is pending. This record does not establish a macOS 15 runner result or complete other 0226 targets.
 
 ## Changed behavior
 
@@ -20,7 +20,7 @@ M5 uses Homebrew Rust/Cargo 1.95.0 for aarch64-apple-darwin, Apple clang 21.0.0 
 
 ## Focused checks and retained evidence
 
-On M5, SQLite `cargo fmt --check` and strict all-target/all-feature offline Clippy passed. The source-mode macOS symbol command found only `_sqlite3_thinkthen_init`; the guard count stayed one; a byte-oriented search found no builder home in the release dylib. The complete source-mode `check.sh` and repository `surfaces` rung were not run. On Linux, shell syntax, Python syntax, `sdlc/scripts/tickets`, `git diff --check`, and the SQLite Python ratchet passed. That ratchet rose from 1,714 to 1,737 nonblank test lines: 23 lines add the selected native-host assertions and platform library name while reusing the existing test entry points. The new native C probe has no product export or dependency. The caught-panic Rust guard and worker files are unchanged from the earlier 3/3 source child run at `10f85fa7`; no installed test injects a synthetic panic.
+On M5, SQLite `cargo fmt --check` and strict all-target/all-feature offline Clippy passed. The source-mode macOS symbol command found only `_sqlite3_thinkthen_init`; the guard count stayed one; a byte-oriented search found no builder home in the release dylib. The complete source-mode `check.sh` and repository `surfaces` rung were not run. On Linux, shell syntax, Python syntax, `sdlc/scripts/tickets`, `git diff --check`, and the SQLite Python ratchet passed. That ratchet rose from 1,714 to 1,739 nonblank test lines: 25 lines add the selected native-host assertions and platform library name while reusing the existing test entry points. The last two lines retain an observed failed-load residency value without imposing M5's `1` on another macOS loader. The new native C probe has no product export or dependency. The caught-panic Rust guard and worker files are unchanged from the earlier 3/3 source child run at `10f85fa7`; no installed test injects a synthetic panic.
 
 At `7e712808`, the host builder refreshed its cache because the stamp gained the probe's source hash. The stamp's last line equals `shasum -a 256 databases/sqlite/tests/load_probe.c` at `63d589770afb8b0af288817bfcaafa6d53f0b2e1971163648c2f95fac6ce12aa`. The existing two selected `test_schema.py` functions passed again against the same packaged dylib and newly built native probes. The installed examples, conformance and archive were unchanged, so they were not repeated.
 
