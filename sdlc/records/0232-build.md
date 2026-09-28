@@ -1,6 +1,6 @@
 # 0232 macOS SQLite package checker build
 
-Status: implementation and focused M5 native package proof passed at pushed candidate `b1013288`; a one-line cache-stamp correction followed and needs the same focused host check. Independent code review is pending. This record does not establish a macOS 15 runner result or complete other 0226 targets.
+Status: implementation and focused M5 native package proof passed at pushed `b1013288`; the one-line cache-stamp correction and both selected load assertions passed again at pushed `7e712808`. Independent code review is pending. This record does not establish a macOS 15 runner result or complete other 0226 targets.
 
 ## Changed behavior
 
@@ -22,8 +22,10 @@ M5 uses Homebrew Rust/Cargo 1.95.0 for aarch64-apple-darwin, Apple clang 21.0.0 
 
 On M5, SQLite `cargo fmt --check` and strict all-target/all-feature offline Clippy passed. The source-mode macOS symbol command found only `_sqlite3_thinkthen_init`; the guard count stayed one; a byte-oriented search found no builder home in the release dylib. The complete source-mode `check.sh` and repository `surfaces` rung were not run. On Linux, shell syntax, Python syntax, `sdlc/scripts/tickets`, `git diff --check`, and the SQLite Python ratchet passed. That ratchet rose from 1,714 to 1,737 nonblank test lines: 23 lines add the selected native-host assertions and platform library name while reusing the existing test entry points. The new native C probe has no product export or dependency. The caught-panic Rust guard and worker files are unchanged from the earlier 3/3 source child run at `10f85fa7`; no installed test injects a synthetic panic.
 
-Retained M5 logs are `/tmp/thinkthen-m5-0232-setup.log`, `/tmp/thinkthen-m5-0232-pack.log`, `/tmp/thinkthen-m5-0232-installed.log`, `/tmp/thinkthen-m5-0232-lint.log`, `/tmp/thinkthen-m5-0232-floor-success.log`, and `/tmp/thinkthen-m5-0232-floor-refusal.log`. The pack log is empty because successful quiet Cargo and packaging emitted no output. The archives and checksum manifest remain in `/tmp/thinkthen-m5-artifacts-0232/`, with the unpacked dylib in `/tmp/thinkthen-m5-sqlite-installed-0232/`. The source zips and exploratory first probe remain under `/tmp/thinkthen-sqlite-*`; none is committed or published.
+At `7e712808`, the host builder refreshed its cache because the stamp gained the probe's source hash. The stamp's last line equals `shasum -a 256 databases/sqlite/tests/load_probe.c` at `63d589770afb8b0af288817bfcaafa6d53f0b2e1971163648c2f95fac6ce12aa`. The existing two selected `test_schema.py` functions passed again against the same packaged dylib and newly built native probes. The installed examples, conformance and archive were unchanged, so they were not repeated.
+
+Retained M5 logs are `/tmp/thinkthen-m5-0232-setup.log`, `/tmp/thinkthen-m5-0232-pack.log`, `/tmp/thinkthen-m5-0232-installed.log`, `/tmp/thinkthen-m5-0232-lint.log`, `/tmp/thinkthen-m5-0232-floor-success.log`, `/tmp/thinkthen-m5-0232-floor-refusal.log`, `/tmp/thinkthen-m5-0232-stamp-recheck.log`, and `/tmp/thinkthen-m5-0232-selected-recheck.log`. The pack log is empty because successful quiet Cargo and packaging emitted no output. The archives and checksum manifest remain in `/tmp/thinkthen-m5-artifacts-0232/`, with the unpacked dylib in `/tmp/thinkthen-m5-sqlite-installed-0232/`. The source zips and exploratory first probe remain under `/tmp/thinkthen-sqlite-*`; none is committed or published.
 
 ## Remaining work
 
-Recheck the cache-stamp correction on M5, then have a fresh independent reviewer inspect the exact checker diff and evidence. The release package still needs an actual macOS 15 compatibility result before any such support claim. Linux ARM64, macOS Intel, retained DuckDB C API and separate language-binding panic issues remain outside this ticket.
+Have a fresh independent reviewer inspect the exact checker diff and evidence. The release package still needs an actual macOS 15 compatibility result before any such support claim. Linux ARM64, macOS Intel, retained DuckDB C API and separate language-binding panic issues remain outside this ticket.
