@@ -244,9 +244,11 @@ fn a_deadline_while_width_is_held_reserves_no_send() {
         retry_wait: Duration::from_millis(10),
     };
     let budget = crate::public::SendBudget::new();
+    let facts = crate::engine::CallFacts::new();
     let cancel = crate::engine::Cancel::default()
         .with_deadline(crate::engine::Deadline::after(Duration::from_millis(60)))
-        .with_send_budget(Some((budget.clone(), Some(1))));
+        .with_send_budget(Some((budget.clone(), Some(1))))
+        .with_facts(facts.clone());
     let counts = Counters::new(None);
     let client = Client::new(
         Duration::from_secs(1),
@@ -258,6 +260,7 @@ fn a_deadline_while_width_is_held_reserves_no_send() {
     drop(held);
     assert!(matches!(refused, Err(Error::Deadline(_))));
     assert_eq!(counts.snapshot().requests_sent, 0);
+    assert_eq!(facts.snapshot().requests_sent, 0);
     assert!(matches!(listener.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock));
     budget
         .reserve(Some(1), None)
@@ -321,6 +324,8 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
     );
     let observed = Cell::new(0_u32);
     let counts = Counters::new(None);
+    let facts = crate::engine::CallFacts::new();
+    let cancel = crate::engine::Cancel::default().with_facts(facts.clone());
     let exchange = Exchange {
         url: "http://127.0.0.1:0/v1/systemone",
         body: b"{}",
@@ -329,16 +334,14 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         retry_wait: Duration::from_millis(1),
     };
 
-    let result = client.post_observed_with_retry(
-        &exchange,
-        &crate::engine::Cancel::default(),
-        &counts,
-        |_| observed.set(observed.get() + 1),
-    );
+    let result = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| {
+        observed.set(observed.get() + 1)
+    });
 
     assert_eq!(observed.get(), 1);
     assert_eq!(counts.snapshot().requests_sent, 1);
     assert_eq!(counts.snapshot().retries, 0);
+    assert_eq!(facts.snapshot().requests_sent, 1);
     assert!(matches!(
         result,
         Err(Error::Transport(TransportKind::Refused))

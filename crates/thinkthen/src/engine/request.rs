@@ -141,6 +141,7 @@ where
                     .map_err(E::from)?;
                 if recorder.counts_cache_answers() {
                     usage.cache_answer();
+                    cancel.cache_answer();
                 }
                 reply
             },
@@ -153,6 +154,7 @@ where
             let (permit, answered) = finish_or_cancel(permit, send(&prepared, &key))?;
             let decoded = built_in::decode_observed(plan, &answered.body);
             usage.live_reply(decoded.usage);
+            cancel.live_reply(decoded.usage);
             let reply = match decoded.reply {
                 Ok(reply) => reply,
                 Err(error) => {
@@ -170,6 +172,7 @@ where
         }
     };
     usage.answered_by(reply.model());
+    cancel.answered_by(reply.model().as_str());
     Ok(Answered {
         reply,
         replayed,
@@ -376,5 +379,39 @@ mod tests {
         assert!(has_partial(&folder));
         assert!(lock.exists());
         fs::remove_dir_all(folder).expect("fixture removed");
+    }
+
+    #[test]
+    fn a_received_usage_report_survives_a_refused_logical_reply() {
+        let (backend, plan, prepared) = request();
+        let facts = crate::engine::CallFacts::new();
+        let cancel = crate::engine::Cancel::default().with_facts(facts.clone());
+        let recorder = Recorder::of(None, None).expect("uncached recorder");
+        let usage = Counters::new(None);
+        let result: Result<Answered, Error> = super::ask_prepared(
+            &backend,
+            &plan,
+            prepared,
+            &recorder,
+            &cancel,
+            &usage,
+            || Ok(Key::of("sk-test")),
+            |_, _| {
+                Ok(crate::engine::http::HttpAnswer {
+                    body: br#"{"model":"jev-latest","answers":{},"usage":{"input_tokens":7,"output_tokens":3}}"#.to_vec(),
+                    requests_sent: 1,
+                })
+            },
+        );
+        assert!(result.is_err(), "the reply has no answer for q1");
+        assert_eq!(
+            facts
+                .snapshot()
+                .tokens
+                .map(crate::core::Usage::token_counts),
+            Some((7, 3))
+        );
+        assert_eq!(usage.snapshot().input_tokens, 7);
+        assert_eq!(usage.snapshot().output_tokens, 3);
     }
 }

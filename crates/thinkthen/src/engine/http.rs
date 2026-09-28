@@ -223,6 +223,7 @@ impl Client {
             if let Some(reservation) = reservation {
                 reservation.commit();
             }
+            cancel.sent();
             let sending = cancel.sending();
             let sent = send(&self.agent, exchange, limit);
             drop(sending);

@@ -14,7 +14,7 @@ use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::engine::{Cancel, Deadline, workers};
+use crate::engine::{CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
 
 /// How many records one model request may contain.
@@ -269,6 +269,7 @@ impl<'a> CallOptions<'a> {
 /// token and check, and a check's panic held until the call has joined.
 pub(crate) struct Stop<'a> {
     base: Cancel<'static>,
+    facts: CallFacts,
     token: Option<&'a CancelToken>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     panic: Mutex<Option<Box<dyn Any + Send>>>,
@@ -277,6 +278,7 @@ pub(crate) struct Stop<'a> {
 impl<'a> Stop<'a> {
     /// Fix the deadline and refuse a call whose token already fired.
     pub(crate) fn begin(options: CallOptions<'a>) -> Result<Self, Error> {
+        let facts = CallFacts::new();
         let stop = Self {
             base: Cancel::default()
                 .with_deadline(options.deadline()?)
@@ -285,7 +287,9 @@ impl<'a> Stop<'a> {
                     options
                         .send_budget
                         .map(|(budget, limit)| (budget.clone(), limit)),
-                ),
+                )
+                .with_facts(facts.clone()),
+            facts,
             token: options.cancel,
             check: options.check,
             panic: Mutex::new(None),
@@ -342,6 +346,7 @@ impl<'a> Stop<'a> {
     /// Resume a check's panic, once every worker of the call has joined, then
     /// return the call's result, or cancellation when the token has fired.
     pub(crate) fn finish<T>(&self, result: Result<T, Error>) -> Result<T, Error> {
+        self.facts.finish();
         let held = self.panic.lock().ok().and_then(|mut held| held.take());
         if let Some(payload) = held {
             resume_unwind(payload);
