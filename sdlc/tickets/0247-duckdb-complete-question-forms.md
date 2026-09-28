@@ -1,6 +1,6 @@
 # Ticket 0247: Complete choose, score and tag questions in DuckDB
 
-Status: **Built; pending fresh High code/package review.** The fresh High [design review](../records/0247-duckdb-complete-question-forms-design-review.md) accepted `4f0f93e5`, and the coordinator approved the exact runtime claim at main `6fd7b170`. The [preflight](../records/0247-duckdb-complete-question-forms-preflight.md) pins the starting source. The [build record](../records/0247-duckdb-complete-question-forms-build.md) pins the Linux installed package and selected proof. The [code review](../records/0247-duckdb-complete-question-forms-code-review.md) is pending.
+Status: **Accepted and integrated for Linux x86-64 after fresh High code/package review of `795fe61a`.** The fresh High [design review](../records/0247-duckdb-complete-question-forms-design-review.md) accepted `4f0f93e5`, and the coordinator approved the exact runtime claim at main `6fd7b170`. The [preflight](../records/0247-duckdb-complete-question-forms-preflight.md) pins the starting source. The [build record](../records/0247-duckdb-complete-question-forms-build.md) pins the Linux installed package and selected proof. The [code review](../records/0247-duckdb-complete-question-forms-code-review.md) records acceptance and retained target limits.
 
 ## Outcome
 

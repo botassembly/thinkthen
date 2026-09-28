@@ -1,5 +1,9 @@
 # 0247 DuckDB complete-question forms code/package review
 
-Status: **Pending fresh independent High review.** Candidate source `dc5b428b9f11cb5fddd9456b62e9ab07bbb070e3` and the [build record](0247-duckdb-complete-question-forms-build.md) identify the exact Linux package and selected host proof. No code or release acceptance is claimed in this record.
+Status: **ACCEPT** from fresh independent High review of `795fe61a7a9cbd375b9018e51fc1085b4d0bb72b`.
 
-Review binder and execution arity together, including `ScalarBind::Copy`/`Equals` and the legacy three-argument NULL/list overload. Check caller `ClientContext` file authority, active-statement snapshot and later prepared recheck, whole-chunk validation before a send, Local parser secrecy, typed SQL NULL/value codec, public details metadata, actual budget/cancellation and package hashes. Compare captured request bodies and independent canonical digests with the changed path. Confirm Linux stock v1.5.5 load, unchanged-artifact v1.5.4 refusal, caps, strict policy and stated cross-platform limits. Return ACCEPT or concrete findings before landing.
+The reviewer traced bind and execution arity together, including the copied complete-question mode and retained legacy list overloads. The bridge copies caller bytes before detached work. File reads use the caller’s session, cache only within the statement and recheck later prepared execution. File-parser failures use fixed Local diagnostics. The public details path preserves saved metadata, typed values and SQL NULL; budgets and cancellation retain the statement scope. The unsafe boundary remains in a policy-compliant `ffi.rs` child.
+
+The retained bridge, built extension, archive and extracted extension hashes match the build record. Runtime code is unchanged between the proved source `dc5b428b` and the review candidate. The reviewer retained the seven selected installed cases and stock v1.5.5 load/v1.5.4 refusal without repeating tests for unchanged code. Root integration preserves the exact accepted DuckDB source and proof files.
+
+Acceptance covers Linux x86-64. Other targets have not run this changed package. Native Intel hardware, macOS 15 execution, recognize/relate file forms and final shared-case accounting remain separate. No broad release qualification is implied.

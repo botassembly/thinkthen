@@ -1,6 +1,6 @@
 # 0247 DuckDB complete-question forms build
 
-Status: Linux x86-64 implementation source `dc5b428b9f11cb5fddd9456b62e9ab07bbb070e3` built and selected installed proof passed on 2026-09-28. The preceding source slice `9a7c4fb8` held the same behavior with the FFI child at a policy-rejected basename; `dc5b428b` moved that child without changing its contents. Pending fresh independent High code/package review; no landing or release qualification is claimed. The branch includes main `75f756d1`, including the adjacent 0246 engine change, before its final source build. No provider, real user file, public page or other platform package was touched.
+Status: Linux x86-64 implementation source `dc5b428b9f11cb5fddd9456b62e9ab07bbb070e3` built and selected installed proof passed on 2026-09-28. The preceding source slice `9a7c4fb8` held the same behavior with the FFI child at a policy-rejected basename; `dc5b428b` moved that child without changing its contents. Fresh independent High code/package review accepted candidate `795fe61a`; the coordinator integrated the unchanged runtime and proof files. Release qualification is not claimed. The branch includes main `75f756d1`, including the adjacent 0246 engine change, before its final source build. No provider, real user file, public page or other platform package was touched.
 
 ## Source and installed artifact
 
