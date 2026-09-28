@@ -6,7 +6,7 @@ opens: crates/thinkthen/src/public/settings.rs crates/thinkthen/src/public/resul
 
 # 0157: Expose request size and retry counts through the libraries
 
-Status: design accepted 2026-09-27 after fresh independent review at `5f3b943e`. Owner: Codex. 0154 and 0155 have landed. Implementation waits for 0149 and its 0201 caller-session prerequisite, then needs exact runtime claims.
+Status: design accepted 2026-09-27 after fresh independent review at `5f3b943e`. Owner: Codex. 0154 and 0155 have landed. The scoped 0149 Linux x86-64, SQLite and PostgreSQL implementation landed on main at `f9dfd8c8`; its three retained DuckDB C API targets remain open. Exact 0157 runtime claims are granted in the work plan, and the core size/retry implementation has begun without a full-ticket acceptance claim.
 
 ## Outcome and authority
 

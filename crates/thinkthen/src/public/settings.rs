@@ -60,6 +60,7 @@ pub struct EngineBuilder {
     model: Option<ModelName>,
     width: Option<Width>,
     max_requests: Option<usize>,
+    max_request_bytes: usize,
     cache: Cache,
     seeded: Option<Seeded>,
     timeout: Duration,
@@ -77,6 +78,7 @@ impl EngineBuilder {
             model: None,
             width: None,
             max_requests: None,
+            max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
             cache: Cache::Default,
             seeded: None,
             timeout: Duration::from_secs(30),
@@ -88,7 +90,7 @@ impl EngineBuilder {
     }
 
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
-    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, the XDG cache home, and the
+    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
     /// XDG configuration file. The setters and `build` read no environment.
     ///
     /// # Errors
@@ -123,6 +125,16 @@ impl EngineBuilder {
         }
         if let Some(model) = config.model() {
             builder = builder.model(model)?;
+        }
+        if let Some(size) = variable("THINKTHEN_MAX_REQUEST_BYTES")? {
+            let value = size
+                .parse::<usize>()
+                .ok()
+                .filter(|value| *value > 0 && size.bytes().all(|byte| byte.is_ascii_digit()))
+                .ok_or_else(|| {
+                    Error::usage("THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1")
+                })?;
+            builder = builder.max_request_bytes(value)?;
         }
         Ok(builder)
     }
@@ -189,6 +201,22 @@ impl EngineBuilder {
             ));
         }
         self.max_requests = value;
+        Ok(self)
+    }
+
+    /// Set the request-byte ceiling for split plans. A lone question still goes alone.
+    /// A smaller backend-profile ceiling takes precedence when a plan is prepared.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for zero.
+    pub fn max_request_bytes(mut self, value: usize) -> Result<Self, Error> {
+        if value == 0 {
+            return Err(Error::usage(
+                "max_request_bytes is a whole number of at least 1",
+            ));
+        }
+        self.max_request_bytes = value;
         Ok(self)
     }
 
@@ -303,8 +331,9 @@ impl EngineBuilder {
             })
             .transpose()?;
         let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
-        let backend =
-            Backend::resolve(self.base_url.as_deref(), None, model).map_err(Error::refused)?;
+        let backend = Backend::resolve(self.base_url.as_deref(), None, model)
+            .map_err(Error::refused)?
+            .with_request_size(self.max_request_bytes);
         let key = self.key.clone();
         let settings = Settings {
             backend,
