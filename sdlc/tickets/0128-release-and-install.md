@@ -389,6 +389,10 @@ On landing Phase 4: `sdlc/issues/2026-09-25-release-and-install-for-0-1.md`. Stu
 
 Every decision above. The ones most worth his look: no PyPI source distribution (7), the sample as its own release file (8), R against the published crate (10), and leaving the Rust Polars move to ticket 0130 (15). `SECURITY.md` keeps GitHub's private vulnerability reporting, which stays on GitHub.
 
+## What the build taught us
+
+The Phase 3a Linux jobs build library packages in pinned containers but run installed smoke on separate native runners. Their shared `host-setup` originally fetched pinned DuckDB tools only on Darwin, leaving both Linux smoke runners dependent on incidental host state. The [Linux DuckDB setup Quick Fix](../records/qf-linux-duckdb-release-setup.md) places that fetch only in native Linux smoke and pins the orchestration with a fake-command invocation witness. It is a local proof of routing, not an actual runner result; the first four-target rehearsal and ARM64 migration review remain separate.
+
 ## Review
 
 - Design review 1, 2026-09-25: findings, not ACCEPT. The coordinator ruled the four phases, the runner as the macOS proof of record, release dispatched from the tag, the tag ruleset, and three more items for Ian. This rewrite answers every finding. It adds the dry bump, `versions --set`, and the version-free tests; the full list of version places; the R rewrite, lock, and `OS_type`; one time-limit helper; the CI guards; publish metadata; the packed-crate smoke and the partial-publish rule; the loopback installer test and the `shasum` row; packing from the rung's builds; each container toolchain's source; the smoke runners and the import-path rule; and `gate.yml`'s public API tool and nightly.

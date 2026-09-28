@@ -7,8 +7,10 @@ broken rule prints one line. The rules sit beside the code that checks them, and
 ticket 0128's "The workflow check" table lists them. Usage: workflows [--self-test]
 """
 
+import os
 import pathlib
 import re
+import subprocess
 import sys
 import tempfile
 
@@ -144,6 +146,39 @@ def check(folder):
         if path.name == "release.yml":
             out += release(path.name, doc)
     return out
+
+
+def host_setup_calls(target, smoke):
+    """Run the real setup branch while a temporary PATH records its host calls."""
+    with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
+        root = pathlib.Path(tmp)
+        bin_dir = root / "bin"
+        bin_dir.mkdir()
+        route = bin_dir / "route"
+        route.write_text("""#!/bin/sh
+case ${0##*/} in
+rustc) case $1 in
+  -vV) printf 'host: %s\\n' "$FAKE_TARGET" ;;
+  --version) echo 'rustc 1.95.0 (59807616e 2026-04-14)' ;;
+  --print) printf '%s/toolchains/1.95.0\\n' "$RUSTUP_HOME" ;;
+  esac ;;
+cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
+maturin) echo 'maturin 1.15.0' ;;
+uv) [ "$1" != --version ] || echo 'uv 0.9.17' ;;
+uname) [ "$1" != -s ] || echo Linux ;;
+sh) printf '%s %s\\n' "$1" "$2" >> "$FAKE_LOG" ;;
+esac
+""")
+        route.chmod(0o755)
+        for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "python3", "python3.12"):
+            (bin_dir / name).symlink_to(route.name)
+        log = root / "calls"
+        env = os.environ.copy()
+        env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
+                   TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), RELEASE_SMOKE="1" if smoke else "0")
+        result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
+                                env=env, capture_output=True, text=True, timeout=20, check=False)
+        return result, log.read_text().splitlines() if log.exists() else []
 
 
 # A release workflow that keeps every rule. Each self-test case breaks one.
@@ -292,7 +327,19 @@ def self_test():
         if got != expected:
             bad += 1
             print(f"workflows self-test {name}: expected {expected}, got {got}", file=sys.stderr)
-    print(f"workflows self-test: {len(cases) - bad}/{len(cases)} cases hold")
+    host_cases = [(target, smoke) for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu")
+                  for smoke in (False, True)]
+    for target, smoke in host_cases:
+        result, calls = host_setup_calls(target, smoke)
+        wanted = ["libraries/ruby/setup-ruby.sh "]
+        if smoke:
+            wanted.append("databases/duckdb/tools/setup.sh --fetch")
+        if result.returncode != 0 or calls != wanted:
+            bad += 1
+            print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "
+                  f"wanted {wanted}, got {calls}; stderr {result.stderr}", file=sys.stderr)
+    total = len(cases) + len(host_cases)
+    print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 
 

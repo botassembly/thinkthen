@@ -46,6 +46,10 @@ host-setup)
 		sh databases/duckdb/tools/setup.sh --fetch
 	else
 		sh libraries/ruby/setup-ruby.sh
+		# Linux builds use containers; the native installed smoke needs the pinned host.
+		if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
+			sh databases/duckdb/tools/setup.sh --fetch
+		fi
 	fi
 	if [ "${RELEASE_SMOKE:-0}" = 1 ]; then
 		command -v python3.12 >/dev/null || fail 'the installed Python smoke needs Python 3.12'
