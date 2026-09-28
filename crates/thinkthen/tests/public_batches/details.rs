@@ -100,6 +100,7 @@ fn split_record_details_name_the_refused_parent_and_the_answering_half() {
         let json: serde_json::Value =
             serde_json::from_str(&row.value().to_json()).expect("detail JSON");
         assert_eq!(json["meta"]["batch"]["split"], true);
+        assert_eq!(json["meta"]["batch"]["closed"], "size");
         assert_eq!(json["meta"]["batch"]["records"], 1);
         assert_eq!(
             json["meta"]["requests_sent"],

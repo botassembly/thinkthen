@@ -8,12 +8,14 @@ use crate::engine::facade::{self, Completed};
 use crate::public::error::Error;
 use crate::public::results::Member;
 use crate::public::results::ObservedQuestion;
+use crate::public::results::ParentReceipt;
 
 struct ParentAttempt {
     digest: String,
     sent: u64,
     total: usize,
     offset: usize,
+    closed: core::batch::Closed,
 }
 
 impl ParentAttempt {
@@ -55,13 +57,12 @@ impl Observation<'_> {
         if !self.details {
             return Ok(None);
         }
-        let parent = self.parent.map(|parent| {
-            (
-                parent.digest.as_str(),
-                parent.sent,
-                parent.total,
-                parent.offset,
-            )
+        let parent = self.parent.map(|parent| ParentReceipt {
+            digest: &parent.digest,
+            sent: parent.sent,
+            total: parent.total,
+            offset: parent.offset,
+            closed: parent.closed,
         });
         Member::from_batch(
             batch,
@@ -121,6 +122,7 @@ pub(super) fn answer(
                 sent: attempted.load(Ordering::Relaxed),
                 total: work.batch.outcomes.len(),
                 offset: 0,
+                closed: work.batch.closed,
             };
             let records = work
                 .texts

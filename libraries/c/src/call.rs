@@ -151,6 +151,9 @@ fn split(members: Members) -> Result<Request, Failure> {
                     verb.as_str(),
                     "decide" | "choose" | "score" | "tag" | "filter" | "rank" | "annotate"
                 );
+            if !many {
+                return Err(Failure::usage(format!("{verb} takes no call key")));
+            }
             let mut call = Controls {
                 batch: None,
                 context: None,

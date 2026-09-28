@@ -70,18 +70,27 @@ fn call_batch_controls_request_count_and_refuses_scalar_context_before_send() {
     let refused =
         json!({"decide":"Is it relevant?","evidence":"alpha","call":{"context":"Shared."}})
             .to_string();
+    let empty_calls = [
+        json!({"decide":"Is it relevant?","evidence":"alpha","call":{}}),
+        json!({"find":"Which?","units":["alpha"],"call":{}}),
+        json!({"recognize":{"version":1,"recognize":{"kinds":{"person":"A person."}}},"evidence":"alpha","call":{}}),
+        json!({"relate":{"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}},"records":[{"name":"alpha","kind":"person"}],"call":{}}),
+    ];
     let mut script = Script::default();
     script.ask("settings", &[base, &settings]);
     script.ask("call", &[base, &maximal]);
     script.ask("call", &[base, &singles]);
     script.ask("call", &[base, &contextual]);
     script.ask("call", &[base, &refused]);
+    for request in &empty_calls {
+        script.ask("call", &[base, &request.to_string()]);
+    }
     script.ask("facts", &[base, "-"]);
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
     let output = run(&driver, "", &script.0);
     assert!(output.status.success(), "{}", text(&output.stderr));
     let got = replies(&output.stdout).expect("framed replies");
-    assert_eq!(got.len(), 6);
+    assert_eq!(got.len(), 10);
     let maximal: Value = serde_json::from_str(&got[1].1).expect("maximal JSON");
     let singles: Value = serde_json::from_str(&got[2].1).expect("single JSON");
     let contextual: Value = serde_json::from_str(&got[3].1).expect("contextual JSON");
@@ -105,8 +114,14 @@ fn call_batch_controls_request_count_and_refuses_scalar_context_before_send() {
         maximal["value"][0]["meta"]["question_sha256"]
     );
     assert_eq!(got[4].0, 1, "scalar context is a usage failure");
+    for (reply, verb) in got[5..9]
+        .iter()
+        .zip(["decide", "find", "recognize", "relate"])
+    {
+        assert_eq!(reply.0, 1, "{verb} refuses an empty call object");
+    }
     assert_eq!(
-        got[5],
+        got[9],
         (0, "null".to_owned()),
         "pre-send usage has no call facts"
     );

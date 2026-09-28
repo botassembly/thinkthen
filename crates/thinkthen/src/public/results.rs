@@ -6,7 +6,7 @@ use std::fmt;
 mod call;
 pub use call::{Call, Facts};
 mod member;
-pub(crate) use member::Member;
+pub(crate) use member::{Member, ParentReceipt};
 mod observation;
 pub(crate) use observation::{ObservedQuestion, observe_chunk};
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};

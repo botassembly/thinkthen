@@ -39,6 +39,14 @@ pub(crate) struct Member {
     requests: Vec<String>,
 }
 
+pub(crate) struct ParentReceipt<'a> {
+    pub(crate) digest: &'a str,
+    pub(crate) sent: u64,
+    pub(crate) total: usize,
+    pub(crate) offset: usize,
+    pub(crate) closed: core::batch::Closed,
+}
+
 impl Member {
     #[allow(
         clippy::too_many_arguments,
@@ -53,19 +61,19 @@ impl Member {
         position: usize,
         setting: core::Setting,
         context: bool,
-        parent: Option<(&str, u64, usize, usize)>,
+        parent: Option<ParentReceipt<'_>>,
     ) -> Result<Self, Error> {
         let records = batch.outcomes.len();
         let own_sent = core::share(whole.requests_sent, records, position);
-        let parent_sent = parent.map_or(0, |(_, sent, total, offset)| {
-            core::share(sent, total, offset + position)
+        let parent_sent = parent.as_ref().map_or(0, |parent| {
+            core::share(parent.sent, parent.total, parent.offset + position)
         });
         let sent = own_sent
             .checked_add(parent_sent)
             .ok_or_else(|| Error::defect("a batch request share overflowed"))?;
-        let half_parent = parent.map_or(0, |(_, sent, total, offset)| {
+        let half_parent = parent.as_ref().map_or(0, |parent| {
             (0..records)
-                .map(|place| core::share(sent, total, offset + place))
+                .map(|place| core::share(parent.sent, parent.total, parent.offset + place))
                 .sum::<u64>()
         });
         let whole_sent = whole
@@ -77,7 +85,7 @@ impl Member {
                 setting,
                 records,
                 position + 1,
-                batch.closed,
+                parent.as_ref().map_or(batch.closed, |parent| parent.closed),
                 whole.reply.usage(),
                 whole_sent,
             );
@@ -88,8 +96,8 @@ impl Member {
             }
         });
         let mut requests = Vec::with_capacity(1 + usize::from(parent.is_some()));
-        if let Some((digest, _, _, _)) = parent {
-            requests.push(digest.to_owned());
+        if let Some(parent) = parent {
+            requests.push(parent.digest.to_owned());
         }
         requests.push(whole.request.as_str().to_owned());
         let own = Answered {

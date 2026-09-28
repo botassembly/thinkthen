@@ -469,6 +469,11 @@
     {"name":"c-record-call-options","definition":"doorRequest","schema_only":true,"request":{"choose":"Which?","options":["first","second"],"records":["alpha","beta"],"call":{"batch":2,"context":"Shared facts."}}},
     {"name":"c-call-unknown-option","definition":"doorRequest","request":{"decide":"Q?","records":["alpha"],"call":{"jobs":2}},"request_valid":false,"expected_error":"usage"},
     {"name":"c-call-on-scalar","definition":"doorRequest","request":{"decide":"Q?","evidence":"alpha","call":{"batch":2}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-scalar","definition":"doorRequest","request":{"decide":"Q?","evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-find","definition":"doorRequest","request":{"find":"Which?","units":["alpha"],"call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-recognize","definition":"doorRequest","request":{"recognize":{"version":1,"recognize":{"kinds":{"person":"A person."}}},"evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-empty-call-on-relate","definition":"doorRequest","request":{"relate":{"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}},"records":[{"name":"alpha","kind":"person"}],"call":{}},"request_valid":false,"expected_error":"usage"},
+    {"name":"c-annotate-context-refused","definition":"doorRequest","request":{"annotate":{"version":1,"questions":{"ready":{"decide":"Ready?"}}},"records":["alpha"],"call":{"context":"Shared facts."}},"request_valid":false,"expected_error":"usage"},
     {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}}
   ]
 }

@@ -321,6 +321,8 @@
           "then": {"not": {"anyOf": [{"required": ["records"]}, {"required": ["units"]}]}}},
         {"if": {"required": ["call"]}, "then": {"required": ["records"],
           "not": {"anyOf": [{"required": ["find"]}, {"required": ["recognize"]}, {"required": ["relate"]}]}}},
+        {"if": {"required": ["annotate"]},
+          "then": {"properties": {"call": {"not": {"required": ["context"]}}}}},
         {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
           {"required": ["annotate"]}, {"required": ["relate"]}]},
           "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["units"]}]}}},
