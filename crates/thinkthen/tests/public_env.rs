@@ -26,6 +26,34 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use conformance_backend::{Canned, Listener};
 use thinkthen::{Engine, EngineBuilder, Error, Question};
 
+#[test]
+fn inline_profile_replaces_a_file_and_rejects_invalid_json_as_usage() {
+    let profile =
+        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":8}"#;
+    let missing = folder("missing-profile.json");
+    let from_inline = Engine::builder()
+        .no_cache()
+        .profile(&missing)
+        .expect("path")
+        .profile_json(profile)
+        .expect("inline profile")
+        .build();
+    assert!(
+        from_inline.is_ok(),
+        "the later inline profile replaces the path"
+    );
+    let invalid = Engine::builder().profile_json("{}");
+    assert!(matches!(invalid, Err(Error::Usage(_))));
+    let from_file = Engine::builder()
+        .no_cache()
+        .profile_json(profile)
+        .expect("inline profile")
+        .profile(&missing)
+        .expect("path")
+        .build();
+    assert!(matches!(from_file, Err(Error::Local(_))));
+}
+
 /// The one answer every listener gives: a yes at 0.92.
 const ANSWERED: &str = concat!(
     r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
