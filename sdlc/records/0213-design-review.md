@@ -1,0 +1,13 @@
+# 0213 design review handoff
+
+Status: proposed for fresh independent design review. The [ticket](../tickets/0213-choose-record-batching.md) and [preflight](0213-choose-batching-preflight.md) are notes only. Main `0b1d4ec2` lacks choose batching; reviewed 0172 `43edb3dc` is not yet on main; codex-5's 0212 B12a is a proposed library design. Do not treat these three snapshots as one compiled source.
+
+Please answer the following before runtime claims:
+
+1. Does the proposed ADR 0090 clarification of ADR 0048 item 1 preserve its intended duplicate sharing while ensuring `choose --options` never reuses an answer across differing candidate lists? Is selected-record-plus-complete-question identity sufficient, with content cuts still based only on selected record bytes? If the accepted “equal evidence” sentence must remain literal even when questions differ, name that contract conflict explicitly.
+2. Does the proposed fixed and per-record `Batcher` path preserve exact no-context singleton body/digest, order and descriptions, actual per-question size limits, the earlier open batch on a later local refusal, and each original question in one 413 halving? Inspect the existing `Asks::FromRecord` guard, `Batcher` template assumptions and the chosen proof fixture, not merely the happy-path `batch-choose` body.
+3. Do the proposed CLI tiers and docs match current choose semantics: JSONL-only `--options`, a choose file's new `batch`, one-document refusal of typed batch/context, tie/null/raw output, partial reply, stopped prefix/facts and threshold warning? Is any new wording accidentally copied from `rank`'s held-output rule or `decide`'s quoted-evidence rule?
+4. Are the prospective files and cap risks complete, especially the 0172 context/refusal parents and 0212 planner overlap? A design acceptance may settle semantics but must not grant a source collision or claim 0212's proposed `Call<T>` as built.
+5. Is the proof set distinct and outside-in? It must catch identical selected evidence with differing options, exact old singleton bytes, context identity, 413 halves, and the later refused row; reuse existing choose tests for threshold and labels. Paid test 11 and one context run remain separately authorized measurements only after a reviewed build and concrete reservation. `sdlc/scripts/live` precharges a token reservation but is not an in-request cap.
+
+Ian can overturn the settled default-maximal, speed-over-accuracy and choose-output rulings in their owning issue/specification. Routine file extraction and test-helper choice may be decided by the builder after exact claims. A public library return shape belongs to 0212's separate review. No new runtime, broad gate or provider result is asserted here.
