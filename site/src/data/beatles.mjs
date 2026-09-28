@@ -84,7 +84,8 @@ const ARTICLES = {
     goal: "ThinkThen is one command with ten functions, and its bindings bring the same functions to languages and databases.",
     idea: [
       "ThinkThen is one command-line tool, `thinkthen`. It has ten functions, such as `decide`, `filter`, and `rank`. It also has six tools, such as `audit` and `diff`.",
-      "Bindings bring the same ten functions to programming languages and databases. [Install](/install/) links every binding's page.",
+      "Bindings bring the same ten functions to 24 programming languages and databases: Ada, C, C#, C++, COBOL, Dart, DuckDB, Go, Java, Kotlin, Objective-C, pandas, PHP, Polars, PostgreSQL, Python, R, Ruby, Rust, Scala, SQLite, Swift, TypeScript, and Zig.",
+      "To set one up, start at [Install](/install/).",
     ],
     see: {
       '1-help': "The first ten names are the functions. `help` and the six tools follow.",
@@ -173,7 +174,7 @@ const ARTICLES = {
     see: {
       '1-bands': "Every timed song goes in. `jq` keeps three of them.",
     },
-    lesson: "Her Majesty is the shortest Beatles song. It scores 0.23, very short. Revolution 9 is the longest. It scores 3.31, nearest long, one level short of the truth. Yesterday runs just under the line between short and average. It scores 1.73, nearest average.",
+    lesson: "Her Majesty is the shortest Beatles song. It scores 0.23, very short. Revolution 9 is the longest. It scores 3.31, nearest long, one level short of the truth. Yesterday runs 2:05, right on the line between short and average. It scores 1.73, nearest average.",
     takeaway: "Give each level a range, and the steps can be as uneven as your data.",
     link: REPO,
   },
@@ -288,7 +289,7 @@ const ARTICLES = {
     goal: "Each language binding asks the same question the command asks.",
     idea: [
       "On the slide, Python and C ask Jev the same question with `decide`. Python sits over the scripting languages, and C sits over the systems languages.",
-      "Each binding calls the same engine as the command. [Install](/install/) links every binding's page, with its install line and its first call.",
+      "Each binding calls the same engine as the command. To set one up, start at [Install](/install/).",
     ],
     takeaway: "Pick your language. The question stays the same.",
     link: REPO,
@@ -299,9 +300,9 @@ const ARTICLES = {
     label: "Tables and frames",
     goal: "One question adds an answer column to a database table or a data frame.",
     idea: [
-      "One SQL query adds an answer column to a table of songs. The query holds the question as JSON. SQLite, DuckDB, and PostgreSQL run it as written.",
+      "One SQL query adds an answer column to a table of songs. The query holds the question as JSON.",
       "Polars, pandas, and R take a column and give a column back. Each one writes not sure its own way: NULL in SQL, null in Polars, <NA> in pandas, and NA in R.",
-      "[Install](/install/) links every binding's page.",
+      "To set one up, start at [Install](/install/).",
     ],
     takeaway: "Ask the question where your data already lives.",
     link: REPO,
@@ -385,8 +386,8 @@ const ARTICLES = {
     goal: "Agents use the ten functions to route work, check it, pull facts out of text, and find records.",
     idea: [
       "Routing: `decide` picks an easy or a hard model. `choose` picks the agent for each part of a task. `decide` says loop or stop.",
-      "Evaluation: `decide`, `score`, and `rank` ask whether the work is done, whether it is right, and which prompt wins on accuracy and tokens.",
-      "Extraction: `tag`, `annotate`, `recognize`, and `relate` pull out tags, names, and relations. They build a knowledge graph and an ontology.",
+      "Evaluation: `decide`, `score`, and `rank` ask whether the work is done, whether it is right, and which prompt wins.",
+      "Extraction: `tag`, `annotate`, `recognize`, and `relate` pull out tags, names, and relations. Their edges can feed a knowledge graph.",
       "Retrieval: `filter`, `rank`, and `find` keep, order, and find the records that answer a question.",
     ],
     takeaway: "Each agent job maps to a function.",
@@ -399,7 +400,7 @@ const ARTICLES = {
     goal: "Decision search asks Jev your question about each record, and it adds a fourth way to retrieve.",
     idea: [
       "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings and cosine similarity work this way. Hybrid search blends the two.",
-      "Decision search asks Jev your question about each record. `filter`, `rank`, and `find` do the asking. Decision search can also query the names, kinds, and ontology terms that `recognize` and `relate` pull out.",
+      "Decision search asks Jev your question about each record. `filter`, `rank`, and `find` do the asking. Decision search can also query the names, kinds, and edges that `recognize` and `relate` pull out.",
     ],
     takeaway: "Search finds text like your question. Decision search answers it.",
     link: REPO,
