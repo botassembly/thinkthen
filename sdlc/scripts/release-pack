@@ -114,24 +114,28 @@ part_duckdb() {
 	fi
 	extension="databases/duckdb/build/artifacts/cpp/$TARGET/thinkthen.duckdb_extension"
 	[ -f "$extension" ] || { echo "release-pack: $extension is missing; build it first" >&2; exit 1; }
-	if [ "$TARGET" = aarch64-unknown-linux-gnu ]; then
-		machine=$(readelf -h "$extension" | sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p')
-		[ "$machine" = AArch64 ] || { echo "release-pack: DuckDB extension is $machine, not AArch64" >&2; exit 1; }
-	fi
+	elf_arch= mac_arch=
 	case $TARGET in
+	x86_64-unknown-linux-gnu) elf_arch='Advanced Micro Devices X86-64' ;;
+	aarch64-unknown-linux-gnu) elf_arch=AArch64 ;;
 	aarch64-apple-darwin) mac_arch=arm64 ;;
 	x86_64-apple-darwin) mac_arch=x86_64 ;;
 	esac
+	if [ -n "${elf_arch:-}" ]; then
+		machine=$(readelf -h "$extension" | sed -n 's/^[[:space:]]*Machine:[[:space:]]*//p')
+		[ "$machine" = "$elf_arch" ] || { echo "release-pack: DuckDB extension is $machine, not $elf_arch" >&2; exit 1; }
+	fi
 	if [ -n "${mac_arch:-}" ]; then
 		[ "$(lipo -archs "$extension")" = "$mac_arch" ] || {
 			echo "release-pack: $extension is not a single $mac_arch Mach-O" >&2
 			exit 1
 		}
 	fi
+	. databases/duckdb/tools/version.env
+	python3 databases/duckdb/cpp/verify_footer.py "$extension" "$TARGET" "$DUCKDB_VERSION" "$V"
 	folder=$(fresh duckdb)
 	cp "$extension" "$folder/"
 	cp LICENSE "$folder/LICENSE.thinkthen"
-	. databases/duckdb/tools/version.env
 	tools=${THINKTHEN_TOOLCHAINS:-$HOME/.cache/thinkthen-toolchains}/duckdb/$DUCKDB_VERSION
 	source=${THINKTHEN_DUCKDB_CPP_SOURCE:-$tools/source}
 	cp "$source/LICENSE" "$folder/LICENSE.duckdb"
