@@ -38,4 +38,4 @@ The follow-up work after `notes/Autorubric cookbook.md` and `~/foss/awesome-eval
 
 A per-case view should carry enough to cluster by shape: the answer, the truth, the probabilities, the options in their sent order, and the case's kind. `audit` already prints precision, recall, f1, and both disagreement directions per group. The case list wants the same counts, and the evals literature names the rule: report TPR and TNR separately, because accuracy hides a rare class.
 
-Evidence: `~/workspace/experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13, `pipeline.py`, and `runs/pipeline/`.
+Evidence: `experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13, `pipeline.py`, and `runs/pipeline/`.

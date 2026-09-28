@@ -1,6 +1,6 @@
 # thinkthen
 
-ThinkThen answers typed questions about text. Use the command in a shell script or a binding inside a program. The model returns structured judgments, not generated prose. A failed call stays separate from an answer.
+ThinkThen answers typed questions about text. Use the command in a shell script or a binding inside a program. The model returns structured values. A failed call stays separate from an answer.
 
 ## The ten functions
 
