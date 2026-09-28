@@ -238,11 +238,11 @@ pub(crate) struct Exchange<'a> {
 }
 
 impl fmt::Debug for Exchange<'_> {
-    /// Show what an exchange does and never the evidence or the key it carries.
+    /// Name the exchange and withhold its address, evidence, and key.
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         formatter
             .debug_struct("Exchange")
-            .field("url", &self.url)
+            .field("url", &"<withheld>")
             .field("body", &Withheld(self.body.len()))
             .field("key", &self.key)
             .field("max_retries", &self.max_retries)
