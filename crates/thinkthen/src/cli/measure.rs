@@ -47,6 +47,10 @@ pub(crate) enum Cause {
     BatchSetting(usize),
     /// `--write` names standard input.
     WriteDash,
+    /// `--write-to` needs a source question file.
+    WriteToNeedsWrite,
+    /// `--write-to` names standard output instead of a file.
+    WriteToDash,
     /// `--write` beside `--threshold`.
     WriteThreshold,
     /// `--write` beside `--by verb`.
@@ -63,6 +67,12 @@ pub(crate) enum Cause {
     Digest(usize),
     /// The file `--write` names could not be written.
     Unwritable,
+    /// The named tuned output already exists.
+    OutputExists,
+    /// The named tuned output could not be published.
+    OutputWrite,
+    /// A failed output publication also left a temporary file.
+    OutputCleanup,
     /// The key has lines, and no answer that did not fail has a label in it.
     NoneLabeled,
 }
@@ -72,7 +82,12 @@ impl Refusal {
     pub(crate) const fn code(&self) -> u8 {
         if matches!(
             self.cause,
-            Cause::Unreadable | Cause::NotQuestions | Cause::Unwritable
+            Cause::Unreadable
+                | Cause::NotQuestions
+                | Cause::Unwritable
+                | Cause::OutputExists
+                | Cause::OutputWrite
+                | Cause::OutputCleanup
         ) {
             5
         } else {
@@ -103,6 +118,8 @@ impl fmt::Display for Refusal {
                 "{role} line {line} has invalid meta.batch.setting; expected max or a whole number of at least 1"
             ),
             Cause::WriteDash => formatter.write_str("--write needs a file path"),
+            Cause::WriteToNeedsWrite => formatter.write_str("--write-to needs --write QUESTIONS"),
+            Cause::WriteToDash => formatter.write_str("--write-to needs a file path"),
             Cause::WriteThreshold => {
                 formatter.write_str("--write reads each answer as it ran; drop --threshold")
             }
@@ -120,6 +137,11 @@ impl fmt::Display for Refusal {
                 "results line {line} was not asked from the question file; --write needs --details lines from that file"
             ),
             Cause::Unwritable => formatter.write_str("cannot write the question file"),
+            Cause::OutputExists => formatter
+                .write_str("the --write-to output already exists; choose a new path"),
+            Cause::OutputWrite => formatter.write_str("cannot write the --write-to output"),
+            Cause::OutputCleanup => formatter
+                .write_str("cannot write the --write-to output; could not remove its temporary file"),
             Cause::NoneLabeled => formatter.write_str(
                 "no answer has a label in the key; check that --id points at the key's ids and that its values fit the verb",
             ),

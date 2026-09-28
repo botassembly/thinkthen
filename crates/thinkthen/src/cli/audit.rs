@@ -1,8 +1,8 @@
 //! `thinkthen audit`: grade saved answers against an answer key and suggest a bar.
 //!
 //! The command reads the paths it is handed and nothing else, sends no
-//! request, and reads no setting. Only `--write` changes a file, through the
-//! `write` module. `sdlc/scripts/policy.py` holds it to that.
+//! request, and reads no setting. Only `--write`, optionally paired with
+//! `--write-to`, changes a file through the `write` module. Policy holds that.
 
 mod table;
 mod write;
@@ -60,6 +60,9 @@ pub(crate) struct AuditArguments {
     /// Write the steady bar into the question file or set the results came from.
     #[arg(long, value_name = "QUESTIONS")]
     write: Option<PathBuf>,
+    /// Write a tuned copy to a new file, keeping the --write question file unchanged.
+    #[arg(long, value_name = "OUTPUT")]
+    write_to: Option<PathBuf>,
     /// How a recognize name matches a key name: the same places and kind, or overlapping places and the same kind.
     #[arg(long = "match", value_enum, default_value = "strict")]
     matching: Match,
@@ -132,13 +135,16 @@ pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), 
 /// The rows, the pooled line when asked, and the `--write` report.
 type Graded = (Vec<Row>, Option<Pooled>, String);
 
-fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
-    let refusal = |role, cause| Refusal {
-        command: "audit",
-        role,
-        cause,
-    };
+fn write_options(arguments: &AuditArguments) -> Result<(), Cause> {
     let dash = Path::new("-");
+    if let Some(output) = &arguments.write_to {
+        if arguments.write.is_none() {
+            return Err(Cause::WriteToNeedsWrite);
+        }
+        if output == dash {
+            return Err(Cause::WriteToDash);
+        }
+    }
     if let Some(path) = &arguments.write {
         let refused = [
             (path == dash, Cause::WriteDash),
@@ -150,9 +156,20 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
             ),
         ];
         if let Some((_, cause)) = refused.into_iter().find(|(beside, _)| *beside) {
-            return Err(refusal("question", cause));
+            return Err(cause);
         }
     }
+    Ok(())
+}
+
+fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
+    let refusal = |role, cause| Refusal {
+        command: "audit",
+        role,
+        cause,
+    };
+    let dash = Path::new("-");
+    write_options(arguments).map_err(|cause| refusal("question", cause))?;
     if arguments.curve && arguments.table {
         return Err(refusal("results", Cause::CurveTable));
     }
@@ -205,8 +222,15 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
         return Err(refusal("key", Cause::NoneLabeled));
     }
     let report = match &arguments.write {
-        Some(path) => write::bars(path, &results, &answers, &rows, &batch_settings)
-            .map_err(|cause| refusal("question", cause))?,
+        Some(path) => write::bars(
+            path,
+            arguments.write_to.as_deref(),
+            &results,
+            &answers,
+            &rows,
+            &batch_settings,
+        )
+        .map_err(|cause| refusal("question", cause))?,
         None => String::new(),
     };
     let report = if batch_settings.len() > 1 {

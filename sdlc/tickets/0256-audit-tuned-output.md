@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-audit-writes-the-tuned-bar-in-place.md sdlc/record
 
 # 0256: Write an audited candidate beside its source
 
-Status: fresh Medium design review accepted `4061dabd3b8e54f4f965c30c76c180cb4731f463`. The coordinator approves implementation under the exact Lanes claim and ADR 0102. Existing `--write` remains unchanged. No product completion is claimed before code and focused proof pass independent review. [Preflight](../records/0256-audit-output-preflight.md) records the inspected source and policy boundaries.
+Status: fresh Medium design review accepted `4061dabd3b8e54f4f965c30c76c180cb4731f463`. The coordinator approved implementation under the exact Lanes claim and ADR 0102. The source and focused proof are candidates for fresh Medium code review, not yet a completion claim. [Preflight](../records/0256-audit-output-preflight.md) records the inspected boundaries; the [build record](../records/0256-audit-output-build.md) records the actual proof and limits.
 
 ## Outcome
 
@@ -38,4 +38,4 @@ Current nonblank counts are audit 214, writer 204, measure 279, command help 415
 
 ## What the build taught us
 
-Pending implementation and fresh code review. Record corrected assumptions, source growth, exact proof and any retained gaps here before landing.
+The [build record](../records/0256-audit-output-build.md) holds exact checks and source growth. The first reusability assertion used the public library parser, which intentionally rejects CLI-only `on`; it was replaced by the actual compiled command's dry-run on the output. Strict Clippy required two small local helpers for the 90-line limit, with no suppression or broader writer framework. The settings checker needed the freshly built command on PATH. Existing in-place fixtures remain, and the new six-case target proves separate destination behavior. Unsupported hard-link and cleanup-error branches are source-reviewed mappings, not fault-injected runtime results. The old digest and in-place semantics, site ownership and separate tuning-loop reports remain unchanged. Fresh code review still decides whether further proof is needed before the issue can close.
