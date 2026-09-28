@@ -4,35 +4,29 @@
 //! the detachable worker. The package names the verb, so one method serves
 //! each shape: one text, many texts, an ordering, and the three set calls.
 
-use crate::diagnostics::{host, host_error};
 use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict};
-use thinkthen::{
-    Annotated, Answer, CallOptions, EngineBuilder, Error, Evidence, FailureCause, Judgment,
-};
+use thinkthen::{Annotated, Answer, Batch, Error, FailureCause, Judgment};
 
 use crate::asked::{Asked, Edge, Question, QuestionSet, Recognize, Recognized, Relate};
 use crate::frame::ask_column;
-use crate::input::{controls, entities, is_column, text, texts, whole};
-use crate::worker::{Token, run};
+use crate::input::{controls, entities, is_column, text, texts};
+use crate::result::{self, Completed};
+use crate::worker::{Token, run_observed};
 use crate::{guard, raised, usage};
 
-const THROTTLE: &str = "a throttle is a whole number from 1 through 32";
+mod operations;
+mod settings;
+
+use operations::{Many, labels, many, order};
+
+pub(crate) use settings::batch;
+use settings::{Settings, checked_throttle, context, folder_path, setting};
+
 const MAX_REQUESTS: &str = "a request limit is a whole number of 1 or more";
-const CACHE: &str = "cache is a folder path, False for no cache, or True for the default folder";
 
 pub(crate) type Arg<'a, 'py> = Option<&'a Bound<'py, PyAny>>;
 pub(crate) type Held<'a, 'py> = Option<&'a Bound<'py, Token>>;
-
-/// One record and its place in the caller's list.
-#[derive(Debug)]
-struct Indexed(usize, String);
-
-impl Evidence for Indexed {
-    fn evidence(&self) -> &str {
-        &self.1
-    }
-}
 
 pub(crate) fn answer(py: Python<'_>, answer: Answer) -> Py<PyAny> {
     match answer {
@@ -49,6 +43,14 @@ fn judgment(py: Python<'_>, value: Judgment) -> PyResult<Py<PyAny>> {
         Judgment::Score(position) => position.into_pyobject(py)?.into_any().unbind(),
         Judgment::Tags(labels) => labels.into_pyobject(py)?.unbind(),
     })
+}
+
+fn detail_value(py: Python<'_>, verb: &str, found: thinkthen::Details) -> PyResult<Py<PyAny>> {
+    if verb == "details" {
+        Ok(found.to_json().into_pyobject(py)?.into_any().unbind())
+    } else {
+        judgment(py, found.value().clone())
+    }
 }
 
 /// A failed annotate question's cause, as the shared cases spell it.
@@ -103,171 +105,16 @@ fn only(py: Python<'_>, asked: &Asked, verb: &str, kind: &str) -> PyResult<think
     }
 }
 
-/// How the engine caches: `True` for the default folder, `False` for none,
-/// or a folder path.
-fn cached(builder: EngineBuilder, cache: &Bound<'_, PyAny>) -> PyResult<EngineBuilder> {
-    let py = cache.py();
-    if let Ok(on) = cache.cast::<PyBool>() {
-        return Ok(if on.is_true() {
-            builder.default_cache()
-        } else {
-            builder.no_cache()
-        });
-    }
-    let folder: std::path::PathBuf = host_error(host(|| cache.extract()), || usage(py, CACHE))?;
-    builder.cache_at(folder).map_err(|error| raised(py, &error))
-}
-
-/// A whole-number setting in the range its type holds, or its sentence.
-fn setting<T: TryFrom<i64>>(
-    value: Option<&Bound<'_, PyAny>>,
-    sentence: &str,
-) -> PyResult<Option<T>> {
-    value
-        .map(|value| T::try_from(whole(value, sentence)?).map_err(|_| usage(value.py(), sentence)))
-        .transpose()
-}
-
-/// A record's place, text, and probability.
-type Placed = (usize, String, f64);
-
-/// The throttle, checked here so `throttle=300` is a `UsageError`, not an
-/// `OverflowError` (amendment change 13).
-fn checked_throttle(value: Arg<'_, '_>) -> PyResult<Option<u8>> {
-    match (value, setting::<u8>(value, THROTTLE)?) {
-        (Some(value), Some(read)) if !(1..=32).contains(&read) => Err(usage(value.py(), THROTTLE)),
-        (_, read) => Ok(read),
-    }
-}
-
-/// Read one optional folder setting with its own public refusal sentence.
-fn folder_path(
-    py: Python<'_>,
-    value: Arg<'_, '_>,
-    refusal: &'static str,
-) -> PyResult<Option<std::path::PathBuf>> {
-    value
-        .map(|value| host_error(host(|| value.extract()), || usage(py, refusal)))
-        .transpose()
-}
-
-/// The checked settings of `tt.Engine`, each applied over the environment.
-struct Settings<'a> {
-    base_url: Option<&'a str>,
-    model: Option<&'a str>,
-    throttle: Option<u8>,
-    most: Option<usize>,
-    max_request_bytes: Option<usize>,
-    timeout: Option<u64>,
-    retries: Option<u32>,
-    record: Option<std::path::PathBuf>,
-    replay: Option<std::path::PathBuf>,
-    profile: Option<std::path::PathBuf>,
-}
-
-impl Settings<'_> {
-    fn build(self, py: Python<'_>, cache: Arg<'_, '_>) -> PyResult<thinkthen::Engine> {
-        let refused = |error: thinkthen::Error| raised(py, &error);
-        let mut builder = EngineBuilder::from_env().map_err(refused)?;
-        if let Some(address) = self.base_url {
-            builder = builder.base_url(address).map_err(refused)?;
-        }
-        if let Some(name) = self.model {
-            builder = builder.model(name).map_err(refused)?;
-        }
-        if self.most.is_some() {
-            builder = builder.max_requests(self.most).map_err(refused)?;
-        }
-        if let Some(size) = self.max_request_bytes {
-            builder = builder.max_request_bytes(size).map_err(refused)?;
-        }
-        if let Some(seconds) = self.timeout {
-            builder = builder
-                .timeout(std::time::Duration::from_secs(seconds))
-                .map_err(refused)?;
-        }
-        if let Some(retries) = self.retries {
-            builder = builder.max_retries(retries);
-        }
-        if let Some(folder) = self.record {
-            builder = builder.record(folder).map_err(refused)?;
-        }
-        if let Some(folder) = self.replay {
-            builder = builder.replay(folder).map_err(refused)?;
-        }
-        if let Some(path) = self.profile {
-            builder = builder.profile(path).map_err(refused)?;
-        }
-        if let Some(cache) = cache {
-            builder = cached(builder, cache)?;
-        }
-        if let Some(throttle) = self.throttle {
-            builder = builder.throttle(throttle).map_err(refused)?;
-        }
-        builder.build().map_err(refused)
-    }
-}
-
-/// What `many` gives back from the worker.
-enum Many {
-    Kept(Vec<String>),
-    Answers(Vec<Answer>),
-}
-
-/// The worker's side of `many`: `filter` under `cut`, or `decide_many`.
-fn many(
-    engine: &thinkthen::Engine,
-    cut: Option<&thinkthen::Question>,
-    asked: &Asked,
-    records: Vec<String>,
-    options: CallOptions<'_>,
-) -> Result<Many, Error> {
-    let value = |row: Result<thinkthen::Row<String, Answer>, Error>| row.map(|row| *row.value());
-    match (cut, asked) {
-        (Some(cut), _) => engine
-            .filter_with(cut, records, options)
-            .collect::<Result<_, _>>()
-            .map(Many::Kept),
-        (None, asked) => engine
-            .decide_many_with(asked.decision(), records, options)
-            .map(value)
-            .collect::<Result<_, _>>()
-            .map(Many::Answers),
-    }
-}
-
-/// The worker's side of `order`: every ranked record, or the found unit.
-fn order(
-    engine: &thinkthen::Engine,
-    find: bool,
-    asked: &thinkthen::Question,
-    records: Vec<String>,
-    options: CallOptions<'_>,
-) -> Result<Vec<Placed>, Error> {
-    let records = records
-        .into_iter()
-        .enumerate()
-        .map(|(at, text)| Indexed(at, text));
-    if find {
-        let found = engine.find_with(asked, records, options)?.into_value();
-        let probability = |at: usize| {
-            found
-                .candidates()
-                .get(at)
-                .map_or(0.0, thinkthen::Candidate::probability)
-        };
-        return Ok(found
-            .selected()
-            .map(|Indexed(at, text)| (*at, text.clone(), probability(*at)))
-            .into_iter()
-            .collect());
-    }
-    let ranked = engine.rank_with(asked, records, options)?.into_value();
-    Ok(ranked
-        .into_iter()
-        .map(|row| (row.probability(), row.into_input()))
-        .map(|(probability, Indexed(at, text))| (at, text, probability))
-        .collect())
+#[expect(
+    clippy::expect_used,
+    reason = "an exhausted successful batch always fixes its facts"
+)]
+pub(crate) fn collected<T>(mut batch: Batch<'_, T>) -> Result<Completed<Vec<T>>, Error> {
+    let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
+    Ok(Completed::new(
+        rows,
+        batch.facts().expect("successful batch facts"),
+    ))
 }
 
 /// One record's values, owned so they leave the worker.
@@ -298,7 +145,7 @@ impl Engine {
     /// Start from what `thinkthen` reads from the environment, then apply
     /// each given setting (amendment changes 11 to 13).
     #[new]
-    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, max_requests=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
+    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, batch=None, max_requests=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
     #[expect(
         clippy::too_many_arguments,
         reason = "PyO3's keyword-only constructor exposes the engine settings"
@@ -307,6 +154,7 @@ impl Engine {
         base_url: Option<&str>,
         model: Option<&str>,
         throttle: Arg<'_, '_>,
+        batch: Arg<'_, '_>,
         max_requests: Arg<'_, '_>,
         max_request_bytes: Arg<'_, '_>,
         cache: Arg<'_, '_>,
@@ -322,6 +170,7 @@ impl Engine {
                     base_url,
                     model,
                     throttle: checked_throttle(throttle)?,
+                    batch: self::batch(batch)?,
                     most: setting(max_requests, MAX_REQUESTS)?,
                     max_request_bytes: setting(
                         max_request_bytes,
@@ -352,6 +201,11 @@ impl Engine {
     /// `decide`, `choose`, `score`, `tag`, or `details` over one text. Each
     /// reads the one `details` call, so a question with runtime labels adds
     /// no send (decision 8). `details` gives the document as JSON text.
+    #[pyo3(signature = (verb, question, evidence, deadline, token, batch=None, context=None))]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 accepts column controls beside scalar arguments"
+    )]
     fn ask(
         &self,
         verb: &str,
@@ -359,6 +213,8 @@ impl Engine {
         evidence: &Bound<'_, PyAny>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
+        batch: Arg<'_, '_>,
+        context: Arg<'_, '_>,
     ) -> PyResult<Py<PyAny>> {
         let py = question.py();
         guard(py, || {
@@ -367,26 +223,36 @@ impl Engine {
                 of_kind(py, &asked, verb, verb)?;
             }
             if is_column(evidence)? {
-                return ask_column(&engine, verb, &asked, evidence, deadline, token);
+                let batch = self::batch(batch)?;
+                let context = self::context(context)?;
+                return ask_column(
+                    &engine, verb, &asked, evidence, batch, context, deadline, token,
+                );
+            }
+            if batch.is_some() || context.is_some() {
+                return Err(usage(py, "one text does not take batch or shared context"));
             }
             let (evidence, controls) = (text(evidence)?, controls(py, deadline, token)?);
-            let found = run(py, controls, move |options| {
-                engine.details_with(asked.detail(), &evidence, options)
-            })?
-            .into_value();
-            if verb == "details" {
-                return Ok(found.to_json().into_pyobject(py)?.into_any().unbind());
-            }
-            judgment(py, found.value().clone())
+            let found = run_observed(py, controls, move |options| {
+                let found = engine.details_with(asked.detail(), &evidence, options)?;
+                Ok::<_, Error>(Completed::new(found.value().clone(), found.facts()))
+            })?;
+            result::converted(py, found, |found| detail_value(py, verb, found))
         })
     }
 
     /// `decide_many` or `filter` over every record.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 mirrors the public controls on a many call"
+    )]
     fn many(
         &self,
         verb: &str,
         question: &Bound<'_, Question>,
         records: &Bound<'_, PyAny>,
+        batch: Arg<'_, '_>,
+        context: Arg<'_, '_>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
     ) -> PyResult<Py<PyAny>> {
@@ -403,63 +269,144 @@ impl Engine {
                 ));
             }
             if cut.is_none() && is_column(records)? {
-                return ask_column(&engine, "decide", &asked, records, deadline, token);
+                let batch = self::batch(batch)?;
+                let context = self::context(context)?;
+                return ask_column(
+                    &engine, "decide", &asked, records, batch, context, deadline, token,
+                );
             }
+            let (batch, context) = (self::batch(batch)?, self::context(context)?);
             let (records, controls) = (texts(records)?, controls(py, deadline, token)?);
-            let done = run(py, controls, move |options| {
+            let done = run_observed(py, controls, move |options| {
+                let options = batch.map_or(options, |batch| options.batch(batch));
+                let options = context
+                    .as_deref()
+                    .map_or(options, |context| options.context(context));
                 many(&engine, cut.as_ref(), &asked, records, options)
             })?;
-            match done {
+            result::converted(py, done, |done| match done {
                 Many::Kept(passed) => Ok(passed.into_pyobject(py)?.unbind()),
                 Many::Answers(answers) => {
                     let answers: Vec<Py<PyAny>> =
                         answers.into_iter().map(|one| answer(py, one)).collect();
                     Ok(answers.into_pyobject(py)?.unbind())
                 }
-            }
+                Many::Judgments(values) => values
+                    .into_iter()
+                    .map(|value| judgment(py, value))
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into_pyobject(py)
+                    .map(|value| value.unbind()),
+            })
+        })
+    }
+
+    /// Runtime-label choose, score and tag over the shared details planner.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 mirrors the public controls on a many call"
+    )]
+    fn label_many(
+        &self,
+        verb: &str,
+        question: &Bound<'_, Question>,
+        records: &Bound<'_, PyAny>,
+        batch: Arg<'_, '_>,
+        context: Arg<'_, '_>,
+        deadline: Arg<'_, '_>,
+        token: Held<'_, '_>,
+    ) -> PyResult<Py<PyAny>> {
+        let py = question.py();
+        guard(py, || {
+            let (engine, asked) = (self.0.clone(), question.get().0.clone());
+            of_kind(py, &asked, verb, verb)?;
+            let (batch, context) = (self::batch(batch)?, self::context(context)?);
+            let (records, controls) = (texts(records)?, controls(py, deadline, token)?);
+            let done = run_observed(py, controls, move |options| {
+                let options = batch.map_or(options, |batch| options.batch(batch));
+                let options = context
+                    .as_deref()
+                    .map_or(options, |context| options.context(context));
+                labels(&engine, &asked, records, options)
+            })?;
+            result::converted(py, done, |done| match done {
+                Many::Judgments(values) => values
+                    .into_iter()
+                    .map(|value| judgment(py, value))
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into_pyobject(py)
+                    .map(|value| value.unbind()),
+                _ => Err(usage(py, "the question did not produce labels")),
+            })
         })
     }
 
     /// `rank` gives each record's place, text, and probability, most likely
     /// first. `find` gives the selected unit's alone, or nothing.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 mirrors the public controls on an ordering call"
+    )]
     fn order(
         &self,
         verb: &str,
         question: &Bound<'_, Question>,
         records: &Bound<'_, PyAny>,
+        batch: Arg<'_, '_>,
+        context: Arg<'_, '_>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
-    ) -> PyResult<Vec<Placed>> {
+    ) -> PyResult<Py<PyAny>> {
         let py = question.py();
         guard(py, || {
             let (engine, asked) = (self.0.clone(), only(py, &question.get().0, verb, verb)?);
+            if verb == "find" && context.is_some() {
+                return Err(usage(py, "find does not take a shared context"));
+            }
+            let (batch, context) = (self::batch(batch)?, self::context(context)?);
             let (records, controls) = (texts(records)?, controls(py, deadline, token)?);
             let find = verb == "find";
-            run(py, controls, move |options| {
+            let done = run_observed(py, controls, move |options| {
+                let options = batch.map_or(options, |batch| options.batch(batch));
+                let options = context
+                    .as_deref()
+                    .map_or(options, |context| options.context(context));
                 order(&engine, find, &asked, records, options)
-            })
+            })?;
+            result::converted(py, done, |value| Ok(value.into_pyobject(py)?.unbind()))
         })
     }
 
     /// One dictionary per record, in the set's order.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "PyO3 mirrors the public controls on annotation"
+    )]
     fn annotate(
         &self,
         py: Python<'_>,
         questions: &Bound<'_, QuestionSet>,
         records: &Bound<'_, PyAny>,
+        batch: Arg<'_, '_>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
-    ) -> PyResult<Vec<Py<PyAny>>> {
+    ) -> PyResult<Py<PyAny>> {
         guard(py, || {
             let (engine, set) = (self.0.clone(), questions.get().0.clone());
+            let batch = self::batch(batch)?;
             let (records, controls) = (texts(records)?, controls(py, deadline, token)?);
-            let rows = run(py, controls, move |options| {
-                engine
-                    .annotate_with(&set, records, options)
-                    .map(|record| record.map(named))
-                    .collect::<Result<Vec<_>, _>>()
+            let rows = run_observed(py, controls, move |options| {
+                let options = batch.map_or(options, |batch| options.batch(batch));
+                collected(engine.annotate_with(&set, records, options))
+                    .map(|done| done.map(|rows| rows.into_iter().map(named).collect()))
             })?;
-            rows.into_iter().map(|values| row(py, values)).collect()
+            result::converted(py, rows, |rows: Vec<Vec<(String, Annotated)>>| {
+                rows.into_iter()
+                    .map(|values| row(py, values))
+                    .collect::<PyResult<Vec<_>>>()?
+                    .into_pyobject(py)
+                    .map(|value| value.unbind())
+            })
         })
     }
 
@@ -470,14 +417,18 @@ impl Engine {
         evidence: &Bound<'_, PyAny>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
-    ) -> PyResult<Recognized> {
+    ) -> PyResult<Py<PyAny>> {
         guard(py, || {
             let (engine, ask) = (self.0.clone(), ask.get().0.clone());
             let (evidence, controls) = (text(evidence)?, controls(py, deadline, token)?);
-            let found = run(py, controls, move |options| {
-                engine.recognize_with(&ask, &evidence, options)
+            let found = run_observed(py, controls, move |options| {
+                let found = engine.recognize_with(&ask, &evidence, options)?;
+                Ok::<_, Error>(Completed::new(
+                    Recognized::from(found.value()),
+                    found.facts(),
+                ))
             })?;
-            Ok(Recognized::from(found.value()))
+            result::converted(py, found, |found| Ok(Py::new(py, found)?.into_any()))
         })
     }
 
@@ -488,14 +439,18 @@ impl Engine {
         given: &Bound<'_, PyAny>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
-    ) -> PyResult<Vec<Edge>> {
+    ) -> PyResult<Py<PyAny>> {
         guard(py, || {
             let (engine, ask) = (self.0.clone(), ask.get().0.clone());
             let (given, controls) = (entities(given)?, controls(py, deadline, token)?);
-            let edges = run(py, controls, move |options| {
-                engine.relate_with(&ask, given, options)
+            let edges = run_observed(py, controls, move |options| {
+                let edges = engine.relate_with(&ask, given, options)?;
+                Ok::<_, Error>(Completed::new(
+                    edges.value().iter().map(Edge::from).collect::<Vec<_>>(),
+                    edges.facts(),
+                ))
             })?;
-            Ok(edges.value().iter().map(Edge::from).collect())
+            result::converted(py, edges, |edges| Ok(edges.into_pyobject(py)?.unbind()))
         })
     }
 
