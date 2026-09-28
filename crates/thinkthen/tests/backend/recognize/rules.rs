@@ -1,7 +1,7 @@
 //! Ticket 0147, test 7: rules with no kind limits.
 
-use super::{automatic, json, questions, run, stdout};
-use crate::harness::{Listener, spawn};
+use super::{automatic, json, profile, questions, run, stdout};
+use crate::harness::{Canned, Gathering, Listener, spawn};
 use serde_json::Value;
 
 const SPELLINGS: [&str; 3] = ["knows", "knows=*:*", "knows=ANY:ANY"];
@@ -126,4 +126,143 @@ fn relate_gives_one_plan_for_the_three_spellings() {
         stdout(&spawn(&arguments, &[], names).expect("relate"))
     });
     assert_eq!(listener.connections(), 0);
+}
+
+/// Repeated mentions remain output spans, while each distinct name/kind is
+/// asked once. Both rules share the one relevant state, and details retain a
+/// pair that the relation cut removes from the bare value.
+#[test]
+fn repeated_names_and_two_rules_keep_one_pair_each_and_show_a_dropped_edge() {
+    const TEXT: &[u8] = b"Ada met Acme, then Ada met Acme in Town.";
+    let listener = Listener::answering(|body| {
+        if String::from_utf8_lossy(body).contains("Does the text itself state that") {
+            Canned::ok(r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.2}},"usage":{"input_tokens":10,"output_tokens":2}}"#)
+        } else {
+            automatic(body)
+        }
+    })
+    .expect("listener");
+    let result = json(&run(
+        &listener,
+        &[
+            "person",
+            "organization",
+            "place",
+            "--relation",
+            "works_for=person:organization",
+            "--relation",
+            "knows=person:organization",
+            "--details",
+        ],
+        TEXT,
+    ));
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 3, "one request per recognition stage");
+    let body: Value = serde_json::from_slice(&requests[2].body).expect("relation request");
+    assert_eq!(
+        body,
+        serde_json::json!({
+            "state": {"evidence":"Ada met Acme, then Ada met Acme in Town.","entities":[
+                {"id":"i1","name":"Ada","kind":"person"},
+                {"id":"i2","name":"Acme","kind":"organization"}
+            ]},
+            "model":"local-1",
+            "questions":{
+                "q1":{"type":"noul","instructions":"Does the text itself state that i1 works for i2?"},
+                "q2":{"type":"noul","instructions":"Does the text itself state that i1 knows i2?"}
+            }
+        })
+    );
+    assert_eq!(
+        result["value"]["entities"],
+        serde_json::json!([
+            {"text":"Ada","start":0,"end":3,"length":3,"kind":"person","strength":0.9},
+            {"text":"Acme","start":8,"end":12,"length":4,"kind":"organization","strength":0.9},
+            {"text":"Ada","start":19,"end":22,"length":3,"kind":"person","strength":0.9},
+            {"text":"Acme","start":27,"end":31,"length":4,"kind":"organization","strength":0.9},
+            {"text":"Town","start":35,"end":39,"length":4,"kind":"place","strength":0.9}
+        ])
+    );
+    assert_eq!(
+        result["value"]["relations"],
+        serde_json::json!([{"relation":"works_for",
+            "source":{"text":"Ada","start":0,"end":3,"length":3,"kind":"person","strength":0.9},
+            "target":{"text":"Acme","start":8,"end":12,"length":4,"kind":"organization","strength":0.9},
+            "probability":0.9}])
+    );
+    assert_eq!(
+        result["answer"]["pairs"],
+        serde_json::json!([
+            {"relation":"works_for","source":{"start":0,"end":3},"target":{"start":8,"end":12},"probability":0.9},
+            {"relation":"knows","source":{"start":0,"end":3},"target":{"start":8,"end":12},"probability":0.2}
+        ])
+    );
+    assert_eq!(result["meta"]["requests_sent"], 3);
+}
+
+/// A one-question profile makes the two rules separate chunks. Holding both
+/// replies proves that a later rule enters within the same width, rather than
+/// waiting for the earlier rule's response.
+#[test]
+fn split_two_rule_requests_overlap_within_width() {
+    let one = profile("two-rule-overlap", r#""max_questions":1"#);
+    let gathered = Gathering::new(2);
+    let listener = Listener::answering(move |body| {
+        if String::from_utf8_lossy(body).contains("Does the text itself state that") {
+            gathered.hold();
+        }
+        automatic(body)
+    })
+    .expect("listener");
+    let result = json(&run(
+        &listener,
+        &[
+            "person",
+            "organization",
+            "--relation",
+            "works_for=person:organization",
+            "--relation",
+            "knows=person:organization",
+            "--profile",
+            one.to_str().expect("profile path"),
+            "--lines",
+            "--jobs",
+            "2",
+            "--details",
+        ],
+        b"Ada met Acme.\n",
+    ));
+    assert_eq!(listener.peak(), 2);
+    let relation = listener
+        .requests()
+        .into_iter()
+        .filter(|request| {
+            String::from_utf8_lossy(&request.body).contains("Does the text itself state that")
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(relation.len(), 2);
+    let mut asked = relation
+        .iter()
+        .map(|request| {
+            let questions = questions(&request.body);
+            assert_eq!(questions.len(), 1);
+            questions[0]["instructions"]
+                .as_str()
+                .expect("question")
+                .to_owned()
+        })
+        .collect::<Vec<_>>();
+    asked.sort();
+    assert_eq!(
+        asked,
+        [
+            "Does the text itself state that i1 knows i2?",
+            "Does the text itself state that i1 works for i2?",
+        ]
+    );
+    assert_eq!(
+        result["value"]["relations"].as_array().map(Vec::len),
+        Some(2)
+    );
+    assert_eq!(result["meta"]["requests_sent"], 9);
 }
