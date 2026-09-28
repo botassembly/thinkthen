@@ -19,7 +19,7 @@ mod relate;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
 
-use thinkthen::{Engine, EngineBuilder, Error, ErrorKind};
+use thinkthen::{BatchSetting, Engine, EngineBuilder, Error, ErrorKind};
 
 pub use ffi::get_thinkthen_metadata;
 
@@ -70,6 +70,7 @@ pub(crate) struct Settings {
     pub(crate) record: Option<String>,
     pub(crate) replay: Option<String>,
     pub(crate) profile: Option<String>,
+    pub(crate) batch: Option<BatchSetting>,
 }
 
 impl Settings {
@@ -94,6 +95,7 @@ impl Settings {
             self.profile
                 .as_ref()
                 .map(|_| "profile = <folder>".to_owned()),
+            self.batch.map(|it| format!("batch = {it:?}")),
         ]
         .into_iter()
         .flatten()
@@ -142,6 +144,9 @@ impl Settings {
         }
         if let Some(path) = &self.profile {
             builder = builder.profile(path)?;
+        }
+        if let Some(batch) = self.batch {
+            builder = builder.batch(batch);
         }
         builder.build()
     }

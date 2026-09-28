@@ -9,11 +9,11 @@ digests <- function(locale) {
   child(c(
     'word <- rawToChar(as.raw(c(0x63, 0x61, 0x66, 0xc3, 0xa9)))',
     'stopifnot(Encoding(word) == "unknown")',
-    'd <- tt_details(paste("Is", word, "open?"), paste("the", word, "is open"))',
+    'd <- tt_details(paste("Is", word, "open?"), paste("the", word, "is open"))$value',
     'cat("decide", d$meta$question_sha256, unlist(d$meta$requests), "\\n")',
-    'c <- tt_details(tt_question(choose = "Which?", options = c(word, "tea")), "a drink")',
+    'c <- tt_details(tt_question(choose = "Which?", options = c(word, "tea")), "a drink")$value',
     'cat("choose", c$meta$question_sha256, unlist(c$meta$requests), "\\n")',
-    'e <- tt_relate(data.frame(name = c("a1", "b1"), kind = "x"), relations = word)',
+    'e <- tt_relate(data.frame(name = c("a1", "b1"), kind = "x"), relations = word)$value',
     'cat("relate", sapply(e$relation, function(x) paste(charToRaw(enc2utf8(x)), collapse = "")), "\\n")'
   ), env = paste0("LC_ALL=", locale))$text
 }
@@ -26,7 +26,7 @@ check("R3-17 and R5-10: native text gives the same digests and names under C and
 latin1 <- "caf\xe9 complaint"
 Encoding(latin1) <- "latin1"
 check("latin1 and UTF-8 forms give one question digest", identical(
-  tt_details(latin1, "x")$meta$question_sha256, tt_details(enc2utf8(latin1), "x")$meta$question_sha256))
+  tt_details(latin1, "x")$value$meta$question_sha256, tt_details(enc2utf8(latin1), "x")$value$meta$question_sha256))
 
 # Invalid bytes and a bytes mark are refused by name, and send nothing.
 native_invalid <- "caf\xe9"
@@ -34,14 +34,14 @@ Encoding(native_invalid) <- "unknown"
 bytes <- "caf\xe9"
 Encoding(bytes) <- "bytes"
 for (bad in list(native_invalid, bytes)) {
-  sent <- sent_by(said <- message_of(tt_decide("Is this a complaint?", bad)))
+  sent <- sent_by(said <- message_of(tt_decide("Is this a complaint?", bad)$value))
   check("bad bytes as evidence are refused before a send",
         sent == 0L && grepl("convert it with enc2utf8() or iconv() first", said, fixed = TRUE))
 }
-check("native invalid bytes in a question are usage", identical(kind_of(tt_decide(native_invalid, "x")), "usage"))
+check("native invalid bytes in a question are usage", identical(kind_of(tt_decide(native_invalid, "x")$value), "usage"))
 
 # A percent in the caller's text reaches R's error formatter intact.
-check("a percent in evidence answers", isTRUE(tt_decide("Is this sure?", "100% sure %s %n")))
-check("clean UTF-8 answers", isTRUE(tt_decide("Is this a complaint?", "café \U0001F600 complaint")))
+check("a percent in evidence answers", isTRUE(tt_decide("Is this sure?", "100% sure %s %n")$value))
+check("clean UTF-8 answers", isTRUE(tt_decide("Is this a complaint?", "café \U0001F600 complaint")$value))
 
 finish("text", 9L)

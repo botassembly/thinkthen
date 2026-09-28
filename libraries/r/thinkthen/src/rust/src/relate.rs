@@ -1,12 +1,15 @@
 //! `recognize` and `relate`: named things in texts, and edges among them.
 
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use extendr_api::prelude::*;
 use std::result::Result;
 use thinkthen::{Entity, Recognize, Recognized, Relate};
 
-use crate::calls::{Crossed, Pending, call};
+use crate::calls::receipt::Receipt;
+use crate::calls::render;
+use crate::calls::{Crossed, Pending, call_owned};
 use crate::carry;
 
 /// Where a recognize or relate spec comes from: the file's JSON, or a path.
@@ -71,17 +74,45 @@ fn place(offset: usize) -> f64 {
 pub(crate) fn recognize(
     spec: &Spec,
     texts: Vec<String>,
+    positions: Vec<usize>,
     deadline: Option<f64>,
     pending: Pending<'_>,
+    receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
     let ask = recognize_ask(spec)?;
-    let found = call(deadline, pending, move |engine, options| {
-        texts
-            .iter()
-            .map(|text| engine.recognize_with(&ask, text, options).map(thinkthen::Call::into_value))
-            .collect::<Result<Vec<_>, _>>()
-    })?;
-    Ok(List::from_values(found.iter().map(names)))
+    if texts.len() != positions.len() {
+        return Err(crate::usage("recognize positions do not match texts"));
+    }
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            if texts.is_empty() {
+                account.no_work();
+            }
+            let mut found = Vec::with_capacity(texts.len());
+            for (text, original) in texts.iter().zip(positions) {
+                let observer = |event: thinkthen::RecordObservation<'_>| {
+                    account.observe(event, Some(original))
+                };
+                let answer = engine.recognize_with(&ask, text, options.observe(&observer));
+                match answer {
+                    Ok(answer) => {
+                        account.add(answer.facts())?;
+                        found.push(answer.into_value());
+                    }
+                    Err(error) => {
+                        return Err(account.failed(&error)?);
+                    }
+                }
+            }
+            Ok(found)
+        },
+    )?;
+    Ok(render::envelope(completed, |found| {
+        List::from_values(found.iter().map(names)).into()
+    }))
 }
 
 /// `relate` over entities given as names and kinds. A repeated pair is
@@ -91,6 +122,7 @@ pub(crate) fn relate(
     pairs: Vec<(String, String)>,
     deadline: Option<f64>,
     pending: Pending<'_>,
+    receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
     let ask = relate_ask(spec)?;
     let mut seen = HashSet::new();
@@ -100,16 +132,30 @@ pub(crate) fn relate(
         .map(|(name, kind)| Entity::new(&name, &kind))
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| carry(&error))?;
-    let edges = call(deadline, pending, move |engine, options| {
-        engine.relate_with(&ask, entities, options)
-    })?
-    .into_value();
-    Ok(list!(
-        source = each(&edges, |edge| edge.source().name()),
-        target = each(&edges, |edge| edge.target().name()),
-        relation = each(&edges, |edge| edge.relation()),
-        probability = each(&edges, |edge| edge.probability()),
-        source_kind = each(&edges, |edge| edge.source().kind()),
-        target_kind = each(&edges, |edge| edge.target().kind())
-    ))
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let edges = match engine.relate_with(&ask, entities, options) {
+                Ok(value) => value,
+                Err(error) => {
+                    return Err(account.failed(&error)?);
+                }
+            };
+            account.add(edges.facts())?;
+            Ok(edges.into_value())
+        },
+    )?;
+    Ok(render::envelope(completed, |edges| {
+        list!(
+            source = each(&edges, |edge| edge.source().name()),
+            target = each(&edges, |edge| edge.target().name()),
+            relation = each(&edges, |edge| edge.relation()),
+            probability = each(&edges, |edge| edge.probability()),
+            source_kind = each(&edges, |edge| edge.source().kind()),
+            target_kind = each(&edges, |edge| edge.target().kind())
+        )
+        .into()
+    }))
 }

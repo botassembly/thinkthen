@@ -7,125 +7,26 @@
 //! once, so a request already on the wire never holds the caller. The
 //! detached worker then sends nothing new and finishes what it sent.
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::mpsc::{Receiver, RecvTimeoutError, channel};
-use std::thread;
-use std::time::{Duration, Instant};
-
 use extendr_api::prelude::*;
-use std::result::Result;
+use std::sync::Arc;
 use thinkthen::{
-    Annotated, Answer, CallOptions, CancelToken, DecisionQuestion, Engine, Error, Evidence,
-    FailureCause, Judgment, LoadedQuestion, Question, QuestionSet,
+    Annotated, Answer, BatchSetting, CallOptions, DecisionQuestion, Engine, Evidence, FailureCause,
+    Judgment, LoadedQuestion, Question, QuestionSet,
 };
 
-use crate::{carry, defect, engine, interrupted, usage};
+use crate::{carry, defect, engine, usage};
+use account::Account;
+use receipt::Receipt;
 
+pub(crate) mod account;
 mod diagnostics;
+pub(crate) mod receipt;
+pub(crate) mod render;
+mod worker;
 
-/// How long the main thread waits between R's interrupt checks.
-const TICK: Duration = Duration::from_millis(100);
-
-/// R's guarded interrupt check, run on the main thread.
-pub(crate) type Pending<'a> = &'a dyn Fn() -> bool;
-
-/// A shim result: R's value, or the packed failure.
-pub(crate) type Crossed<T> = Result<T, String>;
-
-/// Cancels the call's token on every way out of the wait, so a detached
-/// worker starts no new request after its caller has left.
-struct Stop(CancelToken);
-
-impl Drop for Stop {
-    fn drop(&mut self) {
-        self.0.cancel();
-    }
-}
-
-/// One engine call on a fresh worker, with the checks ADR 0042 places
-/// before the spawn and at each tick. A refused deadline sends nothing,
-/// because it is checked here before any thread starts.
-pub(crate) fn call<T: Send + 'static>(
-    deadline: Option<f64>,
-    pending: Pending<'_>,
-    work: impl FnOnce(&Engine, CallOptions<'_>) -> Result<T, Error> + Send + 'static,
-) -> Crossed<T> {
-    if pending() {
-        return Err(interrupted());
-    }
-    let due = due(deadline)?;
-    let engine = engine()?;
-    let token = CancelToken::new();
-    let held = token.clone();
-    on_worker(token, pending, move || {
-        let options = CallOptions::new().cancel(&held);
-        let options = due.map_or(options, |at| options.deadline_at(at));
-        work(&engine, options).map_err(|error| carry(&error))
-    })
-}
-
-/// The deadline as one instant, fixed before the call starts, so every
-/// engine call a verb makes shares it. The engine's `deadline_seconds`
-/// rules the number, and `-1` is none.
-fn due(deadline: Option<f64>) -> Crossed<Option<Instant>> {
-    let Some(seconds) = deadline else {
-        return Ok(None);
-    };
-    CallOptions::new()
-        .deadline_seconds(seconds)
-        .map_err(|error| carry(&error))?;
-    if seconds < 0.0 {
-        return Ok(None);
-    }
-    let late = || {
-        usage(&format!(
-            "a deadline of {seconds} seconds does not fit this clock"
-        ))
-    };
-    let budget = Duration::try_from_secs_f64(seconds).map_err(|_| late())?;
-    Instant::now()
-        .checked_add(budget)
-        .map(Some)
-        .ok_or_else(late)
-}
-
-/// Run `body` on a new thread and wait for it in ticks.
-fn on_worker<T: Send + 'static>(
-    token: CancelToken,
-    pending: Pending<'_>,
-    body: impl FnOnce() -> Crossed<T> + Send + 'static,
-) -> Crossed<T> {
-    let (sender, receiver) = channel();
-    thread::Builder::new()
-        .name("thinkthen-r".to_owned())
-        .spawn(move || {
-            let answer = diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
-                Ok(value) => value,
-                Err(payload) => {
-                    std::mem::forget(payload);
-                    Err(defect("the call panicked"))
-                }
-            });
-            // The caller left after an interrupt when this send fails.
-            let _ignored = sender.send(answer);
-        })
-        .map_err(|error| defect(&format!("the call's worker did not start: {error}")))?;
-    wait(&receiver, &Stop(token), pending)
-}
-
-/// The main thread's wait. The stop guard cancels on every return.
-fn wait<T>(receiver: &Receiver<Crossed<T>>, _stop: &Stop, pending: Pending<'_>) -> Crossed<T> {
-    loop {
-        match receiver.recv_timeout(TICK) {
-            Ok(answer) => return answer,
-            Err(RecvTimeoutError::Timeout) if pending() => return Err(interrupted()),
-            Err(RecvTimeoutError::Timeout) => {}
-            Err(RecvTimeoutError::Disconnected) => {
-                return Err(defect("the call's worker ended without an answer"));
-            }
-        }
-    }
-}
+#[cfg(test)]
+pub(crate) use worker::on_worker;
+pub(crate) use worker::{Crossed, Pending, call_owned};
 
 /// One text and its one-based place in the caller's vector.
 #[derive(Debug)]
@@ -169,10 +70,15 @@ fn judged<Q: DecisionQuestion>(
     question: &Q,
     texts: &[String],
     options: CallOptions<'_>,
-) -> Result<Judged, Error> {
+    account: &Account,
+) -> Crossed<Judged> {
     let mut answers = (Vec::new(), Vec::new());
-    for row in engine.decide_many_with(question, texts.iter().map(String::as_str), options) {
-        let row = row?;
+    let mut batch = engine.decide_many_with(question, texts.iter().map(String::as_str), options);
+    let rows = account::collect(&mut batch, account)?;
+    if texts.is_empty() {
+        account.no_work();
+    }
+    for row in rows {
         answers.0.push(code(*row.value()));
         answers.1.push(row.probability());
     }
@@ -180,53 +86,117 @@ fn judged<Q: DecisionQuestion>(
 }
 
 /// `decide` over a column, in input order.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the binding passes public call controls explicitly"
+)]
 pub(crate) fn decide(
     json: &str,
     texts: Vec<String>,
     deadline: Option<f64>,
+    batch: Option<BatchSetting>,
+    context: Option<String>,
     pending: Pending<'_>,
+    receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
     let asked = question(json)?;
-    let (codes, probabilities) = call(deadline, pending, move |engine, options| match &asked {
-        LoadedQuestion::Question(held) => judged(engine, held, &texts, options),
-        LoadedQuestion::Banded(held) => judged(engine, held, &texts, options),
-    })?;
-    Ok(list!(answer = codes, probability = probabilities))
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let options = batch.map_or(options, |value| options.batch(value));
+            let options = context
+                .as_deref()
+                .map_or(options, |value| options.context(value));
+            match &asked {
+                LoadedQuestion::Question(held) => judged(engine, held, &texts, options, account),
+                LoadedQuestion::Banded(held) => judged(engine, held, &texts, options, account),
+            }
+        },
+    )?;
+    Ok(render::envelope(completed, |(codes, probabilities)| {
+        list!(answer = codes, probability = probabilities).into()
+    }))
 }
 
 /// `filter` over records: the one-based places whose evidence held.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the binding passes public call controls explicitly"
+)]
 pub(crate) fn filter(
     json: &str,
     texts: Vec<String>,
     deadline: Option<f64>,
+    batch: Option<BatchSetting>,
+    context: Option<String>,
     pending: Pending<'_>,
-) -> Crossed<Vec<i32>> {
+    receipt: Option<Arc<Receipt>>,
+) -> Crossed<List> {
     let LoadedQuestion::Question(asked) = question(json)? else {
         return Err(usage("filter does not take a banded question"));
     };
-    call(deadline, pending, move |engine, options| {
-        engine
-            .filter_with(&asked, placed(texts), options)
-            .map(|kept| kept.map(|held| held.place))
-            .collect()
-    })
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let empty = texts.is_empty();
+            let options = batch.map_or(options, |value| options.batch(value));
+            let options = context
+                .as_deref()
+                .map_or(options, |value| options.context(value));
+            let mut rows = engine.filter_with(&asked, placed(texts), options);
+            let found = account::collect(&mut rows, account)?;
+            if empty {
+                account.no_work();
+            }
+            Ok(found.into_iter().map(|held| held.place).collect::<Vec<_>>())
+        },
+    )?;
+    Ok(render::envelope(completed, |places| places.into()))
 }
 
 /// `rank` over records: places in rank order with their probabilities.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the binding passes public call controls explicitly"
+)]
 pub(crate) fn rank(
     text: &str,
     texts: Vec<String>,
     deadline: Option<f64>,
+    batch: Option<BatchSetting>,
+    context: Option<String>,
     pending: Pending<'_>,
+    receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
     let asked = Question::rank(text).map_err(|error| carry(&error))?;
-    let ranked = call(deadline, pending, move |engine, options| {
-        engine.rank_with(&asked, placed(texts), options)
-    })?
-    .into_value();
-    let places: Vec<i32> = ranked.iter().map(|row| row.input().place).collect();
-    let probabilities: Vec<f64> = ranked.iter().map(thinkthen::Ranked::probability).collect();
-    Ok(list!(place = places, probability = probabilities))
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let options = batch.map_or(options, |value| options.batch(value));
+            let options = context
+                .as_deref()
+                .map_or(options, |value| options.context(value));
+            let ranked = match engine.rank_with(&asked, placed(texts), options) {
+                Ok(value) => value,
+                Err(error) => {
+                    return Err(account.failed(&error)?);
+                }
+            };
+            account.add(ranked.facts())?;
+            Ok(ranked.into_value())
+        },
+    )?;
+    Ok(render::envelope(completed, |ranked| {
+        let places: Vec<i32> = ranked.iter().map(|row| row.input().place).collect();
+        let probabilities: Vec<f64> = ranked.iter().map(thinkthen::Ranked::probability).collect();
+        list!(place = places, probability = probabilities).into()
+    }))
 }
 
 /// `find` over units: the selected place and its probability, or `NULL`s.
@@ -236,6 +206,7 @@ pub(crate) fn find(
     texts: Vec<String>,
     deadline: Option<f64>,
     pending: Pending<'_>,
+    receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
     let asked = Question::find(text)
         .and_then(|asked| {
@@ -246,47 +217,39 @@ pub(crate) fn find(
             }
         })
         .map_err(|error| carry(&error))?;
-    let found = call(deadline, pending, move |engine, options| {
-        engine.find_with(&asked, placed(texts), options)
-    })?
-    .into_value();
-    let selected = found.candidates().iter().find(|held| {
-        held.input()
-            .zip(found.selected())
-            .is_some_and(|(one, two)| one.place == two.place)
-    });
-    Ok(match selected {
-        Some(held) => list!(
-            place = held.input().map_or(0, |one| one.place),
-            probability = held.probability()
-        ),
-        None => list!(
-            place = Nullable::<i32>::Null,
-            probability = Nullable::<f64>::Null
-        ),
-    })
-}
-
-/// Every record's values, in set order.
-fn annotated(
-    set: QuestionSet,
-    texts: Vec<String>,
-    deadline: Option<f64>,
-    pending: Pending<'_>,
-) -> Crossed<Vec<Vec<Annotated>>> {
-    call(deadline, pending, move |engine, options| {
-        engine
-            .annotate_with(&set, texts.iter().map(String::as_str), options)
-            .map(|record| {
-                record.map(|held| {
-                    held.values()
-                        .iter()
-                        .map(|one| one.value().clone())
-                        .collect()
-                })
-            })
-            .collect()
-    })
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let found = match engine.find_with(&asked, placed(texts), options) {
+                Ok(value) => value,
+                Err(error) => {
+                    return Err(account.failed(&error)?);
+                }
+            };
+            account.add(found.facts())?;
+            Ok(found.into_value())
+        },
+    )?;
+    Ok(render::envelope(completed, |found| {
+        let selected = found.candidates().iter().find(|held| {
+            held.input()
+                .zip(found.selected())
+                .is_some_and(|(one, two)| one.place == two.place)
+        });
+        match selected {
+            Some(held) => list!(
+                place = held.input().map_or(0, |one| one.place),
+                probability = held.probability()
+            ),
+            None => list!(
+                place = Nullable::<i32>::Null,
+                probability = Nullable::<f64>::Null
+            ),
+        }
+        .into()
+    }))
 }
 
 /// A failure cause as the shared cases spell it.
@@ -321,12 +284,18 @@ fn cell(value: &Annotated) -> Robj {
 
 /// `annotate` over a column from a question set: the members' names and
 /// kinds, and one list of cells a member.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the binding passes public call controls explicitly"
+)]
 pub(crate) fn annotate(
     set: QuestionSet,
     texts: Vec<String>,
     taken: &[String],
     deadline: Option<f64>,
+    batch: Option<BatchSetting>,
     pending: Pending<'_>,
+    receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
     let members: Vec<(String, String)> = set
         .members()
@@ -337,78 +306,100 @@ pub(crate) fn annotate(
             "annotate cannot add a question named '{name}': the input already has a column by that name; rename one"
         )));
     }
-    let rows = annotated(set, texts, deadline, pending)?;
-    let columns = (0..members.len())
-        .map(|at| {
-            let cells = rows.iter().map(|row| {
-                row.get(at)
-                    .map(cell)
-                    .ok_or_else(|| defect("an annotate record lacked a member"))
-            });
-            cells.collect::<Crossed<Vec<Robj>>>().map(List::from_values)
-        })
-        .collect::<Crossed<Vec<List>>>()?;
-    let names: Vec<&str> = members.iter().map(|(name, _)| name.as_str()).collect();
-    let kinds: Vec<&str> = members.iter().map(|(_, kind)| kind.as_str()).collect();
-    Ok(list!(
-        names = names,
-        kinds = kinds,
-        columns = List::from_values(columns)
-    ))
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let options = batch.map_or(options, |value| options.batch(value));
+            let mut rows = engine.annotate_with(&set, texts.iter().map(String::as_str), options);
+            let found = account::collect(&mut rows, account)?;
+            if texts.is_empty() {
+                account.no_work();
+            }
+            Ok(found
+                .into_iter()
+                .map(|held| {
+                    held.values()
+                        .iter()
+                        .map(|one| one.value().clone())
+                        .collect::<Vec<_>>()
+                })
+                .collect::<Vec<_>>())
+        },
+    )?;
+    let completed = completed.map(|rows| {
+        let columns = (0..members.len())
+            .map(|at| {
+                let cells = rows.iter().map(|row| {
+                    row.get(at)
+                        .map(cell)
+                        .ok_or_else(|| defect("an annotate record lacked a member"))
+                });
+                cells.collect::<Crossed<Vec<Robj>>>().map(List::from_values)
+            })
+            .collect::<Crossed<Vec<List>>>()?;
+        let names: Vec<&str> = members.iter().map(|(name, _)| name.as_str()).collect();
+        let kinds: Vec<&str> = members.iter().map(|(_, kind)| kind.as_str()).collect();
+        Ok(list!(
+            names = names,
+            kinds = kinds,
+            columns = List::from_values(columns)
+        ))
+    });
+    Ok(render::envelope(completed, Into::into))
 }
 
 /// `choose`, `score`, or `tag` over a column as one `annotate` of a one-question set (0095).
 /// The engine refuses a broken one-question reply whole, so a failed cell is a defect.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the binding passes public call controls explicitly"
+)]
 pub(crate) fn column(
     json: &str,
     texts: Vec<String>,
     deadline: Option<f64>,
+    batch: Option<BatchSetting>,
+    context: Option<String>,
     pending: Pending<'_>,
+    receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
     let LoadedQuestion::Question(asked) = question(json)? else {
         return Err(usage("only a decide question takes a band"));
     };
-    let Ok(set) = QuestionSet::builder()
-        .question("value", asked.clone())
-        .and_then(thinkthen::QuestionSetBuilder::build)
-    else {
-        return one_by_one(asked, texts, deadline, pending);
-    };
-    let rows = annotated(set, texts, deadline, pending)?;
-    let cells = rows.iter().map(|row| match row.first() {
-        Some(Annotated::Failed(_)) => Err(defect("a one-question annotate held a failed cell")),
-        Some(value) => Ok(cell(value)),
-        None => Err(defect("an annotate record held no value")),
-    });
-    Ok(List::from_values(cells.collect::<Crossed<Vec<Robj>>>()?))
-}
-
-/// One judgment a row after a set-builder refusal, including a saved profile
-/// on a question. Rows go one at a time and keep the original question.
-fn one_by_one(
-    asked: Question,
-    texts: Vec<String>,
-    deadline: Option<f64>,
-    pending: Pending<'_>,
-) -> Crossed<List> {
-    let judged = call(deadline, pending, move |engine, options| {
-        texts
-            .iter()
-            .map(|text| {
-                engine
-                    .details_with(&asked, text, options)
-                    .map(|held| held.value().value().clone())
-            })
-            .collect::<Result<Vec<_>, _>>()
-    })?;
-    Ok(List::from_values(judged.iter().map(|value| -> Robj {
-        match value {
-            Judgment::Decision(answer) => code(*answer).into(),
-            Judgment::Choice(pick) => Nullable::from(pick.clone()).into(),
-            Judgment::Score(position) => (*position).into(),
-            Judgment::Tags(labels) => labels.clone().into(),
-        }
-    })))
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let options = batch.map_or(options, |value| options.batch(value));
+            let options = context
+                .as_deref()
+                .map_or(options, |value| options.context(value));
+            let mut rows =
+                engine.details_many_with(&asked, texts.iter().map(String::as_str), options);
+            let found = account::collect(&mut rows, account)?;
+            if texts.is_empty() {
+                account.no_work();
+            }
+            Ok(found
+                .into_iter()
+                .map(|row| row.value().value().clone())
+                .collect::<Vec<_>>())
+        },
+    )?;
+    Ok(render::envelope(completed, |judged| {
+        List::from_values(judged.iter().map(|value| -> Robj {
+            match value {
+                Judgment::Decision(answer) => code(*answer).into(),
+                Judgment::Choice(pick) => Nullable::from(pick.clone()).into(),
+                Judgment::Score(position) => (*position).into(),
+                Judgment::Tags(labels) => labels.clone().into(),
+            }
+        }))
+        .into()
+    }))
 }
 
 /// The audit view of one judgment: the command's `--details` document.
@@ -417,15 +408,29 @@ pub(crate) fn details(
     text: String,
     deadline: Option<f64>,
     pending: Pending<'_>,
-) -> Crossed<String> {
+    receipt: Option<Arc<Receipt>>,
+) -> Crossed<List> {
     let asked = question(json)?;
-    call(deadline, pending, move |engine, options| {
-        match &asked {
-            LoadedQuestion::Question(held) => engine.details_with(held, &text, options),
-            LoadedQuestion::Banded(held) => engine.details_with(held, &text, options),
-        }
-        .map(|held| held.value().to_json())
-    })
+    let completed = call_owned(
+        deadline,
+        pending,
+        receipt,
+        move |engine, options, account| {
+            let held = match &asked {
+                LoadedQuestion::Question(held) => engine.details_with(held, &text, options),
+                LoadedQuestion::Banded(held) => engine.details_with(held, &text, options),
+            };
+            let held = match held {
+                Ok(value) => value,
+                Err(error) => {
+                    return Err(account.failed(&error)?);
+                }
+            };
+            account.add(held.facts())?;
+            Ok(held.value().to_json())
+        },
+    )?;
+    Ok(render::envelope(completed, Into::into))
 }
 
 /// The counters of the engine in use, as doubles.
@@ -440,63 +445,4 @@ pub(crate) fn counters() -> Crossed<List> {
         input_tokens = as_double(counted.input_tokens()),
         output_tokens = as_double(counted.output_tokens())
     ))
-}
-
-#[cfg(test)]
-mod tests {
-    use std::sync::atomic::{AtomicUsize, Ordering};
-
-    use super::*;
-
-    static PANICS: AtomicUsize = AtomicUsize::new(0);
-
-    #[test]
-    fn each_worker_edge_answers_without_a_stray_panic() {
-        std::panic::set_hook(Box::new(|_| {
-            PANICS.fetch_add(1, Ordering::SeqCst);
-        }));
-        let ticks = AtomicUsize::new(0);
-        let left = on_worker(
-            CancelToken::new(),
-            &|| ticks.fetch_add(1, Ordering::SeqCst) > 0,
-            || {
-                thread::sleep(Duration::from_millis(400));
-                Ok(1)
-            },
-        );
-        assert_eq!(left, Err(interrupted()));
-        thread::sleep(Duration::from_millis(500));
-        assert_eq!(
-            PANICS.load(Ordering::SeqCst),
-            0,
-            "the worker's failed send panicked"
-        );
-
-        let closed = channel::<Crossed<i32>>();
-        drop(closed.0);
-        let answer = wait(&closed.1, &Stop(CancelToken::new()), &|| false);
-        assert_eq!(
-            answer,
-            Err(defect("the call's worker ended without an answer"))
-        );
-
-        let boom: Crossed<i32> = on_worker(CancelToken::new(), &|| false, || {
-            std::panic::panic_any("boom")
-        });
-        assert_eq!(boom, Err(defect("the call panicked")));
-        assert_eq!(on_worker(CancelToken::new(), &|| false, || Ok(7)), Ok(7));
-        let _ = std::panic::take_hook();
-    }
-
-    #[test]
-    fn the_stop_guard_cancels_the_token_on_an_interrupt() {
-        let token = CancelToken::new();
-        let seen = token.clone();
-        let left = on_worker(token, &|| true, || {
-            thread::sleep(Duration::from_millis(300));
-            Ok(())
-        });
-        assert_eq!(left, Err(interrupted()));
-        assert!(seen.is_cancelled());
-    }
 }

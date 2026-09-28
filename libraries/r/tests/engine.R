@@ -22,7 +22,7 @@ check("the seed run counts one send", sent == 1L && grepl("sent 1", out, fixed =
 check("the answer lands in THINKTHEN_CACHE", length(list.files(folder, recursive = TRUE)) > 0L)
 
 # A set base_url wins over the variable.
-sent <- sent_by(out <- run(c(sprintf('tt_engine(base_url = "%s")', generic), 'cat(tt_decide("Q?", "over the variable"), "\\n")'),
+sent <- sent_by(out <- run(c(sprintf('tt_engine(base_url = "%s")', generic), 'cat(tt_decide("Q?", "over the variable")$value, "\\n")'),
                            env = "THINKTHEN_BASE_URL=http://127.0.0.1:1/generic/v1"))
 check("a set base_url wins over THINKTHEN_BASE_URL", sent == 1L && grepl("TRUE", out, fixed = TRUE))
 
@@ -46,8 +46,8 @@ check("no refusal sends", sent == 0L)
 # streaming decide sends the first record and refuses at the second.
 refused <- 'function(e) conditionMessage(e)'
 sent <- sent_by(out <- run(c('tt_engine(max_requests = 1L)',
-  sprintf('cat(tryCatch(tt_rank("Q?", c("m1", "m2")), thinkthen_usage = %s), "\\n")', refused),
-  sprintf('cat(tryCatch(tt_decide("Q?", c("m1", "m2")), thinkthen_usage = %s), "\\n")', refused))))
+  sprintf('cat(tryCatch(tt_rank("Q?", c("m1", "m2"))$value, thinkthen_usage = %s), "\\n")', refused),
+  sprintf('cat(tryCatch(tt_decide("Q?", c("m1", "m2"))$value, thinkthen_usage = %s), "\\n")', refused))))
 check("max_requests = 1L refuses rank and decide over two texts", sent == 1L &&
       lengths(regmatches(out, gregexpr("this engine answers at most 1 records in one call", out, fixed = TRUE))) == 2L)
 
@@ -63,7 +63,7 @@ check("a base_url with credentials is refused without echoing them",
       grepl("a base address carries no user information", out, fixed = TRUE))
 out <- run(c(
   'r <- tryCatch(tt_decide("Q?", "secret check", deadline = 0), error = function(e) e); print(r); print(conditionMessage(r))',
-  'print(tryCatch(tt_decide("", "x"), error = function(e) e)); print(tt_details("Q?", "details check")$meta$url)'
+  'print(tryCatch(tt_decide("", "x"), error = function(e) e)); print(tt_details("Q?", "details check")$value$meta$url)'
 ))
 check("no output names the key or the URL's credentials",
       !any(grepl("tt-test-not-a-key", said, fixed = TRUE)) && !any(grepl("hunter2", said, fixed = TRUE)))

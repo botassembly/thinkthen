@@ -18,13 +18,18 @@
 )]
 
 use std::ffi::{CStr, c_char, c_void};
+use std::sync::Arc;
 
 use extendr_api::SEXP;
 use extendr_api::prelude::*;
 
+use crate::calls::receipt::Receipt;
 use crate::calls::{self, Crossed};
-use crate::relate::{self, Spec};
+use crate::relate::{self};
 use crate::{Settings, usage};
+
+mod values;
+use values::{asked, batch_of, completion_of, context_of, required_completion, spec_of, whole_of};
 
 #[allow(
     improper_ctypes,
@@ -115,6 +120,20 @@ fn texts_of(value: &Robj, what: &str) -> Crossed<Vec<String>> {
         .collect()
 }
 
+fn positions_of(value: &Robj, count: usize) -> Crossed<Vec<usize>> {
+    if value.rtype() != Rtype::Integers || value.len() != count {
+        return Err(usage("recognize positions must match the live evidence"));
+    }
+    (0..count)
+        .map(|at| {
+            let at = isize::try_from(at).map_err(|_| usage("recognize positions are too long"))?;
+            // SAFETY: at is inside the integer vector R handed this call.
+            let held = unsafe { INTEGER_ELT(value.get(), at) };
+            usize::try_from(held).map_err(|_| usage("recognize positions must be nonnegative"))
+        })
+        .collect()
+}
+
 /// A number of length one with no class but `AsIs`, or `None` for `NULL`.
 fn number_of(value: &Robj, what: &str) -> Crossed<Option<f64>> {
     if value.is_null() {
@@ -155,36 +174,43 @@ fn deadline_of(value: &Robj) -> Crossed<Option<f64>> {
     number_of(value, "the deadline")
 }
 
-/// A spec argument: a path when `path` is `TRUE`, the file's JSON otherwise.
-fn spec_of(spec: &Robj, path: bool) -> Crossed<Spec> {
-    let text = text_of(spec, "the spec")?;
-    Ok(if path {
-        Spec::Path(text)
+#[extendr]
+fn tt_completion_new() -> ExternalPtr<Arc<Receipt>> {
+    ExternalPtr::new(Arc::new(Receipt::new()))
+}
+
+#[extendr]
+fn tt_completion_claim(value: Robj) -> Crossed<()> {
+    if required_completion(&value)?.claim() {
+        Ok(())
     } else {
-        Spec::Json(text)
-    })
-}
-
-/// A whole number of length one for a setting, or `None` for `NULL`.
-fn whole_of<T: TryFrom<i64>>(value: &Robj, what: &str) -> Crossed<Option<T>> {
-    let refused = || usage(&format!("{what} is one whole number in range"));
-    let Some(held) = number_of(value, what).map_err(|_| refused())? else {
-        return Ok(None);
-    };
-    if held.fract() != 0.0 || !(-1e15..=1e15).contains(&held) {
-        return Err(refused());
+        Err(usage("completion belongs to an earlier call"))
     }
-    #[expect(
-        clippy::cast_possible_truncation,
-        reason = "the value is whole and inside 1e15"
-    )]
-    let whole = held as i64;
-    T::try_from(whole).map(Some).map_err(|_| refused())
 }
 
-/// A call's question text and its column of texts.
-fn asked(question: &Robj, texts: &Robj, what: &str) -> Crossed<(String, Vec<String>)> {
-    Ok((text_of(question, "the question")?, texts_of(texts, what)?))
+#[extendr]
+fn tt_completion_read_native(value: Robj) -> Crossed<List> {
+    Ok(calls::render::receipt(required_completion(&value)?.read()))
+}
+
+#[extendr]
+fn tt_completion_settle_early(value: Robj, kind: Robj) -> Crossed<()> {
+    let kind = text_of(&kind, "completion kind")?;
+    if ![
+        "usage",
+        "backend",
+        "local",
+        "cancelled",
+        "deadline",
+        "defect",
+        "interrupt",
+    ]
+    .contains(&kind.as_str())
+    {
+        return Err(usage("completion kind is invalid"));
+    }
+    required_completion(&value)?.settle_early(kind);
+    Ok(())
 }
 
 /// Check a question file and name its kind.
@@ -198,31 +224,97 @@ fn tt_question_check(body: Robj) -> Crossed<String> {
 }
 
 #[extendr]
-fn tt_decide_column(question: Robj, records: Robj, deadline: Robj) -> Crossed<List> {
+fn tt_decide_column(
+    question: Robj,
+    records: Robj,
+    deadline: Robj,
+    batch: Robj,
+    context: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (json, texts) = asked(&question, &records, "the evidence")?;
-    calls::decide(&json, texts, deadline_of(&deadline)?, &interrupt_pending)
+    calls::decide(
+        &json,
+        texts,
+        deadline_of(&deadline)?,
+        batch_of(&batch)?,
+        context_of(&context)?,
+        &interrupt_pending,
+        completion_of(&completion)?,
+    )
 }
 
 #[extendr]
-fn tt_column(question: Robj, records: Robj, deadline: Robj) -> Crossed<List> {
+fn tt_column(
+    question: Robj,
+    records: Robj,
+    deadline: Robj,
+    batch: Robj,
+    context: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (json, texts) = asked(&question, &records, "the evidence")?;
-    calls::column(&json, texts, deadline_of(&deadline)?, &interrupt_pending)
+    calls::column(
+        &json,
+        texts,
+        deadline_of(&deadline)?,
+        batch_of(&batch)?,
+        context_of(&context)?,
+        &interrupt_pending,
+        completion_of(&completion)?,
+    )
 }
 
 #[extendr]
-fn tt_filter_places(question: Robj, records: Robj, deadline: Robj) -> Crossed<Vec<i32>> {
+fn tt_filter_places(
+    question: Robj,
+    records: Robj,
+    deadline: Robj,
+    batch: Robj,
+    context: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (json, texts) = asked(&question, &records, "the records")?;
-    calls::filter(&json, texts, deadline_of(&deadline)?, &interrupt_pending)
+    calls::filter(
+        &json,
+        texts,
+        deadline_of(&deadline)?,
+        batch_of(&batch)?,
+        context_of(&context)?,
+        &interrupt_pending,
+        completion_of(&completion)?,
+    )
 }
 
 #[extendr]
-fn tt_rank_all(question: Robj, records: Robj, deadline: Robj) -> Crossed<List> {
+fn tt_rank_all(
+    question: Robj,
+    records: Robj,
+    deadline: Robj,
+    batch: Robj,
+    context: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (text, texts) = asked(&question, &records, "the records")?;
-    calls::rank(&text, texts, deadline_of(&deadline)?, &interrupt_pending)
+    calls::rank(
+        &text,
+        texts,
+        deadline_of(&deadline)?,
+        batch_of(&batch)?,
+        context_of(&context)?,
+        &interrupt_pending,
+        completion_of(&completion)?,
+    )
 }
 
 #[extendr]
-fn tt_find_one(question: Robj, units: Robj, none: Robj, deadline: Robj) -> Crossed<List> {
+fn tt_find_one(
+    question: Robj,
+    units: Robj,
+    none: Robj,
+    deadline: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (text, texts) = asked(&question, &units, "the units")?;
     // tt_find checks `none` is TRUE or FALSE before it crosses.
     let none = none.as_bool() == Some(true);
@@ -232,11 +324,19 @@ fn tt_find_one(question: Robj, units: Robj, none: Robj, deadline: Robj) -> Cross
         texts,
         deadline_of(&deadline)?,
         &interrupt_pending,
+        completion_of(&completion)?,
     )
 }
 
 #[extendr]
-fn tt_annotate_file(path: Robj, records: Robj, taken: Robj, deadline: Robj) -> Crossed<List> {
+fn tt_annotate_file(
+    path: Robj,
+    records: Robj,
+    taken: Robj,
+    deadline: Robj,
+    batch: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (path, texts) = (
         text_of(&path, "the question set path")?,
         texts_of(&records, "the records")?,
@@ -246,16 +346,35 @@ fn tt_annotate_file(path: Robj, records: Robj, taken: Robj, deadline: Robj) -> C
         deadline_of(&deadline)?,
     );
     let set = thinkthen::QuestionSet::load(path).map_err(|error| crate::carry(&error))?;
-    calls::annotate(set, texts, &taken, deadline, &interrupt_pending)
+    calls::annotate(
+        set,
+        texts,
+        &taken,
+        deadline,
+        batch_of(&batch)?,
+        &interrupt_pending,
+        completion_of(&completion)?,
+    )
 }
 
 #[extendr]
-fn tt_details_one(question: Robj, evidence: Robj, deadline: Robj) -> Crossed<String> {
+fn tt_details_one(
+    question: Robj,
+    evidence: Robj,
+    deadline: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (json, text) = (
         text_of(&question, "the question")?,
         text_of(&evidence, "the evidence")?,
     );
-    calls::details(&json, text, deadline_of(&deadline)?, &interrupt_pending)
+    calls::details(
+        &json,
+        text,
+        deadline_of(&deadline)?,
+        &interrupt_pending,
+        completion_of(&completion)?,
+    )
 }
 
 #[extendr]
@@ -269,9 +388,24 @@ fn tt_interrupt_pending() -> bool {
 }
 
 #[extendr]
-fn tt_recognize_column(spec: Robj, path: bool, texts: Robj, deadline: Robj) -> Crossed<List> {
+fn tt_recognize_column(
+    spec: Robj,
+    path: bool,
+    texts: Robj,
+    positions: Robj,
+    deadline: Robj,
+    completion: Robj,
+) -> Crossed<List> {
     let (spec, texts) = (spec_of(&spec, path)?, texts_of(&texts, "the evidence")?);
-    relate::recognize(&spec, texts, deadline_of(&deadline)?, &interrupt_pending)
+    let positions = positions_of(&positions, texts.len())?;
+    relate::recognize(
+        &spec,
+        texts,
+        positions,
+        deadline_of(&deadline)?,
+        &interrupt_pending,
+        completion_of(&completion)?,
+    )
 }
 
 #[extendr]
@@ -281,6 +415,7 @@ fn tt_relate_frame(
     names: Robj,
     kinds: Robj,
     deadline: Robj,
+    completion: Robj,
 ) -> Crossed<List> {
     let spec = spec_of(&spec, path)?;
     let (names, kinds) = (
@@ -292,6 +427,7 @@ fn tt_relate_frame(
         names.into_iter().zip(kinds).collect(),
         deadline_of(&deadline)?,
         &interrupt_pending,
+        completion_of(&completion)?,
     )
 }
 
@@ -312,6 +448,7 @@ fn tt_engine_set(
     record: Robj,
     replay: Robj,
     profile: Robj,
+    batch: Robj,
 ) -> Crossed<()> {
     let optional =
         |value: &Robj, what: &str| (!value.is_null()).then(|| text_of(value, what)).transpose();
@@ -332,6 +469,7 @@ fn tt_engine_set(
         record: optional(&record, "record")?,
         replay: optional(&replay, "replay")?,
         profile: optional(&profile, "profile")?,
+        batch: batch_of(&batch)?,
     })
 }
 
@@ -350,4 +488,8 @@ extendr_module! {
     fn tt_recognize_column;
     fn tt_relate_frame;
     fn tt_engine_set;
+    fn tt_completion_new;
+    fn tt_completion_claim;
+    fn tt_completion_read_native;
+    fn tt_completion_settle_early;
 }
