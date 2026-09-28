@@ -63,3 +63,19 @@ recording; I ran that exact `decide --replay` invocation with the lane binary
 and got `true`, exit zero. The site details route imports a saved request and
 Jev response body with its reported usage, and links the canonical type,
 result, and schema files.
+
+## Four replayed practical pages
+
+The site adds a Bash coprocess that keeps one `choose` process alive for three
+steps using demo 21's recorded exchanges; a paragraph split with `awk -v RS=`
+and `jq` that judges four paragraphs against existing recordings; a
+Claude Code `PreToolUse` guard that maps the three replayed outcomes from demo
+19 to `allow`, `ask`, and `deny`; and a raw-line validator that sets a malformed
+record and a non-text body aside before judging three valid records. The guard
+does not execute any proposed command. Its host mapping was checked on
+2026-09-28 against the official hooks reference at
+`https://code.claude.com/docs/en/hooks#pretooluse-decision-control`.
+`npm run build` now replays 95 CLI examples, builds 92 pages and their Markdown
+twins, and checks 130 internal routes. The sample checker still examines
+copyable examples; it omits exact recorded inputs and wire bodies that the
+smoke run consumes.

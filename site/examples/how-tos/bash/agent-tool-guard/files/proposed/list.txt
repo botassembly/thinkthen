@@ -1,0 +1,6 @@
+Proposed command:
+
+    grep -rn "TODO" src/ | head -n 20
+
+Reason given: the assistant was asked to list the unfinished work it can see in
+the source tree, and to show no more than twenty lines of it.

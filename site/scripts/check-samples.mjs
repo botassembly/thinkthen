@@ -74,7 +74,7 @@ const LIBRARY = new Set(['.py', '.rb', '.R', '.ts', '.rs', '.c']);
 // does not accept. That throw fails the build, so a mistyped fence tag or
 // a new kind of file never passes unread.
 export const NO_CALL = new Set([
-  '.json', '.out', '.txt', '.exit', '.diff', '.jq',
+  '.json', '.jsonl', '.out', '.txt', '.exit', '.diff', '.jq',
   'text', 'json', 'console', 'output',
 ]);
 const FILE_LANGUAGE = { '.sh': 'bash', '.py': 'python', '.ts': 'typescript', '.rb': 'ruby', '.R': 'r', '.rs': 'rust', '.c': 'c', '.sql': 'sql' };
@@ -93,7 +93,9 @@ function namedAnswers(label, text, kind, language, offset = 0) {
 function walk(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = path.join(dir, e.name);
-    if (e.isDirectory()) return p === bench ? [] : walk(p);
+    // Recorded wire bodies are machine data checked by the replay smoke run,
+    // not a code block a reader copies from the page.
+    if (e.isDirectory()) return p === bench || ['recording', 'proposed'].includes(e.name) ? [] : walk(p);
     return [p];
   });
 }

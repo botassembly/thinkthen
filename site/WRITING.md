@@ -152,6 +152,7 @@ The build fails when a script has no caption, a caption has no script, or a scri
 ### How the smoke run works
 
 - The scripts of one page run in name order in one fresh folder, as a reader would run them. The folder starts with a copy of the page's `files/`.
+- A page may keep a small strict-replay folder under `files/recording/` and its exact recorded input under `files/proposed/`. Smoke copies them; the page and sample-style checker omit those immutable data files from the visible list. JSON Lines input under `files/` is data, not code.
 - A Beatles Bench page runs in a copy of `examples/beatles/bench/`, in the folder `examples/beatles/folders.json` names for the page. Its scripts name `--replay recording` themselves.
 - Every other `thinkthen` function call answers from `recordings/`. The runner adds `--replay recordings/` to a call that names no replay folder and no `--dry-run`.
 - The run has no key and no base address. It sends nothing and costs nothing.

@@ -667,6 +667,25 @@ export const TECHNIQUES = [
       '2-fail': 'One line hedges. The check prints it and exits 1.',
     },
   },
+  {
+    slug: 'long-lived-loop', title: 'Keep one process for a step loop', label: 'one process',
+    goal: 'A coproc sends each step to one choose process and reads its answer before the next step.',
+    said: '`coproc` holds one `choose` process open. `--batch 1` releases each answer while the input remains open; strict replay needs no key or network. A library is the route when the loop needs lower call overhead.',
+    see: { '1-loop': 'Three changing action lists produce three answers from one process.' },
+  },
+  {
+    slug: 'judge-paragraphs', title: 'Judge one paragraph at a time', label: 'paragraphs',
+    goal: 'awk splits a document into paragraphs, jq makes JSON records, and filter judges each paragraph.',
+    said: '`awk -v RS=` splits on blank lines. `jq` gives each paragraph a `text` field, and `filter --field /text` sends only that text. Use a sentence splitter for sentences or a parser for code functions.',
+    see: { '1-paragraphs': 'The two complaint paragraphs return as JSON records.' },
+  },
+  {
+    slug: 'agent-tool-guard', title: 'Guard a coding agent tool call', label: 'tool guard',
+    goal: 'Map a bounded decide answer to one coding agent host hook contract.',
+    said: 'This Claude Code `PreToolUse` hook reads a proposed Bash command as text; it runs none of the proposals. A yes yields `allow`, no yields `deny`, and not sure yields `ask`. A failed judge also denies. The hook decision is JSON, because ThinkThen exit 2 means an input error, while a hook exit 2 blocks the tool call.',
+    source: ['Claude Code hooks reference, checked 2026-09-28', 'https://code.claude.com/docs/en/hooks#pretooluse-decision-control'],
+    see: { '1-guard': 'One recorded proposal is allowed, one asks a person, and one is denied.' },
+  },
 ];
 
 export const RECIPES = [
@@ -695,6 +714,12 @@ export const RECIPES = [
     goal: 'annotate fills a form with picks from your own lists, and no field holds model-written text.',
     said: 'Every field is a pick from a list you wrote, or true or false. No character in the form comes from a model.',
     see: { '1-form': 'Each request gets a plan, a topic, and whether to call back, all from the lists in the form.' },
+  },
+  {
+    slug: 'set-aside-bad-records', title: 'Set bad records aside first', label: 'Set aside bad records',
+    goal: 'Split malformed and non-text records before a record run, then judge only valid inputs.',
+    said: '`jq` reads each raw line and keeps only JSON objects with a string `body`. It writes every other line to an aside file before `decide` sees the good records. A record run otherwise stops at the first bad record.',
+    see: { '1-split': 'The malformed line and numeric body stay aside; three text records are judged.' },
   },
 ];
 
