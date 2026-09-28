@@ -2,6 +2,7 @@
 #include "bridge.hpp"
 #include "relate_query.hpp"
 #include "scalar_owner.hpp"
+#include "scalar_settings.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
 #include "duckdb/function/aggregate_function.hpp"
 
@@ -100,7 +101,7 @@ int64_t Finish(WarmData &data, ClientContext &context) {
 		return 0;
 	}
 	if (data.question->rfind("@~", 0) == 0) {
-		throw InvalidInputException("thinkthen usage: thinkthen_warm cannot read an '@~' path, because home_directory is a session setting it cannot see; write the full path");
+		throw InvalidInputException("thinkthen usage: thinkthen_warm cannot read an '@~' path; write the full path");
 	}
 	if (!data.question->empty() && data.question->front() == '@' && RelateBusyFor(context)) {
 		throw InvalidInputException("thinkthen usage: thinkthen_warm cannot read '@file' while a relate query runs on this database; run it before or after the relate, or pass the file's JSON text");
@@ -111,8 +112,10 @@ int64_t Finish(WarmData &data, ClientContext &context) {
 	for (auto &text : texts) {
 		copied.push_back({reinterpret_cast<const uint8_t *>(text.data()), text.size()});
 	}
+	auto settings = Settings(context);
 	RustReply reply(thinkthen_cpp_warm(reinterpret_cast<const uint8_t *>(resolved.text.data()), resolved.text.size(),
-	                                  copied.data(), copied.size(), resolved.from_file ? 1 : 0, StopFor(context)));
+	                                  copied.data(), copied.size(), resolved.from_file ? 1 : 0,
+	                                  settings.Bridge(), StopFor(context)));
 	Checked(reply.value);
 	if (!reply.value.bytes || reply.value.len != sizeof(int64_t)) {
 		throw InvalidInputException("thinkthen defect: the bridge returned an invalid warm count");

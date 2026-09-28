@@ -122,7 +122,7 @@ A run with no question file prints no `from` object, because every setting came 
 
 ## The digest of a question
 
-Every `--details` row carries `meta.question_sha256`. It names the exact question that produced the row, so two runs that asked almost the same thing cannot be mistaken for one. The same question gives the same digest whether it was typed or read from a file, and any override shows up as a different digest.
+Each single-question `--details` row carries `meta.question_sha256`. It names the exact question that produced the row, so two runs that asked almost the same thing cannot be mistaken for one. The same question gives the same digest whether it was typed or read from a file, and any override shows up as a different digest. An `annotate --details` row instead carries `meta.questions_sha256` for its resolved question set, as described below.
 
 The digest is the SHA-256 of the canonical form below, written as 64 lowercase hexadecimal figures. A saved `profile` follows `threshold` in that form and changes the digest. Selecting `--profile FILE` does not.
 

@@ -31,13 +31,34 @@ pub(crate) fn run<T: Send + 'static>(
     deadline: Option<i64>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
+    run_with(db, deadline, None, work)
+}
+
+/// Keep a warm aggregate's deadline fixed across its separate chunk workers.
+pub(crate) fn run_until<T: Send + 'static>(
+    db: *mut sqlite3,
+    deadline: Option<Instant>,
+    work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
+) -> Result<T, Failure> {
+    run_with(db, None, deadline, work)
+}
+
+fn run_with<T: Send + 'static>(
+    db: *mut sqlite3,
+    deadline: Option<i64>,
+    absolute: Option<Instant>,
+    work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
+) -> Result<T, Failure> {
     let due = budget::remaining(db)?.map(|(_, due)| due);
     let engine = settings::engine()?;
     settings::remaining()?;
+    let (send_budget, total) = settings::send_budget();
     let token = CancelToken::new();
     let theirs = token.clone();
     let (answers, _detached) = spawn(move || {
-        let mut options = CallOptions::new().cancel(&theirs);
+        let mut options = CallOptions::new()
+            .cancel(&theirs)
+            .send_budget(send_budget, total);
         let left = due
             .map(|due| {
                 let left = due.checked_duration_since(Instant::now()).ok_or_else(|| {
@@ -61,11 +82,17 @@ pub(crate) fn run<T: Send + 'static>(
             (_, Some(budget)) => Some(budget),
             (call, None) => call,
         };
-        if let Some(millis) = deadline {
+        if let Some(at) = absolute {
+            options = options.deadline_at(due.map_or(at, |connection| at.min(connection)));
+        } else if let Some(millis) = deadline {
             options = options.deadline_millis(millis)?;
         }
         work(engine, options)
     })?;
+    let due = match (due, absolute) {
+        (Some(connection), Some(call)) => Some(connection.min(call)),
+        (connection, call) => connection.or(call),
+    };
     wait(&answers, &token, || ffi::interrupted(db), due)
 }
 

@@ -24,7 +24,119 @@ use std::process::Command;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{Engine, EngineBuilder, Error, Question};
+use thinkthen::{
+    CallOptions, Engine, EngineBuilder, Error, ErrorKind, Question, SendBudget, SendBudgetDenial,
+};
+
+#[test]
+fn process_send_budget_distinguishes_first_send_retry_and_backend_status() {
+    let question = Question::decide("asks for a refund")
+        .expect("question")
+        .cut();
+    let budget = SendBudget::new();
+    let listener =
+        Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
+            .expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-test")
+        .expect("key")
+        .max_retries(1)
+        .no_cache()
+        .build()
+        .expect("engine");
+    let first = engine
+        .decide_with(
+            &question,
+            "evidence",
+            CallOptions::new().send_budget(&budget, Some(0)),
+        )
+        .expect_err("zero-cap first send");
+    assert_eq!(first.kind(), ErrorKind::Usage);
+    assert_eq!(
+        first.send_budget_denial(),
+        Some(SendBudgetDenial::BeforeFirstSend)
+    );
+    assert_eq!(listener.count(), 0);
+
+    let retry = engine
+        .decide_with(
+            &question,
+            "evidence",
+            CallOptions::new().send_budget(&budget, Some(1)),
+        )
+        .expect_err("one send followed by a denied retry");
+    assert_eq!(retry.kind(), ErrorKind::Backend);
+    assert!(!retry.retryable());
+    assert_eq!(
+        retry.send_budget_denial(),
+        Some(SendBudgetDenial::BeforeRetry { last_status: 503 })
+    );
+    assert_eq!(listener.count(), 1);
+
+    let spent = engine
+        .decide_with(
+            &question,
+            "evidence",
+            CallOptions::new().send_budget(&budget, Some(1)),
+        )
+        .expect_err("shared budget spent");
+    assert_eq!(
+        spent.send_budget_denial(),
+        Some(SendBudgetDenial::BeforeFirstSend)
+    );
+    assert_eq!(listener.count(), 1);
+
+    let no_retry = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-test")
+        .expect("key")
+        .max_retries(0)
+        .no_cache()
+        .build()
+        .expect("engine without retries");
+    let ordinary = no_retry
+        .decide_with(
+            &question,
+            "evidence",
+            CallOptions::new().send_budget(&budget, Some(2)),
+        )
+        .expect_err("backend status after raised cap");
+    assert_eq!(ordinary.kind(), ErrorKind::Backend);
+    assert_eq!(ordinary.send_budget_denial(), None);
+    assert!(ordinary.retryable());
+    assert_eq!(listener.count(), 2);
+}
+
+#[test]
+fn inline_profile_replaces_a_file_and_rejects_invalid_json_as_usage() {
+    let profile =
+        r#"{"schema":"thinkthen.backend-profile/1","name":"small","max_evidence_bytes":8}"#;
+    let missing = folder("missing-profile.json");
+    let from_inline = Engine::builder()
+        .no_cache()
+        .profile(&missing)
+        .expect("path")
+        .profile_json(profile)
+        .expect("inline profile")
+        .build();
+    assert!(
+        from_inline.is_ok(),
+        "the later inline profile replaces the path"
+    );
+    let invalid = Engine::builder().profile_json("{}");
+    assert!(matches!(invalid, Err(Error::Usage(_))));
+    let from_file = Engine::builder()
+        .no_cache()
+        .profile_json(profile)
+        .expect("inline profile")
+        .profile(&missing)
+        .expect("path")
+        .build();
+    assert!(matches!(from_file, Err(Error::Local(_))));
+}
 
 /// The one answer every listener gives: a yes at 0.92.
 const ANSWERED: &str = concat!(

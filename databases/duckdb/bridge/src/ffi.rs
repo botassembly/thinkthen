@@ -9,12 +9,15 @@ use std::sync::mpsc::{RecvTimeoutError, channel};
 use std::time::Duration;
 
 use crate::{engines, errors, signal};
-use thinkthen::{CallOptions, CancelToken, LoadedQuestion, Question, QuestionSet};
+use thinkthen::{CancelToken, LoadedQuestion, Question, QuestionSet};
 
 mod listed;
 mod nested;
 #[path = "ffi/scalar/ffi.rs"]
 mod scalar;
+mod settings;
+
+pub(crate) use settings::{BridgeSettings, asked, probe};
 
 thread_local! {
     static BRIDGE_DEPTH: Cell<usize> = const { Cell::new(0) };
@@ -271,24 +274,19 @@ pub(crate) struct BridgeText {
     pub(crate) len: usize,
 }
 
-/// Unset numeric SQL settings use `i64::MIN`; every valid setting is larger.
-#[repr(C)]
-#[derive(Debug)]
-pub(crate) struct BridgeSettings {
-    throttle: i64,
-    max_requests: i64,
-    max_requests_total: i64,
-    cache_bytes: *const u8,
-    cache_len: usize,
-    cache_allowed: i32,
-}
-
 /// A no-throw query interrupt predicate, valid for the synchronous bridge call.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub(crate) struct BridgeStop {
     context: *mut c_void,
     interrupted: Option<extern "C" fn(*mut c_void) -> i32>,
+}
+
+#[derive(Clone, Copy)]
+pub(crate) struct CallScope<'a> {
+    pub(crate) due: i64,
+    pub(crate) token: &'a CancelToken,
+    pub(crate) total: Option<i64>,
 }
 
 // SAFETY: the public engine invokes the host check only on the FFI calling
@@ -423,10 +421,16 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_nested_group(
         let texts = copied_texts(texts, text_count)?;
         let ask = nested::ask(kind, argument, &members, from_file != 0)?;
         let asked = asked(&settings)?;
-        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
+        let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         let (texts, cut) = engines::within_total(&asked, texts)?;
+        let total = asked.max_requests_total;
         run_detached(stop, move |token| {
-            let values = nested::run(&engine, &ask, texts, deadline_ms, kind, &token)?;
+            let scope = CallScope {
+                due: deadline_ms,
+                token: &token,
+                total,
+            };
+            let values = nested::run(&engine, &ask, texts, kind, scope)?;
             if let Some(error) = cut {
                 return Err(error);
             }
@@ -458,43 +462,16 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_listed_group(
         let texts = copied_texts(texts, text_count)?;
         let set = listed::set(kind, question, &members)?;
         let asked = asked(&settings)?;
-        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
+        let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         let (texts, cut) = engines::within_total(&asked, texts)?;
+        let total = asked.max_requests_total;
         run_detached(stop, move |token| {
-            let options = if deadline_ms == -1 {
-                CallOptions::new().cancel(&token)
-            } else {
-                CallOptions::new()
-                    .deadline_millis(deadline_ms)
-                    .map_err(|error| errors::RowError::from(error).text)?
-                    .cancel(&token)
-            };
-            let values = listed::run(&engine, &set, texts, options)?;
+            let options = engines::options(deadline_ms, &token, total)?;
+            let values = listed::run(&engine, &set, texts, options, total)?;
             if let Some(error) = cut {
                 return Err(error);
             }
             Ok(values)
         })
     })
-}
-
-pub(crate) fn asked(settings: &BridgeSettings) -> Result<engines::Asked, String> {
-    let present = |value| (value != i64::MIN).then_some(value);
-    let cache = (!settings.cache_bytes.is_null())
-        .then(|| text(settings.cache_bytes, settings.cache_len).map(str::to_owned))
-        .transpose()?;
-    Ok(engines::Asked {
-        throttle: present(settings.throttle),
-        max_requests: present(settings.max_requests),
-        max_requests_total: present(settings.max_requests_total),
-        cache,
-    })
-}
-
-pub(crate) fn probe(settings: &BridgeSettings) -> engines::Probe {
-    if settings.cache_allowed != 0 {
-        engines::Probe::Allowed
-    } else {
-        engines::Probe::Refused
-    }
 }

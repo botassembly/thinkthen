@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use thinkthen::{CallOptions, Entity, Relate, RelationRule};
+use thinkthen::{Entity, Relate, RelationRule};
 
 use crate::engines;
 use crate::errors::RowError;
@@ -112,7 +112,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_validate(
     reply_boundary(|| {
         let (_, wildcard) = copied_rules(rule, rule_len, members, member_count, list, from_file)?;
         let asked = asked(&settings)?;
-        let _engine = engines::engine_for(&asked, |_| probe(&settings))?;
+        let _engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         Ok(vec![u8::from(wildcard)])
     })
 }
@@ -205,20 +205,14 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
             return Ok(0_u32.to_ne_bytes().to_vec());
         }
         let asked = asked(&settings)?;
-        let engine = engines::engine_for(&asked, |_| probe(&settings))?;
+        let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         engines::within_total(&asked, Vec::new())?;
+        let total = asked.max_requests_total;
         run_detached(stop, move |token| {
-            let options = if deadline_ms == -1 {
-                CallOptions::new().cancel(&token)
-            } else {
-                CallOptions::new()
-                    .deadline_millis(deadline_ms)
-                    .map_err(|error| RowError::from(error).text)?
-                    .cancel(&token)
-            };
+            let options = engines::options(deadline_ms, &token, total)?;
             let edges = engine
                 .relate_with(&ask, entities, options)
-                .map_err(|error| RowError::from(error).text)?;
+                .map_err(|error| engines::call_error(error, total).text)?;
             encoded_edges(edges, &mapped)
         })
     })

@@ -1,5 +1,10 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
+mod budget;
+
+pub(crate) use budget::SendReservation;
+pub use budget::{SendBudget, SendBudgetDenial};
+
 use std::any::Any;
 use std::fmt;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
@@ -76,6 +81,7 @@ pub struct CallOptions<'a> {
     cancel: Option<&'a CancelToken>,
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
+    send_budget: Option<(&'a SendBudget, Option<u64>)>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -85,6 +91,7 @@ impl fmt::Debug for CallOptions<'_> {
             .field("cancel", &self.cancel)
             .field("deadline", &self.due)
             .field("interrupt", &self.check.is_some())
+            .field("send_budget", &self.send_budget.is_some())
             .finish()
     }
 }
@@ -97,6 +104,7 @@ impl<'a> CallOptions<'a> {
             cancel: None,
             due: None,
             check: None,
+            send_budget: None,
         }
     }
 
@@ -104,6 +112,14 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn cancel(mut self, value: &'a CancelToken) -> Self {
         self.cancel = Some(value);
+        self
+    }
+
+    /// Share a process send counter and apply this call's optional total.
+    /// A cache or strict replay answer uses no reservation.
+    #[must_use]
+    pub const fn send_budget(mut self, value: &'a SendBudget, limit: Option<u64>) -> Self {
+        self.send_budget = Some((value, limit));
         self
     }
 
@@ -217,7 +233,12 @@ impl<'a> Stop<'a> {
         let stop = Self {
             base: Cancel::default()
                 .with_deadline(options.deadline()?)
-                .with_token(options.cancel.map(CancelToken::flag)),
+                .with_token(options.cancel.map(CancelToken::flag))
+                .with_send_budget(
+                    options
+                        .send_budget
+                        .map(|(budget, limit)| (budget.clone(), limit)),
+                ),
             token: options.cancel,
             check: options.check,
             panic: Mutex::new(None),
