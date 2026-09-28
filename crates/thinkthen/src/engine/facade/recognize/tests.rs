@@ -32,7 +32,11 @@ fn recognition_sends_the_pair_chunks_it_prepared_once() {
         &spec,
         "Ada met Acme.",
         &entities,
-        (&mut Aggregate::default(), &mut Probabilities::default()),
+        (
+            &mut Aggregate::default(),
+            &mut Probabilities::default(),
+            &mut |_, _, _| Ok(()),
+        ),
         &Cancel::default(),
     );
     assert!(sent.is_err(), "nothing answers the closed local port");

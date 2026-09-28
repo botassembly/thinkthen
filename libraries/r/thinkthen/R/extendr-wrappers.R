@@ -39,6 +39,6 @@ tt_recognize_column <- function(spec, path, texts, deadline) .Call(wrap__tt_reco
 
 tt_relate_frame <- function(spec, path, names, kinds, deadline) .Call(wrap__tt_relate_frame, spec, path, names, kinds, deadline)
 
-tt_engine_set <- function(base_url, model, throttle, max_requests, cache, timeout, max_retries, record, replay, profile) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, cache, timeout, max_retries, record, replay, profile)
+tt_engine_set <- function(base_url, model, throttle, max_requests, max_request_bytes, cache, timeout, max_retries, record, replay, profile) .Call(wrap__tt_engine_set, base_url, model, throttle, max_requests, max_request_bytes, cache, timeout, max_retries, record, replay, profile)
 
 # nolint end

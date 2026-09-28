@@ -20,6 +20,7 @@ use crate::edge;
 use crate::engine::facade::{Answered, Completed, Input, InputPort, Judgment};
 use crate::failure::Failure;
 use crate::failure::context::Limits;
+use crate::judge::Keeping;
 use crate::schedule::{self, Judged, Output, Placed};
 use crate::table::Rows as TableRows;
 
@@ -116,10 +117,13 @@ pub(super) fn run(
     if configuration.common.dry_run {
         return planned(former, records, &configuration, output);
     }
+    if matches!(configuration.keeping, Keeping::Passing | Keeping::Ordered) {
+        output.guard_models();
+    }
     let judging = Judging::new(configuration)?;
     let recording = judging.engine.recording();
     let outcome = judging.engine.records(
-        output.holds(),
+        output.flow(),
         judging.environment.cancel(),
         |asks, events| {
             let (sender, raw) = sync_channel(AHEAD);
@@ -429,13 +433,16 @@ fn answer_rows(
     let reply = &whole.reply;
     let mut rows = Vec::with_capacity(count);
     let mut stop = None;
-    if batch.questions.len() != count || batch.row_questions.len() != count {
+    if batch.questions.len() != count
+        || batch.outcomes.len() != count
+        || batch.row_questions.len() != count
+    {
         return Err(Placed::at(
             Failure::Defect("a batch lost a row question"),
             first,
         ));
     }
-    for (position, (held, &asked)) in records.iter().zip(&batch.questions).enumerate() {
+    for (position, (held, &asked)) in records.iter().zip(&batch.outcomes).enumerate() {
         let Some(AnswerOutcome::Answered(answer)) = reply.outcomes().get(asked) else {
             stop = Some(Placed::at(Failure::PartialReply { first, last }, held.at));
             break;
@@ -494,7 +501,7 @@ fn failed(cause: Failure, first: usize, last: usize) -> Failure {
         | Failure::Status(_)
         | Failure::TokenLimit
         | Failure::Reply(_)
-        | Failure::ReplayMiss(_)
+        | Failure::ReplayMiss { .. }
             if last > first =>
         {
             Failure::BatchFailed {

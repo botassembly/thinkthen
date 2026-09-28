@@ -167,6 +167,24 @@ Quick Fix qf-command-edges-and-prune changed two rules that `site/src/pages/refe
 
 Done when: both lines match the specification.
 
+## 9. Migrate Ruby samples with ticket 0234
+
+Preparation against main `79244123` found direct bare-result consumers under `site/examples/functions/{decide,question-file,filter,rank,choose,score,annotate,recognize,relate}/`, `site/examples/install/ruby/first-call.rb`, and syntax expectations in `site/scripts/named-answers.test.mjs`. Ticket0234 landed at `b07e56b7` with the reviewed Ruby `Call` value, facts and details. Its library consumers are updated; the site work below remains. The marketing owner must update these consumers and generated copies against the final accepted package before public 0.1. A truth test on a wrapper can pass while its contained answer is false or nil. Preserve named answers and inspect `.value` for actual scalar, list, rank, annotate, recognition and relation assertions. Keep nil, false, empty collections and failed answers distinct. Reuse the existing offline examples and recordings, with explicit batch one where historical request bodies require it; do not spend new provider calls just to change accessors. Ticket 0234 migrates Ruby-owned examples and tests, while this existing site issue owns site edits. The C and Python wrapper migrations remain in their existing specific issues and can share the same marketing batch.
+
+## 10. Migrate TypeScript samples with ticket 0236
+
+High-reviewed design0236 at `5283cfe3` makes asking methods return `Call<T>` with the former result in `.value`, plus owned facts and details. Its implementation landed at `ef0cc3de` after High acceptance of `b84ff2de`; migrate the site against that accepted package. Preparation found ten direct consumers: `site/examples/install/typescript/first-call.ts` and `site/examples/functions/{decide,question-file,choose,tag,rank,find,annotate,recognize,relate}/typescript.ts`. Include generated copies and `site/scripts/check-samples.mjs` in the marketing owner's verification. Preserve null, false, empty arrays, typed failed fields and actual answers; a truth test of the wrapper is not an answer check. Reuse the existing offline sample route and explicit batch one where historical recordings require it. The library ticket owns its examples and tests only. This belongs with the existing C, Python and Ruby sample migrations before public0.1.
+
+## 11. Migrate R samples with ticket 0237
+
+High-reviewed design 0237 at `e24f2c29` returns `thinkthen_call` with the former answer in `$value`, plus facts and owned details. Its implementation is in progress. The marketing owner must migrate `site/examples/functions/{decide,question-file,filter,rank,find,tag,score,annotate,recognize,relate}/` R consumers and `site/examples/install/r/first-call.R` against the final accepted package. Include generated copies and `site/scripts/named-answers.test.mjs` in verification. Preserve false, NA, empty and failed results and inspect the contained answer. Reuse offline samples and explicit batch one for historical request bodies. Library-owned examples belong to 0237; site examples remain here before public 0.1.
+
+## 12. State the SQL warm recipe's batch setting
+
+SQLite ticket 0219 reproduced a misleading general promise in `site/src/data/catalog.mjs`: “Every later query reads the saved answers.” ADR 0048 keys the cache by the complete prepared request. A default packed warm does not populate singleton request keys; a later scalar query may send. The library-owned legacy recipe now explicitly selects `thinkthen_batch(1)` before the engine is created and still proves no sends after warm. A separate default-Max proof checks reuse of an identical ordered packed cohort. The coordinator's [cache-identity clarification](../records/2026-09-28-sql-warm-cache-identity.md) and 0219 build record give the observed bodies and digests.
+
+Before public 0.1, the marketing owner must qualify the SQLite blurb and any generated SQL warm recipe with that explicit setting and matching question/context. Do not promise reuse by every later query. Apply the same complete-request rule when refreshing PostgreSQL and DuckDB examples against their landed implementations. Reuse recorded or loopback evidence; no provider run is needed for this correction.
+
 ## Order
 
 Items 1, 2, 3, 4, 7, and 8 can go now. Item 5 can repoint the pull script now for every landed surface. Its final run waits for DuckDB 0110 and pandas 0122. Item 6 waits for Beatles Bench ticket 0006. Regenerate every sample once, after DuckDB and pandas land, before the site publishes.

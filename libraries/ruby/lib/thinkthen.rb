@@ -2,8 +2,8 @@
 
 # The Ruby surface over the thinkthen public Rust API.
 #
-# The ten verbs are module methods on ThinkThen, beside decide_many,
-# details, question, set, usage, and with_tick. The same methods live on a
+# The asking verbs are module methods on ThinkThen, beside question, set,
+# usage, and with_tick. The same methods live on a
 # ThinkThen::Engine value, which carries the engine settings. The module
 # methods call one lazy engine built from the environment.
 #
@@ -16,13 +16,14 @@
 # String crosses as its JSON text, never as Ruby's to_s form.
 
 require "json"
+require "timeout"
 require_relative "thinkthen/version"
 
 module ThinkThen
   # The one base class. `kind` is the kind's word and `retryable` the
   # engine's retry signal.
   class Error < StandardError
-    attr_reader :kind, :retryable
+    attr_reader :kind, :retryable, :facts, :details, :completion
 
     def initialize(message = nil, kind = nil, retryable = false)
       super(message)
@@ -37,6 +38,49 @@ module ThinkThen
   class CancelledError < Error; end
   class DeadlineError < Error; end
   class DefectError < Error; end
+
+  # The old Ruby value plus one completed call's immutable account.
+  class Call
+    attr_reader :value, :facts, :details
+
+    def initialize(value, facts, details)
+      @value = value
+      @facts = ThinkThen.__send__(:deep_freeze, facts)
+      @details = ThinkThen.__send__(:deep_freeze, details)
+      freeze
+    end
+
+    def map
+      self.class.new(yield(value), facts, details)
+    rescue Exception => error
+      ThinkThen.__send__(:attach_account, error, facts, details)
+      raise
+    end
+
+    def inspect
+      "#<ThinkThen::Call value=<withheld> records=#{facts[:records]}>"
+    end
+  end
+
+  # A prompt stop retains the original worker's eventual final account.
+  class Completion
+    def initialize(native)
+      @native = native
+    end
+
+    def done? = @native.done?
+    alias done done?
+
+    def result(timeout: nil)
+      raise UsageError.new("completion timeout takes a nonnegative number", "usage") unless timeout.nil? ||
+        (timeout.is_a?(Numeric) && timeout.real? && timeout.finite? && timeout >= 0)
+
+      raw = @native.result(timeout)
+      raise Timeout::Error, "the call has not completed" if raw.nil?
+
+      @result ||= ThinkThen.__send__(:deep_freeze, raw)
+    end
+  end
 end
 
 require_relative "thinkthen/thinkthen"
@@ -112,12 +156,13 @@ module ThinkThen
   # as the module methods' engine does. The throttle is the most requests
   # in flight at once, per loaded copy of the library.
   class Engine
-    def initialize(base_url: nil, model: nil, throttle: nil, max_requests: nil, cache: nil,
-                   timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil)
+    def initialize(base_url: nil, model: nil, throttle: nil, max_requests: nil, max_request_bytes: nil, cache: nil,
+                   timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil, batch: nil)
       ThinkThen.__send__(:text_setting, :base_url, base_url)
       ThinkThen.__send__(:text_setting, :model, model)
       ThinkThen.__send__(:whole_setting, :throttle, throttle)
       ThinkThen.__send__(:whole_setting, :max_requests, max_requests)
+      ThinkThen.__send__(:whole_setting, :max_request_bytes, max_request_bytes)
       ThinkThen.__send__(:whole_setting, :timeout, timeout)
       ThinkThen.__send__(:whole_setting, :max_retries, max_retries)
       { record: record, replay: replay, profile: profile }.each do |name, value|
@@ -126,9 +171,11 @@ module ThinkThen
       unless cache.nil? || cache == false || cache.is_a?(String)
         raise UsageError.new("cache is a folder path, false for none, or nil for the default", "usage")
       end
+      batch = ThinkThen.__send__(:batch_of, batch)
       @native = Native.engine({ base_url: base_url, model: model, throttle: throttle,
-        max_requests: max_requests, cache_at: cache || nil, no_cache: cache == false,
-        timeout: timeout, max_retries: max_retries, record: record, replay: replay, profile: profile })
+        max_requests: max_requests, max_request_bytes: max_request_bytes,
+        cache_at: cache || nil, no_cache: cache == false,
+        timeout: timeout, max_retries: max_retries, record: record, replay: replay, profile: profile, batch: batch })
     end
 
     def self.from_native(native)
@@ -142,68 +189,92 @@ module ThinkThen
       "#<ThinkThen::Engine>"
     end
 
-    def decide(question, evidence, cancel: nil, deadline: nil)
-      crossing("decide", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline)
+    def decide(question, evidence, cancel: nil, deadline: nil, batch: nil, context: nil)
+      crossing("decide", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+               batch: batch, context: context)
     end
 
-    def decide_many(question, records, cancel: nil, deadline: nil)
-      decide_many_with_probabilities(question, records, cancel: cancel, deadline: deadline).map { |row| row[:answer] }
+    def decide_many(question, records, cancel: nil, deadline: nil, batch: nil, context: nil)
+      decide_many_with_probabilities(question, records, cancel: cancel, deadline: deadline, batch: batch,
+                                    context: context).map { |rows| rows.map { |row| row[:answer] } }
     end
 
     # Each answer with its probability, from the same requests.
-    def decide_many_with_probabilities(question, records, cancel: nil, deadline: nil)
-      rows = crossing("decide_many", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, records.to_a), cancel, deadline)
-      rows.map { |answer, probability| { answer: answer, probability: probability } }
+    def decide_many_with_probabilities(question, records, cancel: nil, deadline: nil, batch: nil, context: nil)
+      crossing("decide_many", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, records.to_a), cancel, deadline,
+               batch: batch, context: context, batch_ok: true, context_ok: true)
+        .map { |rows| rows.map { |answer, probability| { answer: answer, probability: probability } } }
     end
 
-    def filter(question, records, cancel: nil, deadline: nil)
+    def filter(question, records, cancel: nil, deadline: nil, batch: nil, context: nil)
       list = records.to_a
-      places = crossing("filter", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, list), cancel, deadline)
-      places.map { |place| list[place] }
+      crossing("filter", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, list), cancel, deadline,
+               batch: batch, context: context, batch_ok: true, context_ok: true)
+        .map { |places| places.map { |place| list[place] } }
     end
 
-    def rank(question, records, top: nil, cancel: nil, deadline: nil)
+    def rank(question, records, top: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       list = records.to_a
-      placed = crossing("rank", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
-      ranked = placed.map { |place, probability| Ranked.new(place, list[place], probability) }
-      top ? ranked.first(top) : ranked
+      crossing("rank", ThinkThen.__send__(:question_text, "rank", question), ThinkThen.__send__(:texts, list), cancel, deadline,
+               batch: batch, context: context, batch_ok: true, context_ok: true)
+        .map do |placed|
+          ranked = placed.map { |place, probability| Ranked.new(place, list[place], probability) }
+          top ? ranked.first(top) : ranked
+        end
     end
 
     # none: true offers a none candidate, as find --none does, so nothing may fit.
-    def find(question, units, none: false, cancel: nil, deadline: nil)
+    def find(question, units, none: false, cancel: nil, deadline: nil, batch: nil, context: nil)
       raise UsageError.new("none is true or false", "usage") unless [true, false].include?(none)
 
       list = units.to_a
-      place, probability = crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, question), ThinkThen.__send__(:texts, list), cancel, deadline)
-      Found.new(place, place.nil? ? nil : list[place], probability)
+      crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, "find", question), ThinkThen.__send__(:texts, list), cancel, deadline,
+               batch: batch, context: context).map do |place, probability|
+        Found.new(place, place.nil? ? nil : list[place], probability)
+      end
     end
 
-    def choose(question, evidence, options: nil, cancel: nil, deadline: nil)
+    def choose(question, evidence, options: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "choose", question, :options, options)
-      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline)[1]
+      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+               batch: batch, context: context).map { |triple| triple[1] }
     end
 
-    def score(question, evidence, levels: nil, cancel: nil, deadline: nil)
+    def score(question, evidence, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "score", question, :levels, levels)
-      crossing("score", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline)
+      crossing("score", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+               batch: batch, context: context)
     end
 
     # The position and its nearest level, from one call.
-    def score_with_level(question, evidence, levels: nil, cancel: nil, deadline: nil)
+    def score_with_level(question, evidence, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "score", question, :levels, levels)
-      _, position, nearest = crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline)
-      [position, nearest]
+      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+               batch: batch, context: context).map { |_, position, nearest| [position, nearest] }
     end
 
-    def tag(question, evidence, labels: nil, cancel: nil, deadline: nil)
+    def tag(question, evidence, labels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "tag", question, :labels, labels)
-      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline)[1]
+      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+               batch: batch, context: context).map { |triple| triple[1] }
     end
 
     # The command's --details document for one text.
-    def details(question, evidence, cancel: nil, deadline: nil)
-      json, = crossing("details", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline)
-      JSON.parse(json)
+    def details(question, evidence, cancel: nil, deadline: nil, batch: nil, context: nil)
+      crossing("details", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+               batch: batch, context: context).map { |json,| JSON.parse(json) }
+    end
+
+    def choose_many(question, records, options: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+      many("choose", question, :options, options, records, cancel, deadline, batch, context)
+    end
+
+    def score_many(question, records, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+      many("score", question, :levels, levels, records, cancel, deadline, batch, context)
+    end
+
+    def tag_many(question, records, labels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+      many("tag", question, :labels, labels, records, cancel, deadline, batch, context)
     end
 
     # One Hash per record, named by the set's questions. A set member whose
@@ -211,7 +282,7 @@ module ThinkThen
     # record is a Hash, its `on` value is the evidence, and the answers
     # join its own keys. A question landing on any record's key refuses
     # before any request.
-    def annotate(set, records, on: nil, cancel: nil, deadline: nil)
+    def annotate(set, records, on: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       set = ThinkThen.set(set) if set.is_a?(String)
       list = records.to_a
       if on
@@ -220,22 +291,25 @@ module ThinkThen
       else
         evidence = ThinkThen.__send__(:texts, list)
       end
-      rows = crossing("annotate", set, evidence, cancel, deadline)
-      rows.each_with_index.map do |json, place|
-        answers = JSON.parse(json).transform_keys(&:to_sym)
-        on ? list[place].transform_keys(&:to_sym).merge(answers) : answers
+      crossing("annotate", set, evidence, cancel, deadline, batch: batch, context: context, batch_ok: true)
+        .map do |rows|
+          rows.each_with_index.map do |json, place|
+            answers = JSON.parse(json).transform_keys(&:to_sym)
+            on ? list[place].transform_keys(&:to_sym).merge(answers) : answers
+          end
+        end
       end
-    end
 
     # Find every name in a text and say what kind it is.
     #
     #   found = ThinkThen.recognize(text, kinds: %w[person organization place],
     #                               relations: { works_for: %w[person organization] })
     #   found.entities.first.kind  # "person"
-    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, cancel: nil, deadline: nil)
+    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, cancel: nil, deadline: nil,
+                  batch: nil, context: nil)
       spec = ThinkThen.__send__(:recognize_spec, kinds, relations, threshold, relation_threshold)
-      json = crossing("recognize", JSON.generate(spec), ThinkThen.__send__(:text_of, text), cancel, deadline)
-      ThinkThen.__send__(:recognized, JSON.parse(json))
+      crossing("recognize", JSON.generate(spec), ThinkThen.__send__(:text_of, text), cancel, deadline,
+               batch: batch, context: context).map { |json| ThinkThen.__send__(:recognized, JSON.parse(json)) }
     end
 
     # Say how named entities relate. An entity is a [name, kind] pair, a
@@ -244,15 +318,17 @@ module ThinkThen
     #
     #   edges = ThinkThen.relate([["Ana", "person"], ["Acme", "organization"]],
     #                            relations: { works_for: %w[person organization] })
-    def relate(entities, relations:, either: nil, threshold: nil, cancel: nil, deadline: nil)
+    def relate(entities, relations:, either: nil, threshold: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       spec = ThinkThen.__send__(:relate_spec, relations, either, threshold)
       pairs = entities.to_a.each_with_index.map { |entity, place| ThinkThen.__send__(:pair_of, entity, place) }
-      rows = crossing("relate", JSON.generate(spec), pairs, cancel, deadline)
-      rows.map do |json|
-        edge = JSON.parse(json)
-        Edge.new(edge["relation"], ThinkThen.__send__(:entity, edge["source"]), ThinkThen.__send__(:entity, edge["target"]), edge["probability"])
+      crossing("relate", JSON.generate(spec), pairs, cancel, deadline, batch: batch, context: context)
+        .map do |rows|
+          rows.map do |json|
+            edge = JSON.parse(json)
+            Edge.new(edge["relation"], ThinkThen.__send__(:entity, edge["source"]), ThinkThen.__send__(:entity, edge["target"]), edge["probability"])
+          end
+        end
       end
-    end
 
     # The engine's counters since the process started.
     def usage
@@ -277,23 +353,46 @@ module ThinkThen
 
     private
 
-    def crossing(verb, subject, input, cancel, deadline)
+    def many(verb, question, key, members, records, cancel, deadline, batch, context)
+      question = ThinkThen.__send__(:keyed, verb, question, key, members)
+      crossing("many", question, ThinkThen.__send__(:texts, records.to_a), cancel, deadline,
+               batch: batch, context: context, batch_ok: true, context_ok: true)
+    end
+
+    def crossing(verb, subject, input, cancel, deadline, batch: nil, context: nil, batch_ok: false, context_ok: false)
       unless cancel.nil? || cancel.is_a?(Cancel)
         raise UsageError.new("cancel is a ThinkThen::Cancel or nil", "usage")
       end
+
+      raise UsageError.new("#{verb} does not take batch", "usage") if !batch.nil? && !batch_ok
+      raise UsageError.new("#{verb} does not take context", "usage") if !context.nil? && !context_ok
+      batch = ThinkThen.__send__(:batch_of, batch)
+      context = ThinkThen.__send__(:context_of, context)
 
       seconds = ThinkThen.__send__(:deadline_of, deadline)
       own = Cancel.new
       tick = Thread.current[:thinkthen_tick]
       row = tick && ThinkThen.__send__(:watch, Row.new(tick, own, nil))
+      pending = nil
       begin
-        @native.call(verb, subject, input, own, cancel, seconds)
-      rescue Interrupt
-        raise CancelledError.new("the call was cancelled", "cancelled")
+        raw, facts, details = @native.call(verb, subject, input, own, cancel, seconds, batch, context)
+        Call.new(raw, facts, details)
+      rescue Interrupt => error
+        pending = error
+        stopped = CancelledError.new("the call was cancelled", "cancelled")
+        ThinkThen.__send__(:attach_receipt, stopped, error)
+        raise stopped
+      rescue Exception => error
+        pending = error
+        ThinkThen.__send__(:attach_receipt, error, error)
+        raise
       ensure
         if row
           ThinkThen.__send__(:unwatch, row)
-          raise row.error if row.error
+          if row.error
+            ThinkThen.__send__(:attach_receipt, row.error, pending) if pending
+            raise row.error
+          end
         end
       end
     end
@@ -321,8 +420,8 @@ module ThinkThen
       Native.set_json(JSON.generate(body))
     end
 
-    %i[decide decide_many decide_many_with_probabilities filter rank find choose score score_with_level
-       tag details annotate recognize relate usage].each do |name|
+    %i[decide decide_many decide_many_with_probabilities filter rank find choose choose_many score score_many score_with_level
+       tag tag_many details annotate recognize relate usage].each do |name|
       define_method(name) { |*args, **keywords, &block| default_engine.public_send(name, *args, **keywords, &block) }
     end
 
@@ -331,6 +430,52 @@ module ThinkThen
     end
 
     private
+
+    def deep_freeze(value)
+      case value
+      when Hash
+        value.each { |key, held| deep_freeze(key); deep_freeze(held) }
+      when Array
+        value.each { |held| deep_freeze(held) }
+      end
+      value.freeze
+    end
+
+    def batch_of(value)
+      return nil if value.nil?
+      return value if value == "max" || (value.is_a?(Integer) && value.positive?)
+
+      refuse("batch takes max or a whole number of at least 1")
+    end
+
+    def context_of(value)
+      return nil if value.nil?
+      refuse("context is nonblank text") unless value.is_a?(String)
+      text = text_of(value, "context")
+      refuse("context is nonblank text") if text.strip.empty?
+
+      text
+    end
+
+    def attach_receipt(error, source)
+      native = source.instance_variable_get(:@thinkthen_completion)
+      receipt = native ? Completion.new(native) : source.respond_to?(:completion) ? source.completion : nil
+      error.instance_variable_set(:@completion, receipt) if receipt
+      unless error.respond_to?(:completion)
+        error.define_singleton_method(:completion) { @completion }
+      end
+      if error.is_a?(Error)
+        deep_freeze(error.facts) if error.facts
+        deep_freeze(error.details) if error.details
+      end
+    end
+
+    def attach_account(error, facts, details)
+      error.instance_variable_set(:@facts, facts)
+      error.instance_variable_set(:@details, details)
+      error.define_singleton_method(:facts) { @facts } unless error.respond_to?(:facts)
+      error.define_singleton_method(:details) { @details } unless error.respond_to?(:details)
+    end
 
     def default_engine
       @default_mutex.synchronize do
@@ -382,9 +527,15 @@ module ThinkThen
     end
 
     # rank and find read one question text and no rule.
-    def question_text(value)
+    def question_text(verb, value)
       return value if value.is_a?(String)
-      return JSON.parse(value.json).fetch("decide") { refuse("rank and find take a decide question") } if value.is_a?(Question)
+      if value.is_a?(Question)
+        spec = JSON.parse(value.json)
+        refuse("#{verb} takes a decide question") unless spec.key?("decide")
+        extra = spec.keys.find { |key| key != "decide" }
+        refuse("#{verb} takes a decide question with no #{extra}") if extra
+        return spec.fetch("decide")
+      end
 
       refuse("a question is a built question or its text")
     end

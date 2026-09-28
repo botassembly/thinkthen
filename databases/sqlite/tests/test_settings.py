@@ -16,8 +16,27 @@ from helper import Backend, Child, child, environment, expect, main
 AFTER_BUILD = "thinkthen usage: settings apply before the first call; this process already built its engine"
 
 
+def test_saved_calibration_identity_in_sql_details() -> None:
+    """The public SQL details route keeps the shared saved name and warning."""
+    case = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance" / "calibration.json").read_text())
+    backend = Backend()
+    question = json.dumps(case["question"], separators=(",", ":"))
+    profile = json.dumps(case["runtime_profile"], separators=(",", ":"))
+    def quote(value: str) -> str:
+        return "'" + value.replace("'", "''") + "'"
+    setup = f"SELECT thinkthen_profile({quote(profile)})"
+    sql = f"SELECT thinkthen_details({quote(question)}, {quote(case['evidence'])})"
+    held = child(f"db = connect()\nrun(db, {setup!r})\n"
+                 f"say(details=run(db, {sql!r}))\n", environment(backend))
+    details = json.loads(held["details"][0][0])
+    expect(details["meta"]["question_sha256"], case["question_sha256"], "saved profile digest")
+    expect(details["meta"]["profile_warning"], case["warning"], "saved profile mismatch")
+    expect(details["meta"]["model"], case["model"], "actual backend model")
+    expect(backend.close(), 1, "one SQL details request")
+
+
 def test_shared_settings_corpus() -> None:
-    """Run the shared eight setting cases through SQLite's public SQL functions."""
+    """Run the shared nine setting cases through SQLite's public SQL functions."""
     corpus = json.loads((pathlib.Path(__file__).resolve().parents[3] / "conformance" / "settings.json").read_text())
     expect(corpus["schema"], "thinkthen.settings-cases/1", "settings corpus version")
     for shared in corpus["cases"]:
@@ -35,7 +54,13 @@ def test_shared_settings_corpus() -> None:
                     else:
                         literal = str(value) if isinstance(value, int) else "'" + str(value).replace("'", "''") + "'"
                         setup.append(f"SELECT thinkthen_{name}({literal})")
-                if step.get("verb") == "decide_many":
+                setup_rows = ""
+                if step.get("verb") == "relate":
+                    entities = [(at, one["name"], one["kind"]) for at, one in enumerate(shared["entities"])]
+                    setup_rows = ("db.execute('CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)')\n"
+                                  f"db.executemany('INSERT INTO e VALUES (?, ?, ?)', {entities!r})\n")
+                    sql = f"SELECT count(*) FROM thinkthen_relate('e', 'id', 'name', 'kind', '{shared['relation']}')"
+                elif step.get("verb") == "decide_many":
                     values = ", ".join("('" + value.replace("'", "''") + "')" for value in step["records"])
                     sql = f"SELECT thinkthen_warm('Is this a refund?', column1) FROM (VALUES {values})"
                 elif "model" in step:
@@ -44,6 +69,7 @@ def test_shared_settings_corpus() -> None:
                     sql = f"SELECT thinkthen_decide('Is this a refund?', '{step['text']}')"
                 result = child(f"db = connect()\nsetup = {setup!r}\n"
                                f"for statement in setup:\n    assert not isinstance(run(db, statement), str)\n"
+                               f"{setup_rows}"
                                f"say(value=run(db, {sql!r}))\n",
                                environment(backend, shared["arm"].removesuffix("/v1")))["value"]
                 label = shared["id"]
@@ -51,6 +77,8 @@ def test_shared_settings_corpus() -> None:
                     expect(isinstance(result, str) and result.startswith(f"thinkthen {step['error']}"), True, label)
                 elif "model" in step:
                     expect(result, [[step["model"]]], label)
+                elif step.get("verb") == "relate":
+                    expect(result, [[step["edges"]]], label)
                 else:
                     expect(result, [[1]], label)
                 expect(backend.count(), step["count"], f"{label} listener count")

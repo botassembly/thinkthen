@@ -7,6 +7,27 @@
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
+#[path = "public_batches/contracts.rs"]
+mod contracts;
+
+#[path = "public_batches/splits.rs"]
+mod splits;
+
+#[path = "public_batches/native.rs"]
+mod native;
+
+#[path = "public_batches/recognition.rs"]
+mod recognition;
+
+#[path = "public_batches/identity.rs"]
+mod identity;
+
+#[path = "public_batches/interactive.rs"]
+mod interactive;
+
+#[path = "public_batches/details.rs"]
+mod details;
+
 #[path = "../src/test_deadline/wait.rs"]
 #[allow(dead_code, reason = "only the child deadline bounds the churn here")]
 mod wait;
@@ -18,12 +39,15 @@ use std::time::{Duration, Instant};
 
 use conformance_backend::{Backend, Canned, Listener};
 use thinkthen::{
-    AnnotatedRecord, Answer, CallOptions, CancelToken, Counters, Description, Engine,
-    EngineBuilder, Error, ErrorKind, Found, Question, QuestionSet, QuestionSetBuilder, Ranked, Row,
+    AnnotatedRecord, Answer, BatchSetting, CallOptions, CancelToken, Counters, Description, Engine,
+    EngineBuilder, Error, ErrorKind, Found, Judgment, ObservedRow, Question, QuestionSet,
+    QuestionSetBuilder, Ranked, RecordObservation, Row,
 };
 
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
 const THROTTLE: u8 = 2;
+
+thinkthen::choices! { enum BulkLabel { First => "first", Second => "second" } }
 
 static SERIAL: Mutex<()> = Mutex::new(());
 
@@ -53,6 +77,7 @@ const _: () = {
     shared::<Engine>();
     shared::<CancelToken>();
     shared::<CallOptions<'static>>();
+    shared::<BatchSetting>();
     shared::<Question>();
     shared::<thinkthen::BandedQuestion>();
     shared::<QuestionSet>();
@@ -79,6 +104,88 @@ fn threads() -> usize {
 }
 
 #[test]
+fn explicit_batch_one_and_a_question_file_tier_keep_one_record_requests() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = engine(listener.base());
+    let options = CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
+    let asked = question();
+    let mut batch = engine.decide_many_with(&asked, ["alpha", "beta"], options);
+    assert!(
+        batch.facts().is_none(),
+        "facts wait for the final ordered row"
+    );
+    let decided = batch
+        .by_ref()
+        .collect::<Result<Vec<_>, _>>()
+        .expect("explicit batch one");
+    assert_eq!(decided.len(), 2);
+    let facts = batch.facts().expect("the completed batch has final facts");
+    assert_eq!((facts.records(), facts.requests_sent()), (2, 2));
+    assert_eq!(listener.count(), 2);
+
+    let thinkthen::LoadedQuestion::Question(saved) =
+        Question::from_json(r#"{"decide":"Refund?","batch":1}"#).expect("question file")
+    else {
+        panic!("a decide question with no band");
+    };
+    let decided = engine
+        .decide_many(&saved, ["gamma", "delta"])
+        .collect::<Result<Vec<_>, _>>()
+        .expect("question-file batch one");
+    assert_eq!(decided.len(), 2);
+    assert_eq!(listener.count(), 4);
+
+    let engine_default = Engine::builder()
+        .base_url(listener.base())
+        .and_then(|builder| builder.api_key("sk-public-batches"))
+        .map(EngineBuilder::no_cache)
+        .map(|builder| builder.batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)))
+        .and_then(EngineBuilder::build)
+        .expect("engine with a batch default");
+    let thinkthen::LoadedQuestion::Question(file_max) =
+        Question::from_json(r#"{"decide":"Refund?","batch":"max"}"#).expect("question file")
+    else {
+        panic!("a decide question with no band");
+    };
+    let decided = engine_default
+        .decide_many(&file_max, ["one", "two"])
+        .collect::<Result<Vec<_>, _>>()
+        .expect("engine batch one outranks file max");
+    assert_eq!(decided.len(), 2);
+    assert_eq!(listener.count(), 6);
+
+    let thinkthen::LoadedQuestion::Question(invalid_file_tier) =
+        Question::from_json(r#"{"decide":"Refund?","batch":"bad"}"#)
+            .expect("a lower-priority file tier")
+    else {
+        panic!("a decide question with no band");
+    };
+    let failed = engine.decide_many(&invalid_file_tier, ["epsilon"]).next();
+    assert!(failed.is_some_and(|row| row.is_err_and(|error| error.kind() == ErrorKind::Usage)));
+    assert_eq!(
+        listener.count(),
+        6,
+        "selected invalid file tier sends nothing"
+    );
+    let decided = engine
+        .decide_many_with(&invalid_file_tier, ["epsilon"], options)
+        .collect::<Result<Vec<_>, _>>()
+        .expect("typed batch wins over the unused file tier");
+    assert_eq!(decided.len(), 1);
+    assert_eq!(listener.count(), 7);
+
+    let blank = CallOptions::new()
+        .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+        .context(" ");
+    let failed = engine
+        .decide_many_with(&question(), ["epsilon"], blank)
+        .next();
+    assert!(failed.is_some_and(|row| row.is_err_and(|error| error.kind() == ErrorKind::Usage)));
+    assert_eq!(listener.count(), 7, "invalid context sends nothing");
+}
+
+#[test]
 fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED).after(40)).expect("listener");
@@ -93,8 +200,14 @@ fn one_engine_serves_two_threads_under_one_throttle_and_leaves_no_worker() {
                 let records = texts.iter().map(String::as_str);
                 let (engine, asked) = (&engine, &asked);
                 scope.spawn(move || {
-                    let rows: Result<Vec<Row<&str, Answer>>, Error> =
-                        engine.decide_many(asked, records).collect();
+                    let rows: Result<Vec<Row<&str, Answer>>, Error> = engine
+                        .decide_many_with(
+                            asked,
+                            records,
+                            CallOptions::new()
+                                .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+                        )
+                        .collect();
                     rows
                 })
             })
@@ -184,6 +297,7 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
     let by_slice: Vec<String> = engine
         .rank(&ranked, texts)
         .expect("rank")
+        .into_value()
         .into_iter()
         .map(|row| row.into_input().to_owned())
         .collect();
@@ -192,15 +306,21 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
     assert_eq!(
         by_slice,
         by_cursor
+            .into_value()
             .into_iter()
             .map(Ranked::into_input)
             .collect::<Vec<_>>()
     );
     let found = Question::find("Which asks for a refund?").expect("find");
-    let by_slice = engine.find(&found, texts).expect("find").into_selected();
+    let by_slice = engine
+        .find(&found, texts)
+        .expect("find")
+        .into_value()
+        .into_selected();
     let by_cursor = engine
         .find(&found, cursor(&texts))
         .expect("find")
+        .into_value()
         .into_selected();
     assert_eq!(by_slice.map(str::to_owned), by_cursor);
 
@@ -239,7 +359,11 @@ fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
             backend.release();
             held_pull
         });
-        let mut batch = engine.filter(&asked, records);
+        let mut batch = engine.filter_with(
+            &asked,
+            records,
+            CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+        );
         let mut rows = 0;
         while rows < 50 {
             assert!(batch.next().is_some_and(|row| row.is_ok()));

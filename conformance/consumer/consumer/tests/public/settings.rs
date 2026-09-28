@@ -2,7 +2,28 @@ use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
 
-use thinkthen::{Answer, Engine, ErrorKind, Judgment, Question};
+use thinkthen::{Answer, Engine, Entity, ErrorKind, Judgment, Question, Relate};
+
+fn related(engine: &Engine, case: &serde_json::Value, step: &serde_json::Value, id: &str) {
+    let entities = case["entities"]
+        .as_array()
+        .expect("entities")
+        .iter()
+        .map(|one| {
+            Entity::new(
+                one["name"].as_str().expect("name"),
+                one["kind"].as_str().expect("kind"),
+            )
+            .expect("entity")
+        })
+        .collect::<Vec<_>>();
+    let rule = Relate::from_json(
+        r#"{"version":1,"relate":{"relations":[{"name":"linked","source":"item","target":"item"}]}}"#,
+    )
+    .expect("rule");
+    let edges = engine.relate(&rule, entities).expect("relate").into_value();
+    assert_eq!(edges.len(), step["edges"].as_u64().expect("edges") as usize, "{id}");
+}
 
 #[test]
 fn builder_validates_new_settings_at_the_public_edge() {
@@ -94,7 +115,7 @@ fn old_recording_child() {
         "/../../../demos/27-test-with-no-network/vague.txt"
     ));
     assert_eq!(
-        engine.decide(&question, report).expect("saved"),
+        engine.decide(&question, report).expect("saved").into_value(),
         Answer::Yes
     );
     let error = engine.decide(&question, vague).expect_err("local miss");
@@ -150,17 +171,17 @@ fn the_builder_follows_the_command_folder_rules() {
     let paired = Engine::builder().base_url(&base).expect("base")
         .api_key("loopback").expect("key").record(&saved).expect("record")
         .replay(&saved).expect("replay").build().expect("pair");
-    assert_eq!(paired.decide(&ask, "one").expect("send"), Answer::Yes);
-    assert_eq!(paired.decide(&ask, "one").expect("replay"), Answer::Yes);
+    assert_eq!(paired.decide(&ask, "one").expect("send").into_value(), Answer::Yes);
+    assert_eq!(paired.decide(&ask, "one").expect("replay").into_value(), Answer::Yes);
     assert_eq!((backend.count(), paired.usage().cache_answers()), (1, 0));
     let recorder = Engine::builder().base_url(&base).expect("base")
         .api_key("loopback").expect("key").record(&saved).expect("record")
         .build().expect("record only");
-    assert_eq!(recorder.decide(&ask, "one").expect("send again"), Answer::Yes);
+    assert_eq!(recorder.decide(&ask, "one").expect("send again").into_value(), Answer::Yes);
     assert_eq!(backend.count(), 2);
     let reader = Engine::builder().base_url(&base).expect("base")
         .no_cache().replay(&saved).expect("replay").build().expect("reader");
-    assert_eq!(reader.decide(&ask, "one").expect("saved"), Answer::Yes);
+    assert_eq!(reader.decide(&ask, "one").expect("saved").into_value(), Answer::Yes);
     assert_eq!(backend.count(), 2);
     let wrong = Engine::builder().base_url(&format!("{}/arm/503/v1", backend.origin()))
         .expect("other base").replay(&saved).expect("replay").build().expect("wrong reader");
@@ -172,6 +193,7 @@ fn the_builder_follows_the_command_folder_rules() {
 #[test]
 #[expect(
     clippy::excessive_nesting,
+    clippy::cognitive_complexity,
     clippy::too_many_lines,
     reason = "one shared corpus row maps settings, runs the engine, and checks its wire effect"
 )]
@@ -218,11 +240,16 @@ fn every_shared_setting_reaches_the_public_engine() {
                     "max_requests" => builder
                         .max_requests(Some(value.as_u64().expect("limit") as usize))
                         .expect("limit"),
+                    "max_request_bytes" => builder
+                        .max_request_bytes(value.as_u64().expect("bytes") as usize)
+                        .expect("bytes"),
                     _ => panic!("unknown shared setting {name}"),
                 };
             }
             let engine = builder.build().expect("engine");
-            if step["verb"] == "decide_many" {
+            if step["verb"] == "relate" {
+                related(&engine, case, step, id);
+            } else if step["verb"] == "decide_many" {
                 let records = step["records"].as_array().expect("records");
                 let answers: Vec<_> = engine
                     .decide_many(&question, records.iter().map(|v| v.as_str().expect("text")))
@@ -237,14 +264,14 @@ fn every_shared_setting_reaches_the_public_engine() {
                 let text = step["text"].as_str().expect("text");
                 if let Some(model) = step["model"].as_str() {
                     let details = engine.details(&question, text).expect("details");
-                    assert_eq!(details.model(), model, "{id}");
-                    assert_eq!(details.value(), &Judgment::Decision(Answer::Yes), "{id}");
+                    assert_eq!(details.value().model(), model, "{id}");
+                    assert_eq!(details.value().value(), &Judgment::Decision(Answer::Yes), "{id}");
                 } else {
                     let result = engine.decide(&question, text);
                     if let Some(kind) = step["error"].as_str() {
                         assert_eq!(result.expect_err(id).kind().name(), kind, "{id}");
                     } else {
-                        assert_eq!(result.expect(id), Answer::Yes, "{id}");
+                        assert_eq!(result.expect(id).into_value(), Answer::Yes, "{id}");
                     }
                 }
             }

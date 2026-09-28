@@ -66,7 +66,10 @@ impl From<EngineError> for Failure {
             EngineError::TokenLimit => Self::TokenLimit,
             EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
             EngineError::Reply(error) => Self::Reply(error),
-            EngineError::ReplayMiss(name) => Self::ReplayMiss(name),
+            EngineError::ReplayMiss(name) => Self::ReplayMiss {
+                name,
+                context: None,
+            },
             EngineError::Entry(name, message) => Self::Entry(name, message),
             EngineError::RecordingConflict(name) => Self::RecordingConflict(name),
             EngineError::RecordingStorage => Self::RecordingStorage,

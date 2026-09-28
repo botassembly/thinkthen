@@ -100,7 +100,7 @@
       }
     },
     "tag": {
-      "description": "A `tag` entry: the question text and its labels, each read under the same single cut.",
+      "description": "A `tag` entry: the question text and its labels, each read under the same single cut. A top-level `batch` sizes a record stream.",
       "type": "object",
       "required": [
         "tag"
@@ -124,11 +124,18 @@
         },
         "profile": {
           "$ref": "#/$defs/profile"
+        },
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            { "const": "max" },
+            { "type": "integer", "minimum": 1 }
+          ]
         }
       }
     },
     "score": {
-      "description": "A `score` entry: the question text and its levels, lowest first. A score takes no threshold; the answer is a number.",
+      "description": "A `score` entry: the question text and its levels, lowest first. A score takes no threshold; the answer is a number. A top-level `batch` sizes a record stream.",
       "type": "object",
       "required": [
         "score"
@@ -149,6 +156,13 @@
         },
         "profile": {
           "$ref": "#/$defs/profile"
+        },
+        "batch": {
+          "description": "`max`, or a whole number of at least 1.",
+          "anyOf": [
+            { "const": "max" },
+            { "type": "integer", "minimum": 1 }
+          ]
         }
       }
     },

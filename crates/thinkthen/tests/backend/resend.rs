@@ -130,6 +130,27 @@ fn a_stall_past_the_timeout_is_sent_once() {
 }
 
 #[test]
+fn a_stalled_two_record_batch_names_timeout_advice() {
+    let listener =
+        Listener::answering(|_| Canned::ok(ANSWERED).after(2_500)).expect("a loopback listener");
+    let output = decide(
+        &listener,
+        &["--jsonl", "--batch", "2", "--timeout", "1", "--no-cache"],
+        &[],
+        "{\"id\":1}\n{\"id\":2}\n",
+    )
+    .expect("the compiled binary runs");
+
+    assert_eq!(listener.requests().len(), 1);
+    assert_eq!(output.status.code(), Some(4));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: stopped at record 1; the request for records 1 to 2 failed: the backend timed out; increase --timeout or try again; 0 records finished\n"
+    );
+}
+
+#[test]
 fn a_body_cut_short_is_sent_once() {
     let listener = failing(Canned::cut_short).expect("a loopback listener");
 

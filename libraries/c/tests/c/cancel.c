@@ -104,7 +104,7 @@ int main(void) {
 
     char *usage = thinkthen_call(tt, "{\"usage\":true}");
     check(usage != NULL &&
-              strcmp(usage, "{\"requests_sent\":6,\"input_tokens\":0,\"output_tokens\":0,"
+              strcmp(usage, "{\"requests_sent\":6,\"retries\":0,\"input_tokens\":0,\"output_tokens\":0,"
                             "\"cache_answers\":1}") == 0,
           "six requests were sent and one answer came from the cache");
     if (failed && usage != NULL) {

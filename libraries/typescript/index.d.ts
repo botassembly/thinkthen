@@ -8,30 +8,46 @@ export type Cut = number;
 /** A band threshold: unsure between the two numbers. */
 export type Band = [low: number, high: number];
 
+/** JSON carried unchanged through the version-one question grammar. */
+export type JsonValue = null | boolean | number | string | readonly JsonValue[] | { readonly [key: string]: JsonValue };
+export type Description = string | null | readonly JsonValue[] | { readonly [key: string]: JsonValue };
+export type QuestionText = string | readonly JsonValue[] | { readonly [key: string]: JsonValue };
+export type LabelSet = readonly string[] | { readonly [key: string]: Description };
+
 export interface DecideSpec {
-  decide: string;
+  decide: QuestionText;
+  batch?: 'max' | number;
+  true?: Description;
+  false?: Description;
   threshold?: Cut | Band;
   model?: string;
+  profile?: string;
 }
 
 export interface ChooseSpec {
-  choose: string;
-  options: readonly string[];
+  choose: QuestionText;
+  batch?: 'max' | number;
+  options: LabelSet;
   threshold?: Cut;
   model?: string;
+  profile?: string;
 }
 
 export interface ScoreSpec {
-  score: string;
-  levels: readonly string[];
+  score: QuestionText;
+  batch?: 'max' | number;
+  levels: LabelSet;
   model?: string;
+  profile?: string;
 }
 
 export interface TagSpec {
-  tag: string;
-  labels: readonly string[];
+  tag: QuestionText;
+  batch?: 'max' | number;
+  labels: LabelSet;
   threshold?: Cut;
   model?: string;
+  profile?: string;
 }
 
 export type QuestionSpec = DecideSpec | ChooseSpec | ScoreSpec | TagSpec;
@@ -51,19 +67,30 @@ export interface CallOptions {
   deadlineMs?: number | null;
 }
 
+export interface ManyCallOptions extends CallOptions {
+  batch?: 'max' | number;
+  context?: string;
+}
+
+export interface AnnotateCallOptions extends CallOptions { batch?: 'max' | number; }
+
 export interface ChooseOptions extends CallOptions {
-  options: readonly string[];
+  options: LabelSet;
 }
 
 export interface TagOptions extends CallOptions {
-  labels: readonly string[];
+  labels: LabelSet;
 }
 
 export interface ScoreOptions extends CallOptions {
-  levels: readonly string[];
+  levels: LabelSet;
 }
 
-export interface RankOptions extends CallOptions {
+export interface ChooseManyOptions extends ManyCallOptions { options: LabelSet; }
+export interface ScoreManyOptions extends ManyCallOptions { levels: LabelSet; }
+export interface TagManyOptions extends ManyCallOptions { labels: LabelSet; }
+
+export interface RankOptions extends ManyCallOptions {
   /** Keep the first `top` of the ordered result. */
   top?: number;
 }
@@ -75,6 +102,47 @@ export interface FindOptions extends CallOptions {
 
 /** `true`, `false`, or `null` when the answer is unsure. */
 export type Answer = boolean | null;
+
+/** Final facts of this call alone, including rows omitted from its value. */
+export interface Facts {
+  readonly records: number;
+  readonly requests_sent: number;
+  readonly cache_answers: number;
+  readonly seconds: number;
+  readonly input_tokens?: number;
+  readonly output_tokens?: number;
+  readonly model?: string;
+}
+
+/** One completed question; a failed question has `failed`, not `answer: null`. */
+export interface QuestionObservation {
+  readonly index: number;
+  readonly position: number;
+  readonly member?: string;
+  readonly stage?: string;
+  readonly question_sha256: string;
+  readonly answer?: Answer | string | number | readonly string[];
+  readonly failed?: FailedField['failed'];
+  readonly probabilities?: number | readonly (readonly [string, number])[];
+  readonly confidence?: number;
+  readonly model: string;
+  readonly url: string;
+  readonly requests: readonly string[];
+  readonly requests_sent: number;
+  readonly usage?: { readonly input_tokens: number; readonly output_tokens: number };
+  readonly cached: boolean;
+  readonly failed_questions: number;
+}
+
+export interface Call<T> {
+  readonly value: T;
+  readonly facts: Facts;
+  readonly details: readonly QuestionObservation[];
+}
+
+export interface Completion<T> {
+  wait(): Promise<{ ok: Call<T> } | { err: ThinkThenError }>;
+}
 
 /** One judgment as the command's `--details` prints it: `thinkthen.result/1`. */
 export interface Details {
@@ -100,6 +168,7 @@ export interface Details {
     requests: string[];
     failed_questions: number;
     usage?: { input_tokens: number; output_tokens: number };
+    profile_warning?: { tuned_for: string; running: string };
   };
 }
 
@@ -138,7 +207,7 @@ export type AnnotatedField = Answer | string | number | string[] | FailedField;
 export type AnnotatedRow = Record<string, AnnotatedField>;
 
 /** A question set: a file path, the set's JSON text, or the set object. */
-export type QuestionSet = string | { version: 1; questions: Record<string, QuestionSpec> };
+export type QuestionSet = string | { version: 1; batch?: 'max' | number; questions: Record<string, QuestionSpec> };
 
 /** One name `recognize` found. `text.slice(start, end)` is the name, since
  * `start` and `end` count UTF-16 units, and `length` is `end - start`.
@@ -169,7 +238,7 @@ export interface Recognized {
 
 export interface RecognizeOptions extends CallOptions {
   /** Kind words, or kind words with their descriptions. */
-  kinds?: readonly string[] | Record<string, string | null>;
+  kinds?: readonly string[] | { readonly [key: string]: Description };
   /** Each rule's ends, as kind words or the any-kind end "*", or the file's rule list. */
   relations?:
     | Record<string, readonly [source: string, target: string]>
@@ -202,6 +271,7 @@ export interface RelateOptions extends CallOptions {
 /** This process's totals. Failed calls and retries count, and nothing resets them. */
 export interface Usage {
   requests_sent: number;
+  retries: number;
   cache_answers: number;
   input_tokens: number;
   output_tokens: number;
@@ -211,6 +281,9 @@ export interface Usage {
 export class ThinkThenError extends Error {
   kind: 'usage' | 'backend' | 'local' | 'cancelled' | 'deadline' | 'defect';
   retryable: boolean;
+  facts?: Facts;
+  details?: readonly QuestionObservation[];
+  completion?: Completion<unknown>;
 }
 
 /** An engine's settings. Each given key overrides what the environment set. */
@@ -221,6 +294,8 @@ export interface EngineOptions {
   throttle?: number;
   /** Refuse a call over more records than this. */
   maxRequests?: number;
+  /** Request-byte ceiling for a split plan; a lone question still goes alone. */
+  maxRequestBytes?: number;
   /** `false` reads and writes no cache; a string names the cache folder. */
   cache?: false | string;
   timeoutSeconds?: number;
@@ -228,25 +303,32 @@ export interface EngineOptions {
   record?: string;
   replay?: string;
   profile?: string;
+  batch?: 'max' | number;
 }
 
 export interface Verbs {
-  decide(question: string | Question | DecideSpec, text: string, options?: CallOptions): Promise<Answer>;
-  decide_many(question: string | Question | DecideSpec, records: readonly string[], options?: CallOptions): Promise<Answer[]>;
-  choose(question: string, text: string, options: ChooseOptions): Promise<string | null>;
-  choose(question: ChooseSpec | Question, text: string, options?: CallOptions): Promise<string | null>;
-  score(question: string, text: string, options: ScoreOptions): Promise<number>;
-  score(question: ScoreSpec | Question, text: string, options?: CallOptions): Promise<number>;
-  tag(question: string, text: string, options: TagOptions): Promise<string[]>;
-  tag(question: TagSpec | Question, text: string, options?: CallOptions): Promise<string[]>;
-  filter(question: string | Question | DecideSpec, records: readonly string[], options?: CallOptions): Promise<string[]>;
-  rank(question: string | Question | DecideSpec, records: readonly string[], options?: RankOptions): Promise<Ranked[]>;
-  find(question: string | Question | DecideSpec, units: readonly string[], options?: FindOptions): Promise<Found | null>;
+  decide(question: string | Question | DecideSpec, text: string, options?: CallOptions): Promise<Call<Answer>>;
+  decide_many(question: string | Question | DecideSpec, records: readonly string[], options?: ManyCallOptions): Promise<Call<Answer[]>>;
+  choose(question: string, text: string, options: ChooseOptions): Promise<Call<string | null>>;
+  choose(question: ChooseSpec | Question, text: string, options?: CallOptions): Promise<Call<string | null>>;
+  choose_many(question: string, records: readonly string[], options: ChooseManyOptions): Promise<Call<(string | null)[]>>;
+  choose_many(question: ChooseSpec | Question, records: readonly string[], options?: ManyCallOptions): Promise<Call<(string | null)[]>>;
+  score(question: string, text: string, options: ScoreOptions): Promise<Call<number>>;
+  score(question: ScoreSpec | Question, text: string, options?: CallOptions): Promise<Call<number>>;
+  score_many(question: string, records: readonly string[], options: ScoreManyOptions): Promise<Call<number[]>>;
+  score_many(question: ScoreSpec | Question, records: readonly string[], options?: ManyCallOptions): Promise<Call<number[]>>;
+  tag(question: string, text: string, options: TagOptions): Promise<Call<string[]>>;
+  tag(question: TagSpec | Question, text: string, options?: CallOptions): Promise<Call<string[]>>;
+  tag_many(question: string, records: readonly string[], options: TagManyOptions): Promise<Call<string[][]>>;
+  tag_many(question: TagSpec | Question, records: readonly string[], options?: ManyCallOptions): Promise<Call<string[][]>>;
+  filter(question: string | Question | DecideSpec, records: readonly string[], options?: ManyCallOptions): Promise<Call<string[]>>;
+  rank(question: string | Question | DecideSpec, records: readonly string[], options?: RankOptions): Promise<Call<Ranked[]>>;
+  find(question: string | Question | DecideSpec, units: readonly string[], options?: FindOptions): Promise<Call<Found | null>>;
   /** A set member whose `on` names a part reads it from each record as JSON text. */
-  annotate(set: QuestionSet, records: readonly string[], options?: CallOptions): Promise<AnnotatedRow[]>;
-  details(question: string | Question | QuestionSpec, text: string, options?: CallOptions): Promise<Details>;
-  recognize(text: string, options?: RecognizeOptions): Promise<Recognized>;
-  relate(entities: readonly Entity[], options?: RelateOptions): Promise<Edge[]>;
+  annotate(set: QuestionSet, records: readonly string[], options?: AnnotateCallOptions): Promise<Call<AnnotatedRow[]>>;
+  details(question: string | Question | QuestionSpec, text: string, options?: CallOptions): Promise<Call<Details>>;
+  recognize(text: string, options?: RecognizeOptions): Promise<Call<Recognized>>;
+  relate(entities: readonly Entity[], options?: RelateOptions): Promise<Call<Edge[]>>;
   usage(): Usage;
 }
 
@@ -255,6 +337,9 @@ export class Engine implements Verbs {
   constructor(options?: EngineOptions);
   decide: Verbs['decide'];
   decide_many: Verbs['decide_many'];
+  choose_many: Verbs['choose_many'];
+  score_many: Verbs['score_many'];
+  tag_many: Verbs['tag_many'];
   choose: Verbs['choose'];
   score: Verbs['score'];
   tag: Verbs['tag'];
@@ -273,6 +358,9 @@ export function question(spec: QuestionSpec): Question;
 
 export const decide: Verbs['decide'];
 export const decide_many: Verbs['decide_many'];
+export const choose_many: Verbs['choose_many'];
+export const score_many: Verbs['score_many'];
+export const tag_many: Verbs['tag_many'];
 export const choose: Verbs['choose'];
 export const score: Verbs['score'];
 export const tag: Verbs['tag'];

@@ -20,6 +20,11 @@ pub(crate) fn fail_cleanup() {
     fault::STORAGE_FAULT.with(|value| value.set(Some(fault::StorageStage::Cleanup)));
 }
 
+#[cfg(test)]
+pub(crate) fn fail_install() {
+    fault::STORAGE_FAULT.with(|value| value.set(Some(fault::StorageStage::Install)));
+}
+
 static WRITES: AtomicU64 = AtomicU64::new(0);
 
 /// Which folders `--record` and `--replay` named, once they agree.
@@ -30,6 +35,7 @@ pub(crate) struct Recorder {
     replaying: bool,
     private_default: bool,
     cache_answers: bool,
+    force_refresh: bool,
     /// Whether the folder's backend identity has matched once. The folder
     /// gate itself belongs to each operation, so no lock outlives a request.
     checked: AtomicBool,
@@ -60,7 +66,8 @@ struct PreparedWrite {
     partial: PathBuf,
     file: Option<File>,
     replace_damaged: bool,
-    lock: Option<CacheLock>,
+    // Keep the inode locked through completion. Only folder-exclusive prune unlinks it.
+    _lock: Option<CacheLock>,
 }
 
 enum Existing {
@@ -103,8 +110,19 @@ impl Recorder {
             replaying: replay.is_some(),
             private_default,
             cache_answers,
+            force_refresh: false,
             checked: AtomicBool::new(false),
         })
+    }
+
+    /// Select a live replacement for every cache exchange in this engine.
+    pub(crate) fn with_refresh(mut self, refresh: bool) -> Self {
+        self.force_refresh = refresh;
+        self
+    }
+
+    pub(crate) const fn force_refresh(&self) -> bool {
+        self.force_refresh
     }
 
     pub(crate) const fn counts_cache_answers(&self) -> bool {
@@ -118,6 +136,20 @@ impl Recorder {
 
     pub(crate) const fn reported(&self) -> bool {
         self.folder.is_some() && !self.private_default
+    }
+
+    /// A read-only admission observation. `gate` remains the binding authority.
+    pub(crate) fn unbound_empty(&self) -> Result<bool, Error> {
+        let Some(folder) = self.folder.as_deref() else {
+            return Ok(false);
+        };
+        if !self.recording {
+            return Ok(false);
+        }
+        if self.private_default && folder.exists() {
+            identity::require_private(folder)?;
+        }
+        identity::unbound_empty(folder)
     }
 
     /// Open the shared folder gate one operation holds, checking the
@@ -179,12 +211,24 @@ impl Recorder {
     }
 
     /// Prepare as `prepare_cancelled` does, reading an entry `complete` refuses as damaged.
+    #[cfg(test)]
     pub(crate) fn prepare_checked(
         &self,
         exchange: &Exchange<'_>,
         digest: &Digest,
         cancel: &crate::engine::Cancel,
         complete: &dyn Fn(&[u8]) -> bool,
+    ) -> Result<PreparedRecording, Error> {
+        self.prepare_checked_refresh(exchange, digest, cancel, complete, false)
+    }
+
+    pub(crate) fn prepare_checked_refresh(
+        &self,
+        exchange: &Exchange<'_>,
+        digest: &Digest,
+        cancel: &crate::engine::Cancel,
+        complete: &dyn Fn(&[u8]) -> bool,
+        refresh: bool,
     ) -> Result<PreparedRecording, Error> {
         let Some(folder) = self.folder.as_ref() else {
             return Ok(PreparedRecording::Live(WritePermit {
@@ -194,7 +238,7 @@ impl Recorder {
         };
         let gate = self.gate(exchange, &digest.file_name(), cancel)?;
         Ok(
-            match self.prepare_in(folder, exchange, digest, cancel, complete)? {
+            match self.prepare_in(folder, exchange, digest, cancel, complete, refresh)? {
                 PreparedRecording::Live(permit) => PreparedRecording::Live(permit.under(gate)),
                 replay @ PreparedRecording::Replay(_) => replay,
             },
@@ -202,6 +246,10 @@ impl Recorder {
     }
 
     /// Decide replay or prepare the write while the folder gate is held.
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "the exchange, cancellation, completeness and refresh policy stay explicit at storage preparation"
+    )]
     fn prepare_in(
         &self,
         folder: &Path,
@@ -209,9 +257,17 @@ impl Recorder {
         digest: &Digest,
         cancel: &crate::engine::Cancel,
         complete: &dyn Fn(&[u8]) -> bool,
+        refresh: bool,
     ) -> Result<PreparedRecording, Error> {
         let name = digest.file_name();
         let entry = folder.join(&name);
+        if refresh && self.caches() {
+            let lock = cache_lock::acquire_cancelled(folder, digest.as_str(), cancel)
+                .map_err(storage)??;
+            let found = existing(&entry, exchange)?;
+            let replace = !matches!(found, Existing::Missing);
+            return prepared_write(folder, entry, replace, Some(lock));
+        }
         let first = existing(&entry, exchange)?;
 
         if !self.recording {
@@ -236,11 +292,11 @@ impl Recorder {
                     .map_err(storage)??;
                 match checked(existing(&entry, exchange)?) {
                     Existing::Valid(response) if self.replaying => {
-                        remove_lock(lock)?;
+                        drop(lock);
                         Ok(PreparedRecording::Replay(response))
                     }
                     Existing::Valid(_) => {
-                        remove_lock(lock)?;
+                        drop(lock);
                         prepared_write(folder, entry, false, None)
                     }
                     Existing::Missing => prepared_write(folder, entry, false, Some(lock)),
@@ -327,24 +383,13 @@ impl PreparedWrite {
                 name,
             )
         };
-        let valid_final = match final_existing(&self.entry, exchange) {
-            Ok(Existing::Valid(_)) => true,
-            Ok(Existing::Missing | Existing::Damaged(_)) => false,
-            Err(error) => {
-                result = Err(error);
-                false
-            }
-        };
+        if let Err(error) = final_existing(&self.entry, exchange) {
+            result = Err(error);
+        }
         if result.is_ok()
             && let Err(error) = sync_recording_directory(&self.folder)
         {
             result = Err(storage(error));
-        }
-        if valid_final
-            && let Some(lock) = self.lock.take()
-            && let Err(error) = remove_lock(lock)
-        {
-            result = Err(error);
         }
         result
     }
@@ -406,7 +451,7 @@ fn prepared_write(
             partial,
             file: Some(file),
             replace_damaged,
-            lock,
+            _lock: lock,
         }),
         _gate: None,
     }))
@@ -462,16 +507,6 @@ fn make_folder(folder: &Path) -> Result<(), Error> {
 
 fn storage(_error: io::Error) -> Error {
     Error::RecordingStorage
-}
-
-/// Remove a completed lock file without syncing `.locks`.
-///
-/// A valid entry exists. A power loss can bring back the empty lock file. It
-/// holds no answer, and prune removes it when it removes that entry. A sync
-/// here cost one of the three per-entry syncs (`sdlc/records/qf-request-cost.md`).
-fn remove_lock(lock: CacheLock) -> Result<(), Error> {
-    maybe_fail(StorageStageName::LockRemove)?;
-    lock.unlink().map_err(storage)
 }
 
 fn sync_recording_directory(folder: &Path) -> io::Result<()> {

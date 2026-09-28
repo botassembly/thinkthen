@@ -5,6 +5,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "conformance" / "children"))
+from children import child_env  # noqa: E402
+
 import duckdb
 
 
@@ -44,6 +47,7 @@ def main() -> None:
         capture_output=True,
         text=True,
         check=True,
+        env=child_env(),
     )
     assert "owned-by-rust, nested" in cli.stdout, cli.stdout
     assert "│                                           7 │" in cli.stdout, cli.stdout
@@ -62,7 +66,7 @@ def main() -> None:
     child = subprocess.run(
         [sys.executable, str(Path(__file__).resolve()), "--cli", str(args.cli),
          "--extension", extension, "--panic-child"],
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True, check=True, env=child_env(),
     )
     assert "SYNTHETIC_KEY_AND_EVIDENCE_MARKER_0201" not in child.stdout + child.stderr, "panic payload leaked"
     assert "unrelated host panic marker" in child.stderr, "the prior host hook did not run on another thread"

@@ -10,18 +10,24 @@
 )]
 
 use std::ffi::c_void;
+use std::num::NonZeroUsize;
 use std::sync::Arc;
+use std::time::Instant;
 
 use magnus::prelude::*;
 use magnus::{
     Error, Exception, ExceptionClass, RHash, RModule, Ruby, TryConvert, Value, function, method,
 };
 use thinkthen::{
-    CancelToken, Engine, Entity, LoadedQuestion, Question, QuestionSet, Recognize, Relate,
+    BatchSetting, CancelToken, Engine, Entity, LoadedQuestion, Question, QuestionSet, Recognize,
+    Relate,
 };
 
-use crate::call::{Ask, Output, Value as Judged};
-use crate::{Fault, Handoff, Settings, Taken, class_name, guarded, start};
+use crate::call::Ask;
+
+mod result;
+use crate::{Controls, Crossing, Fault, Handoff, Settings, Taken, class_name, guarded, start};
+use result::{attach_completion, details_array, facts_hash, output, protected_completion};
 
 #[magnus::wrap(class = "ThinkThen::Cancel", free_immediately, size)]
 #[derive(Debug, Default)]
@@ -66,6 +72,80 @@ pub(crate) struct EngineValue {
     engine: Engine,
 }
 
+#[magnus::wrap(class = "ThinkThen::Native::Completion", free_immediately, size)]
+#[derive(Debug)]
+struct CompletionValue(Arc<Handoff>);
+
+impl CompletionValue {
+    fn done(&self) -> bool {
+        !matches!(self.0.take(), Taken::Waiting)
+    }
+
+    fn result(ruby: &Ruby, rb_self: &Self, timeout: Option<f64>) -> Result<Option<RHash>, Error> {
+        let timeout = match timeout {
+            Some(value) if !value.is_finite() || value < 0.0 => {
+                return Err(raise(
+                    ruby,
+                    Fault::usage("completion timeout takes a nonnegative number"),
+                ));
+            }
+            value => value,
+        };
+        let started = Instant::now();
+        let pointer = Arc::as_ptr(&rb_self.0).cast_mut().cast::<c_void>();
+        loop {
+            match rb_self.0.take() {
+                Taken::Ready(terminal) => return protected_completion(ruby, &terminal).map(Some),
+                Taken::Closed => {
+                    let held = ruby.hash_new();
+                    held.aset(ruby.to_symbol("outcome"), "panicked")?;
+                    held.aset(ruby.to_symbol("facts"), ruby.qnil())?;
+                    held.aset(ruby.to_symbol("details"), ruby.qnil())?;
+                    return Ok(Some(held));
+                }
+                Taken::Waiting => {}
+            }
+            if timeout.is_some_and(|value| started.elapsed().as_secs_f64() >= value) {
+                return Ok(None);
+            }
+            magnus::rb_sys::protect(|| {
+                // SAFETY: the Arc keeps this handoff alive across the GVL-free wait.
+                unsafe {
+                    rb_sys::rb_thread_call_without_gvl(
+                        Some(wait_for),
+                        pointer,
+                        Some(wake),
+                        pointer,
+                    );
+                    rb_sys::rb_thread_check_ints();
+                }
+                rb_sys::Qnil.into()
+            })?;
+        }
+    }
+}
+
+fn batch_of(ruby: &Ruby, value: Value) -> Result<Option<BatchSetting>, Error> {
+    if value.is_nil() {
+        return Ok(None);
+    }
+    if let Ok(text) = String::try_convert(value)
+        && text == "max"
+    {
+        return Ok(Some(BatchSetting::Max));
+    }
+    if let Ok(number) = i64::try_convert(value)
+        && let Ok(number) = usize::try_from(number)
+        && let Some(number) = NonZeroUsize::new(number)
+    {
+        return Ok(Some(BatchSetting::Records(number)));
+    }
+    Err(raise(
+        ruby,
+        Fault::usage("batch takes max or a whole number of at least 1"),
+    ))
+}
+
 /// Raise one fault as its `ThinkThen` class, with the kind and retry
 /// signal riding the exception.
 fn raise(ruby: &Ruby, fault: Fault) -> Error {
@@ -75,6 +155,28 @@ fn raise(ruby: &Ruby, fault: Fault) -> Error {
         let made: Value = class.funcall(
             "new",
             (fault.message.as_str(), fault.kind.name(), fault.retryable),
+        )?;
+        made.funcall::<_, _, Value>(
+            "instance_variable_set",
+            (
+                "@facts",
+                fault
+                    .facts
+                    .as_ref()
+                    .map(|facts| facts_hash(ruby, facts))
+                    .transpose()?,
+            ),
+        )?;
+        made.funcall::<_, _, Value>(
+            "instance_variable_set",
+            (
+                "@details",
+                if fault.facts.is_some() {
+                    Some(details_array(ruby, &fault.details)?)
+                } else {
+                    None
+                },
+            ),
         )?;
         Exception::from_value(made)
             .map(Error::from)
@@ -154,7 +256,7 @@ fn cross(
     handoff: &Arc<Handoff>,
     own: &CancelToken,
     caller: Option<&CancelToken>,
-) -> Result<Result<Output, Fault>, Error> {
+) -> Result<Crossing, Error> {
     let pointer = Arc::as_ptr(handoff).cast_mut().cast::<c_void>();
     loop {
         let heard = magnus::rb_sys::protect(|| {
@@ -175,7 +277,7 @@ fn cross(
             return Ok(Err(Fault::cancelled()));
         }
         match handoff.take() {
-            Taken::Ready(answer) => return Ok(answer),
+            Taken::Ready(answer) => return Ok(Ok(answer)),
             Taken::Closed => {
                 return Ok(Err(Fault::of(
                     thinkthen::ErrorKind::Defect,
@@ -200,6 +302,7 @@ fn ask(ruby: &Ruby, verb: &str, subject: Value, input: Value) -> Result<Ask, Err
         "details" => Ask::Details(question_of(subject)?, text()?),
         "score" => Ask::Score(question_of(subject)?, text()?),
         "decide_many" => Ask::DecideMany(question_of(subject)?, records()?),
+        "many" => Ask::Many(question_of(subject)?, records()?),
         "filter" => Ask::Filter(question_of(subject)?, records()?),
         "rank" => Ask::Rank(String::try_convert(subject)?, records()?),
         "find" | "find_none" => Ask::Find(
@@ -229,31 +332,6 @@ fn ask(ruby: &Ruby, verb: &str, subject: Value, input: Value) -> Result<Ask, Err
     })
 }
 
-fn judged(ruby: &Ruby, value: Judged) -> Value {
-    match value {
-        Judged::Decision(answer) => ruby.into_value(answer),
-        Judged::Choice(pick) => ruby.into_value(pick),
-        Judged::Score(position) => ruby.into_value(position),
-        Judged::Tags(labels) => ruby.into_value(labels),
-    }
-}
-
-fn output(ruby: &Ruby, answer: Output) -> Value {
-    match answer {
-        Output::Answer(answer) => ruby.into_value(answer),
-        Output::Score(position) => ruby.into_value(position),
-        Output::Details(json, value, nearest) => {
-            ruby.into_value((json, judged(ruby, value), nearest))
-        }
-        Output::Rows(rows) => ruby.into_value(rows),
-        Output::Places(places) => ruby.into_value(places),
-        Output::Ranked(ranked) => ruby.into_value(ranked),
-        Output::Found(found) => ruby.into_value(found),
-        Output::Json(json) => ruby.into_value(json),
-        Output::JsonRows(rows) => ruby.into_value(rows),
-    }
-}
-
 impl EngineValue {
     /// One call: read the inputs, start the worker, wait, and convert.
     #[expect(
@@ -269,8 +347,14 @@ impl EngineValue {
         own: &CancelValue,
         caller: Option<&CancelValue>,
         deadline: Option<f64>,
+        batch: Option<Value>,
+        context: Option<String>,
     ) -> Result<Value, Error> {
         let asked = ask(ruby, &verb, subject, input)?;
+        let batch = batch
+            .map(|value| batch_of(ruby, value))
+            .transpose()?
+            .flatten();
         let caller = caller.map(|token| &token.0);
         if own.0.is_cancelled() || caller.is_some_and(CancelToken::is_cancelled) {
             return Err(raise(ruby, Fault::cancelled()));
@@ -281,21 +365,43 @@ impl EngineValue {
                 rb_self.engine.clone(),
                 asked,
                 own.0.clone(),
-                deadline,
+                Controls {
+                    deadline,
+                    batch,
+                    context,
+                },
                 quiet_signals,
             ),
         )?;
-        let answer = cross(&handoff, &own.0, caller)?;
-        protected(ruby, || match answer {
-            Ok(answer) => Ok(output(ruby, answer)),
-            Err(fault) => Err(raise(ruby, fault)),
-        })
+        let answer = match cross(&handoff, &own.0, caller) {
+            Ok(answer) => answer,
+            Err(error) => {
+                attach_completion(ruby, &error, &handoff);
+                return Err(error);
+            }
+        };
+        match answer {
+            Ok(terminal) => protected(ruby, || match &*terminal {
+                Ok(done) => Ok(ruby.into_value((
+                    output(ruby, &done.value)?,
+                    facts_hash(ruby, &done.facts)?,
+                    details_array(ruby, &done.details)?,
+                ))),
+                Err(fault) => Err(raise(ruby, fault.clone())),
+            }),
+            Err(fault) => {
+                let error = raise(ruby, fault);
+                attach_completion(ruby, &error, &handoff);
+                Err(error)
+            }
+        }
     }
 
     fn usage(ruby: &Ruby, rb_self: &Self) -> Result<RHash, Error> {
         let counts = rb_self.engine.usage();
         let hash = ruby.hash_new();
         hash.aset(ruby.to_symbol("requests_sent"), counts.requests_sent())?;
+        hash.aset(ruby.to_symbol("retries"), counts.retries())?;
         hash.aset(ruby.to_symbol("cache_answers"), counts.cache_answers())?;
         hash.aset(ruby.to_symbol("input_tokens"), counts.input_tokens())?;
         hash.aset(ruby.to_symbol("output_tokens"), counts.output_tokens())?;
@@ -323,6 +429,7 @@ fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
         model: read(ruby, options, "model")?,
         throttle: read(ruby, options, "throttle")?,
         max_requests: read(ruby, options, "max_requests")?,
+        max_request_bytes: read(ruby, options, "max_request_bytes")?,
         cache_at: read(ruby, options, "cache_at")?,
         no_cache: read(ruby, options, "no_cache")?.unwrap_or(false),
         timeout: read(ruby, options, "timeout")?,
@@ -330,6 +437,11 @@ fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
         record: read(ruby, options, "record")?,
         replay: read(ruby, options, "replay")?,
         profile: read(ruby, options, "profile")?,
+        batch: options
+            .get(ruby.to_symbol("batch"))
+            .map(|value| batch_of(ruby, value))
+            .transpose()?
+            .flatten(),
     };
     checked(ruby, guarded(|| settings.build())).map(|engine| EngineValue { engine })
 }
@@ -361,8 +473,11 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let set_class = module.define_class("QuestionSet", ruby.class_object())?;
     set_class.define_method("names", method!(SetValue::names, 0))?;
     let native = module.define_module("Native")?;
+    let completion = native.define_class("Completion", ruby.class_object())?;
+    completion.define_method("done?", method!(CompletionValue::done, 0))?;
+    completion.define_method("result", method!(CompletionValue::result, 1))?;
     let engine = native.define_class("Engine", ruby.class_object())?;
-    engine.define_method("call", method!(EngineValue::call, 6))?;
+    engine.define_method("call", method!(EngineValue::call, 8))?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;
     native.define_module_function("default_engine", function!(default_engine, 0))?;
     native.define_module_function("engine", function!(new_engine, 1))?;

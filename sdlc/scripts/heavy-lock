@@ -1,12 +1,13 @@
-# Sourced by the heavy rungs `install`, `test`, `spec`, and `surfaces` before they change
-# directory. It re-runs the calling rung under an exclusive `flock`. Heavy
-# rungs on one machine then run one at a time. The lock is released when the
-# rung exits.
+# Sourced by the heavy rungs install, test, spec and surfaces before they
+# change directory. Where flock is available, re-runs the calling rung
+# under the selected exclusive lock and releases it on exit. Otherwise it
+# warns and runs unlocked; shared mutations on M5 need separate exclusion,
+# such as a Python fcntl wrapper.
 #
-# THINKTHEN_HEAVY_LOCK overrides the path. The default sits under
-# XDG_RUNTIME_DIR. It differs from the /tmp/thinkthen-heavy.lock agents used by
-# hand. An old hand wrapper around a rung is then only redundant. On the same
-# path, the rung would wait forever on its own wrapper.
+# THINKTHEN_HEAVY_LOCK selects the path. Independent lanes choose separate
+# paths and isolated outputs; load, memory and I/O govern build concurrency.
+# The shared fallback below is a default, not a machine-wide scheduling rule.
+# Retain exclusion for actual shared installation or output mutations.
 #
 # The holder exports THINKTHEN_HEAVY_LOCK_HELD. A rung or script called
 # under it skips the lock instead of deadlocking. `flock -o` keeps the lock

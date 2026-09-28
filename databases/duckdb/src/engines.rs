@@ -14,7 +14,8 @@
 use std::sync::{Arc, Mutex, OnceLock, PoisonError};
 use std::time::Duration;
 
-use thinkthen::{CallOptions, CancelToken, Engine, EngineBuilder, Error, SendBudget};
+use std::num::NonZeroUsize;
+use thinkthen::{BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, SendBudget};
 
 use crate::errors::{RowError, usage};
 
@@ -26,6 +27,7 @@ const MOST: usize = 16;
 pub(crate) struct Asked {
     pub(crate) throttle: Option<i64>,
     pub(crate) max_requests: Option<i64>,
+    pub(crate) max_request_bytes: Option<i64>,
     pub(crate) cache: Option<String>,
     pub(crate) max_requests_total: Option<i64>,
     pub(crate) model: Option<String>,
@@ -46,6 +48,7 @@ pub(crate) enum Probe {
 /// One engine's key: the settings that change what an engine is.
 type Key = (
     Option<u8>,
+    Option<usize>,
     Option<usize>,
     Option<String>,
     Option<String>,
@@ -77,6 +80,36 @@ pub(crate) fn options<'a>(
             .map_err(|error| RowError::from(error).text)?
     };
     Ok(options.cancel(token).send_budget(budget, limit))
+}
+
+/// C++ scalar and warm calls read this session's batch cap and literal context.
+pub(crate) fn options_for<'a>(
+    deadline_ms: i64,
+    token: &'a CancelToken,
+    total: Option<i64>,
+    batch: Option<&str>,
+    context: Option<&'a str>,
+) -> Result<CallOptions<'a>, String> {
+    let mut options = options(deadline_ms, token, total)?;
+    if let Some(batch) = batch {
+        let setting = if batch == "max" {
+            BatchSetting::Max
+        } else if !batch.is_empty() && batch.bytes().all(|byte| byte.is_ascii_digit()) {
+            let count = batch
+                .parse::<usize>()
+                .ok()
+                .and_then(NonZeroUsize::new)
+                .ok_or_else(|| usage("batch takes max or a whole number of at least 1"))?;
+            BatchSetting::Records(count)
+        } else {
+            return Err(usage("batch takes max or a whole number of at least 1"));
+        };
+        options = options.batch(setting);
+    }
+    if let Some(context) = context {
+        options = options.context(context);
+    }
+    Ok(options)
 }
 
 #[allow(
@@ -242,6 +275,15 @@ pub(crate) fn from_env() -> Result<Arc<Engine>, String> {
 }
 
 /// Every value converted and run through its setter on a fresh builder.
+fn request_bytes(value: Option<i64>) -> Result<Option<usize>, RowError> {
+    value
+        .map(|value| {
+            usize::try_from(value)
+                .map_err(|_| RowError::usage("max_request_bytes is a whole number of at least 1"))
+        })
+        .transpose()
+}
+
 fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
     let refused = RowError::from;
     let mut builder = EngineBuilder::from_env().map_err(refused)?;
@@ -263,6 +305,10 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
         })
         .transpose()?;
     builder = builder.max_requests(most).map_err(refused)?;
+    let bytes = request_bytes(asked.max_request_bytes)?;
+    if let Some(bytes) = bytes {
+        builder = builder.max_request_bytes(bytes).map_err(refused)?;
+    }
     if let Some(folder) = &asked.cache {
         builder = if folder == "off" {
             builder.no_cache()
@@ -314,6 +360,7 @@ fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
         (
             throttle,
             most,
+            bytes,
             asked.cache.clone(),
             asked.model.clone(),
             timeout,

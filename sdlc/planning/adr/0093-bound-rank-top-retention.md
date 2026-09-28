@@ -1,0 +1,19 @@
+# ADR 0093: Bound rank top retention
+
+Status: accepted by fresh independent design review at `52f0864b` with [ticket 0220](../../tickets/0220-bound-rank-top-retention.md). Date: 2026-09-28. This amends the settled retention and `jobs` prose in [rank.md](../../../specification/rank.md) and [records.md](../../../specification/records.md) with the built candidate. Ian can overturn the outcome.
+
+## Problem
+
+`rank --top N` prints only N records but `cli/schedule.rs::Output` retains every scored row, then makes whole-run odds and place vectors to sort them. The current engine scheduler's `held` mode admits another request whenever fewer than `jobs` requests are in flight. If the first batch waits while later batches finish, `Run.pending` can also keep completed rows without a file-length bound. Settled rank prose says every record must be held for a final order, and records prose promises a `jobs`-row buffer for every command. Neither describes this distinction accurately.
+
+## Decision
+
+With `--top N`, keep at most N scored output rows after each ordered callback. Keep higher probabilities first using the existing `f64::total_cmp` order; an exact later tie never replaces an earlier row. A private record-flow value distinguishes streaming, held-all, and held-windowed. Held-windowed retains rank's held-output failure metadata but bounds un-emitted dispatched batches by the existing `dispatched - next < jobs` window. The 64-record feed, at-most-4,096-member open batch, worker requests, batch result and split halves remain bounded staging. A row's own bytes and N selected rows can still be large; this is no fixed RSS limit. Rank without `--top` keeps its all-row accumulation and current held-all dispatch. No planner, request shape, digest rule, public option or library API changes.
+
+For a completed finite input with stable batch boundaries, every eligible record is judged, and rank top keeps the same request plan, bodies, digests and count, sorted stdout, stable ties, detailed rows and accounting. Concurrent arrival order is not fixed. A bounded window may prevent speculative sends before failure or cancellation. On a timed pipe it may also move a 50 ms pause cut and therefore change batch identities or a replay miss. Keep the existing failure kind and exit, accurate stopped-at/finished/replayed metadata for work actually done, no rank stdout on stop, and per-attempt retry/413 rules. Do not promise equal speculative sends, counters or timed batch cuts across modes.
+
+When the accepted build updates the settled pages, `rank.md` must distinguish uncut rank's all-row hold from top-N winners plus bounded staging and retain the upstream-window advice for endless streams, which never produce a final order. `records.md` must replace its universal `jobs`-row/flat-memory sentence: streaming output holds at most `jobs` outstanding *batches*, not rows; uncut rank may retain all scores and later completions behind a stalled earliest batch; rank top holds N winning output rows and at most `jobs` un-emitted batches, plus the separate bounded feed and open batch. Its `jobs` parity sentence must scope exact completed output and request-plan parity to finite inputs with stable batch boundaries. Stopped or timed runs keep their contract form and actual counts, not identical speculative work or pause cuts. Preserve other commands' accepted ordering rules.
+
+## Proof and limit
+
+Use ticket 0220's literal top/tie/failure edge table, a private post-callback N-row invariant, and one acknowledged stalled-first-batch backpressure witness through the existing loopback helper. Review the sink and scheduler source invariant together; finite tests cannot prove process RSS or every thread interleaving. No provider, full gate, load campaign or test-only product hook is needed. The separate register 45 guidance has landed; merge the shared page only after the final runtime claim and preserve its ordering/timeout text.

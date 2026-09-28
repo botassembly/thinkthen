@@ -19,10 +19,11 @@ test('an engine starts from the environment: THINKTHEN_CACHE holds its answers',
   mkdirSync(scratch);
   const { value } = await ask(backend, `
     const engine = new tt.Engine({ throttle: 4, baseUrl: ${JSON.stringify(backend.base())} });
-    return [await engine.decide('Refund?', 'same'), await engine.decide('Refund?', 'same')];`,
+    return [(await engine.decide('Refund?', 'same')).value, (await engine.decide('Refund?', 'same')).value];`,
   { env: { THINKTHEN_CACHE: folderA, HOME: scratch, XDG_CACHE_HOME: scratch } });
   assert.deepEqual(value, [true, true]);
   assert.equal(await backend.count(), 1);
+  assert.equal((await ask(backend, `return new tt.Engine({ cache: false }).usage();`)).value.retries, 0);
   assert.equal(files(folderA).length, 1, 'the answer lands in folder A');
   assert.deepEqual(readdirSync(scratch), [], 'nothing lands under the scratch cache home');
 });
@@ -34,9 +35,9 @@ test('baseUrl and a named cache override their setting', async (t) => {
   const { value } = await ask(first, `
     const out = {};
     // A cache folder belongs to one backend address, so this engine keeps none.
-    out.second = await new tt.Engine({ baseUrl: ${JSON.stringify(second.base())}, cache: false }).decide('Refund?', 'elsewhere');
+    out.second = (await new tt.Engine({ baseUrl: ${JSON.stringify(second.base())}, cache: false }).decide('Refund?', 'elsewhere')).value;
     const named = new tt.Engine({ cache: ${JSON.stringify(folder)} });
-    out.named = [await named.decide('Refund?', 'kept'), await named.decide('Refund?', 'kept')];
+    out.named = [(await named.decide('Refund?', 'kept')).value, (await named.decide('Refund?', 'kept')).value];
     return out;`);
   assert.deepEqual(value, {
     second: true,
@@ -51,7 +52,7 @@ test('a refused setting throws usage from the constructor and sends nothing', as
   const backend = await startBackend(t);
   const { value } = await ask(backend, `
     const out = [];
-    for (const options of [{ timeoutSeconds: 0 }, { maxRetries: 1.5 }, { throttle: 33 }, { throttle: '4' }, { nope: 1 }, { cache: true }, 'fast']) {
+    for (const options of [{ timeoutSeconds: 0 }, { maxRetries: 1.5 }, { maxRequestBytes: 0 }, { throttle: 33 }, { throttle: '4' }, { nope: 1 }, { cache: true }, 'fast']) {
       try { new tt.Engine(options); out.push('built'); } catch (error) { out.push([error.name, error.kind, error.message]); }
     }
     return out;`);
@@ -59,6 +60,7 @@ test('a refused setting throws usage from the constructor and sends nothing', as
   assert.deepEqual(value, [
     usage('a timeout is a time above zero'),
     usage('options.maxRetries is a whole number'),
+    usage('max_request_bytes is a whole number of at least 1'),
     usage('a throttle is a whole number from 1 through 32'),
     usage('options.throttle is a whole number'),
     usage('new Engine takes no option nope'),
@@ -68,6 +70,20 @@ test('a refused setting throws usage from the constructor and sends nothing', as
   assert.equal(await backend.count(), 0);
 });
 
+test('an explicit engine batch outranks an invalid environment batch', async (t) => {
+  const backend = await startBackend(t);
+  const { value, error } = await ask(backend, `
+    const engine = new tt.Engine({ batch: 1, cache: false });
+    const first = await engine.decide_many('Refund?', ['one', 'two']);
+    const second = await engine.decide_many('Refund?', ['three', 'four'], { batch: 'max' });
+    return { first, second };`, { env: { THINKTHEN_BATCH: 'invalid' } });
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.deepEqual(value.first.value, [true, true]);
+  assert.equal(value.first.facts.requests_sent, 2);
+  assert.equal(value.second.facts.requests_sent, 1);
+  assert.equal(await backend.count(), 3);
+});
+
 test('the first explicit throttle holds for the process and the default engine', async (t) => {
   const backend = await startBackend(t);
   const run = child(backend, `
@@ -75,7 +91,7 @@ test('the first explicit throttle holds for the process and the default engine',
     let second;
     try { new tt.Engine({ throttle: 8 }); } catch (error) { second = error.message; }
     line(second);
-    return Promise.all([0, 1, 2, 3, 4].map((at) => tt.decide('Refund?', 'held ' + at)));`, { arm: 'arm/held' });
+    return Promise.all([0, 1, 2, 3, 4].map(async (at) => (await tt.decide('Refund?', 'held ' + at)).value));`, { arm: 'arm/held' });
   assert.equal(await backend.wait(4), 4);
   await sleep(300);
   assert.equal(await backend.count(), 4, 'the module-level calls follow throttle 4');

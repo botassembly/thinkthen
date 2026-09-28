@@ -20,6 +20,7 @@ use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 mod ceiling;
 mod choose;
 mod context;
+mod tag_score;
 mod tiers;
 mod too_large;
 mod warning;
@@ -225,7 +226,7 @@ fn replay_answers_every_batch() {
         (
             Some(concat!(
                 "thinkthen: stopped at record 1; the request for records 1 to 5 failed: ",
-                "the replay folder holds no entry"
+                "the decide request: the replay folder holds no entry"
             )),
             concat!(
                 "; the entry name covers the backend interface, address, and request; ",

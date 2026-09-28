@@ -163,3 +163,19 @@ Done when: the six files exist on main, and the repository settings are filled.
 - A published skill file that teaches an agent the verbs, the exit codes, and `--dry-run`.
 
 Two launch items belong to neither issue and stay with their own open issues: the cap on questions in one request (`closed/2026-09-20-packing-rows-into-one-request-measured.md`) and the `interface-audit.md` refresh (`2026-09-25-docs-how-tos-and-spec-claims-owed.md`).
+
+## Distribution decision input (2026-09-28, from the language-port program)
+
+Registries to add for the language ports, grounded in the nine consumer-proof experiments:
+
+- **NuGet** — C# wrapper. Can carry per-platform natives via runtime identifiers, matching the thin-wrapper + native-archive model.
+- **Packagist** — PHP wrapper. Auto-publishes from a GitHub tag via webhook; near-zero setup.
+- **Maven Central** — one artifact for Java, Kotlin, and Scala. Namespace verification and GPG signing required; JitPack is a workable stopgap that builds from GitHub tags with no registration.
+
+No new registry needed elsewhere: Go publishes by pushing a tag (proxy.golang.org and pkg.go.dev index it automatically); Zig depends by URL (`build.zig.zon`), so GitHub is the registry; SwiftPM installs from a GitHub tag, with an optional Swift Package Index listing; Ada can join Alire later if asked; no registry exists for COBOL, and CocoaPods fits Apple-platform Objective-C, not the GNU/Linux port.
+
+Base for all eleven languages: a README per language under `libraries/<lang>/` plus GitHub Releases assets (per-platform native archives and wrapper sources). The website install path and every registry entry point at the same release assets; registry entries wrap the thin wrapper and reference the native archive rather than embedding engine builds. Ian's one-time account setup is tracked in his to-dos (`notes/todos/2026-09-28-register-thinkthen-on-nuget-packagist-maven-central.md`).
+
+Dart addition (2026-09-28, Ian): a Dart/Flutter port joins the program (local experiment 300) and publishes through **pub.dev**, which replaces the "no registry needed" answer for that language: trusted publishing links the package to this GitHub repository, or a token secret carries the release job. Iconography for all consumer languages now sits in the mktg deck library (mktg `qf-language-icons`); showing the new marks in the Beatles bench deck is tracked in Ian's to-dos.
+
+JVM namespace ruling (2026-09-28, Ian): the Maven Central artifact uses `io.github.botassembly`, verified by a marker file in this repository. Ian's one-time account steps stay in his registration to-do.

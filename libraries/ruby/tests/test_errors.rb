@@ -85,12 +85,12 @@ class TestErrors < Minitest::Test
   def test_result_values_print_no_caller_text
     lines, count = TestBackend.run(<<~RUBY)
       require "pp"
-      found = T.recognize("x MARK-Ana", kinds: %w[MARK-kind])
+      found = T.recognize("x MARK-Ana", kinds: %w[MARK-kind]).value
       first, last = found.entities
       relation = T::Relation.new("knows", first, last, 0.5)
       values = [relation, T::Recognized.new(found.entities, [relation]), found,
-                T.relate([%w[MARK-Ana MARK-kind], %w[MARK-Bo MARK-kind]], relations: %w[knows]).first,
-                T.rank("Is it urgent?", %w[MARK-one]).first, T.find("Which?", %w[MARK-one MARK-two]), T::Found.new]
+                T.relate([%w[MARK-Ana MARK-kind], %w[MARK-Bo MARK-kind]], relations: %w[knows]).value.first,
+                T.rank("Is it urgent?", %w[MARK-one]).value.first, T.find("Which?", %w[MARK-one MARK-two]).value, T::Found.new]
       say values.map(&:inspect)
       say values.flat_map { |value| [value.pretty_inspect.chomp, *([value.to_s, "\#{value}"] unless value.is_a?(T::Ranked))] }.grep(/MARK/)
     RUBY

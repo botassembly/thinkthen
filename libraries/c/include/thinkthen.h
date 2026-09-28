@@ -38,8 +38,10 @@
  * The failure rule: a nonzero return leaves every out parameter holding
  * what it held before the call, and `thinkthen_error_code`,
  * `thinkthen_error_message`, and `thinkthen_error_retryable` name the
- * failure. Nothing partial is delivered: a cancelled or deadline-expired
- * bulk call returns its code with no rows. With a null engine, the three
+ * failure. `thinkthen_error_facts_json` names final facts when the failed
+ * call started; it is NULL for a pre-call refusal. Nothing partial is
+ * delivered: a cancelled or deadline-expired
+ * bulk call returns its code with no rows. With a null engine, the error accessors
  * name the calling thread's last failed `thinkthen_engine_new` until that
  * thread's next engine builds.
  *
@@ -242,11 +244,14 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  *
  * A request names one verb of the ten: `decide`, `choose`, `score`, `tag`,
  * `filter`, `rank`, `find`, `annotate`, `recognize`, or `relate`. Beside
- * the verb the door reads five keys of its own: `evidence` (one text, for
+ * the verb the door reads six keys of its own: `evidence` (one text, for
  * `decide`, `choose`, `score`, `tag`, and `recognize`), `records` (an
- * array, for `filter`, `rank`, `annotate`, and `relate`), `units` (an
- * array, for `find`), `details` (true or false, for the four single
- * judgments), and `usage` (true, alone, for the counters). Every other
+ * array for the four judgments, `filter`, `rank`, `annotate`, and `relate`),
+ * `units` (an array for `find`), `details` (true or false for the four
+ * judgments), `usage` (true, alone, for the counters), and `call` (a closed
+ * object for eligible record arrays). `call.batch` is `"max"` or a positive
+ * integer; `call.context` is nonblank shared text for supported text records.
+ * Every other
  * key forms the question object, in the question file's own grammar, so
  * `{"choose": "Which team?", "options": ["billing", "other"],
  * "evidence": "..."}` asks one choose question. `filter` asks its text as
@@ -256,23 +261,32 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * part of each record as JSON text; `recognize` and `relate` carry
  * `version` and their section beside the verb.
  *
- * The answer is the bare value the command prints: `true`, `false`, or
+ * A successful asking call returns `{"value":VALUE,"facts":FACTS}`.
+ * VALUE is the old bare answer: `true`, `false`, or
  * `null` for decide; a label or `null` for choose; a number for score; an
  * array of labels for tag; an array of the kept records for filter; an
  * array of every record, most likely yes first, for rank; the selected
  * unit or `null` for find; an array of one object a record for annotate;
  * `{"entities": [...], "relations": [...]}` for recognize; and
- * `{"edges": [...]}` for relate. `"details": true` answers the command's
- * `--details` line instead. `{"usage": true}` answers this process's
- * counters as `{"requests_sent": N, "input_tokens": N, "output_tokens":
+ * `{"edges": [...]}` for relate. The four judgments also accept `records`,
+ * whose VALUE is an ordered answer array. `"details": true` makes VALUE the
+ * command's `--details` object or an array of full record-detail objects.
+ * FACTS holds this call's records, sends, cache answers, seconds, and optional
+ * provider tokens and model. `{"usage": true}` remains this process's direct
+ * counters as `{"requests_sent": N, "retries": N, "input_tokens": N, "output_tokens":
  * N, "cache_answers": N}` and takes no options.
  *
- * Returns NULL on failure; `thinkthen_error_code` and
+ * Returns NULL on failure, with no partial value; `thinkthen_error_code` and
  * `thinkthen_error_message` name what failed and
  * `thinkthen_error_retryable` says whether the same call could pass
- * later. */
+ * later. `thinkthen_error_facts_json` reads final started-failure facts. */
 char *thinkthen_call_opts(const thinkthen_engine *engine, const char *request_json,
                           int64_t deadline_ms, thinkthen_cancel_token *cancel);
+
+/* Borrow the calling thread's last failed call's facts on this engine, or NULL
+ * when no failure with started-call facts exists. The pointer has the same
+ * lifetime as thinkthen_error_message and must not be freed. */
+const char *thinkthen_error_facts_json(const thinkthen_engine *engine);
 
 /* Find every name in one text, and the relations the rules allow: exactly
  * `thinkthen_recognize_opts` with THINKTHEN_NO_DEADLINE and a null

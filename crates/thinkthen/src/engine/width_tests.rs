@@ -1,7 +1,7 @@
 //! Process width proofs: selection, the attempt gate, and its transitions.
 //! The command setup and combined-path proofs live beside the command.
 
-use std::io::{ErrorKind, Read as _, Write as _};
+use std::io::ErrorKind;
 use std::net::TcpListener;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
@@ -9,6 +9,8 @@ use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
 use std::{fs, io};
+
+use conformance_backend::{Canned, Listener};
 
 use crate::core::{Backend, Evidence, ModelName, Plan, Question, QuestionText};
 use crate::engine::backoff;
@@ -314,44 +316,25 @@ fn a_deadline_spent_behind_a_full_gate_sends_nothing_and_holds_nothing() {
     drop(full);
 }
 
-fn busy(wait_ms: u64) -> String {
-    format!(
-        "HTTP/1.1 503 Busy\r\nretry-after-ms: {wait_ms}\r\nConnection: close\r\nContent-Length: 0\r\n\r\n"
-    )
-}
-
-fn answer(body: &str) -> String {
-    format!(
-        "HTTP/1.1 200 OK\r\nConnection: close\r\nContent-Length: {}\r\n\r\n{body}",
-        body.len()
-    )
-}
-
-/// Serve these raw responses in order, one per connection, and announce each.
-fn serving(responses: Vec<String>) -> (String, Receiver<()>) {
-    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
-    let url = format!(
-        "http://{}/v1/systemone",
-        listener.local_addr().expect("address")
-    );
+/// Serve one reply per connection and announce after each response write.
+fn serving(responses: Vec<Canned>) -> (Listener, Receiver<()>) {
     let (answered, served) = channel();
-    thread::spawn(move || {
-        for response in responses {
-            let (mut stream, _) = listener.accept().expect("request");
-            let mut request = [0_u8; 4096];
-            let _read = stream.read(&mut request).expect("request bytes");
-            stream.write_all(response.as_bytes()).expect("response");
-            let _observed = answered.send(());
-        }
-    });
-    (url, served)
+    let responses = responses
+        .into_iter()
+        .map(|response| response.notifying(answered.clone()))
+        .collect();
+    (Listener::serving(responses).expect("listener"), served)
 }
 
 #[test]
 fn a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one() {
     let widths = widths();
     assert_eq!(widths.select(Some(width(1))), Ok(width(1)));
-    let (url, busy) = serving(vec![busy(600), answer("{}")]);
+    let (listener, busy) = serving(vec![
+        Canned::status(503, "").asking("retry-after-ms", "600"),
+        Canned::ok("{}"),
+    ]);
+    let url = listener.url().to_owned();
     let attempts = AtomicUsize::new(0);
     let during_attempts = AtomicUsize::new(0);
 
@@ -385,6 +368,7 @@ fn a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one() {
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
     assert_eq!(during_attempts.load(Ordering::SeqCst), 1);
     assert_eq!(widths.active(), 0);
+    assert_eq!(listener.connections(), 2);
 }
 
 #[test]
@@ -453,15 +437,18 @@ fn a_replayed_answer_takes_no_permit() -> io::Result<()> {
     let folder =
         std::env::temp_dir().join(format!("thinkthen-width-replay-{}", std::process::id()));
     let _absent = fs::remove_dir_all(&folder);
-    let (url, _served) = serving(vec![answer(
+    let (listener, _served) = serving(vec![Canned::ok(
         r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
     )]);
+    let url = listener.url().to_owned();
     let open = widths();
     let recording = Recorder::of(Some(&folder), None).expect("recorder");
     assert!(matches!(
         ask(&url, &recording, open, &Cancel::default()),
         Ok(false)
     ));
+    assert_eq!(listener.connections(), 1);
+    drop(listener);
 
     let full = widths();
     assert_eq!(full.select(Some(width(1))), Ok(width(1)));

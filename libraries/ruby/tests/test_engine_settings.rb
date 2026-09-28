@@ -19,7 +19,7 @@ class TestEngineSettings < Minitest::Test
       2.times { engine.decide("Is it urgent?", "the same text") }
       say engine.usage
     RUBY
-      assert_equal({ "requests_sent" => 1, "cache_answers" => 1, "input_tokens" => 0, "output_tokens" => 0 }, child.hear)
+      assert_equal({ "requests_sent" => 1, "retries" => 0, "cache_answers" => 1, "input_tokens" => 0, "output_tokens" => 0 }, child.hear)
       status, errors = child.finish
       assert status.success?, errors
       assert_equal 1, backend.count
@@ -30,7 +30,7 @@ class TestEngineSettings < Minitest::Test
 
   def test_the_throttle_holds_exactly_that_many_requests_in_flight
     TestBackend.with(<<~RUBY, arm: "arm/held") do |backend, child|
-      say T::Engine.new(throttle: 8).decide_many("Is it urgent?", (1..20).map { |n| "record \#{n}" }).size
+      say T::Engine.new(throttle: 8, batch: 2).decide_many("Is it urgent?", (1..20).map { |n| "record \#{n}" }).value.size
     RUBY
       assert_equal 8, backend.wait(8)
       sleep 0.3
@@ -45,7 +45,7 @@ class TestEngineSettings < Minitest::Test
   def test_bad_settings_refuse_before_any_request
     lines, count = TestBackend.run(<<~RUBY)
       [{ throttle: 33 }, { throttle: 0 }, { throttle: true }, { throttle: 1.5 }, { max_requests: "2" },
-       { timeout: 0 }, { timeout: "30" }, { replay: 7 }, { cache: 3 }, { base_url: 7 }].each do |settings|
+       { max_request_bytes: 0 }, { timeout: 0 }, { timeout: "30" }, { replay: 7 }, { cache: 3 }, { base_url: 7 }].each do |settings|
         T::Engine.new(**settings)
         say "built"
       rescue T::UsageError => e
@@ -54,7 +54,7 @@ class TestEngineSettings < Minitest::Test
     RUBY
     assert_equal ["a throttle is a whole number from 1 through 32", "a throttle is a whole number from 1 through 32",
                   "throttle is a whole number or nil", "throttle is a whole number or nil",
-                  "max_requests is a whole number or nil", "a timeout is a time above zero",
+                  "max_requests is a whole number or nil", "max_request_bytes is a whole number of at least 1", "a timeout is a time above zero",
                   "timeout is a whole number or nil", "replay is text or nil",
                   "cache is a folder path, false for none, or nil for the default", "base_url is text or nil"], lines
     assert_equal 0, count

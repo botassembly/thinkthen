@@ -28,7 +28,7 @@ pub(crate) struct FindArguments {
 }
 
 /// The shared options that apply to one aggregate `find` request.
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct FindCommon {
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]
@@ -68,9 +68,13 @@ pub(crate) struct FindCommon {
         help = format!("The model named in the request. [default: {DEFAULT_MODEL}]")
     )]
     pub(crate) model: Option<String>,
-    /// Write the completed exchange into DIR.
+    /// Call the backend for every request, then write its exchange into DIR.
     ///
-    /// An explicit recording folder suppresses the platform default cache.
+    /// A held request is sent again and may be billed again. A different fresh
+    /// answer exits 5 without printing it; the old entry stays. Use --cache
+    /// DIR to reuse held answers, or record into a new empty folder for a
+    /// deliberate fresh run. An explicit recording folder suppresses the
+    /// platform default cache.
     #[arg(long, value_name = "DIR", hide_short_help = true)]
     pub(crate) record: Option<PathBuf>,
     /// Answer from DIR alone.
@@ -89,6 +93,9 @@ pub(crate) struct FindCommon {
     /// --record or --replay folder.
     #[arg(long, conflicts_with = "cache")]
     pub(crate) no_cache: bool,
+    /// Send the requested exchange live and replace its complete cache entry.
+    #[arg(long, conflicts_with_all = ["record", "replay", "no_cache"], hide_short_help = true)]
+    pub(crate) refresh_cache: bool,
     /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(
         long,
@@ -122,6 +129,7 @@ impl FindCommon {
             replay: self.replay.clone(),
             cache: self.cache.clone(),
             no_cache: self.no_cache,
+            refresh_cache: self.refresh_cache,
             timeout: self.timeout,
             jobs: None,
             max_retries: self.max_retries,

@@ -90,7 +90,7 @@ The schema is structural; agreement with it is not agreement with this page. The
 | The evidence | `--field POINTER` | `on` | The whole record | Anything that is not RFC 6901, or that holds a control character: `a pointer is one line of printable text`. A refusal writes the pointer with JSON escapes |
 | The model | `--model NAME` | `model` | `jev-1.13.0` | Empty or only white space |
 | The threshold's calibration identity | none | `profile` | absent | Anything outside lowercase letters, digits, hyphens, and underscores |
-| The batch setting of a `decide` or `choose` file. Not built yet, by ADR 0048 item 7: on `tag` and `score` files | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
+| The batch setting of a top-level `decide`, `choose`, `tag`, or `score` file | `--batch N` | `batch` | `max` | 0, a fraction, and any text but `max` |
 
 Nothing has a default where a guess would hide a mistake. `choose` with no options in either home is a usage error, and so is `score` with no levels.
 
@@ -100,7 +100,9 @@ Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.
 
 A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead. `--model` beside a file that names a model is the explicit way to run that file on another model.
 
-`--batch` replaces the file's `batch`. On `decide`, `filter`, `rank`, and `choose` over a stream, `batch` takes four tiers: `--batch`, then `THINKTHEN_BATCH`, then the file's `batch`, then `max`. Only a per-call value counts as typed. The read-only configuration file holds no `batch` key. The file's `batch` stays out of the digest. On one document `--batch` is a usage error, and `THINKTHEN_BATCH` and the file's `batch` are ignored. A bad `--batch` or `THINKTHEN_BATCH` exits 2, and a bad file `batch` exits 5. A file with a threshold was tuned at its saved `batch`, or at 1 if it has no `batch`. A record run at another setting warns once and adds `meta.batch_warning` to detailed rows. A file without a threshold has no tuned-for setting. `audit --write` records a batched setting when it writes a threshold and never writes 1; a bar tuned at 1 leaves `batch` absent and warns at the batched default. A library engine setting and a SQL `SET` join the environment tier, and a question set carries at most one top-level `batch`. Every other setting keeps the ruling above.
+`--batch` replaces the file's `batch`. On `decide`, `filter`, `rank`, `choose`, `tag`, and `score` over a stream, `batch` takes four tiers: `--batch`, then `THINKTHEN_BATCH`, then the file's `batch`, then `max`. Only a per-call value counts as typed. The read-only configuration file holds no `batch` key. The file's `batch` stays out of the digest. On one document `--batch` is a usage error, and `THINKTHEN_BATCH` and the file's `batch` are ignored. A bad `--batch` or `THINKTHEN_BATCH` exits 2, and a bad file `batch` exits 5. A file with a threshold was tuned at its saved `batch`, or at 1 if it has no `batch`. A record run at another setting warns once and adds `meta.batch_warning` to detailed rows. A file without a threshold has no tuned-for setting. `audit --write` records a batched setting when it writes a threshold and never writes 1; a bar tuned at 1 leaves `batch` absent and warns at the batched default. A library engine setting and a SQL `SET` join the environment tier, and a question set carries at most one top-level `batch`. For CLI `annotate` record streams, the tiers are typed `--batch`, `THINKTHEN_BATCH`, top-level set `batch`, then `max`. That set key stays out of `questions_sha256`; each nested `questions.NAME.batch` remains invalid. Every other setting keeps the ruling above.
+
+The C JSON door keeps the top-level question-file `batch` as the saved calibration tier. Its separate `"call":{"batch":N}` or `"call":{"batch":"max"}` controls one eligible record call and outranks the engine and environment tier. `call.context` supplies nonblank shared evidence for that call; it changes the request digest, not the saved question digest. Unsupported scalar and structured routes refuse these controls before sending.
 
 A list typed beside `@FILE` replaces the file's whole list and never merges with it. That covers the options of `choose`, the labels of `tag`, and the levels of `score`. A typed list carries no descriptions, so replacing a described list drops every description the file held.
 
@@ -125,6 +127,8 @@ A run with no question file prints no `from` object, because every setting came 
 Each single-question `--details` row carries `meta.question_sha256`. It names the exact question that produced the row, so two runs that asked almost the same thing cannot be mistaken for one. The same question gives the same digest whether it was typed or read from a file, and any override shows up as a different digest. An `annotate --details` row instead carries `meta.questions_sha256` for its resolved question set, as described below.
 
 The digest is the SHA-256 of the canonical form below, written as 64 lowercase hexadecimal figures. A saved `profile` follows `threshold` in that form and changes the digest. Selecting `--profile FILE` does not.
+
+The command, public Rust API, language libraries, and SQL details forms keep that saved name when they parse the same question. A runtime backend profile applies limits but does not change the question digest. A surface that cannot keep a saved name in a grouped or text-only call refuses the call before sending.
 
 ### The canonical form
 

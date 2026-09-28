@@ -177,8 +177,9 @@ pub(crate) fn choose(arguments: &ChooseArguments) -> Result<(Resolved, FileTier)
 }
 
 /// Settle everything `tag` was asked.
-pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
-    let file = read_top(&arguments.question)?.0;
+pub(crate) fn tag(arguments: &TagArguments) -> Result<(Resolved, FileTier), Failure> {
+    let (file, batch) = read_top(&arguments.question)?;
+    let tuned = file.as_ref().is_some_and(QuestionFile::has_threshold);
     let listed = !arguments.labels.is_empty();
     let described = !arguments.described.is_empty();
     if listed && described {
@@ -211,17 +212,18 @@ pub(crate) fn tag(arguments: &TagArguments) -> Result<Resolved, Failure> {
         on: fields(&arguments.common),
         ..Typed::default()
     };
-    Ok(resolve(
+    let settled = resolve(
         Verb::Tag,
         typed_text(&arguments.question, file.is_some()),
         file.as_ref(),
         &typed,
-    )?)
+    )?;
+    Ok((settled, FileTier { batch, tuned }))
 }
 
 /// Settle everything `score` was asked.
-pub(crate) fn score(arguments: &ScoreArguments) -> Result<Resolved, Failure> {
-    let file = read_top(&arguments.question)?.0;
+pub(crate) fn score(arguments: &ScoreArguments) -> Result<(Resolved, FileTier), Failure> {
+    let (file, batch) = read_top(&arguments.question)?;
     let typed = Typed {
         // `score` takes no rule, and the core writes that refusal, so the
         // value reaches it rather than being refused twice.
@@ -237,12 +239,19 @@ pub(crate) fn score(arguments: &ScoreArguments) -> Result<Resolved, Failure> {
         on: fields(&arguments.common),
         ..Typed::default()
     };
-    Ok(resolve(
+    let settled = resolve(
         Verb::Score,
         typed_text(&arguments.question, file.is_some()),
         file.as_ref(),
         &typed,
-    )?)
+    )?;
+    Ok((
+        settled,
+        FileTier {
+            batch,
+            tuned: false,
+        },
+    ))
 }
 
 /// Split one `--option` entry at its first `=`.
