@@ -29,8 +29,9 @@ use crate::engine::{Cancel, Width};
 pub(crate) use crate::engine::annotate_schedule::{
     InputPort as GroupPort, Outcome as GroupOutcome, Prepared,
 };
-pub(crate) use crate::engine::http::Key;
+pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
+pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
@@ -89,6 +90,7 @@ pub(crate) struct Engine {
     /// The explicit width or `None`, applied again in each process.
     width: Option<Width>,
     storage: Storage,
+    roots: Option<Roots>,
     usage_path: Option<PathBuf>,
     recording: bool,
     state: Arc<Guarded<State>>,
@@ -126,8 +128,20 @@ impl Engine {
         Self::built_by(settings, std::process::id())
     }
 
+    /// The same engine with parsed replacement trust roots.
+    pub(crate) fn with_roots(settings: Settings, roots: Option<Roots>) -> Result<Self, Error> {
+        match roots {
+            Some(roots) => Self::built_with_roots(settings, std::process::id(), Some(roots)),
+            None => Self::new(settings),
+        }
+    }
+
     /// Build this engine's state as process `pid`, which then owns it.
     fn built_by(settings: Settings, pid: u32) -> Result<Self, Error> {
+        Self::built_with_roots(settings, pid, None)
+    }
+
+    fn built_with_roots(settings: Settings, pid: u32, roots: Option<Roots>) -> Result<Self, Error> {
         let mut engine = Self {
             usage_path: settings.usage.path().map(PathBuf::from),
             backend: settings.backend,
@@ -138,6 +152,7 @@ impl Engine {
             key: settings.key,
             width: settings.width,
             storage: settings.storage,
+            roots,
             recording: false,
             state: Arc::new(Guarded::empty()),
         };
@@ -163,7 +178,12 @@ impl Engine {
         let widths = crate::engine::process_width_of(pid, cancel)?;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
         Ok(State {
-            client: Client::new(self.timeout, self.backend.is_secure(), widths),
+            client: match self.roots.as_ref() {
+                Some(roots) => {
+                    Client::with_roots(self.timeout, self.backend.is_secure(), widths, Some(roots))
+                }
+                None => Client::new(self.timeout, self.backend.is_secure(), widths),
+            },
             recorder,
             usage,
             width,

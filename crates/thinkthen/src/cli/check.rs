@@ -32,19 +32,23 @@ pub(crate) fn run(
     let asked = arguments.model.as_deref().or_else(|| environment.model());
     let backend = Backend::resolve(Some(url), None, asked.unwrap_or(DEFAULT_MODEL))?;
     environment.check_key(&backend)?;
+    let roots = environment.roots()?;
     let probes =
         check::probes(backend.model()).ok_or(Failure::Defect("a check probe no longer parses"))?;
-    let engine = Engine::new(Settings {
-        backend,
-        profile: None,
-        timeout: Duration::from_secs(arguments.timeout),
-        max_retries: MAX_RETRIES,
-        retry_wait: environment.retry_wait(),
-        width: None,
-        storage: Storage::default(),
-        key: environment.key_reader(),
-        usage: environment.counters(),
-    })?;
+    let engine = Engine::with_roots(
+        Settings {
+            backend,
+            profile: None,
+            timeout: Duration::from_secs(arguments.timeout),
+            max_retries: MAX_RETRIES,
+            retry_wait: environment.retry_wait(),
+            width: None,
+            storage: Storage::default(),
+            key: environment.key_reader(),
+            usage: environment.counters(),
+        },
+        roots,
+    )?;
     let mut lines = vec![
         format!("url {}", engine.backend().url().as_str()),
         format!("provider {}", check::PROVIDER),
