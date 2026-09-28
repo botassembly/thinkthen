@@ -6,7 +6,7 @@ opens: sdlc/tickets/0229-identify-unused-fixture-entries.md sdlc/records/0229-un
 
 # 0229: Report unused entries in an explicit recording folder
 
-Status: technical design ACCEPT at `97abffa6` by fresh independent Medium reviewer `/root/unused_fixture_design_review`; Ian approved `cache unused DIR --used DIGESTS` with a complete caller-supplied list in the work plan. Owner: Codex. The [preflight](../records/0229-unused-fixture-preflight.md) refreshes the boundaries against landed 0238 and 0242. Runtime awaits exact source claims. The coordinator owns source claims and register closure.
+Status: **Accepted for implementation.** Independent Medium design review accepted `97abffa6`; Ian approved the public command and complete caller-supplied manifest in the work plan. Current preparation `e976be74` and the restored shared policy boundary support the exact runtime claims now recorded in the Lanes table. Product completion still requires code review and functional proof.
 
 ## Outcome and authority
 
