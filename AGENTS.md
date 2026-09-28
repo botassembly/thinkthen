@@ -6,7 +6,7 @@ Read `README.md`, `specification/README.md`, and `sdlc/planning/rust-standards.m
 
 - Red-green development: see the stated failure, pass it, then clean up. Before landing, turn scaffold tests into outside-in CLI/API, edge-table, contract, or prior-failing regression tests, or delete them. Review checks this.
 - Build simply: YAGNI, DRY, local behavior, separate concerns. A command or option enters only when a demo needs it.
-- The gate ladder is `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused format, lint, and functional checks per change; full integration at the related-ticket batch checkpoint. Run repeated load, churn, timing, and contention only through `test-stress --run`; retain full functional cases in `test-full-cases --run`.
+- The gate ladder is `sdlc/scripts/{install,lint,test,spec,surfaces}`. Run focused format, lint and functional checks per change. The coordinator names the related-ticket checkpoint before a full test, spec or surfaces run. Run load, churn, timing and contention only through `test-stress --run`; retain all functional cases in `test-full-cases --run`.
 - `sdlc/ratchet.json` equals the measured source total. A raised ceiling records growth, why it earns its lines, and where duplication was sought for deletion.
 - A second agent reviews raised ceilings, wider public surfaces, and dependencies, naming what it checked.
 - A ticket that turns a demo green writes its page in ADR 0011's how-to form, and `sdlc/scripts/demos` checks it.
