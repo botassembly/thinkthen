@@ -11,7 +11,10 @@ use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop, guarded};
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
-use crate::public::results::{self, Answer, Call, Counters, Details};
+use crate::public::results::{
+    self, Answer, Call, Counters, Details, ObservedQuestion, ObservedRow, QuestionDetail,
+    RecordObservation,
+};
 use crate::public::settings::EngineBuilder;
 
 /// One engine: its settings, its connection pool, its cache, and its counters.
@@ -352,9 +355,25 @@ impl Engine {
         let engine = self.asking(question)?;
         let stop = Stop::begin(options)?;
         stop.run_call(1, |cancel| {
-            engine
+            let judged = engine
                 .judge(&question.core, question.threshold, evidence, cancel)
-                .map_err(Error::from)
+                .map_err(Error::from)?;
+            if stop.observing() {
+                let details = Details::of(&judged, question, engine.backend(), engine.profile())?;
+                let observed = ObservedQuestion::from_details(&details);
+                stop.observe(RecordObservation::Question {
+                    index: 0,
+                    member: None,
+                    stage: None,
+                    position: 0,
+                    detail: QuestionDetail::of(&observed),
+                });
+                stop.observe(RecordObservation::Row {
+                    index: 0,
+                    value: ObservedRow::Judgment(details.value()),
+                });
+            }
+            Ok(judged)
         })
     }
 }

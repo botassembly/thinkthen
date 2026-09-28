@@ -2,6 +2,9 @@
 
 use std::sync::Arc;
 
+mod observation;
+use observation::observe_find;
+
 use crate::core::{self, Find, Plan, Value, ranking};
 use crate::engine::facade::{self, Completed};
 use crate::public::annotated::AnnotatedRecord;
@@ -356,8 +359,12 @@ impl Engine {
                 })
             })?;
         let stop = Stop::begin(options)?;
-        stop.run_call(1, |cancel| engine.find(&find, cancel).map_err(Error::from))?
-            .try_map(|found| Found::new(units, none, &found))
+        stop.run_call(1, |cancel| {
+            let found = engine.find(&find, cancel).map_err(Error::from)?;
+            observe_find(&stop, &engine, question, &find, &found)?;
+            Ok(found)
+        })?
+        .try_map(|found| Found::new(units, none, &found))
     }
 
     /// Each record with every value of the set, lazily, in input order. A
@@ -440,6 +447,7 @@ impl Engine {
             self.most,
             question.core.clone(),
             question.threshold,
+            question.profile.clone(),
             setting,
             context,
             pair,

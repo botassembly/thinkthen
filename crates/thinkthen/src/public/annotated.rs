@@ -138,7 +138,7 @@ pub enum FailureCause {
     UnexpectedProbability,
 }
 
-const fn cause(cause: BackendFailureCause) -> FailureCause {
+pub(crate) const fn cause(cause: BackendFailureCause) -> FailureCause {
     match cause {
         BackendFailureCause::MissingAnswer => FailureCause::MissingAnswer,
         BackendFailureCause::WrongKind => FailureCause::WrongKind,

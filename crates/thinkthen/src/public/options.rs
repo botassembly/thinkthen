@@ -1,6 +1,7 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
 mod budget;
+mod observer;
 
 pub(crate) use budget::SendReservation;
 pub use budget::{SendBudget, SendBudgetDenial};
@@ -16,7 +17,9 @@ use std::time::{Duration, Instant};
 
 use crate::engine::{CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
-use crate::public::results::{Call, Facts};
+use crate::public::results::{Call, Facts, RecordObservation};
+
+type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
 
 /// How many records one model request may contain.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -104,6 +107,7 @@ pub struct CallOptions<'a> {
     send_budget: Option<(&'a SendBudget, Option<u64>)>,
     batch: Option<BatchSetting>,
     context: Option<&'a str>,
+    observer: Option<Observer<'a>>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -116,6 +120,7 @@ impl fmt::Debug for CallOptions<'_> {
             .field("send_budget", &self.send_budget.is_some())
             .field("batch", &self.batch)
             .field("context", &self.context.is_some())
+            .field("observer", &self.observer.is_some())
             .finish()
     }
 }
@@ -131,6 +136,7 @@ impl<'a> CallOptions<'a> {
             send_budget: None,
             batch: None,
             context: None,
+            observer: None,
         }
     }
 
@@ -160,6 +166,17 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn context(mut self, value: &'a str) -> Self {
         self.context = Some(value);
+        self
+    }
+
+    /// Observe each completed logical question and row on this caller thread.
+    /// Borrowed detail remains valid only during the callback.
+    #[must_use]
+    pub const fn observe(
+        mut self,
+        observer: &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync),
+    ) -> Self {
+        self.observer = Some(observer);
         self
     }
 
@@ -273,6 +290,7 @@ pub(crate) struct Stop<'a> {
     facts: CallFacts,
     token: Option<&'a CancelToken>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
+    observer: Option<Observer<'a>>,
     panic: Mutex<Option<Box<dyn Any + Send>>>,
 }
 
@@ -293,6 +311,7 @@ impl<'a> Stop<'a> {
             facts,
             token: options.cancel,
             check: options.check,
+            observer: options.observer,
             panic: Mutex::new(None),
         };
         if stop.token.is_some_and(CancelToken::is_cancelled) {
