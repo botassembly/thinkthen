@@ -1,6 +1,6 @@
 # 0216 annotate batching build
 
-Status: offline code accepted by independent High review at `efa2cd9e` and integrated on main. The separately reviewed helper passed its one authorized recorded comparison. Its measured outcome awaits independent evidence review. B10 and its S1 exception stay open.
+Status: offline code accepted at `efa2cd9e`; the one recorded comparison at `c61654d4` passed independent evidence review. The B10 completion candidate removes only annotate's S1 list exception and retains its function workload. Coordinator landing remains.
 
 ## Build and retained behavior
 
@@ -19,7 +19,7 @@ Ian accepted ADR 0092 before this build. A detailed record-mode row carries opti
 
 The shared coordinator already packed group requests for the public library, so the CLI needed profile slices and a feeder rather than a second scheduler. The first feeder could return `End` while a later closed row waited behind the oldest frontier. A profile listener exposed a successful exit that printed only row one of two. Waiting for the frontier and draining all closed work before `End` fixed that loss. A 413 second-half failure also needed to name the first unfinished member, not the parent batch's first member. The focused split-stop case pins that correction. Legacy stream fixtures originally assumed one request per row; making their `--batch 1` input explicit retained their purpose and kept their assertions. The public consumer still passes after the planner extension. The root's wildcard-import policy check exposed an inherited test import in the group helper; the exact import replaced it without changing assertions.
 
-The reviewed paid comparison is still needed to close B10 and remove annotate's S1 exception. It must use a pinned two-question yes/no and pick-one set over the keyed 182-case cohort, with separate batch-one and default arms, actual attempts, token usage, accuracy and cost. No such measurement is inferred from these loopback tests.
+At the offline-code checkpoint, the paid comparison was still needed to close B10 and remove annotate's S1 exception. The later recorded section below supplies that proof; no provider result was inferred from these loopback tests.
 
 ## Recorded comparison helper and offline plan
 
@@ -57,8 +57,18 @@ The single named job ran through `sdlc/scripts/live --max-tokens 750000 probes/a
 
 Across both arms, the job sent 367 attempts and reported 211,980 input plus 88,945 output tokens. On this one cohort, default used 361 fewer requests and 87,249 fewer reported combined tokens than batch one. Its decide score rose by 18 and album score by 22 correct answers. These are observed paired task results, not an accuracy gate or a general guarantee. The wall times show this run only; batch one's 762-second duration and default's 1-second duration do not establish a stable speed ratio. At the admitted **historical** input price of $0.042 per million with free output, the reported input corresponds to $0.00626657 for batch one, $0.00263659 for default, and $0.00890316 together. This is not a newly verified current vendor bill. Refused requests could have unreported cost in other runs even though this run observed none.
 
-The durable evidence is in ignored `target/annotate-batching/b10-0216-f950e4ae/`. Its `started.json`, `progress.jsonl`, and `complete.json` frame the one job. Each arm's `started.json`, raw `stdout.jsonl`, `stderr.txt`, raw before/after status and final facts, `completion.json`, `validated.json`, and `recording/` retain the comparison without committing the private selected input or replies. Do not repeat this name. Independent evidence review must accept the outcome before B10 closes or annotate leaves S1's exception.
+The durable evidence is in ignored `target/annotate-batching/b10-0216-f950e4ae/`. Its `started.json`, `progress.jsonl`, and `complete.json` frame the one job. Each arm's `started.json`, raw `stdout.jsonl`, `stderr.txt`, raw before/after status and final facts, `completion.json`, `validated.json`, and `recording/` retain the comparison without committing the private selected input or replies. Do not repeat this name. Independent evidence review accepted this outcome at `c61654d4`; annotate can leave S1's exception while its workload stays.
 
 ### What the recorded run taught us
 
 The two independent `on` groups stayed distinct in the recorded bodies and answers. The default question slices closed in one decide request and two album requests, exactly as the full-cohort loopback had planned. Reported input fell more than output on this set; the historical price calculation therefore follows the measured input field rather than the wrapper reservation. The durable arm boundary made the long singleton phase and the short default phase reviewable without repeating either paid arm.
+
+## Independent evidence review and B10 scope
+
+The fresh read-only reviewer accepted `c61654d4` after independently recomputing the 182 ordered inputs and truth, question set and binary digests, answer-to-group identities, exact saved request bodies and recording digests, row token shares, status deltas, final facts and per-question accuracy. It found one completed named job, two arm progress entries, zero retries and cache answers, and no evidence of a duplicate run. The coordinator independently checked that the live ledger moved by the single authorized 750,000-token reservation to 11,109,709 remaining. The reviewer recommended B10 closure. This candidate removes only annotate's `list` exception from `probes/speed/functions.jsonl` and keeps its record workload and gate floor. S1's broader live size, context and timing measurements remain separate.
+
+The focused `speed.rs` test runs `probes/speed/measure.py gate` against its existing generic loopback backend. Its committed gate passed after annotate left the list, but an old planted fault still tried to change choose's `number:null`, removed by B8. With the coordinator's exact file claim, that one fault plant now uses recognize's still-listed row and retains the same landed-ticket refusal assertion. The focused target then passed. No speed workload, floor, gate rule, or product runtime changed in this correction.
+
+### What final evidence review taught us
+
+A successful helper run still needed independent checks that its selected truth, saved bodies and token arithmetic were real. That review found no mismatch. Keeping the B10 exception separate from the S1 workload lets the gate continue testing the landed batching behavior without claiming the broader speed campaign is complete.
