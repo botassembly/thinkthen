@@ -1,15 +1,43 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
+mod budget;
+mod observer;
+
+pub(crate) use budget::SendReservation;
+pub use budget::{SendBudget, SendBudgetDenial};
+
 use std::any::Any;
 use std::fmt;
+use std::num::NonZeroUsize;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::Arc;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
-use crate::engine::{Cancel, Deadline};
+use crate::engine::{CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
+use crate::public::results::{Call, Facts, RecordObservation};
+
+type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
+
+/// How many records one model request may contain.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum BatchSetting {
+    /// Fill each request to its applicable limits.
+    Max,
+    /// Close a request after this many records at most.
+    Records(NonZeroUsize),
+}
+
+impl From<BatchSetting> for crate::core::batch::Setting {
+    fn from(value: BatchSetting) -> Self {
+        match value {
+            BatchSetting::Max => Self::Max,
+            BatchSetting::Records(count) => Self::Records(count),
+        }
+    }
+}
 
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
 const MOST_SECONDS: u64 = 4_294_967_295;
@@ -76,6 +104,10 @@ pub struct CallOptions<'a> {
     cancel: Option<&'a CancelToken>,
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
+    send_budget: Option<(&'a SendBudget, Option<u64>)>,
+    batch: Option<BatchSetting>,
+    context: Option<&'a str>,
+    observer: Option<Observer<'a>>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -85,6 +117,10 @@ impl fmt::Debug for CallOptions<'_> {
             .field("cancel", &self.cancel)
             .field("deadline", &self.due)
             .field("interrupt", &self.check.is_some())
+            .field("send_budget", &self.send_budget.is_some())
+            .field("batch", &self.batch)
+            .field("context", &self.context.is_some())
+            .field("observer", &self.observer.is_some())
             .finish()
     }
 }
@@ -97,6 +133,10 @@ impl<'a> CallOptions<'a> {
             cancel: None,
             due: None,
             check: None,
+            send_budget: None,
+            batch: None,
+            context: None,
+            observer: None,
         }
     }
 
@@ -105,6 +145,55 @@ impl<'a> CallOptions<'a> {
     pub const fn cancel(mut self, value: &'a CancelToken) -> Self {
         self.cancel = Some(value);
         self
+    }
+
+    /// Share a process send counter and apply this call's optional total.
+    /// A cache or strict replay answer uses no reservation.
+    #[must_use]
+    pub const fn send_budget(mut self, value: &'a SendBudget, limit: Option<u64>) -> Self {
+        self.send_budget = Some((value, limit));
+        self
+    }
+
+    /// Select the number of records one eligible many-record request holds.
+    #[must_use]
+    pub const fn batch(mut self, setting: BatchSetting) -> Self {
+        self.batch = Some(setting);
+        self
+    }
+
+    /// Share nonblank text as context for an eligible many-record request.
+    #[must_use]
+    pub const fn context(mut self, value: &'a str) -> Self {
+        self.context = Some(value);
+        self
+    }
+
+    /// Observe each completed logical question and row on this caller thread.
+    /// Borrowed detail remains valid only during the callback.
+    #[must_use]
+    pub const fn observe(
+        mut self,
+        observer: &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync),
+    ) -> Self {
+        self.observer = Some(observer);
+        self
+    }
+
+    pub(crate) const fn batch_setting(&self) -> Option<BatchSetting> {
+        self.batch
+    }
+
+    pub(crate) const fn context_text(&self) -> Option<&'a str> {
+        self.context
+    }
+
+    pub(crate) fn without_context(&self, call: &str) -> Result<(), Error> {
+        self.context.map_or(Ok(()), |_| {
+            Err(Error::usage(format!(
+                "{call} does not take a shared context"
+            )))
+        })
     }
 
     /// Stop the call at this instant. A past instant sends nothing.
@@ -206,20 +295,31 @@ impl<'a> CallOptions<'a> {
 /// token and check, and a check's panic held until the call has joined.
 pub(crate) struct Stop<'a> {
     base: Cancel<'static>,
+    facts: CallFacts,
     token: Option<&'a CancelToken>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
+    observer: Option<Observer<'a>>,
     panic: Mutex<Option<Box<dyn Any + Send>>>,
 }
 
 impl<'a> Stop<'a> {
     /// Fix the deadline and refuse a call whose token already fired.
     pub(crate) fn begin(options: CallOptions<'a>) -> Result<Self, Error> {
+        let facts = CallFacts::new();
         let stop = Self {
             base: Cancel::default()
                 .with_deadline(options.deadline()?)
-                .with_token(options.cancel.map(CancelToken::flag)),
+                .with_token(options.cancel.map(CancelToken::flag))
+                .with_send_budget(
+                    options
+                        .send_budget
+                        .map(|(budget, limit)| (budget.clone(), limit)),
+                )
+                .with_facts(facts.clone()),
+            facts,
             token: options.cancel,
             check: options.check,
+            observer: options.observer,
             panic: Mutex::new(None),
         };
         if stop.token.is_some_and(CancelToken::is_cancelled) {
@@ -248,12 +348,14 @@ impl<'a> Stop<'a> {
         let Some(check) = self.check else {
             return false;
         };
-        catch_unwind(AssertUnwindSafe(check)).unwrap_or_else(|payload| {
-            if let Ok(mut held) = self.panic.lock() {
-                held.get_or_insert(payload);
-            }
-            true
-        })
+        workers::with_host_diagnostics(|| catch_unwind(AssertUnwindSafe(check))).unwrap_or_else(
+            |payload| {
+                if let Ok(mut held) = self.panic.lock() {
+                    held.get_or_insert(payload);
+                }
+                true
+            },
+        )
     }
 
     /// Run one engine call on this thread with the caller's controls polled
@@ -269,9 +371,26 @@ impl<'a> Stop<'a> {
         self.finish(result)
     }
 
+    /// Run an eager call, then retain its final receipts on success or failure.
+    pub(crate) fn run_call<T>(
+        &self,
+        records: usize,
+        call: impl FnOnce(&Cancel<'_>) -> Result<T, Error>,
+    ) -> Result<Call<T>, Error> {
+        let result = self.run(call);
+        if result.is_ok() {
+            self.facts.finished_records(records);
+        }
+        let facts = Facts::of(self.facts.snapshot());
+        result
+            .map(|value| Call::new(value, facts.clone()))
+            .map_err(|error| error.with_facts(facts))
+    }
+
     /// Resume a check's panic, once every worker of the call has joined, then
     /// return the call's result, or cancellation when the token has fired.
     pub(crate) fn finish<T>(&self, result: Result<T, Error>) -> Result<T, Error> {
+        self.facts.finish();
         let held = self.panic.lock().ok().and_then(|mut held| held.take());
         if let Some(payload) = held {
             resume_unwind(payload);
@@ -281,11 +400,15 @@ impl<'a> Stop<'a> {
         }
         result
     }
+
+    pub(crate) fn facts(&self) -> Facts {
+        Facts::of(self.facts.snapshot())
+    }
 }
 
 /// Run one engine call and turn any panic below the door into a defect.
 pub(crate) fn guarded<T>(call: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
-    catch_unwind(AssertUnwindSafe(call))
+    catch_unwind(AssertUnwindSafe(|| workers::with_engine_diagnostics(call)))
         .unwrap_or_else(|_| Err(Error::defect("the engine panicked below the public door")))
 }
 
@@ -295,25 +418,137 @@ impl fmt::Debug for Stop<'_> {
     }
 }
 
-/// R1-10 has no real seam: no input makes the engine panic, and the owner's
-/// ruling removed the private fault hook. This row holds the one door every
-/// public call passes, so dropping its guard turns it red.
+/// The private child exercises diagnostic and worker boundaries that no
+/// ordinary input can force. The public API has no fault hook.
 #[cfg(test)]
 mod tests {
-    use std::panic::resume_unwind;
+    use std::panic::{AssertUnwindSafe, catch_unwind, panic_any};
+    use std::process::Command;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicBool, Ordering};
+    use std::sync::mpsc;
 
-    use super::guarded;
+    use super::{CallOptions, Stop, guarded};
+    use crate::engine::{Cancel, workers};
     use crate::public::error::{Error, ErrorKind};
 
+    fn wait_for_host_check(held: mpsc::Receiver<()>, joined: Arc<AtomicBool>) {
+        held.recv().expect("host check releases worker");
+        joined.store(true, Ordering::Release);
+    }
+
     #[test]
-    fn a_panic_below_the_door_is_a_defect_and_the_next_call_runs() {
-        let panicked: Result<(), Error> = guarded(|| resume_unwind(Box::new("engine fault")));
-        let error = panicked.err();
-        assert_eq!(error.as_ref().map(Error::kind), Some(ErrorKind::Defect));
+    fn diagnostic_boundary_child() {
+        if std::env::var_os("THINKTHEN_TEST_DIAGNOSTIC_CHILD").is_none() {
+            return;
+        }
+        std::panic::set_hook(Box::new(|info| {
+            let message = info
+                .payload()
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+                .unwrap_or("unknown panic");
+            let _written = std::io::Write::write_all(
+                &mut std::io::stderr(),
+                format!("prior hook: {message}\n").as_bytes(),
+            );
+        }));
+
+        let worker: Result<(), Error> = guarded(|| {
+            workers::on_worker(&Cancel::default(), || {
+                panic_any("worker key evidence secret")
+            });
+            Ok(())
+        });
+        let error = worker.expect_err("worker panic becomes a defect");
+        assert_eq!(error.kind(), ErrorKind::Defect);
+        assert!(!error.retryable());
         assert_eq!(
-            error.map(|error| error.to_string()).as_deref(),
-            Some("defect: the engine panicked below the public door")
+            error.to_string(),
+            "defect: the engine panicked below the public door"
         );
+
+        let scoped: Result<(), Error> = guarded(|| {
+            let (results, _received) = mpsc::channel::<()>();
+            workers::scoped_observed(
+                1,
+                results,
+                &|_: ()| (),
+                &|| panic_any("scoped key evidence secret"),
+                |queue| {
+                    let _sent = queue.send(());
+                },
+            );
+            Ok(())
+        });
+        let error = scoped.expect_err("scoped worker panic becomes a defect");
+        assert_eq!(error.kind(), ErrorKind::Defect);
+        assert!(!error.retryable());
+
+        let (release, held) = mpsc::channel();
+        let joined = Arc::new(AtomicBool::new(false));
+        let check = || -> bool {
+            let _sent = release.send(());
+            panic_any("host stop marker");
+        };
+        let stop = Stop::begin(CallOptions::new().interrupt(&check)).expect("valid stop");
+        let joined_worker = Arc::clone(&joined);
+        let resumed = catch_unwind(AssertUnwindSafe(|| {
+            let _: Result<(), Error> = stop.run(|cancel| {
+                workers::on_worker(cancel, move || wait_for_host_check(held, joined_worker));
+                Ok(())
+            });
+        }))
+        .expect_err("host check panic resumes");
+        assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host stop marker"));
+        assert!(joined.load(Ordering::Acquire));
+
+        let (release, held) = mpsc::channel();
+        let joined = Arc::new(AtomicBool::new(false));
+        let check = || -> bool {
+            let _sent = release.send(());
+            panic_any("host cancel marker");
+        };
+        let cancel = Cancel::default().with_check(&check);
+        let joined_worker = Arc::clone(&joined);
+        let resumed = catch_unwind(AssertUnwindSafe(|| {
+            workers::with_engine_diagnostics(|| {
+                workers::on_worker(&cancel, move || wait_for_host_check(held, joined_worker));
+            });
+        }))
+        .expect_err("direct host check panic resumes");
+        assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host cancel marker"));
+        assert!(joined.load(Ordering::Acquire));
+
+        let _unrelated = std::thread::spawn(|| panic_any("unrelated host marker")).join();
         assert_eq!(guarded(|| Ok(7)).ok(), Some(7));
+    }
+
+    #[test]
+    fn engine_diagnostics_hide_worker_payloads_and_preserve_host_hook() {
+        let output = Command::new(std::env::current_exe().expect("test binary"))
+            .args([
+                "--exact",
+                "public::options::tests::diagnostic_boundary_child",
+                "--nocapture",
+            ])
+            .env("THINKTHEN_TEST_DIAGNOSTIC_CHILD", "1")
+            .output()
+            .expect("run diagnostic child");
+        assert!(
+            output.status.success(),
+            "diagnostic child failed: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        for stream in [&*stdout, &*stderr] {
+            assert!(!stream.contains("worker key evidence secret"));
+            assert!(!stream.contains("scoped key evidence secret"));
+        }
+        assert!(stderr.contains("prior hook: host stop marker"));
+        assert!(stderr.contains("prior hook: host cancel marker"));
+        assert!(stderr.contains("prior hook: unrelated host marker"));
     }
 }

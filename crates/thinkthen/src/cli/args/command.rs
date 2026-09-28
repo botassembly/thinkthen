@@ -80,9 +80,10 @@ pub(crate) enum Command {
     /// The printed order puts the most likely yes first. An exact tie keeps
     /// input order. `rank` never runs a tournament.
     ///
-    /// It holds every record until the input ends, because a final order needs
-    /// the whole set, so an endless stream is cut into windows upstream.
-    /// `--top N` prints the first N of the order and saves no request.
+    /// It prints only after the input ends. Without `--top`, it holds every
+    /// scored record; with `--top N`, it keeps N winners and bounded work in
+    /// flight. Cut an endless stream into windows upstream. Every record is
+    /// still judged, so `--top` saves no request on a completed input.
     ///
     /// `rank` orders and never selects. A floor is `filter` in front of it. With
     /// no framing flag it reads lines, or JSON Lines when a pointer is given by
@@ -289,6 +290,9 @@ pub(crate) enum CacheCommand {
 pub(crate) struct PruneArguments {
     /// The cache or recording folder to maintain.
     pub(crate) directory: PathBuf,
+    /// Show selected names and allocated bytes without changing the folder.
+    #[arg(long)]
+    pub(crate) dry_run: bool,
     /// Trim to this many allocated bytes. Without it, the configuration's
     /// cache_bytes applies, or 100000000.
     #[arg(long, value_name = "BYTES")]
@@ -400,7 +404,7 @@ pub(crate) struct StatusArguments {
     pub(crate) json: bool,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args)]
 pub(crate) struct CheckArguments {
     /// The base the requests are posted under, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
@@ -411,7 +415,20 @@ pub(crate) struct CheckArguments {
     /// Seconds from 1 to 86400 that bound one attempt from connect to last byte, and each retry wait.
     #[arg(long, value_name = "SECONDS", default_value_t = 30)]
     pub(crate) timeout: u64,
-    /// Print the four request bodies and stop. No key is read and nothing is sent.
+    /// Print the four request bodies and stop. An optional key is checked
+    /// against the address; no key is required and nothing is sent.
     #[arg(long)]
     pub(crate) dry_run: bool,
+}
+
+impl std::fmt::Debug for CheckArguments {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        formatter
+            .debug_struct("CheckArguments")
+            .field("url", &self.url.as_ref().map(|_| "<withheld>"))
+            .field("model", &self.model)
+            .field("timeout", &self.timeout)
+            .field("dry_run", &self.dry_run)
+            .finish()
+    }
 }

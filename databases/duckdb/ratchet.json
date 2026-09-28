@@ -1,7 +1,8 @@
 {
   "directory": [
-    "src"
+    "src",
+    "bridge/src"
   ],
   "extension": ".rs",
-  "max": 4078
+  "max": 5755
 }

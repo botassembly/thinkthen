@@ -9,12 +9,14 @@ use crate::core::{ModelName, Reading, Record};
 use crate::engine::facade::{
     GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
 };
-use crate::failure::Failure;
+use crate::failure::{Failure, ReplayContext};
 use crate::schedule::{Judged, Output, Placed};
 
 struct Work {
     group: PreparedGroup,
     at: usize,
+    ordinal: usize,
+    members: usize,
 }
 
 struct Answers {
@@ -48,9 +50,13 @@ where
         },
         |input| prepare(judging, reading, input),
         &|work: Work| {
-            judging
-                .answer_group(work.group)
-                .map_err(|error| Placed::at(error, work.at))
+            judging.answer_group(work.group).map_err(|error| {
+                let source = ReplayContext::AnnotateGroup {
+                    ordinal: work.ordinal,
+                    members: work.members,
+                };
+                Placed::at(error.with_replay_context(source), work.at)
+            })
         },
         |answers, answer| {
             let model = answer.model.as_ref().ok_or_else(|| {
@@ -108,10 +114,17 @@ fn prepare(
     let work = judging
         .groups()
         .into_iter()
-        .map(|places| {
+        .enumerate()
+        .map(|(index, places)| {
+            let members = places.len();
             judging
                 .prepare_group(reading, &record, places)
-                .map(|group| Work { group, at })
+                .map(|group| Work {
+                    group,
+                    at,
+                    ordinal: index + 1,
+                    members,
+                })
         })
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| Placed::at(error, at))?;

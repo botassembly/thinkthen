@@ -41,6 +41,10 @@ pub(crate) enum Kind {
 pub(crate) enum Error {
     Transport(TransportKind),
     Status(u16),
+    /// A process send total refused the first live attempt.
+    SendBudgetFirst,
+    /// A process send total refused retrying this status.
+    SendBudgetRetry(u16),
     /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
     TokenLimit,
     /// The reply passed its request's limit of this many bytes and was not kept.
@@ -121,6 +125,7 @@ impl Error {
         match self {
             Self::Transport(_)
             | Self::Status(_)
+            | Self::SendBudgetRetry(_)
             | Self::TokenLimit
             | Self::ReplyTooLarge(_)
             | Self::Reply(_)
@@ -138,6 +143,7 @@ impl Error {
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_)
+            | Self::SendBudgetFirst
             | Self::ProfileLimit(_)
             | Self::NoKey(_)
             | Self::WidthActive(_)

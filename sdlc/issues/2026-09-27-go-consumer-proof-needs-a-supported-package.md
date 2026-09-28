@@ -43,3 +43,7 @@ Host: Ubuntu 24.04.3 LTS, kernel 6.17.0-35-generic, glibc 2.39, x86_64. Go 1.22.
 ## CI and release direction (Ian, 2026-09-27)
 
 Each port must state its dependencies and how they were installed, and the product must also build and release on GitHub Actions `ubuntu-24.04` runners (pin Go 1.22; Rust toolchain for the native rebuild), publish native archives through GitHub Releases, and let consumers install directly or through the Go module path. The queue owner owns the workflow, release, and publishing tickets; nothing is published from the experiments.
+
+## Post-J1 re-pin pass (2026-09-28, pin 6dbdf03f)
+
+The accepted four-consumer gate passed unchanged in every behavioral assertion at the post-J1 pin (39 receipts, exact 47-arrival multisets per consumer, strict held scalar 5 / bulk 5 / deadline 3 with recovery, direct-C proofs). One mechanical adaptation: the ABI preflight now expects twenty exports for `thinkthen_engine_new_with`, which the Go wrapper still does not bind — that stays with the J8 ticket. One drift finding filed separately: recognition relation-pair request shape changed (see `2026-09-28-recognition-relation-requests-changed-shape-on-main.md`). Evidence: local experiment 274, `post-j1/POST-J1-REPORT.md`.

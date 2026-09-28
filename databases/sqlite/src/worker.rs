@@ -31,13 +31,34 @@ pub(crate) fn run<T: Send + 'static>(
     deadline: Option<i64>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
+    run_with(db, deadline, None, work)
+}
+
+/// Keep a warm aggregate's deadline fixed across its separate chunk workers.
+pub(crate) fn run_until<T: Send + 'static>(
+    db: *mut sqlite3,
+    deadline: Option<Instant>,
+    work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
+) -> Result<T, Failure> {
+    run_with(db, None, deadline, work)
+}
+
+fn run_with<T: Send + 'static>(
+    db: *mut sqlite3,
+    deadline: Option<i64>,
+    absolute: Option<Instant>,
+    work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
+) -> Result<T, Failure> {
     let due = budget::remaining(db)?.map(|(_, due)| due);
     let engine = settings::engine()?;
     settings::remaining()?;
+    let (send_budget, total) = settings::send_budget();
     let token = CancelToken::new();
     let theirs = token.clone();
     let (answers, _detached) = spawn(move || {
-        let mut options = CallOptions::new().cancel(&theirs);
+        let mut options = CallOptions::new()
+            .cancel(&theirs)
+            .send_budget(send_budget, total);
         let left = due
             .map(|due| {
                 let left = due.checked_duration_since(Instant::now()).ok_or_else(|| {
@@ -61,11 +82,17 @@ pub(crate) fn run<T: Send + 'static>(
             (_, Some(budget)) => Some(budget),
             (call, None) => call,
         };
-        if let Some(millis) = deadline {
+        if let Some(at) = absolute {
+            options = options.deadline_at(due.map_or(at, |connection| at.min(connection)));
+        } else if let Some(millis) = deadline {
             options = options.deadline_millis(millis)?;
         }
         work(engine, options)
     })?;
+    let due = match (due, absolute) {
+        (Some(connection), Some(call)) => Some(connection.min(call)),
+        (connection, call) => connection.or(call),
+    };
     wait(&answers, &token, || ffi::interrupted(db), due)
 }
 
@@ -127,6 +154,7 @@ fn wait<T>(
 
 #[cfg(test)]
 mod tests {
+    use std::io::Write;
     use std::sync::mpsc::channel;
     use std::thread;
     use std::time::Duration;
@@ -134,7 +162,102 @@ mod tests {
     use thinkthen::{CancelToken, ErrorKind};
 
     use super::{spawn, wait};
-    use crate::Failure;
+    use crate::{Failure, guard};
+
+    const CHILD: &str = "THINKTHEN_TEST_SQLITE_PANIC_CHILD";
+    const STRING_MARKER: &str = "sqlite-owned-string-payload-marker";
+    const DROP_MARKER: &str = "sqlite-owned-drop-payload-marker";
+
+    struct Exploding;
+
+    impl Drop for Exploding {
+        fn drop(&mut self) {
+            panic!("{DROP_MARKER}");
+        }
+    }
+
+    #[test]
+    fn caught_callback_and_worker_payloads_stay_out_of_diagnostics() {
+        if std::env::var_os(CHILD).is_some() {
+            native_panic_child();
+        } else {
+            let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+                .args([
+                    "--exact",
+                    "worker::tests::caught_callback_and_worker_payloads_stay_out_of_diagnostics",
+                    "--nocapture",
+                ])
+                .env(CHILD, "1")
+                .output()
+                .expect("isolated SQLite proof");
+            assert!(
+                output.status.success(),
+                "{}",
+                String::from_utf8_lossy(&output.stdout)
+            );
+            for stream in [&output.stdout, &output.stderr] {
+                let text = String::from_utf8_lossy(stream);
+                assert!(!text.contains(STRING_MARKER), "{text}");
+                assert!(!text.contains(DROP_MARKER), "{text}");
+            }
+            assert_eq!(
+                String::from_utf8_lossy(&output.stderr),
+                "host-thread-marker\n"
+            );
+        }
+    }
+
+    fn native_panic_child() {
+        std::panic::set_hook(Box::new(|info| {
+            let text = info
+                .payload()
+                .downcast_ref::<&str>()
+                .copied()
+                .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+                .unwrap_or(if info.payload().is::<Exploding>() {
+                    DROP_MARKER
+                } else {
+                    "other panic"
+                });
+            let _ = std::io::stderr().write_all(format!("{text}\n").as_bytes());
+        }));
+        let callback = guard("scalar", || -> Result<(), Failure> {
+            panic!("{STRING_MARKER}")
+        });
+        let failure = callback.expect_err("caught callback");
+        assert_eq!(
+            (failure.kind, failure.retryable),
+            (ErrorKind::Defect, false)
+        );
+        assert_eq!(
+            rusqlite::Error::from(failure).to_string(),
+            "thinkthen defect: a panic crossed the SQLite boundary"
+        );
+        let (answers, handle) =
+            spawn(|| -> Result<(), Failure> { std::panic::panic_any(Exploding) })
+                .expect("worker started");
+        let failure = answers
+            .recv_timeout(Duration::from_secs(2))
+            .expect("worker answered")
+            .expect_err("caught worker");
+        assert_eq!(
+            (failure.kind, failure.retryable),
+            (ErrorKind::Defect, false)
+        );
+        assert_eq!(
+            rusqlite::Error::from(failure).to_string(),
+            "thinkthen defect: a panic crossed the SQLite boundary"
+        );
+        assert!(handle.join().is_ok(), "no secondary unwind on the worker");
+        assert_eq!(guard("scalar", || Ok(7)).ok(), Some(7));
+        let (answers, handle) = spawn(|| Ok(8)).expect("later worker started");
+        let later = answers
+            .recv_timeout(Duration::from_secs(2))
+            .expect("later answer");
+        assert_eq!(later.expect("later worker succeeded"), 8);
+        assert!(handle.join().is_ok());
+        let _ = thread::spawn(|| panic!("host-thread-marker")).join();
+    }
 
     /// A worker that answers after its caller left sends into a closed
     /// channel. It must end quietly, and the caller must hear `cancelled`.

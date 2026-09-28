@@ -11,6 +11,7 @@ use pyo3::types::{PyBool, PyDict, PyInt, PyString};
 use thinkthen::{CallOptions, CancelToken};
 
 use crate::asked::{Entity, RecognizedEntity};
+use crate::diagnostics::{host, host_error, host_owned};
 use crate::worker::{Controls, Token};
 use crate::{raised, usage};
 
@@ -26,7 +27,7 @@ pub(crate) const DEADLINE: &str =
 pub(crate) fn top(value: &Bound<'_, PyAny>) -> PyResult<String> {
     let mut first = None;
     for kind in value.get_type().mro() {
-        let module = kind.getattr("__module__")?.str()?;
+        let module = host_owned(host(|| kind.getattr("__module__")?.str())?);
         let top = module.to_str()?.split('.').next().unwrap_or_default();
         if top == "pandas" {
             return Ok(top.to_owned());
@@ -43,7 +44,7 @@ pub(crate) fn refuse_container(value: &Bound<'_, PyAny>) -> PyResult<()> {
     if matches!(top(value)?.as_str(), "pandas" | "polars" | "pyarrow")
         || arrow
             .iter()
-            .any(|name| value.hasattr(*name).unwrap_or(false))
+            .any(|name| host(|| value.hasattr(*name).unwrap_or(false)))
     {
         return Err(usage(value.py(), ARROW));
     }
@@ -67,13 +68,13 @@ impl Pandas {
 pub(crate) fn is_column(value: &Bound<'_, PyAny>) -> PyResult<bool> {
     Ok(value.is_instance_of::<Pandas>()
         || top(value)? == "pandas"
-        || value.hasattr("__arrow_c_stream__")?
-        || value.hasattr("__arrow_c_array__")?)
+        || host(|| value.hasattr("__arrow_c_stream__"))?
+        || host(|| value.hasattr("__arrow_c_array__"))?)
 }
 
 /// A Polars frame, or a refusal before any request (decision 4).
 pub(crate) fn polars_frame(value: &Bound<'_, PyAny>, verb: &str) -> PyResult<()> {
-    if top(value)? != "polars" || !value.hasattr("__arrow_c_stream__")? {
+    if top(value)? != "polars" || !host(|| value.hasattr("__arrow_c_stream__"))? {
         return Err(usage(
             value.py(),
             &format!(
@@ -89,13 +90,30 @@ fn string(value: &Bound<'_, PyAny>, what: &str) -> PyResult<Option<String>> {
     let Ok(text) = value.cast::<PyString>() else {
         return Ok(None);
     };
-    let text = text.to_str().map_err(|_| {
+    let text = host_error(text.to_str(), || {
         usage(
             value.py(),
             &format!("{what} holds a lone surrogate, which is not Unicode text"),
         )
     })?;
     Ok(Some(text.to_owned()))
+}
+
+/// One dict member's conversion and final Python reference release.
+fn entity_field(
+    fields: &Bound<'_, PyDict>,
+    key: &str,
+    refused: impl Fn() -> PyErr,
+) -> PyResult<Option<String>> {
+    let found = host_error(host(|| fields.get_item(key)), &refused)?;
+    match found {
+        Some(value) => {
+            let read = host_error(host(|| value.extract()), refused);
+            host(|| drop(value));
+            read.map(Some)
+        }
+        None => Ok(None),
+    }
 }
 
 /// The evidence of a single call.
@@ -120,15 +138,15 @@ pub(crate) fn texts(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
 /// Every text of an iterable, with no container check (a marked pandas Series).
 pub(crate) fn listed(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
     let py = records.py();
-    let items = records.try_iter().map_err(|_| {
+    let mut items = host_owned(host_error(host(|| records.try_iter()), || {
         usage(
             py,
             "the records are a list, tuple, or other iterable of str",
         )
-    })?;
+    })?);
     let mut read = Vec::new();
-    for (index, item) in items.enumerate() {
-        let item = item?;
+    for (index, item) in std::iter::from_fn(|| host(|| items.next())).enumerate() {
+        let item = host_owned(item?);
         let what = format!("record {index}");
         read.push(string(&item, &what)?.ok_or_else(|| usage(py, &format!("{what} is not a str")))?);
     }
@@ -140,12 +158,12 @@ pub(crate) fn listed(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
 pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Entity>> {
     let py = values.py();
     refuse_container(values)?;
-    let items = values
-        .try_iter()
-        .map_err(|_| usage(py, "the entities are a list of (name, kind) pairs"))?;
+    let mut items = host_owned(host_error(host(|| values.try_iter()), || {
+        usage(py, "the entities are a list of (name, kind) pairs")
+    })?);
     let mut read = Vec::new();
-    for (index, item) in items.enumerate() {
-        let item = item?;
+    for (index, item) in std::iter::from_fn(|| host(|| items.next())).enumerate() {
+        let item = host_owned(item?);
         let refused = || {
             usage(
                 py,
@@ -162,19 +180,16 @@ pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Ent
             (entity.text.clone(), entity.kind.clone())
         } else if let Ok(fields) = item.cast::<PyDict>() {
             // A name `recognize` found carries `text` in place of `name`.
-            let field = |key: &str| -> PyResult<Option<String>> {
-                fields
-                    .get_item(key)?
-                    .map(|value| value.extract().map_err(|_| refused()))
-                    .transpose()
-            };
-            let name = match field("name")? {
+            let name = match entity_field(fields, "name", refused)? {
                 Some(name) => name,
-                None => field("text")?.ok_or_else(refused)?,
+                None => entity_field(fields, "text", refused)?.ok_or_else(refused)?,
             };
-            (name, field("kind")?.ok_or_else(refused)?)
+            (
+                name,
+                entity_field(fields, "kind", refused)?.ok_or_else(refused)?,
+            )
         } else {
-            item.extract().map_err(|_| refused())?
+            host_error(host(|| item.extract()), refused)?
         };
         read.push(thinkthen::Entity::new(&name, &kind).map_err(|error| raised(py, &error))?);
     }
@@ -197,7 +212,7 @@ pub(crate) fn controls(
             if value.is_instance_of::<PyBool>() || matches!(name.to_str()?, "bool" | "bool_") {
                 return Err(usage(py, DEADLINE));
             }
-            let seconds: f64 = value.extract().map_err(|_| usage(py, DEADLINE))?;
+            let seconds: f64 = host_error(host(|| value.extract()), || usage(py, DEADLINE))?;
             CallOptions::new()
                 .deadline_seconds(seconds)
                 .map_err(|error| raised(py, &error))?;
@@ -216,5 +231,5 @@ pub(crate) fn whole(value: &Bound<'_, PyAny>, sentence: &str) -> PyResult<i64> {
     if value.is_instance_of::<PyBool>() || !value.is_instance_of::<PyInt>() {
         return Err(usage(value.py(), sentence));
     }
-    value.extract().map_err(|_| usage(value.py(), sentence))
+    host_error(host(|| value.extract()), || usage(value.py(), sentence))
 }

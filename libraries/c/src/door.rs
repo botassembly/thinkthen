@@ -3,8 +3,8 @@
 
 use serde_json::Value;
 use thinkthen::{
-    Answer, CallOptions, CancelToken, Engine, Entity, Judgment, LoadedQuestion, Probabilities,
-    Question, Recognize, Relate,
+    Answer, CallOptions, CancelToken, Engine, Entity, Facts, Judgment, LoadedQuestion,
+    Probabilities, Question, Recognize, Relate,
 };
 
 use crate::Judgment as Reply;
@@ -63,7 +63,8 @@ pub(crate) fn decide(
         }
         LoadedQuestion::Question(asked) => engine.details_with(asked, text, options)?,
         LoadedQuestion::Banded(asked) => engine.details_with(asked, text, options)?,
-    };
+    }
+    .into_value();
     match (details.value(), details.probabilities()) {
         (Judgment::Decision(answer), Probabilities::YesNo { yes }) => Ok(reply(*answer, *yes)),
         _ => Err(Failure::defect(
@@ -105,9 +106,10 @@ pub(crate) fn recognize(
     spec: &str,
     text: &str,
     options: CallOptions<'_>,
-) -> Result<String, Failure> {
+) -> Result<(String, Facts), Failure> {
     let ask = Recognize::from_json(spec)?;
-    Ok(engine.recognize_with(&ask, text, options)?.to_json())
+    let call = engine.recognize_with(&ask, text, options)?;
+    Ok((call.value().to_json(), call.facts().clone()))
 }
 
 /// Refuse a relate call past [`MOST_RELATED`] records.
@@ -145,11 +147,14 @@ pub(crate) fn relate(
     spec: &str,
     entities: Vec<Entity>,
     options: CallOptions<'_>,
-) -> Result<String, Failure> {
+) -> Result<(String, Facts), Failure> {
     let ask = Relate::from_json(spec)?;
-    let edges = engine.relate_with(&ask, entities, options)?;
-    let edges: Vec<String> = edges.iter().map(thinkthen::Edge::to_json).collect();
-    Ok(format!("{{\"edges\":[{}]}}", edges.join(",")))
+    let call = engine.relate_with(&ask, entities, options)?;
+    let edges: Vec<String> = call.value().iter().map(thinkthen::Edge::to_json).collect();
+    Ok((
+        format!("{{\"edges\":[{}]}}", edges.join(",")),
+        call.facts().clone(),
+    ))
 }
 
 /// Refuse a null `out` or `out_len`, which success always writes.

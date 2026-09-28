@@ -150,7 +150,7 @@ type Call<'a> = &'a dyn Fn() -> Result<(), Error>;
 fn bulk(engine: &Engine, texts: &[&'static str], batch: &Cancel, each: &Cancel) -> Bulk {
     let mut rows = Vec::new();
     let outcome = engine.records(
-        false,
+        crate::engine::schedule::RecordFlow::Streaming,
         batch,
         reader(texts.to_vec()),
         &|text: &&str| ask(engine, text, each).map(|yes| Completed::one(yes, false, false)),

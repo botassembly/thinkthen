@@ -8,6 +8,8 @@ use std::process::Output;
 use crate::harness::{Canned, Listener, spawn};
 use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
 
+mod replay_context;
+
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
     r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
@@ -232,36 +234,6 @@ fn meta_holds_the_url_the_model_the_usage_and_the_cached_flag() {
     ]
     .concat();
     assert!(printed.contains(&expected), "{printed}");
-}
-
-#[test]
-fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
-    let folder = folder("missed");
-    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
-    assert_eq!(
-        listener.requests().len(),
-        1,
-        "the recording run called once"
-    );
-
-    // Another question makes other request bytes, so the digest names a file
-    // this folder does not hold.
-    let output = judge(
-        "asks for something else",
-        listener.base(),
-        &["--replay", &folder.to_string_lossy()],
-        None,
-    )
-    .expect("the compiled binary runs");
-
-    assert_eq!(output.status.code(), Some(5));
-    assert!(output.stdout.is_empty());
-    let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("no entry named"), "{message}");
-    assert!(message.contains(".json"), "{message}");
-    assert!(!message.contains(&name), "{message}");
-    assert!(!message.contains(EVIDENCE), "{message}");
-    assert_eq!(listener.requests().len(), 0, "a replay opens no connection");
 }
 
 #[test]

@@ -105,7 +105,8 @@ def cargo_flags() -> None:
 
 
 def vendored() -> None:
-    named = (ROOT / "check.sh").read_text() + "".join(path.read_text() for path in (ROOT / "tools").iterdir() if path.is_file())
+    named = (ROOT / "check.sh").read_text() + (REPO / "sdlc" / "scripts" / "release-pack").read_text()
+    named += "".join(path.read_text() for path in (ROOT / "tools").iterdir() if path.is_file())
     for path in sorted((ROOT / "vendor").iterdir()):
         if path.name != "LICENSE" and path.name not in named:
             fail(f"R1-33: vendor/{path.name} is named by no script")

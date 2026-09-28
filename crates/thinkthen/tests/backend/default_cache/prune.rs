@@ -8,104 +8,33 @@ use crate::support::{
     plant_recording,
 };
 
-#[test]
-fn prune_selects_by_model_and_names_a_bad_entry() {
-    let folder = folder("cache-prune-model");
-    let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
-    let current = plant_recording(
-        &folder,
-        &url,
-        &encoded_decide(EVIDENCE, "jev-latest", "asks for a refund"),
-        ANSWERED,
-    )
-    .expect("current");
-    plant_backend_identity(&folder, &url).expect("marker");
-    let old_response = ANSWERED.replace("jev-1.13.0", "jev-old");
-    let old = plant_recording(
-        &folder,
-        &url,
-        &encoded_decide(EVIDENCE, "jev-latest", "another question"),
-        &old_response,
-    )
-    .expect("old");
-    let output = run(
-        &[
-            "cache",
-            "prune",
-            folder.to_str().expect("folder"),
-            "--max-size",
-            "100000000",
-            "--answered-by-other-than",
-            "jev-1.13.0",
-        ],
-        &[],
-    )
-    .expect("prune");
-    assert_eq!(output.status.code(), Some(0));
-    assert!(folder.join(&current).exists());
-    assert!(!folder.join(old).exists());
-
-    let removable = plant_recording(
-        &folder,
-        &url,
-        &encoded_decide(EVIDENCE, "jev-latest", "third question"),
-        &old_response,
-    )
-    .expect("old");
-    let bad = plant_recording(
-        &folder,
-        &url,
-        &encoded_decide("private malformed marker", "jev-latest", "bad question"),
-        &ANSWERED.replace("jev-1.13.0", "jev-latest"),
-    )
-    .expect("bad source");
-    let bad_name = "0".repeat(64) + ".json";
-    fs::rename(folder.join(bad), folder.join(&bad_name)).expect("mismatch");
-    let output = run(
-        &[
-            "cache",
-            "prune",
-            folder.to_str().expect("folder"),
-            "--answered-by-other-than",
-            "jev-1.13.0",
-        ],
-        &[],
-    )
-    .expect("prune");
-    assert_eq!(output.status.code(), Some(0));
-    assert!(!folder.join(removable).exists());
-    assert!(folder.join(&current).exists());
-    assert!(folder.join(&bad_name).exists());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        format!("thinkthen: cache prune: left `{bad_name}` in place; it is not a valid entry\n")
-    );
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("private malformed marker"));
-    let alias = run(
-        &[
-            "cache",
-            "prune",
-            folder.to_str().expect("folder"),
-            "--answered-by-other-than",
-            "jev-latest",
-        ],
-        &[],
-    )
-    .expect("alias");
-    assert_eq!(alias.status.code(), Some(2));
-    assert!(alias.stdout.is_empty());
-    assert!(alias.stderr.starts_with(
-        b"thinkthen: --answered-by-other-than names the model the requests asked for"
-    ));
-    assert!(!String::from_utf8_lossy(&alias.stderr).contains(&bad_name));
-    assert!(folder.join(current).exists());
-    assert!(folder.join(bad_name).exists());
-}
-
 /// The allocated bytes of one entry, as prune counts them.
 fn allocated(folder: &Path, name: &str) -> io::Result<u64> {
     use std::os::unix::fs::MetadataExt as _;
     Ok(fs::metadata(folder.join(name))?.blocks() * 512)
+}
+
+type FileBytes = Vec<(std::ffi::OsString, Vec<u8>)>;
+
+fn folder_names(folder: &Path) -> io::Result<Vec<std::ffi::OsString>> {
+    let mut names = fs::read_dir(folder)?
+        .map(|item| item.map(|item| item.file_name()))
+        .collect::<io::Result<Vec<_>>>()?;
+    names.sort();
+    Ok(names)
+}
+
+fn folder_file_bytes(folder: &Path) -> io::Result<FileBytes> {
+    let mut files = Vec::new();
+    for item in fs::read_dir(folder)? {
+        let item = item?;
+        let kind = item.file_type()?;
+        if kind.is_file() || kind.is_symlink() {
+            files.push((item.file_name(), fs::read(item.path())?));
+        }
+    }
+    files.sort_by(|left, right| left.0.cmp(&right.0));
+    Ok(files)
 }
 
 #[allow(
@@ -387,4 +316,167 @@ fn prune_names_a_digest_shaped_symlink_without_following_it() {
         before
     );
     fs::remove_dir_all(outside).expect("outside cleanup");
+}
+
+#[test]
+fn preview_names_selection_without_creating_locks_and_commit_cleans_safe_partials() {
+    use crate::harness::Listener;
+    use std::os::unix::fs::symlink;
+
+    let folder = folder("cache-prune-preview");
+    let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
+    let keep = plant(&folder, ANSWERED).expect("current entry");
+    let old = plant_recording(
+        &folder,
+        &url,
+        &encoded_decide(EVIDENCE, "jev-latest", "older question"),
+        &ANSWERED.replace("jev-1.13.0", "jev-old"),
+    )
+    .expect("old entry");
+    let kept_bytes = allocated(&folder, &keep).expect("kept bytes");
+    let old_bytes = allocated(&folder, &old).expect("old bytes");
+    let temporary = format!(".123.0.{}.json", "a".repeat(64));
+    fs::write(folder.join(&temporary), b"private partial bytes").expect("partial");
+    let temporary_bytes = allocated(&folder, &temporary).expect("partial bytes");
+    let linked = format!(".123.3.{}.json", "c".repeat(64));
+    fs::hard_link(folder.join(&keep), folder.join(&linked)).expect("partial hard link");
+    let linked_bytes = allocated(&folder, &linked).expect("hard-link bytes");
+    let unsafe_name = format!(".123.1.{}.json", "b".repeat(64));
+    symlink(folder.join(&keep), folder.join(&unsafe_name)).expect("unsafe partial");
+    let unknown = ".123.2.not-a-digest.json";
+    fs::write(folder.join(unknown), b"unrecognized").expect("unknown name");
+    let bad = format!("{}.json", "0".repeat(64));
+    fs::create_dir(folder.join(&bad)).expect("bad final");
+    let before = folder_names(&folder).expect("folder names");
+    let keep_before = fs::read(folder.join(&keep)).expect("keep bytes");
+    let before_bytes = folder_file_bytes(&folder).expect("all file bytes");
+    let args = [
+        "cache",
+        "prune",
+        folder.to_str().expect("folder"),
+        "--max-size",
+        "100000000",
+        "--answered-by-other-than",
+        "jev-1.13.0",
+    ];
+    let listener = Listener::serving(Vec::new()).expect("unused loopback backend");
+    let preview = run(
+        &[&args[..], &["--dry-run"]].concat(),
+        &[
+            ("THINKTHEN_BASE_URL", listener.base()),
+            ("THINKTHEN_API_KEY", "test-key"),
+        ],
+    )
+    .expect("preview");
+    assert_eq!(preview.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8(preview.stdout).expect("preview text"),
+        format!(
+            "selected 1 entries and {old_bytes} bytes; 1 entries and {kept_bytes} bytes unselected\nselected {old}\nselected 2 temporary files and {} bytes\nselected temporary {temporary}\nselected temporary {linked}\n",
+            temporary_bytes + linked_bytes
+        )
+    );
+    assert_eq!(
+        String::from_utf8(preview.stderr).expect("diagnostic"),
+        format!("thinkthen: cache prune: left `{bad}` in place; it is not a valid entry\n")
+    );
+    assert_eq!(folder_names(&folder).expect("names after preview"), before);
+    assert_eq!(
+        folder_file_bytes(&folder).expect("bytes after preview"),
+        before_bytes
+    );
+    assert!(listener.requests().is_empty());
+    assert!(!folder.join(".locks").exists());
+    let committed = run(&args, &[]).expect("commit");
+    assert_eq!(committed.status.code(), Some(0));
+    assert_eq!(
+        String::from_utf8(committed.stdout).expect("commit text"),
+        format!(
+            "removed 1 entries and {old_bytes} bytes; 1 entries and {kept_bytes} bytes remain\nremoved 2 temporary files and {} bytes\n",
+            temporary_bytes + linked_bytes
+        )
+    );
+    assert_eq!(
+        fs::read(folder.join(&keep)).expect("kept final"),
+        keep_before
+    );
+    assert!(!folder.join(old).exists());
+    assert!(!folder.join(temporary).exists());
+    assert!(!folder.join(linked).exists());
+    assert!(folder.join(unsafe_name).is_symlink());
+    assert!(folder.join(unknown).exists());
+}
+
+#[test]
+fn model_refusal_keeps_a_temporary_and_suppresses_bad_entry_diagnostics() {
+    let folder = folder("cache-prune-preview-refusal");
+    let keep = plant_recording(
+        &folder,
+        &format!("{DEFAULT_BASE}/{ENDPOINT_PATH}"),
+        &encoded_decide(EVIDENCE, "jev-latest", "asks for a refund"),
+        ANSWERED,
+    )
+    .expect("current entry");
+    let temporary = format!(".123.0.{}.json", "a".repeat(64));
+    fs::write(folder.join(&temporary), b"private partial bytes").expect("partial");
+    let bad = format!("{}.json", "0".repeat(64));
+    fs::create_dir(folder.join(&bad)).expect("bad final");
+    let before = fs::read(folder.join(&temporary)).expect("partial bytes");
+    for extra in [&["--dry-run"][..], &[][..]] {
+        let output = run(
+            &[
+                &[
+                    "cache",
+                    "prune",
+                    folder.to_str().expect("folder"),
+                    "--answered-by-other-than",
+                    "jev-latest",
+                ][..],
+                extra,
+            ]
+            .concat(),
+            &[],
+        )
+        .expect("refusal");
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stderr).expect("error"),
+            "thinkthen: --answered-by-other-than names the model the requests asked for, and no reply names it, so prune removed nothing; name the version a result's meta.model shows, not the alias passed to --model\n"
+        );
+        assert_eq!(fs::read(folder.join(&temporary)).expect("partial"), before);
+        assert!(folder.join(&keep).exists());
+        assert!(folder.join(&bad).exists());
+        assert!(!folder.join(".locks").exists());
+    }
+}
+
+#[test]
+fn uninspectable_temporary_fails_before_any_cleanup() {
+    use std::os::unix::fs::PermissionsExt as _;
+
+    let folder = folder("cache-prune-temp-inspection-error");
+    let temporary = format!(".123.0.{}.json", "a".repeat(64));
+    fs::create_dir_all(&folder).expect("folder");
+    fs::write(folder.join(&temporary), b"private partial bytes").expect("partial");
+    let before = fs::read(folder.join(&temporary)).expect("before");
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o400)).expect("remove search");
+    // A privileged host can still inspect this folder; it cannot prove this error path.
+    let inaccessible = fs::symlink_metadata(folder.join(&temporary)).is_err();
+    let output = if inaccessible {
+        Some(run(&["cache", "prune", folder.to_str().expect("folder")], &[]).expect("prune"))
+    } else {
+        None
+    };
+    fs::set_permissions(&folder, fs::Permissions::from_mode(0o700)).expect("restore search");
+    if let Some(output) = output {
+        assert_eq!(output.status.code(), Some(5));
+        assert!(output.stdout.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stderr).expect("diagnostic"),
+            "thinkthen: the recording folder could not be read or written; check its permissions and free space\n"
+        );
+        assert_eq!(fs::read(folder.join(&temporary)).expect("after"), before);
+        assert!(!folder.join(".locks").exists());
+    }
 }

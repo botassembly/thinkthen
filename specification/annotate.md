@@ -12,6 +12,8 @@ thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--detai
 
 `FILE` is the saved question set. It holds several named questions, and each entry has the shape of a question file. `@FILE` names the same file, as a question file does on the other verbs. `annotate` reads one document on standard input by default, and it reads records under `--lines`, `--jsonl`, `--csv`, or `--tsv`. `--input FILE` reads the evidence from a file. [records.md](records.md) gives the framing and the pointer rules.
 
+With no record framing flag and no `--field`, `annotate` tries to parse the whole document as JSON. Valid JSON becomes a JSON value, including an object, array, string, number, boolean, or `null`; input that fails JSON syntax stays text. Other JSON validation errors are refused. A JSON object can gain named answer fields in the output. To choose record framing explicitly, use `--lines` for separate text lines or `--jsonl` for separate JSON values; CSV and TSV have their own flags. `--lines` makes each nonblank line a separate record, so it cannot preserve a multi-line text document as one record. There is no flag that forces a JSON-looking whole document to be treated as text.
+
 ## The question set
 
 ```json
@@ -57,6 +59,18 @@ A not sure answer is `null`. A failed question is a failure marker and never `nu
 
 `--details` prints `input`, `value`, `answers`, and `meta`, as [result.md](result.md) gives them.
 
+### Read a mixed record stream
+
+Use `--details` when a consumer needs one reliable carrier for every record shape. This example reads JSONL records and keeps the original input beside a named result for every question:
+
+```sh
+thinkthen annotate triage.json --jsonl --details < issues.jsonl | jq -c '{input, results: (.answers | to_entries | map({name: .key} + (if .value | has("failure") then {status: "failed", failure: .value.failure} else {status: "answered", value: .value.value} end)))}'
+```
+
+Choose `--lines`, `--csv`, or `--tsv` instead when that is the input's actual framing. The command emits one normalized row per completed input record. `input` preserves an original object, array, scalar, or `null`; `results` is a list so question names stay data even when they spell `input`, `value`, or `meta`. An answered value can itself be `null` (not sure), a boolean, number, string, or list. A failed question has `status: "failed"` and a `failure` object instead of a value. On CSV and TSV input, every original cell in `input` is a string, including text that looks like a number or `null` ([records.md](records.md)). A run that stops before completing a record does not emit its row.
+
+The bare output cannot identify an arbitrary object's original fields just by looking for `input` and `value`: those can be the object's own keys. With `--details`, the command itself establishes the carrier, and original fields remain under `input`. [result.md](result.md) describes the detailed answer entries and their digests.
+
 ## Options
 
 | Option | Meaning | Default |
@@ -76,6 +90,8 @@ A not sure answer is `null`. A failed question is a failure marker and never `nu
 0 when the run finished with every question answered, 6 when it finished after one or more logical questions failed, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record, at exit 2, before any request for it. An unreadable or invalid file is exit 5. A later whole-run failure keeps its own code and stop boundary.
 
 ## Examples
+
+The first and third examples use the one-document rule on a JSON object. The second selects JSONL records explicitly.
 
 ```sh
 thinkthen annotate triage.json < issue.json

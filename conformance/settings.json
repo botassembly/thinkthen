@@ -71,6 +71,36 @@
         {"settings": {"cache": false}, "text": "refund now", "value": true, "count": 1},
         {"settings": {"cache": false}, "text": "refund now", "value": true, "count": 2}
       ]
+    },
+    {
+      "id": "request-bytes-splits-relations",
+      "setting": "max_request_bytes",
+      "arm": "generic/v1",
+      "entities": [
+        {"name": "item 0", "kind": "item"},
+        {"name": "item 1", "kind": "item"},
+        {"name": "item 2", "kind": "item"},
+        {"name": "item 3", "kind": "item"},
+        {"name": "item 4", "kind": "item"},
+        {"name": "item 5", "kind": "item"},
+        {"name": "item 6", "kind": "item"},
+        {"name": "item 7", "kind": "item"},
+        {"name": "item 8", "kind": "item"},
+        {"name": "item 9", "kind": "item"},
+        {"name": "item 10", "kind": "item"},
+        {"name": "item 11", "kind": "item"},
+        {"name": "item 12", "kind": "item"},
+        {"name": "item 13", "kind": "item"},
+        {"name": "item 14", "kind": "item"},
+        {"name": "item 15", "kind": "item"},
+        {"name": "item 16", "kind": "item"},
+        {"name": "item 17", "kind": "item"}
+      ],
+      "relation": "linked=item:item",
+      "steps": [
+        {"settings": {}, "verb": "relate", "edges": 306, "count": 1},
+        {"settings": {"max_request_bytes": 20000}, "verb": "relate", "edges": 306, "count": 3}
+      ]
     }
   ]
 }
