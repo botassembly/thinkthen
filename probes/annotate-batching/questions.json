@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "questions": {
+    "before_1965": {
+      "decide": "Was this Beatles song first released before 1965?",
+      "true": "The song was first released before 1965.",
+      "false": "The song was first released in 1965 or later.",
+      "on": ""
+    },
+    "album": {
+      "choose": "The text is the title of a song by the Beatles. On which album was it first released?",
+      "options": [
+        "Please Please Me",
+        "With the Beatles",
+        "A Hard Day's Night",
+        "Beatles for Sale",
+        "Help!",
+        "Rubber Soul",
+        "Revolver",
+        "Sgt. Pepper's Lonely Hearts Club Band",
+        "Magical Mystery Tour",
+        "The Beatles (White Album)",
+        "Yellow Submarine",
+        "Abbey Road",
+        "Let It Be",
+        "Past Masters",
+        "Anthology 1",
+        "Anthology 2",
+        "Anthology 3",
+        "Anthology 4",
+        "Live at the BBC",
+        "On Air – Live at the BBC Volume 2"
+      ],
+      "on": "/input"
+    }
+  }
+}
