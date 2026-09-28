@@ -1,6 +1,6 @@
 # 0240 DuckDB try-details budget preflight
 
-Status: Notes-only design candidate from main `ef0cc3de` for fresh High review. Ticket 0240 proposes runtime claims; this record neither edits source nor claims a fixed artifact. Current branch is `ticket/0240-duckdb-try-budget-values`.
+Status: Notes-only design candidate measured at main `ef0cc3de` and merged with planning-only main `fcf7bbef` for fresh High review. Ticket 0240 proposes runtime claims; this record neither edits source nor claims a fixed artifact. Current branch is `ticket/0240-duckdb-try-budget-values`.
 
 ## Authority and reproduced regression
 
