@@ -19,12 +19,10 @@ mod ffi;
 )]
 pub(crate) use ffi::{install, start_bridge};
 
-/// Every SIGINT the handler has seen in this process.
-static SIGNALS: AtomicU64 = AtomicU64::new(0);
-
-/// When the last SIGINT landed while an invoke ran, in milliseconds on
-/// [`now_ms`]'s clock; 0 when none has.
-static SIGNAL_AT: AtomicU64 = AtomicU64::new(0);
+/// The latest signalled live interval and its millisecond clock. One atomic
+/// value prevents a delayed handler from publishing an old interval over a
+/// newer signal. The interval changes when the last invoke ends.
+static SIGNAL_EVENT: AtomicU64 = AtomicU64::new(0);
 
 /// Scalar invokes, warm finalizes, and table scans running now. A query that
 /// is still reading its chunk counts (R6-6).
@@ -33,7 +31,6 @@ static SIGNAL_AT: AtomicU64 = AtomicU64::new(0);
 // from inheriting the previous query's signal wave at the last-drop boundary.
 static INVOKING: AtomicU64 = AtomicU64::new(0);
 const COUNT_MASK: u64 = u32::MAX as u64;
-const CLOCK_MASK: u64 = (1 << 40) - 1;
 
 /// A signal landing this close before an invoke begins belongs to the query
 /// that invoke serves: its other threads were running when it landed.
@@ -59,25 +56,22 @@ pub(crate) fn start_clock() {
 }
 
 /// The handler's work, in plain atomics.
-fn on_signal() {
-    // Capture the active interval before publishing the signal count. An
-    // invoke starting after this snapshot must not inherit this signal.
-    let active = INVOKING.load(Ordering::SeqCst);
-    SIGNALS.fetch_add(1, Ordering::SeqCst);
+fn publish_signal(active: u64) {
     if active & COUNT_MASK != 0 {
         let epoch = active >> 32;
-        SIGNAL_AT.store(
-            ((epoch & 0x00ff_ffff) << 40) | (now_ms() & CLOCK_MASK),
-            Ordering::SeqCst,
-        );
+        let event = (epoch << 32) | (now_ms() & COUNT_MASK);
+        SIGNAL_EVENT.fetch_max(event, Ordering::SeqCst);
     }
+}
+
+fn on_signal() {
+    publish_signal(INVOKING.load(Ordering::SeqCst));
 }
 
 /// One running invoke, counted from entry to drop.
 #[derive(Debug)]
 pub(crate) struct Invoke {
-    signals: u64,
-    started: u64,
+    started: u32,
     epoch: u64,
 }
 
@@ -96,8 +90,7 @@ impl Invoke {
             }
         };
         Self {
-            signals: SIGNALS.load(Ordering::SeqCst),
-            started: now_ms(),
+            started: now_ms() as u32,
             epoch,
         }
     }
@@ -105,13 +98,42 @@ impl Invoke {
     /// The one interrupt predicate: a SIGINT landed inside this invoke, or
     /// landed within one wave before it while another invoke of the query ran.
     pub(crate) fn stopped(&self) -> bool {
-        if SIGNALS.load(Ordering::SeqCst) > self.signals {
-            return true;
+        let event = SIGNAL_EVENT.load(Ordering::SeqCst);
+        if event >> 32 != self.epoch {
+            return false;
         }
-        let at = SIGNAL_AT.load(Ordering::SeqCst);
-        at != 0
-            && (at >> 40) == (self.epoch & 0x00ff_ffff)
-            && (self.started & CLOCK_MASK).wrapping_sub(at & CLOCK_MASK) < WAVE_MS
+        let age = self.started.wrapping_sub(event as u32);
+        age > i32::MAX as u32 || age < WAVE_MS as u32
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{INVOKING, Invoke, Ordering, publish_signal, start_clock};
+
+    #[test]
+    fn a_signal_wave_reaches_siblings_but_not_the_next_interval() {
+        start_clock();
+        let first = Invoke::begin();
+        let old_interval = INVOKING.load(Ordering::SeqCst);
+
+        // The sibling begins after the handler reads the live interval but
+        // before it publishes the signal. It must still stop.
+        let sibling = Invoke::begin();
+        publish_signal(old_interval);
+        assert!(first.stopped());
+        assert!(sibling.stopped());
+        drop(sibling);
+        drop(first);
+
+        // The handler read the old interval while it was live, then the
+        // final owner ended and a new query began before publication.
+        let old = Invoke::begin();
+        let old_interval = INVOKING.load(Ordering::SeqCst);
+        drop(old);
+        let next = Invoke::begin();
+        publish_signal(old_interval);
+        assert!(!next.stopped(), "the next query inherited the prior signal");
     }
 }
 
