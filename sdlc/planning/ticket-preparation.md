@@ -101,3 +101,6 @@ Before declaring a proof complete, match each promised property to its actual as
 
 
 Keep the approval work proportional too. A small internal cleanup within an already accepted method needs its exact claim, preservation evidence and fresh code review. Use another design review when it changes the outcome, shared fixture contract or material safety assumption; do not repeat design approval just because another helper is selected. The one-helper 0119 slice retained useful evidence, but its additional planning and review records must not become the default cost of every small cleanup.
+
+
+For interpreter boundaries, inventory host callbacks separately on the caller, worker and cleanup paths. A guarded wait can dispatch a signal handler, and dropping a moved source can invoke a foreign release callback before the catch returns. One caller-side hook observation and an existing release-order test do not prove worker-side hook delegation. Select one representative observation at each distinct ownership boundary. For admission-order changes, compare the settled contract with the reported side effect before calling current behavior accidental; preserve the full issue criterion when a ticket fixes only one case.
