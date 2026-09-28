@@ -11,7 +11,7 @@ tt_engine(cache = FALSE, profile = running)
 saved <- tempfile(fileext = ".json")
 writeLines(jsonlite::toJSON(case$question, auto_unbox = TRUE), saved)
 question <- tt_question(file = saved)
-details <- tt_details(question, case$evidence)
+details <- tt_details(question, case$evidence)$value
 check("the saved name has the pinned canonical digest",
       identical(details$meta$question_sha256, case$question_sha256))
 check("the warning carries saved and running names",
@@ -27,16 +27,16 @@ writeLines('{"decide":', invalid)
 check("an invalid question file is local", sent_by(check("invalid kind",
   identical(kind_of(tt_question(file = invalid)), "local"))) == 0L)
 check("rank and find refuse a profiled built question", sent_by({
-  check("rank sentence", identical(message_of(tt_rank(question, c("one", "two"))),
+  check("rank sentence", identical(message_of(tt_rank(question, c("one", "two"))$value),
                                   "rank takes a decide question with no profile"))
-  check("find sentence", identical(message_of(tt_find(question, c("one", "two"))),
+  check("find sentence", identical(message_of(tt_find(question, c("one", "two"))$value),
                                   "find takes a decide question with no profile"))
 }) == 0L)
 
 scored <- tempfile(fileext = ".json")
 writeLines('{"score":"How urgent?","levels":["low","high"],"profile":"old"}', scored)
 before <- backend_count()
-values <- tt_score(tt_question(file = scored), c("one", "two"))
+values <- tt_score(tt_question(file = scored), c("one", "two"), batch = 1L)$value
 check("profiled score keeps two values", isTRUE(all.equal(values, c(0.1, 0.1))))
 check("profiled score keeps one request per row", backend_count() - before == 2L)
 

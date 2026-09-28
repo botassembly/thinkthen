@@ -2,9 +2,9 @@
 # counters do not move (0096, Q15). mcparallel forks a process whose
 # parent already holds the default engine.
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
-check("the parent's first call answers", isTRUE(tt_decide("Q?", "before the fork")))
+check("the parent's first call answers", isTRUE(tt_decide("Q?", "before the fork")$value))
 before <- tt_usage()
-job <- parallel::mcparallel(c(tt_decide("Q?", "in the child"), tt_usage()$requests_sent))
+job <- parallel::mcparallel(c(tt_decide("Q?", "in the child")$value, tt_usage()$requests_sent))
 got <- parallel::mccollect(job, timeout = 60)[[1]]
 # The child counts from zero after the fork, so it reports its one send.
 check("the forked child answers and counts its own send", identical(got, c(1, 1)))
