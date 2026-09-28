@@ -75,7 +75,7 @@ fn cases<'a>(base: &'a str, folder: &'a str, set: &'a str) -> [Case<'a>; 7] {
             "one document",
             vec!["decide", "private-question", "--url", base, "--replay", folder],
             b"private-evidence",
-            "the decide request: the replay folder holds no entry",
+            "the decide request for one document: the replay folder holds no entry",
         ),
         (
             "streaming row",

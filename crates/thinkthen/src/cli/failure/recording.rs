@@ -1,7 +1,7 @@
 //! Fixed local recording diagnostics.
 
 use super::Failure;
-use crate::core::RecordError;
+use crate::core::{Question, RecordError};
 
 /// Closed, command-owned labels for a request that strict replay could not find.
 #[derive(Clone, Copy, Debug)]
@@ -12,6 +12,7 @@ pub(crate) enum ReplayContext {
     Choose,
     Tag,
     Score,
+    Document(&'static str),
     AnnotateGroup { ordinal: usize, members: usize },
     FindSet(usize),
     Recognize,
@@ -27,6 +28,7 @@ impl ReplayContext {
             Self::Choose => "the choose request".to_owned(),
             Self::Tag => "the tag request".to_owned(),
             Self::Score => "the score request".to_owned(),
+            Self::Document(verb) => format!("the {verb} request for one document"),
             Self::AnnotateGroup { ordinal, members } => {
                 format!("annotate group {ordinal} with {members} members")
             }
@@ -45,9 +47,25 @@ impl Failure {
         self
     }
 
+    /// One non-streamed judgment knows it sent exactly one document.
+    pub(crate) fn with_replay_document(self, question: &Question, streams: bool) -> Self {
+        if streams {
+            return self;
+        }
+        let verb = match question {
+            Question::Decide { .. } => "decide",
+            Question::Choose { .. } => "choose",
+            Question::Tag { .. } => "tag",
+            Question::Score { .. } => "score",
+        };
+        self.with_replay_context(ReplayContext::Document(verb))
+    }
+
     fn attach_replay_context(&mut self, source: ReplayContext) {
         match self {
-            Self::ReplayMiss { context, .. } => *context = Some(source),
+            Self::ReplayMiss { context, .. } => {
+                context.get_or_insert(source);
+            }
             Self::Stopped { cause, .. } | Self::BatchFailed { cause, .. } => {
                 cause.attach_replay_context(source);
             }
