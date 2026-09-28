@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-24-rank-by-graded-relevance-for-search-reranking.md s
 
 # 0223: Rank records by a graded question
 
-Status: proposed for fresh independent design review. Owner: Codex. [ADR 0095](../planning/adr/0095-rank-graded-score-questions.md) proposes the outward command shape; the [preflight](../records/0223-reranking-preflight.md) cites current main `81b145ed`. This ticket would implement ask 1 of [the open issue](../issues/2026-09-24-rank-by-graded-relevance-for-search-reranking.md). It does not settle optional per-level weights or reciprocal rank fusion. Ian may overturn the CLI-first boundary, file-only level entry, or graded detailed value before implementation.
+Status: technical design ACCEPT at `aecc15f2`; pending Ian's outward-facing choice. No implementation authorized by this review alone. Owner: Codex. [ADR 0095](../planning/adr/0095-rank-graded-score-questions.md) proposes the outward command shape; the [preflight](../records/0223-reranking-preflight.md) cites current main `81b145ed`. This ticket would implement ask 1 of [the open issue](../issues/2026-09-24-rank-by-graded-relevance-for-search-reranking.md). It does not settle optional per-level weights or reciprocal rank fusion. Ian may overturn the CLI-first boundary, file-only level entry, or graded detailed value before implementation.
 
 ## Outcome and retained behavior
 
@@ -26,7 +26,7 @@ Use a small compiled-command table with four distinct records and the literal th
 
 ## Deferred and routing
 
-This design is command-only because the current public `Ranked::probability()` cannot truthfully carry a level position. A separate reviewed API design would be required if a Rust or binding caller needs graded rank. Positional levels on `rank`, custom level weights and RRF are deferred, not counted done; RRF would be a transform, not another model call. Keep the issue open for those asks or split its closure explicitly after the implemented outcome is reviewed. The coordinator owns lane claims and plan rows. Fresh design review must accept the proposed public shape and the exact score/recording parity before any runtime edit.
+This design is command-only because the current public `Ranked::probability()` cannot truthfully carry a level position. A separate reviewed API design would be required if a Rust or binding caller needs graded rank. Positional levels on `rank`, custom level weights and RRF are deferred, not counted done; RRF would be a transform, not another model call. Keep the issue open for those asks or split its closure explicitly after the implemented outcome is reviewed. The coordinator owns lane claims and plan rows. Fresh independent review accepted the technical proposal without findings; ADR 0095 remains proposed until Ian chooses the outward shape. No runtime edit precedes that choice.
 
 ## Evidence
 
