@@ -234,6 +234,7 @@ mod tests {
             native_panic_child();
         } else {
             let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+                .env_clear()
                 .args([
                     "--exact",
                     "errors::tests::callback_and_worker_payloads_stay_out_of_diagnostics",

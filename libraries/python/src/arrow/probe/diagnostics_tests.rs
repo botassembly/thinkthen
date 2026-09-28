@@ -89,7 +89,14 @@ fn a_caught_python_panic_delegates_each_host_callback() {
     if std::env::var_os(CHILD).is_some() {
         child();
     } else {
-        let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+        let mut command = std::process::Command::new(std::env::current_exe().expect("test binary"));
+        command.env_clear();
+        for name in ["LD_LIBRARY_PATH", "PYTHONHOME"] {
+            if let Some(value) = std::env::var_os(name) {
+                command.env(name, value);
+            }
+        }
+        let output = command
         .args([
             "--exact",
             "arrow::probe::diagnostics_tests::a_caught_python_panic_delegates_each_host_callback",

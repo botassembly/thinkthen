@@ -181,7 +181,13 @@ mod tests {
         if std::env::var_os(CHILD).is_some() {
             native_panic_child();
         } else {
-            let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+            let mut child =
+                std::process::Command::new(std::env::current_exe().expect("test binary"));
+            child.env_clear();
+            if let Some(path) = std::env::var_os("LD_LIBRARY_PATH") {
+                child.env("LD_LIBRARY_PATH", path);
+            }
+            let output = child
                 .args([
                     "--exact",
                     "worker::tests::caught_callback_and_worker_payloads_stay_out_of_diagnostics",

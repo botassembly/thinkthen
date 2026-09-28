@@ -76,9 +76,11 @@ def append_json(path, value):
 
 
 def sample(bench):
-    if subprocess.check_output(['git', '-C', str(bench), 'rev-parse', '--short=8', 'HEAD'], text=True).strip() != BENCH_SHA:
+    if subprocess.check_output(['git', '-C', str(bench), 'rev-parse', '--short=8', 'HEAD'], text=True,
+                               env=speed.plain()).strip() != BENCH_SHA:
         refuse('the benchmark revision changed')
-    if subprocess.check_output(['git', '-C', str(bench), 'status', '--porcelain'], text=True).strip():
+    if subprocess.check_output(['git', '-C', str(bench), 'status', '--porcelain'], text=True,
+                               env=speed.plain()).strip():
         refuse('the benchmark checkout is dirty')
     sys.path.insert(0, str(bench / 'scripts/generate'))
     from generate import settled_lead

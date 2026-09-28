@@ -3,9 +3,11 @@
 # exported as RUBY. Every cargo call runs --locked --offline.
 set -eu
 cd -- "$(dirname -- "$0")"
-# Cargo embeds source paths in panic locations. The remap keeps the builder's
-# home out of the gem's extension, as in the other bindings (ticket 0128).
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
+# Keep direct gem builds clean too. release-pack may already pass the same
+# remaps; repeating them preserves the direct route without replacing its flags.
+repo=$(CDPATH='' cd ../.. && pwd)
+cargo_home=${CARGO_HOME:-$HOME/.cargo}
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$repo=/build/source --remap-path-prefix=$cargo_home=/build/cargo --remap-path-prefix=$HOME=/build/home"
 # RUSTFLAGS from the environment replaces .cargo/config.toml target rustflags.
 # Preserve the Darwin extension's load-time Ruby symbol lookup when remapping.
 case $(uname -s) in

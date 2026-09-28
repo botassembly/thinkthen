@@ -63,7 +63,13 @@ mod tests {
         if std::env::var_os(CHILD).is_some() {
             child();
         } else {
-            let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+            let mut child =
+                std::process::Command::new(std::env::current_exe().expect("test binary"));
+            child.env_clear();
+            if let Some(path) = std::env::var_os("LD_LIBRARY_PATH") {
+                child.env("LD_LIBRARY_PATH", path);
+            }
+            let output = child
                 .args([
                     "--exact",
                     "diagnostics::tests::a_caught_panic_stays_out_of_ruby_diagnostics",

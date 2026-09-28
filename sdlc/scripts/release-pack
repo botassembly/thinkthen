@@ -24,9 +24,11 @@ case $TARGET in
 *-linux-gnu) dl=so command_target=${TARGET%-gnu}-musl ;;
 *) echo "release-pack: no release for $TARGET" >&2; exit 2 ;;
 esac
-# A built file never names the builder's home, as each surface check requires.
-RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build"
-CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
+# The source and Cargo cache can sit outside HOME in a release container.
+# Remap all three origins before packaging a library's panic/debug locations.
+cargo_home=${CARGO_HOME:-$HOME/.cargo}
+RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$REPO=/build/source --remap-path-prefix=$cargo_home=/build/cargo --remap-path-prefix=$HOME=/build/home"
+CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$REPO=/build/source -ffile-prefix-map=$cargo_home=/build/cargo -ffile-prefix-map=$HOME=/build/home"
 export RUSTFLAGS CFLAGS
 . sdlc/scripts/scratch.sh
 scratch_dir stage

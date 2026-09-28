@@ -65,6 +65,7 @@ mod tests {
             child();
         } else {
             let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+                .env_clear()
                 .args([
                     "--exact",
                     "calls::diagnostics::tests::a_caught_panic_stays_out_of_r_diagnostics",
