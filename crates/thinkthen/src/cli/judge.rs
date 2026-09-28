@@ -4,6 +4,7 @@
 //! record, and hands both to `asking.rs`, which owns the request and the row.
 
 use std::io::{Read, Write};
+use std::path::Path;
 use std::process::ExitCode;
 
 use crate::core::{Json, Pointer, QuestionFileError, Resolved, Setting};
@@ -26,7 +27,7 @@ pub(crate) struct Asked<'a> {
     pub(crate) settled: &'a Resolved,
     pub(crate) view: View,
     pub(crate) keeping: Keeping,
-    /// Where `decide`, `filter` and `rank` read their batch setting, or `None`.
+    /// Where record verbs read their batch setting, or `None`.
     pub(crate) batch: Option<Tiers<'a>>,
 }
 
@@ -34,6 +35,7 @@ pub(crate) struct Asked<'a> {
 /// `THINKTHEN_BATCH` and `max` settle a batch, by ADR 0048 item 4.
 #[derive(Debug)]
 pub(crate) struct Tiers<'a> {
+    pub(crate) context: Option<&'a Path>,
     pub(crate) flag: Option<&'a str>,
     pub(crate) request_size: Option<&'a str>,
     pub(crate) file: Option<Json>,
@@ -238,6 +240,7 @@ pub(crate) fn rank(
 
 fn tiers(batching: &Batching, file: FileTier) -> Tiers<'_> {
     Tiers {
+        context: batching.context.as_deref(),
         flag: batching.batch.as_deref(),
         request_size: batching.max_request_bytes.as_deref(),
         file: file.batch,
@@ -329,7 +332,7 @@ pub(crate) fn choose(
     if arguments.raw && (arguments.common.csv || arguments.common.tsv) {
         return Err(Failure::TableRaw);
     }
-    let settled = asked::choose(arguments)?;
+    let (settled, file) = asked::choose(arguments)?;
     let asks = match arguments.options_pointer.as_deref() {
         Some(typed) => {
             if !arguments.common.jsonl {
@@ -355,7 +358,7 @@ pub(crate) fn choose(
             settled: &settled,
             view,
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,
@@ -376,7 +379,7 @@ pub(crate) fn tag(
     if arguments.quiet {
         return Err(Failure::TagQuiet);
     }
-    let settled = asked::tag(arguments)?;
+    let (settled, file) = asked::tag(arguments)?;
     judging(
         Asked {
             common: &arguments.common,
@@ -388,7 +391,7 @@ pub(crate) fn tag(
                 details: arguments.common.details,
             },
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,
@@ -419,7 +422,7 @@ pub(crate) fn score(
             "`score` has no answer exit code, so --quiet would discard its result",
         ));
     }
-    let settled = asked::score(arguments)?;
+    let (settled, file) = asked::score(arguments)?;
     let view = View {
         quiet: false,
         raw: false,
@@ -432,7 +435,7 @@ pub(crate) fn score(
             settled: &settled,
             view,
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,

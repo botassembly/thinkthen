@@ -1,0 +1,9 @@
+# 0211 private TLS roots code review
+
+Status: **ACCEPT** and complete. Fresh independent Sol High reviewer session `01a0e699-a344-7741-b83a-ef948cb93a50` reviewed initial candidate `4c2229f3`, found two issues, and accepted clean correction `9d2ced4e`. This integration lands the accepted source. High effort was recorded for trust-store, credential and public/native boundary risk.
+
+The correction defers environment CA-path validation until the selected builder path is known, so an explicit setter overrides an invalid relative environment path. The revised public test creates that actual conflict through from_env. An ordinary live decide case uses a missing bundle and absent key and counts zero accepted TCP connections. A real fork consumer changes the PEM after parent construction and observes one trusted child HTTPS POST using the retained snapshot. The existing fork helper is reused, without a product fault hook or new dependency.
+
+The reviewer retained its accepted conclusions on default roots, replacement trust, bounded certificate-only loading, hostname verification, safe failures, key/URL collision order and facade snapshot propagation. It independently checked the added fixture and reuse rationale, source caps, exact 83,864-line root total and the +781-line TLS share (210 product and 571 test lines). The separate reviewed 0225 change contributes +135 lines. The fork fixture protects a boundary the model-change test cannot cover.
+
+Focused author proof passed: four TLS cases, one real fork case, root and fork strict Clippy, policy, formatting, settings/pages/tickets/diff, and the selected installed SQLite environment-reach check. The latter is not a live SQL TLS handshake or a platform-wide matrix. Review checked ratchet, diff and clean worktree and retained the recorded compiled proof; it did not repeat broad gates or access a provider or paid ledger. No blocking finding remains.

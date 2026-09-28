@@ -8,8 +8,8 @@ use std::marker::PhantomData;
 use std::path::Path;
 
 use crate::core::{
-    self, Json, Meaning, ModelName, QuestionFile, QuestionText, Threshold, Typed, Verb, Withheld,
-    json_line, resolve,
+    self, Json, Meaning, ModelName, ProfileName, QuestionFile, QuestionText, Threshold, Typed,
+    Verb, Withheld, json_line, resolve,
 };
 use crate::public::builders::{
     ChooseBuilder, DecideBuilder, LabelBuilder, Listing, ScoreBuilder, TagBuilder,
@@ -235,6 +235,7 @@ pub struct Question {
     pub(crate) core: core::Question,
     pub(crate) threshold: Option<Threshold>,
     pub(crate) model: Option<ModelName>,
+    pub(crate) profile: Option<ProfileName>,
     pub(crate) kind: Kind,
 }
 
@@ -430,6 +431,7 @@ impl Question {
             .cloned()
             .ok_or_else(|| Error::defect("a question file resolved no question"))?;
         let model = (!resolved.sources().model_is_default()).then(|| resolved.model().clone());
+        let profile = resolved.profile().cloned();
         let threshold = resolved.threshold();
         let kind = match file.verb() {
             Verb::Decide if threshold.is_some_and(|rule| !rule.is_cut()) => Kind::Banded,
@@ -442,6 +444,7 @@ impl Question {
             core,
             threshold,
             model,
+            profile,
             kind,
         };
         Ok(if kind == Kind::Banded {
@@ -518,6 +521,7 @@ impl Question {
             core: core::Question::Decide { text, yes, no },
             threshold,
             model: None,
+            profile: None,
             kind,
         }
     }

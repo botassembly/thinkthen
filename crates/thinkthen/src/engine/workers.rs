@@ -2,8 +2,8 @@
 
 use std::cell::Cell;
 use std::collections::BTreeMap;
-use std::sync::Mutex;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, sync_channel};
+use std::sync::{Mutex, Once};
 use std::thread;
 
 use crate::engine::Cancel;
@@ -12,6 +12,53 @@ use crate::engine::error::Error;
 thread_local! {
     /// Whether this thread is an engine worker with host signals masked.
     static ENGINE_WORKER: Cell<bool> = const { Cell::new(false) };
+    /// Suppress panic diagnostics only while ThinkThen owns this thread.
+    static DIAGNOSTIC_DEPTH: Cell<usize> = const { Cell::new(0) };
+}
+
+static DIAGNOSTIC_HOOK: Once = Once::new();
+
+/// Keep the host's hook for unrelated threads, including after this call.
+fn install_diagnostic_hook() {
+    DIAGNOSTIC_HOOK.call_once(|| {
+        let prior = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            let owned = DIAGNOSTIC_DEPTH
+                .try_with(|depth| depth.get() != 0)
+                .unwrap_or(false);
+            if !owned {
+                prior(info);
+            }
+        }));
+    });
+}
+
+/// Restore the prior depth even if a nested call unwinds.
+struct DiagnosticDepth(usize);
+
+impl Drop for DiagnosticDepth {
+    fn drop(&mut self) {
+        DIAGNOSTIC_DEPTH.with(|depth| depth.set(self.0));
+    }
+}
+
+/// Mark work owned by the engine on this thread, including worker threads.
+pub(crate) fn with_engine_diagnostics<T>(work: impl FnOnce() -> T) -> T {
+    install_diagnostic_hook();
+    let prior = DIAGNOSTIC_DEPTH.with(|depth| {
+        let prior = depth.get();
+        depth.set(prior.saturating_add(1));
+        prior
+    });
+    let _restore = DiagnosticDepth(prior);
+    work()
+}
+
+/// Let a host interrupt callback use the previous hook on direct engine calls.
+pub(crate) fn with_host_diagnostics<T>(check: impl FnOnce() -> T) -> T {
+    let prior = DIAGNOSTIC_DEPTH.with(|depth| depth.replace(0));
+    let _restore = DiagnosticDepth(prior);
+    check()
 }
 
 /// Run one live attempt on an engine worker: this thread when it is one, or
@@ -21,15 +68,17 @@ thread_local! {
 /// there during a width gate or retry wait and never during a blocking send.
 pub(crate) fn on_worker<T: Send>(cancel: &Cancel<'_>, send: impl FnOnce() -> T + Send) -> T {
     if ENGINE_WORKER.get() {
-        return send();
+        return with_engine_diagnostics(send);
     }
     let (done, finished) = sync_channel(1);
     thread::scope(|scope| {
         let worker = scope.spawn(move || {
-            enter();
-            let sent = send();
-            let _caller_waits = done.send(());
-            sent
+            with_engine_diagnostics(|| {
+                enter();
+                let sent = send();
+                let _caller_waits = done.send(());
+                sent
+            })
         });
         while let Err(RecvTimeoutError::Timeout) = finished.recv_timeout(Cancel::poll()) {
             cancel.poll_between_sends();
@@ -81,15 +130,24 @@ where
         for _ in 0..jobs {
             let results = results.clone();
             let queue = &queue;
-            scope.spawn(move || {
-                enter();
-                let _lifetime = begin();
-                worker(queue, &results, work);
-            });
+            scope.spawn(move || observed_worker(queue, &results, work, begin));
         }
         drop(results);
         body(send)
     })
+}
+
+fn observed_worker<W, R, G>(
+    queue: &Mutex<Receiver<W>>,
+    results: &Sender<R>,
+    work: &(impl Fn(W) -> R + Sync),
+    begin: &(impl Fn() -> G + Sync),
+) {
+    with_engine_diagnostics(|| {
+        enter();
+        let _lifetime = begin();
+        worker(queue, results, work);
+    });
 }
 
 /// Run `items` on up to `jobs` workers and hand each result on in item order.

@@ -8,7 +8,7 @@ use super::{
 
 mod column;
 
-use column::{Shape, answered, kind_word, texts};
+use column::{answered, failed, kind_word, texts};
 
 /// The one member name of the set a single-question column asks.
 const MEMBER: &str = "answer";
@@ -93,13 +93,14 @@ pub trait PolarsEngine {
         options: CallOptions<'_>,
     ) -> Result<Series, Error>;
 
-    /// Ask every question of the set of the text column `on`: the caller's
-    /// frame with one new column per question, in set order.
+    /// Ask every question of the text column `on`: the caller's frame with
+    /// one typed column per question, followed by nullable `failed` markers.
     ///
     /// # Errors
     ///
     /// As [`PolarsEngine::decide_series`], and [`Error::Usage`] when the
-    /// frame holds no column `on` or already holds a column a question names.
+    /// frame holds no column `on`, a result column already exists, or a
+    /// question is named `failed`.
     fn annotate_frame(
         &self,
         questions: &QuestionSet,
@@ -167,7 +168,15 @@ impl PolarsEngine for Engine {
         let held = frame
             .column(on)
             .map_err(|_| Error::usage(format!("the frame holds no column {on}")))?;
-        for (name, _) in questions.members() {
+        if questions.members().any(|(name, _)| name == "failed") {
+            return Err(Error::usage(
+                "the question name failed is reserved for frame failures",
+            ));
+        }
+        for (name, _) in questions
+            .members()
+            .chain(std::iter::once(("failed", QuestionKind::Decide)))
+        {
             if frame.column(name).is_ok() {
                 return Err(Error::usage(format!(
                     "the frame already holds a column named {name}"
@@ -178,13 +187,16 @@ impl PolarsEngine for Engine {
         let records = self
             .annotate_with(questions, rows, options)
             .collect::<Result<Vec<_>, _>>()?;
-        let columns = questions
+        let mut columns = questions
             .members()
             .enumerate()
-            .map(|(place, (name, kind))| {
-                answered(name, kind, Shape::Frame, &records, place).map(Into::into)
-            })
+            .map(|(place, (name, kind))| answered(name, kind, &records, place).map(Into::into))
             .collect::<Result<Vec<Column>, Error>>()?;
+        let names = questions
+            .members()
+            .map(|(name, _)| name)
+            .collect::<Vec<_>>();
+        columns.push(failed(&names, &records)?.into());
         frame
             .hstack(&columns)
             .map_err(|error| Error::defect(&format!("the frame refused a new column: {error}")))
@@ -213,5 +225,5 @@ fn single(
     let records = engine
         .annotate_with(&set, rows, options)
         .collect::<Result<Vec<_>, _>>()?;
-    answered(texts.name().as_str(), wanted, Shape::Series, &records, 0)
+    answered(texts.name().as_str(), wanted, &records, 0)
 }

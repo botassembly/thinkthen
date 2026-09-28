@@ -47,6 +47,7 @@ pub(crate) fn run(
             .or_else(|| environment.model())
             .unwrap_or(crate::core::DEFAULT_MODEL),
     )?;
+    environment.check_key(&backend)?;
     let profile = profile::read(common)?;
     let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {

@@ -37,6 +37,7 @@ pub(crate) struct Cancel<'a> {
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
     sends: Arc<AtomicUsize>,
+    send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
     #[cfg(test)]
@@ -107,6 +108,37 @@ impl<'a> Cancel<'a> {
         }
     }
 
+    pub(crate) fn with_send_budget(
+        &self,
+        send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    ) -> Self {
+        Self {
+            send_budget,
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn reserve_send(
+        &self,
+        last_status: Option<u16>,
+    ) -> Result<Option<crate::public::SendReservation>, error::Error> {
+        self.send_budget
+            .as_ref()
+            .map(|(budget, limit)| {
+                budget
+                    .reserve(*limit, last_status)
+                    .map_err(|denial| match denial {
+                        crate::public::SendBudgetDenial::BeforeFirstSend => {
+                            error::Error::SendBudgetFirst
+                        }
+                        crate::public::SendBudgetDenial::BeforeRetry { last_status } => {
+                            error::Error::SendBudgetRetry(last_status)
+                        }
+                    })
+            })
+            .transpose()
+    }
+
     /// Share this stop flag with one call whose host check runs on this thread.
     #[allow(
         dead_code,
@@ -161,11 +193,13 @@ impl<'a> Cancel<'a> {
         else {
             return false;
         };
-        let interrupted = std::panic::catch_unwind(std::panic::AssertUnwindSafe(check.run))
-            .unwrap_or_else(|panic| {
-                self.fired.store(true, Ordering::Release);
-                std::panic::resume_unwind(panic)
-            });
+        let interrupted = workers::with_host_diagnostics(|| {
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(check.run))
+        })
+        .unwrap_or_else(|panic| {
+            self.fired.store(true, Ordering::Release);
+            std::panic::resume_unwind(panic)
+        });
         if interrupted {
             self.fired.store(true, Ordering::Release);
         }
@@ -486,6 +520,7 @@ pub(crate) mod prepared_request;
 pub(crate) mod process;
 pub(crate) mod recorder;
 pub(crate) mod request;
+pub(crate) mod roots;
 pub(crate) mod schedule;
 pub(crate) mod usage;
 #[cfg(test)]

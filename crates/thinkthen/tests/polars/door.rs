@@ -8,9 +8,9 @@ mod common;
 
 use conformance_backend::Backend;
 use thinkthen::polars::prelude::{DataFrame, DataType, IntoColumn, NamedFrom, Series};
-use thinkthen::{CallOptions, Error, ErrorKind, PolarsEngine, Question, QuestionSet};
-
-const MARKER: &str = r#"{"failed":{"kind":"backend","cause":"missing_probability"}}"#;
+use thinkthen::{
+    CallOptions, Error, ErrorKind, LoadedQuestion, PolarsEngine, Question, QuestionSet,
+};
 
 fn decide() -> Question {
     Question::decide("Does this ask for a refund?")
@@ -35,10 +35,31 @@ fn frame(columns: Vec<Series>) -> DataFrame {
     .expect("a frame")
 }
 
-fn cells(frame: &DataFrame, name: &str) -> Vec<Option<String>> {
-    let column = frame.column(name).expect("the column");
-    let text = column.str().expect("a String column");
-    text.iter().map(|cell| cell.map(str::to_owned)).collect()
+#[test]
+fn a_profiled_question_keeps_its_identity_through_a_series() {
+    let fixture: serde_json::Value =
+        serde_json::from_str(include_str!("../../../../conformance/calibration.json"))
+            .expect("shared calibration fixture");
+    let question = match Question::from_json(&fixture["question"].to_string()).expect("question") {
+        LoadedQuestion::Question(question) => Some(question),
+        LoadedQuestion::Banded(_) => None,
+    }
+    .expect("the fixture is one decide question");
+    let backend = Backend::start().expect("backend");
+    let engine = common::builder(&format!("{}/generic/v1", backend.origin()))
+        .profile_json(&fixture["runtime_profile"].to_string())
+        .expect("runtime profile")
+        .build()
+        .expect("engine");
+    let evidence = fixture["evidence"].as_str().expect("evidence");
+    let answered = engine
+        .decide_series(&question, &common::column(&[evidence]), CallOptions::new())
+        .expect("series");
+    assert_eq!(answered.bool().expect("boolean series").get(0), Some(true));
+    let details = engine.details(&question, evidence).expect("details");
+    assert_eq!(details.question_sha256(), fixture["question_sha256"]);
+    assert_eq!(details.profile_warning(), Some(("old", "new")));
+    assert_eq!(backend.count(), 1);
 }
 
 /// Each refusal names its cause whole, in `Display` and `Debug`, and sends nothing.
@@ -55,6 +76,14 @@ fn every_refusal_is_pinned_and_sends_nothing() {
         r#"{"version": 1, "questions": {"body": {"decide": "Does this ask for a refund?"}}}"#,
     )
     .expect("a set");
+    let reserved = QuestionSet::from_json(
+        r#"{"version": 1, "questions": {"failed": {"decide": "Does this ask for a refund?"}}}"#,
+    )
+    .expect("a reserved set");
+    let other = QuestionSet::from_json(
+        r#"{"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
+    )
+    .expect("another set");
     let refusals: Vec<(Result<(), Error>, &str)> = vec![
         (
             engine
@@ -92,6 +121,26 @@ fn every_refusal_is_pinned_and_sends_nothing() {
                 .map(drop),
             "the frame already holds a column named body",
         ),
+        (
+            engine
+                .annotate_frame(&reserved, &texts, "body", options())
+                .map(drop),
+            "the question name failed is reserved for frame failures",
+        ),
+        (
+            engine
+                .annotate_frame(
+                    &other,
+                    &frame(vec![
+                        common::column(&["refund me"]),
+                        Series::new("failed".into(), [1i64]),
+                    ]),
+                    "body",
+                    options(),
+                )
+                .map(drop),
+            "the frame already holds a column named failed",
+        ),
     ];
     for (refused, sentence) in refusals {
         let error = refused.expect_err(sentence);
@@ -105,11 +154,9 @@ fn every_refusal_is_pinned_and_sends_nothing() {
     assert_eq!(backend.count(), 0, "a refusal reached the backend");
 }
 
-/// A failed question widens its whole column to text holding the engine's
-/// marker, and the good cells keep their pinned texts (shared case
-/// `17-annotate-partial`).
+/// Shared case 17 keeps typed answers and the exact nested failure cause.
 #[test]
-fn a_failed_question_widens_to_the_markers_text() {
+fn a_failed_question_keeps_typed_columns_and_a_marker() {
     let backend = Backend::start().expect("a backend");
     let engine = common::engine(&format!("{}/case/17-annotate-partial/v1", backend.origin()));
     let set = QuestionSet::from_json(
@@ -127,15 +174,51 @@ fn a_failed_question_widens_to_the_markers_text() {
     let out = engine
         .annotate_frame(&set, &texts, "body", CallOptions::new())
         .expect("the frame");
-    assert_eq!(cells(&out, "team"), [Some(MARKER.to_owned())]);
+    let team = out.column("team").expect("team");
+    assert_eq!(team.dtype(), &DataType::String);
+    assert_eq!(team.null_count(), 1);
     let refund = out.column("refund").expect("refund");
     assert_eq!(refund.dtype(), &DataType::Boolean);
     assert_eq!(refund.null_count(), 1, "not sure reads null");
     let severity = out.column("severity").expect("severity");
     assert_eq!(severity.f64().expect("Float64").get(0), Some(1.2));
+    assert!(matches!(
+        out.column("topics").expect("topics").dtype(),
+        DataType::List(_)
+    ));
+    let failed = out
+        .column("failed")
+        .expect("failed")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(failed.null_count(), 0);
+    let team = failed.field_by_name("team").expect("team marker");
+    let marker = team
+        .struct_()
+        .expect("question Struct")
+        .field_by_name("failed")
+        .expect("marker");
     assert_eq!(
-        cells(&out, "topics"),
-        [Some(r#"["billing","urgent"]"#.to_owned())]
+        marker
+            .struct_()
+            .expect("marker Struct")
+            .field_by_name("kind")
+            .expect("kind")
+            .str()
+            .expect("text")
+            .get(0),
+        Some("backend")
+    );
+    assert_eq!(
+        marker
+            .struct_()
+            .expect("marker Struct")
+            .field_by_name("cause")
+            .expect("cause")
+            .str()
+            .expect("text")
+            .get(0),
+        Some("missing_probability")
     );
 }
 
@@ -246,7 +329,11 @@ fn the_callers_columns_come_back_unchanged() {
             series.name()
         );
     }
-    assert_eq!(out.width(), theirs.len() + 1);
+    assert_eq!(out.width(), theirs.len() + 2);
+    assert_eq!(
+        out.column("failed").expect("failure column").null_count(),
+        out.height()
+    );
 }
 
 /// An empty column gives an empty column of the verb's type and sends nothing.
@@ -287,5 +374,21 @@ fn an_empty_column_answers_empty() {
         let series = series.expect("an empty answer");
         assert_eq!((series.len(), series.dtype()), (0, &dtype));
     }
+    let set = QuestionSet::from_json(
+        r#"{"version": 1, "questions": {"refund": {"decide": "Does this ask for a refund?"}}}"#,
+    )
+    .expect("a set");
+    let output = engine
+        .annotate_frame(&set, &frame(vec![empty]), "body", options())
+        .expect("empty frame");
+    assert_eq!(output.height(), 0);
+    assert_eq!(
+        output.column("refund").expect("answer").dtype(),
+        &DataType::Boolean
+    );
+    assert!(matches!(
+        output.column("failed").expect("failure column").dtype(),
+        DataType::Struct(_)
+    ));
     assert_eq!(backend.count(), 0);
 }

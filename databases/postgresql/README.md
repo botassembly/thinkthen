@@ -53,6 +53,8 @@ The domain rejects a different non-`NULL` label. A stored `NULL` can represent a
 
 `thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
 
+The details digest includes a question's saved calibration `profile`. A different runtime `thinkthen.profile` name appears as `meta.profile_warning` with `tuned_for` and `running`. The selected runtime profile checks limits before sending.
+
 `thinkthen_try_details(question, evidence)` returns `jsonb` with `status: "answered"` and the full details object, or `status: "failed"` and an error with public `kind`, fixed safe `message`, and typed `retryable`. It returns SQL NULL when either input is SQL NULL, before reading a question file or settings. An unresolved answer is answered with JSON `null` in its details. Usage, local, and backend row failures let later rows complete. Cancellation, deadline, and defect still raise. The failed value includes no question, evidence, key, file path, cache path, or backend address.
 
 `thinkthen_usage()` returns this backend process's running totals of requests sent, cache answers and tokens.
@@ -64,18 +66,24 @@ The domain rejects a different non-`NULL` label. A stored `NULL` can represent a
 | `thinkthen.deadline_ms` | any role | the per-call budget in milliseconds. -1 means none, and 0 means already spent |
 | `thinkthen.throttle` | superuser | requests in flight at once, 1 to 32. -1 keeps the engine's value. PostgreSQL refuses any other value where it is set. The refusal reads `thinkthen usage: a throttle is a whole number from 1 through 32`. `SET` fails, and a configuration file's bad value draws the refusal as a warning and leaves -1 |
 | `thinkthen.max_requests` | superuser | the most records one call answers. -1 means no limit |
+| `thinkthen.max_request_bytes` | any role | positive request-byte ceiling for relation plans. -1 keeps the environment value |
 | `thinkthen.max_requests_total` | superuser | the most requests one backend sends. -1 means no total |
-| `thinkthen.cache` | superuser | the answer cache folder. Empty keeps `THINKTHEN_CACHE` or the platform folder |
+| `thinkthen.model` | any role | backend model. Empty keeps the environment value |
+| `thinkthen.timeout` | any role | positive attempt timeout in seconds; -1 keeps the environment value |
+| `thinkthen.max_retries` | any role | status retries, 0 or more; -1 keeps the environment value |
+| `thinkthen.profile` | any role | version-one backend profile as JSON text; empty keeps the environment value |
+| `thinkthen.record`, `thinkthen.replay` | superuser | absolute folders for live recording or strict offline replay. Empty keeps the environment value |
+| `thinkthen.cache` | superuser | an absolute answer cache folder. `off` disables it; empty keeps `THINKTHEN_CACHE` or the platform folder |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. There is no off switch on this surface. `thinkthen.cache` moves the folder, and an empty value keeps `THINKTHEN_CACHE` or the platform folder.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. `cache prune` is the only thing that removes entries. Set `thinkthen.cache = 'off'` to disable it. An empty value keeps `THINKTHEN_CACHE` or the platform folder.
 
 The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 
-`thinkthen.max_requests_total` caps spending on a large query, where each row is its own call. Before each call the backend adds the requests its engines have sent. Once the total is spent, the call refuses with 22023 and sends nothing. Only an array batch and `thinkthen_warm` are cut to what remains: they send the records that fit, then refuse. Any other call that sends several requests runs to its end once any of the total remains, such as `thinkthen_annotate` over several groups or `thinkthen_relate` over up to 255 entities. The total belongs to one backend process: each new connection forks a backend that starts from zero. A pool of N connections can therefore spend up to N times the total. A cancelled call's send already on the wire, and the engine's retries, can each pass the total by one call. `thinkthen status` never sees this spend, because it counts only what the command sends.
+`thinkthen.max_requests_total` caps attempted live sends in one backend, including retries and requests inside annotate or relate. An atomic reservation admits every attempt before transport, so a call cannot pass the total. A call with a spent total raises 22023 before sending, including when it could read an answer from cache. Array batches and `thinkthen_warm` retain their ordered partial-row cut. A new connection forks a backend with a new total. A pool of N connections can spend up to N times its per-backend total. A cancelled call's send already on the wire remains counted. `thinkthen status` counts only command sends.
 
 ## Errors
 

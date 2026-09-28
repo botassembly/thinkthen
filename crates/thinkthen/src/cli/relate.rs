@@ -31,6 +31,7 @@ pub(crate) fn run(
             .unwrap_or(crate::core::DEFAULT_MODEL),
     )?
     .with_request_size(request_size);
+    environment.check_key(&backend)?;
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
     let source = crate::edge::source(arguments.common.input.as_deref(), input)?;

@@ -16,6 +16,8 @@ Ticket 0063 wrote the count of each request to disk before sending it, so a cras
 3. The command waits for the writer after its results, then prints the one warning if a write failed. It waits as long as another process holds the lock.
 4. The guarantee changes. `specification/recording.md` said "A crash can undercount tokens or overcount one precharged request." ADR 0034 said "A crash can leave a conservative overcount of one request or an undercount of later tokens." Both now read: "A crash can undercount the requests and tokens counted after the last write that finished." Ticket 0063's precharge rule is retired.
 
+Amendment on 2026-09-28: [ADR 0097](0097-bound-advisory-usage-lock-acquisition.md) replaces item 3's unlimited advisory usage-lock wait with one shared finalization deadline. The write-behind queue and the rest of this decision remain.
+
 ## Consequences
 
 `--jobs N` puts N requests in flight whatever the usage file is doing. A killed process loses the counts it had not yet written. Ticket 0141 weighed one write at the end of the run, which needs no thread. It was set aside because `status` would show nothing during a long run and a kill would lose the whole run.

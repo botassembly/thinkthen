@@ -32,7 +32,7 @@ An unknown option is a usage error. So is a repeated single-value option, and so
 
 Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
 
-Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, `--facts`, and `--batch N` on `decide`, `filter` and `rank`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there. Not built yet, by ADR 0048 item 11: `--context FILE` joins the advanced options.
+Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, `--facts`, and `--batch N` and `--context FILE` on `decide`, `filter`, `rank`, `choose`, `tag` and `score`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there.
 
 ## Standard input
 
@@ -119,4 +119,4 @@ A run that read a question file carries one more field, `from`, between `input` 
 
 `recognize --dry-run` reports its piece count and every exact step-1 request for the first record under `thinkthen.recognize-plan/2`. [recognize.md](recognize.md) fixes that schema.
 
-`relate --dry-run` reports the complete entity set, expanded relations, method and fallback choices, and every exact split request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.
+`relate --dry-run` reports the complete entity set, ordered rules, their fixed yes/no method and null fallback, and every exact shared request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.
