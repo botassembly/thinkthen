@@ -407,3 +407,12 @@ Fresh High review of `1d0d8dbb` found two cases outside the passing selected con
 ## Observed documentation requests take precedence
 
 The 0241 follow-on candidate `b370d140` proves 89 of 92 displayed examples. Its three SQL recognize cases reach exact-replay misses: SQLite sends sorted kind names, while DuckDB and PostgreSQL omit descriptions from the kind question. A bounded helper initially inferred from source that SQLite should match an existing recording. The actual captured body contradicted that inference, and the helper withdrew it. Similar text and labels are insufficient evidence of request identity. Prepare any missing capture from the observed request and retain a strict match; never attach an existing response to a newly invented request or mark a replay miss as answer proof.
+
+
+## Preparation must resolve the current type contract
+
+The five-row preparation recommended renaming Python recognized-span `text` to `name` from the old register. Implementation preparation then compared all current public outputs and found that accepted ADR 0082, types.md and result.schema.json retain `text` for recognized spans. Relation entities use the distinct `name` shape and already accept the recognized text fallback. A Python-only rename would introduce drift. The coordinator withdrew that source change and assigned the actual per-surface field/unit table and focused handoff proof. Before proposing a field rename, compare the normative schema, accepted ADR and every affected public constructor; do not infer the current contract from an old parity description.
+
+## Validate the final paid-job command before charging it
+
+The 0241 helper matched planned request bodies offline but added `--jobs 1` to its final single-text recognize commands. That mode refuses the option. The authorized invocation stopped with zero requests and retries, while the wrapper retained its 15,000-token reservation. The coordinator approved one corrected invocation after both complete argument lists pass a loopback execution. A dry-run body comparison alone does not validate the eventual command's argument policy. Keep the failed invocation and its charge; do not silently edit its logs or retry under its authorization.
