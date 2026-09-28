@@ -99,6 +99,26 @@
       "valid": true
     },
     {
+      "name": "tag-batch-max",
+      "verb": "tag",
+      "file": {
+        "tag": "Which topics?",
+        "labels": ["billing", "urgent"],
+        "batch": "max"
+      },
+      "valid": true
+    },
+    {
+      "name": "tag-batch-zero",
+      "verb": "tag",
+      "file": {
+        "tag": "Which topics?",
+        "labels": ["billing", "urgent"],
+        "batch": 0
+      },
+      "valid": false
+    },
+    {
       "name": "score-bare-list",
       "verb": "score",
       "file": {
@@ -125,6 +145,26 @@
         }
       },
       "valid": true
+    },
+    {
+      "name": "score-batch-two",
+      "verb": "score",
+      "file": {
+        "score": "How much disruption?",
+        "levels": ["low", "high"],
+        "batch": 2
+      },
+      "valid": true
+    },
+    {
+      "name": "score-batch-string-two",
+      "verb": "score",
+      "file": {
+        "score": "How much disruption?",
+        "levels": ["low", "high"],
+        "batch": "2"
+      },
+      "valid": false
     },
     {
       "name": "empty-structure-is-a-value",

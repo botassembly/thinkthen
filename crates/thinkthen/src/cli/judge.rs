@@ -379,7 +379,7 @@ pub(crate) fn tag(
     if arguments.quiet {
         return Err(Failure::TagQuiet);
     }
-    let settled = asked::tag(arguments)?;
+    let (settled, file) = asked::tag(arguments)?;
     judging(
         Asked {
             common: &arguments.common,
@@ -391,7 +391,7 @@ pub(crate) fn tag(
                 details: arguments.common.details,
             },
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,
@@ -422,7 +422,7 @@ pub(crate) fn score(
             "`score` has no answer exit code, so --quiet would discard its result",
         ));
     }
-    let settled = asked::score(arguments)?;
+    let (settled, file) = asked::score(arguments)?;
     let view = View {
         quiet: false,
         raw: false,
@@ -435,7 +435,7 @@ pub(crate) fn score(
             settled: &settled,
             view,
             keeping: Keeping::Answers,
-            batch: None,
+            batch: Some(tiers(&arguments.batching, file)),
         },
         environment,
         input,

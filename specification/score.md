@@ -18,6 +18,8 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 On one document, a JSON number. The score runs from 0 at the lowest level to the number of levels minus one at the highest. In record mode each compact JSONL row is `{"input":RECORD,"value":NUMBER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `score`.
 
+Record mode fills each request with records up to `--batch N|max` and the request-size limit. `--batch 1` without a context sends each record's former request bytes. A top-level question-file `batch` follows a typed `--batch` and `THINKTHEN_BATCH`; the default is `max`. `--context FILE` supplies shared evidence, and `--max-request-bytes N` sets the soft byte cut. A typed batch or context on one document is refused. [records.md](records.md) gives the limits and ordered-row rules. `score` has no tuned threshold or batch warning.
+
 ## The number
 
 The number is the backend's probability-weighted position on the levels. With K levels, it is the sum of each level's probability times its zero-based index, divided by the measured total of the accepted probabilities. The tool rounds that result at twelve decimal places. Three levels with probabilities 0.05, 0.30, and 0.65 give `(0 × 0.05 + 1 × 0.30 + 2 × 0.65) / 1`. That is 1.6. Every probability here is illustrative.
@@ -35,6 +37,7 @@ In `--details`, `answer.level` names the first level with the highest probabilit
 | `--details` | Prints the full result object | Off |
 | `--dry-run` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
+| Record batching | `--batch`, `--context`, `--max-request-bytes` | `max`, no context, 96,000 bytes |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
 `score` takes no `--threshold`, no `--quiet`, and no `--raw`. It has no answer exit code, so quiet output would discard its result. Its result is a JSON number; `choose --raw` is the command that prints a bare label.
