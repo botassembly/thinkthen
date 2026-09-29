@@ -1,6 +1,6 @@
 # 0260 first proof slice: portable batch identity
 
-Status: candidate proof passed focused checks; the first fresh code review found two proof-integration corrections, now applied for the same reviewer. Landing remains. This completes the CLI plus C-door checkpoint in ticket 0260, not register 64's every-applicable-surface criterion. Source began at accepted design `f68d9496` and claimed main `94bdf96d`; the coordinator owns later host assignments.
+Status: first core, CLI and C proof accepted at `3a194a88` and integrated at main `fb57009b`. Later TypeScript/Ruby/R proof was accepted at `73959b19`, and SQL proof at `068fd3fd`. This record preserves the first-slice evidence; the ticket and linked follow-on records track the remaining hosts.
 
 ## What was added and observed
 
@@ -22,7 +22,9 @@ Fresh read-only code review of `12b5281d` accepted the fixture, body and counted
 
 After correction, a selector check read the four names from the routine script and matched them against Cargo's actual library/backend test lists, two each. The affected compiled CLI filter passed both tests, and the C door filter passed its one test. Root library/backend and C all-target strict Clippy, both format checks, shell syntax, ticket check and measured ratchets passed. These checks verify the correction without rerunning the unrelated routine suite.
 
-## Finite remaining host proof
+## Host remainder recorded at the first checkpoint
+
+The table below records the first checkpoint's scope. TypeScript/Ruby/R and SQL source routes have since passed fresh review in [native proof](0260-native-host-proof.md) and [SQL proof](0260-sql-host-proof.md). Public Rust, Python/frame, Rust Polars and the eleven C-wrapper package groups remain assigned under the current ticket. Separate installed-target qualification remains unchanged.
 
 The original criterion requires the shared corpus to be exercised at every applicable public surface. The current first slice proves CLI and C only. The next related batch must consume the same five-text corpus through these existing runner/check routes, with ordered five-row acceptance, three counted sends and fixed bodies/request identities, or a stated unsupported-domain reason:
 

@@ -17,7 +17,7 @@ Focused results: TypeScript portable test 1/1; Ruby portable test 1/1 with seven
 | Public Rust library | Call the five-text Max bulk API through the public crate and compare literal bodies, row digests and three sends. |
 | Python bulk and supported column/frame doors | Pass the same five strings through each advertised public text route. Preserve host missing-value rules and ordered rows. |
 | Rust Polars feature | Pass the public string column route through the shared Max corpus. |
-| SQLite, PostgreSQL, DuckDB | Each public SQL aggregate must demonstrate deterministic five-text order, literal bodies, digests and sends under its own NULL and transaction rules. SQL work is separately owned. |
+| SQLite, PostgreSQL, DuckDB | Completed after this native checkpoint at accepted `068fd3fd`; the [SQL record](0260-sql-host-proof.md) distinguishes directly returned DuckDB digests from PostgreSQL/SQLite body/count proof and shared-source inference. |
 | PHP, C#, JVM Java/Kotlin/Scala, Dart, Swift, Zig, Go, C++, Ada, GNU Objective-C and COBOL | The accepted C corpus proves the common native door. Each package still needs a public forwarding call with returned ordered rows, digest identities and counted sends. A single common C driver does not prove each adapter call. Go/C++ release packaging is separately owned. |
 | TypeScript, Ruby, R installed targets | Existing installed-artifact modes need their own provenance and public forwarding qualification; the focused source-tree cases above do not assert it. |
 

@@ -1,0 +1,7 @@
+# 0260 SQL host review and integration
+
+Fresh independent Sol Medium review accepted corrected candidate `068fd3fd`. It checked the exact shared fixture bodies, three-send multisets, ordered PostgreSQL rows, SQLite distinct count and DuckDB returned row identities against the original register 64 criterion. PostgreSQL and SQLite return no digest in these APIs. The reviewer accepted their observable body/count proof and the explicitly qualified shared-source inference for unexposed digests. No new SQL API is required by this criterion.
+
+The first review found that DuckDB's installed checker used an explicit list that omitted the registered case. The correction adds that selector and accurately records the focused out-of-tree installed-copy pass. The reviewer checked the local extension hash against the recorded current-source artifact. It measured all three Python ratchets. Their growth rationale and helper reuse appear in the corrective and integration commit bodies; the coordinator retained the original published history instead of rewriting it for a message-only requirement.
+
+Integration changes no SQL product input. Focused syntax, measured counters, pages, tickets and whitespace checks pass. The prior installed PostgreSQL/SQLite and current DuckDB evidence remains applicable. Register 64 stays open for the remaining public host routes, and release-target qualification stays separate.

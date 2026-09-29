@@ -25,3 +25,7 @@ After that pilot, extend the same file and native-identity rule in small port gr
 ## Independent preparation review
 
 Fresh independent Sol Medium review accepted `b50d0bf1`. It checked all thirteen changed files against the accepted integration and current release tools. The source-complete status, original release criteria, package identities and Go/C++ pilot scope are supported. No runtime check or issue closure follows from this preparation. Pages, ticket evidence and whitespace checks passed; unchanged executable inputs retain their existing proof.
+
+## Accepted local routing follow-up
+
+Ticket0261 completed the bounded local Go/C++ release route after fresh code acceptance `0623703b`, integrated at `e81770f1`. Its [review](0261-go-cpp-release-code-review.md) and [build receipt](0261-go-cpp-release-build.md) prove matching wrapper/C archives, the shared preflight, installed consumers and refusal boundaries. The older route inventory above is pinned to its named preparation revision. Final release pin, other targets, workflow routing and distribution remain open; do not repeat the accepted local pilot merely because that older inventory predates it. Ticket0262 now prepares C#/JVM local routing using the same lessons.
