@@ -30,21 +30,18 @@ fn given(arg: Option<&str>, what: &str) -> Given {
     Given::read(arg, what, call::file_directory().as_deref()).or_raise()
 }
 
-fn given_result(arg: Option<&str>, what: &str) -> Result<Given, Refusal> {
-    Given::read(arg, what, call::file_directory().as_deref())
-}
-
 /// The question argument, with the function's members joined under `key`.
 fn question(arg: Option<&str>, key: &str, members: Option<Array<'_, &str>>) -> LoadedQuestion {
     let members = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
-    given(arg, "question")
-        .with_members(key, members)
+    Given::read_question(arg, key, call::file_directory().as_deref())
+        .and_then(|held| held.with_members(key, members))
         .and_then(|held| held.parse(thinkthen::Question::from_json))
         .or_raise()
 }
 
 fn question_result(arg: Option<&str>) -> Result<LoadedQuestion, Refusal> {
-    given_result(arg, "question")?.parse(thinkthen::Question::from_json)
+    Given::read_question(arg, "", call::file_directory().as_deref())?
+        .parse(thinkthen::Question::from_json)
 }
 
 /// A SQL context is literal text. `NULL` keeps the historical request.

@@ -1,6 +1,6 @@
 # A PHP 8.3 FFI consumer works through C, but no supported package exists
 
-Status: the local package experiment (local experiment 291) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.
+Status: ticket 0249 landed the `libraries/php/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-php-build.md) cover the Composer source package and installed consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, Packagist/direct distribution, other-host proof and PHP-driven in-flight cancellation. No release dispatch or publication is claimed.
 
 ## Evidence
 
@@ -10,9 +10,9 @@ Package: Composer-shaped with php >=8.3 + ext-ffi and an absolute-library-path n
 
 ## Handoff
 
-Copy only `stage2/package/` into the J8 integration ticket under `libraries/php/`; never ship rehearsal archives. The ticket applies the type contract (issue `2026-09-27-one-type-contract-for-every-surface`) — Composer-shaped package requiring php >=8.3 + ext-ffi, absolute-library-path contract. Single-threaded cancellation limitation documented; engine-level strict proof labeled as ctypes. — runs J1's result-schema parity corpus now that `specification/result.schema.json` has landed, binds `thinkthen_engine_new_with` where the stage-two pin predates it, rebuilds on the final release pin, and adds the GitHub Actions `ubuntu-24.04` build/release path with native archives on GitHub Releases and direct or language-registry distribution.
+The historical experiment copy instruction is complete and superseded by `libraries/php/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, Packagist/direct distribution, other-host proof and PHP-driven in-flight cancellation.
 
-Note: PHP cannot fire a token while a blocking FFI call holds the VM — the J8 ticket decides pre-fire-only documentation versus a worker-process design.
+Note: PHP cannot fire a token while a blocking FFI call holds the VM — release work retains the pre-fire-only documentation and any worker-process design as an explicit open choice.
 
 ## Limits
 
@@ -28,6 +28,6 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 
 ADAPTED-PASS (packing, envelope, 48->40; FFI deprecation noted for J8). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
 
-## Product source integration candidate (2026-09-28)
+## Landed product source (2026-09-28)
 
-Ticket 0249's PHP candidate is in `libraries/php/`; [preflight](../records/0249-php-preflight.md) and [build proof](../records/0249-php-build.md) name its current-source gate and remaining review. This does not close the issue. The final release pin, `ubuntu-24.04` build/release path, native archives, and Packagist/direct distribution remain explicit release criteria. The local Linux x86_64 source gate does not claim other hosts or PHP-driven in-flight cancellation.
+Ticket 0249's landed PHP source is in `libraries/php/`; [preflight](../records/0249-php-preflight.md) and [build proof](../records/0249-php-build.md) name its current-source gate and completed review. This does not close the issue. The final release pin, `ubuntu-24.04` build/release path, native archives, and Packagist/direct distribution remain explicit release criteria. The local Linux x86_64 source gate does not claim other hosts or PHP-driven in-flight cancellation.

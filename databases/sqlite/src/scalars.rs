@@ -1,4 +1,4 @@
-//! The judgment functions: six scalars, `thinkthen_usage`, and the
+//! The judgment functions: volatile scalars, `thinkthen_usage`, and the
 //! `thinkthen_warm` aggregate, each registered volatile and direct-only.
 
 use std::sync::Arc;
@@ -7,7 +7,8 @@ use rusqlite::Connection;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use thinkthen::{
-    Answer, CallOptions, Details, Engine, Judgment, LoadedQuestion, Question, QuestionKind,
+    Answer, CallOptions, Details, Engine, Judgment, LoadedQuestion, Probabilities, Question,
+    QuestionKind,
 };
 
 use crate::question::{question, set, shown, text};
@@ -94,6 +95,23 @@ fn contextual(
         .1)
 }
 
+/// One ordinary detail read; all question kinds keep the same engine path.
+fn scalar_details(
+    engine: &Engine,
+    held: &LoadedQuestion,
+    evidence: &str,
+    options: CallOptions<'_>,
+) -> Result<Details, Failure> {
+    Ok(match held {
+        LoadedQuestion::Question(asked) => {
+            engine.details_with(asked, evidence, options)?.into_value()
+        }
+        LoadedQuestion::Banded(asked) => {
+            engine.details_with(asked, evidence, options)?.into_value()
+        }
+    })
+}
+
 /// Refuse a question `name` does not take, before any send.
 fn only(held: &LoadedQuestion, name: &str, kind: QuestionKind) -> Result<(), Failure> {
     match held {
@@ -153,6 +171,37 @@ fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
             Answer::No => Some(0),
             Answer::Unsure => None,
         })
+    })?)
+}
+
+fn probability(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
+    Ok(guard("thinkthen_probability", || {
+        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
+            return Ok(None);
+        };
+        match &*held {
+            LoadedQuestion::Banded(_) => {}
+            LoadedQuestion::Question(asked) if asked.kind() == QuestionKind::Decide => {}
+            _ => {
+                return Err(Failure::usage(
+                    "thinkthen_probability takes a decide question",
+                ));
+            }
+        }
+        let yes = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
+            let details = if let Some(shared) = shared {
+                contextual(engine, &held, evidence, options.context(&shared))?
+            } else {
+                scalar_details(engine, &held, &evidence, options)?
+            };
+            match details.probabilities() {
+                Probabilities::YesNo { yes } => Ok(*yes),
+                Probabilities::Named(_) => {
+                    Err(Failure::defect("a decide answer held named probabilities"))
+                }
+            }
+        })?;
+        Ok(Some(yes))
     })?)
 }
 
@@ -237,16 +286,7 @@ fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             if let Some(shared) = shared {
                 Ok(contextual(engine, &held, evidence, options.context(&shared))?.to_scalar_json())
             } else {
-                Ok(match &*held {
-                    LoadedQuestion::Question(asked) => engine
-                        .details_with(asked, &evidence, options)?
-                        .into_value()
-                        .to_json(),
-                    LoadedQuestion::Banded(asked) => engine
-                        .details_with(asked, &evidence, options)?
-                        .into_value()
-                        .to_json(),
-                })
+                Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
             }
         })?;
         Ok(Some(details))
@@ -266,16 +306,7 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             if let Some(shared) = shared {
                 Ok(contextual(engine, &held, evidence, options.context(&shared))?.to_scalar_json())
             } else {
-                Ok(match &*held {
-                    LoadedQuestion::Question(asked) => engine
-                        .details_with(asked, &evidence, options)?
-                        .into_value()
-                        .to_json(),
-                    LoadedQuestion::Banded(asked) => engine
-                        .details_with(asked, &evidence, options)?
-                        .into_value()
-                        .to_json(),
-                })
+                Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
             }
         })?;
         let details: serde_json::Value =
@@ -358,6 +389,7 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     )?;
     for arity in [2, 3, 4] {
         connection.create_scalar_function("thinkthen_decide", arity, volatile, decide)?;
+        connection.create_scalar_function("thinkthen_probability", arity, volatile, probability)?;
         connection.create_scalar_function("thinkthen_choose", arity, volatile, choose)?;
         connection.create_scalar_function("thinkthen_score", arity, volatile, score)?;
         connection.create_scalar_function("thinkthen_tag", arity, volatile, tag)?;

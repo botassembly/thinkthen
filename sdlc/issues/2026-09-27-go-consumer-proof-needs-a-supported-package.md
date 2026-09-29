@@ -1,10 +1,10 @@
 # A Go consumer works through C, but no supported package exists
 
-Status: the local Go package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing, not publication. He can overturn the thread-pinning choice and the explicit native-archive route.
+Status: ticket 0249 landed the `libraries/go/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-go-cpp-build.md) cover the Go module and isolated shared/static-C consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archive, module tags, direct installation and other-host proof. No release dispatch or publication is claimed.
 
 ## Gap
 
-The ideal state makes the C interface the route to additional languages. Experiment 274 now supplies the Go implementation, package metadata, examples, documentation, tests and local archive rehearsal on Beelink. The repository still needs reviewed integration, release packaging and final-release verification before offering supported Go use.
+The ideal state makes the C interface the route to additional languages. Experiment 274 now supplies the Go implementation, package metadata, examples, documentation, tests and local archive rehearsal on Beelink. Ticket 0249 supplied reviewed integration. Release packaging and final-release verification remain before supported Go use.
 
 ## Evidence
 
@@ -24,7 +24,7 @@ At the sealed stage-two pin, a scalar C call could return success after its toke
 
 ## Handoff and remaining work
 
-Historical evidence remains local and unchanged under `stage2/`, including its package, artifacts, fixtures, gate and handoff. Product integration must use `post-fix/package/`, `post-fix/fixtures/` and `post-fix/gate.sh`, which carry the passing strict expectations. The integration ticket copies `post-fix/package/` into `libraries/go/`, relocates fixture controls into product offline tests, adapts release packaging and documentation, and adds the surface registry entry. The post-fix package also contains the context-watcher correction described below; the sealed stage-two package lacks it. The integration ticket records the final Go API behavior. The post-fix experiment copy already requires strict cancellation success and passed. Product integration must carry that contract and rerun everything on the final release pin. Do not publish the rehearsal archives.
+The historical experiment copy instruction is complete and superseded by `libraries/go/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, module tags, direct installation and other-host proof.
 
 ## Limits
 
@@ -58,6 +58,6 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 
 ADAPTED-PASS (packing, envelope, multiset 47->39). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
 
-## Product source candidate (2026-09-28)
+## Landed product source (2026-09-28)
 
-Ticket 0249 copied the accepted repin package into `libraries/go/` and adapted a product-owned offline gate. At source `976bcd75`, the gate passed four copied-module consumers with 39 exact full request bodies each, plus one external module call per consumer, 55 schema cases and 29 executable public Go cases, current 30-export native ABI, settings construction, named error kinds and copied failure facts. See `sdlc/records/0249-go-cpp-{preflight,build,review}.md`. Fresh Medium review accepted source `d7723841`; Go registration passed focused policy and registry checks after Swift/Zig landed. Narrow registration review is pending. The original final-release pin, `ubuntu-24.04` CI/release run, native archive distribution, and module-tag/direct-install criteria remain open. No package was published.
+Ticket 0249 copied the accepted repin package into `libraries/go/` and adapted a product-owned offline gate. At source `976bcd75`, the gate passed four copied-module consumers with 39 exact full request bodies each, plus one external module call per consumer, 55 schema cases and 29 executable public Go cases, current 30-export native ABI, settings construction, named error kinds and copied failure facts. See `sdlc/records/0249-go-cpp-{preflight,build,review}.md`. Fresh Medium review accepted source `d7723841`; Go registration passed focused policy and registry checks after Swift/Zig landed. Shared registration review and landing completed under ticket 0249. The original final-release pin, `ubuntu-24.04` CI/release run, native archive distribution, and module-tag/direct-install criteria remain open. No package was published.

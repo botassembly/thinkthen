@@ -1,10 +1,10 @@
 # A JVM consumer works through C, but no supported package exists
 
-Status: the local JVM package experiment is complete, and ticket 0166 fixed the native cancellation blocker it exposed. A post-fix re-verification on main 22f36d00 passed every case, including strict held-scalar cancellation through Java, Kotlin, and Scala. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing and the toolchain downloads, not publication. He can overturn the FFM-over-JNI choice, the join-first close contract, and the one-MiB refusal bound.
+Status: ticket 0249 landed the `libraries/jvm/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-csharp-jvm-build.md) cover the Java, Kotlin and Scala JAR package and installed consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, Maven distribution and other-host proof. No release dispatch or publication is claimed.
 
 ## Gap
 
-The ideal state makes the C interface the route to additional languages. Experiment 289 (renumbered from a collided 275 claim) now supplies Java, Kotlin, and Scala implementations, JAR-shaped package artifacts, documentation, tests and local archive rehearsal on Beelink. The repository still needs reviewed integration, release packaging and final-release verification before offering supported JVM use.
+The ideal state makes the C interface the route to additional languages. Experiment 289 (renumbered from a collided 275 claim) now supplies Java, Kotlin, and Scala implementations, JAR-shaped package artifacts, documentation, tests and local archive rehearsal on Beelink. Ticket 0249 supplied reviewed integration. Release packaging and final-release verification remain before supported JVM use.
 
 ## Evidence
 
@@ -24,7 +24,7 @@ At the sealed stage-two pin, a scalar C call could return success after its toke
 
 ## Handoff and remaining work
 
-Historical evidence remains local and unchanged under `stage2/`, including its package, artifacts, fixtures, gate and handoff. Product integration must use `post-fix/package/`, `post-fix/fixtures/` and `post-fix/gate.sh`, which carry the passing strict expectations. The integration ticket copies `post-fix/package/` into `libraries/jvm/`, adapts fixtures into product offline tests, decides JAR distribution and the native archive route, and adds the surface registry entry. The post-fix experiment copy already updated the strict classifier and Java/Kotlin/Scala held-call expectations and passed its gate. Product integration must carry those expectations, rebuild from the final release commit and rerun its gate. Do not publish the rehearsal archives or JARs.
+The historical experiment copy instruction is complete and superseded by `libraries/jvm/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, Maven distribution and other-host proof.
 
 ## Limits
 
@@ -34,7 +34,7 @@ Java 21 FFM is a preview; behavior on final-FFM JDKs is untested. Concurrent eng
 
 Ticket 0166 landed the engine fix. A parent-verified rerun at pin `22f36d0006fd34e7390a71d15c0458e493f3e844` (header `7fdca29a...`) rebuilt the native library and all three JARs and passed the complete copied gate with exit 0: strict held scalar returns `THINKTHEN_ECANCELLED` with untouched seeded native outputs, fresh-token recovery passes, held bulk returns 5, held deadline returns 3, and all 35 outer plus 33 child receipts match. Evidence: `post-fix/POST-FIX-REPORT.md`, worker gate `post-fix/logs/gate-20260927T130613Z`, parent rerun `post-fix/logs/gate-20260927T132352Z`. Integrators carry the strict-pass expectations into the product ticket and rerun on its final release pin.
 
-Remaining integration work is unchanged: integration ticket, JAR and native-archive distribution decisions, final-release rebuild, and the preview-FFM/carrier/close/one-MiB limits recorded in the handoff.
+Remaining release work is JAR and native-archive distribution, final-release rebuild, and the preview-FFM/carrier/close/one-MiB limits recorded in the handoff.
 
 ## Dependencies and installation (Beelink, recorded 2026-09-27)
 
@@ -54,6 +54,6 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 
 ADAPTED-PASS (packing, envelope; packaged Kotlin/Scala examples fixed in repin only). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
 
-## Product integration candidate, ticket 0249
+## Landed product source, ticket 0249
 
-The reviewed first batch imports `repin/package/` into `libraries/jvm/`, builds the local Java/Kotlin/Scala JAR bundle and records Maven metadata at `io.github.botassembly:thinkthen-jvm`. Java 21 preview FFM consumers pass 60 exact arrivals apiece through isolated installations. The carrier diagnostic lives in test code outside the product JAR. Settings, named errors, borrowed facts, member-order tolerant result decoding and the J1 public-binding corpus pass on Linux x86_64. The product build receipt is `sdlc/records/0249-csharp-jvm-build.md`. This is a review candidate until landed. Maven publication, native release packaging and other hosts remain open.
+The reviewed first batch imports `repin/package/` into `libraries/jvm/`, builds the local Java/Kotlin/Scala JAR bundle and records Maven metadata at `io.github.botassembly:thinkthen-jvm`. Java 21 preview FFM consumers pass 60 exact arrivals apiece through isolated installations. The carrier diagnostic lives in test code outside the product JAR. Settings, named errors, borrowed facts, member-order tolerant result decoding and the J1 public-binding corpus pass on Linux x86_64. The product build receipt is `sdlc/records/0249-csharp-jvm-build.md`. Ticket 0249 source integration landed. Maven publication, native release packaging and other hosts remain open.

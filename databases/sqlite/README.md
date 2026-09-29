@@ -18,6 +18,7 @@ The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a
 | Function | Answers |
 |---|---|
 | `thinkthen_decide(question, text[, deadline[, context]])` | 1, 0, or NULL for unsure |
+| `thinkthen_probability(question, text[, deadline[, context]])` | a decide question's yes probability as REAL, including when decide is unsure |
 | `thinkthen_choose(question, text[, deadline[, context]])` | the chosen label, or NULL |
 | `thinkthen_score(question, text[, deadline[, context]])` | the position from 0 to K−1, as REAL |
 | `thinkthen_tag(question, text[, deadline[, context]])` | a JSON array of labels |
@@ -31,7 +32,7 @@ The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a
 | `thinkthen_recognize_document(text, spec)` | complete recognize JSON with entities and any relation edges |
 | `thinkthen_relate(table, id, name, kind, rule, …[, deadline])` | a table of `relation, source, target, probability`; the deadline follows the fourth rule slot |
 
-A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_details`, and `thinkthen_warm` only. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question.
+A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_probability`, `thinkthen_details`, and `thinkthen_warm`. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question. `thinkthen_probability('Is this a complaint?', body)` reads the yes probability directly. Separate calls reuse an answer only when their complete request digests match.
 
 `thinkthen_find` instead takes a **plain** question and one ordered JSON array of text units. For a table with an explicit `ordinal`, use `SELECT thinkthen_find('Which passage answers?', json_group_array(passage ORDER BY ordinal), 1) FROM passages`. Its `none` flag is integer `0` or `1` (default `0`); the fourth slot is the usual deadline. An empty array or top-level SQL NULL returns SQL NULL without sending. At least two units are required otherwise, with at most 255 (254 when offering none). Each duplicate retains its own zero-based index. A selected none returns a non-null JSON object with null `index` and `value`. The complete ordered group is one request and has its own cache identity; the function is direct-only and volatile.
 

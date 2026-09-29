@@ -8,6 +8,10 @@
       "sql": "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now');",
       "expected": "1"
     },
+    "probability": {
+      "sql": "SELECT thinkthen_probability('Is this a complaint?', 'i want a refund now');",
+      "expected": "0.9"
+    },
     "choose": {
       "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now');",
       "expected": "the refund desk"
