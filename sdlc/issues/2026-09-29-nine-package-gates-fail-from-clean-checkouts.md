@@ -22,6 +22,12 @@ Six of nine trace to the documented contract changes in `2026-09-28-batching-and
 
 csharp's gate depends on ambient environment; objective-c README lacks node/jsonschema prerequisites; several cosmetic findings — all listed per surface in the experiment.
 
+## Current-main preparation, 2026-09-29
+
+The [bounded reconciliation](../records/2026-09-29-clean-package-gates-preparation.md) compares the sealed `680b67ba` receipts with `origin/main` `ac19afc9d`. The five priority causes remain in current source; **no current full package gate was rerun**, so this is not a new nine-gate failure measurement or a closure. One clean-interpreter Objective-C startup check still fails at the first Python step. The C held test must keep a real in-flight request before each token fire: the proposed count of three follows the packed wire, but its request and cache assertions need focused execution. Zig's missing file is required by the installed project's default build and must be copied, not removed from that build. The TypeScript assertion and Rust example outputs still disagree with their current exports and pinned answers.
+
+The 0276 child-environment cleanup, 0277 wrapper facts, privacy cleanup, version checks and API inventory gate changes landed after the sealed pin; none edits the five failing lines above. They are retained improvements, not proof that the original nine clauses are green. The Python frame/Series clauses, Polars, DuckDB and SQLite remain held; Python's independent settings count and preferred-host Pydantic compatibility are classified in the record without executing frame work. C#/JVM and C++/Dart package work belongs to their claimed lanes. Keep all nine original criteria separate until each affected gate or a narrower equivalent has passing evidence.
+
 ## Evidence
 
 Local experiment 302 `experiments/302-polyglot-package-verification/`: one folder per surface with REPORT.md and logs; `FINDINGS.md` consolidates; `waves.log` is the run record. Inputs sealed at the pin.
