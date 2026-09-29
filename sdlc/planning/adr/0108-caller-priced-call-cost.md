@@ -1,6 +1,6 @@
 # ADR 0108: Caller-priced call cost
 
-- Status: **proposed** 2026-09-29 for fresh High design/API review. The coordinator may accept routine details within Ian's approved useful pre-release API outcome; this document does not itself change the product.
+- Status: **accepted** 2026-09-29. Fresh High design/API review accepted `5bde09bb5aa1f266ae358a56df38dc293cfed724`; the queue owner approves this decision within Ian's authorized pre-release API outcome. Implementation and matching consumer proof remain required.
 - Opens: the cost criterion of [every-surface facts](../../issues/2026-09-26-every-surface-should-give-back-run-facts.md). Implementation route: [ticket 0300](../../tickets/0300-caller-priced-call-cost.md).
 
 ## Decision

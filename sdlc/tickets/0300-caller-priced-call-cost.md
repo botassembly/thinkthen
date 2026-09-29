@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0300: Caller-priced cost in call and run facts
 
-Status: Proposed for fresh High design/API review. No product contract or issue criterion is closed by this draft. [ADR 0108](../planning/adr/0108-caller-priced-call-cost.md) is proposed with it.
+Status: ACCEPTED for implementation after fresh High design/API review of `5bde09bb5aa1f266ae358a56df38dc293cfed724` on 2026-09-29. The queue owner approves [ADR 0108](../planning/adr/0108-caller-priced-call-cost.md) within Ian's authorized pre-release API work. Implementation follows the shared 0283/0289 changes and exact lane claims. No product criterion is closed by design acceptance.
 
 ## Outcome
 
@@ -44,7 +44,7 @@ Update `specification/settings.md` and `specification/result.md` with the condit
 - Keeps: All values, token and request facts, default unpriced bytes, frozen C ABI, six errors, record bodies, count-only month/retry sidecar and the separate 0299 admission rule.
 - Changes: An opt-in, caller-priced exact USD pair and optional fixed-point whole-call/whole-run estimate; a deliberate priced-mode pre-freeze reader migration with strict unknown-key behavior retained.
 - Proof: Independent send-count loopback table, complete-versus-partial usage and independent token-arithmetic validity through both owners, pre-start validation, copied failure lifetime, exact cost/rounding and strict old/new copied-reader boundary.
-- Defers: High review, implementation and release qualification; provider bills/tariffs, hard money cap, SQL/frame calls, timing/IDs, durable library status, full-detail parity and the remaining umbrella criteria.
+- Defers: Implementation and release qualification; provider bills/tariffs, hard money cap, SQL/frame calls, timing/IDs, durable library status, full-detail parity and the remaining umbrella criteria.
 
 ## What the build taught us
 

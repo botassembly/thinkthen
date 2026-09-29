@@ -1,5 +1,7 @@
 # 0300 caller-priced cost preparation, 2026-09-29
 
+Fresh High design/API review accepted `5bde09bb5aa1f266ae358a56df38dc293cfed724` on 2026-09-29. The queue owner accepted the corrected design. No runtime or product closure is claimed.
+
 Source pin: `origin/main` `0cb22bc13`; accepted [accounting preparation](2026-09-29-accounting-api-preparation.md) at `2778a8e3e`, 0282 landed at `acf2bc802`, and accepted 0299 stays unmerged at `ee55bd6f4`. This note prepares [ticket 0300](../tickets/0300-caller-priced-call-cost.md) and proposed [ADR 0108](../planning/adr/0108-caller-priced-call-cost.md). It closes no issue and authorizes no source edit. The ideal-state cost ladder asks for a usable price before scaling, while the existing [facts issue](../issues/2026-09-26-every-surface-should-give-back-run-facts.md) asks for caller-supplied cost. The [SQL follow-up](2026-09-29-sql-redesign-followup-assessment.md) separates it from token admission, headers and durable status.
 
 ## Source findings that constrain the contract
