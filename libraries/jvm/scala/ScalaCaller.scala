@@ -7,17 +7,17 @@ import scala.concurrent.duration.*
 
 /** Scala facade over the same Java FFM door. Await before closing the engine. */
 final class ScalaFacade(engine: Door)(using ExecutionContext) {
-  def decide(question: String, evidence: String): Door.Answer =
+  def decide(question: String, evidence: String): Door.TypedResult[Door.Answer] =
     engine.decide(question, evidence.getBytes(StandardCharsets.UTF_8))
   def call(request: String): String = engine.call(request)
   final class RunningDecision(question: String, evidence: String) extends AutoCloseable {
     private val token = engine.token()
-    private val promise = Promise[Door.Answer]()
+    private val promise = Promise[Door.TypedResult[Door.Answer]]()
     private val caller = Thread.ofPlatform().start(() =>
       try promise.success(engine.decide(question, evidence.getBytes(StandardCharsets.UTF_8), -1L, token))
       catch { case ex: Throwable => promise.failure(ex) }
     )
-    def future: Future[Door.Answer] = promise.future
+    def future: Future[Door.TypedResult[Door.Answer]] = promise.future
     def cancel(): Unit = token.fire()
     override def close(): Unit = { caller.join(); token.close() }
   }
@@ -28,9 +28,9 @@ final class ScalaFacade(engine: Door)(using ExecutionContext) {
   val engine = new Door()
   try {
     val facade = new ScalaFacade(engine)
-    assert(facade.decide("Is it?", "scala-direct").outcome() == 1)
+    assert(facade.decide("Is it?", "scala-direct").value().outcome() == 1)
     val running = facade.decideAsync("Is it?", "scala-future")
-    try assert(Await.result(running.future, 20.seconds).probability() == .9)
+    try assert(Await.result(running.future, 20.seconds).value().probability() == .9)
     finally running.close()
     val token = engine.token()
     try {
@@ -55,7 +55,7 @@ final class ScalaFacade(engine: Door)(using ExecutionContext) {
       catch { case ex: Door.NativeFailure => assert(ex.failure.code() == 5, s"Scala cancellation code: ${ex.failure.code()}") }
       println("SCALA_HELD_SCALAR_CANCELLED_PASS")
     } finally held.close()
-    assert(facade.decide("Is it?", "scala-recovery").outcome() == 1)
+    assert(facade.decide("Is it?", "scala-recovery").value().outcome() == 1)
     println("SCALA_PASS")
   } finally engine.close()
 }

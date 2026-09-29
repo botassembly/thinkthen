@@ -166,4 +166,40 @@ public final class ResultEnvelope {
         Value answer = (Value) top.get("value");
         return json.substring(answer.start(), answer.end());
     }
+
+    /** Decode owned typed-call facts with the same bounded JSON reader. */
+    public static Door.Facts facts(String json) {
+        Reader reader = new Reader(json);
+        Value result = reader.value();
+        reader.space();
+        if (reader.at != json.length() || !(result.parsed() instanceof Map<?, ?> raw))
+            throw new IllegalStateException("invalid native facts object");
+        @SuppressWarnings("unchecked") Map<String, Value> fields = (Map<String, Value>) raw;
+        if (!fields.keySet().containsAll(REQUIRED) || !ALLOWED.containsAll(fields.keySet()) || fields.containsKey("retries"))
+            throw new IllegalStateException("incomplete native facts");
+        long records = count(fields, "records");
+        long requests = count(fields, "requests_sent");
+        long cache = count(fields, "cache_answers");
+        Long input = fields.containsKey("input_tokens") ? count(fields, "input_tokens") : null;
+        Long output = fields.containsKey("output_tokens") ? count(fields, "output_tokens") : null;
+        Object elapsed = fields.get("seconds").parsed();
+        if (!(elapsed instanceof BigDecimal value) || value.signum() < 0 || !Double.isFinite(value.doubleValue()))
+            throw new IllegalStateException("invalid native facts: seconds");
+        Object model = fields.containsKey("model") ? fields.get("model").parsed() : null;
+        if (fields.containsKey("model") && !(model instanceof String))
+            throw new IllegalStateException("invalid native facts: model");
+        return new Door.Facts(records, requests, cache, value.doubleValue(), input, output, (String) model);
+    }
+
+    private static long count(Map<String, Value> fields, String name) {
+        Value item = fields.get(name);
+        if (item == null) {
+            throw new IllegalStateException("missing native facts: " + name);
+        }
+        if (!(item.parsed() instanceof BigDecimal number) || number.signum() < 0 ||
+                number.stripTrailingZeros().scale() > 0)
+            throw new IllegalStateException("invalid native facts: " + name);
+        try { return number.longValueExact(); }
+        catch (ArithmeticException overflow) { throw new IllegalStateException("native facts count exceeds Java long: " + name, overflow); }
+    }
 }

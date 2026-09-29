@@ -16,6 +16,9 @@ public struct Answer {
     public Outcome OutcomeKind => Outcome switch { 0 => global::ThinkThen.Outcome.No, 1 => global::ThinkThen.Outcome.Yes, 2 => global::ThinkThen.Outcome.NotSure, _ => throw new InvalidOperationException("invalid native outcome") };
 }
 public sealed record CallResult(JsonElement Value, JsonElement Facts);
+public sealed record Facts(ulong Records, ulong RequestsSent, ulong CacheAnswers, double Seconds,
+    ulong? InputTokens, ulong? OutputTokens, string? Model);
+public sealed record TypedResult<T>(T Value, Facts Facts);
 
 public static class Native
 {
@@ -31,10 +34,14 @@ public static class Native
     [DllImport(Library)] public static extern IntPtr thinkthen_error_message(IntPtr engine);
     [DllImport(Library)] public static extern IntPtr thinkthen_error_facts_json(IntPtr engine);
     [DllImport(Library)] public static extern int thinkthen_decide_opts(IntPtr engine, byte[] question, byte[] text, nuint textLength, long deadlineMs, IntPtr token, ref Answer answer);
+    [DllImport(Library)] public static extern int thinkthen_decide_with_facts_opts(IntPtr engine, byte[] question, byte[] text, nuint textLength, long deadlineMs, IntPtr token, ref Answer answer, ref IntPtr facts, ref nuint factsLength);
     [DllImport(Library)] public static extern int thinkthen_decide_many_opts(IntPtr engine, byte[] question, IntPtr texts, IntPtr lengths, nuint count, long deadlineMs, IntPtr token, IntPtr answers);
+    [DllImport(Library)] public static extern int thinkthen_decide_many_with_facts_opts(IntPtr engine, byte[] question, IntPtr texts, IntPtr lengths, nuint count, long deadlineMs, IntPtr token, IntPtr answers, ref IntPtr facts, ref nuint factsLength);
     [DllImport(Library)] public static extern IntPtr thinkthen_call_opts(IntPtr engine, byte[] request, long deadlineMs, IntPtr token);
     [DllImport(Library)] public static extern int thinkthen_recognize_opts(IntPtr engine, byte[] spec, byte[] text, nuint length, long deadlineMs, IntPtr token, ref IntPtr output, ref nuint outputLength);
+    [DllImport(Library)] public static extern int thinkthen_recognize_with_facts_opts(IntPtr engine, byte[] spec, byte[] text, nuint length, long deadlineMs, IntPtr token, ref IntPtr output, ref nuint outputLength, ref IntPtr facts, ref nuint factsLength);
     [DllImport(Library)] public static extern int thinkthen_relate_opts(IntPtr engine, byte[] spec, IntPtr texts, IntPtr lengths, nuint count, long deadlineMs, IntPtr token, ref IntPtr output, ref nuint outputLength);
+    [DllImport(Library)] public static extern int thinkthen_relate_with_facts_opts(IntPtr engine, byte[] spec, IntPtr texts, IntPtr lengths, nuint count, long deadlineMs, IntPtr token, ref IntPtr output, ref nuint outputLength, ref IntPtr facts, ref nuint factsLength);
     [DllImport(Library)] public static extern void thinkthen_free_string(IntPtr value);
 }
 
@@ -80,6 +87,40 @@ public sealed class Engine : IDisposable
         if (observed != code) throw new InvalidOperationException($"native error mismatch {code}/{observed}");
         return new Failure(code, retryable != 0, message, facts);
     }
+    private static byte[] CopyBytes(IntPtr pointer, nuint length)
+    {
+        if (pointer == IntPtr.Zero) throw new InvalidOperationException("missing native output");
+        byte[] bytes = new byte[checked((int)length)];
+        Marshal.Copy(pointer, bytes, 0, bytes.Length);
+        return bytes;
+    }
+    private static Facts ReadFacts(IntPtr pointer, nuint length)
+    {
+        using JsonDocument document = JsonDocument.Parse(CopyBytes(pointer, length));
+        JsonElement root = document.RootElement;
+        if (root.ValueKind != JsonValueKind.Object) throw new InvalidOperationException("invalid native facts");
+        static ulong Required(JsonElement root, string name)
+        {
+            if (!root.TryGetProperty(name, out JsonElement value) || value.ValueKind != JsonValueKind.Number || !value.TryGetUInt64(out ulong number))
+                throw new InvalidOperationException("invalid native facts: " + name);
+            return number;
+        }
+        static ulong? Optional(JsonElement root, string name)
+        {
+            if (!root.TryGetProperty(name, out JsonElement value)) return null;
+            if (value.ValueKind != JsonValueKind.Number || !value.TryGetUInt64(out ulong number))
+                throw new InvalidOperationException("invalid native facts: " + name);
+            return number;
+        }
+        if (!root.TryGetProperty("seconds", out JsonElement elapsed) || elapsed.ValueKind != JsonValueKind.Number ||
+            !elapsed.TryGetDouble(out double seconds) || !double.IsFinite(seconds) || seconds < 0)
+            throw new InvalidOperationException("invalid native facts: seconds");
+        string? model = null;
+        if (root.TryGetProperty("model", out JsonElement named))
+            model = named.ValueKind == JsonValueKind.String ? named.GetString() : throw new InvalidOperationException("invalid native facts: model");
+        return new Facts(Required(root, "records"), Required(root, "requests_sent"), Required(root, "cache_answers"),
+            seconds, Optional(root, "input_tokens"), Optional(root, "output_tokens"), model);
+    }
     private TResult Invoke<TResult>(TimeSpan? budget, CancellationToken cancellation, Func<IntPtr, long, IntPtr, TResult> body)
     {
         lifetime.EnterReadLock();
@@ -99,23 +140,26 @@ public sealed class Engine : IDisposable
         }
         finally { lifetime.ExitReadLock(); }
     }
-    public Answer Decide(string question, string text, TimeSpan? budget = null, CancellationToken cancellation = default)
+    public TypedResult<Answer> Decide(string question, string text, TimeSpan? budget = null, CancellationToken cancellation = default)
     {
         byte[] q = CString(question), t = Text(text);
         return Invoke(budget, cancellation, (ptr, deadline, token) => {
             Answer answer = new() { Outcome = 123, Probability = -1.0 };
-            int rc = Native.thinkthen_decide_opts(ptr, q, t, (nuint)t.Length, deadline, token, ref answer);
-            if (rc != 0) { if (answer.Outcome != 123 || answer.Probability != -1.0) throw new InvalidOperationException("failed scalar changed output"); throw ReadFailure(ptr, rc); }
-            return answer;
+            IntPtr facts = IntPtr.Zero; nuint factsLength = 123;
+            int rc = Native.thinkthen_decide_with_facts_opts(ptr, q, t, (nuint)t.Length, deadline, token, ref answer, ref facts, ref factsLength);
+            if (rc != 0) { if (answer.Outcome != 123 || answer.Probability != -1.0 || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed scalar changed output"); throw ReadFailure(ptr, rc); }
+            try { return new TypedResult<Answer>(answer, ReadFacts(facts, factsLength)); }
+            finally { Native.thinkthen_free_string(facts); }
         });
     }
-    public Answer[] DecideMany(string question, params string[] texts) => DecideManyWithOptions(question, texts, null, default);
-    public Answer[] DecideManyWithOptions(string question, string[] texts, TimeSpan? budget, CancellationToken cancellation)
+    public TypedResult<Answer[]> DecideMany(string question, params string[] texts) => DecideManyWithOptions(question, texts, null, default);
+    public TypedResult<Answer[]> DecideManyWithOptions(string question, string[] texts, TimeSpan? budget, CancellationToken cancellation)
     {
         byte[] q = CString(question);
         byte[][] encoded = Array.ConvertAll(texts, Text);
         return Invoke(budget, cancellation, (ptr, deadline, token) => {
             IntPtr pointers = IntPtr.Zero, lengths = IntPtr.Zero, answers = IntPtr.Zero;
+            IntPtr facts = IntPtr.Zero; nuint factsLength = 123;
             IntPtr[] entries = new IntPtr[texts.Length];
             int stride = Marshal.SizeOf<Answer>();
             int pointerBytes = checked(entries.Length * IntPtr.Size);
@@ -133,15 +177,15 @@ public sealed class Engine : IDisposable
                     Marshal.WriteIntPtr(lengths, checked(i * IntPtr.Size), new IntPtr(encoded[i].Length));
                     Marshal.StructureToPtr(new Answer { Outcome = 123, Probability = -1 }, answers + checked(i * stride), false);
                 }
-                int rc = Native.thinkthen_decide_many_opts(ptr, q, pointers, lengths, (nuint)entries.Length, deadline, token, answers);
+                int rc = Native.thinkthen_decide_many_with_facts_opts(ptr, q, pointers, lengths, (nuint)entries.Length, deadline, token, answers, ref facts, ref factsLength);
                 Answer[] result = new Answer[entries.Length];
                 for (int i = 0; i < result.Length; i++) result[i] = Marshal.PtrToStructure<Answer>(answers + checked(i * stride));
                 if (rc != 0)
                 {
-                    if (Array.Exists(result, item => item.Outcome != 123 || item.Probability != -1)) throw new InvalidOperationException("failed bulk changed output");
+                    if (Array.Exists(result, item => item.Outcome != 123 || item.Probability != -1) || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed bulk changed output");
                     throw ReadFailure(ptr, rc);
                 }
-                return result;
+                return new TypedResult<Answer[]>(result, ReadFacts(facts, factsLength));
             }
             finally
             {
@@ -149,6 +193,7 @@ public sealed class Engine : IDisposable
                 if (pointers != IntPtr.Zero) Marshal.FreeHGlobal(pointers);
                 if (lengths != IntPtr.Zero) Marshal.FreeHGlobal(lengths);
                 if (answers != IntPtr.Zero) Marshal.FreeHGlobal(answers);
+                if (facts != IntPtr.Zero) Native.thinkthen_free_string(facts);
             }
         });
     }
@@ -171,24 +216,24 @@ public sealed class Engine : IDisposable
             throw new InvalidOperationException("invalid native result envelope");
         return new CallResult(value.Clone(), facts.Clone());
     }
-    public string Recognize(string spec, string text, TimeSpan? budget = null, CancellationToken cancellation = default)
+    public TypedResult<string> Recognize(string spec, string text, TimeSpan? budget = null, CancellationToken cancellation = default)
     {
         byte[] q = CString(spec), t = Text(text);
         return Invoke(budget, cancellation, (ptr, deadline, token) => {
-            IntPtr output = IntPtr.Zero; nuint length = unchecked((nuint)123);
-            int rc = Native.thinkthen_recognize_opts(ptr, q, t, (nuint)t.Length, deadline, token, ref output, ref length);
-            if (rc != 0) { if (output != IntPtr.Zero || length != 123) throw new InvalidOperationException("failed recognize changed output"); throw ReadFailure(ptr, rc); }
-            try { byte[] result = new byte[checked((int)length)]; Marshal.Copy(output, result, 0, result.Length); return StrictUtf8.GetString(result); }
-            finally { Native.thinkthen_free_string(output); }
+            IntPtr output = IntPtr.Zero, facts = IntPtr.Zero; nuint length = 123, factsLength = 123;
+            int rc = Native.thinkthen_recognize_with_facts_opts(ptr, q, t, (nuint)t.Length, deadline, token, ref output, ref length, ref facts, ref factsLength);
+            if (rc != 0) { if (output != IntPtr.Zero || length != 123 || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed recognize changed output"); throw ReadFailure(ptr, rc); }
+            try { return new TypedResult<string>(StrictUtf8.GetString(CopyBytes(output, length)), ReadFacts(facts, factsLength)); }
+            finally { try { Native.thinkthen_free_string(output); } finally { Native.thinkthen_free_string(facts); } }
         });
     }
-    public string Relate(string spec, params string[] records)
+    public TypedResult<string> Relate(string spec, params string[] records)
     {
         byte[] q = CString(spec);
         byte[][] encoded = Array.ConvertAll(records, Text);
         return Invoke(null, default, (ptr, deadline, token) => {
-            IntPtr pointers = IntPtr.Zero, lengths = IntPtr.Zero, output = IntPtr.Zero;
-            nuint outputLength = 123;
+            IntPtr pointers = IntPtr.Zero, lengths = IntPtr.Zero, output = IntPtr.Zero, facts = IntPtr.Zero;
+            nuint outputLength = 123, factsLength = 123;
             IntPtr[] entries = new IntPtr[encoded.Length];
             int pointerBytes = checked(entries.Length * IntPtr.Size);
             try
@@ -202,15 +247,14 @@ public sealed class Engine : IDisposable
                     Marshal.WriteIntPtr(pointers, checked(i * IntPtr.Size), entries[i]);
                     Marshal.WriteIntPtr(lengths, checked(i * IntPtr.Size), new IntPtr(encoded[i].Length));
                 }
-                int rc = Native.thinkthen_relate_opts(ptr, q, pointers, lengths, (nuint)entries.Length, deadline, token, ref output, ref outputLength);
-                if (rc != 0) { if (output != IntPtr.Zero || outputLength != 123) throw new InvalidOperationException("failed relate changed output"); throw ReadFailure(ptr, rc); }
-                byte[] bytes = new byte[checked((int)outputLength)];
-                Marshal.Copy(output, bytes, 0, bytes.Length);
-                return StrictUtf8.GetString(bytes);
+                int rc = Native.thinkthen_relate_with_facts_opts(ptr, q, pointers, lengths, (nuint)entries.Length, deadline, token, ref output, ref outputLength, ref facts, ref factsLength);
+                if (rc != 0) { if (output != IntPtr.Zero || outputLength != 123 || facts != IntPtr.Zero || factsLength != 123) throw new InvalidOperationException("failed relate changed output"); throw ReadFailure(ptr, rc); }
+                return new TypedResult<string>(StrictUtf8.GetString(CopyBytes(output, outputLength)), ReadFacts(facts, factsLength));
             }
             finally
             {
-                if (output != IntPtr.Zero) Native.thinkthen_free_string(output);
+                try { if (output != IntPtr.Zero) Native.thinkthen_free_string(output); }
+                finally { if (facts != IntPtr.Zero) Native.thinkthen_free_string(facts); }
                 foreach (IntPtr entry in entries) if (entry != IntPtr.Zero) Marshal.FreeHGlobal(entry);
                 if (pointers != IntPtr.Zero) Marshal.FreeHGlobal(pointers);
                 if (lengths != IntPtr.Zero) Marshal.FreeHGlobal(lengths);

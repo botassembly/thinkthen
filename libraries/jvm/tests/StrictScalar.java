@@ -24,8 +24,8 @@ public class StrictScalar {
                 token.fire();token.fire();Thread.sleep(250);
             } finally {Files.createFile(barrier.resolve("release-"+held));caller.join();}
             Object observed=result.get();
-            Door.Answer recovered=engine.decide("Is it?",b(recovery));
-            if(recovered.outcome()!=1 || recovered.probability()!=.9)throw new AssertionError("fresh-token recovery "+recovered);
+            Door.TypedResult<Door.Answer> recovered=engine.decide("Is it?",b(recovery));
+            if(recovered.value().outcome()!=1 || recovered.value().probability()!=.9)throw new AssertionError("fresh-token recovery "+recovered);
             System.out.println("FRESH_TOKEN_RECOVERY_PASS");
             if(plant)
                 throw new AssertionError("PLANTED DIFFERENT STRICT FAILURE AFTER RECOVERY");

@@ -19,7 +19,7 @@ import scala.concurrent.ExecutionContext
   val door = new Door()
   try {
     val answer = new ScalaFacade(door).decide("Is it?", "release-scala")
-    assert(answer.outcome() == 1 && answer.probability() == 0.9)
+    assert(answer.value().outcome() == 1 && answer.value().probability() == 0.9 && answer.facts().records() == 1L && answer.facts().requestsSent() == 1L)
     println("INSTALLED_SCALA_PASS")
   } finally door.close()
 }
