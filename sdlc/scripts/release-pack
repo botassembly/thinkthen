@@ -30,9 +30,9 @@ case " $* " in
 		source_commit=$(git -C "$REPO" rev-parse HEAD)
 		[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	else
-		case " $* " in *' go '* | *' cpp '*) ;; *) echo 'release-pack: archived source permits only go and cpp wrappers' >&2; exit 1 ;; esac
+		case " $* " in *' go '* | *' cpp '* | *' swift '* | *' zig '*) ;; *) echo 'release-pack: archived source permits only go, cpp, swift and zig wrappers' >&2; exit 1 ;; esac
 		for part in "$@"; do
-			case $part in c | go | cpp | sqlite | duckdb | postgresql | python | typescript | ruby) ;;
+			case $part in c | go | cpp | swift | zig | sqlite | duckdb | postgresql | python | typescript | ruby) ;;
 			*) echo "release-pack: archived source does not permit $part" >&2; exit 1 ;; esac
 		done
 		case ${THINKTHEN_ARCHIVED_SOURCE_TAR:-} in /*) ;; *) echo 'release-pack: archived source tar path must be absolute' >&2; exit 1 ;; esac
@@ -289,7 +289,7 @@ cobol)
 		;;
 	esac
 	if [ -n "${THINKTHEN_ARCHIVED_SOURCE_TAR:-}" ]; then
-		case $1 in go | cpp) ;; *) echo "release-pack: archived source does not permit $1" >&2; exit 1 ;; esac
+		case $1 in go | cpp | swift | zig) ;; *) echo "release-pack: archived source does not permit $1" >&2; exit 1 ;; esac
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "libraries/$1/$relative" | cmp -s - "$copied" || {
