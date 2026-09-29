@@ -1,10 +1,12 @@
 //! Command framing and output around the engine-owned grouped scheduler.
 
+use std::cell::Cell;
+use std::io::Write;
 use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::annotate::{GroupAnswer, Judging, PreparedGroup, check_model};
+use crate::annotate::{GroupAnswer, Judging, PrepareError, PreparedGroup, check_model};
 use crate::core::{ModelName, Reading, Record};
 use crate::engine::facade::{
     GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
@@ -25,7 +27,17 @@ struct Answers {
     at: usize,
 }
 
-type PreparedInput = Prepared<(usize, Record), Answers, Work>;
+enum Seed {
+    Record(Record),
+    Missing { at: usize, pointer: String },
+}
+
+struct Finished {
+    judged: Judged,
+    skipped: bool,
+}
+
+type PreparedInput = Prepared<Seed, Answers, Work>;
 
 pub(crate) enum Input {
     Bytes(usize, Vec<u8>),
@@ -42,6 +54,7 @@ pub(crate) fn run<I>(
 where
     I: Iterator<Item = Result<Input, Placed>> + Send + 'static,
 {
+    let skipped = Cell::new(0usize);
     let outcome = judging.engine().groups(
         reading.streams(),
         cancel,
@@ -70,15 +83,45 @@ where
             answers.ordered.push(answer);
             Ok(())
         },
-        |(_, record), answers| {
-            judging
-                .finish(record, answers.ordered)
-                .map(Judged::completed)
-                .map_err(|error| Placed::at(error, answers.at))
+        |seed, answers| {
+            let finished = match seed {
+                Seed::Record(record) => Finished {
+                    judged: judging
+                        .finish(record, answers.ordered)
+                        .map_err(|error| Placed::at(error, answers.at))?,
+                    skipped: false,
+                },
+                Seed::Missing { at, pointer } => Finished {
+                    judged: crate::annotate::error_row::missed(at, &pointer)
+                        .map_err(|error| Placed::at(error, at))?,
+                    skipped: true,
+                },
+            };
+            let (replayed, partial) = (finished.judged.replayed, finished.judged.partial_failure);
+            Ok(crate::engine::facade::Completed::one(
+                finished, replayed, partial,
+            ))
         },
-        |judged| output.take(judged).map_err(Placed::from),
-    )?;
+        |finished| {
+            let emitted = output.take(finished.judged).map_err(Placed::from)?;
+            if emitted && finished.skipped {
+                skipped.set(skipped.get() + 1);
+            }
+            Ok(emitted)
+        },
+    );
+    if skipped.get() > 0 {
+        let count = skipped.get();
+        writeln!(
+            std::io::stderr().lock(),
+            "thinkthen: {count} record{} skipped",
+            if count == 1 { "" } else { "s" }
+        )
+        .map_err(Failure::Output)?;
+    }
+    let outcome = outcome?;
     match outcome {
+        RunOutcome::Complete { .. } if skipped.get() > 0 => Ok(ExitCode::from(7)),
         RunOutcome::Complete { partial_failure } => Ok(if partial_failure {
             ExitCode::from(6)
         } else {
@@ -126,10 +169,24 @@ fn prepare(
                     members,
                 })
         })
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| Placed::at(error, at))?;
+        .collect::<Result<Vec<_>, _>>();
+    let work = match work {
+        Ok(work) => work,
+        Err(PrepareError::MissingOn(pointer)) if judging.continue_missing() => {
+            return Ok(Prepared {
+                seed: Seed::Missing { at, pointer },
+                accumulator: Answers {
+                    ordered: Vec::new(),
+                    model: None,
+                    at,
+                },
+                work: Vec::new(),
+            });
+        }
+        Err(error) => return Err(Placed::at(error.into_failure(), at)),
+    };
     Ok(Prepared {
-        seed: (at, record),
+        seed: Seed::Record(record),
         accumulator: Answers {
             ordered: Vec::with_capacity(work.len()),
             model: None,

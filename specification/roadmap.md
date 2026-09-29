@@ -24,7 +24,6 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | `--from FILE` for `choose` options | On one document the shell already reads a list into the arguments with command substitution. In record mode `--options POINTER` reads the list from the record | A demo whose candidate list is neither in the record nor available to the shell |
 | `--invert` on `filter` | A reworded question is a different measurement with its own threshold, so rewording is no inversion. `decide --jsonl --details` and `jq 'select(.answer.probability < T)'` keep the other side of the same question at the same cut, as the third example in [filter.md](filter.md) shows. Kept on hold 2026-09-26. Ian can overturn this | A demo where that `jq` step cannot serve |
 | `--output FILE`, publishing on success | It would write a file, and it would add a second success path beside the exit code | A demo that must not leave a half-written file behind on a failure |
-| `--on-error continue` | It needs an error row shape, a failure count on standard error, and an exit code of its own. Stopping at the first failure needs none of those. `--cache` resumes a stopped run, as `demos/12-keep-going/` shows. Kept on hold 2026-09-26. Ian can overturn this | A demo over a large file where one bad record must not end the run |
 | A request cap | Demo 05 wanted a budget and found it the wrong shape, because a per-file loop spends across processes rather than within a run | A budget that holds across processes. That is a different tool |
 | A `required` mark in the `annotate` file | The file holds questions and nothing else. A required mark is policy | A demo where a missing answer must fail the record |
 | Nesting in `annotate` output | Flat top-level fields keep a chain of judgments flat. Demo 07 found nesting made the next `jq` read `.input.input.sku` | A demo whose answers collide with record fields that cannot be renamed |
@@ -41,6 +40,11 @@ The rule for entry is ADR 0005: a feature enters when a demo cannot be written w
 | A `serve` command or a daemon | Declined by `sdlc/planning/ten-use-cases.md`. A process that waits for work is a service, and this tool is a command that ends. Record mode through a `coproc` already serves a loop from one long-lived process, and a how-to shows it | Nothing. A service is a different program |
 
 ADR 0048 brought two held rows in: `--context FILE`, now built on `decide`, `filter` and `rank`, and packing many records into one request as batching. Later batching tickets extend the remaining verbs and library surfaces.
+
+ADR 0104 brought in a narrow `annotate --jsonl --details --batch 1 --on-error continue`
+for a missing question-set `on` pointer. The general record-failure policy,
+including malformed records and failed batched requests, remains held. A whole
+failed batch cannot identify its poisoned member without extra isolation sends.
 
 ## Held by ADR 0010
 

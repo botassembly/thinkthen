@@ -1,11 +1,11 @@
 # `annotate`
 
-Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one; ADR 0039 amends that exclusion. ADR 0048 amends the requests for batches.
+Status: **Settled** for the file grammar, the output, and several pointers on `on`. ADR 0010 accepted the pointers and struck structured question values from version one; ADR 0039 amends that exclusion. ADR 0048 amends the requests for batches. ADR 0104 adds the narrow missing-pointer continuation and detailed-name exemption.
 
 Asks a saved question set about each record and adds one field per question.
 
 ```text
-thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--batch max|N] [--max-request-bytes N] [--details] [--dry-run] [BACKEND]
+thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--batch max|N] [--max-request-bytes N] [--details] [--dry-run] [--on-error continue] [BACKEND]
 ```
 
 ## What it reads
@@ -78,6 +78,7 @@ The bare output cannot identify an arbitrary object's original fields just by lo
 | `--lines`, `--jsonl`, `--csv`, or `--tsv` | Reads a record stream in place of one document | One document |
 | `--field POINTER` | The part of each record the questions see. An `on` pointer works inside it | The whole record |
 | `--details` | Prints the full result object per record | Off |
+| `--on-error continue` | With `--jsonl --details --batch 1`, prints one error row for a missing question-set `on` pointer and judges later records | Off; stop at the first failed record |
 | `--input FILE` | Reads the evidence from a file | Standard input |
 | `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
 | `--profile FILE` | Applies explicit local backend limits and names the running calibration profile. See [backends.md](backends.md) | None |
@@ -87,7 +88,9 @@ The bare output cannot identify an arbitrary object's original fields just by lo
 
 ## Exit codes
 
-0 when the run finished with every question answered, 6 when it finished after one or more logical questions failed, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record, at exit 2, before any request for it. An unreadable or invalid file is exit 5. A later whole-run failure keeps its own code and stop boundary.
+0 when the run finished with every question answered, 6 when it finished after one or more logical questions failed, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record in bare mode, at exit 2 before any request for it. With `--details`, the original member remains under `input` while the answer uses its name under `value` and `answers`; the name no longer collides, including in dry run. An unreadable or invalid file is exit 5. A later whole-run failure keeps its own code and stop boundary.
+
+`--on-error continue` requires explicit `--jsonl --details --batch 1`, refuses `--dry-run`, and is not an option on another verb. Missing any required flag or typing another policy is exit 2 before input is read. Only a missing question-set `on` pointer is recoverable. It emits one `thinkthen.record-error/1` row in input order, with one-based `at` and `failure:{"kind":"usage","cause":"missing_pointer","pointer":"/body"}`. It sends no request for that record. A completed run with any such row exits 7 and prints `thinkthen: 1 record skipped` or the plural count once on standard error; exit 7 outranks a completed exit-6 partial answer, whose failed marker stays in its row. Malformed/oversized/invalid-UTF-8 input, backend/group/replay/model/cancellation and output failures still stop with their existing code and boundary. A skip count, if any, prints before the terminal diagnostic. The error row has no input, answer, metadata, token count or backend body; route it by `schema` instead of feeding it to a judgment consumer. [result.md](result.md) fixes its full shape.
 
 ## Examples
 
@@ -126,6 +129,20 @@ In record mode, consecutive records of one `on` group share a request until cont
 `--details` reports `meta.usage` as the checked sum over the record's requests only when every reply reports usage. `meta.requests` lists every chunk's recording digest in question-set group and chunk order. `meta.requests_sent` sums actual sends, including retries. In a detailed row, `meta.batches` aligns with `meta.requests` when any contributing request held several records or came from a split. Each entry names the one-based `on` group, exact request digest, setting, record count and position, close reason, whole-request usage when known, attempts and a true split marker when applicable. Ordinary singleton entries are included to keep the arrays aligned. The field is absent when every chunk is an ordinary singleton. `meta.cached` is true only when every chunk replayed. Each answer also carries the digest of the chunk that produced it. Every chunk must report the same model. [result.md](result.md) gives the shape.
 
 A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detailed output its entry carries `question`, `failure`, and `request`, and carries no `value`, `answer`, or `threshold`. `meta.failed_questions` counts failed logical questions. It is always present, including zero. `null` means not sure and never means failed.
+
+Questions sharing one `on` selection ride in one logical group. A reply with at
+least one usable answer prints that answer beside a failed marker for each
+unusable answer and makes a completed run exit 6. A reply with no usable
+answer in any group stops the run at exit 4. It publishes none of that record's
+answers, even when a sibling `on` group answered successfully. A failed request
+covering several records cannot identify which member caused it;
+`--on-error continue` does not recover that whole batch. Separating questions
+into different `on` groups spends more requests and limits which questions
+share a partial reply or a changed request. It does not preserve sibling-group
+answers when one group wholly fails. Editing a question in a packed group
+changes that group's request identity, so a rerun may send the whole group
+again. Keep the exact group and batch setting when comparing saved runs or
+estimating request cost.
 
 ## Cautions
 
