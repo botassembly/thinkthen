@@ -38,6 +38,10 @@ Root can update the new-user rows above and change the docs issue's stale 6/8/9 
 
 No tests, builds, network, provider or site commands ran. The next useful proof, if root doubts the accepted page evidence, is the existing offline 0241 replay fixture for the *specific* script and its saved `.out`, not a full site or provider rerun. This record only cites that accepted proof.
 
+## Review and application
+
+Fresh independent Medium review accepted candidate `b23f1a18`. The coordinator applied the exact row and page corrections to the two issues. Both umbrellas stay open; this closes subcriteria and changes no whole-item count. Row4 proceeds to bounded design0274.
+
 ## What the build taught us
 
 The stale queue came from searching an old site data path and treating the umbrella's historical gap prose as current status. The actual catalog, scripts, saved output and 0241 acceptance settle the loop and paragraph criteria without new writing. A first-hour doc item can be complete while its umbrella stays open for explicitly later pages and launch intake. The source pin predates the accepted result guide's integration, so root must apply that separate closure against its landed commit.
