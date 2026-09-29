@@ -146,7 +146,7 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 | --- | --- | --- | --- |
 | `decide` | `decide` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `filter` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
-| `rank` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
+| `rank` | `decide`, `score` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `choose` | `choose` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `tag` | `tag` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `score` | `score` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `context_sha256?` |
@@ -155,7 +155,7 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 | `recognize` | `recognize` | `schema` `value` `input?` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `relate` | `relate` | `schema` `value` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 
-`question.verb` names the kind of question asked, not the command. A `filter` row, a `rank` row and a `decide` record row print the same verb, `decide`, and the same members. A reader that needs the command keeps it from the command line that wrote the rows.
+`question.verb` names the kind of question asked, not the command. A `filter` row, an ordinary `rank` row and a `decide` record row print `decide` with the same members. A graded `rank` row from a saved `score` question prints `score` and keeps the same outer members, including its numeric `value`. A reader that needs the command keeps it from the command line that wrote the rows.
 
 ## Record rows
 
@@ -171,10 +171,16 @@ Under `--details`, the full result object also carries `input`, the original rec
 {"schema":"thinkthen.result/1","value":true,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this report a payment failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
 ```
 
-The preceding row is a `decide --details` example. A ranked detailed row keeps the same complete shape, with `value` and `threshold` both `null`:
+The preceding row is a `decide --details` example. An ordinary yes/no ranked detailed row keeps the same complete shape, with `value` and `threshold` both `null`:
 
 ```json rank
 {"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
+```
+
+A graded rank row instead keeps the numeric score under `value`, a `score` question and answer, and a null threshold.
+
+```json rank-score
+{"schema":"thinkthen.result/1","value":1.5,"input":"alpha","question":{"verb":"score","text":"How relevant?","levels":["low","middle","high"]},"answer":{"kind":"score","level":"high","probabilities":{"low":0.1,"middle":0.3,"high":0.6}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"d20f...21d6","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
 ```
 
 ## `annotate`
