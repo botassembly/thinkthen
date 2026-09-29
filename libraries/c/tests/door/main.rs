@@ -330,7 +330,9 @@ fn a_token_fired_during_a_held_reply_cancels_the_call() {
     let mut stdin = child.stdin.take().expect("its input");
     let mut said = BufReader::new(child.stdout.take().expect("its output"));
     let mut fired = Vec::new();
-    for arrived in [1, 2, 6] {
+    // The five bulk texts share one default packed request. Hold that third
+    // arrival before firing token C, as with the two scalar arrivals.
+    for arrived in [1, 2, 3] {
         assert_eq!(backend.wait(arrived), arrived, "the requests are held");
         stdin.write_all(b"fire\n").expect("the fire line");
         let mut line = String::new();
@@ -356,5 +358,5 @@ fn a_token_fired_during_a_held_reply_cancels_the_call() {
             String::new()
         )
     );
-    assert_eq!(backend.count(), 6, "nothing was sent after a fire");
+    assert_eq!(backend.count(), 3, "nothing was sent after a fire");
 }
