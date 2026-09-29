@@ -61,10 +61,6 @@ exceptions = [
     # Apache-2.0 WITH LLVM-exception, with no plain Apache-2.0 offered: a build
     # dependency of psm under stacker under polars-utils. It runs at build time only.
     { crate = "ar_archive_writer", allow = ["Apache-2.0 WITH LLVM-exception"] },
-    # ADR 0047: the DuckDB binding's one license exception. `zlib-rs` comes
-    # through `flate2` and `zip` in `libduckdb-sys`'s build dependencies and
-    # runs only at build time. `check.sh` compares this file with the root copy.
-    { crate = "zlib-rs", allow = ["Zlib"] },
 ]
 confidence-threshold = 0.9
 unused-allowed-license = "deny"

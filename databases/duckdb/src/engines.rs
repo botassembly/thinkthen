@@ -61,10 +61,7 @@ type Key = (
 
 static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
 
-#[allow(
-    dead_code,
-    reason = "used by the C++ bridge while other platforms retain the C API"
-)]
+#[allow(dead_code, reason = "used by the C++ bridge across its verb families")]
 pub(crate) fn options<'a>(
     deadline_ms: i64,
     token: &'a CancelToken,
@@ -112,10 +109,7 @@ pub(crate) fn options_for<'a>(
     Ok(options)
 }
 
-#[allow(
-    dead_code,
-    reason = "used by the C++ bridge while other platforms retain the C API"
-)]
+#[allow(dead_code, reason = "used by the C++ bridge across its verb families")]
 pub(crate) fn call_error(error: Error, total: Option<i64>) -> RowError {
     if error.send_budget_denial().is_some() {
         let total = total.unwrap_or_default();
@@ -267,11 +261,6 @@ pub(crate) fn engine_for_typed(
         used,
     });
     Ok(built)
-}
-
-/// The retained C API warm path on platforms pending the C++ migration.
-pub(crate) fn from_env() -> Result<Arc<Engine>, String> {
-    engine_for(&Asked::default(), |_| Probe::Allowed)
 }
 
 /// Every value converted and run through its setter on a fresh builder.

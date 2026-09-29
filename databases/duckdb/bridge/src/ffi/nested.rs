@@ -63,7 +63,13 @@ pub(super) fn run(
 ) -> Result<Vec<u8>, String> {
     let mut bytes = Vec::new();
     for text in texts {
-        let options = crate::engines::options(scope.due, scope.token, scope.total)?;
+        let options = crate::engines::options_for(
+            scope.due,
+            scope.token,
+            scope.total,
+            scope.batch,
+            scope.context,
+        )?;
         let found = engine
             .recognize_with(ask, &text, options)
             .map_err(|error| crate::engines::call_error(error, scope.total).text)?;

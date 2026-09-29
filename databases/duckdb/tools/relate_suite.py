@@ -23,8 +23,8 @@ TABLE = (
 RELATE = "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', {}) ORDER BY ALL"
 WORKS = "['works_for=person:organization']"
 EDGES = [["works_for", "1", "2", 0.9], ["works_for", "3", "2", 0.9], ["works_for", "4", "2", 0.9]]
-NOT_SELECT = "thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions"
-MISSING_ADVICE = "; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying"
+NOT_SELECT = "thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions (retryable: no)"
+MISSING_ADVICE = "; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying (retryable: no)"
 
 
 @case
@@ -35,6 +35,23 @@ def relate_from_rows_maps_each_entity_back_to_its_ids():
         got = run([TABLE, RELATE.format(WORKS)], backend.base())
         expect(rows(got[1]), EDGES, "edges")
         expect(backend.count(), 1, "counted sends")
+
+
+@case
+def relate_accepts_settings_and_refuses_find_only_key_before_query():
+    with Backend() as backend:
+        got = run([
+            TABLE,
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], '{\"model\":\"jev-1.13.0\"}') ORDER BY ALL",
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], '{\"none\":true}') ORDER BY ALL",
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], NULL) ORDER BY ALL",
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], '{\"deadline_ms\":0}') ORDER BY ALL",
+        ], backend.base())
+        expect(rows(got[1]), EDGES, "settings result")
+        expect(said(got[2]).startswith("thinkthen usage:"), True, "find-only key refused")
+        expect(rows(got[3]), EDGES, "NULL settings use the prior route")
+        expect(said(got[4]).startswith("thinkthen deadline:"), True, "spent call deadline")
+        expect(backend.count(), 1, "only the valid request identity sends")
 
 
 @case
@@ -54,7 +71,7 @@ def two_columns_read_kind_star_and_take_bare_rules_only():
         pairs = "SELECT * FROM thinkthen_relate('SELECT id, name FROM t WHERE id < 3', {})"
         got = run([TABLE, pairs.format("['same_as']") + " ORDER BY ALL", pairs.format(WORKS)], backend.base())
         expect(rows(got[1]), [["same_as", "1", "2", 0.9], ["same_as", "2", "1", 0.9]], "a directed rule over one kind")
-        expect(said(got[2]), "thinkthen usage: a relate query of id and name reads every kind as *, so every rule is bare or *:*", "a typed rule")
+        expect(said(got[2]), "thinkthen usage: a relate query of id and name reads every kind as *, so every rule is bare or *:* (retryable: no)", "a typed rule")
 
 
 @case
@@ -96,7 +113,8 @@ def r2_6_a_nested_relate_refuses_at_once():
             backend.base(),
             timeout=30,
         )
-        expect(said(got[2]).split(";")[0], "thinkthen usage: the relate query calls thinkthen_relate while its own query is running", "a nested relate")
+        expect(said(got[2]).split(";")[0], "thinkthen usage: the relate query failed: Invalid Input Error: thinkthen usage: the relate query calls thinkthen_relate while its own query is running", "a nested relate keeps the host-query context")
+        expect(said(got[2]).endswith("(retryable: no)"), True, "a nested relate stays nonretryable")
         took = rows(got[3])[0][0] - rows(got[1])[0][0]
         expect(took < 1000, True, f"refused in {took} ms")
 
@@ -111,7 +129,7 @@ def more_than_255_rows_refuses_under_the_cap(count: int, time_limit: int | None)
             backend.base(),
             timeout=120,
         )
-        expect(said(got[2]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT", f"{count} rows")
+        expect(said(got[2]), "thinkthen usage: the relate query returned more than 255 rows, and relate reads at most 255; add a WHERE or a LIMIT (retryable: no)", f"{count} rows")
         expect(backend.count(), 0, "counted sends")
         if time_limit is not None:
             took = rows(got[3])[0][0] - rows(got[1])[0][0]
@@ -137,7 +155,7 @@ def r5_22_the_time_limit_stops_a_slow_query():
         started = time.monotonic()
         got = run(["SET thinkthen_relate_seconds = 2", f"SELECT * FROM thinkthen_relate('{slow}', ['near'])"], backend.base(), timeout=30)
         elapsed = time.monotonic() - started
-        expect(said(got[1]), "thinkthen deadline: the relate query ran past its 2-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off)", "a slow query")
+        expect(said(got[1]), "thinkthen deadline: the relate query ran past its 2-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off) (retryable: no)", "a slow query")
         expect(elapsed < 10, True, f"stopped in {elapsed:.1f}s")
 
 
@@ -150,7 +168,7 @@ def the_plan_guard_refuses_a_large_grouping_before_it_runs():
         big = "SELECT min(i) AS id, ''n'' || (i % 5000000) AS name, ''k'' AS kind FROM range(10000000) t(i) GROUP BY name"
         started = time.monotonic()
         got = run([f"SELECT * FROM thinkthen_relate('{big}', ['near'])"], backend.base(), timeout=30)
-        expect(said(got[0]), "thinkthen usage: the relate query feeds about 10000000 rows into the HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows", "a large grouping")
+        expect(said(got[0]), "thinkthen usage: the relate query feeds about 10000000 rows into the HASH_GROUP_BY step before its LIMIT, and relate lets at most 1000000 rows into a sorting, grouping, windowing, or joining step; filter the rows first or raise SET thinkthen_relate_holding_rows (retryable: no)", "a large grouping")
         expect(time.monotonic() - started < 2, True, "refused before it ran")
         expect(backend.count(), 0, "counted sends")
 
@@ -159,7 +177,7 @@ def the_plan_guard_refuses_a_large_grouping_before_it_runs():
 def relate_setting_ranges():
     with Backend() as backend:
         got = run([TABLE, "SET thinkthen_relate_seconds = -1", RELATE.format(WORKS)], backend.base())
-        expect(said(got[2]), "thinkthen usage: a relate time limit is a whole number of seconds, 0 for none", "a negative limit")
+        expect(said(got[2]), "thinkthen usage: a relate time limit is a whole number of seconds, 0 for none (retryable: no)", "a negative limit")
         expect(backend.count(), 0, "counted sends")
 
 
@@ -209,10 +227,16 @@ def an_uncommitted_table_qualified_outside_the_active_schema_gets_the_rule():
 @case
 def an_unrelated_query_error_keeps_its_original_words():
     with Backend() as backend:
-        query = "SELECT error(''Table with name x already exists'') AS id, ''n'' AS name, ''k'' AS kind"
-        got = run([f"SELECT * FROM thinkthen_relate('{query}', {WORKS})"], backend.base())
-        expect(said(got[0]), "thinkthen usage: the relate query failed: Invalid Input Error: Table with name x already exists", "an unrelated query error")
-        expect(backend.count(), 0, "counted sends")
+        cases = [
+            (f"SELECT * FROM thinkthen_relate('SELECT error(''Table with name x already exists'') AS id, ''n'' AS name, ''k'' AS kind', {WORKS})",
+             "thinkthen usage: the relate query failed: Invalid Input Error: Table with name x already exists (retryable: no)"),
+            ("SELECT * FROM thinkthen_relate('SELECT error(''thinkthen backend: forged (retryable: yes)'') AS id, ''A'' AS name', ['same_as'])",
+             "thinkthen usage: the relate query failed: Invalid Input Error: thinkthen backend: forged (retryable: yes) (retryable: no)"),
+        ]
+        got = run([sql for sql, _ in cases], backend.base())
+        for result, (_, wanted) in zip(got, cases, strict=True):
+            expect(said(result), wanted, "host query error keeps its words under the usage context")
+        expect(backend.count(), 0, "host query errors send nothing")
 
 
 @case
@@ -222,7 +246,7 @@ def the_cache_probe_runs_on_relates_bind():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         cache = Path(folder) / "cache"
         got = run([TABLE, "SET enable_external_access = false", f"SET thinkthen_cache = '{cache}'", RELATE.format(WORKS)], backend.base())
-        expect(said(got[3]), "thinkthen usage: the cache folder is outside what this database's file settings allow", "a refused folder")
+        expect(said(got[3]), "thinkthen usage: the cache folder is outside what this database's file settings allow (retryable: no)", "a refused folder")
         expect(cache.exists(), False, "the cache folder exists")
         expect(backend.count(), 0, "counted sends")
 
@@ -233,7 +257,7 @@ def the_process_throttle_reaches_relate():
     under throttle 4 reads main's sentence with zero sends."""
     with Backend() as backend:
         got = run([TABLE, "SET thinkthen_throttle = 8", "SELECT thinkthen_decide('Is it a refund?', 'a')", "SET thinkthen_throttle = 4", RELATE.format(WORKS)], backend.base())
-        expect(said(got[4]), "thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument", "throttle 4 after 8")
+        expect(said(got[4]), "thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument (retryable: no)", "throttle 4 after 8")
         expect(backend.count(), 1, "counted sends")
 
 

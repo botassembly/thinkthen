@@ -190,7 +190,7 @@ os.kill(os.getpid(), signal.SIGINT); held.join()
 """,
             backend.base("arm/held"),
         )
-        expect(dict(got), {"queued": "Invalid Input Error: thinkthen deadline: the relate query waited past its 1-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)", "held": "Invalid Input Error: thinkthen cancelled: the call was cancelled"}, "the two relates")
+        expect(dict(got), {"queued": "Invalid Input Error: thinkthen deadline: the relate query waited past its 1-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off) (retryable: no)", "held": "Invalid Input Error: thinkthen cancelled: the call was cancelled (retryable: no)"}, "the two relates")
         expect(backend.count(), 1, "counted sends")
 
 
@@ -215,29 +215,7 @@ say(round((after - before) / 10 * 100, 2))
 
 
 @case
-def warm_inside_a_relate_query_refuses_and_never_hangs():
-    """Ticket 0129 decision 4: relate holds the gate its nested warm would wait on."""
-    with Backend() as backend:
-        got = script(
-            """
-open(sys.argv[2] + "/q.json", "w").write('{"decide": "Is it a refund?"}')
-a = db(); staff(a, 2)
-query = f"SELECT id, name, kind FROM t, (SELECT thinkthen_warm(''@{sys.argv[2]}/q.json'', name) AS w FROM t) WHERE w > 0"
-try:
-    a.execute(f"SELECT count(*) FROM thinkthen_relate('{query}', ['works_for=person:organization'])").fetchall(); said = "answered"
-except Exception as error:
-    said = str(error).split("\\n")[0]
-say(said)
-""",
-            backend.base(),
-            timeout=60,
-        )
-        expect(got[0].split("thinkthen usage: ", 1)[-1], "thinkthen_warm cannot read '@file' while a relate query runs on this database; run it before or after the relate, or pass the file's JSON text", "the nested warm")
-        expect(backend.count(), 0, "counted sends")
-
-
-@case
-def warm_after_reopen_uses_the_new_callers_file_settings():
+def decide_after_reopen_uses_the_new_callers_file_settings():
     """A new caller owns file access after the previous connection closes."""
     with Backend() as backend:
         got = script(
@@ -245,11 +223,11 @@ def warm_after_reopen_uses_the_new_callers_file_settings():
 open(sys.argv[2] + "/q.json", "w").write('{"decide": "Is it a refund?"}')
 a = db(sys.argv[2] + "/a.db"); a.close()
 a = db(sys.argv[2] + "/a.db")
-say(a.execute(f"SELECT thinkthen_warm('@{sys.argv[2]}/q.json', 'refund now')").fetchone()[0])
+say(a.execute(f"SELECT thinkthen_decide('@{sys.argv[2]}/q.json', 'refund now')").fetchone()[0])
 """,
             backend.base(),
         )
-        expect(got, [1], "the reopened caller's file answers")
+        expect(got, [True], "the reopened caller's file answers")
         expect(backend.count(), 1, "one send after reopening")
 
 

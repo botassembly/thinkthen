@@ -22,7 +22,7 @@ impl RowError {
         Self {
             kind: ErrorKind::Local,
             retryable: false,
-            text: format!("{}{}", prefix(ErrorKind::Local), message),
+            text: render(ErrorKind::Local, message, false),
         }
     }
 
@@ -45,25 +45,22 @@ impl RowError {
 
 impl From<Error> for RowError {
     fn from(error: Error) -> Self {
-        let retry = if error.retryable() {
-            " (a second try could help)"
-        } else {
-            ""
-        };
         Self {
             kind: error.kind(),
             retryable: error.retryable(),
-            text: format!(
-                "{}{retry}{}",
-                prefix(error.kind()),
-                error.detail().message()
-            ),
+            text: render(error.kind(), error.detail().message(), error.retryable()),
         }
     }
 }
 
 pub(crate) fn usage(message: &str) -> String {
-    format!("thinkthen usage: {message}")
+    render(ErrorKind::Usage, message, false)
+}
+
+fn render(kind: ErrorKind, message: &str, retryable: bool) -> String {
+    let (first, later) = message.split_at(message.find('\n').unwrap_or(message.len()));
+    let retry = if retryable { "yes" } else { "no" };
+    format!("{}{first} (retryable: {retry}){later}", prefix(kind))
 }
 
 fn prefix(kind: ErrorKind) -> &'static str {

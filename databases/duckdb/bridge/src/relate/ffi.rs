@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-use thinkthen::{Entity, Relate, RelationRule};
+use thinkthen::{Entity, Relate, RelationRule, Settings};
 
 use crate::engines;
 use crate::errors::RowError;
@@ -95,6 +95,23 @@ fn copied_rules(
     rules(rule, &members, list != 0, from_file != 0)
 }
 
+fn portable_settings(
+    rule: &str,
+    from_file: bool,
+    raw: &str,
+) -> Result<(Settings, Option<String>), String> {
+    let (call, model) = crate::ffi::portable_aux::call_settings(raw)?;
+    if from_file && model.is_some() {
+        let source: serde_json::Value =
+            serde_json::from_str(rule).map_err(|error| RowError::usage(&error.to_string()).text)?;
+        if source.get("model").is_some() {
+            call.conflicts(&["model"], false)
+                .map_err(|error| RowError::usage(&error.to_string()).text)?;
+        }
+    }
+    Ok((call, model))
+}
+
 /// Validate one relate bind, including its engine settings, without a send.
 ///
 /// # Safety
@@ -107,11 +124,22 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_validate(
     member_count: usize,
     list: i32,
     from_file: i32,
+    call_settings: *const u8,
+    call_settings_len: usize,
     settings: BridgeSettings,
 ) -> Reply {
     reply_boundary(|| {
+        let rule_text = if list == 0 { text(rule, rule_len)? } else { "" };
+        let (_, model) = portable_settings(
+            rule_text,
+            from_file != 0,
+            text(call_settings, call_settings_len)?,
+        )?;
         let (_, wildcard) = copied_rules(rule, rule_len, members, member_count, list, from_file)?;
-        let asked = asked(&settings)?;
+        let mut asked = asked(&settings)?;
+        if let Some(model) = model {
+            asked.model = Some(model);
+        }
         let _engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         Ok(vec![u8::from(wildcard)])
     })
@@ -192,10 +220,18 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
     kinds: *const BridgeText,
     count: usize,
     deadline_ms: i64,
+    call_settings: *const u8,
+    call_settings_len: usize,
     settings: BridgeSettings,
     stop: BridgeStop,
 ) -> Reply {
     reply_boundary(|| {
+        let rule_text = if list == 0 { text(rule, rule_len)? } else { "" };
+        let (call, model) = portable_settings(
+            rule_text,
+            from_file != 0,
+            text(call_settings, call_settings_len)?,
+        )?;
         let (ask, _) = copied_rules(rule, rule_len, members, member_count, list, from_file)?;
         let ids = copied_texts(ids, count)?;
         let names = copied_texts(names, count)?;
@@ -204,12 +240,27 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_relate_rows(
         if entities.is_empty() {
             return Ok(0_u32.to_ne_bytes().to_vec());
         }
-        let asked = asked(&settings)?;
+        let mut asked = asked(&settings)?;
+        if let Some(model) = model {
+            asked.model = Some(model);
+        }
         let engine = engines::engine_for(&asked, |path| probe(&settings, path))?;
         engines::within_total(&asked, Vec::new())?;
         let total = asked.max_requests_total;
+        let due = match call.deadline_ms() {
+            None | Some(-1) => deadline_ms,
+            Some(value) if deadline_ms < 0 => value,
+            Some(value) => deadline_ms.min(value),
+        };
+        let batch = if call.batch_max() {
+            Some("max".to_owned())
+        } else {
+            call.batch_records().map(|value| value.to_string())
+        };
+        let context = call.context().map(str::to_owned);
         run_detached(stop, move |token| {
-            let options = engines::options(deadline_ms, &token, total)?;
+            let options =
+                engines::options_for(due, &token, total, batch.as_deref(), context.as_deref())?;
             let edges = engine
                 .relate_with(&ask, entities, options)
                 .map_err(|error| engines::call_error(error, total).text)?;

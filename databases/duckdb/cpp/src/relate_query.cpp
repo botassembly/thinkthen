@@ -15,8 +15,7 @@ std::mutex registry_lock;
 std::map<DatabaseInstance *, std::weak_ptr<RelateDatabase>> registry;
 
 string Failed(const string &message) {
-	const auto at = message.find("thinkthen ");
-	return at == string::npos ? "thinkthen usage: the relate query failed: " + message : message.substr(at);
+	return "thinkthen usage: the relate query failed: " + message;
 }
 
 string Error(const string &message) {
@@ -49,7 +48,7 @@ string Boundary(ClientContext &caller, const string &raw) {
 unique_ptr<MaterializedQueryResult> Query(Connection &connection, ClientContext &caller, const string &sql) {
 	auto result = connection.Query(sql);
 	if (!result || result->HasError()) {
-		throw InvalidInputException("%s", Boundary(caller, result ? result->GetError() : "the query returned no result").c_str());
+		throw OrdinaryError("%s", Boundary(caller, result ? result->GetError() : "the query returned no result").c_str());
 	}
 	return result;
 }
@@ -96,25 +95,25 @@ RelateFound QueryRows(Connection &connection, ClientContext &caller, const strin
 	vector<unique_ptr<SQLStatement>> statements;
 	try { statements = connection.ExtractStatements(sql); }
 	catch (const Exception &error) {
-		throw InvalidInputException("%s", Error("the relate query did not parse: " + string(error.what())).c_str());
+		throw OrdinaryError("%s", Error("the relate query did not parse: " + string(error.what())).c_str());
 	}
 	if (statements.size() != 1) {
-		throw InvalidInputException("thinkthen usage: the relate query is one SQL statement and this one holds %llu; relate reads records, it does not run scripts", static_cast<unsigned long long>(statements.size()));
+		throw OrdinaryError("thinkthen usage: the relate query is one SQL statement and this one holds %llu; relate reads records, it does not run scripts", static_cast<unsigned long long>(statements.size()));
 	}
 	const string refused = "thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions";
 	if (statements[0]->type != StatementType::SELECT_STATEMENT) {
-		throw InvalidInputException("%s", refused.c_str());
+		throw OrdinaryError("%s", refused.c_str());
 	}
 	const auto wrapper = "SELECT * FROM (" + sql + ") AS thinkthen_kind";
 	auto prepared = connection.Prepare(wrapper);
 	if (prepared->HasError()) {
 		const auto message = prepared->GetError();
-		throw InvalidInputException("%s", (message.rfind("Parser Error", 0) == 0 ? refused : Boundary(caller, message)).c_str());
+		throw OrdinaryError("%s", (message.rfind("Parser Error", 0) == 0 ? refused : Boundary(caller, message)).c_str());
 	}
 	const auto capped = "SELECT COLUMNS(*)::VARCHAR FROM (" + sql + ") AS thinkthen_capped LIMIT 256";
 	auto started = connection.Query("BEGIN TRANSACTION READ ONLY");
 	if (started->HasError()) {
-		throw InvalidInputException("thinkthen usage: the relate query could not start its read-only transaction: %s", started->GetError().c_str());
+		throw OrdinaryError("thinkthen usage: the relate query could not start its read-only transaction: %s", started->GetError().c_str());
 	}
 	ResetQuery reset {connection};
 	if (search_path && !search_path->empty()) {
@@ -122,12 +121,12 @@ RelateFound QueryRows(Connection &connection, ClientContext &caller, const strin
 		for (char ch : *search_path) { quoted += ch; if (ch == '\'') { quoted += '\''; } }
 		auto path = connection.Query("SET search_path = '" + quoted + "'");
 		if (path->HasError()) {
-			throw InvalidInputException("thinkthen usage: the relate query could not run under the calling session's search path %s: %s", search_path->c_str(), path->GetError().c_str());
+			throw OrdinaryError("thinkthen usage: the relate query could not run under the calling session's search path %s: %s", search_path->c_str(), path->GetError().c_str());
 		}
 	}
 	auto plan = Query(connection, caller, "EXPLAIN (FORMAT JSON) " + capped);
 	if (plan->RowCount() == 0 || plan->ColumnCount() < 2 || plan->GetValue(1, 0).IsNull()) {
-		throw InvalidInputException("thinkthen defect: the relate plan came back empty");
+		throw OrdinaryError("thinkthen defect: the relate plan came back empty");
 	}
 	const auto plan_text = plan->GetValue(1, 0).GetValue<string>();
 	RustReply checked(thinkthen_cpp_relate_plan(reinterpret_cast<const uint8_t *>(plan_text.data()), plan_text.size(), holding));
@@ -182,10 +181,10 @@ bool RelateBusyFor(ClientContext &context) noexcept {
 RelateFound ReadRelateRows(RelateDatabase &held, ClientContext &caller, const string &sql,
                           uint64_t seconds, uint64_t holding, const std::optional<string> &search_path) {
 	if (QueryInterrupted(caller)) {
-		throw InvalidInputException("thinkthen cancelled: the call was cancelled");
+		throw OrdinaryError("thinkthen cancelled: the call was cancelled");
 	}
 	if (held.connection.context == caller.shared_from_this()) {
-		throw InvalidInputException("thinkthen usage: the relate query calls thinkthen_relate while its own query is running; nested relate cannot run, because the outer query waits on the connection the inner one needs");
+		throw OrdinaryError("thinkthen usage: the relate query calls thinkthen_relate while its own query is running; nested relate cannot run, because the outer query waits on the connection the inner one needs");
 	}
 	using Clock = std::chrono::steady_clock;
 	const auto now = Clock::now();
@@ -195,9 +194,9 @@ RelateFound ReadRelateRows(RelateDatabase &held, ClientContext &caller, const st
 	                    : std::nullopt;
 	std::unique_lock<std::mutex> gate(held.gate, std::defer_lock);
 	while (!gate.try_lock()) {
-		if (QueryInterrupted(caller)) { throw InvalidInputException("thinkthen cancelled: the call was cancelled"); }
+		if (QueryInterrupted(caller)) { throw OrdinaryError("thinkthen cancelled: the call was cancelled"); }
 		if (at && Clock::now() >= *at) {
-			throw InvalidInputException("thinkthen deadline: the relate query waited past its %llu-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)", static_cast<unsigned long long>(seconds));
+			throw OrdinaryError("thinkthen deadline: the relate query waited past its %llu-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off)", static_cast<unsigned long long>(seconds));
 		}
 		std::this_thread::sleep_for(std::chrono::milliseconds(5));
 	}
@@ -205,7 +204,7 @@ RelateFound ReadRelateRows(RelateDatabase &held, ClientContext &caller, const st
 	Limit timer(held.connection, at);
 	try {
 		auto found = QueryRows(held.connection, caller, sql, holding, search_path);
-		if (QueryInterrupted(caller)) { throw InvalidInputException("thinkthen cancelled: the call was cancelled"); }
+		if (QueryInterrupted(caller)) { throw OrdinaryError("thinkthen cancelled: the call was cancelled"); }
 		if (at) {
 			found.remaining_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
 			    *at - Clock::now()).count();
@@ -214,9 +213,9 @@ RelateFound ReadRelateRows(RelateDatabase &held, ClientContext &caller, const st
 		found.lease = std::move(lease);
 		return found;
 	} catch (const Exception &) {
-		if (QueryInterrupted(caller)) { throw InvalidInputException("thinkthen cancelled: the call was cancelled"); }
+		if (QueryInterrupted(caller)) { throw OrdinaryError("thinkthen cancelled: the call was cancelled"); }
 		if (timer.Fired()) {
-			throw InvalidInputException("thinkthen deadline: the relate query ran past its %llu-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off)", static_cast<unsigned long long>(seconds));
+			throw OrdinaryError("thinkthen deadline: the relate query ran past its %llu-second limit and was stopped; filter the rows first or raise SET thinkthen_relate_seconds (0 turns the limit off)", static_cast<unsigned long long>(seconds));
 		}
 		throw;
 	}

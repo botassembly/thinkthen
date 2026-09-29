@@ -19,7 +19,7 @@ from pathlib import Path
 
 from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, said
 
-CANCELLED = "thinkthen cancelled: the call was cancelled"
+CANCELLED = "thinkthen cancelled: the call was cancelled (retryable: no)"
 
 # The child: take the host action named in argv[2], LOAD, then run one
 # statement per stdin line and print each result as one JSON line.
