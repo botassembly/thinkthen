@@ -507,3 +507,8 @@ Fresh ticket review of the 0249 language handoff found five practical gaps befor
 ## Trace every mode that repeats a validation rule
 
 The 0258 author found that the accepted details-only annotate collision exemption has a second guard in `cli/annotate/batching/former.rs`. The first focused case passed on batch one while the default packed path still exited 2. The coordinator added that precise file to the claim at `e5c19870`; no batching algorithm or accepted outcome changed. For later argument or input-policy work, search every occurrence of the refusal and map each supported mode before declaring the source claim complete. Keep a small distinguishing functional case for each genuinely different validation path.
+
+
+## A later accepted checkpoint was missed during queue selection
+
+The 2026-09-29 release selection read the old0254 ticket and item remainder, then proposed rebuilding the Linux DuckDB bridge package. The later `2026-09-28-changed-host-functional-checkpoint.md` already records the linked archive, stock-host load, counted send and fresh independent High rerun. The coordinator found that record after assigning the lane and stopped further checks; a redundant warm build had already finished. The lane now reconciles records instead of repeating accepted qualification. This caused unnecessary work, not a new product defect. Before proposing a verification batch, search records for the ticket and behavior, read the last independent acceptance, compare actual source dependencies, and name the original criterion still unmet. An earlier ticket status or the top line of an appended record does not override later acceptance. A source-pinned historical proof is not automatically a final release-pin proof.
