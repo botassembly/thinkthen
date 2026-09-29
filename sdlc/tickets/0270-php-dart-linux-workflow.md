@@ -37,3 +37,9 @@ Prospective file claim after fresh design review: `sdlc/scripts/release-pack` an
 - Changes: Allows archived PHP/Dart members in the one x86 C pack, checks their copied bytes, requires their exact assets across the copy/collect domain, and removes source-only PHP prerequisites from installed preflight.
 - Proof: Focused real-script archive/gate refusals during the hold; later one same-pin x86 pack, existing pair and two selected installed callers; separately authorized Actions receipt before a runner support claim.
 - Defers: SQL/DataFrame aggregate execution during Ian's hold, other target PHP/Dart qualification, installed Flutter, Composer CLI, pub.dev/Packagist distribution, final release pin and publication, and PHP in-flight cancellation design.
+
+## What the build taught us
+
+- The independent selector slice is recorded in [the selector build record](../records/0270-php-dart-selector-build.md). PHP's installed path can reach its C archive guard without `jsonschema`, `bwrap`, `git` or `node`; source mode still refuses absent source tools.
+- Dart's archived lock check needs a second extraction because `pub get` creates `.dart_tool` beside the package. The unrelated consumer also needs both its generated lock hash and resolved cache root checked; the prior root-only assertion covered `thinkthen_dart` alone.
+- The preparation correctly separated this slice from shared workflow files. The archive pack, release gate, real installed consumers and runner remain unproved here. The coordinator owns those later steps after 0269 and Ian's hold.
