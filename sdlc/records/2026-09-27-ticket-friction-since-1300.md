@@ -564,3 +564,8 @@ The first Dart fence bridge passed the actual README but missed valid typed decl
 ## Check native argument decoding and runnable selectors
 
 The JVM J1 case41 failure came from its isolated child environment. Java reported ordinary UTF-8 string encoding while its native argument decoder used ASCII, so the Unicode request changed before the exact backend oracle saw it. Source-matched JARs still failed; the explicit UTF-8 locale preserved the bytes through Java, Kotlin and Scala. Fresh review of f961d92d0 then caught a selector that accepted schema-only cases and passed after zero runtime calls. Accepted correction9359eae77 validates the runnable subset and refuses invalid selectors even under optimized Python before compilation or backend startup. Preserve the original boundary oracle, compare actual input bytes, and validate that a selected check performs the promised work. The source package and release matrix remain separate.
+
+
+## Refresh strict consumers before adding a result member
+
+Accounting preparation b30af6426 missed Ada, Objective-C and COBOL facts readers that landed while it was being written. Fresh High review traced those strict decoders and the closed facts schema, so an added price member needs an explicit pre-release compatibility decision and the affected consumer checks. The same review found a separate CLI usage-completeness path and an ambiguous timing ordinal for repeated request digests. Accepted preparation2778a8e3e names both call and command accounting owners, assigns timing observations at the actual send boundary, and requires a repeated-digest case. Reconcile newly landed producers and consumers before design acceptance; a nonempty token total does not prove that every attempt reported usage.
