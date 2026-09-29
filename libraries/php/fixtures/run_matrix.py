@@ -142,3 +142,19 @@ finally:
                                                 'receipts':receipts},indent=2,ensure_ascii=False)+'\n')
     print(RUN, status, 'arrivals', len(server.arrivals), flush=True)
 if status != 'PASS': sys.exit(1)
+facts_barrier = RUN / 'facts-barrier'
+facts_barrier.mkdir()
+facts_server = Backend(facts_barrier)
+original_env = ENV
+try:
+    ENV = ENV | {'THINKTHEN_BASE_URL': f'http://127.0.0.1:{facts_server.server_port}/generic/v1',
+                 'THINKTHEN_CACHE': str(RUN / 'facts-cache'), 'TT_BARRIER_DIR': str(facts_barrier),
+                 'TT_FACTS_PROOF': '1'}
+    exit_code = execute('omitted-facts', [PHP_BIN, '-d', 'ffi.enable=1', 'fixtures/matrix.php'], timeout=60)
+    assert exit_code == 0 and 'PHP_OMITTED_FACTS_PASS' in (RUN / 'omitted-facts.log').read_text()
+    assert facts_server.attempts == 2 and collections.Counter(facts_server.arrivals) == {
+        'no-usage': 1, 'Each question quotes the text it asks about.': 1}
+    print('PHP_OMITTED_FACTS_PASS arrivals=2')
+finally:
+    ENV = original_env
+    facts_server.close()

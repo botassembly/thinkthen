@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0277: Return owned facts from Go and PHP typed calls
 
-Status: High design/API ACCEPT at `92cb4112`; root approved ADR 0106 on main `b6f06c4fc` for implementation. Source pin: `origin/main` `7af09e3e5`. [ADR 0106](../planning/adr/0106-typed-wrapper-call-facts.md) proposes the pre-0.1 return contract; [preparation](../records/0277-go-php-call-facts-preparation.md) maps current code and proof. Ian's every-call/no-setting/no-second-call outcome is already ruled. No new C symbol, scheduler or facts schema is authorized here.
+Status: High design/API ACCEPT at `92cb4112`; root approved ADR 0106 on main `b6f06c4fc` for implementation. Build candidate awaits fresh High code review. Source pin for preparation: `origin/main` `7af09e3e5`. [ADR 0106](../planning/adr/0106-typed-wrapper-call-facts.md) sets the pre-0.1 return contract; [preparation](../records/0277-go-php-call-facts-preparation.md) maps the earlier code and proof. Ian's every-call/no-setting/no-second-call outcome is already ruled. No new C symbol, scheduler or facts schema is authorized here.
 
 ## Outcome and retained behavior
 
@@ -29,15 +29,15 @@ The C facts keys are required `records`, `requests_sent`, `cache_answers`, `seco
 
 ## Routing and deferred gaps
 
-Root claims product files and schedules the implementation only after High design/API review and approval of ADR 0106. No blocker or Ian question is identified from current source; the return migration is an explicit pre-0.1 choice for root to approve. Candidate follow-ons: C++/Dart typed wrappers, then C#/JVM typed wrappers, each with their own return-shape and owned-output proof against the same C API. Other wrapper families, SQL/DataFrame hosts, full detail, timing and cost stay in the open issue or existing holds.
+Root claimed the implementation after High design/API review and approval of ADR 0106; the [build record](../records/0277-go-php-call-facts-build.md) carries source and installed-source receipts for fresh High code review. No Ian question was needed for the delegated pre-0.1 return migration. Candidate follow-ons: C++/Dart typed wrappers, then C#/JVM typed wrappers, each with their own return-shape and owned-output proof against the same C API. Other wrapper families, SQL/DataFrame hosts, full detail, timing and cost stay in the open issue or existing holds.
 
 ## Evidence
 
 - Starts from: Ian's [every-call ruling](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), ADR 0101's **C-only** compatibility exception, current C header/typed-facts proof and the [0260 wrapper host proof](../records/0260-wrapper-host-proof.md).
 - Keeps: The four typed values and order, JSON `Call`/`call` envelopes, started-failure facts, C ABI and old C exports, existing cancellation/deadline and host concurrency limits.
-- Changes: Proposes pre-0.1 Go/PHP typed success returns that own value and final facts from one C facts-returning operation, with all direct examples and consumers migrated.
-- Proof: Focused existing-fixture scalar/four-method, ordered bulk, empty bulk, missing-usage omission, failure/next-call lifetime and same-engine Go concurrency receipts, plus matched source and later installed-package checks.
-- Defers: Product edits until High review/root approval; full per-row detail, cost, vendor timing/IDs, other wrappers, actual runner/release qualification and held SQL/DataFrame work.
+- Changes: Migrates pre-0.1 Go/PHP typed success returns that own value and final facts from one C facts-returning operation, with all direct examples and consumers migrated.
+- Proof: Focused existing-fixture scalar/four-method, ordered bulk, empty bulk, missing-usage omission, failure/next-call lifetime and same-engine Go concurrency receipts, plus matched source and copied installed-source checks; release archives stay separate.
+- Defers: Fresh High code review and landing; full per-row detail, cost, vendor timing/IDs, other wrappers, release archive/actual runner qualification and held SQL/DataFrame work.
 
 ## What the build taught us
 

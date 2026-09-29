@@ -122,6 +122,19 @@ def main():
         assert wrong.returncode == 1 and "details changed:" in wrong.stdout and negative.arrivals, wrong.stdout
     finally:
         negative.close()
+    facts_barrier = configured / "facts-barrier"
+    facts_barrier.mkdir(exist_ok=True)
+    facts_server = Backend(facts_barrier)
+    try:
+        facts_env = env | {"THINKTHEN_BASE_URL": f"http://127.0.0.1:{facts_server.server_port}/generic/v1",
+                           "THINKTHEN_CACHE": str(configured / "facts-cache"),
+                           "TT_BARRIER_DIR": str(facts_barrier), "TT_FACTS_PROOF": "1"}
+        checked([GO, "test", "-race", "-count=1", "-run", "^TestOwnedFacts$", "."],
+                cwd=configured / "module", env=facts_env)
+        assert facts_server.arrivals.count("success") == 1 and facts_server.arrivals.count(
+            "Each question quotes the text it asks about.") == 1 and facts_server.attempts == 2
+    finally:
+        facts_server.close()
     print("GO_INSTALLED_MATRIX_PASS 4 consumers x 39 exact full request bodies plus one external module call each")
     print("GO_SETTINGS_PASS one configured request; invalid object sent nothing")
     print("GO_WRONG_DETAIL_PLANT_REJECTED")

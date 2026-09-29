@@ -1,6 +1,6 @@
 # 0277 Go/PHP typed call facts preparation
 
-Date: 2026-09-29. Source pin: `origin/main` `7af09e3e5`. Notes and [ADR candidate](../planning/adr/0106-typed-wrapper-call-facts.md) only; no product, test, release, provider or package command ran. [Ticket](../tickets/0277-go-php-call-facts.md) awaits fresh High design/API review and root approval.
+Date: 2026-09-29. Source pin: `origin/main` `7af09e3e5`. This preparation was notes only; no product, test, release, provider or package command ran during design. [ADR 0106](../planning/adr/0106-typed-wrapper-call-facts.md) later passed High review at `92cb4112` and root approval on main `b6f06c4fc`; the [ticket](../tickets/0277-go-php-call-facts.md) now carries the implementation candidate.
 
 ## What current source actually gives
 
