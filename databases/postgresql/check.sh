@@ -106,7 +106,7 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample plain_question_contract recognize_and_relate_as_drawn conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment}
+	STEPS=${STEPS:-examples slide_sample plain_question_contract portable_batch_identity recognize_and_relate_as_drawn conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -723,6 +723,15 @@ packed_array_preserves_first_occurrence_and_attempts() {
 	same "$(python3 tests/batching_cases.py one_of_packed "$RUN/one-packed")" 'pass one_of_packed'
 }
 check packed_array_preserves_first_occurrence_and_attempts
+
+portable_batch_identity() {
+	fresh arm/full/capture
+	out=$(q -c "SET thinkthen.batch = 'max'" -c "SET thinkthen.max_retries = 0" \
+		-c "$(python3 tests/portable_batch.py sql)")
+	bcapture >"$RUN/portable.capture.json"
+	python3 tests/portable_batch.py verify "$out" "$(bcount)" "$RUN/portable.capture.json"
+}
+check portable_batch_identity
 
 context_overloads_keep_scalar_shapes_and_null_rules() {
 	fresh generic
