@@ -1,0 +1,11 @@
+# 0264 PHP and Dart local release code review
+
+Status: ACCEPT at `7181d981` after fresh read-only Sol Medium review and a correction re-review. The coordinator accepts the local pilot; the original PHP and Dart release issues retain their remaining criteria.
+
+The reviewer inspected the installed package selectors, independent Dart pub resolution, explicit PHP native path, literal request comparisons, curated archive inventories and shared preflight/smoke routes. It checked the recorded archive hashes and actual `php-dart` preflight, shell syntax, whitespace and offline policy with the compiler wrapper disabled. Product APIs and dependencies remain unchanged. PHP test Python growth funds archive selection and focused plants in the reused consumer; existing PHP and Dart source counters remain exact. No Composer CLI, Flutter app, public registry or other-platform qualification is claimed.
+
+The first review found that `part_c` overwrote an existing output archive and allowed a second `c` after a wrapper recorded its first digest. The correction adds one early shared guard for fresh source-wrapper invocations. It requires exactly one `c` and refuses existing archive or sidecar paths, including symlinks, before creating output or invoking Cargo. Relative output paths resolve from the caller's working directory. Legacy default and non-wrapper reuse routes retain their behavior, and wrapper reuse still refuses.
+
+The re-review checked all three refusal receipts: an existing archive, sidecar alone and `c php c dart`. Each returns its named diagnostic with output bytes and modification times unchanged, or output absent, and no compiler sentinel invocation. The reviewer also verified unchanged C/PHP/Dart product and pair/smoke inputs since clean build `2fb1bb8e`, unchanged archive hashes and passing strict pairing.
+
+The two successful installed-consumer runs and their five values, three literal bodies and three counted sends remain source-pinned builder evidence. The reviewer did not rerun them or rebuild C. The later rejection-path change does not change their product inputs or successful packing steps; the record accurately makes no corrected-HEAD build claim. The native/archive proof and the new refusal proof jointly establish this bounded ticket.

@@ -2,7 +2,7 @@
 # release-pack [--reuse] TARGET OUT [PART...] (ticket 0128): pack the release files of one
 # Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
 # each release target builds on its own runner. The parts are command, c, go, cpp, csharp,
-# jvm, swift, zig, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
+# jvm, swift, zig, php, dart, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
 # keeps its established parts and source wrappers are explicit pilot parts.
 # Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
 # packs the files each surface check already built in its own build folder, which the
@@ -14,21 +14,29 @@ reuse=
 TARGET=$1 OUT=$2
 shift 2
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+host=$(rustc -vV | sed -n 's/^host: //p')
+[ "$TARGET" = "$host" ] || { echo "release-pack: $TARGET is not this host's target, $host" >&2; exit 2; }
+V=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
+source_commit=$(git -C "$REPO" rev-parse HEAD)
+c_built=
+case " $* " in
+*' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '*)
+	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
+	[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
+	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
+	c_count=0
+	for part in "$@"; do [ "$part" != c ] || c_count=$((c_count + 1)); done
+	[ "$c_count" -eq 1 ] || { echo 'release-pack: source wrappers need exactly one c part' >&2; exit 1; }
+	c_name=thinkthen-c-$V-$TARGET.tar.gz
+	[ ! -e "$OUT/$c_name" ] && [ ! -L "$OUT/$c_name" ] &&
+		[ ! -e "$OUT/$c_name.sha256" ] && [ ! -L "$OUT/$c_name.sha256" ] || {
+		echo 'release-pack: source wrappers need an output without an existing C archive or sidecar' >&2; exit 1;
+	}
+	;;
+esac
 mkdir -p -- "$OUT"
 OUT=$(CDPATH='' cd -- "$OUT" && pwd)
 cd -- "$REPO"
-host=$(rustc -vV | sed -n 's/^host: //p')
-[ "$TARGET" = "$host" ] || { echo "release-pack: $TARGET is not this host's target, $host" >&2; exit 2; }
-V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
-source_commit=$(git rev-parse HEAD)
-c_built=
-case " $* " in
-*' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '*)
-	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
-	[ -z "$(git status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
-	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
-	;;
-esac
 case $TARGET in
 *-apple-darwin) dl=dylib command_target=$TARGET ;;
 *-linux-gnu) dl=so command_target=${TARGET%-gnu}-musl ;;
@@ -163,6 +171,21 @@ zig)
 		cp libraries/zig/examples/decide.zig "$folder/examples/"
 		cp libraries/zig/src/thinkthen.zig "$folder/src/"
 		;;
+php)
+		mkdir -p "$folder/examples" "$folder/src"
+		cp libraries/php/LICENSE libraries/php/README.md libraries/php/composer.json \
+			libraries/php/autoload.php "$folder/"
+		cp libraries/php/examples/direct.php "$folder/examples/"
+		cp libraries/php/src/ThinkThen.php "$folder/src/"
+		;;
+dart)
+		mkdir -p "$folder/lib/src"
+		cp libraries/dart/CHANGELOG.md libraries/dart/LICENSE libraries/dart/README.md \
+			libraries/dart/pubspec.yaml libraries/dart/pubspec.lock "$folder/"
+		cp libraries/dart/lib/thinkthen_dart.dart "$folder/lib/"
+		cp libraries/dart/lib/src/allocator.dart libraries/dart/lib/src/door.dart \
+			libraries/dart/lib/src/typed.dart "$folder/lib/src/"
+		;;
 	esac
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
@@ -174,6 +197,8 @@ part_csharp() { part_source_wrapper csharp; }
 part_jvm() { part_source_wrapper jvm; }
 part_swift() { part_source_wrapper swift; }
 part_zig() { part_source_wrapper zig; }
+part_php() { part_source_wrapper php; }
+part_dart() { part_source_wrapper dart; }
 
 part_sqlite() {
 	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
@@ -262,7 +287,7 @@ part_first_run() {
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
 for part in "$@"; do
 	case $part in
-	command | c | go | cpp | csharp | jvm | swift | zig | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac
