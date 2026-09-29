@@ -8,6 +8,10 @@
       "sql": "SELECT thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
       "expected": "t"
     },
+    "decide_plain": {
+      "sql": "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now');",
+      "expected": "t"
+    },
     "batch_context": {
       "setup": ["SET thinkthen.batch = '2'"],
       "sql": "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', ARRAY['refund one', 'refund two'], 'Use this policy note.');",
@@ -19,6 +23,10 @@
     },
     "choose": {
       "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now', NULL);",
+      "expected": "the refund desk"
+    },
+    "choose_native_plain": {
+      "sql": "SELECT thinkthen_choose('Which team handles this?', 'refund now', ARRAY['the refund desk','other desk']);",
       "expected": "the refund desk"
     },
     "score": {

@@ -1,6 +1,6 @@
-//! Question, set, and spec arguments: JSON text or a file named `'@path'`,
-//! read under the privilege gate, the 1 MiB cap, the regular-file rule, and
-//! confinement beneath `thinkthen.file_directory` (decision 8).
+//! Judgment questions accept plain text, JSON, or a file named `'@path'`.
+//! Sets and specs accept JSON or `@path`. Named files use the privilege gate,
+//! 1 MiB cap, regular-file rule, and `thinkthen.file_directory` confinement.
 
 use std::path::{Component, Path, PathBuf};
 
@@ -144,6 +144,33 @@ pub(crate) struct Given {
 }
 
 impl Given {
+    /// Plain judgment text has the same public question grammar as JSON;
+    /// sets and specs still use `read` and never take this branch.
+    pub(crate) fn read_question(
+        arg: Option<&str>,
+        key: &str,
+        directory: Option<&str>,
+    ) -> Result<Self, Refusal> {
+        let text = arg.unwrap_or_default();
+        if text.trim().is_empty() || text.starts_with('@') || text.trim_start().starts_with('{') {
+            return Self::read(arg, "question", directory);
+        }
+        let verb = match key {
+            "" => "decide",
+            "options" => "choose",
+            "levels" => "score",
+            "labels" => "tag",
+            _ => return Err(Refusal::of(ErrorKind::Defect, "unknown judgment members")),
+        };
+        let mut object = serde_json::Map::new();
+        object.insert(verb.to_owned(), serde_json::Value::from(text));
+        Ok(Self {
+            json: serde_json::Value::Object(object).to_string(),
+            file: None,
+            what: "question".to_owned(),
+        })
+    }
+
     /// Read an argument: its JSON, or the named file's text.
     pub(crate) fn read(
         arg: Option<&str>,

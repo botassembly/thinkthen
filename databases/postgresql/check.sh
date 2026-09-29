@@ -106,7 +106,7 @@ echo "== package"
 	# release archive, and runs the drawn SQL, the examples, and the shared cases.
 	mkdir "$RUN/artifact" && tar -xzf "$THINKTHEN_ARTIFACT" -C "$RUN/artifact"
 	runtime_install "$RUN/artifact/lib" "$RUN/artifact/extension"
-	STEPS=${STEPS:-examples slide_sample recognize_and_relate_as_drawn conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment}
+	STEPS=${STEPS:-examples slide_sample plain_question_contract recognize_and_relate_as_drawn conformance find_inputs find_proxy_cases find_cancel find_signatures_are_owned_and_private the_fake_key_stays_in_the_environment}
 }
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
 	./pgrx-package-locked.sh --pg-config "$PG_CONFIG" >/dev/null
@@ -166,6 +166,39 @@ slide_sample() {
 	same "$out" "$(printf '1|billing|0.15\n2|billing|0.15\n3|billing|0.15')"
 }
 check slide_sample
+plain_question_contract() {
+	fresh case/02-decide-no
+	same "$(q -c "SELECT thinkthen_decide('Does this need attention?', 'A short note.')")" f
+	same "$(bcount)" 1
+	fresh case/06-choose-billing
+	same "$(q -c "SELECT thinkthen_choose('Which team owns this?', 'Route this note.', ARRAY['billing','shipping','other'])")" billing
+	same "$(bcount)" 1
+	fresh case/11-score-middle
+	same "$(q -c "SELECT thinkthen_score('How severe is this?', 'Rate this note.', ARRAY['low','medium','high'])")" 1
+	same "$(bcount)" 1
+	fresh case/09-tag-two
+	same "$(q -c "SELECT array_to_string(thinkthen_tag('Which labels apply?', 'Classify this note.', ARRAY['billing','urgent','security']), ',')")" billing,urgent
+	same "$(bcount)" 1
+	fresh generic
+	same "$(q -c "SELECT thinkthen_decide('Does this need attention?', 'A short note.', 'Use this policy note.')")" t
+	same "$(bcount)" 1
+	fresh arm/full/capture
+	digest=$(q -c "SELECT thinkthen_details('Does this need attention?', 'A short note.')->'meta'->'requests'->>0")
+	same "$(bcount)" 1
+	bcapture | python3 -c '
+import hashlib, json, sys
+case = next(one for one in json.load(open("../../conformance/cases.json"))["cases"] if one["id"] == "02-decide-no")
+bodies = json.load(sys.stdin)["bodies"]
+assert bodies == [case["exchanges"][0]["request"]], (bodies, case["exchanges"][0]["request"])
+address = f"http://127.0.0.1:{sys.argv[1]}/arm/full/capture/v1/systemone"
+expected = hashlib.sha256(b"systemone\n" + address.encode() + b"\n" + bodies[0].encode()).hexdigest()
+assert sys.argv[2] == expected, (sys.argv[2], expected)
+' "$BPORT" "$digest"
+	has "$(q -c "SELECT thinkthen_decide('{broken', 'A short note.')")" "thinkthen usage:"
+	has "$(q -c "SELECT thinkthen_decide('@missing-question.json', 'A short note.')")" "thinkthen local:"
+	same "$(bcount)" 1
+}
+check plain_question_contract
 recognize_and_relate_as_drawn() {
 	fresh generic
 	out=$(q -c "SELECT t.id, n.text, n.kind FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n ORDER BY t.id, n.start" \
@@ -245,11 +278,10 @@ a_deliberate_grant_survives() {
 check a_deliberate_grant_survives
 bare_text_is_never_a_path() {
 	fresh generic
-	out=$(q -c "SELECT thinkthen_decide('refund.json', 'x')")
-	has "$out" "thinkthen usage: a question file is named with the @ spelling: '@refund.json'; bare text is never a path (retryable: no)"
+	same "$(q -c "SELECT thinkthen_decide('refund.json', 'x')")" t
 	out=$(q -c "SELECT thinkthen_annotate('form.json', 'x')")
 	has "$out" "'@form.json'; bare text is never a path"
-	same "$(bcount)" 0
+	same "$(bcount)" 1
 }
 check bare_text_is_never_a_path
 
