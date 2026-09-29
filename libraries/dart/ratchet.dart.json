@@ -1,5 +1,5 @@
 {
   "directory": ["lib", "checks/consumers", "flutter/lib", "flutter/example/lib", "flutter/example/test"],
   "extension": ".dart",
-  "max": 2563
+  "max": 2950
 }

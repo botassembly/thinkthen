@@ -16,9 +16,10 @@ int main() {
     if (texts.size() != 5) throw std::runtime_error("shared corpus has another text count");
     auto engine = tt::create(std::getenv("TT_PORTABLE_SETTINGS"));
     auto rows = tt::many(engine, corpus.at("question").get<std::string>(), texts);
-    if (rows.size() != texts.size()) throw std::runtime_error("bulk row count changed");
-    for (size_t at = 0; at < rows.size(); ++at) {
-        if (rows[at].outcome != tt::Outcome::yes || rows[at].probability != 0.9)
+    if (rows.value.size() != texts.size() || rows.facts.records != texts.size() || rows.facts.requestsSent != 3)
+        throw std::runtime_error("bulk row count or facts changed");
+    for (size_t at = 0; at < rows.value.size(); ++at) {
+        if (rows.value[at].outcome != tt::Outcome::yes || rows.value[at].probability != 0.9)
             throw std::runtime_error("bulk answer changed at " + std::to_string(at));
     }
     std::cout << "CPP_PORTABLE_BATCH_PASS five ordered rows\n";

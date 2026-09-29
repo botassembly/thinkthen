@@ -18,7 +18,7 @@ stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ'
 consumer = sys.argv[1] if len(sys.argv) >= 2 else 'alpha'
 if consumer not in ('alpha', 'bravo'): raise SystemExit('unknown consumer')
 plant = sys.argv[2] if len(sys.argv) == 3 else ''
-if plant not in ('', 'extra-bulk', 'wrong-relation', 'wrong-probability', 'swapped-bulk', 'wrong-json', 'wrong-annotate', 'wrong-recognize', 'wrong-relate', 'fail-mid-case'):
+if plant not in ('', 'owned-facts', 'extra-bulk', 'wrong-relation', 'wrong-probability', 'swapped-bulk', 'wrong-json', 'wrong-annotate', 'wrong-recognize', 'wrong-relate', 'fail-mid-case'):
     raise SystemExit('unknown planted variant')
 logs = root / 'logs' / ('gate-' + stamp + '-' + consumer + ('-' + plant if plant else ''))
 logs.mkdir(parents=True, exist_ok=False)
@@ -35,6 +35,7 @@ env = {
     'TT_BARRIER_DIR': str(barrier), 'TT_PLANT': plant, 'PUB_CACHE': str(root / 'scratch/pub-cache'),
 }
 command = [dart, 'run', str(root / 'consumers' / consumer / 'bin/main.dart'), str(root / 'scratch/libthinkthen.so')]
+if plant == 'owned-facts': command.append('owned-facts')
 receipt = {'command': command, 'pid': None, 'pgid': None, 'exit': None, 'signals': [], 'timeout_seconds': 140}
 process = None
 try:
@@ -84,7 +85,12 @@ finally:
     described_requests = [json.loads(line) for line in (barrier / 'requests.jsonl').read_text().splitlines() if json.loads(line)['name'] == 'described']
     description_preserved = len(described_requests) == 1 and any(q.get('criteria', {}).get('true') == {'what': 'Affirmative answer.', 'not_for': 'Unclear.', 'examples': ['yes']} for q in described_requests[0]['body']['questions'].values())
     bodies_match = matches(barrier / 'requests.jsonl', root / 'expected-requests.json')
-    status = ('PASS' if receipt['exit'] == 0 and f'DART_STAGE_TWO_PASS {consumer}' in text
+    owned_required = {'without-usage': 1, 'hold-owned-scalar': 1, 'hold-owned-bulk-first': 1}
+    if plant == 'owned-facts':
+        status = 'PASS' if consumer == 'alpha' and receipt['exit'] == 0 and 'DART_OWNED_FACTS_PASS' in text and \
+            counts == owned_required and len(server.completions) == 3 else 'FAIL'
+    else:
+        status = ('PASS' if receipt['exit'] == 0 and f'DART_STAGE_TWO_PASS {consumer}' in text
               and counts == required and bodies_match and description_preserved and relation == {relation_name: 1}
               and bulk == {'hold-bulk-first': 1}
               and counts['hold-scalar'] == 1 and 'hold-scalar' in server.completions

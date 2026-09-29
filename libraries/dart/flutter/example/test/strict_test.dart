@@ -12,8 +12,10 @@ void main() {
     final library = Platform.environment['TT_NATIVE_LIBRARY'];
     if (library == null) throw StateError('TT_NATIVE_LIBRARY required');
     final answer = ThinkThenFlutter(library).decide('Is it?', 'flutter-facade');
-    expect(answer.outcome, Outcome.yes);
-    expect(answer.probability, .9);
+    expect(answer.value.outcome, Outcome.yes);
+    expect(answer.value.probability, .9);
+    expect(answer.facts.records, 1);
+    expect(answer.facts.requestsSent, 1);
     print('FLUTTER_FACADE_PASS');
     await tester.runAsync(() async => strict.main([library]));
   });
