@@ -1,6 +1,6 @@
 # Dart consumer proof needs a supported package
 
-Status: the local package experiment (local experiment 300) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized Dart on 2026-09-28; the team uses it with Flutter.
+Status: ticket 0249 landed the `libraries/dart/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-dart-build.md) cover the Dart pub source package, installed Dart consumers and a real Linux Flutter app on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archive, pub.dev distribution and other Flutter hosts. No release dispatch or publication is claimed.
 
 ## What was proven
 
@@ -12,7 +12,7 @@ Review 1 found a real leak: invalid input with an embedded NUL thrown after part
 
 ## Handoff to J8
 
-Copy only `stage2/package/` into `libraries/dart/`. Then: rebuild at the final release pin and rerun the gate; run the full J1 runtime corpus through the public binding; run a real Flutter-embedder test — an actual Flutter application calling through the binding on a Flutter target, per Ian's ruling 2026-09-28 ('flutter yes') — and decide platform packaging (pubspec assets vs. runtime download of the native archive — the README must stay honest that the native library installs separately); adopt trusted publishing per Ian's registration to-do. Ian's compute grant covers installing the Flutter SDK on the Linux host and the M5 Mac for this. Note for every port: derive export lists per pin; `thinkthen_error_facts_json` exists since pin `5f069321`.
+The historical experiment copy instruction is complete and superseded by `libraries/dart/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, pub.dev distribution and other Flutter hosts.
 
 ## Evidence
 
@@ -20,11 +20,11 @@ Local experiment 300: `FINDINGS.md` (stage one), `stage2/FINDINGS.md`, `BUILD-RE
 
 ## Limits
 
-One Linux host and SDK, synthetic loopback, shared-library loading only (no static-link mode), no Flutter embedder run, no publication, rehearsal archives never ship. GH Actions direction: `ubuntu-24.04`, setup-dart, offline native build from the release archive, `dart pub publish --dry-run` in CI and real publication through the release job.
+At the stage-two pin: one Linux host and SDK, synthetic loopback, shared-library loading only (no static-link mode), and no Flutter embedder run. Stage three and ticket 0249 later supplied the Linux Flutter proof below. No publication occurred; rehearsal archives never ship. GH Actions direction: `ubuntu-24.04`, setup-dart, offline native build from the release archive, `dart pub publish --dry-run` in CI and real publication through the release job.
 
 ## Flutter surface proven (2026-09-28, stage three)
 
-The ruling "flutter yes" now has executed evidence in local experiment 300 `stage3/`: the Flutter host test toolchain runs the full strict contract (17 exact arrivals, isolate cancellation, planted negatives), and a real Flutter engine app — `flutter build linux` under xvfb — decides through the binding with one counted backend arrival and the literal `FLUTTER_EMBEDDER_PASS` marker. Ian installed `ninja-build` and `libgtk-3-dev` to unblock the Linux build. The J8 ticket inherits the sharpened packaging decisions: no `path:` dependencies at publish, per-platform native archives (a Linux `.so` satisfies no other target), no untested runtime download, README names archive/version/discovery/platforms. Flutter 3.47.5 hash in the experiment's `inputs/flutter-toolchain.json`.
+The ruling "flutter yes" now has executed evidence in local experiment 300 `stage3/`: the Flutter host test toolchain runs the full strict contract (17 exact arrivals, isolate cancellation, planted negatives), and a real Flutter engine app — `flutter build linux` under xvfb — decides through the binding with one counted backend arrival and the literal `FLUTTER_EMBEDDER_PASS` marker. Ian installed `ninja-build` and `libgtk-3-dev` to unblock the Linux build. Release packaging retains these requirements: no `path:` dependencies at publish, per-platform native archives (a Linux `.so` satisfies no other target), no untested runtime download, README names archive/version/discovery/platforms. Flutter 3.47.5 hash in the experiment's `inputs/flutter-toolchain.json`.
 
 
 ## Pre-merge re-pin (2026-09-28, pin 71f25087)
@@ -35,4 +35,4 @@ UNCHANGED-PASS (pin already postdated the contract changes; take the repin READM
 
 Ticket 0249's Dart lane now contains `libraries/dart/` and a Linux Flutter consumer under `libraries/dart/flutter/`. The current-pin local source gate proved two installed Dart pub consumers, complete 16-arrival body multisets each, all 29 executable shared J1 cases through the public binding, 18 historical Dart planted negatives, the 17-arrival Flutter host, and an actual one-arrival Linux app. The source package still installs its native C library separately. See `sdlc/records/0249-dart-build.md` for exact artifact hashes and the embedder cache repeatability fix. This checkpoint does not close the issue's final release pin, Ubuntu 24.04 CI, native archive install, pub dry run, trusted publishing, or untested hosts.
 
-The registration candidate now has one `libraries/dart` surface entry, a checked `pubspec.yaml`, nested private Flutter wrapper and app manifests, and an exact Dart source ratchet. Policy and the surface registry pass. Independent recheck of the shared J1 backend startup correction and registration is pending; the release criteria above remain open.
+The landed registration has one `libraries/dart` surface entry, a checked `pubspec.yaml`, nested private Flutter wrapper and app manifests, and an exact Dart source ratchet. Policy and the surface registry pass. The shared J1 startup correction and registration passed final integration review; the release criteria above remain open.
