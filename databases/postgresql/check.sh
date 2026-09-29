@@ -205,6 +205,37 @@ assert sys.argv[2] == expected, (sys.argv[2], expected)
 	same "$(bcount)" 1
 }
 check plain_question_contract
+plan_and_named() {
+	fresh arm/full/capture
+	local out
+	out=$(q -c "SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{}'::json)::text")
+	python3 -c 'import json,sys
+p=json.loads(sys.argv[1]); expected="{\"state\":\"Refund me please.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"asks for a refund\"}}}"
+assert p["records"] == 1 and p["requests"] == 1, p
+assert p["estimated_bytes"] == 120 and p["estimated_input_tokens"] == {"lower":61,"upper":109}, p
+assert p["upper_bound"] is False and p["first_body_utf8"] == expected, p' "$out"
+	same "$(bcount)" 0
+	for sql in \
+		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"bogus\":1}'::json)" \
+		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"model\":\"a\",\"model\":\"b\"}'::json)" \
+		"SELECT thinkthen_decide('asks for a refund', 'Refund me please.', settings => '{\"threshold\":\"0.3:0.7\"}'::json, threshold => '0.3:0.7')"; do
+		out=$(q -c "$sql")
+		has "$out" 'thinkthen usage:'
+	done
+	same "$(bcount)" 0
+	out=$(q -c "SELECT thinkthen_decide('asks for a refund', 'Refund me please.', threshold => '0.3:0.7')")
+	hasnt "$out" ERROR
+	same "$(bcount)" 1
+	fresh arm/full/capture
+	out=$(q -c "SELECT key || ':' || coalesce(value::text, 'null') FROM thinkthen_decide_many('asks for a refund', '{\"7\":\"Refund me please.\",\"9\":\"No thanks.\"}'::jsonb, '{\"batch\":\"max\"}'::json) ORDER BY key")
+	same "$out" $'7:true\n9:true'
+	same "$(bcount)" 1
+	bcapture | python3 -c 'import json,sys
+bodies=json.load(sys.stdin)["bodies"]
+wanted="{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Refund me please.\\\". asks for a refund\"},\"q2\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"No thanks.\\\". asks for a refund\"}}}"
+assert bodies == [wanted], (bodies, wanted)'
+}
+check plan_and_named
 recognize_and_relate_as_drawn() {
 	fresh generic
 	out=$(q -c "SELECT t.id, n.text, n.kind FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n ORDER BY t.id, n.start" \
@@ -1031,4 +1062,5 @@ the_fake_key_stays_in_the_environment() {
 check the_fake_key_stays_in_the_environment
 
 echo "postgresql: $PASSED passed, $FAILED failed"
+[ "$PASSED" -gt 0 ] || { echo 'postgresql: no selected step ran' >&2; exit 2; }
 [ "$FAILED" = 0 ]

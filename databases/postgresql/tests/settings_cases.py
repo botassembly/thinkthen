@@ -21,7 +21,7 @@ def quote(value: str) -> str:
 def query(socket: str, statements: list[str]) -> subprocess.CompletedProcess[str]:
     command = ["psql", "-X", "-q", "-At", "-v", "ON_ERROR_STOP=1", "-h", socket,
                "-U", "postgres", "-d", "postgres"]
-    for statement in statements:
+    for statement in ["SET statement_timeout='30s'", *statements]:
         command += ["-c", statement]
     return subprocess.run(command, capture_output=True, text=True, timeout=30, check=False, env=child_env())
 

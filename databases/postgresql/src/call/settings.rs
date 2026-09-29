@@ -9,7 +9,7 @@ use std::time::Duration;
 use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
 use thinkthen::{BatchSetting, EngineBuilder, Error};
 
-use super::{ACTIVE_THROTTLE, Call, OrRaise, Refusal, spent, totals};
+use super::{ACTIVE_THROTTLE, Call, OrRaise, Refusal};
 use crate::ffi;
 
 /// The registered value that leaves a numeric engine setting unset.
@@ -184,18 +184,13 @@ fn text_of(setting: &GucSetting<Option<CString>>) -> Option<String> {
 
 /// Everything a call reads before its worker starts. `GucSetting::get`
 /// panics off the backend thread, so this runs first in every function.
-/// A set key refuses every call (decision 12), and names no value.
+/// A set key is ignored by the engine, which reads only its server environment.
 pub(crate) fn read() -> Call {
     read_result().or_raise()
 }
 
 /// Read settings without raising recoverable row failures.
 pub(crate) fn read_result() -> Result<Call, Refusal> {
-    if text_of(&API_KEY).is_some_and(|key| !key.trim().is_empty()) {
-        return Err(Refusal::usage(
-            "thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment",
-        ));
-    }
     let cache = text_of(&CACHE);
     let batch = text_of(&BATCH);
     let model = text_of(&MODEL);
@@ -226,13 +221,11 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
     }
     // Ian's ruling of 2026-09-25: the backend's total, computed once per call.
     let total = u64::try_from(MAX_REQUESTS_TOTAL.get()).ok();
-    let left = total.map(|total| total.saturating_sub(totals()[0]));
-    if left == Some(0) {
-        return Err(spent(total.unwrap_or_default()));
-    }
     Ok(Call {
         plan,
-        deadline_ms: DEADLINE_MS.get(),
+        deadline_ms: i64::from(DEADLINE_MS.get()),
+        context: None,
+        batch: None,
         total,
     })
 }
@@ -364,16 +357,7 @@ pub(crate) fn register() {
         GucContext::Suset,
         GucFlags::NO_SHOW_ALL,
     );
-    // `Userset`, so a `SET` never fails and never logs its statement; the
-    // next call refuses instead (amendment item 2).
-    GucRegistry::define_string_guc(
-        c"thinkthen.api_key",
-        c"not read; the key comes from THINKTHEN_API_KEY in the server's environment",
-        c"",
-        &API_KEY,
-        GucContext::Userset,
-        GucFlags::NO_SHOW_ALL | GucFlags::SUPERUSER_ONLY | GucFlags::DISALLOW_IN_AUTO_FILE,
-    );
+    ffi::define_ignored_api_key(&API_KEY);
 }
 
 /// The active SQL total, read on PostgreSQL's backend thread.

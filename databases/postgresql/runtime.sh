@@ -153,7 +153,7 @@ pg_stop() {
 # Every output also lands in psql.all, which the check reads for the fake key.
 qs() {
 	local out code
-	out=$(sh "$LIMIT" "${QTIMEOUT:-30}" psql -X -q -At -h "$SOCK" -U "${PGUSER_AS:-postgres}" -d postgres "$@" 2>&1)
+	out=$(sh "$LIMIT" "${QTIMEOUT:-30}" psql -X -q -At -h "$SOCK" -U "${PGUSER_AS:-postgres}" -d postgres -c "SET statement_timeout='30s'" "$@" 2>&1)
 	code=$?
 	printf '%s\n' "$out" | tee -a "$RUN/psql.all"
 	return "$code"

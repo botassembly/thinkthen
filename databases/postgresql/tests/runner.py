@@ -95,7 +95,7 @@ def texts(values):
 def psql(*statements):
     command = ["psql", "-X", "-q", "-At", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose"]
     command += ["-h", SOCKET, "-U", "postgres", "-d", "postgres"]
-    for statement in statements:
+    for statement in ("SET statement_timeout='30s'", *statements):
         command += ["-c", statement]
     done = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False,
                           env=child_env())

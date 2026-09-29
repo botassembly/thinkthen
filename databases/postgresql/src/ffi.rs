@@ -7,8 +7,55 @@ use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::thread::JoinHandle;
 
+use pgrx::callconv::{Arg, ArgAbi};
+use pgrx::datum::JsonString;
+use pgrx::nullable::Nullable;
 use pgrx::pg_sys;
-use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting, check_for_interrupts, pg_guard};
+use pgrx::pgrx_sql_entity_graph::metadata::{
+    ArgumentError, Returns, ReturnsError, SqlMapping, SqlTranslatable,
+};
+use pgrx::{FromDatum, pg_sys::Datum};
+use pgrx::{
+    GucContext, GucFlags, GucRegistry, GucSetting, PgSqlErrorCode, check_for_interrupts, pg_guard,
+};
+
+/// PostgreSQL `json` as original bytes, retaining duplicate member names.
+#[derive(Debug)]
+pub(crate) struct RawJson(pub(crate) String);
+
+impl FromDatum for RawJson {
+    unsafe fn from_polymorphic_datum(
+        datum: Datum,
+        is_null: bool,
+        typoid: pg_sys::Oid,
+    ) -> Option<Self> {
+        // SAFETY: the SQL declaration below supplies a json datum and pgrx owns its copy.
+        unsafe { JsonString::from_polymorphic_datum(datum, is_null, typoid) }
+            .map(|value| Self(value.0))
+    }
+}
+
+// SAFETY: FromDatum reads the same PostgreSQL json datum this declaration names.
+unsafe impl SqlTranslatable for RawJson {
+    fn argument_sql() -> Result<SqlMapping, ArgumentError> {
+        Ok(SqlMapping::literal("json"))
+    }
+    fn return_sql() -> Result<Returns, ReturnsError> {
+        Ok(Returns::One(SqlMapping::literal("json")))
+    }
+}
+
+// SAFETY: the SQL mapping guarantees a PostgreSQL json datum for the delegated reader.
+unsafe impl<'fcx> ArgAbi<'fcx> for RawJson {
+    unsafe fn unbox_arg_unchecked(arg: Arg<'_, 'fcx>) -> Self {
+        // SAFETY: pgrx passes this non-null json argument through FromDatum.
+        unsafe { arg.unbox_arg_using_from_datum() }.unwrap_or_else(|| pgrx::error!("json was null"))
+    }
+    unsafe fn unbox_nullable_arg(arg: Arg<'_, 'fcx>) -> Nullable<Self> {
+        // SAFETY: FromDatum returns None for SQL NULL.
+        unsafe { arg.unbox_arg_using_from_datum() }.into()
+    }
+}
 
 // PostgreSQL's interrupt flags, read only. PostgreSQL raises the error; the
 // wait reads these to tell a cancel from any other pending interrupt.
@@ -87,6 +134,44 @@ pub(crate) fn define_throttle(setting: &'static GucSetting<i32>) {
             None,
         );
     }
+}
+
+/// Keep SET successful; only an interactive nonempty assignment gets advice.
+pub(crate) fn define_ignored_api_key(setting: &'static GucSetting<Option<std::ffi::CString>>) {
+    // SAFETY: the guarded hook only reads PostgreSQL's live proposed value.
+    unsafe {
+        GucRegistry::define_string_guc_with_hooks(
+            c"thinkthen.api_key",
+            c"ignored; use THINKTHEN_API_KEY in the server environment",
+            c"",
+            setting,
+            GucContext::Userset,
+            GucFlags::NO_SHOW_ALL | GucFlags::SUPERUSER_ONLY | GucFlags::DISALLOW_IN_AUTO_FILE,
+            Some(check_ignored_api_key),
+            None,
+            None,
+        );
+    }
+}
+
+#[pg_guard]
+unsafe extern "C-unwind" fn check_ignored_api_key(
+    value: *mut *mut std::ffi::c_char,
+    _extra: *mut *mut std::ffi::c_void,
+    source: pg_sys::GucSource::Type,
+) -> bool {
+    if source == pg_sys::GucSource::PGC_S_INTERACTIVE {
+        // SAFETY: PostgreSQL passes a live pointer to the proposed NUL-terminated value.
+        let proposed = unsafe { *value };
+        if !proposed.is_null() && !unsafe { std::ffi::CStr::from_ptr(proposed) }.is_empty() {
+            pgrx::ereport!(
+                WARNING,
+                PgSqlErrorCode::ERRCODE_WARNING,
+                "thinkthen.api_key is ignored; set THINKTHEN_API_KEY in the server environment"
+            );
+        }
+    }
+    true
 }
 
 #[pg_guard]

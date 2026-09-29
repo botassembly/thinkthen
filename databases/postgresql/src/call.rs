@@ -9,7 +9,8 @@ use std::time::{Duration, Instant};
 
 use pgrx::prelude::*;
 use thinkthen::{
-    CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget, SendBudgetDenial,
+    BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget,
+    SendBudgetDenial, Settings,
 };
 
 use crate::ffi;
@@ -162,7 +163,9 @@ pub(crate) fn totals() -> [u64; 4] {
 #[derive(Debug)]
 pub(crate) struct Call {
     pub(crate) plan: Plan,
-    pub(crate) deadline_ms: i32,
+    pub(crate) deadline_ms: i64,
+    pub(crate) context: Option<String>,
+    pub(crate) batch: Option<BatchSetting>,
     /// `thinkthen.max_requests_total`, enforced for each actual send.
     total: Option<u64>,
 }
@@ -175,8 +178,20 @@ fn spent(total: u64) -> Refusal {
 }
 
 impl Call {
-    pub(crate) fn max_requests(&self) -> Option<usize> {
-        self.plan.max_requests
+    pub(crate) fn with_settings(mut self, settings: &Settings) -> Result<Self, Refusal> {
+        if let Some(value) = settings.deadline_ms() {
+            self.deadline_ms = value;
+        }
+        self.context = settings.context().map(str::to_owned);
+        self.batch = if settings.batch_max() {
+            Some(BatchSetting::Max)
+        } else {
+            settings
+                .batch_records()
+                .and_then(std::num::NonZeroUsize::new)
+                .map(BatchSetting::Records)
+        };
+        Ok(self)
     }
 
     /// Refuse held records over `max_requests` before any send. The total
@@ -268,6 +283,7 @@ pub(crate) fn run_result<T: Send + 'static>(
     let (answer, answered) = mpsc::channel::<Result<T, Error>>();
     let (plan, worker_token) = (call.plan.clone(), token.clone());
     let total = call.total;
+    let (call_batch, call_context) = (call.batch, call.context);
     let send_budget = SEND_BUDGET.get_or_init(SendBudget::new);
     ffi::spawn_masked(move || {
         deliver(&answer, || {
@@ -275,11 +291,15 @@ pub(crate) fn run_result<T: Send + 'static>(
                 Some(engine) => engine,
                 None => build(&plan)?,
             };
-            CallOptions::new()
+            let options = CallOptions::new()
                 .cancel(&worker_token)
-                .send_budget(send_budget, total)
-                .deadline_millis(i64::from(millis))
-                .and_then(|options| work(&engine, options))
+                .send_budget(send_budget, total);
+            let options = options.deadline_ms(millis)?;
+            let options = call_batch.map_or(options, |batch| options.batch(batch));
+            let options = call_context
+                .as_deref()
+                .map_or(options, |text| options.context(text));
+            work(&engine, options)
         });
     })
     .map_err(|_| Refusal::of(ErrorKind::Defect, "the call's worker could not start"))
