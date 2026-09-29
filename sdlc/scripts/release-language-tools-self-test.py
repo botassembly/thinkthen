@@ -5,6 +5,8 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 from unittest.mock import patch
 import zipfile
@@ -31,6 +33,7 @@ class Observer:
         self.versions = tools.PACKAGES.copy()
         self.provider = f"libncurses5-dev (= {tools.PACKAGES['libncurses-dev']}), ncurses-dev"
         self.java_version = "21.0.12"
+        self.cc_owner = "gcc-13-x86-64-linux-gnu"
 
     def __call__(self, args, *, env=None):
         self.calls.append((args, env))
@@ -45,7 +48,8 @@ class Observer:
             if path.parent == self.root / "jdk/bin":
                 owner = "openjdk-21-jre-headless" if path.name == "java" else "openjdk-21-jdk-headless"
             else:
-                owner = tools.OWNERS.get(path.name, "wrong-owner")
+                owner = (self.cc_owner if path.name == "gcc-13"
+                         else tools.OWNERS.get(path.name, "wrong-owner"))
             return f"{owner}: {path}"
         path = Path(args[0])
         if path.parent == self.root / "jdk/bin":
@@ -125,6 +129,19 @@ def main():
                            for args, _ in observer.calls)
                 assert all("install" not in args and "update" not in args for args, _ in observer.calls)
 
+                rogue = root / "rogue/gcc-13"
+                executable(rogue)
+                (root / "bin/cc").unlink()
+                (root / "bin/cc").symlink_to(rogue)
+                must_fail(lambda: tools.check_smoke_tools(observer, root / "bin/bwrap"),
+                          "not the selected GCC 13")
+                (root / "bin/cc").unlink()
+                (root / "bin/cc").symlink_to("gcc-13")
+                observer.cc_owner = "unowned"
+                must_fail(lambda: tools.check_smoke_tools(observer, root / "bin/bwrap"),
+                          "selected cc package owner differs")
+                observer.cc_owner = "gcc-13-x86-64-linux-gnu"
+
                 observer.versions["gnucobol4"] = "3.1.2"
                 must_fail(lambda: tools.setup("smoke", root / "wrong-package", SHA, False,
                                               github_env, github_path, observer,
@@ -178,10 +195,91 @@ def main():
                 assert sources.count("Snapshot: " + tools.SNAPSHOT) == 2
                 assert "archive.ubuntu.com" in sources and "security.ubuntu.com" in sources
                 assert "packages.microsoft.com" not in sources and "ppa.launchpad.net" not in sources
+                acquisition_cli(root)
         finally:
             os.environ.clear()
             os.environ.update(old)
     print("release language tools self-test: selected inputs and refusals PASS")
+
+
+def acquisition_cli(root):
+    """Run the public entry point with observed apt and download boundaries."""
+    process_dir = root / "processes"
+    process_dir.mkdir()
+    log = root / "process-log"
+    package = "openjdk-21-jdk"
+    version = tools.PACKAGES[package]
+    process = process_dir / "apt-cache"
+    process.write_text("#!/usr/bin/env python3\nimport os, sys\n"
+                       "from pathlib import Path\n"
+                       "Path(os.environ['OBSERVE_LOG']).open('a').write('metadata\\n')\n"
+                       "print(os.environ['OBSERVE_METADATA'])\n")
+    process.chmod(0o755)
+    process = process_dir / "apt-get"
+    process.write_text("#!/usr/bin/env python3\nimport os, sys\n"
+                       "from pathlib import Path\n"
+                       "Path(os.environ['OBSERVE_LOG']).open('a').write('apt ' + ' '.join(sys.argv[1:]) + '\\n')\n"
+                       "if 'install' in sys.argv and '-s' not in sys.argv: "
+                       "Path(os.environ['OBSERVE_INSTALLED']).touch()\n"
+                       "if '-s' in sys.argv: print(os.environ['OBSERVE_PLAN'])\n")
+    process.chmod(0o755)
+    process = process_dir / "sudo"
+    process.write_text("#!/bin/sh\nexec \"$@\"\n")
+    process.chmod(0o755)
+    # The entry point's fetch boundary receives signed deterministic bytes.
+    # The digest is patched only for these InRelease fixtures; no SDK is fetched.
+    wrapper = ("import importlib.util, pathlib, sys\n"
+               "spec = importlib.util.spec_from_file_location('tools', sys.argv[1])\n"
+               "tools = importlib.util.module_from_spec(spec); spec.loader.exec_module(tools)\n"
+               "tools.fetch = lambda url, path: path.write_bytes(url.encode())\n"
+               "tools.RELEASES = {key: tools.hashlib.sha256((f'https://snapshot.ubuntu.com/ubuntu/'"
+               "f'{tools.SNAPSHOT}/dists/{key}/InRelease').encode()).hexdigest() "
+               "for key in tools.RELEASES}\n"
+               "import os\n"
+               "tools.package_version = lambda name, run=tools.command: "
+               "tools.MANAGED[name] if pathlib.Path(os.environ['OBSERVE_INSTALLED']).exists() else None\n"
+               "def setup(mode, job, sha, acquire, *handoff):\n"
+               "    job.mkdir()\n"
+               "    return {'mode': mode, 'packages': tools.ensure_packages(mode, job, acquire, get=tools.fetch)}\n"
+               "tools.setup = setup\n"
+               "try: tools.main(sys.argv[2:])\n"
+               "except RuntimeError as error: print(error, file=sys.stderr); sys.exit(1)\n")
+    env = os.environ.copy()
+    env.update(PATH=str(process_dir) + os.pathsep + env["PATH"], OBSERVE_LOG=str(log),
+               OBSERVE_INSTALLED=str(root / "installed"),
+               OBSERVE_METADATA=(f"Package: {package}\nVersion: {version}\nArchitecture: amd64\n"
+                                 "Filename: pool/main/o/openjdk.deb\nSHA256: " + "a" * 64),
+               OBSERVE_PLAN=(f"Reading package lists...\nInst {package} ({version} Ubuntu:24.04/noble-updates [amd64])"))
+    # Keep this focused on the acquisition boundary: other installed inputs
+    # are represented by the already exercised selected-home fixture.
+    script = HERE / "release-language-tools.py"
+    for label, plan, metadata, should_install in (
+        ("good", env["OBSERVE_PLAN"], env["OBSERVE_METADATA"], True),
+        ("foreign", "Reading package lists...\nInst foreign-library (99.0 thirdparty:foreign [amd64])",
+         env["OBSERVE_METADATA"], False),
+        ("foreign-snapshot", "Reading package lists...\nInst foreign-library (99.0 Ubuntu:24.04/noble [amd64])",
+         env["OBSERVE_METADATA"], False),
+        ("changed", f"Reading package lists...\nInst {package} (99.0 Ubuntu:24.04/noble-updates [amd64])",
+         env["OBSERVE_METADATA"], False),
+    ):
+        Path(env["OBSERVE_INSTALLED"]).unlink(missing_ok=True)
+        log.unlink(missing_ok=True)
+        env.update(OBSERVE_PLAN=plan, OBSERVE_METADATA=metadata)
+        command = [sys.executable, "-c", wrapper, str(script), "managed",
+                   str(root / ("acquire-" + label)), SHA, "--acquire"]
+        # Use the real CLI argument parser and acquisition path. Intercept
+        # setup after package selection to avoid unrelated SDK work.
+        result = subprocess.run(command, env=env, text=True, capture_output=True, check=False)
+        assert result.returncode == (0 if should_install else 1), result
+        if label == "foreign":
+            assert "unrecognized or duplicate selection" in result.stderr, result
+        if label == "foreign-snapshot":
+            assert "outside signed snapshot metadata" in result.stderr, result
+        if label == "changed":
+            assert "substituted pinned package" in result.stderr, result
+        assert Path(env["OBSERVE_INSTALLED"]).exists() == should_install
+        assert "-s" in log.read_text(), (label, log.read_text())
+        assert ("metadata" in log.read_text()) == (label in ("good", "foreign-snapshot"))
 
 
 if __name__ == "__main__":

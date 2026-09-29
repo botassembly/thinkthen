@@ -122,6 +122,41 @@ def snapshot_sources(job):
     return source
 
 
+def selected_plan(plan):
+    selected = {}
+    for line in plan.splitlines():
+        if line.startswith(("Remv ", "Conf ")):
+            if line.startswith("Remv "):
+                fail("apt plan removes an installed package")
+            continue
+        if not line.startswith("Inst "):
+            continue
+        match = re.fullmatch(r"Inst ([a-z0-9][a-z0-9+.-]*) (?:\[[^]]+\] )?"
+                             r"\(([^ ()]+) (Ubuntu:24\.04/noble(?:-updates|-security)? \[(?:amd64|all)\])\)",
+                             line)
+        if not match or match[1] in selected:
+            fail("apt plan contains an unrecognized or duplicate selection")
+        selected[match[1]] = match[2]
+    if not selected:
+        fail("apt did not produce a package acquisition plan")
+    return selected
+
+
+def snapshot_package(name, version, apt, run):
+    # The empty status file excludes locally installed packages. apt's isolated
+    # lists contain only indexes authenticated by the snapshot source above.
+    metadata = run(["apt-cache", *apt[1:], "-o", "Dir::State::status=/dev/null",
+                    "show", f"{name}={version}"])
+    for stanza in metadata.split("\n\n"):
+        fields = dict(line.split(": ", 1) for line in stanza.splitlines() if ": " in line)
+        if (fields.get("Package") == name and fields.get("Version") == version
+                and fields.get("Architecture") in ("amd64", "all")
+                and fields.get("Filename", "").startswith("pool/")
+                and re.fullmatch(r"[0-9a-f]{64}", fields.get("SHA256", ""))):
+            return
+    fail(f"apt selected {name}={version} outside signed snapshot metadata")
+
+
 def ensure_packages(mode, job, acquire, run=command, get=fetch):
     wanted = package_set(mode)
     existing = {name: package_version(name, run) for name in wanted}
@@ -146,8 +181,13 @@ def ensure_packages(mode, job, acquire, run=command, get=fetch):
     run(["sudo", *apt, "update"])
     pins = [f"{name}={version}" for name, version in sorted(wanted.items())]
     plan = run([*apt, "-s", "install", "--no-install-recommends", *pins])
-    if not plan.startswith("Reading package lists") or not any(line.startswith("Inst ") for line in plan.splitlines()):
+    if not plan.startswith("Reading package lists"):
         fail("apt did not produce a package acquisition plan")
+    selected_plan_versions = selected_plan(plan)
+    for name, version in selected_plan_versions.items():
+        if name in wanted and wanted[name] != version:
+            fail(f"apt substituted pinned package {name}")
+        snapshot_package(name, version, apt, run)
     (job / "apt-plan.txt").write_text(plan + "\n")
     run(["sudo", *apt, "install", "--yes", "--allow-downgrades", "--no-install-recommends", *pins])
     selected = {name: package_version(name, run) for name in wanted}
@@ -157,7 +197,8 @@ def ensure_packages(mode, job, acquire, run=command, get=fetch):
         provider = run(["dpkg-query", "-W", "-f=${Provides}", "libncurses-dev"])
         if f"libncurses5-dev (= {PACKAGES['libncurses-dev']})" not in provider.split(", "):
             fail("selected libncurses-dev does not provide libncurses5-dev")
-    return {"source": SNAPSHOT, "versions": selected, "plan": "apt-plan.txt"}
+    return {"source": SNAPSHOT, "versions": selected, "closure": selected_plan_versions,
+            "plan": "apt-plan.txt"}
 
 
 def selected_executable(path):
@@ -291,15 +332,21 @@ def check_smoke_tools(run=command, bwrap=Path("/usr/bin/bwrap")):
             fail(f"selected {tool} package owner differs from pin")
         selected[tool] = str(path)
     cc = shutil.which("cc")
-    if not cc or "gcc-13" not in str(Path(cc).resolve()):
-        fail("selected cc is not GCC 13")
+    cc_path = selected_executable(Path(cc)) if cc else None
+    if cc_path is None or str(cc_path) != selected["gcc"]:
+        fail("selected cc is not the selected GCC 13")
+    if "13.3.0" not in run([str(cc_path), "--version"]):
+        fail("selected cc version differs from pin")
+    cc_owner = run(["dpkg-query", "-S", str(cc_path)]).split(":", 1)[0]
+    if cc_owner != "gcc-13-x86-64-linux-gnu":
+        fail("selected cc package owner differs from pin")
     if selected_executable(bwrap) is None or "0.9.0" not in run([str(bwrap), "--version"]):
         fail("/usr/bin/bwrap differs from the pinned bubblewrap")
     if run(["dpkg-query", "-S", str(bwrap)]).split(":", 1)[0] != "bubblewrap":
         fail("/usr/bin/bwrap package owner differs from pin")
     run([str(bwrap), "--unshare-user", "--unshare-pid", "--unshare-net", "--die-with-parent",
          "--ro-bind", "/", "/", "--", "/bin/true"])
-    selected["cc"] = str(Path(cc).resolve())
+    selected["cc"] = str(cc_path)
     selected["bwrap"] = str(bwrap)
     return selected
 
