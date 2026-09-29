@@ -237,8 +237,7 @@ test('runtime-label many calls preserve ordered descriptions and bare versus nul
   assert.ok(Array.isArray(Object.values(bare.questions)[0].criteria));
   assert.deepEqual(Object.values(described.questions)[0].criteria, [{}, 'High.']);
   assert.match(backend.bodies[3], /nested/);
-  assert.equal(Object.values(meaning.questions)[0].criteria.true, null);
-  assert.deepEqual(Object.values(meaning.questions)[0].criteria.false, { nested: ['no', true] });
+  assert.deepEqual(Object.values(meaning.questions)[0].criteria, { false: { nested: ['no', true] } });
   assert.deepEqual(value.choices.details.map((row) => row.requests), [[recordingDigest(backend.base(), backend.bodies[0])], [recordingDigest(backend.base(), backend.bodies[0])]]);
   assert.equal(Object.values(JSON.parse(backend.bodies[7]).questions)[0].type, 'choice');
   assert.ok(value.recognized.details.some((row) => row.requests.includes(recordingDigest(backend.base(), backend.bodies[7]))));

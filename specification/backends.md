@@ -126,7 +126,7 @@ The response body:
 | --- | --- |
 | The evidence | `state`: the text as a string, or the object or list a pointer selection made, as that JSON value |
 | A yes/no question and its text | `type` `noul`, with the question as `instructions`, as the string, object, or list the question held |
-| What true means and what false means | `criteria.true` and `criteria.false` under the `noul` question, each the string, object, list, or `null` the question held. A text that was not given is absent, and a question with neither sends no `criteria` at all |
+| What true means and what false means | `criteria.true` and `criteria.false` under the `noul` question carry only non-null string, object, or list descriptions. An absent or explicitly null description sends no member; if neither side has a description, the question sends no `criteria` at all. The parsed question and its canonical digest retain an explicit null |
 | A yes/no answer's probability | `noul` |
 | Pick one from a list | `type` `choice`, with the options as the keys of `criteria` and each description as the value, or `null` |
 | Place on named levels | `type` `score`, with the `criteria` array in level order: a level from a list of names sends its name, a described level sends the description the map held, and a `null` description sends an empty object in its place. The name never stands in for a `null` |

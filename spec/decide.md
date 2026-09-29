@@ -93,7 +93,7 @@ A question file carries the same settings under `@FILE`, and its question text a
 cat > question.json <<'JSON'
 {"decide":{"ask":"Does this message ask for a refund?","lang":"en"},"true":{"means":"Money back."},"false":null}
 JSON
-printf 'Refund me please.' | thinkthen decide @question.json --plan | grep -c '"instructions":{"ask":"Does this message ask for a refund?","lang":"en"},"criteria":{"true":{"means":"Money back."},"false":null}' | mustmatch "1"
+printf 'Refund me please.' | thinkthen decide @question.json --plan | grep -c '"instructions":{"ask":"Does this message ask for a refund?","lang":"en"},"criteria":{"true":{"means":"Money back."}}' | mustmatch "1"
 rm question.json
 ```
 

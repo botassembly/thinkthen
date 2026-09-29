@@ -72,14 +72,14 @@ fn a_null_tag_description_is_omitted_from_the_array_and_the_criteria() {
 }
 
 #[test]
-fn true_and_false_carry_structure_and_null_into_the_criteria() {
+fn structured_true_and_null_false_keep_the_input_but_omit_the_null_wire_member() {
     let written = written(
         "structured-decide-criteria",
         r#"{"decide":"Does this ask for a refund?","true":{"means":"Money back."},"false":null}"#,
     );
     let plan = printed(&["decide", &written, "--plan"]);
     assert!(
-        plan.contains(r#""criteria":{"true":{"means":"Money back."},"false":null}"#),
+        plan.contains(r#""criteria":{"true":{"means":"Money back."}}"#),
         "{plan}"
     );
 }
