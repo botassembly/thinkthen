@@ -28,7 +28,7 @@ fn csv_dry_run_parses_the_first_data_row_as_an_object() {
             "--csv",
             "--field",
             "/body",
-            "--dry-run",
+            "--plan",
         ],
         &[],
         b"id,body\n7,The payout failed again.\n8,not read\n",
@@ -257,7 +257,7 @@ fn table_flags_are_explicit_and_mutually_exclusive() {
         ["--tsv", "--lines"],
     ] {
         let output = spawn(
-            &["decide", "Question", pair[0], pair[1], "--dry-run"],
+            &["decide", "Question", pair[0], pair[1], "--plan"],
             &[],
             b"a\nvalue\n",
         )
@@ -301,23 +301,19 @@ fn choose_raw_refuses_both_table_framings_before_any_request() {
 }
 
 #[test]
-fn table_dry_run_stops_after_the_first_data_row() {
+fn table_plan_refuses_a_malformed_later_data_row_before_disclosure() {
     let output = spawn(
-        &[
-            "decide",
-            "Question",
-            "--csv",
-            "--field",
-            "/body",
-            "--dry-run",
-        ],
+        &["decide", "Question", "--csv", "--field", "/body", "--plan"],
         &[],
         b"body,id\nfirst,1\nmalformed\n",
     )
     .expect("the command runs");
-    assert_eq!(output.status.code(), Some(0));
-    assert!(String::from_utf8_lossy(&output.stdout).contains(r#""state":"first""#));
-    assert!(output.stderr.is_empty());
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        output.stderr,
+        b"thinkthen: the CSV record has 1 field; its header has 2\n"
+    );
 }
 
 #[test]
@@ -422,7 +418,7 @@ fn one_job_sends_table_requests_in_record_order() {
 fn table_header_diagnostics_hide_evidence_and_key_markers() {
     let marker = "marker-evidence-51d2";
     let output = spawn(
-        &["decide", "Question", "--csv", "--dry-run"],
+        &["decide", "Question", "--csv", "--plan"],
         &[("THINKTHEN_API_KEY", "marker-key-19aa")],
         format!("{marker},{marker}\nleft,right\n").as_bytes(),
     )

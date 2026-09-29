@@ -77,7 +77,7 @@ fn through_a_terminal(
 #[test]
 fn a_terminal_is_told_what_the_command_waits_for_and_a_pipe_is_not() {
     let into = folder("terminal").expect("a folder for this case");
-    let asked = ["decide", "asks for a refund", "--dry-run"];
+    let asked = ["decide", "asks for a refund", "--plan"];
 
     let (out, err) =
         through_a_terminal(&asked, "Refund me please.\n", &into).expect("a pseudo-terminal");
@@ -100,7 +100,7 @@ fn a_run_reading_a_file_is_told_nothing_even_at_a_terminal() {
     let evidence = into.join("evidence.txt");
     fs::write(&evidence, "Refund me please.\n").expect("the evidence is written");
     let path = evidence.to_string_lossy().into_owned();
-    let asked = ["decide", "asks for a refund", "--dry-run", "--input", &path];
+    let asked = ["decide", "asks for a refund", "--plan", "--input", &path];
 
     let (out, err) = through_a_terminal(&asked, "", &into).expect("a pseudo-terminal");
 

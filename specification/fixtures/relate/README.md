@@ -11,8 +11,8 @@ set -euo pipefail
 root=$(git rev-parse --show-toplevel)
 fixture="$root/specification/fixtures/relate"
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
-  thinkthen relate "@$fixture/member-of.json" --jsonl --dry-run < "$fixture/bands.jsonl" \
-  | jq -c '{entity_count,logical_questions,request_count,rule:.relations[0].name}' \
+  thinkthen relate "@$fixture/member-of.json" --jsonl --plan < "$fixture/bands.jsonl" \
+  | sed -n '1p' | jq -c '{entity_count,logical_questions,request_count,rule:.relations[0].name}' \
   | mustmatch '{"entity_count":13,"logical_questions":30,"request_count":1,"rule":"member_of"}'
 ```
 
@@ -22,8 +22,8 @@ root=$(git rev-parse --show-toplevel)
 fixture="$root/specification/fixtures/relate"
 for set in cities cities-plus; do
   env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
-    thinkthen relate "@$fixture/located-in.json" --jsonl --dry-run < "$fixture/$set.jsonl" \
-    | jq -c '{entity_count,logical_questions,request_count,rule:.relations[0].name}'
+    thinkthen relate "@$fixture/located-in.json" --jsonl --plan < "$fixture/$set.jsonl" \
+    | sed -n '1p' | jq -c '{entity_count,logical_questions,request_count,rule:.relations[0].name}'
 done | mustmatch '{"entity_count":18,"logical_questions":80,"request_count":1,"rule":"located_in"}
 {"entity_count":21,"logical_questions":110,"request_count":1,"rule":"located_in"}'
 ```

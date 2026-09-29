@@ -6,9 +6,9 @@ probe=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 mode=${1:-live}
 case "$mode" in
 live) extra= ;;
---dry-run) extra=--dry-run ;;
+--plan) extra=--plan ;;
 *)
-	printf 'probability-total-0038: the one argument is --dry-run\n' >&2
+	printf 'probability-total-0038: the one argument is --plan\n' >&2
 	exit 2
 	;;
 esac

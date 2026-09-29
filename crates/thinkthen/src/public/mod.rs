@@ -23,6 +23,7 @@ mod results;
 mod set;
 mod settings;
 
+pub use crate::core::settings::{For, Settings, SettingsError};
 pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};

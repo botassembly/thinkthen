@@ -4,6 +4,10 @@
 use std::process::Command;
 
 #[test]
+#[expect(
+    clippy::too_many_lines,
+    reason = "one PTY script checks terminal and pipe channels in the same process boundary"
+)]
 fn the_role_hint_uses_stderr_only_when_stdout_is_a_terminal() {
     // Python's standard-library PTY supplies real terminal file descriptors.
     // Keeping stdin a pipe avoids the independent waiting-for-evidence notice.
@@ -16,9 +20,9 @@ import subprocess
 import tty
 
 binary = os.environ['THINKTHEN_BIN']
-hint = b'thinkthen: dry-run: request.state is the evidence; request.questions holds what you asked about it.\n'
+hint = b'thinkthen: plan: request.state is the evidence; request.questions holds what you asked about it.\n'
 environment = {'HOME': os.environ['THINKTHEN_TEST_HOME']}
-args = [binary, 'decide', 'asks for a refund', '--dry-run', '--url', 'http://127.0.0.1:1/v1']
+args = [binary, 'decide', 'asks for a refund', '--plan', '--url', 'http://127.0.0.1:1/v1']
 
 def run(stdout_terminal, stderr_terminal, argv=args, evidence=b'Refund me please.'):
     master, slave = pty.openpty()
@@ -61,8 +65,11 @@ def run(stdout_terminal, stderr_terminal, argv=args, evidence=b'Refund me please
         os.close(master)
 
 def plan(line):
-    assert line.endswith(b'\n') and line.count(b'\n') == 1, line
-    document = json.loads(line)
+    assert line.endswith(b'\n') and line.count(b'\n') == 2, line
+    first, counts = line.splitlines()
+    document = json.loads(first)
+    summary = json.loads(counts)
+    assert summary['records'] == 1 and summary['requests'] == 1, summary
     assert document['request']['state'] == 'Refund me please.', document
     assert document['request']['questions']['q1']['instructions'] == 'asks for a refund', document
     assert document['key_env'] == 'THINKTHEN_API_KEY', document
@@ -83,10 +90,10 @@ plan(piped_stdout)
 assert terminal_stderr == b'', terminal_stderr
 
 # A record-only verb must not receive the one-document explanation.
-filter_args = [binary, 'filter', 'asks for a refund', '--dry-run', '--url', 'http://127.0.0.1:1/v1']
+filter_args = [binary, 'filter', 'asks for a refund', '--plan', '--url', 'http://127.0.0.1:1/v1']
 _, stderr, terminal_stdout = run(True, False, filter_args, b'Refund me please.\n')
 assert stderr == b'', stderr
-assert json.loads(terminal_stdout)['input']['framing'] == 'lines', terminal_stdout
+assert json.loads(terminal_stdout.splitlines()[0])['input']['framing'] == 'lines', terminal_stdout
 "#;
     let output = Command::new("python3")
         .arg("-c")

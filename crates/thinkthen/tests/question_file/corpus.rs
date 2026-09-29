@@ -32,7 +32,7 @@ fn the_schema_and_the_parser_agree_on_the_shared_corpus() {
         } else {
             b"Refund me please."
         };
-        let mut arguments = vec![verb, &written, "--dry-run"];
+        let mut arguments = vec![verb, &written, "--plan"];
         if has_batch {
             // A file batch is ignored on one document; a stream exercises its value.
             arguments.push("--lines");

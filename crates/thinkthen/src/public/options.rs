@@ -41,14 +41,12 @@ impl From<BatchSetting> for crate::core::batch::Setting {
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
 const MOST_SECONDS: u64 = 4_294_967_295;
 
-/// A number plain up to 20 characters, the width of `u64::MAX`, else as `1e300`.
 fn shown(value: f64) -> String {
     let plain = value.to_string();
     if plain.len() <= 20 {
-        plain
-    } else {
-        format!("{value:e}")
+        return plain;
     }
+    format!("{value:e}")
 }
 
 /// A cancel flag a caller may set from any thread.
@@ -218,13 +216,11 @@ impl<'a> CallOptions<'a> {
         Ok(self)
     }
 
-    /// Stop the call this many seconds after it begins: `-1` is no deadline
-    /// and clears an earlier one, and `0` is spent, so the call sends nothing.
+    /// Seconds since call start; `-1` clears and `0` sends nothing.
+    /// Retained for host source migration to `deadline_ms`.
     ///
     /// # Errors
-    ///
-    /// Returns [`Error::Usage`] for any other negative, NaN, infinity, or a
-    /// budget above 4,294,967,295 seconds.
+    /// Refuses another negative value, NaN, infinity, or an excessive budget.
     pub fn deadline_seconds(self, value: f64) -> Result<Self, Error> {
         if value == -1.0 {
             return Ok(self.cleared());
@@ -242,27 +238,32 @@ impl<'a> CallOptions<'a> {
         self.deadline_after(budget).map_err(|_| refused())
     }
 
-    /// Stop the call this many milliseconds after it begins, under the rules
-    /// of [`CallOptions::deadline_seconds`].
+    /// Milliseconds since call start; `-1` clears and `0` sends nothing.
     ///
     /// # Errors
-    ///
-    /// Returns [`Error::Usage`] for a negative value other than `-1`, or a
-    /// budget above 4,294,967,295 seconds.
-    pub fn deadline_millis(self, value: i64) -> Result<Self, Error> {
+    /// Refuses another negative value or more than 4,294,967,295 seconds.
+    pub fn deadline_ms(self, value: i64) -> Result<Self, Error> {
         if value == -1 {
             return Ok(self.cleared());
         }
         let budget = u64::try_from(value)
             .ok()
             .map(Duration::from_millis)
-            .filter(|budget| *budget <= Duration::from_secs(MOST_SECONDS))
+            .filter(|_| crate::core::settings::valid_deadline_ms(value))
             .ok_or_else(|| {
                 Error::usage(format!(
                     "a deadline of {value} milliseconds is not -1, 0, or a positive budget of at most {MOST_SECONDS} seconds"
                 ))
             })?;
         self.deadline_after(budget)
+    }
+
+    /// Milliseconds retained for host source migration to `deadline_ms`.
+    ///
+    /// # Errors
+    /// As [`CallOptions::deadline_ms`].
+    pub fn deadline_millis(self, value: i64) -> Result<Self, Error> {
+        self.deadline_ms(value)
     }
 
     /// Run this check on the calling thread while the call waits.

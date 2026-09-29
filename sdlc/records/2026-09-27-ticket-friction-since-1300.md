@@ -573,8 +573,25 @@ Accounting preparation b30af6426 missed Ada, Objective-C and COBOL facts readers
 
 ## Follow public removals into separate workspaces
 
-High review of0283 candidate674a82041 found that retiring two Rust deadline methods broke callers in separate library and database workspaces. Root workspace Clippy never compiled them. The same review found a recognize summary marked as an upper bound while omitting the second stage, and integer settings accepted outside the public deadline range. Correction is pending. Source preparation must map every caller of a removed public declaration across workspace boundaries and name its transition owner. Preserve exact old units until that caller migrates. A test that checks an upper-bound marker must also check the bound's value; a parser's integer shape check does not prove its numeric domain.
+High review of0283 candidate674a82041 found that retiring two Rust deadline methods broke callers in separate library and database workspaces. Root workspace Clippy never compiled them. The same review found a recognize summary marked as an upper bound while omitting the second stage, and integer settings accepted outside the public deadline range. The deadline corrections passed recheck; the final profile-aware bound passed High review at9f6ae2896. Source preparation must map every caller of a removed public declaration across workspace boundaries and name its transition owner. Preserve exact old units until that caller migrates. A test that checks an upper-bound marker must also check the bound's value; a parser's integer shape check does not prove its numeric domain.
 
 ## Check the actual selector and arithmetic authority
 
-Review ofSQL host preparationd12f9f166 found a named-function command that SQLite's helper does not support. That helper runs its entire small test module; shared conformance selects IDs through an absolute environment-named file. Accepted correction0557d77e names the real selector and an exact positive pass count before a build follows it. Separately, review ofcost design2735d738 found that matching usage-reply and send counts cannot establish complete money when checked token addition has already dropped an overflow. The design correction must distinguish arithmetic validity from reply completeness and preserve that state through host aggregates. These are source and preparation defects; neither requires a broad runtime campaign to identify.
+Review ofSQL host preparationd12f9f166 found a named-function command that SQLite's helper does not support. That helper runs its entire small test module; shared conformance selects IDs through an absolute environment-named file. Accepted correction0557d77e names the real selector and an exact positive pass count before a build follows it. Separately, review ofcost design2735d738 found that matching usage-reply and send counts cannot establish complete money when checked token addition has already dropped an overflow. Fresh High review accepted corrected cost design5bde09bb5. It distinguishes arithmetic validity from reply completeness, suppresses stale CLI token totals and requires checked host aggregates. These are source and preparation defects; neither requires a broad runtime campaign to identify.
+
+
+## Bound each independently split stage
+
+The0283 recheck accepted the deadline corrections but found that the name-stage request bound still reused the number of first-stage chunks. Backend profiles split each stage independently, and long kind descriptions can make the second stage split more finely. The first regression used the default profile and could not reveal this. The corrected9f6ae2896 candidate passed High recheck with a valid profile-limit witness and a conservative question-count bound. Future staged-planner preparation must trace every independent splitter and distinguish known bytes from future response-dependent bodies.
+
+
+## Locate feature code before copying a host claim
+
+The0289 kickoff inventory named nonexistent `libraries/polars/src` and a separate Polars source counter. The binding README states that this folder holds no code. Its implementation is the root crate's feature-gated `public/frame.rs` and helpers, with tests under `tests/polars`; the root Rust counter covers both. The coordinator corrected the lane claim and next brief before implementation. A folder name is not evidence that a surface has its own crate.
+
+
+## Refresh derived assertions after a prerequisite lands
+
+The0301 wire preparation found the core fixture, but review also found exact R and TypeScript assertions. After0283 landed, its new whole-plan line added two byte/token literals in already claimed files. Root added their independently derived 13-byte reduction and 809–1,424 band directly to the handoff; High recheck accepted46925b681. Refresh both the copied body and every count derived from it, while keeping changed-question and exchanged-request identities separate.
+
+A staged0289 launch prompt still said to wait for its prerequisite after main already contained it. The worker returned without editing. Root replaced that first line with the actual landed commit and explicit start instruction, then confirmed the worker created its implementation branch. Check that a launch brief describes present authorization rather than an old future condition.

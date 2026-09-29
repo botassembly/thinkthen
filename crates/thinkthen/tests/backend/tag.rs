@@ -110,7 +110,7 @@ fn typed_labels_replace_the_question_files_whole_list() {
             "tag",
             &format!("@{}", question.to_string_lossy()),
             "new",
-            "--dry-run",
+            "--plan",
         ],
         &[],
         b"evidence",

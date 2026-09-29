@@ -35,7 +35,7 @@ It also prints no order while an earlier record or batch is still waiting for a 
 | `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
 | `--input FILE` | Reads the records from a file | Standard input |
 | `--true TEXT`, `--false TEXT` | What a yes and a no mean for a yes/no question; refused with a saved `score` question | No text |
-| `--dry-run` | Prints the plan for the first record and sends nothing | Off |
+| `--plan` | Validates the whole input, prints its first request and whole-input count line, and sends nothing | Off |
 | Record options | `--jobs N`, `--record DIR`, `--replay DIR`, `--cache DIR`, as [records.md](records.md) and [recording.md](recording.md) give them | `--jobs 4` |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 

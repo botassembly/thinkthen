@@ -37,7 +37,7 @@ pub(crate) fn options(
     deadline_ms: i64,
     token: Option<&CancelToken>,
 ) -> Result<CallOptions<'_>, Failure> {
-    let options = CallOptions::new().deadline_millis(deadline_ms)?;
+    let options = CallOptions::new().deadline_ms(deadline_ms)?;
     Ok(token.map_or(options, |token| options.cancel(token)))
 }
 

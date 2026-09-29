@@ -132,12 +132,12 @@ fn a_table_fed_to_jsonl_names_csv_and_lines() {
         );
     }
     check(
-        &["find", "Q?", "--jsonl", "--dry-run", "--no-cache"],
+        &["find", "Q?", "--jsonl", "--plan", "--no-cache"],
         b"name,value\n\"a,b\",c\n",
         &format!("{HINT}thinkthen: stopped at record 1; 0 records finished\n"),
     );
     check(
-        &["find", "Q?", "--jsonl", "--dry-run", "--no-cache"],
+        &["find", "Q?", "--jsonl", "--plan", "--no-cache"],
         b"123\nnot-json\n",
         &format!("{PLAIN}thinkthen: stopped at record 2; 0 records finished\n"),
     );

@@ -450,12 +450,8 @@ fn a_missing_key_and_a_refused_connection_have_distinct_causes() {
 
 #[test]
 fn dry_run_and_early_setup_failures_report_zero_work() {
-    let dry = spawn(
-        &["decide", QUESTION, "--facts", "--dry-run"],
-        &[],
-        b"line 1",
-    )
-    .expect("dry-run command");
+    let dry =
+        spawn(&["decide", QUESTION, "--facts", "--plan"], &[], b"line 1").expect("dry-run command");
     assert_eq!(dry.status.code(), Some(0));
     assert_eq!(line(&dry)["records"], 0);
     assert_eq!(line(&dry)["requests_sent"], 0);
@@ -465,7 +461,7 @@ fn dry_run_and_early_setup_failures_report_zero_work() {
     fs::create_dir_all(config.join("thinkthen")).expect("configuration folder");
     fs::write(config.join("thinkthen/config.json"), b"not JSON").expect("invalid configuration");
     let early = spawn(
-        &["decide", QUESTION, "--facts", "--dry-run"],
+        &["decide", QUESTION, "--facts", "--plan"],
         &[("XDG_CONFIG_HOME", config.to_str().expect("UTF-8 config"))],
         b"line 1",
     )

@@ -33,7 +33,8 @@ set -euo pipefail
 
 jq -c '{query: "Why is signing in slow or failing?", path, passage: .body}' hits.jsonl \
   | env -u THINKTHEN_API_KEY thinkthen rank 'The passage answers the query.' \
-      --jsonl --field /query --field /passage --dry-run \
+      --jsonl --field /query --field /passage --plan \
+  | sed -n '1p' \
   | jq -c '.input, {state: .request.state, q1: (.request.questions.q1.instructions | .[0:21])}' \
   | mustmatch '{"framing":"jsonl","field":["/query","/passage"]}
 {"state":"Each question quotes the text it asks about.","q1":"The text is {\"query\":"}'

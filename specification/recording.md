@@ -14,7 +14,7 @@ A recording is a folder of backend exchanges. It lets a command run again with n
 | `--cache DIR` | The row above, written once. It stands beside neither `--record` nor `--replay`, because one run keeps one folder |
 | `--refresh-cache` | With an enabled answer cache, send every planned exchange live and replace each complete cached answer. The flag stands beside neither `--record`, `--replay` nor `--no-cache` |
 
-Giving both options with two different folders is a usage error. So is giving either option beside `--dry-run`, because a plan sends nothing and reads no recording folder. It only inspects the optional configured key for an address collision.
+Giving both options with two different folders is a usage error. So is giving either option beside `--plan`, because a plan sends nothing and reads no recording folder. It only inspects the optional configured key for an address collision.
 
 `--record` alone does not reuse a held answer. Recording the same request into a used folder sends it to the backend again and may incur another charge. An equal stored response leaves the entry as it was. If the fresh response differs, the run exits 5 with a recording conflict before printing that fresh answer; the old entry stays. For a pinned model, use `--cache DIR` or both `--record DIR --replay DIR` to reuse complete held answers.
 
