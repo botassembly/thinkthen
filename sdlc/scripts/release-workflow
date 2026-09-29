@@ -178,7 +178,10 @@ managed-build)
 	c_archive=$3/thinkthen-c-$version-$4.tar.gz
 	python3 sdlc/scripts/release-managed-pair.py c-check "$c_archive" "$2/c.json" "$4" "$version"
 	JAVA_HOME=${THINKTHEN_JDK_HOME:-}
-	export JAVA_HOME
+	[ -n "$JAVA_HOME" ] && [ -x "$JAVA_HOME/bin/java" ] || fail 'managed build lacks selected JDK Java'
+	JAVACMD=$JAVA_HOME/bin/java
+	PATH=$JAVA_HOME/bin:$PATH
+	export JAVA_HOME JAVACMD PATH
 	sh sdlc/scripts/release-workflow managed-tools "$4"
 	[ ! -e "$2/managed.json" ] && [ ! -L "$2/managed.json" ] || fail 'managed receipt already exists'
 	scratch_dir managed_stage
