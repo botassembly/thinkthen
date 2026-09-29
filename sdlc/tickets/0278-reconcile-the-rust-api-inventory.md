@@ -1,6 +1,6 @@
 # 0278 — Reconcile the frozen Rust API inventory
 
-Status: Prepared for independent design review. No implementation claim yet. The [issue](../issues/2026-09-29-frozen-rust-api-inventory-lags-the-release-line.md) remains open.
+Status: High design review ACCEPT at `0a642671`; coordinator approval and exact implementation claim on main `d71160cf9`. The checker candidate and its focused proof are in the [build record](../records/0278-rust-api-inventory-build.md). The [issue](../issues/2026-09-29-frozen-rust-api-inventory-lags-the-release-line.md) remains open until independent code review and integration.
 
 ## Outcome and scope
 
@@ -161,7 +161,7 @@ struct Facts
 struct QuestionDetail<'a>
 ```
 
-The 36 retired lines cover Engine and root `choose`, `decide`, `details`, `find`, `rank`, `recognize`, `relate`, `score` and `tag`, each with ordinary and `_with` forms. The corresponding 36 additions retain their exact arguments and bounds. Of the remaining 67, 62 are ticket 0212 and ADR 0089 batch/facts/observer exports; 2 are 0230's dynamic details bridge; 0203, 0211 and 0243 supply one each. No implementation source is authorized to change by this preparation.
+The 36 retired lines cover Engine and root `choose`, `decide`, `details`, `find`, `rank`, `recognize`, `relate`, `score` and `tag`, each with ordinary and `_with` forms. The corresponding 36 additions retain their exact arguments and bounds. Of the remaining 67, 62 are ticket 0212 and ADR 0089 batch/facts/observer exports; 2 are 0230's dynamic details bridge; 0203, 0211 and 0243 supply one each. The reviewed implementation claim changes the inventory checker only, not public API source.
 
 ## Build route after review
 
@@ -185,4 +185,4 @@ A raw set difference overcounts the defect because the checker intentionally per
 
 ## What the build taught us
 
-Pending implementation and its fresh code review. Record any parser, canonicalization, or source-authority surprise here before landing; do not replace preparation claims with an assumed pass.
+The historical contract composes with the reviewed text delta without changing the existing Rust declaration parser or built-listing canonicalization. Its 375 earlier entries become 442, and the pinned no-default-features extraction now reports zero differences while refusing all four existing mutations. A short literal witness protects tuple variant, observer field, `const fn` and nested `Call` spellings; separate malformed-delta cases prove duplicate, overlap and historical membership refusals. No test was deleted or consolidated because the old four plants cover distinct export, removal, signature and trait regressions. The preparation correctly found the 169 policy-allowed implicit trait impls; no additional source-authority mismatch appeared. The [build record](../records/0278-rust-api-inventory-build.md) gives commands and limits. Fresh code review and coordinator integration remain before issue closure.
