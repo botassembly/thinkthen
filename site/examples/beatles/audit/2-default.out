@@ -1,7 +1,6 @@
 {
-  "songs": 70,
-  "right": 50,
-  "wrong_yes": 20,
-  "missed_yes": 0,
-  "suggested_bar": 0.78
+  "songs": 10,
+  "right": 5,
+  "wrong_yes": 5,
+  "missed_yes": 0
 }

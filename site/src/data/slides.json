@@ -1,5 +1,5 @@
 {
-  "deck": "84dba726524132a33a12921e7904079d4abdf4a0",
+  "deck": "62ddf209908fa7f03c06e219edca3300ad3af9ea",
   "bench": "af538978aea39c738cc3c4d2a15aaf43c48b3a8a",
   "slides": {
     "beatles-bench": {
@@ -109,13 +109,13 @@
     },
     "audit": {
       "slide": "23-audit",
-      "sha256": "4a7b39979e14ade73f945862aba60c46d1bace4b2738153b88faaef9f5c4866d",
-      "card": "334c45d934146072c29b95a81bd3146a55e2cc4d43a037930f6cf48ec1cbc37f"
+      "sha256": "21c7dc46332734d7150738c21790b2ef705ede088a06fb5ecbd1d0c3c8b7f053",
+      "card": "bed5343a678210525f6335e1057e6a41f526dd7f0ce58fffc0158b7d3a694a34"
     },
     "diff": {
       "slide": "24-diff",
-      "sha256": "ca8fa29b7eda350d5ae3639f0f6a61fd38b10e5f317948b91888da3094c857e6",
-      "card": "cf9ea7966f219c3257c98385965238e3f7c1dab2129af12d22894776d3a81328"
+      "sha256": "e820b73933244b2372699ea4575e8c08b4042379ff6dff0a9c79d5114ed4d1f3",
+      "card": "cf0548938b199cdcc4d121d3e83c5af036a6d7a8ddf885478055c468c79bc3b8"
     },
     "use-cases": {
       "slide": "25-use-cases",
