@@ -165,6 +165,11 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
         for (key, value) in fields {
             match key.as_str() {
                 "base_url" => return Err(Failure::usage("settings JSON has unknown key base_url")),
+                "max_estimated_input_tokens_total" => {
+                    return Err(Failure::usage(
+                        "settings JSON has unknown key max_estimated_input_tokens_total",
+                    ));
+                }
                 "model" => next.model = value.as_str().map(str::to_owned),
                 "throttle" => next.throttle = value.as_u64().and_then(|n| u8::try_from(n).ok()),
                 "batch" => next.batch = Some(batch(value)?),
