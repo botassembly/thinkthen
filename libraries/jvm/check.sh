@@ -10,6 +10,9 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ] && command -v flock >/dev/nul
 fi
 for tool in python3 bwrap; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 python3 "$here/tests/toolchains.py"
+[ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
+    echo 'JVM portable batch needs an installed artifact' >&2; exit 2;
+}
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'JVM installed: C archive missing' >&2; exit 1; }
     . "$root/sdlc/scripts/scratch.sh"
@@ -21,7 +24,11 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     python3 "$root/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
     THINKTHEN_RELEASE_JVM_DIR="$managed" THINKTHEN_RELEASE_C_DIR="$native" \
         python3 "$here/tests/installed.py"
-    echo 'JVM installed release PASS: Java, Kotlin and Scala one call each'
+    if [ "${THINKTHEN_PORTABLE_BATCH:-}" = 1 ]; then
+        echo 'JVM portable batch PASS: Java, Kotlin and Scala installed files'
+    else
+        echo 'JVM installed release PASS: Java, Kotlin and Scala one call each'
+    fi
     exit 0
 fi
 mkdir -p "$here/target/native"

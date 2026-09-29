@@ -11,7 +11,7 @@ import re
 # a packed decide batch quotes one JSON record in each distinct wire question.
 PACKED_STATE = 'Each question quotes the text it asks about.'
 def quoted_record(question):
-    match = re.fullmatch(r'The text is ("(?:\\.|[^"\\])*")\. Is it\?', question['instructions'])
+    match = re.fullmatch(r'The text is ("(?:\\.|[^"\\])*")\. (?:Is it\?|Is it relevant\?)', question['instructions'])
     if match is None:
         raise AssertionError('unexpected packed decide question: ' + repr(question['instructions']))
     return json.loads(match.group(1))

@@ -3,6 +3,15 @@ using System.Text.Json;
 using ThinkThen;
 foreach (string forbidden in new[] { "/usr/bin/cargo", "/usr/bin/rustc", "/home/ian/workspace/repos/thinkthen", "/home/ian/workspace/experiments/290-thinkthen-csharp-c-interface/stage2/inputs/source" })
     if (System.IO.File.Exists(forbidden) || System.IO.Directory.Exists(forbidden)) throw new Exception("source/compiler visible");
+if (Environment.GetEnvironmentVariable("TT_PORTABLE_BATCH") == "1") {
+    using var bulk = Engine.Open("{\"batch\":\"max\",\"cache\":false,\"throttle\":1,\"max_retries\":0}");
+    string[] texts = ["alpha", "café-5544", "omega", "line 2907", "tail"];
+    Answer[] rows = bulk.DecideMany("Is it relevant?", texts);
+    if (rows.Length != 5 || rows.Any(row => row.Outcome != 1 || row.Probability != .9))
+        throw new Exception("portable bulk answers");
+    Console.WriteLine("PORTABLE_BATCH_CSHARP_PASS");
+    return;
+}
 using var engine = Engine.Open();
 if (engine.Decide("Is it?", "consumer-csharp").Outcome != 1) throw new Exception("scalar");
 using var json = JsonDocument.Parse(engine.Call("{\"decide\":\"Is it?\",\"evidence\":\"consumer-json\"}"));
