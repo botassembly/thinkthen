@@ -12,3 +12,11 @@ Both corrected ceilings equal measured current source: Ruby 2,122 and C 901. Bot
 
 
 The reviewer independently counted tracked Git blobs at all named before/after revisions, confirmed unchanged accepted product/test trees and the prior High acceptance records, and inspected the distinct host behavior and ABI probes. Both direct ratchets and the offline binding registry passed again. The registry's intentional process-termination plant prints a killed-process line before its successful conclusion; it is not a product crash. No source, policy or budget exemption changed.
+
+## Typed C facts follow-up, 2026-09-28
+
+The 0249 registry check found another omitted host counter after the accepted 0255 change. At main `443fd469`, the actual ratchet reports 1,126 nonblank C lines against 937. Independent counts of tracked Git blobs show 11 C files and 937 lines at `41114d20^`, then 12 files and 1,126 lines at reviewed `41114d20`, with exactly the same tracked source at current main. The growth is 189 lines in the two updated C examples and the new installed `typed_facts.c` driver. No generated or untracked C file contributes. The `0255-c-facts-build.md` record and fresh High review accepted the typed ownership/facts behavior, examples and installed AddressSanitizer proof, but only the Rust source counter was updated.
+
+This correction changes only `libraries/c/ratchet.c.json` to the measured 1,126. The C source, examples, tests, native artifact and prior functional proof stay unchanged. The existing installed driver covers ownership, output-slot aliasing, final facts, failures and freeing; removing it to lower a stale counter would discard distinct accepted guarantees. The older bare entry-point proof and JSON call proof cover different compatibility paths, so neither replaces this driver. The direct C ratchet and whitespace check pass. Independent verification of the count and reviewed source provenance is required before landing. No native rebuild or repeated full surface run is warranted by this metadata correction.
+
+Preparation must name and run each affected host counter as well as its Rust counter, even when the installed package proof passed. A cheap direct ratchet invocation catches this omission without compiling any unchanged surface.
