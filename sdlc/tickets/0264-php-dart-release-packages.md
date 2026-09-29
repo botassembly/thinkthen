@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md sd
 
 # 0264: Pack PHP and Dart source with one matching C archive
 
-Status: fresh independent design review accepted `b6869e87`; host-side implementation is in progress. The shared release helpers remain with ticket 0263 until its reviewed changes land. The [preflight](../records/0264-php-dart-release-preflight.md) cites current main `39f36f12` and the accepted 0249, 0260, 0261 and 0262 proofs.
+Status: design accepted `b6869e87`; implementation is a code-review candidate. Ticket 0263's shared helpers landed at `1ab1f04f` before this batch extended them. The [preflight](../records/0264-php-dart-release-preflight.md) cites the design baseline `39f36f12` and the accepted 0249, 0260, 0261 and 0262 proofs. The [build record](../records/0264-php-dart-release-build.md) pins the clean same-source archive proof.
 
 ## Outcome and retained behavior
 
@@ -51,3 +51,9 @@ The original PHP and Dart issues stay open after this pilot. They retain final-r
 - Changes: Adds opt-in local PHP/Dart source archives and strict matching C identity, then installed-file selectors using only unpacked product inputs and current public five-text consumers.
 - Proof: One clean three-file pack with adjacent checksums and fixed-data manifests; shared preflight and two isolated installed calls with five values, three actual sends and three literal bodies each; missing, tampered, mismatched, extra and missing-inner-file refusals before consumers start.
 - Defers: Flutter package/app installation from release files, path-dependency removal for publication, other native targets, actual Actions runner and final pin, Composer/pub publication or registry install, public assets, and PHP in-flight cancellation. Neither original issue closes from this local pilot.
+
+## What the build taught us
+
+The accepted 0263 shared release scripts admitted a literal `php-dart` mode without a separate validator or a new archive format. One clean commit, `2fb1bb8e`, built a fresh C archive and exact PHP/Dart source archives; their manifests pin that commit and the actual C digest. Strict pair preflight, both selected installed consumers, four package-identity plants and six outer/inner archive mutations passed their expected outcomes. The missing-Dart smoke plant reached preflight and refused before backend startup. The final archive and member hashes, exact diagnostics, tool versions and qualified request counts are in the build record.
+
+The installed Dart caller needed a fresh scratch pub consumer and an explicit path check: reusing a checkout `.dart_tool` would have hidden a stale source path. PHP needed to clear any inherited debug library search path, then use only the selected unpacked C library directory. The first selected PHP attempt hit the sandbox's loopback bind restriction after ABI checking; the same command passed with routine local loopback permission. The accepted 0261 C archive used for fixture rehearsal was not substituted into the final pack. No native source changed after its clean build, so the final evidence commit does not imply a rebuild. The direct PHP archive consumer, offline Dart path consumer and local Linux C pair meet this bounded pilot; Composer CLI, installed Flutter, registries and final distribution remain in the original issues.
