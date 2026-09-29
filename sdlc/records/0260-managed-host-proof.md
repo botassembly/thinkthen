@@ -1,6 +1,6 @@
 # 0260 C# and JVM public bulk forwarding proof
 
-Status: focused candidate awaiting fresh code review. This advances the accepted [portable batch identity ticket](../tickets/0260-portable-batch-identity.md) for two C-door package groups and four public language callers. It does not requalify release distribution or close the central ticket's other remaining hosts.
+Status: accepted at `2c92e3de` after fresh read-only code review. These two C-door package groups and four public language callers complete the [portable batch identity ticket](../tickets/0260-portable-batch-identity.md). The same fresh reviewer accepted closure against the original register64 criterion and the complete22-group index. Release distribution remains separate.
 
 ## Selected APIs and source boundary
 
