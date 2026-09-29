@@ -59,6 +59,8 @@ Both options on one folder are also the resume for a record run. A resumed run a
 
 One exchange is one file named `DIGEST.json`. `DIGEST` is the SHA-256, in lowercase hex, of the adapter name, a newline, the URL, a newline, and the request body exactly as the adapter encoded it. An adapter encodes the same plan to the same bytes every time, so the same command finds the same entry.
 
+The default cache and an explicit recording use this same key. For one-document text, `hello\n` and `hello\r\n` put different line endings in the encoded evidence and name different entries. The literal text `{"a":1}` and `{"a":1.0}` likewise differs when sent as text. A replay of one spelling misses the other, and a cache sends a new request. The rule applies to encoded request bytes, not every original file byte: `--lines` strips a record terminator, and JSONL or a selected JSON value can be parsed and re-encoded before the request is built. Use recordings with the same question, backend, request settings, and encoded evidence when transferring a run; do not expect a cosmetic text change to replay.
+
 Keep the JSON value under `request` byte for byte, including its key order and whitespace. Replay compares those inner request bytes with the request the current command encoded; reformatting that value can make the entry fail as a different exchange even when its parsed values look equal. Formatting around the valid version-one envelope, outside the `request` and `response` JSON values, is accepted. This is distinct from changing the inner request.
 
 ```json

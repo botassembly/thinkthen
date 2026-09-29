@@ -6,9 +6,9 @@ opens: libraries sdlc/issues sdlc/tickets
 
 # 0249: Merge the language bindings
 
-Status: **blocked** (not one of the usual three; deliberate). Ian holds this ticket and hand-delivers it to the queue owner. Work starts only on his explicit go-ahead. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). No merge step has been performed: `libraries/` is untouched by the program, nothing is published, no CI is configured.
+Status: **ready for staged integration**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). No merge step has been performed: `libraries/` is untouched by the program, nothing is published, no CI is configured.
 
-Number corrected from 0247 during queue intake because the existing DuckDB lane holds 0247 and the usage-persistence design holds 0248. Scope and the explicit start hold are retained. This handoff consolidates existing J8 rows; it is not another independent issue.
+Number corrected from 0247 during queue intake because the existing DuckDB lane holds 0247 and the usage-persistence design holds 0248. Scope is retained; the later explicit authorization above releases the start hold. This handoff consolidates existing J8 rows; it is not another independent issue.
 
 ## Evidence
 
@@ -16,7 +16,7 @@ Number corrected from 0247 during queue intake because the existing DuckDB lane 
 - Keeps: accepted C result envelopes, packed batches, entities-only relation state, default retries, subset cache identity and exact per-gate arrival counts. The drift issue records their confirmation.
 - Changes: integrates reviewed package copies into libraries, adds each actual binding to the root README and supplies its existing J8 contract and package proof.
 - Proof: rebuild the selected package at the final source pin, retain exact request multisets and planted negatives, exercise the J1 corpus through the public binding and record each actual host and artifact hash.
-- Defers: publication and registry/account changes, unproved host targets, unrelated website work and any integration before the explicit start hold is released.
+- Defers: publication and registry/account changes, unproved host targets, unrelated website work and unrelated experimental changes outside the reviewed integration scope.
 
 ## Everything the program has done
 
@@ -37,4 +37,4 @@ Twelve consumer languages proven through the landed C door, each with two gated 
 4. Run the J8 residuals each issue names: full J1 corpus through each public binding, `engine_new_with`/`error_facts_json` where unbound, typed deltas for the six pre-contract ports, per-platform packaging (XCFramework on the M5 Mac, Windows/macOS, Flutter targets), model-produced non-BMP case.
 5. Documentation pages per the agreed skeleton; site content belongs to Marketing.
 
-Blocked on: Ian's go-ahead, delivered with this ticket. Everything above is ready; nothing in this ticket requires the program's author to execute.
+The queue owner now owns execution. Registry account changes and publication remain separate from source integration. Current source has advanced beyond the experiment pin; derive the ABI from the current header and qualify each merged package rather than treating the earlier 21-export inventory as current.

@@ -18,6 +18,8 @@ One text document on standard input, read to its end as UTF-8. `--input FILE` re
 
 On one document, a JSON number. The score runs from 0 at the lowest level to the number of levels minus one at the highest. In record mode each compact JSONL row is `{"input":RECORD,"value":NUMBER}` in input order. `--details` prints the object in [result.md](result.md), with an `answer.kind` of `score`.
 
+To put the highest values first, save the same question and levels in a `score` question file and run `rank @FILE` over the records. At equal framing, field selection, context, batch setting, model, and backend, both commands send the same score requests and use the same weighted values. `score` keeps input order; `rank` sorts those values, keeps input order at an exact tie, and can print only the first `--top N` rows. [rank.md](rank.md) gives that command's output and details.
+
 Record mode fills each request with records up to `--batch N|max` and the request-size limit. `--batch 1` without a context sends each record's former request bytes. A top-level question-file `batch` follows a typed `--batch` and `THINKTHEN_BATCH`; the default is `max`. `--context FILE` supplies shared evidence, and `--max-request-bytes N` sets the soft byte cut. A typed batch or context on one document is refused. [records.md](records.md) gives the limits and ordered-row rules. `score` has no tuned threshold or batch warning.
 
 ## The number
@@ -63,7 +65,7 @@ Measurement of the first System One model showed rubric scores rejecting 18% to 
 
 A live run then placed forty made-up incident reports on five levels. The cases are few and they are made up. The order held well: the value tracked the trusted level with a rank correlation of 0.9703, and no text missed by more than one level, on 40 of 40. The exact level was right on 31 of 40. The absolute level ran one step high on 9 of 40, all of them one step and never more. A cut on the number is therefore tuned on labeled cases before anyone trusts it. The help text for `score` says so.
 
-No other command depends on `score`. A gate that has to hold belongs in `decide` or `choose`. A number from `score` belongs in a review queue that a person reads.
+`rank @FILE` can sort a stream with a saved `score` question. A gate that has to hold belongs in `decide` or `choose`. A number from `score` belongs in a review queue that a person reads.
 
 ## Cutting on a score
 

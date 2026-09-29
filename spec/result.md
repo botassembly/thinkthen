@@ -26,22 +26,27 @@ row() { head -n 1 | jq -c --arg command "$1" '{from: "replayed", command: $comma
   awk '/^```/ { if (fenced) { fenced = 0 } else { fenced = 1; label = $2 }; next }
        fenced && /"schema":"thinkthen\.result\/1"/ { print "{\"from\":\"example\",\"command\":\"" label "\",\"row\":" $0 "}" }' "$page"
 } > "$HOME/rows.jsonl"
-wc -l < "$HOME/rows.jsonl" | mustmatch "19"
+wc -l < "$HOME/rows.jsonl" | mustmatch "20"
 sed -n '/^## Compatibility$/,/^## Record rows$/p' "$page" | grep '^| `' \
-  | jq -R -c 'split("|") | {command: (.[1] | gsub("[` ]"; "")), verb: (.[2] | gsub("[` ]"; "")),
+  | jq -R -c 'split("|") | {command: (.[1] | gsub("[` ]"; "")), verbs: (.[2] | [scan("`([^`]+)`")[0]] | if length == 0 then ["none"] else . end),
       members: [.[3] | scan("`([^`]+)`")[0]], meta: [.[4] | scan("`([^`]+)`")[0]]}' > "$HOME/table.jsonl"
 wc -l < "$HOME/table.jsonl" | mustmatch "10"
 jq -r --slurpfile table "$HOME/table.jsonl" '
   def compare($where; $held; $listed):
     ($held - ($listed | map(rtrimstr("?"))) | .[] | "\($where) \(.) is not in the table"),
     (($listed | map(select(endswith("?") | not))) - $held | .[] | "\($where) \(.) is missing");
-  .command as $c | .row as $row | "\(.from) \(if $c == "" then "(no command)" else $c end):" as $who
+  .command as $label | (if $label == "rank-score" then "rank" else $label end) as $c
+  | .row as $row | "\(.from) \(if $label == "" then "(no command)" else $label end):" as $who
   | [$table[] | select(.command == $c)] as $match
   | if ($match | length) != 1 then "\($who) no table row"
     else $match[0] as $t
     | compare("\($who) member"; $row | keys_unsorted; $t.members),
       compare("\($who) meta member"; $row.meta | keys_unsorted; $t.meta),
       ((if $row | has("question") then $row.question.verb else "none" end) as $verb
-       | select($verb != $t.verb) | "\($who) question.verb is \($verb), the table says \($t.verb)")
+       | (select(($t.verbs | index($verb)) == null) | "\($who) question.verb is \($verb), the table says \($t.verbs | join(" or "))"),
+         (if $c == "rank" then
+            (if $label == "rank-score" then "score" else "decide" end) as $expected
+            | select($verb != $expected) | "\($who) question.verb is \($verb), expected \($expected) for this rank form"
+          else empty end))
     end' "$HOME/rows.jsonl" | mustmatch ""
 ```
