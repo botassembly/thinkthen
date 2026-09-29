@@ -1,0 +1,30 @@
+const std = @import("std");
+const pkg = @import("thinkthen");
+pub fn build(b: *std.Build) void {
+    const target = b.standardTargetOptions(.{});
+    const optimize = b.standardOptimizeOption(.{});
+    const native = b.option([]const u8, "native", "Absolute unpacked native archive root") orelse @panic("provide -Dnative");
+    const mode = b.option(pkg.LinkMode, "link-mode", "shared or static") orelse .shared;
+    const dep = b.dependency("thinkthen", .{ .target = target, .optimize = optimize });
+    const module = dep.module("thinkthen");
+    const exe = b.addExecutable(.{ .name = "matrix", .root_module = b.createModule(.{ .root_source_file = b.path("matrix.zig"), .target = target, .optimize = optimize }) });
+    exe.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, exe, module, native, mode);
+    b.installArtifact(exe);
+    const concurrent = b.addExecutable(.{ .name = "concurrent", .root_module = b.createModule(.{ .root_source_file = b.path("concurrent.zig"), .target = target, .optimize = optimize }) });
+    concurrent.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, concurrent, module, native, mode);
+    b.installArtifact(concurrent);
+    const allocation = b.addExecutable(.{ .name = "allocation", .root_module = b.createModule(.{ .root_source_file = b.path("allocation.zig"), .target = target, .optimize = optimize }) });
+    allocation.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, allocation, module, native, mode);
+    b.installArtifact(allocation);
+    const type_case = b.addExecutable(.{ .name = "type-case", .root_module = b.createModule(.{ .root_source_file = b.path("type_case.zig"), .target = target, .optimize = optimize }) });
+    type_case.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, type_case, module, native, mode);
+    b.installArtifact(type_case);
+    const settings = b.addExecutable(.{ .name = "settings", .root_module = b.createModule(.{ .root_source_file = b.path("settings.zig"), .target = target, .optimize = optimize }) });
+    settings.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, settings, module, native, mode);
+    b.installArtifact(settings);
+}

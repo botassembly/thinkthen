@@ -1,0 +1,5 @@
+module CThinkThen [system] {
+    header "include/thinkthen.h"
+    link "thinkthen"
+    export *
+}

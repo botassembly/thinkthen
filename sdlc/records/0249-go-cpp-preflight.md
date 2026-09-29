@@ -1,0 +1,17 @@
+# 0249 Go and C++ product preflight
+
+Prepared from the accepted `0249-go-cpp-preparation.md` and the local Go experiment 274 `repin/package` and C++ experiment 301 `stage2/package`. Product source pin for this batch is `976bcd7562f0b5bf7e1da76b0e26e4d4ad707b1a`. Later `origin/main` claim-only commits do not change the native source used here. Both package source copies omit rehearsal inputs, archives, generated outputs, and absolute experiment paths. Their product checks and curated fixtures live under `libraries/go/` and `libraries/cpp/`, outside each language package's published files.
+
+The host is Ubuntu 24.04.3 x86_64 with Go 1.22.2, CMake 3.28.3, GCC 13.3, Clang 18.1.3, Python 3.12, and the pinned Rust 1.95.0 toolchain. Each check resolves its actual Go or CMake, Python, and `flock` executables before building. Missing required tools return 77. `THINKTHEN_GO_BIN=/missing/go sh libraries/go/check.sh 0` and `THINKTHEN_CMAKE_BIN=/missing/cmake sh libraries/cpp/check.sh 0` each returned 77. Both gates use `/run/user/1000/thinkthen-codex-6.lock`, offline Cargo, and isolated `target/go` or `target/cpp` output. They compare the current public header against native exports and installed copies instead of pinning the historical 21-export inventory.
+
+The public C header is SHA-256 `1aa49b91a157b4ef6baed1e72a2195f07e453d61e14c81f5459e7fa55edc7089`; the shared library is `16a6988800a7fc563605fcadfc2a4219560673a7ed56872a43936a6e3112603d`; the static archive is `b3a4d15ab16eac7a6a65eae504cb5a3378f23778d1c8f353653e9eb68e0912d0`. The installed header and libraries compare byte-for-byte to these build artifacts. Both gates derive 30 public exports. The frozen Go full-request fixture is SHA-256 `f58ad05aca1bbd6e8da94e125ea6476b5e1c40f865fb1f7d3422965ef220fd85`; the C++ fixture is `c6f0c4adf609178ed86de349d4db9d5dc39dabfaa3729768881b76d81e894c61`. These fixtures retain the accepted experiment request bodies and are compared against fresh loopback receipts by normalized full-body multiset.
+
+The current shared corpus contains 55 schema cases and 29 executable public-binding cases. The two 0258 CLI record-error cases remain schema-only. The Go and C++ adapters execute the 29 applicable cases through their own public bindings; C-only ctypes proof is insufficient for these ports. The shared `start_backend` helper now builds its conformance backend offline at the launched path. Neither port assumes a warm backend binary.
+
+The existing C constructor eagerly validates `THINKTHEN_BASE_URL` through `EngineBuilder::from_env()` before applying explicit C settings JSON. This read-only command returned `pointer None code 1`:
+
+```sh
+THINKTHEN_BASE_URL='not a URL' python3 -c 'import ctypes; c=ctypes.CDLL("libraries/c/target/debug/libthinkthen_c.so"); c.thinkthen_engine_new_with.argtypes=[ctypes.c_char_p]; c.thinkthen_engine_new_with.restype=ctypes.c_void_p; c.thinkthen_error_code.argtypes=[ctypes.c_void_p]; c.thinkthen_error_code.restype=ctypes.c_int; p=c.thinkthen_engine_new_with(b"{\"base_url\":\"http://127.0.0.1:9/v1\"}"); print("pointer",p,"code",c.thinkthen_error_code(None))'
+```
+
+`specification/settings.md` describes valid address selection, and ADR 0148 explicitly starts with `from_env`; neither promises that a malformed environment value is ignored. The Go package test therefore proves that explicit `base_url` overrides a valid but unreachable environment address. It does not claim malformed-environment recovery. No C behavior changed in this batch.

@@ -1,0 +1,24 @@
+# thinkthen-cpp
+
+This C++17 header-only package wraps the separately installed ThinkThen C library. It owns C++ argument, result and error lifetimes; Rust owns question grammar and judgment. The package and its installed consumers have passed locally on Linux x86_64. Final release archives and other hosts need separate qualification.
+
+Build the matching native C artifacts from this checkout, then install the CMake package into a local prefix:
+
+```sh
+cargo build --locked --offline --manifest-path libraries/c/Cargo.toml --lib
+cmake -S libraries/cpp -B target/thinkthen-cpp -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$HOME/.local/thinkthen-cpp" \
+  -DTHINKTHEN_C_HEADER="$PWD/libraries/c/include/thinkthen.h" \
+  -DTHINKTHEN_NATIVE_SHARED="$PWD/libraries/c/target/debug/libthinkthen_c.so" \
+  -DTHINKTHEN_NATIVE_STATIC="$PWD/libraries/c/target/debug/libthinkthen_c.a"
+cmake --build target/thinkthen-cpp --parallel 2
+cmake --install target/thinkthen-cpp
+```
+
+A separate CMake project can set `CMAKE_PREFIX_PATH` to that prefix and call `find_package(thinkthen-cpp CONFIG REQUIRED)`. Link `thinkthen::thinkthen_cpp_shared` or `thinkthen::thinkthen_cpp_static`; both provide `<thinkthen/door.hpp>`. Shared mode needs the installed library directory in the runtime loader path. Static-C mode still depends on Linux system libraries. The package config uses `PACKAGE_PREFIX_DIR` and also resolves a multi-component `lib/x86_64-linux-gnu` installation. It does not ship a shim library or download a native binary.
+
+`sh libraries/cpp/check.sh 0` checks the current 30-export native ABI, parser boundaries, the 55-case schema and 29 executable public corpus cases, four installed shared/static/multilib/sanitized consumers with 16 exact request bodies each, and planted failures. It uses only a counted loopback backend. The C++ sanitizer checks the C++ consumer, not Rust allocations.
+
+`tt::Engine`, `tt::CancelToken`, and `tt::OwnedString` are move-only RAII owners. Join worker and canceller threads before freeing the token or engine. `tt::create(settings)` accepts the current C settings JSON. `tt::call` returns the JSON success envelope, including `value` and `facts`; typed helpers retain bare values. `tt::Failure` names one of six kinds and copies the message and borrowed final facts before another native call on the same thread. An unresolved `null` value is not a failure. Typed annotation fields, entities and edges preserve that distinction; entity offsets count Unicode scalars, not UTF-16 units.
+
+The local MIT JSON parser preserves object insertion order for label maps and rejects invalid strings and duplicate keys. It accepts the exact integer boundary 2^53 and rejects larger integer lexemes before `double` conversion, including entity offsets. Decimal and exponent numbers remain `double`; this is not arbitrary-precision number support. Synthetic replies prove the integration boundary, not model accuracy or a published release.
