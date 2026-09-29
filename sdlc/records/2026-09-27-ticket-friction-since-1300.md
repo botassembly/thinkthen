@@ -559,3 +559,8 @@ The same slice traced installed Go/C++ consumers and found that their common jso
 ## Exercise host syntax when adapting a shared checker
 
 The first Dart fence bridge passed the actual README but missed valid typed declarations and calls split across lines. Fresh Medium review reproduced both false passes in `561e3eb17`. Accepted correction `ec00b80d9` adds focused negative plants for those forms and preserves shared-rule line numbers. This was an implementation and proof gap, not a product contract ambiguity. Future small syntax adapters should exercise the host declaration forms and legal whitespace they claim to support. Keep configuration-data exceptions exact and real executable examples in the semantic check; do not build a second general language parser to avoid an ownership boundary.
+
+
+## Check native argument decoding and runnable selectors
+
+The JVM J1 case41 failure came from its isolated child environment. Java reported ordinary UTF-8 string encoding while its native argument decoder used ASCII, so the Unicode request changed before the exact backend oracle saw it. Source-matched JARs still failed; the explicit UTF-8 locale preserved the bytes through Java, Kotlin and Scala. Fresh review of f961d92d0 then caught a selector that accepted schema-only cases and passed after zero runtime calls. Accepted correction9359eae77 validates the runnable subset and refuses invalid selectors even under optimized Python before compilation or backend startup. Preserve the original boundary oracle, compare actual input bytes, and validate that a selected check performs the promised work. The source package and release matrix remain separate.
