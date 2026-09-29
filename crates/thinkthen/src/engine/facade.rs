@@ -101,7 +101,7 @@ pub(crate) struct Engine {
     roots: Option<Roots>,
     usage_path: Option<PathBuf>,
     recording: bool,
-    send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    send_budget: Option<crate::engine::send_budget::ProcessBudget>,
     state: Arc<Guarded<State>>,
 }
 
@@ -131,8 +131,16 @@ pub(crate) struct Found {
 
 impl Engine {
     /// Select this engine's limit at each live transport reservation.
-    pub(crate) fn with_process_budget(mut self, limit: Option<u64>) -> Self {
-        self.send_budget = Some((crate::public::process_budget(), limit));
+    pub(crate) fn with_process_budget(
+        mut self,
+        limit: Option<u64>,
+        estimated_limit: Option<u64>,
+    ) -> Self {
+        self.send_budget = Some(crate::engine::send_budget::ProcessBudget {
+            budget: crate::public::process_budget(),
+            requests: limit,
+            estimated: estimated_limit,
+        });
         self
     }
 

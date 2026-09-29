@@ -93,7 +93,10 @@ pub(crate) fn engine(
         },
         roots,
     )?
-    .with_process_budget(common.max_requests_total))
+    .with_process_budget(
+        common.max_requests_total,
+        common.max_estimated_input_tokens_total,
+    ))
 }
 
 /// Where one record's question comes from.

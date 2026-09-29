@@ -632,3 +632,8 @@ The final0284 High review reproduced configure accepting a zero request total. T
 ## Keep host callbacks outside held usage guards
 
 The 0299 correction added a post-reservation cancellation check to prove that an unstarted attempt refunds its slots. High review of b50bc1e2 found that the chosen check also invoked a host callback while PreparedAttempt held the usage queue mutex. Reentry could deadlock. The existing callback-free remaining-time check observes the cancellation token and deadline without crossing that boundary. The retained builder is applying that narrow correction; the earlier listener and C proof gaps are resolved. Preparation for 0300 cost and 0302 observations must trace guard lifetimes around every host callback, observer and accounting operation. A new test seam must preserve the production callback and locking order.
+
+
+## Exercise each class of repeated setting
+
+DuckDB review reproduced an I8 failure in the shared prerequisite: a structured question with batch 1 and settings with batch 2 silently succeeded. Settings::conflicts inspected only question_fields and missed batch stored separately. Repeated model or threshold already refused, so a single representative negative hid this different storage path. Root routes the correction to the shared helper before the next host builds depend on it. Tests should distinguish question-file keys from explicit named parameters and cover each storage path with a small public-boundary table. The same review found that typed SQL NULL::VARCHAR members took DuckDB’s settings-object branch; bare NULL and NULL::VARCHAR[] did not. Keep typed nulls separate from malformed JSON in host preparation.

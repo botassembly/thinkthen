@@ -67,6 +67,7 @@ impl From<EngineError> for Failure {
             EngineError::SendBudgetRetry(_) => {
                 Self::Usage("the process send budget was spent before a retry")
             }
+            EngineError::EstimatedInput(reason) => Self::EstimatedInput(reason),
             EngineError::TokenLimit => Self::TokenLimit,
             EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),
             EngineError::Reply(error) => Self::Reply(error),
