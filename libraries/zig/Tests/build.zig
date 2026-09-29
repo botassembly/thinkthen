@@ -27,4 +27,11 @@ pub fn build(b: *std.Build) void {
     settings.root_module.addImport("thinkthen", module);
     pkg.linkNative(b, settings, module, native, mode);
     b.installArtifact(settings);
+    const portable = b.addExecutable(.{ .name = "portable-batch", .root_module = b.createModule(.{ .root_source_file = b.path("portable_batch.zig"), .target = target, .optimize = optimize }) });
+    portable.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, portable, module, native, mode);
+    const installed = b.addInstallArtifact(portable, .{});
+    b.getInstallStep().dependOn(&installed.step);
+    const focused = b.step("portable-batch", "Build only the portable public bulk fixture");
+    focused.dependOn(&installed.step);
 }

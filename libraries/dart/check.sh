@@ -39,6 +39,7 @@ for consumer in alpha bravo; do
 done
 python3 "$CHECKS/schema.py"
 python3 "$CHECKS/types.py"
+python3 "$CHECKS/portable_batch.py"
 python3 "$CHECKS/request_identity.py" "$CHECKS/expected-requests.json"
 python3 "$CHECKS/request_identity.py" "$FLUTTER/expected-requests.json"
 python3 "$CHECKS/plant-check.py"

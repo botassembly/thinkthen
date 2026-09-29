@@ -18,6 +18,11 @@ fi
 mkdir -p "$here/target/native/include" "$here/target/native/lib" "$here/target/home" "$here/target/cache" "$here/target/scratch" "$here/target/logs"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.zig.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
+case ${THINKTHEN_FOCUSED:-} in
+    portable-batch) "$zig" fmt --check "$here/Tests/portable_batch.zig" "$here/Tests/build.zig"; python3 "$here/Tests/portable_batch.py"; exit 0 ;;
+    '') ;;
+    *) echo "Zig: unknown focused selector: $THINKTHEN_FOCUSED" >&2; exit 2 ;;
+esac
 RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
 native="$root/libraries/c/target/debug"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native/libthinkthen_c.so"
@@ -26,12 +31,13 @@ cp "$native/libthinkthen_c.so" "$here/target/native/lib/libthinkthen.so"
 cp "$native/libthinkthen_c.a" "$here/target/native/lib/libthinkthen.a"
 ln -sf libthinkthen.so "$here/target/native/lib/libthinkthen.so.0"
 export HOME="$here/target/home" ZIG_GLOBAL_CACHE_DIR="$here/target/cache"
-"$zig" fmt --check "$here/src/thinkthen.zig" "$here/build.zig" "$here/Tests/type_case.zig" "$here/Tests/settings.zig" "$here/Tests/build.zig"
+"$zig" fmt --check "$here/src/thinkthen.zig" "$here/build.zig" "$here/Tests/type_case.zig" "$here/Tests/settings.zig" "$here/Tests/portable_batch.zig" "$here/Tests/build.zig"
 "$zig" build -j2 -Dnative="$here/target/native" -Dlink-mode=shared --build-file "$here/build.zig" --cache-dir "$here/target/scratch/package-cache" --global-cache-dir "$here/target/cache"
 "$zig" build -j2 -Dnative="$here/target/native" -Dlink-mode=shared --build-file "$here/Tests/build.zig" --cache-dir "$here/target/scratch/tests-cache" --global-cache-dir "$here/target/cache"
 python3 "$here/Tests/types.py"
 python3 "$here/Tests/run_matrix.py"
 python3 "$here/Tests/run_settings.py"
+python3 "$here/Tests/portable_batch.py"
 python3 "$here/Tests/package_local.py"
 python3 "$here/Tests/guard.py" "$here/target/artifacts/thinkthen-zig-0.0.1-src.tar.gz"
 plant=$(mktemp "$here/target/logs/private-plant-XXXXXX")

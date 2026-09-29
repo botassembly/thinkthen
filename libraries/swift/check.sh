@@ -20,6 +20,11 @@ mkdir -p "$here/target/native/lib" "$here/target/scratch/matrix-main" "$here/tar
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
 cmp "$root/libraries/c/include/thinkthen.h" "$here/Sources/CThinkThen/include/thinkthen.h"
+case ${THINKTHEN_FOCUSED:-} in
+    portable-batch) python3 "$here/Tests/fixtures/portable_batch.py"; exit 0 ;;
+    '') ;;
+    *) echo "Swift: unknown focused selector: $THINKTHEN_FOCUSED" >&2; exit 2 ;;
+esac
 RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --manifest-path "$root/libraries/c/Cargo.toml" --locked --offline --lib -j2
 native="$root/libraries/c/target/debug/libthinkthen_c.so"
 python3 "$root/sdlc/scripts/check-c-exports.py" "$root/libraries/c/include/thinkthen.h" "$native"
@@ -35,6 +40,7 @@ cp "$here/Tests/fixtures/settings.swift" "$here/target/scratch/matrix-main/main.
 python3 "$here/Tests/fixtures/types.py"
 python3 "$here/Tests/fixtures/run_matrix.py"
 python3 "$here/Tests/fixtures/run_settings.py"
+python3 "$here/Tests/fixtures/portable_batch.py"
 python3 "$here/Tests/fixtures/packed_negative.py"
 python3 "$here/Tests/fixtures/package_local.py"
 python3 "$here/Tests/fixtures/guard.py" "$here/target/artifacts/thinkthen-swift-0.0.1.zip"
