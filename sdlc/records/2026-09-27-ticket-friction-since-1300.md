@@ -494,3 +494,8 @@ The contract-page fix `9df4e2cc` introduced an internal ticket citation in the s
 
 
 The bounded correction passed fresh review at `d6a01ecd`: generation produced 99 pages and the actual consumer accepted all 51 settings. The next 0257 review found its new `--cases` flag absent from that same settings inventory, contrary to its accepted ADR note. It also found a three-field assertion where the preflight promised a complete literal fallback row. Correct the plan/ADR omission and full fixture, then run both the CLI settings inventory and generated consumer. Reuse unchanged audit evidence; neither finding calls for a broad core or port rerun.
+
+
+## Preserve the full original criterion in preparation
+
+The remaining-queue scan initially reduced register64 to request/digest equality, but the original issue concerns record spelling changing content batch cuts. Its corrected proof includes multi-record cuts and membership. It also reduced the accepted graded-rank handoff to one page and register52 to recording guidance alone. Fresh review accepted the corrections at `ffd7f377`. Future briefs must copy the original observable criterion into a compact checklist, then map every requested page and stage before proposing consolidation. Shared implementation does not make those outcomes duplicates.
