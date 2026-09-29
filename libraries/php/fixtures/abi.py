@@ -1,6 +1,7 @@
 """Compare the current installed native library with its public header."""
 
 import hashlib
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -18,7 +19,7 @@ def main():
     assert exported == declared, {"missing": sorted(declared - exported), "extra": sorted(exported - declared)}
     dynamic = subprocess.check_output(["readelf", "-d", str(LIBRARY)], text=True)
     assert "Library soname: [libthinkthen.so.0]" in dynamic
-    print(f"PHP_ABI_PASS source={subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()} "
+    print(f"PHP_ABI_PASS source={subprocess.check_output([os.environ.get('THINKTHEN_GIT_BIN', '/usr/bin/git'), 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip()} "
           f"exports={len(exported)} header_sha256={hashlib.sha256(HEADER.read_bytes()).hexdigest()} "
           f"library_sha256={hashlib.sha256(LIBRARY.read_bytes()).hexdigest()}")
 

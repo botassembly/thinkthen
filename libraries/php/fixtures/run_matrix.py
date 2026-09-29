@@ -13,6 +13,8 @@ from backend import Backend
 
 ROOT = Path(__file__).resolve().parent.parent
 REPO = ROOT.parent.parent
+PHP_BIN = os.environ.get('THINKTHEN_PHP_BIN', '/usr/bin/php8.3')
+PYTHON_BIN = os.environ.get('THINKTHEN_PYTHON_BIN', '/usr/bin/python3')
 RUN = REPO / 'target/php' / ('run-' + datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
 RUN.mkdir(parents=True)
 (RUN / 'barrier').mkdir()
@@ -63,9 +65,9 @@ def execute(label, command, timeout=120):
 status = 'interrupted'
 try:
     status = 'PASS'
-    commands = [('direct', ['/usr/bin/php', '-d', 'ffi.enable=1', 'examples/direct.php']),
-                ('matrix', ['/usr/bin/php', '-d', 'ffi.enable=1', 'fixtures/matrix.php']),
-                ('native-strict', ['/usr/bin/python3', 'fixtures/native_strict.py'])]
+    commands = [('direct', [PHP_BIN, '-d', 'ffi.enable=1', 'examples/direct.php']),
+                ('matrix', [PHP_BIN, '-d', 'ffi.enable=1', 'fixtures/matrix.php']),
+                ('native-strict', [PYTHON_BIN, 'fixtures/native_strict.py'])]
     def release_deadline():
         marker = RUN/'barrier/arrived-hold-deadline'
         limit = time.monotonic()+90
@@ -107,9 +109,14 @@ finally:
         expected[norm({'entities':[{'id':'i1','name':first,'kind':'alert'},
               {'id':'i2','name':second,'kind':'alert'}],
               })] = 1
+    bodies = [json.loads(line) for line in (RUN/'barrier/request-bodies.jsonl').read_text().splitlines()]
+    canonical = lambda request: json.dumps(request, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
+    observed_bodies = collections.Counter(map(canonical, bodies))
+    accepted_bodies = collections.Counter(canonical(json.loads(line)) for line in
+        (ROOT/'fixtures/accepted_requests.jsonl').read_text().splitlines())
+    assert sum(accepted_bodies.values()) == 40, 'accepted full-body fixture is incomplete'
     packed=[]
-    for line in (RUN/'barrier/request-bodies.jsonl').read_text().splitlines():
-        request=json.loads(line)
+    for request in bodies:
         if request['state']=='Each question quotes the text it asks about.':
             import re
             rows=[]
@@ -123,12 +130,15 @@ finally:
                      ['filter-one','filter-two'],['rank-one','rank-two'],
                      [f'hold-bulk-{i}' for i in range(1,7)]]
     (RUN/'packed-rows.json').write_text(json.dumps(packed,indent=2)+'\n')
-    if status == 'PASS' and (counts != expected or packed != expected_packed
+    if status == 'PASS' and (counts != expected or observed_bodies != accepted_bodies or packed != expected_packed
                              or server.attempts != len(server.arrivals)
                              or server.bulk_completion != []):
         status = 'COUNT_MISMATCH'
     (RUN/'outcome.json').write_text(json.dumps({'status':status, 'arrivals':len(server.arrivals),
                                                 'expected':dict(expected), 'observed':dict(counts),
+                                                'full_body_match':observed_bodies==accepted_bodies,
+                                                'full_body_extra':list((observed_bodies-accepted_bodies).items()),
+                                                'full_body_missing':list((accepted_bodies-observed_bodies).items()),
                                                 'receipts':receipts},indent=2,ensure_ascii=False)+'\n')
     print(RUN, status, 'arrivals', len(server.arrivals), flush=True)
 if status != 'PASS': sys.exit(1)

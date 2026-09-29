@@ -16,6 +16,7 @@ PHP = ROOT / "libraries/php"
 NATIVE = ROOT / "libraries/c/target/debug/libthinkthen_c.so"
 HEADER = ROOT / "libraries/c/include/thinkthen.h"
 PACKAGE_FILES = ["LICENSE", "README.md", "autoload.php", "composer.json", "examples/direct.php", "src/ThinkThen.php"]
+PRIVATE_PATTERNS = (b"tt-canary-291", b"/home/ian", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
 def identical(source, copied):
@@ -25,7 +26,7 @@ def identical(source, copied):
 def verify_install(package, native):
     assert sorted(str(p.relative_to(package)) for p in package.rglob("*") if p.is_file()) == PACKAGE_FILES, "package members"
     for name in PACKAGE_FILES:
-        assert b"tt-canary-" not in (package / name).read_bytes(), f"private canary in {name}"
+        assert not any(pattern in (package / name).read_bytes() for pattern in PRIVATE_PATTERNS), f"private pattern in {name}"
         assert identical(PHP / name, package / name), f"source member changed: {name}"
     assert identical(HEADER, native / "include/thinkthen.h"), "installed header changed"
     assert identical(NATIVE, native / "lib/libthinkthen.so"), "installed library changed"
@@ -34,7 +35,7 @@ def verify_install(package, native):
 
 def main():
     plant = sys.argv[1] if len(sys.argv) > 1 else ""
-    assert plant in ("", "source", "header", "native", "canary", "wrong-value")
+    assert plant in ("", "source", "header", "native", "canary", "private-key", "wrong-value")
     for mode in ("alpha", "beta"):
         with tempfile.TemporaryDirectory(prefix="thinkthen-php-installed-") as folder:
             work = Path(folder)
@@ -55,8 +56,10 @@ def main():
             if plant == "native":
                 with (native / "lib/libthinkthen.so").open("ab") as stream: stream.write(b"stale")
             if plant == "canary":
-                (package / "README.md").write_bytes((package / "README.md").read_bytes() + b"\ntt-canary-private\n")
-            if plant in ("source", "header", "native", "canary"):
+                (package / "README.md").write_bytes((package / "README.md").read_bytes() + b"\ntt-canary-291\n")
+            if plant == "private-key":
+                (package / "README.md").write_bytes((package / "README.md").read_bytes() + b"\n-----BEGIN PRIVATE KEY-----\n")
+            if plant in ("source", "header", "native", "canary", "private-key"):
                 try: verify_install(package, native)
                 except AssertionError as error:
                     print(f"PHP_INSTALLED_PLANT_REJECTED {plant}: {error}")
@@ -73,11 +76,16 @@ def main():
                        "THINKTHEN_API_KEY": "tt-canary-291", "THINKTHEN_BASE_URL": base if mode == "alpha" else "http://127.0.0.1:1/generic/v1",
                        "TT_USE_SETTINGS": "1" if mode == "beta" else "0", "TT_SETTINGS_BASE_URL": base}
                 if plant == "wrong-value": env["TT_PLANT_WRONG_VALUE"] = "1"
-                command = ["bwrap", "--unshare-all", "--share-net", "--die-with-parent",
+                php_bin = os.environ.get("THINKTHEN_PHP_BIN", "/usr/bin/php8.3")
+                command = [os.environ.get("THINKTHEN_BWRAP_BIN", "/usr/bin/bwrap"), "--unshare-all", "--share-net", "--die-with-parent",
                            "--ro-bind", "/usr", "/usr", "--ro-bind", "/lib", "/lib", "--ro-bind", "/lib64", "/lib64",
-                           "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--bind", str(work), "/work",
-                           "--chdir", "/work", "--", "/usr/bin/php8.3", "-n", "-d", "extension=ffi", "-d", "ffi.enable=1", "/work/consumer.php"]
+                           "--proc", "/proc", "--dev", "/dev", "--tmpfs", "/tmp", "--bind", str(work), "/work"]
+                if php_bin != "/usr/bin/php8.3":
+                    command += ["--ro-bind", php_bin, "/usr/bin/php8.3"]
+                command += ["--chdir", "/work", "--", "/usr/bin/php8.3", "-n", "-d", "extension=ffi", "-d", "ffi.enable=1", "/work/consumer.php"]
                 result = subprocess.run(command, env=env, capture_output=True, text=True, timeout=60)
+                if result.returncode != 0 and result.stderr.startswith("bwrap:") and not server.arrivals:
+                    raise SystemExit(77)
                 if plant == "wrong-value":
                     assert result.returncode != 0 and "value/facts mismatch" in result.stdout, (result.returncode, result.stdout, result.stderr)
                     assert collections.Counter(server.arrivals) == {"consumer-php": 1, "consumer-json": 1}

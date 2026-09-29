@@ -36,7 +36,7 @@ def main():
                        "THINKTHEN_API_KEY": "sk-type-contract-loopback",
                        "THINKTHEN_CACHE": str(Path(folder) / str(index)),
                        "TT_LIBRARY": str(ROOT / "libraries/c/target/debug/libthinkthen_c.so")}
-                process = subprocess.run(["/usr/bin/php", "-d", "ffi.enable=1", str(PHP / "fixtures/type_case.php")],
+                process = subprocess.run([os.environ.get("THINKTHEN_PHP_BIN", "/usr/bin/php8.3"), "-d", "ffi.enable=1", str(PHP / "fixtures/type_case.php")],
                                          input=json.dumps(case["request"], ensure_ascii=False, separators=(",", ":")),
                                          text=True, capture_output=True, env=env, timeout=30)
                 assert process.returncode == 0 and not process.stderr, (case["name"], process.returncode, process.stderr)

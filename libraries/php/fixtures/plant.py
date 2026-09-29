@@ -3,10 +3,11 @@
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[3]
 env = dict(os.environ, TT_PLANT_BAD_PACKED="1")
-result = subprocess.run(["python3", "libraries/php/fixtures/run_matrix.py"], cwd=ROOT, env=env,
+result = subprocess.run([sys.executable, "libraries/php/fixtures/run_matrix.py"], cwd=ROOT, env=env,
                         capture_output=True, text=True, timeout=120)
 assert result.returncode == 1 and "FAILED:matrix" in result.stdout, (result.returncode, result.stdout, result.stderr)
 folder = Path(result.stdout.split()[0])
