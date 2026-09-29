@@ -146,3 +146,7 @@ Ticket 0277 passed fresh High code review at `0d714cfee`. Each wrapper’s four 
 ## C# and JVM typed calls, 2026-09-29
 
 Ticket 0280 passed fresh High code review at `3b74fa121`. The four typed C# and JVM routes now return their former values with independently owned facts through the existing C ABI. Kotlin and Scala forward the same carrier. The focused source and copied installed consumers preserve exact request inventories, typed failure lifetime and controlled overlap. An identical three-record packed replay reports one cached response and zero sends; held calls prove elapsed facts. The JSON routes and prior host lifetime limits remain. Other wrappers, richer details, cost, per-request vendor timing, request IDs and clean release/runner qualification remain open.
+
+## C++ and Dart typed calls, 2026-09-29
+
+Ticket 0279 passed fresh High code review at `9ff5c0e7c`. Its four typed C++ and Dart routes return owned value/facts through the existing C API; direct consumers and the Flutter facade follow the return shape. Focused proof covers strict decoding, absent usage, empty bulk, held overlap, typed failure lifetime, exact request bodies, installed C++ shared/static consumers and the changed Flutter source test. The frozen C ABI and JSON routes remain. The source-qualified pair does not establish final release archives, other runners or the remaining richer-facts criteria.

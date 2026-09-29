@@ -9,6 +9,8 @@ export 'package:thinkthen_dart/thinkthen_dart.dart'
         Door,
         DoorFailure,
         AnswerValue,
+        CallFacts,
+        CallResult,
         Outcome,
         ErrorKind,
         Annotation,
@@ -20,7 +22,7 @@ class ThinkThenFlutter {
   final Door door;
   ThinkThenFlutter(String nativeLibraryPath) : door = Door(nativeLibraryPath);
 
-  AnswerValue decide(String question, String text) {
+  CallResult<AnswerValue> decide(String question, String text) {
     final Pointer<Void> engine = door.create();
     try {
       return door.decide(engine, question, text);

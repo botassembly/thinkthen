@@ -79,6 +79,8 @@ class Door {
     int,
     Pointer<Void>,
     Pointer<Answer>,
+    Pointer<Pointer<Uint8>>,
+    Pointer<IntPtr>,
   ) decideOpts = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
@@ -88,6 +90,8 @@ class Door {
         Int64,
         Pointer<Void>,
         Pointer<Answer>,
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
       ),
       int Function(
         Pointer<Void>,
@@ -97,7 +101,9 @@ class Door {
         int,
         Pointer<Void>,
         Pointer<Answer>,
-      )>('thinkthen_decide_opts');
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
+      )>('thinkthen_decide_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -107,6 +113,8 @@ class Door {
     int,
     Pointer<Void>,
     Pointer<Answer>,
+    Pointer<Pointer<Uint8>>,
+    Pointer<IntPtr>,
   ) manyOpts = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
@@ -117,6 +125,8 @@ class Door {
         Int64,
         Pointer<Void>,
         Pointer<Answer>,
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
       ),
       int Function(
         Pointer<Void>,
@@ -127,7 +137,9 @@ class Door {
         int,
         Pointer<Void>,
         Pointer<Answer>,
-      )>('thinkthen_decide_many_opts');
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
+      )>('thinkthen_decide_many_with_facts_opts');
   late final Pointer<Uint8> Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -155,6 +167,8 @@ class Door {
     Pointer<Void>,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
+    Pointer<Pointer<Uint8>>,
+    Pointer<IntPtr>,
   ) recognizeOpts = lib.lookupFunction<
       Int32 Function(
         Pointer<Void>,
@@ -163,6 +177,8 @@ class Door {
         IntPtr,
         Int64,
         Pointer<Void>,
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
         Pointer<Pointer<Uint8>>,
         Pointer<IntPtr>,
       ),
@@ -175,7 +191,9 @@ class Door {
         Pointer<Void>,
         Pointer<Pointer<Uint8>>,
         Pointer<IntPtr>,
-      )>('thinkthen_recognize_opts');
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
+      )>('thinkthen_recognize_with_facts_opts');
   late final int Function(
     Pointer<Void>,
     Pointer<Uint8>,
@@ -184,6 +202,8 @@ class Door {
     int,
     int,
     Pointer<Void>,
+    Pointer<Pointer<Uint8>>,
+    Pointer<IntPtr>,
     Pointer<Pointer<Uint8>>,
     Pointer<IntPtr>,
   ) relateOpts = lib.lookupFunction<
@@ -197,6 +217,8 @@ class Door {
         Pointer<Void>,
         Pointer<Pointer<Uint8>>,
         Pointer<IntPtr>,
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
       ),
       int Function(
         Pointer<Void>,
@@ -208,7 +230,9 @@ class Door {
         Pointer<Void>,
         Pointer<Pointer<Uint8>>,
         Pointer<IntPtr>,
-      )>('thinkthen_relate_opts');
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
+      )>('thinkthen_relate_with_facts_opts');
   late final void Function(Pointer<Uint8>) freeString = lib.lookupFunction<
       Void Function(Pointer<Uint8>),
       void Function(Pointer<Uint8>)>('thinkthen_free_string');
@@ -457,7 +481,15 @@ class Door {
     );
   }
 
-  AnswerValue decide(
+  CallFacts _readFacts(Pointer<Uint8> pointer, int length) {
+    if (pointer.address == 0)
+      throw StateError('successful call returned null facts');
+    return CallFacts.parse(
+      jsonDecode(utf8.decode(pointer.asTypedList(length))),
+    );
+  }
+
+  CallResult<AnswerValue> decide(
     Pointer<Void> engine,
     String question,
     String text, {
@@ -469,8 +501,16 @@ class Door {
       final q = owned.add(memory.cString(question));
       final t = owned.add(memory.cString(text));
       final out = owned.add(memory.allocate(sizeOf<Answer>()).cast<Answer>());
+      final facts = owned.add(
+        memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
+      );
+      final factsLen = owned.add(
+        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+      );
       out.ref.outcome = 123;
       out.ref.probability = -1;
+      facts.value = nullptr;
+      factsLen.value = 999;
       final code = decideOpts(
         engine,
         q,
@@ -479,19 +519,31 @@ class Door {
         deadline,
         token ?? nullptr,
         out,
+        facts,
+        factsLen,
       );
-      if (code != 0) {
-        if (out.ref.outcome != 123 || out.ref.probability != -1)
-          throw StateError('failure modified scalar output');
-        throw failure(engine, code);
+      try {
+        if (code != 0) {
+          if (out.ref.outcome != 123 ||
+              out.ref.probability != -1 ||
+              facts.value.address != 0 ||
+              factsLen.value != 999)
+            throw StateError('failure modified scalar outputs');
+          throw failure(engine, code);
+        }
+        return CallResult(
+          AnswerValue(out.ref.outcome, out.ref.probability),
+          _readFacts(facts.value, factsLen.value),
+        );
+      } finally {
+        if (facts.value.address != 0) freeString(facts.value);
       }
-      return AnswerValue(out.ref.outcome, out.ref.probability);
     } finally {
       owned.releaseAll();
     }
   }
 
-  List<AnswerValue> many(
+  CallResult<List<AnswerValue>> many(
     Pointer<Void> engine,
     String question,
     List<String> texts, {
@@ -516,6 +568,14 @@ class Door {
       final out = owned.add(
         memory.allocate(sizeOf<Answer>() * texts.length).cast<Answer>(),
       );
+      final facts = owned.add(
+        memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
+      );
+      final factsLen = owned.add(
+        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+      );
+      facts.value = nullptr;
+      factsLen.value = 999;
       for (var i = 0; i < texts.length; i++) {
         ptrs[i] = encoded[i];
         lens[i] = utf8.encode(texts[i]).length;
@@ -531,18 +591,26 @@ class Door {
         deadline,
         token ?? nullptr,
         out,
+        facts,
+        factsLen,
       );
-      if (code != 0) {
-        for (var i = 0; i < texts.length; i++) {
-          if (out[i].outcome != 123 || out[i].probability != -1)
-            throw StateError('failure modified bulk output');
+      try {
+        if (code != 0) {
+          for (var i = 0; i < texts.length; i++) {
+            if (out[i].outcome != 123 || out[i].probability != -1)
+              throw StateError('failure modified bulk output');
+          }
+          if (facts.value.address != 0 || factsLen.value != 999)
+            throw StateError('failure modified bulk facts output');
+          throw failure(engine, code);
         }
-        throw failure(engine, code);
+        return CallResult([
+          for (var i = 0; i < texts.length; i++)
+            AnswerValue(out[i].outcome, out[i].probability),
+        ], _readFacts(facts.value, factsLen.value));
+      } finally {
+        if (facts.value.address != 0) freeString(facts.value);
       }
-      return [
-        for (var i = 0; i < texts.length; i++)
-          AnswerValue(out[i].outcome, out[i].probability),
-      ];
     } finally {
       owned.releaseAll();
     }
@@ -556,10 +624,24 @@ class Door {
     return Annotation.parse(envelope['value']);
   }
 
-  Recognition recognize(Pointer<Void> engine, String spec, String text) =>
-      Recognition.parse(structured(engine, spec, [text], recognize: true));
-  Relations relate(Pointer<Void> engine, String spec, List<String> records) =>
-      Relations.parse(structured(engine, spec, records, recognize: false));
+  CallResult<Recognition> recognize(
+    Pointer<Void> engine,
+    String spec,
+    String text,
+  ) {
+    final result = structured(engine, spec, [text], recognize: true);
+    return CallResult(Recognition.parse(result.value), result.facts);
+  }
+
+  CallResult<Relations> relate(
+    Pointer<Void> engine,
+    String spec,
+    List<String> records,
+  ) {
+    final result = structured(engine, spec, records, recognize: false);
+    return CallResult(Relations.parse(result.value), result.facts);
+  }
+
   Object? call(Pointer<Void> engine, String jsonText) {
     final text = memory.cString(jsonText);
     try {
@@ -575,7 +657,7 @@ class Door {
     }
   }
 
-  Object? structured(
+  CallResult<Object?> structured(
     Pointer<Void> engine,
     String spec,
     List<String> texts, {
@@ -602,12 +684,20 @@ class Door {
       final outLen = owned.add(
         memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
       );
+      final facts = owned.add(
+        memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
+      );
+      final factsLen = owned.add(
+        memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>(),
+      );
       for (var i = 0; i < values.length; i++) {
         ptrs[i] = values[i];
         lens[i] = utf8.encode(texts[i]).length;
       }
       out.value = Pointer<Uint8>.fromAddress(0);
       outLen.value = 999;
+      facts.value = nullptr;
+      factsLen.value = 999;
       final code = recognize
           ? recognizeOpts(
               engine,
@@ -618,6 +708,8 @@ class Door {
               nullptr,
               out,
               outLen,
+              facts,
+              factsLen,
             )
           : relateOpts(
               engine,
@@ -629,17 +721,27 @@ class Door {
               nullptr,
               out,
               outLen,
+              facts,
+              factsLen,
             );
-      if (code != 0) {
-        if (out.value.address != 0 || outLen.value != 999)
-          throw StateError('failure changed JSON outputs');
-        throw failure(engine, code);
-      }
-      final bytes = out.value.asTypedList(outLen.value);
       try {
-        return jsonDecode(utf8.decode(bytes));
+        if (code != 0) {
+          if (out.value.address != 0 ||
+              outLen.value != 999 ||
+              facts.value.address != 0 ||
+              factsLen.value != 999)
+            throw StateError('failure changed JSON outputs');
+          throw failure(engine, code);
+        }
+        if (out.value.address == 0)
+          throw StateError('successful JSON call returned null');
+        return CallResult(
+          jsonDecode(utf8.decode(out.value.asTypedList(outLen.value))),
+          _readFacts(facts.value, factsLen.value),
+        );
       } finally {
-        freeString(out.value);
+        if (out.value.address != 0) freeString(out.value);
+        if (facts.value.address != 0) freeString(facts.value);
       }
     } finally {
       owned.releaseAll();

@@ -32,7 +32,7 @@ for mode in ("shared", "static"):
                 archive.extractall(trial / "package", filter="data")
             with tarfile.open(NATIVE) as archive:
                 archive.extractall(trial / "native", filter="data")
-            for name in ("build.zig", "build.zig.zon", "matrix.zig", "allocation.zig", "concurrent.zig", "type_case.zig", "settings.zig"):
+            for name in ("build.zig", "build.zig.zon", "matrix.zig", "allocation.zig", "concurrent.zig", "type_case.zig", "settings.zig", "portable_batch.zig"):
                 shutil.copy2(PACKAGE / "Tests" / name, trial / "project" / name)
             metadata = trial / "project/build.zig.zon"
             metadata.write_text(metadata.read_text().replace('.path = "../"', '.path = "../package"'))

@@ -28,6 +28,10 @@ The [bounded reconciliation](../records/2026-09-29-clean-package-gates-preparati
 
 The 0276 child-environment cleanup, 0277 wrapper facts, privacy cleanup, version checks and API inventory gate changes landed after the sealed pin; none edits the five failing lines above. They are retained improvements, not proof that the original nine clauses are green. The Python frame/Series clauses, Polars, DuckDB and SQLite remain held; Python's independent settings count and preferred-host Pydantic compatibility are classified in the record without executing frame work. C#/JVM and C++/Dart package work belongs to their claimed lanes. Keep all nine original criteria separate until each affected gate or a narrower equivalent has passing evidence.
 
+## Focused Quick Fix candidate
+
+The [Quick Fix build record](../records/2026-09-29-clean-package-gates-quick-fix-build.md) names separate current-source receipts for the five assigned clauses. C's held scalar/JSON/bulk cancellation witness now reaches three real held requests and returns without a new send; TypeScript's selected shapes suite passes with twenty matching export names; Rust's existing example-output test passes pinned bytes; Objective-C's privacy and J1 runners start normally under a minimal environment; Zig's direct installed selector runs four shared/static consumers with 42 exact bodies each. These are **focused candidate fixes**, not a rerun or closure of all nine package gates. The Zig build also found `Tests/types.py` shadowing stdlib `types` under a clean interpreter; its same-mechanism rename was added to this claim and has a separate direct J1 proof. The remaining Python, Polars, DuckDB and SQLite clauses stay open under their respective holds and qualification work.
+
 ## Evidence
 
 Local experiment 302 `experiments/302-polyglot-package-verification/`: one folder per surface with REPORT.md and logs; `FINDINGS.md` consolidates; `waves.log` is the run record. Inputs sealed at the pin.
