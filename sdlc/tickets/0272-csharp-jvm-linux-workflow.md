@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md
 
 # 0272: Prepare C# and JVM managed archives for the Linux x86 release workflow
 
-Status: design accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). A static workflow/helper candidate is on `ticket/0272-managed-package-helper` after landed 0271; its [build record](../records/0272-managed-package-helper-build.md) names bounded proof and remaining runner work. An early independent High helper review returned three findings; the branch candidate now addresses them, but full combined High review and actual runner qualification are pending. No SDK download, compilation, container execution or Actions rehearsal is claimed. Ian’s SQL/DataFrame hold remains in force.
+Status: static CODE ACCEPT `bfa7c2e3` after fresh independent High review. The [build record](../records/0272-managed-package-helper-build.md) and [final review](../records/0272-managed-workflow-code-review.md) cover the helper, workflow integration and all three early corrections. Actual SDK provisioning and runner qualification remain open. No SDK download, compilation, container execution or Actions rehearsal is claimed. Ian’s SQL/DataFrame hold remains in force.
 
 ## One source pin and one native archive
 
@@ -32,7 +32,11 @@ Prospective implementation claim after accepted design and cleared shared files:
 
 ## Early helper review correction
 
-The immutable `ede90a0b` helper review found that a real Git tar has two tracked symlinks, that the nupkg check allowed missing `_rels/.rels` or `[Content_Types].xml`, and that ZIP directory/mode checks could admit an extra directory or symlink-typed required file when receipts were refreshed. The current candidate permits only the two supported Git source symlinks and checks their targets before extraction; requires the complete fixed nupkg set; and requires exact nupkg/JAR directories and safe ZIP file types. Focused public CLI tests change one required member or type at a time, refresh the managed receipt and outer sidecar, and require assembly and verification to refuse for the specific inventory/type reason. The genuine `367c160f` Git tar passes source preflight, and retained package ZIP shapes pass bounded read checks. Those checks do not qualify compiler output, the runner, or Actions. The earlier High verdict remains FINDINGS until the independent reviewer assesses the combined candidate.
+The immutable `ede90a0b` helper review found that a real Git tar has two tracked symlinks, that the nupkg check allowed missing `_rels/.rels` or `[Content_Types].xml`, and that ZIP directory/mode checks could admit an extra directory or symlink-typed required file when receipts were refreshed. The accepted code permits only the two supported Git source symlinks and checks their targets before extraction; requires the complete fixed nupkg set; and requires exact nupkg/JAR directories and safe ZIP file types. Focused public CLI tests change one required member or type at a time, refresh the managed receipt and outer sidecar, and require assembly and verification to refuse for the specific inventory/type reason. The genuine `367c160f` Git tar passes source preflight, and retained package ZIP shapes pass bounded read checks. Those checks do not qualify compiler output, the runner, or Actions. The final independent review accepted the complete corrected candidate at `bfa7c2e3`.
+
+## What the build taught us
+
+The pair validator alone did not establish independently captured source, C and managed-output identities. The workflow now captures each at its producer handoff. A real Git source tar contains tracked symlinks that the first synthetic positive omitted. Exact ZIP validation needs both required members and safe directory/file types; the corrected tests refresh receipts so these refusals reach their intended checks. The final reviewer assembled and verified retained real packages without recompiling them. Actual SDK setup moves to 0273, and runner execution remains a separate checkpoint.
 
 ## Evidence
 
