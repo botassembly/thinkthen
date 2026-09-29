@@ -30,4 +30,8 @@ Python's non-frame settings count can get its own later bounded ticket once its 
 
 The C fixture's live third arrival is the packed bulk request; preserving `wait` before token fire matters more than substituting `3` for `6` in two lines. Zig's missing project file is a build dependency created by its default install step, while its source archive intentionally has a different member list. Objective-C's clean startup fails before its privacy logic runs, and ambient Python warnings can hide that shadow. Recent hygiene and wrapper commits are valuable but do not repair or remeasure these five package gates. Later builders should carry exact source, copied installed, and runner receipts separately.
 
+## Builder correction to this preparation
+
+The first direct `env -i ... python3 libraries/zig/Tests/installed.py` run after the copy-list edit failed before its own code on the same stdlib-shadow mechanism: `Tests/types.py` loaded as `types` during `json` import. The earlier experiment's ambient interpreter state had hidden this second clean-start defect. Root extended the claim on main `82514fed7` to rename that Zig J1 runner and its `check.sh` invocation. This does not retrospectively change experiment 302's seven-file copy omission or its scratch producer proof. The adjacent C#, JVM, Dart, Ada and Swift `types.py` names are **only a preparation family** for later clean-start diagnosis, not confirmed failures or part of this batch.
+
 Fresh review corrected the intake’s unsupported six-of-nine cause count and two source/case citations. It also caught the TypeScript shapes file’s native-addon and backend prerequisites. Carry those prerequisites into the build brief and distinguish the corrected assertion from a full gate pass.

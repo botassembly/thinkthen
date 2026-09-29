@@ -1,4 +1,4 @@
-"""Run the shared J1 result corpus through the installed Dart public binding."""
+"""Run the shared J1 result corpus through the GNU Objective-C public binding."""
 import importlib.util
 import json
 import os
