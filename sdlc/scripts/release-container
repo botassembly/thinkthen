@@ -28,10 +28,23 @@ source_commit=$(git -C "$REPO" rev-parse HEAD)
 if [ -n "${THINKTHEN_RELEASE_EXPECTED_SHA:-}" ] && [ "$source_commit" != "$THINKTHEN_RELEASE_EXPECTED_SHA" ]; then
 	echo 'release-container: checkout differs from resolved release SHA' >&2; exit 1
 fi
-git -C "$REPO" archive --format=tar HEAD >"$RUN/source.tar"
-[ "$(git get-tar-commit-id <"$RUN/source.tar")" = "$source_commit" ] || {
-	echo 'release-container: archived commit differs from checkout' >&2; exit 1;
-}
+if [ -n "${THINKTHEN_RELEASE_SOURCE_TAR:-}${THINKTHEN_RELEASE_SOURCE_RECEIPT:-}" ]; then
+	[ "$TARGET" = x86_64-unknown-linux-gnu ] &&
+	[ -n "${THINKTHEN_RELEASE_SOURCE_TAR:-}" ] &&
+	[ -n "${THINKTHEN_RELEASE_SOURCE_RECEIPT:-}" ] || {
+		echo 'release-container: selected source needs both x86 provenance paths' >&2; exit 1;
+	}
+	python3 "$REPO/sdlc/scripts/release-managed-pair.py" source-check \
+		"$THINKTHEN_RELEASE_SOURCE_TAR" "$THINKTHEN_RELEASE_SOURCE_RECEIPT" "$source_commit"
+	cp -- "$THINKTHEN_RELEASE_SOURCE_TAR" "$RUN/source.tar"
+	python3 "$REPO/sdlc/scripts/release-managed-pair.py" source-check \
+		"$RUN/source.tar" "$THINKTHEN_RELEASE_SOURCE_RECEIPT" "$source_commit"
+else
+	git -C "$REPO" archive --format=tar HEAD >"$RUN/source.tar"
+	[ "$(git get-tar-commit-id <"$RUN/source.tar")" = "$source_commit" ] || {
+		echo 'release-container: archived commit differs from checkout' >&2; exit 1;
+	}
+fi
 tar -x -f "$RUN/source.tar" -C "$RUN/src"
 set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
 set -- "$@" -e THINKTHEN_ARCHIVED_SOURCE_TAR=/work/source.tar -e THINKTHEN_ARCHIVED_SOURCE_COMMIT="$source_commit"

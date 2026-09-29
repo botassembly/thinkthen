@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """Synthetic outside-in receipt and package refusals for release-managed-pair."""
 import hashlib
+import os
+import shutil
 import io
+import importlib.machinery
 import json
 from pathlib import Path
 import subprocess
@@ -11,7 +14,7 @@ import tempfile
 import zipfile
 
 HELPER = Path(__file__).with_name("release-managed-pair.py")
-COMMIT = "a" * 40
+COMMIT = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
 VERSION = "0.0.1"
 TARGET = "x86_64-unknown-linux-gnu"
 
@@ -46,13 +49,24 @@ def save_json(path, data):
 def run(base, mode, expected):
     cmd = [sys.executable, str(HELPER), mode,
            "--source-tar", str(base / "source.tar"), "--source-receipt", str(base / "source.json"),
-           "--c-archive", str(base / f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"),
+           "--c-archive", str(base / "out" / f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"),
            "--c-receipt", str(base / "c.json"), "--managed-receipt", str(base / "managed.json"),
            "--output", str(base / "out"), "--target", TARGET, "--version", VERSION]
     if mode == "assemble":
         cmd += ["--nupkg", str(base / f"Botassembly.ThinkThen.{VERSION}.nupkg"),
                 "--jars", str(base / "jars")]
     result = subprocess.run(cmd, capture_output=True, text=True)
+    assert result.returncode == expected, (result.returncode, result.stdout, result.stderr)
+
+
+def gate(base, expected):
+    provenance = base / "provenance"
+    provenance.mkdir(exist_ok=True)
+    for name in ("source.tar", "source.json", "c.json", "managed.json"):
+        shutil.copyfile(base / name, provenance / name)
+    result = subprocess.run(["sh", str(HELPER.with_name("release-workflow")), "managed-gate",
+                             str(base / "out"), TARGET, COMMIT, str(provenance)],
+                            capture_output=True, text=True)
     assert result.returncode == expected, (result.returncode, result.stdout, result.stderr)
 
 
@@ -65,10 +79,11 @@ def fixture(base):
     write_tar(base / "source.tar", source, COMMIT)
     save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
     c_name = f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
-    write_tar(base / c_name, {"include/thinkthen.h": b"header"})
-    c_hash = sha((base / c_name).read_bytes())
+    (base / "out").mkdir()
+    write_tar(base / "out" / c_name, {"include/thinkthen.h": b"header"})
+    c_hash = sha((base / "out" / c_name).read_bytes())
     save_json(base / "c.json", {"name": c_name, "sha256": c_hash})
-    (base / (c_name + ".sha256")).write_text(f"{c_hash}  {c_name}\n")
+    (base / "out" / (c_name + ".sha256")).write_text(f"{c_hash}  {c_name}\n")
     nupkg = base / f"Botassembly.ThinkThen.{VERSION}.nupkg"
     nuspec = b"<package><metadata><id>Botassembly.ThinkThen</id><version>0.0.1</version></metadata></package>"
     write_zip(nupkg, {"Botassembly.ThinkThen.nuspec": nuspec,
@@ -86,7 +101,9 @@ def fixture(base):
     }
     for kind in ("door", "kotlin", "scala"):
         path = jars / f"thinkthen-{kind}.jar"
-        files = {"META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\n"}
+        files = {"META-INF/": b"", "META-INF/MANIFEST.MF": b"Manifest-Version: 1.0\n"}
+        if kind == "door":
+            files["thinkthen/"] = b""
         files.update({("thinkthen/" if kind == "door" else "") + name + ".class": b"class"
                       for name in classes[kind]})
         if kind == "kotlin":
@@ -97,7 +114,6 @@ def fixture(base):
         write_zip(path, files)
         managed[kind] = sha(path.read_bytes())
     save_json(base / "managed.json", managed)
-    (base / "out").mkdir()
     return source
 
 
@@ -112,30 +128,111 @@ def mutate_outer(base, family, change):
     (base / "out" / (name + ".sha256")).write_text(f"{sha(path.read_bytes())}  {name}\n")
 
 
+def before_extraction(base):
+    observer = base / "observer"
+    observer.mkdir()
+    marker = base / "tool-calls"
+    for name in ("tar", "docker", "dotnet"):
+        tool = observer / name
+        tool.write_text("#!/bin/sh\nprintf '%s\n' '" + name + "' >>\"$TT_OBSERVER\"\nexit 92\n")
+        tool.chmod(0o755)
+    env = os.environ.copy()
+    env.pop("THINKTHEN_API_KEY", None)
+    env.update(PATH=str(observer) + os.pathsep + env["PATH"], TT_OBSERVER=str(marker),
+               THINKTHEN_RELEASE_EXPECTED_SHA=COMMIT,
+               THINKTHEN_RELEASE_SOURCE_TAR=str(base / "source.tar"),
+               THINKTHEN_RELEASE_SOURCE_RECEIPT=str(base / "source.json"))
+    workflow = str(HELPER.with_name("release-workflow"))
+    container = subprocess.run(["sh", str(HELPER.with_name("release-container")),
+                                str(base / "container-work"), str(base / "container-out")],
+                               env=env, capture_output=True, text=True)
+    assert container.returncode == 1 and "source tar differs" in container.stderr, container.stderr
+    build = subprocess.run(["sh", workflow, "managed-build", str(base), str(base / "out"),
+                            TARGET, COMMIT], env=env, capture_output=True, text=True)
+    assert build.returncode == 1 and "source tar differs" in build.stderr, build.stderr
+    assert not marker.exists(), "untrusted source reached extraction or a build tool"
+
+
 def case(label, change, mode="verify"):
     with tempfile.TemporaryDirectory() as temporary:
         base = Path(temporary)
         source = fixture(base)
         run(base, "assemble", 0)
+        if label == "substituted C with matching sidecar":
+            captured = base / "captured"
+            captured.mkdir()
+            shutil.copyfile(base / "source.json", captured / "source.json")
+            c_path = base / "out" / f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
+            result = subprocess.run(["sh", str(HELPER.with_name("release-workflow")),
+                                     "c-capture", str(c_path), str(captured), TARGET],
+                                    capture_output=True, text=True)
+            assert result.returncode == 0, result.stderr
+            shutil.copyfile(captured / "c.json", base / "c.json")
         change(base, source)
         run(base, mode, 1)
+        gate(base, 1)
+        if label == "same Git header, altered source":
+            before_extraction(base)
+        if label == "substituted C with matching sidecar":
+            build = subprocess.run(["sh", str(HELPER.with_name("release-workflow")),
+                                    "managed-build", str(base), str(base / "out"), TARGET, COMMIT],
+                                   capture_output=True, text=True)
+            assert build.returncode == 1 and "C archive differs" in build.stderr, build.stderr
         print(f"{label}: refused")
 
 
+def gate_case(label, change):
+    with tempfile.TemporaryDirectory() as temporary:
+        base = Path(temporary)
+        fixture(base)
+        run(base, "assemble", 0)
+        change(base / "out")
+        gate(base, 1)
+        print(f"{label}: refused")
+
+
+def workflow_mutations():
+    checker = importlib.machinery.SourceFileLoader(
+        "managed_workflows", str(HELPER.with_name("workflows"))).load_module()
+    original = (HELPER.parents[2] / ".github/workflows/release.yml").read_text()
+    cases = (
+        ("source capture", "release-workflow source-capture", "release-workflow absent-source"),
+        ("C capture", "release-workflow c-capture", "release-workflow absent-c"),
+        ("internal upload", "name: provenance-x86", "name: public-provenance"),
+        ("smoke gate", 'release-workflow managed-gate platform "$TARGET" "$SHA" provenance',
+         'release-workflow absent-gate platform "$TARGET" "$SHA" provenance'),
+        ("draft gate", 'release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance',
+         'release-workflow absent-gate "platform/platform-$target" "$target" "$SHA" provenance'),
+    )
+    for label, before, after in cases:
+        assert before in original, label
+        altered = original.replace(before, after, 1)
+        findings = checker.release("release.yml", checker.yaml.safe_load(altered))
+        assert any("provenance" in item or "receipt capture" in item or "managed" in item
+                   for item in findings), (label, findings)
+    reordered = original.replace("release-workflow source-capture", "ORDER_PLACEHOLDER", 1).replace(
+        "release-workflow c-capture", "release-workflow source-capture", 1).replace(
+        "ORDER_PLACEHOLDER", "release-workflow c-capture", 1)
+    findings = checker.release("release.yml", checker.yaml.safe_load(reordered))
+    assert any("receipt capture order" in item for item in findings), findings
+
+
 def main():
+    workflow_mutations()
     with tempfile.TemporaryDirectory() as temporary:
         base = Path(temporary)
         fixture(base)
         run(base, "assemble", 0)
         run(base, "verify", 0)
+        gate(base, 0)
     def source_attack(base, source):
         source["libraries/csharp/README.md"] = b"altered"
         write_tar(base / "source.tar", source, COMMIT)
     case("same Git header, altered source", source_attack)
     def c_attack(base, source):
-        path = base / f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
+        path = base / "out" / f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
         write_tar(path, {"include/thinkthen.h": b"other valid C"})
-        (base / (path.name + ".sha256")).write_text(f"{sha(path.read_bytes())}  {path.name}\n")
+        (base / "out" / (path.name + ".sha256")).write_text(f"{sha(path.read_bytes())}  {path.name}\n")
     case("substituted C with matching sidecar", c_attack)
     def inner_attack(base, source):
         def change(files):
@@ -147,6 +244,15 @@ def main():
             files[name] = buf.getvalue()
         mutate_outer(base, "csharp", change)
     case("changed inner DLL and outer hash", inner_attack)
+    def jar_attack(base, source):
+        def change(files):
+            members = read_zip(files["thinkthen-door.jar"])
+            members["thinkthen/Door.class"] = b"changed class"
+            buf = io.BytesIO()
+            write_zip(buf, members)
+            files["thinkthen-door.jar"] = buf.getvalue()
+        mutate_outer(base, "jvm", change)
+    case("changed inner JAR and outer hash", jar_attack)
     case("changed POM and outer hash", lambda base, source: mutate_outer(
         base, "jvm", lambda files: files.__setitem__("pom.xml", b"<project/>")))
     case("missing wrapper member", lambda base, source: mutate_outer(
@@ -156,6 +262,10 @@ def main():
     case("wrong inner package member", lambda base, source: mutate_outer(
         base, "csharp", lambda files: files.__setitem__(
             f"Botassembly.ThinkThen.{VERSION}.nupkg", extra_nupkg(files))))
+    gate_case("missing selected family", lambda out: (out / f"thinkthen-jvm-{VERSION}-{TARGET}.tar.gz").unlink())
+    gate_case("extra selected suffix", lambda out: (out / "thinkthen-csharp-extra").write_bytes(b"extra"))
+    gate_case("wrong selected target", lambda out: (out / f"thinkthen-jvm-{VERSION}-aarch64-unknown-linux-gnu.tar.gz").write_bytes(b"other"))
+    gate_case("linked selected entry", lambda out: (out / "thinkthen-csharp-linked").symlink_to("missing"))
     print("release-managed-pair self-test: pass")
 
 

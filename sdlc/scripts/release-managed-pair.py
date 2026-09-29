@@ -50,6 +50,8 @@ def tar_files(data, label):
             name = member.name.removeprefix("./")
             require(name not in files and not name.startswith("/") and ".." not in Path(name).parts,
                     f"unsafe or repeated {label} member")
+            if label == "source" and member.issym():
+                continue
             require(member.isfile() or member.isdir(), f"unsafe {label} member type: {name}")
             if member.isdir():
                 require(name not in dirs, f"repeated {label} directory")
@@ -69,15 +71,20 @@ def archive_members(data, expected, label):
 def zip_members(data, label):
     with zipfile.ZipFile(io.BytesIO(data)) as archive:
         members = {}
+        dirs = set()
         for item in archive.infolist():
             name = item.filename
             require(not name.startswith("/") and ".." not in Path(name).parts,
                     f"unsafe {label} member")
             require(name not in members, f"duplicate {label} member: {name}")
+            member_type = (item.external_attr >> 16) & 0o170000
+            require(member_type in (0, 0o040000, 0o100000), f"unsafe {label} ZIP member type: {name}")
             if item.is_dir():
+                require(name not in dirs, f"duplicate {label} directory: {name}")
+                dirs.add(name)
                 continue
             members[name] = archive.read(item)
-    return members
+    return members, dirs
 
 
 def xml_field(data, name):
@@ -89,7 +96,8 @@ def xml_field(data, name):
 
 
 def check_nupkg(data, version, source):
-    members = zip_members(data, "nupkg")
+    members, dirs = zip_members(data, "nupkg")
+    require(not dirs, "unexpected nupkg directory")
     fixed = {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE",
              "_rels/.rels", "[Content_Types].xml"}
     other = set(members) - fixed
@@ -108,7 +116,9 @@ def check_nupkg(data, version, source):
 
 
 def check_jar(data, kind):
-    members = zip_members(data, f"{kind} JAR")
+    members, dirs = zip_members(data, f"{kind} JAR")
+    require(dirs == ({"META-INF/", "thinkthen/"} if kind == "door" else {"META-INF/"}),
+            f"{kind} JAR directory inventory differs")
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is not None and manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
     expected = {
@@ -129,27 +139,40 @@ def check_jar(data, kind):
                      b"-----BEGIN PRIVATE KEY-----")), f"private {kind} JAR byte")
 
 
+def check_source(path, receipt_path, selected):
+    source_receipt = receipt(receipt_path, ("commit", "sha256"))
+    require(re.fullmatch(r"[0-9a-f]{40}", selected) is not None and
+            source_receipt["commit"] == selected, "source receipt commit differs from resolved SHA")
+    source_bytes = regular(path)
+    pinned(source_bytes, source_receipt["sha256"], "source tar")
+    _, headers, _ = tar_files(source_bytes, "source")
+    require(headers.get("comment") == selected, "Git tar commit header differs")
+    return source_bytes
+
+
+def check_c(path, receipt_path, target, version):
+    captured = receipt(receipt_path, ("name", "sha256"))
+    name = f"thinkthen-c-{version}-{target}.tar.gz"
+    require(captured["name"] == name and path.name == name, "captured C basename differs")
+    pinned(regular(path), captured["sha256"], "C archive")
+    require(regular(path.with_name(name + ".sha256")) ==
+            f"{captured['sha256']}  {name}\n".encode(), "C sidecar differs")
+    return captured
+
+
 def check(args):
     require(re.fullmatch(r"[A-Za-z0-9_]+-unknown-linux-gnu", args.target) is not None,
             "invalid Linux target")
     require(re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", args.version) is not None,
             "invalid version")
     source_receipt = receipt(args.source_receipt, ("commit", "sha256"))
-    c_receipt = receipt(args.c_receipt, ("name", "sha256"))
     managed = receipt(args.managed_receipt, ("nupkg", "door", "kotlin", "scala"))
     require(re.fullmatch(r"[0-9a-f]{40}", source_receipt["commit"]) is not None,
             "invalid captured source commit")
-    source_bytes = regular(args.source_tar)
-    pinned(source_bytes, source_receipt["sha256"], "source tar")
-    source, headers, _ = tar_files(source_bytes, "source")
-    require(headers.get("comment") == source_receipt["commit"], "Git tar commit header differs")
-    c_name = f"thinkthen-c-{args.version}-{args.target}.tar.gz"
-    require(c_receipt["name"] == c_name, "captured C basename differs")
-    c_bytes = regular(args.c_archive)
-    require(args.c_archive.name == c_name, "C basename differs")
-    pinned(c_bytes, c_receipt["sha256"], "C archive")
-    require(regular(args.c_archive.with_name(c_name + ".sha256")) ==
-            f"{c_receipt['sha256']}  {c_name}\n".encode(), "C sidecar differs")
+    source_bytes = check_source(args.source_tar, args.source_receipt, source_receipt["commit"])
+    source, _, _ = tar_files(source_bytes, "source")
+    c_receipt = check_c(args.c_archive, args.c_receipt, args.target, args.version)
+    c_name = c_receipt["name"]
     manifest = (f"source_commit={source_receipt['commit']}\ntarget={args.target}\n"
                 f"version={args.version}\nc_archive={c_name}\nc_sha256={c_receipt['sha256']}\n").encode()
     nupkg = f"Botassembly.ThinkThen.{args.version}.nupkg"
@@ -217,6 +240,14 @@ def check(args):
 
 
 def main():
+    if len(sys.argv) == 5 and sys.argv[1] == "source-check":
+        check_source(Path(sys.argv[2]), Path(sys.argv[3]), sys.argv[4])
+        print("release-managed-pair: source-check pass")
+        return
+    if len(sys.argv) == 6 and sys.argv[1] == "c-check":
+        check_c(Path(sys.argv[2]), Path(sys.argv[3]), sys.argv[4], sys.argv[5])
+        print("release-managed-pair: c-check pass")
+        return
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("assemble", "verify"))
     for name in ("source-tar", "source-receipt", "c-archive", "c-receipt", "managed-receipt", "output"):
