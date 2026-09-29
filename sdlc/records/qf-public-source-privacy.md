@@ -4,7 +4,7 @@ Candidate from main `aebd273cf`, after the accepted 0275 routing landed. The sav
 
 The claimed privacy and package guards now reject generic `/home/` and `/Users/` byte paths, including compressed shipping members, rather than one machine's home. Dart's source scan plants both roots. Zig's existing negative plant uses a generic path. The C#, JVM and Swift isolated consumers now assert that their isolated namespaces expose neither home root; they retain their compiler absence, package, request and receipt assertions. `release-managed-pair.py` retains exact package inventories, captured hashes, source pins and sidecars while rejecting either generic home root in managed members. No scanner rule, product API, dependency or supported artifact format changed.
 
-Sixteen claimed historical record/ticket files use `~/` references; the two experiment indexes use links relative to the workspace. Three issue lines now identify marketing ownership without naming a private repository. Commit IDs, measured values, source pins and hashes remain as recorded. No site or SQL/DataFrame file changed.
+Historical workspace references use `~/` where they name paths; the two experiment indexes use links relative to the workspace. Fresh High review caught two old scan claims where `~` would falsely describe a checked byte. Those now say “the then-specific home path.” Three issue lines identify marketing ownership without naming a private repository. Commit IDs, measured values, source pins and hashes remain as recorded. No site or SQL/DataFrame file changed.
 
 ## Focused evidence
 
