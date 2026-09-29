@@ -3,16 +3,19 @@ with Ada.Exceptions; use Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Ada.Text_IO; use Ada.Text_IO;
+with Interfaces; use Interfaces;
 with Thinkthen; use Thinkthen;
 procedure Consumer is
    Client : Thinkthen.Engine;
    Answer : Thinkthen.Decision;
+   Facts : Thinkthen.Run_Facts;
    Error : Thinkthen.Failure;
    JSON : Thinkthen.JSON_Result;
    Data : constant String := Ada.Environment_Variables.Value ("TT_CONSUMER_EVIDENCE", "consumer-ada");
 begin
-   Thinkthen.Decide (Client, "Is it?", Data, Answer, Error);
-   if Error.Kind /= Thinkthen.None or Answer.Value /= Thinkthen.Yes then
+   Thinkthen.Decide (Client, "Is it?", Data, Answer, Facts, Error);
+   if Error.Kind /= Thinkthen.None or Answer.Value /= Thinkthen.Yes or
+      Facts.Records /= 1 or Facts.Requests_Sent /= 1 or not Facts.Has_Model then
       raise Program_Error with "scalar consumer failure: " & Thinkthen.Message (Error);
    end if;
    Thinkthen.Call (Client, "{""choose"":""Which?"",""options"":{ ""first"":{ ""what"":""A first choice"", ""not_for"":""other choices"", ""examples"":[""sample""] }, ""second"":""Second choice"" }, ""evidence"":""consumer-ada-json""}", JSON, Error);

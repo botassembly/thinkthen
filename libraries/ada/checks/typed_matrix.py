@@ -20,13 +20,21 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-ada-typed-") as name:
                                 capture_output=True, text=True, timeout=90)
         assert result.returncode == 0 and "TYPED_ADA_MATRIX_PASS" in result.stdout, (result.stdout, result.stderr)
         shared = "Each question quotes the text it asks about."
-        assert collections.Counter(backend.arrivals) == collections.Counter([shared, shared, "hold-scalar", "hold-deadline", "recovery-package"])
+        relation = {"entities": [{"id": "i1", "name": "Third", "kind": "alert"},
+                                 {"id": "i2", "name": "Fourth", "kind": "alert"}]}
+        key = lambda value: json.dumps(value, sort_keys=True)
+        expected = [shared, shared, "hold-scalar", "hold-deadline", "recovery-package",
+                    "John Smith", "John Smith", relation, "status-401", "after-error"]
+        assert collections.Counter(map(key, backend.arrivals)) == collections.Counter(map(key, expected)), backend.arrivals
         bodies = [json.loads(line) for line in (work / "request-bodies.jsonl").read_text().splitlines()]
+        golden = json.loads((HERE / "expected-requests.json").read_text())
+        assert collections.Counter(key(b) for b in bodies if b["state"] in ("John Smith", relation)) == collections.Counter(
+            key(b) for b in golden if b["state"] in ("John Smith", relation)), "typed structured request bytes"
         packed = [b["questions"] for b in bodies if b["state"] == shared]
         assert packed == [
             {f"q{i}": {"instructions": f'The text is "{row}". Is it?', "type": "noul"} for i,row in enumerate(("first","second","third"),1)},
             {f"q{i}": {"instructions": f'The text is "{row}". Is it?', "type": "noul"} for i,row in enumerate(("hold-bulk-1","hold-bulk-2"),1)}
         ], packed
-        print("Ada public typed matrix: 5 exact arrivals, held scalar/bulk cancellation, deadline, recovery")
+        print("Ada public typed matrix: 10 exact arrivals, four typed routes, held cancellation and owned failure")
     finally:
         backend.close()

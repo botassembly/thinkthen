@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0282: Owned facts for Ada, Objective-C and COBOL typed calls
 
-Status: design candidate corrected after fresh High review of `487403bff`; awaiting same-reviewer recheck and root's exact implementation claim. Typed source traced at main `260b75457`; the body-preserving Ada fixture rename and separate SQL/frame ADRs are included from main `869710193`.
+Status: accepted design `e800984e`; source implementation candidate on this branch after merging main `0a32572d3`, awaiting fresh High code review. The exact codex-7 claim is in the current work plan. ADRs 0105/0107 coexist with this typed-facts scope.
 
 ## Outcome and exact host routes
 
@@ -34,7 +34,7 @@ COBOL calls `thinkthen_decide_with_facts_opts` with no deadline/nil token from `
 
 Use current matching C header/library with all four facts `_opts` exports and the accepted 0255 native ownership proof. Extend the existing Ada `checks/package_bulk.adb`/`typed_matrix.py`, Objective-C `checks/matrix.m`/`run_matrix.py`, and COBOL `checks/{matrix.cob,failure.cob,run_matrix.py}` rather than a new corpus. Each host needs one typed value-plus-facts success per actual route (COBOL only decide), exact listener counts, and a valid no-usage response retaining model but omitting token fields. Reuse an **identical packed request** for cache proof where the host already permits it: three finished rows, zero new sends, one cached reply. A different repeated-input group is not that witness. Pin fractional seconds with a decoder fixture and positive elapsed time with a held request; reject one representative missing/null/wrong-type/overflow count and bad seconds/optional field per decoder, not a field-by-route grid. Objective-C empty `many` should return empty value, zero sends and no model; Ada's pre-start empty refusal remains. A two-entity relation question may report `records=1`. A first failed row may report `records=0`, `requests_sent=1` under ADR 0089. Check typed started-failure facts before a later native call, then retain the copy through another call and close; pin pre-start no-facts and unchanged outputs. Force two held backend arrivals before releasing either for any same-engine overlap claim; COBOL has no new thread-safety claim. No test-only hooks or stress loop.
 
-Prospective implementation claim, subject to root assignment:
+Implemented source claim from the current work plan:
 
 - Ada: `libraries/ada/src/{thinkthen.ads,thinkthen.adb,thinkthen_c.ads}`, `examples/consumer.adb`, `checks/{package_bulk.adb,door.adb,failure.adb,portable_batch.adb,typed_matrix.py,installed.py,run_matrix.py}` only where direct typed signatures/proof require, `README.md`, and measured `ratchet.{adb,ads,py}.json`. Inspect `checks/legacy/` only as retained raw-C ABI proof. The same-body `checks/types.py` to `public_types.py` rename and matching `check.sh` update are integrated on main `dbf952ca5`; their JSON corpus is unchanged, so neither file needs a 0282 edit.
 - Objective-C: `libraries/objective-c/Sources/{ThinkThen.h,ThinkThen.m}`, `Examples/consumer.m`, direct typed callers `checks/{matrix.m,portable_batch.m,nul_text.m,installed.py,run_matrix.py}` as needed, `README.md`, and measured `ratchet.{h,m,py}.json`. If the existing `nul_text.m` link wrapper names change, update only that bounded wrapper assertion. Keep `TTJSON.c/.h`, `public_types.py`, the copied C header and raw-C `direct.m` unchanged unless exact evidence demands a claim expansion.
@@ -48,8 +48,8 @@ Prospective implementation claim, subject to root assignment:
 - Keeps: Old typed values, JSON envelopes, frozen C ABI, six failures, same-thread borrowed-error copy, Ada task join, Objective-C handle/deallocation limit, COBOL bounded buffers and raw-C probes.
 - Changes: Four Ada and four Objective-C typed routes, including counted variants, and COBOL's sole typed `TT-DECIDE` expose final owned facts from their single existing C operation.
 - Proof: Exact route/value/listener checks, strict host fact decoding, identical packed cache replay where supported, no-usage/model and empty-work distinction, typed failure lifetime, controlled overlap only where claimed, and matched copied installed typed consumers.
-- Defers: Same-reviewer design recheck and root implementation claim; clean release/runner qualification, richer detail/cost/vendor timing/IDs and SQL/DataFrame work under separate accepted ADRs 0105/0107.
+- Defers: Fresh High code review; clean release/runner qualification, richer detail/cost/vendor timing/IDs and separate SQL/DataFrame outcomes under accepted ADRs 0105/0107.
 
 ## What the build taught us
 
-Pending implementation. Record changed exact counts, pointer/free paths and failure probes, copied installed members, measured growth and duplication choice, review corrections and remaining qualification limits.
+The [build record](../records/0282-ada-objc-cobol-call-facts-build.md) names the source and copied installed proofs, strict decoding and independent native frees, measured host ratchets, reused fixtures and release qualification limits. The Ada empty bulk precondition needed its array allocation moved below the guard: the former declaration evaluated a negative bound before the intended refusal. No tests were deleted; migrated value assertions now check value and facts together. Fresh code review remains pending.

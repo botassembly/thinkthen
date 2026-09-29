@@ -93,6 +93,23 @@ try:
               'OBJC_BOUNDARIES_PASS' not in (logs / 'boundaries.log').read_text() or
               'OBJC_REVERSE_PASS' not in (logs / 'reverse.log').read_text()):
             status = 'STRICT_MARKER_MISSING'
+    if status == 'PASS':
+        overlap_barrier = logs / 'overlap-barrier'
+        overlap_barrier.mkdir()
+        overlap_backend = Backend(overlap_barrier)
+        try:
+            overlap_env = {**env, 'TT_BARRIER_DIR': str(overlap_barrier),
+                           'THINKTHEN_BASE_URL': f'http://127.0.0.1:{overlap_backend.server_port}/generic/v1',
+                           'THINKTHEN_CACHE': str(logs / 'overlap-cache')}
+            completed = subprocess.run([str(root / 'target/main'), 'overlap'], env=overlap_env,
+                                       cwd=root, capture_output=True, text=True, timeout=35)
+            if (completed.returncode != 0 or 'OBJC_HELD_OVERLAP_PASS' not in completed.stdout or
+                collections.Counter(overlap_backend.arrivals) != collections.Counter(['hold-overlap-a', 'hold-overlap-b']) or
+                any(request['questions'] != {'q1': {'instructions': 'Is it?', 'type': 'noul'}}
+                    for request in overlap_backend.requests)):
+                status = 'FAIL:overlap'
+        finally:
+            overlap_backend.close()
 finally:
     if active is not None: stop(active)
     backend.close()
