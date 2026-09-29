@@ -383,12 +383,14 @@ Any ticket that adds or changes a setting updates that setting's row in `specifi
 
 `.facts` on recognize results comes with each surface's batching ticket, B12a to B12f. No recognize ticket depends on `--context`, batching B7.
 
+The recognition-guidance Quick Fix fulfills R8's symptom-to-setting table and discloses the current fixed step-1 wording in the specification and command help. It also documents the already built 0245 recognition relation guard. R8 remains open for R7's measured batching cost and its separate long-text measurement; R7 remains open. The retired word-rule, `confirm` and 200-word-window text above is historical and does not restore those outcomes.
+
 ## Known gaps
 
 - Touching names of one kind: `Paul John`, `Portland Oregon`.
 - `Octopus's Garden` breaks in two in most tries.
 - The strength formula drops some whole names on kind doubt: `Boeing 747` at 0.32 to 0.39, `Sgt. Pepper's Lonely Hearts Club Band` and `St. Mary's Church` in 5 of 9 tries. It stays until a measured change is proposed.
-- The fixed news-document wording of the word questions, item 8 of the scale-and-shape issue.
+- The current fixed generic step-1 wording is disclosed, but accuracy outside the measured corpora remains unknown.
 - A clue further from a name than the window is out of view.
 - The relation step keeps the whole text as evidence, so a long text with relation rules can pass Jev's evidence limit.
 
