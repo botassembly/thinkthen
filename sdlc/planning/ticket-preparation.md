@@ -77,6 +77,8 @@ For retained CLI workers, launch each resume from its explicit assigned worktree
 
 The later SQL and batching reviews add four bounded checks. For an aggregate, name the lifetime of each deadline and budget across internal flushes. Trace state accessors before proposing a missing guard; 0149's initial fork finding was withdrawn after the existing process reset was found. For a grammar addition, inspect the parser, closed schema, shared parity cases and tests that assert the old refusal together. For a public result carrier, map every accepted field through each operation shape, including partial failures and multi-question rows. The examples and revisions are in the incident log.
 
+Keep the checked-out candidate stable from review handoff through the reviewer's checks, or give the reviewer an isolated snapshot at the exact commit. Reusing the author's worktree for another branch can make a valid check run against the wrong source; an immutable remote build may continue independently.
+
 At integration, a clean textual merge does not prove feature compatibility. Compare the changed exports and exhaustive consumers, then compile only the configurations implicated by that merge. The 0167/0172 `LimitKind` correction needed the CLI and library-only configurations, not another full port campaign. Preserve unchanged paid recordings and prior valid checks. Check prepared audit keys against the exact extracted rows before spending provider calls, and compare feature graphs before enabling optional umbrella dependencies.
 
 
