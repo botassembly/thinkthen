@@ -11,7 +11,7 @@ use std::time::Duration;
 use crate::cli::args::CheckArguments;
 use crate::cli::edge::{self, Environment};
 use crate::core::check::{self, Probe, Report};
-use crate::core::{Backend, DEFAULT_MODEL, NAME};
+use crate::core::{Backend, DEFAULT_MODEL, NAME, PlanSummary, json_line};
 use crate::engine::error::Error;
 use crate::engine::facade::{Chunk, Engine, Settings, Storage};
 use crate::failure::{self, Failure};
@@ -27,6 +27,9 @@ pub(crate) fn run(
     environment: &Environment,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    if arguments.retired_dry_run {
+        return Err(Failure::Usage("--dry-run was renamed --plan"));
+    }
     let url = arguments.url.as_deref().or_else(|| environment.base_url());
     let url = url.ok_or(Failure::Usage(NO_ADDRESS))?;
     let asked = arguments.model.as_deref().or_else(|| environment.model());
@@ -56,12 +59,19 @@ pub(crate) fn run(
         format!("model sent {}", engine.backend().model().as_str()),
     ];
     let mut report = Report::new(&probes);
+    let mut summary = PlanSummary::new(false);
     for probe in &probes {
         // The one request a probe makes, from the split every command uses.
         let Ok([chunk]) = <[Chunk; 1]>::try_from(engine.split(&probe.plan)?) else {
             return Err(Failure::Defect("a check probe split into several requests"));
         };
         if arguments.dry_run {
+            summary
+                .record()
+                .map_err(|_| Failure::Defect("a plan is too large"))?;
+            summary
+                .request(&chunk.request.body)
+                .map_err(|_| Failure::Defect("a plan is too large"))?;
             let body = String::from_utf8_lossy(&chunk.request.body);
             lines.push(format!("request {} {body}", probe.name));
         } else if !send(
@@ -80,6 +90,11 @@ pub(crate) fn run(
     let (graded, critical) = report.lines();
     if !arguments.dry_run {
         lines.extend(graded);
+    } else {
+        let counts = summary
+            .counts()
+            .map_err(|_| Failure::Defect("a plan is too large"))?;
+        lines.push(json_line(&counts)?);
     }
     for line in lines {
         edge::write_line(&mut writer, &line)?;

@@ -33,7 +33,7 @@ The command validates the complete set before any request. It refuses a malforme
 
 For an oversized set, the command's refusal names its actual entity count and the 255 limit. It explains that **if every entity were distinct**, an unordered all-kind rule would have `N×(N-1)/2` candidate pairs, then says to split the set or narrow by kind. That number is hypothetical; typed rules and the actual relation plan can ask about fewer pairs. This command diagnostic does not change the public engine or library and database host errors.
 
-Empty line and JSONL streams succeed with no output and no request. A blank line is invalid in either stream. Empty CSV and TSV input is exit 2; a header with no records succeeds empty. Empty document input is exit 2. Normal and dry runs have the same outcomes.
+Empty line and JSONL streams succeed with no output and no request. A blank line is invalid in either stream. Empty CSV and TSV input is exit 2; a header with no records succeeds empty. Empty document input is exit 2. Normal and plan runs have the same outcomes.
 
 ## Output
 
@@ -47,9 +47,9 @@ Directed output keeps the rule's direction. Unordered output puts endpoints in i
 
 Every rule asks one yes/no question per allowed pair in rule, source, then target order. A question reads `Is it true that i1 READS i2?`, using the rule's `reads`. `either` asks each unordered pair once and reads `Is it true that i1 READS i2, or that i2 READS i1?`. Directed rules ask both directions when both match. Every request carries the same state of entities whose kinds a rule names, in input order, with no `relation` field. Wildcards match every kind.
 
-## Dry run
+## Plan
 
-`--dry-run` sends nothing, inspects an optional key for an address collision without requiring one, and prints one compact `thinkthen.relate-plan/1` object. Keys appear in this order: `schema`, `url`, `model`, `key_env`, `backend_profile`, `framing`, `fields`, optional `from`, `entity_count`, `relations`, `logical_questions`, `request_count`, `requests`.
+`--plan` sends nothing, inspects an optional key for an address collision without requiring one, and prints one compact `thinkthen.relate-plan/1` object followed by a whole-input count line marked as an upper bound. Keys appear in this order: `schema`, `url`, `model`, `key_env`, `backend_profile`, `framing`, `fields`, optional `from`, `entity_count`, `relations`, `logical_questions`, `request_count`, `requests`.
 
 Each relation is one rule as given. It carries `name`, `source`, `target`, `reads`, `either`, `method` always `yes_no`, `fallback` always null, `logical_questions`, and `request_count`. Its request count includes each request carrying one of its questions, so per-rule counts may add to more than the run count. Each request carries its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. The plan makes no token or price claim.
 

@@ -37,7 +37,7 @@ In `--details`, `answer.level` names the first level with the highest probabilit
 | Option | Meaning | Default |
 | --- | --- | --- |
 | `--details` | Prints the full result object | Off |
-| `--dry-run` | Prints the plan and sends nothing | Off |
+| `--plan` | Prints the plan and sends nothing | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
 | Record batching | `--batch`, `--context`, `--max-request-bytes` | `max`, no context, 96,000 bytes |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |

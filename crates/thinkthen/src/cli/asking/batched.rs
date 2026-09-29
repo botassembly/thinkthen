@@ -10,7 +10,7 @@ use std::thread;
 use std::time::Duration;
 
 use super::batch_meta::Description;
-use super::{Asks, Judging, JudgingInput, RowContext, print_plan, table_kind};
+use super::{Asks, Judging, JudgingInput, RowContext, table_kind};
 use crate::core::batch::halves_with_questions;
 use crate::core::{
     AnswerOutcome, Backend, BackendProfile, Batch, BatchError, Batcher, Evidence, Reading, Record,
@@ -25,6 +25,7 @@ use crate::schedule::{self, Judged, Output, Placed};
 use crate::table::Rows as TableRows;
 
 mod choose;
+mod planned;
 
 /// How long input may pause before the open batch goes out, by ADR 0048 item 2.
 const PAUSE: Duration = Duration::from_millis(50);
@@ -115,7 +116,7 @@ pub(super) fn run(
         limits,
     };
     if configuration.common.dry_run {
-        return planned(former, records, &configuration, output);
+        return planned::run(former, records, &configuration, output);
     }
     if matches!(configuration.keeping, Keeping::Passing | Keeping::Ordered) {
         output.guard_models();
@@ -153,36 +154,6 @@ fn feed(records: Records, sender: &SyncSender<Result<Held, Placed>>) {
         if sender.send(record).is_err() || failed {
             return;
         }
-    }
-}
-
-/// Print the plan of the first batch that closes without a pause.
-fn planned(
-    mut former: Former,
-    records: Records,
-    configuration: &JudgingInput<'_>,
-    output: &mut Output<'_>,
-) -> Result<ExitCode, Failure> {
-    for record in records {
-        former.push(record);
-        if !former.queue.is_empty() {
-            break;
-        }
-    }
-    if former.queue.is_empty() {
-        former.end();
-    }
-    match former.queue.pop_front() {
-        Some(Input::Item(item)) => print_plan(
-            &configuration.backend,
-            &configuration.mismatch,
-            &former.reading,
-            &configuration.planning(),
-            &item.batch.plan,
-            output.writer(),
-        ),
-        Some(Input::Failed(error)) => Err(error.cause),
-        Some(Input::End) | None => Ok(ExitCode::SUCCESS),
     }
 }
 

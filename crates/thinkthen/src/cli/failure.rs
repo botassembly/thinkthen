@@ -415,7 +415,7 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
             "--record and --replay name two different folders, and one run keeps one"
         }
         Failure::DryRunWithRecording => {
-            "--dry-run sends nothing, so it takes neither --record nor --replay"
+            "--plan sends nothing, so it takes neither --record nor --replay"
         }
         Failure::CacheWithRecording => {
             "--cache is --record and --replay on one folder, so it stands beside neither"

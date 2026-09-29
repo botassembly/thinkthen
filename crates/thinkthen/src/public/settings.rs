@@ -99,6 +99,16 @@ impl fmt::Debug for EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Validate the closed C/host engine-settings object without reading the
+    /// environment or accepting the not-yet-active total-request cap.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for duplicate, unknown, or invalid settings.
+    pub fn validate_settings_json(text: &str) -> Result<(), Error> {
+        crate::core::engine_settings(text).map_err(Error::usage)
+    }
+
     pub(crate) fn new() -> Self {
         Self {
             base_url: None,

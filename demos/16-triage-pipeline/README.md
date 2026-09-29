@@ -82,7 +82,7 @@ printf '%s\n' '{"value":{"credential_request":false,"queue":null,"urgency":0}}' 
 
 - The output directory must not exist. This prevents a second run from mixing old and new rows.
 - A question name may collide with an input member in `--details`: the original stays under `input`, and the answer appears under `value` and `answers`. Bare output still refuses the collision. Keep policy code pointed at the detailed answer, not an original input member with the same name.
-- `/body` is the disclosure boundary. `--dry-run` shows the exact request without sending it. Detailed output still contains the full local row, including `reviewed_action`, so treat the three files as audit data.
+- `/body` is the disclosure boundary. `--plan` shows the exact request without sending it. Detailed output still contains the full local row, including `reviewed_action`, so treat the three files as audit data.
 - Adding, removing, or changing one question changes the whole packed request and its cache digest. A rerun asks and pays for all three questions again, and an answer near its cut can move.
 - The policy refuses missing, malformed, and unknown values. It never silently drafts them.
 

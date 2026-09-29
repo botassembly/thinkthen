@@ -167,8 +167,8 @@ fn a_details_run_carries_the_rule_it_was_judged_under() {
 fn a_dry_run_prints_the_plan_and_opens_no_connection() {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("a loopback listener");
 
-    let output = decide(listener.base(), &["--dry-run"], KEY, "Refund me.")
-        .expect("the compiled binary runs");
+    let output =
+        decide(listener.base(), &["--plan"], KEY, "Refund me.").expect("the compiled binary runs");
 
     assert!(listener.requests().is_empty(), "a plan opens no connection");
     let printed = String::from_utf8_lossy(&output.stdout);

@@ -53,6 +53,11 @@ impl std::fmt::Debug for PlanDocument<'_> {
 }
 
 impl<'a> PlanDocument<'a> {
+    /// The exact first encoded request this document discloses.
+    pub(crate) fn request_body(&self) -> &[u8] {
+        self.request.get().as_bytes()
+    }
+
     /// Show the request this backend would send.
     ///
     /// # Errors

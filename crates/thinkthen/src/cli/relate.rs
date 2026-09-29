@@ -20,6 +20,7 @@ pub(crate) fn run(
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    arguments.common.check_plan_name()?;
     let settled = config::settle(arguments)?;
     let configured = settled.spec.model.as_ref().map(ModelName::as_str);
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;

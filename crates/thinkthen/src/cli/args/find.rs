@@ -52,8 +52,11 @@ pub(crate) struct FindCommon {
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,
     /// Print the complete one-request plan and send nothing.
-    #[arg(long)]
+    #[arg(long = "plan")]
     pub(crate) dry_run: bool,
+    /// The removed spelling is parsed only to give the migration sentence.
+    #[arg(long = "dry-run", hide = true)]
+    pub(crate) retired_dry_run: bool,
     /// The backend base, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
     pub(crate) url: Option<String>,
@@ -122,6 +125,7 @@ impl FindCommon {
             tsv: false,
             field: self.field.clone(),
             dry_run: self.dry_run,
+            retired_dry_run: self.retired_dry_run,
             url: self.url.clone(),
             profile: self.profile.clone(),
             model: self.model.clone(),

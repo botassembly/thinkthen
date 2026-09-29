@@ -41,16 +41,6 @@ impl From<BatchSetting> for crate::core::batch::Setting {
 /// The largest budget a deadline takes: 4,294,967,295 seconds (ADR 0041).
 const MOST_SECONDS: u64 = 4_294_967_295;
 
-/// A number plain up to 20 characters, the width of `u64::MAX`, else as `1e300`.
-fn shown(value: f64) -> String {
-    let plain = value.to_string();
-    if plain.len() <= 20 {
-        plain
-    } else {
-        format!("{value:e}")
-    }
-}
-
 /// A cancel flag a caller may set from any thread.
 ///
 /// Every clone shares one flag. A call that carries it starts no request or
@@ -218,38 +208,14 @@ impl<'a> CallOptions<'a> {
         Ok(self)
     }
 
-    /// Stop the call this many seconds after it begins: `-1` is no deadline
-    /// and clears an earlier one, and `0` is spent, so the call sends nothing.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::Usage`] for any other negative, NaN, infinity, or a
-    /// budget above 4,294,967,295 seconds.
-    pub fn deadline_seconds(self, value: f64) -> Result<Self, Error> {
-        if value == -1.0 {
-            return Ok(self.cleared());
-        }
-        let refused = || {
-            Error::usage(format!(
-                "a deadline of {} seconds is not -1, 0, or a positive budget of at most {MOST_SECONDS} seconds",
-                shown(value)
-            ))
-        };
-        if !value.is_finite() || value < 0.0 {
-            return Err(refused());
-        }
-        let budget = Duration::try_from_secs_f64(value).map_err(|_| refused())?;
-        self.deadline_after(budget).map_err(|_| refused())
-    }
-
-    /// Stop the call this many milliseconds after it begins, under the rules
-    /// of [`CallOptions::deadline_seconds`].
+    /// Stop the call this many milliseconds after it begins. `-1` clears an
+    /// earlier deadline and `0` is spent, so the call sends nothing.
     ///
     /// # Errors
     ///
     /// Returns [`Error::Usage`] for a negative value other than `-1`, or a
     /// budget above 4,294,967,295 seconds.
-    pub fn deadline_millis(self, value: i64) -> Result<Self, Error> {
+    pub fn deadline_ms(self, value: i64) -> Result<Self, Error> {
         if value == -1 {
             return Ok(self.cleared());
         }

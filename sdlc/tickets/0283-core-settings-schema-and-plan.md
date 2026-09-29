@@ -1,13 +1,13 @@
 # 0283 — Core settings schema and plan (T1)
 
-Status: Accepted design. High preparation review accepted `8bf14799`; implementation is in progress on this ticket branch. No code outcome or issue closure is claimed yet.
+Status: Accepted design at High preparation review `8bf14799`; implementation candidate is ready for fresh High code review. No integrated gate or issue closure is claimed yet.
 
 ## Outcome
 
 Build `thinkthen.settings/1` and its parser once in the Rust core
 (`crates/thinkthen/src/core` boundary respected: the parser is pure), beside
 one core engine-settings schema shared with the C door's
-`thinkthen_engine_new_with` (ADR 0037), gaining `max_requests_total`. Unify
+`thinkthen_engine_new_with` (ADR 0037), reserving `max_requests_total` until 0289 activates it. Unify
 the deadline as `deadline_ms` milliseconds at every boundary a number crosses
 (Rust keeps `Duration` internally). Replace the asking verbs' `--dry-run` with
 `--plan` (first request body plus a whole-input count line; `check --plan`;
@@ -18,7 +18,7 @@ Dry-run and Deadline rows and the new schema row, the gated demo blocks (03,
 (`probes/probability-total-0038`, `probes/find-0040`), and the remaining prose
 (`demos/27-test-with-no-network/README.md`, `demos/FINDINGS.md`, `AGENTS.md`).
 
-Current C constructor enters libraries/c/src/ffi.rs and parses in libraries/c/src/settings.rs; the Rust builder is crates/thinkthen/src/public/settings.rs. The parser belongs in pure core and cannot read files, environment, clock or sockets. The C engine schema may validate max_requests_total here, but no public configure path may accept an inert value: T7 supplies active reservation and final exposure. Existing CLI preview branches include asking, batched, find, annotate, recognize, relate and check; cache prune --dry-run is a deliberate exception. At the 500 nonblank-line cap, cli/args.rs measures 473 (27 headroom), public/settings.rs 470 (30), and cli/args/command.rs 430 (70); cli/asking.rs is 419 (81) and core/question_file.rs 392 (108). Reuse modules or one cohesive private extraction rather than consuming unrelated headroom. Libraries/c/src/settings.rs is 143 nonblank lines. Remeasure all touched files and shared ratchets before review.
+Current C constructor enters libraries/c/src/ffi.rs and parses in libraries/c/src/settings.rs; the Rust builder is crates/thinkthen/src/public/settings.rs. The parser belongs in pure core and cannot read files, environment, clock or sockets. The C engine schema refuses max_requests_total until T7 supplies active reservation and final exposure; no public configure path accepts an inert value. Existing CLI preview branches include asking, batched, find, annotate, recognize, relate and check; cache prune --dry-run is a deliberate exception. At the 500 nonblank-line cap, cli/args.rs measures 473 (27 headroom), public/settings.rs 470 (30), and cli/args/command.rs 430 (70); cli/asking.rs is 419 (81) and core/question_file.rs 392 (108). Reuse modules or one cohesive private extraction rather than consuming unrelated headroom. Libraries/c/src/settings.rs is 143 nonblank lines. Remeasure all touched files and shared ratchets before review.
 
 The changed executable blocks include demos 03, 06, 14, 15, 16, 21 and 45, probes probability-total-0038 and find-0040, specification/settings.md Dry-run/Deadline/schema rows, demos/27 and FINDINGS, plus AGENTS.md. The old spec/decide.md assertion rejecting --plan must change with the flag. The full V/I corpus belongs in one core fixture, not copied to every host.
 
@@ -34,6 +34,56 @@ Prerequisite: first build. Proposed exact future claim: new `crates/thinkthen/sr
 
 Run V1–V11 and I1–I10 from the [independent corpus](../records/2026-09-29-sql-frame-redesign-corpus.md) through one pure core parser test; add one C engine-schema conversion edge. Use a multi-cut input whose **independently recorded wire bodies** establish full-input records, planned requests and exact summed body bytes; assert the token band's fixed-rate rounding and unchanged first body. Include recognize/relate marked upper bounds and an invalid later record that a first-record preview would miss. A loopback listener must accept **zero** requests for invalid settings and every `--plan` route; pin exit codes/refusal sentences. Keep `cache prune --dry-run`. Run changed executable pages/demo blocks/probe self-tests with a matched binary, measure ratchets and focused format/policy/pages/tickets/diff. No broad gate or provider run belongs to preparation. [Shared proof routes](../records/2026-09-29-sql-frame-redesign-proofs.md) separate installed and release qualification.
 
+## Normative Rust public API delta
+
+This additive reviewed contract changes only the named declarations. The rest of the 0278 inventory remains authoritative. The C ABI and result envelopes are unchanged. `Settings` is a pure parsed call value: hosts validate verb applicability and conflicts before converting arguments, and the builder bridge checks the same closed engine schema before C map conversion. There is no accepted `max_requests_total` setter until 0289 installs admission.
+
+### Retired public declarations
+
+```text
+fn CallOptions::deadline_millis(self, i64) -> Result<CallOptions<'a>, Error>
+fn CallOptions::deadline_seconds(self, f64) -> Result<CallOptions<'a>, Error>
+```
+
+### Added public declarations
+
+```text
+For::Choose
+For::Decide
+For::Find
+For::Score
+For::Tag
+SettingsError::BadBatch
+SettingsError::BadNone
+SettingsError::BlankContext
+SettingsError::DeadlineNotWhole
+SettingsError::Json(String)
+SettingsError::NotAnObject
+SettingsError::Question(String)
+SettingsError::RepeatedField(String)
+SettingsError::TwoMemberKeys(String, String)
+SettingsError::TwoMembers
+SettingsError::UnknownKey(String)
+SettingsError::WrongVerb(String)
+const fn Settings::batch_max(&self) -> bool
+const fn Settings::batch_records(&self) -> Option<usize>
+const fn Settings::deadline_ms(&self) -> Option<i64>
+const fn Settings::none(&self) -> Option<bool>
+enum For
+enum SettingsError
+fn CallOptions::deadline_ms(self, i64) -> Result<CallOptions<'a>, Error>
+fn EngineBuilder::validate_settings_json(&str) -> Result<(), Error>
+fn Settings::check(&self, For) -> Result<(), SettingsError>
+fn Settings::conflicts(&self, &[&str], bool) -> Result<(), SettingsError>
+fn Settings::context(&self) -> Option<&str>
+fn Settings::parse(&str) -> Result<Settings, SettingsError>
+fn Settings::question_json(&self, For, &str) -> Result<String, SettingsError>
+impl Default for Settings
+impl Display for SettingsError
+impl Error for SettingsError
+struct Settings
+```
+
 ## Evidence
 
 - Starts from: Main `869710193`, accepted ADR 0105, experiment 2038 HANDOFF and saved spikes, and the [preparation](../records/2026-09-29-sql-frame-redesign-preparation.md).
@@ -44,4 +94,4 @@ Run V1–V11 and I1–I10 from the [independent corpus](../records/2026-09-29-sq
 
 ## What the build taught us
 
-Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.
+The accepted preview needs a second output line for whole-input totals while retaining the first prepared request's body. Existing first-record-only tests were wrong under this contract: a malformed later JSON or CSV record now refuses before any disclosure. The stronger regressions pin those two distinct parser boundaries, and the former first-only JSON test was retired. A packed two-record request followed by a singleton uses different wire shapes; counting records does not establish body bytes. The real batcher and group planner supply the bodies while one core summary owns the arithmetic. C's handwritten duplicate scan could be deleted once the shared pure schema validated before map conversion. The parser must become reachable by separate SQL/frame crates, and the numeric Rust deadline name reaches the C door's internal call and frozen API inventory; the accepted claim includes the public module, C door and inventory delta. Cross-crate visibility was invisible to the original CLI-only route: C must use the public builder bridge, while later hosts need the re-exported pure call value. `max_requests_total` is reserved until 0289 activates it, so this ticket never accepts an inert cap.

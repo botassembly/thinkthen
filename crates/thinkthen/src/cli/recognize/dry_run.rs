@@ -6,10 +6,13 @@ use std::process::ExitCode;
 
 use serde::Serialize;
 
-use crate::core::{Backend, BackendProfile, KEY_VAR, Reading, RecognizeSpec, json_line};
+use crate::core::{
+    Backend, BackendProfile, KEY_VAR, PlanSummary, Reading, RecognizeSpec, Record, json_line,
+};
 use crate::edge;
 use crate::engine::facade;
 use crate::failure::Failure;
+use crate::table::{Kind as TableKind, Rows as TableRows};
 
 #[derive(Serialize)]
 struct DryRun<'a> {
@@ -67,49 +70,98 @@ struct From {
     question: &'static str,
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the preview boundary receives each already resolved concern once"
+)]
 pub(super) fn run(
     reading: &Reading,
     source: Box<dyn std::io::BufRead + Send>,
     backend: &Backend,
     profile: Option<&BackendProfile>,
+    table: Option<TableKind>,
     question: (&RecognizeSpec, bool, usize),
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
+    if let Some(kind) = table {
+        let rows = TableRows::new(source, kind)?;
+        return planned(rows, backend, profile, question, writer, reading);
+    }
+    let reading_for_rows = reading.clone();
+    let records = edge::numbered(edge::Chunks::new(source, reading.streams()), reading).map(
+        move |(_, bytes)| {
+            let bytes = bytes?;
+            reading_for_rows
+                .record(&bytes)
+                .map_err(|error| Failure::record(error, reading_for_rows.streams()))
+        },
+    );
+    planned(records, backend, profile, question, writer, reading)
+}
+
+fn planned(
+    records: impl Iterator<Item = Result<Record, Failure>>,
+    backend: &Backend,
+    profile: Option<&BackendProfile>,
+    question: (&RecognizeSpec, bool, usize),
+    writer: &mut dyn Write,
+    reading: &Reading,
+) -> Result<ExitCode, Failure> {
     let (spec, from_file, limit) = question;
-    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), reading);
-    let Some(bytes) = chunks.next().map(|(_, row)| row).transpose()? else {
+    let mut summary = PlanSummary::new(true);
+    let mut first = None;
+    for record in records {
+        let record = record?;
+        let text = reading.evidence(&record)?.as_text()?.into_owned();
+        let (pieces, prepared) = facade::step_one(backend, profile, spec, &text, limit)?;
+        summary
+            .record()
+            .map_err(|_| Failure::Defect("a plan is too large"))?;
+        let mut requests = Vec::new();
+        for chunk in prepared {
+            summary
+                .request(&chunk.request.body)
+                .map_err(|_| Failure::Defect("a plan is too large"))?;
+            if first.is_none() {
+                requests.push(Request {
+                    digest: chunk.request.digest.as_str().to_owned(),
+                    bytes: chunk.request.body.len(),
+                    body_utf8: String::from_utf8(chunk.request.body)
+                        .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
+                });
+            }
+        }
+        let bound = relation_upper_bound(spec, pieces.len());
+        if let Some(bound) = bound {
+            summary
+                .possible_requests(bound)
+                .map_err(|_| Failure::Defect("a plan is too large"))?;
+        }
+        if first.is_none() {
+            first = Some((pieces.len(), requests, bound));
+        }
+    }
+    let Some((pieces, requests, relation_bound)) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    let record = reading
-        .record(&bytes)
-        .map_err(|error| Failure::record(error, reading.streams()))?;
-    let text = reading.evidence(&record)?.as_text()?.into_owned();
-    let (pieces, chunks) = facade::step_one(backend, profile, spec, &text, limit)?;
-    let requests = chunks
-        .into_iter()
-        .map(|chunk| {
-            Ok(Request {
-                digest: chunk.request.digest.as_str().to_owned(),
-                bytes: chunk.request.body.len(),
-                body_utf8: String::from_utf8(chunk.request.body)
-                    .map_err(|_| Failure::Defect("an encoded request is not UTF-8"))?,
-            })
-        })
-        .collect::<Result<Vec<_>, Failure>>()?;
     let report = DryRun {
         schema: "thinkthen.recognize-plan/2",
         url: backend.url().as_str(),
         model: backend.model().as_str(),
         key_env: KEY_VAR,
         from: from_file.then_some(From { question: "file" }),
-        pieces: pieces.len(),
+        pieces,
         request_count: requests.len(),
         name_requests_upper_bound: requests.len(),
-        relation_pairs_upper_bound: relation_upper_bound(spec, pieces.len()),
-        relation_requests_upper_bound: relation_upper_bound(spec, pieces.len()),
+        relation_pairs_upper_bound: relation_bound,
+        relation_requests_upper_bound: relation_bound,
         requests,
     };
-    edge::write_line(writer, &json_line(&report)?)?;
+    edge::write_line(&mut *writer, &json_line(&report)?)?;
+    let counts = summary
+        .counts()
+        .map_err(|_| Failure::Defect("a plan is too large"))?;
+    edge::write_line(writer, &json_line(&counts)?)?;
     Ok(ExitCode::SUCCESS)
 }
 

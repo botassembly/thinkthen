@@ -48,7 +48,7 @@ fn profile(name: &str, limit: &str) -> PathBuf {
 }
 
 fn plan(options: &[&str], input: &[u8]) -> Value {
-    let mut arguments = vec!["relate", "--dry-run", "--no-cache"];
+    let mut arguments = vec!["relate", "--plan", "--no-cache"];
     arguments.extend_from_slice(options);
     let output = spawn(&arguments, &[], input).expect("command");
     assert_eq!(
@@ -57,7 +57,7 @@ fn plan(options: &[&str], input: &[u8]) -> Value {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    serde_json::from_slice(&output.stdout).expect("plan")
+    super::plan_json(&output)
 }
 
 fn counts(plan: &Value) -> Vec<u64> {

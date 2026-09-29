@@ -5,7 +5,7 @@ Status: **Settled** for the file grammar, the output, and several pointers on `o
 Asks a saved question set about each record and adds one field per question.
 
 ```text
-thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--batch max|N] [--max-request-bytes N] [--details] [--dry-run] [--on-error continue] [BACKEND]
+thinkthen annotate FILE [--lines|--jsonl|--csv|--tsv] [--field POINTER] [--batch max|N] [--max-request-bytes N] [--details] [--plan] [--on-error continue] [BACKEND]
 ```
 
 ## What it reads
@@ -80,7 +80,7 @@ The bare output cannot identify an arbitrary object's original fields just by lo
 | `--details` | Prints the full result object per record | Off |
 | `--on-error continue` | With `--jsonl --details --batch 1`, prints one error row for a missing question-set `on` pointer and judges later records | Off; stop at the first failed record |
 | `--input FILE` | Reads the evidence from a file | Standard input |
-| `--dry-run` | Checks the file, prints the plan, and sends nothing. See below | Off |
+| `--plan` | Checks the file, prints the plan, and sends nothing. See below | Off |
 | `--profile FILE` | Applies explicit local backend limits and names the running calibration profile. See [backends.md](backends.md) | None |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 
@@ -88,9 +88,9 @@ The bare output cannot identify an arbitrary object's original fields just by lo
 
 ## Exit codes
 
-0 when the run finished with every question answered, 6 when it finished after one or more logical questions failed, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record in bare mode, at exit 2 before any request for it. With `--details`, the original member remains under `input` while the answer uses its name under `value` and `answers`; the name no longer collides, including in dry run. An unreadable or invalid file is exit 5. A later whole-run failure keeps its own code and stop boundary.
+0 when the run finished with every question answered, 6 when it finished after one or more logical questions failed, and 2, 4, 5, and 70 as [channels.md](channels.md) gives them. A question name that the record already holds is an input error for that record in bare mode, at exit 2 before any request for it. With `--details`, the original member remains under `input` while the answer uses its name under `value` and `answers`; the name no longer collides, including in a plan. An unreadable or invalid file is exit 5. A later whole-run failure keeps its own code and stop boundary.
 
-`--on-error continue` requires explicit `--jsonl --details --batch 1`, refuses `--dry-run`, and is not an option on another verb. Missing any required flag or typing another policy is exit 2 before input is read. Only a missing question-set `on` pointer is recoverable. It emits one `thinkthen.record-error/1` row in input order, with one-based `at` and `failure:{"kind":"usage","cause":"missing_pointer","pointer":"/body"}`. It sends no request for that record. A completed run with any such row exits 7 and prints `thinkthen: 1 record skipped` or the plural count once on standard error; exit 7 outranks a completed exit-6 partial answer, whose failed marker stays in its row. Malformed/oversized/invalid-UTF-8 input, backend/group/replay/model/cancellation and output failures still stop with their existing code and boundary. A skip count, if any, prints before the terminal diagnostic. The error row has no input, answer, metadata, token count or backend body; route it by `schema` instead of feeding it to a judgment consumer. [result.md](result.md) fixes its full shape.
+`--on-error continue` requires explicit `--jsonl --details --batch 1`, refuses `--plan`, and is not an option on another verb. Missing any required flag or typing another policy is exit 2 before input is read. Only a missing question-set `on` pointer is recoverable. It emits one `thinkthen.record-error/1` row in input order, with one-based `at` and `failure:{"kind":"usage","cause":"missing_pointer","pointer":"/body"}`. It sends no request for that record. A completed run with any such row exits 7 and prints `thinkthen: 1 record skipped` or the plural count once on standard error; exit 7 outranks a completed exit-6 partial answer, whose failed marker stays in its row. Malformed/oversized/invalid-UTF-8 input, backend/group/replay/model/cancellation and output failures still stop with their existing code and boundary. A skip count, if any, prints before the terminal diagnostic. The error row has no input, answer, metadata, token count or backend body; route it by `schema` instead of feeding it to a judgment consumer. [result.md](result.md) fixes its full shape.
 
 ## Examples
 
@@ -105,20 +105,20 @@ thinkthen annotate triage.json --jsonl < issues.jsonl | jq -c 'select(.kind == "
 ```
 
 ```sh
-thinkthen annotate triage.json --dry-run < issue.json
+thinkthen annotate triage.json --plan < issue.json
 ```
 
-## `--dry-run`
+## `--plan`
 
-`--dry-run` validates the file and sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing, unless a question reads `on` under `--lines`. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request a live run sends, which is the first chunk under a profile, and an `on` object that names the normalized pointers for every question. `request_count` counts the requests the first record makes, and `group_requests` counts each `on` group's requests in group order.
+`--plan` validates the file and every input record, then sends nothing. It needs no key. An empty document is a usage error. An empty line or JSONL stream succeeds and prints nothing, unless a question reads `on` under `--lines`. An empty CSV or TSV input fails because its required header is missing. With evidence it prints the first request a live run sends, which is the first chunk under a profile, and an `on` object that names the normalized pointers for every question. `request_count` and `group_requests` count the whole input’s prepared requests; the second line gives records, requests, exact prepared bytes and the measured token band.
 
-One record makes at least one request per distinct `on`, and a profile can split a group into several. The plan prints one request: the first that the first record's first `on` set sends, taking the questions in file order. `request_count` and `group_requests` count the rest. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
+Each record makes at least one request per distinct `on`, and a profile can split a group into several. The plan prints one request: the first that the first record's first `on` set sends, taking the questions in file order. `request_count` and `group_requests` count the rest. The plan's `input` object names the framing and, under `on`, the pointers of every question, so a reviewer sees what each check would see and not only the check that the plan printed.
 
 ```json
 {"framing":"jsonl","on":{"correct":["/input","/gold","/output"],"grounded":["/context","/output"]}}
 ```
 
-`--dry-run` reads the question set and the first record. A name that collides with a field on record two is invisible to it. [How-to 16](../demos/16-triage-pipeline/) keeps the collision caution beside its table-input pipeline.
+`--plan` checks the whole input, including a later record whose field collides with a question name. [How-to 16](../demos/16-triage-pipeline/) keeps the collision caution beside its table-input pipeline.
 
 ## Requests
 

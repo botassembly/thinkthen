@@ -114,8 +114,8 @@ jq -e -s 'all(.[]; .policy.action == .input.reviewed_action)' "$output"/*.jsonl 
 real_thinkthen="$HERE/../../target/debug/thinkthen"
 test -x "$real_thinkthen"
 "$real_thinkthen" annotate "$HERE/questions.json" --tsv --details --jobs 4 \
-	--input "$HERE/tickets.tsv" --max-retries 0 --dry-run > "$work/dry-run.jsonl"
-test "$(wc -l < "$work/dry-run.jsonl" | tr -d ' ')" = 1
+	--input "$HERE/tickets.tsv" --max-retries 0 --plan > "$work/dry-run.jsonl"
+test "$(wc -l < "$work/dry-run.jsonl" | tr -d ' ')" = 2
 if grep -E 'reviewed_action|SUP-1042|Duplicate renewal' "$work/dry-run.jsonl" >/dev/null; then
 	printf '%s\n' 'triage self-test: a local field entered the request' >&2
 	exit 1
