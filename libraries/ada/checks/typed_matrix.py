@@ -35,6 +35,11 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-ada-typed-") as name:
             {f"q{i}": {"instructions": f'The text is "{row}". Is it?', "type": "noul"} for i,row in enumerate(("first","second","third"),1)},
             {f"q{i}": {"instructions": f'The text is "{row}". Is it?', "type": "noul"} for i,row in enumerate(("hold-bulk-1","hold-bulk-2"),1)}
         ], packed
+        boundary = subprocess.run([str(HERE / "target/facts_boundary")], env=env,
+                                  capture_output=True, text=True, timeout=20)
+        assert boundary.returncode == 0 and "ADA_FACTS_BOUNDARY_PASS" in boundary.stdout, (
+            boundary.stdout, boundary.stderr)
+        assert len(backend.arrivals) == 10, "controlled facts conversion made no provider request"
         print("Ada public typed matrix: 10 exact arrivals, four typed routes, held cancellation and owned failure")
     finally:
         backend.close()

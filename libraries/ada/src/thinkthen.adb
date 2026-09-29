@@ -113,6 +113,12 @@ package body Thinkthen is
       return (Value => Outcome'Val (Integer (Raw.Outcome)), Probability => Long_Float (Raw.Probability));
    end Converted;
    function Decode_Run_Facts (Pointer : chars_ptr; Length : size_t) return Run_Facts;
+   procedure Native_Result_Defect (Error : out Failure) is
+   begin
+      Error := (Kind => Defect, Retryable => False,
+                Text => To_Unbounded_String ("native typed result broke the contract"),
+                Facts_JSON => Null_Unbounded_String);
+   end Native_Result_Defect;
    procedure Decide (Client : in out Engine; Question, Evidence : String;
                      Result : out Decision; Facts : out Run_Facts; Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
@@ -132,10 +138,16 @@ package body Thinkthen is
       Capture (Client.Handle, Code, Error);
       if Code = 0 then
          declare
-            Answer_Value : constant Decision := Converted (Raw);
-            Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+            Answer_Value : Decision;
+            Read : Run_Facts;
          begin
+            Answer_Value := Converted (Raw);
+            Read := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
             Result := Answer_Value; Facts := Read;
+         exception
+            when Constraint_Error | Program_Error =>
+               Native_Result_Defect (Error);
+               Result := (Value => Not_Sure, Probability => 0.0); Facts := (others => <>);
          end;
       else
          Result := (Value => Not_Sure, Probability => 0.0); Facts := (others => <>);
@@ -183,6 +195,11 @@ package body Thinkthen is
                begin
                   Result := Converted_Answers; Facts := Read;
                end;
+            exception
+               when Constraint_Error | Program_Error =>
+                  Native_Result_Defect (Error);
+                  for I in Result'Range loop Result (I) := (Value => Not_Sure, Probability => 0.0); end loop;
+                  Facts := (others => <>);
             end;
          else
             for I in Result'Range loop Result (I) := (Value => Not_Sure, Probability => 0.0); end loop;
@@ -327,7 +344,8 @@ package body Thinkthen is
       end loop;
       return To_String (Result) & (if Described then "}" else "]");
    end Label_Descriptions;
-   function Extract (Object_Text, Name : String; Optional : Boolean := False) return String;
+   function Extract (Object_Text, Name : String; Optional : Boolean := False;
+                     Facts_Only : Boolean := False) return String;
    function Unquote (Text : String) return Unbounded_String;
    function Decode_Field (Text : String) return Annotated_Field is
       Kind : Answer_Kind;
@@ -395,20 +413,26 @@ package body Thinkthen is
       Output.Native := True; Raw_Facts.Native := True;
       Capture (Client.Handle, Code, Error);
       if Code = 0 then
-         declare
-            Data : constant String := Value (Output.Pointer, Out_Len);
          begin
-            Validate (Data);
             declare
-               Shape : constant String := Extract (Data, "entities");
+               Data : constant String := Value (Output.Pointer, Out_Len);
             begin
-               if Shape (Shape'First) /= '[' then raise Constraint_Error with "recognize entities must be an array"; end if;
+               Validate (Data);
+               declare
+                  Shape : constant String := Extract (Data, "entities");
+               begin
+                  if Shape (Shape'First) /= '[' then raise Constraint_Error with "recognize entities must be an array"; end if;
+               end;
+               declare
+                  Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+               begin
+                  Result.JSON := To_Unbounded_String (Data); Facts := Read;
+               end;
             end;
-            declare
-               Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
-            begin
-               Result.JSON := To_Unbounded_String (Data); Facts := Read;
-            end;
+         exception
+            when Constraint_Error | Program_Error =>
+               Native_Result_Defect (Error);
+               Result.JSON := Null_Unbounded_String; Facts := (others => <>);
          end;
       else Result.JSON := Null_Unbounded_String; Facts := (others => <>);
       end if;
@@ -445,26 +469,33 @@ package body Thinkthen is
          Output.Native := True; Raw_Facts.Native := True;
          Capture (Client.Handle, Code, Error);
          if Code = 0 then
-            declare
-               Data : constant String := Value (Output.Pointer, Out_Len);
             begin
-               Validate (Data);
                declare
-                  Shape : constant String := Extract (Data, "edges");
+                  Data : constant String := Value (Output.Pointer, Out_Len);
                begin
-                  if Shape (Shape'First) /= '[' then raise Constraint_Error with "relate edges must be an array"; end if;
+                  Validate (Data);
+                  declare
+                     Shape : constant String := Extract (Data, "edges");
+                  begin
+                     if Shape (Shape'First) /= '[' then raise Constraint_Error with "relate edges must be an array"; end if;
+                  end;
+                  declare
+                     Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+                  begin
+                     Result.JSON := To_Unbounded_String (Data); Facts := Read;
+                  end;
                end;
-               declare
-                  Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
-               begin
-                  Result.JSON := To_Unbounded_String (Data); Facts := Read;
-               end;
+            exception
+               when Constraint_Error | Program_Error =>
+                  Native_Result_Defect (Error);
+                  Result.JSON := Null_Unbounded_String; Facts := (others => <>);
             end;
          else Result.JSON := Null_Unbounded_String; Facts := (others => <>);
          end if;
       end;
    end Relate;
-   function Extract (Object_Text, Name : String; Optional : Boolean := False) return String is
+   function Extract (Object_Text, Name : String; Optional : Boolean := False;
+                     Facts_Only : Boolean := False) return String is
       P : Natural := Object_Text'First;
       Found : Unbounded_String;
       Present : Boolean := False;
@@ -531,6 +562,12 @@ package body Thinkthen is
             if P > Object_Text'Last or else Object_Text (P) /= ':' then raise Constraint_Error with "expected member colon"; end if;
             P := P + 1; Space; Start_Value := P;
             End_Value := Value_End (P);
+            -- specification/result.schema.json closes the facts member set.
+            if Facts_Only and then Key /= "records" and then Key /= "requests_sent" and then
+               Key /= "cache_answers" and then Key /= "seconds" and then
+               Key /= "input_tokens" and then Key /= "output_tokens" and then Key /= "model" then
+               raise Constraint_Error with "unknown facts member";
+            end if;
             if Key = Name then
                if Present then raise Constraint_Error with "duplicate result member: " & Name; end if;
                Found := To_Unbounded_String (Ada.Strings.Fixed.Trim (Object_Text (Start_Value .. End_Value - 1), Ada.Strings.Both));
@@ -563,7 +600,7 @@ package body Thinkthen is
       Validate (Value (Pointer, Length));
       declare
          Text : constant String := Value (Pointer, Length);
-         Seconds_Text : constant String := Extract (Text, "seconds");
+         Seconds_Text : constant String := Extract (Text, "seconds", Facts_Only => True);
          Answer : Run_Facts;
          Input : constant String := Extract (Text, "input_tokens", Optional => True);
          Output : constant String := Extract (Text, "output_tokens", Optional => True);

@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0282: Owned facts for Ada, Objective-C and COBOL typed calls
 
-Status: accepted design `e800984e`; source implementation candidate on this branch after merging main `0a32572d3`, awaiting fresh High code review. The exact codex-7 claim is in the current work plan. ADRs 0105/0107 coexist with this typed-facts scope.
+Status: accepted design `e800984e`; High code review of `29bccae4e` requested two Ada corrections. This branch now contains the bounded Defect mapping and native-facts fixture for the same-reviewer recheck. Main `2710f4b55` expanded the codex-7 claim; ADRs 0105/0107 coexist with this typed-facts scope.
 
 ## Outcome and exact host routes
 
@@ -36,7 +36,7 @@ Use current matching C header/library with all four facts `_opts` exports and th
 
 Implemented source claim from the current work plan:
 
-- Ada: `libraries/ada/src/{thinkthen.ads,thinkthen.adb,thinkthen_c.ads}`, `examples/consumer.adb`, `checks/{package_bulk.adb,door.adb,failure.adb,portable_batch.adb,typed_matrix.py,installed.py,run_matrix.py}` only where direct typed signatures/proof require, `README.md`, and measured `ratchet.{adb,ads,py}.json`. Inspect `checks/legacy/` only as retained raw-C ABI proof. The same-body `checks/types.py` to `public_types.py` rename and matching `check.sh` update are integrated on main `dbf952ca5`; their JSON corpus is unchanged, so neither file needs a 0282 edit.
+- Ada: `libraries/ada/src/{thinkthen.ads,thinkthen.adb,thinkthen_c.ads}`, `examples/consumer.adb`, `checks/{package_bulk.adb,door.adb,failure.adb,portable_batch.adb,facts_boundary.adb,facts_boundary.c,typed_matrix.py,installed.py,run_matrix.py}` only where direct typed signatures/proof require, `README.md`, routine `check.sh` registration for the controlled fixture, and measured `ratchet.{adb,ads,c,py}.json`. Inspect `checks/legacy/` only as retained raw-C ABI proof. The same-body `checks/types.py` to `public_types.py` rename and matching `check.sh` update are integrated on main `dbf952ca5`; their JSON corpus is unchanged, so neither file needs a 0282 edit.
 - Objective-C: `libraries/objective-c/Sources/{ThinkThen.h,ThinkThen.m}`, `Examples/consumer.m`, direct typed callers `checks/{matrix.m,portable_batch.m,nul_text.m,installed.py,run_matrix.py}` as needed, `README.md`, and measured `ratchet.{h,m,py}.json`. If the existing `nul_text.m` link wrapper names change, update only that bounded wrapper assertion. Keep `TTJSON.c/.h`, `public_types.py`, the copied C header and raw-C `direct.m` unchanged unless exact evidence demands a claim expansion.
 - COBOL: `libraries/cobol/{copybooks/thinkthen.cpy,src/tt_decide.cob,src/tt_shape.c,README.md,check.sh}`, affected `checks/{matrix.cob,failure.cob,installed.py,run_matrix.py}`, and measured `ratchet.{c,cob,cpy,py}.json`. Make `installed.py` compile its existing `checks/failure.cob` caller against copied `TT-DECIDE`, `TTJSON.c` and `tt_shape.c`; pin its typed success/failure facts and adjust the exact arrival count. Keep packaged `examples/direct.cob` and the matrix's direct C calls as raw-C ABI probes. The unchanged `TT-CALL`, portable JSON batch and JSON corpus need no rerun or edit.
 
@@ -48,8 +48,8 @@ Implemented source claim from the current work plan:
 - Keeps: Old typed values, JSON envelopes, frozen C ABI, six failures, same-thread borrowed-error copy, Ada task join, Objective-C handle/deallocation limit, COBOL bounded buffers and raw-C probes.
 - Changes: Four Ada and four Objective-C typed routes, including counted variants, and COBOL's sole typed `TT-DECIDE` expose final owned facts from their single existing C operation.
 - Proof: Exact route/value/listener checks, strict host fact decoding, identical packed cache replay where supported, no-usage/model and empty-work distinction, typed failure lifetime, controlled overlap only where claimed, and matched copied installed typed consumers.
-- Defers: Fresh High code review; clean release/runner qualification, richer detail/cost/vendor timing/IDs and separate SQL/DataFrame outcomes under accepted ADRs 0105/0107.
+- Defers: Same-reviewer High code recheck; clean release/runner qualification, richer detail/cost/vendor timing/IDs and separate SQL/DataFrame outcomes under accepted ADRs 0105/0107.
 
 ## What the build taught us
 
-The [build record](../records/0282-ada-objc-cobol-call-facts-build.md) names the source and copied installed proofs, strict decoding and independent native frees, measured host ratchets, reused fixtures and release qualification limits. The Ada empty bulk precondition needed its array allocation moved below the guard: the former declaration evaluated a negative bound before the intended refusal. No tests were deleted; migrated value assertions now check value and facts together. Fresh code review remains pending.
+The [build record](../records/0282-ada-objc-cobol-call-facts-build.md) names the source and copied installed proofs, strict decoding and independent native frees, measured host ratchets, reused fixtures and release qualification limits. The Ada empty bulk precondition needed its array allocation moved below the guard: the former declaration evaluated a negative bound before the intended refusal. No tests were deleted; migrated value assertions now check value and facts together. The closed `facts` definition in `specification/result.schema.json` requires rejecting unknown members; the new controlled C-boundary fixture exercises that case through public Ada `Relate`. Its other typed calls prove model without usage, fractional seconds, malformed required and optional values, Defect mapping, independent frees and pre-start caller refusal. The same High reviewer will recheck this correction.
