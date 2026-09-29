@@ -1,0 +1,17 @@
+# Shared settings conflict Quick Fix
+
+Status: landed after fresh Medium code review ACCEPT of `129ffe0a78fef40e32c5b51b647052e292f948b8`, based on main `3af779c8f`. Integration preserves the reviewed runtime and test bytes. DuckDB and PostgreSQL consume this helper in their own host work; this record does not qualify either installed host.
+
+## Reproduction and change
+
+The reported DuckDB query is `SELECT thinkthen_plan('{"decide":"Refund?","batch":1}', '{"7":"Refund me"}', '{"batch":2}')`. Before this correction, the public `Settings::parse("{\"batch\":2}")?.check(For::Decide)?.conflicts(&["batch"], false)` boundary returned `Ok(())`; DuckDB consequently showed a plan instead of ADR 0105 and corpus I8's Usage refusal. A focused public-boundary test first failed exactly at the batch row with `left: Ok(())`, `right: Err(RepeatedField("batch"))`. Existing repeated model/threshold tests passed because `conflicts` inspected only `question_fields`; `batch`, `context`, `deadline_ms` and find's `none` live in separate fields.
+
+`Settings::parse` now retains the parsed object's key order alongside the existing question-field values. One `conflicts` pass uses that order for both question-file keys and valid explicit named-parameter keys, returning the existing `RepeatedField` error and sentence. The question-file serializer still uses its original ordered `question_fields`; call-only context, deadline, batch and none do not enter that file. The existing `TwoMembers` behavior remains: a present members argument conflicts; NULL or an omitted argument passes `false` and leaves settings members intact. No SQL parser, public API, setting value rule or error wording changed.
+
+## Focused proof and limits
+
+The existing `tests/settings_cases.rs` now has one compact public-API table with literal threshold/model/batch/context/deadline/find-none repetitions, both JSON input orders when two keys repeat, a distinct nonconflict, and present-versus-NULL members. The initial batch row was red before the helper edit; the same focused test is green after it. Three existing core settings tests also pass, including the shared question grammar and old conflict/member cases. Root all-target Clippy with warnings denied and format pass under offline Cargo, wrappers `/usr/bin/env`, two jobs and the codex-2 lane lock. Offline policy checked 189 resolved packages; the measured root ratchet is 102,705 nonblank lines, up 43 from 102,662. Pages, tickets and diff checks are recorded at handoff. No network, provider, SQL build, full suite or additional test hook was used.
+
+## What the build taught us
+
+The preparation had treated the portable settings object as one set of keys, while its implementation stored question fields and call fields separately. A conflict helper that loops over only the question-file values misses valid named-parameter collisions. I checked the existing core parser tests, public settings fixture and question serializer for duplication; the public table is the single new regression, and the old parser/member tests remain because they prove different boundaries. The 43-line growth is two private key-order lines plus the compact table and formatting. DuckDB's owner should rerun its installed keyless I8 witness and PostgreSQL's owner should rerun its named/settings duplicate witness against a source-matched helper; this pure parser check alone does not claim their host result or listener count.
