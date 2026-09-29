@@ -36,7 +36,7 @@ NONCARGO = {
     "libraries/csharp": ("ThinkThen.csproj", r'<PackageId>Botassembly\.ThinkThen</PackageId>'),
     "libraries/jvm": ("pom.xml", r'<artifactId>thinkthen-jvm</artifactId>'),
     "libraries/dart": ("pubspec.yaml", r'(?m)^name: thinkthen_dart$'),
-    "libraries/swift": ("Package.swift", r'name: "ThinkThen"'),
+    "libraries/swift": ("Package.swift", r'(?m)^let package = Package\(\n    name: "ThinkThen",$'),
     "libraries/zig": ("build.zig.zon", r'\.name = \.thinkthen,'),
     "libraries/go": ("go.mod", r'(?m)^module github\.com/botassembly/thinkthen/libraries/go$'),
     "libraries/cpp": ("CMakeLists.txt", r'(?m)^project\(thinkthen_cpp VERSION '),
@@ -65,6 +65,11 @@ PLACES = [
       ("libraries/dart/pubspec.yaml", "libraries/dart/flutter/pubspec.yaml",
        "libraries/dart/flutter/example/pubspec.yaml")],
     ("libraries/zig/build.zig.zon", r'(?m)^    \.version = "([^"]+)",$', WHOLE),
+    ("libraries/zig/build.zig", r'(?m)^    const expected = \[_\]u32\{ (\d+), \d+, \d+ \};$', PART[0]),
+    ("libraries/zig/build.zig", r'(?m)^    const expected = \[_\]u32\{ \d+, (\d+), \d+ \};$', PART[1]),
+    ("libraries/zig/build.zig", r'(?m)^    const expected = \[_\]u32\{ \d+, \d+, (\d+) \};$', PART[2]),
+    ("libraries/zig/build.zig", r'(?m)^    if \(!headerVersionMatches\(bytes\)\) @panic\("thinkthen C header does not match package ABI (\d+\.\d+\.\d+)"\);$', WHOLE),
+    ("libraries/zig/build.zig", r'(?m)^        if \(std\.mem\.indexOf\(u8, bytes, needle\) == null\) @panic\("thinkthen C header does not match package ABI (\d+\.\d+\.\d+)"\);$', WHOLE),
     ("libraries/cpp/CMakeLists.txt", r'(?m)^project\(thinkthen_cpp VERSION (\S+) LANGUAGES CXX\)$', WHOLE),
     *[(p, r'(?m)^  "version": "([^"]+)",$', WHOLE) for p in
       ("libraries/objective-c/source-package.json", "libraries/cobol/source-package.json")],
@@ -254,6 +259,16 @@ def self_test():
         ("copied-header", lambda r: edit(r, "libraries/swift/Sources/CThinkThen/include/thinkthen.h",
                                          f"Version {version},", "Version 9.9.9,"), [],
          (1, [f"versions: libraries/swift/Sources/CThinkThen/include/thinkthen.h reads 9.9.9, and {CRATE} reads {version}"])),
+        ("zig-abi", lambda r: edit(r, "libraries/zig/build.zig", "const expected = [_]u32{ 0, 0, 1 };",
+                                   "const expected = [_]u32{ 0, 0, 2 };"), [],
+         (1, [f"versions: libraries/zig/build.zig reads 2, and {CRATE} reads 1"])),
+        ("zig-diagnostic", lambda r: edit(r, "libraries/zig/build.zig",
+                                          'if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 0.0.1");',
+                                          'if (std.mem.indexOf(u8, bytes, needle) == null) @panic("thinkthen C header does not match package ABI 9.9.9");'), [],
+         (1, [f"versions: libraries/zig/build.zig reads 9.9.9, and {CRATE} reads {version}"])),
+        ("swift-name", lambda r: edit(r, "libraries/swift/Package.swift", 'name: "ThinkThen",',
+                                      'name: "Renamed",'), [],
+         (1, ["versions: libraries/swift/Package.swift has no package identity the check can read"])),
         ("missing-metadata", lambda r: (r / "libraries/php/composer.json").unlink(), [],
          (1, ["versions: missing or unreadable required metadata libraries/php/composer.json"])),
         ("unknown-surface", lambda r: edit(r, "sdlc/surfaces.txt", "libraries/php         landed",
@@ -275,6 +290,9 @@ def self_test():
          (1, ["versions: databases/postgresql/thinkthen.control has no version line the check can read; nothing was written"])),
         ("missing-set", lambda r: (r / "libraries/swift/Package.swift").unlink(), ["--set", "9.8.7"],
          (1, ["versions: missing or unreadable required metadata libraries/swift/Package.swift; nothing was written"])),
+        ("swift-name-set", lambda r: edit(r, "libraries/swift/Package.swift", 'name: "ThinkThen",',
+                                           'name: "Renamed",'), ["--set", "9.8.7"],
+         (1, ["versions: libraries/swift/Package.swift has no package identity the check can read; nothing was written"])),
         ("cargo-name-set", lambda r: edit(r, "libraries/c/Cargo.toml", 'name = "thinkthen-c"',
                                          'no_name = "thinkthen-c"'), ["--set", "9.8.7"],
          (1, ["versions: libraries/c/Cargo.toml has no package name the check can read; nothing was written"])),
@@ -296,6 +314,10 @@ def self_test():
             plant(root)
             before = {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}
             got = run(root, argv)
+            if name == "set" and got == expected:
+                zig = (root / "libraries/zig/build.zig").read_text(encoding="utf-8")
+                if "const expected = [_]u32{ 9, 8, 7 };" not in zig or zig.count("package ABI 9.8.7") != 2:
+                    got = (got, "--set did not update Zig's numeric ABI and both diagnostics")
             if expected[0] and argv[:1] == ["--set"] and before != {p: p.read_bytes() for p in root.rglob("*") if p.is_file()}:
                 got = (got, "a refused --set changed a file")
             if got != expected:
