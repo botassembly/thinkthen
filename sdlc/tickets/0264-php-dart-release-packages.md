@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md sd
 
 # 0264: Pack PHP and Dart source with one matching C archive
 
-Status: design candidate for fresh review. No package, checker, workflow, registry or product runtime has changed for this ticket. The [preflight](../records/0264-php-dart-release-preflight.md) cites current main `39f36f12` and the accepted 0249, 0260, 0261 and 0262 proofs.
+Status: fresh independent design review accepted `b6869e87`; host-side implementation is in progress. The shared release helpers remain with ticket 0263 until its reviewed changes land. The [preflight](../records/0264-php-dart-release-preflight.md) cites current main `39f36f12` and the accepted 0249, 0260, 0261 and 0262 proofs.
 
 ## Outcome and retained behavior
 
