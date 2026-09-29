@@ -1,6 +1,6 @@
 # Nothing lists the uncertain, hard, or flip-flopping cases a person should label
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`. Deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement.
 
 ## What happens today
 
@@ -49,3 +49,11 @@ Evidence: `experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13.
 ## Factual preparation refresh, 2026-09-28
 
 At source `9b766cf9`, `audit` groups saved outcomes and `diff` pairs changed cases, but neither orders an unlabeled candidate queue, reserves a seeded audit share or aligns repeat flips. The per-case audit issue can share its parser and identity; it does not fulfill this ranking criterion. The `runs/labels.json` advantage came from one 228-case yes/no pool, fixed held 76, label pool 152 and 300 trials. The original 10-to-60 advantage is retained as evidence, not a universal pass/fail gate. A future design must specify record plus tag/annotate criterion identity, key-free uncertainty versus labeled hard cases, missing probabilities, run/repeat pairing, stable ties and seeded share. Top-two evidence applies only when a suitable choice distribution exists. A small saved table can prove exact order/share, near-cut and hard misses, disagreement and flip, with zero sends; it need not reproduce the experiment's held-set accuracy. See `sdlc/records/2026-09-28-tuning-evidence-refresh.md`.
+
+## Scope note, 2026-09-28
+
+The need varies and existing commands cover part of it. `audit --cases` prints a row per case with its outcome and
+probability, so a person can rank cases by proximity to the cut today, and `audit --optimize
+accuracy|precision|recall|f1` tunes the suggested cut for the named measure. The label simulation's evidence (ten to
+sixty uncertainty-picked labels held 0.724 against 0.711 at the default cut and 0.697 for the full-pool tune)
+remains the case for a built-in selector when a project needs one.

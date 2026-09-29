@@ -1,6 +1,6 @@
 # No run-level cost beside the score
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/296-gepa-question-tuning/` and `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/296-gepa-question-tuning/` and `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`. Deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement.
 
 ## What happens today
 
@@ -27,3 +27,10 @@ The “nothing reports” premise predates accepted ticket 0170. At main `e58ace
 ## Factual preparation after typed C facts, 2026-09-28
 
 At main `23371cc9`, `cli/facts.rs` still reports the whole command, while `transforms/cost.jq` already computes a separate input-only estimate from printed detail rows, dividing cached from charged rows and listing rows without usage. Neither puts cost in `audit`'s score row. `core/result.rs::Usage::share` and `specification/result.md` establish that per-row batch usage is allocated evenly; `meta.batch.usage` is the same request's whole usage and must not be added again. Accepted 0256 changed safe audit output publication, not cost. Codex-3 now designs 0257 per-case audit on the same `cli/audit.rs` source, so a score-adjacent cost shape should follow that design rather than colliding with its claim. The smallest future saved-row proof compares printed-row shares with whole-run facts when a filtered/rank-trimmed row is omitted, and covers cached, missing-usage and unequal-size batch cases without pricing unknown tokens. Source/API work and an optional output-token price need a reviewed contract; do not infer either from the experimental price. See `sdlc/records/2026-09-28-accounting-after-c-facts.md`.
+
+## Scope note, 2026-09-28
+
+`audit --cases` now carries each result line's `meta.usage` with `usage_scope`, and `status` totals the month. A
+caller can sum the case rows for a run total today. The measured spread (450 against 630 tokens a call for the
+album-year wording, and 3,713 against 2,794 for the blob) remains the case for a run-level line when a project
+needs one.
