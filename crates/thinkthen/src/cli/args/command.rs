@@ -35,7 +35,7 @@ pub(crate) enum Command {
     ///
     /// printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?'
     ///
-    /// printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9 --details
+    /// printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9
     ///
     /// The answer is a bare `true`, `false`, or `null`. The exit code is 0 for
     /// yes, 1 for no, 3 for not sure, and any other code when the run is broken

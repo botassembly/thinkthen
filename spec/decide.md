@@ -17,6 +17,7 @@ thinkthen decide --help | grep -c -- 'set -e' | mustmatch not like "0"
 thinkthen decide --help | grep -c -- 'defaults to 0.5' | mustmatch not like "0"
 thinkthen decide --help | grep -c -- '\[default: 4\]' | mustmatch not like "0"
 thinkthen decide --help | sed -n '/^Examples:/,/^The answer is/p' | grep -c "printf 'Refund me please.' | thinkthen decide" | mustmatch "2"
+thinkthen decide --help | sed -n '/^Examples:/,/^The answer is/p' | grep -Fxc "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9" | mustmatch "1"
 ```
 
 `--dry-run` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.
