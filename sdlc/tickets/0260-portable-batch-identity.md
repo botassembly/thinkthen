@@ -6,7 +6,7 @@ opens: sdlc/records/2026-09-28-content-batch-identity-preparation.md
 
 # 0260: Pin portable record spelling and content-batch identity
 
-Status: design accepted after fresh read-only review of `f68d9496`; the coordinator accepted the retained contract and claimed the first proof slice on main `94bdf96d`. The first slice passes focused proof. Fresh code review of `12b5281d` found two integration corrections, now applied for the same reviewer. Register 64 remains open for the other applicable host runners. The [design](../records/0260-portable-batch-identity-design.md), [preflight](../records/0260-portable-batch-identity-preflight.md) and [build record](../records/0260-portable-batch-identity-build.md) distinguish this checkpoint from final closure.
+Status: first core, CLI and C proof accepted at `3a194a88` and integrated; remaining host proof is open. Register64 is not complete. The accepted design `f68d9496` retains the existing runtime contract. The build record lists the finite remaining public routes.
 
 ## Outcome
 

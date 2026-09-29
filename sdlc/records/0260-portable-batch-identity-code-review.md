@@ -1,0 +1,5 @@
+# 0260 first proof review and integration
+
+Fresh independent Sol Medium review accepted corrected candidate `3a194a88`. It independently recomputed the literal record hash heads, cut decisions and fixed-address request digests. The complete-body comparisons and actual listener counts are sound. The first review required routine-gate registration for the four core/CLI cases and removal of two copied digest helpers. The correction adds exact selectors and reuses the existing CLI support and C parent helpers; focused CLI/C tests, strict lint, policy and measured counters pass. The reviewer accepted the delta without repeating broad checks.
+
+The coordinator merged the reviewed fixture, contract and test changes. No production encoder, cache or host adapter changed. Root source measures99122 and C3837. The recorded core/CLI/C proof remains applicable; landing checks pages, tickets, counters and whitespace. Register64 remains open until the build record's remaining host routes consume the shared fixture through real public calls. This first proof does not close answer parity or wire economy issues and makes no new platform claim.
