@@ -27,3 +27,7 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 ## Pre-merge re-pin (2026-09-28, pin 71f25087)
 
 ADAPTED-PASS (packing, envelope, 30-arrival multiset). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
+
+## Product integration candidate, ticket 0249
+
+The reviewed first batch imports `repin/package/` into `libraries/csharp/` with a product-local gate and the `Botassembly.ThinkThen` wrapper ID. The current C header has 30 declarations, verified against the rebuilt library. Local NuGet packaging, two isolated consumers, the exact 30-arrival matrix, named errors, constructor/facts behavior and the J1 public-binding corpus pass on Linux x86_64. The product build receipt is `sdlc/records/0249-csharp-jvm-build.md`. This is a review candidate until landed. Registry publication, native release packaging and other hosts remain open.

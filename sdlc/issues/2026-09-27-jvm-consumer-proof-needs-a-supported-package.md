@@ -53,3 +53,7 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 ## Pre-merge re-pin (2026-09-28, pin 71f25087)
 
 ADAPTED-PASS (packing, envelope; packaged Kotlin/Scala examples fixed in repin only). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
+
+## Product integration candidate, ticket 0249
+
+The reviewed first batch imports `repin/package/` into `libraries/jvm/`, builds the local Java/Kotlin/Scala JAR bundle and records Maven metadata at `io.github.botassembly:thinkthen-jvm`. Java 21 preview FFM consumers pass 60 exact arrivals apiece through isolated installations. The carrier diagnostic lives in test code outside the product JAR. Settings, named errors, borrowed facts, member-order tolerant result decoding and the J1 public-binding corpus pass on Linux x86_64. The product build receipt is `sdlc/records/0249-csharp-jvm-build.md`. This is a review candidate until landed. Maven publication, native release packaging and other hosts remain open.

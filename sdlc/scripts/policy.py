@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import tomllib
+import xml.etree.ElementTree as ET
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CRATES_IO = "registry+https://github.com/rust-lang/crates.io-index"
@@ -589,6 +590,24 @@ def deny_failures(name: str, deny: dict) -> list[str]:
     return []
 
 
+NONCARGO_MANIFESTS = {
+    "libraries/csharp": ("ThinkThen.csproj", {"PackageId": "Botassembly.ThinkThen", "TargetFramework": "net8.0", "Version": "0.0.1"}),
+    "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": "0.0.1", "packaging": "pom"}),
+}
+
+
+def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
+    if source is None:
+        return [f"{name} has no package manifest"]
+    try:
+        root = ET.fromstring(source)
+    except ET.ParseError:
+        return [f"{name} has invalid XML package metadata"]
+    fields = {node.tag.rsplit("}", 1)[-1]: (node.text or "").strip() for node in root.iter()}
+    return [f"{name} package {key} is not {value}" for key, value in NONCARGO_MANIFESTS[name][1].items()
+            if fields.get(key) != value]
+
+
 def check_bindings() -> None:
     """ADR 0047 and ticket 0093: every binding folder, then one planted failure of each kind."""
     crates = binding_crates()
@@ -601,6 +620,12 @@ def check_bindings() -> None:
         name = folder.relative_to(REPO).as_posix()
         crate = crates.get(name, name)
         if name in feature_folders():
+            continue
+        noncargo = NONCARGO_MANIFESTS.get(name)
+        if noncargo is not None:
+            package = folder / noncargo[0]
+            for failure in noncargo_manifest_failures(name, package.read_text() if package.is_file() else None):
+                fail("binding", failure)
             continue
         if not (REPO / crate / "Cargo.toml").is_file():
             fail("binding", f"{name} holds a Cargo.toml, or its surfaces.txt line names its crate folder")
@@ -616,6 +641,11 @@ def check_bindings() -> None:
                    for section, key, _ in tables]
         if not all(deny_failures(name, planted) for planted in [other, *seconds]):
             fail("binding", f"{name}/deny.toml with a planted extra entry or another difference is refused")
+    for name, (filename, values) in NONCARGO_MANIFESTS.items():
+        source = (REPO / name / filename).read_text()
+        key, value = next(iter(values.items()))
+        if not noncargo_manifest_failures(name, None) or not noncargo_manifest_failures(name, source.replace(value, "planted", 1)):
+            fail("binding", f"{name} missing or tampered package manifest is refused")
     if "libraries/r" in crates and (REPO / crates["libraries/r"] / "Cargo.toml").is_file():
         crate = crates["libraries/r"]
         files = binding_files("libraries/r", crate)
