@@ -21,6 +21,10 @@ impl Drop for PanickingDrop {
 }
 
 fn child() {
+    assert!(
+        std::env::var_os("UNRELATED_DUCKDB_PARENT_SETTING").is_none(),
+        "unrelated parent setting reached bridge child"
+    );
     std::panic::set_hook(Box::new(|info| {
         PRIOR_HOOK_CALLS.fetch_add(1, Ordering::SeqCst);
         use std::io::Write as _;
@@ -74,6 +78,7 @@ fn child() {
 fn parent() {
     let executable = std::env::current_exe().expect("test executable");
     let output = std::process::Command::new(executable)
+        .env_clear()
         .args([
             "--exact",
             "ffi::tests::caught_payloads_stay_in_bridge_scope",
