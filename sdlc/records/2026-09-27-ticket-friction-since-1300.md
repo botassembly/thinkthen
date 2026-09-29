@@ -615,3 +615,10 @@ The0286 build used one raw Python probe that loaded DuckDB and executed a functi
 ## Validate facade kinds and nonexhaustive error consumers
 
 Fresh High review of0289 found that its public plan accepted staged question kinds that the ordinary execution path refused. The correction reuses that execution guard before preparing a body and pins zero sends. Review also found SQLite and PostgreSQL denial conversions that used nonexhaustive matches, so the new additional-send variant compiled but lost each host’s established spent-total message. The corrected candidate df77e6526 passed High re-review after both source-matched hosts proved cap1, batch1, two rows, one send and their own refusal. Future enum preparation must inspect nonexhaustive matches as well as compiler-visible consumers. No full package campaign was needed.
+
+
+## Preserve host semantics when caching keyed rows
+
+Early High review of SQLite candidate1742ac3b found three defects before final plan/cap integration: pushed key equality changed NULL, TEXT affinity and NOCASE behavior; parsing through a JSON value collapsed duplicate keys; and row reuse by raw `@path` skipped the existing named-file freshness check. The reviewer reproduced them against a source-matched extension on pinned SQLite3.50. Corrections are assigned to the retained0284 author; they are not yet accepted fixes.
+
+The next host brief must distinguish SQL equality from internal string lookup, and immutable inline arguments from a named file whose contents can change. Compare a pushed predicate with an ordinary host table before marking it omitted. Preserve duplicate-key rejection only where the host input still carries duplicates: PostgreSQL jsonb may have already resolved them. A connection-owned result cache needs the effective question identity or validated freshness as well as input bytes. These are small functional witnesses, not a reason for another scale campaign. PostgreSQL’s per-query tuplestore and DuckDB’s vector execution have different lifetimes; do not copy the SQLite LRU or its fixes without tracing those lifetimes.
