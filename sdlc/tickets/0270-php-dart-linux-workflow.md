@@ -8,6 +8,9 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 Status: corrected design candidate from main `165709fe`; no implementation or runner qualification. [Preparation](../records/0270-php-dart-workflow-preparation.md) maps the current route and exact prerequisites. The 0268 Go/C++ static wiring landed at `85831aac`; wait for 0269 Swift/Zig **static workflow wiring** to land and compare its actual selected-family and directory gate before editing. An accepted design alone is not an executable prerequisite. Ian's SQL and DataFrame hold prevents a container, installed-host, aggregate-smoke or Actions run through the present release route.
 
+
+The independent design recheck accepted `ed4e3eb9`; [the review record](../records/0270-php-dart-workflow-design-review.md) records the corrected scope and coordinator approval. Implementation still waits for 0269 and a lane claim.
+
 ## Bounded outcome and retained route
 
 Add only PHP and Dart source archives to the Linux x86-64 manual release workflow beside the **same** manylinux C archive that 0268/0269 select. The existing direct PHP FFI and unrelated Dart path-consumer local archive proof is accepted in [0264](../records/0264-php-dart-release-build.md); this ticket adds a required x86 file/gate route before the files can reach a draft. It does not turn the private Flutter wrapper into a public Dart asset. Retain `workflow_dispatch`, the resolved source SHA, 0268's complete tar-versus-extraction comparison, one fresh C in a non-reuse invocation, the pinned manylinux image and glibc floor, historical release families, four target jobs and the release environment/`RELEASE_ARMED` publication controls. Linux ARM and both Darwin targets must reject accidental PHP/Dart assets until separately qualified.
