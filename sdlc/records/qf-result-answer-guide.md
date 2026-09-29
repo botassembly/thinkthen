@@ -9,3 +9,5 @@ No runtime type, result schema, serializer, option, help, site, SQL or DataFrame
 ## What the build taught us
 
 The old row named three shapes, but the current contract has five. A first-screen comparison can make the field distinction visible without copying the long examples or changing output. `find`'s optional `confidence` comes from its own serializer, while `tag` has no such field; the table follows those actual paths. Aggregate results need an explicit scope sentence so the discriminator guidance is not overgeneralized.
+
+Fresh independent Medium review accepted `f6e22242710d20bd25cda4cbc464df0879ca8d72`. It checked the table against `Shape` and `FindAnswer`, choice threshold/tie behavior, weighted scores, find none, and aggregate exceptions. Page, ticket and diff checks passed; no runtime check was needed for the text-only map. Root marks new-user criterion 16 complete in the same landing; its umbrella remains open.
