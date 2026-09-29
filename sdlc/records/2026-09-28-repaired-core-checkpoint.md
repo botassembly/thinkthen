@@ -14,3 +14,9 @@ Local evidence is in `target/codex-builds/repaired-core-checkpoint-2026-09-28/` 
 The coordinator shortened only demo 21's introductory paragraph. It still explains a different action list per record and `--options POINTER`. Every fenced command and expected output is byte-identical to the reviewed page. The page now has 887 words by the runner's whitespace-field count, below 900. No checker, fixture, recording, result or runtime changed. Reuse the passing test rung; rerun spec after independent review of this prose correction, retaining the first failed log.
 
 The source subsequently gained reviewed ticket 0255 in main `558e6ef3`. Its C ABI additions have independent installed AddressSanitizer and header/export proof; they do not change the CLI source or the page request identities. The passing test pin above is explicit and is not a claim that one complete test rung ran against the later C source. The next spec record will name its own exact pin.
+
+## Spec recheck
+
+After the fresh independent Medium review accepted the prose correction at `f0d1ad2c3a961f58abe1fea719a0133d3d606301`, the coordinator reran only `sdlc/scripts/spec` at that exact source. It exited 0 in 18.51 seconds wall. The complete routine spec rung passed, ending with 22 green demos and zero red. The previously passing test rung was retained without repetition because this correction changed only introductory prose and its record.
+
+The new local artifacts are `spec-after-wording-source.json`, `spec-after-wording-run.sh`, `spec-after-wording.log` and `spec-after-wording.status` in the same evidence folder. They preserve the source pin, script hashes, invocation and explicit exit 0. The original test and failed spec logs and statuses remain unchanged. The recheck retained the same offline environment, isolated Cargo home and lane lock. No stress, provider or additional full test run was started.
