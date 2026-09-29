@@ -6,7 +6,7 @@ Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evi
 
 `audit` prints one JSON row per group: counts, agreement with its interval, precision, recall, f1, AUC, calibration, the coverage curve, and the suggested cut. `--table` prints the group lines and the coverage table. Neither view names a case. A reader learns that six of sixty answers were wrong, never which six and never why.
 
-A `--details` row already carries everything needed: `input`, `question`, `answer`, `threshold`, and `meta.usage`. `--id` and the key join a row to its label. The missing piece is a view that makes that join.
+A saved `--details` row can carry `input`, `question`, `answer`, and `threshold`; `meta.usage` is present only when usage is known. `--id` and the key join a row to its label. The missing piece is a view that makes that join and exposes unavailable row usage explicitly.
 
 ## Why it matters
 
@@ -21,7 +21,7 @@ Experiments 296 and 297 did exactly that. The experiment's `scoring.py` restates
 
 ## What to change
 
-One additive option or subcommand that prints one row per case: id, question text, said, truth, right or wrong, the probabilities, and the tokens. A `--cases` flag on `audit` is the smallest form. The current group output stays the default, and no exit code changes.
+One additive option or subcommand that prints one row per case: id, question text, said, truth, outcome, probabilities, and tokens when the saved row supplies them. The later design must represent unavailable usage as absent or null, never zero or a share inferred from whole-run `--facts`. A `--cases` flag on `audit` is the smallest form. The current group output stays the default, and no exit code changes.
 
 A per-case member on the existing group row is not enough: one group holds many cases, and the row has no place for them.
 

@@ -22,15 +22,15 @@ Local experiment 297, `runs/labels.json`. The saved probabilities of the bench's
 | 120 | 0.713 | 0.697 | 0.697 |
 | All 152 | 0.697 | 0.697 | 0.697 |
 
-Held at the default cut 0.5: 0.711. Ten to sixty uncertainty-picked labels beat random, beat the default, and beat tuning on all 152 labels. Beyond about sixty the extra labels pull the cut toward an overfit value.
+Held at the default cut 0.5: 0.711. In this cohort and simulation, ten to sixty uncertainty-picked labels beat random, the default, and tuning on all 152 labels. The 120-label and all-label outcomes were lower on this held set; this one experiment does not establish a universal label budget or cause.
 
 The same experiment measured the flip side, in `runs/noise-summary.json`: fifty `multi-hop` same-month yes/no cases asked three times each with no cache produced one answer flip, on a case at p 0.49 to 0.52. The median probability spread across repeats was 0.020 and the maximum 0.070. A selector wants the cases near the cut and the cases that disagree between runs.
 
 ## What to change
 
-A subcommand that ranks cases for labeling: distance from the cut, disagreement between two saved runs, and a flip across repeats, with a random share for quiet drift. It reads saved `--details` rows, sends nothing, and needs no key, like `audit` and `diff`.
+A subcommand that ranks cases for labeling: distance from the cut, disagreement between two saved runs, and a flip across repeats, with a seeded random share for quiet drift. The uncertainty queue reads saved `--details` rows, sends nothing, and needs no key; ranking labeled hard misses uses a key when requested. A tag or annotate candidate identifies its criterion as well as its record.
 
-The label simulation above is the contract to test it against: ten to sixty uncertainty-picked cases should beat random on a held set. A new command is additive.
+The label simulation above motivates the selector; its 10-to-60-label accuracy advantage is not a general acceptance threshold. A new command is additive. Its proof should pin exact saved-row predicates and order: near versus far cut, labeled hard miss, paired-run disagreement, repeat flip, criterion member, stable ties and seeded random share, with zero sends.
 
 ## Factual preparation, 2026-09-28
 

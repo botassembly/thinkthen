@@ -8,7 +8,7 @@ A user who needs two facts chained writes one question that asks for both, as th
 
 ## Why it matters
 
-Splitting the chain nearly tripled the right answers at the same cost.
+In experiment 297's album-year cohort, splitting the chain raised right answers from 22/60 to 51/60, about 2.3 times as many. The saved second hop reused matching cached requests; the experiment does not establish equal cost for a new or different run.
 
 | Form | Right |
 | --- | --- |
@@ -17,11 +17,11 @@ Splitting the chain nearly tripled the right answers at the same cost.
 | Two-question pipeline | 51/60 = 0.850 |
 | Pipeline ceiling, the true album | 52/60 = 0.867 |
 
-The second hop repeats across cases: thirteen albums carry sixty songs, so the album-year answers are thirteen distinct requests and the recording cache serves the rest. The shipped `audit` confirms the pipeline at 0.864 over 59 rows. Experiment 243 saw the same effect on a smaller sample, 11 of 22 against 3 of 22.
+The second hop repeats across cases: thirteen albums carry sixty songs, and this saved run reused matching album-year requests. The 51/60 summary counts the full cohort; the shipped `audit` reports 0.864 over the 59 rows with a usable first-hop answer. Experiment 243 saw a similar result on a smaller sample, 11 of 22 against 3 of 22.
 
 ## What to change
 
-A how-to that shows the two-command pipeline: the first `choose` prints the album, and the second call takes that album as its input. A line in `audit`'s guidance telling a user to compare a chained question with its split before tuning wording. The help and the how-to name the reuse: a hop with a small, repeated answer space costs nothing after its first call.
+A how-to that shows the two-command pipeline: the first `choose` prints the album, and the second call takes that album as its input. A line in `audit`'s guidance telling a user to compare a chained question with its split before tuning wording. The help and the how-to explain that a repeated hop can avoid a new send when its complete request matches an existing cache entry.
 
 ThinkThen sequences nothing new. The host already runs two commands. The gap is that nothing tells the user to try it.
 
