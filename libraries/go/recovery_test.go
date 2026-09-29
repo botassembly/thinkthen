@@ -39,7 +39,7 @@ func TestFailuresAndRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	requireAnswer(t, answer, Yes, .9)
+	requireAnswer(t, answer.Value, Yes, .9)
 	// A context past the native maximum must clamp to its accepted maximum.
 	far, cancel := context.WithDeadline(context.Background(), time.Now().AddDate(150, 0, 0))
 	defer cancel()
@@ -47,7 +47,7 @@ func TestFailuresAndRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	requireAnswer(t, answer, Yes, .9)
+	requireAnswer(t, answer.Value, Yes, .9)
 	if _, err := copyCountedResult(nil, math.MaxInt32+1); err == nil {
 		t.Fatal("oversized C size_t was truncated")
 	}
