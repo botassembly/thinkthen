@@ -165,6 +165,10 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
         run: sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RUNNER_TEMP/thinkthen-dart"
+      - name: Check Ada, GNU Objective-C and COBOL consumer tools
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        env: {TARGET: "${{ matrix.target }}"}
+        run: sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: 'platform-${{ matrix.target }}', path: platform}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -180,6 +184,9 @@ jobs:
       - name: Require the selected PHP/Dart family
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow php-dart-gate platform "$TARGET" "$SHA"
+      - name: Require the selected Ada/Objective-C/COBOL family
+        env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: sdlc/scripts/release-workflow ada-objc-cobol-gate platform "$TARGET" "$SHA"
       - env: {TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
         run: |
           sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
@@ -209,6 +216,7 @@ jobs:
             sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow swift-zig-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"
+            sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"
           done
           sdlc/scripts/release-workflow collect platform npm-dist all-files
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
