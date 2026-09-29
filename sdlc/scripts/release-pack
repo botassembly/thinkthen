@@ -2,7 +2,8 @@
 # release-pack [--reuse] TARGET OUT [PART...] (ticket 0128): pack the release files of one
 # Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
 # each release target builds on its own runner. The parts are command, c, go, cpp, csharp,
-# jvm, swift, zig, php, dart, ada, objective-c, cobol, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
+# jvm, swift, zig, php, dart, flutter, ada, objective-c, cobol, sqlite, duckdb,
+# postgresql, python, typescript, ruby, and first-run; the default
 # keeps its established parts and source wrappers are explicit pilot parts.
 # Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
 # packs the files each surface check already built in its own build folder, which the
@@ -19,8 +20,9 @@ host=$(rustc -vV | sed -n 's/^host: //p')
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
 source_commit=$(git -C "$REPO" rev-parse HEAD)
 c_built=
+dart_built=
 case " $* " in
-*' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' ada '* | *' objective-c '* | *' cobol '*)
+*' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' flutter '* | *' ada '* | *' objective-c '* | *' cobol '*)
 	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
 	[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
@@ -32,6 +34,24 @@ case " $* " in
 		[ ! -e "$OUT/$c_name.sha256" ] && [ ! -L "$OUT/$c_name.sha256" ] || {
 		echo 'release-pack: source wrappers need an output without an existing C archive or sidecar' >&2; exit 1;
 	}
+	;;
+esac
+case " $* " in
+*' flutter '*)
+	dart_count=0 flutter_count=0
+	for part in "$@"; do
+		[ "$part" != dart ] || dart_count=$((dart_count + 1))
+		[ "$part" != flutter ] || flutter_count=$((flutter_count + 1))
+	done
+	[ "$dart_count" -eq 1 ] && [ "$flutter_count" -eq 1 ] || {
+		echo 'release-pack: Flutter needs exactly one dart and one flutter part' >&2; exit 1;
+	}
+	for name in "thinkthen-dart-$V-$TARGET.tar.gz" "thinkthen-flutter-$V-$TARGET.tar.gz"; do
+		[ ! -e "$OUT/$name" ] && [ ! -L "$OUT/$name" ] &&
+			[ ! -e "$OUT/$name.sha256" ] && [ ! -L "$OUT/$name.sha256" ] || {
+			echo "release-pack: Flutter needs an output without an existing $name or sidecar" >&2; exit 1;
+		}
+	done
 	;;
 esac
 mkdir -p -- "$OUT"
@@ -186,6 +206,32 @@ dart)
 		cp libraries/dart/lib/src/allocator.dart libraries/dart/lib/src/door.dart \
 			libraries/dart/lib/src/typed.dart "$folder/lib/src/"
 		;;
+flutter)
+		[ "$dart_built" = 1 ] || { echo 'release-pack: flutter needs dart built earlier in this invocation' >&2; exit 1; }
+		dart_name=thinkthen-dart-$V-$TARGET.tar.gz
+		[ -f "$OUT/$dart_name" ] || { echo 'release-pack: Dart archive is missing' >&2; exit 1; }
+		dart_digest=$(sha256 "$OUT/$dart_name" | awk '{print $1}')
+		mkdir -p "$folder/flutter/lib" "$folder/flutter/example/lib" \
+			"$folder/flutter/example/linux/flutter" "$folder/flutter/example/linux/runner"
+		cp libraries/dart/flutter/README.md libraries/dart/flutter/pubspec.yaml \
+			libraries/dart/flutter/pubspec.lock "$folder/flutter/"
+		cp libraries/dart/flutter/lib/thinkthen_flutter.dart "$folder/flutter/lib/"
+		cp libraries/dart/flutter/example/.metadata libraries/dart/flutter/example/README.md \
+			libraries/dart/flutter/example/pubspec.yaml libraries/dart/flutter/example/pubspec.lock \
+			libraries/dart/flutter/example/analysis_options.yaml "$folder/flutter/example/"
+		cp libraries/dart/flutter/example/lib/main.dart "$folder/flutter/example/lib/"
+		cp libraries/dart/flutter/example/linux/CMakeLists.txt "$folder/flutter/example/linux/"
+		cp libraries/dart/flutter/example/linux/flutter/CMakeLists.txt \
+			libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.h \
+			libraries/dart/flutter/example/linux/flutter/generated_plugin_registrant.cc \
+			libraries/dart/flutter/example/linux/flutter/generated_plugins.cmake \
+			"$folder/flutter/example/linux/flutter/"
+		cp libraries/dart/flutter/example/linux/runner/CMakeLists.txt \
+			libraries/dart/flutter/example/linux/runner/main.cc \
+			libraries/dart/flutter/example/linux/runner/my_application.cc \
+			libraries/dart/flutter/example/linux/runner/my_application.h \
+			"$folder/flutter/example/linux/runner/"
+		;;
 ada)
 		mkdir -p "$folder/src" "$folder/examples"
 		cp libraries/ada/LICENSE libraries/ada/README.md libraries/ada/thinkthen.gpr "$folder/"
@@ -219,6 +265,9 @@ cobol)
 	esac
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
+	if [ "$1" = flutter ]; then
+		printf 'dart_archive=%s\ndart_sha256=%s\n' "$dart_name" "$dart_digest" >>"$folder/THINKTHEN-PACKAGE-INPUTS"
+	fi
 	pack "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
 }
 part_go() { part_source_wrapper go; }
@@ -228,7 +277,8 @@ part_jvm() { part_source_wrapper jvm; }
 part_swift() { part_source_wrapper swift; }
 part_zig() { part_source_wrapper zig; }
 part_php() { part_source_wrapper php; }
-part_dart() { part_source_wrapper dart; }
+part_dart() { part_source_wrapper dart; dart_built=1; }
+part_flutter() { part_source_wrapper flutter; }
 part_ada() { part_source_wrapper ada; }
 part_cobol() { part_source_wrapper cobol; }
 
@@ -320,7 +370,7 @@ part_first_run() {
 for part in "$@"; do
 	case $part in
 	objective-c) part_source_wrapper objective-c ;;
-	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | ada | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | flutter | ada | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac
