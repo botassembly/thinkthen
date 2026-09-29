@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 """Compare the built public Rust API with its frozen declarations.
 
-The one source is the ticket text: the normative block of ticket 0084, the
-whole added block of ticket 0095 (tickets 0086 and 0098 built it), the export
-sentence for `choices!`, and the ADR 0017 throttle rename. No file here copies that list.
+The sources are the historical ticket blocks (0084, 0095, 0147), the export
+sentence for `choices!`, ADR 0017's throttle rename, and ticket 0278's reviewed
+retired/added delta. No file here copies the declaration list.
 `cargo public-api`, pinned by the install rung, reads the built crate. The
-self-test plants an added export, a removed item, and a changed signature
-into the real listing and proves each one fails.
+self-test plants four changes in the real listing and proves each one fails.
 """
 
 from __future__ import annotations
@@ -145,6 +144,67 @@ def declared(source: str) -> set[str]:
     return items
 
 
+def delta_lines(page: str, heading: str) -> set[str]:
+    match = re.search(rf"^{re.escape(heading)}\n\n```text\n(.*?)^```$", page, re.M | re.S)
+    if not match:
+        sys.exit(f"inventory: no text block under {heading!r}")
+    lines = match.group(1).splitlines()
+    if not lines or any(not line or line != line.strip() for line in lines):
+        sys.exit(f"inventory: empty or padded declaration under {heading!r}")
+    if len(lines) != len(set(lines)):
+        sys.exit(f"inventory: duplicate declaration under {heading!r}")
+    return set(lines)
+
+
+def apply_delta(items: set[str], page: str) -> set[str]:
+    retired = delta_lines(page, "### Retired declarations")
+    added = delta_lines(page, "### Added declarations")
+    if retired & added:
+        sys.exit("inventory: declaration occurs in both delta blocks")
+    if len(retired) != 36 or len(added) != 103:
+        sys.exit("inventory: 0278 delta must have 36 retired and 103 added declarations")
+    if retired - items:
+        sys.exit("inventory: retired declaration is absent from historical contract")
+    if added & items:
+        sys.exit("inventory: added declaration is already in historical contract")
+    return (items - retired) | added
+
+
+def delta_self_test(page: str, items: set[str]) -> None:
+    # Literal edge sample: neither side is built from the current API listing.
+    sample = [
+        "BatchSetting::Records(NonZeroUsize)",
+        "RecordObservation::Question::detail: QuestionDetail<'a>",
+        "const fn Facts::records(&self) -> u64",
+        "fn sample() -> Result<Call<Vec<u8>>, Error>",
+    ]
+    document = "### Added declarations\n\n```text\n" + "\n".join(sample) + "\n```"
+    listing = [
+        "pub thinkthen::BatchSetting::Records(NonZeroUsize)",
+        "pub thinkthen::RecordObservation::Question::detail: QuestionDetail<'a>",
+        "pub const fn thinkthen::Facts::records(&self) -> u64",
+        "pub fn thinkthen::sample() -> Result<Call<Vec<u8>>, Error>",
+    ]
+    if delta_lines(document, "### Added declarations") != set(sample) or built(listing) != set(sample):
+        sys.exit("inventory: canonical delta edge sample was dropped or changed")
+
+    retired = sorted(delta_lines(page, "### Retired declarations"))
+    added = sorted(delta_lines(page, "### Added declarations"))
+    cases = [
+        (page.replace(retired[1], retired[0], 1), "duplicate declaration"),
+        (page.replace(added[0], retired[0], 1), "both delta blocks"),
+        (page.replace(retired[0], "fn absent_from_old_contract()", 1), "absent from historical contract"),
+        (page.replace(added[0], next(iter(sorted(items - set(retired)))), 1), "already in historical contract"),
+    ]
+    for changed, reason in cases:
+        try:
+            apply_delta(items, changed)
+        except SystemExit as error:
+            if reason in str(error):
+                continue
+        sys.exit(f"inventory: malformed delta was not refused: {reason}")
+
+
 def contract() -> set[str]:
     page = text("0084-*.md")
     items = declared(block(page, "## Normative public inventory"))
@@ -154,7 +214,9 @@ def contract() -> set[str]:
     new, old = re.search(r"`EngineBuilder::(\w+)\(n\)`\. It replaces `EngineBuilder::(\w+)`", ADR.read_text()).groups()
     items = {i.replace(f"fn EngineBuilder::{old}(", f"fn EngineBuilder::{new}(") for i in items}
     items.add("macro " + re.search(r"The crate root exports `(\w+!)`", page).group(1))
-    return items
+    delta = text("0278-*.md")
+    delta_self_test(delta, items)
+    return apply_delta(items, delta)
 
 
 def built(listing: list[str]) -> set[str]:
