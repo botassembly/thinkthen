@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0282: Owned facts for Ada, Objective-C and COBOL typed calls
 
-Status: design candidate. Source traced at main `260b75457`; implementation awaits fresh High review and root's exact file claim.
+Status: design candidate corrected after fresh High review of `487403bff`; awaiting same-reviewer recheck and root's exact implementation claim. Typed source traced at main `260b75457`; the body-preserving Ada fixture rename and separate SQL/frame ADRs are included from main `869710193`.
 
 ## Outcome and exact host routes
 
@@ -14,7 +14,7 @@ Apply Ian's every-library-call ruling and ADR 0106's pre-0.1 return migration. O
 
 | Host | Actual direct typed route | Proposed public success carrier |
 | --- | --- | --- |
-| Ada | `Decide`, `Decide_Many`, `Recognize`, `Relate` | Add `Facts : out Call_Facts` to each procedure, beside its existing `Result : out Decision`, `Decision_Array` or `JSON_Result` and `Error : out Failure`. The `Call_Facts` record has required `Unsigned_64` counts and `Long_Float Seconds`, optional token/model presence flags with owned unbounded model text. Preserve the nonempty `Decide_Many` precondition. |
+| Ada | `Decide`, `Decide_Many`, `Recognize`, `Relate` | Add `Facts : out Run_Facts` to each procedure, beside its existing `Result : out Decision`, `Decision_Array` or `JSON_Result` and `Error : out Failure`. The `Run_Facts` record has required `Unsigned_64` counts and `Long_Float Seconds`, optional token/model presence flags with owned unbounded model text. Preserve the nonempty `Decide_Many` precondition and the existing public `Call_Facts (Result : JSON_Result)` JSON accessor. |
 | GNU Objective-C | `decide`, `many`, `recognize`, `relate`, each also with a counted C-string `*Bytes` variant | Add a required `facts:(TTCallFacts *)` output to each selector; retain `TTErrorKind` status and former `TTDecision` or malloc-owned result bytes/length. `TTCallFacts` has `uint64_t` required counts, `double seconds`, explicit optional-presence flags, optional `uint64_t` tokens and malloc-owned model; `tt_call_facts_clear` releases model. Counted variants delegate to the same facts-bearing base call. |
 | COBOL | Public `TT-DECIDE` only | Add `tt-facts` output group to the call/copybook: bounded owned `tt-facts-json pic x(8192)` and binary-double unsigned byte length, parallel to the existing failure facts group. The former `tt-answer` stays. Reject oversized or malformed facts before publishing success. |
 
@@ -36,11 +36,11 @@ Use current matching C header/library with all four facts `_opts` exports and th
 
 Prospective implementation claim, subject to root assignment:
 
-- Ada: `libraries/ada/src/{thinkthen.ads,thinkthen.adb,thinkthen_c.ads}`, `examples/consumer.adb`, `checks/{package_bulk.adb,door.adb,failure.adb,portable_batch.adb,typed_matrix.py,installed.py,run_matrix.py}` only where direct typed signatures/proof require, `README.md`, and measured `ratchet.{adb,ads,py}.json`. Inspect `checks/legacy/` only as retained raw-C ABI proof. `checks/types.py` is being renamed by codex-2 with an unchanged JSON corpus; avoid that file and `check.sh` in this claim.
+- Ada: `libraries/ada/src/{thinkthen.ads,thinkthen.adb,thinkthen_c.ads}`, `examples/consumer.adb`, `checks/{package_bulk.adb,door.adb,failure.adb,portable_batch.adb,typed_matrix.py,installed.py,run_matrix.py}` only where direct typed signatures/proof require, `README.md`, and measured `ratchet.{adb,ads,py}.json`. Inspect `checks/legacy/` only as retained raw-C ABI proof. The same-body `checks/types.py` to `public_types.py` rename and matching `check.sh` update are integrated on main `dbf952ca5`; their JSON corpus is unchanged, so neither file needs a 0282 edit.
 - Objective-C: `libraries/objective-c/Sources/{ThinkThen.h,ThinkThen.m}`, `Examples/consumer.m`, direct typed callers `checks/{matrix.m,portable_batch.m,nul_text.m,installed.py,run_matrix.py}` as needed, `README.md`, and measured `ratchet.{h,m,py}.json`. If the existing `nul_text.m` link wrapper names change, update only that bounded wrapper assertion. Keep `TTJSON.c/.h`, `public_types.py`, the copied C header and raw-C `direct.m` unchanged unless exact evidence demands a claim expansion.
 - COBOL: `libraries/cobol/{copybooks/thinkthen.cpy,src/tt_decide.cob,src/tt_shape.c,README.md,check.sh}`, affected `checks/{matrix.cob,failure.cob,installed.py,run_matrix.py}`, and measured `ratchet.{c,cob,cpy,py}.json`. Make `installed.py` compile its existing `checks/failure.cob` caller against copied `TT-DECIDE`, `TTJSON.c` and `tt_shape.c`; pin its typed success/failure facts and adjust the exact arrival count. Keep packaged `examples/direct.cob` and the matrix's direct C calls as raw-C ABI probes. The unchanged `TT-CALL`, portable JSON batch and JSON corpus need no rerun or edit.
 
-`release-pack` explicitly copies the three Ada sources and `consumer.adb`, Objective-C `ThinkThen.h/.m`, `TTJSON` and consumer, and COBOL's copybook, `tt_shape.c`, `tt_decide.cob`, examples and related sources. These edits add no archive member, source list or paired-release checker change; copied bytes still need fresh matched proof. Selected source compile/matrix and one copied installed typed consumer per host suffice for this build, with format/syntax, measured ratchets, policy/pages/tickets/diff. Do not run complete `check.sh`, package, all-port, Actions, provider or held SQL/DataFrame work. Old 0265 archive/source receipts prove only their pinned inputs; source, copied installed, clean release archive and actual runner are different claims.
+`release-pack` explicitly copies the three Ada sources and `consumer.adb`, Objective-C `ThinkThen.h/.m`, `TTJSON` and consumer, and COBOL's copybook, `tt_shape.c`, `tt_decide.cob`, examples and related sources. These edits add no archive member, source list or paired-release checker change; copied bytes still need fresh matched proof. Selected source compile/matrix and one copied installed typed consumer per host suffice for this build, with format/syntax, measured ratchets, policy/pages/tickets/diff. Do not run complete `check.sh`, package, all-port, Actions, provider or unrelated SQL/DataFrame work. Old 0265 archive/source receipts prove only their pinned inputs; source, copied installed, clean release archive and actual runner are different claims.
 
 ## Evidence
 
@@ -48,7 +48,7 @@ Prospective implementation claim, subject to root assignment:
 - Keeps: Old typed values, JSON envelopes, frozen C ABI, six failures, same-thread borrowed-error copy, Ada task join, Objective-C handle/deallocation limit, COBOL bounded buffers and raw-C probes.
 - Changes: Four Ada and four Objective-C typed routes, including counted variants, and COBOL's sole typed `TT-DECIDE` expose final owned facts from their single existing C operation.
 - Proof: Exact route/value/listener checks, strict host fact decoding, identical packed cache replay where supported, no-usage/model and empty-work distinction, typed failure lifetime, controlled overlap only where claimed, and matched copied installed typed consumers.
-- Defers: Fresh High design/API review and root implementation claim; clean release/runner qualification, richer detail/cost/vendor timing/IDs and held SQL/DataFrame work.
+- Defers: Same-reviewer design recheck and root implementation claim; clean release/runner qualification, richer detail/cost/vendor timing/IDs and SQL/DataFrame work under separate accepted ADRs 0105/0107.
 
 ## What the build taught us
 
