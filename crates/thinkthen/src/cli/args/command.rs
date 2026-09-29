@@ -199,6 +199,8 @@ pub(crate) enum Command {
     /// Relations are beta. `--threshold` gates computed name strength;
     /// `--relation-threshold` gates a relation's model probability.
     ///
+    /// Without kinds, fixed step-1 wording lists person, organisation, place, product, work, event or other thing; with kinds it names the caller's kinds, but descriptions reach only step 2, and accuracy outside the measured corpora is unknown.
+    ///
     /// Each record can make paid requests in three steps: one boundary question
     /// per text piece; one kind question per found name when kinds are given,
     /// plus an edge question when its span can change; then questions for the

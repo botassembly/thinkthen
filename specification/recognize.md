@@ -12,6 +12,8 @@ White space separates pieces. Each character of Unicode general category P or S 
 
 Each piece gets one pick-one question: `BEGIN`, `INSIDE`, `END`, `SINGLE` or `OUT`. The question names the caller's kinds without their descriptions. With no kinds it asks about a name of any kind. Each question shows a snippet of six pieces on each side, with the piece wrapped in `[[ ]]`.
 
+Without kinds, fixed step-1 wording lists person, organisation, place, product, work, event or other thing; with kinds it names the caller's kinds, but descriptions reach only step 2, and accuracy outside the measured corpora is unknown. This is the current generic wording, not the earlier news-document question. The measurements below cover their named keys and public sets, not every caller kind or domain.
+
 A step-1 request holds at most 40 consecutive pieces. Its evidence runs from six pieces before its first piece to six pieces after its last. A text of 40 pieces or fewer sends its whole text once. A longer text never sends its whole text in one step-1 request.
 
 After every step-1 request returns, a Viterbi decode picks the most likely valid tag sequence over the whole text. `BEGIN` and `INSIDE` must be followed by `INSIDE` or `END`. Each probability is floored at one in a million. On a tie the earlier tag in the order above wins. A `SINGLE` piece is a name, and so is a `BEGIN` through its `END`.
@@ -54,6 +56,13 @@ The recognized span is named `text` on every current surface. Offset units vary 
 
 Lowering the cut can keep a weaker name that step 1 found and step 2 classified. It cannot make step 1 decode a new stretch or restore a name step 2 declined. To inspect a missing name, use `--details`: `answer.pieces` gives each piece's five tag probabilities, and `answer.names` gives the stretches found before the cut with their kind and edge probabilities.
 
+| Symptom | Dial and limit |
+| --- | --- |
+| A name is missing | Inspect `--details` first. Lower `--threshold` only if the name was found and classified but fell below the cut; it cannot recover a step-1 miss or a step-2 `none of these` decline. |
+| Too many names appear | Raise `--threshold` to remove lower-strength names. This may also remove correct names and cannot repair a wrong span or kind. |
+| A custom kind never appears | Give that kind a clear `--kind KIND=DESCRIPTION` description for step 2. Descriptions do not reach step 1 and cannot make it detect a missed name; custom kinds are only as useful as their descriptions and the text available to the questions. |
+| Too many relation edges appear | Raise `--relation-threshold` to drop lower-probability edges, or lower it to retain more asked edges. The cut acts after pair requests and cannot reduce their count, create an unasked pair or change which names were found. Narrow the relation rules or input to reduce planned pairs. |
+
 ## Kinds
 
 Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives a description, which reaches only the step-2 kind option. Bare and described kinds do not mix. A run takes 0 to 20 distinct nonblank kinds: `thinkthen: recognize takes 0 to 20 distinct, nonblank kinds`. A `--kind` with no `=` is refused at exit 2: ``--kind is KIND=DESCRIPTION, and this one holds no `=`; give a bare kind without --kind``.
@@ -65,6 +74,8 @@ Bare kinds keep the caller's exact names. `--kind KIND=DESCRIPTION` gives a desc
 Relations are beta. `--relation NAME=SOURCE:TARGET` adds a directed rule and makes `relations` present. `--relation NAME` means `NAME=*:*`. Either side may be `*` or `ANY`, and the canonical question writes `*`. `NAME=KIND` is malformed. A concrete side naming a kind the run lacks exits 2.
 
 Each ordered pair of kept names whose kinds match a rule's sides gets one yes/no question: `Does the text itself state that i1 READS i2?`. Under `either` it reads `Does the text itself state that i1 READS i2, or that i2 READS i1?`, and the pair is asked once. `*` expands to the kinds of kept names in first-seen order. Names with equal text and kind are asked once. A name is never related to itself. The pair questions share requests that carry the whole text, split at the request-size setting and at 400 questions. `--max-request-bytes N` sets that size, with `THINKTHEN_MAX_REQUEST_BYTES` next and 96,000 bytes at every address by default; a profile may lower it. `--relation-threshold` keeps an edge when its probability is at or above the cut. The default is `0.5`.
+
+After steps 1 and 2 settle the names, a nonempty relation plan admits at most 255 distinct names whose kinds occur on a rule side and at most 4,000 prospective pair questions across all rules. A zero-pair plan returns an empty relation list before these limits. A larger nonempty plan refuses locally, with its count and a reduce-or-split remedy, before relation planning or any relation request; earlier name requests may already have been sent. This recognition guard does not apply to standalone `relate`.
 
 An edge repeats both complete names:
 
