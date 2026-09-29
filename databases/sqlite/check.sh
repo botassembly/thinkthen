@@ -57,7 +57,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	THINKTHEN_SQLITE_EXTENSION=$(echo "$scratch"/libthinkthen0.*)
 	[ -f "$THINKTHEN_SQLITE_EXTENSION" ] || { echo "FAIL     the archive holds no libthinkthen0 library" >&2; exit 1; }
 	export THINKTHEN_SQLITE_EXTENSION
-	for test in tests/examples.py tests/conformance.py; do
+	for test in tests/examples.py tests/conformance.py tests/test_probability.py; do
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
