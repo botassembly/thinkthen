@@ -6,7 +6,7 @@ Status: Open. Filed 2026-09-29 from Ian's dictation after experiment 413 ran Liq
 
 Ian asked for a documentation page about the Liquid d1 decision model, the API it exposes, and how a user signs up for it. A reader who hears "Liquid works with ThinkThen" has nowhere to land: `site/src/pages/install/backends.astro` stays vendor-neutral, the README names only TypeSafe, and no page walks a user from Liquid's console to a working `thinkthen` call.
 
-Experiment 413 (`~/workspace/experiments/413-liquid-d1-vs-jev/RESULTS.md`) verified what the page should say:
+Experiment 413's `RESULTS.md` reports the following evidence for the page:
 
 - The address is `https://api.liquid.ai/decisions/v1`, and ThinkThen posts to its `systemone` endpoint unchanged. No code change and no new adapter.
 - The model is `d1:free`, listed by `GET /decisions/v1/models`, released 2026-09-22. Output tokens are always zero and usage reports input tokens only.
@@ -17,3 +17,7 @@ Experiment 413 (`~/workspace/experiments/413-liquid-d1-vs-jev/RESULTS.md`) verif
 ## Done when
 
 A docs page under `site/src/pages/` walks a reader from Liquid's console to a passing `thinkthen check` and a first answered question, states the null-criteria limitation, and names the model, the address, and the capture dates of every claim.
+
+## Builder handoff correction
+
+Reviewed0301 source8286b99d7 corrects explicitly null `noul` descriptions. An absent `--true` or `--false` side was already omitted; do not repeat the original missing-side diagnosis. The code and local Rust/R/TypeScript checks are accepted, while the hosted Liquid check remains pending. Use its eventual receipt before describing the corrected build as remotely verified.
