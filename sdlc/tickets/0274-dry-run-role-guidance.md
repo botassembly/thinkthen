@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-20-new-user-stumble-register.md
 
 # 0274: Explain the question and evidence in an interactive dry run
 
-Status: implemented candidate on the branch, pending fresh independent code review. Preparation source pin: `60aec53e`; implementation merged approved main `1b1f09d70` first. [Preparation](../records/0274-dry-run-role-preparation.md) traces the plan, channels, and existing proof; the [build record](../records/0274-dry-run-role-build.md) gives focused results. This ticket addresses row 4 of the new-user stumble register; root owns its reviewed closure and the register remains open.
+Status: complete. Fresh independent Medium code review accepted `447adf0c9`; the coordinator integrated its unchanged implementation and focused proof. Preparation source pin: `60aec53e`; implementation merged approved main `1b1f09d70` first. [Preparation](../records/0274-dry-run-role-preparation.md) traces the plan, channels, and existing proof; the [build record](../records/0274-dry-run-role-build.md) gives focused results. This ticket addresses row 4 of the new-user stumble register; row4 is closed and the register remains open for its other criteria.
 
 ## Outcome and boundary
 
