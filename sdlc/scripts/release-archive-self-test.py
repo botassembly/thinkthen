@@ -141,6 +141,11 @@ def main():
                 file.unlink()
             expect(run("sh", gate, "ada-objc-cobol-gate", str(missing), host, commit),
                    f"missing or linked thinkthen-{family}-")
+        no_sidecar = base / "missing-cobol-sidecar"
+        shutil.copytree(base / "paired", no_sidecar)
+        (no_sidecar / f"thinkthen-cobol-{version}-{host}.tar.gz.sha256").unlink()
+        expect(run("sh", gate, "ada-objc-cobol-gate", str(no_sidecar), host, commit),
+               f"missing or linked thinkthen-cobol-{version}-{host}.tar.gz.sha256")
         another_commit = "0" * 40
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, another_commit),
                "checkout differs from resolved SHA")
@@ -238,6 +243,19 @@ def main():
         if refused_output.exists():
             raise AssertionError("extra COBOL asset created collected output")
         extra_cobol.unlink()
+        for target, family in ((other_target, "ada"),
+                               ("aarch64-apple-darwin", "objective-c"),
+                               ("x86_64-apple-darwin", "cobol")):
+            foreign = platform / f"platform-{target}/thinkthen-{family}-{version}-{target}.tar.gz"
+            foreign.write_bytes(b"unsupported language asset")
+            expect(run("sh", gate, "ada-objc-cobol-gate", str(foreign.parent), target, commit),
+                   f"unsupported target has {foreign.name}")
+            refused_output = base / f"refused-{family}-{target}"
+            expect(run("sh", gate, "collect", str(platform), str(base / "no-npm"), str(refused_output)),
+                   f"unsupported target has {foreign.name}")
+            if refused_output.exists():
+                raise AssertionError(f"{family} asset on {target} created collected output")
+            foreign.unlink()
         extra_platform = platform / "platform-extra"
         extra_platform.mkdir()
         (extra_platform / "unselected.zip").write_bytes(b"unselected release asset")
@@ -349,11 +367,12 @@ def main():
                "unexpected source path: libraries/c/.cargo/config.toml")
         extra_config.unlink()
         extra_config.parent.rmdir()
+        calls_before_refusal = (base / "cargo-calls").read_text().splitlines()
         (source / "libraries/go/README.md").write_text("changed source\n")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "changed"), *parts, cwd=source, env=env),
                "source file differs: libraries/go/README.md")
-        if (base / "cargo-calls").read_text().splitlines() != ["called"]:
+        if (base / "cargo-calls").read_text().splitlines() != calls_before_refusal:
             raise AssertionError("an archived-source refusal reached Cargo")
         expect(run("sh", str(REPO / "sdlc/scripts/release-pack"), host,
                    str(base / "override"), "go", env=env),

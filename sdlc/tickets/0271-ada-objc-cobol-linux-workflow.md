@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sd
 
 # 0271: Prepare Ada, GNU Objective-C and COBOL for the Linux x86 release workflow
 
-Status: design accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approves the bounded design; implementation waits for landed 0270 wiring and a lane claim. [Preparation](../records/0271-0272-language-runner-preparation.md) records the current source and tool boundaries. No implementation, SDK download, compilation or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
+Status: static candidate built in the codex-3 ticket lane after landed 0270. The design was accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approved the bounded design. [Preparation](../records/0271-0272-language-runner-preparation.md) and the [runner input research](../records/0271-0272-runner-toolchain-inputs.md) record the remaining tool boundaries. The candidate awaits fresh High code review. No native compiler, backend, container, Actions or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
 
 ## Outcome and boundaries
 
@@ -31,3 +31,11 @@ Prospective executable claim after landed 0270 and fresh design review: `.github
 - Changes: Adds workflow source admission, selected-family presence and source-only prerequisite placement.
 - Proof: Registered static archive and gate refusals under the hold; later selected installed calls on the actual runner.
 - Defers: Actual compiler/container/runner/Actions proof, final pin, distribution and other hosts.
+
+## What the build taught us
+
+The 0265 packer already contained the curated Ada, GNU Objective-C and COBOL copy arms. Admission of those parts from checked archived source and comparison of every staged source member needed only allowlist changes. The existing pair validator already checked the fixed member sets, adjacent sidecars, metadata, C identity and selected SHA; the new gate calls it after refusing unknown family names. The workflow calls the gate before installed consumers and before collection. The selected installed scripts did not use Node or Python jsonschema, so their prerequisites now sit after the installed return while source diagnostics remain.
+
+The first fixture revision expected one Cargo stub call overall. Three new copied-member plants each reached the stubbed C build before changing the staged wrapper member, so that copied-count expectation was wrong. The corrected assertion compares the call count immediately before and after the whole-tree refusal. The fixture now tests both distinct boundaries: changing an extracted member fails before the C stub, and changing a staged Ada, Objective-C or COBOL member fails before its wrapper archive appears. No full source or installed matrix was repeated.
+
+The `ubuntu-24.04` tool probe checks actual selected commands and GNU Objective-C linkage before installed selectors. It does not install or pin them. The accepted runner input record still lacks proof of GnuCOBOL 4 dependency closure and compatibility, and the available gprbuild version differs from the locally tested one without proof of incompatibility. An authorized runner checkpoint must resolve those facts, then run the existing installed selectors and retain sanitized command and nonsecret setting receipts. Static checks cannot qualify the runner or close the three release issues.
