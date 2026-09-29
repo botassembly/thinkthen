@@ -436,7 +436,7 @@ fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
         fs::write(config.join("evidence"), EVIDENCE).unwrap();
         let mut command = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
         command
-            .args(["decide", "asks for a refund", "--dry-run"])
+            .args(["decide", "asks for a refund", "--plan"])
             .env_clear()
             .envs(environment)
             .stdin(fs::File::open(config.join("evidence")).unwrap())

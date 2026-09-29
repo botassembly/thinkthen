@@ -421,7 +421,7 @@ fn the_plan_under_dry_run_shows_the_first_record_and_opens_no_connection() -> io
                 "--jsonl",
                 "--field",
                 "/body",
-                "--dry-run",
+                "--plan",
                 "--url",
                 listener.base(),
             ],
@@ -430,7 +430,7 @@ fn the_plan_under_dry_run_shows_the_first_record_and_opens_no_connection() -> io
         )?;
         assert_eq!(code(&output), 0, "{verb}: {}", said(&output));
         let plan = printed(&output);
-        assert_eq!(plan.lines().count(), 1, "{verb}");
+        assert_eq!(plan.lines().count(), 2, "{verb}");
         assert!(
             plan.contains(r#""input":{"framing":"jsonl","field":["/body"]}"#),
             "{verb}: {plan}"

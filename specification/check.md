@@ -9,7 +9,7 @@ Each request is built by the production question grammar and written by the prod
 ## Command line
 
 ```text
-thinkthen check [--url BASE] [--model NAME] [--timeout SECONDS] [--dry-run]
+thinkthen check [--url BASE] [--model NAME] [--timeout SECONDS] [--plan]
 ```
 
 - The address comes from `--url`, then `THINKTHEN_BASE_URL`, then the configuration file's `url`. The rules of [backends.md](backends.md) apply unchanged. The built-in default address is refused, because the check would otherwise spend requests at the hosted service when you named nothing. The refusal exits 2 before the key is read and sends nothing. Its whole standard error line reads `thinkthen: check needs an address you name: give --url, set THINKTHEN_BASE_URL, or set url in the configuration file`.
@@ -107,7 +107,7 @@ The last line counts the finding lines. The report prints once, after the last p
 | 5 | Standard output could not be written |
 | 70 | A defect |
 
-`--dry-run` prints the `url`, `provider`, `model asked`, and `model sent` lines, then one `request PROBE BODY` line per probe. It prints no reply line. The bodies come from the same split the live check sends. It inspects the optional configured key for an address collision first. It requires no key, sends nothing, and exits 0 for a safe address.
+`--plan` prints the `url`, `provider`, `model asked`, and `model sent` lines, then one `request PROBE BODY` line per probe and a JSON count line for the four prepared requests. It prints no reply line. The bodies come from the same split the live check sends. It inspects the optional configured key for an address collision first. It requires no key, sends nothing, and exits 0 for a safe address.
 
 ## What the check cannot see
 

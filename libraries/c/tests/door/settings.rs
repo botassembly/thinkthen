@@ -188,10 +188,11 @@ fn the_c_settings_object_refuses_bad_shapes_and_keys() {
         (r#"{"api_key":"k"}"#, "api_key"),
         (r#"{"cache":true}"#, "cache"),
         (r#"{"model":null}"#, "model"),
-        (r#"{"timeout":1,"timeout":2}"#, "timeout"),
+        (r#"{"timeout":1,"timeout":2}"#, "repeats"),
         (r#"{"throttle":8.0}"#, "throttle"),
         (r#"{"max_retries":-1}"#, "max_retries"),
         (r#"{"max_request_bytes":0}"#, "max_request_bytes"),
+        (r#"{"max_requests_total":3}"#, "max_requests_total"),
     ] {
         let mut script = Script::default();
         script.ask("settings", &[&base, given]);

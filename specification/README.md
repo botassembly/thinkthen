@@ -10,7 +10,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 
 | Document | What it fixes | Status |
 | --- | --- | --- |
-| [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--dry-run`, option placement | Settled |
+| [channels.md](channels.md) | Arguments, the five channels, exit codes, `--quiet`, `--raw`, `--plan`, option placement | Settled |
 | [threshold.md](threshold.md) | The one threshold rule, its two forms, and which verbs take which | Settled |
 | [question-file.md](question-file.md) | The two homes of every setting, the question file grammar, precedence, and the question digest | Settled |
 | [result.md](result.md) | The bare value, the `--details` object, and the five answer kinds | Settled |

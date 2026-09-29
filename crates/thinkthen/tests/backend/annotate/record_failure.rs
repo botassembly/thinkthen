@@ -259,7 +259,7 @@ fn details_preserve_shadowed_input_while_bare_mode_refuses_it() -> io::Result<()
             &file.to_string_lossy(),
             "--jsonl",
             "--details",
-            "--dry-run",
+            "--plan",
             "--url",
             bare.base(),
             "--model",
@@ -283,15 +283,15 @@ fn continue_refuses_unsupported_modes_before_any_request() -> io::Result<()> {
     let modes: [(&[&str], &str); 5] = [
         (
             &["--jsonl", "--details", "--on-error", "continue"],
-            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --dry-run",
+            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --plan",
         ),
         (
             &["--jsonl", "--batch", "1", "--on-error", "continue"],
-            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --dry-run",
+            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --plan",
         ),
         (
             &["--details", "--batch", "1", "--on-error", "continue"],
-            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --dry-run",
+            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --plan",
         ),
         (
             &[
@@ -299,11 +299,11 @@ fn continue_refuses_unsupported_modes_before_any_request() -> io::Result<()> {
                 "--details",
                 "--batch",
                 "1",
-                "--dry-run",
+                "--plan",
                 "--on-error",
                 "continue",
             ],
-            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --dry-run",
+            "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --plan",
         ),
         (
             &["--jsonl", "--details", "--batch", "1", "--on-error", "stop"],

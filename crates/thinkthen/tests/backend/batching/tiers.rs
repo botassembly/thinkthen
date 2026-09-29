@@ -20,7 +20,7 @@ fn question_file(place: &str, batch: &str) -> String {
 fn planning(place: &str, tiers: (Option<&str>, Option<&str>, Option<&str>), input: &str) -> Output {
     let (flag, variable, batch) = tiers;
     let question = batch.map_or_else(|| QUESTION.to_owned(), |batch| question_file(place, batch));
-    let mut arguments = vec!["decide", &question, "--dry-run"];
+    let mut arguments = vec!["decide", &question, "--plan"];
     if input.contains('\n') {
         arguments.push("--lines");
     }
@@ -54,7 +54,14 @@ fn the_batch_setting_follows_its_tiers() {
     ];
     for (tiers, count) in planned {
         let output = planning(&place, tiers, &three);
-        let plan: Value = serde_json::from_slice(&output.stdout).expect("a plan");
+        let plan: Value = serde_json::from_slice(
+            output
+                .stdout
+                .split(|byte| *byte == b'\n')
+                .next()
+                .expect("plan line"),
+        )
+        .expect("a plan");
         let questions = plan["request"]["questions"].as_object().map_or(0, Map::len);
         assert_eq!(questions, count, "{tiers:?}: {}", text(&output.stderr));
     }
@@ -115,12 +122,8 @@ fn a_file_batch_leaves_the_question_digest_and_stays_off_other_files() {
     let set = format!("{place}/set.json");
     let entry = r#"{"version":1,"questions":{"ok":{"decide":"Is it yes?","batch":5}}}"#;
     fs::write(&set, entry).expect("a question set");
-    let annotate = spawn(
-        &["annotate", &set, "--lines", "--dry-run"],
-        &[],
-        b"line 1\n",
-    )
-    .expect("the command runs");
+    let annotate = spawn(&["annotate", &set, "--lines", "--plan"], &[], b"line 1\n")
+        .expect("the command runs");
     assert_eq!(annotate.status.code(), Some(5));
     assert_eq!(
         text(&annotate.stderr),
@@ -134,7 +137,7 @@ fn a_file_batch_leaves_the_question_digest_and_stays_off_other_files() {
     )
     .expect("a choose file");
     let chosen = spawn(
-        &["choose", &format!("@{choose}"), "--lines", "--dry-run"],
+        &["choose", &format!("@{choose}"), "--lines", "--plan"],
         &[],
         b"line 1\nline 2\n",
     )

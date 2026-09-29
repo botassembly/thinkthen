@@ -573,7 +573,7 @@ Accounting preparation b30af6426 missed Ada, Objective-C and COBOL facts readers
 
 ## Follow public removals into separate workspaces
 
-High review of0283 candidate674a82041 found that retiring two Rust deadline methods broke callers in separate library and database workspaces. Root workspace Clippy never compiled them. The same review found a recognize summary marked as an upper bound while omitting the second stage, and integer settings accepted outside the public deadline range. Correction is pending. Source preparation must map every caller of a removed public declaration across workspace boundaries and name its transition owner. Preserve exact old units until that caller migrates. A test that checks an upper-bound marker must also check the bound's value; a parser's integer shape check does not prove its numeric domain.
+High review of0283 candidate674a82041 found that retiring two Rust deadline methods broke callers in separate library and database workspaces. Root workspace Clippy never compiled them. The same review found a recognize summary marked as an upper bound while omitting the second stage, and integer settings accepted outside the public deadline range. The deadline corrections passed recheck; the final profile-aware bound passed High review at9f6ae2896. Source preparation must map every caller of a removed public declaration across workspace boundaries and name its transition owner. Preserve exact old units until that caller migrates. A test that checks an upper-bound marker must also check the bound's value; a parser's integer shape check does not prove its numeric domain.
 
 ## Check the actual selector and arithmetic authority
 
@@ -582,4 +582,9 @@ Review ofSQL host preparationd12f9f166 found a named-function command that SQLit
 
 ## Bound each independently split stage
 
-The0283 recheck accepted the deadline corrections but found that the name-stage request bound still reused the number of first-stage chunks. Backend profiles split each stage independently, and long kind descriptions can make the second stage split more finely. The first regression used the default profile and could not reveal this. The retained author is adding a valid profile-limit witness and a conservative bound. Future staged-planner preparation must trace every independent splitter and distinguish known bytes from future response-dependent bodies.
+The0283 recheck accepted the deadline corrections but found that the name-stage request bound still reused the number of first-stage chunks. Backend profiles split each stage independently, and long kind descriptions can make the second stage split more finely. The first regression used the default profile and could not reveal this. The corrected9f6ae2896 candidate passed High recheck with a valid profile-limit witness and a conservative question-count bound. Future staged-planner preparation must trace every independent splitter and distinguish known bytes from future response-dependent bodies.
+
+
+## Locate feature code before copying a host claim
+
+The0289 kickoff inventory named nonexistent `libraries/polars/src` and a separate Polars source counter. The binding README states that this folder holds no code. Its implementation is the root crate's feature-gated `public/frame.rs` and helpers, with tests under `tests/polars`; the root Rust counter covers both. The coordinator corrected the lane claim and next brief before implementation. A folder name is not evidence that a surface has its own crate.

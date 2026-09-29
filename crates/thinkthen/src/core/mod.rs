@@ -22,6 +22,7 @@ pub(crate) mod measure;
 mod order;
 mod plan;
 mod plan_document;
+mod plan_summary;
 mod pointer;
 mod probability;
 mod question;
@@ -37,6 +38,8 @@ pub(crate) mod relation;
 mod render;
 mod reply;
 mod result;
+pub(crate) mod settings;
+pub(crate) use settings::engine_settings;
 mod text;
 mod threshold;
 
@@ -61,6 +64,7 @@ pub(crate) use crate::core::json::JsonError;
 pub(crate) use crate::core::order::ranking;
 pub(crate) use crate::core::plan::Plan;
 pub(crate) use crate::core::plan_document::PlanDocument;
+pub(crate) use crate::core::plan_summary::PlanSummary;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub(crate) use crate::core::question_file::{

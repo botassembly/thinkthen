@@ -45,7 +45,7 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
         &[
             "decide",
             "Is this relevant?",
-            "--dry-run",
+            "--plan",
             "--profile",
             &exact_evidence.to_string_lossy(),
         ],
@@ -59,7 +59,7 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
         &[
             "decide",
             "Is this relevant?",
-            "--dry-run",
+            "--plan",
             "--profile",
             &exact_evidence.to_string_lossy(),
         ],
@@ -83,7 +83,7 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
         &[
             "decide",
             "Is this relevant?",
-            "--dry-run",
+            "--plan",
             "--profile",
             &exact_request.to_string_lossy(),
         ],
@@ -100,7 +100,7 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
         &[
             "decide",
             "Is this relevant?",
-            "--dry-run",
+            "--plan",
             "--profile",
             &too_small.to_string_lossy(),
         ],
@@ -151,7 +151,7 @@ fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
         spawn(
             &[
                 &base[..],
-                &["--dry-run", "--profile", &profile.to_string_lossy()],
+                &["--plan", "--profile", &profile.to_string_lossy()],
             ]
             .concat(),
             &[],
@@ -372,7 +372,7 @@ fn grouped_annotate_checks_every_group_before_starting_one() {
         &[
             "annotate",
             &set.to_string_lossy(),
-            "--dry-run",
+            "--plan",
             "--profile",
             &tiny.to_string_lossy(),
         ],

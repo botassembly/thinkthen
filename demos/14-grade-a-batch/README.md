@@ -22,8 +22,9 @@ The saved replies use one record per request. These examples set `--batch 1` to 
 ## Prove the disclosure boundary
 
 ```bash
-env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --batch 1 --dry-run \
+env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --batch 1 --plan \
   --input cases.jsonl \
+  | sed -n '1p' \
   | jq -c '.on' \
   | mustmatch '{"correct":["/input","/gold","/output"],"grounded":["/context","/output"],"complete":["/input","/gold","/output"],"failure_kind":["/input","/gold","/output"],"severity":["/input","/gold","/output"]}'
 ```

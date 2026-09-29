@@ -32,7 +32,7 @@ fn help_names_the_beta_complete_set_and_secrecy_contract() {
             "\n\nA run makes paid requests. A relation between two kinds asks one question for every ",
             "entity of the larger kind, or of the source kind when the counts are equal. A same-kind ",
             "relation asks one yes-or-no question for every pair, in both directions unless --either. ",
-            "--dry-run prints the questions and requests and sends nothing.\n\n",
+            "--plan prints the questions and requests and sends nothing.\n\n",
         )),
         "{help}"
     );
@@ -97,7 +97,7 @@ fn relate_reads_the_names_recognize_found() {
         .collect();
     lines.push(r#"{"name":"Ana Lima","text":"not this","kind":"PER"}"#.to_owned());
     std::fs::write(folder.join("entities"), lines.join("\n")).expect("entities");
-    let plan = thinkthen("relate works_for=PER:ORG --dry-run --jsonl", "entities");
+    let plan = thinkthen("relate works_for=PER:ORG --plan --jsonl", "entities");
     let body = plan["requests"][0]["body_utf8"].as_str().expect("body");
     let state: serde_json::Value = serde_json::from_str(body).expect("json");
     let names = state["state"]["entities"].as_array().expect("entities");

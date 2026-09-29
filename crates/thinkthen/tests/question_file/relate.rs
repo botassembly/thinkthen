@@ -20,7 +20,7 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
             "0.7",
             "--model",
             "cli-model",
-            "--dry-run",
+            "--plan",
             "--url",
             CLOSED,
             "--no-cache",
@@ -34,7 +34,14 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
         "{}",
         String::from_utf8_lossy(&output.stderr)
     );
-    let plan: Value = serde_json::from_slice(&output.stdout).expect("plan");
+    let plan: Value = serde_json::from_slice(
+        output
+            .stdout
+            .split(|byte| *byte == b'\n')
+            .next()
+            .expect("plan line"),
+    )
+    .expect("plan");
     assert_eq!(plan["model"], "cli-model");
     assert_eq!(plan["backend_profile"], Value::Null);
     assert_eq!(
@@ -60,7 +67,7 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
         &[
             "relate",
             &file,
-            "--dry-run",
+            "--plan",
             "--url",
             CLOSED,
             "--no-cache",
@@ -76,7 +83,14 @@ fn file_backed_dry_run_reports_every_independent_precedence_source() {
         "{}",
         String::from_utf8_lossy(&profiled.stderr)
     );
-    let profiled: Value = serde_json::from_slice(&profiled.stdout).expect("plan");
+    let profiled: Value = serde_json::from_slice(
+        profiled
+            .stdout
+            .split(|byte| *byte == b'\n')
+            .next()
+            .expect("plan line"),
+    )
+    .expect("plan");
     assert_eq!(profiled["backend_profile"], "runtime");
     assert_eq!(profiled["from"]["profile"], "file");
 }
@@ -108,7 +122,7 @@ fn invalid_unreadable_and_wrong_verb_files_keep_their_ruled_exit_codes() {
         (invalid_recognize, 5),
         ("@/path/that/does/not/exist.json".to_owned(), 5),
     ] {
-        let output = run(&["relate", &file, "--dry-run"], b"[]").expect("binary runs");
+        let output = run(&["relate", &file, "--plan"], b"[]").expect("binary runs");
         assert_eq!(output.status.code(), Some(code), "{file}");
         assert!(output.stdout.is_empty());
     }

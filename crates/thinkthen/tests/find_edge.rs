@@ -73,7 +73,7 @@ fn recording() -> String {
 
 #[test]
 fn dry_run_builds_one_aggregate_request_and_names_the_framing() {
-    let output = run(&["find", "Which?", "--dry-run"], b"alpha\nbeta\n").expect("binary runs");
+    let output = run(&["find", "Which?", "--plan"], b"alpha\nbeta\n").expect("binary runs");
     assert_eq!(output.status.code(), Some(0));
     let plan = String::from_utf8_lossy(&output.stdout);
     assert!(
@@ -219,8 +219,7 @@ fn aggregate_byte_limit_accepts_the_exact_boundary() {
     let mut input = vec![b'a'; half - 1];
     input.push(b'\n');
     input.extend(std::iter::repeat_n(b'b', half));
-    let status =
-        status_without_output(&["find", "Which?", "--dry-run"], &input).expect("binary runs");
+    let status = status_without_output(&["find", "Which?", "--plan"], &input).expect("binary runs");
     assert_eq!(status.code(), Some(0));
 }
 
@@ -232,7 +231,7 @@ fn compiled_count_boundaries_accept_and_refuse_the_exact_edges() {
             .collect::<String>()
     };
     for (count, none) in [(255, false), (254, true)] {
-        let mut arguments = vec!["find", "Which?", "--dry-run"];
+        let mut arguments = vec!["find", "Which?", "--plan"];
         if none {
             arguments.push("--none");
         }
@@ -313,7 +312,7 @@ fn input_file_and_directory_follow_the_shared_opened_handle_rules() {
     fs::write(&file, b"first\nsecond\n").expect("input file");
     let file_text = file.to_string_lossy();
     let accepted = run(
-        &["find", "Which?", "--dry-run", "--input", &file_text],
+        &["find", "Which?", "--plan", "--input", &file_text],
         b"ignored",
     )
     .expect("file runs");
@@ -322,7 +321,7 @@ fn input_file_and_directory_follow_the_shared_opened_handle_rules() {
 
     let root_text = root.to_string_lossy();
     let refused = run(
-        &["find", "Which?", "--dry-run", "--input", &root_text],
+        &["find", "Which?", "--plan", "--input", &root_text],
         b"ignored",
     )
     .expect("directory is refused");

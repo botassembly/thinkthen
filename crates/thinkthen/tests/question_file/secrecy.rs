@@ -88,7 +88,7 @@ fn a_refusal_names_the_key_and_never_the_description_it_held() {
         "secrecy-structured",
         &format!(r#"{{"choose":"a","options":{{"x":{{"note":"{marker}"}},"y":true}}}}"#),
     );
-    let (stderr, code) = refused(&["choose", &file, "--dry-run"]);
+    let (stderr, code) = refused(&["choose", &file, "--plan"]);
     assert_eq!(
         stderr,
         "thinkthen: `options` in the question file is a list of labels, or a map from each label to its description\n"

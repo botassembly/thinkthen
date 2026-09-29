@@ -4,8 +4,8 @@ use std::io::{Read, Write};
 use std::process::ExitCode;
 
 use crate::core::{
-    Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, Meta, PlanDocument, Pointer, QuestionText,
-    Reading, Record, RequestMeta, json_line,
+    Backend, Evidence, Find, Framing, MAX_RECORD_BYTES, Meta, PlanDocument, PlanSummary, Pointer,
+    QuestionText, Reading, Record, RequestMeta, json_line,
 };
 
 use crate::args::{Common, FindArguments};
@@ -16,6 +16,10 @@ use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 
 /// Read one bounded set, ask once, and print its selected original unit.
+#[expect(
+    clippy::too_many_lines,
+    reason = "the bounded find set resolves one question and one result with a separate preview helper"
+)]
 pub(crate) fn run(
     arguments: &FindArguments,
     environment: &Environment,
@@ -23,6 +27,7 @@ pub(crate) fn run(
     writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     let common = &arguments.common.as_common();
+    common.check_plan_name()?;
     let framing = if common.jsonl {
         Framing::Jsonl
     } else {
@@ -89,12 +94,14 @@ pub(crate) fn run(
     let find = Find::new(question, &evidence, backend.model().clone(), arguments.none)
         .map_err(|_| Failure::Defect("a validated find set could not become a plan"))?;
     if common.dry_run {
-        let _prepared = facade::split(&backend, profile.as_ref(), find.plan())?;
-        let document = PlanDocument::of(&backend, find.plan())
-            .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
-        let document = document.reading(&reading);
-        edge::write_line(writer, &json_line(&document)?)?;
-        return Ok(ExitCode::SUCCESS);
+        return planned(
+            &find,
+            &backend,
+            profile.as_ref(),
+            &reading,
+            units.len(),
+            writer,
+        );
     }
     let engine = engine.ok_or(Failure::Defect("a live find run has no engine"))?;
     let found = engine.find(&find, environment.cancel()).map_err(|error| {
@@ -110,6 +117,39 @@ pub(crate) fn run(
     } else {
         ExitCode::from(3)
     })
+}
+
+fn planned(
+    find: &Find,
+    backend: &Backend,
+    profile: Option<&crate::core::BackendProfile>,
+    reading: &Reading,
+    records: usize,
+    mut writer: impl Write,
+) -> Result<ExitCode, Failure> {
+    let prepared = facade::split(backend, profile, find.plan())?;
+    let mut summary = PlanSummary::new(false);
+    summary
+        .records_added(records)
+        .map_err(|_| Failure::Defect("a plan is too large"))?;
+    for chunk in prepared {
+        summary
+            .request(&chunk.request.body)
+            .map_err(|_| Failure::Defect("a plan is too large"))?;
+    }
+    let document = PlanDocument::of(backend, find.plan())
+        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+    if summary.first_body() != Some(document.request_body()) {
+        return Err(Failure::Defect(
+            "the disclosed request changed after preparation",
+        ));
+    }
+    edge::write_line(&mut writer, &json_line(&document.reading(reading))?)?;
+    let counts = summary
+        .counts()
+        .map_err(|_| Failure::Defect("a plan is too large"))?;
+    edge::write_line(&mut writer, &json_line(&counts)?)?;
+    Ok(ExitCode::SUCCESS)
 }
 
 type Unit = (Vec<u8>, Record, Evidence);

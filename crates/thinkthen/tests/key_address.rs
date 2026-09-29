@@ -143,27 +143,21 @@ fn command_refuses_before_plan_status_or_recording_output() {
     let folder = home.join("recording");
     let record = folder.to_string_lossy().into_owned();
     for args in [
-        vec!["decide", "a question", "--url", &base, "--dry-run"],
+        vec!["decide", "a question", "--url", &base, "--plan"],
         vec!["decide", "a question", "--url", &base, "--record", &record],
         vec!["decide", "a question", "--url", &base, "--cache", &record],
         vec!["decide", "a question", "--url", &base, "--replay", &record],
-        vec!["find", "a question", "--url", &base, "--dry-run"],
+        vec!["find", "a question", "--url", &base, "--plan"],
         vec![
             "recognize",
             "--kind",
             "person=Person",
             "--url",
             &base,
-            "--dry-run",
+            "--plan",
         ],
-        vec![
-            "relate",
-            "linked=person:person",
-            "--url",
-            &base,
-            "--dry-run",
-        ],
-        vec!["check", "--url", &base, "--dry-run"],
+        vec!["relate", "linked=person:person", "--url", &base, "--plan"],
+        vec!["check", "--url", &base, "--plan"],
         vec!["status", "--json"],
         vec!["status"],
     ] {

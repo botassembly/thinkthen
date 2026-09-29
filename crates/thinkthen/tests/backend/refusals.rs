@@ -215,8 +215,8 @@ const REFUSALS: [Refusal; 33] = [
     ),
     every(
         "a plan beside a recording",
-        &["--dry-run", "--record", "{dir}"],
-        "--dry-run sends nothing",
+        &["--plan", "--record", "{dir}"],
+        "--plan sends nothing",
         2,
     ),
     every(

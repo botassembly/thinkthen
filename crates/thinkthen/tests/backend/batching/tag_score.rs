@@ -236,7 +236,7 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
             "billing",
             "urgent",
             "--lines",
-            "--dry-run",
+            "--plan",
             "--batch",
             "5",
             "--no-cache",

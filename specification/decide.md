@@ -30,7 +30,7 @@ On one document, `true`, `false`, or `null`. `null` is a not sure answer, and it
 | `--quiet` | On one document, prints nothing on standard output. Record mode refuses it because no record's answer sets the exit code | Off |
 | `--details` | Prints the full result object in place of the bare value | Off |
 | `--context FILE` | Uses the file's text once as shared evidence in each record batch; see [records.md](records.md) | None |
-| `--dry-run` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
+| `--plan` | Prints the plan and sends nothing. See [channels.md](channels.md) | Off |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field`. See [records.md](records.md) | One document |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |
 

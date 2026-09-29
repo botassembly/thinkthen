@@ -52,6 +52,7 @@ pub(crate) fn run(
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    arguments.common.check_plan_name()?;
     refuse_views(arguments)?;
     // `@FILE` names the same file, as the other verbs' question files do.
     let path = arguments
@@ -104,15 +105,24 @@ pub(crate) fn run(
     }
     let source = edge::source(arguments.common.input.as_deref(), input)?;
     if let Some(kind) = table_kind(&arguments.common) {
-        let mut rows = TableRows::new(source, kind)?;
+        let rows = TableRows::new(source, kind)?;
         if arguments.common.dry_run {
+            let engine = asking::engine(
+                &arguments.common,
+                environment,
+                folders,
+                backend.clone(),
+                profile.clone(),
+                arguments.common.jobs,
+            )?;
             return dry_run_record(
                 &set,
                 &backend,
                 &reading,
-                profile.as_ref(),
+                &engine,
+                setting.unwrap_or(Setting::Records(std::num::NonZeroUsize::MIN)),
                 &mismatch,
-                rows.next().transpose()?,
+                rows,
                 arguments.common.details,
                 &mut writer,
             );
@@ -157,15 +167,24 @@ pub(crate) fn run(
             )
         };
     }
-    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
+    let chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
     if arguments.common.dry_run {
+        let engine = asking::engine(
+            &arguments.common,
+            environment,
+            folders,
+            backend.clone(),
+            profile.clone(),
+            arguments.common.jobs,
+        )?;
         return dry_run(
             &set,
             &backend,
             &reading,
-            profile.as_ref(),
+            &engine,
+            setting.unwrap_or(Setting::Records(std::num::NonZeroUsize::MIN)),
             &mismatch,
-            chunks.next().map(|(_, row)| row).transpose()?,
+            chunks.map(|(_, row)| row),
             arguments.common.details,
             &mut writer,
         );
@@ -220,7 +239,7 @@ fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
             || arguments.common.dry_run
         {
             return Err(Failure::Usage(
-                "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --dry-run",
+                "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --plan",
             ));
         }
     }

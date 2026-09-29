@@ -108,7 +108,7 @@ A threshold saved in a question file was tuned at the file's `batch`, or at 1 wh
 | `annotate` over N records | One request for each filled compatible `(on group, question slice)` batch; at `--batch 1`, N times its profile chunks |
 | `find` | 1 |
 | `relate` | The shared relation planner's exact request count for the complete set |
-| `--dry-run`, `--replay` | 0 |
+| `--plan`, `--replay` | 0 |
 
 `rank` sorts locally and makes no pairwise calls. Without a cache, every request inside one command is independent of every other. A command is therefore one round, and the round runs in parallel with output order kept. With a cache, equal request digests share one backend call and each record still receives its own logical judgment in input order.
 
