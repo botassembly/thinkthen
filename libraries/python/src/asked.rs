@@ -9,8 +9,8 @@ use std::path::PathBuf;
 
 use pyo3::prelude::*;
 use thinkthen::{
-    BandedQuestion, DecisionQuestion, Description, DetailQuestion, Kind, LoadedQuestion,
-    QuestionKind, RelationRule,
+    BandedQuestion, DecisionQuestion, Description, DetailQuestion, For, Kind, LoadedQuestion,
+    QuestionKind, RelationRule, Settings,
 };
 
 use crate::{raised, usage};
@@ -77,6 +77,48 @@ pub(crate) struct Question(pub(crate) Asked);
 
 #[pymethods]
 impl Question {
+    /// Validate Python's keyword JSON with the shared core settings grammar.
+    /// A built question can take call controls without rebuilding its identity.
+    #[staticmethod]
+    fn _settings(
+        py: Python<'_>,
+        verb: &str,
+        text: Option<&str>,
+        keywords: &str,
+    ) -> PyResult<(
+        Option<Self>,
+        Option<usize>,
+        bool,
+        Option<String>,
+        Option<i64>,
+    )> {
+        let settings = Settings::parse(keywords).map_err(|error| usage(py, &error.to_string()))?;
+        let asked = if let Some(text) = text {
+            let kind = match verb {
+                "decide" => For::Decide,
+                "choose" => For::Choose,
+                "score" => For::Score,
+                "tag" => For::Tag,
+                _ => return Err(usage(py, "this verb takes no question keywords")),
+            };
+            let json = settings
+                .question_json(kind, text)
+                .map_err(|error| usage(py, &error.to_string()))?;
+            Some(Self(
+                loaded(py, thinkthen::Question::from_json(&json))?.into(),
+            ))
+        } else {
+            None
+        };
+        Ok((
+            asked,
+            settings.batch_records(),
+            settings.batch_max(),
+            settings.context().map(str::to_owned),
+            settings.deadline_ms(),
+        ))
+    }
+
     /// Question-file JSON the caller's arguments made. A broken rule is usage.
     #[staticmethod]
     fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {

@@ -101,6 +101,7 @@ pub(super) struct Settings<'a> {
     pub(super) throttle: Option<u8>,
     pub(super) batch: Option<BatchSetting>,
     pub(super) most: Option<usize>,
+    pub(super) most_total: Option<u64>,
     pub(super) max_request_bytes: Option<usize>,
     pub(super) timeout: Option<u64>,
     pub(super) retries: Option<u32>,
@@ -121,6 +122,9 @@ impl Settings<'_> {
         }
         if self.most.is_some() {
             builder = builder.max_requests(self.most).map_err(refused)?;
+        }
+        if self.most_total.is_some() {
+            builder = builder.max_requests_total(self.most_total);
         }
         if let Some(size) = self.max_request_bytes {
             builder = builder.max_request_bytes(size).map_err(refused)?;

@@ -8,6 +8,8 @@ cross the whole door from Python.
 
 import pathlib
 
+import pytest
+
 from conftest import child_env, run
 
 TESTS = str(pathlib.Path(__file__).resolve().parent)
@@ -54,6 +56,7 @@ def test_extents_past_readable_memory_are_refused(backend, tmp_path):
     assert backend.count() == 2
 
 
+@pytest.mark.stress
 def test_refused_inputs_release_their_batches(backend, tmp_path):
     """R2-17: 200 refused 8 MB number columns in a row each release their
     stream, so peak resident memory grows under 8 MiB. Regression: a
@@ -89,7 +92,7 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     rows = [f"note {n}" for n in range(50)]
     frame = pl.DataFrame({"body": rows})
     wanted = [one["team"] for one in engine.annotate(spec, rows).value]
-    out = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None)
+    out = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None, None).value
     stream, schema, [batch] = pull(out.__arrow_c_stream__())
     child = batch.children[1].contents
     moved, moved_schema = type(child)(), type(schema.children[1].contents)()
@@ -103,7 +106,7 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     print(bool(batch.release), bool(schema.release), bool(stream.release))
     reread = pa.Array._import_from_c(ctypes.addressof(moved), ctypes.addressof(moved_schema))
     print(reread.to_pylist() == wanted)
-    column = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None)
+    column = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None, None).value
     table = pa.table(column)
     print(table.column("team").to_pylist() == wanted)
     del table

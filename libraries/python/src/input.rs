@@ -18,9 +18,8 @@ use crate::{raised, usage};
 /// The refusal for a column where a verb reads a list.
 pub(crate) const ARROW: &str = "filter, rank, find, and relate read a list of str, not a column, and annotate and recognize read a column only from a Polars or pandas frame with on=. Pass column.to_list()";
 
-/// The refusal for a deadline that is not a number (R5-8).
-pub(crate) const DEADLINE: &str =
-    "deadline is seconds from now, a number; no deadline is spelled None or -1";
+/// The refusal for a nonintegral numeric deadline.
+pub(crate) const DEADLINE: &str = "`deadline_ms` is a whole number of milliseconds";
 
 /// The top-level module of a value's type, or `pandas` when any class in its
 /// method resolution order is pandas', so a subclass counts.
@@ -196,9 +195,7 @@ pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Ent
     Ok(read)
 }
 
-/// The caller's token and deadline. A deadline is checked here, before any
-/// work starts: a bool or a non-number is refused, and the public rule
-/// (ADR 0041) judges the number.
+/// The caller's token and millisecond deadline, checked before any send.
 pub(crate) fn controls(
     py: Python<'_>,
     deadline: Option<&Bound<'_, PyAny>>,
@@ -212,11 +209,11 @@ pub(crate) fn controls(
             if value.is_instance_of::<PyBool>() || matches!(name.to_str()?, "bool" | "bool_") {
                 return Err(usage(py, DEADLINE));
             }
-            let seconds: f64 = host_error(host(|| value.extract()), || usage(py, DEADLINE))?;
+            let millis: i64 = host_error(host(|| value.extract()), || usage(py, DEADLINE))?;
             CallOptions::new()
-                .deadline_seconds(seconds)
+                .deadline_millis(millis)
                 .map_err(|error| raised(py, &error))?;
-            Some(seconds)
+            Some(millis)
         }
     };
     Ok(Controls {

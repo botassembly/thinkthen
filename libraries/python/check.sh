@@ -18,24 +18,28 @@ not_run() {
 	exit 77
 }
 
+command -v uv >/dev/null 2>&1 || not_run "no uv"
+cached_host=$(uv python find --offline 3.13 2>/dev/null || true)
 host=
-for candidate in python3.14 python3.13 python3.12 python3; do
+for candidate in python3.14 python3.13 "$cached_host" python3.12 python3; do
+	[ -n "$candidate" ] || continue
 	if command -v "$candidate" >/dev/null 2>&1 &&
-		"$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 12))' 2>/dev/null; then
+		"$candidate" -c 'import sys; sys.exit(sys.version_info < (3, 12) or sys.version_info.releaselevel != "final")' 2>/dev/null; then
 		host=$(command -v "$candidate")
 		break
 	fi
 done
-[ -n "$host" ] || not_run "no Python 3.12 or later (the test pins need it)"
-command -v uv >/dev/null 2>&1 || not_run "no uv"
+[ -n "$host" ] || not_run "no stable Python 3.12 or later (the test pins need it)"
 command -v maturin >/dev/null 2>&1 || not_run "no maturin"
 
 # One venv per checkout and pin file, outside the product cache and the
 # repository, keyed by the checkout and, past the first, the pin file's name.
 pinned() {
-	venv=${XDG_CACHE_HOME:-$HOME/.cache}/thinkthen-toolchains/python/$(printf '%s' "$here$2" |
+	venv=${XDG_CACHE_HOME:-$HOME/.cache}/thinkthen-toolchains/python/$(printf '%s' "$here$2$host" |
 		sha256sum | cut -c1-16)
-	[ -x "$venv/bin/python" ] && return 0
+	if [ -x "$venv/bin/python" ] && "$venv/bin/python" -c 'import sys; sys.exit(sys.version_info.releaselevel != "final" or sys.version_info < (3, 12))'; then
+		return 0
+	fi
 	if ! { uv venv --quiet --offline --python "$host" "$venv" &&
 		uv pip install --quiet --offline --require-hashes --python "$venv/bin/python" -r "$1"; }; then
 		rm -rf -- "$venv"
@@ -119,7 +123,7 @@ echo "   Arrow safety, bounded exit/release, throttle, and the address proof"
 precondition "$python" True "pandas 3"
 if [ "$profile" = stress ]; then
 	"$python" -m pytest -q -p no:cacheprovider --tb=short -m stress \
-		tests/test_release.py tests/test_column_timing.py tests/test_pandas.py
+		tests/test_release.py tests/test_column_timing.py tests/test_pandas.py tests/test_arrow_safety.py
 else
 	"$python" -m pytest -q -p no:cacheprovider --tb=short -m 'not stress' tests/
 fi

@@ -247,7 +247,10 @@ def test_the_slide_sample_runs_as_drawn(backend, tmp_path):
     os.chdir({str(tmp_path)!r})
     df = polars.DataFrame({{"body": ["I was charged twice. Please refund the duplicate."]}})
     df = tt.annotate("form.json", df, on="body").value
-    print(df.columns, df.dtypes)
+    print(df.columns, df["wants_refund"].to_list(), df["team"].to_list(),
+          df["urgency"].to_list(), df["failed"].to_list())
     """, child_env(backend, tmp_path))
-    assert printed.strip() == ("['body', 'wants_refund', 'team', 'urgency'] "
-                               "[String, Boolean, String, Float64]")
+    # The generic replay returns noul=.9, first choice .9, and score
+    # 0*.9 + 1*.05 + 2*.05 = .15 under the weighted-level contract.
+    assert printed.strip() == ("['body', 'wants_refund', 'team', 'urgency', 'failed'] "
+                               "[True] ['billing'] [0.15] [None]")

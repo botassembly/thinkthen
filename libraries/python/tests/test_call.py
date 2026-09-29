@@ -19,6 +19,27 @@ import pytest
 from conftest import child_env, run, start
 
 
+def test_keywords_and_probability_share_the_answer(backend, tmp_path):
+    """The public call holds probability from its own reply, including a column.
+    A second probability request or a missing column row changes the exact count."""
+    printed = run("""
+    import polars as pl, thinkthen as tt
+    engine = tt.Engine(cache=False)
+    decided = engine.decide("Is it late?", "one", true="a late item")
+    chosen = engine.choose("Which team?", "two", options=["billing", "shipping"])
+    scored = engine.score("How urgent?", "three", levels=["Routine.", "Now."])
+    tagged = engine.tag("Which kind?", "four", labels=["bill", "ship"])
+    column = engine.decide("Is it late?", pl.Series(["five", "six"]))
+    print(decided.value, decided.probability, chosen.value, chosen.probability,
+          scored.value, scored.probability, tagged.value, tagged.probability,
+          column.value.to_list(), column.probability.to_list(),
+          engine.usage()["requests_sent"])
+    """, child_env(backend, tmp_path))
+    assert printed.strip() == ("True 0.9 billing 0.9 0.1 None ['bill', 'ship'] None "
+                               "[True, True] [0.9, 0.9] 5")
+    assert backend.count() == 5
+
+
 @pytest.mark.parametrize("shape", ["list", "polars_series"])
 def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path, shape):
     fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"
