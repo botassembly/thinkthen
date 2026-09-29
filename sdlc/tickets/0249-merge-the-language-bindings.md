@@ -6,7 +6,7 @@ opens: libraries sdlc/issues sdlc/tickets
 
 # 0249: Merge the language bindings
 
-Status: **ready for staged integration**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). No merge step has been performed: `libraries/` is untouched by the program, nothing is published, no CI is configured.
+Status: **design accepted; first C#/JVM implementation candidate under code review**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). The first local package batch is built and checked; nothing is published and no CI is configured. See `sdlc/records/0249-csharp-jvm-build.md` for candidate proof and remaining host criteria.
 
 Number corrected from 0247 during queue intake because the existing DuckDB lane holds 0247 and the usage-persistence design holds 0248. Scope is retained; the later explicit authorization above releases the start hold. This handoff consolidates existing J8 rows; it is not another independent issue.
 
