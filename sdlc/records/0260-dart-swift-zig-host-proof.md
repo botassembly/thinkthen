@@ -1,6 +1,6 @@
 # 0260 Dart, Swift and Zig public bulk forwarding
 
-Status: candidate for fresh independent code review. This related slice adds focused fixtures and routine check registration only. The engine, C door, host runtime libraries, cache, encoder and public APIs are unchanged. Register 64 remains open for the other named public adapters and installed-target qualifications.
+Status: fresh independent code review accepted `24c7a98e` at merge tip `0d444e69`; integrated. This related slice adds focused fixtures and routine check registration only. The engine, C door, host runtime libraries, cache, encoder and public APIs are unchanged. Register 64 remains open for the other named public adapters. Installed-target qualification belongs to the separate release issues.
 
 ## Applicable public routes
 

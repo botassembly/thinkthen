@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md
 
 # 0262: Pack C# and JVM binaries with one matching C archive
 
-Status: corrected design accepted by fresh independent review at `da2ed94a`; coordinator approved implementation at main `16e77459` and expanded the JVM test-backend capture claim at main `e5c5d9b4`. The bounded Linux x86-64 candidate is built and locally proved in [the 0262 build record](../records/0262-csharp-jvm-release-build.md); fresh code review is pending. No workflow dispatch or registry publication occurred. Owner: Codex.
+Status: complete. Fresh independent code review accepted `6b3c138a`; the coordinator integrated the bounded local package proof. Original C#/JVM release issues remain open for final pin, runner and distribution evidence.
 
 ## Outcome and retained behavior
 

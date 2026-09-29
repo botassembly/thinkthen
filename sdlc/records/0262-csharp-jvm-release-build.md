@@ -1,6 +1,6 @@
 # 0262 C#/JVM local release-package build
 
-Status: bounded Linux x86-64 candidate awaiting fresh code review. The accepted design is [ticket 0262](../tickets/0262-csharp-jvm-release-packages.md). The original C# and JVM consumer-package issues remain open for final release pin, actual Ubuntu Actions execution, supported distribution and other platforms. No registry account, publication, workflow dispatch or full release bundle was exercised.
+Status: bounded Linux x86-64 local pilot accepted by fresh code review at `6b3c138a` and integrated. The accepted design is [ticket 0262](../tickets/0262-csharp-jvm-release-packages.md). The original C# and JVM consumer-package issues remain open for final release pin, actual Ubuntu Actions execution, supported distribution and other platforms. No registry account, publication, workflow dispatch or full release bundle was exercised.
 
 ## Source and files
 
