@@ -40,6 +40,83 @@ def test_keywords_and_probability_share_the_answer(backend, tmp_path):
     assert backend.count() == 5
 
 
+def test_process_cap_reserves_actual_attempts(backend, tmp_path):
+    """The Python constructor forwards the active process cap. A refusal
+    after one send cannot be simulated by a plan or by a per-call limit."""
+    printed = run("""
+    import thinkthen as tt
+    low = tt.Engine(cache=False, max_requests_total=1)
+    print(low.decide("Is it late?", "one").value)
+    try:
+        low.decide("Is it late?", "two").value
+    except tt.UsageError as error:
+        print(error.kind, error.retryable, low.usage()["requests_sent"])
+    else:
+        raise AssertionError("the second attempt crossed the cap")
+    high = tt.Engine(cache=False, max_requests_total=2)
+    print(high.decide("Is it late?", "three").value,
+          high.usage()["requests_sent"])
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == ["True", "usage False 1", "True 1"]
+    assert backend.count() == 2
+
+
+def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend, tmp_path):
+    """A default call packs three records; batch one sends three scalar
+    bodies. The value and probability for each record survive both cuts."""
+    packed = (b'{"state":"Each question quotes the text it asks about.",'
+              b'"model":"jev-1.13.0","questions":{'
+              b'"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"},'
+              b'"q2":{"type":"noul","instructions":"The text is \\"two\\". Is it late?"},'
+              b'"q3":{"type":"noul","instructions":"The text is \\"three\\". Is it late?"}}}')
+    single = [b'{"state":"' + word + b'","model":"jev-1.13.0",'
+              b'"questions":{"q1":{"type":"noul","instructions":"Is it late?"}}}'
+              for word in (b"one", b"two", b"three")]
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        rows = ["one", "two", "three"]
+        for setting in ({}, {"batch": 1}):
+            call = engine.decide_many("Is it late?", rows, **setting)
+            print(call.value, call.probability, call.facts.requests_sent)
+        """, env)
+        assert printed.splitlines() == [
+            "[False, True, True] [0.1, 0.9, 0.9] 1",
+            "[False, True, True] [0.1, 0.9, 0.9] 3",
+        ]
+        assert bodies == [packed, *single]
+    assert backend.count() == 0
+
+
+def test_unresolved_choice_omits_probability_but_banded_decide_keeps_yes_probability(backend, tmp_path):
+    """Saved cases 03 and 07 distinguish an unresolved choice from a
+    banded decision; both still carry facts from exactly one answer."""
+    printed = run("""
+    import os, pandas as pd, thinkthen as tt
+    base = os.environ["THINKTHEN_BASE_URL"]
+    case = lambda name: base.replace("/generic/", f"/case/{name}/")
+    band = tt.Engine(base_url=case("03-decide-band-unsure"), cache=False).decide(
+        "Does this need attention?", "A short note.", threshold="0.2:0.8")
+    choice = tt.Engine(base_url=case("07-choose-unsure"), cache=False).choose(
+        "Which team owns this?", "Route this note.",
+        options=["billing", "shipping", "other"], threshold=0.6)
+    column = tt.Engine(cache=False).choose(
+        "Which team?", pd.Series(["one", "two"], index=[7, 5], name="body"),
+        options=["billing", "shipping"], threshold=1.0)
+    print(band.value, band.probability, band.facts.requests_sent,
+          choice.value, choice.probability, choice.facts.requests_sent,
+          column.value.isna().tolist(), column.probability.isna().tolist(),
+          column.probability.index.tolist(), column.probability.dtype.name,
+          column.facts.requests_sent)
+    """, child_env(backend, tmp_path))
+    assert printed.strip() == ("None 0.2 1 None None 1 [True, True] [True, True] "
+                               "[7, 5] Float64 1")
+    assert backend.count() == 3
+
+
 @pytest.mark.parametrize("shape", ["list", "polars_series"])
 def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path, shape):
     fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"

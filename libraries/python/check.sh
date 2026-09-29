@@ -30,14 +30,17 @@ for candidate in python3.14 python3.13 "$cached_host" python3.12 python3; do
 	fi
 done
 [ -n "$host" ] || not_run "no stable Python 3.12 or later (the test pins need it)"
+host_identity=$("$host" -c 'import os, sys; print(os.path.realpath(sys._base_executable), sys.version.split()[0])')
 command -v maturin >/dev/null 2>&1 || not_run "no maturin"
 
 # One venv per checkout and pin file, outside the product cache and the
 # repository, keyed by the checkout and, past the first, the pin file's name.
 pinned() {
-	venv=${XDG_CACHE_HOME:-$HOME/.cache}/thinkthen-toolchains/python/$(printf '%s' "$here$2$host" |
+	venv=${XDG_CACHE_HOME:-$HOME/.cache}/thinkthen-toolchains/python/$(printf '%s' "$here$2$host_identity" |
 		sha256sum | cut -c1-16)
-	if [ -x "$venv/bin/python" ] && "$venv/bin/python" -c 'import sys; sys.exit(sys.version_info.releaselevel != "final" or sys.version_info < (3, 12))'; then
+	if [ -x "$venv/bin/python" ]; then
+		venv_identity=$("$venv/bin/python" -c 'import os, sys; print(os.path.realpath(sys._base_executable), sys.version.split()[0])')
+		[ "$venv_identity" = "$host_identity" ] || not_run "the cached venv uses another Python interpreter"
 		return 0
 	fi
 	if ! { uv venv --quiet --offline --python "$host" "$venv" &&

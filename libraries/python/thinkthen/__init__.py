@@ -16,12 +16,10 @@ The module functions use one engine configured by the environment
 (``THINKTHEN_BASE_URL``, ``THINKTHEN_CACHE``, and the rest). ``tt.Engine``
 takes the settings as keywords and has the same methods.
 
-Every verb takes ``deadline``, in seconds from the call, and ``token``, a
-``CancelToken`` any thread can set to stop the call.
-No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041).
-Zero is a spent deadline: the call sends nothing and raises
-``DeadlineError``. Any other negative, a bool, and a non-number raise
-``UsageError``, so compute a budget as ``max(0, end - now)``.
+Every verb takes ``deadline_ms``, in whole milliseconds from call start,
+and ``token``, a ``CancelToken`` any thread can set to stop the call.
+Omit ``deadline_ms`` or pass -1 for no deadline. Zero is spent and sends
+nothing. The old ``deadline=`` spelling raises ``UsageError``.
 """
 
 import json
@@ -63,10 +61,12 @@ __all__ = [
 _VERBS = ("decide", "choose", "score", "tag")
 _PARTS = {"threshold": "threshold", "options": "options", "labels": "labels",
           "levels": "levels", "true": "true", "false": "false", "model": "model"}
+_MISSING = object()
 
 
 def question(*, decide=None, choose=None, score=None, tag=None, threshold=None,
-             options=None, labels=None, levels=None, true=None, false=None, true_=None, false_=None,
+             options=None, labels=None, levels=None, true=None, false=None,
+             true_=_MISSING, false_=_MISSING,
              model=None, file=None, descriptions=None):
     """Build one question from its parts, or read it from ``file``.
 
@@ -75,7 +75,7 @@ def question(*, decide=None, choose=None, score=None, tag=None, threshold=None,
     file's ``"low:high"`` text. Parts
     and files make the same question, since both go through the file form.
     """
-    if true_ is not None or false_ is not None:
+    if true_ is not _MISSING or false_ is not _MISSING:
         raise UsageError("use true= and false= instead of true_= and false_=")
     if descriptions is not None:
         raise UsageError("put descriptions inside options, levels, or labels")
@@ -141,12 +141,26 @@ def _configured(verb, asked, keywords):
     if not isinstance(asked, str):
         if not isinstance(asked, Question):
             raise UsageError(f"{verb} takes a question text or tt.question(), not a {type(asked).__name__}")
+        if "none" in fields:
+            raise UsageError("the settings key `none` does not belong to this verb")
         repeated = _QUESTION_KEYS.intersection(fields)
         if repeated:
             raise UsageError(f"settings repeats `{sorted(repeated)[0]}` from the question or named arguments")
+    try:
+        encoded = json.dumps(fields, allow_nan=False)
+    except (TypeError, ValueError) as source:
+        raise UsageError("the settings hold a value JSON cannot represent") from source
     built, count, maximum, context, deadline_ms = Question._settings(
-        verb, asked if isinstance(asked, str) else None, json.dumps(fields))
+        verb, asked if isinstance(asked, str) else None, encoded)
     return built or asked, ("max" if maximum else count), context, deadline_ms
+
+
+def _due_keyword(deadline_ms, legacy):
+    if "deadline" in legacy:
+        raise UsageError("use deadline_ms= instead of deadline=")
+    if legacy:
+        raise UsageError(f"the settings key `{sorted(legacy)[0]}` does not exist")
+    return None if deadline_ms is _MISSING else deadline_ms
 
 
 def _rebuilt(value, answer):
@@ -185,7 +199,7 @@ def _paired(call, verb, multiple=False):
             value = call.value
             if _pandas(value) == "Series":
                 probability = type(value)(probabilities, index=value.index, name=value.name,
-                                          dtype="float64")
+                                          dtype="Float64")
             elif type(value).__module__.partition(".")[0] == "polars":
                 probability = type(value)(probabilities)
             else:
@@ -406,29 +420,32 @@ class Engine:
         asked, batch, context, deadline_ms = _configured("tag", question, keywords)
         return self._engine.label_many("tag", asked, records, batch, context, deadline_ms, token)
 
-    def details(self, question, text, *, deadline=None, token=None):
+    def details(self, question, text, *, deadline_ms=_MISSING, token=None, **legacy):
         """The command's ``--details`` document, as a ``dict``."""
+        deadline_ms = _due_keyword(deadline_ms, legacy)
         return _mapped(self._engine.ask("details", _asked(question, "details"), text,
-                                        deadline, token), json.loads)
+                                        deadline_ms, token), json.loads)
 
-    def filter(self, question, records, *, batch=None, context=None, deadline=None, token=None):
+    def filter(self, question, records, *, token=None, **keywords):
         """The records the ``decide`` question passes, in input order."""
-        return self._engine.many("filter", _asked(question, "filter"), records,
-                                 batch, context, deadline, token)
+        asked, batch, context, deadline_ms = _configured("decide", question, keywords)
+        return self._engine.many("filter", asked, records,
+                                 batch, context, deadline_ms, token)
 
     def rank(self, question, records, *, top=None, batch=None, context=None,
-             deadline=None, token=None):
+             deadline_ms=_MISSING, token=None, **legacy):
         """Records most likely first, as ``{"index", "record", "probability"}``.
 
         ``question`` is the question text. ``top`` keeps the first entries.
         """
+        deadline_ms = _due_keyword(deadline_ms, legacy)
         ranked = self._engine.order("rank", _ordering(question, "rank"), records,
-                                     batch, context, deadline, token)
+                                     batch, context, deadline_ms, token)
         return _mapped(ranked, lambda rows: [{"index": index, "record": record,
                                                "probability": probability}
                                               for index, record, probability in rows][:top])
 
-    def find(self, question, units, *, none=False, deadline=None, token=None):
+    def find(self, question, units, *, none=False, deadline_ms=_MISSING, token=None, **legacy):
         """The unit that answers the question best, as ``{"index", "unit",
         "probability"}``, or ``None`` when nothing fits. ``none=True`` offers
         a none candidate, as ``find --none`` does."""
@@ -437,7 +454,8 @@ class Engine:
         asked = _ordering(question, "find")
         if none:
             asked = asked._offering_none()
-        found = self._engine.order("find", asked, units, None, None, deadline, token)
+        deadline_ms = _due_keyword(deadline_ms, legacy)
+        found = self._engine.order("find", asked, units, None, None, deadline_ms, token)
         def picked(rows):
             if not rows:
                 return None
@@ -446,7 +464,7 @@ class Engine:
         return _mapped(found, picked)
 
     def annotate(self, questions, records, *, on=None, batch=None, context=None,
-                 deadline=None, token=None):
+                 deadline_ms=_MISSING, token=None, **legacy):
         """Ask every question in a named set of every record.
 
         ``questions`` is a question-set file path or the file's ``dict``.
@@ -458,17 +476,18 @@ class Engine:
         holds a question-to-failure map for partial rows and null otherwise.
         A pandas frame keeps its index. A question named as a column is refused first.
         """
+        deadline_ms = _due_keyword(deadline_ms, legacy)
         if context is not None:
             raise UsageError("annotate does not take a shared context")
         asked = _spec(_thinkthen._QuestionSet, questions)
         if on is None:
-            return self._engine.annotate(asked, records, batch, deadline, token)
+            return self._engine.annotate(asked, records, batch, deadline_ms, token)
         if "failed" in asked._names():
             raise UsageError("the question name failed is reserved for frame failures")
         if _pandas(records) == "DataFrame":
             column = _on(records, on, (*asked._names(), "failed"))
             answers = _thinkthen._annotate_column(self._engine, asked, _marked(column, "Series"),
-                                                  batch, deadline, token)
+                                                  batch, deadline_ms, token)
             def rebuild(columns):
                 out = records.assign()
                 for name, (values, dtype) in columns.items():
@@ -476,12 +495,12 @@ class Engine:
                 return out
             return _mapped(answers, rebuild)
         result = _thinkthen._annotate_frame(self._engine, asked, records, on,
-                                            batch, deadline, token)
+                                            batch, deadline_ms, token)
         return _mapped(result, lambda value: type(records)(_Stream(value)))
 
     def recognize(self, text, ask=None, *, kinds=None, relations=None, either=None,
-                  threshold=None, relation_threshold=None, on=None, deadline=None, token=None,
-                  descriptions=None):
+                  threshold=None, relation_threshold=None, on=None, deadline_ms=_MISSING,
+                  token=None, descriptions=None, **legacy):
         """Find every name in a text and say what kind it is.
 
         ``kinds`` lists kind words, or maps each to a description.
@@ -497,6 +516,7 @@ class Engine:
         ``names`` column: one list per row of ``dict`` with those fields but
         ``row``. Relations take one text.
         """
+        deadline_ms = _due_keyword(deadline_ms, legacy)
         if on is not None and relations is not None:
             raise UsageError("recognize with on= takes no relations; ask them of one text")
         if ask is not None:
@@ -521,16 +541,16 @@ class Engine:
         if on is not None and _pandas(text) == "DataFrame":
             column = _on(text, on, ["names"])
             found = _thinkthen._recognize_column(self._engine, spec, _marked(column, "Series"),
-                                                 deadline, token)
+                                                 deadline_ms, token)
             return _mapped(found, lambda value: text.assign(
                 names=type(column)(value, index=text.index, dtype="object")))
         if on is not None:
-            result = _thinkthen._recognize_frame(self._engine, spec, text, on, deadline, token)
+            result = _thinkthen._recognize_frame(self._engine, spec, text, on, deadline_ms, token)
             return _mapped(result, lambda value: type(text)(_Stream(value)))
-        return self._engine.recognize(spec, text, deadline, token)
+        return self._engine.recognize(spec, text, deadline_ms, token)
 
     def relate(self, entities, ask=None, *, relations=None, either=None, threshold=None,
-               deadline=None, token=None):
+               deadline_ms=_MISSING, token=None, **legacy):
         """Say how the entities relate: a list of ``Edge``.
 
         ``entities`` holds ``(name, kind)`` pairs, dicts with ``name`` and
@@ -539,11 +559,12 @@ class Engine:
         named by its ``text``. ``relations`` and ``either`` read as for
         ``recognize``.
         """
+        deadline_ms = _due_keyword(deadline_ms, legacy)
         if ask is not None:
             spec = _spec(_thinkthen._Relate, ask)
         else:
             spec = _thinkthen._Relate._build(_rules(relations, either), threshold)
-        return self._engine.relate(spec, entities, deadline, token)
+        return self._engine.relate(spec, entities, deadline_ms, token)
 
     def usage(self):
         """This engine's totals: requests sent, cache answers, and tokens."""
@@ -594,43 +615,39 @@ def tag(question, text, *, token=None, **keywords):
     return _engine().tag(question, text, token=token, **keywords)
 
 
-def details(question, text, *, deadline=None, token=None):
-    return _engine().details(question, text, deadline=deadline, token=token)
+def details(question, text, **keywords):
+    return _engine().details(question, text, **keywords)
 
 
-def filter(question, records, *, batch=None, context=None, deadline=None, token=None):
-    return _engine().filter(question, records, batch=batch, context=context,
-                            deadline=deadline, token=token)
+def filter(question, records, **keywords):
+    return _engine().filter(question, records, **keywords)
 
 
-def rank(question, records, *, top=None, batch=None, context=None, deadline=None, token=None):
-    return _engine().rank(question, records, top=top, batch=batch, context=context,
-                          deadline=deadline, token=token)
+def rank(question, records, **keywords):
+    return _engine().rank(question, records, **keywords)
 
 
-def find(question, units, *, none=False, deadline=None, token=None):
-    return _engine().find(question, units, none=none, deadline=deadline, token=token)
+def find(question, units, **keywords):
+    return _engine().find(question, units, **keywords)
 
 
-def annotate(questions, records, *, on=None, batch=None, context=None,
-             deadline=None, token=None):
-    return _engine().annotate(questions, records, on=on, batch=batch, context=context,
-                              deadline=deadline, token=token)
+def annotate(questions, records, **keywords):
+    return _engine().annotate(questions, records, **keywords)
 
 
 def recognize(text, ask=None, *, kinds=None, relations=None, either=None, threshold=None,
-              relation_threshold=None, on=None, deadline=None, token=None,
-              descriptions=None):
+              relation_threshold=None, on=None, deadline_ms=_MISSING, token=None,
+              descriptions=None, **legacy):
     return _engine().recognize(text, ask, kinds=kinds, relations=relations, either=either,
                                threshold=threshold, relation_threshold=relation_threshold,
-                               on=on, deadline=deadline, token=token,
-                               descriptions=descriptions)
+                               on=on, deadline_ms=deadline_ms, token=token,
+                               descriptions=descriptions, **legacy)
 
 
 def relate(entities, ask=None, *, relations=None, either=None, threshold=None,
-           deadline=None, token=None):
+           deadline_ms=_MISSING, token=None, **legacy):
     return _engine().relate(entities, ask, relations=relations, either=either,
-                            threshold=threshold, deadline=deadline, token=token)
+                            threshold=threshold, deadline_ms=deadline_ms, token=token, **legacy)
 
 
 def usage():

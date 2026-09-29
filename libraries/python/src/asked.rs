@@ -75,6 +75,14 @@ impl From<LoadedQuestion> for Asked {
 #[derive(Debug)]
 pub(crate) struct Question(pub(crate) Asked);
 
+type Prepared = (
+    Option<Question>,
+    Option<usize>,
+    bool,
+    Option<String>,
+    Option<i64>,
+);
+
 #[pymethods]
 impl Question {
     /// Validate Python's keyword JSON with the shared core settings grammar.
@@ -85,13 +93,7 @@ impl Question {
         verb: &str,
         text: Option<&str>,
         keywords: &str,
-    ) -> PyResult<(
-        Option<Self>,
-        Option<usize>,
-        bool,
-        Option<String>,
-        Option<i64>,
-    )> {
+    ) -> PyResult<Prepared> {
         let settings = Settings::parse(keywords).map_err(|error| usage(py, &error.to_string()))?;
         let asked = if let Some(text) = text {
             let kind = match verb {

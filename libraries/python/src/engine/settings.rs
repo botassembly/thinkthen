@@ -3,10 +3,10 @@
 use std::num::NonZeroUsize;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyString};
+use pyo3::types::{PyBool, PyInt, PyString};
 use thinkthen::{BatchSetting, EngineBuilder};
 
-use super::Arg;
+use super::{Arg, MAX_REQUESTS_TOTAL};
 use crate::diagnostics::{host, host_error};
 use crate::input::whole;
 use crate::{raised, usage};
@@ -48,6 +48,20 @@ pub(super) fn checked_throttle(value: Arg<'_, '_>) -> PyResult<Option<u8>> {
         (Some(value), Some(read)) if !(1..=32).contains(&read) => Err(usage(value.py(), THROTTLE)),
         (_, read) => Ok(read),
     }
+}
+
+/// The shared process cap uses the full unsigned range, including zero.
+pub(super) fn total(value: Arg<'_, '_>) -> PyResult<Option<u64>> {
+    value
+        .map(|value| {
+            if value.is_instance_of::<PyBool>() || !value.is_instance_of::<PyInt>() {
+                return Err(usage(value.py(), MAX_REQUESTS_TOTAL));
+            }
+            host_error(host(|| value.extract()), || {
+                usage(value.py(), MAX_REQUESTS_TOTAL)
+            })
+        })
+        .transpose()
 }
 
 pub(crate) fn batch(value: Arg<'_, '_>) -> PyResult<Option<BatchSetting>> {

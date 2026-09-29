@@ -21,7 +21,7 @@ mod settings;
 use operations::{Many, labels, many, order};
 
 pub(crate) use settings::batch;
-use settings::{Settings, checked_throttle, context, folder_path, setting};
+use settings::{Settings, checked_throttle, context, folder_path, setting, total};
 
 const MAX_REQUESTS: &str = "a request limit is a whole number of 1 or more";
 const MAX_REQUESTS_TOTAL: &str = "max_requests_total is a whole number of 0 or more";
@@ -174,7 +174,7 @@ impl Engine {
                     throttle: checked_throttle(throttle)?,
                     batch: self::batch(batch)?,
                     most: setting(max_requests, MAX_REQUESTS)?,
-                    most_total: setting(max_requests_total, MAX_REQUESTS_TOTAL)?,
+                    most_total: total(max_requests_total)?,
                     max_request_bytes: setting(
                         max_request_bytes,
                         "max_request_bytes is a whole number",
