@@ -94,6 +94,8 @@ A gate is a command whose exit code decides whether something happens. Word the 
 
 `--dry-run` prints what the command would send and then stops. It calls no backend and needs no key. It sends nothing, so `--record` or `--replay` beside it is a usage error.
 
+For a one-document `decide`, `choose`, `tag` or `score` dry run with standard output on a terminal, standard error says `thinkthen: dry-run: request.state is the evidence; request.questions holds what you asked about it.` before the JSON appears. The hint contains no question or evidence text. With standard output piped or redirected, it does not appear, even if standard error is a terminal. Record-mode and other plans have no role hint; their evidence can sit in different parts of the request.
+
 The plan is one compact JSON document on standard output with four fields that are always present.
 
 ```json
