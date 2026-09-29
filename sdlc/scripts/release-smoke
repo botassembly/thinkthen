@@ -22,13 +22,13 @@ sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256
 pair=
 managed_pair=
 swift_zig_pair=
-php_dart_pair=
+php_seen= dart_seen= flutter_seen=
 ada_objc_cobol_pair=
 for file in "$DIR"/*; do
 	case ${file##*/} in thinkthen-go-* | thinkthen-cpp-*) pair=1 ;; esac
 	case ${file##*/} in thinkthen-csharp-* | thinkthen-jvm-*) managed_pair=1 ;; esac
 	case ${file##*/} in thinkthen-swift-* | thinkthen-zig-*) swift_zig_pair=1 ;; esac
-	case ${file##*/} in thinkthen-php-* | thinkthen-dart-*) php_dart_pair=1 ;; esac
+	case ${file##*/} in thinkthen-php-*) php_seen=1 ;; thinkthen-dart-*) dart_seen=1 ;; thinkthen-flutter-*) flutter_seen=1 ;; esac
 	case ${file##*/} in thinkthen-ada-* | thinkthen-objective-c-* | thinkthen-cobol-*) ada_objc_cobol_pair=1 ;; esac
 done
 if [ -n "$pair" ]; then
@@ -40,8 +40,11 @@ fi
 if [ -n "$swift_zig_pair" ]; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" swift-zig
 fi
-if [ -n "$php_dart_pair" ]; then
+if [ -n "$php_seen" ] || { [ -n "$dart_seen" ] && [ -z "$flutter_seen" ]; }; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" php-dart
+fi
+if [ -n "$flutter_seen" ]; then
+	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" dart-flutter
 fi
 if [ -n "$ada_objc_cobol_pair" ]; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" ada-objective-c-cobol
@@ -107,6 +110,7 @@ for file in "$DIR"/*; do
 		thinkthen-zig-*.tar.gz) surface=libraries/zig ;;
 		thinkthen-php-*.tar.gz) surface=libraries/php ;;
 		thinkthen-dart-*.tar.gz) surface=libraries/dart ;;
+		thinkthen-flutter-*.tar.gz) surface=libraries/dart ;;
 		thinkthen-ada-*.tar.gz) surface=libraries/ada ;;
 		thinkthen-objective-c-*.tar.gz) surface=libraries/objective-c ;;
 		thinkthen-cobol-*.tar.gz) surface=libraries/cobol ;;
@@ -133,6 +137,7 @@ for file in "$DIR"/*; do
 		   [ "$surface" = libraries/ada ] || [ "$surface" = libraries/objective-c ] ||
 		   [ "$surface" = libraries/cobol ]; then
 			THINKTHEN_ARTIFACT=$file THINKTHEN_C_ARTIFACT="$DIR/thinkthen-c-$V-$(rustc -vV | sed -n 's/^host: //p').tar.gz" \
+				THINKTHEN_DART_ARTIFACT="$DIR/thinkthen-dart-$V-$(rustc -vV | sed -n 's/^host: //p').tar.gz" \
 				sh "$surface/check.sh" "$port" 3>&-
 		else
 			THINKTHEN_ARTIFACT=$file sh "$surface/check.sh" "$port" 3>&-

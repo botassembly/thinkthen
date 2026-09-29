@@ -1,11 +1,11 @@
 #!/bin/sh
 # Validate one fixed managed pair against the C archive that built with it.
 # The one-argument Go/C++ route stays unchanged; release-smoke also calls the
-# csharp-jvm, swift-zig, php-dart and ada-objective-c-cobol modes before consumers.
+# csharp-jvm, swift-zig, php-dart, dart-flutter and ada-objective-c-cobol modes before consumers.
 set -eu
-[ "$#" -ge 1 ] && [ "$#" -le 2 ] && [ -d "$1" ] || { echo 'release-go-cpp-pair: DIR [csharp-jvm|swift-zig|php-dart|ada-objective-c-cobol] required' >&2; exit 2; }
+[ "$#" -ge 1 ] && [ "$#" -le 2 ] && [ -d "$1" ] || { echo 'release-go-cpp-pair: DIR [csharp-jvm|swift-zig|php-dart|dart-flutter|ada-objective-c-cobol] required' >&2; exit 2; }
 mode=${2:-go-cpp}
-case $mode in go-cpp | csharp-jvm | swift-zig | php-dart | ada-objective-c-cobol) ;; *) echo "release-go-cpp-pair: unknown mode $mode" >&2; exit 2 ;; esac
+case $mode in go-cpp | csharp-jvm | swift-zig | php-dart | dart-flutter | ada-objective-c-cobol) ;; *) echo "release-go-cpp-pair: unknown mode $mode" >&2; exit 2 ;; esac
 dir=$(CDPATH='' cd -- "$1" && pwd)
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$repo"
@@ -20,6 +20,7 @@ go-cpp) first=thinkthen-go-$version-$target.tar.gz second=thinkthen-cpp-$version
 csharp-jvm) first=thinkthen-csharp-$version-$target.tar.gz second=thinkthen-jvm-$version-$target.tar.gz ;;
 swift-zig) first=thinkthen-swift-$version-$target.tar.gz second=thinkthen-zig-$version-$target.tar.gz ;;
 php-dart) first=thinkthen-php-$version-$target.tar.gz second=thinkthen-dart-$version-$target.tar.gz ;;
+dart-flutter) first=thinkthen-dart-$version-$target.tar.gz second=thinkthen-flutter-$version-$target.tar.gz ;;
 ada-objective-c-cobol) first=thinkthen-ada-$version-$target.tar.gz second=thinkthen-objective-c-$version-$target.tar.gz third=thinkthen-cobol-$version-$target.tar.gz ;;
 esac
 fail() { echo "release-go-cpp-pair: $*" >&2; exit 1; }
@@ -42,6 +43,8 @@ for file in "$dir"/*; do
 	swift-zig:thinkthen-swift-*.tar.gz.sha256 | swift-zig:thinkthen-zig-*.tar.gz.sha256 | \
 	php-dart:thinkthen-php-*.tar.gz | php-dart:thinkthen-dart-*.tar.gz | \
 	php-dart:thinkthen-php-*.tar.gz.sha256 | php-dart:thinkthen-dart-*.tar.gz.sha256 | \
+	dart-flutter:thinkthen-dart-*.tar.gz | dart-flutter:thinkthen-flutter-*.tar.gz | \
+	dart-flutter:thinkthen-dart-*.tar.gz.sha256 | dart-flutter:thinkthen-flutter-*.tar.gz.sha256 | \
 	ada-objective-c-cobol:thinkthen-ada-*.tar.gz | ada-objective-c-cobol:thinkthen-objective-c-*.tar.gz | \
 	ada-objective-c-cobol:thinkthen-cobol-*.tar.gz | ada-objective-c-cobol:thinkthen-ada-*.tar.gz.sha256 | \
 	ada-objective-c-cobol:thinkthen-objective-c-*.tar.gz.sha256 | ada-objective-c-cobol:thinkthen-cobol-*.tar.gz.sha256) selected=1 ;;
@@ -67,6 +70,9 @@ for name in "$first" "$second" ${third:+"$third"}; do
 	fi
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$target" "$version" "$c" "$c_digest" >"$work/expected"
+	if [ "$mode" = dart-flutter ] && [ "$name" = "$second" ]; then
+		printf 'dart_archive=%s\ndart_sha256=%s\n' "$first" "$(sha256 "$dir/$first" | awk '{print $1}')" >>"$work/expected"
+	fi
 	cmp -s "$work/actual" "$work/expected" || fail "C identity or manifest differs for $name"
 done
 if [ "$mode" = swift-zig ]; then
@@ -90,6 +96,19 @@ if [ "$mode" = swift-zig ]; then
 	zig_version=$(tar -xOzf "$dir/$second" ./build.zig.zon | sed -n 's/^[[:space:]]*\.version = "\([^"]*\)",$/\1/p')
 	[ "$zig_version" = "$version" ] || fail 'Zig package version differs'
 fi
+check_dart_archive() {
+	name=$1
+	tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
+	printf '%s\n' ./ ./CHANGELOG.md ./LICENSE ./README.md ./pubspec.yaml \
+		./pubspec.lock ./lib/ ./lib/thinkthen_dart.dart ./lib/src/ \
+		./lib/src/allocator.dart ./lib/src/door.dart ./lib/src/typed.dart \
+		./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
+	cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
+	tar -xOzf "$dir/$name" ./pubspec.yaml >"$work/package-metadata"
+	grep -Fxq 'name: thinkthen_dart' "$work/package-metadata" || fail 'Dart pub identity differs'
+	grep -Fxq "version: $version" "$work/package-metadata" || fail 'Dart pub version differs'
+	grep -Fxq '  ffi: ^2.1.4' "$work/package-metadata" || fail 'Dart ffi dependency differs'
+}
 if [ "$mode" = php-dart ]; then
 	for name in "$first" "$second"; do
 		tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
@@ -102,18 +121,54 @@ if [ "$mode" = php-dart ]; then
 			python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"} and p["autoload"]=={"files":["autoload.php"]}' "$work/package-metadata" || fail 'PHP Composer identity differs'
 			;;
 		"$second")
-			printf '%s\n' ./ ./CHANGELOG.md ./LICENSE ./README.md ./pubspec.yaml \
-				./pubspec.lock ./lib/ ./lib/thinkthen_dart.dart ./lib/src/ \
-				./lib/src/allocator.dart ./lib/src/door.dart ./lib/src/typed.dart \
-				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
-			tar -xOzf "$dir/$name" ./pubspec.yaml >"$work/package-metadata"
-			grep -Fxq 'name: thinkthen_dart' "$work/package-metadata" || fail 'Dart pub identity differs'
-			grep -Fxq "version: $version" "$work/package-metadata" || fail 'Dart pub version differs'
-			grep -Fxq '  ffi: ^2.1.4' "$work/package-metadata" || fail 'Dart ffi dependency differs'
+			check_dart_archive "$name"
+			continue
 			;;
 		esac
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
 	done
+fi
+if [ "$mode" = dart-flutter ]; then
+	check_dart_archive "$first"
+	tar -tzf "$dir/$second" | LC_ALL=C sort >"$work/members" || fail "cannot list $second"
+	printf '%s\n' ./ ./THINKTHEN-PACKAGE-INPUTS ./flutter/ \
+		./flutter/README.md ./flutter/pubspec.yaml ./flutter/pubspec.lock \
+		./flutter/lib/ ./flutter/lib/thinkthen_flutter.dart \
+		./flutter/example/ ./flutter/example/.metadata ./flutter/example/README.md \
+		./flutter/example/pubspec.yaml ./flutter/example/pubspec.lock \
+		./flutter/example/analysis_options.yaml ./flutter/example/lib/ \
+		./flutter/example/lib/main.dart ./flutter/example/linux/ \
+		./flutter/example/linux/CMakeLists.txt ./flutter/example/linux/flutter/ \
+		./flutter/example/linux/flutter/CMakeLists.txt \
+		./flutter/example/linux/flutter/generated_plugin_registrant.h \
+		./flutter/example/linux/flutter/generated_plugin_registrant.cc \
+		./flutter/example/linux/flutter/generated_plugins.cmake \
+		./flutter/example/linux/runner/ ./flutter/example/linux/runner/CMakeLists.txt \
+		./flutter/example/linux/runner/main.cc ./flutter/example/linux/runner/my_application.cc \
+		./flutter/example/linux/runner/my_application.h | LC_ALL=C sort >"$work/expected-members"
+	cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $second"
+	python3 - "$dir/$first" "$dir/$second" "$version" <<'PY' || fail 'private package metadata or archive member type differs'
+import sys
+import tarfile
+
+dart_path, flutter_path, version = sys.argv[1:]
+for path in (dart_path, flutter_path):
+    with tarfile.open(path, "r:gz") as archive:
+        for member in archive:
+            assert member.isfile() or member.isdir(), (path, member.name)
+with tarfile.open(flutter_path, "r:gz") as archive:
+    def read(name):
+        return archive.extractfile(name).read().decode("utf-8")
+    wrapper = read("./flutter/pubspec.yaml")
+    example = read("./flutter/example/pubspec.yaml")
+    for data, package in ((wrapper, "thinkthen_flutter"), (example, "thinkthen_flutter_example")):
+        assert f"name: {package}\n" in data
+        assert f"version: {version}\n" in data
+        assert "publish_to: none\n" in data
+    assert "  thinkthen_dart:\n    path: ..\n" in wrapper
+    assert "  thinkthen_flutter:\n    path: ..\n" in example
+    assert "  thinkthen_dart:\n    path: ../..\n" in example
+PY
 fi
 if [ "$mode" = ada-objective-c-cobol ]; then
 	tar -tzf "$dir/$c" | LC_ALL=C sort >"$work/members" || fail 'cannot list C members'
@@ -165,4 +220,4 @@ PY
 	tar -xOzf "$dir/$c" ./include/thinkthen.h >"$work/c-header"
 	cmp -s "$work/objective-header" "$work/c-header" || fail 'Objective-C copied C header differs'
 fi
-case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; swift-zig) echo 'release-go-cpp-pair: swift-zig pass' ;; php-dart) echo 'release-go-cpp-pair: php-dart pass' ;; ada-objective-c-cobol) echo 'release-go-cpp-pair: ada-objective-c-cobol pass' ;; esac
+case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; swift-zig) echo 'release-go-cpp-pair: swift-zig pass' ;; php-dart) echo 'release-go-cpp-pair: php-dart pass' ;; dart-flutter) echo 'release-go-cpp-pair: dart-flutter pass' ;; ada-objective-c-cobol) echo 'release-go-cpp-pair: ada-objective-c-cobol pass' ;; esac
