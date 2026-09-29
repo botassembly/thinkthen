@@ -81,10 +81,30 @@ printf '%s\n' '{"value":{"credential_request":false,"queue":null,"urgency":0}}' 
 ## What can go wrong
 
 - The output directory must not exist. This prevents a second run from mixing old and new rows.
-- A question name may not collide with a field already in the input row. `annotate` refuses that record before sending it. Keep names such as `queue` and `urgency` out of the TSV header.
+- A question name may collide with an input member in `--details`: the original stays under `input`, and the answer appears under `value` and `answers`. Bare output still refuses the collision. Keep policy code pointed at the detailed answer, not an original input member with the same name.
 - `/body` is the disclosure boundary. `--dry-run` shows the exact request without sending it. Detailed output still contains the full local row, including `reviewed_action`, so treat the three files as audit data.
 - Adding, removing, or changing one question changes the whole packed request and its cache digest. A rerun asks and pays for all three questions again, and an answer near its cut can move.
 - The policy refuses missing, malformed, and unknown values. It never silently drafts them.
+
+## Route one missing record to review
+
+`review-input.jsonl` uses all six recorded tickets with one `/body` omitted.
+The five judged requests have the same bytes as the existing batch-one
+recording. Run the offline review route with the built
+`thinkthen` on `PATH`:
+
+```sh
+./review-jsonl /tmp/triage-review
+jq -s '[.[] | [.schema, .policy.action, .policy.reason]]' /tmp/triage-review/*.jsonl
+```
+
+`review-jsonl` accepts the completed annotate exit 7. It checks every row's
+schema before applying the ordinary policy only to successful judgments. The
+separate error row goes to `review` with reason `record_error`. An unknown
+schema or terminal annotate error removes the staged output. The error row
+contains the missing pointer and input position, not the original evidence.
+The script writes five successful decisions and one review row; it does not
+pretend that the missing record has a model answer.
 
 ## Related how-tos
 

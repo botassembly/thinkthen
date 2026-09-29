@@ -22,6 +22,7 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod aggregation;
 mod batching;
+pub(crate) mod error_row;
 mod plan;
 
 pub(crate) use crate::engine::facade::{GroupAnswer, PreparedGroup, check_model};
@@ -98,6 +99,7 @@ pub(crate) fn run(
                 profile.as_ref(),
                 &mismatch,
                 rows.next().transpose()?,
+                arguments.common.details,
                 &mut writer,
             );
         }
@@ -150,6 +152,7 @@ pub(crate) fn run(
             profile.as_ref(),
             &mismatch,
             chunks.next().map(|(_, row)| row).transpose()?,
+            arguments.common.details,
             &mut writer,
         );
     }
@@ -193,6 +196,20 @@ pub(crate) fn run(
 }
 
 fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
+    if let Some(policy) = arguments.on_error.as_deref() {
+        if policy != "continue" {
+            return Err(Failure::Usage("--on-error takes continue"));
+        }
+        if !arguments.common.jsonl
+            || !arguments.common.details
+            || arguments.batching.batch.as_deref() != Some("1")
+            || arguments.common.dry_run
+        {
+            return Err(Failure::Usage(
+                "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --dry-run",
+            ));
+        }
+    }
     if arguments.extra_input.is_some() {
         return Err(Failure::Usage(
             "the second path is input; write it as `--input FILE`",
@@ -291,6 +308,7 @@ pub(crate) struct Judging<'a> {
     set: QuestionSet,
     mismatch: Mismatch,
     streams: bool,
+    continue_missing: bool,
 }
 
 impl<'a> Judging<'a> {
@@ -304,6 +322,7 @@ impl<'a> Judging<'a> {
         let common = &arguments.common;
         Self {
             streams: common.framing() != Framing::Document,
+            continue_missing: arguments.on_error.is_some(),
             engine,
             common,
             environment,
@@ -335,12 +354,18 @@ impl<'a> Judging<'a> {
                 .map_err(|error| Failure::record(error, base.streams()))?,
             crate::annotate_schedule::Input::Record(_, record) => record,
         };
-        collisions(&self.set, &record)?;
+        if !self.common.details {
+            collisions(&self.set, &record)?;
+        }
         Ok(record)
     }
 
     pub(crate) fn groups(&self) -> Vec<Vec<usize>> {
         self.set.groups()
+    }
+
+    pub(crate) const fn continue_missing(&self) -> bool {
+        self.continue_missing
     }
 
     pub(crate) const fn requested_model(&self) -> &ModelName {

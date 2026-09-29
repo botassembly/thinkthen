@@ -205,6 +205,21 @@ The readable `question` in each answer prints `choose` options and `tag` labels 
 
 `meta.usage` is the sum over the record's requests.
 
+An explicit `annotate --jsonl --details --batch 1 --on-error continue` may
+place a separate error row among successful detailed rows when a question-set
+`on` pointer is absent from one record:
+
+```json annotate
+{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}
+```
+
+`at` is the one-based input position. This row has no `input`, `value`,
+`answers`, `meta`, request, or usage. It is not a `thinkthen.result/1` judgment;
+consumers distinguish the two by `schema`. The `recordError` definition in
+[`result.schema.json`](result.schema.json) validates this row separately; the
+schema root remains the successful detailed result. [annotate.md](annotate.md)
+fixes the only supported continuation mode and its exit status.
+
 ## What a high probability does not mean
 
 The model judges only the evidence it was shown. A probability of 0.98 says nothing about facts that were absent from the input. In one measurement the model approved every case at 0.98 while human reviewers had refused 23% of them. The only test of a question is a measurement against labeled cases.

@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+if (($# != 1)); then
+	printf '%s\n' 'usage: review-jsonl OUTPUT_DIRECTORY' >&2
+	exit 2
+fi
+output=$1
+if ! mkdir -- "$output" 2>/dev/null; then
+	printf '%s\n' 'review-jsonl: the output directory already exists' >&2
+	exit 2
+fi
+cleanup() {
+	status=$?
+	trap - EXIT
+	if ((status != 0)); then rm -rf -- "$output"; fi
+	exit "$status"
+}
+trap cleanup EXIT
+tmp=$(mktemp -d "$output/.staging.XXXXXX")
+
+status=0
+thinkthen annotate "$HERE/questions.json" --jsonl --details --batch 1 \
+	--on-error continue --jobs 1 --max-retries 0 --replay "$HERE/recording" \
+	--input "$HERE/review-input.jsonl" > "$tmp/annotated.jsonl" || status=$?
+if ((status != 7)); then
+	printf 'review-jsonl: expected a completed run with a skipped record, got %s\n' "$status" >&2
+	exit 1
+fi
+
+# Refuse an unknown row before any policy transform or publication.
+jq -e -s 'length == 6 and
+  (map(select(.schema == "thinkthen.record-error/1")) | length) == 1 and
+  all(.[]; .schema == "thinkthen.result/1" or .schema == "thinkthen.record-error/1")' \
+	"$tmp/annotated.jsonl" >/dev/null
+jq -c 'select(.schema == "thinkthen.result/1")' "$tmp/annotated.jsonl" \
+	| jq -c -f "$HERE/../../transforms/triage/triage.jq" > "$tmp/decisions.jsonl"
+jq -c 'select(.schema == "thinkthen.record-error/1") |
+  . + {policy:{action:"review",reason:"record_error"}}' \
+	"$tmp/annotated.jsonl" > "$tmp/review.jsonl"
+rm -- "$tmp/annotated.jsonl"
+mv -- "$tmp/decisions.jsonl" "$tmp/review.jsonl" "$output/"
+rmdir -- "$tmp"

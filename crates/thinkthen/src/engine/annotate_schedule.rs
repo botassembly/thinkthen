@@ -252,7 +252,7 @@ fn receive<T, S, A, W, G, R, E>(
     defect: fn(&'static str) -> E,
 ) -> Result<(), E> {
     match event {
-        Event::Input(input) => receive_input(state, input, streams, prepare),
+        Event::Input(input) => receive_input(state, input, streams, prepare, finish),
         Event::Answered { row, group, answer } => {
             state.in_flight = state.in_flight.saturating_sub(1);
             if state.quiet_stop {
@@ -306,6 +306,7 @@ fn receive_input<T, S, A, W, G, R, E>(
     input: Input<T, E>,
     streams: bool,
     prepare: &impl Fn(T) -> Result<Prepared<S, A, W>, E>,
+    finish: &impl Fn(S, A) -> Result<Completed<R, E>, E>,
 ) -> Result<(), E> {
     state.reading = false;
     if state.halted {
@@ -332,6 +333,18 @@ fn receive_input<T, S, A, W, G, R, E>(
         }
     };
     let groups = prepared.work.len();
+    if groups == 0 {
+        match finish(prepared.seed, prepared.accumulator) {
+            Ok(completed) => {
+                state.ready.insert(row, completed);
+            }
+            Err(error) => state.failed(row, 0, error),
+        }
+        if !streams {
+            state.exhausted = true;
+        }
+        return Ok(());
+    }
     state.rows.insert(
         row,
         Row {

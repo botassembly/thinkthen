@@ -18,6 +18,17 @@
       "type": "object", "required": ["kind", "cause"], "additionalProperties": false,
       "properties": {"kind": {"const": "backend"}, "cause": {"$ref": "#/$defs/failureCause"}}
     },
+    "recordError": {
+      "type": "object", "required": ["schema", "at", "failure"], "additionalProperties": false,
+      "properties": {
+        "schema": {"const": "thinkthen.record-error/1"},
+        "at": {"type": "integer", "minimum": 1},
+        "failure": {"type": "object", "required": ["kind", "cause", "pointer"],
+          "additionalProperties": false,
+          "properties": {"kind": {"const": "usage"}, "cause": {"const": "missing_pointer"},
+            "pointer": {"type": "string", "pattern": "^/"}}}
+      }
+    },
     "failed": {
       "type": "object", "required": ["failed"], "additionalProperties": false,
       "properties": {"failed": {"$ref": "#/$defs/failure"}}

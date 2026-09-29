@@ -22,6 +22,7 @@ pub(super) fn dry_run(
     profile: Option<&BackendProfile>,
     mismatch: &Mismatch,
     first: Option<Vec<u8>>,
+    details: bool,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
     let Some(bytes) = first else {
@@ -30,7 +31,16 @@ pub(super) fn dry_run(
     let record = base
         .annotation_record(&bytes)
         .map_err(|error| Failure::record(error, base.streams()))?;
-    dry_run_record(set, backend, base, profile, mismatch, Some(record), writer)
+    dry_run_record(
+        set,
+        backend,
+        base,
+        profile,
+        mismatch,
+        Some(record),
+        details,
+        writer,
+    )
 }
 
 #[expect(
@@ -44,12 +54,15 @@ pub(super) fn dry_run_record(
     profile: Option<&BackendProfile>,
     mismatch: &Mismatch,
     first: Option<Record>,
+    details: bool,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
     let Some(record) = first else {
         return Ok(ExitCode::SUCCESS);
     };
-    collisions(set, &record)?;
+    if !details {
+        collisions(set, &record)?;
+    }
     let plans = set
         .groups()
         .into_iter()

@@ -40,6 +40,13 @@ The C door's `question_json` already carries structured descriptions. Its generi
 
 For a SQL `choose` result, constrain the caller's **stored answer column** with a [PostgreSQL domain](../databases/postgresql/README.md#constrain-a-stored-answer), [DuckDB enum cast](../databases/duckdb/README.md#constrain-a-stored-answer), or [SQLite check](../databases/sqlite/README.md#constrain-a-stored-answer). These recipes leave the functions' plain return types unchanged. A stored `NULL` can represent a choice with no selected option: the winner falls below the cut or the top two options tie exactly, even above the cut. SQL input-`NULL` behavior depends on the surface and argument; see each function's contract. Each recipe permits a stored `NULL`. A failed call remains an error or a distinct `try_details` failed envelope; never insert a failure as `NULL` to satisfy the constraint.
 
+The command's narrow annotate continuation emits a `thinkthen.record-error/1`
+row for a missing question-set `on` pointer. Its `failure.kind` is the existing
+`usage` kind, with `cause: missing_pointer`; it does not add a seventh failure
+kind or change library, C, or binding return types. The named `recordError`
+definition in [`result.schema.json`](result.schema.json) checks this separate
+CLI row. The schema root still checks successful `thinkthen.result/1` rows.
+
 ## Offsets
 
 `start` includes the first character and `end` excludes the next character in Rust, C, Python, and TypeScript. `length` is `end - start`. Rust, C, and Python count Unicode scalar values. TypeScript counts UTF-16 code units, matching `String.slice`. R reports one-based inclusive positions. Keep these names and document the unit beside each native entity type. The shared non-BMP [conformance case 41](../conformance/cases.json), `Le café 😀 Maria Chen arrived.`, pins `Maria Chen` at scalar span `[10,20)`, TypeScript UTF-16 span `[11,21)`, and R positions `11..20`. The same case checks the C door and each later port; no new recording is needed.
