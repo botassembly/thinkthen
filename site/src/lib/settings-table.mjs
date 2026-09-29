@@ -84,9 +84,11 @@ function cellsOf(line) {
 
 // The page shows the prose, not where each rule is written. A sentence that
 // only cites a record goes, and so does a trailing clause that cites an ADR.
-// A ticket number means nothing to a public reader, so a sentence that names
-// one in any form goes too: "ticket 0147", "Tickets 0109 and 0110", "under
-// tickets 0231 and 0128", "Ticket 0139, ADR 0048, records ...".
+// A ticket number means nothing to a public reader, so a prose sentence that
+// names one in any form goes too. Such a sentence is a record or a readiness
+// note, and Ian's ruling of 2026-09-28 keeps binding readiness off the site.
+// The forms: "ticket 0147", "Tickets 0109 and 0110", "under tickets 0231 and
+// 0128", "Ticket 0139, ADR 0048, records ...".
 const TICKETS = String.raw`tickets? \d+(?:(?:,| and|, and) \d+)*`;
 const CITES_TICKET = new RegExp(String.raw`\b${TICKETS}\b`, 'i');
 const CITE_SENTENCE = /^(ADR \d+\.|The batching design\b|Ian's ruling)/i;
@@ -96,10 +98,8 @@ const CITE_CLAUSE = /,\s*(by|as) ADR \d+( states)?(?=[.,])/g;
 const CITE_BRACKET = new RegExp(String.raw`\s*\((?:ADR \d+(?:(?:,| and|, and) \d+)*|${TICKETS})\)`, 'gi');
 const CITE_TAIL = new RegExp(String.raw`,\s*(?:ADR \d+|${TICKETS})$`, 'i');
 
-const sentencesOf = (text) => text.split(/(?<=\.)\s+(?=[A-Z`'])/);
-
 function uncited(text) {
-  return sentencesOf(text)
+  return text.split(/(?<=\.)\s+(?=[A-Z`'])/)
     .filter((s) => !CITE_SENTENCE.test(s.trim()) && !CITES_TICKET.test(s))
     .join(' ')
     .replace(CITE_CLAUSE, '')
@@ -107,12 +107,9 @@ function uncited(text) {
     .replace(/\s+The batching design's section \d+ puts them there\./g, '');
 }
 
-// What a setting does, with its ticket and ADR citations taken out.
-function meaning(does) {
-  return sentencesOf(does.replace(CITE_BRACKET, '').replace(CITE_TAIL, ''))
-    .filter((s) => !CITES_TICKET.test(s))
-    .join(' ');
-}
+// What a setting does, with its bracketed and final citations taken out. A
+// ticket cited anywhere else stays, so the check fails loudly on it.
+const meaning = (does) => does.replace(CITE_BRACKET, '').replace(CITE_TAIL, '');
 
 function uncitedBlocks(blocks) {
   return blocks.map((b) => (b.kind === 'p'
