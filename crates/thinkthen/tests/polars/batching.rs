@@ -60,6 +60,125 @@ fn digest(url: &str, body: &[u8]) -> String {
         .collect()
 }
 
+fn assert_portable_exchange(listener: &Listener, expected: [&str; 3], observed: &Seen) {
+    let literal: Vec<_> = expected
+        .iter()
+        .map(|body| body.strip_suffix('\n').expect("fixture newline").as_bytes())
+        .collect();
+    assert_eq!(
+        listener
+            .requests()
+            .iter()
+            .map(|request| request.body.as_slice())
+            .collect::<Vec<_>>(),
+        literal
+    );
+    let [first, second, third] = expected.map(|body| {
+        digest(
+            listener.url(),
+            body.strip_suffix('\n').expect("fixture newline").as_bytes(),
+        )
+    });
+    assert_eq!(
+        *observed.lock().expect("observations"),
+        [
+            (0, vec![first.clone()]),
+            (1, vec![first]),
+            (2, vec![second.clone()]),
+            (3, vec![second]),
+            (4, vec![third]),
+        ]
+    );
+}
+
+#[test]
+fn portable_max_cuts_cross_public_series_and_frame_calls() {
+    let corpus: Value = serde_json::from_str(include_str!(
+        "../../../../specification/fixtures/batching/portable-records.json"
+    ))
+    .expect("literal corpus");
+    let texts: Vec<&str> = corpus["texts"]
+        .as_array()
+        .expect("five texts")
+        .iter()
+        .map(|value| value.as_str().expect("text"))
+        .collect();
+    let source = common::column(&texts);
+    let listener = listener();
+    let engine = common::builder(listener.base())
+        .model("jev-1.13.0")
+        .expect("model")
+        .throttle(1)
+        .expect("one in flight")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let question = Question::decide(corpus["question"].as_str().expect("question"))
+        .expect("question")
+        .cut();
+    let set = QuestionSet::from_json(&format!(
+        r#"{{"version":1,"questions":{{"answer":{{"decide":{}}}}}}}"#,
+        corpus["question"]
+    ))
+    .expect("one-member set");
+    let bodies = [
+        include_str!("../../../../specification/fixtures/batching/portable-1.request.json"),
+        include_str!("../../../../specification/fixtures/batching/portable-2.request.json"),
+        include_str!("../../../../specification/fixtures/batching/portable-3.request.json"),
+    ];
+    let frame_bodies = [
+        include_str!("../../../../specification/fixtures/batching/portable-frame-1.request.json"),
+        include_str!("../../../../specification/fixtures/batching/portable-frame-2.request.json"),
+        bodies[2],
+    ];
+    for (through_frame, expected) in [(false, bodies), (true, frame_bodies)] {
+        let observed = Mutex::new(Vec::new());
+        let observe = |event: RecordObservation<'_>| {
+            if let RecordObservation::Question { index, detail, .. } = event {
+                observed
+                    .lock()
+                    .expect("observations")
+                    .push((index, detail.requests().to_vec()));
+            }
+        };
+        let options = CallOptions::new().observe(&observe);
+        let call = if through_frame {
+            let answered = engine
+                .annotate_frame(&set, &frame(vec![source.clone()]), "body", options)
+                .expect("public frame");
+            assert_eq!(
+                answered
+                    .value()
+                    .column("answer")
+                    .expect("answer")
+                    .bool()
+                    .expect("Boolean")
+                    .iter()
+                    .collect::<Vec<_>>(),
+                [Some(true); 5]
+            );
+            (answered.facts().records(), answered.facts().requests_sent())
+        } else {
+            let answered = engine
+                .decide_series(&question, &source, options)
+                .expect("public series");
+            assert_eq!(
+                answered
+                    .value()
+                    .bool()
+                    .expect("Boolean")
+                    .iter()
+                    .collect::<Vec<_>>(),
+                [Some(true); 5]
+            );
+            (answered.facts().records(), answered.facts().requests_sent())
+        };
+        assert_eq!(call, (5, 3));
+        assert_portable_exchange(&listener, expected, &observed);
+    }
+    assert_eq!(listener.count(), 6);
+}
+
 fn assert_observed(listener: &Listener, requests: &[Recorded], observed: &Seen) {
     let actual = ["Come Together", "Because", "Help"].map(|state| {
         let request = requests
