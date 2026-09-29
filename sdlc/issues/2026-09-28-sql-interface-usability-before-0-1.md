@@ -550,3 +550,8 @@ The [2026-09-29 source preparation](../records/2026-09-29-sql-usability-preparat
 - `2026-09-26-every-surface-should-give-back-run-facts.md` owns the facts that proposal 3 moves off the data frame idioms' return value.
 - `2026-09-25-site-samples-and-pages-after-the-surfaces-land.md` owns site sample regeneration. Proposal 10 adds the page to it.
 - `2026-09-26-batching-design.md` owns the packing rules that proposal 6 extends.
+
+
+## Remaining SQL error-format acceptance
+
+Review of DuckDB0286 at2463436c2 found ordinary ThinkThen usage errors without ADR0105 section8’s `(retryable: yes|no)` suffix. The accepted ADR governs this change; its exact plain removal messages remain exceptions. DuckDB0286 owns its renderer correction now. A narrow SQLite follow-up must apply the same format, and PostgreSQL0285 must retain and prove its existing suffix. Host-native SQL syntax and binding errors remain the host’s errors. The shared error catalog and final SQL examples wait for these consistent runtime outputs. Earlier SQLite settings/keyed-call completion did not close this umbrella criterion.

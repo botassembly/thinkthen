@@ -214,6 +214,33 @@ impl Client {
         before_attempt: impl Fn(bool),
         marked: impl Fn(),
     ) -> Result<HttpAnswer, Error> {
+        self.post_with_reservation_check(exchange, cancel, usage, (before_attempt, || (), marked))
+    }
+
+    #[cfg(test)]
+    pub(crate) fn post_observed_after_reservation(
+        &self,
+        exchange: &Exchange<'_>,
+        cancel: &crate::engine::Cancel,
+        usage: &Counters,
+        after_reservation: impl Fn(),
+    ) -> Result<HttpAnswer, Error> {
+        self.post_with_reservation_check(
+            exchange,
+            cancel,
+            usage,
+            (|_| (), after_reservation, || ()),
+        )
+    }
+
+    fn post_with_reservation_check(
+        &self,
+        exchange: &Exchange<'_>,
+        cancel: &crate::engine::Cancel,
+        usage: &Counters,
+        hooks: (impl Fn(bool), impl Fn(), impl Fn()),
+    ) -> Result<HttpAnswer, Error> {
+        let (before_attempt, after_reservation, marked) = hooks;
         exchange.key.check_line_break()?;
         let gates = backoff::process_gates(cancel)?;
         let mut wait = exchange.retry_wait;
@@ -232,7 +259,9 @@ impl Client {
             // host callback while the usage lock is held.
             let budget = cancel.remaining_without_check()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
-            let reservation = cancel.reserve_send(last_status)?;
+            let reservation = cancel.reserve_send(last_status, exchange.body.len())?;
+            after_reservation();
+            cancel.remaining_without_check()?;
             prepared.mark(retries > 0)?;
             if let Some(reservation) = reservation {
                 reservation.commit();

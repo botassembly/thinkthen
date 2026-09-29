@@ -66,3 +66,8 @@ The [process and maintenance record](../records/2026-09-29-polyglot-verification
 The same batch owns the repeated recording-entry counters. Share a helper among Python runners under `conformance/` where their semantics match. Specify one independent fixture containing actual entries, the backend marker, locks and temporary files; only actual entries count. R and Ruby may retain small native implementations against that fixture rather than acquire a Python dependency. Coordinate this change after the active SQLite/DuckDB claims clear. SQLite's immediate missing JSON filter remains part of 0284; passing that case alone does not prove consolidation.
 
 R's per-call `batch` and other uniform keywords already belong to accepted preparation ticket 0288. Add a same-session proof that two calls use different call-level settings and produce their expected bodies without restarting R. Preserve the separate engine-configuration lifetime rules. The fresh-child correction at61350a253 fixed the existing counter test; it did not implement per-call settings. No duplicate R design ticket is needed.
+
+
+## SQLite counter correction in 0284
+
+Fresh High review accepted `a843a3fc52812e2062d9aa90170764725bc8a246`. The SQLite recording counter selects answer `*.json` files and excludes the backend marker; a fixture places a `.locks/one.lock` beside one answer and requires one entry. The installed selector runs the same witness, and the build record retains selected source and source-matched unpacked-archive receipts. This closes the original SQLite counter clause, not the other surfaces or a full package/release-runner gate. See [0284 build](../records/0284-sqlite-settings-and-keyed-many-build.md).

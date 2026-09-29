@@ -18,6 +18,48 @@ pub enum SendBudgetDenial {
     },
 }
 
+/// Why estimated input admission refused one final encoded body.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum EstimatedInputDenial {
+    /// Before this call's first request.
+    InitialRequest {
+        /// The selected finite limit.
+        limit: u64,
+    },
+    /// Before a later ordinary or split request.
+    AdditionalRequest {
+        /// The selected finite limit.
+        limit: u64,
+    },
+    /// Before a same-exchange retry.
+    Retry {
+        /// The selected finite limit.
+        limit: u64,
+        /// The prior retryable status.
+        last_status: u16,
+    },
+}
+
+impl std::fmt::Display for EstimatedInputDenial {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let (limit, ending) = match *self {
+            Self::InitialRequest { limit } => {
+                (limit, "before this call's first request".to_owned())
+            }
+            Self::AdditionalRequest { limit } => {
+                (limit, "before another request in this call".to_owned())
+            }
+            Self::Retry { limit, last_status } => {
+                (limit, format!("before retrying status {last_status}"))
+            }
+        };
+        write!(
+            formatter,
+            "max_estimated_input_tokens_total={limit} (encoded-body-bytes-908-v1) would be exceeded {ending}"
+        )
+    }
+}
+
 /// One owner's attempted live sends, shared by its engine clones.
 /// A forked child starts a fresh count when it first reserves a send.
 #[derive(Clone, Debug)]
@@ -28,6 +70,7 @@ struct BudgetCount {
     owner: AtomicU32,
     resetting: AtomicU32,
     sent: AtomicU64,
+    estimated: AtomicU64,
 }
 
 impl Default for SendBudget {
@@ -44,6 +87,7 @@ impl SendBudget {
             owner: AtomicU32::new(std::process::id()),
             resetting: AtomicU32::new(0),
             sent: AtomicU64::new(0),
+            estimated: AtomicU64::new(0),
         }))
     }
 
@@ -64,9 +108,43 @@ impl SendBudget {
                 .is_ok()
             {
                 self.0.sent.store(0, Ordering::Release);
+                self.0.estimated.store(0, Ordering::Release);
                 self.0.owner.store(pid, Ordering::Release);
                 self.0.resetting.store(0, Ordering::Release);
                 return;
+            }
+        }
+    }
+
+    /// Reserve the version-one estimate of one final encoded request body.
+    pub(crate) fn reserve_estimated(
+        &self,
+        limit: Option<u64>,
+        bytes: usize,
+    ) -> Result<EstimatedReservation, ()> {
+        self.reset_after_fork();
+        let bytes = u64::try_from(bytes).map_err(|_| ())?;
+        let amount = crate::core::PlanSummary::estimated_input_high(bytes).ok_or(())?;
+        let mut spent = self.0.estimated.load(Ordering::Acquire);
+        loop {
+            let next = spent.checked_add(amount).ok_or(())?;
+            if limit.is_some_and(|limit| next > limit) {
+                return Err(());
+            }
+            match self.0.estimated.compare_exchange_weak(
+                spent,
+                next,
+                Ordering::AcqRel,
+                Ordering::Acquire,
+            ) {
+                Ok(_) => {
+                    return Ok(EstimatedReservation {
+                        count: Arc::clone(&self.0),
+                        amount,
+                        committed: false,
+                    });
+                }
+                Err(observed) => spent = observed,
             }
         }
     }
@@ -145,4 +223,27 @@ fn inherited_budget_and_reset_marker_do_not_block_a_child() {
         .expect("fresh child total")
         .commit();
     assert!(budget.reserve(Some(1), None).is_err());
+}
+
+/// An estimated-input reservation, refunded unless transport starts.
+pub(crate) struct EstimatedReservation {
+    count: Arc<BudgetCount>,
+    amount: u64,
+    committed: bool,
+}
+
+impl EstimatedReservation {
+    pub(crate) fn commit(mut self) {
+        self.committed = true;
+    }
+}
+
+impl Drop for EstimatedReservation {
+    fn drop(&mut self) {
+        if !self.committed {
+            self.count
+                .estimated
+                .fetch_sub(self.amount, Ordering::AcqRel);
+        }
+    }
 }

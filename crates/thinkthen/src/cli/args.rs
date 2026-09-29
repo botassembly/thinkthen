@@ -49,6 +49,11 @@ pub(crate) struct Common {
     #[arg(long, value_name = "N", hide_short_help = true)]
     pub(crate) max_requests_total: Option<u64>,
 
+    /// Refuse a live final encoded body when its estimated input admission
+    /// would exceed N across this process; this does not cap provider billing.
+    #[arg(long, value_name = "N", hide_short_help = true)]
+    pub(crate) max_estimated_input_tokens_total: Option<u64>,
+
     /// Print the full result object in place of the bare value.
     ///
     /// In record mode the object also carries `input`, the whole record as it

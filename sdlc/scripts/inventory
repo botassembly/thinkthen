@@ -3,7 +3,7 @@
 
 The sources are the historical ticket blocks (0084, 0095, 0147), the export
 sentence for `choices!`, ADR 0017's throttle rename, and tickets 0278 and
-0283 and 0289's reviewed additive deltas. No file here copies the declaration list.
+0283, 0289 and 0299's reviewed additive deltas. No file here copies the declaration list.
 `cargo public-api`, pinned by the install rung, reads the built crate. The
 self-test plants four changes in the real listing and proves each one fails.
 """
@@ -190,6 +190,15 @@ def apply_0289_delta(items: set[str], page: str) -> set[str]:
     return items | added
 
 
+def apply_0299_delta(items: set[str], page: str) -> set[str]:
+    added = delta_lines(page, "### Added public declarations")
+    if len(added) != 11:
+        sys.exit("inventory: 0299 delta must have 11 added declarations")
+    if added & items:
+        sys.exit("inventory: 0299 added declaration is already in reviewed contract")
+    return items | added
+
+
 def delta_self_test(page: str, items: set[str]) -> None:
     # Literal edge sample: neither side is built from the current API listing.
     sample = [
@@ -238,7 +247,8 @@ def contract() -> set[str]:
     delta_self_test(delta, items)
     items = apply_delta(items, delta)
     items = apply_0283_delta(items, text("0283-*.md"))
-    return apply_0289_delta(items, text("0289-*.md"))
+    items = apply_0289_delta(items, text("0289-*.md"))
+    return apply_0299_delta(items, text("0299-*.md"))
 
 
 def built(listing: list[str]) -> set[str]:

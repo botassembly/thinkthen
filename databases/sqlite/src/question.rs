@@ -8,7 +8,7 @@ use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::types::ValueRef;
-use thinkthen::{ErrorKind, LoadedQuestion, Question, QuestionSet};
+use thinkthen::{ErrorKind, For, LoadedQuestion, Question, QuestionSet, Settings};
 
 use crate::Failure;
 
@@ -19,7 +19,15 @@ const CACHE_CAP: usize = 4096;
 const FILE_CAP: u64 = 1024 * 1024;
 
 /// A named file's modified time and size, read from the descriptor its bytes came through.
-type Stamp = (SystemTime, u64);
+pub(crate) type Stamp = (SystemTime, u64);
+
+/// A named question's current stamp for connection-owned row reuse.
+pub(crate) fn stamp(argument: &[u8]) -> Option<Stamp> {
+    let path = argument.strip_prefix(b"@")?;
+    let path = std::str::from_utf8(path).ok()?;
+    let meta = std::fs::metadata(path).ok()?;
+    Some((meta.modified().ok()?, meta.len()))
+}
 
 /// How SQL gave a value, for a message that names it.
 pub(crate) fn shown(value: ValueRef<'_>) -> String {
@@ -185,6 +193,113 @@ pub(crate) fn question(argument: &str) -> Result<Arc<LoadedQuestion>, Failure> {
             Ok(LoadedQuestion::Question(Question::decide(source)?.cut()))
         }
     })
+}
+
+/// Parse one host settings argument at the shared pure boundary.
+pub(crate) fn call_settings(value: ValueRef<'_>) -> Result<Settings, Failure> {
+    if matches!(value, ValueRef::Integer(_) | ValueRef::Real(_)) {
+        return Err(Failure::usage(
+            "the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'",
+        ));
+    }
+    let Some(source) = text(value, "the settings")? else {
+        return Ok(Settings::default());
+    };
+    Settings::parse(&source).map_err(|error| Failure::usage(error.to_string()))
+}
+
+/// Aggregate verbs take call controls only; question fields belong to their spec.
+pub(crate) fn call_controls(value: ValueRef<'_>) -> Result<Settings, Failure> {
+    let source = text(value, "the settings")?;
+    let Some(source) = source else {
+        return Ok(Settings::default());
+    };
+    let settings = Settings::parse(&source).map_err(|error| Failure::usage(error.to_string()))?;
+    let value: serde_json::Value = serde_json::from_str(&source)
+        .map_err(|_| Failure::usage("the settings argument is one JSON object"))?;
+    if let Some(key) = value.as_object().and_then(|fields| {
+        fields
+            .keys()
+            .find(|key| !matches!(key.as_str(), "context" | "batch" | "deadline_ms"))
+    }) {
+        return Err(Failure::usage(format!(
+            "the settings key `{key}` does not belong to this verb"
+        )));
+    }
+    Ok(settings)
+}
+
+/// Apply portable question fields without changing an unconfigured question's bytes.
+pub(crate) fn question_with_settings(
+    argument: &str,
+    settings: &Settings,
+    verb: For,
+) -> Result<Arc<LoadedQuestion>, Failure> {
+    if settings == &Settings::default() {
+        return question(argument);
+    }
+    let file = argument.starts_with('@');
+    let source = if file {
+        Some(named_file(argument, "question")?.0)
+    } else if argument.starts_with('{') {
+        Some(argument.to_owned())
+    } else {
+        None
+    };
+    let Some(source) = source else {
+        let json = settings
+            .question_json(verb, argument)
+            .map_err(|error| Failure::usage(error.to_string()))?;
+        return Ok(Arc::new(Question::from_json(&json)?));
+    };
+    let explicit: serde_json::Value = serde_json::from_str(&source).map_err(|error| {
+        Failure::of(
+            if file {
+                ErrorKind::Local
+            } else {
+                ErrorKind::Usage
+            },
+            format!("the question is not JSON: {error}"),
+        )
+    })?;
+    let fields = explicit
+        .as_object()
+        .ok_or_else(|| Failure::usage("the question is one JSON object"))?;
+    let extra = settings
+        .question_json(verb, "settings merge")
+        .or_else(|_| settings.question_json(For::Decide, "settings merge"))
+        .map_err(|error| Failure::usage(error.to_string()))?;
+    let extra_value: serde_json::Value = serde_json::from_str(&extra)
+        .map_err(|_| Failure::defect("the shared settings writer returned invalid JSON"))?;
+    let extra_fields = extra_value
+        .as_object()
+        .ok_or_else(|| Failure::defect("the shared settings writer returned no object"))?;
+    let explicit_keys: Vec<_> = fields.keys().map(String::as_str).collect();
+    settings
+        .conflicts(&explicit_keys, false)
+        .map_err(|error| Failure::usage(error.to_string()))?;
+    if extra_fields.len() == 1 {
+        return Ok(Arc::new(
+            Question::from_json(&source).map_err(|error| from_file(error, file))?,
+        ));
+    }
+    // The shared writer preserved member-map order. Append only its question
+    // fields, leaving the caller's complete JSON bytes in their original order.
+    let first = extra
+        .find(',')
+        .ok_or_else(|| Failure::defect("settings lost their fields"))?;
+    let suffix = extra
+        .get(first + 1..extra.len() - 1)
+        .ok_or_else(|| Failure::defect("settings lost their closing object"))?;
+    let original = source
+        .trim_end()
+        .strip_suffix('}')
+        .ok_or_else(|| Failure::usage("the question is one JSON object"))?;
+    let separator = if fields.is_empty() { "" } else { "," };
+    let merged = format!("{original}{separator}{suffix}}}");
+    Ok(Arc::new(
+        Question::from_json(&merged).map_err(|error| from_file(error, file))?,
+    ))
 }
 
 /// The question set one argument names, inline JSON or `'@name'`.

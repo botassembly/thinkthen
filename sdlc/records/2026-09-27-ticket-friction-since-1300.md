@@ -622,3 +622,18 @@ Fresh High review of0289 found that its public plan accepted staged question kin
 Early High review of SQLite candidate1742ac3b found three defects before final plan/cap integration: pushed key equality changed NULL, TEXT affinity and NOCASE behavior; parsing through a JSON value collapsed duplicate keys; and row reuse by raw `@path` skipped the existing named-file freshness check. The reviewer reproduced them against a source-matched extension on pinned SQLite3.50. Corrections are assigned to the retained0284 author; they are not yet accepted fixes.
 
 The next host brief must distinguish SQL equality from internal string lookup, and immutable inline arguments from a named file whose contents can change. Compare a pushed predicate with an ordinary host table before marking it omitted. Preserve duplicate-key rejection only where the host input still carries duplicates: PostgreSQL jsonb may have already resolved them. A connection-owned result cache needs the effective question identity or validated freshness as well as input bytes. These are small functional witnesses, not a reason for another scale campaign. PostgreSQL’s per-query tuplestore and DuckDB’s vector execution have different lifetimes; do not copy the SQLite LRU or its fixes without tracing those lifetimes.
+
+
+## Preserve each host value domain through a shared parser
+
+The final0284 High review reproduced configure accepting a zero request total. The new shared parser permits zero for core callers, but SQLite’s retained setting contract requires one or more and uses null to reset. Sharing grammar does not erase a host’s narrower value rule. The next host brief must compare its previous setters with the shared schema and pin the difference before storing configuration. A newly accepted core key also needs an explicit host disposition. A mapper must not accept an inert value or turn an unsupported setting into an internal defect. The0299 reviewer is checking that integration boundary while the SQLite builder corrects its positive-limit guard.
+
+
+## Keep host callbacks outside held usage guards
+
+The 0299 correction added a post-reservation cancellation check to prove that an unstarted attempt refunds its slots. High review of b50bc1e2 found that the chosen check also invoked a host callback while PreparedAttempt held the usage queue mutex. Reentry could deadlock. The existing callback-free remaining-time check observes the cancellation token and deadline without crossing that boundary. The retained builder is applying that narrow correction; the earlier listener and C proof gaps are resolved. Preparation for 0300 cost and 0302 observations must trace guard lifetimes around every host callback, observer and accounting operation. A new test seam must preserve the production callback and locking order.
+
+
+## Exercise each class of repeated setting
+
+DuckDB review reproduced an I8 failure in the shared prerequisite: a structured question with batch 1 and settings with batch 2 silently succeeded. Settings::conflicts inspected only question_fields and missed batch stored separately. Repeated model or threshold already refused, so a single representative negative hid this different storage path. Root routes the correction to the shared helper before the next host builds depend on it. Tests should distinguish question-file keys from explicit named parameters and cover each storage path with a small public-boundary table. The same review found that typed SQL NULL::VARCHAR members took DuckDB’s settings-object branch; bare NULL and NULL::VARCHAR[] did not. Keep typed nulls separate from malformed JSON in host preparation.

@@ -6,6 +6,9 @@ Status: **Settled**, amended by ADR 0048, for the wire shape, the key, the addre
 
 A backend is an address and a model. `THINKTHEN_BASE_URL` or the configuration file's `url` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. An explicit profile may add a stable name and local limits. It never selects either value.
 
+
+The optional `max_estimated_input_tokens_total` setting admits each final encoded body using `ceil(body bytes × 908 / 1000)` (`encoded-body-bytes-908-v1`). The process retains each started attempt's estimate, including failed replies, retries and refusal-split children; a stopped attempt before transport refunds it. Cache and replay answers add no charge. Each engine selects its own limit against the retained sum. This is an estimated input admission bound, not a hard provider token, output, dollar or billing cap. A future coefficient or body-coverage change needs a new version and review.
+
 ## Explicit profiles and local preflight
 
 Settled by ADR 0032 and amended by ADR 0040.
