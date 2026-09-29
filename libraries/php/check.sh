@@ -39,6 +39,7 @@ lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
     cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
 "$flock_bin" -w 180 -o "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+THINKTHEN_PORTABLE_LIBRARY="$repo/libraries/c/target/debug/libthinkthen_c.so" "$python_bin" fixtures/portable_batch.py
 "$python_bin" fixtures/abi.py
 "$python_bin" fixtures/installed.py
 for plant in source header native canary private-key wrong-value; do "$python_bin" fixtures/installed.py "$plant"; done

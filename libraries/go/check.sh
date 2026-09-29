@@ -40,6 +40,9 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_ARTIFACT=$THINKTHEN_C_ARTIFACT
     installed_unpack
     native=$scratch
+    cp portable_batch_test.go "$wrapper/portable_batch_test.go"
+    cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+    THINKTHEN_PORTABLE_NATIVE="$native" THINKTHEN_PORTABLE_MODULE="$wrapper" "$python_bin" fixtures/portable_batch.py
     "$python_bin" fixtures/installed_release.py "$wrapper" "$native"
     exit
 fi
@@ -72,6 +75,8 @@ EOF
 "$python_bin" fixtures/abi.py
 export PKG_CONFIG_PATH="$out/native/lib/pkgconfig" LD_LIBRARY_PATH="$out/native/lib"
 export GOCACHE="$out/cache" GOMODCACHE="$out/modcache" GOPROXY=off GOSUMDB=off GOTOOLCHAIN=local CGO_ENABLED=1
+cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+THINKTHEN_PORTABLE_NATIVE="$out/native" "$python_bin" fixtures/portable_batch.py
 "$go_bin" vet ./...
 "$go_bin" build -o "$out/type-case" ./fixtures/type_case.go
 "$python_bin" fixtures/packing_negative.py

@@ -38,6 +38,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     THINKTHEN_ARTIFACT=$THINKTHEN_C_ARTIFACT
     installed_unpack
     native=$scratch
+    cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+    THINKTHEN_PORTABLE_NATIVE="$native" THINKTHEN_PORTABLE_CPP_INCLUDE="$wrapper/include" "$python_bin" fixtures/portable_batch.py
     "$python_bin" fixtures/installed_release.py "$wrapper" "$native"
     exit
 fi
@@ -69,6 +71,8 @@ static=$repo/libraries/c/target/debug/libthinkthen_c.a
 cmp "$header" "$out/install/include/thinkthen/thinkthen.h"
 cmp "$shared" "$out/install/lib/libthinkthen.so.0"
 cmp "$static" "$out/install/lib/libthinkthen.a"
+cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+THINKTHEN_PORTABLE_NATIVE="$out/install" "$python_bin" fixtures/portable_batch.py
 for mode in shared static; do
     "$cmake_bin" -S "$out/consumer-source/$mode" -B "$out/installed-$mode-build" \
         -DCMAKE_PREFIX_PATH="$out/install" -DCMAKE_BUILD_TYPE=Release
