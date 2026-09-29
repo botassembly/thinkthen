@@ -4,6 +4,23 @@
 #include <string>
 using tt::Json;
 int main() {
+    const auto goodFacts=Json::parse(R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":0.25,"model":"fixture"})");
+    const auto parsedFacts=tt::decodeFacts(goodFacts);
+    if (parsedFacts.records!=1 || parsedFacts.requestsSent!=1 || parsedFacts.cacheAnswers!=0 ||
+        parsedFacts.seconds!=0.25 || parsedFacts.inputTokens || parsedFacts.outputTokens ||
+        parsedFacts.model!=std::optional<std::string>("fixture")) return 20;
+    for (const auto& bad : {
+        R"({"requests_sent":1,"cache_answers":0,"seconds":0})",
+        R"({"records":null,"requests_sent":1,"cache_answers":0,"seconds":0})",
+        R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":0,"input_tokens":null})",
+        R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":0,"model":null})",
+        R"({"records":-1,"requests_sent":1,"cache_answers":0,"seconds":0})",
+        R"({"records":1.5,"requests_sent":1,"cache_answers":0,"seconds":0})",
+        R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":-0.1})"}) {
+        try { (void)tt::decodeFacts(Json::parse(bad)); return 21; }
+        catch (const std::exception&) {}
+    }
+    std::cout << "CALL_FACTS_STRICT_DECODER_PASS" << '\n';
     for (const auto& text : {"\"\\uD800\"", "\"\\uDC00\"", "\"\\uD800\\u0061\"",
                              "\"\\q\"", "\"\\uXYZ1\"", "[1,]", "{\"a\":1,\"a\":2}", "01", "1e9999"}) {
         try { (void)Json::parse(text); std::cerr << "JSON_NEGATIVE_ACCEPTED " << text << '\n'; return 1; }

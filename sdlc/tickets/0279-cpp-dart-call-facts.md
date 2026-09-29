@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0279: Return owned facts from C++ and Dart typed calls
 
-Status: prepared for fresh design/API review. Source pin: `origin/main` `a4de0ab02`. Ian's every-library-call ruling and the accepted 0255 C facts contract authorize this pre-0.1 wrapper migration; ADR 0106 is the reviewed Go/PHP precedent, not an edit claim here. Root owns implementation approval and issue closure.
+Status: design/API accepted by fresh High review `9d4797aa2`, approved on main `90170b29a`; code candidate awaits fresh review. Preparation source pin: `origin/main` `a4de0ab02`. Ian's every-library-call ruling and the accepted 0255 C facts contract authorize this pre-0.1 wrapper migration; ADR 0106 is the reviewed Go/PHP precedent, not an edit claim here. Root owns issue closure.
 
 ## Outcome and exact routes
 
@@ -41,8 +41,8 @@ Run selected C++ header/parser and installed shared/static consumer checks again
 - Keeps: Frozen C ABI and old symbols, JSON Call envelopes, former typed values/order, same-thread started-failure facts, host cleanup and lifetime rules, and existing no-send/cancellation boundaries.
 - Changes: Four direct typed routes per host return owned value plus strict final facts from one C `_with_facts_opts` call, with migrated C++/Dart/Flutter direct callers and no bare alias.
 - Proof: Focused counted four-route, omitted-usage, empty-bulk, decoder-refusal, typed started-failure/later-call/close and held-overlap cases; matching C exports and selected installed-source C++/Dart/Flutter consumers.
-- Defers: Fresh design/code review, clean final-pin release archives and actual runner, other wrappers, full detail/cost/vendor timing/IDs, and held SQL/DataFrame work.
+- Defers: Fresh code review, clean final-pin release archives and actual runner, other wrappers, full detail/cost/vendor timing/IDs, and held SQL/DataFrame work.
 
 ## What the build taught us
 
-Preparation found the existing Dart public `structured` helper and Flutter facade are direct typed callers that the source-only door migration must include. It also found that C++ can keep the new public types in its already installed `door.hpp`; adding a new header would need explicit CMake and release-pack inventory work. Build evidence and measured growth belong here after implementation, not in this preparation status.
+The [build record](../records/0279-cpp-dart-call-facts-build.md) holds the focused source and copied installed receipts. Preparation correctly included Dart's public `structured` helper, Flutter direct consumers and the existing installed C++ header; no new header or archive member was needed. Its first no-usage case incorrectly coupled missing usage to missing model; High review corrected that before code, and the build proves the two conditions separately. A zero-deadline refusal can still carry started facts, so the typed pre-start no-facts check uses a rejected question type. Both host overlap checks wait for two counted held requests before release; starting threads or isolates alone was insufficient. The copied local C source pair is not a clean release archive, so root must retain later release qualification separately.

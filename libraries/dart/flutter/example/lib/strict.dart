@@ -97,11 +97,15 @@ void invalidInputAllocationRegression(Door door, Pointer<Void> engine) {
     ),
     (
       'structured-partial-records',
-      () => door.structured(engine, relation, [
-        'first',
-        'bad\u0000',
-        'not-reached',
-      ], recognize: false),
+      () => door.structured(
+          engine,
+          relation,
+          [
+            'first',
+            'bad\u0000',
+            'not-reached',
+          ],
+          recognize: false),
       (e) => e is ArgumentError && '$e'.contains('embedded NUL'),
     ),
     (
@@ -172,25 +176,30 @@ Future<void> held(
   Isolate? workerIsolate, cancelIsolate;
   bool completed = false;
   try {
-    workerIsolate = await Isolate.spawn(worker, [
-      receiver.sendPort,
-      library,
-      engine.address,
-      token.address,
-      state,
-      mode,
-    ], onExit: exited.sendPort);
+    workerIsolate = await Isolate.spawn(
+        worker,
+        [
+          receiver.sendPort,
+          library,
+          engine.address,
+          token.address,
+          state,
+          mode,
+        ],
+        onExit: exited.sendPort);
     workerExitFuture = exited.first;
     await arrival(state);
     if (Platform.environment['TT_PLANT'] == 'fail-mid-case' &&
-        state == 'hold-scalar')
-      throw StateError('PLANTED_MID_CASE_FAILURE');
+        state == 'hold-scalar') throw StateError('PLANTED_MID_CASE_FAILURE');
     if (wanted == 5) {
-      cancelIsolate = await Isolate.spawn(fire, [
-        fireReceiver.sendPort,
-        library,
-        token.address,
-      ], onExit: fireExited.sendPort);
+      cancelIsolate = await Isolate.spawn(
+          fire,
+          [
+            fireReceiver.sendPort,
+            library,
+            token.address,
+          ],
+          onExit: fireExited.sendPort);
       fireExitFuture = fireExited.first;
       require(
         await fireReceiver.first.timeout(const Duration(seconds: 18)) ==
@@ -283,8 +292,8 @@ Future<void> main(List<String> args) async {
         text,
       );
       require(
-        answer.outcome == Outcome.values[outcome] &&
-            answer.probability == probability,
+        answer.value.outcome == Outcome.values[outcome] &&
+            answer.value.probability == probability,
         'scalar $text $answer',
       );
     }
@@ -306,18 +315,18 @@ Future<void> main(List<String> args) async {
     final cached = door.decide(engine, 'Is it?', 'yes');
     final after = door.call(engine, '{"usage":true}') as Map;
     require(
-      cached.outcome == Outcome.yes &&
+      cached.value.outcome == Outcome.yes &&
           after['requests_sent'] == before['requests_sent'] &&
           after['cache_answers'] > before['cache_answers'],
       'cache coalescing and counters',
     );
     final batch = door.many(engine, 'Is it?', ['batch-one', 'batch-two']);
     require(
-      batch.length == 2 &&
-          batch[0].outcome == Outcome.yes &&
-          batch[0].probability == .9 &&
-          batch[1].outcome == Outcome.no &&
-          batch[1].probability == .1,
+      batch.value.length == 2 &&
+          batch.value[0].outcome == Outcome.yes &&
+          batch.value[0].probability == .9 &&
+          batch.value[1].outcome == Outcome.no &&
+          batch.value[1].probability == .1,
       'bulk ordered answers .9 then .1',
     );
     final decide = door.call(
@@ -346,10 +355,12 @@ Future<void> main(List<String> args) async {
     );
     final spec =
         '{"version":1,"recognize":{"kinds":{"person":"A person name."}}}';
-    final recognized =
-        door.structured(engine, spec, ['John Smith'], recognize: true) as Map;
+    final recognized = door
+        .structured(engine, spec, ['John Smith'], recognize: true)
+        .value as Map;
     require(
-      jsonEncode(recognized) == '{"entities":[{"text":"John Smith","start":0,"end":10,"length":10,"kind":"person","strength":0.81}]}',
+      jsonEncode(recognized) ==
+          '{"entities":[{"text":"John Smith","start":0,"end":10,"length":10,"kind":"person","strength":0.81}]}',
       'recognize JSON exact entity identity',
     );
     require(
@@ -358,16 +369,23 @@ Future<void> main(List<String> args) async {
     );
     final relSpec =
         '{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]} }';
-    final related = door.structured(engine, relSpec, [
-      '{"name":"First","kind":"alert"}',
-      '{"name":"Second","kind":"alert"}',
-    ], recognize: false) as Map;
+    final related = door
+        .structured(
+            engine,
+            relSpec,
+            [
+              '{"name":"First","kind":"alert"}',
+              '{"name":"Second","kind":"alert"}',
+            ],
+            recognize: false)
+        .value as Map;
     final edges = related['edges'] as List;
     require(
       edges.length == 2 &&
           jsonEncode(edges[0]) ==
               '{"relation":"caused_by","source":{"name":"First","kind":"alert"},"target":{"name":"Second","kind":"alert"},"probability":0.9}' &&
-          jsonEncode(edges[1]) == '{"relation":"caused_by","source":{"name":"Second","kind":"alert"},"target":{"name":"First","kind":"alert"},"probability":0.9}',
+          jsonEncode(edges[1]) ==
+              '{"relation":"caused_by","source":{"name":"Second","kind":"alert"},"target":{"name":"First","kind":"alert"},"probability":0.9}',
       'relate JSON exact edges and order',
     );
     require(Relations.parse(related).edges.length == 2, 'typed edges');
@@ -417,7 +435,8 @@ Future<void> main(List<String> args) async {
     );
     try {
       require(
-        door.decide(configured, 'Is it?', 'configured').outcome == Outcome.yes,
+        door.decide(configured, 'Is it?', 'configured').value.outcome ==
+            Outcome.yes,
         'settings constructor route',
       );
     } finally {
@@ -426,7 +445,7 @@ Future<void> main(List<String> args) async {
     final empty = door.create('{}');
     try {
       require(
-        door.decide(empty, 'Is it?', 'yes').outcome == Outcome.yes,
+        door.decide(empty, 'Is it?', 'yes').value.outcome == Outcome.yes,
         '{} constructor equivalence',
       );
     } finally {
@@ -435,7 +454,7 @@ Future<void> main(List<String> args) async {
     await held(door, engine, args.single, 'hold-scalar', 5);
     final previous = door.call(engine, '{"usage":true}') as Map;
     require(
-      door.decide(engine, 'Is it?', 'hold-scalar').outcome == Outcome.yes,
+      door.decide(engine, 'Is it?', 'hold-scalar').value.outcome == Outcome.yes,
       'cancelled reply retained in cache',
     );
     final present = door.call(engine, '{"usage":true}') as Map;
@@ -449,6 +468,7 @@ Future<void> main(List<String> args) async {
       require(
         door
                 .decide(engine, 'Is it?', 'recovery-scalar', token: fresh)
+                .value
                 .outcome ==
             Outcome.yes,
         'fresh token recovery',
