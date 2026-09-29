@@ -20,8 +20,9 @@ pub fn main() !void {
     };
     defer engine.deinit();
     switch (try engine.decideMany(question, texts, .{})) {
-        .ok => |answers| {
-            defer alloc.free(answers);
+        .ok => |success| {
+            defer success.deinit(alloc);
+            const answers = success.value;
             if (answers.len != 5) return error.WrongAnswerCount;
             for (answers) |answer| {
                 if (answer.outcome != .yes or answer.probability != 0.9) return error.WrongAnswer;

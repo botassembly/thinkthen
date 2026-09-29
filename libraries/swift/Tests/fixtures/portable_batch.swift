@@ -11,7 +11,7 @@ enum PortableBatch {
         let engine = try Engine()
         defer { engine.close() }
         let answers = try engine.decideMany(question, texts)
-        precondition(answers.count == 5 && answers.allSatisfy { $0.outcome == .yes && $0.probability == 0.9 })
+        precondition(answers.value.count == 5 && answers.value.allSatisfy { $0.outcome == .yes && $0.probability == 0.9 })
         print("SWIFT_PORTABLE_BATCH_PASS")
     }
 }

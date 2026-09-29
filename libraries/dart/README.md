@@ -31,9 +31,9 @@ import 'package:thinkthen_dart/thinkthen_dart.dart';
 final door = Door('/absolute/path/to/libthinkthen_c.so');
 final engine = door.create();
 try {
-  final result = door.ask(engine, {'decide': 'Is it?', 'evidence': 'Example'}) as Map;
-  print(result['value']);
-  print(result['facts']);
+  final decisionEnvelope = door.ask(engine, {'decide': 'Is it?', 'evidence': 'Example'}) as Map;
+  print(decisionEnvelope['value']);
+  print(decisionEnvelope['facts']);
 } finally {
   door.engineFree(engine);
 }

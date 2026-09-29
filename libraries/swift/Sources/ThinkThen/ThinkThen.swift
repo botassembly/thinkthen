@@ -55,6 +55,55 @@ public struct Answer: Sendable {
     }
 }
 
+public struct CallResult<Value: Sendable>: Sendable {
+    public let value: Value
+    public let facts: CallFacts
+}
+
+public struct CallFacts: Sendable, Decodable {
+    public let records: UInt64
+    public let requestsSent: UInt64
+    public let cacheAnswers: UInt64
+    public let seconds: Double
+    public let inputTokens: UInt64?
+    public let outputTokens: UInt64?
+    public let model: String?
+    enum CodingKeys: String, CodingKey {
+        case records, seconds, model
+        case requestsSent = "requests_sent", cacheAnswers = "cache_answers"
+        case inputTokens = "input_tokens", outputTokens = "output_tokens"
+    }
+    public init(from decoder: Decoder) throws {
+        let fields = try decoder.container(keyedBy: CodingKeys.self)
+        records = try fields.decode(UInt64.self, forKey: .records)
+        requestsSent = try fields.decode(UInt64.self, forKey: .requestsSent)
+        cacheAnswers = try fields.decode(UInt64.self, forKey: .cacheAnswers)
+        seconds = try fields.decode(Double.self, forKey: .seconds)
+        guard seconds.isFinite && seconds >= 0 else {
+            throw DecodingError.dataCorruptedError(forKey: .seconds, in: fields, debugDescription: "invalid seconds")
+        }
+        func optional<T: Decodable>(_ type: T.Type, _ key: CodingKeys) throws -> T? {
+            guard fields.contains(key) else { return nil }
+            return try fields.decode(T.self, forKey: key)
+        }
+        inputTokens = try optional(UInt64.self, .inputTokens)
+        outputTokens = try optional(UInt64.self, .outputTokens)
+        model = try optional(String.self, .model)
+    }
+}
+
+private func decodeFacts(_ pointer: UnsafeMutablePointer<CChar>?, _ length: Int) throws -> CallFacts {
+    guard let pointer, length >= 0 else {
+        throw DoorFailure(code: 6, retryable: false, message: "missing native facts")
+    }
+    do {
+        let bytes = UnsafeRawBufferPointer(start: pointer, count: length)
+        return try JSONDecoder().decode(CallFacts.self, from: Data(bytes))
+    } catch {
+        throw DoorFailure(code: 6, retryable: false, message: "invalid native facts")
+    }
+}
+
 // Join every call using a token before closing it; cancel() may run on another thread.
 public final class CancelToken: @unchecked Sendable {
     public let handle: OpaquePointer
@@ -103,23 +152,26 @@ public final class Engine: @unchecked Sendable {
         return DoorFailure(code: last, retryable: retryable, message: message, factsJSON: facts)
     }
     public func decide(_ question: String, _ text: String, deadline: Int64 = -1,
-                token: OpaquePointer? = nil) throws -> Answer {
+                token: OpaquePointer? = nil) throws -> CallResult<Answer> {
         let h = try open()
         return try withInput(question) { q in
             try withEvidence(text) { bytes, count in
                 var answer = thinkthen_answer(outcome: 123, probability: -1)
-                let rc = thinkthen_decide_opts(h, q, bytes, count, deadline, token, &answer)
+                var facts: UnsafeMutablePointer<CChar>? = nil
+                var factsLen = 0
+                defer { thinkthen_free_string(facts) }
+                let rc = thinkthen_decide_with_facts_opts(h, q, bytes, count, deadline, token, &answer, &facts, &factsLen)
                 if rc != 0 {
                     let error = failure(h, rc)
-                    precondition(answer.outcome == 123 && answer.probability == -1, "failure changed output")
+                    precondition(answer.outcome == 123 && answer.probability == -1 && facts == nil && factsLen == 0, "failure changed output")
                     throw error
                 }
-                return try Answer(answer)
+                return try CallResult(value: Answer(answer), facts: decodeFacts(facts, factsLen))
             }
         }
     }
     public func decideMany(_ question: String, _ texts: [String], deadline: Int64 = -1,
-                    token: OpaquePointer? = nil) throws -> [Answer] {
+                    token: OpaquePointer? = nil) throws -> CallResult<[Answer]> {
         let h = try open()
         return try withInput(question) { q in
             let contents = texts.map { Array($0.utf8) }
@@ -132,20 +184,23 @@ public final class Engine: @unchecked Sendable {
             var pointers: [UnsafePointer<CChar>?] = allocations.map { UnsafePointer($0) }
             var lengths = contents.map { $0.count }
             var answers = Array(repeating: thinkthen_answer(outcome: 123, probability: -1), count: texts.count)
+            var facts: UnsafeMutablePointer<CChar>? = nil
+            var factsLen = 0
+            defer { thinkthen_free_string(facts) }
             let rc = pointers.withUnsafeMutableBufferPointer { ps in
                 lengths.withUnsafeMutableBufferPointer { ls in
                     answers.withUnsafeMutableBufferPointer { a in
-                        thinkthen_decide_many_opts(h, q, ps.baseAddress, ls.baseAddress,
-                                                   texts.count, deadline, token, a.baseAddress)
+                        thinkthen_decide_many_with_facts_opts(h, q, ps.baseAddress, ls.baseAddress,
+                                                   texts.count, deadline, token, a.baseAddress, &facts, &factsLen)
                     }
                 }
             }
             if rc != 0 {
                 let error = failure(h, rc)
-                precondition(answers.allSatisfy { $0.outcome == 123 && $0.probability == -1 }, "bulk failure changed output")
+                precondition(answers.allSatisfy { $0.outcome == 123 && $0.probability == -1 } && facts == nil && factsLen == 0, "bulk failure changed output")
                 throw error
             }
-            return try answers.map(Answer.init)
+            return try CallResult(value: answers.map(Answer.init), facts: decodeFacts(facts, factsLen))
         }
     }
     public func call(_ request: String, deadline: Int64 = -1, token: OpaquePointer? = nil) throws -> String {
@@ -156,25 +211,27 @@ public final class Engine: @unchecked Sendable {
             return String(cString: pointer)
         }
     }
-    public func recognize(_ spec: String, _ text: String) throws -> String {
+    public func recognize(_ spec: String, _ text: String) throws -> CallResult<String> {
         let h = try open()
         return try withInput(spec) { q in
             try withEvidence(text) { bytes, count in
                 var result: UnsafeMutablePointer<CChar>? = nil
                 var length: Int = 991
-                let rc = thinkthen_recognize(h, q, bytes, count, &result, &length)
+                var facts: UnsafeMutablePointer<CChar>? = nil
+                var factsLen = 0
+                defer { thinkthen_free_string(result); thinkthen_free_string(facts) }
+                let rc = thinkthen_recognize_with_facts_opts(h, q, bytes, count, -1, nil, &result, &length, &facts, &factsLen)
                 if rc != 0 {
                     let error = failure(h, rc)
-                    precondition(result == nil && length == 991, "recognize failure changed output")
+                    precondition(result == nil && length == 991 && facts == nil && factsLen == 0, "recognize failure changed output")
                     throw error
                 }
                 guard let pointer = result else { throw DoorFailure(code: 6, retryable: false, message: "missing native result") }
-                defer { thinkthen_free_string(pointer) }
-                return String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self), count: length), as: UTF8.self)
+                return try CallResult(value: String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self), count: length), as: UTF8.self), facts: decodeFacts(facts, factsLen))
             }
         }
     }
-    public func relate(_ spec: String, _ records: [String]) throws -> String {
+    public func relate(_ spec: String, _ records: [String]) throws -> CallResult<String> {
         let h = try open()
         return try withInput(spec) { q in
             let contents = records.map { Array($0.utf8) }
@@ -188,19 +245,21 @@ public final class Engine: @unchecked Sendable {
             var lengths = contents.map { $0.count }
             var result: UnsafeMutablePointer<CChar>? = nil
             var length: Int = 991
+            var facts: UnsafeMutablePointer<CChar>? = nil
+            var factsLen = 0
+            defer { thinkthen_free_string(result); thinkthen_free_string(facts) }
             let rc = pointers.withUnsafeMutableBufferPointer { ps in
                 lengths.withUnsafeMutableBufferPointer { ls in
-                    thinkthen_relate(h, q, ps.baseAddress, ls.baseAddress, records.count, &result, &length)
+                    thinkthen_relate_with_facts_opts(h, q, ps.baseAddress, ls.baseAddress, records.count, -1, nil, &result, &length, &facts, &factsLen)
                 }
             }
             if rc != 0 {
                 let error = failure(h, rc)
-                precondition(result == nil && length == 991, "relate failure changed output")
+                precondition(result == nil && length == 991 && facts == nil && factsLen == 0, "relate failure changed output")
                 throw error
             }
             guard let pointer = result else { throw DoorFailure(code: 6, retryable: false, message: "missing native result") }
-            defer { thinkthen_free_string(pointer) }
-            return String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self), count: length), as: UTF8.self)
+            return try CallResult(value: String(decoding: UnsafeBufferPointer(start: UnsafeRawPointer(pointer).assumingMemoryBound(to: UInt8.self), count: length), as: UTF8.self), facts: decodeFacts(facts, factsLen))
         }
     }
 }

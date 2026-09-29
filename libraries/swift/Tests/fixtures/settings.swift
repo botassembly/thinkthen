@@ -15,6 +15,6 @@ for invalid in ["{\"nope\":1}", "{\"timeout\":\"30\"}"] {
 let a = try configured.decide("Is it?", "swift-settings")
 let b = try environment.decide("Is it?", "swift-env")
 let c = try empty.decide("Is it?", "swift-empty")
-precondition(a.outcome == .yes && b.outcome == .yes && c.outcome == .yes)
+precondition(a.value.outcome == .yes && b.value.outcome == .yes && c.value.outcome == .yes)
 configured.close(); environment.close(); empty.close()
 print("SWIFT_SETTINGS_PASS")
