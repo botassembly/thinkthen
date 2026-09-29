@@ -43,6 +43,15 @@ func requireAnswer(t *testing.T, a Answer, outcome Outcome, p float64) {
 		t.Fatalf("want %d %.1f got %+v", outcome, p, a)
 	}
 }
+func requireFacts(t *testing.T, facts Facts, records uint64) {
+	t.Helper()
+	if facts.Records != records || facts.Seconds < 0 || (records > 0 && (facts.Model == nil || *facts.Model != "jev-1.13.0")) {
+		t.Fatalf("typed call facts for %d records: %+v", records, facts)
+	}
+	if records == 0 && (facts.RequestsSent != 0 || facts.CacheAnswers != 0) {
+		t.Fatalf("empty bulk did work: %+v", facts)
+	}
+}
 func TestMatrix(t *testing.T) {
 	e := engine(t)
 	for _, tc := range []struct {
@@ -58,7 +67,8 @@ func TestMatrix(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		requireAnswer(t, a, tc.want, tc.p)
+		requireAnswer(t, a.Value, tc.want, tc.p)
+		requireFacts(t, a.Facts, 1)
 	}
 	_, badText := e.Decide(context.Background(), "Is it?", string([]byte{'x', 0xff, 'y'}))
 	requireError(t, badText, 1, false) // counted text must be UTF-8; no request sent
@@ -66,9 +76,10 @@ func TestMatrix(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	requireFacts(t, rows.Facts, 3)
 	for i, p := range []float64{.9, .1, .6} {
-		if rows[i].Probability != p {
-			t.Fatalf("bulk row %d: %+v", i, rows[i])
+		if rows.Value[i].Probability != p {
+			t.Fatalf("bulk row %d: %+v", i, rows.Value[i])
 		}
 	}
 	repeated, err := e.DecideMany(context.Background(), "Is it?", []string{"first", "second", "first", "second"})
@@ -76,13 +87,17 @@ func TestMatrix(t *testing.T) {
 		t.Fatal(err)
 	}
 	for i, p := range []float64{.9, .1, .9, .1} {
-		if repeated[i].Probability != p {
-			t.Fatalf("repeated row %d: %+v", i, repeated[i])
+		if repeated.Value[i].Probability != p {
+			t.Fatalf("repeated row %d: %+v", i, repeated.Value[i])
 		}
 	}
 	empty, err := e.DecideMany(context.Background(), "Is it?", nil)
-	if err != nil || len(empty) != 0 {
+	if err != nil || len(empty.Value) != 0 {
 		t.Fatalf("empty bulk %v %v", empty, err)
+	}
+	requireFacts(t, empty.Facts, 0)
+	if empty.Facts.InputTokens != nil || empty.Facts.OutputTokens != nil {
+		t.Fatalf("empty bulk invented usage: %+v", empty.Facts)
 	}
 	requests := []string{
 		`{"decide":"Is it?","evidence":"json-decide","details":true}`,
@@ -197,13 +212,15 @@ func TestMatrix(t *testing.T) {
 		}
 	}
 	named, err := e.Recognize(context.Background(), `{"version":1,"recognize":{"kinds":{"person":"A person's name."}}}`, "John Smith")
-	if err != nil || !strings.Contains(named, `"entities"`) {
-		t.Fatalf("typed recognize: %s %v", named, err)
+	if err != nil || !strings.Contains(named.Value, `"entities"`) {
+		t.Fatalf("typed recognize: %s %v", named.Value, err)
 	}
+	requireFacts(t, named.Facts, 1)
 	edges, err := e.Relate(context.Background(), `{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}`, []string{`{"name":"Third","kind":"alert"}`, `{"name":"Fourth","kind":"alert"}`})
-	if err != nil || !strings.Contains(edges, `"edges"`) {
-		t.Fatalf("typed relate: %s %v", edges, err)
+	if err != nil || !strings.Contains(edges.Value, `"edges"`) {
+		t.Fatalf("typed relate: %s %v", edges.Value, err)
 	}
+	requireFacts(t, edges.Facts, 1)
 	usage, err := e.Call(context.Background(), `{"usage":true}`)
 	if err != nil {
 		t.Fatal(err)
@@ -228,6 +245,9 @@ func TestMatrix(t *testing.T) {
 	}
 	_, err = e.Decide(context.Background(), "{invalid", "text")
 	saved := requireError(t, err, 1, false)
+	if len(saved.Facts) != 0 {
+		t.Fatalf("pre-start refusal carried facts: %s", saved.Facts)
+	}
 	copyMessage := saved.Message
 	other := engine(t)
 	_, err = other.Decide(context.Background(), "Is it?", "")
@@ -277,7 +297,7 @@ func TestConcurrent(t *testing.T) {
 	e := engine(t)
 	states := []string{"failure-one", "failure-two", "success"}
 	type result struct {
-		answer Answer
+		answer Result[Answer]
 		err    error
 	}
 	replies := make([]result, len(states))
@@ -302,7 +322,47 @@ func TestConcurrent(t *testing.T) {
 	if replies[2].err != nil {
 		t.Fatal(replies[2].err)
 	}
-	requireAnswer(t, replies[2].answer, Yes, .9)
+	requireAnswer(t, replies[2].answer.Value, Yes, .9)
+}
+
+// Run with TT_FACTS_PROOF=1 against the counted no-usage fixture. It leaves
+// the existing exact request inventory unchanged while exercising two live
+// successes on one engine with different owned fact objects.
+func TestOwnedFacts(t *testing.T) {
+	if os.Getenv("TT_FACTS_PROOF") != "1" {
+		t.Skip("separate owned-facts fixture")
+	}
+	e := engine(t)
+	var one Result[Answer]
+	var many Result[[]Answer]
+	var oneErr, manyErr error
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); one, oneErr = e.Decide(context.Background(), "Is it?", "success") }()
+	go func() {
+		defer wg.Done()
+		many, manyErr = e.DecideMany(context.Background(), "Is it?", []string{"no-usage", "yes"})
+	}()
+	wg.Wait()
+	if oneErr != nil || manyErr != nil {
+		t.Fatalf("concurrent typed calls: %v %v", oneErr, manyErr)
+	}
+	requireAnswer(t, one.Value, Yes, .9)
+	requireFacts(t, one.Facts, 1)
+	requireFacts(t, many.Facts, 2)
+	if one.Facts.InputTokens == nil || many.Facts.InputTokens != nil || many.Facts.OutputTokens != nil {
+		t.Fatalf("reported and omitted usage collapsed: one=%+v many=%+v", one.Facts, many.Facts)
+	}
+	retained := many.Facts
+	e.Close()
+	if many.Facts.Records != retained.Records || many.Facts.InputTokens != nil {
+		t.Fatalf("facts changed after close: %+v", many.Facts)
+	}
+	for _, data := range []string{`{"records":null,"requests_sent":0,"cache_answers":0,"seconds":0}`, `{"requests_sent":0,"cache_answers":0,"seconds":0}`, `{"records":"1","requests_sent":0,"cache_answers":0,"seconds":0}`} {
+		if _, err := decodeFacts(data); err == nil {
+			t.Fatalf("malformed required native facts accepted: %s", data)
+		}
+	}
 }
 func marker(t *testing.T, name string) string {
 	t.Helper()
@@ -326,8 +386,8 @@ func release(path string) error { return os.WriteFile(path, []byte{}, 0600) }
 func TestHeldContext(t *testing.T) {
 	e := engine(t)
 	type result struct {
-		answer  Answer
-		answers []Answer
+		answer  Result[Answer]
+		answers Result[[]Answer]
 		err     error
 	}
 	run := func(state string, deadline time.Duration, many bool) result {
@@ -371,22 +431,22 @@ func TestHeldContext(t *testing.T) {
 	}
 	deadline := run("hold-deadline", 25*time.Millisecond, false)
 	requireError(t, deadline.err, 3, false)
-	if deadline.answer != (Answer{}) {
+	if deadline.answer.Value != (Answer{}) {
 		t.Fatalf("deadline wrote an answer: %+v", deadline.answer)
 	}
 	bulk := run("hold-bulk-1", 0, true)
 	requireError(t, bulk.err, 5, false)
-	if bulk.answers != nil {
-		t.Fatalf("cancelled bulk returned %d partial answers", len(bulk.answers))
+	if bulk.answers.Value != nil {
+		t.Fatalf("cancelled bulk returned %d partial answers", len(bulk.answers.Value))
 	}
 	scalar := run("hold-scalar", 0, false)
 	recovery, err := e.Decide(context.Background(), "Is it?", "recovery-scalar")
 	if err != nil {
 		t.Fatalf("fresh token recovery: %v", err)
 	}
-	requireAnswer(t, recovery, Yes, .9)
+	requireAnswer(t, recovery.Value, Yes, .9)
 	requireError(t, scalar.err, 5, false)
-	if scalar.answer != (Answer{}) {
+	if scalar.answer.Value != (Answer{}) {
 		t.Fatalf("cancelled scalar wrote an answer: %+v", scalar.answer)
 	}
 	t.Log("held scalar cancellation returned code 5 without output")
@@ -401,7 +461,7 @@ func TestHeldScalarContract(t *testing.T) {
 	e := engine(t)
 	ctx, cancel := context.WithCancel(context.Background())
 	type result struct {
-		answer Answer
+		answer Result[Answer]
 		err    error
 	}
 	done := make(chan result, 1)
@@ -421,12 +481,12 @@ func TestHeldScalarContract(t *testing.T) {
 	if err != nil {
 		t.Fatalf("fresh-token recovery: %v", err)
 	}
-	requireAnswer(t, answer, Yes, .9)
+	requireAnswer(t, answer.Value, Yes, .9)
 	if os.Getenv("TT_STRICT_WRONG_FAILURE") == "1" {
 		t.Fatal("PLANTED DIFFERENT STRICT FAILURE AFTER RECOVERY")
 	}
 	requireError(t, r.err, 5, false)
-	if r.answer != (Answer{}) {
+	if r.answer.Value != (Answer{}) {
 		t.Fatalf("cancelled scalar wrote an answer: %+v", r.answer)
 	}
 	t.Log("STRICT_CANCELLED_SCALAR_PASS: code 5, untouched answer, fresh-token recovery")
@@ -489,7 +549,7 @@ func TestSettingsConstructor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	requireAnswer(t, answer, Yes, .9)
+	requireAnswer(t, answer.Value, Yes, .9)
 	if _, err = NewWith(`{"unexpected":true}`); err == nil {
 		t.Fatal("unknown setting built an engine")
 	} else {

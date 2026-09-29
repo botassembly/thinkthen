@@ -1,6 +1,6 @@
 # ADR 0106: Owned facts on Go and PHP typed calls
 
-- Status: Proposed for fresh High design/API review and coordinator approval. Ian can overturn the return-shape choice before 0.1.
+- Status: Accepted after fresh High design/API review at `92cb4112` and coordinator approval on main `b6f06c4fc`. Ian can overturn the return-shape choice before 0.1.
 - Date: 2026-09-29
 
 ## Context

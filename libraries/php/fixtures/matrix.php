@@ -25,26 +25,53 @@ function assertCallEnvelope(string $json, mixed $expected, string $label, int $e
         || !is_float($facts['seconds']) || $facts['seconds'] < 0)
         throw new RuntimeException($label . ' facts: ' . $json);
 }
+function assertTypedFacts(array $result, int $records): void {
+    check(array_keys($result) === ['value', 'facts'], 'typed envelope keys');
+    $facts = $result['facts'];
+    check(is_array($facts) && $facts['records'] === $records && is_int($facts['requests_sent'])
+        && is_int($facts['cache_answers']) && is_numeric($facts['seconds']) && $facts['seconds'] >= 0,
+        'typed facts: ' . json_encode($result));
+    if ($records === 0) check($facts['requests_sent'] === 0, 'empty bulk sent work');
+}
 $door = new ThinkThen(getenv('TT_LIBRARY'));
 $retained = null;
+if (getenv('TT_FACTS_PROOF') === '1') {
+    try {
+        $one = $door->decide('Is it?', 'no-usage');
+        assertTypedFacts($one, 1);
+        check(!array_key_exists('input_tokens', $one['facts']) && !array_key_exists('output_tokens', $one['facts']), 'scalar omitted usage');
+        $many = $door->decideMany('Is it?', ['no-usage', 'yes']);
+        assertTypedFacts($many, 2);
+        check(!array_key_exists('input_tokens', $many['facts']) && !array_key_exists('output_tokens', $many['facts']), 'bulk omitted usage');
+        $saved = $one['facts'];
+    } finally { $door->close(); }
+    check($one['facts'] === $saved, 'typed facts changed after later call and close');
+    echo "PHP_OMITTED_FACTS_PASS\n";
+    return;
+}
 try {
     foreach (['café' => 1, 'yes' => 1, 'no' => 0, 'unsure' => 2] as $state => $outcome) {
         $q = $state === 'unsure' ? '{"decide":"Is it?","threshold":"0.4:0.8"}' : 'Is it?';
-        check($door->decide($q, $state)['outcome'] === $outcome, 'scalar ' . $state);
+        $scalar = $door->decide($q, $state);
+        assertTypedFacts($scalar, 1);
+        check($scalar['value']['outcome'] === $outcome, 'scalar ' . $state);
     }
-    check($door->decide('Is it?', "a\0b")['outcome'] === 1, 'counted text NUL');
+    check($door->decide('Is it?', "a\0b")['value']['outcome'] === 1, 'counted text NUL');
     failed(fn() => $door->decideMany('Is it?', ['bulk-before-bad','bulk-middle-bad','bulk-after-bad']), 2);
     foreach (['malformed-backend','transport-close','retry-status'] as $state) {
         try { $door->decide('Is it?', $state, 200); throw new RuntimeException('backend failure passed'); }
         catch (ThinkThenFailure $e) { check(in_array($e->nativeCode, [2,3], true), 'backend failure code'); }
     }
-    check($door->decide('Is it?', 'post-failure-recovery')['outcome'] === 1, 'failure recovery');
-    check($door->decide('Is it?', 'maximum-deadline', 4294967295000)['outcome'] === 1, 'max deadline');
-    check($door->decideMany('Is it?', []) === [], 'empty bulk');
+    check($door->decide('Is it?', 'post-failure-recovery')['value']['outcome'] === 1, 'failure recovery');
+    check($door->decide('Is it?', 'maximum-deadline', 4294967295000)['value']['outcome'] === 1, 'max deadline');
+    $empty = $door->decideMany('Is it?', []);
+    assertTypedFacts($empty, 0);
+    check($empty['value'] === [] && !array_key_exists('input_tokens', $empty['facts']), 'empty bulk');
     $rows = $door->decideMany('Is it?', ['first','second','third']);
-    check(array_column($rows, 'probability') === [0.9,0.1,0.6], 'reverse completion reorders: '.json_encode($rows));
+    assertTypedFacts($rows, 3);
+    check(array_column($rows['value'], 'probability') === [0.9,0.1,0.6], 'reverse completion reorders: '.json_encode($rows));
     $repeated = $door->decideMany('Is it?', ['first','second','first']);
-    check(array_column($repeated, 'probability') === [0.9,0.1,0.9], 'repeated bulk');
+    check(array_column($repeated['value'], 'probability') === [0.9,0.1,0.9], 'repeated bulk');
     $requests = [
       '{"decide":"Is it?","evidence":"json-decide","details":true}',
       '{"choose":"Which team?","options":["first","second"],"evidence":"choose"}',
@@ -86,17 +113,22 @@ try {
         }
     }
     $spec = '{"version":1,"recognize":{"kinds":{"person":"A person\'s name."}}}';
-    check(str_contains($door->recognize($spec, 'John Smith'), '"length"'), 'typed recognize');
-    check(str_contains($door->recognize('{"version":1,"recognize":{}}', 'Ada Lovelace'), '"kind":"ENTITY"'), 'default kind');
+    $named = $door->recognize($spec, 'John Smith');
+    assertTypedFacts($named, 1);
+    check(str_contains($named['value'], '"length"'), 'typed recognize');
+    check(str_contains($door->recognize('{"version":1,"recognize":{}}', 'Ada Lovelace')['value'], '"kind":"ENTITY"'), 'default kind');
     $relation = '{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}';
-    check(str_contains($door->relate($relation, ['{"name":"Third","kind":"alert"}','{"name":"Fourth","kind":"alert"}']), '"edges"'), 'typed relate');
+    $edges = $door->relate($relation, ['{"name":"Third","kind":"alert"}','{"name":"Fourth","kind":"alert"}']);
+    assertTypedFacts($edges, 1);
+    check(str_contains($edges['value'], '"edges"'), 'typed relate');
     check(str_contains($door->call('{"usage":true}'), 'requests_sent'), 'usage');
     refused(fn() => $door->decide("Is it?\0bad",'x'));
     refused(fn() => $door->call("{}\0bad"));
     refused(fn() => $door->recognize("{}\0bad",'x'));
     refused(fn() => $door->relate("{}\0bad",[]));
     failed(fn() => $door->decide('Is it?', "x\xff"), 1);
-    failed(fn() => $door->decide('Is it?', ''), 1);
+    $prestart = failed(fn() => $door->decide('Is it?', ''), 1);
+    check($prestart->factsJson === null, 'pre-start failure had facts');
     failed(fn() => $door->decide('Is it?', 'x', 0), 3);
     failed(fn() => $door->decide('Is it?', 'x', -2), 1);
     failed(fn() => $door->decide('Is it?', 'x', 4294967295001), 1);
@@ -112,7 +144,7 @@ try {
     check(json_decode($retained->factsJson, true, 512, JSON_THROW_ON_ERROR) === $failureFacts,
           'error facts copied before next failure');
     $other = new ThinkThen(getenv('TT_LIBRARY'));
-    try { check($other->decide('Is it?', 'success')['outcome'] === 1, 'other engine'); }
+    try { check($other->decide('Is it?', 'success')['value']['outcome'] === 1, 'other engine'); }
     finally { $other->close(); }
     $token = $door->token();
     try {
@@ -120,7 +152,8 @@ try {
         failed(fn() => $door->decide('Is it?', 'never-sent', -1, $token), 5);
     } finally { $door->freeToken($token); }
     failed(fn() => $door->decide('Is it?', 'hold-deadline', 50), 3);
-    check($door->decide('Is it?', 'recovery-scalar')['outcome'] === 1, 'recovery after deadline');
+    check($door->decide('Is it?', 'recovery-scalar')['value']['outcome'] === 1, 'recovery after deadline');
 } finally { $door->close(); }
+check(isset($scalar) && isset($scalar['facts']) && $scalar['facts']['records'] === 1, 'typed facts changed after close');
 check($retained !== null && $retained->nativeCode === 2 && $retained->getMessage() !== '', 'copied error survives engine free');
 echo "PHP_MATRIX_PASS\n";

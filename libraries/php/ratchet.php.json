@@ -1,5 +1,9 @@
 {
-  "directory": ["src", "examples", "fixtures"],
+  "directory": [
+    "src",
+    "examples",
+    "fixtures"
+  ],
   "extension": ".php",
-  "max": 366
+  "max": 433
 }

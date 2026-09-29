@@ -24,7 +24,7 @@ for name in ("libthinkthen.so", "libthinkthen.a"):
 shutil.copytree(native / "lib/pkgconfig", prefix / "lib/pkgconfig")
 module = home / "module"
 module.mkdir()
-for name in ("LICENSE", "README.md", "go.mod", "thinkthen.go", "thinkthen_test.go", "recovery_test.go"):
+for name in ("LICENSE", "README.md", "go.mod", "thinkthen.go", "result.go", "thinkthen_test.go", "recovery_test.go"):
     shutil.copy2(wrapper / name, module / name)
 shutil.copytree(wrapper / "examples", module / "examples")
 consumer = home / "external"

@@ -42,7 +42,7 @@ type Error struct {
 func (e *Error) Error() string { return fmt.Sprintf("thinkthen code %d: %s", e.Code, e.Message) }
 
 // Engine may be called concurrently. Close waits for in-flight calls and must
-// not race with the caller's own use of a returned Answer, string, or Error.
+// not race with the caller's own use of a returned Result, string, or Error.
 // Those values contain only Go-owned data and remain valid after Close.
 type Engine struct {
 	mu  sync.RWMutex
@@ -117,6 +117,13 @@ func copyCountedResult(result *C.char, length C.size_t) (string, error) {
 		return "", errors.New("native result is nil with nonzero length")
 	}
 	return C.GoStringN(result, C.int(length)), nil
+}
+func copyFacts(result *C.char, length C.size_t) (Facts, error) {
+	value, err := copyCountedResult(result, length)
+	if err != nil {
+		return Facts{}, err
+	}
+	return decodeFacts(value)
 }
 func buffer(s string) unsafe.Pointer {
 	if len(s) == 0 {
@@ -203,66 +210,84 @@ func asAnswer(a C.thinkthen_answer) (Answer, error) {
 	return Answer{Outcome: Outcome(a.outcome), Probability: float64(a.probability)}, nil
 }
 
-func (e *Engine) Decide(ctx context.Context, question, evidence string) (Answer, error) {
+func (e *Engine) Decide(ctx context.Context, question, evidence string) (Result[Answer], error) {
 	q, err := checkedCString(question)
 	if err != nil {
-		return Answer{}, err
+		return Result[Answer]{}, err
 	}
 	defer C.free(unsafe.Pointer(q))
 	b := buffer(evidence)
 	defer C.free(b)
 	out := (*C.thinkthen_answer)(C.malloc(C.size_t(unsafe.Sizeof(C.thinkthen_answer{}))))
 	if out == nil {
-		return Answer{}, errors.New("cannot allocate answer")
+		return Result[Answer]{}, errors.New("cannot allocate answer")
 	}
 	defer C.free(unsafe.Pointer(out))
 	raw, token, ms, leave, err := e.enter(ctx)
 	if err != nil {
-		return Answer{}, err
+		return Result[Answer]{}, err
 	}
 	defer leave()
-	code := C.thinkthen_decide_opts(raw, q, (*C.char)(b), C.size_t(len(evidence)), ms, token, out)
+	var facts *C.char
+	var factsLen C.size_t
+	code := C.thinkthen_decide_with_facts_opts(raw, q, (*C.char)(b), C.size_t(len(evidence)), ms, token, out, &facts, &factsLen)
+	defer C.thinkthen_free_string(facts)
 	if code != 0 {
-		return Answer{}, failure(raw, code)
+		return Result[Answer]{}, failure(raw, code)
 	}
-	return asAnswer(*out)
+	value, err := asAnswer(*out)
+	if err != nil {
+		return Result[Answer]{}, err
+	}
+	owned, err := copyFacts(facts, factsLen)
+	if err != nil {
+		return Result[Answer]{}, err
+	}
+	return Result[Answer]{Value: value, Facts: owned}, nil
 }
-func (e *Engine) DecideMany(ctx context.Context, question string, evidence []string) ([]Answer, error) {
+func (e *Engine) DecideMany(ctx context.Context, question string, evidence []string) (Result[[]Answer], error) {
 	q, err := checkedCString(question)
 	if err != nil {
-		return nil, err
+		return Result[[]Answer]{}, err
 	}
 	defer C.free(unsafe.Pointer(q))
 	if len(evidence) == 0 {
 		raw, token, ms, leave, err := e.enter(ctx)
 		if err != nil {
-			return nil, err
+			return Result[[]Answer]{}, err
 		}
 		defer leave()
-		code := C.thinkthen_decide_many_opts(raw, q, nil, nil, 0, ms, token, nil)
+		var facts *C.char
+		var factsLen C.size_t
+		code := C.thinkthen_decide_many_with_facts_opts(raw, q, nil, nil, 0, ms, token, nil, &facts, &factsLen)
+		defer C.thinkthen_free_string(facts)
 		if code != 0 {
-			return nil, failure(raw, code)
+			return Result[[]Answer]{}, failure(raw, code)
 		}
-		return []Answer{}, nil
+		owned, err := copyFacts(facts, factsLen)
+		if err != nil {
+			return Result[[]Answer]{}, err
+		}
+		return Result[[]Answer]{Value: []Answer{}, Facts: owned}, nil
 	}
 	n := len(evidence)
 	width := unsafe.Sizeof((*C.char)(nil))
 	if uintptr(n) > ^uintptr(0)/width || uintptr(n) > ^uintptr(0)/unsafe.Sizeof(C.size_t(0)) || uintptr(n) > ^uintptr(0)/unsafe.Sizeof(C.thinkthen_answer{}) {
-		return nil, errors.New("too many records")
+		return Result[[]Answer]{}, errors.New("too many records")
 	}
 	ptrs := C.malloc(C.size_t(uintptr(n) * width))
 	if ptrs == nil {
-		return nil, errors.New("cannot allocate pointers")
+		return Result[[]Answer]{}, errors.New("cannot allocate pointers")
 	}
 	defer C.free(ptrs)
 	sizes := C.malloc(C.size_t(uintptr(n) * unsafe.Sizeof(C.size_t(0))))
 	if sizes == nil {
-		return nil, errors.New("cannot allocate lengths")
+		return Result[[]Answer]{}, errors.New("cannot allocate lengths")
 	}
 	defer C.free(sizes)
 	outs := C.malloc(C.size_t(uintptr(n) * unsafe.Sizeof(C.thinkthen_answer{})))
 	if outs == nil {
-		return nil, errors.New("cannot allocate answers")
+		return Result[[]Answer]{}, errors.New("cannot allocate answers")
 	}
 	defer C.free(outs)
 	cptrs := unsafe.Slice((**C.char)(ptrs), n)
@@ -278,21 +303,28 @@ func (e *Engine) DecideMany(ctx context.Context, question string, evidence []str
 	}()
 	raw, token, ms, leave, err := e.enter(ctx)
 	if err != nil {
-		return nil, err
+		return Result[[]Answer]{}, err
 	}
 	defer leave()
-	code := C.thinkthen_decide_many_opts(raw, q, (**C.char)(ptrs), (*C.size_t)(sizes), C.size_t(n), ms, token, (*C.thinkthen_answer)(outs))
+	var facts *C.char
+	var factsLen C.size_t
+	code := C.thinkthen_decide_many_with_facts_opts(raw, q, (**C.char)(ptrs), (*C.size_t)(sizes), C.size_t(n), ms, token, (*C.thinkthen_answer)(outs), &facts, &factsLen)
+	defer C.thinkthen_free_string(facts)
 	if code != 0 {
-		return nil, failure(raw, code)
+		return Result[[]Answer]{}, failure(raw, code)
 	}
 	values := make([]Answer, n)
 	for i, a := range unsafe.Slice((*C.thinkthen_answer)(outs), n) {
 		values[i], err = asAnswer(a)
 		if err != nil {
-			return nil, err
+			return Result[[]Answer]{}, err
 		}
 	}
-	return values, nil
+	owned, err := copyFacts(facts, factsLen)
+	if err != nil {
+		return Result[[]Answer]{}, err
+	}
+	return Result[[]Answer]{Value: values, Facts: owned}, nil
 }
 
 // Call accepts the unchanged C JSON-door grammar. Successful JSON is a Go
@@ -317,57 +349,68 @@ func (e *Engine) Call(ctx context.Context, request string) (string, error) {
 }
 
 // Recognize and Relate use their typed JSON-returning C entry points.
-func (e *Engine) Recognize(ctx context.Context, spec, evidence string) (string, error) {
+func (e *Engine) Recognize(ctx context.Context, spec, evidence string) (Result[string], error) {
 	q, err := checkedCString(spec)
 	if err != nil {
-		return "", err
+		return Result[string]{}, err
 	}
 	defer C.free(unsafe.Pointer(q))
 	b := buffer(evidence)
 	defer C.free(b)
 	out := (*unsafe.Pointer)(C.malloc(C.size_t(unsafe.Sizeof(uintptr(0)))))
 	if out == nil {
-		return "", errors.New("cannot allocate result pointer")
+		return Result[string]{}, errors.New("cannot allocate result pointer")
 	}
 	defer C.free(unsafe.Pointer(out))
 	*out = nil
 	length := (*C.size_t)(C.malloc(C.size_t(unsafe.Sizeof(C.size_t(0)))))
 	if length == nil {
-		return "", errors.New("cannot allocate result length")
+		return Result[string]{}, errors.New("cannot allocate result length")
 	}
 	defer C.free(unsafe.Pointer(length))
 	raw, token, ms, leave, err := e.enter(ctx)
 	if err != nil {
-		return "", err
+		return Result[string]{}, err
 	}
 	defer leave()
-	code := C.thinkthen_recognize_opts(raw, q, (*C.char)(b), C.size_t(len(evidence)), ms, token, (**C.char)(unsafe.Pointer(out)), length)
+	var facts *C.char
+	var factsLen C.size_t
+	code := C.thinkthen_recognize_with_facts_opts(raw, q, (*C.char)(b), C.size_t(len(evidence)), ms, token, (**C.char)(unsafe.Pointer(out)), length, &facts, &factsLen)
+	defer C.thinkthen_free_string(facts)
+	defer C.thinkthen_free_string((*C.char)(*out))
 	if code != 0 {
-		return "", failure(raw, code)
+		return Result[string]{}, failure(raw, code)
 	}
 	result := (*C.char)(*out)
-	defer C.thinkthen_free_string(result)
-	return copyCountedResult(result, *length)
+	value, err := copyCountedResult(result, *length)
+	if err != nil {
+		return Result[string]{}, err
+	}
+	owned, err := copyFacts(facts, factsLen)
+	if err != nil {
+		return Result[string]{}, err
+	}
+	return Result[string]{Value: value, Facts: owned}, nil
 }
-func (e *Engine) Relate(ctx context.Context, spec string, records []string) (string, error) {
+func (e *Engine) Relate(ctx context.Context, spec string, records []string) (Result[string], error) {
 	q, err := checkedCString(spec)
 	if err != nil {
-		return "", err
+		return Result[string]{}, err
 	}
 	defer C.free(unsafe.Pointer(q))
 	n := len(records)
 	width := unsafe.Sizeof((*C.char)(nil))
 	if uintptr(n) > ^uintptr(0)/width || uintptr(n) > ^uintptr(0)/unsafe.Sizeof(C.size_t(0)) {
-		return "", errors.New("too many records")
+		return Result[string]{}, errors.New("too many records")
 	}
 	ptrs := C.malloc(C.size_t(uintptr(n) * width))
 	if ptrs == nil && n > 0 {
-		return "", errors.New("cannot allocate pointers")
+		return Result[string]{}, errors.New("cannot allocate pointers")
 	}
 	defer C.free(ptrs)
 	sizes := C.malloc(C.size_t(uintptr(n) * unsafe.Sizeof(C.size_t(0))))
 	if sizes == nil && n > 0 {
-		return "", errors.New("cannot allocate lengths")
+		return Result[string]{}, errors.New("cannot allocate lengths")
 	}
 	defer C.free(sizes)
 	if n > 0 {
@@ -385,25 +428,36 @@ func (e *Engine) Relate(ctx context.Context, spec string, records []string) (str
 	}
 	out := (*unsafe.Pointer)(C.malloc(C.size_t(unsafe.Sizeof(uintptr(0)))))
 	if out == nil {
-		return "", errors.New("cannot allocate result pointer")
+		return Result[string]{}, errors.New("cannot allocate result pointer")
 	}
 	defer C.free(unsafe.Pointer(out))
 	*out = nil
 	length := (*C.size_t)(C.malloc(C.size_t(unsafe.Sizeof(C.size_t(0)))))
 	if length == nil {
-		return "", errors.New("cannot allocate result length")
+		return Result[string]{}, errors.New("cannot allocate result length")
 	}
 	defer C.free(unsafe.Pointer(length))
 	raw, token, ms, leave, err := e.enter(ctx)
 	if err != nil {
-		return "", err
+		return Result[string]{}, err
 	}
 	defer leave()
-	code := C.thinkthen_relate_opts(raw, q, (**C.char)(ptrs), (*C.size_t)(sizes), C.size_t(n), ms, token, (**C.char)(unsafe.Pointer(out)), length)
+	var facts *C.char
+	var factsLen C.size_t
+	code := C.thinkthen_relate_with_facts_opts(raw, q, (**C.char)(ptrs), (*C.size_t)(sizes), C.size_t(n), ms, token, (**C.char)(unsafe.Pointer(out)), length, &facts, &factsLen)
+	defer C.thinkthen_free_string(facts)
+	defer C.thinkthen_free_string((*C.char)(*out))
 	if code != 0 {
-		return "", failure(raw, code)
+		return Result[string]{}, failure(raw, code)
 	}
 	result := (*C.char)(*out)
-	defer C.thinkthen_free_string(result)
-	return copyCountedResult(result, *length)
+	value, err := copyCountedResult(result, *length)
+	if err != nil {
+		return Result[string]{}, err
+	}
+	owned, err := copyFacts(facts, factsLen)
+	if err != nil {
+		return Result[string]{}, err
+	}
+	return Result[string]{Value: value, Facts: owned}, nil
 }
