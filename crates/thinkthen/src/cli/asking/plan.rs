@@ -1,6 +1,6 @@
 //! The plan `--dry-run` prints in place of a request.
 
-use std::io::Write;
+use std::io::{self, IsTerminal, Write};
 use std::process::ExitCode;
 
 use super::{Asks, JudgingInput, asked_of};
@@ -106,6 +106,16 @@ pub(super) fn print_plan(
         Some(sources) => document.from(sources),
         None => document,
     };
-    edge::write_line(writer, &json_line(&document)?)?;
+    let line = json_line(&document)?;
+    if !reading.streams() && io::stdout().is_terminal() {
+        let mut stderr = io::stderr().lock();
+        writeln!(
+            stderr,
+            "thinkthen: dry-run: request.state is the evidence; request.questions holds what you asked about it."
+        )
+        .and_then(|()| stderr.flush())
+        .map_err(Failure::Output)?;
+    }
+    edge::write_line(writer, &line)?;
     Ok(ExitCode::SUCCESS)
 }

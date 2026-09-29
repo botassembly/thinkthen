@@ -36,6 +36,8 @@ Add concise investigation notes to the ticket. A shared record may hold facts co
 
 Review the notes against source and ask the builder whether they are actionable. Correct inaccurate or speculative claims before handoff. Keep accepted unbuilt tickets on their existing branches; do not land them early merely to add notes.
 
+When changing test subprocesses, check every process level with the dedicated `children` guard. `policy.py` does not replace it. A clean grandchild environment does not isolate its parent helper. A subprocess timeout must kill and reap the owned child and close its descriptors; a timeout exception alone leaves work running.
+
 ## Before landing
 
 The builder updates the ticket under `## What the build taught us`. Use a few factual bullets, with build-record links for details:
