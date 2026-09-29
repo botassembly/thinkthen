@@ -202,6 +202,10 @@ fn the_c_settings_object_refuses_bad_shapes_and_keys() {
             "max_estimated_input_tokens_total",
         ),
         (
+            r#"{"max_estimated_input_tokens_total":18446744073709551616}"#,
+            "max_estimated_input_tokens_total",
+        ),
+        (
             r#"{"max_estimated_input_tokens_total":"4"}"#,
             "max_estimated_input_tokens_total",
         ),
@@ -269,7 +273,7 @@ fn the_c_constructor_estimated_zero_refuses_before_the_listener() {
     let output = run(&driver, &base, &script.0);
     let said = replies(&output.stdout).expect("replies");
     assert_eq!(said[0].0, 0, "the constructor accepted an active limit");
-    assert_ne!(said[1].0, 0, "the live body was refused");
+    assert_eq!(said[1].0, 1, "the live body has the existing Usage code");
     assert!(
         said[1]
             .1

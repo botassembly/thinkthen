@@ -221,6 +221,62 @@ fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
 }
 
 #[test]
+fn cancellation_after_reservation_refunds_both_process_charges() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    listener.set_nonblocking(true).expect("nonblocking");
+    let url = format!(
+        "http://{}/v1/systemone",
+        listener.local_addr().expect("address")
+    );
+    let key = Key::of("sk-test-value");
+    let exchange = Exchange {
+        url: &url,
+        body: b"{}",
+        key: &key,
+        max_retries: 0,
+        retry_wait: Duration::from_millis(10),
+    };
+    let budget = crate::public::SendBudget::new();
+    let selected = Some(crate::engine::send_budget::ProcessBudget {
+        budget: budget.clone(),
+        requests: Some(1),
+        estimated: Some(2),
+    });
+    let token = Arc::new(AtomicBool::new(false));
+    let stopped = crate::engine::Cancel::default()
+        .with_token(Some(Arc::clone(&token)))
+        .with_process_budget(selected.clone());
+    let counts = Counters::new(None);
+    let client = Client::new(
+        Duration::from_secs(1),
+        false,
+        crate::engine::process_width(),
+    );
+    let refused = client.post_observed_after_reservation(&exchange, &stopped, &counts, || {
+        token.store(true, Ordering::Release);
+    });
+    assert!(matches!(refused, Err(Error::Cancelled)));
+    assert_eq!(counts.snapshot().requests_sent, 0);
+    assert!(matches!(listener.accept(), Err(error) if error.kind() == io::ErrorKind::WouldBlock));
+
+    listener.set_nonblocking(false).expect("blocking server");
+    let server = thread::spawn(move || {
+        let (mut stream, _) = listener.accept().expect("fresh request");
+        let mut request = [0_u8; 1024];
+        let _read = stream.read(&mut request).expect("request bytes");
+        stream
+            .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
+            .expect("reply");
+    });
+    let fresh = crate::engine::Cancel::default().with_process_budget(selected);
+    client
+        .post_observed_with_retry(&exchange, &fresh, &counts, |_| ())
+        .expect("refunded charge admits fresh send");
+    server.join().expect("server");
+    assert_eq!(counts.snapshot().requests_sent, 1);
+}
+
+#[test]
 fn a_deadline_while_width_is_held_reserves_no_send() {
     static WIDTH: crate::engine::Widths = crate::engine::Widths::new();
     WIDTH

@@ -5,7 +5,7 @@
 )]
 
 use std::num::NonZeroUsize;
-use std::sync::Arc;
+use std::sync::{Arc, Barrier, mpsc};
 use std::thread;
 use std::time::{Duration, Instant};
 
@@ -13,6 +13,7 @@ use conformance_backend::{Canned, Listener, Rendezvous};
 use thinkthen::{BatchSetting, CallOptions, Engine, ErrorKind, EstimatedInputDenial, Question};
 
 const ANSWER: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":312,"output_tokens":48000}}"#;
+const NO_USAGE: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
 
 #[test]
 fn final_body_charge_selects_each_limit_and_distinguishes_later_and_retry_denials() {
@@ -105,6 +106,8 @@ fn final_body_charge_selects_each_limit_and_distinguishes_later_and_retry_denial
     held_race(charge, first, &question);
     cached_answer(charge, first, &question);
     replayed_answer(charge, first, &question);
+    mixed_settings(charge, first, &question);
+    absent_usage_still_charges(charge, first, &question);
 }
 
 fn retry_refusal(charge: u64, first: u64, question: &Question) {
@@ -149,10 +152,13 @@ fn retry_refusal(charge: u64, first: u64, question: &Question) {
 
 fn held_race(charge: u64, first: u64, question: &Question) {
     let gate = Arc::new(Rendezvous::new(2));
-    let held = Arc::clone(&gate);
-    let arrived = Listener::answering(move |_| Canned::ok(ANSWER).after_release(Arc::clone(&held)))
-        .expect("held listener");
-    let denied = Listener::answering(|_| Canned::ok(ANSWER)).expect("denied listener");
+    let listeners: Vec<_> = (0..2)
+        .map(|_| {
+            let held = Arc::clone(&gate);
+            Listener::answering(move |_| Canned::ok(ANSWER).after_release(Arc::clone(&held)))
+                .expect("contender listener")
+        })
+        .collect();
     let build = |base: &str| {
         Engine::builder()
             .base_url(base)
@@ -165,30 +171,54 @@ fn held_race(charge: u64, first: u64, question: &Question) {
             .build()
             .expect("engine")
     };
-    let one = build(arrived.base());
-    let two = build(denied.base());
+    let engines: Vec<_> = listeners
+        .iter()
+        .map(|listener| build(listener.base()))
+        .collect();
+    let start = Barrier::new(3);
+    let (send, receive) = mpsc::channel();
     thread::scope(|scope| {
-        let worker = scope.spawn(|| one.decide(question, "item ten"));
+        for (index, (engine, evidence)) in engines.iter().zip(["item ten", "item six"]).enumerate()
+        {
+            let send = send.clone();
+            let start = &start;
+            scope.spawn(move || {
+                start.wait();
+                send.send((index, engine.decide(question, evidence)))
+                    .expect("contender result");
+            });
+        }
+        start.wait();
         let until = Instant::now() + Duration::from_secs(3);
-        while arrived.count() == 0 {
-            assert!(Instant::now() < until, "held request never arrived");
+        while listeners.iter().map(Listener::count).sum::<usize>() == 0 {
+            assert!(
+                Instant::now() < until,
+                "one admitted contender never arrived"
+            );
             thread::sleep(Duration::from_millis(5));
         }
-        let refusal = two
-            .decide(question, "item six")
-            .expect_err("in-flight charge fills total");
+        let (loser, refusal) = receive
+            .recv_timeout(Duration::from_secs(3))
+            .expect("other contender reaches admission");
+        let refusal = refusal.expect_err("one of two contenders loses the only charge");
         assert_eq!(
             refusal.estimated_input_denial(),
             Some(EstimatedInputDenial::InitialRequest { limit: charge * 5 })
         );
-        assert_eq!(denied.count(), 0, "a second request did not arrive");
+        assert_eq!(listeners.get(loser).expect("contender index").count(), 0);
+        assert_eq!(listeners.iter().map(Listener::count).sum::<usize>(), 1);
         gate.wait();
-        worker.join().expect("worker").expect("held answer");
+        receive
+            .recv_timeout(Duration::from_secs(3))
+            .expect("held winner completed")
+            .1
+            .expect("held answer");
     });
     assert_eq!(
-        arrived
-            .requests()
-            .first()
+        listeners
+            .iter()
+            .flat_map(Listener::requests)
+            .next()
             .expect("captured held body")
             .body
             .len() as u64,
@@ -285,4 +315,141 @@ fn replayed_answer(charge: u64, first: u64, question: &Question) {
         1,
         "replay adds no live attempt or estimate"
     );
+}
+
+fn mixed_settings(charge: u64, first: u64, question: &Question) {
+    let gate = Arc::new(Rendezvous::new(2));
+    let held = Arc::clone(&gate);
+    let a_listener =
+        Listener::answering(move |_| Canned::ok(ANSWER).after_release(Arc::clone(&held)))
+            .expect("A listener");
+    let b_listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("B listener");
+    let build = |base: &str, limit| {
+        Engine::builder()
+            .base_url(base)
+            .expect("base")
+            .api_key("sk-test")
+            .expect("fake key")
+            .no_cache()
+            .max_retries(0)
+            .max_estimated_input_tokens_total(limit)
+            .build()
+            .expect("engine")
+    };
+    let a = build(a_listener.base(), Some(charge * 8));
+    let b = build(b_listener.base(), Some(charge * 9));
+    thread::scope(|scope| {
+        let worker = scope.spawn(|| a.decide(question, "item one"));
+        let until = Instant::now() + Duration::from_secs(3);
+        while a_listener.count() == 0 {
+            assert!(Instant::now() < until, "A did not arrive");
+            thread::sleep(Duration::from_millis(5));
+        }
+        b.decide(question, "item two")
+            .expect("B's larger limit admits while A is held");
+        assert_eq!(b_listener.count(), 1);
+        let refused = a
+            .decide(question, "item tri")
+            .expect_err("A's selected limit is spent");
+        assert_eq!(
+            refused.estimated_input_denial(),
+            Some(EstimatedInputDenial::InitialRequest { limit: charge * 8 })
+        );
+        assert_eq!(a_listener.count(), 1);
+        gate.wait();
+        worker.join().expect("A worker").expect("A answer");
+    });
+    for listener in [&a_listener, &b_listener] {
+        assert_eq!(
+            listener
+                .requests()
+                .first()
+                .expect("captured body")
+                .body
+                .len() as u64,
+            first
+        );
+    }
+    let cases = [
+        (None, true, 2),
+        (Some(charge * 9), false, 2),
+        (Some(charge * 11), true, 3),
+        (Some(charge * 10), false, 3),
+    ];
+    for (limit, admitted, arrivals) in cases {
+        let result = build(b_listener.base(), limit).decide(question, "item one");
+        if admitted {
+            result.expect("unset or raised setting admits against retained count");
+        } else {
+            let refused = result.expect_err("lower or reapplied finite setting refuses");
+            assert_eq!(
+                refused.estimated_input_denial(),
+                Some(EstimatedInputDenial::InitialRequest {
+                    limit: limit.expect("finite limit")
+                })
+            );
+        }
+        assert_eq!(b_listener.count(), arrivals);
+    }
+    assert!(
+        b_listener
+            .requests()
+            .iter()
+            .all(|body| body.body.len() as u64 == first)
+    );
+}
+
+fn absent_usage_still_charges(charge: u64, first: u64, question: &Question) {
+    for (number, success) in [(12, true), (13, false)] {
+        let listener = Listener::answering(move |_| {
+            if success {
+                Canned::ok(NO_USAGE)
+            } else {
+                Canned::status(422, "bad request")
+            }
+        })
+        .expect("listener");
+        let limit = charge * number;
+        let engine = Engine::builder()
+            .base_url(listener.base())
+            .expect("base")
+            .api_key("sk-test")
+            .expect("fake key")
+            .no_cache()
+            .max_retries(0)
+            .max_estimated_input_tokens_total(Some(limit))
+            .build()
+            .expect("engine");
+        if success {
+            let call = engine
+                .decide(question, "item one")
+                .expect("answer without usage");
+            assert_eq!(call.facts().requests_sent(), 1);
+            assert_eq!(call.facts().input_tokens(), None);
+            assert_eq!(call.facts().output_tokens(), None);
+        } else {
+            let failure = engine
+                .decide(question, "item one")
+                .expect_err("terminal failure");
+            assert_eq!(failure.facts().expect("started facts").requests_sent(), 1);
+            assert_eq!(failure.facts().expect("started facts").input_tokens(), None);
+            assert_eq!(
+                failure.facts().expect("started facts").output_tokens(),
+                None
+            );
+        }
+        assert_eq!(listener.count(), 1);
+        assert_eq!(
+            listener.requests().first().expect("actual body").body.len() as u64,
+            first
+        );
+        let denied = engine
+            .decide(question, "item two")
+            .expect_err("started request kept its charge");
+        assert_eq!(
+            denied.estimated_input_denial(),
+            Some(EstimatedInputDenial::InitialRequest { limit })
+        );
+        assert_eq!(listener.count(), 1, "denial sent nothing");
+    }
 }
