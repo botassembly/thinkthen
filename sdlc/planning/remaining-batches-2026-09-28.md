@@ -18,7 +18,7 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Current open counts after the release hygiene fix
 
-The live queue has 67 to-do rows after accepted audit-output0256, the reviewed register114 disposition and the register50/register88/SQL-alias corrections. The [Every item table](work-plan-2026-09-27.md#every-item) and its current Lanes section own status and assignments. The original 75-row inventory and dated evidence below are history; they must not revive closed issues, superseded platform claims or expired holds. The latest closure mapping and platform evidence remain in the work plan and their reviewed records. Current open rows group as follows:
+The live queue has 68 to-do rows after the new settings-site citation regression after accepted audit-output0256, the reviewed register114 disposition and the register50/register88/SQL-alias corrections. The [Every item table](work-plan-2026-09-27.md#every-item) and its current Lanes section own status and assignments. The original 75-row inventory and dated evidence below are history; they must not revive closed issues, superseded platform claims or expired holds. The latest closure mapping and platform evidence remain in the work plan and their reviewed records. Current open rows group as follows:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |
@@ -29,10 +29,10 @@ The live queue has 67 to-do rows after accepted audit-output0256, the reviewed r
 | Accounting, timing and budgets |9| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
 | Record failure handling |4| Preparation accepted64749d91. A numbered design must settle the error carrier, recoverable classes, exit precedence and failed-batch policy. |
 | Question controls and uncertainty |6| Refresh accepted rank and environment decisions before proposing new grammar. |
-| Documentation, trust and launch usability |8| The verified SQL alias and contract-page gaps are fixed. Marketing owns site; the temporary broader documentation hold has ended. |
+| Documentation, trust and launch usability |9| The verified SQL alias and contract-page gaps are fixed. Marketing owns site; the temporary broader documentation hold has ended. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
 | New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
-| **Total** |**67**| Counts are tracked rows, not independent builds. |
+| **Total** |**68**| Counts are tracked rows, not independent builds. |
 
 ## Later intake
 
