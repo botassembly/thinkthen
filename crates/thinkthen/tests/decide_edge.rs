@@ -382,6 +382,11 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     }
 
     let long = String::from_utf8_lossy(&long.stdout);
+    let stop = long.find("The answer is a bare").expect("answer");
+    let first = "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?'";
+    let second = "printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9";
+    let printed = long[..stop].lines().filter(|s| s.starts_with("printf "));
+    assert!(printed.eq([first, second]), "{long}");
     for option in [
         "--threshold",
         "--quiet",
@@ -400,9 +405,6 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     for gone in ["--adapter", "--key-env", "--config"] {
         assert!(!long.contains(gone), "{gone} is still in {long}");
     }
-    // The help states the model a run defaults to, and the adapter owns that
-    // value. Reading it from the constant fails this case if the copy in the
-    // help rots, which is the one place the default model is written twice.
     assert!(
         long.contains(&format!("[default: {DEFAULT_MODEL}]")),
         "the long help does not name the default model {DEFAULT_MODEL}: {long}"
@@ -430,6 +432,14 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     ] {
         assert!(long.contains(cache_rule), "{cache_rule}: {long}");
     }
+}
+
+#[test]
+fn filter_help_names_default_batching() {
+    let filter = run(&["filter", "--help"], &[], b"").expect("the compiled binary runs");
+    let filter = String::from_utf8_lossy(&filter.stdout);
+    assert!(filter.contains("Records share requests by default; --batch 1"));
+    assert!(!filter.contains("one paid request for every record"));
 }
 
 #[test]
@@ -495,7 +505,10 @@ fn shared_help_defers_order_and_document_rules_to_each_command() {
     }
     let output = run(&["rank", "--help"], &[], b"").expect("the compiled binary runs");
     let help = String::from_utf8_lossy(&output.stdout);
-    assert!(help.contains("most likely yes first"), "{help}");
+    assert!(
+        help.contains("The printed order puts the highest value first."),
+        "{help}"
+    );
     assert!(help.contains("An exact tie keeps input order."), "{help}");
 }
 
