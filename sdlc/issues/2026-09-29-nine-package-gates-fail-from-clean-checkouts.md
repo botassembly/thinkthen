@@ -16,7 +16,7 @@ Status: open. Independent verification of all 24 integrated package surfaces at 
 | databases/duckdb | settings_suite + conformance | 4 + 3 cases fail after all builds/lints pass; surface is mid-flight in its own lane | under analysis |
 | databases/sqlite | tests/test_settings.py | counter omits the `*.json` filter every sibling has; engine's `.locks` file miscounted; engine correct | harness defect |
 
-Six of nine trace to the documented contract changes in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md` not reaching package test harnesses. The product code mostly matches the new contracts; the gates do not.
+The causes differ. The sealed receipts identify packing drift in C and Polars, an export-count mismatch in TypeScript, example output and formatting defects in Rust, and separate harness or build-input defects in other packages. Python has mixed failures and DuckDB needs further analysis. The [contract drift issue](2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md) explains relevant behavior changes; it does not establish one cause for six failures. The 15 PASS / 9 FAIL result above describes the sealed revision, not current main.
 
 ## Also worth fixing (from PASS reports)
 
