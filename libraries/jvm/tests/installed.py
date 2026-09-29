@@ -1,5 +1,7 @@
 """Run the accepted Java, Kotlin, and Scala installed consumers from product-built JARs."""
 import datetime
+import collections
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -13,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "target"
 RELEASE = os.environ.get("THINKTHEN_RELEASE_JVM_DIR")
 RELEASE_C = os.environ.get("THINKTHEN_RELEASE_C_DIR")
+PORTABLE = bool(RELEASE) and os.environ.get("THINKTHEN_PORTABLE_BATCH") == "1"
 assert bool(RELEASE) == bool(RELEASE_C), "installed release needs both package paths"
 if RELEASE:
     package = Path(RELEASE)
@@ -71,12 +74,30 @@ for index, lang in enumerate(("java", "kotlin", "scala")):
                "--bind", str(trial), "/work", "--tmpfs", "/tmp", "--proc", "/proc", "--dev", "/dev", *mounts,
                "--setenv", "PATH", "/usr/bin:/opt/jdk/bin", "--chdir", "/work/project", "/usr/bin/python3", "consumer-run.py"]
     if RELEASE:
-        command += [lang]
+        command += [f"portable-{lang}" if PORTABLE else lang]
     result = subprocess.run(command, env={"PATH": "/usr/bin:/bin"}, capture_output=True, text=True, timeout=420)
     (trial / "outer.log").write_text(result.stdout + result.stderr)
     assert result.returncode == 0, (lang, result.stdout[-1000:], result.stderr[-1000:])
     summary = json.loads((trial / "home/summary.json").read_text())
-    if RELEASE:
+    if PORTABLE:
+        fixture = ROOT.parents[1] / "specification/fixtures/batching"
+        expected = [(fixture / f"portable-{n}.request.json").read_bytes().removesuffix(b"\n") for n in (1, 2, 3)]
+        observed = [path.read_bytes() for path in (trial / "home/barrier").glob("wire-body-*.json")]
+        assert collections.Counter(observed) == collections.Counter(expected), (lang, observed)
+        assert summary["attempts"] == summary["connections"] == 3, summary
+        if lang != "java":
+            returned = json.loads((trial / "project/portable-result.json").read_text())
+            assert returned["facts"]["records"] == 5 and returned["facts"]["requests_sent"] == 3, returned
+            rows = returned["value"]
+            corpus = json.loads((fixture / "portable-records.json").read_text())
+            assert len(rows) == 5, rows
+            digests = [hashlib.sha256(b"systemone\n" + summary["url"].encode() + b"\n" + body).hexdigest()
+                       for body in expected]
+            for at, row in enumerate(rows):
+                assert row["input"] == corpus["texts"][at] and row["value"] is True, row
+                assert row["meta"]["requests"] == [digests[[0, 0, 1, 1, 2][at]]], row
+        print(f"installed {lang}: five public rows, three exact bodies and sends PASS", flush=True)
+    elif RELEASE:
         assert summary["arrivals"] == [f"release-{lang}"] and summary["attempts"] == summary["connections"] == 1, summary
         print(f"JVM {lang} observed body:", json.dumps(summary["body"], sort_keys=True), flush=True)
         print(f"installed {lang}: one exact body and native load PASS", flush=True)

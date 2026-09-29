@@ -1,6 +1,6 @@
 # 0260 public host proof index
 
-Status: closure preparation. Twenty of the22 public host groups have accepted proof. C# and the JVM group remain in progress; this index does not close register64.
+Status: complete. All22 public host groups have accepted proof. Fresh code and closure review accepted the final C#/JVM candidate `2c92e3de`; [the review record](0260-managed-host-code-review.md) closes register64 against its original success criterion.
 
 The original finding asks for portable record spelling and a shared fixture hashed on every surface. Ticket0260 fixed the spelling contract and pinned literal UTF-8 records, content cuts, request bodies and digests. This index maps each supported public route to its independently reviewed proof. Core, CLI and C establish the common oracle. Each host exercises its own public conversion with the same five accepted texts and three captured requests. The structured CLI arm separately pins JSON member order, escaping and numeric spelling; it does not extend a text-only host's input domain.
 
@@ -26,8 +26,8 @@ The original finding asks for portable record spelling and a shared fixture hash
 | Ada | `61caadaa` | [Ada/Objective-C/COBOL record](0260-ada-objc-cobol-host-proof.md): typed public bulk, exact bodies/counts and retained order proof. |
 | GNU Objective-C | `61caadaa` | Same record: counted UTF-8 public bulk conversion, literal bodies/counts and retained order proof. |
 | COBOL | `61caadaa` | Same record: bounded public TT-CALL JSON wrapper, distinct input rows, direct row digests and closure details. |
-| C# | Pending | Codex6 is exercising the typed public bulk method on accepted0262 package bytes. |
-| JVM: Java, Kotlin, Scala | Pending | Codex6 is exercising Java typed bulk and the Kotlin/Scala public JSON facades on accepted0262 JARs. |
+| C# | `2c92e3de` | [Managed-host record](0260-managed-host-proof.md): typed public bulk on accepted0262 package bytes, exact bodies/counts and retained mixed-answer order proof. |
+| JVM: Java, Kotlin, Scala | `2c92e3de` | Same record: Java typed bulk and Kotlin/Scala public JSON facades on accepted0262 JARs. The facade rows expose direct digests and facts. |
 
 Where a public result omits digests, its exact captured bodies and counted sends prove grouping at that boundary. The shared C/core Exchange path supplies explicitly qualified source inference for digest identity. No test-only metadata API was added. Identical all-yes results prove count/value; existing distinct-answer tests establish result order where a new case cannot distinguish a permutation.
 
