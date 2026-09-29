@@ -443,13 +443,15 @@ const ARTICLES = {
   retrieval: {
     title: "Four ways to retrieve.",
     label: "Retrieval",
-    goal: "Classification understands each item more deeply than search, and it costs more to run.",
+    goal: "The four ways stack to find records in a large collection at an affordable cost.",
     idea: [
       "Keyword search matches shared words. TF-IDF and BM25 work this way. Semantic search matches similar meaning. Embeddings and cosine similarity work this way. Hybrid search blends the two scores.",
       "Classification asks a question about each item. Should it stay? How well does it fit? Which tags apply? A language model reads the item and answers. Each answer carries a probability.",
-      "The trade-off is cost. Keyword and semantic search look items up in a prebuilt index. Classification sends every item to a language model. It costs more and takes longer. Search narrows the pile first. Classification reads what is left.",
+      "The strategies stack. A cheap search narrows a large collection. Keyword search or embeddings both work. Classification then judges the shortlist.",
+      "Classification can also stack on itself. Ask a coarse question first. Then ask finer questions of the fewer items that pass.",
+      "Cost grows with the number of items judged. Keyword and semantic search look items up in a prebuilt index. Classification sends every item it judges to a language model. Narrowing first keeps the cost affordable.",
     ],
-    takeaway: "Classification understands each item far more deeply than search.",
+    takeaway: "Combine them: search narrows the set, and classification judges what is left.",
     link: REPO,
   },
 
