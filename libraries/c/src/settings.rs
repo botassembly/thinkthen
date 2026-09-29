@@ -40,6 +40,12 @@ fn apply(
             }
             "max_requests_total" if value.is_null() => builder.max_requests_total(None),
             "max_requests_total" => builder.max_requests_total(Some(whole()?)),
+            "max_estimated_input_tokens_total" if value.is_null() => {
+                builder.max_estimated_input_tokens_total(None)
+            }
+            "max_estimated_input_tokens_total" => {
+                builder.max_estimated_input_tokens_total(Some(whole()?))
+            }
             "max_request_bytes" => builder
                 .max_request_bytes(usize::try_from(whole()?).map_err(|_| {
                     Failure::usage("a request size is a whole number of 1 or more")

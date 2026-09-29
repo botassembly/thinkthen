@@ -232,7 +232,7 @@ impl Client {
             // host callback while the usage lock is held.
             let budget = cancel.remaining_without_check()?;
             let limit = budget.map_or(self.timeout, |budget| budget.min(self.timeout));
-            let reservation = cancel.reserve_send(last_status)?;
+            let reservation = cancel.reserve_send(last_status, exchange.body.len())?;
             prepared.mark(retries > 0)?;
             if let Some(reservation) = reservation {
                 reservation.commit();

@@ -34,9 +34,11 @@ pub use error::{Error, ErrorDetail, ErrorKind};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine};
 pub use native_batch::RecoverableDetails;
-pub(crate) use options::SendReservation;
 pub(crate) use options::budget::process_budget;
-pub use options::{BatchSetting, CallOptions, CancelToken, SendBudget, SendBudgetDenial};
+pub use options::{
+    BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
+};
+pub(crate) use options::{EstimatedReservation, SendReservation};
 pub use plan::PlanEstimate;
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,

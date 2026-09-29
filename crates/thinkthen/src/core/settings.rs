@@ -337,7 +337,9 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
             "timeout" => number().is_some(),
             "max_retries" => number().is_some_and(|count| u32::try_from(count).is_ok()),
             "batch" => Setting::of_json(&value).is_some(),
-            "max_requests_total" => matches!(value, Json::Null) || number().is_some(),
+            "max_requests_total" | "max_estimated_input_tokens_total" => {
+                matches!(value, Json::Null) || number().is_some()
+            }
             _ => return Err(format!("settings JSON has unknown key {}", safe_key(&key))),
         };
         if !valid {

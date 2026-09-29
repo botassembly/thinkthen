@@ -193,6 +193,18 @@ fn the_c_settings_object_refuses_bad_shapes_and_keys() {
         (r#"{"max_retries":-1}"#, "max_retries"),
         (r#"{"max_request_bytes":0}"#, "max_request_bytes"),
         (r#"{"max_requests_total":-1}"#, "max_requests_total"),
+        (
+            r#"{"max_estimated_input_tokens_total":-1}"#,
+            "max_estimated_input_tokens_total",
+        ),
+        (
+            r#"{"max_estimated_input_tokens_total":1.5}"#,
+            "max_estimated_input_tokens_total",
+        ),
+        (
+            r#"{"max_estimated_input_tokens_total":"4"}"#,
+            "max_estimated_input_tokens_total",
+        ),
     ] {
         let mut script = Script::default();
         script.ask("settings", &[&base, given]);
@@ -205,7 +217,7 @@ fn the_c_settings_object_refuses_bad_shapes_and_keys() {
     let mut script = Script::default();
     script.ask(
         "settings",
-        &[&base, r#"{"max_requests":null,"max_requests_total":3}"#],
+        &[&base, r#"{"max_requests":null,"max_requests_total":3,"max_estimated_input_tokens_total":null}"#],
     );
     let output = run(&driver, &base, &script.0);
     assert_eq!(replies(&output.stdout).expect("null limit")[0].0, 0);
@@ -235,6 +247,37 @@ fn the_c_constructor_zero_cap_refuses_before_the_listener() {
         0,
         "the cap stops the C call before transport"
     );
+}
+
+#[test]
+fn the_c_constructor_estimated_zero_refuses_before_the_listener() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let mut script = Script::default();
+    script.ask(
+        "settings",
+        &[
+            &base,
+            r#"{"cache":false,"max_estimated_input_tokens_total":0}"#,
+        ],
+    );
+    script.ask(
+        "decide",
+        &[&base, r#"{"decide":"asks for a refund"}"#, "Refund me."],
+    );
+    let output = run(&driver, &base, &script.0);
+    let said = replies(&output.stdout).expect("replies");
+    assert_eq!(said[0].0, 0, "the constructor accepted an active limit");
+    assert_ne!(said[1].0, 0, "the live body was refused");
+    assert!(
+        said[1]
+            .1
+            .contains("max_estimated_input_tokens_total=0 (encoded-body-bytes-908-v1)"),
+        "{:?}",
+        said[1]
+    );
+    assert_eq!(backend.count(), 0, "no request reached the listener");
 }
 
 #[test]

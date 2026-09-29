@@ -392,3 +392,27 @@ fn decide_names_choose_as_the_home_of_raw_labels() {
         "thinkthen: `decide` prints JSON; `choose --raw` prints a bare label\n"
     );
 }
+
+#[test]
+fn estimated_input_zero_refuses_the_compiled_command_before_transport() {
+    let output = run(
+        &[
+            "decide",
+            "asks for a refund",
+            "--url",
+            CLOSED,
+            "--no-cache",
+            "--max-estimated-input-tokens-total",
+            "0",
+        ],
+        &[("THINKTHEN_API_KEY", "sk-loopback-test")],
+        b"Refund me please.",
+    )
+    .expect("compiled command");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen usage: max_estimated_input_tokens_total=0 (encoded-body-bytes-908-v1) would be exceeded before this call's first request\n"
+    );
+}

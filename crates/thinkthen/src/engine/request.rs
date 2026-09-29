@@ -36,7 +36,7 @@ pub(crate) struct Transport<'a> {
     pub(crate) max_retries: u32,
     pub(crate) retry_wait: Duration,
     pub(crate) usage: &'a Counters,
-    pub(crate) send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    pub(crate) send_budget: Option<crate::engine::send_budget::ProcessBudget>,
 }
 
 #[expect(

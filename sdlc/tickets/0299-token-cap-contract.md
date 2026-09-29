@@ -1,6 +1,6 @@
 # 0299 — Estimated input admission total
 
-Status: Design accepted after fresh independent High review of `f49eaccf2`; the coordinator approves the contract within Ian's release API outcome. No setting or enforcement is implemented. This is the first token-cap follow-up from experiment 2038 ruling 6, after 0289's request-cap and plan/tally foundation; it does not gate the 0.1 request-cap/preview work or close the [issue](../issues/2026-09-29-token-cap-contract-before-release.md).
+Status: Design accepted after fresh independent High review of `f49eaccf2`; the coordinator approves the contract within Ian's release API outcome. Core, CLI and C implementation is a focused source candidate for High code review. Other host settings, issue closure and release qualification remain open. This is the first token-cap follow-up from experiment 2038 ruling 6, after 0289's request-cap and plan/tally foundation; it does not gate the 0.1 request-cap/preview work or close the [issue](../issues/2026-09-29-token-cap-contract-before-release.md).
 
 ## Decision proposed for review
 
@@ -23,6 +23,26 @@ CLI edge: `crates/thinkthen/src/cli/{args/command.rs,edge.rs,failure/convert.rs}
 Later host-claim inventory, to refresh against the implemented 0283/0289 signatures: Python `libraries/python/src/{engine.rs,engine/settings.rs}` and `thinkthen/__init__.pyi`; R `libraries/r/thinkthen/src/rust/src/{lib.rs,ffi.rs}` and `libraries/r/thinkthen/R/thinkthen.R`; TypeScript `libraries/typescript/src/{door.rs,node.rs}`, `index.mjs` and `index.d.ts`; Ruby `libraries/ruby/{lib/thinkthen.rb,src/lib.rs,src/ffi.rs}`; C `libraries/c/{src/settings.rs,include/thinkthen.h}` and only the C wrappers that copy or validate its JSON setting list. SQL settings/owners are `databases/sqlite/src/{settings.rs,ffi.rs}`, `databases/postgresql/src/{call.rs,call/settings.rs}`, and `databases/duckdb/{src/engines.rs,src/ffi.rs,bridge/src/ffi/settings.rs,cpp/src/scalar_settings.cpp,cpp/src/scalar_settings.hpp}`. Audit direct source consumers such as `libraries/{go/thinkthen.go,php/src/ThinkThen.php,swift/Sources/ThinkThen/ThinkThen.swift,zig/src/thinkthen.zig}` before claiming edits; they currently pass C settings rather than implementing the core budget. Keep core/CLI/C proof in one implementation slice, then small host conversion slices under their own lane claims. Current codex-2 0283 implementation holds the core parser, C settings/FFI, CLI args and preview adapters; later 0289 and T8/T9 will revisit the same boundaries. Do not start 0299 code on either live claim or treat this list as permission to edit held SQL/frame files.
 
 At current main `45973d198`, measured nonblank headroom is `public/settings.rs` 30, `engine/mod.rs` 25, `engine/http.rs` 65, `engine/request.rs` 184, `cli/edge.rs` 5, and C `ffi.rs` 1 of 500; remeasure after 0289 and extract rather than exceed a ceiling. Prefer the one existing request-count gate and prepared body's bytes to another planner, callback or scheduler. No new dependency or C ABI symbol is proposed.
+
+## Normative Rust public API delta
+
+The following 11 declarations add the reviewed typed admission reason and active builder setting to the accepted 0289 inventory. No existing declaration is retired. The C ABI adds no symbol.
+
+### Added public declarations
+
+```text
+EstimatedInputDenial::AdditionalRequest
+EstimatedInputDenial::AdditionalRequest::limit: u64
+EstimatedInputDenial::InitialRequest
+EstimatedInputDenial::InitialRequest::limit: u64
+EstimatedInputDenial::Retry
+EstimatedInputDenial::Retry::last_status: u16
+EstimatedInputDenial::Retry::limit: u64
+const fn Error::estimated_input_denial(&self) -> Option<EstimatedInputDenial>
+enum EstimatedInputDenial
+fn EngineBuilder::max_estimated_input_tokens_total(self, Option<u64>) -> EngineBuilder
+impl Display for EstimatedInputDenial
+```
 
 ## Smallest outside-in proof after implementation
 
@@ -55,4 +75,8 @@ This design settles an estimated input admission bound only. The existing facts 
 
 ## What the build taught us
 
-Pending implementation: record which final-send and shared-parser assumptions survived, changed proof, test consolidation, measured growth/duplication and any remaining host or release limits before landing.
+The 0289 `SendBudget` owner already spans Rust, CLI and C engines and resets on fork. Adding an atomic estimated sum to the same owner preserves that scope; an independent process counter would have broken mixed-engine behavior. The final `Exchange.body` is the only authoritative charge input. The process request reservation, explicit call reservation and estimated reservation all drop uncommitted when any later gate fails, and all commit only after the usage mark. The public error, CLI conversion and native batch recovery had to recognize the new typed denial separately from `SendBudgetDenial`; SQL spent-total matches remain request-only because those hosts do not yet expose this token setting.
+
+The compiled CLI test exposed that its ordinary Usage printer would omit the ticket's `usage:` word; the dedicated typed route now prints the exact safe sentence and exit 2. The first listener proof incorrectly indexed a drained receipt list; the corrected outside-in test reads each receipt once. The bounded source proof covers selected mixed limits, held concurrent arrival, ordinary later request, status retry, cache at a spent limit, larger reported usage and refusal-split child. It does not qualify an installed archive or every later host. The core settings schema accepts only whole nonnegative values or null; the C conversion rejects negative, fraction, string and overflow while keeping null as unset. The C header's constructor-key list had fallen behind existing keys, so this build brought it up to the actual closed parser while documenting the new one.
+
+Source headroom required moving only the two process-limit builder setters into `public/settings/budgets.rs`. The root source/test ratchet grew from 101,798 to 102,416 nonblank lines; the C source/test ratchet grew from 3,806 to 3,854. I checked the existing `SendBudget`, `PlanSummary`, `native_batch` and C settings conversion for reuse. No second estimator, planner, request counter, settings parser or copied host corpus was added. No existing regression was retired; the new outside-in listener and C/CLI cases cover behavior the request-cap tests could not distinguish. Later Python, R, TypeScript, Ruby, SQL and C-wrapper settings remain with their named host owners. The three older Polars package criteria, 0300 cost, 0302 timing and durable status remain separate.
