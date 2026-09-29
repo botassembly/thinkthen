@@ -1,6 +1,6 @@
 # 0271 compiler input plan
 
-Status: bounded version and package-metadata preparation, 2026-09-29. This follows the accepted [runner input research](0271-0272-runner-toolchain-inputs.md) and [dependency follow-up](0271-0272-runner-input-followup.md). No package or SDK body was downloaded or installed. No compilation, link, backend, consumer, container, Actions or SQL/DataFrame work ran. These observations do not qualify an Actions runner.
+Status: ACCEPT `593bc329` after independent High review. bounded version and package-metadata preparation, 2026-09-29. This follows the accepted [runner input research](0271-0272-runner-toolchain-inputs.md) and [dependency follow-up](0271-0272-runner-input-followup.md). No package or SDK body was downloaded or installed. No compilation, link, backend, consumer, container, Actions or SQL/DataFrame work ran. These observations do not qualify an Actions runner.
 
 ## Resolved local tools against 0265
 
@@ -19,3 +19,7 @@ On the actual runner, first probe exact installed package versions and selected 
 ## Process lesson
 
 Compare both package versions and selected executable banners before treating a version label as a new tool. A single signed snapshot makes apt inputs repeatable, while selected paths and the installed consumer still supply the runner-specific proof.
+
+## Independent review and retained inputs
+
+The reviewer checked the retained Ubuntu snapshot signatures, signed compressed and uncompressed index hashes, selected package stanzas, local ownership and direct dependencies. No build, installation or consumer check ran. The snapshot metadata is retained in this lane’s `target/0271-compiler-input-plan/` directory, including the three InRelease files and two security Packages indexes. The complete transitive package selection and actual runner behavior remain future proof.
