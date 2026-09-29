@@ -1,5 +1,7 @@
 Status: Open. Filed 2026-09-29 by the marketing lead from Ian's launch review. The main builder owns `README.md`.
 
+Progress: The README now covers criteria 1 and 2, including TypeSafe's official site, the key and address settings, `--model` and its current default, and the loopback no-key case. Criterion 3 remains open until marketing's overhead benchmark supplies a measured result and named run. No overhead number is inferred from other timing work.
+
 # README: where to get a key, how to change the backend, and the overhead line
 
 ## What Ian asked for
