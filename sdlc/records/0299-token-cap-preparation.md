@@ -24,3 +24,8 @@ The cost/timing/facts issue owns optional money and server timing; status owns d
 ## What preparation taught us
 
 Tracing the marked send rather than the planner exposed two hazards: planned body counts differ from live attempts after cache/retry/split, and a reservation refunded after transport would falsely make a failed billable attempt free. Fresh review exposed two further misses: a process counter does not imply one global limit, and a new exchange can follow earlier started work without a retry status. The proof now uses selected limits at admission and call-scoped attempt context, with final request bodies and listener arrivals observed independently. The estimate's measured upper band is useful for admission math but is not a tokenizer upper bound; the name and proof must say so. The tiny CLI and C file headroom makes extraction part of the future scope, not an afterthought.
+
+
+## Independent acceptance
+
+Fresh High design review accepted `f49eaccf22923a483a2de61f496bcad1f1ac5f9e`. The corrected contract checks each attempt's selected finite limit against the retained process count and outstanding reservations. It distinguishes initial, additional and same-exchange retry denials. The coordinator approves those routine details within Ian's outcome. Implementation waits for0283/0289; this design does not expose an inert setting, claim a bill ceiling, or close the issue. The ticket stays on its pushed branch until its implementation lands.

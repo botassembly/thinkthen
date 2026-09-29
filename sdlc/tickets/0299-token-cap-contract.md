@@ -1,6 +1,6 @@
 # 0299 — Estimated input admission total
 
-Status: Draft design for fresh High public-contract review. No setting or enforcement is implemented. This is the first token-cap follow-up from experiment 2038 ruling 6, after 0289's request-cap and plan/tally foundation; it does not gate the 0.1 request-cap/preview work or close the [issue](../issues/2026-09-29-token-cap-contract-before-release.md).
+Status: Design accepted after fresh independent High review of `f49eaccf2`; the coordinator approves the contract within Ian's release API outcome. No setting or enforcement is implemented. This is the first token-cap follow-up from experiment 2038 ruling 6, after 0289's request-cap and plan/tally foundation; it does not gate the 0.1 request-cap/preview work or close the [issue](../issues/2026-09-29-token-cap-contract-before-release.md).
 
 ## Decision proposed for review
 
