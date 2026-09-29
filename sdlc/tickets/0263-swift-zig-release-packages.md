@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md 
 
 # 0263: Pack Swift and Zig source with one matching C archive
 
-Status: implementation candidate for fresh independent code review. Fresh design review accepted `e3af7c95`; the [local build record](../records/0263-swift-zig-release-build.md) reports the focused passing package proof. The original Swift and Zig release issues remain open.
+Status: complete within the local Linux package scope after fresh code review accepted `6e431d7f`. Fresh design review accepted `e3af7c95`; the [local build record](../records/0263-swift-zig-release-build.md) reports the focused passing package proof. The original Swift and Zig release issues remain open.
 
 ## Outcome and retained behavior
 
