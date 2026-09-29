@@ -1,11 +1,11 @@
 #!/bin/sh
 # Validate one fixed managed pair against the C archive that built with it.
 # The one-argument Go/C++ route stays unchanged; release-smoke also calls the
-# csharp-jvm mode before either managed consumer.
+# csharp-jvm and swift-zig modes before their consumers.
 set -eu
-[ "$#" -ge 1 ] && [ "$#" -le 2 ] && [ -d "$1" ] || { echo 'release-go-cpp-pair: DIR [csharp-jvm] required' >&2; exit 2; }
+[ "$#" -ge 1 ] && [ "$#" -le 2 ] && [ -d "$1" ] || { echo 'release-go-cpp-pair: DIR [csharp-jvm|swift-zig] required' >&2; exit 2; }
 mode=${2:-go-cpp}
-case $mode in go-cpp | csharp-jvm) ;; *) echo "release-go-cpp-pair: unknown mode $mode" >&2; exit 2 ;; esac
+case $mode in go-cpp | csharp-jvm | swift-zig) ;; *) echo "release-go-cpp-pair: unknown mode $mode" >&2; exit 2 ;; esac
 dir=$(CDPATH='' cd -- "$1" && pwd)
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$repo"
@@ -18,6 +18,7 @@ c=thinkthen-c-$version-$target.tar.gz
 case $mode in
 go-cpp) first=thinkthen-go-$version-$target.tar.gz second=thinkthen-cpp-$version-$target.tar.gz ;;
 csharp-jvm) first=thinkthen-csharp-$version-$target.tar.gz second=thinkthen-jvm-$version-$target.tar.gz ;;
+swift-zig) first=thinkthen-swift-$version-$target.tar.gz second=thinkthen-zig-$version-$target.tar.gz ;;
 esac
 fail() { echo "release-go-cpp-pair: $*" >&2; exit 1; }
 sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
@@ -34,7 +35,9 @@ for file in "$dir"/*; do
 	go-cpp:thinkthen-go-*.tar.gz | go-cpp:thinkthen-cpp-*.tar.gz | \
 	go-cpp:thinkthen-go-*.tar.gz.sha256 | go-cpp:thinkthen-cpp-*.tar.gz.sha256 | \
 	csharp-jvm:thinkthen-csharp-*.tar.gz | csharp-jvm:thinkthen-jvm-*.tar.gz | \
-	csharp-jvm:thinkthen-csharp-*.tar.gz.sha256 | csharp-jvm:thinkthen-jvm-*.tar.gz.sha256) selected=1 ;;
+	csharp-jvm:thinkthen-csharp-*.tar.gz.sha256 | csharp-jvm:thinkthen-jvm-*.tar.gz.sha256 | \
+	swift-zig:thinkthen-swift-*.tar.gz | swift-zig:thinkthen-zig-*.tar.gz | \
+	swift-zig:thinkthen-swift-*.tar.gz.sha256 | swift-zig:thinkthen-zig-*.tar.gz.sha256) selected=1 ;;
 	esac
 	[ -n "$selected" ] || continue
 	case $name in "$c" | "$first" | "$second" | "$c.sha256" | "$first.sha256" | "$second.sha256") ;; *) fail "extra family entry $name" ;; esac
@@ -59,4 +62,25 @@ for name in "$first" "$second"; do
 		"$source_commit" "$target" "$version" "$c" "$c_digest" >"$work/expected"
 	cmp -s "$work/actual" "$work/expected" || fail "C identity or manifest differs for $name"
 done
-case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; esac
+if [ "$mode" = swift-zig ]; then
+	# An exact source inventory makes a source archive independently reviewable.
+	for name in "$first" "$second"; do
+		tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
+		case $name in
+		"$first")
+			printf '%s\n' ./ ./LICENSE ./README.md ./Package.swift ./Examples/ ./Examples/main.swift \
+				./Sources/ ./Sources/CThinkThen/ ./Sources/CThinkThen/include/ \
+				./Sources/CThinkThen/include/thinkthen.h ./Sources/CThinkThen/module.modulemap \
+				./Sources/ThinkThen/ ./Sources/ThinkThen/ThinkThen.swift ./Tests/ ./Tests/TypeCase/ \
+				./Tests/TypeCase/main.swift ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
+		"$second")
+			printf '%s\n' ./ ./LICENSE ./README.md ./build.zig ./build.zig.zon ./examples/ \
+				./examples/decide.zig ./src/ ./src/thinkthen.zig ./THINKTHEN-PACKAGE-INPUTS \
+				| LC_ALL=C sort >"$work/expected-members" ;;
+		esac
+		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
+	done
+	zig_version=$(tar -xOzf "$dir/$second" ./build.zig.zon | sed -n 's/^[[:space:]]*\.version = "\([^"]*\)",$/\1/p')
+	[ "$zig_version" = "$version" ] || fail 'Zig package version differs'
+fi
+case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; swift-zig) echo 'release-go-cpp-pair: swift-zig pass' ;; esac
