@@ -123,6 +123,17 @@ def release(name, doc):
             out.append(f"{name}: job {job} must set up Python 3.13 before retaining Python {active_version} for host-setup")
     build_steps = jobs.get("build", {}).get("steps") or []
     container = next((step for step in build_steps if "release-container" in (step.get("run") or "")), None)
+    if container:
+        language_setup = next((i for i, step in enumerate(build_steps)
+                               if "release-language-tools.py managed" in (step.get("run") or "")
+                               and step.get("if") == "matrix.target == 'x86_64-unknown-linux-gnu'"
+                               and (step.get("env") or {}).get("SHA") == RESOLVED
+                               and '"$SHA" --acquire' in (step.get("run") or "")), None)
+        host_setup = next((i for i, step in enumerate(build_steps)
+                           if "release-workflow host-setup" in (step.get("run") or "")), None)
+        build_index = build_steps.index(container)
+        if language_setup is None or host_setup is None or not host_setup < language_setup < build_index:
+            out.append(f"{name}: x86 build must select pinned managed tools after host setup and before assembly")
     if container and (container.get("env") or {}).get("THINKTHEN_RELEASE_EXPECTED_SHA") != RESOLVED:
         out.append(f"{name}: build container must receive the resolved SHA")
     if container:
@@ -145,6 +156,20 @@ def release(name, doc):
     smoke_bundle = next((i for i, step in enumerate(smoke_steps)
                          if "release-workflow smoke-bundle" in (step.get("run") or "")), None)
     if smoke_bundle is not None:
+        language_setup = next((i for i, step in enumerate(smoke_steps)
+                               if "release-language-tools.py smoke" in (step.get("run") or "")
+                               and step.get("if") == "matrix.target == 'x86_64-unknown-linux-gnu'"
+                               and (step.get("env") or {}).get("SHA") == RESOLVED
+                               and '"$SHA" --acquire' in (step.get("run") or "")), None)
+        host_setup = next((i for i, step in enumerate(smoke_steps)
+                           if "release-workflow host-setup" in (step.get("run") or "")), None)
+        tool_indices = [i for i, step in enumerate(smoke_steps)
+                        if any(f"release-workflow {tool}" in (step.get("run") or "") for tool in
+                               ("go-cpp-tools", "swift-zig-tools", "php-dart-tools",
+                                "ada-objc-cobol-tools", "managed-tools"))]
+        if (language_setup is None or host_setup is None or not tool_indices
+                or not host_setup < language_setup < min(tool_indices) < smoke_bundle):
+            out.append(f"{name}: x86 smoke must select pinned language tools before installed consumers")
         gate = next((i for i, step in enumerate(smoke_steps)
                      if "release-workflow go-cpp-gate platform \"$TARGET\" \"$SHA\"" in (step.get("run") or "")
                      and (step.get("env") or {}).get("SHA") == RESOLVED), None)
@@ -514,6 +539,12 @@ def self_test():
          lambda t: t.replace('sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"',
                              'echo skipped'),
          ["release.yml: draft must gate every target's Ada/Objective-C/COBOL family before collection"]),
+        ("language-build-setup", "release.yml",
+         lambda t: t.replace('run: python3 sdlc/scripts/release-language-tools.py managed', 'run: echo skipped'),
+         ["release.yml: x86 build must select pinned managed tools after host setup and before assembly"]),
+        ("language-smoke-setup", "release.yml",
+         lambda t: t.replace('run: python3 sdlc/scripts/release-language-tools.py smoke', 'run: echo skipped'),
+         ["release.yml: x86 smoke must select pinned language tools before installed consumers"]),
     ]
     bad = 0
     for name, file, plant, expected in cases:
@@ -526,7 +557,7 @@ def self_test():
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
                 source = ((REPO / ".github/workflows/release.yml").read_text()
-                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
+                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-", "ada-objc-cobol-", "language-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:
@@ -567,7 +598,12 @@ def self_test():
     if archive.returncode != 0:
         bad += 1
         print(f"workflows self-test archived release: {archive.stdout}{archive.stderr}", file=sys.stderr)
-    total = len(cases) + len(host_cases) + 2
+    language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
+                              capture_output=True, text=True)
+    if language.returncode != 0:
+        bad += 1
+        print(f"workflows self-test language tools: {language.stdout}{language.stderr}", file=sys.stderr)
+    total = len(cases) + len(host_cases) + 3
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 
@@ -581,6 +617,10 @@ def main(argv):
                                  capture_output=True, text=True)
         if managed.returncode:
             out.append(f"managed workflow fixture failed: {managed.stdout}{managed.stderr}")
+        language = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-language-tools-self-test.py")],
+                                  capture_output=True, text=True)
+        if language.returncode:
+            out.append(f"language tool fixture failed: {language.stdout}{language.stderr}")
     print("\n".join(out) if out else "workflows: every workflow runs by hand from pinned code", file=sys.stderr if out else sys.stdout)
     return 1 if out else 0
 

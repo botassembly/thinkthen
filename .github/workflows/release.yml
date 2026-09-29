@@ -57,6 +57,10 @@ jobs:
       - name: Install and check the pinned host tools
         env: {TARGET: "${{ matrix.target }}"}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
+      - name: Select managed language tools
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        env: {SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: python3 sdlc/scripts/release-language-tools.py managed "$RUNNER_TEMP/thinkthen-language-managed" "$SHA" --acquire
       - name: Build and pack the target
         env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}"}
         run: |
@@ -170,6 +174,10 @@ jobs:
         with: {node-version: '22.22.3'}
       - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1'}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
+      - name: Select installed language tools
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        env: {SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: python3 sdlc/scripts/release-language-tools.py smoke "$RUNNER_TEMP/thinkthen-language-smoke" "$SHA" --acquire
       - name: Check and install pinned Go/C++ consumer tools
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
