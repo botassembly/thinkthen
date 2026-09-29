@@ -1,0 +1,55 @@
+---
+flow: build
+priority: 282
+opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
+---
+
+# 0282: Owned facts for Ada, Objective-C and COBOL typed calls
+
+Status: design candidate. Source traced at main `260b75457`; implementation awaits fresh High review and root's exact file claim.
+
+## Outcome and exact host routes
+
+Apply Ian's every-library-call ruling and ADR 0106's pre-0.1 return migration. One existing C `*_with_facts_opts` operation returns the former typed value and that call's final owned facts. No option, second asking operation, bare host alias, process-total substitute, C ABI edit or JSON-route change. Preserve the old value, order, bytes, options, six error kinds and host lifetime rules.
+
+| Host | Actual direct typed route | Proposed public success carrier |
+| --- | --- | --- |
+| Ada | `Decide`, `Decide_Many`, `Recognize`, `Relate` | Add `Facts : out Call_Facts` to each procedure, beside its existing `Result : out Decision`, `Decision_Array` or `JSON_Result` and `Error : out Failure`. The `Call_Facts` record has required `Unsigned_64` counts and `Long_Float Seconds`, optional token/model presence flags with owned unbounded model text. Preserve the nonempty `Decide_Many` precondition. |
+| GNU Objective-C | `decide`, `many`, `recognize`, `relate`, each also with a counted C-string `*Bytes` variant | Add a required `facts:(TTCallFacts *)` output to each selector; retain `TTErrorKind` status and former `TTDecision` or malloc-owned result bytes/length. `TTCallFacts` has `uint64_t` required counts, `double seconds`, explicit optional-presence flags, optional `uint64_t` tokens and malloc-owned model; `tt_call_facts_clear` releases model. Counted variants delegate to the same facts-bearing base call. |
+| COBOL | Public `TT-DECIDE` only | Add `tt-facts` output group to the call/copybook: bounded owned `tt-facts-json pic x(8192)` and binary-double unsigned byte length, parallel to the existing failure facts group. The former `tt-answer` stays. Reject oversized or malformed facts before publishing success. |
+
+Ada `Call`/`Call_Value`/`Call_Facts`, Objective-C `json`/`jsonBytes`/`parsedAnswer`, and COBOL `TT-CALL` already return the JSON `value`/`facts` envelope; leave their grammar and result types unchanged. COBOL's raw C decide-many/recognize/relate calls in `checks/matrix.cob` and raw-C examples are ABI probes, not additional COBOL facade verbs. Do not invent three new COBOL wrappers or treat the C legacy exception as permission for bare `TT-DECIDE`.
+
+Required `records`, `requests_sent`, `cache_answers` must be present, integral, nonnegative and in each host's unsigned range; `seconds` must be present, numeric, finite and nonnegative, including fractions. Absent optional tokens/model stay absent independently; a present null or wrong type is invalid. A reply without usage retains its reported model, whereas empty work has no model. No fabricated price, server timing, ID, digest or detail fields. A successful native result with invalid facts is a host defect, never a factless success. Ada/Objective-C can use an empty many case only where their present input contract permits it; Ada currently refuses empty `Decide_Many`.
+
+## Ownership, errors and lifetime
+
+Ada imports four `_with_facts_opts` signatures in `thinkthen_c.ads`, using the current deadline/token arguments. `Owned_String` in `thinkthen.adb` already finalizes native pointers with `thinkthen_free_string`; give structured value and facts **separate** owners and validate both before assigning public outputs. Reuse the package's JSON extraction for a strict facts decoder, without a new parser. `Capture` copies borrowed message/facts on the calling thread before a later native operation. `Engine`/`Cancel_Token` remain controlled owners: callers join tasks before scope exit; no concurrent close promise is added.
+
+Objective-C uses four facts `_opts` calls. `recognize`/`relate` currently have no options, so pass no deadline and nil token; do not silently add public options. Parse with the existing `TTJSON` tree and raw number lexemes, refusing overflow, bool, fractional counts and nonfinite seconds. Copy both C-owned output pointers independently and call `thinkthen_free_string` on each on success, decode failure or allocation failure; release partially built host output and model. Do not publish either output until both validate. `capture` must copy borrowed failure data on the native calling thread before later native work. Existing `enter`/`leave` tracks active operations and deallocation waits, but beginning/accessing a handle concurrently with `dealloc` stays unsupported; token callers still join before deallocation.
+
+COBOL calls `thinkthen_decide_with_facts_opts` with no deadline/nil token from `TT-DECIDE`; keep question/evidence bounds and C-layout answer. Copy the counted C facts into the fixed owned group, refuse lengths over 8192, and free the C facts pointer even on refusal. Reuse `TTJSON.c` and extend `tt_shape.c` with one narrow strict facts validator; link those existing objects into `TT-DECIDE` consumers. The JSON parser is already packaged; no general helper framework. `TT-CAPTURE-ERROR` continues to copy borrowed failure bytes into `tt-failure` on the same native thread; pre-start refusals have no started facts. Reset success-facts length/storage on failure and preserve answer sentinels. The raw C ABI probes stay raw.
+
+## Smallest focused proof and future claim
+
+Use current matching C header/library with all four facts `_opts` exports and the accepted 0255 native ownership proof. Extend the existing Ada `checks/package_bulk.adb`/`typed_matrix.py`, Objective-C `checks/matrix.m`/`run_matrix.py`, and COBOL `checks/{matrix.cob,failure.cob,run_matrix.py}` rather than a new corpus. Each host needs one typed value-plus-facts success per actual route (COBOL only decide), exact listener counts, and a valid no-usage response retaining model but omitting token fields. Reuse an **identical packed request** for cache proof where the host already permits it: three finished rows, zero new sends, one cached reply. A different repeated-input group is not that witness. Pin fractional seconds with a decoder fixture and positive elapsed time with a held request; reject one representative missing/null/wrong-type/overflow count and bad seconds/optional field per decoder, not a field-by-route grid. Objective-C empty `many` should return empty value, zero sends and no model; Ada's pre-start empty refusal remains. A two-entity relation question may report `records=1`. A first failed row may report `records=0`, `requests_sent=1` under ADR 0089. Check typed started-failure facts before a later native call, then retain the copy through another call and close; pin pre-start no-facts and unchanged outputs. Force two held backend arrivals before releasing either for any same-engine overlap claim; COBOL has no new thread-safety claim. No test-only hooks or stress loop.
+
+Prospective implementation claim, subject to root assignment:
+
+- Ada: `libraries/ada/src/{thinkthen.ads,thinkthen.adb,thinkthen_c.ads}`, `examples/consumer.adb`, `checks/{package_bulk.adb,door.adb,failure.adb,portable_batch.adb,typed_matrix.py,installed.py,run_matrix.py}` only where direct typed signatures/proof require, `README.md`, and measured `ratchet.{adb,ads,py}.json`. Inspect `checks/legacy/` only as retained raw-C ABI proof. `checks/types.py` is being renamed by codex-2 with an unchanged JSON corpus; avoid that file and `check.sh` in this claim.
+- Objective-C: `libraries/objective-c/Sources/{ThinkThen.h,ThinkThen.m}`, `Examples/consumer.m`, direct typed callers `checks/{matrix.m,portable_batch.m,nul_text.m,installed.py,run_matrix.py}` as needed, `README.md`, and measured `ratchet.{h,m,py}.json`. If the existing `nul_text.m` link wrapper names change, update only that bounded wrapper assertion. Keep `TTJSON.c/.h`, `public_types.py`, the copied C header and raw-C `direct.m` unchanged unless exact evidence demands a claim expansion.
+- COBOL: `libraries/cobol/{copybooks/thinkthen.cpy,src/tt_decide.cob,src/tt_shape.c,README.md,check.sh}`, affected `checks/{matrix.cob,failure.cob,installed.py,run_matrix.py}`, and measured `ratchet.{c,cob,cpy,py}.json`. Make `installed.py` compile its existing `checks/failure.cob` caller against copied `TT-DECIDE`, `TTJSON.c` and `tt_shape.c`; pin its typed success/failure facts and adjust the exact arrival count. Keep packaged `examples/direct.cob` and the matrix's direct C calls as raw-C ABI probes. The unchanged `TT-CALL`, portable JSON batch and JSON corpus need no rerun or edit.
+
+`release-pack` explicitly copies the three Ada sources and `consumer.adb`, Objective-C `ThinkThen.h/.m`, `TTJSON` and consumer, and COBOL's copybook, `tt_shape.c`, `tt_decide.cob`, examples and related sources. These edits add no archive member, source list or paired-release checker change; copied bytes still need fresh matched proof. Selected source compile/matrix and one copied installed typed consumer per host suffice for this build, with format/syntax, measured ratchets, policy/pages/tickets/diff. Do not run complete `check.sh`, package, all-port, Actions, provider or held SQL/DataFrame work. Old 0265 archive/source receipts prove only their pinned inputs; source, copied installed, clean release archive and actual runner are different claims.
+
+## Evidence
+
+- Starts from: [Every-call ruling](../issues/2026-09-26-every-surface-should-give-back-run-facts.md), ADR 0106, accepted 0255/0277/0279/0280 and approved 0281 design, current C header and the [preparation](../records/0282-ada-objc-cobol-call-facts-preparation.md).
+- Keeps: Old typed values, JSON envelopes, frozen C ABI, six failures, same-thread borrowed-error copy, Ada task join, Objective-C handle/deallocation limit, COBOL bounded buffers and raw-C probes.
+- Changes: Four Ada and four Objective-C typed routes, including counted variants, and COBOL's sole typed `TT-DECIDE` expose final owned facts from their single existing C operation.
+- Proof: Exact route/value/listener checks, strict host fact decoding, identical packed cache replay where supported, no-usage/model and empty-work distinction, typed failure lifetime, controlled overlap only where claimed, and matched copied installed typed consumers.
+- Defers: Fresh High design/API review and root implementation claim; clean release/runner qualification, richer detail/cost/vendor timing/IDs and held SQL/DataFrame work.
+
+## What the build taught us
+
+Pending implementation. Record changed exact counts, pointer/free paths and failure probes, copied installed members, measured growth and duplication choice, review corrections and remaining qualification limits.
