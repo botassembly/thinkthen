@@ -43,6 +43,6 @@ It wrote one file per label. How-to 04 splits one file into three piles by yes, 
 
 ## Marketing notes for 0.1, 2026-09-29
 
-- Rows 1, 2 and 7 are closed by reviewed Quick Fix `90376c8f`: the source-checkout install section now precedes usage, a dated link cites TypeSafe's public price, and the exit-code table follows the current channel contract. These do not promise registry installation. R-universe and Windows qualification remain future channels under `mktg/sdlc/planning/2026-09-29-thinkthen-0-1-punch-list.md`.
+- Rows 1, 2 and 7 are closed by reviewed Quick Fix `90376c8f`: the source-checkout install section now precedes usage, a dated link cites TypeSafe's public price, and the exit-code table follows the current channel contract. These do not promise registry installation. R-universe and Windows qualification remain future channels under marketing's 2026-09-29 0.1 punch list.
 - Row 18's replay half was already done. TypeSafe's [2026-09-15 announcement](https://typesafe.ai/blog/introducing-system-one-models-and-jev) described a waitlist, but the [public home page](https://typesafe.ai/) checked 2026-09-29 gives no current wait time. Do not publish the old one-day observation as present guidance.
 - After 0.1 ships, marketing runs a clean-machine install of each package from its registry. New stumbles from that run go in this register.

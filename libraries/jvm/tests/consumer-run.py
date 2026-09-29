@@ -11,7 +11,7 @@ from backend import Backend
 from process_group import run
 
 WORK=pathlib.Path('/work')
-for hidden in ('/usr/bin/cargo','/usr/bin/rustc','/home/ian/workspace','/work/inputs/source','/work/scratch/native-target'):
+for hidden in ('/usr/bin/cargo','/usr/bin/rustc','/home','/Users','/work/inputs/source','/work/scratch/native-target'):
     assert not pathlib.Path(hidden).exists(),hidden
 assert shutil.which('cargo') is None and shutil.which('rustc') is None
 assert pathlib.Path('/opt/jdk/bin/javac').is_file()

@@ -115,7 +115,7 @@ def check_nupkg(data, version, source):
             xml_field(nuspec, "version") == version, "nupkg identity differs")
     for name in ("README.md", "LICENSE"):
         require(members[name] == source[f"libraries/csharp/{name}"], f"nupkg {name} differs from source")
-    forbidden = (b"/home/ian", b"thinkthen_panic_probe", b"tt-canary-290", b"-----BEGIN PRIVATE KEY-----")
+    forbidden = (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-290", b"-----BEGIN PRIVATE KEY-----")
     require(not any(token in value or token in name.encode() for name, value in members.items()
                     for token in forbidden), "private nupkg member")
 
@@ -140,7 +140,7 @@ def check_jar(data, kind):
     }[kind]
     require(set(members) == expected, f"{kind} JAR classes differ")
     require(not any(token in value for value in members.values() for token in
-                    (b"/home/ian", b"thinkthen_panic_probe", b"tt-canary-275",
+                    (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275",
                      b"-----BEGIN PRIVATE KEY-----")), f"private {kind} JAR byte")
 
 

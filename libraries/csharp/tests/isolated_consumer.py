@@ -17,7 +17,7 @@ if release_package:
   names=set(bundle.namelist())
   assert {'Botassembly.ThinkThen.nuspec','lib/net8.0/ThinkThen.dll','README.md','LICENSE'} <= names,names
   assert not any(name.endswith(('.so','.a','.dylib')) for name in names),names
-  assert not any(token in bundle.read(name) for name in names for token in (b'/home/ian',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
+  assert not any(token in bundle.read(name) for name in names for token in (b'/home/', b'/Users/',b'thinkthen_panic_probe',b'tt-canary-290')), 'private nupkg byte'
   metadata=ET.fromstring(bundle.read('Botassembly.ThinkThen.nuspec'))
   fields={node.tag.rsplit('}',1)[-1]:(node.text or '').strip() for node in metadata.iter()}
   assert fields['id']=='Botassembly.ThinkThen' and fields['version']=='0.0.1',fields

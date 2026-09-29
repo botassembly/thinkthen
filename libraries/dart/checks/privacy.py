@@ -4,7 +4,7 @@ import re
 import tempfile
 
 root = Path(__file__).resolve().parents[1]
-blocked = re.compile(r'/home/ian/workspace/|PRIVATE_PATH_MARKER|PRIVATE_KEY_MARKER|sk-private-[A-Za-z0-9]+')
+blocked = re.compile(r'(?:/home/|/Users/)|PRIVATE_PATH_MARKER|PRIVATE_KEY_MARKER|sk-private-[A-Za-z0-9]+')
 
 
 def check(paths):
@@ -19,8 +19,8 @@ if found:
     raise SystemExit(f'PRIVATE_SOURCE_REFUSED {found}')
 with tempfile.TemporaryDirectory() as directory:
     planted = Path(directory) / 'planted.txt'
-    for marker in ('/home/ian/workspace/private/file', 'PRIVATE_KEY_MARKER', 'sk-private-SECRET123'):
+    for marker in ('/home/private/file', '/Users/private/file', 'PRIVATE_KEY_MARKER', 'sk-private-SECRET123'):
         planted.write_text(marker)
         if not check([planted]):
             raise SystemExit(f'PRIVATE_PLANT_NOT_REFUSED {marker}')
-print(f'PRIVATE_SOURCE_PASS {len(sources)} files, 3 planted negatives')
+print(f'PRIVATE_SOURCE_PASS {len(sources)} files, 4 planted negatives')

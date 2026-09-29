@@ -3,7 +3,7 @@ import pathlib
 import sys
 import tarfile
 
-needles = (b'/home/ian/', b'tt-canary-273')
+needles = (b'/home/', b'/Users/', b'tt-canary-273')
 for path in map(pathlib.Path, sys.argv[1:]):
     data = [path.read_bytes()]
     if tarfile.is_tarfile(path):

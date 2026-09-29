@@ -6,7 +6,7 @@ import tempfile
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
-BAD = (b"/home/ian/", b"-----BEGIN PRIVATE KEY-----", b"auth.json", b"tt-canary-private")
+BAD = (b"/home/", b"/Users/", b"-----BEGIN PRIVATE KEY-----", b"auth.json", b"tt-canary-private")
 
 def inspect(name, data):
     if any(marker in data for marker in BAD):

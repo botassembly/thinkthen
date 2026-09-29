@@ -32,7 +32,7 @@ if RELEASE:
             members = set(bundle.namelist())
             assert required in members and not any("Stale.class" in item for item in members), (name, members)
             assert not any(token in bundle.read(item) for item in members
-                           for token in (b"/home/ian", b"thinkthen_panic_probe", b"tt-canary-275")), name
+                           for token in (b"/home/", b"/Users/", b"thinkthen_panic_probe", b"tt-canary-275")), name
 RUN = TARGET / "installed" / datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
 RUN.mkdir(parents=True)
 tools = "bash env ls expr dirname uname readlink basename which sed grep cat tr cut head realpath find rm mkdir".split()

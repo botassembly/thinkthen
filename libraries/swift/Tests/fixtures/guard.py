@@ -1,6 +1,6 @@
 """Inspect shipping bytes, including compressed members, for planted secrets/paths."""
 import pathlib,sys,tarfile,zipfile,gzip
-BAD=[b'tt-canary-294',b'/home/ian',b'auth.json',b'-----BEGIN PRIVATE KEY-----']
+BAD=[b'tt-canary-294',b'/home/', b'/Users/',b'auth.json',b'-----BEGIN PRIVATE KEY-----']
 def inspect(label,data):
     for token in BAD:
         if token in data: raise ValueError('rejected private byte pattern in '+label)

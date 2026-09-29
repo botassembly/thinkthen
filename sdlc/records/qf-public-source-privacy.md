@@ -1,0 +1,23 @@
+# Public-source privacy Quick Fix
+
+Candidate from main `aebd273cf`, after the accepted 0275 routing landed. The saved integrated-lint receipt lists 49 locations across 37 tracked files; the handoff's 39-file summary differs from that exact path list. The configured private-name list remained external and was never copied into this repository or printed by these checks.
+
+The claimed privacy and package guards now reject generic `/home/` and `/Users/` byte paths, including compressed shipping members, rather than one machine's home. Dart's source scan plants both roots. Zig's existing negative plant uses a generic path. The C#, JVM and Swift isolated consumers now assert that their isolated namespaces expose neither home root; they retain their compiler absence, package, request and receipt assertions. `release-managed-pair.py` retains exact package inventories, captured hashes, source pins and sidecars while rejecting either generic home root in managed members. No scanner rule, product API, dependency or supported artifact format changed.
+
+Historical workspace references use `~/` where they name paths; the two experiment indexes use links relative to the workspace. Fresh High review caught two old scan claims where `~` would falsely describe a checked byte. Those now say “the then-specific home path.” Three issue lines identify marketing ownership without naming a private repository. Commit IDs, measured values, source pins and hashes remain as recorded. No site or SQL/DataFrame file changed.
+
+## Focused evidence
+
+- Configured private-name scan: **0 tracked path hits, 0 content locations** after the edits. It reported only counts, never matching text. This is a source-hygiene result, not a full lint result.
+- Ada, COBOL and Objective-C existing source/privacy scripts passed their path, key and compressed-member plants. Dart scanned 43 source files and passed four negative plants, including both generic home roots.
+- Actual C++ and Go guards accepted synthetic safe source and refused both home roots. Actual Swift and Zig guards did the same and refused a generic path inside a compressed tar member. The C# package `safe` predicate accepted safe bytes and refused both roots.
+- Existing JVM package check passed exact compiled JAR members, metadata and its stale/compressed-private plants. Existing `release-managed-pair-self-test.py` passed its receipt, inventory, tamper and selected-family refusals. The actual managed-pair validator accepted valid synthetic nupkg/JAR inputs and refused both generic home roots inside each compressed format.
+- Changed Python files parsed; `sh -n` passed for Zig's check script. Ten affected Python ratchets and the C# source ratchet matched their measured ceilings; offline policy checked 189 packages and accepted tables; pages reported 23 green; tickets had zero evidence failures; diff check passed.
+
+The C# local package check stopped at its preexisting stale README comparison on retained warm package bytes, before reaching the changed predicate. Its exact package assertions were preserved, and the warm package was neither rebuilt nor rewritten. The targeted `safe` check above proves this privacy substitution only; it does not make the stale artifact current. Installed C#/JVM/Swift consumers, a full package job and full lint did not run. Root owns the next integrated lint checkpoint; the separate 0276 child-environment baseline and held DuckDB work remain open. No unclaimed test file was needed.
+
+## Review and integration
+
+Fresh High code review accepted `4cfe45fbf` after correcting the two historical assertion descriptions. The coordinator integrated the reviewed source without further code changes. The issue closes on the configured scan and preserved package guards. A subsequent routine lint checkpoint retains its own outcome.
+
+The unmodified routine lint checkpoint on the integrated candidate passed the configured 30-name scan, agent size, policy, catalog, ticket, recognize-key, re-key and child-guard self-tests. It exited 1 at the one held DuckDB child-environment finding. Later version, named-answer, Clippy and API-inventory findings remain separate; this run did not reach them. The log is `target/codex-builds/public-source-privacy/integrated-lint.txt` in the coordinator lane. No package build or SQL/DataFrame runtime check ran.

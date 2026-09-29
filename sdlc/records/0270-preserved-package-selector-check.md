@@ -16,7 +16,7 @@ Both wrapper manifests name `source_commit=e85dc343545980fe0eb983b7b383297cd69ec
 
 ## Host and cache prerequisites
 
-The host had 16 logical CPUs, one-minute load 2.00, 22 GiB available memory and 147 GiB free in this filesystem before execution. Absolute `/usr/bin/php8.3` reported PHP 8.3.6 and passed `-n -d extension=ffi -d ffi.enable=1` with `FFI` present. `/home/ian/.local/opt/dart-3.13.4/bin/dart` reported Dart SDK 3.13.4 stable on `linux_x64`. Python 3.12.3, util-linux `flock` 2.39.3, GNU `nm`/`readelf` 2.42, GNU tar 1.35, Cargo/rustc 1.95.0 and Ubuntu `cc` 13.3.0 were present; `readlink` and `sha256sum` were available. No tool was installed or downloaded.
+The host had 16 logical CPUs, one-minute load 2.00, 22 GiB available memory and 147 GiB free in this filesystem before execution. Absolute `/usr/bin/php8.3` reported PHP 8.3.6 and passed `-n -d extension=ffi -d ffi.enable=1` with `FFI` present. `~/.local/opt/dart-3.13.4/bin/dart` reported Dart SDK 3.13.4 stable on `linux_x64`. Python 3.12.3, util-linux `flock` 2.39.3, GNU `nm`/`readelf` 2.42, GNU tar 1.35, Cargo/rustc 1.95.0 and Ubuntu `cc` 13.3.0 were present; `readlink` and `sha256sum` were available. No tool was installed or downloaded.
 
 One lane-owned `target/0270-preserved-selector-check/pub-cache` copied only the existing local `ffi-2.2.0` folder and its hosted hash sidecar. That sidecar, the tracked Dart lock and the accepted official metadata all give `6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45`. The copied folder is the only hosted package version in that isolated cache. This is local cache provenance, not a new downloaded archive hash or a runner receipt.
 

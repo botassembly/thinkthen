@@ -12,7 +12,7 @@ HEADER = ROOT.parents[1] / "libraries/c/include/thinkthen.h"
 NATIVE = ROOT.parents[1] / "libraries/c/target/debug/libthinkthen_c.so"
 NUPKG = ROOT / "target/scratch/managed/Botassembly.ThinkThen.0.0.1.nupkg"
 ARCHIVE = ROOT / "target/artifacts/thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz"
-BAD = (b"tt-canary-290", b"/home/ian", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
+BAD = (b"tt-canary-290", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
 def digest(data):
@@ -88,7 +88,7 @@ fail("stale-package-hash", lambda: inspect(header, stale, native, receipt))
 tampered = rewrite_tar(native)
 fail("tampered-native-member", lambda: inspect(header, package, tampered))
 fail("tampered-native-hash", lambda: inspect(header, package, tampered, receipt))
-fail("private-byte", lambda: safe("plant", b"/home/ian/private"))
+fail("private-byte", lambda: safe("plant", b"/home/private/file"))
 secret_zip = rewrite_zip(package, "README.md", b"tt-canary-290")
 fail("compressed-private-byte", lambda: inspect(header, secret_zip, native))
 print("C# local packages: source members, hash receipt, header version, managed secrecy and planted negatives PASS")

@@ -1,6 +1,6 @@
 # Public source retains private path literals
 
-Status: Open. Confirmed by the integrated lint checkpoint for ticket 0275 on 2026-09-29.
+Status: Closed. Fixed by the public-source privacy Quick Fix at `4cfe45fbf`, accepted by fresh High code review. The configured scan and focused package guards pass; full lint qualification remains separate.
 
 The configured private-name guard refuses 49 tracked locations. Most are machine-specific home paths in package privacy checks and historical evidence references; three are private repository references in issue records. The guard reports only file and line. The external name list and its contents must stay outside this repository.
 
