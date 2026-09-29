@@ -569,3 +569,12 @@ The JVM J1 case41 failure came from its isolated child environment. Java reporte
 ## Refresh strict consumers before adding a result member
 
 Accounting preparation b30af6426 missed Ada, Objective-C and COBOL facts readers that landed while it was being written. Fresh High review traced those strict decoders and the closed facts schema, so an added price member needs an explicit pre-release compatibility decision and the affected consumer checks. The same review found a separate CLI usage-completeness path and an ambiguous timing ordinal for repeated request digests. Accepted preparation2778a8e3e names both call and command accounting owners, assigns timing observations at the actual send boundary, and requires a repeated-digest case. Reconcile newly landed producers and consumers before design acceptance; a nonempty token total does not prove that every attempt reported usage.
+
+
+## Follow public removals into separate workspaces
+
+High review of0283 candidate674a82041 found that retiring two Rust deadline methods broke callers in separate library and database workspaces. Root workspace Clippy never compiled them. The same review found a recognize summary marked as an upper bound while omitting the second stage, and integer settings accepted outside the public deadline range. Correction is pending. Source preparation must map every caller of a removed public declaration across workspace boundaries and name its transition owner. Preserve exact old units until that caller migrates. A test that checks an upper-bound marker must also check the bound's value; a parser's integer shape check does not prove its numeric domain.
+
+## Check the actual selector and arithmetic authority
+
+Review ofSQL host preparationd12f9f166 found a named-function command that SQLite's helper does not support. That helper runs its entire small test module; shared conformance selects IDs through an absolute environment-named file. Accepted correction0557d77e names the real selector and an exact positive pass count before a build follows it. Separately, review ofcost design2735d738 found that matching usage-reply and send counts cannot establish complete money when checked token addition has already dropped an overflow. The design correction must distinguish arithmetic validity from reply completeness and preserve that state through host aggregates. These are source and preparation defects; neither requires a broad runtime campaign to identify.
