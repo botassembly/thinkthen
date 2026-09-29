@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sd
 
 # 0265: Pack Ada, GNU Objective-C and COBOL source with one matching C archive
 
-Status: design ACCEPT at `efc21b65`; the installed host slice at `de2d24a4` passed fresh review. Accepted 0264 landed, and the coordinator transferred the three shared helper files to this ticket for local package qualification. The three original consumer issues remain open.
+Status: design ACCEPT at `efc21b65`; the installed host slice at `de2d24a4` passed fresh review. Accepted 0264 landed, and the coordinator transferred the three shared helper files to this ticket. The clean four-file [local build proof](../records/0265-ada-objc-cobol-release-build.md) is a code-review candidate. The three original consumer issues remain open.
 
 ## Outcome and retained behavior
 
