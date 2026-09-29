@@ -1,6 +1,6 @@
 # Docs, how-tos, and spec claims owed
 
-Status: Open for its remaining criteria. Quick Fix qf-h1-h3-h6 settles claims 5 and 6 and page 19. Accepted ticket 0241 already supplies the site pages for items 7 and 10, including the bad-record decision's recipe.
+Status: Open for its remaining criteria. Quick Fix qf-h1-h3-h6 settles claims 5 and 6 and page 19. Reviewed reconciliation `b23f1a18` confirms accepted ticket 0241 supplies pages 6–10. Remaining pages 11–18 retain their later, held or measurement-dependent criteria.
 
 This issue merges the open documentation work from twelve older issues: `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, the how-to and verb-hint parts of `2026-09-25-release-and-install-for-0-1.md`, item 8 of the closed `closed/2026-09-21-where-a-user-could-lose-trust-a-first-list.md`, and the one remaining row of `2026-09-25-docs-how-tos-and-spec-claims-owed.md`. They belong together because each asks for words a user reads: a spec sentence, a help line, a message, or a page. Each item was checked against `demos/`, `specification/`, `README.md`, `site/`, and the planning pages on 2026-09-25 at main `44de5c8b`. Work that already landed is listed at the end. ADR 0018 fixes the `demos/` list, so a new page either amends that list or joins the site how-tos.
 
@@ -46,11 +46,7 @@ Done when: each of the four commands above prints a hint that names the right op
 
 ### 6. The refusals page names no neighbor tool and never says text only
 
-**Gap.** `site/src/pages/refusals.astro` says the tool writes no text. It never names the tool that does each refused job: summarize, rewrite, redact a span, cluster, pick a diverse sample, extract a free-form graph. No page, spec, or README says the tool reads text only. A search for "image" or "screen" in `site/src/pages/`, `README.md`, and `specification/` finds nothing. The computer-use projects in Ian's 2026-09-20 notes read a screen.
-
-**Fix.** Add one short list to the refusals page: each refused job, the kind of tool that does it, and the pipe that hands off to or from ThinkThen. Add one line that the tool sends text and nothing else, so a screen or an image becomes text first.
-
-Done when: the refusals page names a neighbor for each refused job and states text only.
+Met by accepted 0241 (`db7e2418`) and the current `site/src/pages/refusals.astro`: text-only input and neighbors for writing, redaction, clustering, sampling and extraction/graphs. Reviewed reconciliation: [first-hour criteria](../records/2026-09-29-first-hour-criterion-reconciliation.md).
 
 ### 7. A tool-call guard for a coding agent
 
@@ -58,19 +54,11 @@ Met by [ticket 0241's site guard](../../site/examples/how-tos/bash/agent-tool-gu
 
 ### 8. A long-lived loop from one process
 
-**Gap.** `README.md:31` says record mode through a `coproc` serves a steady loop from one long-lived process. Ticket 0024 landed that loop. No page under `demos/` or `site/` shows it. `demos/21-options-from-the-record/` changes the options per step and starts a new process per run.
-
-**Fix.** Write a how-to that holds one `thinkthen choose --jsonl --options POINTER` process open through `coproc`, feeds it one step at a time, and reads each answer before the next step. Name the library as the route when the loop must go faster.
-
-Done when: a green page runs a step loop through one process under `--replay`.
+Met by accepted 0241 (`db7e2418`). The `long-lived-loop` recipe holds one `choose` coprocess, uses `--batch 1`, feeds three steps and reads each answer before the next. Its replayed example and saved output are covered by the [0241 build record](../records/0241-site-and-sample-build.md).
 
 ### 9. Text split into paragraphs before a function reads it
 
-**Gap.** The functions read lines, JSON lines, CSV, or TSV. Real text arrives as paragraphs. `demos/43-lint-a-change/` splits a diff with `awk`, and the site's prose-lint recipe reads lines. No page shows `awk -v RS=` or any paragraph split. The 2026-09-20 coverage pass names this the most likely first request for a new flag.
-
-**Fix.** Write a short how-to or recipe that turns paragraphs into JSON lines with `awk -v RS=` and `jq`, then runs one function over them. Name a neighbor tool for sentences and for code functions.
-
-Done when: one green page or site recipe splits a document into paragraphs and judges each one.
+Met by accepted 0241 (`db7e2418`). The `judge-paragraphs` recipe uses `awk -v RS=`, `jq -Rc` and `filter --field /text`; the catalog names sentence and code splitters. The [0241 build record](../records/0241-site-and-sample-build.md) records its replay. No new splitting flag is owed by this criterion.
 
 ### 10. Skipping a bad record has no decision
 
