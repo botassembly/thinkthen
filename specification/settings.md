@@ -33,7 +33,7 @@ The configuration file is `thinkthen.config/1` under the platform configuration 
 
 A surface cell holds that surface's spelling in backticks. A cell reads `not on this surface` where the setting does not reach that surface. "In the question JSON" means the key of the question file, given inline as JSON or as a file. The Polars and pandas columns take the Python or Rust library's spelling, so they have no column of their own.
 
-The DuckDB cells for batch, literal context, model, timeout, retries, request size, inline profile, recording and replay describe the C++ extension selected for Linux x86-64, Linux ARM64, Apple Silicon and Intel macOS. The selected packages have installed settings and caller-session warm proof; the Intel result ran translated on macOS 26. Native Intel package qualification and macOS 15 release-runner proof remain separate under tickets 0231 and 0128.
+The DuckDB cells for batch, literal context, model, timeout, retries, request size, inline profile, recording and replay describe the C++ extension selected for Linux x86-64, Linux ARM64, Apple Silicon and Intel macOS. The selected packages have installed settings and caller-session warm proof; the Intel result ran translated on macOS 26.
 
 Library `usage` results now include `retries` beside `requests_sent`. Retries count actual retry sends and are a subset of requests sent. SQL usage output retains its existing shape.
 

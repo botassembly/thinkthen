@@ -1,6 +1,6 @@
 # 0255 native M5 installed C facts proof
 
-Status: candidate for fresh High installed ABI and ownership review. This record adds no source, public-page, test or package change. It supplements the accepted [0255 Linux build](0255-c-facts-build.md), whose AddressSanitizer result remains distinct. The M5 package came from clean source `7d90f53858e849b1ac33e8ae27b927de8a72298e`. Current main `f0f34292` has no changes to `libraries/c`, `crates/thinkthen/src/core` or `crates/thinkthen/src/engine` since that source. The exact built source and package identity below govern this proof.
+Status: accepted by fresh High installed ABI and ownership review at `9ad3e567`. This record adds no source, public-page, test or package change. It supplements the accepted [0255 Linux build](0255-c-facts-build.md), whose AddressSanitizer result remains distinct. The M5 package came from clean source `7d90f53858e849b1ac33e8ae27b927de8a72298e`. Current main `f0f34292` has no changes to `libraries/c`, `crates/thinkthen/src/core` or `crates/thinkthen/src/engine` since that source. The exact built source and package identity below govern this proof.
 
 ## Host, build and installed artifact
 
