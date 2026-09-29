@@ -2,6 +2,7 @@
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -14,6 +15,27 @@ EXPECTED = [(ROOT / f"specification/fixtures/batching/portable-{n}.request.json"
             .read_bytes().removesuffix(b"\n") for n in (1, 2, 3)]
 RELEASE_PACKAGE = os.environ.get("THINKTHEN_RELEASE_DART_DIR")
 RELEASE_NATIVE = os.environ.get("THINKTHEN_RELEASE_C_DIR")
+FFI_SHA256 = "6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45"
+
+
+def resolved_root(entry, config):
+    uri = urlparse(entry["rootUri"])
+    assert uri.scheme in ("", "file"), entry
+    root = Path(unquote(uri.path)) if uri.scheme == "file" else config.parent / unquote(uri.path)
+    return root.resolve()
+
+
+def check_ffi_lock(lock):
+    text = lock.read_text()
+    blocks = re.findall(r"(?ms)^  ffi:\n(.*?)(?=^  [^ ]|^sdks:|\Z)", text)
+    assert len(blocks) == 1, "DART_FFI_LOCK"
+    block = blocks[0]
+    for line in ('    source: hosted\n', '      name: ffi\n',
+                 '      url: "https://pub.dev"\n', f'      sha256: "{FFI_SHA256}"\n',
+                 '    version: "2.2.0"\n'):
+        assert block.count(line) == 1, "DART_FFI_LOCK"
+
+
 assert bool(RELEASE_PACKAGE) == bool(RELEASE_NATIVE), "both release inputs are required"
 if RELEASE_PACKAGE:
     package = Path(RELEASE_PACKAGE).resolve()
@@ -25,6 +47,7 @@ if RELEASE_PACKAGE:
     assert members == expected and not any(path.is_symlink() for path in package.rglob("*")), ("DART_ARCHIVE_MEMBERS", members)
     manifest = (package / "pubspec.yaml").read_text()
     assert "name: thinkthen_dart\n" in manifest and "ffi: ^2.1.4\n" in manifest, "DART_PUBSPEC_IDENTITY"
+    check_ffi_lock(package / "pubspec.lock")
 else:
     native = Path(os.environ["TT_NATIVE_LIBRARY"])
 DART = os.environ["TT_DART"]
@@ -56,11 +79,14 @@ try:
             assert resolved.returncode == 0, (resolved.stdout, resolved.stderr)
             config = consumer / ".dart_tool/package_config.json"
             entries = json.loads(config.read_text())["packages"]
+            assert sum(item["name"] == "thinkthen_dart" for item in entries) == 1, "DART_PACKAGE_CONFIG"
             entry = next(item for item in entries if item["name"] == "thinkthen_dart")
-            uri = urlparse(entry["rootUri"])
-            assert uri.scheme in ("", "file"), entry
-            root = Path(unquote(uri.path)) if uri.scheme == "file" else config.parent / unquote(uri.path)
-            assert root.resolve() == package, (root, package)
+            assert resolved_root(entry, config) == package, (entry, package)
+            assert sum(item["name"] == "ffi" for item in entries) == 1, "DART_FFI_CONFIG"
+            ffi = next(item for item in entries if item["name"] == "ffi")
+            expected_ffi = Path(env["PUB_CACHE"]) / "hosted/pub.dev/ffi-2.2.0"
+            assert resolved_root(ffi, config) == expected_ffi.resolve(), "DART_FFI_CONFIG"
+            check_ffi_lock(consumer / "pubspec.lock")
         else:
             consumer = HERE / "consumers/alpha"
         done = subprocess.run([DART, "run", "bin/portable_batch.dart", str(native), str(CORPUS)],

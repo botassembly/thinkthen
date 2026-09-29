@@ -41,6 +41,22 @@ swift_zig_names() {
 		fi
 	done
 }
+php_dart_names() {
+	dir=$1 target=$2
+	for file in "$dir"/thinkthen-php* "$dir"/thinkthen-dart*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		name=${file##*/}
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			case $name in
+			"thinkthen-php-$version-$target.tar.gz" | "thinkthen-php-$version-$target.tar.gz.sha256" | \
+			"thinkthen-dart-$version-$target.tar.gz" | "thinkthen-dart-$version-$target.tar.gz.sha256") ;;
+			*) fail "unexpected PHP/Dart family entry $name" ;;
+			esac
+		else
+			fail "unsupported target has $name"
+		fi
+	done
+}
 case ${1:-} in
 host-setup)
 	[ "$#" = 2 ] || fail 'host-setup TARGET'
@@ -166,6 +182,65 @@ swift-zig-gate)
 		;;
 	*) fail "no Swift/Zig release route for $target" ;;
 	esac
+	;;
+php-dart-gate)
+	[ "$#" = 4 ] || fail 'php-dart-gate DIR TARGET SHA'
+	dir=$2 target=$3 selected=$4
+	[ -d "$dir" ] || fail "platform directory is missing: $dir"
+	printf '%s\n' "$selected" | grep -Eq '^[0-9a-f]{40}$' || fail 'resolved SHA is invalid'
+	[ "$(git rev-parse HEAD)" = "$selected" ] || fail 'checkout differs from resolved SHA'
+	case $target in
+	x86_64-unknown-linux-gnu)
+		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail 'PHP/Dart gate requires its installed x86 host'
+		php_dart_names "$dir" "$target"
+		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir" php-dart
+		for family in php dart; do
+			archive=$dir/thinkthen-$family-$version-$target.tar.gz
+			tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
+				grep -Fxq "source_commit=$selected" || fail "$family source differs from resolved SHA"
+		done
+		;;
+	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin)
+		php_dart_names "$dir" "$target"
+		;;
+	*) fail "no PHP/Dart release route for $target" ;;
+	esac
+	;;
+php-dart-tools)
+	[ "$#" = 3 ] || fail 'php-dart-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'PHP/Dart installed tools require Linux x86-64'
+	for tool in curl sha256sum unzip tar cargo cc nm readelf readlink flock python3 git; do
+		command -v "$tool" >/dev/null 2>&1 || fail "PHP/Dart installed tool is missing: $tool"
+	done
+	php_bin=/usr/bin/php8.3
+	[ -x "$php_bin" ] || fail 'PHP 8.3 executable is missing'
+	"$php_bin" -v | grep -q '^PHP 8\.3\.' || fail 'PHP tool differs from 8.3 pin'
+	"$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' ||
+		fail 'PHP 8.3 FFI cannot run'
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	[ -n "${GITHUB_ENV:-}" ] && [ -f "$GITHUB_ENV" ] || fail 'GitHub environment handoff is missing'
+	case $3 in /*) ;; *) fail 'Dart setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Dart setup output already exists'
+	mkdir -p -- "$3"
+	dart_archive=$3/dartsdk-linux-x64-release.zip
+	curl --proto '=https' --tlsv1.2 -fsSL -o "$dart_archive" \
+		https://storage.googleapis.com/dart-archive/channels/stable/release/3.13.4/sdk/dartsdk-linux-x64-release.zip
+	printf '%s  %s\n' 6487a10df5eab890d746d14a55f4c70bec3c1c0633f51804eb504cbc0fc395bb "$dart_archive" |
+		sha256sum -c --quiet || fail 'Dart 3.13.4 SDK differs from official checksum'
+	unzip -q "$dart_archive" -d "$3"
+	dart_bin=$3/dart-sdk/bin/dart
+	"$dart_bin" --version 2>&1 | grep -Eq '^Dart SDK version: 3\.13\.4 \(stable\)' || fail 'Dart SDK differs from pin'
+	pub_cache=$3/pub-cache
+	mkdir -p -- "$pub_cache"
+	PUB_CACHE=$pub_cache "$dart_bin" pub cache add ffi --version 2.2.0 || fail 'pinned ffi cache fill failed'
+	[ -d "$pub_cache/hosted/pub.dev/ffi-2.2.0" ] || fail 'pinned ffi cache is missing'
+	[ "$(cat "$pub_cache/hosted-hashes/pub.dev/ffi-2.2.0.sha256")" = 6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45 ] ||
+		fail 'cached ffi 2.2.0 differs from official digest'
+	[ "$(find "$pub_cache/hosted/pub.dev" -maxdepth 1 -name 'ffi-*' -type d | wc -l | tr -d ' ')" = 1 ] ||
+		fail 'isolated pub cache has another ffi version'
+	printf '%s\n' "$3/dart-sdk/bin" >>"$GITHUB_PATH"
+	printf 'TT_DART=%s\nPUB_CACHE=%s\nTHINKTHEN_PHP_BIN=%s\n' "$dart_bin" "$pub_cache" "$php_bin" >>"$GITHUB_ENV"
 	;;
 swift-zig-tools)
 	[ "$#" = 3 ] || fail 'swift-zig-tools TARGET OUT'
@@ -322,6 +397,7 @@ collect)
 		[ -d "$folder" ] && [ ! -L "$folder" ] || fail "platform folder is missing or linked: platform-$target"
 		go_cpp_names "$folder" "$target"
 		swift_zig_names "$folder" "$target"
+		php_dart_names "$folder" "$target"
 	done
 	mkdir -p "$4"
 	for folder in "$2"/*; do

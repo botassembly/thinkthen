@@ -13,18 +13,15 @@ python_bin=${THINKTHEN_PYTHON_BIN:-/usr/bin/python3}
 bwrap_bin=${THINKTHEN_BWRAP_BIN:-/usr/bin/bwrap}
 flock_bin=${THINKTHEN_FLOCK_BIN:-/usr/bin/flock}
 git_bin=${THINKTHEN_GIT_BIN:-/usr/bin/git}
-for named in "$php_bin" "$python_bin" "$bwrap_bin" "$flock_bin" "$git_bin"; do
+for named in "$php_bin" "$python_bin" "$flock_bin"; do
     case "$named" in /*) ;; *) echo "php: not run: tool path is not absolute: $named" >&2; exit 77 ;; esac
     [ -x "$named" ] || { echo "php: not run: tool is unavailable: $named" >&2; exit 77; }
 done
 "$php_bin" -v | grep -q '^PHP 8\.3\.' || { echo 'php: not run: PHP 8.3 is required' >&2; exit 77; }
 "$php_bin" -n -d extension=ffi -d ffi.enable=1 -r 'exit(class_exists("FFI") ? 0 : 1);' ||
     { echo 'php: not run: PHP 8.3 ext-ffi is unavailable' >&2; exit 77; }
-"$python_bin" -c 'import jsonschema' || { echo 'php: not run: Python jsonschema is unavailable' >&2; exit 77; }
-"$bwrap_bin" --version >/dev/null 2>&1 || { echo 'php: not run: bwrap is unavailable' >&2; exit 77; }
 "$flock_bin" --version >/dev/null 2>&1 || { echo 'php: not run: flock is unavailable' >&2; exit 77; }
-"$git_bin" --version >/dev/null 2>&1 || { echo 'php: not run: git is unavailable' >&2; exit 77; }
-for tool in cargo cc nm readelf node; do
+for tool in cargo cc nm readelf; do
     command -v "$tool" >/dev/null 2>&1 || { echo "php: not run: no $tool" >&2; exit 77; }
 done
 export THINKTHEN_PHP_BIN="$php_bin" THINKTHEN_PYTHON_BIN="$python_bin"
@@ -51,6 +48,15 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     echo 'PHP installed release PASS: five typed rows and three literal requests'
     exit 0
 fi
+for named in "$bwrap_bin" "$git_bin"; do
+    case "$named" in /*) ;; *) echo "php: not run: tool path is not absolute: $named" >&2; exit 77 ;; esac
+    [ -x "$named" ] || { echo "php: not run: tool is unavailable: $named" >&2; exit 77; }
+done
+"$python_bin" -c 'import jsonschema' || { echo 'php: not run: Python jsonschema is unavailable' >&2; exit 77; }
+"$bwrap_bin" --version >/dev/null 2>&1 || { echo 'php: not run: bwrap is unavailable' >&2; exit 77; }
+"$git_bin" --version >/dev/null 2>&1 || { echo 'php: not run: git is unavailable' >&2; exit 77; }
+command -v node >/dev/null 2>&1 || { echo 'php: not run: no node' >&2; exit 77; }
+"$python_bin" fixtures/selector_preflight.py
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.php.json
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
 "$python_bin" -c 'import json; p=json.load(open("composer.json")); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"}'

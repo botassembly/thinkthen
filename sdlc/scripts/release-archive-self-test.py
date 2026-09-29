@@ -66,7 +66,7 @@ def main():
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
                    THINKTHEN_ARCHIVED_SOURCE_COMMIT=commit)
         # Keep the held SQL/DataFrame families out of execution; their allowlist is unchanged.
-        parts = ("c", "go", "cpp", "swift", "zig")
+        parts = ("c", "go", "cpp", "swift", "zig", "php", "dart")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "paired"), *parts, cwd=source, env=env), "", success=True)
         for kind in parts:
@@ -75,8 +75,11 @@ def main():
         gate = str(REPO / "sdlc/scripts/release-workflow")
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
+        expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, commit), "", success=True)
         for family, relative in (("swift", "Sources/ThinkThen/ThinkThen.swift"),
-                                 ("zig", "src/thinkthen.zig")):
+                                 ("zig", "src/thinkthen.zig"),
+                                 ("php", "autoload.php"),
+                                 ("dart", "lib/src/door.dart")):
             copied = source / "libraries" / family / relative
             original = copied.read_bytes()
             copied.write_bytes(original + b"\n// altered archived wrapper\n")
@@ -99,10 +102,19 @@ def main():
             file.unlink()
         expect(run("sh", gate, "swift-zig-gate", str(missing_swift), host, commit),
                "missing or linked thinkthen-swift-")
+        for family in ("php", "dart"):
+            missing = base / f"missing-{family}"
+            shutil.copytree(base / "paired", missing)
+            for file in missing.glob(f"thinkthen-{family}-*"):
+                file.unlink()
+            expect(run("sh", gate, "php-dart-gate", str(missing), host, commit),
+                   f"missing or linked thinkthen-{family}-")
         another_commit = "0" * 40
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, another_commit),
                "checkout differs from resolved SHA")
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, another_commit),
+               "checkout differs from resolved SHA")
+        expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, another_commit),
                "checkout differs from resolved SHA")
         altered_source = base / "altered-source"
         shutil.copytree(base / "paired", altered_source)
@@ -128,6 +140,8 @@ def main():
                "unsupported target has thinkthen-go-")
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), other_target, commit),
                "unsupported target has thinkthen-swift-")
+        expect(run("sh", gate, "php-dart-gate", str(base / "paired"), other_target, commit),
+               "unsupported target has thinkthen-php-")
         platform = base / "platform"
         platform.mkdir()
         for target in (host, other_target, "aarch64-apple-darwin", "x86_64-apple-darwin"):
@@ -144,7 +158,7 @@ def main():
         collected = base / "collected"
         expect(run("sh", gate, "collect", str(platform), str(npm), str(collected)), "", success=True)
         expected_files = {f"thinkthen-{kind}-{version}-{host}.tar.gz{suffix}"
-                          for kind in ("c", "go", "cpp", "swift", "zig") for suffix in ("", ".sha256")}
+                          for kind in parts for suffix in ("", ".sha256")}
         expected_files |= {f"fixture-{target}.bin" for target in
                            (other_target, "aarch64-apple-darwin", "x86_64-apple-darwin")}
         expected_files |= {f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256"}
@@ -170,6 +184,16 @@ def main():
         if refused_output.exists():
             raise AssertionError("extra Swift asset created collected output")
         extra_swift.unlink()
+        extra_php = platform / f"platform-{host}/thinkthen-php-extra.zip"
+        extra_php.write_bytes(b"unselected release asset")
+        expect(run("sh", gate, "php-dart-gate", str(extra_php.parent), host, commit),
+               "unexpected PHP/Dart family entry thinkthen-php-extra.zip")
+        refused_output = base / "refused-php-assets"
+        expect(run("sh", gate, "collect", str(platform), str(base / "no-npm"), str(refused_output)),
+               "unexpected PHP/Dart family entry thinkthen-php-extra.zip")
+        if refused_output.exists():
+            raise AssertionError("extra PHP asset created collected output")
+        extra_php.unlink()
         extra_platform = platform / "platform-extra"
         extra_platform.mkdir()
         (extra_platform / "unselected.zip").write_bytes(b"unselected release asset")
@@ -185,8 +209,10 @@ def main():
         fake_curl.chmod(0o755)
         github_path = base / "github-path"
         github_path.touch()
+        github_env = base / "github-env"
+        github_env.touch()
         tool_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
-                                 "GITHUB_PATH": str(github_path)}
+                                 "GITHUB_PATH": str(github_path), "GITHUB_ENV": str(github_env)}
         expect(run("sh", gate, "go-cpp-tools", other_target, str(base / "other-tools"), env=tool_env),
                "Go/C++ installed tools require Linux x86-64")
         expect(run("sh", gate, "go-cpp-tools", host, str(base / "bad-go"), env=tool_env),
@@ -195,8 +221,36 @@ def main():
                "Swift/Zig installed tools require Linux x86-64")
         expect(run("sh", gate, "swift-zig-tools", host, str(base / "bad-zig"), env=tool_env),
                "Zig 0.15.2 archive differs from official checksum")
+        expect(run("sh", gate, "php-dart-tools", other_target, str(base / "other-dart"), env=tool_env),
+               "PHP/Dart installed tools require Linux x86-64")
+        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-dart"), env=tool_env),
+               "Dart 3.13.4 SDK differs from official checksum")
         if github_path.read_text():
             raise AssertionError("bad tool archive entered the runner path")
+        if github_env.read_text():
+            raise AssertionError("bad Dart archive entered the runner environment")
+        # Let synthetic extraction and pub filling reach the real cache-hash guard.
+        # The earlier bad-download plant exercised the real SDK checksum command.
+        fake_hash = fake_bin / "sha256sum"
+        fake_hash.write_text("#!/bin/sh\n[ \"$1\" = -c ] && exit 0\nexit 2\n")
+        fake_hash.chmod(0o755)
+        fake_unzip = fake_bin / "unzip"
+        fake_unzip.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
+                              "if [ \"$1\" = -d ]; then shift; mkdir -p \"$1/dart-sdk/bin\"; "
+                              "cat >\"$1/dart-sdk/bin/dart\" <<'SH'\n"
+                              "#!/bin/sh\nif [ \"$1\" = --version ]; then "
+                              "echo 'Dart SDK version: 3.13.4 (stable)' >&2; exit 0; fi\n"
+                              "mkdir -p \"$PUB_CACHE/hosted/pub.dev/ffi-2.2.0\" "
+                              "\"$PUB_CACHE/hosted-hashes/pub.dev\"\n"
+                              "printf '%s\\n' wrong >\"$PUB_CACHE/hosted-hashes/pub.dev/ffi-2.2.0.sha256\"\n"
+                              "SH\nchmod +x \"$1/dart-sdk/bin/dart\"; exit 0; fi\nshift\ndone\nexit 2\n")
+        fake_unzip.chmod(0o755)
+        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-ffi"), env=tool_env),
+               "cached ffi 2.2.0 differs from official digest")
+        if github_path.read_text() or github_env.read_text():
+            raise AssertionError("bad ffi cache entered the runner environment")
+        fake_hash.unlink()
+        fake_unzip.unlink()
         wrong = env | {"THINKTHEN_ARCHIVED_SOURCE_COMMIT": "0" * 40}
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "wrong"), *parts, cwd=source, env=wrong),
@@ -310,7 +364,7 @@ def main():
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env),
                    f"{family}: not run: Python jsonschema is unavailable")
-    print("release archive self-test: gitless legacy, Go/C++ and Swift/Zig inputs pass")
+    print("release archive self-test: gitless legacy, Go/C++, Swift/Zig and PHP/Dart inputs pass")
 
 
 if __name__ == "__main__":
