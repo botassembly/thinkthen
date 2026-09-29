@@ -1,6 +1,6 @@
 # 0271 compiler input plan
 
-Status: ACCEPT `593bc329` after independent High review. bounded version and package-metadata preparation, 2026-09-29. This follows the accepted [runner input research](0271-0272-runner-toolchain-inputs.md) and [dependency follow-up](0271-0272-runner-input-followup.md). No package or SDK body was downloaded or installed. No compilation, link, backend, consumer, container, Actions or SQL/DataFrame work ran. These observations do not qualify an Actions runner.
+Status: ACCEPT `593bc329` after independent High review. Bounded version and package-metadata preparation, 2026-09-29. This follows the accepted [runner input research](0271-0272-runner-toolchain-inputs.md) and [dependency follow-up](0271-0272-runner-input-followup.md). No package or SDK body was downloaded or installed. No compilation, link, backend, consumer, container, Actions or SQL/DataFrame work ran. These observations do not qualify an Actions runner.
 
 ## Resolved local tools against 0265
 
