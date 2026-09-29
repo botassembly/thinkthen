@@ -588,3 +588,10 @@ The0283 recheck accepted the deadline corrections but found that the name-stage 
 ## Locate feature code before copying a host claim
 
 The0289 kickoff inventory named nonexistent `libraries/polars/src` and a separate Polars source counter. The binding README states that this folder holds no code. Its implementation is the root crate's feature-gated `public/frame.rs` and helpers, with tests under `tests/polars`; the root Rust counter covers both. The coordinator corrected the lane claim and next brief before implementation. A folder name is not evidence that a surface has its own crate.
+
+
+## Refresh derived assertions after a prerequisite lands
+
+The0301 wire preparation found the core fixture, but review also found exact R and TypeScript assertions. After0283 landed, its new whole-plan line added two byte/token literals in already claimed files. Root added their independently derived 13-byte reduction and 809–1,424 band directly to the handoff; High recheck accepted46925b681. Refresh both the copied body and every count derived from it, while keeping changed-question and exchanged-request identities separate.
+
+A staged0289 launch prompt still said to wait for its prerequisite after main already contained it. The worker returned without editing. Root replaced that first line with the actual landed commit and explicit start instruction, then confirmed the worker created its implementation branch. Check that a launch brief describes present authorization rather than an old future condition.
