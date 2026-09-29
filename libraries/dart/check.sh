@@ -47,6 +47,10 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   [ "$(readlink "$native/lib/libthinkthen.so.0")" = libthinkthen.so ] || exit 1
   export PUB_CACHE=${PUB_CACHE:-"$HOME/.pub-cache"}
   [ -d "$PUB_CACHE/hosted/pub.dev/ffi-2.2.0" ] || { echo 'Dart installed: offline ffi 2.2.0 cache missing' >&2; exit 77; }
+  scratch_dir locked_package
+  tar -xzf "$THINKTHEN_ARTIFACT" -C "$locked_package"
+  "$TT_DART" pub get --offline --enforce-lockfile --directory "$locked_package"
+  cmp "$package/pubspec.lock" "$locked_package/pubspec.lock" || { echo 'Dart installed: archived lock changed' >&2; exit 1; }
   flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
     env CARGO_TARGET_DIR="$ROOT/../../target" CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$ROOT/../../Cargo.toml" --package conformance-backend -j2
