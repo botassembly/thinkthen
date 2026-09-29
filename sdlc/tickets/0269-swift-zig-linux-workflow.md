@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 # 0269: Gate Swift and Zig source files in the Linux x86 release workflow
 
-Status: design correction against main `3fe19303` and pending 0268 candidate `5493e6d0`; no implementation, tool installation, container, installed consumer, Actions run or publication. [Preparation](../records/0269-language-workflow-preparation.md) maps this next pair and the separately gated PHP/Dart follow-on. The 0268 archived-source/Go/C++ route must land before implementation. Ian's SQL and DataFrame hold prohibits running the current whole release workflow or its complete smoke now.
+Status: design correction against main `3fe19303` and pending 0268 candidate `5493e6d0`; no implementation, tool installation, container, installed consumer, Actions run or publication. [Preparation](../records/0269-language-workflow-preparation.md) maps this next pair and the separately gated PHP/Dart follow-on. The coordinator approves the design; the0268 archived-source/Go/C++ route must land and an implementation claim must be recorded before code starts. See [the review](../records/0269-language-workflow-design-review.md). Ian's SQL and DataFrame hold prohibits running the current whole release workflow or its complete smoke now.
 
 ## Remaining outcome and order
 
