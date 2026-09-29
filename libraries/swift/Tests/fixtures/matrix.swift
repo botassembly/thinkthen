@@ -44,11 +44,12 @@ func release(_ state: String) {
 final class ConcurrentResults: @unchecked Sendable {
     private let lock = NSLock()
     private var failures = [String: DoorFailure]()
-    private var success: Answer?
-    func record(_ answer: Answer) { lock.lock(); defer { lock.unlock() }; success = answer }
+    private var success = [String: CallResult<Answer>]()
+    func record(_ answer: CallResult<Answer>, for state: String = "success") { lock.lock(); defer { lock.unlock() }; success[state] = answer }
     func record(_ failure: DoorFailure, for state: String) { lock.lock(); defer { lock.unlock() }; failures[state] = failure }
     func failure(_ state: String) -> DoorFailure? { lock.lock(); defer { lock.unlock() }; return failures[state] }
-    func answer() -> Answer? { lock.lock(); defer { lock.unlock() }; return success }
+    func answer() -> CallResult<Answer>? { lock.lock(); defer { lock.unlock() }; return success["success"] }
+    func answer(_ state: String) -> CallResult<Answer>? { lock.lock(); defer { lock.unlock() }; return success[state] }
 }
 
 func held(_ engine: Engine, _ state: String, _ wanted: Int32, many: Bool = false) throws {
@@ -107,17 +108,81 @@ func direct() throws {
     }
     print("DIRECT_SWIFT_C_PASS")
 }
+func strictFacts() {
+    let good = "{\"records\":18446744073709551615,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125}"
+    let decoder = JSONDecoder()
+    let parsed = try! decoder.decode(CallFacts.self, from: Data(good.utf8))
+    check(parsed.records == UInt64.max && parsed.seconds == 0.125 && parsed.inputTokens == nil && parsed.model == nil, "valid facts boundary")
+    for bad in [
+        good.replacingOccurrences(of: "\"records\":18446744073709551615,", with: ""),
+        good.replacingOccurrences(of: "18446744073709551615", with: "null"),
+        good.replacingOccurrences(of: "18446744073709551615", with: "true"),
+        good.replacingOccurrences(of: "18446744073709551615", with: "-1"),
+        good.replacingOccurrences(of: "\"requests_sent\":0", with: "\"requests_sent\":1.5"),
+        good.replacingOccurrences(of: "\"cache_answers\":0", with: "\"cache_answers\":\"1\""),
+        good.replacingOccurrences(of: "18446744073709551615", with: "18446744073709551616"),
+        good.replacingOccurrences(of: "\"seconds\":0.125", with: "\"seconds\":\"0.125\""),
+        good.replacingOccurrences(of: "\"seconds\":0.125", with: "\"seconds\":-0.125"),
+        good.replacingOccurrences(of: "\"seconds\":0.125", with: "\"seconds\":true"),
+        good.replacingOccurrences(of: "\"seconds\":0.125", with: "\"seconds\":null"),
+        good.replacingOccurrences(of: "\"seconds\":0.125", with: "\"seconds\":1e999"),
+        good.replacingOccurrences(of: "}", with: ",\"input_tokens\":null}"),
+        good.replacingOccurrences(of: "}", with: ",\"model\":1}")
+    ] {
+        check((try? decoder.decode(CallFacts.self, from: Data(bad.utf8))) == nil, "malformed facts accepted: \(bad)")
+    }
+}
+func factsLifetime() throws {
+    let engine = try Engine()
+    let results = ConcurrentResults()
+    let group = DispatchGroup()
+    for state in ["hold-facts-one", "hold-facts-no-usage"] {
+        group.enter()
+        DispatchQueue.global().async {
+            defer { group.leave() }
+            do { results.record(try engine.decide("Is it?", state), for: state) }
+            catch { fatalError("held facts failed: \(error)") }
+        }
+    }
+    waitFor("hold-facts-one")
+    waitFor("hold-facts-no-usage")
+    release("hold-facts-one")
+    release("hold-facts-no-usage")
+    check(group.wait(timeout: .now() + 10) == .success, "held facts calls did not finish")
+    let first = results.answer("hold-facts-one")!
+    let second = results.answer("hold-facts-no-usage")!
+    answer(first.value, 1, 0.9); answer(second.value, 1, 0.9)
+    check(first.facts.records == 1 && first.facts.requestsSent == 1 && first.facts.inputTokens == 1 && first.facts.model == "jev-1.13.0", "first owned facts")
+    check(second.facts.records == 1 && second.facts.requestsSent == 1 && second.facts.inputTokens == nil && second.facts.outputTokens == nil && second.facts.model == "jev-1.13.0", "no-usage owned facts")
+    var failed: DoorFailure?
+    do { _ = try engine.decide("Is it?", "status-401"); fatalError("expected backend failure") }
+    catch let failure as DoorFailure { failed = failure }
+    let failedFacts = failed!.factsJSON!
+    check(failed!.kind == .backend && (decoded(failedFacts) as! [String: Any])["requests_sent"] as? Int == 1, "typed started failure facts")
+    let later = try engine.decide("Is it?", "recovery-scalar")
+    engine.close()
+    answer(later.value, 1, 0.9)
+    check(first.facts.inputTokens == 1 && second.facts.inputTokens == nil && failed!.factsJSON == failedFacts, "owned snapshots after close")
+    print("SWIFT_FACTS_LIFETIME_PASS")
+}
 func matrix() throws {
+    strictFacts()
     let engine = try Engine()
     for (text, code, p) in [("yes", 1, 0.9), ("no", 0, 0.1), ("unsure", 2, 0.5), ("café", 1, 0.9), ("a\0b", 1, 0.9)] {
-        answer(try engine.decide(text == "unsure" ? "{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}" : "Is it?", text), Int32(code), p)
+        let result = try engine.decide(text == "unsure" ? "{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}" : "Is it?", text)
+        answer(result.value, Int32(code), p)
+        check(result.facts.records == 1 && result.facts.requestsSent == 1 && result.facts.cacheAnswers == 0 && result.facts.seconds.isFinite && result.facts.seconds >= 0, "scalar facts")
     }
     let rows = try engine.decideMany("Is it?", ["first", "second", "third"])
-    for i in rows.indices { answer(rows[i], [1, 0, 1][i], [0.9, 0.1, 0.6][i]) }
+    check(rows.facts.records == 3 && rows.facts.requestsSent == 1 && rows.facts.cacheAnswers == 0, "bulk facts")
+    for i in rows.value.indices { answer(rows.value[i], [1, 0, 1][i], [0.9, 0.1, 0.6][i]) }
+    let replay = try engine.decideMany("Is it?", ["first", "second", "third"])
+    check(replay.value.map(\.probability) == [0.9, 0.1, 0.6] && replay.facts.records == 3 && replay.facts.requestsSent == 0 && replay.facts.cacheAnswers == 1, "packed replay")
     let cached = try engine.decideMany("Is it?", ["first", "second", "first", "second"])
-    check(cached.map(\.probability) == [0.9, 0.1, 0.9, 0.1], "bulk cache/order")
+    check(cached.value.map(\.probability) == [0.9, 0.1, 0.9, 0.1], "bulk cache/order")
     let empty = try engine.decideMany("Is it?", [])
-    check(empty.isEmpty, "zero bulk")
+    check(empty.facts.records == 0 && empty.facts.model == nil, "empty facts")
+    check(empty.value.isEmpty, "zero bulk")
     let requests = [
         "{\"decide\":\"Is it?\",\"evidence\":\"json-decide\",\"details\":true}",
         "{\"choose\":\"Which team?\",\"options\":[\"first\",\"second\"],\"evidence\":\"choose\"}",
@@ -147,10 +212,14 @@ func matrix() throws {
         }
     }
     let spec = "{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}"
-    let named = decoded(try engine.recognize(spec, "John Smith")) as! [String: Any]
+    let namedCall = try engine.recognize(spec, "John Smith")
+    let named = decoded(namedCall.value) as! [String: Any]
+    check(namedCall.facts.requestsSent == 2 && namedCall.facts.records > 0, "recognize facts")
     check((named["entities"] as! [Any]).count == 1, "typed recognize")
     let relSpec = "{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}"
-    let edges = decoded(try engine.relate(relSpec, ["{\"name\":\"Third\",\"kind\":\"alert\"}", "{\"name\":\"Fourth\",\"kind\":\"alert\"}"])) as! [String: Any]
+    let edgeCall = try engine.relate(relSpec, ["{\"name\":\"Third\",\"kind\":\"alert\"}", "{\"name\":\"Fourth\",\"kind\":\"alert\"}"])
+    let edges = decoded(edgeCall.value) as! [String: Any]
+    check(edgeCall.facts.requestsSent == 1 && edgeCall.facts.records > 0, "relate facts")
     check((edges["edges"] as! [Any]).count == 2, "typed relate")
     let usage = decoded(try engine.call("{\"usage\":true}")) as! [String: Any]
     check(usage["requests_sent"] != nil, "usage")
@@ -182,11 +251,11 @@ func matrix() throws {
     check(group.wait(timeout: .now() + 15) == .success, "concurrent calls")
     check(results.failure("failure-one")?.kind == .backend && results.failure("failure-one")!.message.contains("401"), "first thread error")
     check(results.failure("failure-two")?.kind == .backend && results.failure("failure-two")!.message.contains("403"), "second thread error")
-    answer(results.answer()!, 1, 0.9)
+    answer(results.answer()!.value, 1, 0.9)
     try held(engine, "hold-deadline", 3)
     try held(engine, "hold-bulk-1", 5, many: true)
     try held(engine, "hold-scalar", 5)
-    answer(try engine.decide("Is it?", "recovery-scalar"), 1, 0.9)
+    answer(try engine.decide("Is it?", "recovery-scalar").value, 1, 0.9)
     print("STRICT_CANCELLED_SCALAR_PASS code=5 fresh-token-recovery")
     engine.close()
     error(1) { _ = try engine.call("{\"usage\":true}") }
@@ -197,5 +266,6 @@ do {
     guard CommandLine.arguments.count == 2 else { fatalError("mode direct|matrix") }
     if CommandLine.arguments[1] == "direct" { try direct() }
     else if CommandLine.arguments[1] == "matrix" { try matrix() }
+    else if CommandLine.arguments[1] == "facts" { try factsLifetime() }
     else { fatalError("mode direct|matrix") }
 } catch { FileHandle.standardError.write(Data("\(error)\n".utf8)); exit(1) }

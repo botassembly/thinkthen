@@ -77,7 +77,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     if kind == 'score':
                         keys = [str(i) for i in range(len(keys))]
                     answers[name] = {'type': kind, 'probabilities': {key: (0.9 if i == 0 else 0.1 / (len(keys) - 1)) for i, key in enumerate(keys)}}
-            data = json.dumps({'model': request['model'], 'answers': answers, 'usage': {'input_tokens': 1, 'output_tokens': 1}}).encode()
+            data = json.dumps({'model': request['model'], 'answers': answers, **({} if state_key == 'hold-facts-no-usage' else {'usage': {'input_tokens': 1, 'output_tokens': 1}})}).encode()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(data)))

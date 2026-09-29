@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import tempfile
+import sys
 
 from backend import Backend
 from process_group import run
@@ -33,17 +34,26 @@ with tempfile.TemporaryDirectory(prefix="zig-matrix-", dir=ROOT) as folder:
                              "arrivals": len(backend.arrivals)})
             assert result.exit == 0 and marker.encode() in output, (name, result.exit, output[-1400:])
             assert len(backend.arrivals) == expected, (name, len(backend.arrivals), expected)
-        case("example", [str(PACKAGE / "zig-out/bin/thinkthen-example")], 1, "yes 0.90")
-        case("matrix", [str(BIN / "matrix")], 32, "matrix: ten verbs")
-        case("allocation", [str(BIN / "allocation")], 34, "allocation: bulk indexes")
-        case("concurrent", [str(BIN / "concurrent"), "--callers-only"], 37, "concurrent: three callers PASS")
-        case("held", [str(BIN / "concurrent"), "--holds-only"], 42, "fresh-token recovery recovery-scalar PASS")
-        (ROOT / "observed_requests.json").write_text(json.dumps(backend.arrivals, ensure_ascii=False, indent=2) + "\n")
-        expected = json.loads((PACKAGE / "Tests/expected_requests.json").read_text())
-        normalize = lambda rows: Counter(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) for row in rows)
-        assert normalize(backend.arrivals) == normalize(expected), "complete normalized Zig request bodies differ"
-        assert backend.bulk_completion == [], backend.bulk_completion
-        print(f"Zig matrix: {len(backend.arrivals)} exact request bodies, held cancellation and recovery PASS")
+        if len(sys.argv)==2 and sys.argv[1]=='facts':
+            case("facts", [str(BIN / "concurrent"), "--facts"], 4, "ZIG_FACTS_LIFETIME_PASS")
+            assert Counter(row['state'] for row in backend.arrivals)==Counter(['hold-facts-one','hold-facts-no-usage','status-401','recovery-scalar']),backend.arrivals
+            print("Zig facts: two held arrivals, failure and recovery exact=4 PASS")
+        elif len(sys.argv)==2 and sys.argv[1]=='facts-allocation':
+            case("facts-allocation", [str(BIN / "allocation"), "--facts-allocation"], 4, "facts allocation index 7:")
+            assert Counter(row['state'] for row in backend.arrivals)==Counter({f'alloc-facts-{i}':1 for i in range(4,8)}),backend.arrivals
+            print("Zig post-native facts allocation faults exact=4 PASS")
+        else:
+            case("example", [str(PACKAGE / "zig-out/bin/thinkthen-example")], 1, "yes 0.90")
+            case("matrix", [str(BIN / "matrix")], 32, "matrix: ten verbs")
+            case("allocation", [str(BIN / "allocation")], 34, "allocation: bulk indexes")
+            case("concurrent", [str(BIN / "concurrent"), "--callers-only"], 37, "concurrent: three callers PASS")
+            case("held", [str(BIN / "concurrent"), "--holds-only"], 42, "fresh-token recovery recovery-scalar PASS")
+            (ROOT / "observed_requests.json").write_text(json.dumps(backend.arrivals, ensure_ascii=False, indent=2) + "\n")
+            expected = json.loads((PACKAGE / "Tests/expected_requests.json").read_text())
+            normalize = lambda rows: Counter(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) for row in rows)
+            assert normalize(backend.arrivals) == normalize(expected), "complete normalized Zig request bodies differ"
+            assert backend.bulk_completion == [], backend.bulk_completion
+            print(f"Zig matrix: {len(backend.arrivals)} exact request bodies, held cancellation and recovery PASS")
     finally:
         (home / "receipts.json").write_text(json.dumps(receipts, indent=2) + "\n")
         backend.close()

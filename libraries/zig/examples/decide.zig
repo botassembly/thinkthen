@@ -14,7 +14,11 @@ pub fn main() !void {
     };
     defer engine.deinit();
     switch (try engine.decide("Is this a complaint?", "I demand a refund today", .{})) {
-        .ok => |answer| std.debug.print("{s} {d:.2}\n", .{ @tagName(answer.outcome), answer.probability }),
+        .ok => |answer| {
+            defer answer.deinit(allocator);
+            if (answer.facts.records != 1 or answer.facts.requests_sent != 1) return error.WrongFacts;
+            std.debug.print("{s} {d:.2}\n", .{ @tagName(answer.value.outcome), answer.value.probability });
+        },
         .failed => |failure| {
             defer engine.freeFailure(failure);
             std.debug.print("decision failure {d}: {s}\n", .{ failure.code, failure.message });

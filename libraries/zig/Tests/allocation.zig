@@ -13,6 +13,31 @@ pub fn main() !void {
             std.debug.print("construction failure metadata copy OOM PASS\n", .{});
             return;
         }
+        if (std.mem.eql(u8, arg, "--facts-allocation")) {
+            var gpa = std.heap.DebugAllocator(.{}){};
+            defer if (gpa.deinit() != .ok) @panic("facts allocation leak");
+            const alloc = gpa.allocator();
+            var engine = switch (try tt.Engine.init(alloc)) {
+                .ok => |value| value,
+                .failed => |failure| {
+                    defer tt.releaseFailure(alloc, failure);
+                    return error.EngineBuild;
+                },
+            };
+            defer engine.deinit();
+            for (4..8) |index| {
+                const text = try std.fmt.allocPrint(alloc, "alloc-facts-{d}", .{index});
+                defer alloc.free(text);
+                const rows = [_][]const u8{ text, text };
+                var failing = std.testing.FailingAllocator.init(alloc, .{ .fail_index = index });
+                engine.allocator = failing.allocator();
+                const result = engine.decideMany("Is it?", &rows, .{});
+                engine.allocator = alloc;
+                try expectOOM(result);
+                std.debug.print("facts allocation index {d}: {d} allocations PASS\n", .{ index, failing.allocations });
+            }
+            return;
+        }
         if (std.mem.eql(u8, arg, "--construction-copy")) {
             var debug = std.heap.DebugAllocator(.{}){};
             defer if (debug.deinit() != .ok) @panic("construction message leak");
