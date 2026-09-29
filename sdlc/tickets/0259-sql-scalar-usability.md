@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-28-sql-interface-usability-before-0-1.md
 
 # 0259: Accept plain PostgreSQL judgment questions and add SQLite yes probability
 
-Status: implementation candidate awaiting fresh code review. Fresh independent design review accepted `88082a28`; the coordinator approved implementation on main `4d83cfbc`. The two fixes share the accepted SQL contract but have independent host proofs. One bounded database ticket keeps their README corrections together. See the [design review](../records/0259-design-review.md) and [build proof](../records/0259-sql-scalar-build.md).
+Status: complete after fresh independent code acceptance of `d01bc92b`. The coordinator integrated the reviewed PostgreSQL plain-question and SQLite yes-probability changes. The parent SQL usability issue retains its other criteria.
 
 ## Outcome and authority
 

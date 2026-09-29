@@ -1,6 +1,6 @@
 # 0259 SQL scalar build proof
 
-Status: implementation candidate awaiting fresh code review. Base main `4d83cfbc` was merged into the codex-7 ticket lane. The accepted design is `88082a28` and its independent review is [0259-design-review](0259-design-review.md). PostgreSQL's first coherent fix was pushed as `f1181384`; the later PostgreSQL array and try-details assertions, SQLite fix, and this record form the review candidate. No common third-slot, named-argument, model, settings, frame or batching API changes are claimed.
+Status: accepted after fresh independent code review at `d01bc92b`; see [the acceptance and integration record](0259-code-review.md). Base main `4d83cfbc` was merged into the codex-7 ticket lane. The accepted design is `88082a28` and its independent review is [0259-design-review](0259-design-review.md). PostgreSQL's first coherent fix was pushed as `f1181384`; the later PostgreSQL array and try-details assertions, SQLite fix, and this record form the review candidate. No common third-slot, named-argument, model, settings, frame or batching API changes are claimed.
 
 The old PostgreSQL packaged host failed `plain_question_contract` at `thinkthen_decide('Does this need attention?', 'A short note.')` with `thinkthen usage: a question file is named with the @ spelling` and zero sends. The old SQLite installed library on the pinned 3.50.0 host returned `no such function: thinkthen_probability` for the new 2- and 3-argument calls. Both failures were observed against local loopback fixtures before the product edits.
 
