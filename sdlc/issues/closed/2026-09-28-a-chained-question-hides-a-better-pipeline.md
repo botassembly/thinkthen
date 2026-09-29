@@ -1,6 +1,6 @@
 # A chained question hides a better pipeline
 
-Status: Open. Filed 2026-09-28 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`, `pipeline.py` and `runs/pipeline/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: closed after fresh Medium code review accepted `b9f1ccf7`. Filed 2026-09-28 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`, `pipeline.py` and `runs/pipeline/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
 
 ## What happens today
 
@@ -28,3 +28,7 @@ ThinkThen sequences nothing new. The host already runs two commands. The gap is 
 ## Factual preparation refresh, 2026-09-28
 
 At source `9b766cf9`, demo 16's `annotate | jq` pipeline makes one model call per record and then applies local policy; it does not feed one model answer into a second model question. The original two-call how-to and audit comparison therefore remain open. Experiment 297's `pipeline.py` is the existing host sequence and reused saved second-hop answers. Its 60-case summary and `runs/pipeline/` audit's 59 saved rows have different denominators: the script omits a live second-hop row without a usable first-hop album. The `22/60`, `48/60`, `51/60` and `52/60` results and thirteen repeated album inputs describe that cohort and cache state, not a general accuracy or cost promise. A future replay proof must run both displayed calls against matching saved request bodies, assert the passed answer value and compare the actual direct/split audit sets. No engine sequencer is proposed. See `sdlc/records/2026-09-28-tuning-evidence-refresh.md`.
+
+## Resolution
+
+[How-to 47](../../../demos/47-split-a-chained-question/README.md) runs two connected calls from real saved exchanges and explicitly stops for review when the first answer ties. The audit reference now recommends comparing the direct and split final answers against the same key, retaining unresolved cases. The page qualifies cache reuse and both measured denominators. The [build and review record](../../records/qf-chained-question-howto.md) names the exact proof and the narrow ADR 0016 exception. No runtime sequencer or new output shape was introduced.

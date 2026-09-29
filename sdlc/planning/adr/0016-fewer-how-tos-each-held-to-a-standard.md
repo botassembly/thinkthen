@@ -51,3 +51,9 @@ Ian's six capabilities still land: structured cases in 14; reusable definitions 
 ## Consequences
 
 Ticket 0018 applies the standard to every green page, merges the green pages named here, adds the checks to `sdlc/scripts/demos`, rewrites `documentation-plan.md` and `demos/README.md` to this list, and puts the front window in the README. Every later ticket that turns a page green meets the standard. A merged green page keeps its recordings only where a block still uses them.
+
+## Amendment: 2026-09-28 two-call evidence example
+
+The coordinator approved one narrow exception within Ian's requested outcome for [how-to 47](../../../demos/47-split-a-chained-question/). Its first asserting block may invoke the linked `run.sh` instead of spelling `thinkthen` inside that block. The linked script exposes both real `choose` calls, every option, the transfer of the first answer into the second input, and the stop when the first answer is not sure. This keeps one runnable host sequence as the page's example and test.
+
+How-to 47 may also name real public songs and albums because its three saved exchanges were already measured with those exact request bytes. Replacing the names with a fictional office scenario would miss the recordings or require new paid calls. The source and copied envelopes were checked for public music facts and no private customer material. Fictional ordinary office work remains the default for other pages. All other form, length, assertion and link limits above remain in force.

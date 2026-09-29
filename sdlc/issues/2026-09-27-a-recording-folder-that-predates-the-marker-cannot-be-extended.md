@@ -1,6 +1,6 @@
 # A recording folder that predates the backend marker cannot be extended
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`. Deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement.
 
 ## What happens today
 
@@ -26,3 +26,9 @@ Either form widens what works. No existing folder changes behavior, and a mixed 
 ## Factual preparation, 2026-09-28
 
 At main `86d5cff1`, `Entry` stores the adapter, URL and request, and `Entry::inspected` can recompute the exchange digest. The filename digest by itself does not reveal the old endpoint. Matching stored fields and digest establishes internal consistency, not authenticated origin: another writer of an explicit folder can forge both. Ticket 0253 settled the distinct empty default-cache status and recovery issue, not this occupied legacy-folder case. The marker gate, safe publication and read-only replay behavior remain necessary. Experiment 296's model-alias miss is a separate complete-request identity; binding a marker cannot make it a cache hit. The recovery choice and a temporary mixed-folder/concurrent-binder proof remain open. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.
+
+## Scope note, 2026-09-28
+
+`--replay` reads an older folder today, and a new folder can serve new writes; the experiments copied the bench
+run's folder and continued in their own. The free-baseline evidence (279 live requests in experiment 296 and 770 in
+297 instead of a fresh call for every saved case) remains the case for adoption when a project needs it.
