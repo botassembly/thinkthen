@@ -26,3 +26,7 @@ One Linux host/toolchain pair, synthetic loopback, decimal/exponent doubles docu
 ## Pre-merge re-pin (2026-09-28, pin 71f25087)
 
 no repin run; review-verified that its pin 4a0a2d6e already matches the current contracts. Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
+
+## Product source candidate (2026-09-28)
+
+Ticket 0249 copied the corrected stage-two package into `libraries/cpp/` and adapted a product-owned offline gate. At source `976bcd75`, four installed `find_package` consumers each passed 16 exact full request bodies, including shared, static-C, multilib and Clang-sanitized variants. Eighteen planted negatives, the 55-schema/29-public-case corpus, current 30-export native ABI, and the 2^53 parser boundary passed. See `sdlc/records/0249-go-cpp-{preflight,build,review}.md`. Fresh Medium review accepted source `d7723841`; C++ registration passed focused policy and registry checks after Swift/Zig landed. Narrow registration review is pending. The final-release pin, `ubuntu-24.04` build/release path, and native archive distribution remain open. No package was published.

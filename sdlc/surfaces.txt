@@ -16,6 +16,8 @@ libraries/jvm         landed
 libraries/dart        landed
 libraries/swift       landed
 libraries/zig         landed
+libraries/go          landed
+libraries/cpp         landed
 libraries/python      landed
 libraries/typescript  landed
 libraries/ruby        landed

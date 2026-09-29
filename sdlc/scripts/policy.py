@@ -597,6 +597,8 @@ NONCARGO_MANIFESTS = {
     "libraries/dart": ("pubspec.yaml", {"name": "thinkthen_dart", "version": "0.0.1"}),
     "libraries/swift": ("Package.swift", {"name": "ThinkThen"}),
     "libraries/zig": ("build.zig.zon", {"name": "thinkthen"}),
+    "libraries/go": ("go.mod", {"module": "github.com/botassembly/thinkthen/libraries/go"}),
+    "libraries/cpp": ("CMakeLists.txt", {"project": "thinkthen_cpp"}),
 }
 
 
@@ -658,6 +660,18 @@ def dart_manifest_failures(source: str | None, flutter_source: str | None,
 def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
     if source is None:
         return [f"{name} has no package manifest"]
+    if name == "libraries/go":
+        if re.fullmatch(r"module github\.com/botassembly/thinkthen/libraries/go\n\ngo 1\.22\n", source) is None:
+            return ["libraries/go go.mod names the Go 1.22 source module without remote dependencies"]
+        return []
+    if name == "libraries/cpp":
+        if (not re.search(r'(?m)^project\(thinkthen_cpp VERSION 0\.0\.1 LANGUAGES CXX\)$', source) or
+                not re.search(r'(?m)^cmake_minimum_required\(VERSION 3\.18\)$', source) or
+                'install(EXPORT ThinkThenCppTargets' not in source or
+                'configure_package_config_file(cmake/ThinkThenCppConfig.cmake.in' not in source or
+                re.search(r'FetchContent|ExternalProject|file\(DOWNLOAD', source)):
+            return ["libraries/cpp CMakeLists.txt names the local source package and installed targets without downloads"]
+        return []
     if name == "libraries/swift":
         package = re.search(r'let\s+package\s*=\s*Package\(\s*name:\s*"([^"]+)"', source)
         if (package is None or package[1] != "ThinkThen" or
