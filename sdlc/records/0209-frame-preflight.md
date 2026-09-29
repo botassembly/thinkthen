@@ -1,6 +1,6 @@
 # 0209 frame preflight
 
-Read-only source review at clean main `30d340d1` on 2026-09-27. The authoritative outcome is rule 7 of `sdlc/issues/2026-09-27-one-type-contract-for-every-surface.md`, ADR 0082 and landed J1 `0204`. No runtime file, test or paid provider service was changed or run during preparation.
+Read-only source review at clean main `30d340d1` on 2026-09-27. The authoritative outcome is rule 7 of `sdlc/issues/closed/2026-09-27-one-type-contract-for-every-surface.md`, ADR 0082 and landed J1 `0204`. No runtime file, test or paid provider service was changed or run during preparation.
 
 ## Confirmed current behavior
 

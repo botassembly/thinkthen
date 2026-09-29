@@ -1,17 +1,36 @@
 # One type contract for every surface
 
-Status: Open. The queue owner places batch J in the work plan. Ian can overturn any rule in section 4.
+Status: closed after fresh independent review of the parent criteria of the completed J1–J8 work on main `38b5e9fb`. Ian can overturn the recorded contract decisions.
 
 The Codex coordinator wrote a type-system review on 2026-09-27 for the language-port experiments. Claude revised it the same day against main at `7a1ba6cc` and corrected its claims about the schema, the C door, Rust, TypeScript and Python. This issue holds the revised version. The port experiments wait on J1: they need one written contract to map into each language.
 
-## Plan placement
+## Closure
+
+All eight counted work rows are complete. The fresh closure review maps this issue's section 6 to the accepted work below. The parent has no separate item-table row, so moving it to closed adds no completion count.
+
+| Row | Accepted work |
+| --- | --- |
+| J1 | Ticket 0204 and ADR 0082 define the type contract, schema and corpus |
+| J2 | Ticket 0209 preserves stable frame columns and the separate failed column |
+| J3 | Ticket 0236 provides TypeScript label maps and descriptions |
+| J4 | Ticket 0243 adds Rust choice descriptions |
+| J5 | Ticket 0233 provides Python Enum/Literal inputs, typed rows and the optional Pydantic extra |
+| J6 | Tickets 0234 and 0237 complete Ruby and R parity |
+| J7 | The SQL answer-constraint Quick Fix provides three host recipes and literal proof |
+| J8 | Ticket 0249 integrates eleven source packages through their public J1 checks |
+
+ADR 0082 resolves the original broad corpus wording in rule 5: the shared schema is held to the real C door and later ports run that corpus through their own APIs; existing libraries retain the accepted J2–J6 proof. This closure does not claim that every earlier library gained a new shared-corpus adapter. The [integration closure record](../../records/0249-integration-closure.md) preserves the distinct package release criteria, which remain open outside this type-contract issue.
+
+The remaining sections preserve the original issue and its proposals.
+
+## Original plan placement
 
 Add batch J to `sdlc/planning/work-plan-2026-09-27.md`. Leave the existing tickets as they are.
 
 - **J1** is ready now. It edits only `specification/`, a new ADR and a fixture corpus, so it collides with no running lane.
 - **J2** has an implementation candidate on ticket 0209. The approved Polars Struct and pandas dictionary now pass selected host boundaries; fresh code and dependency review remains before this defect closes. It edits the Python frame code and the Rust Polars door before B12d starts.
 - **J3 to J6** each run in the same lane right after that library's batching ticket, B12b to B12f, because they edit the same files.
-- **J7** is done: reviewed SQL constraint recipes and literal host proof are recorded in [the Quick Fix record](../records/qf-sql-answer-constraints.md).
+- **J7** is done: reviewed SQL constraint recipes and literal host proof are recorded in [the Quick Fix record](../../records/qf-sql-answer-constraints.md).
 - **J8** is one integration ticket per port, after J1. Rule 2 gates each one.
 - Add J1 to J8 to the "Every item" table as to do, and update the Counts line.
 
@@ -110,7 +129,7 @@ Each form maps to the same ordered set of labels with optional descriptions.
 | J4 | Rust `choices!` carries descriptions. | Libraries | S |
 | J5 | Python accepts `Enum` and `Literal`, the stub gains `Literal` kinds and a typed annotate row, and the `[pydantic]` extra is added. | Libraries | M |
 | J6 | Check Ruby and R for maps, structured descriptions, the failure marker and named kinds. Fix what fails. | Libraries | S |
-| J7 | A SQL recipe for constraining answer columns, one per database. Done after fresh review of `be25a5c9`; valid, invalid and NULL literals checked on all three pinned hosts. See [the Quick Fix record](../records/qf-sql-answer-constraints.md). | Databases / Pages | S |
+| J7 | A SQL recipe for constraining answer columns, one per database. Done after fresh review of `be25a5c9`; valid, invalid and NULL literals checked on all three pinned hosts. See [the Quick Fix record](../../records/qf-sql-answer-constraints.md). | Databases / Pages | S |
 | J8 | Each port integration ticket meets rule 2 and passes the J1 corpus. | Libraries | one per port |
 
 ## 7. Note to the language-port team
