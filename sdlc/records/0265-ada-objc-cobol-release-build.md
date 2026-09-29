@@ -1,6 +1,6 @@
 # 0265 Ada, GNU Objective-C and COBOL local release build
 
-Status: candidate for fresh code review. Design `efc21b65` passed independent review; the installed host slice `de2d24a4` passed its separate fresh host review. The three original consumer-package issues remain open. This record covers one local Linux x86-64 four-file pilot, not an Actions run or publication.
+Status: accepted at `88d23f97` after final fresh code review. Design `efc21b65` passed independent review; the installed host slice `de2d24a4` passed its separate fresh host review. The three original consumer-package issues remain open. This record covers one local Linux x86-64 four-file pilot, not an Actions run or publication.
 
 ## Clean source and archive receipt
 
