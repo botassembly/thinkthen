@@ -1,77 +1,12 @@
 //! The closed JSON settings object for the C constructor.
 
 use std::num::NonZeroUsize;
-use std::{collections::HashSet, time::Duration};
+use std::time::Duration;
 
 use serde_json::{Map, Value};
 use thinkthen::{BatchSetting, Engine, EngineBuilder};
 
 use crate::failures::Failure;
-
-/// Reject repeated top-level keys before `serde_json::Map` can lose them.
-#[expect(
-    clippy::indexing_slicing,
-    reason = "the scan bounds each JSON byte offset before reading it"
-)]
-fn duplicates(text: &str) -> Result<(), Failure> {
-    let bytes = text.as_bytes();
-    let mut at = text
-        .find('{')
-        .ok_or_else(|| Failure::usage("settings JSON is one object"))?
-        + 1;
-    let mut keys = HashSet::new();
-    while at < bytes.len() {
-        while at < bytes.len() && bytes[at].is_ascii_whitespace() {
-            at += 1;
-        }
-        if bytes.get(at) == Some(&b'}') {
-            return Ok(());
-        }
-        let start = at;
-        at += 1;
-        while at < bytes.len() {
-            if bytes[at] == b'\\' {
-                at += 2;
-                continue;
-            }
-            if bytes[at] == b'"' {
-                at += 1;
-                break;
-            }
-            at += 1;
-        }
-        let key: String = serde_json::from_str(&text[start..at])
-            .map_err(|_| Failure::usage("settings JSON is one object"))?;
-        if !keys.insert(key.clone()) {
-            return Err(Failure::usage(format!("settings JSON repeats key {key}")));
-        }
-        while at < bytes.len() && bytes[at] != b':' {
-            at += 1;
-        }
-        at += 1;
-        let mut depth = 0usize;
-        let mut quoted = false;
-        while at < bytes.len() {
-            match bytes[at] {
-                b'\\' if quoted => {
-                    at += 2;
-                    continue;
-                }
-                b'"' => quoted = !quoted,
-                b'{' | b'[' if !quoted => depth += 1,
-                b'}' | b']' if !quoted && depth > 0 => depth -= 1,
-                b',' if !quoted && depth == 0 => {
-                    at += 1;
-                    break;
-                }
-                b'}' if !quoted && depth == 0 => return Ok(()),
-                _ => {}
-            }
-            at += 1;
-        }
-    }
-    Ok(())
-}
 
 fn apply(
     mut builder: EngineBuilder,
@@ -103,6 +38,8 @@ fn apply(
                     Failure::usage("a request limit is a whole number of 1 or more")
                 })?))?
             }
+            "max_requests_total" if value.is_null() => builder.max_requests_total(None),
+            "max_requests_total" => builder.max_requests_total(Some(whole()?)),
             "max_request_bytes" => builder
                 .max_request_bytes(usize::try_from(whole()?).map_err(|_| {
                     Failure::usage("a request size is a whole number of 1 or more")
@@ -138,12 +75,12 @@ pub(crate) fn batch(value: &Value) -> Result<BatchSetting, Failure> {
 }
 
 pub(crate) fn build(text: &str) -> Result<Engine, Failure> {
+    EngineBuilder::validate_settings_json(text).map_err(Failure::from)?;
     let value: Value =
         serde_json::from_str(text).map_err(|_| Failure::usage("settings JSON is one object"))?;
     let values = value
         .as_object()
         .ok_or_else(|| Failure::usage("settings JSON is one object"))?;
-    duplicates(text)?;
     apply(EngineBuilder::from_env()?, values)?
         .build()
         .map_err(Failure::from)

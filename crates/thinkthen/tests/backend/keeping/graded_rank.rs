@@ -202,10 +202,15 @@ fn graded_rank_refuses_typed_meanings_and_dry_run_sends_nothing() -> io::Result<
         assert!(listener.requests().is_empty());
     }
 
-    let plan = run("rank", &file, listener.base(), &["--dry-run"])?;
+    let plan = run("rank", &file, listener.base(), &["--plan"])?;
     assert_eq!(plan.status.code(), Some(0), "{:?}", plan.stderr);
     assert!(plan.stderr.is_empty());
-    let value: Value = serde_json::from_slice(&plan.stdout)?;
+    let value: Value = serde_json::from_slice(
+        plan.stdout
+            .split(|byte| *byte == b'\n')
+            .next()
+            .expect("plan line"),
+    )?;
     assert_eq!(value["request"], serde_json::from_str::<Value>(BODIES[0])?);
     assert_eq!(value["from"]["question"], "file");
     assert_eq!(value["from"]["levels"], "file");

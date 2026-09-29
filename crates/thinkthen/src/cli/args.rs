@@ -44,6 +44,11 @@ pub(crate) struct Common {
     #[arg(long, hide_short_help = true)]
     pub(crate) facts: bool,
 
+    /// Refuse a live attempt once this process has sent N attempts. Cache and
+    /// replay answers use no attempt; zero allows no live sends.
+    #[arg(long, value_name = "N", hide_short_help = true)]
+    pub(crate) max_requests_total: Option<u64>,
+
     /// Print the full result object in place of the bare value.
     ///
     /// In record mode the object also carries `input`, the whole record as it
@@ -97,8 +102,12 @@ pub(crate) struct Common {
 
     /// Print what would be sent and stop. An optional key is checked against
     /// the address; no key is required and no connection opens.
-    #[arg(long)]
+    #[arg(long = "plan")]
     pub(crate) dry_run: bool,
+
+    /// The removed spelling is parsed only to give the migration sentence.
+    #[arg(long = "dry-run", hide = true)]
+    pub(crate) retired_dry_run: bool,
 
     /// The base the request is posted under, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
@@ -194,6 +203,15 @@ pub(crate) struct Common {
 }
 
 impl Common {
+    pub(crate) fn check_plan_name(&self) -> Result<(), crate::failure::Failure> {
+        if self.retired_dry_run {
+            return Err(crate::failure::Failure::Usage(
+                "--dry-run was renamed --plan",
+            ));
+        }
+        Ok(())
+    }
+
     /// The record framing the command line asked for.
     pub(crate) const fn framing(&self) -> Framing {
         if self.lines {

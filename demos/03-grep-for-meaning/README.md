@@ -24,13 +24,14 @@ Two of the five reports pass. The feature request, the vague one, and the how-to
 
 ## Step 1: see what leaves the machine
 
-`--field` is the disclosure boundary: only the value it names is sent. `--dry-run` prints the request that would go out, reads no key, and opens no connection, so a reviewer can read it before anyone pays for one.
+`--field` is the disclosure boundary: only the value it names is sent. `--plan` prints the request that would go out, reads no key, and opens no connection, so a reviewer can read it before anyone pays for one.
 
 ```bash
 set -euo pipefail
 
 env -u THINKTHEN_API_KEY thinkthen filter 'Does the report give steps that would reproduce a defect?' \
-  --csv --field /body --threshold 0.9 --dry-run --input issues.csv \
+  --csv --field /body --threshold 0.9 --plan --input issues.csv \
+  | sed -n '1p' \
   | jq -S -c 'keys, .input, {state: (.request.state | .[0:20])}' \
   | mustmatch '["input","key_env","model","request","url"]
 {"field":["/body"],"framing":"csv"}
@@ -43,7 +44,7 @@ The plan names the key variable and never a key. The reporter's address is in ev
 set -euo pipefail
 
 env -u THINKTHEN_API_KEY thinkthen filter 'Does the report give steps that would reproduce a defect?' \
-  --csv --field /body --threshold 0.9 --dry-run --input issues.csv \
+  --csv --field /body --threshold 0.9 --plan --input issues.csv \
   | mustmatch not like "example.net"
 ```
 

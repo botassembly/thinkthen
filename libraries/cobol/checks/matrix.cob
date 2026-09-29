@@ -38,6 +38,9 @@ working-storage section.
    02 failure-message pic x(512).
    02 failure-facts-length usage binary-double unsigned.
    02 failure-facts-json pic x(8192).
+01 facts-row.
+   02 facts-length usage binary-double unsigned.
+   02 facts-json pic x(8192).
 01 answer-row.
    02 outcome usage binary-long signed.
    02 alignment-pad usage binary-long unsigned.
@@ -106,7 +109,7 @@ procedure division.
     move 111 to outcome
     move "interior-nul-guard" to operation-name
     call "TT-DECIDE" using engine question-text q-len text-input text-len
-       answer-row failure-row
+       answer-row facts-row failure-row
     if failure-code not = 1 or outcome not = 111
        perform fail-now
     end-if
@@ -302,11 +305,12 @@ procedure division.
 
 typed-case.
     call "TT-DECIDE" using engine question-text q-len text-input text-len
-       answer-row failure-row
-    if failure-code not = 0 perform fail-now end-if.
+       answer-row facts-row failure-row
+    if failure-code not = 0 or facts-length = 0
+       or facts-json = spaces perform fail-now end-if.
 expect-usage-typed.
     call "TT-DECIDE" using engine question-text q-len text-input text-len
-       answer-row failure-row
+       answer-row facts-row failure-row
     if failure-code not = 1 or failure-retryable not = 0
        perform fail-now end-if.
 json-case.

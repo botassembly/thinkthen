@@ -32,7 +32,7 @@ fn bare_star_and_any_rules_give_one_plan_and_one_digest() {
     one_answer(|rule| {
         stdout(&run(
             &listener,
-            &["person", "organization", "--relation", rule, "--dry-run"],
+            &["person", "organization", "--relation", rule, "--plan"],
             b"Ada met Acme.",
         ))
     });
@@ -116,7 +116,7 @@ fn relate_gives_one_plan_for_the_three_spellings() {
         let arguments = [
             "relate",
             rule,
-            "--dry-run",
+            "--plan",
             "--url",
             listener.base(),
             "--model",

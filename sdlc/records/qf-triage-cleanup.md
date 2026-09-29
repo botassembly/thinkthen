@@ -91,15 +91,20 @@ or space paths; the new cases pin those previously missed boundaries.
   binary. The absolute warm build path passed. M5 lacked that binary, so its
   focused primitive proof cannot be reported as an M5 demo replay.
 
-## Integration limit
+## Initial integration limit
 
-The issue remains open until the coordinator integrates the reviewed
-candidate and runs one named full lint checkpoint on main after 0275's
-separate hidden-package campaign. Focused lint, policy, pages, tickets, and
+At candidate handoff, the issue remained open until the coordinator integrated the reviewed candidate and ran one named full lint checkpoint on main after 0275's separate hidden-package campaign. Focused lint, policy, pages, tickets, and
 diff checks are candidate evidence only. The
 coordinator can decide whether an M5 full replay is needed after arranging a
 source-compatible binary; it was not available in this focused proof.
 
 ## Independent acceptance and integration
 
-Fresh independent High review accepted `da126032`. The coordinator integrated the unchanged cleanup and publisher and checked the recursive-cleanup guard on main. The full lint criterion remains open: issue0275 separates the hidden package campaign, and the separately filed port child-environment findings remain. No whole-tree lint pass is claimed.
+Fresh independent High review accepted `da126032`. The coordinator integrated the unchanged cleanup and publisher and checked the recursive-cleanup guard on main. At that integration, the full lint criterion remained open for issue0275 and the separately filed port child-environment findings. That earlier step did not claim a whole-tree lint pass.
+
+
+## Final integration checkpoint
+
+The coordinator ran the complete `sdlc/scripts/lint` on main `45973d198`; it exited0. The local receipt is `target/codex-builds/integrated-lint-2026-09-29/4-output-dart-fixed.log`. Private-source, policy, catalog, ticket, child environment, version/workflow/installer, page/named-answer, all registered source ratchets and dependency checks, formatting, Clippy, rustdoc and the442-item public API inventory passed. The four inventory plants refused. The emitted `Killed` line is the registry's intentional TERM-ignoring child cleanup test; its exit143 and absence checks passed. Clippy took10.18seconds and rustdoc1.89seconds on the warm lane.
+
+This closes the original main-lint criterion after the independently reviewed child-environment and Dart fence corrections. No full product `test`, `spec`, `surfaces`, provider or additional M5 demo run was performed. The existing focused cleanup and platform-primitive proofs retain their stated limits.

@@ -3,7 +3,9 @@ use std::io::Write;
 use serde::Serialize;
 
 use super::config::From;
-use crate::core::{Backend, BackendProfile, Framing, RelateFields, RelateSpec, json_line};
+use crate::core::{
+    Backend, BackendProfile, Framing, PlanSummary, RelateFields, RelateSpec, json_line,
+};
 use crate::edge;
 use crate::engine::facade::PreparedRelations;
 use crate::failure::Failure;
@@ -61,6 +63,15 @@ pub(super) fn write(
     context: Context<'_>,
     prepared: &PreparedRelations,
 ) -> Result<(), Failure> {
+    let mut summary = PlanSummary::new(true);
+    summary
+        .records_added(context.entity_count)
+        .map_err(|_| Failure::Defect("a plan is too large"))?;
+    for chunk in &prepared.chunks {
+        summary
+            .request(&chunk.request.body)
+            .map_err(|_| Failure::Defect("a plan is too large"))?;
+    }
     let relations = prepared
         .rules
         .iter()
@@ -105,5 +116,10 @@ pub(super) fn write(
         request_count: requests.len(),
         requests,
     };
-    edge::write_line(writer, &json_line(&report)?).map(|_| ())
+    edge::write_line(&mut *writer, &json_line(&report)?)?;
+    let counts = summary
+        .counts()
+        .map_err(|_| Failure::Defect("a plan is too large"))?;
+    edge::write_line(writer, &json_line(&counts)?)?;
+    Ok(())
 }

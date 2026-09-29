@@ -219,7 +219,7 @@ fn a_collision_and_dry_run_send_no_request() {
     );
 
     let mut dry = common.to_vec();
-    dry.push("--dry-run");
+    dry.push("--plan");
     let planned = spawn(&dry, &[], br#"{"body":"The service failed."}"#).expect("the command runs");
     assert_eq!(planned.status.code(), Some(0));
     let stdout = String::from_utf8_lossy(&planned.stdout);
@@ -237,7 +237,7 @@ fn a_missing_questions_wrapper_wins_over_an_unknown_top_level_key() {
         r#"{"version":1,"unresolved":{"decide":"Still open?"}}"#,
     );
     let output = spawn(
-        &["annotate", &file.to_string_lossy(), "--dry-run"],
+        &["annotate", &file.to_string_lossy(), "--plan"],
         &[],
         b"evidence",
     )
@@ -259,7 +259,7 @@ fn likely_path_mistakes_name_the_input_option_and_the_swap() {
             "annotate",
             &questions.to_string_lossy(),
             &evidence.to_string_lossy(),
-            "--dry-run",
+            "--plan",
         ],
         &[],
         b"",
@@ -277,7 +277,7 @@ fn likely_path_mistakes_name_the_input_option_and_the_swap() {
             &evidence.to_string_lossy(),
             "--input",
             &questions.to_string_lossy(),
-            "--dry-run",
+            "--plan",
         ],
         &[],
         b"",
@@ -466,12 +466,8 @@ fn a_question_set_named_with_at_is_the_same_file() {
     let file = questions();
     let plain = file.to_string_lossy().into_owned();
     let plan = |named: &str| {
-        spawn(
-            &["annotate", named, "--dry-run"],
-            &[],
-            b"The service failed.",
-        )
-        .expect("the compiled binary runs")
+        spawn(&["annotate", named, "--plan"], &[], b"The service failed.")
+            .expect("the compiled binary runs")
     };
     let bare = plan(&plain);
     let at = plan(&format!("@{plain}"));

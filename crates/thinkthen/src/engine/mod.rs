@@ -7,6 +7,7 @@ use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
 
 pub(crate) mod call_facts;
+mod send_budget;
 pub(crate) use call_facts::CallFacts;
 
 const CANCEL_POLL: Duration = Duration::from_millis(50);
@@ -40,7 +41,9 @@ pub(crate) struct Cancel<'a> {
     deadline: Option<Deadline>,
     check: Option<Check<'a>>,
     sends: Arc<AtomicUsize>,
+    sent_any: Arc<AtomicBool>,
     send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    process_budget: Option<(crate::public::SendBudget, Option<u64>)>,
     facts: Option<CallFacts>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
@@ -110,42 +113,6 @@ impl<'a> Cancel<'a> {
             token,
             ..self.clone()
         }
-    }
-
-    pub(crate) fn with_send_budget(
-        &self,
-        send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
-    ) -> Self {
-        Self {
-            send_budget,
-            ..self.clone()
-        }
-    }
-
-    /// Only a zero limit is certainly spent without reserving an attempt.
-    pub(crate) fn has_zero_send_limit(&self) -> bool {
-        matches!(self.send_budget, Some((_, Some(0))))
-    }
-
-    pub(crate) fn reserve_send(
-        &self,
-        last_status: Option<u16>,
-    ) -> Result<Option<crate::public::SendReservation>, error::Error> {
-        self.send_budget
-            .as_ref()
-            .map(|(budget, limit)| {
-                budget
-                    .reserve(*limit, last_status)
-                    .map_err(|denial| match denial {
-                        crate::public::SendBudgetDenial::BeforeFirstSend => {
-                            error::Error::SendBudgetFirst
-                        }
-                        crate::public::SendBudgetDenial::BeforeRetry { last_status } => {
-                            error::Error::SendBudgetRetry(last_status)
-                        }
-                    })
-            })
-            .transpose()
     }
 
     /// Share this stop flag with one call whose host check runs on this thread.

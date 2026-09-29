@@ -364,7 +364,7 @@ fn different_models_across_chunks_keep_the_safe_failure() {
     );
 }
 
-/// Edge rows 9 and 10: `--dry-run` prints the first request a live run sends
+/// Edge rows 9 and 10: `--plan` prints the first request a live run sends
 /// and counts the requests each `on` group makes.
 #[test]
 fn the_plan_shows_each_request() {
@@ -373,7 +373,7 @@ fn the_plan_shows_each_request() {
         let mut arguments = vec![
             "annotate",
             set,
-            "--dry-run",
+            "--plan",
             "--model",
             "local-1",
             "--no-cache",
@@ -405,7 +405,8 @@ fn the_plan_shows_each_request() {
     assert_eq!(code, Some(0), "{line}");
     let counts = r#"]},"request_count":3,"group_requests":[3],"request":{"#;
     assert!(line.contains(counts), "{line}");
-    let plan: serde_json::Value = serde_json::from_str(&line).expect("one JSON plan");
+    let plan: serde_json::Value =
+        serde_json::from_str(line.lines().next().expect("plan line")).expect("one JSON plan");
     let sent = plan["request"]["questions"].as_object().expect("questions");
     let last = sent["q100"]["instructions"].as_str();
     assert_eq!((sent.len(), last), (100, Some("Question 100?")));
@@ -421,6 +422,8 @@ fn the_plan_shows_each_request() {
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","#,
             r#""on":{"concise":["/summary"],"refund":["/body"]},"request_count":2,"group_requests":[1,1],"#,
             r#""request":{"state":"Short note.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is this concise?"}}}}"#,
+            "\n",
+            r#"{"records":1,"requests":2,"estimated_bytes":230,"estimated_input_tokens":{"lower":118,"upper":209},"upper_bound":false}"#,
             "\n",
         )
         .to_owned(), Some(0))

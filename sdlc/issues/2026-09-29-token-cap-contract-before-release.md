@@ -16,6 +16,6 @@ Specify reservation and settlement for concurrent calls, retries, refusal splits
 
 ## Proof and routing
 
-Schedule the API/design decision beside the SQL/frame foundation; implementation follows0289's accepted reservation/tally work. The coordinator may assign0299 after the design scope is prepared. Current0.1 request-cap and preview work need not wait for speculative token enforcement. Any change to Ian's recorded first-follow-up release boundary needs an explicit reviewed disposition, not an assumed deadline.
+Schedule the API/design decision beside the SQL/frame foundation; implementation follows0289's accepted reservation/tally work. Design0299 is accepted after fresh High review at `f49eaccf2`, with its [preparation record](../records/0299-token-cap-preparation.md) on main. The ticket remains on its pushed branch until implementation. Current0.1 request-cap and preview work need not wait for speculative token enforcement. Any change to Ian's recorded first-follow-up release boundary needs an explicit reviewed disposition, not an assumed deadline.
 
 Use one bounded loopback table with independently counted attempts: two concurrent reservations, a retry/split boundary, cache/replay with zero sends, absent usage, a failed response, and output arriving after admission. Derive expected values independently of the implementation. Do not repeat the full table in every wrapper or run a paid/saturation campaign. Implementation closure requires code, review and matching host conversion proof; an accepted design alone does not close this issue.

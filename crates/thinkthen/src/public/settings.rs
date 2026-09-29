@@ -61,6 +61,7 @@ pub struct EngineBuilder {
     model: Option<ModelName>,
     width: Option<Width>,
     max_requests: Option<usize>,
+    max_requests_total: Option<u64>,
     max_request_bytes: usize,
     batch: Option<crate::core::Setting>,
     env_batch: Option<String>,
@@ -83,6 +84,7 @@ impl fmt::Debug for EngineBuilder {
             .field("model", &self.model)
             .field("width", &self.width)
             .field("max_requests", &self.max_requests)
+            .field("max_requests_total", &self.max_requests_total)
             .field("max_request_bytes", &self.max_request_bytes)
             .field("batch", &self.batch)
             .field("env_batch", &self.env_batch.is_some())
@@ -99,6 +101,16 @@ impl fmt::Debug for EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Validate the closed C/host engine-settings object without reading the
+    /// environment. The total-request cap is active before any send.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for duplicate, unknown, or invalid settings.
+    pub fn validate_settings_json(text: &str) -> Result<(), Error> {
+        crate::core::engine_settings(text).map_err(Error::usage)
+    }
+
     pub(crate) fn new() -> Self {
         Self {
             base_url: None,
@@ -106,6 +118,7 @@ impl EngineBuilder {
             model: None,
             width: None,
             max_requests: None,
+            max_requests_total: None,
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
             batch: None,
             env_batch: None,
@@ -255,6 +268,15 @@ impl EngineBuilder {
         }
         self.max_requests = value;
         Ok(self)
+    }
+
+    /// Limit this engine's live attempts against the shared process count.
+    /// `None` leaves this engine unbounded while its sends still count for
+    /// other engines. Zero refuses every live attempt.
+    #[must_use]
+    pub fn max_requests_total(mut self, value: Option<u64>) -> Self {
+        self.max_requests_total = value;
+        self
     }
 
     /// Set the request-byte ceiling for split plans. A lone question still goes alone.
@@ -430,7 +452,14 @@ impl EngineBuilder {
             }),
             usage: Arc::new(Counters::new(None)),
         };
-        super::Engine::from_settings(settings, self.max_requests, profile, roots, batch)
+        super::Engine::from_settings(
+            settings,
+            self.max_requests,
+            self.max_requests_total,
+            profile,
+            roots,
+            batch,
+        )
     }
 
     fn storage(&self) -> Result<Storage, Error> {

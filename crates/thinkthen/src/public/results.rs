@@ -5,6 +5,8 @@ use std::fmt;
 
 mod call;
 pub use call::{Call, Facts};
+mod tally;
+pub use tally::{Tally, TallyStart};
 mod member;
 pub(crate) use member::{Member, ParentReceipt};
 mod observation;

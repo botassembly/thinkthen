@@ -15,6 +15,17 @@ mod at_once;
 mod ceiling;
 mod details;
 
+fn plan_json(output: &Output) -> Value {
+    let shown = String::from_utf8_lossy(&output.stdout);
+    let mut lines = shown.lines();
+    let plan = serde_json::from_str(lines.next().expect("plan report")).expect("plan JSON");
+    let counts: Value =
+        serde_json::from_str(lines.next().expect("whole-input counts")).expect("counts JSON");
+    assert_eq!(counts["upper_bound"], true);
+    assert_eq!(lines.next(), None);
+    plan
+}
+
 pub(super) fn run(listener: &Listener, options: &[&str], input: &[u8]) -> Output {
     let mut arguments = vec![
         "relate",
@@ -78,7 +89,7 @@ fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Paris","kind":"place"},{"name":"Acme","kind":"organization"}]"#;
     let output = run(
         &listener,
-        &["works_for=person:organization", "--dry-run"],
+        &["works_for=person:organization", "--plan"],
         input,
     );
     assert_eq!(
@@ -101,7 +112,7 @@ fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
     );
     let sent: Value = serde_json::from_slice(&sent.stdout).expect("details");
     let digest = sent["meta"]["requests"][0].as_str().expect("sent digest");
-    let plan: Value = serde_json::from_slice(&output.stdout).expect("plan");
+    let plan = plan_json(&output);
     assert_eq!(plan["schema"], "thinkthen.relate-plan/1");
     assert_eq!(plan["entity_count"], 3);
     assert_eq!(plan["logical_questions"], 1);
@@ -167,11 +178,11 @@ fn a_wildcard_rule_expands_to_concrete_kinds_in_first_seen_order() {
     let listener = Listener::answering(answered).expect("listener");
     let output = run(
         &listener,
-        &["linked=*:organization", "--dry-run"],
+        &["linked=*:organization", "--plan"],
         br#"[{"name":"Acme","kind":"organization"},{"name":"Ada","kind":"person"},{"name":"Beta","kind":"organization"}]"#,
     );
     assert_eq!(output.status.code(), Some(0));
-    let plan: Value = serde_json::from_slice(&output.stdout).expect("plan");
+    let plan = plan_json(&output);
     assert_eq!(plan["relations"].as_array().expect("relations").len(), 1);
     assert_eq!(plan["relations"][0]["source"], "*");
     assert_eq!(plan["relations"][0]["target"], "organization");
@@ -257,7 +268,7 @@ fn every_settled_empty_input_outcome_is_identical_in_normal_and_dry_runs() {
         for dry in [false, true] {
             let mut options = arguments.to_vec();
             if dry {
-                options.push("--dry-run");
+                options.push("--plan");
             }
             let output = run(&listener, &options, input);
             assert_eq!(output.status.code(), Some(0), "{options:?}");
@@ -275,7 +286,7 @@ fn every_settled_empty_input_outcome_is_identical_in_normal_and_dry_runs() {
         for dry in [false, true] {
             let mut options = arguments.to_vec();
             if dry {
-                options.push("--dry-run");
+                options.push("--plan");
             }
             let output = run(&listener, &options, input);
             assert_eq!(output.status.code(), Some(2), "{options:?}");
@@ -379,7 +390,7 @@ fn a_question_file_beside_inline_rules_is_refused_before_any_send() {
         for dry in [false, true] {
             let mut options = rules.to_vec();
             if dry {
-                options.push("--dry-run");
+                options.push("--plan");
             }
             let output = run(&listener, &options, input);
             assert_eq!(output.status.code(), Some(2), "{options:?}");
@@ -408,7 +419,7 @@ fn an_option_limit_does_not_change_pair_requests() {
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Grace","kind":"person"},{"name":"Acme","kind":"organization"},{"name":"Beta","kind":"organization"},{"name":"Core","kind":"organization"}]"#;
     let mut plans = Vec::new();
     for profiled in [false, true] {
-        let mut options = vec!["works_for=person:organization", "--dry-run"];
+        let mut options = vec!["works_for=person:organization", "--plan"];
         if profiled {
             options.extend(["--profile", profile.to_str().expect("path")]);
         }
@@ -419,7 +430,7 @@ fn an_option_limit_does_not_change_pair_requests() {
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
-        plans.push(serde_json::from_slice::<Value>(&output.stdout).expect("plan"));
+        plans.push(plan_json(&output));
     }
     assert_eq!(plans[0]["backend_profile"], Value::Null);
     assert_eq!(plans[0]["relations"][0]["method"], "yes_no");

@@ -121,6 +121,8 @@ impl Cancel<'_> {
     }
 
     pub(crate) fn sent(&self) {
+        self.sent_any
+            .store(true, std::sync::atomic::Ordering::Release);
         if let Some(facts) = &self.facts {
             facts.sent();
         }

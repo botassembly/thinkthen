@@ -60,7 +60,7 @@ A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and
 
 The question text under the verb's key is a string, an object, or a list. A string that is empty or holds only white space is refused. An object or a list is the instruction the vendor asked for; the tool carries it and never rewrites it into a sentence. An empty object and an empty list are values, not absence. A null, a number, or a boolean is not question text. The same holds wherever this page says TEXT.
 
-`true` and `false` take a string, an object, a list, or `null`. A `null` written in the file is a present criterion, not an absent key. A string that is empty or holds only white space is refused.
+`true` and `false` take a string, an object, a list, or `null`. A `null` written in the file remains a present criterion in the parsed question and its canonical digest, not an absent input key. The System One encoder omits that null description from `noul` wire criteria; it sends only non-null descriptions. A string that is empty or holds only white space is refused.
 
 `options` and `labels` are lists, or maps from each label to its description. A description is a string, an object, a list, or `null`. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is `null`, empty, or holds only white space is no description.
 
@@ -72,9 +72,9 @@ A description that is an object conventionally holds `what`, `not_for`, and `exa
 
 ## The published schema
 
-`question-file.schema.json`, beside this page, is the grammar above as a Draft 2020-12 JSON Schema. Its root composes five definitions, `decide`, `choose`, `tag`, `score`, and `relate`, each one the complete structural shape of a single question file for that verb. A question-set member has additional contextual rules from [annotate.md](annotate.md), so these definitions do not validate one by themselves. `fixtures/question-file/corpus.json` is the shared corpus: every case names a file and a verdict, a self-test under the test rung proves the schema and each named definition agree with each verdict, and an integration test runs each case through the parser and `--dry-run` for the same verdict.
+`question-file.schema.json`, beside this page, is the grammar above as a Draft 2020-12 JSON Schema. Its root composes five definitions, `decide`, `choose`, `tag`, `score`, and `relate`, each one the complete structural shape of a single question file for that verb. A question-set member has additional contextual rules from [annotate.md](annotate.md), so these definitions do not validate one by themselves. `fixtures/question-file/corpus.json` is the shared corpus: every case names a file and a verdict, a self-test under the test rung proves the schema and each named definition agree with each verdict, and an integration test runs each case through the parser and `--plan` for the same verdict.
 
-The schema is structural; agreement with it is not agreement with this page. The checks it cannot express stay in the parser: members of one object that share a name, repeated label or level names, the threshold's range and band form, and RFC 6901 pointer syntax. The schema's name pattern is also stricter than the `model` check, which refuses only blank text. A run never interprets the schema; `--dry-run` runs the production parser and its full semantic validation.
+The schema is structural; agreement with it is not agreement with this page. The checks it cannot express stay in the parser: members of one object that share a name, repeated label or level names, the threshold's range and band form, and RFC 6901 pointer syntax. The schema's name pattern is also stricter than the `model` check, which refuses only blank text. A run never interprets the schema; `--plan` runs the production parser and its full semantic validation.
 
 ## One table for every setting
 
@@ -100,7 +100,7 @@ Ruled by Ian on 2026-09-19: **the command line, then the file, then the default.
 
 A single value typed beside `@FILE` replaces the file's value. That covers `--threshold`, `--true`, `--false`, `--model`, and `--field`, which replaces `on`. `profile` is calibration identity and has no command-line override. `--profile FILE` selects the run profile instead. `--model` beside a file that names a model is the explicit way to run that file on another model.
 
-For example, put `{"schema":"thinkthen.config/1","model":"configured-1"}` in `$XDG_CONFIG_HOME/thinkthen/config.json` and `{"decide":"Is this a complaint?","model":"saved-1"}` in `question.json`. With `XDG_CONFIG_HOME` pointing at that configuration home, `thinkthen decide @question.json --dry-run < message.txt | jq -r .model` prints `saved-1`. Add `--model typed-1` to that call and it prints `typed-1`. The file's `model` therefore beats the configured model, while the typed flag beats the file. The complete model order is in [settings.md](settings.md#precedence); there is no model environment variable.
+For example, put `{"schema":"thinkthen.config/1","model":"configured-1"}` in `$XDG_CONFIG_HOME/thinkthen/config.json` and `{"decide":"Is this a complaint?","model":"saved-1"}` in `question.json`. With `XDG_CONFIG_HOME` pointing at that configuration home, `thinkthen decide @question.json --plan < message.txt | sed -n '1p' | jq -r .model` prints `saved-1`. Add `--model typed-1` to that call and it prints `typed-1`. The file's `model` therefore beats the configured model, while the typed flag beats the file. The complete model order is in [settings.md](settings.md#precedence); there is no model environment variable.
 
 `--batch` replaces the file's `batch`. On `decide`, `filter`, `rank`, `choose`, `tag`, and `score` over a stream, `batch` takes four tiers: `--batch`, then `THINKTHEN_BATCH`, then the file's `batch`, then `max`. Only a per-call value counts as typed. The read-only configuration file holds no `batch` key. The file's `batch` stays out of the digest. On one document `--batch` is a usage error, and `THINKTHEN_BATCH` and the file's `batch` are ignored. A bad `--batch` or `THINKTHEN_BATCH` exits 2, and a bad file `batch` exits 5. A file with a threshold was tuned at its saved `batch`, or at 1 if it has no `batch`. A record run at another setting warns once and adds `meta.batch_warning` to detailed rows. A file without a threshold has no tuned-for setting. `audit --write` records a batched setting when it writes a threshold and never writes 1; a bar tuned at 1 leaves `batch` absent and warns at the batched default. A library engine setting and a SQL `SET` join the environment tier, and a question set carries at most one top-level `batch`. For CLI `annotate` record streams, the tiers are typed `--batch`, `THINKTHEN_BATCH`, top-level set `batch`, then `max`. That set key stays out of `questions_sha256`; each nested `questions.NAME.batch` remains invalid. Every other setting keeps the ruling above.
 
@@ -116,7 +116,7 @@ The question that results passes every check a typed question passes, and the me
 
 ## Where each setting came from
 
-Under `--dry-run`, a run that used a file prints a `from` object before the request. It names each setting's source as `file`, `command line`, or `default`.
+Under `--plan`, a run that used a file prints a `from` object before the request. It names each setting's source as `file`, `command line`, or `default`.
 
 ```json
 {"from": {"question": "file", "true": "file", "false": "command line", "threshold": "file", "on": "default", "model": "default"}}
@@ -124,7 +124,7 @@ Under `--dry-run`, a run that used a file prints a `from` object before the requ
 
 A run with no question file prints no `from` object, because every setting came from the one place the user is looking at.
 
-`recognize --dry-run` prints the `thinkthen.recognize-plan/2` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
+`recognize --plan` prints the `thinkthen.recognize-plan/2` request plan. Its file-backed plan carries `{"from":{"question":"file"}}` to identify the source of the complete recognize question.
 
 ## The digest of a question
 

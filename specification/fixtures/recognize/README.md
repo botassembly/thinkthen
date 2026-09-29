@@ -178,15 +178,15 @@ thinkthen audit "$work/edges.jsonl" "$work/unstated.jsonl" --match strict --tabl
   | mustmatch "  matched 0, extra 26, missed 5: precision 0.000   recall 0.000   f1 0.000"
 ```
 
-The long text splits into 1,183 pieces. Its dry run plans 30 step-1 requests of at most 40 pieces each, and no request carries the whole text. The replay grades against the long key, and its input tokens come to 258 a word.
+The long text splits into 1,183 pieces. Its plan prepares 30 step-1 requests of at most 40 pieces each, and no request carries the whole text. The replay grades against the long key, and its input tokens come to 258 a word.
 
 ```bash
 set -euo pipefail
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 kinds='["person","place","organisation","work","thing"]'
-jq -r .text long.jsonl | env -u THINKTHEN_API_KEY thinkthen recognize person place organisation work thing --dry-run \
-  | jq -c --argjson whole "$(jq '.text | length' long.jsonl)" '{pieces, request_count, most: ([.requests[].body_utf8 | fromjson | .questions | length] | max), whole: ([.requests[].body_utf8 | fromjson | .state | length] | max >= $whole)}' \
+jq -r .text long.jsonl | env -u THINKTHEN_API_KEY thinkthen recognize person place organisation work thing --plan \
+  | sed -n '1p' | jq -c --argjson whole "$(jq '.text | length' long.jsonl)" '{pieces, request_count, most: ([.requests[].body_utf8 | fromjson | .questions | length] | max), whole: ([.requests[].body_utf8 | fromjson | .state | length] | max >= $whole)}' \
   | mustmatch '{"pieces":1183,"request_count":30,"most":40,"whole":false}'
 jq -c --argjson kinds "$kinds" -f kinds.jq long.jsonl > "$work/key.jsonl"
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL thinkthen recognize person place organisation work thing --replay recordings/long --details --jsonl --field /text < long.jsonl > "$work/run.jsonl"

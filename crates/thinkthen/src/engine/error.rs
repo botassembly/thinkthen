@@ -43,6 +43,8 @@ pub(crate) enum Error {
     Status(u16),
     /// A process send total refused the first live attempt.
     SendBudgetFirst,
+    /// A process send total refused another ordinary or split request.
+    SendBudgetAdditional,
     /// A process send total refused retrying this status.
     SendBudgetRetry(u16),
     /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
@@ -156,6 +158,7 @@ impl Error {
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_)
             | Self::SendBudgetFirst
+            | Self::SendBudgetAdditional
             | Self::ProfileLimit(_)
             | Self::NoKey(_)
             | Self::WidthActive(_)

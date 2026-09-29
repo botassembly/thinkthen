@@ -78,3 +78,7 @@ Fifteen jobs were written before the code, and thirteen pages hold what is left 
 - A structured question or option description. ADR 0010 struck it from version one, and every question on these pages is one sentence.
 - `--options POINTER` on `choose`, from ADR 0009 item 4. No demo had a candidate list that changes per record.
 - Exit codes 5 and 70. Demos 12 and 15 name codes in `case` branches and no page produces either.
+
+## 2026-09-29 plan update
+
+The rows above preserve the observations made under the former `--dry-run` flag. ADR 0105 renamed asking and check preview to `--plan`; it now validates the whole input and prints a second whole-input count line. `cache prune --dry-run` keeps its separate meaning.

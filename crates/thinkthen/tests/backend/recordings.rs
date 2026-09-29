@@ -343,9 +343,9 @@ fn two_different_folders_and_a_dry_run_that_records_are_usage_errors() {
     let folder = folder("two");
     let cases: [&[&str]; 4] = [
         &["--record", "one", "--replay", "another"],
-        &["--dry-run", "--record", "one"],
-        &["--dry-run", "--replay", "one"],
-        &["--dry-run", "--record", "one", "--replay", "another"],
+        &["--plan", "--record", "one"],
+        &["--plan", "--replay", "one"],
+        &["--plan", "--record", "one", "--replay", "another"],
     ];
 
     for arguments in cases {
@@ -513,8 +513,8 @@ fn cache_is_the_two_options_on_one_folder_and_stands_beside_neither() {
     }
 
     let output =
-        decide(listener.base(), &["--cache", &named, "--dry-run"], KEY).expect("the binary runs");
+        decide(listener.base(), &["--cache", &named, "--plan"], KEY).expect("the binary runs");
     assert_eq!(output.status.code(), Some(2));
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("--dry-run"), "{message}");
+    assert!(message.contains("--plan"), "{message}");
 }

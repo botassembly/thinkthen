@@ -32,7 +32,7 @@ On one document, a JSON string or `null` when the answer is not sure. In the def
 | `--options POINTER` | Takes the options from each record. Requires `--jsonl`. See below | None. The options come from the arguments |
 | `--quiet` | On one document, prints nothing on standard output. Record mode refuses it | Off |
 | `--details` | Prints the full result object | Off |
-| `--dry-run` | Prints the plan and sends nothing | Off |
+| `--plan` | Prints the plan and sends nothing | Off |
 | `--batch N`, `--context FILE` | Bound a record batch or give it shared evidence. See [records.md](records.md) | Fill to the backend limits; no shared context |
 | Record options | `--input`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field` | One document |
 | Backend options | `--url` in short and long help, and `--model` in long help. See [backends.md](backends.md) | The two variables and `jev-1.13.0` |

@@ -202,6 +202,9 @@ impl From<EngineError> for Error {
                 detail.retryable = error.retryable();
                 detail.send_budget_denial = match error {
                     EngineError::SendBudgetFirst => Some(SendBudgetDenial::BeforeFirstSend),
+                    EngineError::SendBudgetAdditional => {
+                        Some(SendBudgetDenial::BeforeAdditionalSend)
+                    }
                     EngineError::SendBudgetRetry(last_status) => {
                         Some(SendBudgetDenial::BeforeRetry { last_status })
                     }
@@ -224,6 +227,9 @@ fn message(error: &EngineError) -> String {
         }
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
         EngineError::SendBudgetFirst => "the process send budget was spent before a request",
+        EngineError::SendBudgetAdditional => {
+            "the process send budget was spent before another request in this call"
+        }
         EngineError::SendBudgetRetry(status) => {
             return format!("the process send budget was spent before retrying status {status}");
         }

@@ -30,7 +30,7 @@ The grammar is the verb, then the question, then what the verb needs. No verb ha
 
 An unknown option is a usage error. So is a repeated single-value option, and so is an option that cannot act in the chosen mode. Every one of them exits 2 before any request goes out.
 
-Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--dry-run`. The list names every one. Each verb's page says which of them it takes.
+Everyday options are `--threshold`, `--details`, `--quiet`, `--raw`, `--input FILE`, `--lines`, `--jsonl`, `--csv`, `--tsv`, `--field POINTER`, `--options POINTER`, `--top N`, `--none`, and `--plan`. The list names every one. Each verb's page says which of them it takes.
 
 Advanced options appear in the long help alone: `--model`, `--timeout`, `--max-retries`, `--record DIR`, `--replay DIR`, `--cache DIR`, `--jobs N`, `--facts`, and `--batch N` and `--context FILE` on `decide`, `filter`, `rank`, `choose`, `tag` and `score`. `--url` and `--profile FILE` also appear in short help. They decide where evidence goes and whether a request is locally refused before it goes there.
 
@@ -42,7 +42,7 @@ Without `--input FILE` the evidence comes from standard input. When standard inp
 
 Standard output holds a bare JSON value. `true`, `"bug"`, and `1.6` are whole outputs. [result.md](result.md) gives the value for each command and the object that `--details` prints in its place.
 
-`--quiet` suppresses standard output on `decide` and `choose` over one document. Record mode refuses it because no record's answer sets the exit code. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error. `--dry-run` may be added to any command line that is valid without it, and it prints the plan whatever view option stands beside it.
+`--quiet` suppresses standard output on `decide` and `choose` over one document. Record mode refuses it because no record's answer sets the exit code. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error. `--plan` may be added to any command line that is valid without it, and it prints the plan whatever view option stands beside it.
 
 `--raw` prints a `choose` label without its quotation marks and prints nothing for `null`. No other command takes it.
 
@@ -90,13 +90,13 @@ A gate is a command whose exit code decides whether something happens. Word the 
 
 `decide` exits 1 on a no and 3 on a not sure answer. Under `set -e` a plain `thinkthen decide ...` ends the script on either one. Under `set -o pipefail` a `decide` inside a pipeline gives the whole pipeline a non-zero status for the same reason. Put the command in an `if`, a `case`, or a `||` list. The help says so.
 
-## `--dry-run`
+## `--plan`
 
-`--dry-run` prints what the command would send and then stops. It calls no backend and needs no key. It sends nothing, so `--record` or `--replay` beside it is a usage error.
+`--plan` prints what the command would send and then stops. It calls no backend and needs no key. It sends nothing, so `--record` or `--replay` beside it is a usage error.
 
-For a one-document `decide`, `choose`, `tag` or `score` dry run with standard output on a terminal, standard error says `thinkthen: dry-run: request.state is the evidence; request.questions holds what you asked about it.` before the JSON appears. The hint contains no question or evidence text. With standard output piped or redirected, it does not appear, even if standard error is a terminal. Record-mode and other plans have no role hint; their evidence can sit in different parts of the request.
+For a one-document `decide`, `choose`, `tag` or `score` plan with standard output on a terminal, standard error says `thinkthen: plan: request.state is the evidence; request.questions holds what you asked about it.` before the JSON appears. The hint contains no question or evidence text. With standard output piped or redirected, it does not appear, even if standard error is a terminal. Record-mode and other plans have no role hint; their evidence can sit in different parts of the request.
 
-The plan is one compact JSON document on standard output with four fields that are always present.
+The first output line is one compact JSON document with four fields that are always present.
 
 ```json
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","request":{"state":"Help! My payouts have been failing for 3 days.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this convey urgency?"}}}}
@@ -104,9 +104,15 @@ The plan is one compact JSON document on standard output with four fields that a
 
 `request` is the body the adapter would send, as a JSON value and never as a string. `key_env` names the variable a key would be read from, so a script can prove that a key stays home. The plan never holds the value.
 
+The second output line counts the entire validated input. `requests` counts prepared requests before cache answers, refusal splits and retries. `estimated_bytes` sums their exact UTF-8 body lengths; `estimated_input_tokens.lower` rounds down at 0.516 tokens per byte and `upper` rounds up at 0.908. These measured rates estimate input tokens, not a provider bill. `upper_bound` marks staged recognize and relate work whose later requests depend on answers.
+
+```json
+{"records":1,"requests":1,"estimated_bytes":120,"estimated_input_tokens":{"lower":61,"upper":109},"upper_bound":false}
+```
+
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
-In record mode `--dry-run` prints the plan for the first record and stops. It reads no further than that record, and the plan carries a fifth field, `input`, naming the framing and the pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. On `decide`, `filter` and `rank` it plans the first batch instead. It reads until that batch closes and never waits on a pause. At `--batch 1` that batch is the first record.
+In record mode `--plan` validates every record before printing. The first line discloses the first prepared request; the second counts the whole input. The first line carries a fifth field, `input`, naming the framing and pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. Batched verbs use the same content, member and byte cuts as execution, without a pause boundary.
 
 ```json
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"request":{"state":"Payouts have failed for 3 days.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}
@@ -118,8 +124,8 @@ A run that read a question file carries one more field, `from`, between `input` 
 {"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","key_env":"THINKTHEN_API_KEY","from":{"question":"file","true":"file","false":"file","threshold":"command line","on":"default","model":"file"},"request":{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this message ask for a refund?","criteria":{"true":"The writer asks for money back.","false":"The writer asks for anything else."}}}}}
 ```
 
-`annotate --dry-run` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
+`annotate --plan` also checks the saved file, and its `input` object names each question's pointers. [annotate.md](annotate.md) gives both.
 
-`recognize --dry-run` reports its piece count and every exact step-1 request for the first record under `thinkthen.recognize-plan/2`. [recognize.md](recognize.md) fixes that schema.
+`recognize --plan` reports the first record’s exact step-1 requests under `thinkthen.recognize-plan/2` and counts the complete input on the second line. [recognize.md](recognize.md) fixes that schema.
 
-`relate --dry-run` reports the complete entity set, ordered rules, their fixed yes/no method and null fallback, and every exact shared request under `thinkthen.relate-plan/1`. It sends nothing and makes no token or price claim. [relate.md](relate.md) fixes that schema.
+`relate --plan` reports the complete entity set, ordered rules, their fixed yes/no method and null fallback, and every exact shared request under `thinkthen.relate-plan/1`. Its second line marks the request count as an upper bound. It sends nothing. [relate.md](relate.md) fixes that schema.

@@ -113,7 +113,8 @@ def product(path):
     folders = path.parts[:-1]
     tests = path.name == "tests.rs" or path.stem.endswith("_tests") or path.name.startswith("test_")
     return path.suffix in SOURCE and not tests and not any(
-        part in {"tests", "test", "tools"} or part.endswith("_tests") for part in folders)
+        part in {"checks", "fixtures", "Tests", "tests", "test", "tools"}
+        or part.endswith("_tests") for part in folders)
 
 
 def env_names():
@@ -244,7 +245,7 @@ def cases(text):
          [page + "THINKTHEN_CACHE is read by product code and has no row"]),
         ("a missing key", edit(text, KEY, "`on`", ""), [page + "on is a question-file key and has no row"]),
         ("a fenced decoy table", text.replace("## Settings\n", decoy, 1), []),
-        ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Threshold" has two rows']),
+        ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Annotate record failure policy" has two rows']),
         ("a missing engine cell", edit(text, COLUMNS.index("Python"), "`Engine(timeout=)`", "not on this surface"),
          [page + "Python Timeout source setter has no cell: timeout"]),
         ("a stale SQL cell", cell_edit(text, "Address", COLUMNS.index("DuckDB"), "`SET thinkthen_base_url`"),
@@ -256,6 +257,13 @@ def cases(text):
 def self_test(flags, names, keys):
     bad, text = 0, PAGE.read_text(encoding="utf-8")
     planted = cases(text)
+    # A package gate's source-like helper must not become a product setting;
+    # the matching library implementation remains in the scan.
+    helpers = ("checks", "fixtures", "Tests", "tests")
+    if any(product(pathlib.Path("libraries/example") / folder / "settings.py") for folder in helpers) or not product(
+            pathlib.Path("libraries/example/src/settings.py")):
+        bad += 1
+        print("settings self-test: package helper/product boundary failed", file=sys.stderr)
     for name, body, expected in planted:
         with tempfile.TemporaryDirectory() as tmp:
             copy = pathlib.Path(tmp) / "settings.md"
@@ -264,7 +272,7 @@ def self_test(flags, names, keys):
         if actual != expected:
             bad += 1
             print(f"settings self-test: {name}: expected {expected}, got {actual}", file=sys.stderr)
-    print(f"settings self-test: {len(planted) - bad}/{len(planted)} cases hold")
+    print(f"settings self-test: {len(planted) + 1 - bad}/{len(planted) + 1} cases hold")
     return bad
 
 

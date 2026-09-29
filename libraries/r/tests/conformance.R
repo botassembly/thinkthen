@@ -105,15 +105,21 @@ run_case <- function(case, served) {
       for (want in answers) same("bare", bare(got[[want$exchange + 1L]]), want$bare)
       counters <- case$expect$success$counters
       if (!is.null(counters)) {
-        carried <<- tt_usage()$requests_sent
-        folder <- tempfile("counters")
-        dir.create(folder)
-        tt_engine(cache = folder, batch = if (legacy_batch_one) 1L else "max")
-        before <- tt_usage()
-        for (i in seq_len(counters$calls)) tt_decide(question, evidence)$value
-        after <- tt_usage()
-        same("requests", after$requests_sent - before$requests_sent, counters$requests)
-        same("cache answers", after$cache_answers - before$cache_answers, counters$cache_answers)
+        # The value checks warmed this session's cache. Count in a fresh child;
+        # tt_engine intentionally refuses replacing a session's chosen settings.
+        held <- child(c(
+          sprintf("tt_engine(batch = %s)", if (legacy_batch_one) "1L" else '"max"'),
+          sprintf("question <- tt_question(file = %s)", encodeString(file, quote = '"')),
+          sprintf("for (i in seq_len(%dL)) invisible(tt_decide(question, %s))",
+                  counters$calls, paste(deparse(evidence), collapse = "\n")),
+          'cat("COUNTERS ", jsonlite::toJSON(tt_usage(), auto_unbox = TRUE), "\\n", sep = "")'
+        ))
+        lines <- grep("^COUNTERS ", strsplit(held$text, "\n")[[1L]], value = TRUE)
+        check("the counter child completed", held$status == 0L && length(lines) == 1L)
+        after <- jsonlite::fromJSON(sub("^COUNTERS ", "", lines[[1L]]))
+        carried <<- after$requests_sent
+        same("requests", after$requests_sent, counters$requests)
+        same("cache answers", after$cache_answers, counters$cache_answers)
       }
     },
     filter = {

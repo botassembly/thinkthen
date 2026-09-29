@@ -35,8 +35,9 @@ thinkthen annotate triage.json --jsonl --batch 1 "${offline[@]}" --replay "$root
   | jq -c 'select(.kind == "bug")' \
   | mustmatch '{"id":"T-91","body":"Payouts have failed for 3 days.","open":true,"kind":"bug","impact":1.6}'
 
-# The dry run prints the first request a live run sends and counts every request.
-thinkthen annotate triage.json --dry-run "${offline[@]}" < issue.json \
+# The plan prints the first request a live run sends and counts every request.
+thinkthen annotate triage.json --plan "${offline[@]}" < issue.json \
+  | sed -n '1p' \
   | jq -c '{on, request_count, group_requests, state: .request.state}' \
   | mustmatch '{"on":{"open":["/body"],"kind":[""],"impact":[""]},"request_count":2,"group_requests":[1,1],"state":"Payouts have failed for 3 days."}'
 ```

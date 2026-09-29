@@ -1,6 +1,6 @@
 # Relate a complete entity set
 
-The dry run exposes the complete plan and exact request count without a key or connection.
+The plan exposes the complete first request and a marked upper bound without a key or connection.
 
 ```bash
 set -euo pipefail
@@ -8,7 +8,8 @@ set -euo pipefail
 printf '%s' '[{"name":"gateway","kind":"service"},{"name":"billing","kind":"service"}]' \
   | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
     thinkthen relate calls=service:service --url https://api.typesafe.ai/v1 \
-    --model local-1 --no-cache --dry-run \
+    --model local-1 --no-cache --plan \
+  | sed -n '1p' \
   | jq -c '{schema,backend_profile,framing,fields,entity_count,logical_questions,request_count,method:.relations[0].method,bytes:.requests[0].bytes,digest:.requests[0].digest}' \
   | mustmatch '{"schema":"thinkthen.relate-plan/1","backend_profile":null,"framing":"document","fields":{"name":"/name","kind":"/kind"},"entity_count":2,"logical_questions":2,"request_count":1,"method":"yes_no","bytes":282,"digest":"d59f50a27d4d029d91daf3d3132ebe7341ab84302882158d44aa9d65cb9ed262"}'
 ```
@@ -51,6 +52,6 @@ set -uo pipefail
 status=0
 printf '%s' '[{"name":"gateway","kind":"service"}]' \
   | env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
-    thinkthen relate calls=service:service:extra --dry-run >/dev/null 2>&1 || status=$?
+    thinkthen relate calls=service:service:extra --plan >/dev/null 2>&1 || status=$?
 printf '%s\n' "$status" | mustmatch '2'
 ```

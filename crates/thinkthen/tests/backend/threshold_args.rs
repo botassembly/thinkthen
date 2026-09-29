@@ -70,7 +70,7 @@ fn negative_float_spellings_match_the_equals_form_in_all_seven_homes() {
 #[test]
 fn a_threshold_does_not_consume_a_following_known_option() {
     for (prefix, _) in homes() {
-        let arguments = [prefix, &["--threshold", "--dry-run"][..]].concat();
+        let arguments = [prefix, &["--threshold", "--plan"][..]].concat();
         let output = spawn(&arguments, &[], EVIDENCE.as_bytes()).expect("the binary runs");
         assert_eq!(output.status.code(), Some(2), "{arguments:?}");
         let message = String::from_utf8_lossy(&output.stderr);

@@ -115,7 +115,7 @@ const SAID: [&str; 21] = [
 fn every_refusal_the_grammar_makes_names_its_key_and_its_exit_code() {
     for ((name, verb, text, code), sentence) in REFUSALS.into_iter().zip(SAID) {
         let file = written(name, text);
-        let (message, status) = refused(&[verb, &file, "--dry-run"]);
+        let (message, status) = refused(&[verb, &file, "--plan"]);
         assert_eq!(message, format!("thinkthen: {sentence}\n"), "{name}");
         assert_eq!(status, Some(code), "{name}");
     }
@@ -128,7 +128,7 @@ fn an_unknown_local_key_is_escaped_and_stays_on_one_line() {
         r#"{"decide":"Does this pass?","line\nbreak":true}"#,
     );
     assert_eq!(
-        refused(&["decide", &file, "--dry-run"]),
+        refused(&["decide", &file, "--plan"]),
         (
             r#"thinkthen: a question file takes no key `line\nbreak`
 "#
@@ -145,7 +145,7 @@ fn a_file_with_too_many_options_is_refused_by_the_same_sentence() {
         "too-many",
         &format!(r#"{{"choose":"a","options":[{}]}}"#, names.join(",")),
     );
-    let (message, status) = refused(&["choose", &file, "--dry-run"]);
+    let (message, status) = refused(&["choose", &file, "--plan"]);
     assert_eq!(
         message,
         "thinkthen: the question file's `options`: `choose` takes 2 to 255 options\n"
@@ -156,7 +156,7 @@ fn a_file_with_too_many_options_is_refused_by_the_same_sentence() {
 #[test]
 fn the_command_must_name_the_verb_the_file_holds() {
     let file = written("mismatch", REFUND);
-    let (message, status) = refused(&["choose", &file, "billing", "other", "--dry-run"]);
+    let (message, status) = refused(&["choose", &file, "billing", "other", "--plan"]);
     assert_eq!(
         message,
         "thinkthen: the command is `choose` and the question file holds a `decide` question\n"
@@ -171,7 +171,7 @@ fn a_score_file_refuses_a_rule_and_a_level_that_holds_a_control_character() {
         r#"{"score":"a","levels":["x","y"],"threshold":0.5}"#,
     );
     assert_eq!(
-        refused(&["score", &rule, "--dry-run"]),
+        refused(&["score", &rule, "--plan"]),
         (
             "thinkthen: a `score` question file takes no key `threshold`\n".to_owned(),
             Some(5)
@@ -196,7 +196,7 @@ fn a_score_file_refuses_a_rule_and_a_level_that_holds_a_control_character() {
         &format!(r#"{{"score":"a","levels":["x","y{}u0007"]}}"#, '\\'),
     );
     assert_eq!(
-        refused(&["score", &level, "--dry-run"]),
+        refused(&["score", &level, "--plan"]),
         (
             concat!(
                 "thinkthen: the question file's `levels`: ",
@@ -210,7 +210,7 @@ fn a_score_file_refuses_a_rule_and_a_level_that_holds_a_control_character() {
 
 #[test]
 fn a_file_that_cannot_be_opened_is_a_local_failure() {
-    let (message, status) = refused(&["decide", "@no-such-question-file.json", "--dry-run"]);
+    let (message, status) = refused(&["decide", "@no-such-question-file.json", "--plan"]);
     assert!(
         message.starts_with("thinkthen: the question file could not be opened:"),
         "{message}"
@@ -227,7 +227,7 @@ fn a_list_of_options_and_a_described_option_have_no_order_between_them() {
         "other",
         "--option",
         "sales=New business.",
-        "--dry-run",
+        "--plan",
     ]);
     assert_eq!(
         message,
@@ -241,7 +241,7 @@ fn a_list_of_options_and_a_described_option_have_no_order_between_them() {
 
 #[test]
 fn an_option_without_an_equals_sign_is_a_usage_error() {
-    let (message, status) = refused(&["choose", "Which team?", "--option", "sales", "--dry-run"]);
+    let (message, status) = refused(&["choose", "Which team?", "--option", "sales", "--plan"]);
     assert_eq!(
         message,
         "thinkthen: --option is LABEL=DESCRIPTION, and this one holds no `=`\n"
@@ -305,7 +305,7 @@ fn a_verb_with_no_list_in_either_home_names_neither_home() {
         ),
     ] {
         let file = written(name, text);
-        let (message, status) = refused(&[verb, &file, "--dry-run"]);
+        let (message, status) = refused(&[verb, &file, "--plan"]);
         assert_eq!(message, format!("thinkthen: {sentence}\n"), "{name}");
         assert_eq!(status, Some(2), "{name}");
     }

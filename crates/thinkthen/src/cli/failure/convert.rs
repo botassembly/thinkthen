@@ -60,8 +60,12 @@ impl From<EngineError> for Failure {
         match error {
             EngineError::Transport(message) => Self::Transport(message),
             EngineError::Status(status) => Self::Status(status),
-            EngineError::SendBudgetFirst | EngineError::SendBudgetRetry(_) => {
-                Self::Usage("the process send budget was spent")
+            EngineError::SendBudgetFirst => Self::Usage("the process send budget was spent"),
+            EngineError::SendBudgetAdditional => {
+                Self::Usage("the process send budget was spent before another request")
+            }
+            EngineError::SendBudgetRetry(_) => {
+                Self::Usage("the process send budget was spent before a retry")
             }
             EngineError::TokenLimit => Self::TokenLimit,
             EngineError::ReplyTooLarge(limit) => Self::ReplyTooLarge(limit),

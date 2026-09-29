@@ -58,7 +58,10 @@ fn choose(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
     ];
     spawn(
         &[&asked[..], arguments].concat(),
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        &[
+            ("THINKTHEN_API_KEY", "sk-test-value"),
+            ("THINKTHEN_BATCH", "1"),
+        ],
         input.as_bytes(),
     )
 }
@@ -374,7 +377,7 @@ fn a_row_names_the_options_it_was_asked_with_and_the_plan_names_the_first_record
             "/note",
             "--options",
             "/codes",
-            "--dry-run",
+            "--plan",
         ],
         &[],
         NOTES.as_bytes(),

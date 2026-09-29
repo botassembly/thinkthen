@@ -61,7 +61,7 @@ fn the_option_outranks_the_variable_and_the_variable_outranks_the_default() {
     let request = requests.first().expect("the variable names the address");
     assert_eq!(request.line, "POST /v1/systemone HTTP/1.1");
 
-    let output = decide(&["--dry-run"], &[]).expect("the compiled binary runs");
+    let output = decide(&["--plan"], &[]).expect("the compiled binary runs");
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(
         printed.contains(&format!(r#""url":"{BUILT_IN}""#)),
@@ -185,7 +185,7 @@ fn a_plain_http_base_that_is_not_loopback_is_refused_before_any_request() {
     ];
 
     for base in refused {
-        for arguments in [vec![], vec!["--dry-run"]] {
+        for arguments in [vec![], vec!["--plan"]] {
             let by_option = [arguments.clone(), vec!["--url", base]].concat();
             for (given, environment) in [
                 (by_option, vec![("THINKTHEN_API_KEY", "sk-test-value")]),
@@ -229,7 +229,7 @@ fn loopback_over_plain_http_is_taken_and_https_reaches_any_host() {
         "https://example.com/v1",
         "https://10.0.0.5/v1",
     ] {
-        let output = decide(&["--dry-run", "--url", base], &[]).expect("the compiled binary runs");
+        let output = decide(&["--plan", "--url", base], &[]).expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{base}");
         assert!(output.stderr.is_empty(), "{base}");
@@ -358,7 +358,7 @@ fn a_base_the_option_names_as_white_space_is_refused_as_a_blank_address() {
 #[test]
 fn a_variable_that_holds_nothing_counts_as_absent() {
     for empty in ["", " "] {
-        let output = decide(&["--dry-run"], &[("THINKTHEN_BASE_URL", empty)])
+        let output = decide(&["--plan"], &[("THINKTHEN_BASE_URL", empty)])
             .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(0), "{empty:?}");

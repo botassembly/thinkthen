@@ -20,20 +20,32 @@ package Thinkthen is
       Value : Outcome := Not_Sure;
       Probability : Long_Float := 0.0;
    end record;
+   type Run_Facts is record
+      Records : Unsigned_64 := 0;
+      Requests_Sent : Unsigned_64 := 0;
+      Cache_Answers : Unsigned_64 := 0;
+      Seconds : Long_Float := 0.0;
+      Has_Input_Tokens : Boolean := False;
+      Input_Tokens : Unsigned_64 := 0;
+      Has_Output_Tokens : Boolean := False;
+      Output_Tokens : Unsigned_64 := 0;
+      Has_Model : Boolean := False;
+      Model : Ada.Strings.Unbounded.Unbounded_String;
+   end record;
    type Engine is new Ada.Finalization.Limited_Controlled with private;
    procedure Configure (Client : in out Engine; Settings_JSON : String; Error : out Failure);
    type Cancel_Token is limited private;
    procedure Cancel (Token : in out Cancel_Token);
    -- Owners must outlive all callers. Join Ada tasks before leaving their scope.
    procedure Decide (Client : in out Engine; Question, Evidence : String;
-                     Result : out Decision; Error : out Failure;
+                     Result : out Decision; Facts : out Run_Facts; Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null);
    type Evidence_Array is array (Positive range <>) of Ada.Strings.Unbounded.Unbounded_String;
    type Decision_Array is array (Positive range <>) of Decision;
    procedure Decide_Many (Client : in out Engine; Question : String;
                           Evidence : Evidence_Array; Result : out Decision_Array;
-                          Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
+                          Facts : out Run_Facts; Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
                           Token : access Cancel_Token := null);
    type Label is record
       Name : Ada.Strings.Unbounded.Unbounded_String;
@@ -94,11 +106,12 @@ package Thinkthen is
                    Token : access Cancel_Token := null);
    -- Recognize offsets are zero-based Unicode code points, end exclusive.
    procedure Recognize (Client : in out Engine; Specification, Evidence : String;
-                        Result : out JSON_Result; Error : out Failure;
+                        Result : out JSON_Result; Facts : out Run_Facts; Error : out Failure;
                         Deadline_Ms : Interfaces.Integer_64 := -1;
                         Token : access Cancel_Token := null);
    procedure Relate (Client : in out Engine; Specification : String;
-                     Records : Evidence_Array; Result : out JSON_Result; Error : out Failure;
+                     Records : Evidence_Array; Result : out JSON_Result;
+                     Facts : out Run_Facts; Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null);
 private
