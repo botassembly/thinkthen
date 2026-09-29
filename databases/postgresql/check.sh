@@ -237,6 +237,27 @@ wanted="{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"
 assert bodies == [wanted], (bodies, wanted)'
 }
 check plan_and_named
+merged_settings_conflicts() {
+	fresh arm/full/capture
+	local out
+	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_plan('{\"decide\":\"asks for a refund\",\"batch\":1}', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"batch\":2}'::json)")
+	has "$out" '22023'
+	has "$out" 'thinkthen usage: settings repeats `batch` from the question or named arguments'
+	same "$(bcount)" 0
+	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_decide('asks for a refund', 'Refund me please.', settings => '{\"batch\":2}'::json, batch => '1')")
+	has "$out" '22023'
+	has "$out" 'thinkthen usage: a JSON record holds each member name once, and one name arrived twice'
+	same "$(bcount)" 0
+	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"max_estimated_input_tokens_total\":5}'::json)")
+	has "$out" '22023'
+	has "$out" 'thinkthen usage: max_estimated_input_tokens_total is not supported by this PostgreSQL host'
+	same "$(bcount)" 0
+	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"max_estimated_input_tokens_total\":5,\"max_estimated_input_tokens_total\":6}'::json)")
+	has "$out" '22023'
+	has "$out" 'thinkthen usage: a JSON record holds each member name once, and one name arrived twice'
+	same "$(bcount)" 0
+}
+check merged_settings_conflicts
 e1_keyed_join_body() {
 	fresh arm/full/capture "thinkthen.batch = 'max'"
 	local out

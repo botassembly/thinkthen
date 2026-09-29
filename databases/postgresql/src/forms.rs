@@ -1,7 +1,7 @@
 //! Portable settings and PostgreSQL's defaulted named conveniences.
 
 use pgrx::datum::{Array, JsonB};
-use thinkthen::{For, LoadedQuestion, Question, QuestionKind, Settings};
+use thinkthen::{For, LoadedQuestion, Question, QuestionKind, Settings, SettingsError};
 
 use crate::call::{self, Call, OrRaise as _, Refusal};
 use crate::ffi::RawJson;
@@ -18,16 +18,17 @@ pub(crate) struct Named<'a> {
 
 fn settings(raw: Option<&RawJson>, named: Named<'_>) -> Result<Settings, Refusal> {
     let original = raw.map_or("{}", |value| value.0.as_str());
-    Settings::parse(original).map_err(|error| Refusal::usage(error.to_string()))?;
-    // The core's 0299 key may become valid before this host adopts an active
-    // transport reservation. Never accept it here as an inert setting.
-    let object: serde_json::Value = serde_json::from_str(original)
-        .map_err(|_| Refusal::usage("settings is one JSON object"))?;
-    if object.get("max_estimated_input_tokens_total").is_some() {
-        return Err(Refusal::usage(
-            "max_estimated_input_tokens_total is not supported by this PostgreSQL host",
-        ));
-    }
+    // The engine constructor accepts this 0299 key, but this host has no
+    // active reservation. Keep the portable parser's duplicate-name check
+    // before classifying the unsupported host key.
+    Settings::parse(original).map_err(|error| match error {
+        SettingsError::UnknownKey(key) if key == "max_estimated_input_tokens_total" => {
+            Refusal::usage(
+                "max_estimated_input_tokens_total is not supported by this PostgreSQL host",
+            )
+        }
+        other => Refusal::usage(other.to_string()),
+    })?;
     let mut merged = original.trim().strip_suffix('}').unwrap_or("{").to_owned();
     for (key, value) in [
         ("threshold", named.threshold),
