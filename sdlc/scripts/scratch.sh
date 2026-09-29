@@ -12,7 +12,7 @@ scratch_dir() {
 	scratch_new=$(mktemp -d ${2:+"$2"}) || exit 1
 	[ -n "$scratch_new" ] && [ -d "$scratch_new" ] || { echo "scratch.sh: mktemp made no folder" >&2; exit 1; }
 	scratch_new=$(cd -- "$scratch_new" && pwd -P) || exit 1
-	case $scratch_new in *[!A-Za-z0-9/._\ -]* | "$PWD" | /) echo "scratch.sh: refusing $scratch_new" >&2; rmdir -- "$scratch_new"; exit 1 ;; esac
+	case $scratch_new in *[!A-Za-z0-9/._\ -]* | "$PWD" | /) echo "scratch.sh: refusing $scratch_new" >&2; exit 1 ;; esac
 	[ -n "$scratch_made" ] || { trap scratch_clean EXIT; trap 'exit 130' HUP INT TERM; }
 	scratch_made="$scratch_made$scratch_new
 "

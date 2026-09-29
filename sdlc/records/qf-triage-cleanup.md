@@ -29,22 +29,33 @@ is same-parent and has no cross-filesystem copy fallback.
 The first candidate also rejected ordinary spaces in `scratch_dir` after
 `mktemp` had already created a folder, leaking it before trap registration.
 The shared guard now permits ASCII spaces in its newline-delimited ownership
-list, checks an explicit unsafe template before creation, and removes an
-empty directory if the resolved path is refused. Newlines, glob characters,
-other unsafe delimiters, the lane path, and foreign paths remain refused.
+list and checks an explicit unsafe template before creation. Newlines, glob
+characters, other unsafe delimiters, the lane path, and foreign paths remain
+refused. If an unexpected path fails the post-canonical guard, the helper
+leaves it untouched even if it is empty; a rare scratch leak is safer than
+deleting an unproven path.
 
 Before either changed cleanup first ran, a planted lane path was passed to
 `scratch_remove`; it refused the path and left it intact. The Linux first
 plant also retained its `caller-data` file. The corrected candidate repeated
 the lane refusal on Linux and M5 before exercising cleanup.
+The next High review caught a remaining post-canonical `rmdir` before
+ownership registration. The new focused plant makes `mktemp` return an
+empty, owned stand-in for the current directory. Before the correction the
+plant failed because `scratch_dir` removed that directory; after removing
+`rmdir`, the guard refuses it and the directory survives. This plant runs
+before the corrected cleanup's first real run. The existing caller-data and
+foreign-path guard plants remain.
 
 | Focused check | Result |
 | --- | --- |
 | `bash -n` on the review script and self-test; `sh -n` on `scratch.sh`; Python helper syntax | Passed |
 | Focused `scratch_lint` after removing the recursive cleanup | Passed |
+| Empty stand-in PWD returned by planted `mktemp` before real cleanup | Initial red: the post-canonical `rmdir` deleted it; corrected: refusal at exit 1 and directory survives |
 | Demo 16 `self-test` with the warm Linux binary and saved recording | Passed: five decisions, one review, exact refusal statuses, caller bytes, race, cleanup, and successful and failed paths with spaces |
 | Demo 16 executable `README.md` with the absolute warm binary on `PATH` | 3 passed, 2 skipped |
 | M5 macOS 26.4, `/usr/bin/python3` 3.9.6, native `renamex_np` helper | Passed: same-parent atomic success, raced file/directory/symlink refusals at exit 2, caller bytes, space path, lane guard refusal, and failed-run scratch cleanup |
+| `policy.py`, `pages`, `tickets`, syntax, focused `scratch_lint`, and diff checks after the final guard correction | Passed; the first policy attempt inherited `sccache` and failed before checking packages, then passed with `RUSTC_WRAPPER` cleared |
 
 The M5 proof copied only the candidate Python publisher and scratch helper
 into a fresh `/tmp/triage-publish.CtakHv` directory and removed that exact
@@ -72,6 +83,10 @@ or space paths; the new cases pin those previously missed boundaries.
 - `scratch_dir`'s ownership delimiter is a newline, so ordinary spaces can
   be accepted without admitting a newline or shell metacharacter. Checking
   an unsafe template before `mktemp` avoids the leak found by review.
+- A path returned by `mktemp` has not yet passed this run's ownership guard.
+  The final High review found that `rmdir` on a post-canonical refusal could
+  delete an empty lane or foreign replacement. The bounded PWD plant proved
+  the regression and the correction; the guard now leaves that path alone.
 - The first page check used a demo-relative `PATH` and could not find the
   binary. The absolute warm build path passed. M5 lacked that binary, so its
   focused primitive proof cannot be reported as an M5 demo replay.
@@ -79,7 +94,8 @@ or space paths; the new cases pin those previously missed boundaries.
 ## Integration limit
 
 The issue remains open until the coordinator integrates the reviewed
-candidate and runs its named full lint checkpoint on main. Focused lint,
-policy, pages, tickets, and diff checks are candidate evidence only. The
+candidate and runs one named full lint checkpoint on main after 0275's
+separate hidden-package campaign. Focused lint, policy, pages, tickets, and
+diff checks are candidate evidence only. The
 coordinator can decide whether an M5 full replay is needed after arranging a
 source-compatible binary; it was not available in this focused proof.

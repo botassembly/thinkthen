@@ -106,10 +106,9 @@ contains the missing pointer and input position, not the original evidence.
 The script writes five successful decisions and one review row; it does not
 pretend that the missing record has a model answer.
 
-This review route requires Python 3 for its small atomic directory publisher.
-On Linux it uses `renameat2(RENAME_NOREPLACE)`; on macOS it uses
-`renamex_np(RENAME_EXCL)`. If the local filesystem does not support that
-operation, the route refuses publication and removes its staged files.
+This review route requires Python 3. The output directory must not already
+exist. If publication fails, the script removes its staged files and leaves
+any existing destination untouched.
 
 ## Related how-tos
 

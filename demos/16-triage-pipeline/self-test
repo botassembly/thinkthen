@@ -5,6 +5,22 @@ HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REAL_JQ=$(command -v jq)
 REAL_MV=$(command -v mv)
 . "$HERE/../../sdlc/scripts/scratch.sh"
+# A returned path is not proof that mktemp created it. Refuse even an empty PWD.
+plant=$(mktemp -d)
+plant=$(cd -- "$plant" && pwd -P)
+set +e
+(
+	cd -- "$plant"
+	mktemp() { printf '%s\n' "$PWD"; }
+	scratch_dir refused
+) 2> "$plant.err"
+plant_status=$?
+set -e
+test "$plant_status" = 1
+grep -F "scratch.sh: refusing $plant" "$plant.err" >/dev/null
+test -d "$plant"
+rm -- "$plant.err"
+rmdir -- "$plant"
 scratch_dir work
 child=
 cleanup() {
