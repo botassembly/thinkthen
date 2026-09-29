@@ -1,6 +1,16 @@
 # 0249 language release preparation
 
-Status: read-only release-path preparation at main `7242271c`. Ticket 0249's [accepted closure](0249-integration-closure.md) landed eleven source packages for thirteen languages, including Java/Kotlin/Scala in one JVM package and a real Linux Flutter consumer under Dart. The eleven original consumer-package issues and the C++ umbrella remain open for their release criteria. This pass ran no package, provider, workflow or registry job and changed no executable file.
+Status: the original read-only preparation below describes main `7242271c`. Its recommended local package sequence is now complete through accepted0261–0265; do not start that sequence again. Ticket0249's source integration and the original outward release limits remain as recorded.
+
+## Current local checkpoint
+
+All eleven new source packages have accepted local archive consumers: [Go/C++](0261-go-cpp-release-code-review.md), [C#/JVM](0262-csharp-jvm-release-code-review.md), [Swift/Zig](0263-swift-zig-release-code-review.md), [PHP/Dart](0264-php-dart-release-code-review.md), and [Ada/GNU Objective-C/COBOL](0265-ada-objc-cobol-release-code-review.md). These pilots name distinct clean build pins and native archive hashes; their output directories cannot simply be combined into one matching release bundle. The current packer, shared validator and installed selectors contain the accepted routes. The original source and per-package matrices need no rerun solely because this record was refreshed.
+
+Ticket0266's accepted design and host code add the distinct archive-installed Linux Flutter app; its final matching pack and routing remain in progress. Ticket0267's accepted design proposes one later complete Linux bundle from one clean pin and one invocation of each installed selector, retaining the cases each selector already runs. It does not add duplicate direct wrapper checks. Its implementation waits for0266 and a factual route refresh.
+
+The original consumer issues still retain final release pin, actual runner execution, outward distribution and additional claimed hosts. The workflow still builds its older families. This local package checkpoint does not prove changed Actions configuration, registry ownership, publication or a release-ready four-target bundle.
+
+## Historical preparation at7242271c
 
 ## Current route and gap
 
