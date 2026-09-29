@@ -39,5 +39,5 @@ cp "$native" "$here/target/native/libthinkthen.so"
 sh "$here/build.sh"
 python3 "$here/tests/package_check.py"
 python3 "$here/tests/installed.py"
-python3 "$here/tests/types.py"
+python3 "$here/tests/public_types.py"
 echo 'JVM package PASS: installed Java, Kotlin, Scala consumers and J1 corpus'

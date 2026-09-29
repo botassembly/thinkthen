@@ -60,7 +60,7 @@ cp "$here/Tests/fixtures/matrix.swift" "$here/target/scratch/matrix-main/main.sw
 "$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-matrix"
 cp "$here/Tests/fixtures/settings.swift" "$here/target/scratch/matrix-main/main.swift"
 "$swiftc" -j 2 -I "$here/Sources/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$here/target/scratch/matrix-main/main.swift" -L "$here/target/native/lib" -lthinkthen -Xlinker -rpath -Xlinker "$here/target/native/lib" -o "$here/target/scratch/swift-settings"
-python3 "$here/Tests/fixtures/types.py"
+python3 "$here/Tests/fixtures/public_types.py"
 python3 "$here/Tests/fixtures/run_matrix.py"
 python3 "$here/Tests/fixtures/run_settings.py"
 python3 "$here/Tests/fixtures/portable_batch.py"
