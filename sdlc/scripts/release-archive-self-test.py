@@ -229,6 +229,28 @@ def main():
             raise AssertionError("bad tool archive entered the runner path")
         if github_env.read_text():
             raise AssertionError("bad Dart archive entered the runner environment")
+        # Let synthetic extraction and pub filling reach the real cache-hash guard.
+        # The earlier bad-download plant exercised the real SDK checksum command.
+        fake_hash = fake_bin / "sha256sum"
+        fake_hash.write_text("#!/bin/sh\n[ \"$1\" = -c ] && exit 0\nexit 2\n")
+        fake_hash.chmod(0o755)
+        fake_unzip = fake_bin / "unzip"
+        fake_unzip.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
+                              "if [ \"$1\" = -d ]; then shift; mkdir -p \"$1/dart-sdk/bin\"; "
+                              "cat >\"$1/dart-sdk/bin/dart\" <<'SH'\n"
+                              "#!/bin/sh\nif [ \"$1\" = --version ]; then "
+                              "echo 'Dart SDK version: 3.13.4 (stable)' >&2; exit 0; fi\n"
+                              "mkdir -p \"$PUB_CACHE/hosted/pub.dev/ffi-2.2.0\" "
+                              "\"$PUB_CACHE/hosted-hashes/pub.dev\"\n"
+                              "printf '%s\\n' wrong >\"$PUB_CACHE/hosted-hashes/pub.dev/ffi-2.2.0.sha256\"\n"
+                              "SH\nchmod +x \"$1/dart-sdk/bin/dart\"; exit 0; fi\nshift\ndone\nexit 2\n")
+        fake_unzip.chmod(0o755)
+        expect(run("sh", gate, "php-dart-tools", host, str(base / "bad-ffi"), env=tool_env),
+               "cached ffi 2.2.0 differs from official digest")
+        if github_path.read_text() or github_env.read_text():
+            raise AssertionError("bad ffi cache entered the runner environment")
+        fake_hash.unlink()
+        fake_unzip.unlink()
         wrong = env | {"THINKTHEN_ARCHIVED_SOURCE_COMMIT": "0" * 40}
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "wrong"), *parts, cwd=source, env=wrong),

@@ -180,7 +180,7 @@ jobs:
       - name: Require the selected PHP/Dart family
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow php-dart-gate platform "$TARGET" "$SHA"
-      - env: {TARGET: "${{ matrix.target }}"}
+      - env: {TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
         run: |
           sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
           sdlc/scripts/release-smoke smoke-files
