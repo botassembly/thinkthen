@@ -1,6 +1,6 @@
 # Quick Fix: current command help
 
-Candidate: `ticket/qf-command-help-current` from clean main `00d0b37bdbba013f868c7b6ebe6ad4bed0f6e31a`, corrected after local commit `6cea776e`. Only `crates/thinkthen/src/cli/args/command.rs`, `crates/thinkthen/tests/decide_edge.rs`, `spec/decide.md`, the measured `sdlc/ratchet.json`, and new-user stumble row 8 changed. This record is the sixth file. Root will arrange fresh read-only code review and push after the corrected local commit.
+Accepted candidate: `28fc9e4b`, from clean main `00d0b37b`. Fresh independent Medium review accepted the six-file help change, and the coordinator merged the exact reviewed code.
 
 ## Behavior and evidence
 
@@ -31,3 +31,7 @@ Rust files are 428 and 499 nonblank lines, under the 500-line cap. The measured 
 - The six-case help selection found a stale rank assertion. The settled graded-rank contract and existing help agree on highest value, including saved score questions, so the same claimed test file could correct its one-string expectation. No second ticket or rank runtime change was needed.
 - A split that defaults to the full string when its marker is missing cannot prove that examples precede an explanation. The final case requires the marker and compares both complete example lines before it.
 - The short summary, `set -e`, threshold and exit promises remained visible in the final compiled help. The executable page and selected test pin the new example order. New-user stumble row 8 is fixed; the register's other rows remain open.
+
+## Independent review
+
+Fresh Medium review accepted `28fc9e4b` after running the six help cases, all 24 executable decide-page assertions, strict Clippy, policy, measured ratchet and diff checks. It confirmed both complete examples precede the required marker, retain short-help and failure guidance, and introduce no runtime or option change. File counts were 428 and 499 nonblank lines; the measured total was 99,353. The coordinator verified an empty code-path diff against the accepted candidate and retained these checks. No full gate or external call ran.
