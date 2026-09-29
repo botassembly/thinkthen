@@ -1,6 +1,6 @@
 # 0276: isolate library port-check children
 
-Status: Design accepted by independent Medium review at `594acedb`; implementation approved on main `adf6ac400` and built on this branch. The 45 claimed library findings are cleared by the focused `children` scan. The normal family checks require ten Python ratchet manifests outside the approved file claim to match their new measured totals; exact claim expansion was requested before those edits or fresh code review. The one DuckDB finding remains under Ian's SQL/DataFrame hold, so the whole issue stays open. Full lint is a later coordinator checkpoint.
+Status: Design accepted by independent Medium review at `594acedb`; implementation approved on main `adf6ac400` and built on this branch for fresh code review. The 45 claimed library findings are cleared by the focused `children` scan. Ten affected Python ratchets match their measured totals under the work-plan rule for shared derived metadata. The one DuckDB finding remains under Ian's SQL/DataFrame hold, so the whole issue stays open. Full lint is a later coordinator checkpoint.
 
 ## Outcome
 
@@ -10,7 +10,7 @@ This is one library-only batch using the existing Python `child_env` and R `clea
 
 ## Exact code claim and routing
 
-The saved baseline is `target/codex-builds/lint-intake/children.txt` in codex-4: 46 findings in 27 files, comprising 45 findings in **26 library files** and one held DuckDB finding. The report was compared with the named call sites on main `8313bc4f`, then rechecked after `df69771d` advanced only unrelated paths. The proposed code claim is those 26 files **plus** `libraries/go/fixtures/installed_release.py`: that adjacent parent constructs `abi_env` from `os.environ` before it launches the reported Go `abi.py` child, and is necessary to isolate that child. Thus the proposed claim is 27 library files, 45 reported lines. A reviewer must approve it before implementation. No helper, guard, product, issue or plan file is claimed for code.
+The saved baseline is `target/codex-builds/lint-intake/children.txt` in codex-4: 46 findings in 27 files, comprising 45 findings in **26 library files** and one held DuckDB finding. The report was compared with the named call sites on main `8313bc4f`, then rechecked after `df69771d` advanced only unrelated paths. The accepted code claim is those 26 files **plus** `libraries/go/fixtures/installed_release.py`: that adjacent parent constructs `abi_env` from `os.environ` before it launches the reported Go `abi.py` child, and is necessary to isolate that child. Thus the code claim is 27 library files, 45 reported lines. No helper, guard, product, issue or plan file is claimed for code. The ten `ratchet.py.json` updates are shared derived metadata measured under work-plan Lanes rule 2.
 
 | Family, findings | Exact affected files | Child routes to retain |
 | --- | --- | --- |
