@@ -63,6 +63,8 @@ The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R ea
 | PHP | an FFI binding that loads the separately installed C library | [libraries/php](libraries/php/README.md) |
 | C# | a .NET 8 wrapper with a separate native library | [libraries/csharp](libraries/csharp/README.md) |
 | Java, Kotlin, Scala | three JVM JARs with a separate native library | [libraries/jvm](libraries/jvm/README.md) |
+| Swift | a SwiftPM source package with a separate native library | [libraries/swift](libraries/swift/README.md) |
+| Zig | a Zig source module with a separate native library | [libraries/zig](libraries/zig/README.md) |
 | Dart and Flutter | a Dart FFI package and a Linux Flutter consumer | [libraries/dart](libraries/dart/README.md) |
 | Go | a cgo source module with a separate native library | [libraries/go](libraries/go/README.md) |
 | C++ | a header-only CMake package with a separate native library | [libraries/cpp](libraries/cpp/README.md) |

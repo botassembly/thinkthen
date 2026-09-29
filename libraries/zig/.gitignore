@@ -1,0 +1,4 @@
+target/
+zig-out/
+Tests/zig-out/
+.zig-cache/

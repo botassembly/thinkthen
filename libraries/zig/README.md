@@ -1,0 +1,22 @@
+# ThinkThen for Zig
+
+This Zig 0.15.2 source module wraps the ThinkThen C library. The package gate proves Ubuntu 24.04 x86_64 glibc with a separately installed native shared or static C library. Static-C linkage does not make the executable fully static. Other targets and Zig versions remain unproved.
+
+Build the matching native library from the same checkout, then supply an absolute native root to Zig:
+
+```sh
+cargo build --locked --offline --manifest-path libraries/c/Cargo.toml --lib
+mkdir -p /tmp/thinkthen-native/include /tmp/thinkthen-native/lib
+cp libraries/c/include/thinkthen.h /tmp/thinkthen-native/include/
+cp libraries/c/target/debug/libthinkthen_c.so /tmp/thinkthen-native/lib/libthinkthen.so
+cp libraries/c/target/debug/libthinkthen_c.a /tmp/thinkthen-native/lib/libthinkthen.a
+ln -s libthinkthen.so /tmp/thinkthen-native/lib/libthinkthen.so.0
+cd libraries/zig
+zig build -Dnative=/tmp/thinkthen-native -Dlink-mode=shared
+```
+
+In another Zig project, add this source folder as a dependency named `thinkthen`, import `dep.module("thinkthen")`, and call `@import("thinkthen").linkNative(b, exe, module, native, .shared)` in its build script. The `Tests/build.zig` installed consumer is an executed example of the dependency and native-link lines. `examples/decide.zig` shows the runtime API. Set `THINKTHEN_BASE_URL` and `THINKTHEN_API_KEY` only when intentionally running that example against a backend. The gate uses a synthetic loopback backend.
+
+`Engine.init(allocator)` reads environment settings. `Engine.initWithSettings(allocator, settings)` accepts NUL-terminated JSON and passes it to the C constructor; invalid settings fail before sending. Free a constructor failure with `releaseFailure(allocator, failure)`. Calls return `.ok` or `.failed`, in addition to Zig allocation and validation errors. A failure has one of six named `kind` values and copied `message` and optional `facts_json` slices. Free it with `engine.freeFailure` while the engine exists, or `releaseFailure` with the original allocator after teardown. Free successful bulk slices and JSON bytes with that allocator. The generic JSON call returns the C `{value,facts}` envelope; typed decide, bulk, recognize and relate paths return bare values. Null inside a successful JSON value is not a failure. Inputs use counted evidence and refuse interior NUL in C strings. Keep engine and token owner structs un-copied, join in-flight calls before `deinit`, and use a thread-safe allocator across concurrent callers. Native cancellation is one shot: already-sent requests drain, the cancelled call returns no output, and recovery uses a fresh token.
+
+`sh libraries/zig/check.sh` builds the current C door offline, checks all current header-derived exports, runs the public J1 corpus, and proves the exact 42-request body multiset through two isolated shared and two isolated static-C installed consumers. Its local source/native archives are disposable and are not published. Final release pin, `ubuntu-24.04` Actions jobs, release asset checksums and distribution remain in the Zig consumer issue.
