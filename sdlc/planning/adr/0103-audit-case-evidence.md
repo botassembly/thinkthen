@@ -1,6 +1,6 @@
 # ADR 0103: Show saved audit evidence one case at a time
 
-- Status: Proposed for fresh Medium design review. The coordinator may approve this API within Ian's recorded per-case audit outcome; Ian can overturn it.
+- Status: Accepted by the coordinator after fresh Medium design review of `193fac57fe2d36e743bfa93d9ecaa3534adfc434`, within Ian's recorded per-case audit outcome. Ian can overturn it.
 
 ## Decision
 

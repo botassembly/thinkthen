@@ -243,6 +243,9 @@ pub(crate) enum Command {
     ///
     /// A key may give each record a part of tune or held; without parts audit
     /// splits the records itself and shows how steady its bar is.
+    /// --cases instead prints one JSON line per saved case with its keyed
+    /// outcome, probabilities, available usage and question identity.
+    /// It keeps failed, unlabeled, unsure and tied cases distinct.
     ///
     /// --write changes one threshold in the file and prints the old value on
     /// standard error.

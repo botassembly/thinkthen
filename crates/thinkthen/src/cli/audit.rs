@@ -4,6 +4,7 @@
 //! request, and reads no setting. Only `--write`, optionally paired with
 //! `--write-to`, changes a file through the `write` module. Policy holds that.
 
+mod cases;
 mod table;
 mod write;
 
@@ -75,6 +76,9 @@ pub(crate) struct AuditArguments {
     /// Print the results for a person instead of JSON lines.
     #[arg(long)]
     table: bool,
+    /// Print one JSON line per saved case instead of aggregate groups.
+    #[arg(long, conflicts_with_all = ["by", "seed", "target", "optimize", "curve", "pooled", "table", "write", "write_to"])]
+    cases: bool,
 }
 
 #[derive(Clone, Debug)]
@@ -110,9 +114,16 @@ fn target(text: &str) -> Result<f64, String> {
 
 /// Grade, write the bar `--write` names and report it, then write JSON lines or the table.
 pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), Failure> {
-    let (rows, pooled, report) = grade_all(arguments).map_err(Failure::Measure)?;
+    let (rows, pooled, report, case_rows) = grade_all(arguments).map_err(Failure::Measure)?;
     write(std::io::stderr().lock(), &report)?;
     let mut text = String::new();
+    if let Some(case_rows) = case_rows {
+        for row in &case_rows {
+            text.push_str(&rounded_line(row).map_err(Failure::Render)?);
+            text.push('\n');
+        }
+        return write(writer, &text);
+    }
     for row in &rows {
         if arguments.table {
             table::table(row, &mut text);
@@ -133,7 +144,7 @@ pub(crate) fn run(arguments: &AuditArguments, writer: impl Write) -> Result<(), 
 }
 
 /// The rows, the pooled line when asked, and the `--write` report.
-type Graded = (Vec<Row>, Option<Pooled>, String);
+type Graded = (Vec<Row>, Option<Pooled>, String, Option<Vec<cases::Case>>);
 
 fn write_options(arguments: &AuditArguments) -> Result<(), Cause> {
     let dash = Path::new("-");
@@ -246,5 +257,10 @@ fn grade_all(arguments: &AuditArguments) -> Result<Graded, Refusal> {
         .then(|| grade::pooled(&answers, &key, &settings))
         .transpose()
         .map_err(|e| refusal("results", Cause::Measure(e)))?;
-    Ok((rows, pooled, report))
+    let case_rows = arguments
+        .cases
+        .then(|| cases::collect(&results, &answers, &key, settings.rule))
+        .transpose()
+        .map_err(|e| refusal("results", Cause::Measure(e)))?;
+    Ok((rows, pooled, report, case_rows))
 }

@@ -78,6 +78,18 @@ struct Entry {
     part: Option<Part>,
 }
 
+impl Entry {
+    fn value_for(&self, answer: &Answer) -> Option<&Json> {
+        match &answer.name {
+            None => Some(&self.value),
+            Some(name) => match &self.value {
+                Json::Object(_) => Some(self.value.member(name).unwrap_or(&Json::Null)),
+                _ => None,
+            },
+        }
+    }
+}
+
 /// Every key line by record id, and how names match. Members other than `id`, `value`, and `part` are ignored.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub(crate) struct Key(BTreeMap<String, Entry>, pub(crate) Matching);
@@ -120,6 +132,15 @@ impl Key {
         self.0.get(id).and_then(|entry| entry.part)
     }
 
+    /// The saved key value for an answer, before grade validation.
+    pub(crate) fn saved_value(&self, answer: &Answer) -> Option<&Json> {
+        let entry = self.0.get(&answer.id)?;
+        match &answer.name {
+            None => Some(&entry.value),
+            Some(name) => entry.value.member(name),
+        }
+    }
+
     /// The key's value for this answer, or `None` when it is unlabeled.
     ///
     /// # Errors
@@ -130,12 +151,8 @@ impl Key {
         let Some(entry) = self.0.get(&answer.id) else {
             return Ok(None);
         };
-        let value = match &answer.name {
-            None => &entry.value,
-            Some(name) => match &entry.value {
-                Json::Object(_) => entry.value.member(name).unwrap_or(&Json::Null),
-                _ => return Ok(None),
-            },
+        let Some(value) = entry.value_for(answer) else {
+            return Ok(None);
         };
         let unknown = MeasureError::KeyUnknown(entry.line);
         Ok(match (answer.verb, value) {

@@ -1,6 +1,6 @@
 # Audit
 
-Status: **Settled** by ticket 0113, amended by tickets 0125, 0135 and 0256.
+Status: **Settled** by ticket 0113, amended by tickets 0125, 0135, 0256 and 0257.
 
 `thinkthen audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, `annotate`, `recognize`, and `relate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. With `--write QUESTIONS --write-to OUTPUT` it creates a tuned candidate at a new path and keeps the source unchanged. It sends no request and reads no API key.
 
@@ -16,7 +16,7 @@ thinkthen audit results.jsonl key.jsonl --threshold 0.4 --table
 ```text
 thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--id POINTER] [--seed N] [--target A]
                             [--optimize accuracy|precision|recall|f1] [--match strict|overlap] [--write QUESTIONS] [--write-to OUTPUT]
-                            [--curve] [--pooled] [--table]
+                            [--curve] [--pooled] [--table] [--cases]
 ```
 
 - `RESULTS` holds saved result lines, and `KEY` holds a JSONL answer key. Either may be `-` for standard input, and not both.
@@ -32,6 +32,7 @@ thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--i
 - `--curve` fills each row's `curve`, and the pooled line's. See "Curve".
 - `--pooled` prints one more line after the rows. See "The pooled line".
 - `--table` prints the results for a person instead of JSONL.
+- `--cases` prints one JSONL row per parsed saved case instead of aggregate rows. It accepts `--id`, `--threshold` and `--match`, and conflicts with explicitly supplied `--by`, `--seed`, `--target`, `--optimize`, `--curve`, `--pooled`, `--table`, `--write` and `--write-to`. A conflict is usage exit 2 before either input is read. Without `--cases`, the aggregate view and writing behavior are unchanged.
 
 `filter --details` prints only the records it kept, so its rows cannot show a miss. Grade a filter question from `decide --details` over the same records. A `rank` row prints `verb: "rank"`.
 
@@ -61,6 +62,16 @@ Each input is read whole. Lines split on newline. A blank line is skipped and st
 **Duplicates.** audit refuses the same answer name, record id, question text, and label twice.
 
 Both readers ignore members they do not use. A later version may read more of them.
+
+## Case evidence
+
+`--cases` runs the same answer/key parsing, duplicate check and aggregate validation before printing any case. A nonempty key with no labeled unfailed answer retains the existing refusal. The output follows result-line order, then `answers` member order. A `tag` entry expands in saved `answer.probabilities` member order when present, otherwise in `question.labels` order. Each case identity combines `id`, answer `name`, question text and `label` when present; `line` is one-based provenance, not the identity.
+
+Every row has `case: true`, integer `line`, string `id` and `verb`, nullable string `name`, `question` and `label`, and `input` as the saved JSON value or null when absent. `options` is the saved question's sent-order string array for `choose`, `tag` or `score`, or null when its question carrier is absent. `options` can differ in order from expanded tag rows. `said` is a boolean for yes/no and a tag label, a string for a choice/level/unit, or null for an unresolved or tied answer. It is the answer under `--threshold` when that rule is supplied. `truth` is the matching key's normalized boolean or option string; it is null on an unlabeled or failed case. `outcome` is one of `right`, `wrong`, `unsure`, `tied`, `unlabeled`, `failed`, or `items`. The outcome distinguishes a null `said` due to a tie, an unresolved judgment, or a failure. A failed case alone may carry `key_value`, the unvalidated raw key member if one exists. It has null `said` and `truth` even if that member is present.
+
+For a labeled `recognize` or `relate` case, `outcome` is `items`. `said` contains the saved said items kept under the chosen rule in the grader's strongest-first order; `truth` contains the saved key items in key order. A recognize value keeps its `{"entities":[...]}` shape and a relate value stays an array. `item_counts` is `{matched,extra,missed}` from the same matching rule as aggregate precision and recall. It is null for every other row. A partial item match is not a scalar right or wrong case. `probability` is the saved parsed `answer.probability` or tag-label probability from zero to one, otherwise null. `probabilities` is the valid saved answer probability object or null; one is never inferred from the other. `top_two` is an array of two `{option,probability}` objects only for `choose` with at least two saved sent options and a compatible valid distribution. It ranks by probability and breaks a tie by sent option order. It is null for other verbs or absent/incompatible saved carriers; the full distribution retains any further tied holders.
+
+`usage` is the valid saved `meta.usage` pair `{input_tokens,output_tokens}` of nonnegative integers, or null. `usage_scope` is `"result_line"` only when usage is present, otherwise null. Annotated criteria repeat one root result-line usage value; that value is not each criterion's separate charge. A packed saved row may already hold an upstream share, which audit copies without recalculation. Missing or unusable usage is unknown, never zero or a share of whole-run `--facts`. `--cases` reads no API key or configuration and sends no request.
 
 ## The math
 
@@ -232,6 +243,7 @@ A failure prints nothing on standard output and one line on standard error. The 
 | `--by` starts with `/` and is not a pointer | 2 | `thinkthen: audit: --by takes question, verb, or a JSON pointer such as /category` |
 | No string or integer at the `--by` pointer, or no `input` | 2 | `thinkthen: audit: results line N has no string or integer value at the --by pointer` |
 | `--curve` with `--table` | 2 | `thinkthen: audit: --curve prints JSON lines; drop --table` |
+| `--cases` with an aggregate-only flag listed above | 2 | Ordinary command-line usage conflict before file reads |
 | QUESTIONS cannot be read | 5 | `thinkthen: audit: cannot read the question file` |
 | QUESTIONS is not a question file or set a run accepts | 5 | `thinkthen: audit: --write names a file that is not a valid question file` |
 | A line lacks the digest or carries another | 2 | `thinkthen: audit: results line N was not asked from the question file; --write needs --details lines from that file` |

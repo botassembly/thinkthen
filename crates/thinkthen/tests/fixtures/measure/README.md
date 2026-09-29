@@ -241,6 +241,9 @@ The hand-written `--lines` relate line in `audit_sets` carries `f2c4e88c6a7b11bd
 | `better/decide.jsonl` | `07082f6c1c542f5e70f21e579df3f824280c4dd59e8b015f439e1e72b41aedd8` |
 | `better/tie-key.jsonl` | `8b47ff1106e77c8fd4c00802006c2fe9ca449e4e9e94b00e65bf6b04ad8898b0` |
 | `better/tie.jsonl` | `d74c6d3b93823583fc02fcd2b9ba3be5ef11a98e7ab5bfa32c495d492cdf0386` |
+| `cases/expected.jsonl` | `aaeed17b3028edb387ab1595c27661c427a405ea71b03f275e024203a7014c38` |
+| `cases/key.jsonl` | `133e4e360af0a7e6f8225aa1b5bc2941e914a450e8a01ccaf8394a21e4a8cf1f` |
+| `cases/results.jsonl` | `a6ec997003c3b6a2dab188ae76c55250f119beaa09805065c7dff9f5e0011059` |
 | `diff-recognize-key-run.jsonl` | `b4df57a858b64759ec923be871971c7d03f80da3bf3f4142cc62e064eed93b6e` |
 | `given/by-key.jsonl` | `2380d356e8c93b6136ddc594557cf62ad369c95818f8becc432d3721ed96cb5e` |
 | `given/by.jsonl` | `8d9094499bf640f84258a1d0495c4e934e5a231023e7789a493357055ab1b2b8` |
