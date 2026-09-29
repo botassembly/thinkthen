@@ -44,6 +44,8 @@ Asked: one public tap repository with one formula per Ian's 2026-09-21 ruling. T
 
 Done when: `brew install` of the site's line installs the draft release on macOS on both chips, and the formula update runs from the release job.
 
+Observation, 2026-09-29, wave 4 release QA preparation: `sdlc/scripts/release-workflow` lines 692 to 723 write a formula with Linux branches (lines 707 to 713). The post-publish check in ticket 0128 (line 146) runs `brew install` only on the M5. If Homebrew on Linux is a promised channel, phase 4 needs a Linux `brew install` check. The site catalog (`site/src/data/catalog.mjs:397`) calls Homebrew an option on a Mac, so the Linux branches may be unpromised. This is a scoping question for Ian.
+
 ## 4. crates.io with trusted publishing
 
 Today: the name `thinkthen` is claimed on crates.io at 0.0.1 as a placeholder published by hand. Trusted publishing from GitHub Actions is not set up. A local token exists. `crates/thinkthen/Cargo.toml` sets `publish = false`. Ticket 0120 left the Rust Polars crate at `publish = false` and names the release ticket as the place that brings Ian its name. The recommendation is `thinkthen-polars`.
@@ -83,6 +85,8 @@ Today: the site lists channels with no registry claimed. R shows `install.packag
 Asked: one download per surface that a user can install on Linux and macOS. The C archive stays separate from the command archive per the 2026-09-21 recommendation.
 
 Done when: each surface has a named channel and a release asset or registry entry, and each installs from that channel on a clean machine.
+
+Observation, 2026-09-29, wave 4 release QA preparation: the site catalog's R line (`site/src/data/catalog.mjs:452`) is `install.packages("thinkthen")` with no `repos=` argument. That resolves against CRAN, which ticket 0128 excludes (line 319). The line needs the R-universe repository once Ian sets it up (ticket 0128 line 360). The R README's "Nothing is published" line is accurate today.
 
 ## 9. The Ruby Mac build and other Mac builds
 
