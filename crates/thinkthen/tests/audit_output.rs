@@ -8,8 +8,10 @@ mod measure_support;
 mod wait;
 
 use std::fs;
+use std::io::ErrorKind;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use conformance_backend::{Canned, Listener};
 use measure_support::{audit, fixture, fixtures, payment_rows, ranked, replay, repository};
@@ -28,13 +30,24 @@ const SET_OUTPUT: &str = concat!(
 
 struct Scratch(PathBuf);
 
+static NEXT_SCRATCH: AtomicU64 = AtomicU64::new(0);
+
 impl Scratch {
     fn new(name: &str) -> Self {
-        let path =
-            std::env::temp_dir().join(format!("thinkthen-0256-{name}-{}", std::process::id()));
-        let _old = fs::remove_dir_all(&path);
-        fs::create_dir(&path).expect("scratch directory");
-        Self(path)
+        loop {
+            let number = NEXT_SCRATCH.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "thinkthen-0256-{name}-{}-{number}",
+                std::process::id()
+            ));
+            match fs::create_dir(&path) {
+                Ok(()) => return Self(path),
+                Err(error) => assert!(
+                    error.kind() == ErrorKind::AlreadyExists,
+                    "cannot create scratch directory: {error}"
+                ),
+            }
+        }
     }
 
     fn path(&self, name: &str) -> String {
