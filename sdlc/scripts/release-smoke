@@ -9,13 +9,63 @@ set -eu
 . "$(dirname -- "$0")/verdict.sh"
 . "$(dirname -- "$0")/scratch.sh"
 . "$(dirname -- "$0")/installed.sh"
-[ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke DIR' >&2; exit 2; }
+source_packages=
+if [ "${1:-}" = --source-packages ]; then source_packages=1; shift; fi
+[ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke [--source-packages] DIR' >&2; exit 2; }
 DIR=$(CDPATH='' cd -- "$1" && pwd)
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 unset THINKTHEN_API_KEY
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
+
+# The opt-in Linux bundle must name every installed family before a backend starts.
+# Ordinary release smoke keeps its original nine-family requirement below.
+if [ -n "$source_packages" ]; then
+	[ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || { echo 'release-smoke: source packages require Linux x86_64' >&2; exit 77; }
+	target=$(rustc -vV | sed -n 's/^host: //p')
+	[ "$target" = x86_64-unknown-linux-gnu ] || { echo 'release-smoke: source package target differs from this host' >&2; exit 77; }
+	require_file() {
+		[ -f "$DIR/$1" ] && [ ! -L "$DIR/$1" ] || { echo "release-smoke: missing or linked $1" >&2; exit 1; }
+		[ -f "$DIR/$1.sha256" ] && [ ! -L "$DIR/$1.sha256" ] || { echo "release-smoke: missing or linked $1.sha256" >&2; exit 1; }
+	}
+	for family in c go cpp csharp jvm swift zig php dart flutter ada objective-c cobol sqlite duckdb postgresql16; do
+		name=thinkthen-$family-$V-$target.tar.gz
+		for file in "$DIR"/thinkthen-"$family"-*.tar.gz*; do
+			[ -e "$file" ] || [ -L "$file" ] || continue
+			case ${file##*/} in "$name" | "$name.sha256") ;; *) echo "release-smoke: extra family entry ${file##*/}" >&2; exit 1 ;; esac
+		done
+		require_file "$name"
+	done
+	require_file "thinkthen-$V-x86_64-unknown-linux-musl.tar.gz"
+	for file in "$DIR"/thinkthen-[0-9]*.tar.gz*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		case ${file##*/} in "thinkthen-$V-x86_64-unknown-linux-musl.tar.gz" | "thinkthen-$V-x86_64-unknown-linux-musl.tar.gz.sha256") ;;
+		*) echo "release-smoke: extra command entry ${file##*/}" >&2; exit 1 ;;
+		esac
+	done
+	require_file "thinkthen-$V.tgz"
+	for file in "$DIR"/thinkthen-*.tgz*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		case ${file##*/} in "thinkthen-$V.tgz" | "thinkthen-$V.tgz.sha256") ;; *) echo "release-smoke: extra npm entry ${file##*/}" >&2; exit 1 ;; esac
+	done
+	require_file thinkthen-first-run.tar.gz
+	for extension in whl gem; do
+		count=0
+		for file in "$DIR"/thinkthen-"$V"-*.$extension; do
+			[ -e "$file" ] || [ -L "$file" ] || continue
+			[ -f "$file" ] && [ ! -L "$file" ] || { echo "release-smoke: missing or linked ${file##*/}" >&2; exit 1; }
+			require_file "${file##*/}"
+			name=${file##*/}
+			count=$((count + 1))
+		done
+		[ "$count" -eq 1 ] || { echo "release-smoke: expected one installed $extension, got $count" >&2; exit 1; }
+		for file in "$DIR"/thinkthen-*.$extension*; do
+			[ -e "$file" ] || [ -L "$file" ] || continue
+			case ${file##*/} in "$name" | "$name.sha256") ;; *) echo "release-smoke: extra $extension entry ${file##*/}" >&2; exit 1 ;; esac
+		done
+	done
+fi
 
 # A focused three-file pilot can call this same preflight by itself. A full
 # release-smoke still requires every established family below.

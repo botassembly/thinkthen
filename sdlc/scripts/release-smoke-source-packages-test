@@ -1,0 +1,59 @@
+#!/bin/sh
+# Selected bundle file mistakes must refuse before the release backend build.
+set -eu
+platform=$(uname -s):$(uname -m)
+target=$(rustc -vV | sed -n 's/^host: //p')
+if [ "$platform:$target" != Linux:x86_64:x86_64-unknown-linux-gnu ]; then
+	echo 'release-smoke source packages: skipped on unsupported host'
+	exit 0
+fi
+repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+. "$repo/sdlc/scripts/scratch.sh"
+scratch_dir work
+mkdir "$work/bin" "$work/bundle"
+cat >"$work/bin/cargo" <<EOF
+#!/bin/sh
+touch "$work/backend-started"
+exit 88
+EOF
+chmod +x "$work/bin/cargo"
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$repo/crates/thinkthen/Cargo.toml" | head -n 1)
+for family in c go cpp csharp jvm swift zig php dart flutter ada objective-c cobol sqlite duckdb postgresql16; do
+	: >"$work/bundle/thinkthen-$family-$version-$target.tar.gz"
+	: >"$work/bundle/thinkthen-$family-$version-$target.tar.gz.sha256"
+done
+for name in "thinkthen-$version-x86_64-unknown-linux-musl.tar.gz" "thinkthen-$version.tgz" \
+	"thinkthen-$version-cp310-abi3-manylinux_2_34_x86_64.whl" "thinkthen-$version-x86_64-linux.gem" \
+	thinkthen-first-run.tar.gz; do
+	: >"$work/bundle/$name"
+	: >"$work/bundle/$name.sha256"
+done
+expect_refusal() {
+	rm -f "$work/backend-started"
+	set +e
+	PATH="$work/bin:$PATH" sh "$repo/sdlc/scripts/release-smoke" --source-packages "$work/bundle" >"$work/out" 2>&1
+	code=$?
+	set -e
+	[ "$code" -eq 1 ] || { cat "$work/out" >&2; echo "wanted exit 1, got $code" >&2; exit 1; }
+	grep -Fqx "$1" "$work/out" || { cat "$work/out" >&2; exit 1; }
+	[ ! -e "$work/backend-started" ] || { echo 'release backend started for invalid source packages' >&2; exit 1; }
+}
+go=thinkthen-go-$version-$target.tar.gz
+mv "$work/bundle/$go" "$work/go.saved"
+mv "$work/bundle/$go.sha256" "$work/go.sha256.saved"
+expect_refusal "release-smoke: missing or linked $go"
+mv "$work/go.saved" "$work/bundle/$go"
+mv "$work/go.sha256.saved" "$work/bundle/$go.sha256"
+mv "$work/bundle/$go.sha256" "$work/go.sha256.saved"
+expect_refusal "release-smoke: missing or linked $go.sha256"
+mv "$work/go.sha256.saved" "$work/bundle/$go.sha256"
+: >"$work/bundle/thinkthen-go-$version-wrong-target.tar.gz"
+expect_refusal "release-smoke: extra family entry thinkthen-go-$version-wrong-target.tar.gz"
+rm "$work/bundle/thinkthen-go-$version-wrong-target.tar.gz"
+: >"$work/bundle/thinkthen-go-older-$target.tar.gz"
+expect_refusal "release-smoke: extra family entry thinkthen-go-older-$target.tar.gz"
+rm "$work/bundle/thinkthen-go-older-$target.tar.gz"
+mv "$work/bundle/$go" "$work/go.saved"
+ln -s "$work/go.saved" "$work/bundle/$go"
+expect_refusal "release-smoke: missing or linked $go"
+echo 'release-smoke source packages: omission, sidecar, wrong target, extra version and linked files refused before backend'
