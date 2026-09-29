@@ -1,15 +1,17 @@
 //! Four keyed judgment tables with eight connection-owned packed answer slots.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::ffi::{CStr, c_int};
 use std::sync::Arc;
 
 use rusqlite::ffi::sqlite3;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::Filters;
+use serde::de::{Error as _, MapAccess, Visitor};
+use serde::{Deserialize, Deserializer};
 use thinkthen::{For, Judgment, LoadedQuestion, Probabilities};
 
-use crate::question::{call_settings, question_with_settings, text};
+use crate::question::{Stamp, call_settings, question_with_settings, stamp};
 use crate::tables::{Scan, Table};
 use crate::{Failure, worker};
 
@@ -25,6 +27,7 @@ struct Slot {
     question: Vec<u8>,
     keyed: Vec<u8>,
     settings: Vec<u8>,
+    file_stamp: Option<Stamp>,
     rows: Rows,
     positions: Arc<HashMap<String, usize>>,
 }
@@ -42,12 +45,17 @@ impl Store {
         question: &[u8],
         keyed: &[u8],
         settings: &[u8],
+        file_stamp: Option<Stamp>,
     ) -> Option<HeldRows> {
+        if question.starts_with(b"@") && file_stamp.is_none() {
+            return None;
+        }
         let at = self
             .slots
             .iter()
             .position(|slot| {
                 slot.kind == kind
+                    && slot.file_stamp == file_stamp
                     && slot.pointers
                         == [
                             question.as_ptr() as usize,
@@ -64,6 +72,7 @@ impl Store {
             .or_else(|| {
                 self.slots.iter().position(|slot| {
                     slot.kind == kind
+                        && slot.file_stamp == file_stamp
                         && slot.question.len() == question.len()
                         && slot.keyed.len() == keyed.len()
                         && slot.settings.len() == settings.len()
@@ -100,28 +109,67 @@ fn string(bytes: &[u8], name: &str) -> Result<String, Failure> {
         .map_err(|_| Failure::usage(format!("{name} is UTF-8 text")))
 }
 
-fn keyed(source: &str) -> Result<Vec<(String, String)>, Failure> {
-    let object: serde_json::Value = serde_json::from_str(source)
-        .map_err(|_| Failure::usage("keyed records are one JSON object of text"))?;
-    let fields = object
-        .as_object()
-        .ok_or_else(|| Failure::usage("keyed records are one JSON object of text"))?;
-    fields
-        .iter()
-        .map(|(key, value)| {
-            let text = value
-                .as_str()
-                .filter(|text| !text.trim().is_empty())
-                .ok_or_else(|| Failure::usage("each keyed record is nonblank text"))?;
-            Ok((key.clone(), text.to_owned()))
-        })
-        .collect()
+/// Read this one object without flattening repeated member names. Escaped
+/// spellings are decoded before the duplicate comparison.
+struct Keyed(Vec<(String, String)>);
+
+fn keyed_map<'de, M: MapAccess<'de>>(mut map: M) -> Result<Keyed, M::Error> {
+    let mut seen = HashSet::new();
+    let mut rows = Vec::new();
+    while let Some((key, value)) = map.next_entry::<String, serde_json::Value>()? {
+        if !seen.insert(key.clone()) {
+            return Err(M::Error::custom("a keyed record name is repeated"));
+        }
+        let text = value
+            .as_str()
+            .filter(|text| !text.trim().is_empty())
+            .ok_or_else(|| M::Error::custom("each keyed record is nonblank text"))?;
+        rows.push((key, text.to_owned()));
+    }
+    Ok(Keyed(rows))
+}
+
+impl<'de> Deserialize<'de> for Keyed {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Object;
+        impl<'de> Visitor<'de> for Object {
+            type Value = Keyed;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                formatter.write_str("one JSON object of keyed nonblank text")
+            }
+
+            fn visit_map<M: MapAccess<'de>>(self, map: M) -> Result<Keyed, M::Error> {
+                keyed_map(map)
+            }
+        }
+        deserializer.deserialize_map(Object)
+    }
+}
+
+pub(crate) fn keyed(source: &str) -> Result<Vec<(String, String)>, Failure> {
+    let mut deserializer = serde_json::Deserializer::from_str(source);
+    let rows = Keyed::deserialize(&mut deserializer)
+        .map_err(|error| Failure::usage(format!("keyed records are invalid: {error}")))?;
+    deserializer
+        .end()
+        .map_err(|error| Failure::usage(format!("keyed records are invalid: {error}")))?;
+    Ok(rows.0)
 }
 
 fn selected(rows: Rows, positions: Arc<HashMap<String, usize>>, lookup: Option<String>) -> Scan {
     Scan {
         rows,
         selected: lookup.map(|key| positions.get(&key).copied().unwrap_or(usize::MAX)),
+    }
+}
+
+fn lookup(value: ValueRef<'_>) -> Option<String> {
+    match value {
+        ValueRef::Text(bytes) if !bytes.contains(&0) => {
+            std::str::from_utf8(bytes).ok().map(str::to_owned)
+        }
+        _ => None,
     }
 }
 
@@ -193,12 +241,17 @@ fn scan(
         ValueRef::Text(bytes) => bytes,
         _ => return Err(Failure::usage("the settings are JSON text")),
     };
-    let lookup = text(values[3], "the key")?;
+    // A numeric or NULL equality is evaluated by SQLite with TEXT affinity;
+    // returning all candidates lets its residual predicate decide. The same
+    // applies to malformed text, which SQLite can compare without this host
+    // interpreting it as a UTF-8 key.
+    let lookup = lookup(values[3]);
+    let file_stamp = stamp(question);
     {
         let mut held = store
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner);
-        if let Some((rows, positions)) = held.hit(kind, question, packed, settings) {
+        if let Some((rows, positions)) = held.hit(kind, question, packed, settings, file_stamp) {
             return Ok(selected(rows, positions, lookup));
         }
     }
@@ -257,6 +310,7 @@ fn scan(
             question: question.to_vec(),
             keyed: packed.to_vec(),
             settings: settings.to_vec(),
+            file_stamp,
             rows: Arc::clone(&rows),
             positions: Arc::clone(&positions),
         });

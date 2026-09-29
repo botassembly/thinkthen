@@ -19,7 +19,15 @@ const CACHE_CAP: usize = 4096;
 const FILE_CAP: u64 = 1024 * 1024;
 
 /// A named file's modified time and size, read from the descriptor its bytes came through.
-type Stamp = (SystemTime, u64);
+pub(crate) type Stamp = (SystemTime, u64);
+
+/// A named question's current stamp for connection-owned row reuse.
+pub(crate) fn stamp(argument: &[u8]) -> Option<Stamp> {
+    let path = argument.strip_prefix(b"@")?;
+    let path = std::str::from_utf8(path).ok()?;
+    let meta = std::fs::metadata(path).ok()?;
+    Some((meta.modified().ok()?, meta.len()))
+}
 
 /// How SQL gave a value, for a message that names it.
 pub(crate) fn shown(value: ValueRef<'_>) -> String {

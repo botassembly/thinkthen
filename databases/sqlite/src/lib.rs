@@ -127,7 +127,7 @@ impl From<thinkthen::Error> for Failure {
                     | SendBudgetDenial::BeforeRetry { .. }
             )
         ) {
-            return settings::spent(settings::send_budget().1.unwrap_or(0));
+            return settings::spent(settings::total().unwrap_or(0));
         }
         Self {
             kind: error.kind(),

@@ -343,6 +343,7 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
 }
 
 mod find;
+mod plan;
 
 fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlite::Result<()> {
     for name in [
@@ -441,6 +442,9 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         connection.create_scalar_function("thinkthen_find", arity, volatile, find::find)?;
     }
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
+    for arity in [2, 3] {
+        connection.create_scalar_function("thinkthen_plan", arity, volatile, plan::plan)?;
+    }
     connection.create_scalar_function("thinkthen_configure", 1, volatile, settings::configure)?;
     register_removed(connection, volatile)?;
     Ok(())

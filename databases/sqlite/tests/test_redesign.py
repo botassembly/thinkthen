@@ -3,8 +3,103 @@
 
 import json
 import pathlib
+import tempfile
 
 from helper import Backend, Child, child, environment, expect, main
+
+
+def test_plan_p1_exact_body_and_bad_inputs_never_send() -> None:
+    backend = Backend()
+    held = child("""
+db = connect()
+good = run(db, "SELECT thinkthen_plan(?, ?, ?)", ('asks for a refund', '{"7":"Refund me please."}', '{}'))
+invalid = run(db, "SELECT thinkthen_plan(?, ?, ?)", ('asks for a refund', '{"7":"Refund me please."}', '{"unknwon":1}'))
+repeated = run(db, "SELECT thinkthen_plan(?, ?, ?)", ('asks for a refund', '{"7":"one","7":"two"}', '{}'))
+conflict = run(db, "SELECT thinkthen_plan(?, ?, ?)", ('{"decide":"asks for a refund","threshold":0.4}', '{"7":"Refund me please."}', '{"threshold":0.7}'))
+choice = run(db, "SELECT thinkthen_plan(?, ?, ?)", ('Which team?', '{"x":"Refund me please."}', '{"options":["billing","shipping"]}'))
+say(good=good, invalid=invalid, repeated=repeated, conflict=conflict, choice=choice)
+""", environment(backend))
+    plan = json.loads(held["good"][0][0])
+    expect({key: value for key, value in plan.items() if key != "first_body_utf8"},
+           {"records": 1, "requests": 1, "estimated_bytes": 120,
+            "estimated_input_tokens": {"lower": 61, "upper": 109}, "upper_bound": False}, "P1 native JSON text")
+    expect(plan["first_body_utf8"],
+           '{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}',
+           "independent 120-byte first body")
+    expect(len(plan["first_body_utf8"].encode()), 120, "P1 first body byte count")
+    choice = json.loads(held["choice"][0][0])
+    expect((choice["records"], choice["requests"]), (1, 1), "choose settings plan")
+    expect(all(member in choice["first_body_utf8"] for member in ("billing", "shipping")), True,
+           "settings members entered the selected request")
+    for name in ("invalid", "repeated", "conflict"):
+        expect(held[name].startswith("thinkthen usage:"), True, name)
+    expect(backend.close(), 0, "all previews and refusals sent nothing")
+
+
+def test_process_total_refuses_the_second_packed_send() -> None:
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("SELECT thinkthen_configure(?)", ('{"batch":1,"max_requests_total":1}',))
+say(result=run(db, "SELECT key,value FROM thinkthen_decide_many(?, ?)",
+               ('Is it red?', '{"a":"one red row","b":"another red row"}')))
+""", environment(backend))
+    expect(held["result"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_configure)",
+           "later packed attempt names the configured total")
+    expect(backend.close(), 1, "one live send, refused second send")
+
+
+def test_key_filter_obeys_sqlite_text_affinity_null_and_collation() -> None:
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("CREATE TABLE ordinary(key TEXT, value INTEGER)")
+db.executemany("INSERT INTO ordinary VALUES (?,1)", [('a',), ('7',)])
+base = "SELECT key FROM thinkthen_decide_many(?, ?) WHERE "
+packed = '{"a":"red","7":"red"}'
+cases = [('key = ?', (None,)), ('key COLLATE NOCASE = ?', ('A',)), ('key = ?', (7,))]
+say(actual=[run(db, base + predicate, ('Is it red?', packed) + args) for predicate, args in cases],
+    ordinary=[run(db, 'SELECT key FROM ordinary WHERE ' + predicate, args) for predicate, args in cases])
+""", environment(backend))
+    expect(held["actual"], held["ordinary"], "the ordinary TEXT column is the comparison oracle")
+    expect(held["actual"], [[], [["a"]], [["7"]]], "NULL, NOCASE and numeric affinity")
+    expect(backend.close(), 1, "one judged result across three residual predicates")
+
+
+def test_repeated_decoded_key_refuses_before_any_send() -> None:
+    backend = Backend()
+    held = child(r"""
+db = connect()
+say(raw=run(db, "SELECT count(*) FROM thinkthen_decide_many(?, ?)", ('Is it red?', '{"x":"red","x":"blue"}')),
+    escaped=run(db, "SELECT count(*) FROM thinkthen_decide_many(?, ?)", ('Is it red?', r'{"x":"red","\u0078":"blue"}')))
+""", environment(backend))
+    for value in held.values():
+        expect(value.startswith("thinkthen usage:"), True, "duplicate key refusal")
+    expect(backend.close(), 0, "neither repeated spelling sent")
+
+
+def test_changed_question_file_invalidates_connection_rows() -> None:
+    backend = Backend()
+    with tempfile.TemporaryDirectory() as folder:
+        source = pathlib.Path(folder) / "question.json"
+        source.write_text('{"decide":"Is it red?","model":"judge-a"}')
+        held = child(f"""
+import os
+db = connect()
+sql = "SELECT key,value FROM thinkthen_decide_many(?, ?)"
+args = ('@{source}', '{{"x":"a red door"}}')
+first = run(db, sql, args)
+same = run(db, sql, args)
+before = os.stat({str(source)!r}).st_mtime
+open({str(source)!r}, 'w').write('{{"decide":"Is it red?","model":"judge-b"}}')
+os.utime({str(source)!r}, (before + 2, before + 2))
+changed = run(db, sql, args)
+say(first=first, same=same, changed=changed)
+""", environment(backend, "arm/full/capture"))
+    expect(held, {"first": [["x", 1]], "same": [["x", 1]], "changed": [["x", 1]]}, "stable answer rows")
+    bodies = [json.loads(body) for body in backend.capture()]
+    expect([body["model"] for body in bodies], ["judge-a", "judge-b"], "file model reread")
+    expect(backend.close(), 2, "unchanged reused; changed file sent once")
 
 
 def test_six_song_e1_keyed_join_sends_one_exact_packed_body() -> None:
@@ -24,11 +119,11 @@ say(rows=run(db, sql, (question, '{{"threshold":"0.3:0.7"}}')))
     expected = (
         '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{'
         '"q1":{"type":"noul","instructions":"The text is \\"Here Comes the Sun\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
-        '"q2":{"type":"noul","instructions":"The text is \\"A Day in the Life\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
-        '"q3":{"type":"noul","instructions":"The text is \\"Hey Jude\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
-        '"q4":{"type":"noul","instructions":"The text is \\"Yellow Submarine\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
-        '"q5":{"type":"noul","instructions":"The text is \\"Octopus\'s Garden\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
-        '"q6":{"type":"noul","instructions":"The text is \\"Penny Lane\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."}}}'
+        '"q2":{"type":"noul","instructions":"The text is \\"Yellow Submarine\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
+        '"q3":{"type":"noul","instructions":"The text is \\"Octopus\'s Garden\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
+        '"q4":{"type":"noul","instructions":"The text is \\"Penny Lane\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
+        '"q5":{"type":"noul","instructions":"The text is \\"A Day in the Life\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."},'
+        '"q6":{"type":"noul","instructions":"The text is \\"Hey Jude\\". The text is the title of a song by the Beatles. It appears on the album Abbey Road."}}}'
     )
     expect(backend.capture(), [expected], "one literal E1 request body")
     expect(backend.close(), 1, "one E1 packed send")

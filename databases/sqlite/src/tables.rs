@@ -59,6 +59,12 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
     let mut bound = vec![None; T::COLUMNS - T::FIRST_HIDDEN];
     for (at, constraint) in info.constraints().enumerate() {
         let lookup = T::NAME.ends_with("_many") && constraint.column() == 0;
+        // A keyed row has TEXT affinity, but SQLite may apply a caller's
+        // collation or coerce a numeric right operand. Only binary text can
+        // use our byte-for-byte candidate lookup; SQLite always rechecks it.
+        if lookup && !matches!(info.collation(at), Ok("BINARY")) {
+            continue;
+        }
         let Some(column) = usize::try_from(constraint.column())
             .ok()
             .and_then(|column| column.checked_sub(T::FIRST_HIDDEN))
@@ -74,7 +80,7 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
             continue;
         }
         if let Some(slot) = bound.get_mut(column) {
-            *slot = Some(at);
+            *slot = Some((at, lookup));
         }
     }
     if bound.iter().take(T::REQUIRED).any(Option::is_none) {
@@ -82,12 +88,12 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
     }
     let (mut mask, mut place): (c_int, c_int) = (0, 0);
     for (column, at) in bound.iter().enumerate() {
-        if let Some(at) = at {
+        if let Some((at, visible_lookup)) = at {
             place += 1;
             mask |= 1 << column;
             let mut usage = info.constraint_usage(*at);
             usage.set_argv_index(place);
-            usage.set_omit(true);
+            usage.set_omit(!visible_lookup);
         }
     }
     info.set_idx_num(mask);

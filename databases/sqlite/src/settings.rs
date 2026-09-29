@@ -7,7 +7,7 @@ use std::time::Duration;
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
-use thinkthen::{BatchSetting, Engine, EngineBuilder, SendBudget};
+use thinkthen::{BatchSetting, Engine, EngineBuilder};
 
 use crate::{Failure, guard};
 
@@ -41,6 +41,9 @@ impl Stored {
         }
         if let Some(value) = self.max_request_bytes {
             builder = builder.max_request_bytes(value)?;
+        }
+        if let Some(value) = self.total {
+            builder = builder.max_requests_total(Some(value));
         }
         match &self.cache {
             Some(Some(folder)) => builder = builder.cache_at(folder)?,
@@ -85,7 +88,6 @@ static STORED: Mutex<Stored> = Mutex::new(Stored {
 });
 
 static ENGINE: OnceLock<Engine> = OnceLock::new();
-static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
 
 fn batch(value: &serde_json::Value) -> Result<BatchSetting, Failure> {
     if value.as_str() == Some("max") {
@@ -99,9 +101,9 @@ fn batch(value: &serde_json::Value) -> Result<BatchSetting, Failure> {
     Ok(BatchSetting::Records(count))
 }
 
-/// Keep one count across every engine and every call in this process.
-pub(crate) fn send_budget() -> (&'static SendBudget, Option<u64>) {
-    (SEND_BUDGET.get_or_init(SendBudget::new), stored().total)
+/// The selected cap for a safe SQLite refusal sentence.
+pub(crate) fn total() -> Option<u64> {
+    stored().total
 }
 
 fn stored() -> MutexGuard<'static, Stored> {
@@ -127,23 +129,10 @@ pub(crate) fn built() -> Option<&'static Engine> {
     ENGINE.get()
 }
 
-/// What remains of the process request total for an ordinary scalar call.
-/// A spent total refuses even a cached scalar answer, as before B13e.
-pub(crate) fn remaining() -> Result<Option<usize>, Failure> {
-    let Some(total) = stored().total else {
-        return Ok(None);
-    };
-    let sent = built().map_or(0, |engine| engine.usage().requests_sent());
-    match total.saturating_sub(sent) {
-        0 => Err(spent(total)),
-        left => Ok(Some(usize::try_from(left).unwrap_or(usize::MAX))),
-    }
-}
-
 /// The refusal once the process request total is spent.
 pub(crate) fn spent(total: u64) -> Failure {
     Failure::usage(format!(
-        "this process has sent its total of {total} requests (thinkthen_max_requests_total)"
+        "this process has sent its total of {total} requests (thinkthen_configure)"
     ))
 }
 
@@ -176,6 +165,7 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
                             .map(|n| usize::try_from(n).unwrap_or(usize::MAX)),
                     )
                 }
+                "max_requests_total" => next.total = value.as_u64(),
                 "max_request_bytes" => {
                     next.max_request_bytes = value
                         .as_u64()
