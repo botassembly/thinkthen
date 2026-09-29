@@ -1,0 +1,11 @@
+{"input":{"id":"d1"},"value":true,"question":{"verb":"decide","text":"Is it relevant?"},"answer":{"probability":0.7}}
+{"input":{"id":"c2"},"value":null,"question":{"verb":"choose","text":"Which colour?","options":["green","red","blue"]},"answer":{"probabilities":{"red":0.4,"green":0.4,"blue":0.2}}}
+{"input":{"id":"t1"},"value":["first"],"question":{"verb":"tag","text":"Which labels?","labels":["second","first"]},"answer":{"probabilities":{"first":0.8,"second":0.2}}}
+{"input":{"id":"a1"},"answers":{"urgent":{"question":{"verb":"decide","text":"Is it urgent?"},"failure":{"kind":"backend"}},"kind":{"value":"bug","question":{"verb":"choose","text":"Which kind?","options":["bug","feature"]},"answer":{"probabilities":{"bug":0.9,"feature":0.1}}}},"meta":{"usage":{"input_tokens":7,"output_tokens":2}}}
+{"input":{"id":"s1"},"value":{"entities":[{"kind":"X","start":0,"end":1,"strength":0.9},{"kind":"X","start":2,"end":3,"strength":0.8}]},"question":{"verb":"recognize","kinds":{"X":"Kind X"},"threshold":0.3}}
+{"input":{"id":"u1"},"value":true,"question":{"verb":"decide","text":"Is it relevant?"},"answer":{"probability":0.6}}
+{"input":{"id":"n1"},"value":null,"question":{"verb":"decide","text":"Is it relevant?"},"answer":{"probability":0.5}}
+{"input":{"id":"g1"},"value":1.0,"question":{"verb":"score","text":"Which level?","levels":["low","mid","high"]}}
+{"input":{"id":"d2"},"value":true,"question":{"verb":"decide","text":"Is it relevant?"},"answer":{"probability":0.8}}
+{"input":{"id":"d3"},"value":false,"question":{"verb":"decide","text":"Is it relevant?"},"answer":{"probability":0.2}}
+{"input":{"id":"d4"},"value":false,"question":{"verb":"decide","text":"Is it relevant?"},"answer":{"probability":0.3}}

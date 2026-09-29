@@ -1,0 +1,10 @@
+{"id":"d1","value":false}
+{"id":"c2","value":"green"}
+{"id":"t1","value":["second"]}
+{"id":"a1","value":{"urgent":true,"kind":"bug"}}
+{"id":"s1","value":{"entities":[{"kind":"X","start":0,"end":1},{"kind":"X","start":4,"end":5}]}}
+{"id":"n1","value":true}
+{"id":"g1","value":"high"}
+{"id":"d2","value":true}
+{"id":"d3","value":false}
+{"id":"d4","value":true}

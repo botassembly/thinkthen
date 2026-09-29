@@ -1,6 +1,6 @@
 # Audit shows group counts and no per-case evidence
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/296-gepa-question-tuning/` and `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: closed by ticket0257 after fresh Medium code review accepted `5ce3d270`. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/296-gepa-question-tuning/` and `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
 
 ## What happens today
 
@@ -43,3 +43,7 @@ Evidence: `experiments/297-gepa-loop-tests/LESSONS.md` sections 11 to 13, `pipel
 ## Factual preparation refresh, 2026-09-28
 
 At source `9b766cf9`, `cli/audit.rs::grade_all` already joins numbered result lines to the key through `core/measure/{answer,key}.rs`, then emits group rows from `grade::audit`. `diff` emits changed cases only. Accepted ticket 0256 adds a different saved audit output and is still building; it supplies no per-case evidence view. The original additive case-row criterion remains open. Raw details can carry input, ordered options and `meta.usage`, but parsed `Answer` does not retain every raw field, and usage can be absent. `--facts` is whole-run, not per-case tokens. A case view must reuse key truth and existing grading/refusal rules, distinguish failed/unlabeled/tied/unresolved, and prove its row outcomes against the existing aggregate on a small saved fixture with a duplicate identity refusal. The original 989-call/$0.042 account is retained above as history; the corrected final experiment 296+297 ledger in `experiments/297-gepa-loop-tests/LESSONS.md` reports 1,049 calls, 1,019,902 input tokens and about $0.043. Neither total is a per-case cost. See `sdlc/records/2026-09-28-tuning-evidence-refresh.md`.
+
+## Resolution
+
+Ticket0257 adds the read-only `audit --cases` view while preserving the aggregate default. Complete literal rows prove identity, input, question and sent options when saved, answer, keyed truth, probabilities, distinct outcomes, set counts and explicitly scoped available usage. Aggregate parity covers all four yes/no directions. The existing parser/join/refusals and no-send behavior are retained. [The build record](../../records/0257-audit-case-build.md) records exact proof and limits; uncertain-case selection, repeated judgments and new cost estimates remain separate issues.
