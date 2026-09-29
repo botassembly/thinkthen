@@ -24,6 +24,8 @@ In your application use `require __DIR__ . '/vendor-local/thinkthen-ffi/autoload
 
 The native `libthinkthen.so.0` SONAME is supplied by `libthinkthen_c.so`; the local install must include a matching `libthinkthen.so.0` symlink. This source checkout recipe is not a release channel.
 
+The local Linux package pilot uses `release-pack x86_64-unknown-linux-gnu OUT c php dart` from one clean commit. It writes separate versioned PHP, Dart and C archives with adjacent checksums. The PHP archive carries Composer metadata and source, not the C library. After verifying the archive pair, `THINKTHEN_ARTIFACT=/absolute/path/to/thinkthen-php-...tar.gz THINKTHEN_C_ARTIFACT=/absolute/path/to/thinkthen-c-...tar.gz sh libraries/php/check.sh 0` runs a fresh installed-file consumer against the selected C archive. This direct-file proof does not run Composer or publish to Packagist.
+
 ## Installation contract
 
 The PHP source package is separate from the native library archive. Verify each release's SHA-256 and manifest before extraction. Install the archive's header and library together. Header version must match the installed library; the library SONAME and exports must match the manifest. Resolve the library to an **absolute** path and pass it to `new ThinkThen($absoluteLibrary)`; no fallback lookup or network download exists. Pass an optional JSON settings object as the second constructor argument. Run `require 'vendor/autoload.php'` after Composer installation (or `require 'autoload.php'` for a direct source install). `examples/direct.php` exercises scalar and JSON calls with numeric loopback.

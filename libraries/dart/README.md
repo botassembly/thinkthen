@@ -15,7 +15,7 @@ dart pub get --offline
 dart analyze lib
 ```
 
-The default Linux output is `target/release/libthinkthen_c.so`, unless `CARGO_TARGET_DIR` selects another location. Add a source path dependency to the consuming application's `pubspec.yaml`:
+The default Linux output is `libraries/c/target/release/libthinkthen_c.so`, unless `CARGO_TARGET_DIR` selects another location. Add a source path dependency to the consuming application's `pubspec.yaml`:
 
 ```yaml
 dependencies:
@@ -42,3 +42,5 @@ try {
 Cancellation can fire from a second Dart isolate during a blocking native call. Join both isolates before freeing the cancel token or engine. Strings returned by C are freed with `thinkthen_free_string`; caller arguments use `package:ffi` allocation. [Flutter source](flutter/README.md) contains a Linux application that calls through this package.
 
 `check.sh` builds the current C source offline, matches the header to all exported symbols, checks two independent installed Dart consumers, runs the shared J1 corpus through the public `Door` API, and runs the Flutter Linux host and app. Set `TT_DART` and `TT_FLUTTER` to installed executables when they are absent from `PATH`. The check needs a populated local pub cache and creates no runtime downloads.
+
+The local Linux file pilot packs this Dart source beside a separately built matching C archive with `release-pack x86_64-unknown-linux-gnu OUT c php dart` from one clean commit. The Dart archive contains no Flutter wrapper or native library. After verifying the pair, set `THINKTHEN_ARTIFACT` to the absolute Dart archive path, `THINKTHEN_C_ARTIFACT` to the absolute C archive path, `TT_DART` to the Dart executable and `PUB_CACHE` to a local cache containing `ffi` 2.2.0, then run `sh libraries/dart/check.sh 0`. That installed-file mode resolves an unrelated consumer offline to the unpacked Dart source and loads the unpacked C library. It does not install or test the private Flutter wrapper or publish to pub.dev.

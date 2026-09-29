@@ -531,3 +531,7 @@ Fresh0262 design review found that JVM build.sh compiles into persistent class d
 ## Measure every changed fixture language
 
 Fresh0260 wrapper review found eight inherited C++ fixture lines omitted from0261's counter update. The earlier build and integration checked Python counters but also added a compiled C++ consumer. Corrected6e76d8b1 separates those eight lines from its own23 and restores the exact total. Root checked all52 counters; no other source-count mismatch remained. Preparation and landing must enumerate every extension touched by a fixture, including compiled test consumers, and run each affected ratchet. Existing counters already enforce this; no full build or new test framework is needed.
+
+## Name both artifacts in an identity comparison
+
+During0263 handoff, the coordinator read "first pilot" as the earlier0261/0262 packages. The author meant the first build within0263. The0263 record and fresh reviewer established equality between0263 builds `ebdbb38a` and `7d3e27b7`; their native member hashes differ from0261/0262. The coordinator corrected the review brief and user update. No accepted artifact or test result changed. Future handoffs name both source pins or paths and the compared member hashes instead of relying on relative phrases. A fresh package build and its installed-consumer proof remain valid even when unrelated earlier build bytes differ.

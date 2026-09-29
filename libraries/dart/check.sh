@@ -5,6 +5,33 @@ CHECKS="$ROOT/checks"
 FLUTTER="$ROOT/flutter"
 TT_DART=${TT_DART:-$(command -v dart || true)}
 TT_FLUTTER=${TT_FLUTTER:-$(command -v flutter || true)}
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+  [ -x "$TT_DART" ] || { echo 'Dart installed: Dart executable unavailable' >&2; exit 77; }
+  [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Dart installed: C archive missing' >&2; exit 1; }
+  for tool in cargo nm readelf python3 flock; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+  unset THINKTHEN_API_KEY
+  . "$ROOT/../../sdlc/scripts/scratch.sh"
+  . "$ROOT/../../sdlc/scripts/installed.sh"
+  installed_unpack
+  package=$scratch
+  scratch_dir native
+  tar -xzf "$THINKTHEN_C_ARTIFACT" -C "$native"
+  python3 "$ROOT/../../sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
+  readelf -d "$native/lib/libthinkthen.so" | grep -q 'Library soname: \[libthinkthen.so.0\]'
+  [ "$(readlink "$native/lib/libthinkthen.so.0")" = libthinkthen.so ] || exit 1
+  export PUB_CACHE=${PUB_CACHE:-"$HOME/.pub-cache"}
+  [ -d "$PUB_CACHE/hosted/pub.dev/ffi-2.2.0" ] || { echo 'Dart installed: offline ffi 2.2.0 cache missing' >&2; exit 77; }
+  flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
+    env CARGO_TARGET_DIR="$ROOT/../../target" CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
+    cargo build --locked --offline --manifest-path "$ROOT/../../Cargo.toml" --package conformance-backend -j2
+  TT_DART="$TT_DART" TT_NATIVE_LIBRARY="$native/lib/libthinkthen.so" \
+    THINKTHEN_RELEASE_DART_DIR="$package" THINKTHEN_RELEASE_C_DIR="$native" \
+    THINKTHEN_BACKEND_BIN="$ROOT/../../target/debug/conformance-backend" \
+    python3 "$CHECKS/portable_batch.py"
+  python3 "$CHECKS/release_plants.py" "$package" "$native"
+  echo 'Dart installed release PASS: five typed rows and three literal requests'
+  exit 0
+fi
 if [ ! -x "$TT_DART" ] || [ ! -x "$TT_FLUTTER" ]; then
   echo 'Dart or Flutter executable unavailable; set TT_DART and TT_FLUTTER' >&2
   exit 77
