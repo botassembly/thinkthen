@@ -85,6 +85,9 @@ static class Program
         Answer[] rows = firstBulk.Value;
         Check(firstBulk.Facts.Records == 3 && firstBulk.Facts.RequestsSent >= 1 && firstBulk.Facts.Model == "jev-1.13.0", "typed bulk facts");
         for (int i = 0; i < rows.Length; i++) AnswerIs(rows[i], new[] {1,0,1}[i], new[] {.9,.1,.6}[i]);
+        var cachedBulk = engine.DecideMany("Is it?", "first", "second", "third");
+        Check(cachedBulk.Facts.Records == 3 && cachedBulk.Facts.CacheAnswers == 1 && cachedBulk.Facts.RequestsSent == 0 &&
+            cachedBulk.Value.Select(a => a.Probability).SequenceEqual(new[] {.9,.1,.6}), "identical bulk replays one cached response");
         rows = engine.DecideMany("Is it?", "first", "second", "first", "second").Value;
         Check(rows.Select(a => a.Probability).SequenceEqual(new[] {.9,.1,.9,.1}), "bulk cache/order");
         var empty = engine.DecideMany("Is it?");
@@ -156,7 +159,8 @@ static class Program
         finally { Release("hold-facts-one"); Release("hold-facts-two"); }
         var ownedOne = heldOne.GetAwaiter().GetResult();
         var ownedTwo = heldTwo.GetAwaiter().GetResult();
-        Check(!ReferenceEquals(ownedOne.Facts, ownedTwo.Facts) && ownedOne.Facts.RequestsSent == 1 && ownedTwo.Facts.RequestsSent == 1,
+        Check(!ReferenceEquals(ownedOne.Facts, ownedTwo.Facts) && ownedOne.Facts.RequestsSent == 1 && ownedTwo.Facts.RequestsSent == 1 &&
+            ownedOne.Facts.Seconds > 0 && ownedTwo.Facts.Seconds > 0,
             "two overlapping owned call facts");
         Held(engine, "hold-deadline", 3);
         Held(engine, "hold-bulk-1", 5, true);

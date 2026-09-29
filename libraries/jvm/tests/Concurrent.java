@@ -27,7 +27,8 @@ public class Concurrent {
             @SuppressWarnings("unchecked") Door.TypedResult<Door.Answer>[] results = new Door.TypedResult[calls.length];
             for (int index=0;index<calls.length;index++) {
                 results[index]=calls[index].join();
-                if (results[index].value().outcome()!=1 || results[index].facts().requestsSent()!=1)
+                if (results[index].value().outcome()!=1 || results[index].facts().requestsSent()!=1 ||
+                        (index<2 && results[index].facts().seconds()<=0))
                     throw new AssertionError("overlapping caller result/facts");
             }
             owned=results;
