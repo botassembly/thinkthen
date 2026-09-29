@@ -356,17 +356,17 @@ const ARTICLES = {
     title: "audit grades a run.",
     goal: "audit grades saved answers against answers you already know, at any bar, and sends no request.",
     idea: [
-      "You already know the right answer for some of your records. `audit` grades saved answers against those answers and suggests the bar that gets the most right. It sends no request.",
-      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's red label says so: without context. It reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The console under the table shows `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
+      "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any bar. It sends no request.",
+      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's red label reads (without context). It reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The console under the table shows `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
-      '2-default': "At the default bar of 0.5, 5 are right and 5 are wrong yeses.",
-      '3-bar': "At 0.78, 8 are right.",
+      '2-default': "At the default bar of 0.5, 5 are right. Jev says yes wrongly 5 times.",
+      '3-bar': "At 0.78, 8 are right. audit suggests 0.78 for the whole recorded run.",
     },
     headings: { '2-default': "Try the default bar", '3-bar': "Change the bar" },
     lesson: "From the title alone, half the answers fall inside the band. At 0.5, Jev says yes to 5 songs from other albums. At 0.78, only A Day in the Life and The Long and Winding Road remain wrong, and no Abbey Road song is lost.",
-    takeaway: "The answers you already know find your bar, at no cost.",
+    takeaway: "The answers you already know grade any bar, at no cost.",
     link: tree('audit'),
   },
 
@@ -375,7 +375,7 @@ const ARTICLES = {
     goal: "diff prints only the answers that changed between two runs, and says whether each change fixed a mistake.",
     idea: [
       "Ask the same question twice, and `diff` prints only the answers that changed. A summary comes last. With an answer key, each change says whether it fixed a mistake, made one, or settled a not-sure answer.",
-      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's green label says so: with context. The warning is right. The two runs asked different questions.",
+      "Here the page reads two saved runs for the 10 songs on the [audit page](/learn/beatles-bench/audit/). The first run asked from the title alone. The second run gave Jev each song's catalog entry too. The slide's green label reads (with context). The warning is right. The two runs asked different questions.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 7 of the 10 answers changed, and all 10 end right.",
