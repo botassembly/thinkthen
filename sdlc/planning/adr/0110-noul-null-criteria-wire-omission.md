@@ -1,6 +1,6 @@
 # ADR 0110: Omit explicit null descriptions from System One noul criteria
 
-Status: **Proposed** 2026-09-29 for fresh High review and coordinator approval. [Ticket 0301](../../tickets/0301-noul-criteria-compatibility.md) implements this bounded revision to the Settled wire sections of `specification/backends.md` and `specification/check.md`; it does not authorize a provider call.
+Status: **Accepted**, 2026-09-29. Fresh High design review accepted `46925b681`; the queue owner approves implementation. Hosted acceptance remains pending its bounded check.
 
 ## Decision
 
