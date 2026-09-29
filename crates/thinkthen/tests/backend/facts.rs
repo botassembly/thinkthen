@@ -9,6 +9,7 @@ use serde_json::{Map, Value, json};
 use crate::batching::{self, KEY, QUESTION};
 use crate::harness::{Canned, Listener, spawn};
 
+mod priced;
 #[cfg(unix)]
 mod usage_lock;
 

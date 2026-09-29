@@ -25,6 +25,7 @@ struct State {
     tokens: Option<Usage>,
     live_replies: u64,
     missing_usage: bool,
+    token_sum_valid: bool,
     model: Option<String>,
 }
 
@@ -35,6 +36,7 @@ pub(crate) struct Snapshot {
     pub(crate) requests_sent: u64,
     pub(crate) cache_answers: u64,
     pub(crate) tokens: Option<Usage>,
+    pub(crate) cost_complete: bool,
     pub(crate) model: Option<String>,
 }
 
@@ -49,6 +51,7 @@ impl CallFacts {
             tokens: None,
             live_replies: 0,
             missing_usage: false,
+            token_sum_valid: true,
             model: None,
         })))
     }
@@ -75,6 +78,7 @@ impl CallFacts {
             (_, None) => state.missing_usage = true,
             (Some(previous), Some(next)) => {
                 state.tokens = previous.checked_plus(next);
+                state.token_sum_valid &= state.tokens.is_some();
                 state.missing_usage |= state.tokens.is_none();
             }
             (None, Some(next)) if !state.missing_usage => state.tokens = Some(next),
@@ -107,6 +111,9 @@ impl CallFacts {
             tokens: (!state.missing_usage && state.live_replies > 0)
                 .then_some(state.tokens)
                 .flatten(),
+            cost_complete: state.token_sum_valid
+                && !state.missing_usage
+                && state.live_replies == state.requests_sent,
             model: state.model.clone(),
         }
     }

@@ -431,7 +431,7 @@ impl Engine {
             .context_text()
             .map(|text| core::bytes_sha256(text.as_bytes()));
         let context = options.context_text().map(evidence).transpose()?;
-        let stop = Stop::begin(options)?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
         let engine = self.asking(question)?;
         let count = texts.len();
         let work = plan(&engine, question, texts.to_vec(), setting, context.as_ref())?;

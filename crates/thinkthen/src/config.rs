@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::core::{Backend, DEFAULT_MODEL};
+use crate::core::{Backend, DEFAULT_MODEL, Prices};
 
 /// Why the configuration file was refused. The message names the file and a
 /// field, never a value.
@@ -14,12 +14,25 @@ pub(crate) struct ConfigError {
     pub(crate) message: &'static str,
     /// The file exists but could not be read, which is a local failure.
     pub(crate) unreadable: bool,
+    pub(crate) price: bool,
 }
 
 const fn refused(message: &'static str) -> ConfigError {
     ConfigError {
         message,
         unreadable: false,
+        price: false,
+    }
+}
+
+const PRICE_VALUE: &str = "configuration prices are two decimal strings from 0 through 1000000 with at most six fractional digits";
+const PRICE_PAIR: &str = "configuration prices require both input and output fields";
+
+const fn refused_price(message: &'static str) -> ConfigError {
+    ConfigError {
+        message,
+        unreadable: false,
+        price: true,
     }
 }
 
@@ -41,6 +54,10 @@ pub(crate) struct Config {
     model: Option<String>,
     cache: Option<bool>,
     cache_bytes: Option<u64>,
+    usd_per_million_input: Option<String>,
+    usd_per_million_output: Option<String>,
+    #[serde(skip)]
+    prices: Option<Prices>,
 }
 
 impl std::fmt::Debug for Config {
@@ -72,6 +89,7 @@ impl Config {
                 return Err(ConfigError {
                     message: "the configuration file could not be read",
                     unreadable: true,
+                    price: false,
                 });
             }
         };
@@ -81,10 +99,17 @@ impl Config {
     }
 
     fn parse(bytes: &[u8]) -> Result<Self, ConfigError> {
-        let mut parsed: Self =
-            serde_json::from_slice(bytes).map_err(|_| refused(shape_fault(bytes)))?;
+        let mut parsed: Self = serde_json::from_slice(bytes).map_err(|_| {
+            let fault = shape_fault(bytes);
+            if fault == PRICE_VALUE {
+                refused_price(fault)
+            } else {
+                refused(fault)
+            }
+        })?;
         parsed.present = true;
         parsed.validate()?;
+        parsed.prices = price_pair(bytes, &parsed)?;
         Ok(parsed)
     }
 
@@ -144,6 +169,35 @@ impl Config {
     pub(crate) fn cache_bytes(&self) -> u64 {
         self.cache_bytes.unwrap_or(DEFAULT_CACHE_BYTES)
     }
+    pub(crate) const fn prices(&self) -> Option<Prices> {
+        self.prices
+    }
+}
+
+fn price_pair(bytes: &[u8], config: &Config) -> Result<Option<Prices>, ConfigError> {
+    let value: serde_json::Value = serde_json::from_slice(bytes)
+        .map_err(|_| refused("the configuration file is not valid closed JSON"))?;
+    let Some(fields) = value.as_object() else {
+        return Err(refused("the configuration file is not valid closed JSON"));
+    };
+    match (
+        fields.get("usd_per_million_input"),
+        fields.get("usd_per_million_output"),
+    ) {
+        (None, None) => Ok(None),
+        (Some(input), Some(output)) => {
+            if !input.is_string() || !output.is_string() {
+                return Err(refused_price(PRICE_VALUE));
+            }
+            let pair = config
+                .usd_per_million_input
+                .as_deref()
+                .zip(config.usd_per_million_output.as_deref())
+                .and_then(|(input, output)| Prices::parse(input, output));
+            pair.map(Some).ok_or_else(|| refused_price(PRICE_VALUE))
+        }
+        _ => Err(refused_price(PRICE_PAIR)),
+    }
 }
 
 /// Names the first field in name order that breaks the closed shape, and never its value.
@@ -161,11 +215,13 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
             | ("url" | "model", Value::String(_) | Value::Null)
             | ("cache", Value::Bool(_) | Value::Null) => continue,
             ("cache_bytes", value) if value.is_null() || value.is_u64() => continue,
+            ("usd_per_million_input" | "usd_per_million_output", Value::String(_)) => continue,
             ("schema", _) => SCHEMA,
             ("url", _) => "configuration field `url` must be a string",
             ("model", _) => "configuration field `model` must be a string",
             ("cache", _) => "configuration field `cache` must be true or false",
             ("cache_bytes", _) => CACHE_BYTES,
+            ("usd_per_million_input" | "usd_per_million_output", _) => PRICE_VALUE,
             _ => {
                 "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, and `cache_bytes`"
             }

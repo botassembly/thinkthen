@@ -1,8 +1,54 @@
 //! Shared engine-setting cases and constructor refusals through the C ABI.
 use crate::cases::{Script, replies};
 use crate::{compile, crate_dir, finished, run, scratch, start, text};
-use conformance_backend::Backend;
+use conformance_backend::{Backend, Canned, Listener};
 use serde_json::{Value, json};
+
+#[test]
+fn caller_prices_use_the_shared_builder_and_owned_c_facts() {
+    let reply = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
+    let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let request = r#"{"decide":"Does this need attention?","evidence":"Refund me."}"#;
+    let mut good = Script::default();
+    good.ask("settings", &[listener.base(), r#"{"usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#]);
+    good.ask("call", &[listener.base(), request]);
+    let said = replies(&run(&driver, listener.base(), &good.0).stdout).expect("replies");
+    assert_eq!(said[0].0, 0);
+    assert_eq!(said[1].0, 0);
+    let result: Value = serde_json::from_str(&said[1].1).expect("owned result");
+    assert_eq!(result["facts"]["estimated_cost_usd"], "0.000001");
+    assert_eq!(listener.count(), 1);
+
+    for settings in [
+        r#"{"usd_per_million_input":"0.25"}"#,
+        r#"{"usd_per_million_input":null,"usd_per_million_output":"0"}"#,
+        r#"{"usd_per_million_input":0.25,"usd_per_million_output":"0"}"#,
+        r#"{"usd_per_million_input":"1000000.000001","usd_per_million_output":"0"}"#,
+    ] {
+        let mut invalid = Script::default();
+        invalid.ask("settings", &[listener.base(), settings]);
+        let said = replies(&run(&driver, listener.base(), &invalid.0).stdout).expect("refusal");
+        assert_eq!(said[0].0, 1, "{settings}");
+    }
+    assert_eq!(listener.count(), 1, "invalid pairs sent nothing");
+
+    let malformed = r#"{"model":"jev-1.13.0","answers":{"other":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
+    let failing = Listener::answering(move |_| Canned::ok(malformed)).expect("listener");
+    let mut failed = Script::default();
+    failed.ask("settings", &[failing.base(), r#"{"usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#]);
+    failed.ask("call", &[failing.base(), request]);
+    failed.ask("facts", &[failing.base(), "unused"]);
+    let output = run(&driver, failing.base(), &failed.0);
+    assert!(output.status.success(), "{}", String::from_utf8_lossy(&output.stderr));
+    let said = replies(&output.stdout).expect("failure facts");
+    assert_eq!(said[0].0, 0);
+    assert_eq!(said[1].0, 2, "logical reply failure");
+    assert_eq!(said[2].0, 0);
+    let facts: Value = serde_json::from_str(&said[2].1).expect("borrowed failure facts");
+    assert_eq!(facts["estimated_cost_usd"], "0.000001");
+    assert_eq!(failing.count(), 1);
+}
 
 #[test]
 #[expect(

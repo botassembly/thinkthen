@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `decide`
 
-Every judged record is a paid request, and a run has no spending cap. Use this page to add up what a finished run spent, to see what one case costs before you scale to a hundred thousand of them, and to confirm that a replayed run spent nothing at all.
+One live request may carry several judged records, and a run has no price-based spending cap. Use this page to estimate a finished run under your selected prices, to see what one case costs before you scale to a hundred thousand of them, and to confirm that a replayed run made no new paid request.
 
 ## Input
 
@@ -78,9 +78,18 @@ jq -c '{value, cached: .meta.cached}' "$work/one.jsonl" \
 jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq "$work/one.jsonl" \
   | jq -c . \
   | mustmatch '{"rows":1,"no_usage":[],"charged":{"rows":0,"input_tokens":0,"output_tokens":0},"replayed":{"rows":1,"input_tokens":303,"output_tokens":21},"usd":0,"usd_per_million_input":0.042}'
+
+mkdir -p "$work/config/thinkthen"
+printf '%s\n' '{"schema":"thinkthen.config/1","usd_per_million_input":"0.042","usd_per_million_output":"0.168"}' \
+  > "$work/config/thinkthen/config.json"
+printf '%s' "$(printf '%s' "$example" | jq -r '.body')" \
+  | XDG_CONFIG_HOME="$work/config" thinkthen decide "$question" --threshold 0.2:0.8 --details \
+      --replay ../../transforms/rows/recording/ --facts > "$work/priced.json" 2> "$work/priced.stderr"
+tail -n 1 "$work/priced.stderr" | jq -c '{requests_sent, estimated_cost_usd}' \
+  | mustmatch '{"requests_sent":0,"estimated_cost_usd":"0.000000"}'
 ```
 
-The replayed tokens are reported and never priced. Counting them would put a bill on every gate that replays a recording, and a gate pays nothing.
+The replayed tokens are reported but add no new estimated spend. The configured `--facts` line prices only this run's new sends; it shows zero after replay. The input-only transform above remains a comparison with the earlier workflow.
 
 ### A text record with no usage
 
@@ -110,7 +119,7 @@ sh ../../transforms/cost/example.sh | jq -c '{rows, usd}' | mustmatch '{"rows":4
 - **Assuming a zero for a missing count.** A backend that reports no usage leaves `meta.usage` absent. Those rows are listed in `no_usage` and add nothing, so a total is never quietly short.
 - **Pricing output tokens with the input price.** They are reported beside the input tokens and never converted. The model answers with numbers, so output is small, and only the input side is worth watching.
 - **Reading the price from this page.** 0.042 for a million input tokens is what the hosted service charged on 2026-09-19. Another address has another price, and the argument exists so nobody hard-codes one.
-- **A loop over files has no budget.** Each file is its own run, and nothing stops at a cap. `sdlc/scripts/live` is the door for a paid call in this repository, and it refuses at the ledger's limit.
+- **A loop over files has no dollar cap.** Each file is its own run. Request and estimated-input admission limits can stop sends, but neither caps a provider bill. `sdlc/scripts/live` is the door for a paid call in this repository, and it refuses at the ledger's limit.
 
 ## Related how-tos
 

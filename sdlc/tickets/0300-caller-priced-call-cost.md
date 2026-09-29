@@ -6,13 +6,21 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0300: Caller-priced cost in call and run facts
 
-Status: ACCEPTED for implementation after fresh High design/API review of `5bde09bb5aa1f266ae358a56df38dc293cfed724` on 2026-09-29. The queue owner approves [ADR 0108](../planning/adr/0108-caller-priced-call-cost.md) within Ian's authorized pre-release API work. Implementation follows the shared 0283/0289 changes and exact lane claims. No product criterion is closed by design acceptance.
+Status: Core, CLI, C and narrow SQLite refusal are built as a source candidate for fresh High code review. Fresh High design/API review accepted `5bde09bb5aa1f266ae358a56df38dc293cfed724` on 2026-09-29. The queue owner approves [ADR 0108](../planning/adr/0108-caller-priced-call-cost.md) within Ian's authorized pre-release API work. Strict readers and other typed hosts still need their separately claimed batches; no umbrella criterion is closed by this source slice.
 
 ## Outcome
 
 Let a caller who knows its own USD input and output token prices see a whole-call or whole-command **estimated** cost next to final facts. Preserve every existing value, token field, request count, failure kind, C symbol and count-only month. The opt-in pair is engine scoped; CLI gets it from the configuration file. There is no provider tariff lookup, bill guarantee, price-based admission or new paid call. Token admission 0299, backend timing/IDs and durable non-CLI status have separate owners.
 
 A concrete use: put `"usd_per_million_input":"0.042"` and `"usd_per_million_output":"0.168"` in a private `thinkthen.config/1` file, run `thinkthen decide ... --facts`, and read the final `estimated_cost_usd` string. A native caller supplies the same pair at engine construction and reads `call.facts().estimated_cost_usd()`. A replay reports zero new priced spend. No cost appears without both prices.
+
+### Added public declarations
+
+```text
+fn Engine::estimate_reported_cost(&self, u64, u64) -> Option<String>
+fn EngineBuilder::prices_usd_per_million(self, &str, &str) -> Result<EngineBuilder, Error>
+fn Facts::estimated_cost_usd(&self) -> Option<&str>
+```
 
 ## Contract to implement
 
@@ -44,8 +52,8 @@ Update `specification/settings.md` and `specification/result.md` with the condit
 - Keeps: All values, token and request facts, default unpriced bytes, frozen C ABI, six errors, record bodies, count-only month/retry sidecar and the separate 0299 admission rule.
 - Changes: An opt-in, caller-priced exact USD pair and optional fixed-point whole-call/whole-run estimate; a deliberate priced-mode pre-freeze reader migration with strict unknown-key behavior retained.
 - Proof: Independent send-count loopback table, complete-versus-partial usage and independent token-arithmetic validity through both owners, pre-start validation, copied failure lifetime, exact cost/rounding and strict old/new copied-reader boundary.
-- Defers: Implementation and release qualification; provider bills/tariffs, hard money cap, SQL/frame calls, timing/IDs, durable library status, full-detail parity and the remaining umbrella criteria.
+- Defers: Strict-reader and typed-host implementation, installed/release qualification; provider bills/tariffs, hard money cap, SQL/frame calls, timing/IDs, durable library status, full-detail parity and the remaining umbrella criteria.
 
 ## What the build taught us
 
-Pending implementation. Design review of the first draft found that complete replies do not imply a valid accumulated token total: CLI `Counters::add` can retain stale totals on overflow while its reply counter advances. The corrected design latches arithmetic invalidity independently and checks Python’s previously unchecked frame aggregates. The build record must report the two-reply overflow and fresh-scope proof, retained versus replaced tests, measured source/host ratchets and source versus installed receipts.
+The first slice confirms that complete replies and an exact accumulated token sum are separate facts. `CallFacts` and the CLI process queue each need their own validity latch: the latter can retain stale totals on overflow, while a durable month-write failure after a committed process addition does not invalidate cost. A valid configuration price pair had to be classified as Usage on malformed input at the command conversion boundary; ordinary pre-existing configuration errors keep their prior class. The C crate reaches the one core decimal parser through `EngineBuilder`, and SQLite now refuses both newly core-valid keys explicitly until host adoption. Public `Facts`, private prices and C failures redact money from `Debug`. The C driver requires two fields even for its facts getter, a fixture detail caught by the focused failure-copy proof. `public/settings.rs` and `public/options.rs` exceeded their source caps during wiring, so environment capture and the existing private diagnostic tests moved to cohesive child modules; their behavior and prior tests remain. The additive public inventory holds exactly the three new reviewed declarations. No old test was retired: the new price tables reuse the existing public/compiled-command/C loopback fixtures, and the existing unpriced facts receipt remains the byte-shape oracle. Python/R aggregate overflow and copied strict readers stay for separately claimed batches; the source-only results here do not qualify their packages.
