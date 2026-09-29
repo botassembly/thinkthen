@@ -30,6 +30,27 @@ done
 export THINKTHEN_PHP_BIN="$php_bin" THINKTHEN_PYTHON_BIN="$python_bin"
 export THINKTHEN_BWRAP_BIN="$bwrap_bin" THINKTHEN_FLOCK_BIN="$flock_bin" THINKTHEN_GIT_BIN="$git_bin"
 unset THINKTHEN_API_KEY
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'PHP installed: C archive missing' >&2; exit 1; }
+    for tool in cargo nm readelf; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+    . "$repo/sdlc/scripts/scratch.sh"
+    . "$repo/sdlc/scripts/installed.sh"
+    installed_unpack
+    package=$scratch
+    scratch_dir native
+    tar -xzf "$THINKTHEN_C_ARTIFACT" -C "$native"
+    "$python_bin" "$repo/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
+    readelf -d "$native/lib/libthinkthen.so" | grep -q 'Library soname: \[libthinkthen.so.0\]'
+    [ "$(readlink "$native/lib/libthinkthen.so.0")" = libthinkthen.so ] || exit 1
+    "$flock_bin" -w 180 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
+        env CARGO_TARGET_DIR="$repo/target" CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
+        cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
+    THINKTHEN_RELEASE_PHP_DIR="$package" THINKTHEN_RELEASE_C_DIR="$native" \
+        THINKTHEN_BACKEND_BIN="$repo/target/debug/conformance-backend" "$python_bin" fixtures/portable_batch.py
+    "$python_bin" fixtures/release_plants.py "$package" "$native"
+    echo 'PHP installed release PASS: five typed rows and three literal requests'
+    exit 0
+fi
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.php.json
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
 "$python_bin" -c 'import json; p=json.load(open("composer.json")); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"}'
