@@ -182,6 +182,12 @@ fn annotate_opens_with_the_saved_question_set_sentence_and_keeps_each_part_once(
 
 #[test]
 fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
+    const WORDING: &str = "Without kinds, fixed step-1 wording lists person, organisation, place, product, work, event or other thing; with kinds it names the caller's kinds, but descriptions reach only step 2, and accuracy outside the measured corpora is unknown.";
+    let recognize = help(&["recognize", "--help"]).expect("the help prints");
+    let page = include_str!("../../../specification/recognize.md");
+    for (surface, text) in [("help", recognize.as_str()), ("specification", page)] {
+        assert_eq!(text.matches(WORDING).count(), 1, "{surface}: {WORDING}");
+    }
     for (verb, said) in [
         (
             "recognize",

@@ -4,7 +4,7 @@ Status: Open.
 
 This issue merges seven files: `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, `2026-09-25-recognize-and-relate-scale-and-shape.md`, and one leftover from the deleted `closed/2026-09-23-relate-call-math-efficiency-and-real-jobs.md`. Each item was checked against main at `71ea0a84`, the two specifications, `sdlc/planning/relate-design.md`, and the tickets. They belong together because they share one engine path. The relation planner and the request splitter serve both commands. Every open item is about how that path grows with the input, or how its output and its fixed wording read to a user. Ian can overturn any fix below.
 
-Ticket 0123 fixed items 1 and 2. Items 3 through 8 are later features or documentation.
+Ticket 0123 fixed items 1 and 2. Items 7 and 8 now have their current recognition guidance. Items 3 through 6 remain later features or separate proof.
 
 ## 1. relate sends a request over Jev's input token limit
 
@@ -71,27 +71,11 @@ Done when: the 256 refusal names the count and the pair math on the command and 
 
 ## 7. No page maps a recognize symptom to its dial
 
-Later. Documentation.
+Fulfilled by the recognition-guidance Quick Fix. `specification/recognize.md` maps missing and excess names, a missing custom kind, and excess relation edges to the shipped cuts and description input. It states what each cannot recover and keeps measured quality numbers in the existing provenance paragraph. No obsolete span-gate number was reused. R8 still owes its separate batching cost and long-text measurement outcomes.
 
-What happens today. `specification/recognize.md` documents `--threshold` on the computed `strength`, `--relation-threshold`, and `--kind KIND=DESCRIPTION`. No page tells a user whose names drop out, or whose output is noisy, which dial to turn and what it costs.
+## 8. recognize discloses its current fixed wording
 
-What the review says. Quality review item 1 asks for one symptom-to-dial table and one line saying custom kinds are only as good as their descriptions, because the measured numbers cover the three stock kinds. The repository rule says every printed number names its record.
-
-The fix. Add the table to the recognize manual page. Map names dropped, too much noise, and a kind that never appears to the shipped dials. Give only numbers measured on the shipped `strength` formula, each with its record. The review's span-gate numbers predate the 2026-09-23 baseline and do not carry over.
-
-Done when: the recognize manual carries the table and every number in it names a record.
-
-## 8. recognize hides its fixed news-document wording
-
-Later. Documentation now, measurement only if a user needs it.
-
-What happens today. `DETECTION_WORDS` and `KIND_WORDS` in `crates/thinkthen/src/core/recognize.rs` both begin "The snippet shows five consecutive words from a news document". The detection question lists fixed categories (person, organization, place, nationality, event, product, creative work) and says dates and numbers are not names. The kind question offers the caller's own kinds. Neither `specification/recognize.md` nor `recognize --help` mentions this. A user's benchmark on 2026-09-25 read the requests and took the wording for a bug. A kind outside the fixed list may be marked OUT before any kind question sees it. That risk is read from the code and not measured.
-
-What the design says. Ticket 0080 orders the measured lineage-B words byte for byte (CoNLL04 three-class F1 0.7636, experiment 221). Experiment 225's `words/kind.md` says caller kinds "are new words and a new measurement".
-
-The fix. Add a short section to `specification/recognize.md`: the wording is fixed, cites ticket 0080 and the measured lineage, and says kinds outside the listed categories are unmeasured. Add one sentence to the help. A generic wording needs a paid comparison and a ticket, because it changes every recognize request digest.
-
-Done when: the specification and help name the fixed wording and its limits.
+Fulfilled for the current ADR 0056 three-step design by the recognition-guidance Quick Fix. The historical news-document wording and ticket 0080 lineage-B numbers are superseded; `core/recognize/questions.rs::step_one_words` now uses fixed generic categories with no kinds, or caller kind names without descriptions. `specification/recognize.md` and compiled `recognize --help` both disclose that wording, the step-2 description boundary, and the absence of accuracy proof outside measured corpora. The existing compiled help assertion pins the disclosure on both surfaces. This does not establish new provider accuracy or change question digests.
 
 ## Already fixed
 
