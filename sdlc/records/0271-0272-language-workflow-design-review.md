@@ -1,0 +1,11 @@
+# 0271 and 0272 language workflow design review
+
+Fresh independent High review accepted 0271 at `dc2db62d` and accepted the corrected 0272 at `2d83e3ef`. The coordinator approves both bounded designs within the existing language release outcome. Shared workflow implementation follows 0270 and an explicit lane claim. Actual SQL/DataFrame, container, installed workflow and Actions execution remain held.
+
+0271 reuses the existing Ada, GNU Objective-C and COBOL copied-source checks, fixed package validator and installed consumers. Current scripts support moving source-only Node and jsonschema prerequisites below the installed branch. Exact runner tools and other platforms remain unqualified.
+
+The first 0272 review found three preparation errors. Its pair validator checks outer names, sidecars and C manifests but does not perform the claimed inner managed-package checks. A persisted tar's Git header is not an independent digest of its contents. A digest computed only from the supplied C archive cannot distinguish a valid substituted C from the container's original output.
+
+The corrected design assigns exact managed inventories, package identities and compiled-member checks to an explicit helper. It captures the tar digest when Git generates the tar and verifies it before both extractions. It independently captures the container C digest at output and requires that receipt for assembly and downstream checks. A separate internal provenance artifact carries the source and receipts to smoke and draft; it never enters public release assets. Refusal cases alter a tar while retaining its commit header and substitute a valid C archive with a matching sidecar. The reviewer accepted these corrections. The helper may assemble wrappers directly; code review must verify that Ubuntu never builds a second C.
+
+This review inspected designs and current source. The coordinator ran pages, tickets and the diff check after merging. No build, tool download, installed consumer or runner test ran. Tool acquisition facts still need a bounded refresh before execution. Preparation prevented unsupported validator and provenance assumptions from reaching code; no measured speed improvement or product issue closure is claimed.
