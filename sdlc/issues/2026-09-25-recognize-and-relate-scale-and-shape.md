@@ -85,3 +85,7 @@ Fulfilled for the current ADR 0056 three-step design by the recognition-guidance
 - Call-math waste 5, two-set jobs pay for same-side pairs. The ticket 0081 hybrid planner asks cross-kind rules as one choice per member of the larger side. The stand-in engine that refused the kind field is gone.
 - Call-math waste 2, nothing splits the request. Ticket 0079's splitter splits on profile limits. The no-profile gap is item 1.
 - Quality review items 2 through 7 and 9 through 11 were closed before this merge, as the caller reported. They are not repeated here.
+
+## CLI boundary progress, 2026-09-29
+
+The CLI portion of item 6 landed from independently accepted `8e452e45b`: an oversized complete input reports its actual count, the 255 limit, clearly hypothetical unordered all-kind pair arithmetic and a split/narrow remedy. The existing live 256 refusal proves zero requests; focused 254/255 plans and exact 256/257 diagnostics pass. Shared core/public errors and the bounded public iterator are unchanged. Other host diagnostics and the per-surface boundary matrix remain open; SQL/DataFrame work remains held. See [the build record](../records/qf-relate-boundary-guidance.md).

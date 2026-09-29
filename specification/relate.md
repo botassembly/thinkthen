@@ -31,6 +31,8 @@ Without a framing flag, input is one JSON array. Under `--jsonl`, `--csv`, or `-
 
 The command validates the complete set before any request. It refuses a malformed rule, invalid or missing pointer value, blank name or kind, duplicate name-and-kind pair, absent concrete kind, incompatible line rule, or more than 255 entities at exit 2 with zero sends.
 
+For an oversized set, the command's refusal names its actual entity count and the 255 limit. It explains that **if every entity were distinct**, an unordered all-kind rule would have `N×(N-1)/2` candidate pairs, then says to split the set or narrow by kind. That number is hypothetical; typed rules and the actual relation plan can ask about fewer pairs. This command diagnostic does not change the public engine or library and database host errors.
+
 Empty line and JSONL streams succeed with no output and no request. A blank line is invalid in either stream. Empty CSV and TSV input is exit 2; a header with no records succeeds empty. Empty document input is exit 2. Normal and dry runs have the same outcomes.
 
 ## Output

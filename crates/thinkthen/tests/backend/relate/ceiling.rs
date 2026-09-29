@@ -162,6 +162,43 @@ fn the_largest_cross_kind_rule_keeps_every_request_bounded() {
 }
 
 #[test]
+fn small_cross_kind_rule_admits_254_and_255_complete_entities() {
+    for (other, expected) in [(252, 254), (253, 255)] {
+        let input = entities(&[("person", 1), ("place", 1), ("other", other)]);
+        let run = plan(&["linked=person:place", "--url", ELSEWHERE], &input);
+        assert_eq!(run["entity_count"], expected);
+        assert_eq!(run["logical_questions"], 1);
+        assert_eq!(run["request_count"], 1);
+        assert_eq!(questions(&run), [1]);
+    }
+}
+
+#[test]
+fn oversized_sets_name_the_complete_count_and_hypothetical_pairs_exactly() {
+    for (other, expected) in [
+        (
+            254,
+            "thinkthen: relate takes at most 255 entities; this set has 256. If all 256 were distinct, an unordered all-kind rule would have 32640 candidate pairs; split the set or narrow by kind\n",
+        ),
+        (
+            255,
+            "thinkthen: relate takes at most 255 entities; this set has 257. If all 257 were distinct, an unordered all-kind rule would have 32896 candidate pairs; split the set or narrow by kind\n",
+        ),
+    ] {
+        let input = entities(&[("person", 1), ("place", 1), ("other", other)]);
+        let output = spawn(
+            &["relate", "linked=person:place", "--url", ELSEWHERE],
+            &[],
+            &input,
+        )
+        .expect("command");
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
+    }
+}
+
+#[test]
 fn a_profile_lowers_the_byte_size_and_one_question_still_goes_alone() {
     let limit = profile("twenty-thousand", r#""max_request_bytes":20000"#);
     let small = plan(
