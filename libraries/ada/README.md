@@ -1,6 +1,6 @@
 # ThinkThen Ada
 
-GNAT 13.3 / gprbuild, Linux x86_64 glibc. This is the source package for the Linux Ada binding; no release archive has been published. The Ada sources are distributed separately from the matching versioned native archive `thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz`. Install both and verify the package and native manifests; `thinkthen.h` is an exact pinned match. The native archive contains libthinkthen.so, soname symlink, header, LICENSE. Keep the native library available via a trusted rpath or LD_LIBRARY_PATH, not a world-writable directory.
+GNAT 13.3 / gprbuild, Linux x86_64 glibc. This is the source package for the Linux Ada binding; no release archive has been published. The local pilot pairs `thinkthen-ada-0.0.1-x86_64-unknown-linux-gnu.tar.gz` with a separate `thinkthen-c-0.0.1-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest before installing. The native archive contains the header, shared library and soname link, static archive, pkg-config file and LICENSE. Ada links the native library; it does not compile the C header. Keep the library available through a trusted rpath or LD_LIBRARY_PATH, not a world-writable directory.
 
 From a source checkout, build the native library and Ada package before copying their outputs into a project (the release job will instead supply a matching versioned native archive):
 
@@ -10,7 +10,7 @@ cd thinkthen
 cargo build --locked --offline --release -p thinkthen-c --manifest-path libraries/c/Cargo.toml
 cd libraries/ada
 gprbuild -P thinkthen.gpr -j2
-# Copy this directory's src/ and thinkthen.gpr (or an installed Ada source archive)
+# Copy this directory's src/ and thinkthen.gpr (or the matching local pilot archive)
 # plus libraries/c/target/release/libthinkthen_c.so and libraries/c/include/thinkthen.h
 # into your project, preserving their matching version and header manifest.
 ```

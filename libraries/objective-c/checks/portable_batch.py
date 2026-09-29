@@ -9,7 +9,10 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
-SOURCE = ROOT / "libraries/objective-c/Sources"
+PACKAGE = Path(os.environ.get("THINKTHEN_PORTABLE_PACKAGE", ROOT / "libraries/objective-c")).resolve()
+INSTALLED = "THINKTHEN_PORTABLE_PACKAGE" in os.environ
+SOURCE = PACKAGE / "Sources"
+assert (SOURCE / "ThinkThen.m").is_file(), "Objective-C package source missing"
 NATIVE = Path(os.environ["THINKTHEN_PORTABLE_NATIVE"]).resolve()
 LIB_DIR = NATIVE / "lib" if (NATIVE / "lib").is_dir() else NATIVE
 LIB_NAME = "thinkthen" if LIB_DIR != NATIVE else "thinkthen_c"
@@ -29,6 +32,10 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-objc-portable-") as scratch:
                     str(HERE / "portable_batch.m"), "-L" + str(LIB_DIR),
                     "-l" + LIB_NAME, "-lobjc", "-pthread", "-lm", "-o", str(program)],
                    check=True, capture_output=True, text=True, timeout=60)
+    if INSTALLED:
+        linked = subprocess.check_output(["ldd", program], env={**os.environ, "LD_LIBRARY_PATH": str(LIB_DIR)}, text=True)
+        assert str(LIB_DIR / "libthinkthen.so.0") in linked, linked
+        print("objc installed loader:", next(line.strip() for line in linked.splitlines() if "libthinkthen.so.0" in line))
     server = subprocess.Popen([backend], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     try:
         port = int(server.stdout.readline())

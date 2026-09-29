@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sd
 
 # 0265: Pack Ada, GNU Objective-C and COBOL source with one matching C archive
 
-Status: design-only preparation at clean main `8a4ee8f0`; no executable edit or package build. Fresh independent design review and a coordinator implementation claim must precede code. Owner: Codex. The three original consumer issues remain open.
+Status: design ACCEPT at `efc21b65`; local installed fixture implementation is underway after the coordinator's exact 0265 claim. The shared release helpers remain held by 0264. The three original consumer issues remain open.
 
 ## Outcome and retained behavior
 

@@ -22,11 +22,11 @@ gcc -std=gnu11 -x objective-c -I /absolute/native/include -I /absolute/objc/Sour
 ./example
 ```
 
-On Ubuntu 24.04 the GNU Objective-C compiler and runtime are `gobjc gcc libobjc4`; no Foundation is required. A consuming project must install or name the matching native library and its runtime search path. The two archive instructions below instead start from already-built release assets, which do not yet exist as a public release.
+On Ubuntu 24.04 the GNU Objective-C compiler and runtime are `gobjc gcc libobjc4`; no Foundation is required. A consuming project must install or name the matching native library and its runtime search path. The archive instructions below describe local pilot files, not public release assets.
 
 ## Install from independently supplied archives
 
-Unpack `thinkthen-objective-c-0.0.1.zip` and the *separate matching* `thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz`. The C archive supplies `include/thinkthen.h` and `lib/libthinkthen.so` (soname `libthinkthen.so.0`); never use a C library from another build. GNU Objective-C (`gobjc` version 4:13.2.0-7ubuntu1; gobjc-13 13.3.0), GCC, libobjc4, glibc, pthreads and the separately built Rust C native library are required. On Ubuntu 24.04 install `gobjc gcc libobjc4` (native build requires Rust 1.95 and offline locked Cargo dependencies). Example:
+Unpack the local `thinkthen-objective-c-0.0.1-x86_64-unknown-linux-gnu.tar.gz` and the *separate matching* `thinkthen-c-0.0.1-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest. The C archive supplies `include/thinkthen.h` and `lib/libthinkthen.so` (soname `libthinkthen.so.0`); compare its header with the wrapper's `Sources/thinkthen.h`. Never use a C library from another build. GNU Objective-C (`gobjc` version 4:13.2.0-7ubuntu1; gobjc-13 13.3.0), GCC, libobjc4, glibc, pthreads and the separately built Rust C native library are required. On Ubuntu 24.04 install `gobjc gcc libobjc4` (native build requires Rust 1.95 and offline locked Cargo dependencies). Example:
 
 ```
 gcc -std=gnu11 -x objective-c -I native/include -I package/Sources \

@@ -7,9 +7,39 @@ case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full) ;; stress) exit 77 ;;
 for tool in gcc cargo flock nm node python3 cmp; do
   command -v "$tool" >/dev/null 2>&1 || { echo "GNU Objective-C gate missing $tool" >&2; exit 77; }
 done
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+  for tool in tar ldd; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
+  [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Objective-C installed: wrapper or C archive missing' >&2; exit 1; }
+fi
 python3 -c 'import jsonschema' >/dev/null 2>&1 || { echo 'GNU Objective-C gate missing Python jsonschema' >&2; exit 77; }
 if [ "${TT_OBJC_LOCKED:-0}" != 1 ]; then
   TT_OBJC_LOCKED=1 exec flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" env TT_OBJC_LOCKED=1 "$0" "$@"
+fi
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+  . "$REPO/sdlc/scripts/scratch.sh"
+  . "$REPO/sdlc/scripts/installed.sh"
+  installed_unpack
+  wrapper=$scratch
+  THINKTHEN_ARTIFACT=$THINKTHEN_C_ARTIFACT
+  installed_unpack
+  native=$scratch
+  scratch_dir consumer
+  mkdir -p "$consumer/include" "$consumer/lib"
+  for member in include/thinkthen.h lib/libthinkthen.so lib/libthinkthen.a; do
+    tar -xOzf "$THINKTHEN_C_ARTIFACT" "./$member" | cmp - "$native/$member"
+    cp "$native/$member" "$consumer/$member"
+    cmp "$native/$member" "$consumer/$member"
+  done
+  ln -s libthinkthen.so "$consumer/lib/libthinkthen.so.0"
+  cmp "$wrapper/Sources/thinkthen.h" "$consumer/include/thinkthen.h"
+  python3 "$REPO/sdlc/scripts/check-c-exports.py" "$consumer/include/thinkthen.h" "$consumer/lib/libthinkthen.so"
+  export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
+  export CARGO_TARGET_DIR="$REPO/target/0265-backend"
+  cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
+  THINKTHEN_PORTABLE_PACKAGE="$wrapper" THINKTHEN_PORTABLE_NATIVE="$consumer" \
+    THINKTHEN_BACKEND_BIN="$CARGO_TARGET_DIR/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
+  echo 'GNU Objective-C installed release PASS: five typed rows and three literal sends'
+  exit 0
 fi
 unset THINKTHEN_API_KEY
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
