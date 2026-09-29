@@ -143,7 +143,7 @@ docker run "$@" "$IMAGE" sh -euc '
 	RUBY=/work/home/.cache/thinkthen-toolchains/ruby/3.4.11/bin/ruby
 	export RUBY
 	if [ "$ARCH" = x86_64 ]; then
-		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby go cpp swift zig php dart
+		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby go cpp swift zig php dart ada objective-c cobol
 	else
 		sh sdlc/scripts/release-pack "$TARGET" /work/out c sqlite duckdb postgresql python typescript ruby
 	fi

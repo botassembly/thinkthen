@@ -66,7 +66,7 @@ def main():
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
                    THINKTHEN_ARCHIVED_SOURCE_COMMIT=commit)
         # Keep the held SQL/DataFrame families out of execution; their allowlist is unchanged.
-        parts = ("c", "go", "cpp", "swift", "zig", "php", "dart")
+        parts = ("c", "go", "cpp", "swift", "zig", "php", "dart", "ada", "objective-c", "cobol")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "paired"), *parts, cwd=source, env=env), "", success=True)
         for kind in parts:
@@ -76,10 +76,14 @@ def main():
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
         expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, commit), "", success=True)
+        expect(run("sh", gate, "ada-objc-cobol-gate", str(base / "paired"), host, commit), "", success=True)
         for family, relative in (("swift", "Sources/ThinkThen/ThinkThen.swift"),
                                  ("zig", "src/thinkthen.zig"),
                                  ("php", "autoload.php"),
-                                 ("dart", "lib/src/door.dart")):
+                                 ("dart", "lib/src/door.dart"),
+                                 ("ada", "src/thinkthen.ads"),
+                                 ("objective-c", "Sources/ThinkThen.m"),
+                                 ("cobol", "src/tt_call.cob")):
             copied = source / "libraries" / family / relative
             original = copied.read_bytes()
             copied.write_bytes(original + b"\n// altered archived wrapper\n")
@@ -90,6 +94,27 @@ def main():
             if output.exists():
                 raise AssertionError(f"changed {family} source created package output")
             copied.write_bytes(original)
+        # Alter only the staged copy after the full extracted-tree check has passed.
+        # This exercises the wrapper's own byte comparison against the selected tar.
+        fake_cp = fake_bin / "cp"
+        fake_cp.write_text("#!/bin/sh\n"
+                           "last=\nfor arg do last=$arg; done\n"
+                           "/bin/cp \"$@\" || exit\n"
+                           "for arg do if [ \"$arg\" = \"$THINKTHEN_PLANT_SOURCE\" ]; then\n"
+                           "  printf 'changed copy\\n' >>\"$last/${arg##*/}\"\n"
+                           "fi; done\n")
+        fake_cp.chmod(0o755)
+        for family, relative in (("ada", "src/thinkthen.ads"),
+                                 ("objective-c", "Sources/ThinkThen.m"),
+                                 ("cobol", "src/tt_call.cob")):
+            copied_env = env | {"THINKTHEN_PLANT_SOURCE": f"libraries/{family}/{relative}"}
+            output = base / f"{family}-copied-change"
+            expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                       str(output), *parts, cwd=source, env=copied_env),
+                   f"{family} source differs from archived commit: {relative}")
+            if list(output.glob(f"thinkthen-{family}-*")):
+                raise AssertionError(f"changed {family} copied member created wrapper output")
+        fake_cp.unlink()
         missing_pair = base / "missing-pair"
         shutil.copytree(base / "paired", missing_pair)
         for file in missing_pair.glob("thinkthen-cpp-*"):
@@ -109,12 +134,26 @@ def main():
                 file.unlink()
             expect(run("sh", gate, "php-dart-gate", str(missing), host, commit),
                    f"missing or linked thinkthen-{family}-")
+        for family in ("ada", "objective-c", "cobol"):
+            missing = base / f"missing-{family}"
+            shutil.copytree(base / "paired", missing)
+            for file in missing.glob(f"thinkthen-{family}-*"):
+                file.unlink()
+            expect(run("sh", gate, "ada-objc-cobol-gate", str(missing), host, commit),
+                   f"missing or linked thinkthen-{family}-")
+        no_sidecar = base / "missing-cobol-sidecar"
+        shutil.copytree(base / "paired", no_sidecar)
+        (no_sidecar / f"thinkthen-cobol-{version}-{host}.tar.gz.sha256").unlink()
+        expect(run("sh", gate, "ada-objc-cobol-gate", str(no_sidecar), host, commit),
+               f"missing or linked thinkthen-cobol-{version}-{host}.tar.gz.sha256")
         another_commit = "0" * 40
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, another_commit),
                "checkout differs from resolved SHA")
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, another_commit),
                "checkout differs from resolved SHA")
         expect(run("sh", gate, "php-dart-gate", str(base / "paired"), host, another_commit),
+               "checkout differs from resolved SHA")
+        expect(run("sh", gate, "ada-objc-cobol-gate", str(base / "paired"), host, another_commit),
                "checkout differs from resolved SHA")
         altered_source = base / "altered-source"
         shutil.copytree(base / "paired", altered_source)
@@ -194,6 +233,29 @@ def main():
         if refused_output.exists():
             raise AssertionError("extra PHP asset created collected output")
         extra_php.unlink()
+        extra_cobol = platform / f"platform-{host}/thinkthen-cobol-{version}-{other_target}.tar.zip"
+        extra_cobol.write_bytes(b"unselected release asset")
+        expect(run("sh", gate, "ada-objc-cobol-gate", str(extra_cobol.parent), host, commit),
+               f"unexpected Ada/Objective-C/COBOL family entry {extra_cobol.name}")
+        refused_output = base / "refused-cobol-assets"
+        expect(run("sh", gate, "collect", str(platform), str(base / "no-npm"), str(refused_output)),
+               f"unexpected Ada/Objective-C/COBOL family entry {extra_cobol.name}")
+        if refused_output.exists():
+            raise AssertionError("extra COBOL asset created collected output")
+        extra_cobol.unlink()
+        for target, family in ((other_target, "ada"),
+                               ("aarch64-apple-darwin", "objective-c"),
+                               ("x86_64-apple-darwin", "cobol")):
+            foreign = platform / f"platform-{target}/thinkthen-{family}-{version}-{target}.tar.gz"
+            foreign.write_bytes(b"unsupported language asset")
+            expect(run("sh", gate, "ada-objc-cobol-gate", str(foreign.parent), target, commit),
+                   f"unsupported target has {foreign.name}")
+            refused_output = base / f"refused-{family}-{target}"
+            expect(run("sh", gate, "collect", str(platform), str(base / "no-npm"), str(refused_output)),
+                   f"unsupported target has {foreign.name}")
+            if refused_output.exists():
+                raise AssertionError(f"{family} asset on {target} created collected output")
+            foreign.unlink()
         extra_platform = platform / "platform-extra"
         extra_platform.mkdir()
         (extra_platform / "unselected.zip").write_bytes(b"unselected release asset")
@@ -202,6 +264,13 @@ def main():
                "unexpected platform folder platform-extra")
         if refused_output.exists():
             raise AssertionError("extra platform folder created collected output")
+        for family in ("ada", "objective-c", "cobol"):
+            script = (REPO / "libraries" / family / "check.sh").read_text()
+            installed_end = script.index("  exit 0\nfi\n")
+            source_start = script.index("unset THINKTHEN_API_KEY", installed_end)
+            source_only = script[installed_end:source_start]
+            if "command -v node" not in source_only or "import jsonschema" not in source_only:
+                raise AssertionError(f"{family} source prerequisites precede installed return")
         fake_curl = fake_bin / "curl"
         fake_curl.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
                              "if [ \"$1\" = -o ]; then shift; printf wrong >\"$1\"; exit 0; fi\n"
@@ -298,11 +367,12 @@ def main():
                "unexpected source path: libraries/c/.cargo/config.toml")
         extra_config.unlink()
         extra_config.parent.rmdir()
+        calls_before_refusal = (base / "cargo-calls").read_text().splitlines()
         (source / "libraries/go/README.md").write_text("changed source\n")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "changed"), *parts, cwd=source, env=env),
                "source file differs: libraries/go/README.md")
-        if (base / "cargo-calls").read_text().splitlines() != ["called"]:
+        if (base / "cargo-calls").read_text().splitlines() != calls_before_refusal:
             raise AssertionError("an archived-source refusal reached Cargo")
         expect(run("sh", str(REPO / "sdlc/scripts/release-pack"), host,
                    str(base / "override"), "go", env=env),

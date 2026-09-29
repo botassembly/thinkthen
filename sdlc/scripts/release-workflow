@@ -57,6 +57,23 @@ php_dart_names() {
 		fi
 	done
 }
+ada_objc_cobol_names() {
+	dir=$1 target=$2
+	for file in "$dir"/thinkthen-ada* "$dir"/thinkthen-objective-c* "$dir"/thinkthen-cobol*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		name=${file##*/}
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			case $name in
+			"thinkthen-ada-$version-$target.tar.gz" | "thinkthen-ada-$version-$target.tar.gz.sha256" | \
+			"thinkthen-objective-c-$version-$target.tar.gz" | "thinkthen-objective-c-$version-$target.tar.gz.sha256" | \
+			"thinkthen-cobol-$version-$target.tar.gz" | "thinkthen-cobol-$version-$target.tar.gz.sha256") ;;
+			*) fail "unexpected Ada/Objective-C/COBOL family entry $name" ;;
+			esac
+		else
+			fail "unsupported target has $name"
+		fi
+	done
+}
 case ${1:-} in
 host-setup)
 	[ "$#" = 2 ] || fail 'host-setup TARGET'
@@ -205,6 +222,42 @@ php-dart-gate)
 		;;
 	*) fail "no PHP/Dart release route for $target" ;;
 	esac
+	;;
+ada-objc-cobol-gate)
+	[ "$#" = 4 ] || fail 'ada-objc-cobol-gate DIR TARGET SHA'
+	dir=$2 target=$3 selected=$4
+	[ -d "$dir" ] || fail "platform directory is missing: $dir"
+	printf '%s\n' "$selected" | grep -Eq '^[0-9a-f]{40}$' || fail 'resolved SHA is invalid'
+	[ "$(git rev-parse HEAD)" = "$selected" ] || fail 'checkout differs from resolved SHA'
+	case $target in
+	x86_64-unknown-linux-gnu)
+		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail 'Ada/Objective-C/COBOL gate requires its installed x86 host'
+		ada_objc_cobol_names "$dir" "$target"
+		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir" ada-objective-c-cobol
+		for family in ada objective-c cobol; do
+			archive=$dir/thinkthen-$family-$version-$target.tar.gz
+			tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
+				grep -Fxq "source_commit=$selected" || fail "$family source differs from resolved SHA"
+		done
+		;;
+	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin)
+		ada_objc_cobol_names "$dir" "$target"
+		;;
+	*) fail "no Ada/Objective-C/COBOL release route for $target" ;;
+	esac
+	;;
+ada-objc-cobol-tools)
+	[ "$#" = 2 ] || fail 'ada-objc-cobol-tools TARGET'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'Ada/Objective-C/COBOL installed tools require Linux x86-64'
+	for tool in gprbuild gnatmake gcc cobc cc cargo python3 nm ldd tar cmp flock; do
+		command -v "$tool" >/dev/null 2>&1 || fail "installed language tool is missing: $tool"
+	done
+	gprbuild --version >/dev/null || fail 'gprbuild version probe failed'
+	gnatmake --version >/dev/null || fail 'gnatmake version probe failed'
+	gcc --version >/dev/null || fail 'GCC version probe failed'
+	case $(cobc --version | head -n 1) in *' 4.'*) ;; *) fail 'GnuCOBOL 4 is required' ;; esac
+	scratch_dir tool_probe
+	printf 'int main(void) { return 0; }\n' | gcc -x objective-c - -lobjc -o "$tool_probe/objc-probe" || fail 'GNU Objective-C runtime is not linkable'
 	;;
 php-dart-tools)
 	[ "$#" = 3 ] || fail 'php-dart-tools TARGET OUT'
@@ -398,6 +451,7 @@ collect)
 		go_cpp_names "$folder" "$target"
 		swift_zig_names "$folder" "$target"
 		php_dart_names "$folder" "$target"
+		ada_objc_cobol_names "$folder" "$target"
 	done
 	mkdir -p "$4"
 	for folder in "$2"/*; do
