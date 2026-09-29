@@ -2,7 +2,7 @@
 # release-pack [--reuse] TARGET OUT [PART...] (ticket 0128): pack the release files of one
 # Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
 # each release target builds on its own runner. The parts are command, c, go, cpp, csharp,
-# jvm, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
+# jvm, swift, zig, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
 # keeps its established parts and source wrappers are explicit pilot parts.
 # Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
 # packs the files each surface check already built in its own build folder, which the
@@ -23,7 +23,7 @@ V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1
 source_commit=$(git rev-parse HEAD)
 c_built=
 case " $* " in
-*' go '* | *' cpp '* | *' csharp '* | *' jvm '*)
+*' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '*)
 	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
 	[ -z "$(git status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
@@ -143,6 +143,26 @@ jvm)
 			"$jvm_out/jars/thinkthen-scala.jar" libraries/jvm/pom.xml libraries/jvm/LICENSE \
 			libraries/jvm/README.md "$folder/"
 		;;
+swift)
+		mkdir -p "$folder/Examples" "$folder/Sources/CThinkThen/include" \
+			"$folder/Sources/ThinkThen" "$folder/Tests/TypeCase"
+		cmp libraries/swift/Sources/CThinkThen/include/thinkthen.h libraries/c/include/thinkthen.h || {
+			echo 'release-pack: Swift vendored C header differs' >&2; exit 1;
+		}
+		cp libraries/swift/LICENSE libraries/swift/README.md libraries/swift/Package.swift "$folder/"
+		cp libraries/swift/Examples/main.swift "$folder/Examples/"
+		cp libraries/swift/Sources/CThinkThen/module.modulemap "$folder/Sources/CThinkThen/"
+		cp libraries/swift/Sources/CThinkThen/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
+		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift "$folder/Sources/ThinkThen/"
+		cp libraries/swift/Tests/TypeCase/main.swift "$folder/Tests/TypeCase/"
+		;;
+zig)
+		mkdir -p "$folder/examples" "$folder/src"
+		cp libraries/zig/LICENSE libraries/zig/README.md libraries/zig/build.zig \
+			libraries/zig/build.zig.zon "$folder/"
+		cp libraries/zig/examples/decide.zig "$folder/examples/"
+		cp libraries/zig/src/thinkthen.zig "$folder/src/"
+		;;
 	esac
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
@@ -152,6 +172,8 @@ part_go() { part_source_wrapper go; }
 part_cpp() { part_source_wrapper cpp; }
 part_csharp() { part_source_wrapper csharp; }
 part_jvm() { part_source_wrapper jvm; }
+part_swift() { part_source_wrapper swift; }
+part_zig() { part_source_wrapper zig; }
 
 part_sqlite() {
 	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
@@ -240,7 +262,7 @@ part_first_run() {
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
 for part in "$@"; do
 	case $part in
-	command | c | go | cpp | csharp | jvm | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	command | c | go | cpp | csharp | jvm | swift | zig | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac
