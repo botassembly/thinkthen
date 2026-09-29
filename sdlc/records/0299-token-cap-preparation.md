@@ -15,6 +15,8 @@ The ticket specifies the public name, integer versioned estimator, atomic per-at
 
 Current measured Rust nonblank headroom is narrow: `public/settings.rs` 470/500, `engine/mod.rs` 475/500, `engine/http.rs` 435/500, `cli/edge.rs` 495/500; `libraries/c/src/ffi.rs` is 499/500. 0289 will change these baselines. Use a small extraction around the shared budget/edge when needed, preserve existing tests, and measure source/host ratchets only in the implementation build. No second parser or estimator is justified. Exact host copied schema and package member paths must be refreshed from the implemented 0283/0289 branch before claiming product closure.
 
+Live collision at this pin: codex-2 holds 0283's core settings/parser, C settings/FFI, CLI args and preview adapters; 0289 is the later prepared T7 cap/plan/tally slice, and T8/T9 carry the broad host rollout. The ticket now names the concrete current constructors and settings bridges for future claims. This design branch holds none of them.
+
 The cost/timing/facts issue owns optional money and server timing; status owns durable product usage; per-record cache identity waits under ruling 3B. No new ADR file is claimed. If High review finds the public distinction merits an ADR, root should claim a new available number and record this decision without rewriting accepted 0105/0107 or using reserved 0105 history as an implicit amendment. Ian can overturn the recorded follow-up boundary, but no routine detail here needs a new Ian question.
 
 ## What preparation taught us
