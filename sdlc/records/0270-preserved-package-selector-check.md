@@ -1,6 +1,6 @@
 # 0270 preserved PHP/Dart package selector check
 
-Status: both direct installed selectors passed on the retained 0267 C/PHP/Dart trio on Linux x86-64, 2026-09-29. This is the narrow execution checkpoint authorized after [fresh High code review](0270-php-dart-workflow-code-review.md) of combined code `889c7a94`. It does not qualify a new manylinux pack, the workflow runner, Actions, publication, or aggregate smoke. Ticket 0270 remains open. The branch started clean from `origin/main` at `d8762f88`; no product source changed.
+Status: independently accepted at `645d3d28` after fresh High receipt review; both direct installed selectors passed on the retained 0267 C/PHP/Dart trio on Linux x86-64, 2026-09-29. This is the narrow execution checkpoint authorized after [fresh High code review](0270-php-dart-workflow-code-review.md) of combined code `889c7a94`. It does not qualify a new manylinux pack, the workflow runner, Actions, publication, or aggregate smoke. Ticket 0270 remains open. The branch started clean from `origin/main` at `d8762f88`; no product source changed.
 
 ## Preserved input identity
 
@@ -34,3 +34,9 @@ The literal bodies come from `specification/fixtures/batching/portable-{1,2,3}.r
 The first PHP invocation reached the backend after native checks, then the filesystem sandbox denied its loopback socket (`Operation not permitted`); its controller had no port to read. The explicitly authorized narrow execution retry passed as recorded above. That first attempt was not a PHP product failure or a successful counted-request check. The Dart selector used the same approved loopback access once. Its offline pub output included `Downloading packages...` while resolving from the one-version isolated cache; the command had `--offline` and no tool/package download or provider invocation was made here.
 
 The earlier 0264 and 0267 records remain prior package evidence. This check adds execution of the changed selectors on preserved 0267 bytes. A current-source manylinux x86 workflow pack, actual runner tool and cache setup, aggregate route and Actions receipt remain unresolved. SQL/DataFrame work remains held; every archive in `target/0267-final` was preserved.
+
+## Independent receipt review
+
+Fresh High review accepted `645d3d28`. The reviewer recomputed all three archive and C-member hashes, compared the archived PHP/Dart product files and C header against both revisions, inspected package identities and the isolated ffi cache, and checked the raw success and initial sandbox-failure logs against the assertions. No consumer or build was repeated.
+
+The raw logs do not preserve the exact command invocation and environment. They support the results above, while the absolute archive paths and lock/offline settings are stated in the receipt and traced in selector source. Future selector receipts should save a sanitized command and an explicit allowlist of nonsecret settings. No credential or full environment dump belongs in that record.
