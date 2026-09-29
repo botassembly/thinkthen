@@ -15,7 +15,7 @@ use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
 use rusqlite::ffi::sqlite3;
-use thinkthen::{CallOptions, CancelToken, Engine, ErrorKind};
+use thinkthen::{BatchSetting, CallOptions, CancelToken, Engine, ErrorKind, Settings};
 
 use crate::{Failure, budget, ffi, guard, settings};
 
@@ -31,30 +31,35 @@ pub(crate) fn run<T: Send + 'static>(
     deadline: Option<i64>,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
-    run_with(db, deadline, None, true, work)
+    run_with(db, deadline, work)
 }
 
-/// Keep a warm aggregate's deadline fixed across its separate chunk workers.
-pub(crate) fn run_until<T: Send + 'static>(
+/// Apply the already validated portable call controls inside the owned worker.
+pub(crate) fn run_settings<T: Send + 'static>(
     db: *mut sqlite3,
-    deadline: Option<Instant>,
+    settings: Settings,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
-    run_with(db, None, deadline, false, work)
+    run(db, settings.deadline_ms(), move |engine, mut options| {
+        if settings.batch_max() {
+            options = options.batch(BatchSetting::Max);
+        } else if let Some(records) = settings.batch_records() {
+            let count = std::num::NonZeroUsize::new(records)
+                .ok_or_else(|| Failure::defect("validated batch had zero records"))?;
+            options = options.batch(BatchSetting::Records(count));
+        }
+        work(engine, options)
+    })
 }
 
 fn run_with<T: Send + 'static>(
     db: *mut sqlite3,
     deadline: Option<i64>,
-    absolute: Option<Instant>,
-    scalar_preflight: bool,
     work: impl FnOnce(&'static Engine, CallOptions<'_>) -> Result<T, Failure> + Send + 'static,
 ) -> Result<T, Failure> {
     let due = budget::remaining(db)?.map(|(_, due)| due);
     let engine = settings::engine()?;
-    if scalar_preflight {
-        settings::remaining()?;
-    }
+    settings::remaining()?;
     let (send_budget, total) = settings::send_budget();
     let token = CancelToken::new();
     let theirs = token.clone();
@@ -85,17 +90,11 @@ fn run_with<T: Send + 'static>(
             (_, Some(budget)) => Some(budget),
             (call, None) => call,
         };
-        if let Some(at) = absolute {
-            options = options.deadline_at(due.map_or(at, |connection| at.min(connection)));
-        } else if let Some(millis) = deadline {
-            options = options.deadline_millis(millis)?;
+        if let Some(millis) = deadline {
+            options = options.deadline_ms(millis)?;
         }
         work(engine, options)
     })?;
-    let due = match (due, absolute) {
-        (Some(connection), Some(call)) => Some(connection.min(call)),
-        (connection, call) => connection.or(call),
-    };
     wait(&answers, &token, || ffi::interrupted(db), due)
 }
 

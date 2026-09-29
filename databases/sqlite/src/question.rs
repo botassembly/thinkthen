@@ -8,7 +8,7 @@ use std::sync::{Arc, LazyLock, Mutex, PoisonError};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use rusqlite::types::ValueRef;
-use thinkthen::{ErrorKind, LoadedQuestion, Question, QuestionSet};
+use thinkthen::{ErrorKind, For, LoadedQuestion, Question, QuestionSet, Settings};
 
 use crate::Failure;
 
@@ -185,6 +185,100 @@ pub(crate) fn question(argument: &str) -> Result<Arc<LoadedQuestion>, Failure> {
             Ok(LoadedQuestion::Question(Question::decide(source)?.cut()))
         }
     })
+}
+
+/// Parse one host settings argument at the shared pure boundary.
+pub(crate) fn call_settings(value: ValueRef<'_>) -> Result<Settings, Failure> {
+    if matches!(value, ValueRef::Integer(_) | ValueRef::Real(_)) {
+        return Err(Failure::usage(
+            "the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'",
+        ));
+    }
+    let Some(source) = text(value, "the settings")? else {
+        return Ok(Settings::default());
+    };
+    Settings::parse(&source).map_err(|error| Failure::usage(error.to_string()))
+}
+
+/// Aggregate verbs take call controls only; question fields belong to their spec.
+pub(crate) fn call_controls(value: ValueRef<'_>) -> Result<Settings, Failure> {
+    let source = text(value, "the settings")?;
+    let Some(source) = source else {
+        return Ok(Settings::default());
+    };
+    let settings = Settings::parse(&source).map_err(|error| Failure::usage(error.to_string()))?;
+    let value: serde_json::Value = serde_json::from_str(&source)
+        .map_err(|_| Failure::usage("the settings argument is one JSON object"))?;
+    if let Some(key) = value.as_object().and_then(|fields| {
+        fields
+            .keys()
+            .find(|key| !matches!(key.as_str(), "context" | "batch" | "deadline_ms"))
+    }) {
+        return Err(Failure::usage(format!(
+            "the settings key `{key}` does not belong to this verb"
+        )));
+    }
+    Ok(settings)
+}
+
+/// Apply portable question fields without changing an unconfigured question's bytes.
+pub(crate) fn question_with_settings(
+    argument: &str,
+    settings: &Settings,
+    verb: For,
+) -> Result<Arc<LoadedQuestion>, Failure> {
+    if settings == &Settings::default() {
+        return question(argument);
+    }
+    let source = if let Some(_) = argument.strip_prefix('@') {
+        Some(named_file(argument, "question")?.0)
+    } else if argument.starts_with('{') {
+        Some(argument.to_owned())
+    } else {
+        None
+    };
+    let Some(source) = source else {
+        let json = settings
+            .question_json(verb, argument)
+            .map_err(|error| Failure::usage(error.to_string()))?;
+        return Ok(Arc::new(Question::from_json(&json)?));
+    };
+    let explicit: serde_json::Value = serde_json::from_str(&source)
+        .map_err(|error| Failure::usage(format!("the question is not JSON: {error}")))?;
+    let fields = explicit
+        .as_object()
+        .ok_or_else(|| Failure::usage("the question is one JSON object"))?;
+    let extra = settings
+        .question_json(verb, "settings merge")
+        .or_else(|_| settings.question_json(For::Decide, "settings merge"))
+        .map_err(|error| Failure::usage(error.to_string()))?;
+    let extra_value: serde_json::Value = serde_json::from_str(&extra)
+        .map_err(|_| Failure::defect("the shared settings writer returned invalid JSON"))?;
+    let extra_fields = extra_value
+        .as_object()
+        .ok_or_else(|| Failure::defect("the shared settings writer returned no object"))?;
+    let explicit_keys: Vec<_> = fields.keys().map(String::as_str).collect();
+    settings
+        .conflicts(&explicit_keys, false)
+        .map_err(|error| Failure::usage(error.to_string()))?;
+    if extra_fields.len() == 1 {
+        return Ok(Arc::new(Question::from_json(&source)?));
+    }
+    // The shared writer preserved member-map order. Append only its question
+    // fields, leaving the caller's complete JSON bytes in their original order.
+    let first = extra
+        .find(',')
+        .ok_or_else(|| Failure::defect("settings lost their fields"))?;
+    let suffix = extra
+        .get(first + 1..extra.len() - 1)
+        .ok_or_else(|| Failure::defect("settings lost their closing object"))?;
+    let original = source
+        .trim_end()
+        .strip_suffix('}')
+        .ok_or_else(|| Failure::usage("the question is one JSON object"))?;
+    let separator = if fields.is_empty() { "" } else { "," };
+    let merged = format!("{original}{separator}{suffix}}}");
+    Ok(Arc::new(Question::from_json(&merged)?))
 }
 
 /// The question set one argument names, inline JSON or `'@name'`.

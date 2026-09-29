@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The shared five-text Max corpus through SQLite's ordered warm aggregate."""
+"""The shared five-text Max corpus through one keyed SQLite table call."""
 
 from __future__ import annotations
 
@@ -19,14 +19,12 @@ def test_portable_batch_identity() -> None:
     backend = Backend()
     code = f"""
 db = connect()
-db.execute("SELECT thinkthen_batch('max')")
-db.execute("SELECT thinkthen_max_retries(0)")
-db.execute("CREATE TABLE t(i INTEGER PRIMARY KEY, body TEXT)")
-db.executemany("INSERT INTO t VALUES (?, ?)", {list(enumerate(fixture['texts']))!r})
-say(warm=run(db, "SELECT thinkthen_warm(?, body) FROM (SELECT body FROM t ORDER BY i)", ({fixture['question']!r},)))
+db.execute("SELECT thinkthen_configure(?)", ('{{"batch":"max","max_retries":0}}',))
+say(rows=run(db, "SELECT count(*) FROM thinkthen_decide_many(?, ?)",
+             ({fixture['question']!r}, {json.dumps({str(i): text for i, text in enumerate(fixture['texts'])})!r})))
 """
     held = child(code, environment(backend, "arm/full/capture"))
-    expect(held["warm"], [[5]], "five accepted distinct texts")
+    expect(held["rows"], [[5]], "five accepted distinct texts")
     expect(backend.count(), 3, "three real Max requests")
     expect(sorted(backend.capture()), sorted(bodies), "three exact fixture bodies and first-seen members")
     fixed = [hashlib.sha256(f"systemone\n{fixture['url']}\n{body}".encode()).hexdigest() for body in bodies]

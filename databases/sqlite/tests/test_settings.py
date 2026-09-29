@@ -84,13 +84,28 @@ def test_shared_settings_corpus() -> None:
                     expect(result, [[1]], label)
                 expect(backend.count(), step["count"], f"{label} listener count")
             if "entries" in shared:
-                saved = sum(path.is_file() and path.name != ".thinkthen-backend.json" for path in pathlib.Path(folder).rglob("*"))
+                saved = recording_entries(folder)
                 expect(saved, shared["entries"], f"{shared['id']} saved entries")
         backend.close()
 
 
 def entries(folder: str) -> int:
     return sum(1 for path in pathlib.Path(folder).rglob("*") if path.is_file())
+
+
+def recording_entries(folder: str) -> int:
+    return sum(path.is_file() and path.name != ".thinkthen-backend.json"
+               for path in pathlib.Path(folder).rglob("*.json"))
+
+
+def test_recording_counter_excludes_lock_files() -> None:
+    with tempfile.TemporaryDirectory() as folder:
+        root = pathlib.Path(folder)
+        (root / ".locks").mkdir()
+        (root / ".locks" / "one.lock").write_text("lock")
+        (root / "one.json").write_text("{}")
+        (root / ".thinkthen-backend.json").write_text("{}")
+        expect(recording_entries(folder), 1, "only recorded JSON answers count")
 
 
 def test_settings_keep_the_environment_seed() -> None:

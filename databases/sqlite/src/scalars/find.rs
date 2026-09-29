@@ -2,10 +2,9 @@
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
-use thinkthen::{Evidence, Question};
+use thinkthen::{Evidence, For, Question, Settings};
 
-use super::deadline_at;
-use crate::question::text;
+use crate::question::{call_settings, text};
 use crate::{Failure, ffi, guard, worker};
 
 const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
@@ -54,18 +53,7 @@ fn units(argument: &str) -> Result<Vec<Indexed>, Failure> {
         .collect()
 }
 
-fn offered(context: &Context<'_>) -> Result<bool, Failure> {
-    if context.len() < 3 {
-        return Ok(false);
-    }
-    match context.get_raw(2) {
-        ValueRef::Integer(0) => Ok(false),
-        ValueRef::Integer(1) => Ok(true),
-        _ => Err(Failure::usage("find none is the integer 0 or 1")),
-    }
-}
-
-/// `thinkthen_find(question, units_json[, none[, deadline_ms]])`.
+/// `thinkthen_find(question, units_json[, settings])`.
 pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_find", || {
         if (0..context.len()).any(|slot| matches!(context.get_raw(slot), ValueRef::Null)) {
@@ -75,8 +63,20 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             .ok_or_else(|| Failure::defect("a checked find question was NULL"))?;
         let source = text(context.get_raw(1), "the units")?
             .ok_or_else(|| Failure::defect("checked find units were NULL"))?;
-        let none = offered(context)?;
-        let deadline = deadline_at(context, 3)?;
+        let settings = if context.len() > 2 {
+            if matches!(context.get_raw(2), ValueRef::Integer(_) | ValueRef::Real(_)) {
+                return Err(Failure::usage(
+                    "find's none and deadline moved into the settings object",
+                ));
+            }
+            call_settings(context.get_raw(2))?
+        } else {
+            Settings::default()
+        };
+        settings
+            .check(For::Find)
+            .map_err(|error| Failure::usage(error.to_string()))?;
+        let none = settings.none().unwrap_or(false);
         let units = units(&source)?;
         if units.is_empty() {
             return Ok(None);
@@ -95,33 +95,34 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         } else {
             question
         };
-        let answer = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            let call = engine.find_with(&question, units, options)?;
-            let found = call.into_value();
-            let selected = found.selected();
-            let candidates = found.candidates();
-            let winner = match selected {
-                Some(unit) => candidates.get(unit.position),
-                None => candidates.last().filter(|candidate| candidate.is_none()),
-            }
-            .ok_or_else(|| Failure::defect("a find answer selected no candidate"))?;
-            let candidates: Vec<_> = candidates
-                .iter()
-                .map(|candidate| {
-                    serde_json::json!({
-                        "index": candidate.input().map(|unit| unit.position),
-                        "probability": candidate.probability(),
+        let answer =
+            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                let call = engine.find_with(&question, units, options)?;
+                let found = call.into_value();
+                let selected = found.selected();
+                let candidates = found.candidates();
+                let winner = match selected {
+                    Some(unit) => candidates.get(unit.position),
+                    None => candidates.last().filter(|candidate| candidate.is_none()),
+                }
+                .ok_or_else(|| Failure::defect("a find answer selected no candidate"))?;
+                let candidates: Vec<_> = candidates
+                    .iter()
+                    .map(|candidate| {
+                        serde_json::json!({
+                            "index": candidate.input().map(|unit| unit.position),
+                            "probability": candidate.probability(),
+                        })
                     })
+                    .collect();
+                Ok(serde_json::json!({
+                    "index": selected.map(|unit| unit.position),
+                    "value": selected.map(|unit| unit.text.as_str()),
+                    "probability": winner.probability(),
+                    "candidates": candidates,
                 })
-                .collect();
-            Ok(serde_json::json!({
-                "index": selected.map(|unit| unit.position),
-                "value": selected.map(|unit| unit.text.as_str()),
-                "probability": winner.probability(),
-                "candidates": candidates,
-            })
-            .to_string())
-        })?;
+                .to_string())
+            })?;
         Ok(Some(answer))
     })?)
 }

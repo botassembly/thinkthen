@@ -7,71 +7,49 @@ use rusqlite::Connection;
 use rusqlite::functions::{Context, FunctionFlags};
 use rusqlite::types::ValueRef;
 use thinkthen::{
-    Answer, CallOptions, Details, Engine, Judgment, LoadedQuestion, Probabilities, Question,
-    QuestionKind,
+    Answer, CallOptions, Details, Engine, For, Judgment, LoadedQuestion, Question, QuestionKind,
+    Settings,
 };
 
-use crate::question::{question, set, shown, text};
+use crate::question::{call_controls, call_settings, question, question_with_settings, set, text};
 use crate::{Failure, ffi, guard, recognize_document, settings, worker};
 
-/// One deadline slot, milliseconds under ADR 0041: an INTEGER as given, or
-/// a finite, whole REAL inside `i64`. Anything else is `usage`.
-fn deadline_at(context: &Context<'_>, slot: usize) -> Result<Option<i64>, Failure> {
-    if context.len() <= slot {
-        return Ok(None);
-    }
-    let value = context.get_raw(slot);
-    let millis = match value {
-        ValueRef::Integer(whole) => Some(whole),
-        ValueRef::Real(real)
-            if real.is_finite()
-                && real.fract() == 0.0
-                && (i64::MIN as f64..-(i64::MIN as f64)).contains(&real) =>
-        {
-            Some(real as i64)
-        }
-        _ => None,
+/// One scalar call's checked question, evidence and portable controls.
+type Inputs = Option<(Arc<LoadedQuestion>, String, Settings, Option<String>)>;
+
+fn inputs(context: &Context<'_>, requested: Option<For>) -> Result<Inputs, Failure> {
+    let settings = if context.len() > 2 {
+        call_settings(context.get_raw(2))?
+    } else {
+        Settings::default()
     };
-    let millis = millis.ok_or_else(|| {
-        Failure::usage(format!(
-            "a deadline of {} is not a whole number of milliseconds",
-            shown(value)
-        ))
-    })?;
-    CallOptions::new().deadline_millis(millis)?;
-    Ok(Some(millis))
-}
-
-/// The established judgment and warm deadline is the third argument.
-fn deadline(context: &Context<'_>) -> Result<Option<i64>, Failure> {
-    deadline_at(context, 2)
-}
-
-/// One scalar call's question, evidence, and deadline, or `None` for a NULL.
-type Inputs = Option<(Arc<LoadedQuestion>, String, Option<i64>, Option<String>)>;
-
-/// A final literal context, with SQL NULL meaning the old no-context call.
-fn shared(context: &Context<'_>) -> Result<Option<String>, Failure> {
-    if context.len() < 4 {
-        return Ok(None);
-    }
-    let value = text(context.get_raw(3), "the context")?;
-    if value.as_ref().is_some_and(|value| value.trim().is_empty()) {
-        return Err(Failure::usage("context is text, not white space"));
-    }
-    Ok(value)
-}
-
-fn inputs(context: &Context<'_>) -> Result<Inputs, Failure> {
-    let deadline = deadline(context)?;
     let Some(argument) = text(context.get_raw(0), "the question")? else {
         return Ok(None);
     };
     let Some(evidence) = text(context.get_raw(1), "the text")? else {
         return Ok(None);
     };
-    let shared = shared(context)?;
-    Ok(Some((question(&argument)?, evidence, deadline, shared)))
+    let verb = if let Some(verb) = requested {
+        verb
+    } else {
+        match &*question(&argument)? {
+            LoadedQuestion::Banded(_) => For::Decide,
+            LoadedQuestion::Question(asked) => match asked.kind() {
+                QuestionKind::Decide => For::Decide,
+                QuestionKind::Choose => For::Choose,
+                QuestionKind::Score => For::Score,
+                QuestionKind::Tag => For::Tag,
+                _ => return Err(Failure::usage("details takes a judgment question")),
+            },
+        }
+    };
+    let shared = settings.context().map(str::to_owned);
+    Ok(Some((
+        question_with_settings(&argument, &settings, verb)?,
+        evidence,
+        settings,
+        shared,
+    )))
 }
 
 /// The shared many-record details path for a contextual singleton.
@@ -153,55 +131,25 @@ fn plain_decide(
 
 fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
     Ok(guard("thinkthen_decide", || {
-        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
+        let Some((held, evidence, settings, shared)) = inputs(context, Some(For::Decide))? else {
             return Ok(None);
         };
-        let answer = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            if let Some(shared) = shared {
-                match contextual(engine, &held, evidence, options.context(&shared))?.value() {
-                    Judgment::Decision(answer) => Ok(*answer),
-                    _ => Err(Failure::defect("a decide answer held no decision")),
+        let answer =
+            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                if let Some(shared) = shared {
+                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                        Judgment::Decision(answer) => Ok(*answer),
+                        _ => Err(Failure::defect("a decide answer held no decision")),
+                    }
+                } else {
+                    plain_decide(engine, &held, &evidence, options)
                 }
-            } else {
-                plain_decide(engine, &held, &evidence, options)
-            }
-        })?;
+            })?;
         Ok(match answer {
             Answer::Yes => Some(1),
             Answer::No => Some(0),
             Answer::Unsure => None,
         })
-    })?)
-}
-
-fn probability(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
-    Ok(guard("thinkthen_probability", || {
-        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
-            return Ok(None);
-        };
-        match &*held {
-            LoadedQuestion::Banded(_) => {}
-            LoadedQuestion::Question(asked) if asked.kind() == QuestionKind::Decide => {}
-            _ => {
-                return Err(Failure::usage(
-                    "thinkthen_probability takes a decide question",
-                ));
-            }
-        }
-        let yes = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            let details = if let Some(shared) = shared {
-                contextual(engine, &held, evidence, options.context(&shared))?
-            } else {
-                scalar_details(engine, &held, &evidence, options)?
-            };
-            match details.probabilities() {
-                Probabilities::YesNo { yes } => Ok(*yes),
-                Probabilities::Named(_) => {
-                    Err(Failure::defect("a decide answer held named probabilities"))
-                }
-            }
-        })?;
-        Ok(Some(yes))
     })?)
 }
 
@@ -211,25 +159,31 @@ fn judged(
     name: &'static str,
     kind: QuestionKind,
 ) -> Result<Option<Judgment>, Failure> {
-    let Some((held, evidence, deadline, shared)) = inputs(context)? else {
+    let verb = match kind {
+        QuestionKind::Choose => For::Choose,
+        QuestionKind::Tag => For::Tag,
+        _ => return Err(Failure::defect("judged received another kind")),
+    };
+    let Some((held, evidence, settings, shared)) = inputs(context, Some(verb))? else {
         return Ok(None);
     };
     only(&held, name, kind)?;
-    let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-        if let Some(shared) = shared {
-            Ok(
-                contextual(engine, &held, evidence, options.context(&shared))?
+    let details =
+        worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+            if let Some(shared) = shared {
+                Ok(
+                    contextual(engine, &held, evidence, options.context(&shared))?
+                        .value()
+                        .clone(),
+                )
+            } else {
+                Ok(engine
+                    .details_with(plain(&held)?, &evidence, options)?
+                    .into_value()
                     .value()
-                    .clone(),
-            )
-        } else {
-            Ok(engine
-                .details_with(plain(&held)?, &evidence, options)?
-                .into_value()
-                .value()
-                .clone())
-        }
-    })?;
+                    .clone())
+            }
+        })?;
     Ok(Some(details))
 }
 
@@ -257,38 +211,43 @@ fn tag(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
 
 fn score(context: &Context<'_>) -> rusqlite::Result<Option<f64>> {
     Ok(guard("thinkthen_score", || {
-        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
+        let Some((held, evidence, settings, shared)) = inputs(context, Some(For::Score))? else {
             return Ok(None);
         };
         only(&held, "thinkthen_score", QuestionKind::Score)?;
-        let position = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            if let Some(shared) = shared {
-                match contextual(engine, &held, evidence, options.context(&shared))?.value() {
-                    Judgment::Score(value) => Ok(*value),
-                    _ => Err(Failure::defect("a score answer held no score")),
+        let position =
+            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                if let Some(shared) = shared {
+                    match contextual(engine, &held, evidence, options.context(&shared))?.value() {
+                        Judgment::Score(value) => Ok(*value),
+                        _ => Err(Failure::defect("a score answer held no score")),
+                    }
+                } else {
+                    Ok(engine
+                        .score_with(plain(&held)?, &evidence, options)?
+                        .into_value())
                 }
-            } else {
-                Ok(engine
-                    .score_with(plain(&held)?, &evidence, options)?
-                    .into_value())
-            }
-        })?;
+            })?;
         Ok(Some(position))
     })?)
 }
 
 fn details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_details", || {
-        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
+        let Some((held, evidence, settings, shared)) = inputs(context, None)? else {
             return Ok(None);
         };
-        let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            if let Some(shared) = shared {
-                Ok(contextual(engine, &held, evidence, options.context(&shared))?.to_scalar_json())
-            } else {
-                Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
-            }
-        })?;
+        let details =
+            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                if let Some(shared) = shared {
+                    Ok(
+                        contextual(engine, &held, evidence, options.context(&shared))?
+                            .to_scalar_json(),
+                    )
+                } else {
+                    Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
+                }
+            })?;
         Ok(Some(details))
     })?)
 }
@@ -299,16 +258,20 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         return Ok(None);
     }
     let result = guard("thinkthen_try_details", || {
-        let Some((held, evidence, deadline, shared)) = inputs(context)? else {
+        let Some((held, evidence, settings, shared)) = inputs(context, None)? else {
             return Ok(None);
         };
-        let details = worker::run(ffi::handle_of(context), deadline, move |engine, options| {
-            if let Some(shared) = shared {
-                Ok(contextual(engine, &held, evidence, options.context(&shared))?.to_scalar_json())
-            } else {
-                Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
-            }
-        })?;
+        let details =
+            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                if let Some(shared) = shared {
+                    Ok(
+                        contextual(engine, &held, evidence, options.context(&shared))?
+                            .to_scalar_json(),
+                    )
+                } else {
+                    Ok(scalar_details(engine, &held, &evidence, options)?.to_json())
+                }
+            })?;
         let details: serde_json::Value =
             serde_json::from_str(&details).map_err(|_| Failure::defect("a result is not JSON"))?;
         Ok(Some(
@@ -326,7 +289,11 @@ fn try_details(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
 
 fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
     Ok(guard("thinkthen_annotate", || {
-        let deadline = deadline(context)?;
+        let settings = if context.len() > 2 {
+            call_controls(context.get_raw(2))?
+        } else {
+            Settings::default()
+        };
         let Some(argument) = text(context.get_raw(0), "the question set")? else {
             return Ok(None);
         };
@@ -335,17 +302,12 @@ fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         };
         let questions = set(&argument)?;
         let record =
-            worker::run(
-                ffi::handle_of(context),
-                deadline,
-                move |engine, options| match engine
-                    .annotate_with(&questions, [evidence], options)
-                    .next()
-                {
+            worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                match engine.annotate_with(&questions, [evidence], options).next() {
                     Some(record) => Ok(record?.value_json()),
                     None => Err(Failure::defect("annotate returned no record")),
-                },
-            )?;
+                }
+            })?;
         Ok(Some(record))
     })?)
 }
@@ -374,67 +336,95 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
     })?)
 }
 
-mod warm;
-use warm::Warm;
 mod find;
 
 /// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
     connection.create_scalar_function(
-        "thinkthen_recognize_document",
+        "thinkthen_relations",
         2,
         volatile,
         recognize_document::recognize_document,
     )?;
-    for arity in [2, 3, 4] {
+    connection.create_scalar_function(
+        "thinkthen_recognize_document",
+        -1,
+        volatile,
+        |_| -> rusqlite::Result<String> {
+            Err(
+                Failure::usage("thinkthen_recognize_document was renamed thinkthen_relations")
+                    .into(),
+            )
+        },
+    )?;
+    for arity in [2, 3] {
         connection.create_scalar_function("thinkthen_decide", arity, volatile, decide)?;
-        connection.create_scalar_function("thinkthen_probability", arity, volatile, probability)?;
         connection.create_scalar_function("thinkthen_choose", arity, volatile, choose)?;
         connection.create_scalar_function("thinkthen_score", arity, volatile, score)?;
         connection.create_scalar_function("thinkthen_tag", arity, volatile, tag)?;
-        if arity < 4 {
-            connection.create_scalar_function("thinkthen_annotate", arity, volatile, annotate)?;
-        }
+        connection.create_scalar_function("thinkthen_annotate", arity, volatile, annotate)?;
         connection.create_scalar_function("thinkthen_details", arity, volatile, details)?;
         connection.create_scalar_function("thinkthen_try_details", arity, volatile, try_details)?;
-    }
-    connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
-    for arity in [2, 3, 4] {
-        connection.create_aggregate_function("thinkthen_warm", arity, volatile, Warm)?;
         connection.create_scalar_function("thinkthen_find", arity, volatile, find::find)?;
     }
-    connection.create_scalar_function("thinkthen_throttle", 1, volatile, settings::throttle)?;
-    connection.create_scalar_function("thinkthen_batch", 1, volatile, settings::batch)?;
+    connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
+    connection.create_scalar_function("thinkthen_configure", 1, volatile, settings::configure)?;
+    for name in [
+        "thinkthen_decide",
+        "thinkthen_choose",
+        "thinkthen_score",
+        "thinkthen_tag",
+        "thinkthen_details",
+        "thinkthen_try_details",
+        "thinkthen_annotate",
+        "thinkthen_find",
+    ] {
+        let sentence = if name == "thinkthen_find" {
+            "find's none and deadline moved into the settings object"
+        } else {
+            "the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'"
+        };
+        connection.create_scalar_function(
+            name,
+            4,
+            volatile,
+            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence).into()) },
+        )?;
+    }
     connection.create_scalar_function(
-        "thinkthen_max_requests",
-        1,
+        "thinkthen_warm",
+        -1,
         volatile,
-        settings::max_requests,
+        |_| -> rusqlite::Result<String> {
+            Err(Failure::usage(
+                "thinkthen_warm was removed; pack records with thinkthen_decide_many",
+            )
+            .into())
+        },
     )?;
-    connection.create_scalar_function(
-        "thinkthen_max_request_bytes",
-        1,
-        volatile,
-        settings::max_request_bytes,
-    )?;
-    connection.create_scalar_function(
-        "thinkthen_max_requests_total",
-        1,
-        volatile,
-        settings::max_requests_total,
-    )?;
-    connection.create_scalar_function("thinkthen_cache", 1, volatile, settings::cache)?;
-    connection.create_scalar_function("thinkthen_model", 1, volatile, settings::model)?;
-    connection.create_scalar_function("thinkthen_timeout", 1, volatile, settings::timeout)?;
-    connection.create_scalar_function(
-        "thinkthen_max_retries",
-        1,
-        volatile,
-        settings::max_retries,
-    )?;
-    connection.create_scalar_function("thinkthen_profile", 1, volatile, settings::profile)?;
-    connection.create_scalar_function("thinkthen_record", 1, volatile, settings::record)?;
-    connection.create_scalar_function("thinkthen_replay", 1, volatile, settings::replay)?;
+    for name in [
+        "throttle",
+        "batch",
+        "max_requests",
+        "max_request_bytes",
+        "max_requests_total",
+        "cache",
+        "model",
+        "timeout",
+        "max_retries",
+        "profile",
+        "record",
+        "replay",
+    ] {
+        let full = format!("thinkthen_{name}");
+        let sentence = format!("thinkthen_{name} was replaced by thinkthen_configure");
+        connection.create_scalar_function(
+            full.as_str(),
+            -1,
+            volatile,
+            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence.clone()).into()) },
+        )?;
+    }
     Ok(())
 }

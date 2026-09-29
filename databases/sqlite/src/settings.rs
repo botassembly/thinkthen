@@ -6,10 +6,9 @@ use std::sync::{Mutex, MutexGuard, OnceLock, PoisonError};
 use std::time::Duration;
 
 use rusqlite::functions::Context;
-use rusqlite::types::{Value, ValueRef};
+use rusqlite::types::ValueRef;
 use thinkthen::{BatchSetting, Engine, EngineBuilder, SendBudget};
 
-use crate::question::shown;
 use crate::{Failure, guard};
 
 /// The settings SQL stored, each applied over the environment at the build.
@@ -136,205 +135,78 @@ pub(crate) fn spent(total: u64) -> Failure {
     ))
 }
 
-/// Check one setting against a fresh builder, then store it.
-fn set(check: impl Fn(&mut Stored)) -> Result<(), Failure> {
-    let mut held = stored();
-    if ENGINE.get().is_some() {
-        return Err(Failure::usage(
-            "settings apply before the first call; this process already built its engine",
-        ));
-    }
-    let mut next = Stored::default();
-    check(&mut next);
-    next.apply(EngineBuilder::from_env()?)?;
-    check(&mut held);
-    Ok(())
-}
-
-/// A whole-number argument, or `usage` naming what SQL gave.
-fn whole(context: &Context<'_>, name: &str) -> Result<Option<i64>, Failure> {
-    match context.get_raw(0) {
-        ValueRef::Null => Ok(None),
-        ValueRef::Integer(value) => Ok(Some(value)),
-        other => Err(Failure::usage(format!(
-            "{name} takes a whole number, not {}",
-            shown(other)
-        ))),
-    }
-}
-
-fn text(context: &Context<'_>, name: &str) -> Result<Option<String>, Failure> {
-    match context.get_raw(0) {
-        ValueRef::Null => Ok(None),
-        ValueRef::Text(bytes) => String::from_utf8(bytes.to_vec())
-            .map(Some)
-            .map_err(|_| Failure::usage(format!("{name} takes UTF-8 text"))),
-        other => Err(Failure::usage(format!(
-            "{name} takes text or NULL, not {}",
-            shown(other)
-        ))),
-    }
-}
-
-pub(crate) fn model(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    Ok(guard("thinkthen_model", || {
-        let value = text(context, "thinkthen_model")?;
-        set(|held| held.model = value.clone())?;
-        Ok(value)
-    })?)
-}
-
-pub(crate) fn timeout(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
-    Ok(guard("thinkthen_timeout", || {
-        let value = whole(context, "thinkthen_timeout")?;
-        let seconds = value
-            .map(|value| {
-                u64::try_from(value)
-                    .ok()
-                    .filter(|value| *value > 0)
-                    .map(Duration::from_secs)
-                    .ok_or_else(|| {
-                        Failure::usage("a timeout is a whole number of seconds above zero")
+/// Replace all engine settings atomically, before the engine is built.
+pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
+    Ok(guard("thinkthen_configure", || {
+        let source = match context.get_raw(0) {
+            ValueRef::Text(bytes) => std::str::from_utf8(bytes)
+                .map_err(|_| Failure::usage("settings JSON is UTF-8 text"))?,
+            _ => return Err(Failure::usage("settings JSON is one object")),
+        };
+        // The shared reader detects duplicate names before serde_json flattens them.
+        EngineBuilder::validate_settings_json(source)?;
+        let value: serde_json::Value = serde_json::from_str(source)
+            .map_err(|_| Failure::usage("settings JSON is one object"))?;
+        let fields = value
+            .as_object()
+            .ok_or_else(|| Failure::usage("settings JSON is one object"))?;
+        let mut next = Stored::default();
+        for (key, value) in fields {
+            match key.as_str() {
+                "base_url" => return Err(Failure::usage("settings JSON has unknown key base_url")),
+                "model" => next.model = value.as_str().map(str::to_owned),
+                "throttle" => next.throttle = value.as_u64().and_then(|n| u8::try_from(n).ok()),
+                "batch" => {
+                    next.batch = Some(match value.as_str() {
+                        Some("max") => BatchSetting::Max,
+                        _ => BatchSetting::Records(
+                            NonZeroUsize::new(
+                                usize::try_from(value.as_u64().ok_or_else(|| {
+                                    Failure::usage("settings batch has an invalid value")
+                                })?)
+                                .map_err(|_| {
+                                    Failure::usage("settings batch has an invalid value")
+                                })?,
+                            )
+                            .ok_or_else(|| Failure::usage("settings batch has an invalid value"))?,
+                        ),
                     })
-            })
-            .transpose()?;
-        set(|held| held.timeout = seconds)?;
-        Ok(value)
-    })?)
-}
-
-pub(crate) fn max_retries(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
-    Ok(guard("thinkthen_max_retries", || {
-        let value = whole(context, "thinkthen_max_retries")?;
-        let retries = value
-            .map(|value| {
-                u32::try_from(value).map_err(|_| {
-                    Failure::usage("a retry count is a whole number from 0 through 4294967295")
-                })
-            })
-            .transpose()?;
-        set(|held| held.max_retries = retries)?;
-        Ok(value)
-    })?)
-}
-
-pub(crate) fn profile(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    Ok(guard("thinkthen_profile", || {
-        let value = text(context, "thinkthen_profile")?;
-        set(|held| held.profile = value.clone())?;
-        Ok(value)
-    })?)
-}
-
-pub(crate) fn record(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    Ok(guard("thinkthen_record", || {
-        let value = text(context, "thinkthen_record")?;
-        set(|held| held.record = value.clone().map(PathBuf::from))?;
-        Ok(value)
-    })?)
-}
-
-pub(crate) fn replay(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    Ok(guard("thinkthen_replay", || {
-        let value = text(context, "thinkthen_replay")?;
-        set(|held| held.replay = value.clone().map(PathBuf::from))?;
-        Ok(value)
-    })?)
-}
-
-/// `thinkthen_throttle(n)`: the most requests in flight, 1 through 32.
-pub(crate) fn throttle(context: &Context<'_>) -> rusqlite::Result<i64> {
-    Ok(guard("thinkthen_throttle", || {
-        let value = whole(context, "thinkthen_throttle")?
-            .ok_or_else(|| Failure::usage("thinkthen_throttle takes a whole number, not NULL"))?;
-        // Out of `u8` reads as 0, so the engine's own sentence refuses it.
-        let throttle = u8::try_from(value).unwrap_or(0);
-        set(|held| held.throttle = Some(throttle))?;
-        Ok(value)
-    })?)
-}
-
-/// `thinkthen_batch`: `max`, a positive member cap, or NULL to restore the environment.
-pub(crate) fn batch(context: &Context<'_>) -> rusqlite::Result<Value> {
-    Ok(guard("thinkthen_batch", || {
-        let (shown, setting) = match context.get_raw(0) {
-            ValueRef::Null => (Value::Null, None),
-            ValueRef::Text(b"max") => (Value::Text("max".to_owned()), Some(BatchSetting::Max)),
-            ValueRef::Integer(value) => {
-                let count = usize::try_from(value)
-                    .ok()
-                    .and_then(NonZeroUsize::new)
-                    .ok_or_else(|| {
-                        Failure::usage("a batch is 'max' or a whole number of 1 or more")
-                    })?;
-                (Value::Integer(value), Some(BatchSetting::Records(count)))
+                }
+                "max_requests" => {
+                    next.max_requests = Some(
+                        value
+                            .as_u64()
+                            .map(|n| usize::try_from(n).unwrap_or(usize::MAX)),
+                    )
+                }
+                "max_request_bytes" => {
+                    next.max_request_bytes = value
+                        .as_u64()
+                        .map(|n| usize::try_from(n).unwrap_or(usize::MAX))
+                }
+                "cache" => next.cache = Some(value.as_str().map(PathBuf::from)),
+                "timeout" => next.timeout = value.as_u64().map(Duration::from_secs),
+                "max_retries" => {
+                    next.max_retries = value.as_u64().and_then(|n| u32::try_from(n).ok())
+                }
+                "profile" => next.profile = value.as_str().map(str::to_owned),
+                "record" => next.record = value.as_str().map(PathBuf::from),
+                "replay" => next.replay = value.as_str().map(PathBuf::from),
+                _ => {
+                    return Err(Failure::defect(
+                        "the shared settings reader accepted an unknown field",
+                    ));
+                }
             }
-            _ => {
-                return Err(Failure::usage(
-                    "a batch is 'max' or a whole number of 1 or more",
-                ));
-            }
-        };
-        set(|held| held.batch = setting)?;
-        Ok(shown)
-    })?)
-}
-
-/// `thinkthen_max_requests(n)`: the most records one call takes; NULL is no limit.
-pub(crate) fn max_requests(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
-    Ok(guard("thinkthen_max_requests", || {
-        let value = whole(context, "thinkthen_max_requests")?;
-        let most = value.map(|value| usize::try_from(value).unwrap_or(0));
-        set(|held| held.max_requests = Some(most))?;
-        Ok(value)
-    })?)
-}
-
-/// `thinkthen_max_request_bytes(n)`: the positive request-byte ceiling; NULL keeps the environment.
-pub(crate) fn max_request_bytes(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
-    Ok(guard("thinkthen_max_request_bytes", || {
-        let value = whole(context, "thinkthen_max_request_bytes")?;
-        let bytes = value.map(|value| usize::try_from(value).unwrap_or(0));
-        set(|held| held.max_request_bytes = bytes)?;
-        Ok(value)
-    })?)
-}
-
-/// `thinkthen_cache(dir)`: cache answers in this folder; NULL turns the cache off.
-pub(crate) fn cache(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
-    Ok(guard("thinkthen_cache", || {
-        let folder = match context.get_raw(0) {
-            ValueRef::Null => None,
-            ValueRef::Text(bytes) => Some(
-                String::from_utf8(bytes.to_vec())
-                    .map_err(|_| Failure::usage("thinkthen_cache takes UTF-8 text"))?,
-            ),
-            other => {
-                return Err(Failure::usage(format!(
-                    "thinkthen_cache takes a folder or NULL, not {}",
-                    shown(other)
-                )));
-            }
-        };
-        set(|held| held.cache = Some(folder.clone().map(PathBuf::from)))?;
-        Ok(folder)
-    })?)
-}
-
-/// `thinkthen_max_requests_total(n)`: the most requests this process may
-/// send; NULL is no total.
-pub(crate) fn max_requests_total(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
-    Ok(guard("thinkthen_max_requests_total", || {
-        let value = whole(context, "thinkthen_max_requests_total")?;
-        let total = value
-            .map(|value| {
-                u64::try_from(value)
-                    .ok()
-                    .filter(|total| *total > 0)
-                    .ok_or_else(|| Failure::usage("a request total is a whole number of 1 or more"))
-            })
-            .transpose()?;
-        set(|held| held.total = total)?;
-        Ok(value)
+        }
+        let mut held = stored();
+        if ENGINE.get().is_some() {
+            return Err(Failure::usage(
+                "settings apply before the first call; this process already built its engine",
+            ));
+        }
+        next.apply(EngineBuilder::from_env()?)?;
+        *held = next;
+        Ok(source.to_owned())
     })?)
 }
