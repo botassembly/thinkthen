@@ -3,6 +3,214 @@
 use super::*;
 
 #[test]
+fn caller_prices_round_the_combined_report_and_keep_no_send_zero() {
+    let _serial = serial();
+    let answer = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
+    let listener = Listener::answering(move |_| Canned::ok(answer)).expect("listener");
+    let folder = std::env::temp_dir().join(format!("thinkthen-priced-{}", std::process::id()));
+    let _gone = std::fs::remove_dir_all(&folder);
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .cache_at(&folder)
+        .expect("cache")
+        .prices_usd_per_million("0.25", "0.25")
+        .expect("prices")
+        .build()
+        .expect("engine");
+    let asked = question();
+    assert_eq!(
+        engine.estimate_reported_cost(1, 1).as_deref(),
+        Some("0.000001")
+    );
+    let live = engine.decide(&asked, "Refund me.").expect("live");
+    assert_eq!(live.facts().estimated_cost_usd(), Some("0.000001"));
+    assert!(!format!("{:?}", live.facts()).contains("0.000001"));
+    assert_eq!(
+        (live.facts().input_tokens(), live.facts().output_tokens()),
+        (Some(1), Some(1))
+    );
+    let cached = engine.decide(&asked, "Refund me.").expect("cached");
+    assert_eq!(cached.facts().estimated_cost_usd(), Some("0.000000"));
+    assert_eq!(
+        (
+            cached.facts().requests_sent(),
+            cached.facts().cache_answers()
+        ),
+        (0, 1)
+    );
+    assert_eq!(listener.count(), 1);
+    let plain = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .no_cache()
+        .build()
+        .expect("plain");
+    assert_eq!(plain.estimate_reported_cost(1, 1), None);
+    assert_eq!(
+        plain
+            .decide(&asked, "Another.")
+            .expect("plain answer")
+            .facts()
+            .estimated_cost_usd(),
+        None
+    );
+    assert_eq!(listener.count(), 2);
+    let zero = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .prices_usd_per_million("0", "0")
+        .expect("zero prices")
+        .no_cache()
+        .build()
+        .expect("zero engine");
+    assert_eq!(
+        zero.decide(&asked, "Zero.")
+            .expect("zero price answer")
+            .facts()
+            .estimated_cost_usd(),
+        Some("0.000000")
+    );
+    assert_eq!(listener.count(), 3);
+    let _gone = std::fs::remove_dir_all(folder);
+}
+
+#[test]
+fn malformed_caller_prices_refuse_before_send() {
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    for (input, output) in [
+        ("-1", "0"),
+        ("1e0", "0"),
+        ("0", "1000000.000001"),
+        ("0.0000001", "0"),
+    ] {
+        let result = Engine::builder()
+            .base_url(listener.base())
+            .expect("base")
+            .prices_usd_per_million(input, output);
+        assert_eq!(
+            result.err().map(|error| error.kind()),
+            Some(ErrorKind::Usage)
+        );
+    }
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn priced_empty_relate_is_zero_without_a_send() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .prices_usd_per_million("0.25", "0.25")
+        .expect("prices")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let ask = Relate::builder()
+        .relation(thinkthen::RelationRule::one_way("linked", "person", "person").expect("rule"))
+        .and_then(thinkthen::RelateBuilder::build)
+        .expect("relate");
+    let result = engine
+        .relate(&ask, Vec::<Entity>::new())
+        .expect("empty relation");
+    assert_eq!(result.facts().estimated_cost_usd(), Some("0.000000"));
+    assert_eq!(result.facts().requests_sent(), 0);
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn priced_started_failure_facts_are_copied_while_retry_missing_usage_stays_unpriced() {
+    let _serial = serial();
+    let next = AtomicUsize::new(0);
+    let valid = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
+    let invalid = r#"{"model":"jev-latest","answers":{"other":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
+    let listener = Listener::answering(move |_| match next.fetch_add(1, Ordering::SeqCst) {
+        0 => Canned::status(503, "busy"),
+        1 => Canned::ok(valid),
+        _ => Canned::ok(invalid),
+    })
+    .expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .prices_usd_per_million("1", "0")
+        .expect("prices")
+        .max_retries(1)
+        .no_cache()
+        .build()
+        .expect("engine");
+    let asked = question();
+    let partial = engine.decide(&asked, "First.").expect("retried answer");
+    assert_eq!(
+        (
+            partial.facts().requests_sent(),
+            partial.facts().input_tokens()
+        ),
+        (2, Some(1))
+    );
+    assert_eq!(partial.facts().estimated_cost_usd(), None);
+    let failure = engine
+        .decide(&asked, "Second.")
+        .expect_err("missing answer");
+    assert_eq!(failure.kind(), ErrorKind::Backend);
+    let copied = failure.facts().expect("started facts").clone();
+    drop(engine);
+    assert_eq!(listener.count(), 3);
+    assert_eq!(copied.estimated_cost_usd(), Some("0.000001"));
+    assert_eq!(partial.facts().estimated_cost_usd(), None);
+}
+
+#[test]
+fn complete_batch_replies_with_overflowed_tokens_omit_call_cost_and_next_call_recovers() {
+    let _serial = serial();
+    let next = AtomicUsize::new(0);
+    let big = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":18446744073709551615,"output_tokens":0}}"#;
+    let small = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":0}}"#;
+    let listener = Listener::answering(move |_| {
+        if next.fetch_add(1, Ordering::SeqCst) == 0 {
+            Canned::ok(big)
+        } else {
+            Canned::ok(small)
+        }
+    })
+    .expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .prices_usd_per_million("1", "0")
+        .expect("prices")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let rows = vec!["First.".to_owned(), "Second.".to_owned()];
+    let setting = BatchSetting::Records(std::num::NonZeroUsize::new(1).expect("one"));
+    let call = engine
+        .details_many_recoverable_with(&question(), &rows, CallOptions::new().batch(setting))
+        .expect("two complete replies");
+    assert_eq!(call.facts().requests_sent(), 2);
+    assert_eq!(call.facts().input_tokens(), None);
+    assert_eq!(call.facts().estimated_cost_usd(), None);
+    assert_eq!(listener.count(), 2);
+    let next_call = engine.decide(&question(), "Third.").expect("next call");
+    assert_eq!(next_call.facts().estimated_cost_usd(), Some("0.000001"));
+    assert_eq!(listener.count(), 3);
+}
+
+#[test]
 fn counters_and_cache_answers_match_the_real_attempts() {
     let _serial = serial();
     let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");

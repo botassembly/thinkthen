@@ -12,6 +12,17 @@ fn apply(
     mut builder: EngineBuilder,
     values: &Map<String, Value>,
 ) -> Result<EngineBuilder, Failure> {
+    if values.contains_key("usd_per_million_input") || values.contains_key("usd_per_million_output") {
+        let input = values
+            .get("usd_per_million_input")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Failure::usage("settings prices require both decimal strings"))?;
+        let output = values
+            .get("usd_per_million_output")
+            .and_then(Value::as_str)
+            .ok_or_else(|| Failure::usage("settings prices require both decimal strings"))?;
+        builder = builder.prices_usd_per_million(input, output)?;
+    }
     for (key, value) in values {
         let text = || {
             value
@@ -25,6 +36,7 @@ fn apply(
         };
         let unknown = || Failure::usage(format!("settings JSON has unknown key {key}"));
         builder = match key.as_str() {
+            "usd_per_million_input" | "usd_per_million_output" => builder,
             "base_url" => builder.base_url(text()?)?,
             "model" => builder.model(text()?)?,
             "throttle" => {

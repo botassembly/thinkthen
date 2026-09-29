@@ -103,6 +103,8 @@ impl Environment {
         let config_path = config::path();
         let config = Config::read(config_path.as_deref())?;
         let usage_path = config::usage_path();
+        let usage = std::sync::Arc::new(Counters::new(usage_path.clone()));
+        usage.set_prices(config.prices());
         Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
             batch: read("THINKTHEN_BATCH"),
@@ -119,7 +121,7 @@ impl Environment {
                 .and_then(|text| text.parse().ok()),
             sigint_ack: test_only("THINKTHEN_TEST_SIGINT_ACK").map(PathBuf::from),
             cancel: crate::engine::Cancel::default(),
-            usage: std::sync::Arc::new(Counters::new(usage_path.clone())),
+            usage,
             usage_path,
             key: KeySnapshot::default(),
             ca_bundle: read("THINKTHEN_CA_BUNDLE").map(PathBuf::from),

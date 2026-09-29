@@ -90,15 +90,18 @@ zero = run(db, "SELECT thinkthen_usage()")
 valid = run(db, "SELECT thinkthen_configure(?)", ('{"batch":1,"throttle":8,"model":"judge-b"}',))
 invalid = [run(db, "SELECT thinkthen_configure(?)", (text,)) for text in
            ('{"batch":0}', '{"throttle":33}', '{"unknwon":1}', '{"batch":1,"batch":2}',
-            '{"base_url":"https://example.invalid"}', '{"max_estimated_input_tokens_total":1}')]
+            '{"base_url":"https://example.invalid"}', '{"max_estimated_input_tokens_total":1}',
+            '{"usd_per_million_input":"0","usd_per_million_output":"0"}')]
 answer = run(db, "SELECT thinkthen_details('Is it red?', 'a red door')")
 after = run(db, "SELECT thinkthen_configure('{}')")
 say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
 """, environment(backend))
     expect(json.loads(held["zero"][0][0])["requests_sent"], 0, "usage builds no engine")
-    expect(all(value.startswith("thinkthen usage:") for value in held["invalid"]), True, "six invalid objects")
+    expect(all(value.startswith("thinkthen usage:") for value in held["invalid"]), True, "seven invalid objects")
     expect(held["invalid"][-1],
-           "thinkthen usage: settings JSON has unknown key max_estimated_input_tokens_total", "unimplemented host key")
+           "thinkthen usage: settings JSON has unsupported price key usd_per_million_input", "unimplemented host prices")
+    expect(held["invalid"][-2],
+           "thinkthen usage: settings JSON has unknown key max_estimated_input_tokens_total", "unimplemented host cap")
     expect(held["valid"], [['{"batch":1,"throttle":8,"model":"judge-b"}']], "the selected object")
     expect(json.loads(held["answer"][0][0])["meta"]["model"], "judge-b", "prior selection survived")
     expect(held["after"], AFTER_BUILD, "late configuration")

@@ -91,6 +91,7 @@ impl Tally {
             output_tokens: (!state.missing_usage)
                 .then_some(state.output_tokens)
                 .flatten(),
+            estimated_cost_usd: None,
             seconds: match (state.first, state.last) {
                 (Some(first), Some(last)) => last.duration_since(first).as_secs_f64(),
                 _ => 0.0,

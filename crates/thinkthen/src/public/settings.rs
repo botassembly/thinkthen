@@ -1,14 +1,18 @@
 //! The engine builder, and the environment read it captures once.
 
 mod budgets;
+mod environment;
+mod prices;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
 
-use crate::config::{self, Config};
-use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, KEY_VAR, ModelName};
+use crate::config;
+use crate::core::{
+    Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, KEY_VAR, ModelName, Prices,
+};
 use crate::engine::Width;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Key, Settings, Storage};
@@ -65,6 +69,7 @@ pub struct EngineBuilder {
     max_requests: Option<usize>,
     max_requests_total: Option<u64>,
     max_estimated_input_tokens_total: Option<u64>,
+    prices: Option<Prices>,
     max_request_bytes: usize,
     batch: Option<crate::core::Setting>,
     env_batch: Option<String>,
@@ -127,6 +132,7 @@ impl EngineBuilder {
             max_requests: None,
             max_requests_total: None,
             max_estimated_input_tokens_total: None,
+            prices: None,
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
             batch: None,
             env_batch: None,
@@ -139,61 +145,6 @@ impl EngineBuilder {
             replay: None,
             ca_bundle: None,
         }
-    }
-
-    /// Capture what the command reads: `THINKTHEN_BASE_URL`,
-    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
-    /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
-    /// XDG configuration file. The setters and `build` read no environment.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`Error::Usage`] naming a malformed variable or configuration
-    /// field, and [`Error::Local`] when the configuration file exists but
-    /// cannot be read.
-    pub fn from_env() -> Result<Self, Error> {
-        let config = Config::read(config::path().as_deref()).map_err(|refused| {
-            if refused.unreadable {
-                Error::local(refused.message)
-            } else {
-                Error::usage(refused.message)
-            }
-        })?;
-        let named = variable("THINKTHEN_CACHE")?.map(PathBuf::from);
-        let mut builder = Self::new();
-        builder.seeded = Some(Seeded {
-            platform: named.is_none(),
-            folder: named.or_else(config::cache_path),
-            enabled: config.cache_enabled(),
-        });
-        if let Some(base) =
-            variable("THINKTHEN_BASE_URL")?.or_else(|| config.url().map(str::to_owned))
-        {
-            builder = builder
-                .base_url(&base)
-                .map_err(|error| Error::usage(format!("THINKTHEN_BASE_URL: {error}")))?;
-        }
-        if let Some(key) = variable(KEY_VAR)? {
-            builder.key = Some(Secret(key.into()));
-        }
-        // A later explicit setter outranks this path, including an invalid one.
-        // Validate only the path selected when the engine is built.
-        builder.ca_bundle = variable("THINKTHEN_CA_BUNDLE")?.map(PathBuf::from);
-        builder.env_batch = variable("THINKTHEN_BATCH")?;
-        if let Some(model) = config.model() {
-            builder = builder.model(model)?;
-        }
-        if let Some(size) = variable("THINKTHEN_MAX_REQUEST_BYTES")? {
-            let value = size
-                .parse::<usize>()
-                .ok()
-                .filter(|value| *value > 0 && size.bytes().all(|byte| byte.is_ascii_digit()))
-                .ok_or_else(|| {
-                    Error::usage("THINKTHEN_MAX_REQUEST_BYTES takes a whole number of at least 1")
-                })?;
-            builder = builder.max_request_bytes(value)?;
-        }
-        Ok(builder)
     }
 
     /// Post requests under this base address.
@@ -458,9 +409,9 @@ impl EngineBuilder {
                 self.max_requests_total,
                 self.max_estimated_input_tokens_total,
             ),
-            profile,
-            roots,
+            (profile, roots),
             batch,
+            self.prices,
         )
     }
 

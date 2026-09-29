@@ -33,12 +33,23 @@ const fn code_of(kind: ErrorKind) -> i32 {
 
 /// One failure the door reports: its code, the retry signal, and a message
 /// safe to log.
-#[derive(Debug)]
 pub(crate) struct Failure {
     code: i32,
     retryable: bool,
     message: String,
     facts: Option<String>,
+}
+
+impl fmt::Debug for Failure {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Failure")
+            .field("code", &self.code)
+            .field("retryable", &self.retryable)
+            .field("message", &self.message)
+            .field("facts", &self.facts.is_some())
+            .finish()
+    }
 }
 
 /// The count-only report for one completed asking call.
@@ -58,6 +69,9 @@ pub(crate) fn facts_json(facts: &Facts) -> String {
         }
         if let Some(model) = facts.model() {
             object.insert("model".to_owned(), serde_json::json!(model));
+        }
+        if let Some(cost) = facts.estimated_cost_usd() {
+            object.insert("estimated_cost_usd".to_owned(), serde_json::json!(cost));
         }
     }
     value.to_string()

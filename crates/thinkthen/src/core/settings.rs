@@ -9,6 +9,7 @@ use thiserror::Error;
 
 use crate::core::batch::Setting;
 use crate::core::json::{Json, JsonError};
+use crate::core::price::Prices;
 use crate::core::question_file::{QuestionFile, Verb, safe_key};
 use crate::core::text::ModelName;
 
@@ -322,6 +323,8 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
     let Json::Object(fields) = parsed else {
         return Err("settings JSON is one object".into());
     };
+    let mut input_price = None;
+    let mut output_price = None;
     for (key, value) in fields {
         let number = || match &value {
             Json::Number(number) => number.as_u64(),
@@ -342,11 +345,28 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
             "max_requests_total" | "max_estimated_input_tokens_total" => {
                 matches!(value, Json::Null) || number().is_some()
             }
+            "usd_per_million_input" | "usd_per_million_output" => {
+                let Json::String(text) = &value else {
+                    return Err(format!("settings {key} has an invalid value"));
+                };
+                if key == "usd_per_million_input" {
+                    input_price = Some(text.clone());
+                } else {
+                    output_price = Some(text.clone());
+                }
+                true
+            }
             _ => return Err(format!("settings JSON has unknown key {}", safe_key(&key))),
         };
         if !valid {
             return Err(format!("settings {key} has an invalid value"));
         }
+    }
+    match (input_price.as_deref(), output_price.as_deref()) {
+        (None, None) => {}
+        (Some(input), Some(output)) if Prices::parse(input, output).is_some() => {}
+        (Some(_), Some(_)) => return Err("settings prices have an invalid value".into()),
+        _ => return Err("settings prices require both input and output fields".into()),
     }
     Ok(())
 }

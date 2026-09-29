@@ -20,6 +20,8 @@ struct Line {
     input_tokens: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     output_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    estimated_cost_usd: Option<String>,
     seconds: f64,
     #[serde(skip_serializing_if = "Option::is_none")]
     model: Option<String>,
@@ -63,6 +65,7 @@ pub(crate) fn write(
         cache_answers: snapshot.counts.cache_answers,
         input_tokens: tokens.then_some(snapshot.counts.input_tokens),
         output_tokens: tokens.then_some(snapshot.counts.output_tokens),
+        estimated_cost_usd: snapshot.estimated_cost_usd,
         seconds: (elapsed.as_secs_f64() * 1000.0).round() / 1000.0,
         model: snapshot.model,
         stopped,

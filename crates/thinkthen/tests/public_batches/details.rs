@@ -19,7 +19,16 @@ fn dynamic_details_keep_original_input_and_one_batch_receipt() {
     let _serial = serial();
     let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","choice":"first","probabilities":{"first":0.9,"second":0.1}},"q2":{"type":"choice","choice":"second","probabilities":{"first":0.2,"second":0.8}}},"usage":{"input_tokens":5,"output_tokens":3}}"#;
     let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
-    let engine = engine(listener.base());
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-batches")
+        .expect("key")
+        .prices_usd_per_million("0.25", "0.25")
+        .expect("prices")
+        .no_cache()
+        .build()
+        .expect("engine");
     let thinkthen::LoadedQuestion::Question(asked) =
         Question::from_json(r#"{"choose":"Which label?","options":["first","second"]}"#)
             .expect("dynamic question")
@@ -77,6 +86,12 @@ fn dynamic_details_keep_original_input_and_one_batch_receipt() {
             .facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
         Some((2, 1))
+    );
+    assert_eq!(
+        batch
+            .facts()
+            .and_then(|facts| facts.estimated_cost_usd().map(str::to_owned)),
+        Some("0.000002".to_owned())
     );
 }
 

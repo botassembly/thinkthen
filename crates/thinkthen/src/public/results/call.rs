@@ -2,6 +2,7 @@
 
 use std::fmt;
 
+use crate::core::Prices;
 use crate::engine::call_facts::Snapshot;
 use crate::public::error::Error;
 
@@ -13,6 +14,7 @@ pub struct Facts {
     pub(super) cache_answers: u64,
     pub(super) input_tokens: Option<u64>,
     pub(super) output_tokens: Option<u64>,
+    pub(super) estimated_cost_usd: Option<String>,
     pub(super) seconds: f64,
     pub(super) model: Option<String>,
 }
@@ -26,6 +28,7 @@ impl fmt::Debug for Facts {
             .field("cache_answers", &self.cache_answers)
             .field("input_tokens", &self.input_tokens)
             .field("output_tokens", &self.output_tokens)
+            .field("estimated_cost_usd", &self.estimated_cost_usd.is_some())
             .field("seconds", &self.seconds)
             .field("model", &self.model.is_some())
             .finish()
@@ -33,14 +36,22 @@ impl fmt::Debug for Facts {
 }
 
 impl Facts {
-    pub(crate) fn of(snapshot: Snapshot) -> Self {
+    pub(crate) fn of(snapshot: Snapshot, prices: Option<Prices>) -> Self {
         let tokens = snapshot.tokens.map(crate::core::Usage::token_counts);
+        let estimated_cost_usd = prices.and_then(|prices| {
+            if !snapshot.cost_complete {
+                return None;
+            }
+            let (input, output) = tokens.unwrap_or((0, 0));
+            prices.estimate(input, output)
+        });
         Self {
             records: snapshot.records,
             requests_sent: snapshot.requests_sent,
             cache_answers: snapshot.cache_answers,
             input_tokens: tokens.map(|(input, _)| input),
             output_tokens: tokens.map(|(_, output)| output),
+            estimated_cost_usd,
             seconds: snapshot.elapsed.as_secs_f64(),
             model: snapshot.model,
         }
@@ -74,6 +85,12 @@ impl Facts {
     #[must_use]
     pub const fn output_tokens(&self) -> Option<u64> {
         self.output_tokens
+    }
+
+    /// Caller-priced estimate from complete reported usage, if configured.
+    #[must_use]
+    pub fn estimated_cost_usd(&self) -> Option<&str> {
+        self.estimated_cost_usd.as_deref()
     }
 
     /// Wall seconds from call start through worker join and final stop check.

@@ -9,7 +9,11 @@ use crate::engine::error::Error as EngineError;
 
 impl From<crate::config::ConfigError> for Failure {
     fn from(error: crate::config::ConfigError) -> Self {
-        Self::Configuration(error.message)
+        if error.price {
+            Self::Usage(error.message)
+        } else {
+            Self::Configuration(error.message)
+        }
     }
 }
 

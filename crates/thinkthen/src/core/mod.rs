@@ -24,6 +24,7 @@ mod plan;
 mod plan_document;
 mod plan_summary;
 mod pointer;
+mod price;
 mod probability;
 mod question;
 mod question_file;
@@ -66,6 +67,7 @@ pub(crate) use crate::core::plan::Plan;
 pub(crate) use crate::core::plan_document::PlanDocument;
 pub(crate) use crate::core::plan_summary::PlanSummary;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};
+pub(crate) use crate::core::price::Prices;
 pub(crate) use crate::core::question::{Labels, LabelsError, Question};
 pub(crate) use crate::core::question_file::{
     Cutting, QuestionFile, QuestionFileError, Resolved, Source, Sources, Typed, Verb, pointers,
