@@ -9,11 +9,43 @@ import hashlib
 import json
 import os
 import signal
+import pathlib
 from contextlib import contextmanager
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 
+import pytest
+
 from conftest import child_env, run, start
+
+
+@pytest.mark.parametrize("shape", ["list", "polars_series"])
+def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path, shape):
+    fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"
+    corpus = json.loads((fixture / "portable-records.json").read_text())
+    expected = [(fixture / f"portable-{index}.request.json").read_bytes().removesuffix(b"\n")
+                for index in (1, 2, 3)]
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run(f"""
+            import json, polars as pl, thinkthen as tt
+            rows = {corpus['texts']!r}
+            if {shape!r} == 'polars_series':
+                rows = pl.Series('body', rows)
+            call = tt.Engine(cache=False, throttle=1).decide_many({corpus['question']!r}, rows)
+            value = call.value.to_list() if hasattr(call.value, 'to_list') else call.value
+            print(json.dumps([value, [call.facts.records, call.facts.requests_sent],
+                              [[row['index'], list(row['request_digests'])] for row in call.details]]))
+        """, env)
+        values, facts, details = json.loads(printed)
+        assert bodies == expected
+        assert values == [True] * 5
+        assert facts == [5, 3]
+        hashes = [hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
+                  for body in expected]
+        assert details == [[i, [hashes[group]]] for i, group in enumerate((0, 0, 1, 1, 2))]
+    assert backend.count() == 0
 
 
 @contextmanager

@@ -3,7 +3,7 @@
 use super::*;
 use sha2::{Digest as _, Sha256};
 
-fn request_digest(url: &str, body: &[u8]) -> String {
+pub(super) fn request_digest(url: &str, body: &[u8]) -> String {
     let mut hash = Sha256::new();
     hash.update(b"systemone\n");
     hash.update(url.as_bytes());

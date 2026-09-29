@@ -19,6 +19,47 @@ import pytest
 from conftest import Backend, child_env, run, start
 from test_call import capturing_filter_listener
 
+
+@pytest.mark.parametrize("shape", ["pandas_series", "pandas_frame", "polars_frame"])
+def test_portable_max_content_cuts_in_public_column_and_frame_shapes(backend, tmp_path, shape):
+    fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"
+    corpus = json.loads((fixture / "portable-records.json").read_text())
+    prefix = "portable" if shape == "pandas_series" else "portable-frame"
+    expected = [(fixture / f"{prefix if index < 3 else 'portable'}-{index}.request.json")
+                .read_bytes().removesuffix(b"\n") for index in (1, 2, 3)]
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run(f"""
+            import json, pandas as pd, polars as pl, thinkthen as tt
+            texts = {corpus['texts']!r}
+            shape = {shape!r}
+            engine = tt.Engine(cache=False, throttle=1)
+            if shape == 'pandas_series':
+                source = pd.Series(texts, index=[9, 5, 7, 3, 1], name='body', dtype='string[pyarrow]')
+                call = engine.decide_many({corpus['question']!r}, source)
+                values = call.value.to_list()
+                order = call.value.index.to_list()
+            else:
+                source = (pd.DataFrame({{'body': texts}}, index=[9, 5, 7, 3, 1]) if shape == 'pandas_frame'
+                          else pl.DataFrame({{'body': texts}}))
+                form = {{'version': 1, 'questions': {{'answer': {{'decide': {corpus['question']!r}}}}}}}
+                call = engine.annotate(form, source, on='body')
+                values = call.value['answer'].to_list()
+                order = call.value.index.to_list() if shape == 'pandas_frame' else list(range(5))
+            print(json.dumps([values, order, [call.facts.records, call.facts.requests_sent],
+                              [[row['index'], list(row['request_digests'])] for row in call.details]]))
+        """, env)
+        values, order, facts, details = json.loads(printed)
+        assert bodies == expected
+        assert values == [True] * 5
+        assert order == ([9, 5, 7, 3, 1] if shape != "polars_frame" else list(range(5)))
+        assert facts == [5, 3]
+        hashes = [hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
+                  for body in expected]
+        assert details == [[i, [hashes[group]]] for i, group in enumerate((0, 0, 1, 1, 2))]
+    assert backend.count() == 0
+
 THREE = pandas.__version__.startswith("3.")
 TESTS = str(pathlib.Path(__file__).resolve().parent)
 LISTS = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
