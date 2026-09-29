@@ -8,7 +8,7 @@ use std::process::ExitCode;
 use crate::core::adapters::built_in;
 use crate::core::{
     Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, QuestionSetError, Reading,
-    ReadingError, Record, Setting,
+    ReadingError, Record, RecordError, Setting,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -27,6 +27,20 @@ mod plan;
 
 pub(crate) use crate::engine::facade::{GroupAnswer, PreparedGroup, check_model};
 use plan::{dry_run, dry_run_record};
+
+pub(crate) enum PrepareError {
+    MissingOn(String),
+    Other(Failure),
+}
+
+impl PrepareError {
+    pub(crate) fn into_failure(self) -> Failure {
+        match self {
+            Self::MissingOn(pointer) => Failure::Record(RecordError::Missed(pointer)),
+            Self::Other(error) => error,
+        }
+    }
+}
 
 #[expect(
     clippy::too_many_lines,
@@ -385,9 +399,11 @@ impl<'a> Judging<'a> {
         base: &Reading,
         record: &Record,
         places: Vec<usize>,
-    ) -> Result<PreparedGroup, Failure> {
+    ) -> Result<PreparedGroup, PrepareError> {
         let plan = plan_for(&self.set, &places, self.engine.backend(), base, record)?;
-        Ok(self.engine.prepare_group(&plan, places)?)
+        self.engine
+            .prepare_group(&plan, places)
+            .map_err(|error| PrepareError::Other(error.into()))
     }
 
     pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
@@ -410,15 +426,21 @@ fn plan_for(
     backend: &Backend,
     base: &Reading,
     record: &Record,
-) -> Result<Plan, Failure> {
+) -> Result<Plan, PrepareError> {
     if group.is_empty() {
-        return Err(Failure::Defect("an annotate group is empty"));
+        return Err(PrepareError::Other(Failure::Defect(
+            "an annotate group is empty",
+        )));
     }
+    let record = base
+        .batch_record(record)
+        .map_err(|error| PrepareError::Other(error.into()))?;
     let evidence = set
-        .group_evidence(group, &base.batch_record(record)?)
+        .group_evidence(group, &record)
         .map_err(|error| match error {
-            PartError::Reading(error) => Failure::from(error),
-            PartError::Record(error) => Failure::from(error),
+            PartError::Reading(error) => PrepareError::Other(error.into()),
+            PartError::Record(RecordError::Missed(pointer)) => PrepareError::MissingOn(pointer),
+            PartError::Record(error) => PrepareError::Other(error.into()),
         })?;
     let questions = group
         .iter()
@@ -426,9 +448,11 @@ fn plan_for(
             set.questions()
                 .get(*place)
                 .map(|named| named.question().clone())
-                .ok_or(Failure::Defect("a group points outside its set"))
+                .ok_or(PrepareError::Other(Failure::Defect(
+                    "a group points outside its set",
+                )))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Plan::new(evidence, backend.model().clone(), questions)
-        .map_err(|_| Failure::Defect("an annotate group asks nothing"))
+        .map_err(|_| PrepareError::Other(Failure::Defect("an annotate group asks nothing")))
 }

@@ -133,13 +133,16 @@ A failed bare value is `{"failed":{"kind":"backend","cause":CAUSE}}`. In detaile
 Questions sharing one `on` selection ride in one logical group. A reply with at
 least one usable answer prints that answer beside a failed marker for each
 unusable answer and makes a completed run exit 6. A reply with no usable
-answer stops the run at exit 4. A failed request covering several records
-cannot identify which member caused it; `--on-error continue` does not recover
-that whole batch. Separating questions into different `on` groups spends more
-requests but limits the questions affected by a changed group. Editing a
-question in a packed group changes that group's request identity, so a rerun
-may send the whole group again. Keep the exact group and batch setting when
-comparing saved runs or estimating request cost.
+answer in any group stops the run at exit 4. It publishes none of that record's
+answers, even when a sibling `on` group answered successfully. A failed request
+covering several records cannot identify which member caused it;
+`--on-error continue` does not recover that whole batch. Separating questions
+into different `on` groups spends more requests and limits which questions
+share a partial reply or a changed request. It does not preserve sibling-group
+answers when one group wholly fails. Editing a question in a packed group
+changes that group's request identity, so a rerun may send the whole group
+again. Keep the exact group and batch setting when comparing saved runs or
+estimating request cost.
 
 ## Cautions
 

@@ -7,6 +7,8 @@ use crate::harness::{Canned, Listener, spawn};
 use crate::support::digest;
 use serde_json::{Value, json};
 
+mod field_failure;
+
 const INPUT: &[u8] =
     b"{\"id\":\"a\",\"body\":\"first\"}\n{\"id\":\"b\"}\n{\"id\":\"c\",\"body\":\"third\"}\n";
 const SET: &str =

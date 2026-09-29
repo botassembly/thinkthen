@@ -6,8 +6,8 @@ use std::process::ExitCode;
 use std::sync::mpsc::Receiver;
 use std::thread;
 
-use crate::annotate::{GroupAnswer, Judging, PreparedGroup, check_model};
-use crate::core::{ModelName, Reading, Record, RecordError};
+use crate::annotate::{GroupAnswer, Judging, PrepareError, PreparedGroup, check_model};
+use crate::core::{ModelName, Reading, Record};
 use crate::engine::facade::{
     GroupOutcome as RunOutcome, GroupPort as InputPort, Input as EngineInput, Prepared,
 };
@@ -172,7 +172,7 @@ fn prepare(
         .collect::<Result<Vec<_>, _>>();
     let work = match work {
         Ok(work) => work,
-        Err(Failure::Record(RecordError::Missed(pointer))) if judging.continue_missing() => {
+        Err(PrepareError::MissingOn(pointer)) if judging.continue_missing() => {
             return Ok(Prepared {
                 seed: Seed::Missing { at, pointer },
                 accumulator: Answers {
@@ -183,7 +183,7 @@ fn prepare(
                 work: Vec::new(),
             });
         }
-        Err(error) => return Err(Placed::at(error, at)),
+        Err(error) => return Err(Placed::at(error.into_failure(), at)),
     };
     Ok(Prepared {
         seed: Seed::Record(record),

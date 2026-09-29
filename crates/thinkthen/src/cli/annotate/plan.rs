@@ -66,7 +66,9 @@ pub(super) fn dry_run_record(
     let plans = set
         .groups()
         .into_iter()
-        .map(|group| plan_for(set, &group, backend, base, &record))
+        .map(|group| {
+            plan_for(set, &group, backend, base, &record).map_err(|error| error.into_failure())
+        })
         .collect::<Result<Vec<_>, _>>()?;
     let chunks = plans
         .iter()
