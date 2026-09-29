@@ -57,14 +57,14 @@ units = '["first","second"]'
 db.execute('SELECT thinkthen_budget_ms(0)')
 expired = run(db, 'SELECT thinkthen_find(?, ?)', ('Which?', units))
 db.execute('SELECT thinkthen_budget_ms(-1)')
-db.execute('SELECT thinkthen_max_requests_total(1)')
+db.execute('SELECT thinkthen_configure(?)', ('{"max_requests_total":1}',))
 first = run(db, 'SELECT thinkthen_find(?, ?)', ('Which?', units))
 spent = run(db, 'SELECT thinkthen_find(?, ?)', ('Which other?', units))
 say(expired=expired, first=first, spent=spent)
 """, environment(backend))
     expect(held["expired"], "thinkthen deadline: the connection's ThinkThen budget passed", "expired query")
     expect(json.loads(held["first"][0][0])["index"], 0, "one completed find")
-    expect(held["spent"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_max_requests_total)", "ordinary scalar preflight")
+    expect(held["spent"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_configure)", "ordinary scalar preflight")
     expect(backend.close(), 1, "expired and spent calls send nothing")
 
 
@@ -88,7 +88,7 @@ def test_unresolved_answer_and_spent_total_keep_their_shapes() -> None:
     backend = Backend()
     held = child("""
 db = connect()
-db.execute('SELECT thinkthen_max_requests_total(1)')
+db.execute('SELECT thinkthen_configure(?)', ('{"max_requests_total":1}',))
 unresolved = run(db, '''SELECT thinkthen_try_details('{"decide":"Is it red?","threshold":"0:1"}', 'red door')''')
 spent = run(db, "SELECT thinkthen_try_details('Is it blue?', 'a blue door')")
 say(unresolved=unresolved, spent=spent)

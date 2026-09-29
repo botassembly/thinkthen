@@ -24,6 +24,7 @@ mod budget;
     reason = "the SQLite entry point, API table, and virtual-table glue (ADR 0047 item 3)"
 )]
 mod ffi;
+mod many;
 mod question;
 mod recognize_document;
 mod scalars;
@@ -126,7 +127,7 @@ impl From<thinkthen::Error> for Failure {
                     | SendBudgetDenial::BeforeRetry { .. }
             )
         ) {
-            return settings::spent(settings::send_budget().1.unwrap_or(0));
+            return settings::spent(settings::total().unwrap_or(0));
         }
         Self {
             kind: error.kind(),
