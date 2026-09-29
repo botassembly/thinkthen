@@ -1,0 +1,126 @@
+<?php
+declare(strict_types=1);
+require getenv('TT_AUTOLOAD');
+function check(bool $ok, string $what): void { if (!$ok) throw new RuntimeException($what); }
+function failed(callable $f, int $code): ThinkThenFailure {
+    try { $f(); } catch (ThinkThenFailure $e) {
+        check($e->nativeCode === $code, "expected $code, got " . $e->nativeCode . ' ' . $e->getMessage());
+        return $e;
+    }
+    throw new RuntimeException("expected failure $code");
+}
+function refused(callable $f): void {
+    try { $f(); } catch (InvalidArgumentException $e) { return; }
+    throw new RuntimeException('NUL input was accepted');
+}
+function assertCallEnvelope(string $json, mixed $expected, string $label, int $expectedRecords=1, int $expectedRequests=1, bool $verifyValue=true): void {
+    $row = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+    if (!is_array($row) || array_keys($row) !== ['value', 'facts'] || ($verifyValue && $row['value'] !== $expected))
+        throw new RuntimeException($label . ' envelope/value: ' . $json);
+    $facts = $row['facts'];
+    if (!is_array($facts) || array_keys($facts) !== ['cache_answers','input_tokens','model','output_tokens','records','requests_sent','seconds']
+        || $facts['records'] !== $expectedRecords || $facts['requests_sent'] !== $expectedRequests
+        || $facts['cache_answers'] !== 0 || $facts['input_tokens'] !== $expectedRequests
+        || $facts['output_tokens'] !== $expectedRequests || $facts['model'] !== 'jev-1.13.0'
+        || !is_float($facts['seconds']) || $facts['seconds'] < 0)
+        throw new RuntimeException($label . ' facts: ' . $json);
+}
+$door = new ThinkThen(getenv('TT_LIBRARY'));
+$retained = null;
+try {
+    foreach (['café' => 1, 'yes' => 1, 'no' => 0, 'unsure' => 2] as $state => $outcome) {
+        $q = $state === 'unsure' ? '{"decide":"Is it?","threshold":"0.4:0.8"}' : 'Is it?';
+        check($door->decide($q, $state)['outcome'] === $outcome, 'scalar ' . $state);
+    }
+    check($door->decide('Is it?', "a\0b")['outcome'] === 1, 'counted text NUL');
+    failed(fn() => $door->decideMany('Is it?', ['bulk-before-bad','bulk-middle-bad','bulk-after-bad']), 2);
+    foreach (['malformed-backend','transport-close','retry-status'] as $state) {
+        try { $door->decide('Is it?', $state, 200); throw new RuntimeException('backend failure passed'); }
+        catch (ThinkThenFailure $e) { check(in_array($e->nativeCode, [2,3], true), 'backend failure code'); }
+    }
+    check($door->decide('Is it?', 'post-failure-recovery')['outcome'] === 1, 'failure recovery');
+    check($door->decide('Is it?', 'maximum-deadline', 4294967295000)['outcome'] === 1, 'max deadline');
+    check($door->decideMany('Is it?', []) === [], 'empty bulk');
+    $rows = $door->decideMany('Is it?', ['first','second','third']);
+    check(array_column($rows, 'probability') === [0.9,0.1,0.6], 'reverse completion reorders: '.json_encode($rows));
+    $repeated = $door->decideMany('Is it?', ['first','second','first']);
+    check(array_column($repeated, 'probability') === [0.9,0.1,0.9], 'repeated bulk');
+    $requests = [
+      '{"decide":"Is it?","evidence":"json-decide","details":true}',
+      '{"choose":"Which team?","options":["first","second"],"evidence":"choose"}',
+      '{"tag":"Which labels?","labels":["first","second"],"evidence":"tag"}',
+      '{"score":"What level?","levels":["Low.","High."],"evidence":"score"}',
+      '{"filter":"Is it?","records":["filter-one","filter-two"]}',
+      '{"rank":"Is it?","records":["rank-one","rank-two"]}',
+      '{"find":"Which line?","units":["find-one","find-two"]}',
+      '{"annotate":{"version":1,"questions":{"check":{"decide":"Is it?"}}},"records":["annotate-one"]}',
+      '{"recognize":{"kinds":{"person":"A person\'s name."}},"version":1,"evidence":"Maria Chen"}',
+      '{"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]},"version":1,"records":[{"name":"First","kind":"alert"},{"name":"Second","kind":"alert"}]}',
+      '{"find":"Which line?","none":true,"units":["find-none","find-another"]}',
+      '{"annotate":{"version":1,"questions":{"check":{"decide":"Is it?","on":"/body"}}},"records":["{\\"body\\":\\"annotate-on\\",\\"hidden\\":\\"not-sent\\"}"]}'
+    ];
+    foreach ($requests as $i => $request) {
+        $result = $door->call($request);
+        $envelope = json_decode($result, true, 512, JSON_THROW_ON_ERROR);
+        file_put_contents(getenv('TT_BARRIER_DIR').'/call-results.jsonl', json_encode(['index'=>$i,'result'=>$envelope], JSON_UNESCAPED_UNICODE)."\n", FILE_APPEND);
+        check(is_array($envelope) && array_keys($envelope) === ['value','facts'], 'call success envelope keys');
+        assertCallEnvelope($result, null, 'call index '.$i, in_array($i,[4,5],true)?2:1, $i===8?2:1, false);
+        $result = json_encode($envelope['value'], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES|JSON_THROW_ON_ERROR);
+        switch ($i) {
+            case 0:
+                $v=$envelope['value'];
+                check(is_array($v) && array_keys($v) === ['schema','value','question','answer','threshold','meta']
+                    && $v['schema']==='thinkthen.result/1' && $v['value']===true
+                    && $v['question']===['verb'=>'decide','text'=>'Is it?']
+                    && $v['answer']===['kind'=>'yes_no','probability'=>0.9]
+                    && $v['threshold']===0.5 && is_array($v['meta']), 'details'); break;
+            case 1: check($result === '"first"', 'choose'); break;
+            case 2: check($result === '["first","second"]', 'tag'); break;
+            case 3: check((float)$result === 0.1, 'score'); break;
+            case 4: case 5: check(str_contains($result, $i===4?'filter-one':'rank-one'), 'record order'); break;
+            case 6: check(str_contains($result, 'find-one'), 'find'); break;
+            case 7: case 11: check(str_contains($result, '"check":true'), 'annotate'); break;
+            case 8: check(str_contains($result, '"length"') && str_contains($result,'"text"'), 'recognize shape'); break;
+            case 9: check(str_contains($result, '"edges"'), 'relate'); break;
+            case 10: check($result === 'null', 'none'); break;
+        }
+    }
+    $spec = '{"version":1,"recognize":{"kinds":{"person":"A person\'s name."}}}';
+    check(str_contains($door->recognize($spec, 'John Smith'), '"length"'), 'typed recognize');
+    check(str_contains($door->recognize('{"version":1,"recognize":{}}', 'Ada Lovelace'), '"kind":"ENTITY"'), 'default kind');
+    $relation = '{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}';
+    check(str_contains($door->relate($relation, ['{"name":"Third","kind":"alert"}','{"name":"Fourth","kind":"alert"}']), '"edges"'), 'typed relate');
+    check(str_contains($door->call('{"usage":true}'), 'requests_sent'), 'usage');
+    refused(fn() => $door->decide("Is it?\0bad",'x'));
+    refused(fn() => $door->call("{}\0bad"));
+    refused(fn() => $door->recognize("{}\0bad",'x'));
+    refused(fn() => $door->relate("{}\0bad",[]));
+    failed(fn() => $door->decide('Is it?', "x\xff"), 1);
+    failed(fn() => $door->decide('Is it?', ''), 1);
+    failed(fn() => $door->decide('Is it?', 'x', 0), 3);
+    failed(fn() => $door->decide('Is it?', 'x', -2), 1);
+    failed(fn() => $door->decide('Is it?', 'x', 4294967295001), 1);
+    failed(fn() => $door->call('bad json'), 1);
+    $retained = failed(fn() => $door->call('{"decide":"Is it?","evidence":"failure-one"}'), 2);
+    check($retained->kind === 'backend' && $retained->factsJson !== null, 'named failure/facts');
+    $failureFacts = json_decode($retained->factsJson, true, 512, JSON_THROW_ON_ERROR);
+    check($failureFacts['requests_sent'] === 1 && $failureFacts['cache_answers'] === 0,
+          'started failure facts: ' . $retained->factsJson);
+    $message = $retained->getMessage();
+    failed(fn() => $door->call('{"decide":"Is it?","evidence":"failure-two"}'), 2);
+    check($retained->getMessage() === $message, 'error message copied before next failure');
+    check(json_decode($retained->factsJson, true, 512, JSON_THROW_ON_ERROR) === $failureFacts,
+          'error facts copied before next failure');
+    $other = new ThinkThen(getenv('TT_LIBRARY'));
+    try { check($other->decide('Is it?', 'success')['outcome'] === 1, 'other engine'); }
+    finally { $other->close(); }
+    $token = $door->token();
+    try {
+        $door->fire($token); $door->fire($token);
+        failed(fn() => $door->decide('Is it?', 'never-sent', -1, $token), 5);
+    } finally { $door->freeToken($token); }
+    failed(fn() => $door->decide('Is it?', 'hold-deadline', 50), 3);
+    check($door->decide('Is it?', 'recovery-scalar')['outcome'] === 1, 'recovery after deadline');
+} finally { $door->close(); }
+check($retained !== null && $retained->nativeCode === 2 && $retained->getMessage() !== '', 'copied error survives engine free');
+echo "PHP_MATRIX_PASS\n";

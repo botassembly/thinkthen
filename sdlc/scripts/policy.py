@@ -591,14 +591,91 @@ def deny_failures(name: str, deny: dict) -> list[str]:
 
 
 NONCARGO_MANIFESTS = {
+    "libraries/php": ("composer.json", {"name": "botassembly/thinkthen", "type": "library", "license": "MIT"}),
     "libraries/csharp": ("ThinkThen.csproj", {"PackageId": "Botassembly.ThinkThen", "TargetFramework": "net8.0", "Version": "0.0.1"}),
     "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": "0.0.1", "packaging": "pom"}),
+    "libraries/dart": ("pubspec.yaml", {"name": "thinkthen_dart", "version": "0.0.1"}),
 }
+
+
+def dart_yaml(source: str | None) -> dict | None:
+    """Read the mapping-only pubspec shape used by the source packages."""
+    if source is None:
+        return None
+    root: dict = {}
+    parents = [(-2, root)]
+    for line in source.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        match = re.fullmatch(r"( *)([A-Za-z_][A-Za-z_0-9-]*):(?: +(.*))?", line)
+        if match is None:
+            return None
+        indent, key, value = len(match[1]), match[2], match[3]
+        while parents and indent <= parents[-1][0]:
+            parents.pop()
+        if not parents or indent != parents[-1][0] + 2 or key in parents[-1][1]:
+            return None
+        at = parents[-1][1]
+        if value is None:
+            at[key] = {}
+            parents.append((indent, at[key]))
+        else:
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+                value = value[1:-1]
+            at[key] = value
+    return root
+
+
+def dart_manifest_failures(source: str | None, flutter_source: str | None,
+                           example_source: str | None) -> list[str]:
+    package, flutter, example = map(dart_yaml, (source, flutter_source, example_source))
+    if any(manifest is None for manifest in (package, flutter, example)):
+        return ["libraries/dart and its Flutter consumer hold parseable pubspec mappings"]
+    held = []
+    expected = {
+        "name": "thinkthen_dart", "version": "0.0.1",
+        "repository": "https://github.com/botassembly/thinkthen",
+        "environment": {"sdk": ">=3.3.0 <4.0.0"},
+        "dependencies": {"ffi": "^2.1.4"},
+    }
+    if any(package.get(key) != value for key, value in expected.items()) or "publish_to" in package:
+        held.append("libraries/dart pubspec names the publishable Dart binding and ffi dependency")
+    flutter_expected = {"name": "thinkthen_flutter", "version": "0.0.1", "publish_to": "none",
+                        "dependencies": {"flutter": {"sdk": "flutter"}, "thinkthen_dart": {"path": ".."}}}
+    if any(flutter.get(key) != value for key, value in flutter_expected.items()):
+        held.append("libraries/dart/flutter stays private and depends on the sibling Dart package")
+    example_expected = {"name": "thinkthen_flutter_example", "version": "0.0.1", "publish_to": "none",
+                        "dependencies": {"flutter": {"sdk": "flutter"},
+                                         "thinkthen_flutter": {"path": ".."},
+                                         "thinkthen_dart": {"path": "../.."}}}
+    if any(example.get(key) != value for key, value in example_expected.items()):
+        held.append("libraries/dart/flutter/example stays private and uses the source packages")
+    return held
 
 
 def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
     if source is None:
         return [f"{name} has no package manifest"]
+    if name == "libraries/dart":
+        flutter = REPO / "libraries/dart/flutter/pubspec.yaml"
+        example = REPO / "libraries/dart/flutter/example/pubspec.yaml"
+        return dart_manifest_failures(source, flutter.read_text() if flutter.is_file() else None,
+                                      example.read_text() if example.is_file() else None)
+    if name == "libraries/php":
+        try:
+            fields = json.loads(source)
+        except (json.JSONDecodeError, TypeError):
+            return [f"{name} has invalid JSON package metadata"]
+        if not isinstance(fields, dict):
+            return [f"{name} has invalid JSON package metadata"]
+        expected = NONCARGO_MANIFESTS[name][1]
+        failures = [f"{name} package {key} is not {value}" for key, value in expected.items()
+                    if fields.get(key) != value]
+        if fields.get("require") != {"php": ">=8.3", "ext-ffi": "*"}:
+            failures.append(f"{name} package requirements are not PHP 8.3 and ext-ffi")
+        if fields.get("autoload") != {"files": ["autoload.php"]}:
+            failures.append(f"{name} package autoload does not load autoload.php")
+        return failures
     try:
         root = ET.fromstring(source)
     except ET.ParseError:
@@ -646,6 +723,19 @@ def check_bindings() -> None:
         key, value = next(iter(values.items()))
         if not noncargo_manifest_failures(name, None) or not noncargo_manifest_failures(name, source.replace(value, "planted", 1)):
             fail("binding", f"{name} missing or tampered package manifest is refused")
+        if name == "libraries/php" and not noncargo_manifest_failures(name, source.replace('"autoload.php"', '"planted.php"', 1)):
+            fail("binding", "PHP with a planted autoload path is refused")
+        if name == "libraries/dart":
+            flutter = (REPO / "libraries/dart/flutter/pubspec.yaml").read_text()
+            example = (REPO / "libraries/dart/flutter/example/pubspec.yaml").read_text()
+            plants = (
+                (source, flutter.replace("path: ..", "path: planted", 1), example),
+                (source, flutter.replace("publish_to: none", "publish_to: pub.dev", 1), example),
+                (source, flutter, example.replace("path: ../..", "path: planted", 1)),
+                (source, flutter, None),
+            )
+            if not all(dart_manifest_failures(*plant) for plant in plants):
+                fail("binding", "Dart with a planted Flutter path, publish setting, or missing example is refused")
     if "libraries/r" in crates and (REPO / crates["libraries/r"] / "Cargo.toml").is_file():
         crate = crates["libraries/r"]
         files = binding_files("libraries/r", crate)

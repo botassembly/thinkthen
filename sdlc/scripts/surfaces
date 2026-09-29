@@ -53,14 +53,16 @@ feature() {
 # A binding's manifest sits in its folder, or in the crate folder a third field names.
 manifest() {
 	case $2 in
+		libraries/php) printf '%s\n' 'libraries/php/composer.json'; return ;;
 		libraries/csharp) printf '%s\n' 'libraries/csharp/ThinkThen.csproj'; return ;;
 		libraries/jvm) printf '%s\n' 'libraries/jvm/pom.xml'; return ;;
+		libraries/dart) printf '%s\n' 'libraries/dart/pubspec.yaml'; return ;;
 	esac
 	awk -v at="$2" '!/^#/ && $1 == at { print $1 "/" (NF == 3 ? $3 "/" : "") "Cargo.toml" }' "$1"
 }
 
 noncargo() {
-	case $1 in libraries/csharp|libraries/jvm) return 0 ;; *) return 1 ;; esac
+	case $1 in libraries/php|libraries/csharp|libraries/jvm|libraries/dart) return 0 ;; *) return 1 ;; esac
 }
 
 registry() {
@@ -111,6 +113,16 @@ if [ "$registry_only" -eq 1 ]; then
 	sed 's|^libraries/csharp  *landed$|libraries/csharp landed src|' sdlc/surfaces.txt >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a non-Cargo surface with a crate-folder override' >&2
+		exit 1
+	fi
+	sed 's|^libraries/php  *landed$|libraries/php landed src|' sdlc/surfaces.txt >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed PHP with a crate-folder override' >&2
+		exit 1
+	fi
+	sed 's|^libraries/dart  *landed$|libraries/dart landed src|' sdlc/surfaces.txt >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed Dart with a crate-folder override' >&2
 		exit 1
 	fi
 	# R's crate sits inside its R package. A line without its crate folder fails.
