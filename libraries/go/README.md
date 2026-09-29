@@ -21,6 +21,8 @@ In a separate local Go project, add `require github.com/botassembly/thinkthen/li
 
 `sh libraries/go/check.sh 0` runs the offline product gate with a counted loopback backend. It checks the current 30-export header/library match, four copied module consumers, exact request bodies, the public result corpus, settings precedence, and planted failures. It does not call a paid backend.
 
+For the local Linux x86-64 release pilot, `sdlc/scripts/release-pack TARGET OUT c go cpp` produces versioned Go, C++ and C archives from one clean source commit. Run `sdlc/scripts/release-go-cpp-pair OUT` before using the files together. The Go archive carries source only; unpack it and the matching C archive into separate folders. Point `PKG_CONFIG_PATH` to the C archive's `lib/pkgconfig`, and set `LD_LIBRARY_PATH` to its `lib` when running the shared build. The Go archive's `THINKTHEN-PACKAGE-INPUTS` records the exact C archive digest. This local package has an installed-consumer check, but no published Go module tag or final release asset.
+
 ## API and ownership
 
 `New()` reads the native environment. `NewWith(settingsJSON)` applies the accepted settings object; its `base_url` overrides a valid but unusable environment route. An invalid settings object fails before sending. `Call` returns a Go-owned JSON string whose successful asking result contains `{"value":VALUE,"facts":FACTS}`. `Decide`, `DecideMany`, `Recognize`, and `Relate` retain their typed or bare-value return shapes. Decode an allowed `null` answer separately from a failed call. `Error` carries numeric `Code`, one of six named `Kind` values, `Retryable`, a copied `Message`, and copied final `Facts` when the failed native call started.

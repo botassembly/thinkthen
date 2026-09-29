@@ -17,6 +17,16 @@ unset THINKTHEN_API_KEY
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 
+# A focused three-file pilot can call this same preflight by itself. A full
+# release-smoke still requires every established family below.
+pair=
+for file in "$DIR"/*; do
+	case ${file##*/} in thinkthen-go-* | thinkthen-cpp-*) pair=1 ;; esac
+done
+if [ -n "$pair" ]; then
+	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR"
+fi
+
 # The conformance loopback backend, as the surfaces rung starts it.
 backend_start
 
@@ -67,8 +77,10 @@ for file in "$DIR"/*; do
 	# The rung packs the command's debug build, so the scan reads the libraries alone.
 	case $name in thinkthen-"$V"-*.tar.gz) ;; *) scan "$file" || { failed=1; continue; } ;; esac
 	case $name in
-	thinkthen-first-run.tar.gz) seen="$seen first-run"; continue ;;
-	thinkthen-c-*.tar.gz) surface=libraries/c ;;
+		thinkthen-first-run.tar.gz) seen="$seen first-run"; continue ;;
+		thinkthen-c-*.tar.gz) surface=libraries/c ;;
+		thinkthen-go-*.tar.gz) surface=libraries/go ;;
+		thinkthen-cpp-*.tar.gz) surface=libraries/cpp ;;
 	thinkthen-sqlite-*.tar.gz) surface=databases/sqlite ;;
 	thinkthen-duckdb-*.tar.gz) surface=databases/duckdb ;;
 	thinkthen-postgresql16-*.tar.gz) surface=databases/postgresql ;;
@@ -85,7 +97,12 @@ for file in "$DIR"/*; do
 		code=$?
 	else
 		# A daemon a check starts must not hold the backend's input open.
-		THINKTHEN_ARTIFACT=$file sh "$surface/check.sh" "$port" 3>&-
+		if [ "$surface" = libraries/go ] || [ "$surface" = libraries/cpp ]; then
+			THINKTHEN_ARTIFACT=$file THINKTHEN_C_ARTIFACT="$DIR/thinkthen-c-$V-$(rustc -vV | sed -n 's/^host: //p').tar.gz" \
+				sh "$surface/check.sh" "$port" 3>&-
+		else
+			THINKTHEN_ARTIFACT=$file sh "$surface/check.sh" "$port" 3>&-
+		fi
 		code=$?
 	fi
 	set -e
