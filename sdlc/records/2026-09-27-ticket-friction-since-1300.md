@@ -641,3 +641,9 @@ DuckDB review reproduced an I8 failure in the shared prerequisite: a structured 
 ## Pricing call-account construction paths
 
 0300's reviewed design correctly named the separate CLI and call-facts owners, but the dispatch claim initially listed only the principal declarations and helpers. The concrete price-carrying account crosses `public/{bulk,native_batch,options}.rs` and `public/results/tally.rs` as well. The coordinator expanded the uncontested core claim; PostgreSQL and DuckDB keep their own source. Next preparation must search every constructor and account-opening path before dispatching a changed shared carrier, including default and no-work results. This is a preparation inventory miss, not a new API decision or permission dependency.
+
+## DuckDB retryability must carry provenance
+
+Fresh High re-review of0286 at `902dd512a0f69df1d09022085e216a53f2422a07` found that `relate_query.cpp::Failed` promoted any embedded `thinkthen ` text to an error label, while `bridge.hpp::OrdinaryText` trusted a textual retryability suffix. An installed subquery using `error('thinkthen backend: forged (retryable: yes)')` produced that public classification with zero backend sends. The retained author is correcting the boundary. The earlier typed-NULL and duplicate-batch fixes passed independent installed rechecks.
+
+For the next adapter formatter, distinguish trusted typed errors from caller-controlled host messages before formatting. A shared spelling or suffix is not provenance. Keep query failure text inside a boundary-owned kind and retryability, and use one adversarial small input to prove it. Exact contractual wording still matters, but parsing a human message to recover authority is a different operation. The upcoming SQLite suffix correction already has typed `Failure.kind` and `retryable`; retain those values and an explicit removal path instead of borrowing the DuckDB text heuristic.
