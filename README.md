@@ -60,6 +60,7 @@ The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R ea
 | Ruby | a Ruby binding with a native extension | [libraries/ruby](libraries/ruby/README.md) |
 | R | the package | [libraries/r](libraries/r/README.md) |
 | C | a header and a library for C callers | [libraries/c](libraries/c/README.md) |
+| Dart and Flutter | a Dart FFI package and a Linux Flutter consumer | [libraries/dart](libraries/dart/README.md) |
 | Polars | the Rust feature | [libraries/polars](libraries/polars/README.md) |
 | DuckDB | the extension | [databases/duckdb](databases/duckdb/README.md) |
 | SQLite | the extension | [databases/sqlite](databases/sqlite/README.md) |
