@@ -73,7 +73,7 @@ printf '%s\n' '-----BEGIN PRIVATE KEY----- planted' >"$out/guard-plant/README.md
 if "$python_bin" fixtures/guard.py "$out/guard-plant" >/dev/null 2>&1; then
     echo 'go: private marker plant passed' >&2; exit 1
 fi
-test -z "$(gofmt -l thinkthen.go thinkthen_test.go recovery_test.go examples/decide/main.go fixtures/type_case.go)"
+test -z "$(gofmt -l thinkthen.go result.go thinkthen_test.go recovery_test.go examples/decide/main.go fixtures/type_case.go)"
 cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
 cp "$repo/libraries/c/include/thinkthen.h" "$out/native/include/thinkthen.h"
 cp "$repo/libraries/c/target/debug/libthinkthen_c.so" "$out/native/lib/libthinkthen.so"
