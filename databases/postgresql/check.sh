@@ -182,6 +182,12 @@ plain_question_contract() {
 	fresh generic
 	same "$(q -c "SELECT thinkthen_decide('Does this need attention?', 'A short note.', 'Use this policy note.')")" t
 	same "$(bcount)" 1
+	fresh generic
+	same "$(q -c "SELECT count(*) FROM thinkthen_decide('Does this need attention?', ARRAY['A short note.'])")" 1
+	same "$(bcount)" 1
+	fresh generic
+	same "$(q -c "SELECT thinkthen_try_details('Does this need attention?', 'A short note.')->>'status'")" answered
+	same "$(bcount)" 1
 	fresh arm/full/capture
 	digest=$(q -c "SELECT thinkthen_details('Does this need attention?', 'A short note.')->'meta'->'requests'->>0")
 	same "$(bcount)" 1

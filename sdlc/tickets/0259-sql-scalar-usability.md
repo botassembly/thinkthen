@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-28-sql-interface-usability-before-0-1.md
 
 # 0259: Accept plain PostgreSQL judgment questions and add SQLite yes probability
 
-Status: in progress. Fresh independent design review accepted `88082a28`; the coordinator approved implementation on main `4d83cfbc`. The two fixes share the accepted SQL contract but have independent host proofs. One bounded database ticket keeps their README corrections together. See the [design review](../records/0259-design-review.md).
+Status: implementation candidate awaiting fresh code review. Fresh independent design review accepted `88082a28`; the coordinator approved implementation on main `4d83cfbc`. The two fixes share the accepted SQL contract but have independent host proofs. One bounded database ticket keeps their README corrections together. See the [design review](../records/0259-design-review.md) and [build proof](../records/0259-sql-scalar-build.md).
 
 ## Outcome and authority
 
@@ -46,4 +46,4 @@ Run format, affected Clippy, offline policy, focused source and installed `check
 
 ## What the build taught us
 
-The builder adds factual corrections and proof references before landing. Fresh code review checks this section against the exact candidate.
+PostgreSQL's prior installed host refused the plain decide call before sending; SQLite's prior installed library reported no `thinkthen_probability` function. The PostgreSQL implementation adds a question-only plain branch, leaving generic set/spec parsing and file authority untouched. The new branch feeds the shared scalar, array, warm, context and non-raising `try_details` callers. SQLite's existing `only()` rejects banded questions, so probability validates decide kind directly and admits a banded decide before reading `Details::probabilities()`. Strict Clippy required one shared ordinary-details helper, which also removes duplicate details and try-details branches. The [build record](../records/0259-sql-scalar-build.md) names the exact installed SQL and request proofs, source growth, native pins and remaining limits. The original issue stays open; this candidate covers only its PostgreSQL plain-question defect and SQLite yes-probability gap.
