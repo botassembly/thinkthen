@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md
 
 # 0272: Prepare C# and JVM managed archives for the Linux x86 release workflow
 
-Status: design accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approves the bounded design; implementation waits for landed 0271 wiring and a lane claim. [Preparation](../records/0271-0272-language-runner-preparation.md) records the current source and tool boundaries. No implementation, SDK download, compilation or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
+Status: design accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). A static workflow/helper candidate is on `ticket/0272-managed-package-helper` after landed 0271; its [build record](../records/0272-managed-package-helper-build.md) names bounded proof and remaining runner work. An early independent High helper review returned three findings; the branch candidate now addresses them, but full combined High review and actual runner qualification are pending. No SDK download, compilation, container execution or Actions rehearsal is claimed. Ian’s SQL/DataFrame hold remains in force.
 
 ## One source pin and one native archive
 
@@ -29,6 +29,10 @@ Static proof under the hold: a fixture captures the source digest immediately af
 Later permitted execution must record actual managed SDK source/version and runner paths, fresh nupkg/JAR hashes, container C/header/shared/static hashes and glibc floor, pair result, and existing installed consumer observations: two C# exact bodies/connections and one Java, Kotlin and Scala body/connection each, with the 0260 five-text mixed-answer oracle retained. A separately authorized Actions rehearsal and final-release-pin, NuGet/Maven or direct distribution and other-host criteria remain open in the original issues.
 
 Prospective implementation claim after accepted design and cleared shared files: `.github/workflows/release.yml`, `sdlc/scripts/{release-container,release-managed-pair.py,release-workflow,workflows}` and `sdlc/scripts/release-pack` only if a narrowly reviewed assembly seam cannot use its existing copy arms; focused workflow fixtures and this ticket/build record. Existing `libraries/jvm/build.sh` and `libraries/jvm/tests/package_check.py` are invoked without edits; `libraries/{csharp,jvm}` product, installed helpers and C source stay read-only unless a concrete deficiency earns an exact claim. Coordinate shared files with 0271; fresh independent High review checks the two receipt capture points, package preflight, internal artifact routing, selected assets and first-step release controls. No SQL, DataFrame, publication or registry edit.
+
+## Early helper review correction
+
+The immutable `ede90a0b` helper review found that a real Git tar has two tracked symlinks, that the nupkg check allowed missing `_rels/.rels` or `[Content_Types].xml`, and that ZIP directory/mode checks could admit an extra directory or symlink-typed required file when receipts were refreshed. The current candidate permits only the two supported Git source symlinks and checks their targets before extraction; requires the complete fixed nupkg set; and requires exact nupkg/JAR directories and safe ZIP file types. Focused public CLI tests change one required member or type at a time, refresh the managed receipt and outer sidecar, and require assembly and verification to refuse for the specific inventory/type reason. The genuine `367c160f` Git tar passes source preflight, and retained package ZIP shapes pass bounded read checks. Those checks do not qualify compiler output, the runner, or Actions. The earlier High verdict remains FINDINGS until the independent reviewer assesses the combined candidate.
 
 ## Evidence
 

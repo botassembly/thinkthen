@@ -125,6 +125,22 @@ def release(name, doc):
     container = next((step for step in build_steps if "release-container" in (step.get("run") or "")), None)
     if container and (container.get("env") or {}).get("THINKTHEN_RELEASE_EXPECTED_SHA") != RESOLVED:
         out.append(f"{name}: build container must receive the resolved SHA")
+    if container:
+        build_run = container.get("run") or ""
+        capture = "release-workflow source-capture"
+        container_call = "sdlc/scripts/release-container"
+        c_capture = "release-workflow c-capture"
+        managed_build = "release-workflow managed-build"
+        if not all(part in build_run for part in (capture, container_call, c_capture, managed_build)) or not (
+                build_run.index(capture) < build_run.index(container_call) <
+                build_run.index(c_capture) < build_run.index(managed_build)):
+            out.append(f"{name}: x86 source, container C and managed receipt capture order differs")
+        if "THINKTHEN_RELEASE_SOURCE_TAR" not in build_run or "THINKTHEN_RELEASE_SOURCE_RECEIPT" not in build_run:
+            out.append(f"{name}: container lacks the captured source tar and receipt")
+        upload = next((step for step in build_steps if (step.get("with") or {}).get("name") == "provenance-x86"), None)
+        if not upload or upload.get("if") != "matrix.target == 'x86_64-unknown-linux-gnu'" or (
+                (upload.get("with") or {}).get("path") != "${{ runner.temp }}/thinkthen-provenance-x86/"):
+            out.append(f"{name}: internal x86 provenance upload is missing or public")
     smoke_steps = jobs.get("smoke", {}).get("steps") or []
     smoke_bundle = next((i for i, step in enumerate(smoke_steps)
                          if "release-workflow smoke-bundle" in (step.get("run") or "")), None)
@@ -169,6 +185,21 @@ def release(name, doc):
             out.append(f"{name}: smoke must gate the resolved Ada/Objective-C/COBOL family before installed consumers")
         if language_tools is None or language_tools >= smoke_bundle:
             out.append(f"{name}: x86 smoke must probe Ada/Objective-C/COBOL tools before consumers")
+        managed_gate = next((i for i, step in enumerate(smoke_steps)
+                             if 'release-workflow managed-gate platform "$TARGET" "$SHA" provenance' in
+                             (step.get("run") or "") and (step.get("env") or {}).get("SHA") == RESOLVED), None)
+        provenance_download = next((i for i, step in enumerate(smoke_steps)
+                                    if (step.get("with") or {}).get("name") == "provenance-x86" and
+                                    (step.get("with") or {}).get("path") == "provenance" and
+                                    step.get("if") == "matrix.target == 'x86_64-unknown-linux-gnu'"), None)
+        if managed_gate is None or provenance_download is None or not (
+                provenance_download < managed_gate < smoke_bundle):
+            out.append(f"{name}: smoke must download internal provenance and gate managed packages before copy")
+        managed_tools = next((i for i, step in enumerate(smoke_steps)
+                              if "release-workflow managed-tools" in (step.get("run") or "") and
+                              step.get("if") == "matrix.target == 'x86_64-unknown-linux-gnu'"), None)
+        if managed_tools is None or managed_tools >= smoke_bundle:
+            out.append(f"{name}: x86 smoke must probe exact managed tools before consumers")
     draft_steps = jobs.get("draft", {}).get("steps") or []
     collect_step = next((step for step in draft_steps
                     if "release-workflow collect" in (step.get("run") or "")), None)
@@ -189,6 +220,17 @@ def release(name, doc):
                             or collect.index("release-workflow ada-objc-cobol-gate") > collect.index("release-workflow collect")
                             or (collect_step.get("env") or {}).get("SHA") != RESOLVED):
         out.append(f"{name}: draft must gate every target's Ada/Objective-C/COBOL family before collection")
+    draft_provenance = next((i for i, step in enumerate(draft_steps)
+                             if (step.get("with") or {}).get("name") == "provenance-x86" and
+                             (step.get("with") or {}).get("path") == "provenance"), None)
+    collect_index = next((i for i, step in enumerate(draft_steps) if "release-workflow collect" in
+                          (step.get("run") or "")), None)
+    if collect is not None and (draft_provenance is None or collect_index is None or
+            draft_provenance >= collect_index or
+            'release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance' not in collect or
+            collect.index("release-workflow managed-gate") > collect.index("release-workflow collect") or
+            (collect_step.get("env") or {}).get("SHA") != RESOLVED):
+        out.append(f"{name}: draft must gate managed packages with internal provenance before collection")
     outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
     for job in outward:
         spec = jobs.get(job, {})
@@ -534,6 +576,11 @@ def main(argv):
     if argv == ["--self-test"]:
         return self_test()
     out = check(REPO / ".github/workflows")
+    if not out:
+        managed = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-managed-pair-self-test.py")],
+                                 capture_output=True, text=True)
+        if managed.returncode:
+            out.append(f"managed workflow fixture failed: {managed.stdout}{managed.stderr}")
     print("\n".join(out) if out else "workflows: every workflow runs by hand from pinned code", file=sys.stderr if out else sys.stdout)
     return 1 if out else 0
 

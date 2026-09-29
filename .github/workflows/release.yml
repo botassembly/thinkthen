@@ -64,7 +64,17 @@ jobs:
           mkdir -p release-files
           if [ "$(uname -s)" = Linux ]; then
             export RELEASE_CARGO_REGISTRY="$HOME/.cargo/registry"
+            if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
+              mkdir -p "$RUNNER_TEMP/thinkthen-provenance-x86"
+              sdlc/scripts/release-workflow source-capture "$RUNNER_TEMP/thinkthen-provenance-x86" "$THINKTHEN_RELEASE_EXPECTED_SHA"
+              export THINKTHEN_RELEASE_SOURCE_TAR="$RUNNER_TEMP/thinkthen-provenance-x86/source.tar"
+              export THINKTHEN_RELEASE_SOURCE_RECEIPT="$RUNNER_TEMP/thinkthen-provenance-x86/source.json"
+            fi
             sdlc/scripts/release-container "$RUNNER_TEMP/thinkthen-container" release-files
+            if [ "$TARGET" = x86_64-unknown-linux-gnu ]; then
+              sdlc/scripts/release-workflow c-capture "release-files/thinkthen-c-$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)-$TARGET.tar.gz" "$RUNNER_TEMP/thinkthen-provenance-x86" "$TARGET"
+              sdlc/scripts/release-workflow managed-build "$RUNNER_TEMP/thinkthen-provenance-x86" release-files "$TARGET" "$THINKTHEN_RELEASE_EXPECTED_SHA"
+            fi
             sdlc/scripts/release-pack "$TARGET" release-files command first-run
           else
             RUBY="$HOME/.cache/thinkthen-toolchains/ruby/3.4.11-$(uname -m)-darwin/bin/ruby"
@@ -76,6 +86,13 @@ jobs:
         with:
           name: platform-${{ matrix.target }}
           path: release-files/
+          if-no-files-found: error
+          retention-days: 7
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        with:
+          name: provenance-x86
+          path: ${{ runner.temp }}/thinkthen-provenance-x86/
           if-no-files-found: error
           retention-days: 7
 
@@ -169,8 +186,15 @@ jobs:
         if: matrix.target == 'x86_64-unknown-linux-gnu'
         env: {TARGET: "${{ matrix.target }}"}
         run: sdlc/scripts/release-workflow ada-objc-cobol-tools "$TARGET"
+      - name: Check selected managed consumer tools
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        env: {TARGET: "${{ matrix.target }}"}
+        run: sdlc/scripts/release-workflow managed-tools "$TARGET"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: 'platform-${{ matrix.target }}', path: platform}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        with: {name: provenance-x86, path: provenance}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -187,6 +211,9 @@ jobs:
       - name: Require the selected Ada/Objective-C/COBOL family
         env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
         run: sdlc/scripts/release-workflow ada-objc-cobol-gate platform "$TARGET" "$SHA"
+      - name: Require the selected managed family and original receipts
+        env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: sdlc/scripts/release-workflow managed-gate platform "$TARGET" "$SHA" provenance
       - env: {TARGET: "${{ matrix.target }}", THINKTHEN_HEAVY_LOCK: "${{ runner.temp }}/thinkthen-release-smoke.lock"}
         run: |
           sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
@@ -206,6 +233,8 @@ jobs:
         with: {pattern: 'platform-*', path: platform}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: npm-package, path: npm-dist}
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with: {name: provenance-x86, path: provenance}
       - env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODE: ${{ inputs.mode }}
@@ -217,6 +246,7 @@ jobs:
             sdlc/scripts/release-workflow swift-zig-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"
             sdlc/scripts/release-workflow ada-objc-cobol-gate "platform/platform-$target" "$target" "$SHA"
+            sdlc/scripts/release-workflow managed-gate "platform/platform-$target" "$target" "$SHA" provenance
           done
           sdlc/scripts/release-workflow collect platform npm-dist all-files
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files

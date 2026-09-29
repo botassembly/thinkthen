@@ -74,7 +74,144 @@ ada_objc_cobol_names() {
 		fi
 	done
 }
+managed_names() {
+	dir=$1 target=$2
+	for file in "$dir"/thinkthen-csharp* "$dir"/thinkthen-jvm*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		name=${file##*/}
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			case $name in
+			"thinkthen-csharp-$version-$target.tar.gz" | "thinkthen-csharp-$version-$target.tar.gz.sha256" | \
+			"thinkthen-jvm-$version-$target.tar.gz" | "thinkthen-jvm-$version-$target.tar.gz.sha256") ;;
+			*) fail "unexpected managed family entry $name" ;;
+			esac
+		else
+			fail "unsupported target has $name"
+		fi
+	done
+}
 case ${1:-} in
+source-capture)
+	[ "$#" = 3 ] || fail 'source-capture PROVENANCE_DIR SHA'
+	[ "$3" = "$(git rev-parse HEAD)" ] || fail 'checkout differs from resolved SHA'
+	[ -d "$2" ] && [ ! -L "$2" ] && [ -z "$(find "$2" -mindepth 1 -print -quit)" ] || fail 'provenance must start empty'
+	git archive --format=tar HEAD >"$2/source.tar"
+	[ "$(git get-tar-commit-id <"$2/source.tar")" = "$3" ] || fail 'Git tar header differs from resolved SHA'
+	python3 - "$2/source.tar" "$2/source.json" "$3" <<'PY'
+import hashlib, json, pathlib, sys
+source, output = map(pathlib.Path, sys.argv[1:3])
+commit = sys.argv[3]
+output.write_text(json.dumps({"commit": commit, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}) + "\n")
+PY
+	chmod 444 "$2/source.json"
+	python3 sdlc/scripts/release-managed-pair.py source-check "$2/source.tar" "$2/source.json" "$3"
+	;;
+c-capture)
+	[ "$#" = 4 ] || fail 'c-capture C_ARCHIVE PROVENANCE_DIR TARGET'
+	[ "$4" = x86_64-unknown-linux-gnu ] || fail 'C receipt is x86 only'
+	[ -d "$3" ] && [ ! -L "$3" ] && [ -f "$3/source.json" ] || fail 'source provenance is missing'
+	[ ! -e "$3/c.json" ] && [ ! -L "$3/c.json" ] || fail 'C receipt already exists'
+	name=thinkthen-c-$version-$4.tar.gz
+	[ "${2##*/}" = "$name" ] && [ -f "$2" ] && [ ! -L "$2" ] || fail 'selected C archive is missing or linked'
+	python3 - "$2" "$3/c.json" <<'PY'
+import hashlib, json, pathlib, sys
+source, output = map(pathlib.Path, sys.argv[1:])
+output.write_text(json.dumps({"name": source.name, "sha256": hashlib.sha256(source.read_bytes()).hexdigest()}) + "\n")
+PY
+	chmod 444 "$3/c.json"
+	python3 sdlc/scripts/release-managed-pair.py c-check "$2" "$3/c.json" "$4" "$version"
+	;;
+managed-tools)
+	[ "$#" = 2 ] && [ "$2" = x86_64-unknown-linux-gnu ] || fail 'managed-tools requires Linux x86'
+	[ "$(uname -s):$(uname -m)" = Linux:x86_64 ] || fail 'managed tools need Linux x86'
+	python3 - <<'PY'
+import os, pathlib, re, shutil, subprocess
+
+def selected(variable, name):
+    value = os.environ.get(variable)
+    if variable == "THINKTHEN_DOTNET":
+        path = pathlib.Path(value or shutil.which(name) or "")
+    else:
+        if not value:
+            raise SystemExit(f"managed-tools: set {variable} to a verified exact SDK")
+        path = pathlib.Path(value) / "bin" / name
+    if not path.is_absolute() or not path.is_file():
+        raise SystemExit(f"managed-tools: {name} is missing at {path}")
+    print(f"managed-tools: {name} {path.resolve()}")
+    return str(path)
+
+def version(command, expected):
+    result = subprocess.run(command, text=True, capture_output=True, timeout=20)
+    shown = (result.stdout + result.stderr).strip()
+    print(f"managed-tools: {shown.splitlines()[0] if shown else command[0] + ' gave no version'}")
+    if result.returncode or not re.search(expected, shown):
+        raise SystemExit(f"managed-tools: version differs for {command[0]}")
+
+dotnet = selected("THINKTHEN_DOTNET", "dotnet")
+version([dotnet, "--version"], r"^8\.0\.131$")
+jdk = "THINKTHEN_JDK_HOME"
+for name, args, expected in (("javac", ["-version"], r"javac 21\.0\.12(?:\.1)?\b"),
+                             ("jar", ["--version"], r"jar 21\.0\.12(?:\.1)?\b"),
+                             ("java", ["-version"], r"(?:openjdk|java) version .21\.0\.12(?:\.1)?\b")):
+    version([selected(jdk, name), *args], expected)
+package = subprocess.run(["dpkg-query", "-W", "-f=${Version}", "openjdk-21-jdk"],
+                         text=True, capture_output=True, timeout=20)
+if package.returncode or package.stdout != "21.0.12.1+1-1~24.04.4":
+    raise SystemExit("managed-tools: selected Noble JDK package is unqualified")
+print(f"managed-tools: openjdk-21-jdk {package.stdout}")
+for variable, name, args, expected, runtime in (
+    ("THINKTHEN_KOTLIN_HOME", "kotlinc", ["-version"], r"kotlinc-jvm 2\.4\.20\b", "lib/kotlin-stdlib.jar"),
+    ("THINKTHEN_SCALA_HOME", "scalac", ["-version"], r"Scala compiler version 3\.9\.0\b", "lib/scala.jar")):
+    root = os.environ.get(variable)
+    if not root or not (pathlib.Path(root) / runtime).is_file():
+        raise SystemExit(f"managed-tools: {variable} lacks {runtime}")
+    version([selected(variable, name), *args], expected)
+PY
+	for tool in python3 nm tar flock; do command -v "$tool" >/dev/null || fail "missing $tool"; done
+	[ -x /usr/bin/bwrap ] || fail 'missing /usr/bin/bwrap for installed consumers'
+	;;
+managed-build)
+	[ "$#" = 5 ] && [ "$4" = x86_64-unknown-linux-gnu ] || fail 'managed-build PROVENANCE_DIR PLATFORM_DIR TARGET SHA'
+	[ "$5" = "$(git rev-parse HEAD)" ] || fail 'checkout differs from resolved SHA'
+	[ -d "$2" ] && [ ! -L "$2" ] && [ -d "$3" ] && [ ! -L "$3" ] || fail 'managed build paths are missing or linked'
+	python3 sdlc/scripts/release-managed-pair.py source-check "$2/source.tar" "$2/source.json" "$5"
+	c_archive=$3/thinkthen-c-$version-$4.tar.gz
+	python3 sdlc/scripts/release-managed-pair.py c-check "$c_archive" "$2/c.json" "$4" "$version"
+	JAVA_HOME=${THINKTHEN_JDK_HOME:-}
+	export JAVA_HOME
+	sh sdlc/scripts/release-workflow managed-tools "$4"
+	[ ! -e "$2/managed.json" ] && [ ! -L "$2/managed.json" ] || fail 'managed receipt already exists'
+	scratch_dir managed_stage
+	mkdir -p "$managed_stage/src" "$managed_stage/feed" "$managed_stage/csharp" "$managed_stage/jvm" \
+		"$managed_stage/dotnet-home" "$managed_stage/nuget"
+	# The second source verification precedes this independent managed extraction.
+	python3 sdlc/scripts/release-managed-pair.py source-check "$2/source.tar" "$2/source.json" "$5"
+	tar -xf "$2/source.tar" -C "$managed_stage/src"
+	DOTNET_CLI_HOME="$managed_stage/dotnet-home" NUGET_PACKAGES="$managed_stage/nuget" \
+	DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
+	"${THINKTHEN_DOTNET:-dotnet}" pack "$managed_stage/src/libraries/csharp/ThinkThen.csproj" -c Release \
+		--source "$managed_stage/feed" -o "$managed_stage/csharp" -v quiet
+	THINKTHEN_JVM_OUT="$managed_stage/jvm" sh "$managed_stage/src/libraries/jvm/build.sh"
+	THINKTHEN_JVM_OUT="$managed_stage/jvm" python3 "$managed_stage/src/libraries/jvm/tests/package_check.py"
+	nupkg=$managed_stage/csharp/Botassembly.ThinkThen.$version.nupkg
+	[ -f "$nupkg" ] && [ ! -L "$nupkg" ] || fail 'fresh nupkg is missing'
+	python3 - "$nupkg" "$managed_stage/jvm/jars" "$2/managed.json" <<'PY'
+import hashlib, json, pathlib, sys
+nupkg, jars, receipt = pathlib.Path(sys.argv[1]), pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3])
+def pin(path):
+    if not path.is_file() or path.is_symlink():
+        raise SystemExit(f"managed output is missing or linked: {path}")
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+values = {"nupkg": pin(nupkg)}
+values.update({kind: pin(jars / f"thinkthen-{kind}.jar") for kind in ("door", "kotlin", "scala")})
+receipt.write_text(json.dumps(values) + "\n")
+PY
+	chmod 444 "$2/managed.json"
+	python3 sdlc/scripts/release-managed-pair.py assemble \
+		--source-tar "$2/source.tar" --source-receipt "$2/source.json" \
+		--c-archive "$c_archive" --c-receipt "$2/c.json" --managed-receipt "$2/managed.json" \
+		--nupkg "$nupkg" --jars "$managed_stage/jvm/jars" --output "$3" --target "$4" --version "$version"
+	;;
 host-setup)
 	[ "$#" = 2 ] || fail 'host-setup TARGET'
 	[ "$(rustc -vV | sed -n 's/^host: //p')" = "$2" ] || fail "runner does not have target $2"
@@ -244,6 +381,35 @@ ada-objc-cobol-gate)
 		ada_objc_cobol_names "$dir" "$target"
 		;;
 	*) fail "no Ada/Objective-C/COBOL release route for $target" ;;
+	esac
+	;;
+managed-gate)
+	[ "$#" = 5 ] || fail 'managed-gate DIR TARGET SHA PROVENANCE_DIR'
+	dir=$2 target=$3 selected=$4 provenance=$5
+	[ -d "$dir" ] && [ ! -L "$dir" ] || fail 'managed platform directory is missing or linked'
+	[ "$(git rev-parse HEAD)" = "$selected" ] || fail 'managed gate checkout differs from resolved SHA'
+	printf '%s\n' "$selected" | grep -Eq '^[0-9a-f]{40}$' || fail 'resolved SHA is invalid'
+	managed_names "$dir" "$target"
+	case $target in
+	x86_64-unknown-linux-gnu)
+		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail 'managed gate needs its x86 host'
+		[ -d "$provenance" ] && [ ! -L "$provenance" ] || fail 'internal provenance is missing or linked'
+		[ "$(find "$provenance" -mindepth 1 -maxdepth 1 -printf '%f\n' | LC_ALL=C sort)" = "$(printf '%s\n' c.json managed.json source.json source.tar | LC_ALL=C sort)" ] || fail 'internal provenance inventory differs'
+		for file in source.tar source.json c.json managed.json; do
+			[ -f "$provenance/$file" ] && [ ! -L "$provenance/$file" ] || fail "missing or linked provenance $file"
+		done
+		python3 sdlc/scripts/release-managed-pair.py source-check "$provenance/source.tar" "$provenance/source.json" "$selected"
+		c_archive=$dir/thinkthen-c-$version-$target.tar.gz
+		python3 sdlc/scripts/release-managed-pair.py c-check "$c_archive" "$provenance/c.json" "$target" "$version"
+		sh sdlc/scripts/release-go-cpp-pair "$dir" csharp-jvm
+		python3 sdlc/scripts/release-managed-pair.py verify \
+			--source-tar "$provenance/source.tar" --source-receipt "$provenance/source.json" \
+			--c-archive "$c_archive" --c-receipt "$provenance/c.json" \
+			--managed-receipt "$provenance/managed.json" --output "$dir" \
+			--target "$target" --version "$version"
+		;;
+	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin) ;;
+	*) fail "no managed release route for $target" ;;
 	esac
 	;;
 ada-objc-cobol-tools)
@@ -452,6 +618,7 @@ collect)
 		swift_zig_names "$folder" "$target"
 		php_dart_names "$folder" "$target"
 		ada_objc_cobol_names "$folder" "$target"
+		managed_names "$folder" "$target"
 	done
 	mkdir -p "$4"
 	for folder in "$2"/*; do
