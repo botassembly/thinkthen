@@ -1,6 +1,6 @@
 # 0271–0272 runner input follow-up
 
-Status: bounded metadata follow-up to the accepted [runner input record](0271-0272-runner-toolchain-inputs.md) (`f8670b99`), 2026-09-29. This inspected local Ubuntu archive indexes, package status, existing source and receipts, and official web metadata. It did not download an SDK or compiler body, install anything, compile, run a consumer, start a container, dispatch Actions, or touch SQL/DataFrame work. It does not qualify a future runner.
+Status: ACCEPT `d6efe86d` after independent High review. This is a bounded metadata follow-up to the accepted [runner input record](0271-0272-runner-toolchain-inputs.md) (`f8670b99`), 2026-09-29. This inspected local Ubuntu archive indexes, package status, existing source and receipts, and official web metadata. It did not download an SDK or compiler body, install anything, compile, run a consumer, start a container, dispatch Actions, or touch SQL/DataFrame work. It does not qualify a future runner.
 
 ## Noble GnuCOBOL dependency
 
@@ -23,3 +23,5 @@ Use that exact URL and digest for future acquisition, then inspect the selected 
 ## Process lesson
 
 Resolve unavailable dependency names through signed `Provides` metadata before calling an archive uninstallable. Keep package resolution, compiler compatibility, and runner execution as three separate claims. For release archives, compare an exact official asset name, URL and publisher digest with the saved local receipt. Check the release API when the web asset widget hides those fields. Distinguish a sandbox network restriction from missing publisher evidence before reporting an execution stop.
+
+The independent reviewer verified the Ubuntu signatures, signed index hashes, package stanzas and installed-package claims, then checked the official Scala response fields against the saved receipt. No build or consumer check was repeated.
