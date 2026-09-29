@@ -15,7 +15,7 @@ if ! command -v cargo >/dev/null || ! command -v nm >/dev/null || ! command -v x
 fi
 mkdir -p "$CHECKS/logs" "$CHECKS/scratch" "$FLUTTER/logs" "$FLUTTER/scratch"
 python3 "$CHECKS/privacy.py"
-python3 "$CHECKS/ratchet.py"
+node "$ROOT/../../sdlc/scripts/ratchet.mjs" "$ROOT/ratchet.dart.json"
 export TT_DART TT_FLUTTER
 export TT_NATIVE_LIBRARY="$CHECKS/scratch/libthinkthen.so"
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$CHECKS/scratch/native-target"}
