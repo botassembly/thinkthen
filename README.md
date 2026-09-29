@@ -11,7 +11,7 @@ ThinkThen answers typed questions about text. Use the command in a shell script 
 | `tag` | which labels apply | a JSON array of labels |
 | `score` | where the text falls on a scale | a number on that scale |
 | `filter` | the same yes/no of each record in a stream | the records that pass, byte for byte, in input order |
-| `rank` | the same question of each record | the records, best fit first |
+| `rank` | the same yes/no question or saved score question of each record | the records, highest probability or score first |
 | `find` | which unit best answers the question | that unit, or no output (exit 3) when `--none` wins or ties |
 | `annotate` | a saved set of named questions of each record | records with named answers or failure markers |
 | `recognize` | which words name a thing, and what kind | names, kinds, offsets, and optional relations |
@@ -83,6 +83,7 @@ The cache is on by default.
 - An entry holds the complete request and response, the judged evidence included. Filesystem access and backups can copy that evidence. No key enters an entry.
 - Whoever can write the cache or recording folder controls the answers read from it, so keep that folder private to people whose answers you trust. A platform-default cache is created for its owner alone, and an existing Unix folder must already have mode `0700`. An explicitly named `--cache` folder keeps its user-owned mode.
 - The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells you to restore the old settings or choose another folder.
+- Cache and recording entries use the exact encoded request bytes. With one-document text, `hello\n` and `hello\r\n` have different line endings and miss each other's entries; literal text `{"a":1}` and `{"a":1.0}` also differ. Record framing may strip line terminators or re-encode parsed JSON first. [Recording and replay](specification/recording.md) gives the identity rule and transfer guidance.
 - `--no-cache` runs a job that neither reads nor writes cached answers. `cache prune` is the only thing that removes entries.
 
 ## Usage counts

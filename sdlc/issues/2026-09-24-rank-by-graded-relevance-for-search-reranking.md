@@ -1,6 +1,6 @@
 # Rank by graded relevance for search reranking
 
-Status: Open
+Status: partially complete. Graded command ranking and its normative pages are shipped; optional custom weights and reciprocal-rank fusion remain open.
 
 Filed by the marketing session on 2026-09-24. Source: turbopuffer's post "Jev is a state-of-the-art search reranker", clipped by Ian.
 
@@ -8,7 +8,7 @@ Filed by the marketing session on 2026-09-24. Source: turbopuffer's post "Jev is
 
 A search engine returns 50 to 1,000 candidates for a query. For each candidate, the post asks Jev's score endpoint one question with ten relevance levels, from "unrelated" to "perfect match". It weights each level's probability into one relevance number and sorts by it. It reports Jev agreeing with a frontier model's order more often than two leading rerankers, at $0.0138 a query. turbopuffer also fuses rankings with reciprocal rank fusion (RRF).
 
-## What ThinkThen does today
+## Original gap, 2026-09-24
 
 - `score` asks the same ten-level question per record, with a description per level from a question file. It weights levels by position 0 to K-1 and prints in input order.
 - `rank` sorts records and cuts with `--top N`, but it sorts by one yes probability.
@@ -26,3 +26,7 @@ The vocabulary already names reranking as a `rank` use (`sdlc/planning/ten-use-c
 ## Graded command slice landed
 
 Ticket 0223 passed fresh independent code review at `0e242567` and integration checks at `96e1058d`. The command now accepts `rank @score-file`, orders by the existing weighted score with stable top ties, retains score details and counts every judged record. Ordinary yes/no rank and library rank APIs retain their behavior. The build and review records identify exact request, digest, output and failure proof. Optional per-level weights and reciprocal rank fusion remain open, and public documentation is held for marketing. This source issue is not closed by the first slice.
+
+## Command documentation completed
+
+Quick Fix `782b0aea` passed fresh Medium review and completes the five-page 0223 handoff, command index and root table. The executable result consumer keeps exact ordinary and graded-rank shapes. The [copied-site reference issue](2026-09-28-site-reference-misses-graded-rank-and-cache-byte-examples.md) belongs to marketing. This does not implement optional weights or RRF.
