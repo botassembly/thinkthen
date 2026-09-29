@@ -33,6 +33,12 @@ pub(crate) struct FindCommon {
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]
     pub(crate) facts: bool,
+    /// Refuse live attempts after this process has sent N.
+    #[arg(long, value_name = "N", hide_short_help = true)]
+    pub(crate) max_requests_total: Option<u64>,
+    /// Limit estimated input admission for live final encoded bodies.
+    #[arg(long, value_name = "N", hide_short_help = true)]
+    pub(crate) max_estimated_input_tokens_total: Option<u64>,
 
     /// Print the full result object in place of the original selected line or record.
     /// The result names each line or record by its one-based place, zero-padded
@@ -52,8 +58,11 @@ pub(crate) struct FindCommon {
     #[arg(long, value_name = "POINTER")]
     pub(crate) field: Vec<String>,
     /// Print the complete one-request plan and send nothing.
-    #[arg(long)]
+    #[arg(long = "plan")]
     pub(crate) dry_run: bool,
+    /// The removed spelling is parsed only to give the migration sentence.
+    #[arg(long = "dry-run", hide = true)]
+    pub(crate) retired_dry_run: bool,
     /// The backend base, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
     pub(crate) url: Option<String>,
@@ -114,6 +123,8 @@ impl FindCommon {
     pub(crate) fn as_common(&self) -> Common {
         Common {
             facts: self.facts,
+            max_requests_total: self.max_requests_total,
+            max_estimated_input_tokens_total: self.max_estimated_input_tokens_total,
             details: self.details,
             input: self.input.clone(),
             lines: self.lines,
@@ -122,6 +133,7 @@ impl FindCommon {
             tsv: false,
             field: self.field.clone(),
             dry_run: self.dry_run,
+            retired_dry_run: self.retired_dry_run,
             url: self.url.clone(),
             profile: self.profile.clone(),
             model: self.model.clone(),

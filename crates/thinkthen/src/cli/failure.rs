@@ -69,6 +69,8 @@ pub(crate) enum Failure {
     UsageOverflow,
     /// A command-line shape was understood but cannot act.
     Usage(&'static str),
+    /// Estimated input admission refused this final encoded body.
+    EstimatedInput(crate::public::EstimatedInputDenial),
     /// `--jobs` differs from the width this process already selected.
     WidthActive(crate::engine::WidthActive),
     /// `--option` was given beside a list of options on the command line.
@@ -218,6 +220,9 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     if matches!(failure, Failure::Cancelled) {
         return 130;
     }
+    if let Failure::EstimatedInput(reason) = failure {
+        return report_estimated(*reason, writer);
+    }
     if let Some(code) = stopped::report(failure, writer) {
         return code;
     }
@@ -231,11 +236,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
     }
     if let Some((code, message)) = special_failure(failure) {
         let _unwritten = writeln!(writer, "{}: {message}", crate::core::NAME);
-        return code;
-    }
-    if let Failure::Table(error) = failure {
-        let code = if error.input_failure() { 5 } else { 2 };
-        let _unwritten = writeln!(writer, "{}: {error}", crate::core::NAME);
         return code;
     }
     let (code, message): (u8, String) = match failure {
@@ -263,6 +263,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
             format!("the environment variable `{variable}` is unset or blank, so no key is sent"),
         ),
         Failure::Transport(kind) => (4, transport_message(*kind).to_owned()),
+        Failure::EstimatedInput(reason) => (2, reason.to_string()),
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::ReplayMiss { .. }
@@ -313,15 +314,10 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         return Some(message);
     }
     Some(match failure {
+        Failure::Table(error) => table_message(error),
         Failure::TokenLimit => (4, status::TOKEN_LIMIT.to_owned()),
         Failure::ReplyTooLarge(limit) => (4, reply_too_large(*limit)),
-        Failure::OpenProfile { path, error } => (
-            5,
-            format!(
-                "the profile file `{}` could not be opened: {error}",
-                path.display()
-            ),
-        ),
+        Failure::OpenProfile { path, error } => profile_open_message(path, error),
         Failure::Profile { path, error } => {
             (5, format!("the profile file `{}` {error}", path.display()))
         }
@@ -415,7 +411,7 @@ const fn refused(failure: &Failure) -> Option<&'static str> {
             "--record and --replay name two different folders, and one run keeps one"
         }
         Failure::DryRunWithRecording => {
-            "--dry-run sends nothing, so it takes neither --record nor --replay"
+            "--plan sends nothing, so it takes neither --record nor --replay"
         }
         Failure::CacheWithRecording => {
             "--cache is --record and --replay on one folder, so it stands beside neither"
@@ -476,3 +472,22 @@ const fn transport_message(kind: TransportKind) -> &'static str {
 
 #[cfg(test)]
 mod tests;
+
+fn report_estimated(reason: crate::public::EstimatedInputDenial, writer: &mut dyn Write) -> u8 {
+    let _unwritten = writeln!(writer, "{} usage: {reason}", crate::core::NAME);
+    2
+}
+
+fn table_message(error: &table::Error) -> (u8, String) {
+    (if error.input_failure() { 5 } else { 2 }, error.to_string())
+}
+
+fn profile_open_message(path: &std::path::Path, error: &io::Error) -> (u8, String) {
+    (
+        5,
+        format!(
+            "the profile file `{}` could not be opened: {error}",
+            path.display()
+        ),
+    )
+}

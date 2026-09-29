@@ -44,14 +44,15 @@ The first step is plain and the model gave it every point. The second is not: th
 
 ## Step 2: give each action a sentence
 
-An object under the pointer carries a description per action. The names are the options, and the sentences travel beside them. `--dry-run` sends nothing and prints what would go out.
+An object under the pointer carries a description per action. The names are the options, and the sentences travel beside them. `--plan` sends nothing and prints what would go out.
 
 ```bash
 set -eu
 
 sed -n '3p' steps.jsonl \
   | thinkthen choose 'Which of these actions should be taken next?' \
-      --jsonl --field /state --options /actions --dry-run \
+      --jsonl --field /state --options /actions --plan \
+  | sed -n '1p' \
   | jq -c '.request.questions.q1.criteria' \
   | mustmatch '{"ship_a_replacement":"Send the same item again at no charge.","refund_the_order":"Give the money back and send nothing.","open_a_carrier_claim":"Ask the carrier to investigate the parcel.","close_the_ticket":"End the conversation with no further action."}'
 ```

@@ -10,6 +10,48 @@ use conformance_backend::Backend;
 use serde_json::Value;
 use std::io::Write;
 use std::process::{Command, Stdio};
+use thinkthen::{For, Settings, SettingsError};
+
+#[test]
+fn public_settings_refuse_repeated_question_and_named_fields() {
+    for (text, verb, repeated) in [
+        (r#"{"threshold":0.7}"#, For::Decide, "threshold"),
+        (r#"{"model":"jev-1.13.0"}"#, For::Decide, "model"),
+        (r#"{"batch":2}"#, For::Decide, "batch"),
+        (r#"{"context":"reference"}"#, For::Decide, "context"),
+        (r#"{"deadline_ms":5000}"#, For::Decide, "deadline_ms"),
+        (r#"{"none":true}"#, For::Find, "none"),
+    ] {
+        let settings = Settings::parse(text).expect(text);
+        settings.check(verb).expect(text);
+        assert_eq!(
+            settings.conflicts(&[repeated], false),
+            Err(SettingsError::RepeatedField(repeated.into())),
+            "{text}"
+        );
+    }
+    for (text, first) in [
+        (r#"{"batch":2,"threshold":0.7}"#, "batch"),
+        (r#"{"threshold":0.7,"batch":2}"#, "threshold"),
+    ] {
+        let settings = Settings::parse(text).expect(text);
+        settings.check(For::Decide).expect(text);
+        assert_eq!(
+            settings.conflicts(&["batch", "threshold"], false),
+            Err(SettingsError::RepeatedField(first.into())),
+            "{text}"
+        );
+    }
+    Settings::parse(r#"{"batch":2,"context":"reference"}"#)
+        .expect("different settings")
+        .conflicts(&["deadline_ms"], false)
+        .expect("different explicit key");
+    let members = Settings::parse(r#"{"options":["a","b"]}"#).expect("members");
+    members
+        .conflicts(&[], false)
+        .expect("NULL members are absent");
+    assert_eq!(members.conflicts(&[], true), Err(SettingsError::TwoMembers));
+}
 
 #[expect(
     clippy::panic,

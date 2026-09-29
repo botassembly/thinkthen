@@ -26,9 +26,9 @@ set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 env -u THINKTHEN_API_KEY thinkthen find 'When does a refund reach the customer?' \
-  --lines --dry-run --input policy.txt > "$work/plan.json"
-jq -r '.request.questions | length' "$work/plan.json" | mustmatch '1'
-jq -r '.request.state | fromjson | length' "$work/plan.json" | mustmatch '12'
+  --lines --plan --input policy.txt > "$work/plan.json"
+sed -n '1p' "$work/plan.json" | jq -r '.request.questions | length' | mustmatch '1'
+sed -n '1p' "$work/plan.json" | jq -r '.request.state | fromjson | length' | mustmatch '12'
 ```
 
 Choose `filter` or `rank` when each unit must be judged alone. Choose `find` only when sending the whole set together is appropriate.

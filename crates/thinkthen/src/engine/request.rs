@@ -36,6 +36,7 @@ pub(crate) struct Transport<'a> {
     pub(crate) max_retries: u32,
     pub(crate) retry_wait: Duration,
     pub(crate) usage: &'a Counters,
+    pub(crate) send_budget: Option<crate::engine::send_budget::ProcessBudget>,
 }
 
 #[expect(
@@ -108,12 +109,13 @@ pub(crate) fn ask_sent_observed<E>(
 where
     E: From<Error>,
 {
+    let cancel = cancel.with_process_budget(transport.send_budget.clone());
     ask_prepared(
         backend,
         plan,
         prepared,
         recorder,
-        cancel,
+        &cancel,
         transport.usage,
         key,
         |prepared, key| {
@@ -124,10 +126,10 @@ where
                 max_retries: transport.max_retries,
                 retry_wait: transport.retry_wait,
             };
-            crate::engine::workers::on_worker(cancel, || {
+            crate::engine::workers::on_worker(&cancel, || {
                 transport.client.post_marked_with_retry(
                     &exchange,
-                    cancel,
+                    &cancel,
                     transport.usage,
                     |_| (),
                     &marked,

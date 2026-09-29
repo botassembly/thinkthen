@@ -35,3 +35,39 @@ The [Quick Fix build record](../records/2026-09-29-clean-package-gates-quick-fix
 ## Evidence
 
 Local experiment 302 `experiments/302-polyglot-package-verification/`: one folder per surface with REPORT.md and logs; `FINDINGS.md` consolidates; `waves.log` is the run record. Inputs sealed at the pin.
+
+## Final full-24 re-verification (2026-09-29, pin 4c0ef210)
+
+After the five fixes merged at e90de34a7 and the call-facts tickets 0275-0281 landed: **14 PASS, 10 FAIL**, all gates required to pass under minimal `env -i` environments this time. Evidence: local experiment 302 `finalcheck-4c0ef210/` (24 reports) and `FINAL-RUN-SUMMARY.md`.
+
+- **The five fixes hold green** (zig, objective-c, c, rust, typescript).
+- **New finding — JVM locale masking**: java, kotlin, and scala gates fail in a clean environment because the JVM decodes non-ASCII command-line arguments as ASCII without LANG/LC_ALL; round one passed by ambient-locale accident. One-line fix (export LC_ALL=C.UTF-8 in libraries/jvm/check.sh or move non-ASCII off the CLI); belongs in the environment-hardening sweep.
+- **New regressions between pins, likely from the call-facts wave**: dart and flutter gates fail on one stale planted-negative expected-message (`wrong-probability`, PLANTED_NEGATIVE_WRONG_REASON, in checks/plant-check.py and flutter/plant-check.py); R fails shared conformance case 40-decide-counters deterministically ("the engine is already set with batch = Max; start a new R session to change it" — session-pinned settings interaction).
+- **Unchanged opens**: python (contract ruling pending), polars (stale batch tests, held lane), duckdb (held lane), sqlite (same record-sends-every-time counter bug as originally filed — the *.json filter fix has not landed).
+- **Typescript note stands**: export check still asserts a literal count; derive it from the binding source.
+
+
+## Current routing after the final report
+
+At current main `f1802619d`, the five full-gate passes above remain independently measured at `4c0ef210`. The later JVM locale correction is already landed at `5f53b3a58`; its [focused receipt](../records/qf-jvm-j1-offset.md) proves case41 through Java, Kotlin and Scala under an explicit UTF-8 child locale. It does not change the historical 14/10 table.
+
+Fresh Medium code review accepted `ac5e03d75` for the [Dart/Flutter and R harness correction](../records/qf-package-counter-and-negative-diagnostics.md). R must keep its current session-settings contract: case40's counter measurement belongs in a fresh child because the ordinary answer checks already warmed the first child's cache. Dart's consumers should print the asserted outcome and probability, preserving the exact planted-negative marker. Do not weaken the marker to accept an object identity string. The corrected existing cases pass; these three reported failure causes are fixed. A fresh whole-package result remains separate.
+
+SQLite0284 includes the `*.json` counter filter; DuckDB0286 retains all seven reported cases. Polars0289 and Python0287 retain their package criteria. The accepted SQL/frame ADRs ended the earlier design hold; the historical phrase “contract ruling pending” is no longer their scheduling state. These are active or dependency-ordered builds, not externally blocked items.
+
+The detailed receipts also name unresolved qualification concerns outside the six corrected harness paths: Flutter's wrapper `pub get --offline` rewrote its locked `vector_math` when that version was absent; a Flutter check child lost the Cargo-wrapper override; Ruby fixture reads need an explicit UTF-8 environment; and Ruby's local `file://` dependency plant conflicts with a globally forced Cargo offline setting. Carry these to the package environment/release batch, refresh current source before changing it, and require locked dependency resolution. A missing cached dependency is an environment prerequisite, never permission to validate a silently changed lock. No new full-gate count is asserted here.
+
+The TypeScript literal export count is not a remaining defect by itself. Its test also compares the three public export name sets. Keep an independent expected surface; deriving the expected count from the same actual output could conceal a missing export.
+
+## Follow-up from the completed verification program
+
+The [process and maintenance record](../records/2026-09-29-polyglot-verification-lessons.md) separates adopted standards from remaining implementation. The package-environment batch owns minimal parent and child environments for the release families introduced by 0269–0272. Prove UTF-8 arguments, explicit compiler overrides, unchanged dependency locks and independence from ambient `PYTHONWARNINGS`; preserve each gate's exact intended failure checks. These clauses stay open until the changed runners have receipts.
+
+The same batch owns the repeated recording-entry counters. Share a helper among Python runners under `conformance/` where their semantics match. Specify one independent fixture containing actual entries, the backend marker, locks and temporary files; only actual entries count. R and Ruby may retain small native implementations against that fixture rather than acquire a Python dependency. Coordinate this change after the active SQLite/DuckDB claims clear. SQLite's immediate missing JSON filter remains part of 0284; passing that case alone does not prove consolidation.
+
+R's per-call `batch` and other uniform keywords already belong to accepted preparation ticket 0288. Add a same-session proof that two calls use different call-level settings and produce their expected bodies without restarting R. Preserve the separate engine-configuration lifetime rules. The fresh-child correction at61350a253 fixed the existing counter test; it did not implement per-call settings. No duplicate R design ticket is needed.
+
+
+## SQLite counter correction in 0284
+
+Fresh High review accepted `a843a3fc52812e2062d9aa90170764725bc8a246`. The SQLite recording counter selects answer `*.json` files and excludes the backend marker; a fixture places a `.locks/one.lock` beside one answer and requires one entry. The installed selector runs the same witness, and the build record retains selected source and source-matched unpacked-archive receipts. This closes the original SQLite counter clause, not the other surfaces or a full package/release-runner gate. See [0284 build](../records/0284-sqlite-settings-and-keyed-many-build.md).

@@ -59,7 +59,7 @@ fn decide(base: &str, arguments: &[&str], input: &str) -> io::Result<Output> {
 
 /// Run `decide` with no address at all, which a plan needs none of.
 fn planned(arguments: &[&str], input: &str) -> io::Result<Output> {
-    let asked = ["decide", QUESTION, "--dry-run"];
+    let asked = ["decide", QUESTION, "--plan"];
     spawn(&[&asked[..], arguments].concat(), &[], input.as_bytes())
 }
 
@@ -396,6 +396,8 @@ fn the_record_mode_plan_shows_the_first_record_and_names_the_framing() {
             r#""request":{"state":"The payout failed again.","model":"jev-1.13.0","#,
             r#""questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}"#,
             "\n",
+            r#"{"records":3,"requests":3,"estimated_bytes":445,"estimated_input_tokens":{"lower":229,"upper":405},"upper_bound":false}"#,
+            "\n",
         )
     );
 
@@ -413,20 +415,6 @@ fn the_record_mode_plan_shows_the_first_record_and_names_the_framing() {
         "{}",
         printed(&output)
     );
-}
-
-#[test]
-fn the_plan_frames_no_record_after_the_first() {
-    // The second record would be refused, and a plan that framed it would say
-    // so. The reader ahead of it is a buffer, and a buffer is not a record.
-    let output = planned(
-        &["--jsonl", "--field", "/body"],
-        "{\"body\":\"The payout failed again.\"}\nnot json\n",
-    )
-    .expect("the compiled binary runs");
-
-    assert_eq!(output.status.code(), Some(0));
-    assert!(said(&output).is_empty(), "{}", said(&output));
 }
 
 #[test]

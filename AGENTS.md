@@ -24,7 +24,7 @@ Read the key from `THINKTHEN_API_KEY`. Never commit, log, hash, echo, record, or
 
 ## Proof and records
 
-- Test secrecy on every command, failure path, and `Debug` line. Prove “sends nothing” by counting loopback requests, not `--dry-run`. Pin exact sentences, row counts, and exit codes. Checkers strip fenced code and run from a rung.
+- Test secrecy on every command, failure path, and `Debug` line. Prove “sends nothing” by counting loopback requests, not `--plan`. `cache prune --dry-run` is a separate preview. Pin exact sentences, row counts, and exit codes. Checkers strip fenced code and run from a rung.
 - Do not use `jq //` for a three-way rule: false differs from missing. When disabling `set -e`, pin the captured exit code. A page's number cites its measurement; update behavior and its pages together.
 - For each new test, name its behavior, failing regression, why existing tests miss it, and any test-only hook; move hooks to the real boundary. Reject absent/self-comparing assertions, computed expectations, mocks doing asserted work, copied inventories, and duplicate checks. See `sdlc/planning/ticket-preparation.md` and workspace decision `2026-09-24-tests-earn-their-place.md`.
 - Build records name deleted or consolidated tests and stronger replacements. Retain distinct parser, secrecy, cancellation, cache-miss, invalid-input, and conflict regressions until then. Reconcile source, decisions, and issue criteria before closure.

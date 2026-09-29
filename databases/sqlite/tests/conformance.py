@@ -110,13 +110,13 @@ def refused(case: dict, backend: Backend) -> None:
     elif ident == "21-backend-fault":
         arm = "arm/refuse"
     elif ident == "22-local-fault":
-        steps.insert(0, ["SELECT thinkthen_cache(?)", ["__SCRATCH__/not-a-folder"]])
+        steps.insert(0, ["SELECT thinkthen_configure(json_object('cache',?))", ["__SCRATCH__/not-a-folder"]])
         setup = "open(os.environ['SCRATCH'] + '/not-a-folder', 'w').write('not a folder')"
     elif ident == "23-cancelled-fault":
         arm = "arm/held"
         setup = "threading.Timer(0.3, db.interrupt).start()"
     elif ident == "24-deadline-fault":
-        steps = [["SELECT thinkthen_decide(?, ?, 0)", [question, evidence]]]
+        steps = [["SELECT thinkthen_decide(?, ?, ?)", [question, evidence, '{"deadline_ms":0}']]]
     elif ident == "31-usage-rank-blank-question":
         steps = [["SELECT thinkthen_details(?, ?)", [question, evidence]]]
     elif ident == "30-local-question-file":
@@ -153,7 +153,7 @@ def check(case: dict, backend: Backend) -> None:
     if kind == "find":
         units = case["question"]["units"]
         rows = asked([["SELECT thinkthen_find(?, ?, ?)",
-                       [case["question"]["find"], json.dumps(units), int(case["question"].get("none", False))]]], env)[0]
+                       [case["question"]["find"], json.dumps(units), json.dumps({"none": case["question"].get("none", False)})]]], env)[0]
         if isinstance(rows, str):
             raise AssertionError(f"SQL find failed: {rows}")
         result = json.loads(rows[0][0])
@@ -200,10 +200,11 @@ def check(case: dict, backend: Backend) -> None:
         same("ranking", [{"index": row[0], "probability": row[1]} for row in rows], success["operation"]["ranking"])
         same("judgments sent", backend.count(), len(texts))
     elif kind == "decide_many":
-        env = env | {"THINKTHEN_BATCH": "1"}  # legacy exact one-record exchanges
-        steps = [["SELECT thinkthen_warm(?, t) FROM r", [question]], ["SELECT thinkthen_decide(?, t) FROM r ORDER BY i", [question]]]
-        results = asked(steps, env, rows_table(texts))
-        same("bare", [{1: True, 0: False}.get(row[0]) for row in results[1]], [one["bare"] for one in answers])
+        packed = json.dumps({str(at): text for at, text in enumerate(texts)})
+        steps = [["SELECT thinkthen_configure(?)", ['{"batch":1}']],
+                 ["SELECT key,value FROM thinkthen_decide_many(?,?) ORDER BY key", [question, packed]]]
+        results = asked(steps, env)
+        same("bare", [{1: True, 0: False}.get(row[1]) for row in results[1]], [one["bare"] for one in answers])
     elif kind == "annotate":
         questions = json.dumps(case["question_set"])
         sent = [json.dumps(case["record"])] if "record" in case else texts
@@ -215,7 +216,7 @@ def check(case: dict, backend: Backend) -> None:
         same("failed", failed, success.get("failed_questions", 0))
     elif kind == "recognize":
         if relations:
-            rows = asked([["SELECT thinkthen_recognize_document(?, ?)", [case["text"], question]]], env)[0]
+            rows = asked([["SELECT thinkthen_relations(?, ?)", [case["text"], question]]], env)[0]
             if isinstance(rows, str):
                 raise AssertionError(f"SQL recognize failed: {rows}")
             same("result", json.loads(rows[0][0]), answers[0]["bare"])
@@ -229,7 +230,7 @@ def check(case: dict, backend: Backend) -> None:
     elif kind == "relate":
         entities = case["entities"]
         setup = f"db.execute('CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)')\ndb.executemany('INSERT INTO e VALUES (?, ?, ?)', [(at, one['name'], one['kind']) for at, one in enumerate({entities!r})])"
-        sql = "SELECT relation, source, target, probability FROM thinkthen_relate('e', 'id', 'name', 'kind', ?)"
+        sql = "SELECT relation, source, target, probability FROM thinkthen_relate('SELECT id, name, kind FROM e', ?)"
         rows = asked([[sql, [question]]], env, setup)[0]
         edges = [{"relation": row[0], "source": entities[row[1]], "target": entities[row[2]], "probability": row[3]} for row in rows]
         same("result", edges, answers[0]["bare"])

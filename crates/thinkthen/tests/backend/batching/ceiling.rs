@@ -97,7 +97,7 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
                 "decide",
                 QUESTION,
                 "--lines",
-                "--dry-run",
+                "--plan",
                 "--max-request-bytes",
                 value,
             ],
@@ -114,7 +114,7 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
     }
     for value in ["0", "-1", "1.5", "lots", ""] {
         let output = spawn(
-            &["decide", QUESTION, "--lines", "--dry-run"],
+            &["decide", QUESTION, "--lines", "--plan"],
             &[("THINKTHEN_MAX_REQUEST_BYTES", value)],
             input,
         )
@@ -127,19 +127,102 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
         );
     }
     let one = spawn(
-        &["decide", QUESTION, "--dry-run", "--max-request-bytes", "1"],
+        &["decide", QUESTION, "--plan", "--max-request-bytes", "1"],
         &[],
         b"line 1",
     )
     .expect("one document");
     assert_eq!(one.status.code(), Some(0), "{}", text(&one.stderr));
     let choose = spawn(
-        &["choose", "Which?", "a", "b", "--dry-run"],
+        &["choose", "Which?", "a", "b", "--plan"],
         &[("THINKTHEN_MAX_REQUEST_BYTES", "0")],
         b"line 1",
     )
     .expect("unrelated verb");
     assert_eq!(choose.status.code(), Some(0), "{}", text(&choose.stderr));
+}
+
+#[test]
+fn a_plan_counts_a_closed_batch_and_the_later_singleton_without_sending() {
+    // These are the two wire bodies for the input below. The final one uses
+    // the established singleton form; it does not quote a one-member batch.
+    const FIRST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". asks for a refund"},"q2":{"type":"noul","instructions":"The text is \"beta\". asks for a refund"}}}"#;
+    const SECOND: &str = r#"{"state":"gamma","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}"#;
+    assert_eq!((FIRST.len(), SECOND.len()), (248, 108));
+    let listener = Listener::answering(answering).expect("loopback listener");
+    let output = spawn(
+        &[
+            "decide",
+            "asks for a refund",
+            "--lines",
+            "--batch",
+            "2",
+            "--plan",
+            "--url",
+            listener.base(),
+            "--no-cache",
+        ],
+        &[],
+        b"alpha\nbeta\ngamma\n",
+    )
+    .expect("plan command");
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let lines = text(&output.stdout);
+    let mut lines = lines.lines();
+    let first = lines.next().expect("first disclosed body");
+    assert!(first.contains(&format!("\"request\":{FIRST}")), "{first}");
+    assert_eq!(
+        lines.next(),
+        Some(
+            r#"{"records":3,"requests":2,"estimated_bytes":356,"estimated_input_tokens":{"lower":183,"upper":324},"upper_bound":false}"#
+        )
+    );
+    assert_eq!(lines.next(), None);
+    assert!(listener.requests().is_empty(), "preview sent a request");
+}
+
+#[test]
+fn a_later_ordinary_command_request_is_refused_by_the_process_cap() {
+    let listener = Listener::answering(answering).expect("listener");
+    let output = decide(
+        listener.base(),
+        &["--batch", "1", "--no-cache", "--max-requests-total", "1"],
+        &[],
+        "line 1\nline 2\n",
+    );
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    assert_eq!(
+        text(&output.stderr),
+        "thinkthen: the process send budget was spent before another request\nthinkthen: stopped at record 2; 1 record finished\n"
+    );
+    assert_eq!(
+        listener.count(),
+        1,
+        "the later ordinary request was not sent"
+    );
+    assert_eq!(places(&listener.requests()[0].body).len(), 1);
+}
+
+#[test]
+fn plan_refuses_an_invalid_later_record_before_disclosing_any_body() {
+    let output = spawn(
+        &[
+            "decide",
+            "asks for a refund",
+            "--jsonl",
+            "--field",
+            "/body",
+            "--plan",
+            "--url",
+            "http://127.0.0.1:1/v1",
+        ],
+        &[],
+        b"{\"body\":\"alpha\"}\n{\"body\":\n",
+    )
+    .expect("compiled plan");
+    assert_eq!(output.status.code(), Some(2));
+    assert!(output.stdout.is_empty());
+    assert_eq!(output.stderr, b"thinkthen: the record is not valid JSON\n");
 }
 
 #[test]
@@ -156,7 +239,7 @@ fn a_raised_size_warns_only_at_the_built_in_address() {
             &[
                 "decide",
                 QUESTION,
-                "--dry-run",
+                "--plan",
                 "--url",
                 base,
                 "--max-request-bytes",

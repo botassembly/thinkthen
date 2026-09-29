@@ -204,8 +204,8 @@ pub(crate) enum Command {
     /// Each record can make paid requests in three steps: one boundary question
     /// per text piece; one kind question per found name when kinds are given,
     /// plus an edge question when its span can change; then questions for the
-    /// relation pairs allowed by rules. --dry-run prints the first record's
-    /// exact boundary requests and upper bounds for later requests.
+    /// relation pairs allowed by rules. --plan prints every record's exact
+    /// boundary requests and upper bounds for later requests.
     ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
@@ -220,7 +220,7 @@ pub(crate) enum Command {
     /// A run makes paid requests. A relation between two kinds asks one
     /// question for every entity of the larger kind, or of the source kind when
     /// the counts are equal. A same-kind relation asks one yes-or-no question
-    /// for every pair, in both directions unless --either. --dry-run prints the
+    /// for every pair, in both directions unless --either. --plan prints the
     /// questions and requests and sends nothing.
     ///
     /// A run that answers some relation questions and fails others prints what
@@ -444,8 +444,11 @@ pub(crate) struct CheckArguments {
     pub(crate) timeout: u64,
     /// Print the four request bodies and stop. An optional key is checked
     /// against the address; no key is required and nothing is sent.
-    #[arg(long)]
+    #[arg(long = "plan")]
     pub(crate) dry_run: bool,
+    /// The removed spelling is parsed only to give the migration sentence.
+    #[arg(long = "dry-run", hide = true)]
+    pub(crate) retired_dry_run: bool,
 }
 
 impl std::fmt::Debug for CheckArguments {

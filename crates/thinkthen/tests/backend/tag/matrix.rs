@@ -163,7 +163,7 @@ fn dry_run_prints_the_complete_expansion_without_a_key_or_connection() {
             listener.base(),
             "--model",
             "local-1",
-            "--dry-run",
+            "--plan",
         ],
         &[],
         b"evidence",
@@ -176,6 +176,8 @@ fn dry_run_prints_the_complete_expansion_without_a_key_or_connection() {
             concat!(
                 r#"{{"url":"{}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","request":{{"state":"evidence","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{{"true":"Charges."}}}},"#,
                 r#""q2":{{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{{"true":"Prompt."}}}}}}}}}}"#,
+                "\n",
+                r#"{{"records":1,"requests":1,"estimated_bytes":346,"estimated_input_tokens":{{"lower":178,"upper":315}},"upper_bound":false}}"#,
                 "\n",
             ),
             listener.base()
@@ -317,7 +319,7 @@ fn tag_label_diagnostics_name_labels_and_hide_hostile_content() {
     for (labels, message) in cli_cases {
         let mut arguments = vec!["tag", "Which topics?"];
         arguments.extend(labels);
-        arguments.push("--dry-run");
+        arguments.push("--plan");
         let output = spawn(&arguments, &[], b"evidence").expect("tag refuses");
         assert_eq!(output.status.code(), Some(2));
         assert_eq!(
@@ -344,7 +346,7 @@ fn tag_label_diagnostics_name_labels_and_hide_hostile_content() {
     for (place, (text, message)) in files.into_iter().enumerate() {
         let path = file(&format!("diagnostic-{place}"), text);
         let output = spawn(
-            &["tag", &format!("@{}", path.to_string_lossy()), "--dry-run"],
+            &["tag", &format!("@{}", path.to_string_lossy()), "--plan"],
             &[],
             b"evidence",
         )

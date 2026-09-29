@@ -569,3 +569,71 @@ The JVM J1 case41 failure came from its isolated child environment. Java reporte
 ## Refresh strict consumers before adding a result member
 
 Accounting preparation b30af6426 missed Ada, Objective-C and COBOL facts readers that landed while it was being written. Fresh High review traced those strict decoders and the closed facts schema, so an added price member needs an explicit pre-release compatibility decision and the affected consumer checks. The same review found a separate CLI usage-completeness path and an ambiguous timing ordinal for repeated request digests. Accepted preparation2778a8e3e names both call and command accounting owners, assigns timing observations at the actual send boundary, and requires a repeated-digest case. Reconcile newly landed producers and consumers before design acceptance; a nonempty token total does not prove that every attempt reported usage.
+
+
+## Follow public removals into separate workspaces
+
+High review of0283 candidate674a82041 found that retiring two Rust deadline methods broke callers in separate library and database workspaces. Root workspace Clippy never compiled them. The same review found a recognize summary marked as an upper bound while omitting the second stage, and integer settings accepted outside the public deadline range. The deadline corrections passed recheck; the final profile-aware bound passed High review at9f6ae2896. Source preparation must map every caller of a removed public declaration across workspace boundaries and name its transition owner. Preserve exact old units until that caller migrates. A test that checks an upper-bound marker must also check the bound's value; a parser's integer shape check does not prove its numeric domain.
+
+## Check the actual selector and arithmetic authority
+
+Review ofSQL host preparationd12f9f166 found a named-function command that SQLite's helper does not support. That helper runs its entire small test module; shared conformance selects IDs through an absolute environment-named file. Accepted correction0557d77e names the real selector and an exact positive pass count before a build follows it. Separately, review ofcost design2735d738 found that matching usage-reply and send counts cannot establish complete money when checked token addition has already dropped an overflow. Fresh High review accepted corrected cost design5bde09bb5. It distinguishes arithmetic validity from reply completeness, suppresses stale CLI token totals and requires checked host aggregates. These are source and preparation defects; neither requires a broad runtime campaign to identify.
+
+
+## Bound each independently split stage
+
+The0283 recheck accepted the deadline corrections but found that the name-stage request bound still reused the number of first-stage chunks. Backend profiles split each stage independently, and long kind descriptions can make the second stage split more finely. The first regression used the default profile and could not reveal this. The corrected9f6ae2896 candidate passed High recheck with a valid profile-limit witness and a conservative question-count bound. Future staged-planner preparation must trace every independent splitter and distinguish known bytes from future response-dependent bodies.
+
+
+## Locate feature code before copying a host claim
+
+The0289 kickoff inventory named nonexistent `libraries/polars/src` and a separate Polars source counter. The binding README states that this folder holds no code. Its implementation is the root crate's feature-gated `public/frame.rs` and helpers, with tests under `tests/polars`; the root Rust counter covers both. The coordinator corrected the lane claim and next brief before implementation. A folder name is not evidence that a surface has its own crate.
+
+
+## Refresh derived assertions after a prerequisite lands
+
+The0301 wire preparation found the core fixture, but review also found exact R and TypeScript assertions. After0283 landed, its new whole-plan line added two byte/token literals in already claimed files. Root added their independently derived 13-byte reduction and 809–1,424 band directly to the handoff; High recheck accepted46925b681. Refresh both the copied body and every count derived from it, while keeping changed-question and exchanged-request identities separate.
+
+A staged0289 launch prompt still said to wait for its prerequisite after main already contained it. The worker returned without editing. Root replaced that first line with the actual landed commit and explicit start instruction, then confirmed the worker created its implementation branch. Check that a launch brief describes present authorization rather than an old future condition.
+
+
+## Inventory output producers and discarded attempts
+
+High review of timing design0302 at5e4f424e4 found that the ordinary judgment row writer does not own find, recognize, relate or annotate output. The split path also discards the refused parent result while retaining its send count. The correction must name supported verbs and carry parent observations explicitly; one ordinary row test proves neither route. Header preparation must settle repeated values using the full value list, and copied-reader proof must distinguish a closed outer envelope from closed facts. The corrected design passed High recheck at7b7cc5f8a before code. It names six shared CLI routes and a direct C consumer, preserves split-parent identity and omits duplicate headers.
+
+
+## Package regression feedback and the cap error boundary
+
+Experiment302's final pin4c0ef210 independently confirmed all five original package fixes. The later JVM locale correction already existed; it was not another pending build. Fresh Medium review accepted the bounded Dart/Flutter and R harness correction at ac5e03d75. R's counter case tried to replace immutable session settings after warming the cache. Moving the cache argument earlier alone would spoil the intended counter oracle. Reusing the existing fresh-child helper preserves one send, one cache answer and the final two observed requests. Dart's result-envelope migration had updated value assertions but left failure labels interpolating the wrapper. The next host-family brief must read assertion expressions, diagnostics and exact negative-check markers together. The detailed verifier reports also retain explicit Flutter lock and child-environment gaps; a positive example run does not close them.
+
+The0289 builder reached its final denial-context work with six error conversion/export files outside the exact claim. Root added `engine/error.rs`, `public/error.rs`, `cli/failure/convert.rs`, `public/native_batch.rs`, `public/bulk.rs` and `public/results.rs` at283ca1536 and resumed the retained author. This was a coordinator claim gap, not a user decision or machine-load constraint. The0299/0302 briefs should carry the complete error-conversion path and request any missing paths while other work can still proceed. Save coherent work in progress to its ticket branch before handback; “not ready to land” does not mean “do not commit.”
+
+
+The0286 build used one raw Python probe that loaded DuckDB and executed a function without the test helper. It failed on the default recording folder's backend mismatch before a send. Root stopped that author and resumed the same thread with inherited product/service variables removed, shell exclusions and an explicit requirement to use the scratch-cache loopback helper for executable probes. A catalog read does not need to be combined with a product call. The first restart used the coordinator's current directory by mistake, so the child sandbox named the wrong worktree; root immediately relaunched from codex-7 before continuing. Future launch briefs must pin both the working directory and the parent environment, not just the child test command. Warm files and author context were retained.
+
+
+## Validate facade kinds and nonexhaustive error consumers
+
+Fresh High review of0289 found that its public plan accepted staged question kinds that the ordinary execution path refused. The correction reuses that execution guard before preparing a body and pins zero sends. Review also found SQLite and PostgreSQL denial conversions that used nonexhaustive matches, so the new additional-send variant compiled but lost each host’s established spent-total message. The corrected candidate df77e6526 passed High re-review after both source-matched hosts proved cap1, batch1, two rows, one send and their own refusal. Future enum preparation must inspect nonexhaustive matches as well as compiler-visible consumers. No full package campaign was needed.
+
+
+## Preserve host semantics when caching keyed rows
+
+Early High review of SQLite candidate1742ac3b found three defects before final plan/cap integration: pushed key equality changed NULL, TEXT affinity and NOCASE behavior; parsing through a JSON value collapsed duplicate keys; and row reuse by raw `@path` skipped the existing named-file freshness check. The reviewer reproduced them against a source-matched extension on pinned SQLite3.50. Corrections are assigned to the retained0284 author; they are not yet accepted fixes.
+
+The next host brief must distinguish SQL equality from internal string lookup, and immutable inline arguments from a named file whose contents can change. Compare a pushed predicate with an ordinary host table before marking it omitted. Preserve duplicate-key rejection only where the host input still carries duplicates: PostgreSQL jsonb may have already resolved them. A connection-owned result cache needs the effective question identity or validated freshness as well as input bytes. These are small functional witnesses, not a reason for another scale campaign. PostgreSQL’s per-query tuplestore and DuckDB’s vector execution have different lifetimes; do not copy the SQLite LRU or its fixes without tracing those lifetimes.
+
+
+## Preserve each host value domain through a shared parser
+
+The final0284 High review reproduced configure accepting a zero request total. The new shared parser permits zero for core callers, but SQLite’s retained setting contract requires one or more and uses null to reset. Sharing grammar does not erase a host’s narrower value rule. The next host brief must compare its previous setters with the shared schema and pin the difference before storing configuration. A newly accepted core key also needs an explicit host disposition. A mapper must not accept an inert value or turn an unsupported setting into an internal defect. The0299 reviewer is checking that integration boundary while the SQLite builder corrects its positive-limit guard.
+
+
+## Keep host callbacks outside held usage guards
+
+The 0299 correction added a post-reservation cancellation check to prove that an unstarted attempt refunds its slots. High review of b50bc1e2 found that the chosen check also invoked a host callback while PreparedAttempt held the usage queue mutex. Reentry could deadlock. The existing callback-free remaining-time check observes the cancellation token and deadline without crossing that boundary. The retained builder is applying that narrow correction; the earlier listener and C proof gaps are resolved. Preparation for 0300 cost and 0302 observations must trace guard lifetimes around every host callback, observer and accounting operation. A new test seam must preserve the production callback and locking order.
+
+
+## Exercise each class of repeated setting
+
+DuckDB review reproduced an I8 failure in the shared prerequisite: a structured question with batch 1 and settings with batch 2 silently succeeded. Settings::conflicts inspected only question_fields and missed batch stored separately. Repeated model or threshold already refused, so a single representative negative hid this different storage path. Root routes the correction to the shared helper before the next host builds depend on it. Tests should distinguish question-file keys from explicit named parameters and cover each storage path with a small public-boundary table. The same review found that typed SQL NULL::VARCHAR members took DuckDB’s settings-object branch; bare NULL and NULL::VARCHAR[] did not. Keep typed nulls separate from malformed JSON in host preparation.

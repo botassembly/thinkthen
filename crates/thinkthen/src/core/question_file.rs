@@ -362,7 +362,7 @@ impl QuestionFile {
         Ok((Self::parsed(value)?, batch))
     }
 
-    fn parsed(value: Json) -> Result<Self, QuestionFileError> {
+    pub(crate) fn parsed(value: Json) -> Result<Self, QuestionFileError> {
         let Json::Object(members) = &value else {
             return Err(QuestionFileError::NotAnObject);
         };

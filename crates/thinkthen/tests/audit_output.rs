@@ -129,7 +129,7 @@ fn a_single_question_writes_literal_tuned_bytes_without_touching_the_source_or_s
     assert_eq!(fs::read_to_string(&output).expect("output"), SINGLE_OUTPUT);
     let named = format!("@{output}");
     let (code, plan, diagnostic) = measure_support::measure(
-        &["decide", &named, "--jsonl", "--dry-run"],
+        &["decide", &named, "--jsonl", "--plan"],
         b"{\"body\":\"payment failure\"}\n",
     );
     assert_eq!(code, 0, "{diagnostic}");

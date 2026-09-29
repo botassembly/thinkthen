@@ -92,7 +92,11 @@ pub(crate) fn engine(
             usage: environment.counters(),
         },
         roots,
-    )?)
+    )?
+    .with_process_budget(
+        common.max_requests_total,
+        common.max_estimated_input_tokens_total,
+    ))
 }
 
 /// Where one record's question comes from.
@@ -174,6 +178,7 @@ pub(crate) fn run(
         keeping,
         batch,
     } = asked;
+    common.check_plan_name()?;
     let threshold = settled.threshold();
     let view = view.checked()?;
     let configured_model = settled
@@ -279,7 +284,7 @@ pub(crate) fn run(
             &configuration.mismatch,
             &reading,
             &configuration.planning(),
-            first(&mut chunks)?,
+            chunks.map(|(_, row)| row),
             output.writer(),
         );
     }
@@ -321,7 +326,7 @@ fn over_table(
     kind: TableKind,
     output: &mut Output<'_>,
 ) -> Result<ExitCode, Failure> {
-    let mut rows = TableRows::new(source, kind)?;
+    let rows = TableRows::new(source, kind)?;
     if configuration.common.dry_run {
         return plan_record(
             &configuration.backend,
@@ -329,7 +334,7 @@ fn over_table(
             &configuration.mismatch,
             reading,
             &configuration.planning(),
-            rows.next().transpose()?,
+            rows,
             output.writer(),
         );
     }

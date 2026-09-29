@@ -50,6 +50,7 @@ pub(crate) fn run(
     input: impl Read + Send + 'static,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
+    arguments.common.check_plan_name()?;
     let mut spec = config::settle(arguments)?;
     let max_text_bytes = arguments.max_text_bytes.unwrap_or(MAX_TEXT_BYTES);
     let pointers = if arguments.common.field.is_empty() {
@@ -96,6 +97,7 @@ pub(crate) fn run(
             source,
             &backend,
             selected_profile.as_ref(),
+            config::table_kind(&arguments.common),
             (
                 &spec,
                 arguments

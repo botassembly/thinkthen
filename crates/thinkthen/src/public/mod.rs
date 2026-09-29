@@ -16,6 +16,7 @@ mod error;
 mod frame;
 mod native_batch;
 mod options;
+mod plan;
 mod question;
 mod recognize;
 mod relate;
@@ -23,6 +24,7 @@ mod results;
 mod set;
 mod settings;
 
+pub use crate::core::settings::{For, Settings, SettingsError};
 pub use annotated::{Annotated, AnnotatedRecord, Failed, FailureCause, NamedAnnotation};
 pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
@@ -30,10 +32,14 @@ pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
 pub use error::{Error, ErrorDetail, ErrorKind};
 #[cfg(feature = "polars")]
-pub use frame::PolarsEngine;
+pub use frame::{PolarsCallOptions, PolarsEngine};
 pub use native_batch::RecoverableDetails;
-pub(crate) use options::SendReservation;
-pub use options::{BatchSetting, CallOptions, CancelToken, SendBudget, SendBudgetDenial};
+pub(crate) use options::budget::process_budget;
+pub use options::{
+    BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
+};
+pub(crate) use options::{EstimatedReservation, SendReservation};
+pub use plan::PlanEstimate;
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
     QuestionKind, TagQuestion,
@@ -44,7 +50,8 @@ pub use recognize::{
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::{
     Answer, Call, Candidate, Counters, Details, Facts, Found, Judgment, NamedProbability,
-    ObservedRow, Probabilities, QuestionDetail, Ranked, RecordObservation, Row, Usage,
+    ObservedRow, Probabilities, QuestionDetail, Ranked, RecordObservation, Row, Tally, TallyStart,
+    Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;

@@ -1,10 +1,8 @@
 #!/usr/bin/env python3
 """The slide runs as drawn in the CLI built from the amalgamation.
 
-`tests/slide.sql` visibly selects batch one after `.load ./thinkthen`,
-so the CLI runs in a folder that holds the library under that name.
-The warm judges five rows, the WHERE keeps the rows the generic arm says
-yes to, and the queries after the warm send nothing new.
+The CLI runs in a folder holding the extension under its load name. The
+keyed call judges five rows once; the second query reuses connection rows.
 """
 
 from __future__ import annotations
@@ -25,8 +23,8 @@ def test_the_slide_runs_as_drawn() -> None:
     done = subprocess.run([CLI, ":memory:"], stdin=(HERE / "slide.sql").open(), cwd=folder, env=env,
                           capture_output=True, text=True, timeout=60, check=False)
     rows = ["i want a refund now", "good morning", "refund, please", "maybe later", "see you"]
-    expect((done.stdout, done.stderr), ("1\n5\n" + "".join(f"{at}|{body}\n" for at, body in enumerate(rows, 1)) + "5\n", ""), "the slide")
-    expect(backend.close(), 5, "sends: the warm's five, and none after it")
+    expect((done.stdout, done.stderr), ("".join(f"{at}|{body}\n" for at, body in enumerate(rows, 1)) + "5\n", ""), "the slide")
+    expect(backend.close(), 1, "one packed send and one connection-store reuse")
 
 
 if __name__ == "__main__":

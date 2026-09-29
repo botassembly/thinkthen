@@ -1,121 +1,58 @@
 # The SQLite extension
 
-A loadable SQLite extension over the public `thinkthen` Rust API. It is the unpublished crate `thinkthen-sqlite` in its own Cargo workspace (ADR 0047). The build makes `target/release/libthinkthen0.so`. Copy it to `thinkthen.so` and load it:
+`thinkthen-sqlite` is a loadable extension over the public Rust engine (ADR 0047 and ADR 0105). Build its release library, copy `libthinkthen0.so` to `thinkthen.so`, and load it with `.load ./thinkthen`. SQLite 3.50.0 or newer is required. The extension registers volatile, direct-only functions: an untrusted schema cannot call them to spend requests or read files.
+
+## Judge a table once
 
 ```sql
 .load ./thinkthen
-SELECT thinkthen_batch(1); -- retain the original warm-to-scalar cache identity
-SELECT thinkthen_warm('Is this a complaint?', body) FROM reviews;
-SELECT id, body FROM (
-  SELECT id, body, thinkthen_decide('Is this a complaint?', body) AS is_complaint FROM reviews
-) WHERE is_complaint;
+SELECT s.title, d.value AS on_abbey_road, d.probability AS p
+FROM songs AS s
+JOIN thinkthen_decide_many(
+  'The text is the title of a song by the Beatles. It appears on the album Abbey Road.',
+  (SELECT json_group_object(id, title) FROM songs),
+  '{"threshold":"0.3:0.7"}') AS d ON d.key = CAST(s.id AS TEXT)
+ORDER BY d.probability DESC;
 ```
 
-The extension needs SQLite 3.50.0 or newer. Below 3.50.0 a CHECK constraint in a database file from somewhere else can reach a volatile function, so the load refuses and names the host's version. The recipe selects batch one before the first engine call because its later scalar calls must reuse the same one-record request keys. Without that setting, warm packs by default and later singleton scalar calls are different requests.
+The keyed input is a JSON object of original row keys to nonblank text; repeated decoded keys are usage errors. One table call packs the records in input order; `key` joins each answer back to its row. `thinkthen_decide_many` and `thinkthen_choose_many` return `(key, value, probability)`. `thinkthen_score_many` and `thinkthen_tag_many` return `(key, value)`; their probability column does not exist. A `key =` condition probes the already judged result and is excluded from its argument identity. SQLite still applies its own comparison, including NULL, TEXT affinity and collation; the host uses the fast lookup only for binary text equality. The connection holds eight most recently used packed answer sets, shares rows across scans, and frees them when it closes. Each slot retains the three argument byte strings, one key-to-row map and the answer rows, so its memory grows with that packed input; eight slots bound the number of retained sets, not their total bytes. An identical table call on that connection can reuse its result without another engine call; a changed question, keyed object or settings object occupies another slot. A changed named question file invalidates its matching slot.
 
-## The functions
+Each SQL call still needs the caller's judgment about whether to spend. Correlated scalar calls can send once per source row. For a large join, aggregate its keyed JSON once, then join the table result. `tests/slide.sql` is a runnable small example of that shape.
 
-| Function | Answers |
-|---|---|
-| `thinkthen_decide(question, text[, deadline[, context]])` | 1, 0, or NULL for unsure |
-| `thinkthen_probability(question, text[, deadline[, context]])` | a decide question's yes probability as REAL, including when decide is unsure |
-| `thinkthen_choose(question, text[, deadline[, context]])` | the chosen label, or NULL |
-| `thinkthen_score(question, text[, deadline[, context]])` | the position from 0 to K−1, as REAL |
-| `thinkthen_tag(question, text[, deadline[, context]])` | a JSON array of labels |
-| `thinkthen_details(question, text[, deadline[, context]])` | the command's `--details` JSON document |
-| `thinkthen_try_details(question, text[, deadline[, context]])` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
-| `thinkthen_annotate(questions, text[, deadline])` | a JSON object keyed by question name |
-| `thinkthen_warm(question, text[, deadline[, context]])` | an aggregate: judges each distinct question, context and text triple and returns the count |
-| `thinkthen_find(question, units_json[, none[, deadline_ms]])` | JSON with the selected original index/value/probability and each candidate probability |
-| `thinkthen_usage()` | JSON totals: `requests_sent`, `cache_answers`, `input_tokens`, `output_tokens` |
-| `thinkthen_recognize(text, kinds[, deadline])` | a table of `text, start, end, length, kind, strength` |
-| `thinkthen_recognize_document(text, spec)` | complete recognize JSON with entities and any relation edges |
-| `thinkthen_relate(table, id, name, kind, rule, …[, deadline])` | a table of `relation, source, target, probability`; the deadline follows the fourth rule slot |
+## Calls and settings
 
-A question is plain text for a decide question, JSON text starting with `{`, or `'@name'` for a question file. A question set for `thinkthen_annotate` takes the same three forms. A banded decide question goes to `thinkthen_decide`, `thinkthen_probability`, `thinkthen_details`, and `thinkthen_warm`. `thinkthen_warm` takes decide questions only, and ignores a band, so it fills the answers decide reads with the same question. `thinkthen_probability('Is this a complaint?', body)` reads the yes probability directly. Separate calls reuse an answer only when their complete request digests match.
+| Call | Return |
+| --- | --- |
+| `thinkthen_decide(question, input[, settings])` | 1, 0, or SQL NULL for unsure |
+| `thinkthen_choose(question, input[, settings])` | chosen label or SQL NULL |
+| `thinkthen_score(question, input[, settings])` | position on the named levels |
+| `thinkthen_tag(question, input[, settings])` | JSON array text of labels |
+| `thinkthen_details`, `thinkthen_try_details` with the same slots | result JSON, or an answered/failed envelope |
+| `thinkthen_find(question, units_json[, settings])` | selected index, value and probabilities as JSON text |
+| `thinkthen_annotate(questions, input[, settings])` | named judgments as JSON text |
+| `thinkthen_recognize(input, kinds[, settings])` | rows of names, offsets, kinds and strengths |
+| `thinkthen_relations(input, spec)` | complete recognition JSON, including relations |
+| `thinkthen_relate(query, rules[, settings])` | rows of relation, source id, target id and probability |
+| `thinkthen_plan(question, keyed_json[, settings])` | JSON text with planned records, requests, bytes, input token band and the first exact request body as `first_body_utf8` |
+| `thinkthen_usage()` | cumulative request, cache-answer and reported token totals |
+| `thinkthen_configure(json)` | the selected engine settings object, before engine build |
 
-`thinkthen_find` instead takes a **plain** question and one ordered JSON array of text units. For a table with an explicit `ordinal`, use `SELECT thinkthen_find('Which passage answers?', json_group_array(passage ORDER BY ordinal), 1) FROM passages`. Its `none` flag is integer `0` or `1` (default `0`); the fourth slot is the usual deadline. An empty array or top-level SQL NULL returns SQL NULL without sending. At least two units are required otherwise, with at most 255 (254 when offering none). Each duplicate retains its own zero-based index. A selected none returns a non-null JSON object with null `index` and `value`. The complete ordered group is one request and has its own cache identity; the function is direct-only and volatile.
+The optional settings slot is JSON text in the shared `thinkthen.settings/1` grammar. Question fields such as `threshold`, `options`, `levels`, `labels` and `model` affect question bytes; `context`, `batch` and `deadline_ms` control the call. Choose, score and tag can take a plain question when their members are in settings. Duplicate fields in a complete question and settings refuse before sending. `deadline_ms` is an integer: `-1` removes a call deadline, `0` is already spent, and positive values are milliseconds. The parser checks its range before a worker starts. Find alone accepts `none: true`. Aggregate verbs take call controls, not judgment fields, in their settings object.
 
-A NULL text answers NULL and sends nothing. A BLOB, a number, text holding a NUL byte, or text that is not UTF-8 raises `usage` before any send.
+`thinkthen_plan` validates the keyed input and settings and makes no backend request. Its `requests` count is prepared requests before cache answers, refusal splits or retries. `first_body_utf8` is the exact first planned request body, or JSON null for empty input; it can contain question and evidence text, so handle the plan as carefully as a request. It contains no key.
 
-The deadline is milliseconds under ADR 0041. `-1` means none. `0` is already spent and sends nothing. A REAL is accepted when it is finite and whole. Any other value raises `usage` and names the value.
+`thinkthen_configure` replaces twelve individual setters. Its closed object supports `model`, `batch`, `cache`, `throttle`, `timeout`, `max_retries`, `max_request_bytes`, `max_requests`, `max_requests_total`, `profile`, `record` and `replay`. The whole object is checked before it replaces the previous selection, and the engine must not already have built. `thinkthen_usage()` does not build it; a plan does build the engine so configure before planning. The address and key remain environment-controlled through `THINKTHEN_BASE_URL` and `THINKTHEN_API_KEY`; SQL cannot supply either. `max_requests_total` reserves each live attempt against the shared process count, including later packed requests and retries. Cache hits and plans send nothing.
 
-Context is the fourth argument of eligible judgments and warm; the third remains the deadline. Pass `-1` for no deadline when supplying context. A SQL `NULL` context keeps the no-context request identity; nonblank context is literal text sent once per packed request. It changes the request digest but not the question digest. A packed request with context still differs from a later one-record scalar request with the same context.
+The old `thinkthen_warm`, `thinkthen_probability`, `thinkthen_recognize_document`, individual setters and positional deadline/context forms refuse with migration guidance. Read probability from the same decide or choose `_many` row as its value. A NULL question or input returns SQL NULL; malformed types and settings raise `thinkthen usage` before a send. Error prefixes are `usage`, `local`, `backend`, `cancelled`, `deadline` and `defect`. `thinkthen_try_details` returns fixed safe advice for a recoverable row failure; cancellation and deadlines still raise errors.
 
-`thinkthen_recognize` takes its kinds as a comma list, a JSON recognize section, or `'@name'`. A spec with relations raises `usage`, because relations come from `thinkthen_relate`. `start`, `end`, and `length` count Unicode characters, as SQLite's `substr` does, so `substr(text, start + 1, length)` returns the name. With no kinds, every name has the kind `ENTITY`.
+`thinkthen_find` accepts an ordered JSON array of 2–255 nonblank text units, or 2–254 with `{"none":true}`. Duplicates retain separate zero-based positions. Empty input and SQL NULL return SQL NULL. `thinkthen_recognize` keeps the `text, start, end, length, kind, strength` row shape, with character offsets matching SQLite `substr`. `thinkthen_relations` accepts a full or bare recognize spec or an `@file`.
 
-`thinkthen_recognize_document(text, spec)` takes the original text and a full version-one recognize JSON question file, a bare JSON recognize section, or `'@name'` for either form. It returns the public recognize object as JSON text: complete entities and, when rules were given, a `relations` array with complete source and target entities. The array is empty when no edge reaches the relation cut; it is absent when no rule was given. A SQL NULL argument returns SQL NULL and sends nothing. Invalid SQL types and inline specs raise `usage` before a send; an invalid rule in a file raises `local`. The call may send several requests as recognition finds names, assigns kinds, then tests relations. It remains direct-only and volatile like the other functions.
+`thinkthen_relate` runs a caller-supplied read-only `SELECT` yielding `id, name` or `id, name, kind` on the same connection. `rules` is one inline rule, a JSON array of rules, a JSON relate spec or `@file`. At most 255 distinct name/kind pairs enter a call. Equal pairs share one entity, and each answer edge expands to the ids that held its endpoints. Blank names/kinds and a 256th pair raise usage before a send.
 
-`thinkthen_relate` reads the named table's id, name, and kind columns with a nested read-only SELECT. Each rule is `NAME`, `NAME=SOURCE:TARGET`, or either one with an `either:` prefix, up to four rules. A single JSON relate section or `'@name'` also works. Rows with the same name and kind count as one entity, and each edge comes back once for every row holding its two ends. `source` and `target` carry the id column's values, so the result joins back to the table. At most 255 distinct name and kind pairs go in one call. A NULL or blank name or kind raises `usage` naming the row's id.
+## Runtime boundaries
 
-An error reads `thinkthen <kind>: <message>`, with ` (retryable)` after the kind when a retry could succeed. `cancelled` is `SQLITE_INTERRUPT`, `usage` is `SQLITE_CONSTRAINT`, `local` is `SQLITE_CANTOPEN`, and every other kind is `SQLITE_ERROR`.
+The engine is shared by connections in this loaded copy. `thinkthen_budget_ms(n)` is separate from engine configuration and belongs to one connection: `0` spends it, `-1` clears it, and positive milliseconds run from that statement onward. Calls use the shorter remaining connection budget or call deadline. Every sending call runs on a detachable worker; the SQLite thread checks interruption every 50 ms and cancels promptly. A sent request remains counted. The library stays mapped until process exit so a detached worker can finish safely.
 
-## Constrain a stored answer
+Questions may be plain decide text, inline JSON or a named `@file`; question sets, recognition and relation specs use their documented JSON/file forms. The file door follows symlinks, opens a regular file nonblocking and refuses files above 1 MiB. Parsed named files are re-read when modification time or size changes. Answer cache and recordings contain question and evidence text; keep their folders private. Recordings store bodies, never headers. Strict replay misses send nothing. The cache is not a pricing or authorization ledger.
 
-`thinkthen_choose` returns plain text. Put a `CHECK` on the caller's stored answer column:
-
-```sql
-CREATE TABLE judged (
-  id INTEGER,
-  team TEXT CHECK (team IN ('billing', 'shipping'))
-);
-INSERT INTO judged
-SELECT id, team FROM (
-  SELECT id, thinkthen_choose('{"choose":"Which team owns this?","options":["billing","shipping"]}', body) AS team
-  FROM tickets
-) AS choices;
-SELECT id, team FROM judged WHERE team = 'billing';
-```
-
-The check rejects another non-`NULL` label. A stored `NULL` can represent a choice below the cut or an exact tie. The check permits `NULL`; input-`NULL` behavior follows the function's argument rules above. A failed ThinkThen call raises an error; do not turn it into `NULL` to pass the check. The check reads only the stored `team` value. It does not invoke a ThinkThen function inside the schema, which this extension refuses.
-
-`thinkthen_try_details` lets a query keep later good rows after a usage, local, or backend failure. Its JSON is `{"status":"answered","details":...}` or `{"status":"failed","error":{"kind":"usage","message":"check the row's question and arguments, or raise the process request total when it is spent","retryable":false}}`. The answered `details` is the full `thinkthen.result/1` object. A SQL NULL question or text returns SQL NULL. An unresolved answer returns an answered envelope with JSON `null` in its details. Failed values use fixed advice and omit the question, evidence, key, file path, cache path, and backend address. Interrupts, deadlines, and defects still raise SQL errors.
-
-## Run facts
-
-`thinkthen_details(question, text)` returns the command's `--details` line for one text, schema `thinkthen.result/1`. Read a member with `json_extract`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
-
-The details digest includes a question's saved calibration `profile`. When `thinkthen_profile(json)` selects a different runtime name, `meta.profile_warning` names both values. The selected runtime profile checks limits before sending.
-
-`thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
-
-## The engine and its settings
-
-The extension holds one engine for the process, shared by every connection. It builds on the first call that can send, from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`, as the command reads them. SQL cannot name an address or a key. `thinkthen_usage()` does not build the engine. Before the first call every total reads 0.
-
-Twelve setting functions change the engine before it builds. Each returns its argument and sends nothing. A bad value raises `usage` at the setting call. A setting after the engine builds raises `usage`.
-
-`thinkthen_budget_ms(n)` is separate from those engine settings. Set it in a separate statement immediately before the query. It starts one monotonic budget on that connection: `-1` clears it, `0` is spent, and a positive whole number sets milliseconds. Every ThinkThen call on that connection uses the remaining time, or its shorter per-call deadline. Expiry during a held send returns a deadline error promptly; the sent attempt stays counted. The budget remains in force across later statements until reset. It bounds ThinkThen work only; SQLite work after the last ThinkThen call remains the host's responsibility. Other connections have independent budgets.
-
-- `thinkthen_throttle(n)`: requests in flight at once, from 1 through 32. The default is 4.
-- `thinkthen_max_requests(n)`: the most records one engine call may answer. `NULL` means no limit. Each scalar row is its own one-record call, and each warm flush is one call of up to 256 rows, so this limit does not cap a statement's spending. Use the total below for that.
-- `thinkthen_batch(value)`: `max` (the default) or a positive whole number of records per request. `NULL` clears the explicit choice back to the environment or question-file setting. Select `1` before the first engine call for the old warm-then-scalar cache recipe.
-- `thinkthen_max_request_bytes(n)`: a positive request-byte ceiling for request plans. `NULL` keeps the environment value. Set it before the first engine call.
-- `thinkthen_max_requests_total(n)`: the most live requests this process may attempt across calls and retries. It is unset by default, and `NULL` unsets it. An atomic reservation checks every actual attempt before sending, including packed warm requests, retries and requests within recognize or relate. Concurrent calls cannot exceed the total. An ordinary scalar still refuses a spent total before its call, even for a cache answer. A warm pass can send earlier requests before a later attempt is denied; its aggregate then returns an error, no partial count. A forked child starts a new count. `thinkthen status` counts only command sends.
-- `thinkthen_cache(folder)`: the answer cache's folder. `NULL` turns the cache off.
-- `thinkthen_model(text)`: the backend model; `NULL` keeps the environment value.
-- `thinkthen_timeout(n)`: a positive whole number of seconds for an attempt; `NULL` keeps the environment value.
-- `thinkthen_max_retries(n)`: a whole number of retries from 0 through 4294967295; `NULL` keeps the environment value.
-- `thinkthen_profile(json)`: a version-one backend profile in JSON text, never a path; `NULL` keeps the environment value.
-- `thinkthen_record(path)` and `thinkthen_replay(path)`: a plain folder path for live recording or strict offline replay; `NULL` keeps the environment value. A record always sends, and a replay miss sends nothing.
-
-The throttle holds per loaded copy of the engine. A process that also loads another surface's native package, such as a Python wheel, holds two copies and can run up to twice the throttle (ADR 0047 item 5).
-
-## The cache
-
-Answers go to the engine's disk cache and outlive the process. The cache key is the complete request digest. Repeating the same ordered packed warm cohort under the same settings can reuse its cached request. A later singleton scalar has a different request key and may send. The batch-one recipe above makes warm and scalar requests identical, so the later scalar reads the cache. With `thinkthen_cache(NULL)`, repeated requests send again.
-
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_cache(NULL)`.
-
-## Authority: who may do what
-
-- **Files.** A call reads only the file its `'@name'` argument names, resolved against the process working directory. The file must be a regular file of at most 1 MiB. It is opened once without blocking, so a fifo or a device refuses. The extension confines nothing and follows symlinks. A parsed file is re-read when its modified time or size changes.
-- **Schema.** Every function and both table-valued functions are direct-only. A view, trigger, DEFAULT, CHECK constraint, generated column, or index in a database file cannot call them, whatever `trusted_schema` says. No function is deterministic, so no index expression can hold one.
-- **Credentials.** The key comes from `THINKTHEN_API_KEY` and goes only to the address the environment names. No message carries it.
-- **Cancellation and threads.** Every call that can send runs on its own worker thread. The calling thread waits and checks `sqlite3_is_interrupted` on its own connection every 50 ms. An interrupt, or Ctrl-C in the CLI, cancels the call and returns `thinkthen cancelled` at once. The detached worker finishes the requests it already sent and starts no new one. This is the known exception to ADR 0017's rule that no thread outlives a call: a detached worker lives until its sent requests end, at most the 30-second request timeout, and holds its throttle permits until then. The extension pins itself in memory, so closing the loading connection never unmaps a worker's code.
-
-## Building and checking
-
-`setup.sh` puts the SQLite 3.50.0 amalgamation under `~/.cache/thinkthen-toolchains/` once. It copies from a folder you name, or fetches the zip from sqlite.org, and checks the two hashes in `amalgamation.sha256`. `tests/host_sqlite.sh` builds the host library and CLI from it. `check.sh` never fetches. Without the toolchain it reports "not run" and exits 77.
-
-`check.sh` runs the formatter, Clippy, and the unit tests, builds the release library with the home path remapped, and checks one exported symbol and one panic guard. It then runs each Python test under a 300-second limit from `sdlc/scripts/time-limit`. Every test child starts its own loopback backend and its own cache, configuration, and usage folders, with the caller's key removed. `tests/conformance.py` runs every shared case in its own child and reports each as pass, FAIL, or not run with its reason.
+`setup.sh` installs the pinned SQLite 3.50.0 amalgamation into the local toolchain cache once. `check.sh` builds a matching extension offline, verifies one exported entry point and the panic guard, then runs fixtures on the pinned host. `tests/helper.py` supplies isolated loopback children with clean environments; `tests/conformance.py` selects cases with an absolute `THINKTHEN_CONFORMANCE_IDS` file. A source test, a copied installed package and the release runner are separate qualifications.

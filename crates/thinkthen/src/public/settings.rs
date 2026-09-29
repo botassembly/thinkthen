@@ -1,5 +1,7 @@
 //! The engine builder, and the environment read it captures once.
 
+mod budgets;
+
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -61,6 +63,8 @@ pub struct EngineBuilder {
     model: Option<ModelName>,
     width: Option<Width>,
     max_requests: Option<usize>,
+    max_requests_total: Option<u64>,
+    max_estimated_input_tokens_total: Option<u64>,
     max_request_bytes: usize,
     batch: Option<crate::core::Setting>,
     env_batch: Option<String>,
@@ -83,6 +87,11 @@ impl fmt::Debug for EngineBuilder {
             .field("model", &self.model)
             .field("width", &self.width)
             .field("max_requests", &self.max_requests)
+            .field("max_requests_total", &self.max_requests_total)
+            .field(
+                "max_estimated_input_tokens_total",
+                &self.max_estimated_input_tokens_total,
+            )
             .field("max_request_bytes", &self.max_request_bytes)
             .field("batch", &self.batch)
             .field("env_batch", &self.env_batch.is_some())
@@ -99,6 +108,16 @@ impl fmt::Debug for EngineBuilder {
 }
 
 impl EngineBuilder {
+    /// Validate the closed C/host engine-settings object without reading the
+    /// environment. The total-request cap is active before any send.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] for duplicate, unknown, or invalid settings.
+    pub fn validate_settings_json(text: &str) -> Result<(), Error> {
+        crate::core::engine_settings(text).map_err(Error::usage)
+    }
+
     pub(crate) fn new() -> Self {
         Self {
             base_url: None,
@@ -106,6 +125,8 @@ impl EngineBuilder {
             model: None,
             width: None,
             max_requests: None,
+            max_requests_total: None,
+            max_estimated_input_tokens_total: None,
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
             batch: None,
             env_batch: None,
@@ -430,7 +451,17 @@ impl EngineBuilder {
             }),
             usage: Arc::new(Counters::new(None)),
         };
-        super::Engine::from_settings(settings, self.max_requests, profile, roots, batch)
+        super::Engine::from_settings(
+            settings,
+            self.max_requests,
+            (
+                self.max_requests_total,
+                self.max_estimated_input_tokens_total,
+            ),
+            profile,
+            roots,
+            batch,
+        )
     }
 
     fn storage(&self) -> Result<Storage, Error> {

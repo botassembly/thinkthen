@@ -175,7 +175,7 @@ fn every_preflight_refusal_is_keyed_and_opens_no_connection() {
             2,
         ),
         (vec!["--jsonl"], b"{}\nnot-json\n".to_vec(), 2),
-        (vec!["--dry-run"], b"one\ntwo\n".to_vec(), 0),
+        (vec!["--plan"], b"one\ntwo\n".to_vec(), 0),
         (vec![], Vec::new(), 0),
         (vec!["--csv"], b"a\nb\n".to_vec(), 2),
         (vec!["--tsv"], b"a\nb\n".to_vec(), 2),
@@ -203,7 +203,7 @@ fn every_preflight_refusal_is_keyed_and_opens_no_connection() {
         ),
         (
             "Which?",
-            vec!["--dry-run", "--record", "unused"],
+            vec!["--plan", "--record", "unused"],
             b"one\ntwo\n".as_slice(),
         ),
         (

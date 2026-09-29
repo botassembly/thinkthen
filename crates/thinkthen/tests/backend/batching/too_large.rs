@@ -280,3 +280,68 @@ fn repeated_members_split_by_record_position() {
     );
     assert_eq!(text(&output.stdout).lines().count(), 5);
 }
+
+#[test]
+fn estimated_total_charges_the_refused_parent_and_refuses_a_split_child() {
+    let answer = |request: &[u8]| {
+        if places(request).len() == 5 {
+            Canned::status(400, r#"{"detail":{"error_type":"max_tokens_exceeded"}}"#)
+        } else {
+            answering(request)
+        }
+    };
+    let baseline = Listener::answering(answer).expect("baseline listener");
+    let ordinary = decide(
+        baseline.base(),
+        &[
+            "--batch",
+            "5",
+            "--jobs",
+            "1",
+            "--max-retries",
+            "0",
+            "--no-cache",
+        ],
+        &[],
+        &lines(1..=5),
+    );
+    assert_eq!(ordinary.status.code(), Some(0));
+    let bodies = baseline.requests();
+    assert_eq!(
+        bodies
+            .iter()
+            .map(|r| places(&r.body).len())
+            .collect::<Vec<_>>(),
+        [5, 3, 2]
+    );
+    let parent = bodies.first().expect("refused parent").body.len() as u64;
+    let charge = (parent * 908).div_ceil(1000);
+
+    let limited = Listener::answering(answer).expect("limited listener");
+    let limit = charge.to_string();
+    let stopped = decide(
+        limited.base(),
+        &[
+            "--batch",
+            "5",
+            "--jobs",
+            "1",
+            "--max-retries",
+            "0",
+            "--no-cache",
+            "--max-estimated-input-tokens-total",
+            &limit,
+        ],
+        &[],
+        &lines(1..=5),
+    );
+    assert_eq!(stopped.status.code(), Some(2), "{}", text(&stopped.stderr));
+    assert!(text(&stopped.stderr).contains(&format!(
+        "max_estimated_input_tokens_total={limit} (encoded-body-bytes-908-v1) would be exceeded before another request in this call"
+    )));
+    assert_eq!(limited.count(), 1, "the denied split child never arrived");
+    assert_eq!(
+        limited.requests().first().expect("parent body").body.len() as u64,
+        parent
+    );
+}

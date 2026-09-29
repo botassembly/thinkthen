@@ -101,6 +101,7 @@ pub(crate) struct Engine {
     roots: Option<Roots>,
     usage_path: Option<PathBuf>,
     recording: bool,
+    send_budget: Option<crate::engine::send_budget::ProcessBudget>,
     state: Arc<Guarded<State>>,
 }
 
@@ -129,6 +130,20 @@ pub(crate) struct Found {
 }
 
 impl Engine {
+    /// Select this engine's limit at each live transport reservation.
+    pub(crate) fn with_process_budget(
+        mut self,
+        limit: Option<u64>,
+        estimated_limit: Option<u64>,
+    ) -> Self {
+        self.send_budget = Some(crate::engine::send_budget::ProcessBudget {
+            budget: crate::public::process_budget(),
+            requests: limit,
+            estimated: estimated_limit,
+        });
+        self
+    }
+
     /// Check the local settings, register an explicit width, and build the pool.
     ///
     /// Nothing here reads the key, opens a folder for writing, counts, or connects.
@@ -162,6 +177,7 @@ impl Engine {
             storage: settings.storage,
             roots,
             recording: false,
+            send_budget: None,
             state: Arc::new(Guarded::empty()),
         };
         let (usage, cancel) = (settings.usage, Cancel::default());
@@ -481,6 +497,7 @@ impl Engine {
             max_retries: self.max_retries,
             retry_wait: self.retry_wait,
             usage: &state.usage,
+            send_budget: self.send_budget.clone(),
         }
     }
 }

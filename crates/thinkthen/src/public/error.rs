@@ -1,8 +1,8 @@
 //! The one public error: six kinds, a safe message, and the retry signal.
 
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
-use crate::public::SendBudgetDenial;
 use crate::public::results::Facts;
+use crate::public::{EstimatedInputDenial, SendBudgetDenial};
 
 /// What stopped a call, as one of six stable kinds.
 ///
@@ -64,12 +64,23 @@ impl ErrorKind {
 }
 
 /// The safe message behind one [`Error`] and whether the same call may succeed later.
-#[derive(Debug)]
 pub struct ErrorDetail {
     message: String,
     retryable: bool,
     send_budget_denial: Option<SendBudgetDenial>,
+    estimated_input_denial: Option<EstimatedInputDenial>,
     facts: Option<Box<Facts>>,
+}
+
+impl std::fmt::Debug for ErrorDetail {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ErrorDetail")
+            .field("message", &self.message)
+            .field("retryable", &self.retryable)
+            .field("send_budget_denial", &self.send_budget_denial)
+            .field("facts", &self.facts)
+            .finish()
+    }
 }
 
 impl ErrorDetail {
@@ -121,6 +132,12 @@ impl Error {
         self.detail().send_budget_denial
     }
 
+    /// The typed reason estimated input admission refused this live attempt.
+    #[must_use]
+    pub const fn estimated_input_denial(&self) -> Option<EstimatedInputDenial> {
+        self.detail().estimated_input_denial
+    }
+
     /// Final facts for a started call, including one that sent nothing.
     #[must_use]
     pub fn facts(&self) -> Option<&Facts> {
@@ -144,6 +161,7 @@ impl Error {
             message: message.into(),
             retryable: false,
             send_budget_denial: None,
+            estimated_input_denial: None,
             facts: None,
         };
         match kind {
@@ -200,8 +218,15 @@ impl From<EngineError> for Error {
             | Self::Deadline(detail)
             | Self::Defect(detail) => {
                 detail.retryable = error.retryable();
+                detail.estimated_input_denial = match error {
+                    EngineError::EstimatedInput(reason) => Some(reason),
+                    _ => None,
+                };
                 detail.send_budget_denial = match error {
                     EngineError::SendBudgetFirst => Some(SendBudgetDenial::BeforeFirstSend),
+                    EngineError::SendBudgetAdditional => {
+                        Some(SendBudgetDenial::BeforeAdditionalSend)
+                    }
                     EngineError::SendBudgetRetry(last_status) => {
                         Some(SendBudgetDenial::BeforeRetry { last_status })
                     }
@@ -224,9 +249,13 @@ fn message(error: &EngineError) -> String {
         }
         EngineError::Status(status) => return format!("the backend answered with status {status}"),
         EngineError::SendBudgetFirst => "the process send budget was spent before a request",
+        EngineError::SendBudgetAdditional => {
+            "the process send budget was spent before another request in this call"
+        }
         EngineError::SendBudgetRetry(status) => {
             return format!("the process send budget was spent before retrying status {status}");
         }
+        EngineError::EstimatedInput(reason) => return reason.to_string(),
         EngineError::TokenLimit => "the backend answered with status 400",
         EngineError::ReplyTooLarge(limit) => return reply_too_large(*limit),
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),

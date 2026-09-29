@@ -28,7 +28,7 @@ fn each_verb_carries_a_structured_question_text_into_the_plan() {
     ];
     for (index, (verb, file, wanted)) in cases.into_iter().enumerate() {
         let written = written(&format!("structured-text-{index}"), file);
-        let plan = printed(&[verb, &written, "--dry-run"]);
+        let plan = printed(&[verb, &written, "--plan"]);
         assert!(plan.contains(wanted), "{file}: {plan}");
     }
 }
@@ -39,7 +39,7 @@ fn a_structured_tag_question_text_makes_array_instructions() {
         "structured-tag-text",
         r#"{"tag":["Which topics?"],"labels":["billing","urgent"]}"#,
     );
-    let plan = printed(&["tag", &written, "--dry-run"]);
+    let plan = printed(&["tag", &written, "--plan"]);
     for label in ["billing", "urgent"] {
         let wanted = format!(r#""instructions":[["Which topics?"],{{"label":"{label}"}}]"#);
         assert!(plan.contains(&wanted), "{label}: {plan}");
@@ -52,7 +52,7 @@ fn one_structured_tag_description_expands_every_label_into_an_array() {
         "structured-tag-null",
         r#"{"tag":"Which topics?","labels":{"billing":{"what":"Money"},"urgent":"Urgent."}}"#,
     );
-    let plan = printed(&["tag", &written, "--dry-run"]);
+    let plan = printed(&["tag", &written, "--plan"]);
     let billing =
         r#""instructions":["Which topics?",{"label":"billing","description":{"what":"Money"}}]"#;
     let urgent = r#""instructions":["Which topics?",{"label":"urgent","description":"Urgent."}]"#;
@@ -66,20 +66,20 @@ fn a_null_tag_description_is_omitted_from_the_array_and_the_criteria() {
         "tag",
         r#"{"tag":["Which topics?"],"labels":{"billing":null,"urgent":"Urgent."}}"#,
     );
-    let plan = printed(&["tag", &written, "--dry-run"]);
+    let plan = printed(&["tag", &written, "--plan"]);
     let billing = r#""instructions":[["Which topics?"],{"label":"billing"}]"#;
     assert!(plan.contains(billing), "{plan}");
 }
 
 #[test]
-fn true_and_false_carry_structure_and_null_into_the_criteria() {
+fn structured_true_and_null_false_keep_the_input_but_omit_the_null_wire_member() {
     let written = written(
         "structured-decide-criteria",
         r#"{"decide":"Does this ask for a refund?","true":{"means":"Money back."},"false":null}"#,
     );
-    let plan = printed(&["decide", &written, "--dry-run"]);
+    let plan = printed(&["decide", &written, "--plan"]);
     assert!(
-        plan.contains(r#""criteria":{"true":{"means":"Money back."},"false":null}"#),
+        plan.contains(r#""criteria":{"true":{"means":"Money back."}}"#),
         "{plan}"
     );
 }
@@ -90,7 +90,7 @@ fn described_options_and_a_described_score_map_reach_the_plan() {
         "structured-choose-map",
         r#"{"choose":"Which team?","options":{"billing":{"what":"Money and invoices."},"other":null}}"#,
     );
-    let plan = printed(&["choose", &choose, "--dry-run"]);
+    let plan = printed(&["choose", &choose, "--plan"]);
     assert!(
         plan.contains(r#""criteria":{"billing":{"what":"Money and invoices."},"other":null}"#),
         "{plan}"
@@ -100,7 +100,7 @@ fn described_options_and_a_described_score_map_reach_the_plan() {
         "structured-score-map",
         r#"{"score":"How much?","levels":{"low":{"what":"Little disruption."},"high":null}}"#,
     );
-    let plan = printed(&["score", &score, "--dry-run"]);
+    let plan = printed(&["score", &score, "--plan"]);
     assert!(
         plan.contains(r#""criteria":[{"what":"Little disruption."},{}]"#),
         "{plan}"
@@ -117,8 +117,8 @@ fn a_score_map_of_nulls_sends_empty_objects_where_a_list_sends_names() {
         "structured-score-nulls",
         r#"{"score":"How much?","levels":{"low":null,"high":null}}"#,
     );
-    let listed_plan = printed(&["score", &listed, "--dry-run"]);
-    let mapped_plan = printed(&["score", &mapped, "--dry-run"]);
+    let listed_plan = printed(&["score", &listed, "--plan"]);
+    let mapped_plan = printed(&["score", &mapped, "--plan"]);
     assert!(
         listed_plan.contains(r#""criteria":["low","high"]"#),
         "{listed_plan}"
@@ -195,7 +195,7 @@ fn the_file_refuses_non_text_question_and_description_slots() {
     ];
     for (index, (verb, file, wanted)) in cases.into_iter().enumerate() {
         let written = written(&format!("structured-refused-{index}"), file);
-        let (stderr, code) = refused(&[verb, &written, "--dry-run"]);
+        let (stderr, code) = refused(&[verb, &written, "--plan"]);
         assert_eq!(stderr, format!("thinkthen: {wanted}\n"), "{file}");
         assert_eq!(code, Some(5), "{file}");
     }
@@ -207,7 +207,7 @@ fn a_typed_boundary_replaces_the_files_structured_criterion() {
         "structured-boundary",
         r#"{"decide":"Does this ask for a refund?","true":{"means":"Money back."}}"#,
     );
-    let plan = printed(&["decide", &file, "--dry-run", "--true", "Money back."]);
+    let plan = printed(&["decide", &file, "--plan", "--true", "Money back."]);
     assert!(
         plan.contains(r#""criteria":{"true":"Money back."}"#),
         "{plan}"

@@ -101,21 +101,29 @@ fn a_pointer_with_no_framing_reads_json_lines() -> io::Result<()> {
 fn the_plan_names_a_framing_the_default_chose() -> io::Result<()> {
     let listener = by_body(BY_BODY)?;
     let base = listener.base();
-    let plan = |input: &str| {
+    let plan = |input: &str, counts: &str| {
         format!(
             r#"{{"url":"{base}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","input":{input},"request":{{"state":"The payout failed again.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"{QUESTION}"}}}}}}}}"#
         ) + "\n"
+            + counts
+            + "\n"
     };
     let cases = [
         (
-            &["filter", QUESTION, "--dry-run"][..],
+            &["filter", QUESTION, "--plan"][..],
             LINES,
-            plan(r#"{"framing":"lines","field":[],"from":"default"}"#),
+            plan(
+                r#"{"framing":"lines","field":[],"from":"default"}"#,
+                r#"{"records":3,"requests":3,"estimated_bytes":436,"estimated_input_tokens":{"lower":224,"upper":396},"upper_bound":false}"#,
+            ),
         ),
         (
-            &["rank", QUESTION, "--field", "/body", "--dry-run"][..],
+            &["rank", QUESTION, "--field", "/body", "--plan"][..],
             RECORDS,
-            plan(r#"{"framing":"jsonl","field":["/body"],"from":"default"}"#),
+            plan(
+                r#"{"framing":"jsonl","field":["/body"],"from":"default"}"#,
+                r#"{"records":4,"requests":4,"estimated_bytes":579,"estimated_input_tokens":{"lower":298,"upper":526},"upper_bound":false}"#,
+            ),
         ),
     ];
     for (line, input, wanted) in cases {

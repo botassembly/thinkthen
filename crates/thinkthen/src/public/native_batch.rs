@@ -51,7 +51,9 @@ struct NativeOutcome {
 fn denied(error: &crate::engine::error::Error) -> bool {
     matches!(
         error,
-        crate::engine::error::Error::SendBudgetFirst
+        crate::engine::error::Error::EstimatedInput(_)
+            | crate::engine::error::Error::SendBudgetFirst
+            | crate::engine::error::Error::SendBudgetAdditional
             | crate::engine::error::Error::SendBudgetRetry(_)
     )
 }

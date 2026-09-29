@@ -43,8 +43,12 @@ pub(crate) enum Error {
     Status(u16),
     /// A process send total refused the first live attempt.
     SendBudgetFirst,
+    /// A process send total refused another ordinary or split request.
+    SendBudgetAdditional,
     /// A process send total refused retrying this status.
     SendBudgetRetry(u16),
+    /// The estimated input admission refused one final body.
+    EstimatedInput(crate::public::EstimatedInputDenial),
     /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
     TokenLimit,
     /// The reply passed its request's limit of this many bytes and was not kept.
@@ -155,7 +159,9 @@ impl Error {
             Self::CacheEntry => Kind::Local,
             Self::Defect(_) => Kind::Defect,
             Self::Usage(_)
+            | Self::EstimatedInput(_)
             | Self::SendBudgetFirst
+            | Self::SendBudgetAdditional
             | Self::ProfileLimit(_)
             | Self::NoKey(_)
             | Self::WidthActive(_)

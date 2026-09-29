@@ -74,15 +74,13 @@ fn decided(options: CallOptions<'_>) -> (Result<Answer, Error>, usize) {
 }
 
 #[test]
-fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
+fn deadline_numbers_follow_the_host_table() {
     let none = CallOptions::new();
-    assert_eq!(
-        message(none.deadline_after(Duration::MAX)),
-        format!(
-            "a deadline of {} seconds is above the most, {MOST}",
-            u64::MAX
-        )
+    let above_most = format!(
+        "a deadline of {} seconds is above the most, {MOST}",
+        u64::MAX
     );
+    assert_eq!(message(none.deadline_after(Duration::MAX)), above_most);
     assert!(
         none.deadline_after(Duration::from_secs(4_294_967_295))
             .is_ok()
@@ -102,7 +100,6 @@ fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
         assert_eq!(kind(&result), Some(ErrorKind::Usage), "{value}");
         assert_eq!(message(result), refused(&value.to_string(), "seconds"));
     }
-    // A number longer than 20 characters prints in exponent form.
     for (value, written) in [
         (1e300, "1e300"),
         (-1e-300, "-1e-300"),
@@ -116,25 +113,30 @@ fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
         );
     }
     for value in [-2, i64::MIN, 4_294_967_295_001, i64::MAX] {
-        let result = none.deadline_millis(value);
-        assert_eq!(kind(&result), Some(ErrorKind::Usage), "{value}");
-        assert_eq!(message(result), refused(&value.to_string(), "milliseconds"));
+        for result in [none.deadline_ms(value), none.deadline_millis(value)] {
+            assert_eq!(kind(&result), Some(ErrorKind::Usage), "{value}");
+            assert_eq!(message(result), refused(&value.to_string(), "milliseconds"));
+        }
     }
     for value in [-1.0, 0.0, 0.5, 4_294_967_295.0] {
         assert!(none.deadline_seconds(value).is_ok(), "{value}");
     }
     for value in [-1, 0, 1, 4_294_967_295_000] {
+        assert!(none.deadline_ms(value).is_ok(), "{value}");
         assert!(none.deadline_millis(value).is_ok(), "{value}");
     }
+}
 
+#[test]
+fn deadline_options_clear_and_spend_without_extra_sends() {
+    let none = CallOptions::new();
     // `0` is spent: the call returns Deadline and sends nothing.
     let spent = [
-        none.deadline_seconds(0.0),
+        none.deadline_ms(0),
         none.deadline_millis(0),
-        none.deadline_seconds(30.0)
-            .and_then(|o| o.deadline_millis(0)),
-        none.deadline_after(BOUND)
-            .and_then(|o| o.deadline_seconds(0.0)),
+        none.deadline_seconds(0.0),
+        none.deadline_ms(30_000).and_then(|o| o.deadline_ms(0)),
+        none.deadline_after(BOUND).and_then(|o| o.deadline_ms(0)),
     ];
     for options in spent {
         let (result, sent) = decided(options.expect("options"));
@@ -146,13 +148,12 @@ fn deadline_numbers_follow_the_host_table_and_the_last_call_wins() {
             .expect("the spent call started and carries zero-send facts");
         assert_eq!((facts.records(), facts.requests_sent()), (0, 0));
     }
-    // `-1` clears an earlier deadline, and a later budget replaces a spent one.
     let live = [
+        none.deadline_ms(0).and_then(|o| o.deadline_ms(-1)),
+        none.deadline_millis(0).and_then(|o| o.deadline_millis(-1)),
         none.deadline_seconds(0.0)
             .and_then(|o| o.deadline_seconds(-1.0)),
-        none.deadline_millis(0).and_then(|o| o.deadline_millis(-1)),
-        none.deadline_millis(0)
-            .and_then(|o| o.deadline_after(BOUND)),
+        none.deadline_ms(0).and_then(|o| o.deadline_after(BOUND)),
     ];
     for options in live {
         let (result, sent) = decided(options.expect("options"));

@@ -2,8 +2,8 @@
 """Compare the built public Rust API with its frozen declarations.
 
 The sources are the historical ticket blocks (0084, 0095, 0147), the export
-sentence for `choices!`, ADR 0017's throttle rename, and ticket 0278's reviewed
-retired/added delta. No file here copies the declaration list.
+sentence for `choices!`, ADR 0017's throttle rename, and tickets 0278 and
+0283, 0289 and 0299's reviewed additive deltas. No file here copies the declaration list.
 `cargo public-api`, pinned by the install rung, reads the built crate. The
 self-test plants four changes in the real listing and proves each one fails.
 """
@@ -170,6 +170,35 @@ def apply_delta(items: set[str], page: str) -> set[str]:
     return (items - retired) | added
 
 
+def apply_0283_delta(items: set[str], page: str) -> set[str]:
+    added = delta_lines(page, "### Added public declarations")
+    if "### Retired public declarations" in page:
+        sys.exit("inventory: 0283 retains existing public declarations during host migration")
+    if len(added) != 35:
+        sys.exit("inventory: 0283 delta must have 35 added declarations")
+    if added & items:
+        sys.exit("inventory: 0283 added declaration is already in reviewed contract")
+    return items | added
+
+
+def apply_0289_delta(items: set[str], page: str) -> set[str]:
+    added = delta_lines(page, "### Added public declarations")
+    if len(added) != 19:
+        sys.exit("inventory: 0289 delta must have 19 added declarations")
+    if added & items:
+        sys.exit("inventory: 0289 added declaration is already in reviewed contract")
+    return items | added
+
+
+def apply_0299_delta(items: set[str], page: str) -> set[str]:
+    added = delta_lines(page, "### Added public declarations")
+    if len(added) != 11:
+        sys.exit("inventory: 0299 delta must have 11 added declarations")
+    if added & items:
+        sys.exit("inventory: 0299 added declaration is already in reviewed contract")
+    return items | added
+
+
 def delta_self_test(page: str, items: set[str]) -> None:
     # Literal edge sample: neither side is built from the current API listing.
     sample = [
@@ -216,7 +245,10 @@ def contract() -> set[str]:
     items.add("macro " + re.search(r"The crate root exports `(\w+!)`", page).group(1))
     delta = text("0278-*.md")
     delta_self_test(delta, items)
-    return apply_delta(items, delta)
+    items = apply_delta(items, delta)
+    items = apply_0283_delta(items, text("0283-*.md"))
+    items = apply_0289_delta(items, text("0289-*.md"))
+    return apply_0299_delta(items, text("0299-*.md"))
 
 
 def built(listing: list[str]) -> set[str]:

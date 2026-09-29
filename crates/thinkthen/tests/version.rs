@@ -282,7 +282,7 @@ fn the_long_help_names_connections_conflicts_paid_requests_and_models() {
         ),
         (
             "recognize",
-            "\n\nEach record can make paid requests in three steps: one boundary question per text piece; one kind question per found name when kinds are given, plus an edge question when its span can change; then questions for the relation pairs allowed by rules. --dry-run prints the first record's exact boundary requests and upper bounds for later requests.\n\n",
+            "\n\nEach record can make paid requests in three steps: one boundary question per text piece; one kind question per found name when kinds are given, plus an edge question when its span can change; then questions for the relation pairs allowed by rules. --plan prints the first record's exact boundary requests and upper bounds for later requests.\n\n",
         ),
         (
             "check",

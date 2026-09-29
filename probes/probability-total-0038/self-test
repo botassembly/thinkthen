@@ -8,7 +8,7 @@ repo=$(CDPATH= cd -- "$probe/../.." && pwd)
 scratch_dir scratch
 unset THINKTHEN_API_KEY THINKTHEN_BASE_URL
 
-PATH="$repo/target/debug:$PATH" "$probe/run" --dry-run >"$scratch/dry.json"
+PATH="$repo/target/debug:$PATH" "$probe/run" --plan >"$scratch/dry.json"
 jq -e '.attempts == 50 and .accepted == 50 and .refusals == 0 and .measurements == []' \
 	"$scratch/dry.json" >/dev/null
 
@@ -18,7 +18,7 @@ set -eu
 retries=0
 while [ "$#" -gt 0 ]; do
 	case "$1" in
-	--cache | --record | --replay | --dry-run)
+	--cache | --record | --replay | --plan)
 		printf '%s\n' 'fake: a live attempt was not an independent no-cache call' >&2
 		exit 90
 		;;

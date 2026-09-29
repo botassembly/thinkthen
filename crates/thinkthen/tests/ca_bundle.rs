@@ -336,7 +336,7 @@ fn bounded_bundle_refusals_precede_send_and_replay_folder_work() {
         );
     }
     let output = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-        .args(["check", "--url", base, "--dry-run"])
+        .args(["check", "--url", base, "--plan"])
         .env_clear()
         .env("HOME", &fixture.0)
         .env("THINKTHEN_CA_BUNDLE", &missing)

@@ -61,13 +61,7 @@ fn a_timeout_outside_one_to_a_day_precedes_input_key_and_connection_in_every_arg
     );
 
     let day = spawn(
-        &[
-            "decide",
-            "Does this pass?",
-            "--timeout",
-            "86400",
-            "--dry-run",
-        ],
+        &["decide", "Does this pass?", "--timeout", "86400", "--plan"],
         &[],
         b"yes",
     )
@@ -88,7 +82,7 @@ fn a_one_document_run_refuses_jobs_and_sends_nothing() {
             listener.base(),
         ];
         if dry_run {
-            arguments.push("--dry-run");
+            arguments.push("--plan");
         }
         let output = spawn(&arguments, &[], b"yes").expect("the compiled binary runs");
 

@@ -52,7 +52,7 @@ fn listed(values: &[String]) -> Vec<&str> {
 
 #[test]
 fn a_pick_plans_the_options_as_criteria_and_names_the_key_variable() {
-    let output = verb("choose", &TEAMS, &["--dry-run"]).expect("the compiled binary runs");
+    let output = verb("choose", &TEAMS, &["--plan"]).expect("the compiled binary runs");
 
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
@@ -72,7 +72,7 @@ fn a_pick_plans_the_options_as_criteria_and_names_the_key_variable() {
 
 #[test]
 fn a_placement_plans_the_levels_as_an_ordered_list() {
-    let output = verb("score", &LEVELS, &["--dry-run"]).expect("the compiled binary runs");
+    let output = verb("score", &LEVELS, &["--plan"]).expect("the compiled binary runs");
 
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
@@ -101,7 +101,7 @@ fn a_list_at_each_edge_of_the_range_is_taken() {
     ];
 
     for (name, labels) in cases {
-        let output = verb(name, &labels, &["--dry-run"]).expect("the compiled binary runs");
+        let output = verb(name, &labels, &["--plan"]).expect("the compiled binary runs");
 
         assert_eq!(
             output.status.code(),
@@ -114,13 +114,13 @@ fn a_list_at_each_edge_of_the_range_is_taken() {
 
 #[test]
 fn a_band_on_a_pick_is_a_usage_error_and_a_cut_is_not() {
-    let refused = verb("choose", &TEAMS, &["--dry-run", "--threshold", "0.1:0.9"])
+    let refused = verb("choose", &TEAMS, &["--plan", "--threshold", "0.1:0.9"])
         .expect("the compiled binary runs");
     assert_eq!(refused.status.code(), Some(2));
     let message = String::from_utf8_lossy(&refused.stderr);
     assert!(message.contains("single cut"), "{message}");
 
-    let taken = verb("choose", &TEAMS, &["--dry-run", "--threshold", "0.8"])
+    let taken = verb("choose", &TEAMS, &["--plan", "--threshold", "0.8"])
         .expect("the compiled binary runs");
     assert_eq!(taken.status.code(), Some(0));
 }
@@ -238,19 +238,13 @@ fn the_help_of_each_verb_carries_the_advice_its_page_names() {
 #[test]
 fn a_question_that_is_blank_and_evidence_that_is_blank_are_both_refused() {
     let blank =
-        run(&["choose", "  ", "billing", "other", "--dry-run"]).expect("the compiled binary runs");
+        run(&["choose", "  ", "billing", "other", "--plan"]).expect("the compiled binary runs");
     assert_eq!(blank.status.code(), Some(2));
 
     let empty = run::output(
         Command::new(env!("CARGO_BIN_EXE_thinkthen"))
             .env_clear()
-            .args([
-                "score",
-                "How much disruption?",
-                "none",
-                "blocked",
-                "--dry-run",
-            ]),
+            .args(["score", "How much disruption?", "none", "blocked", "--plan"]),
     )
     .expect("the compiled binary runs");
     assert_eq!(empty.status.code(), Some(2));

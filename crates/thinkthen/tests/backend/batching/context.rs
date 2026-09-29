@@ -98,13 +98,20 @@ fn a_context_is_in_batch_one_and_the_dry_run_plan() {
     assert!(rows.iter().all(|row| row["meta"]["batch"]["setting"] == 1));
 
     let planned = spawn(
-        &[&base[..], &["--dry-run", "--url", listener.base()]].concat(),
+        &[&base[..], &["--plan", "--url", listener.base()]].concat(),
         &[],
         b"line 1\nline 2\n",
     )
     .expect("plan");
     assert_eq!(planned.status.code(), Some(0), "{}", text(&planned.stderr));
-    let plan: Value = serde_json::from_slice(&planned.stdout).expect("plan JSON");
+    let plan: Value = serde_json::from_slice(
+        planned
+            .stdout
+            .split(|byte| *byte == b'\n')
+            .next()
+            .expect("plan line"),
+    )
+    .expect("plan JSON");
     assert_eq!(plan["request"]["state"], "Shared evidence\n");
     assert_eq!(listener.count(), 2, "dry-run sent no new request");
 }
@@ -123,7 +130,7 @@ fn filter_and_rank_plan_the_same_shared_context() {
                 "--lines",
                 "--context",
                 &file,
-                "--dry-run",
+                "--plan",
             ],
             &[],
             b"line 1\nline 2\n",
@@ -135,7 +142,14 @@ fn filter_and_rank_plan_the_same_shared_context() {
             "{verb}: {}",
             text(&output.stderr)
         );
-        let plan: Value = serde_json::from_slice(&output.stdout).expect("plan JSON");
+        let plan: Value = serde_json::from_slice(
+            output
+                .stdout
+                .split(|byte| *byte == b'\n')
+                .next()
+                .expect("plan line"),
+        )
+        .expect("plan JSON");
         assert_eq!(plan["request"]["state"], "Shared evidence\n", "{verb}");
     }
 }

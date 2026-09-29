@@ -36,7 +36,7 @@ one <- tt_decide(structured, "gamma")
 bodies <- capture()
 structured_body <- paste0('{"state":"gamma","model":"jev-1.13.0","questions":{',
   '"q1":{"type":"noul","instructions":{"ask":"Refund?",',
-  '"hints":["one",{"a":null,"b":1}]},"criteria":{"true":null}}}}')
+  '"hints":["one",{"a":null,"b":1}]}}}}')
 check("production parser and wire retain full structured meaning",
       identical(one$value, TRUE) && length(bodies) == 2L && identical(bodies[[2L]], structured_body) &&
       identical(one$details[[1L]]$requests, digest(url, structured_body)))

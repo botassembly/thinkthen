@@ -93,7 +93,7 @@ pub(crate) struct Route {
 
 pub(crate) const PATHS: [Route; 17] = [
     route("a success", &[], Answers::Good, 1, 0),
-    route("a plan", &["--dry-run"], Answers::Nothing, 0, 0),
+    route("a plan", &["--plan"], Answers::Nothing, 0, 0),
     route("a record run", &["--record", "{dir}"], Answers::Good, 1, 0),
     route("a cache", &["--cache", "{dir}"], Answers::Good, 1, 0),
     // The listener answers the priming run alone. The replay that follows it

@@ -145,6 +145,17 @@ pub(super) fn json(output: &Output) -> Value {
     serde_json::from_str(&stdout(output)).expect("one JSON value")
 }
 
+fn plan_json(output: &Output) -> Value {
+    let shown = stdout(output);
+    let mut lines = shown.lines();
+    let report = serde_json::from_str(lines.next().expect("plan report")).expect("plan JSON");
+    let counts: Value =
+        serde_json::from_str(lines.next().expect("whole-input counts")).expect("counts JSON");
+    assert_eq!(counts["upper_bound"], true);
+    assert_eq!(lines.next(), None);
+    report
+}
+
 /// Run `recognize` at the listener, under `key` when one is given.
 pub(super) fn local(
     listener: &Listener,
@@ -305,11 +316,7 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
     let listener = Listener::answering(automatic).expect("listener");
     let at_limit = format!("{} ", "w".repeat(9_999)).repeat(60);
     assert_eq!(at_limit.len(), 600_000);
-    let plan = json(&run(
-        &listener,
-        &["person", "--dry-run"],
-        at_limit.as_bytes(),
-    ));
+    let plan = plan_json(&run(&listener, &["person", "--plan"], at_limit.as_bytes()));
     assert_eq!(
         (&plan["pieces"], &plan["request_count"]),
         (&Value::from(60), &Value::from(2))
@@ -321,9 +328,9 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
         String::from_utf8_lossy(&refused.stderr),
         "thinkthen: recognize: the text is 600001 bytes, over the limit of 600000; raise it with --max-text-bytes\n"
     );
-    let raised = json(&run(
+    let raised = plan_json(&run(
         &listener,
-        &["person", "--dry-run", "--max-text-bytes", "700000"],
+        &["person", "--plan", "--max-text-bytes", "700000"],
         over.as_bytes(),
     ));
     assert_eq!(raised["pieces"], 61);
@@ -340,7 +347,13 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
 #[test]
 fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     let listener = Listener::answering(automatic).expect("listener");
-    let plan = json(&run(&listener, &[&KINDS[..], &["--dry-run"]].concat(), ADA));
+    let output = run(&listener, &[&KINDS[..], &["--plan"]].concat(), ADA);
+    let plan = plan_json(&output);
+    let counts: Value =
+        serde_json::from_str(stdout(&output).lines().nth(1).expect("whole-input counts"))
+            .expect("counts JSON");
+    assert_eq!(counts["requests"], 9); // one prepared request, at most two per each of four pieces
+    assert_eq!(counts["upper_bound"], true);
     let head = [
         "schema",
         "url",
@@ -359,7 +372,7 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
         "THINKTHEN_API_KEY",
         4,
         1,
-        1
+        8
     ]);
     assert_eq!(Value::from(head.to_vec()), expected);
     assert_eq!(listener.connections(), 0);
@@ -367,6 +380,7 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     let planned = &plan["requests"][0];
     assert_eq!(planned["digest"], result["meta"]["requests"][0]);
     let sent = listener.requests();
+    assert_eq!(sent.len(), 2);
     assert_eq!(
         planned["body_utf8"],
         Value::from(String::from_utf8_lossy(&sent[0].body))
@@ -374,14 +388,49 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     assert_eq!(planned["bytes"], sent[0].body.len());
 }
 
+/// A valid byte profile can fit step one's short kind names but split the
+/// independent step-two questions carrying long kind descriptions.
+#[test]
+fn long_descriptions_split_the_name_stage_more_than_the_boundary_stage() {
+    let limit = profile("description-split", r#""max_request_bytes":2300"#);
+    let description = "Meaningful person category. ".repeat(14);
+    let person = format!("person={description}");
+    let organization = format!("organization={description}");
+    let options = [
+        "--kind",
+        person.as_str(),
+        "--kind",
+        organization.as_str(),
+        "--profile",
+        limit.to_str().expect("profile path"),
+        "--no-cache",
+    ];
+    let listener = Listener::answering(automatic).expect("listener");
+    let planned = local(&listener, &[&options[..], &["--plan"]].concat(), None, ADA);
+    let first = plan_json(&planned);
+    let counts: Value =
+        serde_json::from_str(stdout(&planned).lines().nth(1).expect("whole-input counts"))
+            .expect("counts JSON");
+    assert_eq!(first["request_count"], 1);
+    assert_eq!(first["name_requests_upper_bound"], 8); // four pieces, at most two questions each
+    assert_eq!(counts["requests"], 9);
+    assert_eq!(listener.connections(), 0);
+
+    assert_eq!(
+        stdout(&local(&listener, &options, Some("secret-value"), ADA)),
+        format!("{ADA_AND_ACME}\n")
+    );
+    assert_eq!(listener.requests().len(), 3);
+}
+
 #[test]
 fn question_file_dry_run_attributes_source_and_sums_every_rule_bound() {
     let path = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("recognize-question.json");
     fs::write(&path, r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"directed","source":"person","target":"person"},{"name":"either","source":"person","target":"person","either":true},{"name":"cross","source":"person","target":"organization"}]}}"#).expect("question file");
     let listener = Listener::serving(Vec::new()).expect("listener");
-    let report = json(&local(
+    let report = plan_json(&local(
         &listener,
-        &[&format!("@{}", path.display()), "--dry-run"],
+        &[&format!("@{}", path.display()), "--plan"],
         None,
         ADA,
     ));

@@ -37,7 +37,7 @@ try:
     cache = flag(args, "--cache")
     if cache != os.environ["FAKE_EXPECT_CACHE"]:
         raise ValueError("the cache path changed")
-    if any(name in args for name in ("--record", "--replay", "--dry-run", "--top", "--threshold")):
+    if any(name in args for name in ("--record", "--replay", "--plan", "--top", "--threshold")):
         raise ValueError("the probe bypassed its cache")
     if args.count("--details") != 1:
         raise ValueError("details must appear once")
@@ -219,20 +219,20 @@ PY
 python3 fixture.py state b255-a1 >"$scratch/state"
 question=$(python3 fixture.py question b255-a1)
 set -- $(python3 fixture.py options b255-a1)
-"$repo/target/debug/thinkthen" choose "$question" "$@" --dry-run \
+"$repo/target/debug/thinkthen" choose "$question" "$@" --plan \
 	<"$scratch/state" >"$scratch/plain-plan"
 python3 fixture.py state b254-b1 >"$scratch/none-state"
 question=$(python3 fixture.py question b254-b1)
 set -- $(python3 fixture.py options b254-b1 none)
-"$repo/target/debug/thinkthen" choose "$question" "$@" --dry-run \
+"$repo/target/debug/thinkthen" choose "$question" "$@" --plan \
 	<"$scratch/none-state" >"$scratch/none-plan"
-jq -e --rawfile state "$scratch/state" \
-	'.request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
+jq -e -s --rawfile state "$scratch/state" \
+    '.[0] | .request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
 	 and (.request.questions.q1.criteria | keys_unsorted | first) == "u001"
 	 and (.request.questions.q1.criteria | keys_unsorted | last) == "u255"' \
 	"$scratch/plain-plan" >/dev/null
-jq -e --rawfile state "$scratch/none-state" \
-	'.request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
+jq -e -s --rawfile state "$scratch/none-state" \
+    '.[0] | .request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
 	 and (.request.questions.q1.criteria | keys_unsorted | first) == "u001"
 	 and (.request.questions.q1.criteria | keys_unsorted | last) == "none"' \
 	"$scratch/none-plan" >/dev/null

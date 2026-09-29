@@ -118,7 +118,7 @@ fn a_rank_plan_names_only_sources_rank_takes() -> io::Result<()> {
         r#"{"decide":"Does this report a payment failure?","true":"yes side","false":"no side"}"#,
     )?;
     let question = format!("@{}", file.display());
-    let output = refused(&["rank", &question, "--lines", "--dry-run"])?;
+    let output = refused(&["rank", &question, "--lines", "--plan"])?;
     assert_eq!(code(&output), 0);
     let plan = printed(&output);
     assert!(

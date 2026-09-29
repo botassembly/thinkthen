@@ -29,14 +29,14 @@ fn command(words: &[&str]) -> Vec<String> {
 
 fn families(set: &Path) -> [Vec<String>; 8] {
     [
-        command(&["decide", "asks?", "--dry-run"]),
-        command(&["choose", "which?", "a", "b", "--dry-run"]),
-        command(&["tag", "tags?", "a", "--dry-run"]),
-        command(&["score", "score?", "low", "high", "--dry-run"]),
-        command(&["filter", "asks?", "--lines", "--dry-run"]),
-        command(&["rank", "asks?", "--lines", "--dry-run"]),
-        command(&["annotate", &set.to_string_lossy(), "--dry-run"]),
-        command(&["find", "which?", "--dry-run"]),
+        command(&["decide", "asks?", "--plan"]),
+        command(&["choose", "which?", "a", "b", "--plan"]),
+        command(&["tag", "tags?", "a", "--plan"]),
+        command(&["score", "score?", "low", "high", "--plan"]),
+        command(&["filter", "asks?", "--lines", "--plan"]),
+        command(&["rank", "asks?", "--lines", "--plan"]),
+        command(&["annotate", &set.to_string_lossy(), "--plan"]),
+        command(&["find", "which?", "--plan"]),
     ]
 }
 
@@ -46,7 +46,7 @@ fn configuration_supplies_address_model_and_cache_switch_without_a_home() {
     fs::create_dir_all(root.join("thinkthen")).expect("configuration directory");
     fs::write(root.join("thinkthen/config.json"), r#"{"schema":"thinkthen.config/1","url":"http://127.0.0.1:1/v1","model":"configured-1","cache":false}"#).expect("configuration");
     let output = run(
-        &["decide", "asks for a refund", "--dry-run"],
+        &["decide", "asks for a refund", "--plan"],
         &[
             ("XDG_CONFIG_HOME", root.to_str().expect("root")),
             ("HOME", ""),
@@ -74,12 +74,7 @@ fn dry_run_refuses_refresh_when_configuration_disables_the_default_cache() {
     fs::write(&config, r#"{"schema":"thinkthen.config/1","cache":false}"#).expect("configuration");
     let listener = Listener::answering(|_| Canned::ok(ANSWERED)).expect("listener");
     let output = run(
-        &[
-            "decide",
-            "asks for a refund",
-            "--refresh-cache",
-            "--dry-run",
-        ],
+        &["decide", "asks for a refund", "--refresh-cache", "--plan"],
         &[
             ("XDG_CONFIG_HOME", root.to_str().expect("root")),
             (
@@ -173,7 +168,7 @@ fn command_and_environment_precedence_crosses_all_eight_command_families() {
     fs::write(&question, r#"{"decide":"asks?","model":"saved-1"}"#).expect("question file");
     let named = format!("@{}", question.display());
     let saved = spawn(
-        &["decide", &named, "--dry-run"],
+        &["decide", &named, "--plan"],
         &environment,
         EVIDENCE.as_bytes(),
     )
@@ -225,7 +220,7 @@ fn a_configuration_another_user_can_write_is_warned_about() {
         fs::write(&path, r#"{"schema":"thinkthen.config/1"}"#).expect("configuration");
         fs::set_permissions(&path, fs::Permissions::from_mode(mode)).expect("mode");
         let output = run(
-            &["decide", "asks for a refund", "--dry-run"],
+            &["decide", "asks for a refund", "--plan"],
             &[("XDG_CONFIG_HOME", root.to_str().expect("root"))],
         )
         .expect("dry run");

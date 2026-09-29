@@ -272,8 +272,10 @@ fn a_dry_run_prints_the_four_fixed_bodies_and_sends_nothing() {
     // Keyless, a dry run that read the key would fail. Keyed, the helper
     // proves the dry run's output carries no key.
     for environment in [&[][..], &[("THINKTHEN_API_KEY", KEY)][..]] {
-        let output = check(&["--url", url.as_str(), "--dry-run"], environment);
-        let printed = head(&backend, "/arm/full/v1") + &requests;
+        let output = check(&["--url", url.as_str(), "--plan"], environment);
+        let printed = head(&backend, "/arm/full/v1")
+            + &requests
+            + "{\"records\":4,\"requests\":4,\"estimated_bytes\":1568,\"estimated_input_tokens\":{\"lower\":809,\"upper\":1424},\"upper_bound\":false}\n";
         assert_eq!(text(&output.stdout), printed);
         assert_eq!(text(&output.stderr), "");
         assert_eq!(output.status.code(), Some(0));
@@ -328,6 +330,13 @@ fn the_report_names_the_model_asked_the_model_sent_and_the_model_each_reply_name
         (header.map(str::to_owned).to_vec(), other.clone())
     );
     assert_eq!(output.status.code(), Some(0), "{}", text(&output.stdout));
+
+    let sent = listener.requests();
+    assert_eq!(sent.len(), 4, "one observed send per check probe");
+    assert_eq!(
+        sent[0].body,
+        br#"{"state":"The parcel arrived on Tuesday and the box was intact.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Did the parcel arrive undamaged?","criteria":{"true":"The text says the box or its contents were intact."}}}}"#
+    );
 
     let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
         .join(format!("check-config-{}", std::process::id()));
