@@ -174,20 +174,28 @@ fn small_cross_kind_rule_admits_254_and_255_complete_entities() {
 }
 
 #[test]
-fn the_256th_entity_names_the_hypothetical_pair_count_exactly() {
-    let input = entities(&[("person", 1), ("place", 1), ("other", 254)]);
-    let output = spawn(
-        &["relate", "linked=person:place", "--url", ELSEWHERE],
-        &[],
-        &input,
-    )
-    .expect("command");
-    assert_eq!(output.status.code(), Some(2));
-    assert!(output.stdout.is_empty());
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: relate takes at most 255 entities; this set has 256. If all 256 were distinct, an unordered all-kind rule would have 32640 candidate pairs; split the set or narrow by kind\n"
-    );
+fn oversized_sets_name_the_complete_count_and_hypothetical_pairs_exactly() {
+    for (other, expected) in [
+        (
+            254,
+            "thinkthen: relate takes at most 255 entities; this set has 256. If all 256 were distinct, an unordered all-kind rule would have 32640 candidate pairs; split the set or narrow by kind\n",
+        ),
+        (
+            255,
+            "thinkthen: relate takes at most 255 entities; this set has 257. If all 257 were distinct, an unordered all-kind rule would have 32896 candidate pairs; split the set or narrow by kind\n",
+        ),
+    ] {
+        let input = entities(&[("person", 1), ("place", 1), ("other", other)]);
+        let output = spawn(
+            &["relate", "linked=person:place", "--url", ELSEWHERE],
+            &[],
+            &input,
+        )
+        .expect("command");
+        assert_eq!(output.status.code(), Some(2));
+        assert!(output.stdout.is_empty());
+        assert_eq!(String::from_utf8_lossy(&output.stderr), expected);
+    }
 }
 
 #[test]
