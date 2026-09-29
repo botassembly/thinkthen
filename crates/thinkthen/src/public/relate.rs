@@ -272,7 +272,7 @@ impl Engine {
             .collect();
         let admitted = ask.0.admit(&pairs).map_err(Error::refused)?;
         if admitted.is_empty() {
-            let stop = Stop::begin(options)?;
+            let stop = Stop::begin(options)?.with_prices(self.prices);
             return stop.run_call(0, |_| {
                 let edges = Vec::new();
                 observe_row(&stop, &edges);
@@ -283,7 +283,7 @@ impl Engine {
         let prepared =
             facade::relations(&admitted, &ask.0, engine.backend(), self.profile.as_ref())?;
         let threshold = ask.0.threshold.cut_value().unwrap_or(0.5);
-        let stop = Stop::begin(options)?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
             let mut positions = [0; 4];
             let execution = engine

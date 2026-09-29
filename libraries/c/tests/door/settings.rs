@@ -51,6 +51,49 @@ fn caller_prices_use_the_shared_builder_and_owned_c_facts() {
 }
 
 #[test]
+fn priced_c_recognize_and_relate_keep_complete_and_empty_facts() {
+    let listener = Listener::answering(|body| {
+        let request: Value = serde_json::from_slice(body).expect("request");
+        let answers: serde_json::Map<String, Value> = request["questions"]
+            .as_object().expect("questions").iter().map(|(key, question)| {
+                let answer = if question["type"] == "noul" {
+                    json!({"type":"noul","noul":0.9})
+                } else {
+                    let labels = question["criteria"].as_object().expect("choice labels");
+                    let chosen = ["OUT", "none of these"]
+                        .into_iter()
+                        .find(|label| labels.contains_key(*label))
+                        .or_else(|| labels.keys().next().map(String::as_str))
+                        .expect("label");
+                    let probabilities: serde_json::Map<String, Value> = labels.keys().map(|label| (label.clone(), json!(u8::from(label == chosen)))).collect();
+                    json!({"type":"choice","choice":chosen,"probabilities":probabilities})
+                };
+                (key.clone(), answer)
+            }).collect();
+        Canned::ok(&json!({"model":"jev-1.13.0","answers":answers,"usage":{"input_tokens":1,"output_tokens":1}}).to_string())
+    }).expect("listener");
+    let base = listener.base();
+    let recognize = json!({"version":1,"recognize":{"kinds":{"person":null}},"evidence":"Ada"}).to_string();
+    let relation = json!({"relations":[{"name":"linked","source":"person","target":"person"}]});
+    let related = json!({"version":1,"relate":relation,"records":[{"name":"Ada","kind":"person"},{"name":"Bea","kind":"person"}]}).to_string();
+    let empty = json!({"version":1,"relate":relation,"records":[]}).to_string();
+    let mut script = Script::default();
+    script.ask("settings", &[base, r#"{"cache":false,"usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#]);
+    for request in [&recognize, &related, &empty] { script.ask("call", &[base, request]); }
+    let output = run(&compile(&crate_dir().join("tests/c/driver.c")), base, &script.0);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let said = replies(&output.stdout).expect("replies");
+    assert_eq!(said.len(), 4);
+    for reply in &said { assert_eq!(reply.0, 0, "{reply:?}"); }
+    let results: Vec<Value> = said[1..].iter().map(|reply| serde_json::from_str(&reply.1).expect("result")).collect();
+    assert_eq!(results[0]["facts"]["estimated_cost_usd"], "0.000001", "recognize");
+    assert_eq!(results[1]["facts"]["estimated_cost_usd"], "0.000001", "relate");
+    assert_eq!(results[2]["facts"]["estimated_cost_usd"], "0.000000", "empty relate");
+    assert_eq!(results[2]["facts"]["requests_sent"], 0);
+    assert_eq!(listener.count(), 2, "empty relate has no send");
+}
+
+#[test]
 #[expect(
     clippy::excessive_nesting,
     clippy::cognitive_complexity,

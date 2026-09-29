@@ -103,6 +103,32 @@ fn malformed_caller_prices_refuse_before_send() {
 }
 
 #[test]
+fn priced_empty_relate_is_zero_without_a_send() {
+    let _serial = serial();
+    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-controls")
+        .expect("key")
+        .prices_usd_per_million("0.25", "0.25")
+        .expect("prices")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let ask = Relate::builder()
+        .relation(thinkthen::RelationRule::one_way("linked", "person", "person").expect("rule"))
+        .and_then(thinkthen::RelateBuilder::build)
+        .expect("relate");
+    let result = engine
+        .relate(&ask, Vec::<Entity>::new())
+        .expect("empty relation");
+    assert_eq!(result.facts().estimated_cost_usd(), Some("0.000000"));
+    assert_eq!(result.facts().requests_sent(), 0);
+    assert_eq!(listener.count(), 0);
+}
+
+#[test]
 fn priced_started_failure_facts_are_copied_while_retry_missing_usage_stays_unpriced() {
     let _serial = serial();
     let next = AtomicUsize::new(0);
