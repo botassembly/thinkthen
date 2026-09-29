@@ -104,6 +104,46 @@ def main():
         other_target = "aarch64-unknown-linux-gnu"
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), other_target, commit),
                "unsupported target has thinkthen-go-")
+        platform = base / "platform"
+        platform.mkdir()
+        for target in (host, other_target, "aarch64-apple-darwin", "x86_64-apple-darwin"):
+            folder = platform / f"platform-{target}"
+            if target == host:
+                shutil.copytree(base / "paired", folder)
+            else:
+                folder.mkdir()
+                (folder / f"fixture-{target}.bin").write_bytes(b"existing target file")
+        npm = base / "npm"
+        npm.mkdir()
+        (npm / f"thinkthen-{version}.tgz").write_bytes(b"fixture npm")
+        (npm / f"thinkthen-{version}.tgz.sha256").write_text("fixture sidecar\n")
+        collected = base / "collected"
+        expect(run("sh", gate, "collect", str(platform), str(npm), str(collected)), "", success=True)
+        expected_files = {f"thinkthen-{kind}-{version}-{host}.tar.gz{suffix}"
+                          for kind in ("c", "go", "cpp") for suffix in ("", ".sha256")}
+        expected_files |= {f"fixture-{target}.bin" for target in
+                           (other_target, "aarch64-apple-darwin", "x86_64-apple-darwin")}
+        expected_files |= {f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256"}
+        if {file.name for file in collected.iterdir()} != expected_files:
+            raise AssertionError("collect omitted or added a selected fixture file")
+        extra_go = platform / f"platform-{host}/thinkthen-go-extra.zip"
+        extra_go.write_bytes(b"unselected release asset")
+        expect(run("sh", gate, "go-cpp-gate", str(extra_go.parent), host, commit),
+               "unexpected Go/C++ family entry thinkthen-go-extra.zip")
+        refused_output = base / "refused-go-assets"
+        expect(run("sh", gate, "collect", str(platform), str(base / "no-npm"), str(refused_output)),
+               "unexpected Go/C++ family entry thinkthen-go-extra.zip")
+        if refused_output.exists():
+            raise AssertionError("extra Go asset created collected output")
+        extra_go.unlink()
+        extra_platform = platform / "platform-extra"
+        extra_platform.mkdir()
+        (extra_platform / "unselected.zip").write_bytes(b"unselected release asset")
+        refused_output = base / "refused-platform"
+        expect(run("sh", gate, "collect", str(platform), str(base / "no-npm"), str(refused_output)),
+               "unexpected platform folder platform-extra")
+        if refused_output.exists():
+            raise AssertionError("extra platform folder created collected output")
         fake_curl = fake_bin / "curl"
         fake_curl.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
                              "if [ \"$1\" = -o ]; then shift; printf wrong >\"$1\"; exit 0; fi\n"

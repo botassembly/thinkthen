@@ -9,6 +9,22 @@ cd "$repo"
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 fail() { echo "release-workflow: $*" >&2; exit 1; }
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+go_cpp_names() {
+	dir=$1 target=$2
+	for file in "$dir"/thinkthen-go* "$dir"/thinkthen-cpp*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		name=${file##*/}
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			case $name in
+			"thinkthen-go-$version-$target.tar.gz" | "thinkthen-go-$version-$target.tar.gz.sha256" | \
+			"thinkthen-cpp-$version-$target.tar.gz" | "thinkthen-cpp-$version-$target.tar.gz.sha256") ;;
+			*) fail "unexpected Go/C++ family entry $name" ;;
+			esac
+		else
+			fail "unsupported target has $name"
+		fi
+	done
+}
 case ${1:-} in
 host-setup)
 	[ "$#" = 2 ] || fail 'host-setup TARGET'
@@ -98,6 +114,7 @@ go-cpp-gate)
 	case $target in
 	x86_64-unknown-linux-gnu)
 		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail 'Go/C++ gate requires its installed x86 host'
+		go_cpp_names "$dir" "$target"
 		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir"
 		for family in go cpp; do
 			archive=$dir/thinkthen-$family-$version-$target.tar.gz
@@ -106,9 +123,7 @@ go-cpp-gate)
 		done
 		;;
 	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin)
-		for file in "$dir"/thinkthen-go-* "$dir"/thinkthen-cpp-*; do
-			[ ! -e "$file" ] && [ ! -L "$file" ] || fail "unsupported target has ${file##*/}"
-		done
+		go_cpp_names "$dir" "$target"
 		;;
 	*) fail "no Go/C++ release route for $target" ;;
 	esac
@@ -226,6 +241,22 @@ crate-smoke)
 	;;
 collect)
 	[ "$#" = 4 ] || fail 'collect PLATFORM_ROOT NPM_DIR OUT'
+	[ -d "$2" ] && [ ! -L "$2" ] || fail 'platform root is missing or linked'
+	expected_targets='x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin'
+	for folder in "$2"/* "$2"/.[!.]* "$2"/..?*; do
+		[ -e "$folder" ] || [ -L "$folder" ] || continue
+		found=
+		for target in $expected_targets; do
+			[ "${folder##*/}" != "platform-$target" ] || found=1
+		done
+		[ -n "$found" ] || fail "unexpected platform folder ${folder##*/}"
+		[ -d "$folder" ] && [ ! -L "$folder" ] || fail "platform folder is missing or linked: ${folder##*/}"
+	done
+	for target in $expected_targets; do
+		folder=$2/platform-$target
+		[ -d "$folder" ] && [ ! -L "$folder" ] || fail "platform folder is missing or linked: platform-$target"
+		go_cpp_names "$folder" "$target"
+	done
 	mkdir -p "$4"
 	for folder in "$2"/*; do
 		[ -d "$folder" ] || continue
