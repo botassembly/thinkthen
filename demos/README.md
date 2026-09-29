@@ -1,10 +1,10 @@
 # How-tos
 
-Every page here is one shell job written so that it runs. A green page is the how-to, the demo, and the test at once, and `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy. Ticket 0088 added the twenty-first page for the new `relate` command.
+Every page here is one shell job written so that it runs. A green page is the how-to, the demo, and the test at once, and `sdlc/scripts/spec` runs every block that asserts something against a committed recording. ADR 0011 rules that nobody writes a second copy. Later tickets added focused pages beyond ADR 0018's twenty-page base list.
 
 A how-to is one of the four names in the table in [`../README.md`](../README.md).
 
-ADR 0018 fixed this list at 20 pages, and `sdlc/planning/documentation-plan.md` holds the same list with the slice that turns each one green. `sdlc/scripts/pages` checks that the two lists and the folders here agree on every number, title, and state. A number here is a folder under `demos/`.
+ADR 0018 fixed the base list at 20 pages, and `sdlc/planning/documentation-plan.md` holds the current list with the slice or ticket that turns each one green. `sdlc/scripts/pages` checks that the two lists and the folders here agree on every number, title, and state. A number here is a folder under `demos/`.
 
 ## How to read one
 
@@ -51,6 +51,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 17 | [Route a request by how hard it is](17-rate-and-sort/) | `score` | green |
 | 21 | [Choose the next action from a list that changes at every step](21-options-from-the-record/) | `choose` | green |
 | 41 | [Tune a question file and use the same file in the gate](41-tune-a-question-file/) | `decide` | green |
+| 47 | [Split a chained question into two calls](47-split-a-chained-question/) | `choose` | green |
 
 ## Many records
 
