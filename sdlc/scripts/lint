@@ -110,6 +110,8 @@ python3 sdlc/scripts/versions
 python3 sdlc/scripts/workflows --self-test
 python3 sdlc/scripts/workflows
 python3 sdlc/scripts/installer-test
+# Ticket 0267: absent and unexpected source-package files refuse before the backend.
+sh sdlc/scripts/release-smoke-source-packages-test
 # Ticket 0104: a stale crate longer than the fresh one must not reach `tar`.
 mkdir -p target/package
 head -c 4194304 /dev/urandom \
