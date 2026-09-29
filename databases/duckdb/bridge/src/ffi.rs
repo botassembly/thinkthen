@@ -14,6 +14,8 @@ mod find;
 mod listed;
 mod nested;
 mod panic;
+#[path = "ffi/plan/ffi.rs"]
+mod plan;
 #[path = "ffi/portable/ffi.rs"]
 mod portable;
 #[path = "ffi/portable_aux/ffi.rs"]

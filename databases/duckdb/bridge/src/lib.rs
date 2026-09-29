@@ -2,7 +2,7 @@
 
 #[allow(
     dead_code,
-    reason = "the bridge shares the registry while the other verbs move"
+    reason = "the bridge imports the shared engine registry from the retired workspace"
 )]
 #[path = "../../src/engines.rs"]
 mod engines;

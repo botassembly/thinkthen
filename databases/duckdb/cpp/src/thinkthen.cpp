@@ -34,6 +34,7 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_record", "Local recording folder", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_replay", "Local strict replay folder", LogicalType::VARCHAR);
 	RegisterPortableDecide(loader);
+	RegisterPlan(loader);
 	RegisterNested(loader);
 	RegisterFind(loader);
 	RegisterUsage(loader);

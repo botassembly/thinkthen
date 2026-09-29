@@ -2,9 +2,8 @@
 
 - R5-21: the SIGINT handler and its bridge write lock nothing, allocate
   nothing, and call nothing in `thinkthen`.
-- R4-16: no call to a C API function the bindings mark deprecated, and
-  every logical type is made and destroyed by the one wrapper.
-- R2-31: one `catch_unwind` site in `src`.
+- ADR 0081: no raw C API entry, dependency, or shipped path remains.
+- R2-31: the C++ bridge contains both panic catches in its marked scope.
 - R4-19, R5-34: every `cargo` call in check.sh passes `--locked` and
   `--offline`.
 - R1-33: every vendored script is named by check.sh or a tool.
@@ -19,8 +18,6 @@ Run with a file path as `--requirements PATH` to check that file alone.
 
 from __future__ import annotations
 
-import json
-import re
 import subprocess
 import sys
 from pathlib import Path
@@ -56,42 +53,26 @@ def handler() -> None:
             fail(f"R5-21: the SIGINT handler holds `{banned}`")
 
 
-def deprecated() -> None:
-    meta = json.loads(
-        subprocess.run(
-            ["cargo", "metadata", "--offline", "--locked", "--format-version", "1"],
-            cwd=ROOT, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=child_env(CARGO),
-        ).stdout
-    )
-    crate = next(package for package in meta["packages"] if package["name"] == "libduckdb-sys")
-    text = (Path(crate["manifest_path"]).parent / "src" / "bindgen_bundled_version.rs").read_text()
-    notices = {match.group(2) for match in re.finditer(r'#\[doc = "(.*?)"\]\s*pub fn (\w+)', text, re.S) if "DEPRECATION NOTICE" in match.group(1)}
-    if len(notices) < 10:
-        fail(f"R4-16: read only {len(notices)} deprecation notices, so the check cannot see them")
-    pattern = re.compile(r"\b(" + "|".join(sorted(notices)) + r")\b")
-    for path in sorted((ROOT / "src").rglob("*.rs")):
-        for number, line in enumerate(path.read_text().splitlines(), 1):
-            for match in pattern.finditer(line):
-                fail(f"R4-16: {path.relative_to(ROOT)}:{number} calls the deprecated {match.group(1)}")
-
-
-def logical_types() -> None:
-    makers = re.compile(r"duckdb_(create_logical_type|create_list_type|create_struct_type|destroy_logical_type)\b")
-    for path in sorted((ROOT / "src").rglob("*.rs")):
-        text = path.read_text()
-        found = makers.findall(text)
-        if not found:
-            continue
-        wrapper = text[text.index("impl Logical") :] if "impl Logical" in text else ""
-        inside = makers.findall(body(wrapper, "new") + body(wrapper, "drop")) if wrapper else []
-        if path != ROOT / "src" / "ffi.rs" or len(found) != len(inside):
-            fail(f"R4-16: {path.relative_to(ROOT)} makes or destroys a logical type outside the Logical wrapper")
+def retired_entry() -> None:
+    manifest = (ROOT / "Cargo.toml").read_text()
+    lock = (ROOT / "Cargo.lock").read_text()
+    entry = (ROOT / "src" / "lib.rs").read_text()
+    if ('libduckdb-sys' in manifest or 'name = "libduckdb-sys"' in lock or
+            'crate-type = ["cdylib"]' in manifest or
+            'mod ffi;' in entry or (ROOT / "src" / "ffi.rs").exists()):
+        fail("ADR 0081: the retired raw C API still has a dependency or entry point")
+    release = (REPO / "sdlc" / "scripts" / "release-pack").read_text()
+    check = (ROOT / "check.sh").read_text()
+    if "sh databases/duckdb/cpp/build.sh" not in release or "sh cpp/build.sh" not in check:
+        fail("ADR 0081: release and check must build the C++ extension")
 
 
 def guards() -> None:
-    sites = sum(path.read_text().count("catch_unwind(") for path in (ROOT / "src").rglob("*.rs"))
-    if sites != 1:
-        fail(f"R2-31: src holds {sites} catch_unwind sites, and the one guard is the only one")
+    guarded = ROOT / "bridge" / "src" / "ffi" / "panic.rs"
+    sites = [(path, path.read_text().count("catch_unwind("))
+             for path in (ROOT / "bridge" / "src").rglob("*.rs")]
+    if sum(count for _, count in sites) != 2 or dict(sites).get(guarded) != 2:
+        fail("R2-31: the bridge's two panic catches stay together in ffi/panic.rs")
 
 
 def cargo_flags() -> None:
@@ -168,8 +149,8 @@ def shipped() -> None:
         if marker in data:
             fail(f"decision 14: the shipped extension holds {marker.decode()}")
     tree = subprocess.run(
-        ["cargo", "tree", "--offline", "--locked", "-e", "features", "-i", "thinkthen-duckdb"],
-        cwd=ROOT, check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=child_env(CARGO),
+        ["cargo", "tree", "--offline", "--locked", "-e", "features", "-i", "thinkthen-duckdb-bridge"],
+        cwd=ROOT / "bridge", check=True, capture_output=True, text=True, stdin=subprocess.DEVNULL, env=child_env(CARGO),
     ).stdout
     if "test-hooks" in tree:
         fail("decision 14: the shipped build enables test-hooks")
@@ -181,8 +162,7 @@ def main() -> int:
         print("\n".join(wrong) or "ok")
         return 1 if wrong else 0
     handler()
-    deprecated()
-    logical_types()
+    retired_entry()
     guards()
     cargo_flags()
     vendored()

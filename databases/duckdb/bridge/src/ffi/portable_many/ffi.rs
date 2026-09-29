@@ -24,6 +24,12 @@ use super::{
 
 struct Keyed(Vec<(String, String)>);
 
+pub(super) fn keyed_texts(source: &str) -> Result<Vec<String>, String> {
+    let keyed = serde_json::from_str::<Keyed>(source)
+        .map_err(|error| RowError::usage(&error.to_string()).text)?;
+    Ok(keyed.0.into_iter().map(|(_, text)| text).collect())
+}
+
 struct Fields(Vec<(String, Box<RawValue>)>);
 
 struct Ordered;

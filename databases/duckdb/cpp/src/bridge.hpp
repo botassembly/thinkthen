@@ -63,6 +63,12 @@ ThinkThenReply thinkthen_cpp_portable_decide_group(const uint8_t *question, size
 ThinkThenReply thinkthen_cpp_validate_portable_many(const uint8_t *question, size_t question_len,
                                                    int32_t from_file, const uint8_t *keyed, size_t keyed_len,
                                                    const uint8_t *settings, size_t settings_len, int32_t kind);
+ThinkThenReply thinkthen_cpp_validate_plan(const uint8_t *question, size_t question_len,
+                                          int32_t from_file, const uint8_t *keyed, size_t keyed_len,
+                                          const uint8_t *settings, size_t settings_len);
+ThinkThenReply thinkthen_cpp_plan(const uint8_t *question, size_t question_len,
+                                 int32_t from_file, const uint8_t *keyed, size_t keyed_len,
+                                 const uint8_t *settings, size_t settings_len, ThinkThenSettings session);
 ThinkThenReply thinkthen_cpp_portable_many(const uint8_t *question, size_t question_len,
                                           int32_t from_file, const uint8_t *keyed, size_t keyed_len,
                                           const uint8_t *settings, size_t settings_len, int32_t kind,
