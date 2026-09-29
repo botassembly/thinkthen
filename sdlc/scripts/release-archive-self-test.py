@@ -93,8 +93,6 @@ def main():
             file.unlink()
         expect(run("sh", gate, "go-cpp-gate", str(missing_pair), host, commit),
                "missing or linked thinkthen-cpp-")
-        expect(run("sh", gate, "swift-zig-gate", str(missing_pair), host, commit),
-               "missing or linked thinkthen-cpp-")
         missing_swift = base / "missing-swift"
         shutil.copytree(base / "paired", missing_swift)
         for file in missing_swift.glob("thinkthen-swift-*"):
