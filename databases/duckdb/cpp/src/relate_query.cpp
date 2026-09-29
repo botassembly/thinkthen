@@ -15,8 +15,7 @@ std::mutex registry_lock;
 std::map<DatabaseInstance *, std::weak_ptr<RelateDatabase>> registry;
 
 string Failed(const string &message) {
-	const auto at = message.find("thinkthen ");
-	return at == string::npos ? "thinkthen usage: the relate query failed: " + message : message.substr(at);
+	return "thinkthen usage: the relate query failed: " + message;
 }
 
 string Error(const string &message) {

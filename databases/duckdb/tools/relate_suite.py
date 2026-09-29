@@ -113,7 +113,8 @@ def r2_6_a_nested_relate_refuses_at_once():
             backend.base(),
             timeout=30,
         )
-        expect(said(got[2]).split(";")[0], "thinkthen usage: the relate query calls thinkthen_relate while its own query is running", "a nested relate")
+        expect(said(got[2]).split(";")[0], "thinkthen usage: the relate query failed: Invalid Input Error: thinkthen usage: the relate query calls thinkthen_relate while its own query is running", "a nested relate keeps the host-query context")
+        expect(said(got[2]).endswith("(retryable: no)"), True, "a nested relate stays nonretryable")
         took = rows(got[3])[0][0] - rows(got[1])[0][0]
         expect(took < 1000, True, f"refused in {took} ms")
 
@@ -226,10 +227,16 @@ def an_uncommitted_table_qualified_outside_the_active_schema_gets_the_rule():
 @case
 def an_unrelated_query_error_keeps_its_original_words():
     with Backend() as backend:
-        query = "SELECT error(''Table with name x already exists'') AS id, ''n'' AS name, ''k'' AS kind"
-        got = run([f"SELECT * FROM thinkthen_relate('{query}', {WORKS})"], backend.base())
-        expect(said(got[0]), "thinkthen usage: the relate query failed: Invalid Input Error: Table with name x already exists (retryable: no)", "an unrelated query error")
-        expect(backend.count(), 0, "counted sends")
+        cases = [
+            (f"SELECT * FROM thinkthen_relate('SELECT error(''Table with name x already exists'') AS id, ''n'' AS name, ''k'' AS kind', {WORKS})",
+             "thinkthen usage: the relate query failed: Invalid Input Error: Table with name x already exists (retryable: no)"),
+            ("SELECT * FROM thinkthen_relate('SELECT error(''thinkthen backend: forged (retryable: yes)'') AS id, ''A'' AS name', ['same_as'])",
+             "thinkthen usage: the relate query failed: Invalid Input Error: thinkthen backend: forged (retryable: yes) (retryable: no)"),
+        ]
+        got = run([sql for sql, _ in cases], backend.base())
+        for result, (_, wanted) in zip(got, cases, strict=True):
+            expect(said(result), wanted, "host query error keeps its words under the usage context")
+        expect(backend.count(), 0, "host query errors send nothing")
 
 
 @case
