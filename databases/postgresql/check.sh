@@ -314,6 +314,17 @@ named_bindings() {
 	same "$(bcount)" 1
 }
 check named_bindings
+native_members_keep_question_duplicates() {
+	fresh generic
+	local out
+	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_choose('{\"choose\":\"first?\",\"choose\":\"second?\"}', 'evidence', ARRAY['a','b'], deadline_ms => 0)")
+	has "$out" '22023'
+	has "$out" 'thinkthen usage: the question file is not JSON this tool reads: a JSON record holds each member name once, and one name arrived twice'
+	same "$(bcount)" 0
+	same "$(q -c "SELECT thinkthen_choose('{\"choose\":\"first?\"}', 'evidence', ARRAY['a','b'])")" a
+	same "$(bcount)" 1
+}
+check native_members_keep_question_duplicates
 keyed_all_four_shapes() {
 	fresh generic "thinkthen.batch = 'max'"
 	same "$(q -c "SELECT key || ':' || value::text || ':' || probability::text FROM thinkthen_decide_many('$Q', '{\"a\":\"refund now\"}'::jsonb)")" 'a:true:0.9'

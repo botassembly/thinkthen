@@ -219,18 +219,27 @@ impl Given {
         if members.is_empty() {
             return Err(Refusal::usage("the members array is empty"));
         }
-        let mut value: serde_json::Value = serde_json::from_str(&self.json)
+        let value: serde_json::Value = serde_json::from_str(&self.json)
             .map_err(|_| Refusal::usage("the question is not a JSON object"))?;
         let object = value
-            .as_object_mut()
+            .as_object()
             .ok_or_else(|| Refusal::usage("the question is not a JSON object"))?;
         if object.contains_key(key) {
             return Err(Refusal::usage(format!(
                 "the question already names its {key}; pass NULL for the array"
             )));
         }
-        object.insert(key.to_owned(), serde_json::Value::from(members));
-        self.json = value.to_string();
+        // Preserve the source bytes and their member order. The final core
+        // question parse must still see duplicate names in the original JSON.
+        let source = self
+            .json
+            .trim_end()
+            .strip_suffix('}')
+            .ok_or_else(|| Refusal::usage("the question is not a JSON object"))?;
+        let separator = if object.is_empty() { "" } else { "," };
+        let encoded = serde_json::to_string(&members)
+            .map_err(|_| Refusal::of(ErrorKind::Defect, "members could not be written as JSON"))?;
+        self.json = format!("{source}{separator}\"{key}\":{encoded}}}");
         Ok(self)
     }
 
