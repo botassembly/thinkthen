@@ -7,6 +7,29 @@ require "socket"
 require_relative "backend"
 
 class TestBatchFacts < Minitest::Test
+  def test_portable_max_content_cuts_through_public_ruby_bulk_call
+    folder = File.expand_path("../../../specification/fixtures/batching", __dir__)
+    corpus = JSON.parse(File.read(File.join(folder, "portable-records.json")))
+    expected = (1..3).map { |index| File.read(File.join(folder, "portable-#{index}.request.json")).delete_suffix("\n") }
+    script = <<~RUBY
+      result = T::Engine.new(cache: false, throttle: 1).decide_many(#{corpus.fetch("question").inspect}, #{corpus.fetch("texts").inspect})
+      say [result.value, result.facts, result.details]
+    RUBY
+    TestBackend.with(script, arm: "arm/full/capture") do |backend, child|
+      values, facts, details = child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal expected, backend.capture, "literal request bytes and ordered content cuts"
+      assert_equal 3, backend.count
+      assert_equal [true] * 5, values
+      assert_equal [0, 1, 2, 3, 4], details.map { |row| row.fetch("index") }
+      assert_equal [5, 3], facts.values_at("records", "requests_sent")
+      hashes = expected.map { |body| Digest::SHA256.hexdigest("systemone\n#{backend.url('arm/full/capture')}/systemone\n#{body}") }
+      assert_equal [[hashes[0]], [hashes[0]], [hashes[1]], [hashes[1]], [hashes[2]]],
+                   details.map { |row| row.fetch("requests") }
+    end
+  end
+
   def test_account_starts_at_rust_accounting_not_worker_creation
     lines, count = TestBackend.run(<<~RUBY)
       begin

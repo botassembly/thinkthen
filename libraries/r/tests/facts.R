@@ -2,31 +2,6 @@
 # and complete question JSON values. This file has its own loopback backend.
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
 
-capture <- function() {
-  output <- Sys.getenv("TT_BACKEND_OUT")
-  before <- length(grep("^\\{", readLines(output)))
-  backend_say("capture")
-  repeat {
-    lines <- grep("^\\{", readLines(output), value = TRUE)
-    if (length(lines) > before) {
-      return(jsonlite::fromJSON(lines[[length(lines)]], simplifyVector = FALSE)$bodies)
-    }
-    Sys.sleep(0.02)
-  }
-}
-
-digest <- function(url, body) {
-  file <- tempfile()
-  on.exit(unlink(file))
-  writeBin(charToRaw(paste0("systemone\n", url, "\n", body)), file)
-  if (nzchar(Sys.which("sha256sum"))) {
-    answer <- system2("sha256sum", shQuote(file), stdout = TRUE)
-  } else if (nzchar(Sys.which("shasum"))) {
-    answer <- system2("shasum", c("-a", "256", shQuote(file)), stdout = TRUE)
-  } else stop("the installed SHA-256 host tool is absent", call. = FALSE)
-  strsplit(answer[[1L]], " ", fixed = TRUE)[[1L]][[1L]]
-}
-
 url <- arm("arm/full/capture/v1/systemone")
 tt_engine(base_url = arm("arm/full/capture/v1"), cache = FALSE)
 packed_receipt <- tt_completion()
