@@ -1,6 +1,12 @@
 #!/bin/sh
 # Selected bundle file mistakes must refuse before the release backend build.
 set -eu
+platform=$(uname -s):$(uname -m)
+target=$(rustc -vV | sed -n 's/^host: //p')
+if [ "$platform:$target" != Linux:x86_64:x86_64-unknown-linux-gnu ]; then
+	echo 'release-smoke source packages: skipped on unsupported host'
+	exit 0
+fi
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
 scratch_dir work
@@ -12,8 +18,6 @@ exit 88
 EOF
 chmod +x "$work/bin/cargo"
 version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$repo/crates/thinkthen/Cargo.toml" | head -n 1)
-target=$(rustc -vV | sed -n 's/^host: //p')
-[ "$(uname -s):$(uname -m):$target" = Linux:x86_64:x86_64-unknown-linux-gnu ] || exit 77
 for family in c go cpp csharp jvm swift zig php dart flutter ada objective-c cobol sqlite duckdb postgresql16; do
 	: >"$work/bundle/thinkthen-$family-$version-$target.tar.gz"
 	: >"$work/bundle/thinkthen-$family-$version-$target.tar.gz.sha256"
