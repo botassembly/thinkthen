@@ -28,13 +28,13 @@ case(shared_settings_corpus)
 
 
 @case
-def b13c_warm_zero_budget():
-    """Warm finalization reads the caller's already spent query budget."""
+def portable_decide_zero_budget():
+    """The portable vector reads the caller's already spent query budget."""
     with Backend() as backend:
         got = run(["SET thinkthen_query_budget_ms = 0",
-                   "SELECT thinkthen_warm('Is it a refund?', 'refund now')"], backend.base())
-        expect(said(got[1]), "thinkthen deadline: the query has spent its time budget", "warm deadline")
-        expect(backend.count(), 0, "spent warm budget sends nothing")
+                   "SELECT thinkthen_decide('Is it a refund?', 'refund now')"], backend.base())
+        expect(said(got[1]), "thinkthen deadline: the query has spent its time budget", "decide deadline")
+        expect(backend.count(), 0, "spent query budget sends nothing")
 
 
 @case
@@ -55,24 +55,24 @@ def saved_calibration_details_keep_the_shared_digest_and_warning():
         expect(backend.count(), 1, "one details send")
 
 @case
-def caller_settings_and_warm_share_one_engine():
-    """Warm fills only the calling session's selected cache and model plan."""
+def caller_settings_and_repeated_call_share_one_engine():
+    """A repeated call hits only the calling session's selected cache and model."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         query = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
         got = run([
             f"SET thinkthen_cache = '{folder}'",
             "SET thinkthen_model = 'other-model'",
-            "SELECT thinkthen_warm('Is it a refund?', 'refund now')",
+            query,
             query,
             ["B", query],
             "SELECT metric, value FROM thinkthen_usage()",
         ], backend.base())
-        expect(rows(got[2]), [[1]], "warm result")
+        expect(rows(got[2]), [[True]], "first result")
         expect(rows(got[3]), [[True]], "same-session scalar result")
         expect(rows(got[4]), [[True]], "other-session scalar result")
         usage = dict(rows(got[5]))
-        expect(usage["cache_answers"], 1, "same-session warm cache hit")
-        expect(backend.count(), 2, "one warm send and one isolated-session send")
+        expect(usage["cache_answers"], 1, "same-session cache hit")
+        expect(backend.count(), 2, "one first send and one isolated-session send")
 
 
 @case
@@ -90,7 +90,7 @@ def inline_profile_and_record_replay_respect_caller_settings():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         profile = json.dumps({"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 4})
         got = run([f"SET thinkthen_profile = '{profile}'", ASK], backend.base())
-        expect(said(got[1]).startswith("thinkthen usage: profile small allows at most 4 evidence bytes"), True, "inline profile")
+        expect(said(got[1]), "thinkthen usage: a request passes a profile limit", "inline profile")
         expect(backend.count(), 0, "profile sends nothing")
         got = run([f"SET thinkthen_record = '{folder}'", ASK, "RESET thinkthen_record",
                    f"SET thinkthen_replay = '{folder}'", ASK,
@@ -272,15 +272,14 @@ def a_negative_request_total_refuses_before_the_map():
 
 
 @case
-def an_annotate_set_spends_one_request_per_text():
-    """The engine asks every member of a library set in one request per
-    text, since a library set reads each record whole and so holds one
-    group. A total of 2 over three texts sends 2 and refuses."""
+def an_annotate_set_packs_compatible_texts():
+    """Three compatible records fit one packed request under a total of two."""
     with Backend() as backend:
         both = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?"}, "area": {"choose": "Which area?", "options": ["billing", "login"]}}}'
         got = run(["SET thinkthen_max_requests_total = 2", f"SELECT thinkthen_annotate('{both}', x) FROM (VALUES ('one'), ('two'), ('three')) t(x)"], backend.base())
-        expect(said(got[1]), SPENT.replace("of 3", "of 2"), "three texts under a total of 2")
-        expect(backend.count(), 2, "counted sends")
+        expect([json.loads(line) for (line,) in rows(got[1])],
+               [{"refund": True, "area": "billing"}] * 3, "all three records answered")
+        expect(backend.count(), 1, "one packed request under the total")
 
 
 @case
@@ -350,7 +349,7 @@ def judged(result: dict) -> str:
 @case
 def access_cases_match_duckdb():
     """The 35 cache cases against COPY, then caller-file cases against
-    read_text for decide, warm, and relate. Refused paths send nothing."""
+    read_text for decide and relate. Refused paths send nothing."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         root = Path(folder)
         paths = folders(root)
@@ -377,23 +376,23 @@ def access_cases_match_duckdb():
                 sent = backend.count()
                 relate = f"SELECT count(*) FROM thinkthen_relate('SELECT 1 AS id, ''Ada'' AS name, ''person'' AS kind WHERE FALSE', '@{path}/r.json')"
                 files = run(
-                    [*setup, f"SELECT count(*) FROM read_text('{path}/q.json')", *(f"SELECT {verb}('@{path}/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm")), relate],
+                    [*setup, f"SELECT count(*) FROM read_text('{path}/q.json')",
+                     f"SELECT thinkthen_decide('@{path}/q.json', 'refund now')", relate],
                     backend.base(),
                 )
-                oracle = judged(files[-4])
-                for verb, got in (("decide", files[-3]), ("warm", files[-2]), ("relate", files[-1])):
+                oracle = judged(files[-3])
+                for verb, got in (("decide", files[-2]), ("relate", files[-1])):
                     ours = "allowed" if "error" not in got else ("refused" if "file settings refuse it" in said(got) else "missing")
                     if oracle != ours:
                         wrong.append(f"@file {verb} {setting} {name}: read_text {oracle}, we {ours}")
                 if oracle != "allowed" and backend.count() != sent:
                     wrong.append(f"@file {setting} {name}: a file DuckDB did not read sent something")
-        # Ticket 0129 decision 7 retains warm's @~ refusal.
         home = root / "home"
         home.mkdir()
         (home / "q.json").write_text('{"decide": "Is it a refund?"}')
-        tilde = run([f"SET home_directory = '{home}'", *(f"SELECT {verb}('@~/q.json', 'refund now')" for verb in ("thinkthen_decide", "thinkthen_warm"))], backend.base())
+        tilde = run([f"SET home_directory = '{home}'",
+                     "SELECT thinkthen_decide('@~/q.json', 'refund now')"], backend.base())
         expect(rows(tilde[1]), [[True]], "decide reads ~ from the session's home_directory")
-        expect(said(tilde[2]), "thinkthen usage: thinkthen_warm cannot read an '@~' path; write the full path", "warm and ~")
         if wrong:
             raise AssertionError("; ".join(wrong))
 
@@ -427,16 +426,6 @@ def two_databases_each_judge_their_own_access():
         )
         expect(rows(files[1]), [[True]], "A reads the file")
         expect(said(files[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "B's read")
-        warm = run(
-            [
-                ["B", "SET enable_external_access = false"],
-                f"SELECT thinkthen_warm('@{question}', 'refund now')",
-                ["B", f"SELECT thinkthen_warm('@{question}', 'refund now')"],
-            ],
-            backend.base(),
-        )
-        expect(rows(warm[1]), [[1]], "A's warm reads the file")
-        expect(said(warm[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "B's warm")
 
 
 def opens(trace: Path, name: str) -> int:

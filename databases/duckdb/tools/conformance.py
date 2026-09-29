@@ -103,9 +103,10 @@ def single_wanted(case: dict, base: str) -> list:
 
 
 def decide(case: dict, base: str) -> list:
-    # The saved 27/28 fixtures pin per-record request identity. The library's
-    # later default maximal batching has its own installed witness below.
-    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in {"27-decide-many", "28-decide-many-repeated-texts"} else None
+    # These saved exchanges pin singleton request identity. The default packed
+    # route has a separate installed exact-body witness below.
+    single = {"27-decide-many", "28-decide-many-repeated-texts"}
+    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in single else None
     got = run([f"SELECT thinkthen_decide({quoted(json.dumps(case['question']))}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=extra)
     return [value for (value,) in rows(got[0])]
 
@@ -135,14 +136,17 @@ def packed_default() -> None:
 
 def filtered(case: dict, base: str) -> list:
     table = values(evidence(case)) if case["exchanges"] else "(SELECT 0 AS i, 'none' AS x WHERE false) t"
-    got = run([f"SELECT i FROM {table} WHERE thinkthen_decide({quoted(json.dumps(case['question']))}, x) ORDER BY i"], base)
+    extra = {"THINKTHEN_BATCH": "1"} if case["id"] == "13-filter-records" else None
+    got = run([f"SELECT i FROM {table} WHERE thinkthen_decide({quoted(json.dumps(case['question']))}, x) ORDER BY i"], base, extra=extra)
     return [index for (index,) in rows(got[0])]
 
 
 def ranked(case: dict, base: str) -> list:
+    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in {"15-rank-records", "16-rank-stable-tie"} else None
     got = run(
         [f"SELECT i, thinkthen_probability({quoted(json.dumps(case['question']))}, x) AS p FROM {values(evidence(case))} ORDER BY p DESC, i"],
         base,
+        extra=extra,
     )
     return [{"index": index, "probability": probability} for index, probability in rows(got[0])]
 
@@ -272,7 +276,7 @@ def fault(case: dict, backend: Backend) -> str:
         elif injection == "unreadable_question_file" or case["id"].startswith("22-"):
             statement = ask.format(quoted(f"@{folder}/missing.json"))
         elif injection == "expired_deadline":
-            statement = "SELECT thinkthen_decide('Does this need attention?', 'evidence text', 0)"
+            statement = "SELECT thinkthen_decide('Does this need attention?', 'evidence text', '{\"deadline_ms\":0}')"
         else:
             raise LookupError(f"no runner for the injection {injection!r}")
         got = run([statement], backend.base())

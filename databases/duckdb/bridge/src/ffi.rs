@@ -14,6 +14,10 @@ mod find;
 mod listed;
 mod nested;
 mod panic;
+mod portable;
+mod portable_listed;
+mod portable_many;
+mod portable_scalar;
 #[path = "ffi/scalar/ffi.rs"]
 mod scalar;
 mod settings;

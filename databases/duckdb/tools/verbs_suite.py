@@ -81,7 +81,7 @@ def verbs_answer_through_the_generic_arm():
     expect(column(got[1]), ["billing"], "choose picks the first option at 0.9")
     expect(column(got[2]), [["billing", "shipping"]], "tag holds each label the generic arm answers yes")
     expect(json.loads(column(got[3])[0]), {"refund": True}, "annotate value_json")
-    expect(column(got[4]), [None], "a NULL deadline gives a NULL row")
+    expect(column(got[4]), [True], "a NULL optional settings object uses defaults")
     expect(said(got[5]), "thinkthen usage: choose takes its question as plain text and its options in the list", "choose refuses a file")
 
 
@@ -192,10 +192,10 @@ def r2_10_deadlines():
     with Backend() as backend:
         got = run(
             [
-                "SELECT thinkthen_decide('Is it a refund?', 'a', 0)",
-                "SELECT thinkthen_decide('Is it a refund?', 'b', -2)",
-                "SELECT thinkthen_decide('Is it a refund?', 'c', 4294967296000)",
-                "SELECT thinkthen_decide('Is it a refund?', 'd', 9223372036854775807)",
+                "SELECT thinkthen_decide('Is it a refund?', 'a', '{\"deadline_ms\":0}')",
+                "SELECT thinkthen_decide('Is it a refund?', 'b', '{\"deadline_ms\":-2}')",
+                "SELECT thinkthen_decide('Is it a refund?', 'c', '{\"deadline_ms\":4294967296000}')",
+                "SELECT thinkthen_decide('Is it a refund?', 'd', '{\"deadline_ms\":9223372036854775807}')",
             ],
             backend.base(),
         )
@@ -203,47 +203,22 @@ def r2_10_deadlines():
         for result in got[1:]:
             expect(said(result).split(":")[0], "thinkthen usage", "an out-of-range deadline")
         expect(backend.count(), 0, "counted sends")
-        answered = run(["SELECT thinkthen_decide('Is it a refund?', 'e', -1)"], backend.base())
+        answered = run(["SELECT thinkthen_decide('Is it a refund?', 'e', '{\"deadline_ms\":-1}')"], backend.base())
         expect(column(answered[0]), [True], "-1 runs with no deadline")
 
 
 @case
-def r2_22_warm_judges_one_question_per_group():
-    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
-        choose = Path(folder) / "choose.json"
-        choose.write_text('{"choose": "Which colour?", "options": ["red", "blue"]}')
-        got = run(
-            [
-                "SELECT thinkthen_warm(q, x) FROM (VALUES ('Is it a refund?', 'a'), ('Is it late?', 'b')) t(q, x)",
-                f"SELECT thinkthen_warm('@{choose}', 'a')",
-            ],
-            backend.base(),
-        )
-        expect(said(got[0]), "thinkthen usage: thinkthen_warm judges one question per group, and this group carries more than one", "two questions")
-        expect(said(got[1]), "thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide", "warm and a choose file")
-        expect(backend.count(), 0, "counted sends")
-        warmed = run(["SELECT thinkthen_warm('Is it a refund?', x) FROM (VALUES ('a'), ('b'), ('a')) t(x)"], backend.base())
-        expect(column(warmed[0]), [2], "warm counts distinct texts")
-
-
-@case
-def r2_22_warm_takes_the_banded_file_decide_uses():
-    """Ticket 0129: warm takes decide's banded file, and decide then reads the cache."""
+def a_banded_file_and_repeat_decide_share_one_cache_answer():
+    """A banded file remains valid and a repeated vector call uses its cache entry."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         banded = Path(folder) / "banded.json"
         banded.write_text(json.dumps({"decide": "Is it red?", "true": "Red paint.", "false": "Any other colour.", "model": "judge-b", "threshold": "0.85:0.95"}))
         texts = "(VALUES ('a red door'), ('a blue door'), ('a red door')) t(x)"
-        got = run([f"SELECT thinkthen_warm('@{banded}', x) FROM {texts}", f"SELECT thinkthen_decide('@{banded}', x) FROM {texts}"], backend.base())
-        expect(column(got[0]), [2], "warm counts distinct texts")
-        expect(column(got[1]), [None, None, None], "decide reads unsure under the band")
-        expect(backend.count(), 1, "one packed warm send fills decide's cache")
-
-
-@case
-def r2_22_warm_raises_the_engines_word():
-    with Backend() as backend:
-        got = run(["SELECT thinkthen_warm('Is it a refund?', 'a')"], backend.base("arm/refuse"))
-        expect(said(got[0]).split(":")[0], "thinkthen backend", "a refused warm")
+        query = f"SELECT thinkthen_decide('@{banded}', x) FROM {texts}"
+        got = run([query, query], backend.base())
+        expect(column(got[0]), [None, None, None], "the band leaves each row unsure")
+        expect(column(got[1]), [None, None, None], "repeat reads the same banded answers")
+        expect(backend.count(), 1, "one packed send fills the repeat cache")
 
 
 @case
@@ -272,7 +247,6 @@ CALLS = [
     f"SELECT thinkthen_annotate('{SET}', 'a')",
     "SELECT thinkthen_recognize('Maria Chen arrived.', ['person'])",
     f"SELECT thinkthen_relations('Maria Chen arrived.', '{NAMES}')",
-    "SELECT thinkthen_warm('Is it a refund?', 'a')",
     "SELECT * FROM thinkthen_relate('SELECT 1 AS id, ''a'' AS name UNION ALL SELECT 2, ''b''', ['near'])",
 ]
 
@@ -298,8 +272,8 @@ def secrecy_no_key_or_credential_in_any_message():
             backend.base(),
             extra=extra,
         )
-        expect(["error" in result for result in answered], [False] * 11 + [True] * 4, "which calls failed")
-        expect([said(result).split(":")[0] for result in answered[11:]], ["thinkthen usage", "thinkthen local", "thinkthen local", "thinkthen usage"], "the usage and local kinds")
+        expect(["error" in result for result in answered], [False] * 10 + [True] * 4, "which calls failed")
+        expect([said(result).split(":")[0] for result in answered[10:]], ["thinkthen usage", "thinkthen local", "thinkthen local", "thinkthen usage"], "the usage and local kinds")
         expect(backend.count() > 0, True, f"counted sends: {backend.count()}")
         address = run(CALLS[:1], "http://127.0.0.1:1/unused", extra={"THINKTHEN_API_KEY": sentinel, "THINKTHEN_BASE_URL": f"http://user:pw-sentinel-4417@127.0.0.1:{backend.port}/v1"})
         for result in [*refused, *answered, *address]:
@@ -434,16 +408,16 @@ def b13c_context_and_batch_one_wire_identity():
 
 
 @case
-def b13c_warm_first_seen_context():
-    """One warm group sends its distinct texts in first-seen order with its literal context."""
+def portable_vector_first_seen_context():
+    """One vector sends distinct texts in first-seen order with its literal context."""
     with PackedReplies(missing_second=False) as backend:
         got = run(["SET threads = 1",
-                   "SELECT thinkthen_warm('Is it a refund?', x, 'shared') "
+                   "SELECT thinkthen_decide('Is it a refund?', x, '{\"context\":\"shared\"}') "
                    "FROM (VALUES (1,'zeta'),(2,'alpha'),(3,'zeta'),(4,'beta')) t(i,x)"], backend.base)
-        expect(column(got[1]), [3], "warm distinct count")
-        expect(len(backend.bodies), 1, "one warm request")
+        expect(column(got[1]), [True, True, True, True], "every vector row answered")
+        expect(len(backend.bodies), 1, "one packed request")
         expected = b'{"state":"shared","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"zeta\\". Is it a refund?"},"q2":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},"q3":{"type":"noul","instructions":"The text is \\"beta\\". Is it a refund?"}}}'
-        expect(backend.bodies[0], expected, "first-seen warm body")
+        expect(backend.bodies[0], expected, "first-seen vector body")
 
 
 @case

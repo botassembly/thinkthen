@@ -49,6 +49,10 @@ SessionSettings Settings(ClientContext &context) {
 	                          TextSetting(context, "thinkthen_profile"),
 	                          TextSetting(context, "thinkthen_record"),
 	                          TextSetting(context, "thinkthen_replay")};
+	if (settings.max_requests_total != std::numeric_limits<int64_t>::min() &&
+	    settings.max_requests_total < 0) {
+		throw InvalidInputException("thinkthen usage: a request total is a whole number of 0 or more");
+	}
 	settings.cache_allowed = FolderAllowed(context, settings.cache) ? 1 : 0;
 	settings.record_allowed = FolderAllowed(context, settings.record) ? 1 : 0;
 	settings.replay_allowed = FolderAllowed(context, settings.replay) ? 1 : 0;

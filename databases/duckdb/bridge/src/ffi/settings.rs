@@ -5,10 +5,10 @@ use crate::engines;
 
 /// Unset numeric SQL settings use `i64::MIN`; every valid setting is larger.
 #[repr(C)]
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) struct BridgeSettings {
-    batch_bytes: *const u8,
-    batch_len: usize,
+    pub(super) batch_bytes: *const u8,
+    pub(super) batch_len: usize,
     throttle: i64,
     max_requests: i64,
     max_request_bytes: i64,

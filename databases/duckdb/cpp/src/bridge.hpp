@@ -51,6 +51,36 @@ void *thinkthen_cpp_query_begin();
 int32_t thinkthen_cpp_query_stopped(const void *scope);
 void thinkthen_cpp_query_end(void *scope);
 ThinkThenReply thinkthen_cpp_validate_question(const uint8_t *bytes, size_t len, int32_t from_file);
+ThinkThenReply thinkthen_cpp_validate_portable_decide(const uint8_t *question, size_t question_len,
+                                                      int32_t from_file, const uint8_t *settings, size_t settings_len,
+                                                      const uint8_t *threshold, size_t threshold_len);
+ThinkThenReply thinkthen_cpp_portable_decide_group(const uint8_t *question, size_t question_len,
+                                                   int32_t from_file, const ThinkThenText *texts, size_t count,
+                                                   const uint8_t *settings, size_t settings_len,
+                                                   const uint8_t *threshold, size_t threshold_len,
+                                                   int64_t query_deadline_ms, ThinkThenSettings session,
+                                                   ThinkThenStop stop);
+ThinkThenReply thinkthen_cpp_validate_portable_many(const uint8_t *question, size_t question_len,
+                                                   int32_t from_file, const uint8_t *keyed, size_t keyed_len,
+                                                   const uint8_t *settings, size_t settings_len, int32_t kind);
+ThinkThenReply thinkthen_cpp_portable_many(const uint8_t *question, size_t question_len,
+                                          int32_t from_file, const uint8_t *keyed, size_t keyed_len,
+                                          const uint8_t *settings, size_t settings_len, int32_t kind,
+                                          int64_t query_deadline_ms, ThinkThenSettings session, ThinkThenStop stop);
+ThinkThenReply thinkthen_cpp_validate_portable_listed(const uint8_t *question, size_t question_len,
+                                                     int32_t from_file, const uint8_t *members, size_t members_len,
+                                                     const uint8_t *settings, size_t settings_len, int32_t kind);
+ThinkThenReply thinkthen_cpp_portable_listed_group(const uint8_t *question, size_t question_len,
+                                                  int32_t from_file, const ThinkThenText *texts, size_t count,
+                                                  const uint8_t *members, size_t members_len,
+                                                  const uint8_t *settings, size_t settings_len, int32_t kind,
+                                                  int64_t query_deadline_ms, ThinkThenSettings session, ThinkThenStop stop);
+ThinkThenReply thinkthen_cpp_validate_portable_scalar(const uint8_t *question, size_t question_len,
+                                                     int32_t from_file, const uint8_t *settings, size_t settings_len);
+ThinkThenReply thinkthen_cpp_portable_scalar_group(const uint8_t *question, size_t question_len,
+                                                  int32_t from_file, const ThinkThenText *texts, size_t count,
+                                                  const uint8_t *settings, size_t settings_len, int32_t kind,
+                                                  int64_t query_deadline_ms, ThinkThenSettings session, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_validate_set(const uint8_t *bytes, size_t len, int32_t from_file);
 ThinkThenReply thinkthen_cpp_validate_listed(const uint8_t *question, size_t question_len,
                                              const ThinkThenText *members, size_t member_count, int32_t kind);

@@ -8,6 +8,7 @@
 #include "nested.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
+#include "portable.hpp"
 #include "usage.hpp"
 #include "warm.hpp"
 #include "relate.hpp"
@@ -405,7 +406,8 @@ void LoadThinkThen(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_profile", "Inline backend limits profile JSON", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_record", "Local recording folder", LogicalType::VARCHAR);
 	config.AddExtensionOption("thinkthen_replay", "Local strict replay folder", LogicalType::VARCHAR);
-	for (auto name : {"thinkthen_decide", "thinkthen_probability", "thinkthen_details", "thinkthen_try_details", "thinkthen_annotate"}) {
+	RegisterPortableDecide(loader);
+	for (auto name : {"thinkthen_try_details", "thinkthen_annotate"}) {
 		const auto result = string(name) == "thinkthen_details" || string(name) == "thinkthen_try_details" || string(name) == "thinkthen_annotate" ? LogicalType::VARCHAR
 		                    : string(name) == "thinkthen_probability" ? LogicalType::DOUBLE : LogicalType::BOOLEAN;
 		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
@@ -416,24 +418,6 @@ void LoadThinkThen(ExtensionLoader &loader) {
 			if (string(name) == "thinkthen_try_details") {
 				function.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 			}
-			function.SetStability(FunctionStability::VOLATILE);
-			loader.RegisterFunction(function);
-		}
-	}
-	for (auto name : {"thinkthen_choose", "thinkthen_score", "thinkthen_tag"}) {
-		const auto result = string(name) == "thinkthen_score" ? LogicalType::DOUBLE
-		                    : string(name) == "thinkthen_tag" ? LogicalType::LIST(LogicalType::VARCHAR)
-		                                                       : LogicalType::VARCHAR;
-		ScalarFunction complete(name, {LogicalType::VARCHAR, LogicalType::VARCHAR}, result, CompleteListedCall, BindDecide);
-		complete.SetStability(FunctionStability::VOLATILE);
-		loader.RegisterFunction(complete);
-		for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,
-		                                                 LogicalType::LIST(LogicalType::VARCHAR)},
-		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,
-		                                                 LogicalType::LIST(LogicalType::VARCHAR), LogicalType::BIGINT},
-		                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR,
-		                                                 LogicalType::LIST(LogicalType::VARCHAR), LogicalType::BIGINT, LogicalType::VARCHAR}}) {
-			ScalarFunction function(name, parameters, result, Listed, BindDecide);
 			function.SetStability(FunctionStability::VOLATILE);
 			loader.RegisterFunction(function);
 		}
