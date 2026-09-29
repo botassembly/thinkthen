@@ -57,3 +57,7 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 ## Pre-merge re-pin (2026-09-28, pin 71f25087)
 
 ADAPTED-PASS (packing, envelope, multiset 47->39). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
+
+## Product source candidate (2026-09-28)
+
+Ticket 0249 copied the accepted repin package into `libraries/go/` and adapted a product-owned offline gate. At source `976bcd75`, the gate passed four copied-module consumers with 39 exact full request bodies each, plus one external module call per consumer, 55 schema cases and 29 executable public Go cases, current 30-export native ABI, settings construction, named error kinds and copied failure facts. See `sdlc/records/0249-go-cpp-{preflight,build}.md`. Fresh source review and shared surface registration remain pending. The original final-release pin, `ubuntu-24.04` CI/release run, native archive distribution, and module-tag/direct-install criteria remain open. No package was published.
