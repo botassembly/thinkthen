@@ -54,7 +54,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path != "/generic/v1/systemone" or self.headers.get("Authorization") != "Bearer tt-canary-275":
             self.send_error(403)
             return
-        if isinstance(state, str) and (state.startswith("hold-") or packed_hold):
+        if isinstance(state, str) and (state.startswith("hold-") or state in ('parallel-independent-0', 'parallel-independent-1') or packed_hold):
             barrier_name = 'hold-bulk-1' if packed_hold else state
             (self.server.barrier / ("arrived-" + barrier_name)).touch()
             release = self.server.barrier / ("release-" + barrier_name)
@@ -97,7 +97,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 preferred = 'none' if '"evidence":"find-none"' in state_key and 'none' in keys else keys[0]
                 answers[name] = {"type": kind, "probabilities": {key: 0.9 if key == preferred else 0.1 / (len(keys) - 1) for key in keys}}
         packed_middle_bad = any('"bulk-middle-bad"' in str(q.get('instructions', '')) for q in request['questions'].values())
-        data = b'{broken' if state_key in ('malformed-backend', 'bulk-middle-bad') or packed_middle_bad else json.dumps({"model": request["model"], "answers": answers, "usage": {"input_tokens": 1, "output_tokens": 1}}).encode()
+        reply = {"model": request["model"], "answers": answers}
+        if state_key != 'post-failure-recovery': reply["usage"] = {"input_tokens": 1, "output_tokens": 1}
+        data = b'{broken' if state_key in ('malformed-backend', 'bulk-middle-bad') or packed_middle_bad else json.dumps(reply).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))

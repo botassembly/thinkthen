@@ -22,7 +22,7 @@ gcc -std=gnu11 -x objective-c -I /absolute/native/include -I /absolute/objc/Sour
 ./example
 ```
 
-On Ubuntu 24.04 the GNU Objective-C compiler and runtime are `gobjc gcc libobjc4`; no Foundation is required. A consuming project must install or name the matching native library and its runtime search path. The archive instructions below describe local pilot files, not public release assets.
+On Ubuntu 24.04 the GNU Objective-C compiler and runtime are `gobjc gcc libobjc4`; no Foundation is required. Running this checkout's `check.sh` also requires Node and Python with `jsonschema`. A consuming project must install or name the matching native library and its runtime search path. The archive instructions below describe local pilot files, not public release assets.
 
 ## Install from independently supplied archives
 

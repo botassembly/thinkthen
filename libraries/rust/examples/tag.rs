@@ -14,6 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .label(Label::Billing, None)?
         .cut()?;
     let text = "Love the new dashboard, but export crashes the app, and I was charged twice.";
-    writeln!(std::io::stdout().lock(), "{:?}", tt.tag(&labels, text)?)?;
+    let tags = tt.tag(&labels, text)?.into_value();
+    writeln!(std::io::stdout().lock(), "{tags:?}")?;
     Ok(())
 }

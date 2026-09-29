@@ -6,6 +6,8 @@ export 'src/typed.dart'
     show
         Outcome,
         ErrorKind,
+        CallFacts,
+        CallResult,
         Entity,
         Edge,
         Recognition,

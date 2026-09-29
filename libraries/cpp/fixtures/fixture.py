@@ -37,6 +37,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 name = 'hold-bulk-first'
             elif len(rows) == 2 and any('The text is "batch-one".' in q for q in rows) and any('The text is "batch-two".' in q for q in rows):
                 name = 'batch-pair'
+            elif len(rows) == 2 and any('The text is "hold-owned-bulk-first".' in q for q in rows) and any('The text is "hold-owned-bulk-second".' in q for q in rows):
+                name = 'hold-owned-bulk-first'
         if self.path != '/generic/v1/systemone' or self.headers.get('Authorization') != 'Bearer tt-canary-301':
             self.send_error(403)
             return
@@ -78,7 +80,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     answers[key] = {'type': kind, 'probabilities': {k: 1.0 if k in ('OUT', 'none of these') else 0.0 for k in keys}}
                 else:
                     answers[key] = {'type': kind, 'probabilities': {k: .9 if i == 0 else .1 / (len(keys)-1) for i,k in enumerate(keys)}}
-        data = json.dumps({'model': body['model'], 'answers': answers, 'usage': {'input_tokens': 1, 'output_tokens': 1}}).encode()
+        reply = {'model': body['model'], 'answers': answers}
+        if name != 'without-usage': reply['usage'] = {'input_tokens': 1, 'output_tokens': 1}
+        data = json.dumps(reply).encode()
         self.send_response(200)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Content-Length', str(len(data)))

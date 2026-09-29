@@ -100,9 +100,9 @@ try:
                     "{'entities': [{'id': 'i1', 'name': 'First', 'kind': 'alert'}, {'id': 'i2', 'name': 'Second', 'kind': 'alert'}]}": 1,
                     "{'entities': [{'id': 'i1', 'name': 'Third', 'kind': 'alert'}, {'id': 'i2', 'name': 'Fourth', 'kind': 'alert'}]}": 1,
                     'annotate-one': 1, 'Maria Chen': 2, 'John Smith': 2,
-                    'status-401': 1, 'failure-one': 1, 'failure-two': 1,
+                    'status-401': 1, 'failure-one': 1, 'failure-two': 1, 'no-usage': 1,
                     'success': 1, 'hold-deadline': 1, 'hold-scalar': 1,
-                    'recovery-scalar': 1,
+                    'recovery-scalar': 1, 'hold-facts-one': 1, 'hold-facts-two': 1,
                     'packed:hold-bulk-1,hold-bulk-2,hold-bulk-3,hold-bulk-4,hold-bulk-5,hold-bulk-6': 1}
         # New literal request multiset: specification/records.md "Order and requests"
         # and ADR 0048 item 1 put six held rows into one counted POST.

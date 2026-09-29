@@ -107,7 +107,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                     keys = [str(i) for i in range(len(keys))]
                 preferred = 'none' if '"evidence":"find-none"' in state_key and 'none' in keys else keys[0]
                 answers[name] = {"type": kind, "probabilities": {key: 0.9 if key == preferred else 0.1 / (len(keys) - 1) for key in keys}}
-        data = b'{broken' if state_key in ('malformed-backend', 'bulk-middle-bad') else json.dumps({"model": request["model"], "answers": answers, "usage": {"input_tokens": 1, "output_tokens": 1}}).encode()
+        reply = {"model": request["model"], "answers": answers}
+        if state_key != 'no-usage': reply["usage"] = {"input_tokens": 1, "output_tokens": 1}
+        data = b'{broken' if state_key in ('malformed-backend', 'bulk-middle-bad') else json.dumps(reply).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(data)))

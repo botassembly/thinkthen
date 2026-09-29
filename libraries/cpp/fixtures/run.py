@@ -14,7 +14,7 @@ root = pathlib.Path(__file__).resolve().parent
 repo = root.parents[2]
 stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%S%fZ')
 plant = sys.argv[1] if len(sys.argv) == 2 else ''
-if plant not in ('', 'extra-bulk', 'wrong-relation', 'wrong-probability', 'swapped-bulk', 'wrong-json', 'wrong-annotate', 'wrong-recognize', 'wrong-relate', 'fail-mid-case'):
+if plant not in ('', 'owned-facts', 'extra-bulk', 'wrong-relation', 'wrong-probability', 'swapped-bulk', 'wrong-json', 'wrong-annotate', 'wrong-recognize', 'wrong-relate', 'fail-mid-case'):
     raise SystemExit('unknown planted variant')
 logs = repo / 'target/cpp/logs' / ('gate-' + stamp + ('-' + plant if plant else ''))
 logs.mkdir(parents=True, exist_ok=False)
@@ -32,6 +32,7 @@ env = {
     'TT_SOURCE': os.environ.get('CPP_CORPUS_ROOT', str(repo)),
     'ASAN_OPTIONS': 'detect_leaks=1:abort_on_error=1', 'UBSAN_OPTIONS': 'halt_on_error=1',
 }
+if plant == 'owned-facts': env['TT_FACTS_ONLY'] = '1'
 command = [os.environ.get('CPP_CONSUMER', str(repo / 'target/cpp/shared-build/consumer'))]
 receipt = {'command': command, 'pid': None, 'pgid': None, 'exit': None, 'signals': [], 'timeout_seconds': 140}
 process = None
@@ -83,7 +84,12 @@ finally:
     relation = {k: v for k, v in counts.items() if k.startswith('{') and 'entities' in k}
     bulk = {k: v for k, v in counts.items() if k.startswith('hold-bulk-')}
     text = (logs / 'consumer.log').read_text(errors='replace')
-    status = ('PASS' if receipt['exit'] == 0 and 'CPP_PRODUCT_PASS' in text
+    owned_required = {'without-usage': 1, 'hold-owned-scalar': 1, 'hold-owned-bulk-first': 1}
+    if plant == 'owned-facts':
+        status = 'PASS' if receipt['exit'] == 0 and 'CPP_OWNED_FACTS_PASS' in text and counts == owned_required and \
+            len(server.completions) == 3 else 'FAIL'
+    else:
+        status = ('PASS' if receipt['exit'] == 0 and 'CPP_PRODUCT_PASS' in text
               and counts == required and (plant or full_body_match) and relation == {relation_name: 1}
               and bulk == {'hold-bulk-first': 1}
               and counts['hold-scalar'] == 1 and 'hold-scalar' in server.completions

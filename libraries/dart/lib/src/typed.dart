@@ -3,6 +3,52 @@ enum Outcome { no, yes, notSure }
 
 enum ErrorKind { usage, backend, deadline, local, cancelled, defect }
 
+final class CallFacts {
+  final int records, requestsSent, cacheAnswers;
+  final double seconds;
+  final int? inputTokens, outputTokens;
+  final String? model;
+  const CallFacts(
+    this.records,
+    this.requestsSent,
+    this.cacheAnswers,
+    this.seconds,
+    this.inputTokens,
+    this.outputTokens,
+    this.model,
+  );
+
+  factory CallFacts.parse(Object? value) {
+    final map = _map(value, {
+      'records',
+      'requests_sent',
+      'cache_answers',
+      'seconds',
+    });
+    final seconds = _number(map['seconds']);
+    if (seconds < 0) throw FormatException('negative facts seconds');
+    return CallFacts(
+      _nonnegative(map['records']),
+      _nonnegative(map['requests_sent']),
+      _nonnegative(map['cache_answers']),
+      seconds,
+      map.containsKey('input_tokens')
+          ? _nonnegative(map['input_tokens'])
+          : null,
+      map.containsKey('output_tokens')
+          ? _nonnegative(map['output_tokens'])
+          : null,
+      map.containsKey('model') ? _string(map['model']) : null,
+    );
+  }
+}
+
+final class CallResult<T> {
+  final T value;
+  final CallFacts facts;
+  const CallResult(this.value, this.facts);
+}
+
 // C and Dart report zero-based, end-exclusive Unicode scalar offsets, not UTF-16.
 final class Entity {
   final String text, kind;

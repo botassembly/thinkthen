@@ -2,6 +2,7 @@
 #include <thinkthen/thinkthen.h>
 #include "json.hpp"
 #include <algorithm>
+#include <cmath>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -31,6 +32,34 @@ static_assert(!std::is_copy_constructible<Engine>::value, "engines cannot be cop
 static_assert(!std::is_copy_constructible<CancelToken>::value, "tokens cannot be copied");
 static_assert(!std::is_copy_constructible<OwnedString>::value, "returned strings cannot be copied");
 struct Judgment { Outcome outcome; double probability; };
+struct CallFacts {
+    size_t records, requestsSent, cacheAnswers;
+    double seconds;
+    std::optional<size_t> inputTokens, outputTokens;
+    std::optional<std::string> model;
+};
+template <typename T> struct CallResult { T value; CallFacts facts; };
+inline CallFacts decodeFacts(const Json& value) {
+    if (!value.is_object()) throw std::invalid_argument("facts object required");
+    auto count = [&](const char* key) -> size_t {
+        const auto& item = value.at(key);
+        if (!item.is_number()) throw std::invalid_argument(std::string("invalid facts ") + key);
+        return item.get<size_t>();
+    };
+    const auto& duration = value.at("seconds");
+    if (!duration.is_number() || !std::isfinite(duration.get<double>()) || duration.get<double>() < 0)
+        throw std::invalid_argument("invalid facts seconds");
+    CallFacts facts{count("records"), count("requests_sent"), count("cache_answers"), duration.get<double>(),
+                    std::nullopt, std::nullopt, std::nullopt};
+    if (value.contains("input_tokens")) facts.inputTokens = count("input_tokens");
+    if (value.contains("output_tokens")) facts.outputTokens = count("output_tokens");
+    if (value.contains("model")) facts.model = value.at("model").get<std::string>();
+    return facts;
+}
+inline CallFacts decodeFacts(const OwnedString& text, size_t length) {
+    if (!text) throw std::logic_error("successful call returned null facts");
+    return decodeFacts(Json::parse(std::string(text.get(), length)));
+}
 using NullableOutcome = std::optional<Outcome>; // null means unresolved, never failure.
 struct FailedField { ErrorKind kind; std::string cause; };
 using AnnotatedDecision = std::variant<NullableOutcome, FailedField>;
@@ -76,33 +105,40 @@ inline Judgment decode(thinkthen_answer value) {
     if (value.outcome < THINKTHEN_NO || value.outcome > THINKTHEN_UNSURE) throw std::runtime_error("invalid outcome");
     return {static_cast<Outcome>(value.outcome), value.probability};
 }
-inline Judgment decide(const Engine& engine, const std::string& q, const std::string& text,
+inline CallResult<Judgment> decide(const Engine& engine, const std::string& q, const std::string& text,
                        int64_t deadline = THINKTHEN_NO_DEADLINE, thinkthen_cancel_token* cancel = nullptr) {
     thinkthen_answer value{123, -1};
-    int code = thinkthen_decide_opts(engine.get(), q.c_str(), text.data(), text.size(), deadline, cancel, &value);
+    char* rawFacts = nullptr; size_t factsLength = 999;
+    int code = thinkthen_decide_with_facts_opts(engine.get(), q.c_str(), text.data(), text.size(),
+                                                deadline, cancel, &value, &rawFacts, &factsLength);
+    OwnedString facts(rawFacts);
     if (code) {
-        if (value.outcome != 123 || value.probability != -1) throw std::logic_error("failure changed scalar output");
+        if (value.outcome != 123 || value.probability != -1 || rawFacts || factsLength != 999)
+            throw std::logic_error("failure changed scalar outputs");
         throw failure(engine.get(), code);
     }
-    return decode(value);
+    return {decode(value), decodeFacts(facts, factsLength)};
 }
-inline std::vector<Judgment> many(const Engine& engine, const std::string& q,
+inline CallResult<std::vector<Judgment>> many(const Engine& engine, const std::string& q,
                                    const std::vector<std::string>& texts,
                                    int64_t deadline = THINKTHEN_NO_DEADLINE, thinkthen_cancel_token* cancel = nullptr) {
     std::vector<const char*> pointers;
     std::vector<size_t> lengths;
     for (const auto& s : texts) { pointers.push_back(s.data()); lengths.push_back(s.size()); }
     std::vector<thinkthen_answer> result(texts.size(), {123, -1});
-    int code = thinkthen_decide_many_opts(engine.get(), q.c_str(), pointers.data(), lengths.data(),
-                                          texts.size(), deadline, cancel, result.data());
+    char* rawFacts = nullptr; size_t factsLength = 999;
+    int code = thinkthen_decide_many_with_facts_opts(engine.get(), q.c_str(), pointers.data(), lengths.data(),
+                                                     texts.size(), deadline, cancel, result.data(), &rawFacts, &factsLength);
+    OwnedString facts(rawFacts);
     if (code) {
         for (auto value : result) if (value.outcome != 123 || value.probability != -1)
             throw std::logic_error("failure changed bulk output");
+        if (rawFacts || factsLength != 999) throw std::logic_error("failure changed bulk facts output");
         throw failure(engine.get(), code);
     }
     std::vector<Judgment> judgments;
     for (auto value : result) judgments.push_back(decode(value));
-    return judgments;
+    return {std::move(judgments), decodeFacts(facts, factsLength)};
 }
 inline Json call(const Engine& engine, const Json& request) {
     const auto encoded = request.dump();
@@ -110,32 +146,34 @@ inline Json call(const Engine& engine, const Json& request) {
     if (!raw) throw failure(engine.get(), thinkthen_error_code(engine.get()));
     return Json::parse(raw.get());
 }
-inline Json recognize(const Engine& engine, const std::string& spec, const std::string& text) {
-    char* raw = nullptr; size_t length = 999;
-    int code = thinkthen_recognize_opts(engine.get(), spec.c_str(), text.data(), text.size(),
-                                        THINKTHEN_NO_DEADLINE, nullptr, &raw, &length);
+inline CallResult<Json> recognize(const Engine& engine, const std::string& spec, const std::string& text) {
+    char* raw = nullptr; size_t length = 999; char* rawFacts = nullptr; size_t factsLength = 999;
+    int code = thinkthen_recognize_with_facts_opts(engine.get(), spec.c_str(), text.data(), text.size(),
+                                                   THINKTHEN_NO_DEADLINE, nullptr, &raw, &length, &rawFacts, &factsLength);
+    OwnedString owned(raw), facts(rawFacts);
     if (code) {
-        if (raw || length != 999) throw std::logic_error("failure changed recognize outputs");
+        if (raw || length != 999 || rawFacts || factsLength != 999)
+            throw std::logic_error("failure changed recognize outputs");
         throw failure(engine.get(), code);
     }
-    OwnedString owned(raw);
     if (!owned) throw std::logic_error("successful recognize returned null");
-    return Json::parse(std::string(owned.get(), length));
+    return {Json::parse(std::string(owned.get(), length)), decodeFacts(facts, factsLength)};
 }
-inline Json relate(const Engine& engine, const std::string& spec, const std::vector<std::string>& texts) {
+inline CallResult<Json> relate(const Engine& engine, const std::string& spec, const std::vector<std::string>& texts) {
     std::vector<const char*> pointers;
     std::vector<size_t> lengths;
     for (const auto& s : texts) { pointers.push_back(s.data()); lengths.push_back(s.size()); }
-    char* raw = nullptr; size_t length = 999;
-    int code = thinkthen_relate_opts(engine.get(), spec.c_str(), pointers.data(), lengths.data(), texts.size(),
-                                     THINKTHEN_NO_DEADLINE, nullptr, &raw, &length);
+    char* raw = nullptr; size_t length = 999; char* rawFacts = nullptr; size_t factsLength = 999;
+    int code = thinkthen_relate_with_facts_opts(engine.get(), spec.c_str(), pointers.data(), lengths.data(), texts.size(),
+                                                THINKTHEN_NO_DEADLINE, nullptr, &raw, &length, &rawFacts, &factsLength);
+    OwnedString owned(raw), facts(rawFacts);
     if (code) {
-        if (raw || length != 999) throw std::logic_error("failure changed relate outputs");
+        if (raw || length != 999 || rawFacts || factsLength != 999)
+            throw std::logic_error("failure changed relate outputs");
         throw failure(engine.get(), code);
     }
-    OwnedString owned(raw);
     if (!owned) throw std::logic_error("successful relate returned null");
-    return Json::parse(std::string(owned.get(), length));
+    return {Json::parse(std::string(owned.get(), length)), decodeFacts(facts, factsLength)};
 }
 // Offsets are zero-based, end-exclusive Unicode scalar indices (not UTF-16).
 struct Entity { std::string text; size_t startScalar; size_t endScalar; size_t lengthScalar; std::string kind; double strength; };

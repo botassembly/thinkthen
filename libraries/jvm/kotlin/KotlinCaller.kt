@@ -7,18 +7,18 @@ import java.util.concurrent.atomic.AtomicReference
 
 /** Kotlin facade over the same Java FFM door. Caller joins before engine close. */
 class KotlinFacade(private val engine: Door) {
-    fun decide(question: String, evidence: String): Door.Answer = engine.decide(question, evidence.toByteArray(StandardCharsets.UTF_8))
+    fun decide(question: String, evidence: String): Door.TypedResult<Door.Answer> = engine.decide(question, evidence.toByteArray(StandardCharsets.UTF_8))
     fun call(request: String): String = engine.call(request)
     inner class RunningDecision(question: String, evidence: String): AutoCloseable {
         private val token = engine.token()
-        private val result = AtomicReference<Door.Answer>()
+        private val result = AtomicReference<Door.TypedResult<Door.Answer>>()
         private val failure = AtomicReference<Throwable>()
         private val caller = Thread.ofPlatform().start {
             try { result.set(engine.decide(question, evidence.toByteArray(StandardCharsets.UTF_8), -1, token)) }
             catch (ex: Throwable) { failure.set(ex) }
         }
         fun cancel() = token.fire()
-        fun await(): Door.Answer {
+        fun await(): Door.TypedResult<Door.Answer> {
             caller.join()
             failure.get()?.let { throw it }
             return result.get()
@@ -30,8 +30,8 @@ class KotlinFacade(private val engine: Door) {
 fun main() {
     Door().use { engine ->
         val facade = KotlinFacade(engine)
-        check(facade.decide("Is it?", "kotlin-direct").outcome() == 1)
-        facade.decideAsync("Is it?", "kotlin-future").use { check(it.await().probability() == .9) }
+        check(facade.decide("Is it?", "kotlin-direct").value().outcome() == 1)
+        facade.decideAsync("Is it?", "kotlin-future").use { check(it.await().value().probability() == .9) }
         engine.token().use { token ->
             token.fire()
             try { engine.decide("Is it?", "kotlin-never-sent".toByteArray(), -1, token); error("fired token worked") }
@@ -52,7 +52,7 @@ fun main() {
             catch (ex: Door.NativeFailure) { check(ex.failure.code() == 5) { "Kotlin cancellation code: ${ex.failure.code()}" } }
             println("KOTLIN_HELD_SCALAR_CANCELLED_PASS")
         }
-        check(facade.decide("Is it?", "kotlin-recovery").outcome() == 1)
+        check(facade.decide("Is it?", "kotlin-recovery").value().outcome() == 1)
         println("KOTLIN_PASS")
     }
 }

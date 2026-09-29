@@ -127,7 +127,7 @@ def check_jar(data, kind):
     manifest = members.pop("META-INF/MANIFEST.MF", None)
     require(manifest is not None and manifest.startswith(b"Manifest-Version: 1.0"), "JAR manifest differs")
     expected = {
-        "door": {"thinkthen/Door$Answer.class", "thinkthen/Door$Failure.class",
+        "door": {"thinkthen/Door$Answer.class", "thinkthen/Door$Facts.class", "thinkthen/Door$TypedResult.class", "thinkthen/Door$Failure.class",
                  "thinkthen/Door$FailureKind.class", "thinkthen/Door$NativeFailure.class",
                  "thinkthen/Door$Outcome.class", "thinkthen/Door$Token.class",
                  "thinkthen/Door.class", "thinkthen/ResultEnvelope$Reader.class",

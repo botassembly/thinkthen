@@ -16,7 +16,7 @@ fun main() {
     }
     Door().use { door ->
         val answer = KotlinFacade(door).decide("Is it?", "release-kotlin")
-        check(answer.outcome() == 1 && answer.probability() == 0.9)
+        check(answer.value().outcome() == 1 && answer.value().probability() == 0.9 && answer.facts().records() == 1L && answer.facts().requestsSent() == 1L)
         println("INSTALLED_KOTLIN_PASS")
     }
 }

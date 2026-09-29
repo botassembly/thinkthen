@@ -123,26 +123,67 @@ void held(const tt::Engine& engine, const std::string& name, int expected, bool 
         std::cout << "TOKEN_FREED_AFTER_JOIN" << std::endl;
     }
 }
+void ownedFactsCase() {
+    auto engine = tt::create();
+    auto noUsage = tt::decide(engine, "Is it?", "without-usage");
+    check(noUsage.value.outcome == tt::Outcome::yes && noUsage.facts.records == 1 &&
+          noUsage.facts.requestsSent == 1 && !noUsage.facts.inputTokens &&
+          !noUsage.facts.outputTokens && noUsage.facts.model == std::optional<std::string>("jev-1.13.0"),
+          "typed valid reply without usage retains model");
+    auto empty = tt::many(engine, "Is it?", {});
+    check(empty.value.empty() && empty.facts.records == 0 && empty.facts.requestsSent == 0 &&
+          empty.facts.cacheAnswers == 0 && !empty.facts.model && !empty.facts.inputTokens &&
+          !empty.facts.outputTokens, "empty bulk owned zero facts, no model");
+    std::optional<tt::CallResult<tt::Judgment>> scalar;
+    std::optional<tt::CallResult<std::vector<tt::Judgment>>> bulk;
+    std::exception_ptr scalarError, bulkError;
+    std::thread first([&] { try { scalar = tt::decide(engine, "Is it?", "hold-owned-scalar"); }
+                            catch (...) { scalarError = std::current_exception(); } });
+    ThreadJoin firstJoin{first};
+    std::thread second;
+    ThreadJoin secondJoin{second};
+    try {
+        second = std::thread([&] { try { bulk = tt::many(engine, "Is it?", {"hold-owned-bulk-first", "hold-owned-bulk-second"}); }
+                                   catch (...) { bulkError = std::current_exception(); } });
+        awaitArrival("hold-owned-scalar"); awaitArrival("hold-owned-bulk-first");
+    } catch (...) { release("hold-owned-scalar"); release("hold-owned-bulk-first"); throw; }
+    release("hold-owned-scalar"); release("hold-owned-bulk-first");
+    first.join(); second.join();
+    if (scalarError) std::rethrow_exception(scalarError);
+    if (bulkError) std::rethrow_exception(bulkError);
+    check(scalar && bulk && scalar->value.outcome == tt::Outcome::yes && scalar->facts.records == 1 &&
+          scalar->facts.requestsSent == 1 && bulk->value.size() == 2 && bulk->facts.records == 2 &&
+          bulk->facts.requestsSent == 1, "both held requests arrived before release and returned distinct owned facts");
+    auto later = tt::decide(engine, "Is it?", "without-usage");
+    engine.reset();
+    check(later.facts.cacheAnswers == 1 && scalar->facts.records == 1 && bulk->facts.records == 2 &&
+          noUsage.facts.model == std::optional<std::string>("jev-1.13.0"),
+          "owned facts survive later call and engine close");
+    std::cout << "CPP_OWNED_FACTS_PASS" << std::endl;
+}
 int main() {
     try {
+        if (std::getenv("TT_FACTS_ONLY")) { ownedFactsCase(); return 0; }
         auto engine = tt::create();
+        std::optional<Json> retainedFailureFacts;
         try {
             for (const auto& row : std::vector<std::tuple<std::string,tt::Outcome,double>>{
                     {"yes",tt::Outcome::yes,.9},{"no",tt::Outcome::no,.1},{"unsure",tt::Outcome::notSure,.5}}) {
                 auto text = std::get<0>(row);
                 auto q = text == "unsure" ? R"({"decide":"Is it?","threshold":"0.4:0.8"})" : "Is it?";
                 auto value = tt::decide(engine, q, text);
-                check(value.outcome == std::get<1>(row) && value.probability == std::get<2>(row),
+                check(value.value.outcome == std::get<1>(row) && value.value.probability == std::get<2>(row) &&
+                      value.facts.records == 1 && value.facts.requestsSent == 1,
                       text == "yes" ? "scalar yes 0/0.9" : text == "no" ? "scalar no 1/0.1" : "scalar unsure 2/0.5");
             }
             auto before = tt::call(engine, {{"usage", true}});
-            check(tt::decide(engine, "Is it?", "yes").outcome == tt::Outcome::yes, "cached yes");
+            check(tt::decide(engine, "Is it?", "yes").value.outcome == tt::Outcome::yes, "cached yes");
             auto after = tt::call(engine, {{"usage", true}});
             check(after.at("requests_sent") == before.at("requests_sent") &&
                   after.at("cache_answers") > before.at("cache_answers"), "cache and counters");
             auto rows = tt::many(engine, "Is it?", {"batch-one", "batch-two"});
-            check(rows.size() == 2 && rows[0].outcome == tt::Outcome::yes && rows[0].probability == .9 &&
-                  rows[1].outcome == tt::Outcome::no && rows[1].probability == .1,
+            check(rows.value.size() == 2 && rows.value[0].outcome == tt::Outcome::yes && rows.value[0].probability == .9 &&
+                  rows.value[1].outcome == tt::Outcome::no && rows.value[1].probability == .1 && rows.facts.records == 2,
                   "bulk ordered answers .9 then .1");
             auto answer = tt::call(engine, {{"decide","Is it?"},{"evidence","json-decide"}});
             check(tt::decisionValue(answer.at("value")) == tt::NullableOutcome{tt::Outcome::yes} &&
@@ -158,18 +199,18 @@ int main() {
                   "annotate typed row decision");
             const std::string spec = R"({"version":1,"recognize":{"kinds":{"person":"A person name."}}})";
             auto recognized = tt::recognize(engine, spec, "John Smith");
-            check(recognized == Json::parse(R"({"entities":[{"text":"John Smith","start":0,"end":10,"length":10,"kind":"person","strength":0.81}]})") &&
-                  tt::entity(recognized.at("entities").at(0)).endScalar == 10,
+            check(recognized.value == Json::parse(R"({"entities":[{"text":"John Smith","start":0,"end":10,"length":10,"kind":"person","strength":0.81}]})") &&
+                  tt::entity(recognized.value.at("entities").at(0)).endScalar == 10 && recognized.facts.records > 0,
                   "recognize JSON exact entity identity");
-            auto typedRecognized=tt::recognizeTyped(recognized);
+            auto typedRecognized=tt::recognizeTyped(recognized.value);
             check(typedRecognized.entities.size()==1 && typedRecognized.entities[0].text=="John Smith" &&
                   typedRecognized.entities[0].endScalar==10,"recognize typed entity");
             const std::string relSpec = R"({"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}})";
             std::vector<std::string> entities = {R"({"name":"First","kind":"alert"})", R"({"name":"Second","kind":"alert"})"};
             auto related = tt::relate(engine, relSpec, entities);
-            check(related == Json::parse(R"({"edges":[{"relation":"caused_by","source":{"name":"First","kind":"alert"},"target":{"name":"Second","kind":"alert"},"probability":0.9},{"relation":"caused_by","source":{"name":"Second","kind":"alert"},"target":{"name":"First","kind":"alert"},"probability":0.9}]})"),
+            check(related.value == Json::parse(R"({"edges":[{"relation":"caused_by","source":{"name":"First","kind":"alert"},"target":{"name":"Second","kind":"alert"},"probability":0.9},{"relation":"caused_by","source":{"name":"Second","kind":"alert"},"target":{"name":"First","kind":"alert"},"probability":0.9}]})") && related.facts.records == 1,
                   "relate JSON exact edges and order");
-            auto typedEdges=tt::relateTyped(related);
+            auto typedEdges=tt::relateTyped(related.value);
             check(typedEdges.size()==2 && typedEdges[0].source.name=="First" &&
                   typedEdges[0].target.name=="Second" && typedEdges[0].probability==.9,
                   "relate typed ordered edges");
@@ -187,27 +228,30 @@ int main() {
             check(thinkthen_recognize(engine.get(),spec.c_str(),"John Smith",10,&raw,&size)==0 && raw != nullptr,
                   "plain recognize return");
             tt::OwnedString plainRecognize(raw);
-            check(Json::parse(std::string(plainRecognize.get(),size))==recognized, "plain recognize alias identity");
+            check(Json::parse(std::string(plainRecognize.get(),size))==recognized.value, "plain recognize alias identity");
             const char* two[] = {entities[0].c_str(),entities[1].c_str()};
             const size_t twoLen[] = {entities[0].size(),entities[1].size()}; raw=nullptr; size=999;
             check(thinkthen_relate(engine.get(),relSpec.c_str(),two,twoLen,2,&raw,&size)==0 && raw != nullptr,
                   "plain relate return");
             tt::OwnedString plainRelate(raw);
-            check(Json::parse(std::string(plainRelate.get(),size))==related,"plain relate alias identity");
-            std::optional<Json> copiedFacts;
+            check(Json::parse(std::string(plainRelate.get(),size))==related.value,"plain relate alias identity");
             try { tt::decide(engine,"Is it?","backend-failure");
                   throw std::runtime_error("CHECK_FAILED missing backend refusal"); }
             catch (const tt::Failure& e) {
                 check(e.kind==tt::ErrorKind::backend && !e.retryable && !std::string(e.what()).empty() &&
                       e.facts && e.facts->at("requests_sent")==1 && e.facts->at("records")==0,
                       "backend failure code message retryable copied facts");
-                copiedFacts = e.facts;
+                retainedFailureFacts = e.facts;
             }
             try { tt::decide(engine,"Is it?","never-spent",0);
                   throw std::runtime_error("CHECK_FAILED spent budget accepted"); }
             catch(const tt::Failure& e){ check(e.kind==tt::ErrorKind::deadline,"spent budget refusal"); }
-            check(copiedFacts && copiedFacts->at("requests_sent")==1 && copiedFacts->at("records")==0,
+            check(retainedFailureFacts && retainedFailureFacts->at("requests_sent")==1 && retainedFailureFacts->at("records")==0,
                   "borrowed failure facts copied before next failure");
+            try { tt::decide(engine, R"({"choose":"Which?","options":["a","b"]})", "never-spent");
+                  throw std::runtime_error("CHECK_FAILED non-decide question accepted"); }
+            catch (const tt::Failure& e) { check(e.kind==tt::ErrorKind::usage && !e.facts,
+                                                  "typed pre-start question refusal has no facts"); }
             for (const char* invalid : {R"({"not_a_setting":1})", R"({"timeout":"wrong"})"}) {
                 try { auto bad=tt::create(invalid); throw std::runtime_error("CHECK_FAILED invalid constructor accepted"); }
                 catch(const tt::Failure& e){ check(e.kind==tt::ErrorKind::usage && !e.facts,"invalid constructor EUSAGE zero sends"); }
@@ -218,10 +262,10 @@ int main() {
             try { configured = tt::create(tt::question({{"base_url",realURL},{"cache",std::getenv("THINKTHEN_CACHE")}}).c_str()); }
             catch (...) { setenv("THINKTHEN_BASE_URL",realURL.c_str(),1); throw; }
             setenv("THINKTHEN_BASE_URL",realURL.c_str(),1);
-            check(tt::decide(configured,"Is it?","configured").outcome==tt::Outcome::yes,"configured route overrides invalid env URL");
+            check(tt::decide(configured,"Is it?","configured").value.outcome==tt::Outcome::yes,"configured route overrides invalid env URL");
             configured.reset();
             auto empty=tt::create("{}");
-            check(tt::decide(empty,"Is it?","yes").outcome==tt::Outcome::yes,"empty settings equivalent");
+            check(tt::decide(empty,"Is it?","yes").value.outcome==tt::Outcome::yes,"empty settings equivalent");
             empty.reset();
             // Shared J1 non-BMP case 41: parse actual corpus sample, not invented offsets.
             std::ifstream corpus(std::string(std::getenv("TT_SOURCE"))+"/specification/fixtures/types/corpus.json");
@@ -270,12 +314,12 @@ int main() {
             check(described.contains("value") && described.contains("facts"),"structured descriptions map carried through");
             held(engine,"hold-scalar",5);
             auto prior=tt::call(engine,{{"usage",true}});
-            check(tt::decide(engine,"Is it?","hold-scalar").outcome==tt::Outcome::yes,"cancelled reply cached");
+            check(tt::decide(engine,"Is it?","hold-scalar").value.outcome==tt::Outcome::yes,"cancelled reply cached");
             auto now=tt::call(engine,{{"usage",true}});
             check(now.at("requests_sent")==prior.at("requests_sent") && now.at("cache_answers")>prior.at("cache_answers"),
                   "cancel drain counters");
             auto fresh=tt::token();
-            check(tt::decide(engine,"Is it?","recovery-scalar",-1,fresh.get()).outcome==tt::Outcome::yes,
+            check(tt::decide(engine,"Is it?","recovery-scalar",-1,fresh.get()).value.outcome==tt::Outcome::yes,
                   "fresh token recovery");
             fresh.reset();
             held(engine,"hold-bulk-first",5,true);
@@ -283,6 +327,8 @@ int main() {
             std::cout << "CPP_PRODUCT_PASS" << std::endl;
         } catch (...) { engine.reset(); std::cout << "ENGINE_FREED_AFTER_JOIN" << std::endl; throw; }
         engine.reset(); std::cout << "ENGINE_FREED_AFTER_JOIN" << std::endl;
+        check(retainedFailureFacts && retainedFailureFacts->at("requests_sent")==1 &&
+              retainedFailureFacts->at("records")==0, "typed failure facts survive engine close");
         return 0;
     } catch (const std::exception& e) { std::cerr << e.what() << std::endl; return 255; }
 }

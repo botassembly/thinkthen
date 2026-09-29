@@ -16,9 +16,12 @@ void main(List<String> args) {
       corpus['question'] as String,
       (corpus['texts'] as List<dynamic>).cast<String>(),
     );
-    if (answers.length != 5 ||
-        answers.any((answer) =>
-            answer.outcome != Outcome.yes || answer.probability != .9)) {
+    if (answers.value.length != 5 ||
+        answers.facts.records != 5 ||
+        answers.facts.requestsSent != 3 ||
+        answers.value.any(
+          (answer) => answer.outcome != Outcome.yes || answer.probability != .9,
+        )) {
       throw StateError('portable bulk answers changed');
     }
     print('DART_PORTABLE_BATCH_PASS');
