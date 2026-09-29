@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import tempfile
 from toolchains import dotnet as resolve_dotnet
 
@@ -30,7 +32,7 @@ try:
             route = case.get("case_id", "generic")
             if route != "generic":
                 assert route in conformance, case["name"]
-            env = os.environ.copy()
+            env = child_env(HOME=cache, XDG_CACHE_HOME=cache, DOTNET_CLI_HOME=cache)
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1",
                        THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)),
                        LD_LIBRARY_PATH=str(HERE.parent / "target/scratch/lib"))

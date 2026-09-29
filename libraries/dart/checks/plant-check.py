@@ -3,6 +3,8 @@ import json
 import pathlib
 import subprocess
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 root = pathlib.Path(__file__).resolve().parent
 cases = {
@@ -19,7 +21,9 @@ cases = {
 for consumer in ('alpha', 'bravo'):
     for plant, (expected_exit, marker) in cases.items():
         existing = set((root / 'logs').glob(f'gate-*-{consumer}-{plant}'))
-        process = subprocess.run([sys.executable, str(root / 'run.py'), consumer, plant], cwd=root, capture_output=True, text=True, timeout=165)
+        process = subprocess.run([sys.executable, str(root / 'run.py'), consumer, plant], cwd=root,
+                                 env=child_env(keep=('TT_DART', 'TT_NATIVE_LIBRARY', 'PUB_CACHE')),
+                                 capture_output=True, text=True, timeout=165)
         created = set((root / 'logs').glob(f'gate-*-{consumer}-{plant}')) - existing
         if len(created) != 1:
             raise SystemExit(f'PLANTED_NEGATIVE_MISSING_RECEIPT {consumer} {plant} {created} {process.stdout} {process.stderr}')

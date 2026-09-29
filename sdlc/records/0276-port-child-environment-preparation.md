@@ -1,6 +1,6 @@
 # 0276 library child-environment preparation
 
-Prepared from main `8313bc4fa11837a5e26a2fddf907d10f2c0fe60a` and refreshed to `df69771daf601c109ffe5f04f7146f30b4d084ef` on `ticket/0276-isolate-port-check-children`. The intervening main diff touches no library check or child helper. This is design and source inspection only: no library code, product code, SQL/DataFrame path, test runner or provider was changed or launched. The proposed [ticket](../tickets/0276-isolate-port-check-children.md) awaits fresh design review.
+Prepared from main `8313bc4fa11837a5e26a2fddf907d10f2c0fe60a` and refreshed to `df69771daf601c109ffe5f04f7146f30b4d084ef` on `ticket/0276-isolate-port-check-children`. The intervening main diff touches no library check or child helper. This paragraph records the preparation phase only: no library code, product code, SQL/DataFrame path, test runner or provider was changed or launched then. The [ticket](../tickets/0276-isolate-port-check-children.md) passed independent Medium design review at `594acedb`; main `adf6ac400` approved its exact code claim. The subsequent implementation is recorded in [0276-port-child-environment-build.md](0276-port-child-environment-build.md).
 
 ## What the baseline actually says
 

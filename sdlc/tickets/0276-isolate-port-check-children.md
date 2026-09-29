@@ -1,6 +1,6 @@
 # 0276: isolate library port-check children
 
-Status: Proposed for fresh design review. Prepared on main `8313bc4fa11837a5e26a2fddf907d10f2c0fe60a` and refreshed to `df69771daf601c109ffe5f04f7146f30b4d084ef`; no implementation has started. The intervening main diff changes no library check or child-helper file.
+Status: Design accepted by independent Medium review at `594acedb`; implementation approved on main `adf6ac400` and built on this branch. The 45 claimed library findings are cleared by the focused `children` scan. The normal family checks require ten Python ratchet manifests outside the approved file claim to match their new measured totals; exact claim expansion was requested before those edits or fresh code review. The one DuckDB finding remains under Ian's SQL/DataFrame hold, so the whole issue stays open. Full lint is a later coordinator checkpoint.
 
 ## Outcome
 
@@ -53,4 +53,4 @@ For backend and consumer children, give the backend only its required `PATH` and
 
 ## What the build taught us
 
-Preparation only. The builder will record corrected assumptions, actual focused check results, retired tests if any, and remaining gaps here after implementation. The current preparation finding is that C++ and Go already have copied ABI environments outside the literal guard lines, and nested checker launchers need their own boundary proof; see the [preparation record](../records/0276-port-child-environment-preparation.md).
+The guard found one COBOL compiler call still missing `env=` after the first pass; the focused scan caught it before functional proof. Both C++ and Go ABI parent launchers needed clean handoffs beyond the reported lines. Nested plant checkers now pass only named selections; omitting an optional C++ selection must preserve `run.py`'s own default. The real PHP wrappers saw neither planted unrelated setting at backend or consumer entry, and the unchanged five-text/three-body oracle passed. PHP extracted wrapper/native and C++ installed shared/static receipts passed using paired warm archives; Ada and C++ source portable receipts passed. A temporary stub executed the actual JVM compiler launch statements with the selected JDK environment; this was not a real JVM build. No permanent tests were added or retired: the existing functional oracles and temporary boundary plant are stronger than a dictionary-only assertion. C# and other host SDK branches were syntax and guard checked but not all run. See the [build record](../records/0276-port-child-environment-build.md) for exact checks and limits.

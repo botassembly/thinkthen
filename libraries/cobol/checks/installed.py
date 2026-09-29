@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import tempfile
 from backend import Backend
 
@@ -30,13 +33,13 @@ for name in ("alpha", "bravo"):
                   "-I", str(installed / "copybooks")]
         def compile(name, source, extra=()):
             subprocess.run([*common, "-o", str(work / name), str(source), *map(str, extra),
-                            "-L", str(native), "-lthinkthen"], cwd=work, check=True,
+                            "-L", str(native), "-lthinkthen"], cwd=work, env=child_env(), check=True,
                            capture_output=True, timeout=60)
         subprocess.run([CC, "-std=c11", "-D_GNU_SOURCE", "-Wno-misleading-indentation",
                         "-c", str(installed / "src/TTJSON.c"), "-o", str(work / "ttjson.o")],
-                       cwd=work, check=True, capture_output=True, timeout=60)
+                       cwd=work, env=child_env(), check=True, capture_output=True, timeout=60)
         subprocess.run([CC, "-std=c11", "-D_GNU_SOURCE", "-c", str(installed / "src/tt_shape.c"),
-                        "-o", str(work / "ttshape.o")], cwd=work, check=True,
+                        "-o", str(work / "ttshape.o")], cwd=work, env=child_env(), check=True,
                        capture_output=True, timeout=60)
         compile("direct", installed / "examples/direct.cob")
         compile("settings", installed / "examples/settings.cob",
@@ -47,7 +50,7 @@ for name in ("alpha", "bravo"):
         barrier.mkdir()
         server = Backend(barrier)
         try:
-            env = os.environ.copy()
+            env = child_env(HOME=str(work), XDG_CACHE_HOME=str(work / "xdg-cache"))
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{server.server_port}/generic/v1",
                        THINKTHEN_API_KEY="tt-fixture-key", THINKTHEN_CACHE=str(work / "cache"),
                        LD_LIBRARY_PATH=str(native))

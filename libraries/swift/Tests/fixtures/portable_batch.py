@@ -3,6 +3,9 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / "conformance/children"))
+from children import child_env
 import tempfile
 
 PACKAGE = Path(__file__).resolve().parents[2]
@@ -25,13 +28,12 @@ with tempfile.TemporaryDirectory(prefix="swift-portable-", dir=PACKAGE / "target
                     str(PACKAGE / "Tests/fixtures/portable_batch.swift"),
                     "-L", str(NATIVE / "lib"), "-lthinkthen", "-Xlinker", "-rpath",
                     "-Xlinker", str(NATIVE / "lib"), "-o", str(exe)],
-                   check=True, timeout=120)
+                   env=child_env(keep=("SWIFTPM_MODULECACHE_OVERRIDE",), HOME=str(PACKAGE / "target/home")), check=True, timeout=120)
     backend = subprocess.Popen([str(BACKEND)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                                text=True, env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")})
     try:
         port = int(backend.stdout.readline())
-        env = os.environ.copy()
-        env.pop("THINKTHEN_API_KEY", None)
+        env = child_env()
         env.update(HOME=str(scratch), XDG_CACHE_HOME=str(scratch), XDG_CONFIG_HOME=str(scratch),
                    LD_LIBRARY_PATH=str(NATIVE / "lib"), THINKTHEN_CACHE=str(scratch / "cache"),
                    THINKTHEN_API_KEY="tt-portable-loopback",

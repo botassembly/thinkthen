@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -36,14 +39,12 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cpp-portable-") as scratch:
     subprocess.run([os.environ.get("CXX", "c++"), "-std=c++17", "-I", str(CPP_INCLUDE),
                     "-I", str(folder / "include"), str(ROOT / "libraries/cpp/fixtures/portable_consumer.cpp"),
                     "-L", str(NATIVE / "lib"), "-Wl,-rpath," + str(NATIVE / "lib"), "-l:" + library.name,
-                    "-o", str(consumer)], check=True, timeout=60)
-    server = subprocess.Popen([BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+                    "-o", str(consumer)], env=child_env(), check=True, timeout=60)
+    server = subprocess.Popen([BACKEND], env=child_env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     try:
         port = int(server.stdout.readline())
         base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
-        env = os.environ.copy()
-        for name in ("THINKTHEN_API_KEY", "THINKTHEN_BASE_URL", "THINKTHEN_CACHE"):
-            env.pop(name, None)
+        env = child_env()
         env.update(THINKTHEN_API_KEY="sk-loopback-cpp-portable", THINKTHEN_BASE_URL=base,
                    TT_PORTABLE_SETTINGS=json.dumps({"base_url": base, "model": corpus["model"],
                                                     "batch": "max", "cache": False, "max_retries": 0,
