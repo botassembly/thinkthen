@@ -36,6 +36,9 @@ fn frame(columns: Vec<Series>) -> DataFrame {
     .expect("a frame")
 }
 
+#[path = "plan_probability.rs"]
+mod plan_probability;
+
 #[test]
 fn a_profiled_question_keeps_its_identity_through_a_series() {
     let fixture: serde_json::Value =
@@ -105,10 +108,6 @@ fn every_refusal_is_pinned_and_sends_nothing() {
         (
             engine.tag_series(&score(), &nulls, options()).map(drop),
             "tag_series needs a tag question, and this one is a score question",
-        ),
-        (
-            engine.score_series(&score(), &nulls, options()).map(drop),
-            "the column holds nulls; the engine needs text, and NA rows are the caller's to drop",
         ),
         (
             engine

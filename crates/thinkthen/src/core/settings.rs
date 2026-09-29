@@ -337,10 +337,7 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
             "timeout" => number().is_some(),
             "max_retries" => number().is_some_and(|count| u32::try_from(count).is_ok()),
             "batch" => Setting::of_json(&value).is_some(),
-            // Ticket 0289 adds reservation before this field can be configured.
-            "max_requests_total" => {
-                return Err("settings max_requests_total awaits active reservation".into());
-            }
+            "max_requests_total" => matches!(value, Json::Null) || number().is_some(),
             _ => return Err(format!("settings JSON has unknown key {}", safe_key(&key))),
         };
         if !valid {
@@ -462,16 +459,22 @@ mod tests {
     }
 
     #[test]
-    fn constructor_schema_keeps_duplicate_names_and_reserves_the_future_cap() {
+    fn constructor_schema_keeps_duplicate_names_and_accepts_the_active_cap() {
         for (text, reason) in [
             (r#"{"timeout":1,"timeout":2}"#, "repeats"),
-            (r#"{"max_requests_total":1}"#, "max_requests_total"),
+            (r#"{"max_requests_total":-1}"#, "max_requests_total"),
             (r#"{"batch":0}"#, "batch"),
             (r#"{"api_key":"secret"}"#, "api_key"),
         ] {
             assert!(engine_settings(text).expect_err(text).contains(reason));
         }
-        for text in ["{}", r#"{"batch":"max","timeout":30,"cache":false}"#] {
+        for text in [
+            "{}",
+            r#"{"batch":"max","timeout":30,"cache":false}"#,
+            r#"{"max_requests_total":0}"#,
+            r#"{"max_requests_total":1}"#,
+            r#"{"max_requests_total":null}"#,
+        ] {
             engine_settings(text).expect(text);
         }
     }

@@ -192,7 +192,7 @@ fn the_c_settings_object_refuses_bad_shapes_and_keys() {
         (r#"{"throttle":8.0}"#, "throttle"),
         (r#"{"max_retries":-1}"#, "max_retries"),
         (r#"{"max_request_bytes":0}"#, "max_request_bytes"),
-        (r#"{"max_requests_total":3}"#, "max_requests_total"),
+        (r#"{"max_requests_total":-1}"#, "max_requests_total"),
     ] {
         let mut script = Script::default();
         script.ask("settings", &[&base, given]);
@@ -203,9 +203,38 @@ fn the_c_settings_object_refuses_bad_shapes_and_keys() {
         assert_eq!(backend.count(), 0);
     }
     let mut script = Script::default();
-    script.ask("settings", &[&base, r#"{"max_requests":null}"#]);
+    script.ask(
+        "settings",
+        &[&base, r#"{"max_requests":null,"max_requests_total":3}"#],
+    );
     let output = run(&driver, &base, &script.0);
     assert_eq!(replies(&output.stdout).expect("null limit")[0].0, 0);
+}
+
+#[test]
+fn the_c_constructor_zero_cap_refuses_before_the_listener() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let mut script = Script::default();
+    script.ask(
+        "settings",
+        &[&base, r#"{"cache":false,"max_requests_total":0}"#],
+    );
+    script.ask(
+        "decide",
+        &[&base, r#"{"decide":"asks for a refund"}"#, "Refund me."],
+    );
+    let output = run(&driver, &base, &script.0);
+    let said = replies(&output.stdout).expect("replies");
+    assert_eq!(said[0].0, 0, "constructor accepts an active cap");
+    assert_ne!(said[1].0, 0, "the live send is refused");
+    assert!(said[1].1.contains("process send budget"), "{:?}", said[1]);
+    assert_eq!(
+        backend.count(),
+        0,
+        "the cap stops the C call before transport"
+    );
 }
 
 #[test]

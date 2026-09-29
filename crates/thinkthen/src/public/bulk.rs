@@ -36,7 +36,7 @@ fn invalid_answer() -> Error {
     Error::of(ErrorKind::Backend, "a backend question failed in a batch")
 }
 
-fn selected_batch(
+pub(super) fn selected_batch(
     question: &Question,
     options: &CallOptions<'_>,
     engine: Option<core::Setting>,

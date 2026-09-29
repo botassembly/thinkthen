@@ -2,14 +2,12 @@
 
 use crate::public::{Annotated, AnnotatedRecord, Answer, Error, NamedAnnotation, QuestionKind};
 use polars::prelude::{
-    BooleanChunked, DataType, IntoSeries, ListBuilderTrait, ListStringChunkedBuilder, NamedFrom,
-    NewChunkedArray, Series, StructChunked,
+    BooleanChunked, DataType, IdxCa, IdxSize, IntoSeries, ListBuilderTrait,
+    ListStringChunkedBuilder, NamedFrom, NewChunkedArray, Series, StructChunked,
 };
 
-/// Each row's text, borrowed from the column's own buffers across every
-/// chunk and slice offset. A column that is not text, or that holds a null,
-/// refuses before any request.
-pub(crate) fn texts(column: &Series) -> Result<impl Iterator<Item = &str> + '_, Error> {
+/// Keep positions of null input rows, which require no backend question.
+pub(crate) fn nullable(column: &Series) -> Result<Vec<Option<&str>>, Error> {
     let refused = || {
         Error::usage(format!(
             "the column {} is {}, not text",
@@ -21,13 +19,31 @@ pub(crate) fn texts(column: &Series) -> Result<impl Iterator<Item = &str> + '_, 
         return Err(refused());
     }
     let strings = column.str().map_err(|_| refused())?;
-    if strings.null_count() > 0 {
-        return Err(Error::usage(
-            "the column holds nulls; the engine needs text, and NA rows are the caller's to drop"
-                .to_owned(),
-        ));
+    Ok(strings.iter().collect())
+}
+
+/// Reinsert null positions without asking for those rows or changing the
+/// returned Series' native Boolean, String, Float64, List or Struct type.
+pub(crate) fn restore(series: Series, cells: &[Option<&str>]) -> Result<Series, Error> {
+    let mut next = 0usize;
+    let mut places = Vec::with_capacity(cells.len());
+    for cell in cells {
+        places.push(if cell.is_some() {
+            let place =
+                IdxSize::try_from(next).map_err(|_| Error::usage("the frame has too many rows"))?;
+            next += 1;
+            Some(place)
+        } else {
+            None
+        });
     }
-    Ok(strings.iter().flatten())
+    if next != series.len() {
+        return Err(Error::defect("a frame answer lost a non-null input row"));
+    }
+    let indices = IdxCa::from_iter_options("row".into(), places.into_iter());
+    series
+        .take(&indices)
+        .map_err(|error| Error::defect(&format!("the frame could not restore null rows: {error}")))
 }
 
 /// The lowercase word for a question kind.
