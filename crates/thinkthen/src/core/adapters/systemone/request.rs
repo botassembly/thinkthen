@@ -84,9 +84,8 @@ pub(crate) enum RequestQuestion {
 /// What a yes means and what a no means, as the vendor's `criteria` object.
 ///
 /// The tool's own words for these two are `--true` and `--false`, and this
-/// module alone knows they travel here. A question that names neither carries
-/// no `criteria` at all, so its request is byte for byte the request of the
-/// version before the two texts existed.
+/// module alone knows they travel here. An absent or null description has no
+/// wire member; a question with neither carries no `criteria` at all.
 #[derive(Serialize)]
 #[cfg_attr(test, derive(Debug, serde::Deserialize, PartialEq))]
 pub(crate) struct NoulCriteria {
@@ -94,6 +93,16 @@ pub(crate) struct NoulCriteria {
     yes: Option<Json>,
     #[serde(rename = "false", skip_serializing_if = "Option::is_none")]
     no: Option<Json>,
+}
+
+impl NoulCriteria {
+    fn described(yes: Option<&Json>, no: Option<&Json>) -> Option<Self> {
+        let described =
+            |value: Option<&Json>| value.filter(|held| !matches!(held, Json::Null)).cloned();
+        let yes = described(yes);
+        let no = described(no);
+        (yes.is_some() || no.is_some()).then_some(Self { yes, no })
+    }
 }
 
 /// The options of a pick, as a map from each option to its description.
@@ -176,10 +185,10 @@ fn questions(plan: &Plan) -> Result<Questions, EncodeError> {
                         wire_name(written.len()),
                         RequestQuestion::Noul {
                             instructions,
-                            criteria: description.map(|description| NoulCriteria {
-                                yes: Some(description.as_json().clone()),
-                                no: None,
-                            }),
+                            criteria: NoulCriteria::described(
+                                description.map(Description::as_json),
+                                None,
+                            ),
                         },
                     ));
                 }
@@ -239,10 +248,10 @@ impl RequestQuestion {
         Some(match question {
             Question::Decide { text, yes, no } => Self::Noul {
                 instructions: text.as_json().clone(),
-                criteria: (yes.is_some() || no.is_some()).then(|| NoulCriteria {
-                    yes: yes.as_ref().map(|meaning| meaning.as_json().clone()),
-                    no: no.as_ref().map(|meaning| meaning.as_json().clone()),
-                }),
+                criteria: NoulCriteria::described(
+                    yes.as_ref().map(crate::core::text::Meaning::as_json),
+                    no.as_ref().map(crate::core::text::Meaning::as_json),
+                ),
             },
             Question::Choose { text, options } => Self::Choice {
                 instructions: text.as_json().clone(),
@@ -282,10 +291,13 @@ mod tests {
     use crate::core::adapters::systemone::tests::{
         disruption_plan, plan_for, tag_plan, team_plan, urgency_plan,
     };
+    use crate::core::digest::question_sha256;
     use crate::core::json::Json;
     use crate::core::plan::Plan;
     use crate::core::question_file::{QuestionFile, Typed, Verb, resolve};
-    use crate::core::text::{Evidence, ModelName, QuestionText};
+    use crate::core::recording::Exchange;
+    use crate::core::text::{Evidence, ModelName, QuestionText, Url};
+    use crate::core::threshold::Threshold;
     use proptest::collection::vec;
     use proptest::prelude::{Strategy, any};
     use proptest::{prop_assert_eq, proptest};
@@ -398,20 +410,57 @@ mod tests {
     }
 
     #[test]
-    fn a_structured_decide_writes_the_object_and_both_criteria() {
-        let bytes = encode(&file_plan(
-            r#"{"decide":{"ask":"Refund?"},"true":{"means":"Money back."},"false":null}"#,
-            Verb::Decide,
-        ))
-        .expect("a plan is writable");
-        let text = String::from_utf8(bytes).expect("a request is text");
-        assert!(
-            text.contains(r#""instructions":{"ask":"Refund?"}"#),
-            "{text}"
+    fn null_noul_descriptions_leave_only_described_criteria() {
+        let cases = [
+            (
+                r#"{"decide":"Refund?","true":{"means":"Money back."},"false":null}"#,
+                r#"{"true":{"means":"Money back."}}"#,
+            ),
+            (
+                r#"{"decide":"Refund?","true":null,"false":{"means":"Not money back."}}"#,
+                r#"{"false":{"means":"Not money back."}}"#,
+            ),
+            (r#"{"decide":"Refund?","true":null,"false":null}"#, ""),
+            (r#"{"decide":"Refund?"}"#, ""),
+            (
+                r#"{"decide":"Refund?","true":"Money back.","false":"Anything else."}"#,
+                r#"{"true":"Money back.","false":"Anything else."}"#,
+            ),
+        ];
+        for (question, criteria) in cases {
+            let body =
+                String::from_utf8(encode(&file_plan(question, Verb::Decide)).expect("request"))
+                    .expect("UTF-8");
+            let suffix = if criteria.is_empty() {
+                String::new()
+            } else {
+                format!(r#","criteria":{criteria}"#)
+            };
+            assert_eq!(
+                body,
+                format!(
+                    r#"{{"state":"Refund me please.","model":"{DEFAULT_MODEL}","questions":{{"q1":{{"type":"noul","instructions":"Refund?"{suffix}}}}}}}"#
+                )
+            );
+        }
+    }
+
+    #[test]
+    fn null_and_absent_meanings_keep_distinct_question_names_but_share_one_exchange() {
+        let absent = file_plan(r#"{"decide":"Refund?"}"#, Verb::Decide);
+        let explicit = file_plan(r#"{"decide":"Refund?","true":null}"#, Verb::Decide);
+        let cut = Some(Threshold::default());
+        assert_ne!(
+            question_sha256(&absent.questions()[0], cut).expect("absent digest"),
+            question_sha256(&explicit.questions()[0], cut).expect("explicit digest")
         );
-        assert!(
-            text.contains(r#""criteria":{"true":{"means":"Money back."},"false":null}"#),
-            "{text}"
+        let first = encode(&absent).expect("request");
+        let second = encode(&explicit).expect("request");
+        assert_eq!(first, second);
+        let url = Url::new("http://127.0.0.1:9/v1/systemone").expect("URL");
+        assert_eq!(
+            Exchange::new(&url, &first).digest(),
+            Exchange::new(&url, &second).digest()
         );
     }
 

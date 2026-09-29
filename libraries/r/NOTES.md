@@ -51,3 +51,5 @@ Cases 13–16, 27–28, and 34–35 select batch one in their own children to ke
 ## Engine findings
 
 - The command prints the engine's internal `WidthActive` sentence, which still says width. R prints the public one, which says throttle. See `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`.
+
+Experiment 302 later ran the full corpus at `4c0ef210`: 49 passed, case40 failed, and four kept their not-run reasons. The counter case tried to replace an already chosen engine configuration. The [package harness correction](../../sdlc/records/qf-package-counter-and-negative-diagnostics.md) puts that measurement in a fresh child and records a focused pass with two observed requests. That focused correction is separate from a new full-corpus result.

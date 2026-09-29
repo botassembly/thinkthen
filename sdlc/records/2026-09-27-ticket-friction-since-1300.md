@@ -588,3 +588,22 @@ The0283 recheck accepted the deadline corrections but found that the name-stage 
 ## Locate feature code before copying a host claim
 
 The0289 kickoff inventory named nonexistent `libraries/polars/src` and a separate Polars source counter. The binding README states that this folder holds no code. Its implementation is the root crate's feature-gated `public/frame.rs` and helpers, with tests under `tests/polars`; the root Rust counter covers both. The coordinator corrected the lane claim and next brief before implementation. A folder name is not evidence that a surface has its own crate.
+
+
+## Refresh derived assertions after a prerequisite lands
+
+The0301 wire preparation found the core fixture, but review also found exact R and TypeScript assertions. After0283 landed, its new whole-plan line added two byte/token literals in already claimed files. Root added their independently derived 13-byte reduction and 809–1,424 band directly to the handoff; High recheck accepted46925b681. Refresh both the copied body and every count derived from it, while keeping changed-question and exchanged-request identities separate.
+
+A staged0289 launch prompt still said to wait for its prerequisite after main already contained it. The worker returned without editing. Root replaced that first line with the actual landed commit and explicit start instruction, then confirmed the worker created its implementation branch. Check that a launch brief describes present authorization rather than an old future condition.
+
+
+## Inventory output producers and discarded attempts
+
+High review of timing design0302 at5e4f424e4 found that the ordinary judgment row writer does not own find, recognize, relate or annotate output. The split path also discards the refused parent result while retaining its send count. The correction must name supported verbs and carry parent observations explicitly; one ordinary row test proves neither route. Header preparation must settle repeated values using the full value list, and copied-reader proof must distinguish a closed outer envelope from closed facts. The corrected design passed High recheck at7b7cc5f8a before code. It names six shared CLI routes and a direct C consumer, preserves split-parent identity and omits duplicate headers.
+
+
+## Package regression feedback and the cap error boundary
+
+Experiment302's final pin4c0ef210 independently confirmed all five original package fixes. The later JVM locale correction already existed; it was not another pending build. Fresh Medium review accepted the bounded Dart/Flutter and R harness correction at ac5e03d75. R's counter case tried to replace immutable session settings after warming the cache. Moving the cache argument earlier alone would spoil the intended counter oracle. Reusing the existing fresh-child helper preserves one send, one cache answer and the final two observed requests. Dart's result-envelope migration had updated value assertions but left failure labels interpolating the wrapper. The next host-family brief must read assertion expressions, diagnostics and exact negative-check markers together. The detailed verifier reports also retain explicit Flutter lock and child-environment gaps; a positive example run does not close them.
+
+The0289 builder reached its final denial-context work with six error conversion/export files outside the exact claim. Root added `engine/error.rs`, `public/error.rs`, `cli/failure/convert.rs`, `public/native_batch.rs`, `public/bulk.rs` and `public/results.rs` at283ca1536 and resumed the retained author. This was a coordinator claim gap, not a user decision or machine-load constraint. The0299/0302 briefs should carry the complete error-conversion path and request any missing paths while other work can still proceed. Save coherent work in progress to its ticket branch before handback; “not ready to land” does not mean “do not commit.”
