@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Every copy of the crate's version matches `crates/thinkthen/Cargo.toml` (ticket 0128).
+"""Every static product version matches `crates/thinkthen/Cargo.toml` (ticket 0128).
 
-Binding manifests come from `sdlc/surfaces.txt` and lock entries from every tracked
+Binding metadata comes from `sdlc/surfaces.txt` and lock entries from every tracked
 `Cargo.lock`. The site's `install.sh` must equal the root copy. Skipped on purpose:
 `conformance/`, `site/package.json`, the Ruby and TypeScript checks' planted crates,
 the sealed `probes/churn-0086/Cargo.lock`, and `libraries/c/DESIGN.md`'s history.
@@ -14,19 +14,39 @@ import shutil
 import subprocess
 import sys
 import tempfile
-
-sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from policy import lock_versions  # noqa: E402
+import tomllib
 
 REPO = pathlib.Path(__file__).resolve().parents[2]
 CRATE = "crates/thinkthen/Cargo.toml"
 SKIPPED_LOCKS = {"probes/churn-0086/Cargo.lock"}
-PACKAGE = r'(?ms)^\[package\].*?^version = "([^"]+)"'
+PACKAGE = r'(?ms)^\[package\]\n(?:(?!^\[).)*?^version = "([^"]+)"'
 WHOLE = lambda v: v  # noqa: E731
 PART = [lambda v, i=i: v.split(".")[i] for i in range(3)]
+CARGO = {
+    "libraries/rust": "libraries/rust/Cargo.toml", "libraries/c": "libraries/c/Cargo.toml",
+    "libraries/python": "libraries/python/Cargo.toml", "libraries/typescript": "libraries/typescript/Cargo.toml",
+    "libraries/ruby": "libraries/ruby/Cargo.toml", "libraries/r": "libraries/r/thinkthen/src/rust/Cargo.toml",
+    "databases/duckdb": "databases/duckdb/Cargo.toml", "databases/sqlite": "databases/sqlite/Cargo.toml",
+    "databases/postgresql": "databases/postgresql/Cargo.toml",
+}
+# The four versionless formats take their release version from a tag or paired C
+# artifact. Their required package identity is still checked before any --set write.
+NONCARGO = {
+    "libraries/php": ("composer.json", r'"name": "botassembly/thinkthen"'),
+    "libraries/csharp": ("ThinkThen.csproj", r'<PackageId>Botassembly\.ThinkThen</PackageId>'),
+    "libraries/jvm": ("pom.xml", r'<artifactId>thinkthen-jvm</artifactId>'),
+    "libraries/dart": ("pubspec.yaml", r'(?m)^name: thinkthen_dart$'),
+    "libraries/swift": ("Package.swift", r'name: "ThinkThen"'),
+    "libraries/zig": ("build.zig.zon", r'\.name = \.thinkthen,'),
+    "libraries/go": ("go.mod", r'(?m)^module github\.com/botassembly/thinkthen/libraries/go$'),
+    "libraries/cpp": ("CMakeLists.txt", r'(?m)^project\(thinkthen_cpp VERSION '),
+    "libraries/ada": ("thinkthen.gpr", r'for Library_Name use "thinkthen_ada";'),
+    "libraries/objective-c": ("source-package.json", r'"name": "thinkthen-objective-c"'),
+    "libraries/cobol": ("source-package.json", r'"name": "thinkthen-cobol"'),
+}
 # Each place: a file, a pattern whose one group holds the version or a part of it, and that part.
 PLACES = [
-    ("libraries/python/pyproject.toml", r'(?ms)^\[project\].*?^version = "([^"]+)"', WHOLE),
+    ("libraries/python/pyproject.toml", r'(?ms)^\[project\]\n(?:(?!^\[).)*?^version = "([^"]+)"', WHOLE),
     ("libraries/typescript/package.json", r'(?m)\A\{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
     ("libraries/typescript/package-lock.json", r'(?m)\A\{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
     ("libraries/typescript/package-lock.json", r'(?m)"": \{\s*"name": "thinkthen",\s*"version": "([^"]+)"', WHOLE),
@@ -38,17 +58,42 @@ PLACES = [
       for i, n in enumerate(["MAJOR", "MINOR", "PATCH"])],
     ("databases/postgresql/thinkthen.control", r"(?m)^default_version = '([^']+)'$", WHOLE),
     ("CITATION.cff", r'(?m)^version: "([^"]+)"$', WHOLE),
+    ("libraries/csharp/ThinkThen.csproj", r'<Version>([^<]+)</Version>', WHOLE),
+    ("libraries/csharp/Botassembly.ThinkThen.nuspec", r'<version>([^<]+)</version>', WHOLE),
+    ("libraries/jvm/pom.xml", r'(?m)^  <version>([^<]+)</version>$', WHOLE),
+    *[(p, r'(?m)^version: (\S+)$', WHOLE) for p in
+      ("libraries/dart/pubspec.yaml", "libraries/dart/flutter/pubspec.yaml",
+       "libraries/dart/flutter/example/pubspec.yaml")],
+    ("libraries/zig/build.zig.zon", r'(?m)^    \.version = "([^"]+)",$', WHOLE),
+    ("libraries/cpp/CMakeLists.txt", r'(?m)^project\(thinkthen_cpp VERSION (\S+) LANGUAGES CXX\)$', WHOLE),
+    *[(p, r'(?m)^  "version": "([^"]+)",$', WHOLE) for p in
+      ("libraries/objective-c/source-package.json", "libraries/cobol/source-package.json")],
 ]
+for header in ("libraries/swift/Sources/CThinkThen/include/thinkthen.h",
+               "libraries/objective-c/Sources/thinkthen.h"):
+    PLACES.extend((header, pattern, part) for path, pattern, part in PLACES if path == "libraries/c/include/thinkthen.h")
 
 
 def manifests(root):
-    """The crate's manifest and each landed binding's, by the rule `surfaces` uses."""
-    out = [CRATE]
-    for line in (root / "sdlc/surfaces.txt").read_text(encoding="utf-8").splitlines():
+    """Known Cargo manifests, required non-Cargo metadata, and registry errors."""
+    cargo, metadata, errors = [CRATE], [], []
+    try:
+        lines = (root / "sdlc/surfaces.txt").read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError):
+        return cargo, metadata, ["versions: missing or unreadable required metadata sdlc/surfaces.txt"]
+    for line in lines:
         field = line.split()
-        if field and not line.startswith("#") and field[1] == "landed":
-            out.append(f"{field[0]}/{field[2] + '/' if len(field) == 3 else ''}Cargo.toml")
-    return out
+        if not field or line.startswith("#") or len(field) < 2 or field[1] != "landed":
+            continue
+        surface = field[0]
+        if surface in CARGO and (len(field) == 2 or surface == "libraries/r" and field[2:] == ["thinkthen/src/rust"]):
+            cargo.append(CARGO[surface])
+        elif surface in NONCARGO and len(field) == 2:
+            filename, identity = NONCARGO[surface]
+            metadata.append((f"{surface}/{filename}", identity))
+        else:
+            errors.append(f"versions: unknown landed surface {surface} or unsupported metadata path")
+    return cargo, metadata, errors
 
 
 def locks(root):
@@ -59,53 +104,103 @@ def locks(root):
     return sorted(set(names) - SKIPPED_LOCKS)
 
 
-def places(root):
+def places(cargo):
     """Every (file, pattern, part) the version reaches."""
-    return [(m, PACKAGE, WHOLE) for m in manifests(root)] + PLACES
+    return [(m, PACKAGE, WHOLE) for m in cargo] + PLACES
 
 
-def packages(root):
-    """The package names whose lock entries carry the version."""
-    return {"thinkthen"} | {re.search(r'(?m)^name = "([^"]+)"', (root / m).read_text(encoding="utf-8")).group(1)
-                            for m in manifests(root)[1:] if (root / m).is_file()}
+def inspect(root):
+    """Read and validate every input before checking or writing a version."""
+    cargo, metadata, errors = manifests(root)
+    texts, names, lock_data = {}, set(), {}
+    required = set(cargo) | {path for path, _, _ in places(cargo)} | {path for path, _ in metadata}
+    for path in sorted(required):
+        try:
+            texts[path] = (root / path).read_text(encoding="utf-8")
+        except (OSError, UnicodeError):
+            errors.append(f"versions: missing or unreadable required metadata {path}")
+    for path, identity in metadata:
+        if path in texts and re.search(identity, texts[path]) is None:
+            errors.append(f"versions: {path} has no package identity the check can read")
+    for path in cargo:
+        if path not in texts:
+            continue
+        hit = re.search(r'(?ms)^\[package\]\n(?:(?!^\[).)*?^name = "([^"]+)"', texts[path])
+        if hit is None:
+            errors.append(f"versions: {path} has no package name the check can read")
+        else:
+            names.add(hit.group(1))
+    for path in locks(root):
+        try:
+            raw = (root / path).read_text(encoding="utf-8")
+            data = tomllib.loads(raw)
+            entries = {}
+            for package in data["package"]:
+                entries.setdefault(package["name"], set()).add(package["version"])
+            texts[path] = raw
+            lock_data[path] = entries
+        except (OSError, UnicodeError, tomllib.TOMLDecodeError, KeyError, TypeError):
+            errors.append(f"versions: missing or malformed required lock {path}")
+    try:
+        installer = (root / "install.sh").read_bytes()
+        site_installer = (root / "site/public/install.sh").read_bytes()
+    except OSError:
+        errors.append("versions: missing or unreadable required installer copy")
+    else:
+        if installer != site_installer:
+            errors.append("versions: site/public/install.sh differs from install.sh")
+    version = None
+    if CRATE in texts:
+        hit = re.search(PACKAGE, texts[CRATE])
+        if hit is not None:
+            version = hit.group(1)
+        else:
+            errors.append(f"versions: {CRATE} has no version line the check can read")
+    return version, texts, names, lock_data, errors
 
 
 def check(root):
     """Every sentence naming a copy that differs, and the count of places read."""
-    version = re.search(PACKAGE, (root / CRATE).read_text(encoding="utf-8")).group(1)
-    out, count, names = [], 0, packages(root)
-    for path, pattern, part in places(root):
-        text = (root / path).read_text(encoding="utf-8") if (root / path).is_file() else ""
-        found = re.search(pattern, text)
+    cargo, _, _ = manifests(root)
+    version, texts, names, lock_data, errors = inspect(root)
+    out, count = errors, 0
+    for path, pattern, part in places(cargo):
+        found = re.search(pattern, texts[path]) if path in texts else None
         count += 1
-        if found is None:
+        if found is None and path in texts and not (path == CRATE and version is None):
             out.append(f"versions: {path} has no version line the check can read")
-        elif found.group(1) != part(version):
+        elif found is not None and version is not None and found.group(1) != part(version):
             out.append(f"versions: {path} reads {found.group(1)}, and {CRATE} reads {part(version)}")
-    for lock in locks(root):
-        for name, found in sorted(lock_versions(str(root / lock)).items()):
+    for lock, entries in lock_data.items():
+        for name, found in sorted(entries.items()):
             if name in names:
                 count += 1
-                if found != {version}:
+                if version is not None and found != {version}:
                     out.append(f"versions: {lock} pins {name} {', '.join(sorted(found))}, and {CRATE} reads {version}")
-    if (root / "install.sh").read_bytes() != (root / "site/public/install.sh").read_bytes():
-        out.append("versions: site/public/install.sh differs from install.sh")
     return version, count, out
 
 
 def set_version(root, new):
     """Write NEW into every place and every lock entry of a checked package, or into none."""
-    names, texts = packages(root), {}
-    for path, pattern, part in places(root):
-        text = texts.get(path) or (root / path).read_text(encoding="utf-8")
+    cargo, _, _ = manifests(root)
+    _, originals, names, _, errors = inspect(root)
+    if errors:
+        return [f"{error}; nothing was written" for error in errors]
+    texts = {}
+    for path, pattern, part in places(cargo):
+        text = texts[path] if path in texts else originals[path]
         hit = re.search(pattern, text)
         if hit is None:
             return [f"versions: {path} has no version line the check can read; nothing was written"]
         texts[path] = text[:hit.start(1)] + part(new) + text[hit.end(1):]
     entry = re.compile(r'(?m)^(name = "([^"]+)"\nversion = ")([^"]+)(")')
     for lock in locks(root):
-        text = (root / lock).read_text(encoding="utf-8")
-        texts[lock] = entry.sub(lambda m: m.group(1) + (new if m.group(2) in names else m.group(3)) + m.group(4), text)
+        changed = entry.sub(lambda m: m.group(1) + (new if m.group(2) in names else m.group(3)) + m.group(4),
+                            originals[lock])
+        parsed = tomllib.loads(changed)
+        if any(package["version"] != new for package in parsed["package"] if package["name"] in names):
+            return [f"versions: {lock} has a package entry the update cannot read; nothing was written"]
+        texts[lock] = changed
     for path, text in texts.items():
         (root / path).write_text(text, encoding="utf-8")
     return []
@@ -114,14 +209,14 @@ def set_version(root, new):
 def run(root, argv):
     """The exit code and the lines one command prints."""
     if argv[:1] == ["--set"]:
-        if not re.fullmatch(r"\d+\.\d+\.\d+", argv[1]):
+        if len(argv) != 2 or not re.fullmatch(r"\d+\.\d+\.\d+", argv[1]):
             return 2, [f"versions: --set takes X.Y.Z in digits, not {argv[1]!r}; nothing was written"]
         refused = set_version(root, argv[1])
         if refused:
             return 1, refused
         argv = []
     version, count, out = check(root)
-    if argv[:1] == ["--tag"] and argv[1] != f"v{version}":
+    if argv[:1] == ["--tag"] and version is not None and argv[1] != f"v{version}":
         out.append(f"versions: tag {argv[1]} does not match version {version}; the tag must read v{version}")
     return (1, out) if out else (0, [f"versions: {count} places read {version}"])
 
@@ -130,9 +225,10 @@ def self_test():
     """Each edge row against a copy of the real places, with the whole output pinned."""
     def fresh(tmp):
         root = pathlib.Path(tmp)
+        cargo, metadata, _ = manifests(REPO)
         planted = ["libraries/ruby/lib/thinkthen/version.rb", "libraries/r/thinkthen/DESCRIPTION",
                    "databases/postgresql/thinkthen.control", "sdlc/surfaces.txt", "install.sh", "site/public/install.sh"]
-        for path in {p for p, _, _ in places(REPO)} | set(locks(REPO)) | set(planted):
+        for path in {p for p, _, _ in places(cargo)} | {p for p, _ in metadata} | set(locks(REPO)) | set(planted):
             (root / path).parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(REPO / path, root / path)
         return root
@@ -149,6 +245,20 @@ def self_test():
          (1, [f"versions: libraries/r/thinkthen/DESCRIPTION reads 9.9.9, and {CRATE} reads {version}"])),
         ("ruby", lambda r: edit(r, "libraries/ruby/lib/thinkthen/version.rb", f'"{version}"', '"9.9.9"'), [],
          (1, [f"versions: libraries/ruby/lib/thinkthen/version.rb reads 9.9.9, and {CRATE} reads {version}"])),
+        ("csharp", lambda r: edit(r, "libraries/csharp/Botassembly.ThinkThen.nuspec", f"<version>{version}</version>",
+                                  "<version>9.9.9</version>"), [],
+         (1, [f"versions: libraries/csharp/Botassembly.ThinkThen.nuspec reads 9.9.9, and {CRATE} reads {version}"])),
+        ("dart", lambda r: edit(r, "libraries/dart/flutter/example/pubspec.yaml", f"version: {version}",
+                                "version: 9.9.9"), [],
+         (1, [f"versions: libraries/dart/flutter/example/pubspec.yaml reads 9.9.9, and {CRATE} reads {version}"])),
+        ("copied-header", lambda r: edit(r, "libraries/swift/Sources/CThinkThen/include/thinkthen.h",
+                                         f"Version {version},", "Version 9.9.9,"), [],
+         (1, [f"versions: libraries/swift/Sources/CThinkThen/include/thinkthen.h reads 9.9.9, and {CRATE} reads {version}"])),
+        ("missing-metadata", lambda r: (r / "libraries/php/composer.json").unlink(), [],
+         (1, ["versions: missing or unreadable required metadata libraries/php/composer.json"])),
+        ("unknown-surface", lambda r: edit(r, "sdlc/surfaces.txt", "libraries/php         landed",
+                                            "libraries/new         landed"), [],
+         (1, ["versions: unknown landed surface libraries/new or unsupported metadata path"])),
         ("lost", lambda r: edit(r, "databases/postgresql/thinkthen.control", "default_version", "# version"), [],
          (1, ["versions: databases/postgresql/thinkthen.control has no version line the check can read"])),
         ("lock", lambda r: edit(r, "conformance/consumer/Cargo.lock", f'name = "thinkthen"\nversion = "{version}"',
@@ -163,6 +273,21 @@ def self_test():
         ("bad-set", lambda r: None, ["--set", "1.2"], (2, ["versions: --set takes X.Y.Z in digits, not '1.2'; nothing was written"])),
         ("lost-set", lambda r: edit(r, "databases/postgresql/thinkthen.control", "default_version", "# version"), ["--set", "9.8.7"],
          (1, ["versions: databases/postgresql/thinkthen.control has no version line the check can read; nothing was written"])),
+        ("missing-set", lambda r: (r / "libraries/swift/Package.swift").unlink(), ["--set", "9.8.7"],
+         (1, ["versions: missing or unreadable required metadata libraries/swift/Package.swift; nothing was written"])),
+        ("cargo-name-set", lambda r: edit(r, "libraries/c/Cargo.toml", 'name = "thinkthen-c"',
+                                         'no_name = "thinkthen-c"'), ["--set", "9.8.7"],
+         (1, ["versions: libraries/c/Cargo.toml has no package name the check can read; nothing was written"])),
+        ("lock-set", lambda r: edit(r, "conformance/consumer/Cargo.lock", '[[package]]', '[[package]'),
+         ["--set", "9.8.7"],
+         (1, ["versions: missing or malformed required lock conformance/consumer/Cargo.lock; nothing was written"])),
+        ("lock-order-set", lambda r: edit(r, "conformance/consumer/Cargo.lock",
+                                          f'name = "thinkthen"\nversion = "{version}"',
+                                          f'version = "{version}"\nname = "thinkthen"'), ["--set", "9.8.7"],
+         (1, ["versions: conformance/consumer/Cargo.lock has a package entry the update cannot read; nothing was written"])),
+        ("installer-set", lambda r: edit(r, "site/public/install.sh", "#!/bin/sh", "#!/bin/sh "),
+         ["--set", "9.8.7"],
+         (1, ["versions: site/public/install.sh differs from install.sh; nothing was written"])),
     ]
     bad = 0
     for name, plant, argv, expected in cases:
