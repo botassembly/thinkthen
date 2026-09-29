@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 # 0270: Gate PHP and Dart source packages in the Linux x86 release workflow
 
-Status: combined static implementation accepted at `889c7a94` after [fresh High code review](../records/0270-php-dart-workflow-code-review.md). The shared workflow and selector code is complete for this checkpoint. Actual workflow packaging and runner qualification remain open. The coordinator permits the separately traced direct PHP/Dart selector check on preserved packages; it invokes no SQL/DataFrame or container path and does not qualify a new workflow build. The aggregate hold remains in force.
+Status: combined static implementation accepted at `889c7a94` after [fresh High code review](../records/0270-php-dart-workflow-code-review.md). The direct installed PHP and Dart selectors now pass on the coherent retained 0267 C/PHP/Dart trio, as recorded in [the preserved-package check](../records/0270-preserved-package-selector-check.md). This is execution on prior package bytes. Actual current-source workflow packaging and runner qualification remain open. The aggregate SQL/DataFrame hold remains in force.
 
 ## Bounded outcome and retained route
 
@@ -42,4 +42,5 @@ Prospective file claim after fresh design review: `sdlc/scripts/release-pack` an
 
 - The independent selector slice is recorded in [the selector build record](../records/0270-php-dart-selector-build.md). PHP's installed path can reach its C archive guard without `jsonschema`, `bwrap`, `git` or `node`; source mode still refuses absent source tools.
 - Dart's archived lock check needs a second extraction because `pub get` creates `.dart_tool` beside the package. The unrelated consumer also needs both its generated lock hash and resolved cache root checked; the prior root-only assertion covered `thinkthen_dart` alone.
-- The preparation correctly separated this slice from shared workflow files. The archive pack, release gate, real installed consumers and runner remain unproved here. The coordinator owns those later steps after 0269 and Ian's hold.
+- The preparation correctly separated this slice from shared workflow files. At the selector implementation checkpoint, the archive pack, release gate, real installed consumers and runner were still unproved. The later preserved-package result below settles only the direct consumer part on prior package bytes.
+- The later authorized [preserved-package check](../records/0270-preserved-package-selector-check.md) passed both changed direct selectors against the same 0267 C identity, including three counted literal bodies and their existing package refusals. The first PHP attempt hit a sandbox loopback denial; the narrow approved retry passed. Warm offline backend builds took 0.09 s and 0.07 s, with 709 ms and 1298 ms total selector durations. Current-source manylinux workflow packaging and actual runner evidence remain open for the coordinator.
