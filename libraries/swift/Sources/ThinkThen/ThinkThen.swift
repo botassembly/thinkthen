@@ -25,6 +25,7 @@ public enum FailureKind: Int32, Sendable {
 func withInput<R>(_ value: String, _ body: (UnsafePointer<CChar>) throws -> R) throws -> R {
     let bytes = Array(value.utf8)
     guard !bytes.contains(0) else { throw DoorFailure(code: 1, retryable: false, message: "interior NUL") }
+    guard bytes.count < Int.max else { throw DoorFailure(code: 1, retryable: false, message: "input length exceeds host bounds") }
     let storage = UnsafeMutablePointer<CChar>.allocate(capacity: bytes.count + 1)
     defer { storage.deallocate() }
     for (i, byte) in bytes.enumerated() { storage[i] = CChar(bitPattern: byte) }

@@ -19,7 +19,7 @@ checks = shared.validators(json.loads((ROOT / "specification/result.schema.json"
 shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
 backend, port = shared.start_backend()
-run = HERE.parents[1] / "target/scratch/swift-build-2/debug/ThinkThenTypeCase"
+run = Path(os.environ.get("THINKTHEN_SWIFT_BUILD_DIR", HERE.parents[1] / "target/scratch/swift-build-product")) / "debug/ThinkThenTypeCase"
 count = 0
 try:
     with tempfile.TemporaryDirectory(prefix="thinkthen-swift-types-") as cache:

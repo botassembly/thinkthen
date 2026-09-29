@@ -23,4 +23,8 @@ pub fn build(b: *std.Build) void {
     type_case.root_module.addImport("thinkthen", module);
     pkg.linkNative(b, type_case, module, native, mode);
     b.installArtifact(type_case);
+    const settings = b.addExecutable(.{ .name = "settings", .root_module = b.createModule(.{ .root_source_file = b.path("settings.zig"), .target = target, .optimize = optimize }) });
+    settings.root_module.addImport("thinkthen", module);
+    pkg.linkNative(b, settings, module, native, mode);
+    b.installArtifact(settings);
 }

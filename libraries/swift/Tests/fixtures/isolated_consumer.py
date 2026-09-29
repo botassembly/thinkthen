@@ -1,10 +1,10 @@
 """Extract independently installed Swift package/native archives and build in bwrap."""
-import collections,json,pathlib,shutil,sys,tarfile,zipfile
+import collections,json,pathlib,shutil,sys,tarfile,zipfile,tempfile
 from backend import Backend
 from process_group import run
 R=pathlib.Path(__file__).resolve().parents[2]
-mode=sys.argv[1];L=pathlib.Path(sys.argv[2]);W=L/('independent consumer '+mode)
-W.mkdir(parents=True);install=W/'installed package with spaces';install.mkdir()
+mode=sys.argv[1];L=pathlib.Path(sys.argv[2]);W=pathlib.Path(tempfile.mkdtemp(prefix='independent consumer '+mode+' ',dir=L))
+install=W/'installed package with spaces';install.mkdir()
 with zipfile.ZipFile(R/'target/artifacts/thinkthen-swift-0.0.1.zip') as archive:
     for name in archive.namelist():
         dest=install/'package'/name.removeprefix('thinkthen-swift-0.0.1/')

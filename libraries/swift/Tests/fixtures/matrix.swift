@@ -12,6 +12,10 @@ func error(_ wanted: Int32, _ body: () throws -> Void) {
     do { try body(); fatalError("expected native failure \(wanted)") }
     catch let failure as DoorFailure {
         check(failure.code == wanted && !failure.retryable && !failure.message.isEmpty, "wrong failure \(failure)")
+        if wanted == 2 {
+            let facts = decoded(failure.factsJSON ?? "null") as? [String: Any]
+            check(failure.kind == .backend && (facts?["requests_sent"] as? Int ?? 0) > 0, "started failure facts")
+        }
     } catch { fatalError("wrong error \(error)") }
 }
 func decoded(_ json: String) -> Any {

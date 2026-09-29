@@ -14,6 +14,8 @@ libraries/php         landed
 libraries/csharp      landed
 libraries/jvm         landed
 libraries/dart        landed
+libraries/swift       landed
+libraries/zig         landed
 libraries/python      landed
 libraries/typescript  landed
 libraries/ruby        landed

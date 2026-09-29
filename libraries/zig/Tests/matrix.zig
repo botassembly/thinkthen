@@ -244,7 +244,16 @@ pub fn main() !void {
             return error.MaxDeadlineFailed;
         },
     }
-    try errorCode(&engine, try engine.decide("Is it?", "status-401", .{}), tt.c.THINKTHEN_EBACKEND, false);
+    switch (try engine.decide("Is it?", "status-401", .{})) {
+        .ok => return error.ExpectedBackendFailure,
+        .failed => |f| {
+            defer engine.freeFailure(f);
+            try require(f.kind == .backend and !f.retryable and f.facts_json != null);
+            var facts = try std.json.parseFromSlice(std.json.Value, alloc, f.facts_json.?, .{});
+            defer facts.deinit();
+            try require(facts.value.object.get("requests_sent").?.integer > 0);
+        },
+    }
     try errorCode(&engine, try engine.decide("Is it?", "retry-status", .{ .deadline_ms = 500 }), tt.c.THINKTHEN_EBACKEND, true);
     try errorCode(&engine, try engine.decide("Is it?", "transport-close", .{}), tt.c.THINKTHEN_EBACKEND, false);
     try errorCode(&engine, try engine.decide("Is it?", "malformed-backend", .{}), tt.c.THINKTHEN_EBACKEND, false);

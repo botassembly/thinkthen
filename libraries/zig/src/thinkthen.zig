@@ -15,6 +15,10 @@ pub const Failure = struct {
     message: []u8,
     facts_json: ?[]u8,
 };
+pub fn releaseFailure(allocator: std.mem.Allocator, failure: Failure) void {
+    allocator.free(failure.message);
+    if (failure.facts_json) |facts| allocator.free(facts);
+}
 pub fn Result(comptime T: type) type {
     return union(enum) { ok: T, failed: Failure };
 }
@@ -51,8 +55,7 @@ pub const Engine = struct {
         c.thinkthen_engine_free(self.raw);
     }
     pub fn freeFailure(self: *Engine, failure: Failure) void {
-        self.allocator.free(failure.message);
-        if (failure.facts_json) |facts| self.allocator.free(facts);
+        releaseFailure(self.allocator, failure);
     }
     fn failed(self: *Engine, code: c_int) error{OutOfMemory}!Failure {
         return capture(self.allocator, self.raw, code);
