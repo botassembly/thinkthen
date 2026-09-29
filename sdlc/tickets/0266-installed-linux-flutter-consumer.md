@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md s
 
 # 0266: Prove the private Linux Flutter app from matched release files
 
-Status: corrected design accepted at `c8e26b6f`. The [host rehearsal](../records/0266-installed-linux-flutter-host-rehearsal.md) passed from the accepted 0264 C/Dart files and a synthetic Flutter archive; it is not a same-pin package proof. The shared release helpers remain with 0265 before this ticket's final pack/routing work. The original Dart issue remains open for final pin, actual runner, distribution and other hosts.
+Status: corrected design accepted at `c8e26b6f`; the [host rehearsal](../records/0266-installed-linux-flutter-host-rehearsal.md) passed fresh code review. The [clean-pin local build](../records/0266-installed-linux-flutter-build.md) now has matching C/Dart/Flutter archives, direct preflight, one installed Linux app call and focused refusals. This final package delta awaits fresh code review. The original Dart issue remains open for final pin, actual runner, distribution and other hosts.
 
 ## Outcome and retained behavior
 
