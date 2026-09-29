@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 # 0268: Start the reviewed language archives in the manual release workflow
 
-Status: design accepted after fresh independent High review of `e748dcd1`. The [gitless source checkpoint](../records/0268-gitless-provenance-checkpoint.md) is a partial code candidate awaiting fresh High review; it repairs the legacy identity lookup and prepares controlled Go/C++ archive input, without adding language assets to the workflow. [Preparation](../records/0268-release-workflow-language-preparation.md) traced the four-target workflow and eleven locally proved language packages. No workflow dispatch, container build, public draft, registry or site change has run for this ticket. The concurrent 0267 local bundle is not an Actions result and must be compared before the pair workflow is integrated.
+Status: design accepted after fresh independent High review of `e748dcd1`. The [gitless source checkpoint](../records/0268-gitless-provenance-checkpoint.md) passed fresh independent High CODE review at `98672eab`; [the acceptance record](../records/0268-gitless-code-review.md) preserves the remaining workflow and execution criteria; it repairs the legacy identity lookup and prepares controlled Go/C++ archive input, without adding language assets to the workflow. [Preparation](../records/0268-release-workflow-language-preparation.md) traced the four-target workflow and eleven locally proved language packages. No workflow dispatch, container build, public draft, registry or site change has run for this ticket. The concurrent 0267 local bundle is not an Actions result and must be compared before the pair workflow is integrated.
 
 ## Outcome and first boundary
 
