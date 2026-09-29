@@ -13,6 +13,7 @@ libraries/c           landed
 libraries/php         landed
 libraries/csharp      landed
 libraries/jvm         landed
+libraries/dart        landed
 libraries/python      landed
 libraries/typescript  landed
 libraries/ruby        landed

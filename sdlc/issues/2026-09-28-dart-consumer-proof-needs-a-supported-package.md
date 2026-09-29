@@ -30,3 +30,9 @@ The ruling "flutter yes" now has executed evidence in local experiment 300 `stag
 ## Pre-merge re-pin (2026-09-28, pin 71f25087)
 
 UNCHANGED-PASS (pin already postdated the contract changes; take the repin README). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
+
+## Source integration checkpoint (2026-09-28)
+
+Ticket 0249's Dart lane now contains `libraries/dart/` and a Linux Flutter consumer under `libraries/dart/flutter/`. The current-pin local source gate proved two installed Dart pub consumers, complete 16-arrival body multisets each, all 29 executable shared J1 cases through the public binding, 18 historical Dart planted negatives, the 17-arrival Flutter host, and an actual one-arrival Linux app. The source package still installs its native C library separately. See `sdlc/records/0249-dart-build.md` for exact artifact hashes and the embedder cache repeatability fix. This checkpoint does not close the issue's final release pin, Ubuntu 24.04 CI, native archive install, pub dry run, trusted publishing, or untested hosts.
+
+The registration candidate now has one `libraries/dart` surface entry, a checked `pubspec.yaml`, nested private Flutter wrapper and app manifests, and an exact Dart source ratchet. Policy and the surface registry pass. Independent recheck of the shared J1 backend startup correction and registration is pending; the release criteria above remain open.

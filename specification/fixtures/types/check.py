@@ -29,7 +29,6 @@ def checked(command):
 
 
 def build():
-    checked(["cargo", "build", "--locked", "--offline", "--quiet", "--package", "conformance-backend"])
     checked(["cargo", "build", "--locked", "--offline", "--quiet", "--manifest-path", "libraries/c/Cargo.toml", "--lib"])
 
 
@@ -73,6 +72,8 @@ def load_door():
 
 
 def start_backend():
+    checked(["cargo", "build", "--locked", "--offline", "--quiet", "--package", "conformance-backend",
+             "--target-dir", str(ROOT / "target")])
     process = subprocess.Popen(
         [str(BACKEND)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
         stderr=subprocess.PIPE, env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")},

@@ -1,0 +1,9 @@
+.dart_tool/
+build/
+checks/logs/
+checks/scratch/
+flutter/logs/
+flutter/scratch/
+flutter/example/build/
+flutter/example/.flutter-plugins-dependencies
+flutter/.flutter-plugins-dependencies
