@@ -1,0 +1,56 @@
+# 0276: isolate library port-check children
+
+Status: Proposed for fresh design review. Prepared on main `8313bc4fa11837a5e26a2fddf907d10f2c0fe60a` and refreshed to `df69771daf601c109ffe5f04f7146f30b4d084ef`; no implementation has started. The intervening main diff changes no library check or child-helper file.
+
+## Outcome
+
+Apply ticket [0127's accepted child-environment rule](0127-test-harness-fixes.md) to the 45 library findings in the [port-check issue](../issues/2026-09-29-port-check-children-inherit-the-parent-environment.md). Every affected compiler, export tool, loopback backend, nested Python checker, and installed consumer gets an environment built from named inputs. A check reads one parent variable at a time; it never copies the system environment and removes a few names. Keep each selected toolchain, private scratch home, loader path, package mode, exact request body/count and receipt meaning. Change test/check code only, not product bindings or public APIs. Do not exempt a site from `children` or weaken its rules.
+
+This is one library-only batch using the existing Python `child_env` and R `clean_env`, not a new environment framework or ADR. The one DuckDB finding at `databases/duckdb/bridge/src/ffi/tests.rs:76` stays under Ian's SQL/DataFrame hold. The separate 0274 PTY child finding belongs to its author. Clearing the 45 library findings is not a claim that whole-tree `lint` passes.
+
+## Exact code claim and routing
+
+The saved baseline is `target/codex-builds/lint-intake/children.txt` in codex-4: 46 findings in 27 files, comprising 45 findings in **26 library files** and one held DuckDB finding. The report was compared with the named call sites on main `8313bc4f`, then rechecked after `df69771d` advanced only unrelated paths. The proposed code claim is those 26 files **plus** `libraries/go/fixtures/installed_release.py`: that adjacent parent constructs `abi_env` from `os.environ` before it launches the reported Go `abi.py` child, and is necessary to isolate that child. Thus the proposed claim is 27 library files, 45 reported lines. A reviewer must approve it before implementation. No helper, guard, product, issue or plan file is claimed for code.
+
+| Family, findings | Exact affected files | Child routes to retain |
+| --- | --- | --- |
+| Ada, 5 | `libraries/ada/checks/exports.py`, `libraries/ada/checks/installed.py`, `libraries/ada/checks/portable_batch.py` | `nm`; `gnatmake`/`gprbuild`; installed loader, backend and Ada consumer |
+| COBOL, 6 | `libraries/cobol/checks/exports.py`, `libraries/cobol/checks/installed.py`, `libraries/cobol/checks/portable_batch.py` | selected `TT_NM`, C/COBOL compiler, installed loader, backend and consumer |
+| C++, 10 | `libraries/cpp/fixtures/exports.py`, `libraries/cpp/fixtures/installed_release.py`, `libraries/cpp/fixtures/plant-check.py`, `libraries/cpp/fixtures/portable_batch.py` | `nm`, CMake build/install, `ldd`, nested `run.py`, backend and installed shared/static consumers |
+| C#, 1 | `libraries/csharp/tests/types.py` | one whole-map read; selected dotnet runtime and loopback type consumer |
+| Dart, 4 | `libraries/dart/checks/exports.py`, `libraries/dart/checks/plant-check.py`, `libraries/dart/flutter/embedder.py`, `libraries/dart/flutter/plant-check.py` | `nm`, nested checkers and Flutter's `pkg-config` prerequisite probe |
+| Go, 3 | `libraries/go/fixtures/abi.py`, `libraries/go/fixtures/portable_batch.py`, plus adjacent parent `libraries/go/fixtures/installed_release.py` | `nm`, `readelf`, backend, `go test` consumer and installed ABI handoff |
+| JVM, 4 | `libraries/jvm/tests/types.py` | one whole-map read; selected Java, Kotlin and Scala compiler launchers and type consumers |
+| Objective-C, 4 | `libraries/objective-c/checks/exports.py`, `libraries/objective-c/checks/installed.py`, `libraries/objective-c/checks/portable_batch.py` | `nm`, GNU Objective-C compiler, installed loader, backend and consumer |
+| PHP, 4 | `libraries/php/fixtures/abi.py`, `libraries/php/fixtures/portable_batch.py` | `nm`, `readelf`, selected Git, backend and PHP consumer |
+| R, 2 | `libraries/r/tests/helper.R` | `sha256sum` or `shasum` in the already isolated R test process |
+| Swift, 1 | `libraries/swift/Tests/fixtures/portable_batch.py` | selected Swift compiler; existing backend and consumer environments remain explicit |
+| Zig, 1 | `libraries/zig/Tests/portable_batch.py` | selected Zig build; existing backend and consumer environments remain explicit |
+
+`libraries/dart/flutter/plant-check.py` is distinct from `libraries/dart/checks/plant-check.py`. The 45 count includes whole-map reads as well as missing `env=`; it does **not** enumerate every copied map in a `checks/` or `fixtures/` file. The builder must inspect each changed file's adjacent child calls, including C++ `abi_env = os.environ | ...` and Go's installed ABI handoff. A clean grandchild does not make the parent Python helper clean. Other unreported copies outside the exact claim remain an open source-audit limit, not a reason to enlarge this batch without review.
+
+## Method and retained behavior
+
+Use `conformance/children/children.py::child_env(keep=(), **values)` for Python subprocesses and `conformance/children/children.R::clean_env` for R's hash tools. Both start from an empty map, add `PATH`, and reject keeping secret-shaped or `THINKTHEN_*` parent names. Read a legitimate setting with `os.environ.get("NAME")` or `Sys.getenv("NAME")`, then pass a selected or test-owned value explicitly; do not pass `os.environ`, a copy, or a spread. Import the Python helper from the checkout's `conformance/children` path, as the existing Python and database tests do. Verify the invoker before assuming the helper is inside an installed wrapper archive: these check scripts live in the checkout and receive extracted package paths as arguments or variables. The installed consumer must still use the extracted package and C artifact, not silently fall back to source output.
+
+For export and compiler children, retain the actually selected executable and necessary `PATH`, pinned compiler/runtime homes, scratch output and build variables. Preserve `CXX`, `CC`, `TT_NM`, `THINKTHEN_*_BIN` selections by reading them one name at a time; set selected values explicitly because the 0127 helper will not keep a `THINKTHEN_*` name. For CMake, Go and Flutter, preserve only the selected toolchain/cache inputs required by the child. The JVM branch must pass selected `JAVA_HOME`, `JAVACMD` and the selected JDK `bin` on `PATH` through Kotlin and Scala's transitive Java launchers, following landed 0273. Do not assume a `javac` path alone selects their Java runtime. Keep .NET's selected runtime and private home. Refuse a missing prerequisite rather than importing the whole shell to make it work.
+
+For backend and consumer children, give the backend only its required `PATH` and owned paths. Give each consumer its explicit fake key paired with its own `127.0.0.1` address, private `HOME`/XDG/cache paths, selected native loader path (`LD_LIBRARY_PATH` where needed), and only the fixture's required `TT_*` names. Preserve Ada/COBOL/Objective-C/PHP/Go portable five-text, three-body/count proof; C++'s installed shared and static receipts; C#/JVM type checks; Dart/Flutter planted-negative receipt logic; and Swift/Zig portable proof. Do not conflate a source tree run, extracted-wrapper check, and an installed consumer receipt. Nested `plant-check.py -> run.py -> consumer` and the Python wrapper that starts the backend need isolation at **each** child boundary. Preserve current timeout ownership and cleanup; a timeout must not leave a helper running.
+
+## Smallest proof after design acceptance
+
+1. Red-green at a real boundary: run the selected PHP portable checker with a planted unrelated `FAKE_SERVICE_API_KEY=planted` and a planted caller setting. Use test-owned executables selected through its existing `THINKTHEN_BACKEND_BIN` and `THINKTHEN_PHP_BIN` inputs to check absence of the unrelated marker before executing the real backend/PHP. The wrappers report that both levels ran; the existing five-text, three-request exact-body/count assertion remains the functional oracle. The parent's `THINKTHEN_*` selectors are read by name and only the test's loopback settings reach the consumer. This checks the child processes, not just a dictionary returned by the helper; no product hook is needed. If the warm PHP/C artifacts are unavailable, run the helper boundary in a small temporary fixture and label the selected consumer proof pending rather than rebuilding every port.
+2. Run `python3 sdlc/scripts/children` on the candidate and compare it with the saved baseline: all 45 library locations must disappear, while the one held DuckDB line remains identified. Run its existing self-test only if the guard itself changes (it should not). Run `conformance/children/test.sh` for the shared helper contract, then one focused source and one extracted-package selector path affected by this batch using warm artifacts. Check a selected JVM launcher environment with a stub if that branch changes its compiler calls; do not run the 55/29-case corpus or every installed package again.
+3. Run syntax, `policy.py`, `pages`, `tickets`, and diff checks on the exact candidate. Record which selected functional checks actually ran and which host/SDK inputs were unavailable. The coordinator names any later full lint checkpoint after this and the held/other findings are reconciled; this ticket cannot close the whole port-check issue while DuckDB is held.
+
+## Evidence
+
+- Starts from: [0127's accepted rule](0127-test-harness-fixes.md), [the issue](../issues/2026-09-29-port-check-children-inherit-the-parent-environment.md), and the 46-line baseline captured at `target/codex-builds/lint-intake/children.txt` in codex-4; current source is `df69771d`, whose intervening diff has no library-check change.
+- Keeps: Named toolchain and runtime selection, private homes, loader paths, loopback fake-key/address pairs, source versus extracted package identity, exact body/count checks, negative receipts, and timeout cleanup.
+- Changes: The 26 reported library check files and the one adjacent Go installed ABI launcher build each affected child environment from explicit values and read parent settings one key at a time, reusing the existing Python/R helpers.
+- Proof: One planted real backend/consumer boundary with exact portable result; `children` removes 45 library findings; selected source and extracted-package checks preserve their current receipts; focused syntax/policy/pages/tickets/diff checks pass.
+- Defers: The held DuckDB child, 0274's separate PTY issue, other unreported copied environments or subprocess forms outside this exact claim and guard scope, unavailable host SDKs, and any integrated full-lint claim.
+
+## What the build taught us
+
+Preparation only. The builder will record corrected assumptions, actual focused check results, retired tests if any, and remaining gaps here after implementation. The current preparation finding is that C++ and Go already have copied ABI environments outside the literal guard lines, and nested checker launchers need their own boundary proof; see the [preparation record](../records/0276-port-child-environment-preparation.md).
