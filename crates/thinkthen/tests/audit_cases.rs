@@ -108,9 +108,29 @@ fn duplicate_identity_refuses_while_missing_input_keeps_line_identity() {
     let printed = rows(&stdout);
     let last = printed.last().expect("last case");
     assert_eq!(
-        (&last["id"], &last["input"], &last["outcome"]),
-        (&json!("12"), &Value::Null, &json!("unlabeled"))
+        last,
+        &json!({
+            "case": true,
+            "line": 12,
+            "id": "12",
+            "name": null,
+            "question": null,
+            "label": null,
+            "verb": "recognize",
+            "input": null,
+            "options": null,
+            "said": null,
+            "truth": null,
+            "outcome": "unlabeled",
+            "probability": null,
+            "probabilities": null,
+            "top_two": null,
+            "item_counts": null,
+            "usage": null,
+            "usage_scope": null
+        })
     );
+    assert!(last.get("key_value").is_none());
 }
 
 #[test]
