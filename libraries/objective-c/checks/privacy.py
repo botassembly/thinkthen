@@ -27,7 +27,7 @@ def check(path):
     elif path.suffix == ".gz":
         inspect(str(path), gzip.decompress(path.read_bytes()))
 
-sources = [ROOT / "README.md", ROOT / "LICENSE", *ROOT.glob("src/*"),
+sources = [ROOT / "README.md", ROOT / "LICENSE", ROOT / "source-package.json", *ROOT.glob("src/*"),
            *ROOT.glob("Src/*"), *ROOT.glob("Sources/*"), *ROOT.glob("examples/*"),
            *ROOT.glob("Examples/*")]
 for path in sources:

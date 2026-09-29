@@ -2,6 +2,8 @@
 
 Status: the local package experiment (local experiment 292) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.
 
+Ticket 0249 now has a Linux GnuCOBOL 4 source package candidate under `libraries/cobol/`, built against the current 30-export C header. Its public binding passed all 29 executable J1 cases, two installed consumers, copied failure facts and the 30-body historical matrix. Fresh Medium source review accepted `5209f934`; final shared registration review and landing remain in progress. The historical handoff below is superseded by the accepted re-pin preparation. COBOL proves pre-fired tokens and deadlines, while the strict held-call helper remains C-only. This issue stays open for a final-release native pin, `ubuntu-24.04` CI/release, distribution and untested hosts.
+
 ## Evidence
 
 Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 292 at `experiments/292-thinkthen-cobol-c-interface/`. Stage one pinned main `5b90c13b`; stage two pinned `26ae542e`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (BY VALUE SIZE IS 8 width discipline; engine-level strict proof via labeled ctypes helper). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).

@@ -1,0 +1,3 @@
+# 0249 COBOL source review
+
+Fresh read-only Medium review ACCEPTED the COBOL implementation and fixtures at `5209f934`. It independently compared all 30 full-body golden requests with accepted experiment 292 receipts and found no drift. It checked public constructor/JSON/typed wrappers, byte and `size_t` bounds, copied failure facts, native freeing, tokenizer behavior and the explicit C-only cancellation limit. No source finding remains. The later source README, ratchets, direct-download source manifests and final-three surface/policy registration are a separate final delta awaiting the same reviewer's verdict; this record does not claim that pending delta accepted or landed.

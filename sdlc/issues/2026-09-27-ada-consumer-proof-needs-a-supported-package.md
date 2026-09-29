@@ -2,6 +2,8 @@
 
 Status: the local package experiment (local experiment 293) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.
 
+Ticket 0249 now has a Linux GNAT source package candidate under `libraries/ada/`, built against the current 30-export C header. Its public binding passed all 29 executable J1 cases, two installed consumers, copied failure facts, the 32-body historical matrix and Ada-task cancellation. Fresh High source review accepted `31fa3f78`; final shared registration review and landing remain in progress. The historical handoff below is superseded by the accepted re-pin preparation. This issue stays open for a final-release native pin, `ubuntu-24.04` CI/release, distribution and untested hosts.
+
 ## Evidence
 
 Beelink, Ubuntu 24.04.3, glibc 2.39, x86_64; local experiment 293 at `experiments/293-thinkthen-ada-c-interface/`. Stage one pinned main `5b90c13b`; stage two pinned `0d8a7df4`. Native libraries rebuilt offline from each pin under the shared heavy lock with experiment-owned registry copies; hashes, exports, soname and archive members verified in `artifacts/manifest.json`. Each stage ran the full ten-verb matrix against an independently counted loopback fixture with exact arrival multisets, reverse bulk completion, twice-per-name recognition, and the strict post-0166 cancellation contract (Tasking runs strict in-flight cancellation natively). Every stage was rerun independently by the parent and accepted by a fresh read-only review (`stage*/reviews/`, `stage*/FINDINGS.md`).

@@ -1,0 +1,7 @@
+{
+  "name": "thinkthen-cobol",
+  "version": "0.0.1",
+  "source_only": true,
+  "native_dependency": "thinkthen-c",
+  "bundles_native": false
+}
