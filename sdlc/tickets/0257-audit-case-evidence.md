@@ -1,0 +1,37 @@
+---
+flow: build
+priority: 257
+opens: sdlc/issues/2026-09-27-audit-shows-group-counts-and-no-per-case-evidence.md sdlc/records/0257-audit-case-preflight.md
+---
+
+# 0257: Show the evidence behind each saved audit case
+
+Status: design candidate for fresh Medium review at main `23371cc9`. [ADR 0103](../planning/adr/0103-audit-case-evidence.md) proposes the additive view. No source, public page, issue status or count has changed in this design branch.
+
+## Outcome
+
+`thinkthen audit RESULTS KEY --cases` prints one JSON object for each parsed case identity. The reader can see the saved input, question and criterion, sent option order where recorded, answer under the selected rule, keyed truth, distinct failure/unlabeled/unresolved/tied states, probabilities and available usage. A `choose` row may show its top two options when the saved distribution and sent order support them. A `recognize` or `relate` row shows matched, extra and missed item counts rather than claiming a binary right/wrong case. This makes the miss shape visible for a tuning proposer without restating audit's scorer. The default remains the existing aggregate audit. This closes only the original [per-case issue](../issues/2026-09-27-audit-shows-group-counts-and-no-per-case-evidence.md), not uncertain-case selection or repeat work.
+
+## Accepted-design candidate
+
+Use the case-only JSONL and explicit conflict rules in ADR 0103. Only `--id`, `--threshold` and `--match` accompany `--cases`; current positional `RESULTS KEY` and `-` rule remain. Existing `--write` and `--write-to` stay aggregate-only and keep their exact digest gate, threshold splice, output-path behavior and reports. Any combination refused for `--cases` is new usage exit 2; old invocations retain their exits. Case identity and grading come from the same parsed `Answer`, `Key`, `Rule` and item matcher that aggregate rows use. No file write, request, key lookup, cache or whole-run facts read is added to this path.
+
+The case object has the fields and absence rules in ADR 0103. A saved `tag` answer becomes one row per label and an `annotate` line becomes one row per named answer, so `id` alone is never treated as unique. A failed `tag` entry remains the one failed entry the current parser actually produces; the view must not synthesize missing labels. A missing `input` on supported `find`/set output retains the reader's current line-number id fallback but prints `input: null`. Do not infer `question`, `options`, `probabilities`, `top_two` or token counts from a different row or whole-run metadata. An annotated record's root usage is one result-line value shared by its criteria, explicitly scoped as such. Set `said` must honor the selected rule's kept items, with truth and counts using the existing key matching mode.
+
+## Evidence
+
+- **Starts from:** The [original issue](../issues/2026-09-27-audit-shows-group-counts-and-no-per-case-evidence.md), experiments 296 and 297 cited there, the accepted [four-row tuning refresh](../records/2026-09-28-tuning-evidence-refresh.md) at `fa512f45`, and current main `23371cc9`. The original issue's older 989-call cost note is history; the refresh records the corrected 1,049-call final ledger. Neither ledger is per-case usage. [Preflight](../records/0257-audit-case-preflight.md) pins the current source and saved carriers.
+- **Keeps:** Aggregate JSONL/table default, grouping, calibration, suggestions, all current verbs, key/duplicate/threshold refusals, no-send/no-API-key path, and ticket 0256's in-place and separate-output publication. No new assertion about top two on score, tag, set or any verb without a suitable saved choice distribution.
+- **Changes:** Opt-in, case-only JSONL with full case identity, raw saved carriers where present, normalized scalar outcomes and set item counts. It rejects aggregate-only flags explicitly instead of mixing or ignoring their effects. Usage is the saved token pair with result-line scope or unknown.
+- **Proof:** A literal saved fixture table includes one right and wrong yes/no, a three-option choose tie with sent-order top two, a one-step-off score, an annotated named criterion with root usage, a failed criterion, an unlabeled row and a partly matched set. Assert exact complete JSONL case rows and aggregate parity for the same source/key/rule: scalar right/wrong/unsure/tied/failed/unlabeled counts and set matched/extra/missed sums. A duplicate `id + name + question + label` returns the current exact exit-2 refusal; a second distinct criterion under the same id is accepted. Missing usage and options print null. One configured loopback plus canary key proves zero sends/no secret in either stream. Retain current aggregate golden and 0256 publication tests; no provider or stress run.
+- **Defers:** Candidate ordering near a cut, cross-run disagreement or flips, seeded random share, repeated live judgments, a new cost model, absent metadata reconstruction and per-criterion allocation of annotated root usage. Those remain in their distinct original reports. Public `site/` work is outside this ticket.
+
+## Source and review scope
+
+Prospective implementation claim: `crates/thinkthen/src/cli/audit.rs` and coherent new private `cli/audit/cases.rs` for rendering; a small `core/measure/key.rs` accessor only if the raw keyed value is needed for failed-row evidence without a second join; `cli/args/command.rs` audit help; a new `crates/thinkthen/tests/audit_cases.rs` with compact saved fixtures under `tests/fixtures/measure/cases/`; `specification/audit.md`; derived `sdlc/ratchet.json`; this ticket, ADR and a build record. Keep `core/measure/{answer,items,rows,audit}.rs`, `cli/audit/write.rs`, `cli/measure.rs`, existing fixtures and `specification/settings.md` read-only unless a concrete implementation obstacle is reviewed. Use exact current refusal mechanisms; new conflict diagnostics come from clap. Policy needs no new allowance because case rendering reads existing inputs and writes only stdout, but its current check should pass.
+
+Measured nonblank lines at `23371cc9`: `cli/audit.rs` 237, `cli/args/command.rs` 417, `core/measure/answer.rs` 450, `key.rs` 166, `items.rs` 256, `rows.rs` 273, `tests/audit.rs` 477, `audit_refusals.rs` 482 and `tests/support/measure.rs` 431. Put new behavior in a new test file and private cases module, not the near-cap old files. Before lifting the Rust ratchet, check the existing answer/key/item methods and tests for duplicated grading or join logic. Run focused `audit_cases`, retained audit golden/refusal and 0256 output cases, strict affected Clippy, format, policy, ratchet, page/ticket links and the affected executable specification examples. No full core or host build is required for this design.
+
+## What the build taught us
+
+Pending implementation and fresh code review. Preparation identified two likely traps: `Answer` loses raw saved input/options/usage, and one `annotate` result-line usage value can appear beside several criterion rows. Tests must pin source carriers and scope rather than equating row count with sends or token charges.
