@@ -95,7 +95,9 @@ def check_count():
       'completions':server.completions,'bulk_completion':server.bulk_completion}
 
 if len(sys.argv) == 2:
-    lang=sys.argv[1]
+    selected=sys.argv[1]
+    portable=selected.startswith('portable-')
+    lang=selected.removeprefix('portable-')
     assert lang in ('java','kotlin','scala'),lang
     try:
         if lang=='java':
@@ -113,16 +115,23 @@ if len(sys.argv) == 2:
               '-classpath',CP,'-d',str(CLASSES),'InstalledScala.scala'],timeout=240)
             run_class='installedScala'
             runtime_cp=CP+':'+SCALA
-        output=execute('release-'+lang,JAVA+['-cp',runtime_cp,run_class])
-        assert 'INSTALLED_'+lang.upper()+'_PASS' in output,output
-        expected={'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'Is it?'}},'state':'release-'+lang}
-        captured=[json.loads(path.read_text()) for path in BARRIER.glob('wire-body-*.json')]
-        assert captured==[expected],(captured,expected)
+        output=execute(selected,JAVA+['-cp',runtime_cp,run_class],
+          extra={'TT_PORTABLE_BATCH':'1'} if portable else None)
+        marker=('PORTABLE_BATCH_' if portable else 'INSTALLED_')+lang.upper()+'_PASS'
+        assert marker in output,output
         summary={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,
-          'body':captured[0], 'classpath':runtime_cp,'native':'/work/native/lib/libthinkthen.so'}
-        assert summary['arrivals']==['release-'+lang] and summary['attempts']==summary['connections']==1,summary
+          'classpath':runtime_cp,'native':'/work/native/lib/libthinkthen.so',
+          'url':f'http://127.0.0.1:{server.server_port}/generic/v1/systemone'}
+        if portable:
+            assert summary['attempts']==summary['connections']==3,summary
+        else:
+            expected={'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'Is it?'}},'state':'release-'+lang}
+            captured=[json.loads(path.read_text()) for path in BARRIER.glob('wire-body-*.json')]
+            assert captured==[expected],(captured,expected)
+            summary['body']=captured[0]
+            assert summary['arrivals']==['release-'+lang] and summary['attempts']==summary['connections']==1,summary
         (HOME/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
-        print('isolated release',lang,'one exact body PASS',flush=True)
+        print('isolated',selected,'counted bodies PASS',flush=True)
     finally: server.close()
     sys.exit(0)
 

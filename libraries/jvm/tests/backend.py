@@ -37,7 +37,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"]))
         request = json.loads(body)
-        if request.get('state') == 'Each question quotes the text it asks about.' or isinstance(request.get('state'), dict) or b'bulk-middle-bad' in body or str(request.get('state', '')).startswith('release-'):
+        if request.get('state') in ('Each question quotes the text it asks about.', 'tail') or isinstance(request.get('state'), dict) or b'bulk-middle-bad' in body or str(request.get('state', '')).startswith('release-'):
             with self.server.lock:
                 index = self.server.attempts
                 (self.server.barrier / f'wire-body-{index}.json').write_bytes(body)
