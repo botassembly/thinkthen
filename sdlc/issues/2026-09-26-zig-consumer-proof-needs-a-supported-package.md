@@ -1,10 +1,10 @@
 # A Zig consumer works through C, but no supported package exists
 
-Status: the local package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the product integration ticket and release. Ian authorized the expanded Linux engineering and testing, not publication. He can overturn the thin wrapper and explicit native-archive recommendation.
+Status: ticket 0249 landed the `libraries/zig/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-swift-zig-build.md) cover the Zig 0.15.2 source package and isolated shared/static-C consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct source installation and other-host proof. No release dispatch or publication is claimed.
 
 ## Gap
 
-The ideal state makes the C interface the route to additional languages. Experiment 273 now supplies the Zig implementation, package metadata, examples, documentation, tests and local archive rehearsal. The repository still needs reviewed integration, release packaging and final-release verification before offering supported Zig use.
+The ideal state makes the C interface the route to additional languages. Experiment 273 now supplies the Zig implementation, package metadata, examples, documentation, tests and local archive rehearsal. Ticket 0249 supplied reviewed integration. Release packaging and final-release verification remain before supported Zig use.
 
 ## Final evidence
 
@@ -35,7 +35,7 @@ Historical stage-two artifacts remain local and unchanged:
 - `stage2/CASE-LEDGER.md`, `FINDINGS.md`, `REVIEW.md`, and `reviews/`: coverage, parent verification, limits and independent reviews.
 - `stage2/parent-verification/`: parent source checks, gate launch evidence and unchanged-source hashes.
 
-The integration ticket must copy `post-fix/package/` to `libraries/zig/`, place the tests from `post-fix/fixtures/` beside it, and adapt `post-fix/gate.sh` to the repository's artifact/tool/scratch paths and offline surface rung. The sealed stage-two artifacts above retain the earlier evidence; the post-fix copy is the integration source. It should add source-archive release packaging, public API/install documentation and specification registry entries. The release owner must decide distribution and compatibility policy, rebuild from the final release commit and rerun the gate. Do not publish the experiment's rehearsal binaries. The post-fix experiment copy already requires strict success and passed. Product integration must carry that contract and rerun its gate at the final release pin.
+The historical experiment copy instruction is complete and superseded by `libraries/zig/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct source installation and other-host proof.
 
 Keep Zig 0.15.2 for this measured target. Start with a thin optional source package and a separately supplied matching native archive. The current shared mode embeds the supplied library path and requires rebuilding if it moves. A relocatable installation policy or automatic download is a separate product choice. The C constructor remains environment-based and has no public throttle setter.
 
@@ -45,7 +45,7 @@ An earlier intermediate static run accepted 33 rather than 34 requests without i
 
 The first-stage proof remains intact at the experiment root. It tested source `873b04abdeca56bcfc5fcc15b99665b7c32ee116` with a 14-line direct example, an 81-line wrapper, ten independently counted requests and deliberately faulty ordering/message-lifetime copies. Its `FINDINGS.md`, `REVIEW.md` and `HARVEST.md` describe that narrower result. Experiment 205 supplied earlier stand-in lessons; ADR 0037 and ticket 0094 establish the landed C interface.
 
-Go ran as experiment 274 and the JVM as experiment 289, renumbered from a collided 275 claim. Their wrappers account for thread-local C error retrieval; each has its own issue and still needs product integration.
+Go ran as experiment 274 and the JVM as experiment 289, renumbered from a collided 275 claim. Their wrappers account for thread-local C error retrieval; ticket 0249 later integrated both product packages, and their release issues remain open.
 
 ## Post-fix verification (2026-09-27)
 
@@ -69,6 +69,6 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 
 ADAPTED-PASS (packing, envelope, multiset 50->42, retry 3->4 source-proven). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
 
-## Product integration candidate (2026-09-28)
+## Landed product source (2026-09-28)
 
-Ticket 0249's Zig source candidate uses experiment 273 `repin/package/`, which supersedes the earlier post-fix copy instruction above and carries its strict cancellation plus later packing/envelope changes. `libraries/zig/check.sh` currently passes on Ubuntu 24.04.3 x86_64 with Zig 0.15.2 and the current 30-export C header/library: public J1 55 schema / 29 executable cases, named error kinds and copied started-failure facts, settings precedence with invalid-settings zero-send, strict held scalar/bulk cancellation and recovery, and 42 complete normalized request bodies in each of two isolated shared and two isolated static-C source/native consumers. The product keeps the allocation, parser, source privacy, package and host ratchets with a distinct planted private path. The exact build pin and native hash are in `sdlc/records/0249-swift-zig-build.md`. This candidate awaits fresh code review. The issue stays open for final release pin, `ubuntu-24.04` Actions build/release, checksummed native distribution and other-platform proof. Static-C linkage is not a fully static executable; local archives are disposable gate outputs.
+Ticket 0249's landed Zig source used experiment 273 `repin/package/`, which supersedes the earlier post-fix copy instruction above and carries its strict cancellation plus later packing/envelope changes. `libraries/zig/check.sh` currently passes on Ubuntu 24.04.3 x86_64 with Zig 0.15.2 and the current 30-export C header/library: public J1 55 schema / 29 executable cases, named error kinds and copied started-failure facts, settings precedence with invalid-settings zero-send, strict held scalar/bulk cancellation and recovery, and 42 complete normalized request bodies in each of two isolated shared and two isolated static-C source/native consumers. The product keeps the allocation, parser, source privacy, package and host ratchets with a distinct planted private path. The exact build pin and native hash are in `sdlc/records/0249-swift-zig-build.md`. Fresh source review and ticket 0249 integration closure accepted this package. The issue stays open for final release pin, `ubuntu-24.04` Actions build/release, checksummed native distribution and other-platform proof. Static-C linkage is not a fully static executable; local archives are disposable gate outputs.

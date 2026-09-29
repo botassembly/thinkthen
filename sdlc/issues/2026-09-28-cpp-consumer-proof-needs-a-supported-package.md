@@ -1,6 +1,6 @@
 # C++ consumer proof needs a supported package
 
-Status: the local package experiment (local experiment 301) is complete through both stages, parent-verified and review-accepted, and its pin already matches the current main contracts (packed bulk, result envelope — see `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`). The queue owner decides the integration ticket and release; nothing is published. Ian authorized C++ on 2026-09-28 ("make c++ work").
+Status: ticket 0249 landed the `libraries/cpp/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-go-cpp-build.md) cover the CMake source package and installed find_package consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct CMake installation and other-host proof. No release dispatch or publication is claimed.
 
 ## What was proven
 
@@ -12,7 +12,7 @@ Review 1: two real findings (CMake three-directory prefix assumption; silent 2^5
 
 ## Handoff
 
-Copy only `stage2/package/` into `libraries/cpp/`. Rebuild at the final release pin (its pin predates `71f25087` but review confirmed its assertions already match the current contracts; verify at the merge pin anyway). No registry account needed — distribution is GitHub Releases + CMake config; vcpkg/Conan recipes optional add-ons. The from-source triple (clone → native build → find_package/use) is in the package README.
+The historical experiment copy instruction is complete and superseded by `libraries/cpp/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct CMake installation and other-host proof.
 
 ## Evidence
 
@@ -27,6 +27,6 @@ One Linux host/toolchain pair, synthetic loopback, decimal/exponent doubles docu
 
 no repin run; review-verified that its pin 4a0a2d6e already matches the current contracts. Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
 
-## Product source candidate (2026-09-28)
+## Landed product source (2026-09-28)
 
-Ticket 0249 copied the corrected stage-two package into `libraries/cpp/` and adapted a product-owned offline gate. At source `976bcd75`, four installed `find_package` consumers each passed 16 exact full request bodies, including shared, static-C, multilib and Clang-sanitized variants. Eighteen planted negatives, the 55-schema/29-public-case corpus, current 30-export native ABI, and the 2^53 parser boundary passed. See `sdlc/records/0249-go-cpp-{preflight,build,review}.md`. Fresh Medium review accepted source `d7723841`; C++ registration passed focused policy and registry checks after Swift/Zig landed. Narrow registration review is pending. The final-release pin, `ubuntu-24.04` build/release path, and native archive distribution remain open. No package was published.
+Ticket 0249 copied the corrected stage-two package into `libraries/cpp/` and adapted a product-owned offline gate. At source `976bcd75`, four installed `find_package` consumers each passed 16 exact full request bodies, including shared, static-C, multilib and Clang-sanitized variants. Eighteen planted negatives, the 55-schema/29-public-case corpus, current 30-export native ABI, and the 2^53 parser boundary passed. See `sdlc/records/0249-go-cpp-{preflight,build,review}.md`. Fresh Medium review accepted source `d7723841`; C++ registration passed focused policy and registry checks after Swift/Zig landed. Shared registration review and landing completed under ticket 0249. The final-release pin, `ubuntu-24.04` build/release path, and native archive distribution remain open. No package was published.

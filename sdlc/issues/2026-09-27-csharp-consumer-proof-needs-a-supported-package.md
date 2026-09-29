@@ -1,6 +1,6 @@
 # A C#/.NET 8 consumer works through C, but no supported package exists
 
-Status: the local package experiment (local experiment 290) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.
+Status: ticket 0249 landed the `libraries/csharp/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-csharp-jvm-build.md) cover the Botassembly.ThinkThen wrapper and local NuGet package consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, NuGet distribution and other-host proof. No release dispatch or publication is claimed.
 
 ## Evidence
 
@@ -10,7 +10,7 @@ Package: NuGet-shaped ThinkThen.C 0.0.1, linux-x64, no bundled native bits; the 
 
 ## Handoff
 
-Copy only `stage2/package/` into the J8 integration ticket under `libraries/csharp/`; never ship rehearsal archives. The ticket applies the type contract (issue `2026-09-27-one-type-contract-for-every-surface`) — NuGet-shaped `ThinkThen.C` 0.0.1 (linux-x64, no bundled native bits; a separately supplied versioned native archive is the documented contract). Typed `Outcome` present; deltas: named error kinds, map-form label sets with structured descriptions, annotate failure typing, offset naming plus the shared non-BMP case. — runs J1's result-schema parity corpus now that `specification/result.schema.json` has landed, binds `thinkthen_engine_new_with` where the stage-two pin predates it, rebuilds on the final release pin, and adds the GitHub Actions `ubuntu-24.04` build/release path with native archives on GitHub Releases and direct or language-registry distribution.
+The historical experiment copy instruction is complete and superseded by `libraries/csharp/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, NuGet distribution and other-host proof.
 
 Note: The stage-one gate initially built unlocked (dotnet); fixed to one locked entrypoint before acceptance.
 
@@ -28,6 +28,6 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 
 ADAPTED-PASS (packing, envelope, 30-arrival multiset). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
 
-## Product integration candidate, ticket 0249
+## Landed product source, ticket 0249
 
-The reviewed first batch imports `repin/package/` into `libraries/csharp/` with a product-local gate and the `Botassembly.ThinkThen` wrapper ID. The current C header has 30 declarations, verified against the rebuilt library. Local NuGet packaging, two isolated consumers, the exact 30-arrival matrix, named errors, constructor/facts behavior and the J1 public-binding corpus pass on Linux x86_64. The product build receipt is `sdlc/records/0249-csharp-jvm-build.md`. This is a review candidate until landed. Registry publication, native release packaging and other hosts remain open.
+The reviewed first batch imports `repin/package/` into `libraries/csharp/` with a product-local gate and the `Botassembly.ThinkThen` wrapper ID. The current C header has 30 declarations, verified against the rebuilt library. Local NuGet packaging, two isolated consumers, the exact 30-arrival matrix, named errors, constructor/facts behavior and the J1 public-binding corpus pass on Linux x86_64. The product build receipt is `sdlc/records/0249-csharp-jvm-build.md`. Ticket 0249 source integration landed. Registry publication, native release packaging and other hosts remain open.

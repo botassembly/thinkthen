@@ -1,8 +1,8 @@
 # A COBOL (GnuCOBOL 4) consumer works through C, but no supported package exists
 
-Status: the local package experiment (local experiment 292) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.
+Status: ticket 0249 landed the `libraries/cobol/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-cobol-build.md) cover the GnuCOBOL 4 source package and installed consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct source installation and other-host proof. No release dispatch or publication is claimed.
 
-Ticket 0249 now has a Linux GnuCOBOL 4 source package candidate under `libraries/cobol/`, built against the current 30-export C header. Its public binding passed all 29 executable J1 cases, two installed consumers, copied failure facts and the 30-body historical matrix. Fresh Medium source review accepted `5209f934`; final shared registration review and landing remain in progress. The historical handoff below is superseded by the accepted re-pin preparation. COBOL proves pre-fired tokens and deadlines, while the strict held-call helper remains C-only. This issue stays open for a final-release native pin, `ubuntu-24.04` CI/release, distribution and untested hosts.
+Ticket 0249 landed a Linux GnuCOBOL 4 source package under `libraries/cobol/`, built against the current 30-export C header. Its public binding passed all 29 executable J1 cases, two installed consumers, copied failure facts and the 30-body historical matrix. Fresh Medium source review accepted `5209f934`; shared registration review and landing completed under ticket 0249. The historical handoff below is superseded by the landed source and accepted integration closure. COBOL proves pre-fired tokens and deadlines, while the strict held-call helper remains C-only. This issue stays open for a final-release native pin, `ubuntu-24.04` CI/release, distribution and untested hosts.
 
 ## Evidence
 
@@ -12,7 +12,7 @@ Package: copybook facade plus dependency-free C JSON tokenizer, engine_new_with 
 
 ## Handoff
 
-Copy only `stage2/package/` into the J8 integration ticket under `libraries/cobol/`; never ship rehearsal archives. The ticket applies the type contract (issue `2026-09-27-one-type-contract-for-every-surface`) — Copybook with 88-level condition names for outcome and all six error kinds, unresolved/failed/resolved annotate fields, mixed-label rejection by name, thinkthen_engine_new_with bound and tested, schema-sample parity at gate time. Fully type-contract compliant. — runs J1's result-schema parity corpus now that `specification/result.schema.json` has landed, binds `thinkthen_engine_new_with` where the stage-two pin predates it, rebuilds on the final release pin, and adds the GitHub Actions `ubuntu-24.04` build/release path with native archives on GitHub Releases and direct or language-registry distribution.
+The historical experiment copy instruction is complete and superseded by `libraries/cobol/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct source installation and other-host proof.
 
 Note: Single-threaded CALL cannot fire in-flight tokens; pre-fired and deadlines are the COBOL-supported forms.
 

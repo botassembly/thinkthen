@@ -1,8 +1,8 @@
 # A GNU Objective-C (gobjc) consumer works through C, but no supported package exists
 
-Status: the local package experiment (local experiment 295) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.
+Status: ticket 0249 landed the `libraries/objective-c/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-ada-objc-cobol-build.md) cover the GNU Objective-C source package and installed consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives and direct source installation. Apple Objective-C remains unproved. No release dispatch or publication is claimed.
 
-Ticket 0249 now has a Linux GNU Objective-C source package candidate under `libraries/objective-c/`, built against the current 30-export C header. Its public binding passed all 29 executable J1 cases, two installed consumers, copied failure facts, the 33-body historical matrix and pthread cancellation. Fresh High source review accepted `31fa3f78`, including the decoded U+0000 JSON correction; final shared registration review and landing remain in progress. The historical handoff below is superseded by the accepted re-pin preparation. This issue stays open for a final-release native pin, `ubuntu-24.04` CI/release, distribution and untested hosts, including Apple Objective-C.
+Ticket 0249 landed a Linux GNU Objective-C source package under `libraries/objective-c/`, built against the current 30-export C header. Its public binding passed all 29 executable J1 cases, two installed consumers, copied failure facts, the 33-body historical matrix and pthread cancellation. Fresh High source review accepted `31fa3f78`, including the decoded U+0000 JSON correction; shared registration review and landing completed under ticket 0249. The historical handoff below is superseded by the landed source and accepted integration closure. This issue stays open for a final-release native pin, `ubuntu-24.04` CI/release, distribution and untested hosts, including Apple Objective-C.
 
 ## Evidence
 
@@ -12,7 +12,7 @@ Package: GNU Objective-C facade, no Foundation dependency.
 
 ## Handoff
 
-Copy only `stage2/package/` into the J8 integration ticket under `libraries/objective-c/`; never ship rehearsal archives. The ticket applies the type contract (issue `2026-09-27-one-type-contract-for-every-surface`) — Named TTOutcome and six TTErrorKind values, length-aware NUL-refusing constructors, dependency-free MIT JSON tokenizer with full negatives, structured descriptions in live calls. Fully type-contract compliant; Linux GNU runtime only — the Apple runtime is explicitly not inferred. — runs J1's result-schema parity corpus now that `specification/result.schema.json` has landed, binds `thinkthen_engine_new_with` where the stage-two pin predates it, rebuilds on the final release pin, and adds the GitHub Actions `ubuntu-24.04` build/release path with native archives on GitHub Releases and direct or language-registry distribution.
+The historical experiment copy instruction is complete and superseded by `libraries/objective-c/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets and direct source installation. Apple Objective-C remains unproved.
 
 Note: macOS/iOS support needs separate design and is out of scope.
 

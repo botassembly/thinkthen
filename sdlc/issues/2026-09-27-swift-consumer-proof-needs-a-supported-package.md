@@ -1,6 +1,6 @@
 # A Swift 6.4 consumer works through C, but no supported package exists
 
-Status: the local package experiment (local experiment 294) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.
+Status: ticket 0249 landed the `libraries/swift/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-swift-zig-build.md) cover the SwiftPM source package and isolated consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct SwiftPM installation and macOS consumer proof. No release dispatch or publication is claimed.
 
 ## Evidence
 
@@ -10,7 +10,7 @@ Package: SwiftPM with a system-library target and vendored module map.
 
 ## Handoff
 
-Copy only `stage2/package/` into the J8 integration ticket under `libraries/swift/`; never ship rehearsal archives. The ticket applies the type contract (issue `2026-09-27-one-type-contract-for-every-surface`) — SwiftPM package with CThinkThen system-library target and vendored module map. Typed Outcome: Int32 present; same deltas as C# plus J1 parity corpus. — runs J1's result-schema parity corpus now that `specification/result.schema.json` has landed, binds `thinkthen_engine_new_with` where the stage-two pin predates it, rebuilds on the final release pin, and adds the GitHub Actions `ubuntu-24.04` build/release path with native archives on GitHub Releases and direct or language-registry distribution.
+The historical experiment copy instruction is complete and superseded by `libraries/swift/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct SwiftPM installation and macOS consumer proof.
 
 Note: Tarball provenance recorded without an upstream sidecar hash.
 
@@ -32,6 +32,6 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 
 ADAPTED-PASS (packing, envelope, 36->30; packaged example fixed). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
 
-## Product integration candidate (2026-09-28)
+## Landed product source (2026-09-28)
 
-Ticket 0249's Swift source candidate uses experiment 294 `repin/package/` plus only the separately proven post-J1 settings constructor delta. This supersedes the earlier stage-two copy instruction above. `libraries/swift/check.sh` currently passes on Ubuntu 24.04.3 x86_64 with Swift 6.4 and the current 30-export C header/library: public J1 55 schema / 29 executable cases, 30 complete normalized request bodies in the matrix, settings precedence and invalid-settings zero-send, copied started-failure facts and six named kinds, strict held cancellation, and two isolated source/native archive consumers with two exact bodies each. The static request ledger, public TypeCase adapter, planted packed-parser and privacy refusals, and host ratchets are product-owned. The exact build pin and native hash are in `sdlc/records/0249-swift-zig-build.md`. This candidate awaits fresh code review. The issue stays open for final release pin, `ubuntu-24.04` Actions build/release, checksummed native distribution, and an actual macOS or other-platform consumer proof. Local archives are disposable gate outputs, not published assets.
+Ticket 0249's landed Swift source used experiment 294 `repin/package/` plus only the separately proven post-J1 settings constructor delta. This supersedes the earlier stage-two copy instruction above. `libraries/swift/check.sh` currently passes on Ubuntu 24.04.3 x86_64 with Swift 6.4 and the current 30-export C header/library: public J1 55 schema / 29 executable cases, 30 complete normalized request bodies in the matrix, settings precedence and invalid-settings zero-send, copied started-failure facts and six named kinds, strict held cancellation, and two isolated source/native archive consumers with two exact bodies each. The static request ledger, public TypeCase adapter, planted packed-parser and privacy refusals, and host ratchets are product-owned. The exact build pin and native hash are in `sdlc/records/0249-swift-zig-build.md`. Fresh source review and ticket 0249 integration closure accepted this package. The issue stays open for final release pin, `ubuntu-24.04` Actions build/release, checksummed native distribution, and an actual macOS or other-platform consumer proof. Local archives are disposable gate outputs, not published assets.
