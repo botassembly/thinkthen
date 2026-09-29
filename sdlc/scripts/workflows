@@ -149,6 +149,16 @@ def release(name, doc):
             out.append(f"{name}: smoke must gate the resolved Swift/Zig family before installed consumers")
         if swift_tools is None or swift_tools >= smoke_bundle:
             out.append(f"{name}: x86 smoke must check pinned Swift/Zig tools before consumers")
+        php_gate = next((i for i, step in enumerate(smoke_steps)
+                         if 'release-workflow php-dart-gate platform "$TARGET" "$SHA"' in (step.get("run") or "")
+                         and (step.get("env") or {}).get("SHA") == RESOLVED), None)
+        php_tools = next((i for i, step in enumerate(smoke_steps)
+                          if "release-workflow php-dart-tools" in (step.get("run") or "")
+                          and step.get("if") == "matrix.target == 'x86_64-unknown-linux-gnu'"), None)
+        if php_gate is None or php_gate >= smoke_bundle:
+            out.append(f"{name}: smoke must gate the resolved PHP/Dart family before installed consumers")
+        if php_tools is None or php_tools >= smoke_bundle:
+            out.append(f"{name}: x86 smoke must check pinned PHP/Dart tools before consumers")
     draft_steps = jobs.get("draft", {}).get("steps") or []
     collect_step = next((step for step in draft_steps
                     if "release-workflow collect" in (step.get("run") or "")), None)
@@ -161,6 +171,10 @@ def release(name, doc):
                             or collect.index("release-workflow swift-zig-gate") > collect.index("release-workflow collect")
                             or (collect_step.get("env") or {}).get("SHA") != RESOLVED):
         out.append(f"{name}: draft must gate every target's Swift/Zig family before collection")
+    if collect is not None and ('release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"' not in collect
+                            or collect.index("release-workflow php-dart-gate") > collect.index("release-workflow collect")
+                            or (collect_step.get("env") or {}).get("SHA") != RESOLVED):
+        out.append(f"{name}: draft must gate every target's PHP/Dart family before collection")
     outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
     for job in outward:
         spec = jobs.get(job, {})
@@ -420,6 +434,18 @@ def self_test():
          lambda t: t.replace('sdlc/scripts/release-workflow swift-zig-gate "platform/platform-$target" "$target" "$SHA"',
                              'echo skipped'),
          ["release.yml: draft must gate every target's Swift/Zig family before collection"]),
+        ("php-dart-smoke-gate", "release.yml",
+         lambda t: t.replace('run: sdlc/scripts/release-workflow php-dart-gate platform "$TARGET" "$SHA"',
+                             'run: echo skipped'),
+         ["release.yml: smoke must gate the resolved PHP/Dart family before installed consumers"]),
+        ("php-dart-tool-setup", "release.yml",
+         lambda t: t.replace('run: sdlc/scripts/release-workflow php-dart-tools "$TARGET" "$RUNNER_TEMP/thinkthen-dart"',
+                             'run: echo skipped'),
+         ["release.yml: x86 smoke must check pinned PHP/Dart tools before consumers"]),
+        ("php-dart-draft-gate", "release.yml",
+         lambda t: t.replace('sdlc/scripts/release-workflow php-dart-gate "platform/platform-$target" "$target" "$SHA"',
+                             'echo skipped'),
+         ["release.yml: draft must gate every target's PHP/Dart family before collection"]),
     ]
     bad = 0
     for name, file, plant, expected in cases:
@@ -432,7 +458,7 @@ def self_test():
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
                 source = ((REPO / ".github/workflows/release.yml").read_text()
-                          if name.startswith(("go-cpp-", "swift-zig-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
+                          if name.startswith(("go-cpp-", "swift-zig-", "php-dart-")) else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:
