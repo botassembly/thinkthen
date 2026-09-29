@@ -98,7 +98,7 @@ def held_find_and_spent_statement_budget() -> None:
     held_cancel(sql, 1)
     with Backend() as backend:
         got = run(["SET thinkthen_query_budget_ms = 0", sql], backend.base())
-        expect(said(got[1]), "thinkthen deadline: the query has spent its time budget", "spent statement")
+        expect(said(got[1]), "thinkthen deadline: the query has spent its time budget (retryable: no)", "spent statement")
         expect(backend.count(), 0, "spent statement sends nothing")
 
 

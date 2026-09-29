@@ -1,4 +1,5 @@
 #include "nested_result.hpp"
+#include "bridge.hpp"
 #include "duckdb/common/exception.hpp"
 
 #include <cstring>
@@ -25,7 +26,7 @@ struct Cursor {
 
 	void Need(size_t amount) const {
 		if (amount > length - at) {
-			throw InvalidInputException("thinkthen defect: the bridge returned truncated nested values");
+			throw OrdinaryError("thinkthen defect: the bridge returned truncated nested values");
 		}
 	}
 	template <class T> T Read() {
@@ -68,7 +69,7 @@ struct Cursor {
 
 vector<Value> DecodeNested(const uint8_t *bytes, size_t length, idx_t count, int32_t kind) {
 	if (!bytes || (kind != 8 && kind != 9)) {
-		throw InvalidInputException("thinkthen defect: the bridge returned no nested values");
+		throw OrdinaryError("thinkthen defect: the bridge returned no nested values");
 	}
 	Cursor cursor {bytes, length};
 	vector<Value> values;
@@ -77,7 +78,7 @@ vector<Value> DecodeNested(const uint8_t *bytes, size_t length, idx_t count, int
 		values.push_back(cursor.Row(kind));
 	}
 	if (cursor.at != length) {
-		throw InvalidInputException("thinkthen defect: the bridge returned extra nested bytes");
+		throw OrdinaryError("thinkthen defect: the bridge returned extra nested bytes");
 	}
 	return values;
 }

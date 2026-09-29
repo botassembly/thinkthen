@@ -33,12 +33,16 @@ def plan_refusals_and_named_binding_never_send():
             "SELECT thinkthen_plan('asks for a refund', '[\"not keyed\"]')",
             "SELECT thinkthen_plan('asks for a refund', '{\"7\":\"one\",\"7\":\"two\"}')",
             "SELECT thinkthen_plan('{\"decide\":\"asks for a refund\",\"threshold\":0.7}', '{\"7\":\"Refund me please.\"}', '{\"threshold\":0.8}')",
+            "SELECT thinkthen_plan('{\"decide\":\"Refund?\",\"batch\":1}', '{\"7\":\"Refund me\"}', '{\"batch\":2}')",
+            "SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}', '{\"max_estimated_input_tokens_total\":100}')",
             "SELECT thinkthen_plan(stare := 'x', keyed_json := '{}', question := 'asks for a refund')",
         ], backend.base(), keyless=True)
         expect(rows(got[0])[0][0]["first_body"], BODY, "out-of-order named preview")
-        for result in got[1:5]:
+        expect(said(got[5]), "thinkthen usage: settings repeats `batch` from the question or named arguments (retryable: no)",
+               "question batch and settings batch conflict before planning")
+        for result in got[1:7]:
             expect(said(result).startswith("thinkthen usage:"), True, "typed/settings/key refusal")
-        expect("does not support the supplied arguments" in got[5]["error"], True, "unknown name")
+        expect("does not support the supplied arguments" in got[7]["error"], True, "unknown name")
         expect(backend.count(), 0, "all previews and refusals send nothing")
 
 
@@ -56,7 +60,7 @@ def positive_process_total_denies_the_next_actual_send():
         ], backend.base())
         expect(rows(got[3])[0][0]["requests"], 1, "plan does not spend total")
         expect(rows(got[4]), [[True]], "one admitted send")
-        expect(said(got[5]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it", "typed spent-total refusal")
+        expect(said(got[5]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it (retryable: no)", "typed spent-total refusal")
         expect(rows(got[6])[0][0]["first_body"], BODY, "plan after the total is spent")
         expect(backend.count(), 1, "only the admitted call reaches loopback")
 

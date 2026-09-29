@@ -48,14 +48,14 @@ const uint8_t *Bytes(const string &value) { return reinterpret_cast<const uint8_
 Value Decode(const ThinkThenReply &reply) {
 	constexpr size_t header = 6 * sizeof(uint64_t) + 2;
 	if (!reply.bytes || reply.len < header) {
-		throw InvalidInputException("thinkthen defect: the bridge returned no plan values");
+		throw OrdinaryError("thinkthen defect: the bridge returned no plan values");
 	}
 	std::array<int64_t, 6> counts;
 	for (size_t index = 0; index < counts.size(); ++index) {
 		uint64_t value;
 		std::memcpy(&value, reply.bytes + index * sizeof(value), sizeof(value));
 		if (value > uint64_t(std::numeric_limits<int64_t>::max())) {
-			throw InvalidInputException("thinkthen defect: a plan count exceeds the SQL range");
+			throw OrdinaryError("thinkthen defect: a plan count exceeds the SQL range");
 		}
 		counts[index] = int64_t(value);
 	}
@@ -63,7 +63,7 @@ Value Decode(const ThinkThenReply &reply) {
 	const auto present = reply.bytes[6 * sizeof(uint64_t) + 1];
 	if (upper > 1 || present > 1 || (!present && counts[5] != 0) ||
 	    size_t(counts[5]) != reply.len - header) {
-		throw InvalidInputException("thinkthen defect: the bridge returned an invalid plan shape");
+		throw OrdinaryError("thinkthen defect: the bridge returned an invalid plan shape");
 	}
 	const auto body = present ? Value(string(reinterpret_cast<const char *>(reply.bytes + header), size_t(counts[5])))
 	                          : Value(LogicalType::VARCHAR);
@@ -76,7 +76,7 @@ Value Decode(const ThinkThenReply &reply) {
 
 void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PlanBind>().context.lock();
-	if (!context) { throw InvalidInputException("thinkthen defect: the caller session ended"); }
+	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<std::optional<Input>> calls(args.size());
 	for (idx_t row = 0; row < args.size(); ++row) {
@@ -85,7 +85,7 @@ void Plan(DataChunk &args, ExpressionState &state, Vector &result) {
 		if (question.IsNull() || keyed.IsNull()) { continue; }
 		const auto type = args.data[3].GetValue(row).GetValue<string>();
 		if (type != "\"NULL\"" && type != "VARCHAR") {
-			throw InvalidInputException("thinkthen usage: plan settings are one JSON text object");
+			throw OrdinaryError("thinkthen usage: plan settings are one JSON text object");
 		}
 		auto setting = args.data[2].GetValue(row);
 		Input call {owner->Resolve(*context, question.GetValue<string>()), keyed.GetValue<string>(),

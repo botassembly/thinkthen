@@ -64,7 +64,7 @@ Request Read(DataChunk &args, idx_t row) {
 	auto list = args.data[1].GetValue(row);
 	for (auto &child : ListValue::GetChildren(list)) {
 		if (child.IsNull()) {
-			throw InvalidInputException("thinkthen usage: each find unit is text, not NULL");
+			throw OrdinaryError("thinkthen usage: each find unit is text, not NULL");
 		}
 		request.units.push_back(child.GetValue<string>());
 	}
@@ -81,7 +81,7 @@ Request Read(DataChunk &args, idx_t row) {
 Value Decode(const ThinkThenReply &reply, const vector<string> &units) {
 	const size_t minimum = sizeof(uint32_t) + sizeof(int64_t);
 	if (!reply.bytes || reply.len < minimum) {
-		throw InvalidInputException("thinkthen defect: the bridge returned no find values");
+		throw OrdinaryError("thinkthen defect: the bridge returned no find values");
 	}
 	uint32_t count;
 	int64_t selected;
@@ -90,7 +90,7 @@ Value Decode(const ThinkThenReply &reply, const vector<string> &units) {
 	const bool none = count == units.size() + 1;
 	if (count != units.size() + size_t(none) || count > 256 || reply.len != minimum + size_t(count) * 16 ||
 	    selected < -1 || (selected == -1 && !none) || (selected >= 0 && uint64_t(selected) >= units.size())) {
-		throw InvalidInputException("thinkthen defect: the bridge returned an invalid find shape");
+		throw OrdinaryError("thinkthen defect: the bridge returned an invalid find shape");
 	}
 	vector<Value> candidates;
 	candidates.reserve(count);
@@ -103,7 +103,7 @@ Value Decode(const ThinkThenReply &reply, const vector<string> &units) {
 		std::memcpy(&probability, reply.bytes + offset + sizeof(index), sizeof(probability));
 		const auto expected = at == units.size() ? -1 : int64_t(at);
 		if (index != expected || !std::isfinite(probability) || probability < 0 || probability > 1) {
-			throw InvalidInputException("thinkthen defect: the bridge returned an invalid find candidate");
+			throw OrdinaryError("thinkthen defect: the bridge returned an invalid find candidate");
 		}
 		if (index == selected) { winner = probability; }
 		candidates.push_back(Value::STRUCT({{"index", index < 0 ? Value(LogicalType::BIGINT) : Value::BIGINT(index)},
@@ -119,7 +119,7 @@ Value Decode(const ThinkThenReply &reply, const vector<string> &units) {
 void Find(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &bound = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<FindBind>();
 	auto context = bound.context.lock();
-	if (!context) { throw InvalidInputException("thinkthen defect: the caller session ended"); }
+	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<std::optional<Request>> requests(args.size());
 	for (idx_t row = 0; row < args.size(); ++row) {

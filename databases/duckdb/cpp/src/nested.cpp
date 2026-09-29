@@ -82,7 +82,7 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &bound = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<NestedBind>();
 	auto context = bound.context.lock();
 	if (!context) {
-		throw InvalidInputException("thinkthen defect: the caller session ended");
+		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<Group> groups;

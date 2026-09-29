@@ -205,9 +205,29 @@ inline string ReplyText(const ThinkThenReply &reply) {
 	return string(reinterpret_cast<const char *>(reply.bytes), reply.len);
 }
 
+// Rust supplies the typed retryability when available. Raw bridge failures
+// describe local conversion/FFI defects and cannot be retried as a backend call.
+inline string OrdinaryText(string text) {
+	const auto newline = text.find('\n');
+	if (newline != string::npos) {
+		return OrdinaryText(text.substr(0, newline)) + text.substr(newline);
+	}
+	if ((text.size() >= 15 && text.compare(text.size() - 15, 15, "(retryable: no)") == 0) ||
+	    (text.size() >= 16 && text.compare(text.size() - 16, 16, "(retryable: yes)") == 0)) {
+		return text;
+	}
+	return text + " (retryable: no)";
+}
+
+template <typename... Args>
+inline InvalidInputException OrdinaryError(const string &format, Args... args) {
+	const auto text = OrdinaryText(StringUtil::Format(format, args...));
+	return InvalidInputException("%s", text.c_str());
+}
+
 inline void Checked(const ThinkThenReply &reply) {
 	if (reply.status != 0) {
-		throw InvalidInputException("%s", ReplyText(reply).c_str());
+		throw InvalidInputException("%s", OrdinaryText(ReplyText(reply)).c_str());
 	}
 }
 

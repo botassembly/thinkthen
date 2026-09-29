@@ -90,7 +90,8 @@ def verbs_answer_through_the_generic_arm():
     expect(column(got[2]), [["billing", "shipping"]], "tag holds each label the generic arm answers yes")
     expect(json.loads(column(got[3])[0]), {"refund": True}, "annotate value_json")
     expect(column(got[4]), [True], "a NULL optional settings object uses defaults")
-    expect(said(got[5]), "thinkthen usage: choose takes its question as plain text and its options in the list", "choose refuses a file")
+    expect(said(got[5]), "thinkthen local: the question file q.json was not read: it does not exist or could not be opened (retryable: no)",
+           "choose reads the shared @file question form and refuses a missing file")
 
 
 @case
@@ -293,7 +294,7 @@ def secrecy_no_key_or_credential_in_any_message():
 @case
 def an_atfile_read_stops_at_one_mib():
     got = run_generic(["SELECT thinkthen_decide('@/dev/zero', 'a')"], timeout=30)
-    expect(said(got[0]), "thinkthen local: the question file /dev/zero was not read: it holds more than 1 MiB", "an endless file")
+    expect(said(got[0]), "thinkthen local: the question file /dev/zero was not read: it holds more than 1 MiB (retryable: no)", "an endless file")
 
 
 @case
@@ -310,8 +311,8 @@ def atfile_reads_through_the_callers_file_system():
             ]
         )
         expect(column(got[0]), [True], "a file question")
-        expect(said(got[1]), f"thinkthen local: the question file {folder}/missing.json was not read: it does not exist or could not be opened", "a missing file")
-        expect(said(got[3]), f"thinkthen local: the question file {path} was not read: this database's file settings refuse it", "a refused file")
+        expect(said(got[1]), f"thinkthen local: the question file {folder}/missing.json was not read: it does not exist or could not be opened (retryable: no)", "a missing file")
+        expect(said(got[3]), f"thinkthen local: the question file {path} was not read: this database's file settings refuse it (retryable: no)", "a refused file")
 
 
 @case
@@ -367,7 +368,7 @@ def b13c_try_details_blank_context_keeps_good_siblings():
                "check the row's question and arguments, or raise the process request total when it is spent",
                "retryable": False}, "safe context Usage")
         expect("private evidence" in json.dumps(values[1]), False, "failed context row hides evidence")
-        expect(said(got[2]), "thinkthen usage: `context` is text that is not blank", "ordinary scalar still throws")
+        expect(said(got[2]), "thinkthen usage: `context` is text that is not blank (retryable: no)", "ordinary scalar still throws")
         expect(backend.bodies, [b'{"state":"shared","model":"jev-1.13.0","questions":'
                               b'{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},'
                               b'"q2":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}'],
@@ -440,7 +441,7 @@ def b13c_packed_total_admits_one_attempt():
     with PackedReplies() as backend:
         got = run(["SET threads = 1", "SET thinkthen_batch = '2'",
                    "SET thinkthen_max_requests_total = 1", query], backend.base)
-        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it", "spent total")
+        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 1; raise SET thinkthen_max_requests_total or RESET it (retryable: no)", "spent total")
         expect(len(backend.bodies), 1, "only one actual attempt is admitted")
         expect(backend.bodies[0] in PACKED_PAIR_BODIES, True, "either packed request may arrive first")
 

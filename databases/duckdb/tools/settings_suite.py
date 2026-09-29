@@ -19,10 +19,10 @@ from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, ro
 from settings_cases import shared_settings_corpus
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
-PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow"
-SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme"
-THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32"
-SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it"
+PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow (retryable: no)"
+SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme (retryable: no)"
+THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
+SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it (retryable: no)"
 
 case(shared_settings_corpus)
 
@@ -33,7 +33,7 @@ def portable_decide_zero_budget():
     with Backend() as backend:
         got = run(["SET thinkthen_query_budget_ms = 0",
                    "SELECT thinkthen_decide('Is it a refund?', 'refund now')"], backend.base())
-        expect(said(got[1]), "thinkthen deadline: the query has spent its time budget", "decide deadline")
+        expect(said(got[1]), "thinkthen deadline: the query has spent its time budget (retryable: no)", "decide deadline")
         expect(backend.count(), 0, "spent query budget sends nothing")
 
 
@@ -90,7 +90,7 @@ def inline_profile_and_record_replay_respect_caller_settings():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         profile = json.dumps({"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 4})
         got = run([f"SET thinkthen_profile = '{profile}'", ASK], backend.base())
-        expect(said(got[1]), "thinkthen usage: a request passes a profile limit", "inline profile")
+        expect(said(got[1]), "thinkthen usage: a request passes a profile limit (retryable: no)", "inline profile")
         expect(backend.count(), 0, "profile sends nothing")
         got = run([f"SET thinkthen_record = '{folder}'", ASK, "RESET thinkthen_record",
                    f"SET thinkthen_replay = '{folder}'", ASK,
@@ -105,7 +105,7 @@ def inline_profile_and_record_replay_respect_caller_settings():
 def recording_folder_obeys_current_caller_permission():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         got = run([f"SET thinkthen_record = '{folder}'", "SET enable_external_access = false", ASK], backend.base())
-        expect(said(got[2]), "thinkthen usage: the recording folder is outside what this database's file settings allow", "recording permission")
+        expect(said(got[2]), "thinkthen usage: the recording folder is outside what this database's file settings allow (retryable: no)", "recording permission")
         expect(backend.count(), 0, "permission refusal sends nothing")
 
 
@@ -115,7 +115,7 @@ def recording_folders_require_absolute_local_paths():
         for name in ("record", "replay"):
             for folder in ("off", "relative", "s3://bucket/saved"):
                 got = run([f"SET thinkthen_{name} = '{folder}'", ASK], backend.base())
-                expect(said(got[1]), "thinkthen usage: a SQL folder is an absolute local path with no scheme",
+                expect(said(got[1]), "thinkthen usage: a SQL folder is an absolute local path with no scheme (retryable: no)",
                        f"{name} folder {folder}")
         expect(backend.count(), 0, "invalid recording paths send nothing")
 
@@ -125,7 +125,7 @@ def throttle_conflict():
     with Backend() as backend:
         got = run(["SET thinkthen_throttle = 8", ASK, "SET thinkthen_throttle = 4", ASK], backend.base())
         expect(rows(got[1]), [[True]], "the first throttle answers")
-        expect(said(got[3]), "thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument", "a second throttle")
+        expect(said(got[3]), "thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument (retryable: no)", "a second throttle")
         expect(backend.count(), 1, "counted sends")
 
 
@@ -144,7 +144,7 @@ def request_limit_range():
     with Backend() as backend:
         for value in (0, -1):
             got = run([f"SET thinkthen_max_requests = {value}", ASK], backend.base())
-            expect(said(got[1]), "thinkthen usage: a request limit is a whole number of 1 or more", f"max_requests {value}")
+            expect(said(got[1]), "thinkthen usage: a request limit is a whole number of 1 or more (retryable: no)", f"max_requests {value}")
         expect(backend.count(), 0, "counted sends")
 
 
@@ -198,7 +198,7 @@ def seventeen_idle_plans_keep_all_prior_usage():
         expect({name: totals[name] for name in ("requests_sent", "input_tokens", "output_tokens")},
                {"requests_sent": 17, "input_tokens": 17, "output_tokens": 17},
                "historical sends and tokens survive retirement")
-        expect(said(got[36]), "thinkthen usage: this process has spent its request total of 17; raise SET thinkthen_max_requests_total or RESET it", "spent total survives retirement")
+        expect(said(got[36]), "thinkthen usage: this process has spent its request total of 17; raise SET thinkthen_max_requests_total or RESET it (retryable: no)", "spent total survives retirement")
         expect(backend.count(), 17, "all sends remain counted")
 
 
@@ -267,7 +267,7 @@ def a_negative_request_total_refuses_before_the_map():
     with Backend() as backend:
         # A NULL text reaches no engine call, so only the init's check sees it.
         got = run([ASK, "SET thinkthen_max_requests_total = -1", "SELECT thinkthen_decide('Is it a refund?', x) FROM (VALUES (NULL::VARCHAR)) t(x)"], backend.base())
-        expect(said(got[2]), "thinkthen usage: a request total is a whole number of 0 or more", "a total of -1 on a map hit")
+        expect(said(got[2]), "thinkthen usage: a request total is a whole number of 0 or more (retryable: no)", "a total of -1 on a map hit")
         expect(backend.count(), 1, "counted sends")
 
 
@@ -425,7 +425,7 @@ def two_databases_each_judge_their_own_access():
             backend.base(),
         )
         expect(rows(files[1]), [[True]], "A reads the file")
-        expect(said(files[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "B's read")
+        expect(said(files[2]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it (retryable: no)", "B's read")
 
 
 def opens(trace: Path, name: str) -> int:
@@ -455,7 +455,7 @@ def prepared_file_arguments_recheck_current_permissions():
             expect(rows(got[index]), [], f"prepared setup {index}")
         for index, role, path in ((5, "question", question), (6, "question", names), (7, "rules", rules)):
             expect(said(got[index]),
-                   f"thinkthen local: the {role} file {path} was not read: this database's file settings refuse it",
+                   f"thinkthen local: the {role} file {path} was not read: this database's file settings refuse it (retryable: no)",
                    f"prepared {role} access after revoke")
         expect(backend.count(), 0, "prepared file refusals send nothing")
 
@@ -470,7 +470,7 @@ def prepared_relate_uses_executing_session_settings():
             "EXECUTE relate",
         ], backend.base())
         expect(rows(got[1]), [], "relate prepares with its prior settings")
-        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 0; raise SET thinkthen_max_requests_total or RESET it", "relate uses the executing session's total")
+        expect(said(got[3]), "thinkthen usage: this process has spent its request total of 0; raise SET thinkthen_max_requests_total or RESET it (retryable: no)", "relate uses the executing session's total")
         expect(backend.count(), 0, "the current total refuses before a send")
 
 
@@ -494,7 +494,7 @@ def file_opens_under_strace(count: int):
             wrap=["strace", "-f", "-e", "trace=openat", "-o", str(refused)],
             timeout=120,
         )
-        expect(said(got[1]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it", "the refused read")
+        expect(said(got[1]), f"thinkthen local: the question file {question} was not read: this database's file settings refuse it (retryable: no)", "the refused read")
         expect(opens(refused, "q.json"), 0, "opens of q.json with access off")
 
 

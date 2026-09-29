@@ -15,7 +15,7 @@ namespace duckdb {
 
 void LoadThinkThen(ExtensionLoader &loader) {
 	if (thinkthen_cpp_init() != 0) {
-		throw InvalidInputException("thinkthen defect: the Rust bridge did not initialize");
+		throw OrdinaryError("thinkthen defect: the Rust bridge did not initialize");
 	}
 	auto &config = DBConfig::GetConfig(loader.GetDatabaseInstance());
 	config.AddExtensionOption("thinkthen_query_budget_ms", "Whole-statement ThinkThen time budget in milliseconds",

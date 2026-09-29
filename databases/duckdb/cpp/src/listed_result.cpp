@@ -1,4 +1,5 @@
 #include "listed_result.hpp"
+#include "bridge.hpp"
 #include "duckdb/common/exception.hpp"
 
 #include <cstring>
@@ -13,7 +14,7 @@ struct Cursor {
 
 	void Need(size_t count) const {
 		if (count > length - at) {
-			throw InvalidInputException("thinkthen defect: the bridge returned truncated listed values");
+			throw OrdinaryError("thinkthen defect: the bridge returned truncated listed values");
 		}
 	}
 	uint8_t Tag() {
@@ -65,7 +66,7 @@ struct Cursor {
 			}
 			break;
 		}
-		throw InvalidInputException("thinkthen defect: the bridge returned another listed kind");
+		throw OrdinaryError("thinkthen defect: the bridge returned another listed kind");
 	}
 };
 
@@ -87,7 +88,7 @@ std::optional<vector<string>> Members(const Value &value) {
 
 vector<Value> DecodeListed(const uint8_t *bytes, size_t length, idx_t count, int32_t kind) {
 	if (!bytes) {
-		throw InvalidInputException("thinkthen defect: the bridge returned no listed values");
+		throw OrdinaryError("thinkthen defect: the bridge returned no listed values");
 	}
 	Cursor cursor {bytes, length};
 	vector<Value> values;
@@ -96,7 +97,7 @@ vector<Value> DecodeListed(const uint8_t *bytes, size_t length, idx_t count, int
 		values.push_back(cursor.Next(kind));
 	}
 	if (cursor.at != length) {
-		throw InvalidInputException("thinkthen defect: the bridge returned extra listed bytes");
+		throw OrdinaryError("thinkthen defect: the bridge returned extra listed bytes");
 	}
 	return values;
 }

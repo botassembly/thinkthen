@@ -19,7 +19,7 @@ def named_decide_binds_by_name_and_settings_refuse_before_send():
         ], backend.base())
         expect(rows(got[0]), [[True]], "out-of-order named decide")
         expect(said(got[1]).startswith("thinkthen usage:"), True, "invalid settings")
-        expect(said(got[2]), "thinkthen usage: settings repeats `threshold` from the question or named arguments", "duplicate threshold")
+        expect(said(got[2]), "thinkthen usage: settings repeats `threshold` from the question or named arguments (retryable: no)", "duplicate threshold")
         expect("does not support the supplied arguments" in got[3]["error"], True, "unknown name")
         expect(said(got[4]), "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'", "removed deadline slot")
         expect(backend.count(), 1, "only the valid call sends")
@@ -39,9 +39,48 @@ def listed_settings_and_members_are_distinct_overloads():
         for result in got[:3]:
             expect(rows(result), [["billing"]], "listed overload value")
         expect(said(got[3]), "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'", "removed listed deadline")
-        expect(said(got[4]), "thinkthen usage: a members argument and settings both name members", "duplicate members")
+        expect(said(got[4]), "thinkthen usage: a members argument and settings both name members (retryable: no)", "duplicate members")
         expect("does not support the supplied arguments" in got[5]["error"], True, "unknown listed name")
         expect(backend.count(), 1, "the same question and input reuse one cached request across local cuts")
+
+
+@case
+def listed_null_members_keep_settings_and_double_settings_refuse():
+    with Backend() as backend:
+        got = run([
+            "SELECT thinkthen_choose('Which team?', 'refund now', NULL, '{\"options\":[\"billing\",\"shipping\"]}')",
+            "SELECT thinkthen_choose('Which team?', 'refund now', NULL::VARCHAR, '{\"options\":[\"billing\",\"shipping\"]}')",
+            "SELECT thinkthen_choose('Which team?', 'refund now', NULL::VARCHAR[], '{\"options\":[\"billing\",\"shipping\"]}')",
+            "SELECT thinkthen_score('How strong?', 'refund now', NULL::VARCHAR, '{\"levels\":[\"weak\",\"strong\"]}')",
+            "SELECT thinkthen_tag('Which topics?', 'refund now', NULL::VARCHAR, '{\"labels\":[\"billing\",\"shipping\"]}')",
+            "SELECT thinkthen_choose('Which team?', 'refund now', '{\"options\":[\"billing\",\"shipping\"]}', '{\"threshold\":0.7}')",
+            "SELECT thinkthen_choose('Which team?', NULL::VARCHAR, NULL::VARCHAR, '{\"options\":[\"billing\",\"shipping\"]}')",
+        ], backend.base())
+        expect([rows(result) for result in got[:5]],
+               [[['billing']], [['billing']], [['billing']], [[0.1]], [[['billing', 'shipping']]]],
+               "bare and typed NULL members keep each verb's SQL output type")
+        expect(said(got[5]), "thinkthen usage: a settings object follows members, not another settings object (retryable: no)",
+               "two non-NULL settings objects refuse")
+        expect(rows(got[6]), [[None]], "NULL input stays NULL")
+        expect(backend.count(), 3, "three distinct valid questions send; refusals and NULL input send nothing")
+
+
+@case
+def ordinary_errors_show_retryability_while_removed_warm_stays_plain():
+    with Backend() as backend:
+        got = run([
+            "SELECT thinkthen_plan('asks for a refund', '[\"not keyed\"]')",
+            "SELECT thinkthen_warm('Is it a refund?', 'refund now')",
+            "SET thinkthen_max_retries = 0",
+            "SELECT thinkthen_decide('Is it a refund?', 'refund now')",
+        ], backend.base('arm/503'))
+        expect(said(got[0]), "thinkthen usage: invalid type: sequence, expected one keyed JSON object of text values at line 1 column 0 (retryable: no)",
+               "ordinary usage includes a no marker")
+        expect(said(got[1]), "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many",
+               "removed call keeps its plain sentence")
+        expect(said(got[3]).endswith("(retryable: yes)"), True, "backend 503 marks retryability")
+        expect(said(got[3]).startswith("thinkthen backend:"), True, "backend kind stays visible")
+        expect(backend.count(), 1, "only the backend failure sends")
 
 
 @case

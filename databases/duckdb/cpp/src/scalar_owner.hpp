@@ -56,12 +56,12 @@ struct StatementOwner : ClientContextState {
 		                        ? setting.GetValue<int64_t>()
 		                        : -1;
 		if (budget < -1 || budget > 4294967295000LL) {
-			throw InvalidInputException("thinkthen usage: the query budget is outside the supported range");
+			throw OrdinaryError("thinkthen usage: the query budget is outside the supported range");
 		}
 		thinkthen_cpp_query_end(signal_scope);
 		signal_scope = thinkthen_cpp_query_begin();
 		if (!signal_scope) {
-			throw InvalidInputException("thinkthen defect: the signal scope could not start");
+			throw OrdinaryError("thinkthen defect: the signal scope could not start");
 		}
 		active = true;
 		first_use = late;
@@ -88,7 +88,7 @@ struct StatementOwner : ClientContextState {
 		}
 		const auto now = std::chrono::steady_clock::now();
 		if (now >= *expiry) {
-			throw InvalidInputException("thinkthen deadline: the query has spent its time budget");
+			throw OrdinaryError("thinkthen deadline: the query has spent its time budget");
 		}
 		return std::chrono::duration_cast<std::chrono::milliseconds>(*expiry - now).count();
 	}

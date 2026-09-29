@@ -1,4 +1,5 @@
 #include "scalar_owner.hpp"
+#include "bridge.hpp"
 #include "duckdb/common/exception.hpp"
 #include "duckdb/common/file_system.hpp"
 
@@ -36,17 +37,17 @@ ResolvedQuestion ResolveQuestion(ClientContext &context, const string &argument,
 			}
 		}
 	} catch (const PermissionException &) {
-		throw InvalidInputException("thinkthen local: the %s file %s was not read: this database's file settings refuse it", role, path.c_str());
+		throw OrdinaryError("thinkthen local: the %s file %s was not read: this database's file settings refuse it", role, path.c_str());
 	} catch (const IOException &) {
-		throw InvalidInputException("thinkthen local: the %s file %s was not read: it does not exist or could not be opened", role, path.c_str());
+		throw OrdinaryError("thinkthen local: the %s file %s was not read: it does not exist or could not be opened", role, path.c_str());
 	} catch (const Exception &) {
-		throw InvalidInputException("thinkthen local: the %s file %s was not read: this database's file settings refuse it", role, path.c_str());
+		throw OrdinaryError("thinkthen local: the %s file %s was not read: this database's file settings refuse it", role, path.c_str());
 	}
 	if (too_large) {
-		throw InvalidInputException("thinkthen local: the %s file %s was not read: it holds more than 1 MiB", role, path.c_str());
+		throw OrdinaryError("thinkthen local: the %s file %s was not read: it holds more than 1 MiB", role, path.c_str());
 	}
 	if (!Value::StringIsValid(content)) {
-		throw InvalidInputException("thinkthen local: the %s file %s was not read: it is not UTF-8 text", role, path.c_str());
+		throw OrdinaryError("thinkthen local: the %s file %s was not read: it is not UTF-8 text", role, path.c_str());
 	}
 	return {content, true};
 }

@@ -33,7 +33,7 @@ void ScanUsage(ClientContext &, TableFunctionInput &input, DataChunk &output) {
 	Checked(reply.value);
 	constexpr std::array<const char *, 4> names = {"requests_sent", "cache_answers", "input_tokens", "output_tokens"};
 	if (!reply.value.bytes || reply.value.len != names.size() * sizeof(int64_t)) {
-		throw InvalidInputException("thinkthen defect: the bridge returned invalid usage counters");
+		throw OrdinaryError("thinkthen defect: the bridge returned invalid usage counters");
 	}
 	for (idx_t row = 0; row < names.size(); ++row) {
 		int64_t value;

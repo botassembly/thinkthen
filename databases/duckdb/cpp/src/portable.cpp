@@ -59,7 +59,7 @@ void Validate(const Group &group) {
 void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
 	if (!context) {
-		throw InvalidInputException("thinkthen defect: the caller session ended");
+		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
 	const auto session = Settings(*context);
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
@@ -111,7 +111,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		    owner->Remaining(*context), session.Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		if (!reply.value.bytes || reply.value.len != group.texts.size()) {
-			throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision group");
+			throw OrdinaryError("thinkthen defect: the bridge returned an invalid decision group");
 		}
 		answers.emplace_back(reply.value.bytes, reply.value.bytes + reply.value.len);
 	}
@@ -125,7 +125,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 		case 0: result.SetValue(row, Value::BOOLEAN(false)); break;
 		case 1: result.SetValue(row, Value::BOOLEAN(true)); break;
 		case 2: result.SetValue(row, Value(LogicalType::BOOLEAN)); break;
-		default: throw InvalidInputException("thinkthen defect: the bridge returned an invalid decision");
+		default: throw OrdinaryError("thinkthen defect: the bridge returned an invalid decision");
 		}
 	}
 }
@@ -133,7 +133,7 @@ void Decide(DataChunk &args, ExpressionState &state, Vector &result) {
 void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
 	if (!context) {
-		throw InvalidInputException("thinkthen defect: the caller session ended");
+		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
 	const auto session = Settings(*context);
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
@@ -175,7 +175,7 @@ void Many(DataChunk &args, ExpressionState &state, Vector &result) {
 void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
 	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
-	if (!context) { throw InvalidInputException("thinkthen defect: the caller session ended"); }
+	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	const auto session = Settings(*context);
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	struct ListedGroup {
@@ -199,11 +199,11 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 		    (settings_type != "\"NULL\"" && settings_type != "VARCHAR")) {
 			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
 		}
-		if (members_type == "VARCHAR" && settings_type == "VARCHAR") {
-			throw InvalidInputException("thinkthen usage: a settings object follows members, not another settings object");
-		}
 		auto member = args.data[2].GetValue(row);
 		auto setting = args.data[3].GetValue(row);
+		if (members_type == "VARCHAR" && settings_type == "VARCHAR" && !setting.IsNull()) {
+			throw OrdinaryError("thinkthen usage: a settings object follows members, not another settings object");
+		}
 		const auto members = member.IsNull() ? std::nullopt : std::optional<string>(member.GetValue<string>());
 		const auto settings = setting.IsNull() ? string("{}") : setting.GetValue<string>();
 		const auto kind = args.data[4].GetValue(row).GetValue<int32_t>();
@@ -256,7 +256,7 @@ void Listed(DataChunk &args, ExpressionState &state, Vector &result) {
 void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 	if (args.size() == 0) { return; }
 	auto context = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<PortableBind>().context.lock();
-	if (!context) { throw InvalidInputException("thinkthen defect: the caller session ended"); }
+	if (!context) { throw OrdinaryError("thinkthen defect: the caller session ended"); }
 	const auto session = Settings(*context);
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	struct ScalarGroup {
@@ -332,27 +332,27 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		    owner->Remaining(*context), session.Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		vector<Value> values;
-		if (!reply.value.bytes) { throw InvalidInputException("thinkthen defect: the bridge returned no scalar values"); }
+		if (!reply.value.bytes) { throw OrdinaryError("thinkthen defect: the bridge returned no scalar values"); }
 		size_t at = 0;
 		for (idx_t index = 0; index < texts.size(); ++index) {
 			if (group.kind == 1) {
-				if (reply.value.len - at < sizeof(double)) { throw InvalidInputException("thinkthen defect: truncated probability"); }
+				if (reply.value.len - at < sizeof(double)) { throw OrdinaryError("thinkthen defect: truncated probability"); }
 				double value;
 				std::memcpy(&value, reply.value.bytes + at, sizeof(value));
 				at += sizeof(value);
-				if (!std::isfinite(value) || value < 0 || value > 1) { throw InvalidInputException("thinkthen defect: invalid probability"); }
+				if (!std::isfinite(value) || value < 0 || value > 1) { throw OrdinaryError("thinkthen defect: invalid probability"); }
 				values.push_back(Value::DOUBLE(value));
 			} else {
-				if (reply.value.len - at < sizeof(uint32_t)) { throw InvalidInputException("thinkthen defect: truncated details length"); }
+				if (reply.value.len - at < sizeof(uint32_t)) { throw OrdinaryError("thinkthen defect: truncated details length"); }
 				uint32_t length;
 				std::memcpy(&length, reply.value.bytes + at, sizeof(length));
 				at += sizeof(length);
-				if (reply.value.len - at < length) { throw InvalidInputException("thinkthen defect: truncated details"); }
+				if (reply.value.len - at < length) { throw OrdinaryError("thinkthen defect: truncated details"); }
 				values.push_back(Value(string(reinterpret_cast<const char *>(reply.value.bytes + at), length)));
 				at += length;
 			}
 		}
-		if (at != reply.value.len) { throw InvalidInputException("thinkthen defect: extra scalar bytes"); }
+		if (at != reply.value.len) { throw OrdinaryError("thinkthen defect: extra scalar bytes"); }
 		answers.push_back(std::move(values));
 	}
 	const auto kind = args.data[3].GetValue(0).GetValue<int32_t>();
@@ -428,8 +428,8 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		RegisterMacro(loader, "CREATE MACRO thinkthen_" + name + "(question, input, members := NULL, settings := NULL) AS "
 		                      "thinkthen_native_" + name + "(question, input, "
 		                      "CASE WHEN typeof(members) = 'VARCHAR[]' THEN CAST(to_json(members) AS VARCHAR) ELSE NULL END, "
-		                      "CASE WHEN typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE CAST(settings AS VARCHAR) END, "
-		                      + std::to_string(kind) + ", typeof(members), typeof(settings))");
+		                      "CASE WHEN members IS NOT NULL AND typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE CAST(settings AS VARCHAR) END, "
+		                      + std::to_string(kind) + ", CASE WHEN members IS NULL THEN '\"NULL\"' ELSE typeof(members) END, typeof(settings))");
 	}
 	for (auto kind : {1, 2, 3, 7}) {
 		const string name = kind == 1 ? "probability" : kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
