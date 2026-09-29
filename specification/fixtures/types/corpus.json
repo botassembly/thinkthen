@@ -476,6 +476,8 @@
     {"name":"c-empty-call-on-recognize","definition":"doorRequest","request":{"recognize":{"version":1,"recognize":{"kinds":{"person":"A person."}}},"evidence":"alpha","call":{}},"request_valid":false,"expected_error":"usage"},
     {"name":"c-empty-call-on-relate","definition":"doorRequest","request":{"relate":{"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}},"records":[{"name":"alpha","kind":"person"}],"call":{}},"request_valid":false,"expected_error":"usage"},
     {"name":"c-annotate-context-refused","definition":"doorRequest","request":{"annotate":{"version":1,"questions":{"ready":{"decide":"Ready?"}}},"records":["alpha"],"call":{"context":"Shared facts."}},"request_valid":false,"expected_error":"usage"},
-    {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}}
+    {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}},
+    {"name":"record-missing-pointer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}},
+    {"name":"record-error-cannot-be-an-answer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"},"value":null},"response_valid":false}
   ]
 }

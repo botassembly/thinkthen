@@ -17,6 +17,7 @@ use super::Shared;
 pub(super) struct Former {
     engine: Engine,
     set: QuestionSet,
+    details: bool,
     reading: Reading,
     planner: GroupPlanner,
     shared: Arc<Shared>,
@@ -39,6 +40,7 @@ impl Former {
         Ok(Self {
             engine,
             set: judging.set().clone(),
+            details: judging.common.details,
             reading: reading.clone(),
             planner,
             shared,
@@ -127,7 +129,9 @@ impl Former {
                 .map_err(|error| Failure::record(error, self.reading.streams()))?,
             AnnotateInput::Record(_, record) => record,
         };
-        super::super::collisions(&self.set, &record)?;
+        if !self.details {
+            super::super::collisions(&self.set, &record)?;
+        }
         let batch = self.reading.batch_record(&record)?;
         let groups = self
             .planner

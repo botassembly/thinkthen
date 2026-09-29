@@ -41,6 +41,6 @@ At source `9b766cf9`, `cli/args.rs` and `cli/asking/folders.rs` confirm that `--
 ## Scope note, 2026-09-28
 
 The need varies and existing commands cover part of it. `--no-cache` forces fresh requests, and running the
-question twice plus `diff` answers whether two runs differ. The measured noise (one flip in 150 calls, on a case at
+question twice plus `diff` answers whether two runs differ. The measured noise (one flip in 150 answer observations, on a case at
 p 0.49 to 0.52, with a median probability spread of 0.020) remains the case for a per-record repeat option when a
 project needs one.

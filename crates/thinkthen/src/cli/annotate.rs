@@ -8,7 +8,7 @@ use std::process::ExitCode;
 use crate::core::adapters::built_in;
 use crate::core::{
     Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, QuestionSetError, Reading,
-    ReadingError, Record, Setting,
+    ReadingError, Record, RecordError, Setting,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -22,10 +22,25 @@ use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod aggregation;
 mod batching;
+pub(crate) mod error_row;
 mod plan;
 
 pub(crate) use crate::engine::facade::{GroupAnswer, PreparedGroup, check_model};
 use plan::{dry_run, dry_run_record};
+
+pub(crate) enum PrepareError {
+    MissingOn(String),
+    Other(Failure),
+}
+
+impl PrepareError {
+    pub(crate) fn into_failure(self) -> Failure {
+        match self {
+            Self::MissingOn(pointer) => Failure::Record(RecordError::Missed(pointer)),
+            Self::Other(error) => error,
+        }
+    }
+}
 
 #[expect(
     clippy::too_many_lines,
@@ -98,6 +113,7 @@ pub(crate) fn run(
                 profile.as_ref(),
                 &mismatch,
                 rows.next().transpose()?,
+                arguments.common.details,
                 &mut writer,
             );
         }
@@ -150,6 +166,7 @@ pub(crate) fn run(
             profile.as_ref(),
             &mismatch,
             chunks.next().map(|(_, row)| row).transpose()?,
+            arguments.common.details,
             &mut writer,
         );
     }
@@ -193,6 +210,20 @@ pub(crate) fn run(
 }
 
 fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
+    if let Some(policy) = arguments.on_error.as_deref() {
+        if policy != "continue" {
+            return Err(Failure::Usage("--on-error takes continue"));
+        }
+        if !arguments.common.jsonl
+            || !arguments.common.details
+            || arguments.batching.batch.as_deref() != Some("1")
+            || arguments.common.dry_run
+        {
+            return Err(Failure::Usage(
+                "--on-error continue needs --jsonl --details --batch 1 and cannot accompany --dry-run",
+            ));
+        }
+    }
     if arguments.extra_input.is_some() {
         return Err(Failure::Usage(
             "the second path is input; write it as `--input FILE`",
@@ -291,6 +322,7 @@ pub(crate) struct Judging<'a> {
     set: QuestionSet,
     mismatch: Mismatch,
     streams: bool,
+    continue_missing: bool,
 }
 
 impl<'a> Judging<'a> {
@@ -304,6 +336,7 @@ impl<'a> Judging<'a> {
         let common = &arguments.common;
         Self {
             streams: common.framing() != Framing::Document,
+            continue_missing: arguments.on_error.is_some(),
             engine,
             common,
             environment,
@@ -335,12 +368,18 @@ impl<'a> Judging<'a> {
                 .map_err(|error| Failure::record(error, base.streams()))?,
             crate::annotate_schedule::Input::Record(_, record) => record,
         };
-        collisions(&self.set, &record)?;
+        if !self.common.details {
+            collisions(&self.set, &record)?;
+        }
         Ok(record)
     }
 
     pub(crate) fn groups(&self) -> Vec<Vec<usize>> {
         self.set.groups()
+    }
+
+    pub(crate) const fn continue_missing(&self) -> bool {
+        self.continue_missing
     }
 
     pub(crate) const fn requested_model(&self) -> &ModelName {
@@ -360,9 +399,11 @@ impl<'a> Judging<'a> {
         base: &Reading,
         record: &Record,
         places: Vec<usize>,
-    ) -> Result<PreparedGroup, Failure> {
+    ) -> Result<PreparedGroup, PrepareError> {
         let plan = plan_for(&self.set, &places, self.engine.backend(), base, record)?;
-        Ok(self.engine.prepare_group(&plan, places)?)
+        self.engine
+            .prepare_group(&plan, places)
+            .map_err(|error| PrepareError::Other(error.into()))
     }
 
     pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
@@ -385,15 +426,21 @@ fn plan_for(
     backend: &Backend,
     base: &Reading,
     record: &Record,
-) -> Result<Plan, Failure> {
+) -> Result<Plan, PrepareError> {
     if group.is_empty() {
-        return Err(Failure::Defect("an annotate group is empty"));
+        return Err(PrepareError::Other(Failure::Defect(
+            "an annotate group is empty",
+        )));
     }
+    let record = base
+        .batch_record(record)
+        .map_err(|error| PrepareError::Other(error.into()))?;
     let evidence = set
-        .group_evidence(group, &base.batch_record(record)?)
+        .group_evidence(group, &record)
         .map_err(|error| match error {
-            PartError::Reading(error) => Failure::from(error),
-            PartError::Record(error) => Failure::from(error),
+            PartError::Reading(error) => PrepareError::Other(error.into()),
+            PartError::Record(RecordError::Missed(pointer)) => PrepareError::MissingOn(pointer),
+            PartError::Record(error) => PrepareError::Other(error.into()),
         })?;
     let questions = group
         .iter()
@@ -401,9 +448,11 @@ fn plan_for(
             set.questions()
                 .get(*place)
                 .map(|named| named.question().clone())
-                .ok_or(Failure::Defect("a group points outside its set"))
+                .ok_or(PrepareError::Other(Failure::Defect(
+                    "a group points outside its set",
+                )))
         })
         .collect::<Result<Vec<_>, _>>()?;
     Plan::new(evidence, backend.model().clone(), questions)
-        .map_err(|_| Failure::Defect("an annotate group asks nothing"))
+        .map_err(|_| PrepareError::Other(Failure::Defect("an annotate group asks nothing")))
 }

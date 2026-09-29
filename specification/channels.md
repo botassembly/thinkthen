@@ -59,16 +59,17 @@ A reader that closes the pipe early is no error. `thinkthen ... | head -1` ends 
 | 4 | The backend failed or sent a reply the adapter refused. For `check`, the report holds a critical line |
 | 5 | A local failure: a file or a recording |
 | 6 | `annotate` or `relate` completed with at least one valid and one failed logical question |
+| 7 | `annotate --jsonl --details --batch 1 --on-error continue` completed with at least one missing-pointer error row |
 | 70 | A defect in the tool |
 | 130, 143 | SIGINT or SIGTERM stopped the command. It ends by that signal, and a shell reports 128 plus the signal's number |
 
-Codes 7 and 8 stay reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question.
+Code 8 stays reserved. One function maps every error to its exit code. Exit 6 prints no diagnostic because the result marks each failed question. When a completed annotate run has both failed logical questions and missing-pointer error rows, exit 7 wins; a later terminal failure keeps its own code.
 
 `recognize` exits 0 for every complete result, including no names. It never uses 1 or 3. A failed step-1, step-2, or relation request exits 4 and prints no partial value for that input. A text over `--max-text-bytes`, 600,000 bytes by default, exits 2 before any request.
 
 `relate` exits 0 for a complete result, including no accepted edges. Recoverable mixed logical failure prints the buffered partial result and exits 6. If no valid logical answer remains, it exits 4 with no output. [relate.md](relate.md) fixes its aggregate behavior.
 
-In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. A valid answer on standard output can accompany exit 1, 3, or 6, so a script that wants the value reads it and then reads `$?`.
+In record mode the exit code reports the run. A record run exits 0 when it completes without a partial or whole-run failure. The printed values carry the individual answers. `annotate` exits 6 when a completed run contains one or more failed questions; good answers and failed markers both print. Its explicit missing-pointer continuation exits 7 after one or more error rows. A valid answer on standard output can accompany exit 1, 3, 6, or 7, so a script that wants the value reads it and then reads `$?`.
 
 ```sh
 asks_for_refund() {
