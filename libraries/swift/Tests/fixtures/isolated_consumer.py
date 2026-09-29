@@ -1,5 +1,5 @@
 """Extract independently installed Swift package/native archives and build in bwrap."""
-import collections,json,pathlib,shutil,sys,tarfile,zipfile,tempfile
+import collections,json,os,pathlib,shutil,sys,tarfile,zipfile,tempfile
 from backend import Backend
 from process_group import run
 R=pathlib.Path(__file__).resolve().parents[2]
@@ -16,7 +16,9 @@ with tarfile.open(R/'target/artifacts/thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz'
         elif member.isfile():dest.write_bytes(archive.extractfile(member).read())
 (W/'home').mkdir();(W/'cache').mkdir();(W/'barrier').mkdir();(W/'empty-tool').write_bytes(b'')
 server=Backend(W/'barrier')
-SW=str(pathlib.Path(shutil.which('swift') or '').resolve().parents[2])
+swift=os.environ.get('THINKTHEN_SWIFT') or shutil.which('swift')
+assert swift and pathlib.Path(swift).is_file(), 'configured Swift executable unavailable'
+SW=str(pathlib.Path(swift).resolve().parents[2])
 assert pathlib.Path(SW+'/usr/bin/swift').is_file(), SW
 # Runtime libraries are host dependencies; only the installed package/native archive
 # and the Swift toolchain enter this mount. Cargo/rustc/source export are invisible.

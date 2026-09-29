@@ -1,0 +1,3 @@
+# 0249 Swift and Zig code review
+
+Fresh review of `87341bde` found one bounded issue: the installed Swift and Zig consumer scripts ignored the compiler paths validated by their product gates and instead looked up `swift` and `zig` on `PATH`. The reviewer found no other source blocker and independently checked the existing package receipts. The correction exports the validated paths from each `check.sh` and reads them in the installed-consumer scripts. Focused disposable installed runs passed with both tool names absent from `PATH`, as recorded in `0249-swift-zig-build.md`. This record is pending the same reviewer's recheck; it does not claim acceptance or landing.

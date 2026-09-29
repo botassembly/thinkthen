@@ -6,6 +6,7 @@ host_home=$HOME
 export CARGO_HOME=${CARGO_HOME:-$host_home/.cargo} RUSTUP_HOME=${RUSTUP_HOME:-$host_home/.rustup}
 zig=${THINKTHEN_ZIG:-$(command -v zig || true)}
 [ -x "$zig" ] || exit 77
+export THINKTHEN_ZIG="$zig"
 for tool in cargo python3 node nm bwrap flock git tar; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 export PATH="$(dirname "$zig"):$PATH"
 lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-zig.lock}

@@ -7,6 +7,7 @@ export CARGO_HOME=${CARGO_HOME:-$host_home/.cargo} RUSTUP_HOME=${RUSTUP_HOME:-$h
 swift=${THINKTHEN_SWIFT:-$(command -v swift || true)}
 swiftc=${THINKTHEN_SWIFTC:-$(command -v swiftc || true)}
 for tool in "$swift" "$swiftc"; do [ -x "$tool" ] || exit 77; done
+export THINKTHEN_SWIFT="$swift"
 for tool in cargo python3 node nm bwrap flock git tar; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
 export PATH="$(dirname "$swift"):$(dirname "$swiftc"):$PATH"
 lock=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-swift.lock}

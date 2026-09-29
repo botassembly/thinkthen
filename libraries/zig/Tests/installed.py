@@ -14,7 +14,9 @@ PACKAGE = Path(__file__).resolve().parent.parent
 ROOT = PACKAGE / "target"
 SOURCE = ROOT / "artifacts/thinkthen-zig-0.0.1-src.tar.gz"
 NATIVE = ROOT / "artifacts/thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz"
-ZIG = Path(shutil.which("zig") or "").resolve()
+zig = os.environ.get("THINKTHEN_ZIG") or shutil.which("zig")
+assert zig, "configured Zig executable unavailable"
+ZIG = Path(zig).resolve()
 assert ZIG.is_file() and ZIG.name == "zig", "configured Zig executable unavailable"
 expected = json.loads((PACKAGE / "Tests/expected_requests.json").read_text())
 normalize = lambda rows: Counter(json.dumps(row, sort_keys=True, ensure_ascii=False, separators=(",", ":")) for row in rows)
