@@ -610,3 +610,8 @@ The0289 builder reached its final denial-context work with six error conversion/
 
 
 The0286 build used one raw Python probe that loaded DuckDB and executed a function without the test helper. It failed on the default recording folder's backend mismatch before a send. Root stopped that author and resumed the same thread with inherited product/service variables removed, shell exclusions and an explicit requirement to use the scratch-cache loopback helper for executable probes. A catalog read does not need to be combined with a product call. The first restart used the coordinator's current directory by mistake, so the child sandbox named the wrong worktree; root immediately relaunched from codex-7 before continuing. Future launch briefs must pin both the working directory and the parent environment, not just the child test command. Warm files and author context were retained.
+
+
+## Validate facade kinds and nonexhaustive error consumers
+
+Fresh High review of0289 found that its public plan accepted staged question kinds that the ordinary execution path refused. The correction reuses that execution guard before preparing a body and pins zero sends. Review also found SQLite and PostgreSQL denial conversions that used nonexhaustive matches, so the new additional-send variant compiled but lost each host’s established spent-total message. The corrected candidate df77e6526 passed High re-review after both source-matched hosts proved cap1, batch1, two rows, one send and their own refusal. Future enum preparation must inspect nonexhaustive matches as well as compiler-visible consumers. No full package campaign was needed.

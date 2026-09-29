@@ -425,6 +425,7 @@ fn ask(
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         usage: &usage,
+        send_budget: None,
     };
     ask_profile::<Error>(&backend, &plan(), None, recorder, cancel, transport, || {
         Ok(Key::of("sk-test-value"))

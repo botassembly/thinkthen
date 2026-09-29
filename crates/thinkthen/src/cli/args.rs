@@ -44,6 +44,11 @@ pub(crate) struct Common {
     #[arg(long, hide_short_help = true)]
     pub(crate) facts: bool,
 
+    /// Refuse a live attempt once this process has sent N attempts. Cache and
+    /// replay answers use no attempt; zero allows no live sends.
+    #[arg(long, value_name = "N", hide_short_help = true)]
+    pub(crate) max_requests_total: Option<u64>,
+
     /// Print the full result object in place of the bare value.
     ///
     /// In record mode the object also carries `input`, the whole record as it

@@ -431,6 +431,7 @@ pub(super) fn counters(case: &Case, expected: &Counters) {
             max_retries: 0,
             retry_wait: Duration::ZERO,
             usage: &process,
+            send_budget: None,
         };
         let cancel = crate::engine::Cancel::default();
         ask_profile::<EngineError>(&backend, &plan, None, &recorder, &cancel, transport, || {

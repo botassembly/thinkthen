@@ -33,6 +33,9 @@ pub(crate) struct FindCommon {
     /// Print one machine-readable run-facts line last on standard error.
     #[arg(long, hide_short_help = true)]
     pub(crate) facts: bool,
+    /// Refuse live attempts after this process has sent N.
+    #[arg(long, value_name = "N", hide_short_help = true)]
+    pub(crate) max_requests_total: Option<u64>,
 
     /// Print the full result object in place of the original selected line or record.
     /// The result names each line or record by its one-based place, zero-padded
@@ -117,6 +120,7 @@ impl FindCommon {
     pub(crate) fn as_common(&self) -> Common {
         Common {
             facts: self.facts,
+            max_requests_total: self.max_requests_total,
             details: self.details,
             input: self.input.clone(),
             lines: self.lines,
