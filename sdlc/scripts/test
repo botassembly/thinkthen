@@ -20,7 +20,19 @@ exact() {
     cargo test --locked --offline -p "$package" --test "$target" "$filter" -- --exact --nocapture
 }
 
+exact_lib() {
+    package=$1 filter=$2
+    cargo test --locked --offline -p "$package" --lib "$filter" -- --list |
+        grep -Fqx "$filter: test" || {
+            echo "test: $package/lib has no $filter" >&2
+            exit 1
+        }
+    cargo test --locked --offline -p "$package" --lib "$filter" -- --exact --nocapture
+}
+
 exact thinkthen backend loopback_cases::every_wire_case_passes_through_the_command_on_the_conformance_backend
+exact thinkthen backend batching::portable::complete_cli_lines_keep_literal_cuts_bodies_and_request_identities
+exact thinkthen backend batching::portable::structured_cli_values_keep_order_and_numeric_cut_distinctions
 exact thinkthen backend secrecy::no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence
 exact thinkthen backend secrecy::the_key_reaches_the_authorization_header_and_nothing_else
 exact thinkthen backend secrecy_find::find_crosses_every_shared_backend_and_recording_route_without_a_leak
@@ -43,6 +55,9 @@ for filter in core::pointer::tests core::question_file::tests engine::recorder::
         }
     cargo test --locked --offline -p thinkthen --lib "$filter"
 done
+
+exact_lib thinkthen core::batch::tests::portable::selected_text_spelling_sets_the_portable_cuts_and_full_requests
+exact_lib thinkthen core::batch::tests::portable::structured_selected_values_keep_order_and_numeric_kinds
 
 cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
     -p consumer --test public --target-dir target/consumer -- --nocapture

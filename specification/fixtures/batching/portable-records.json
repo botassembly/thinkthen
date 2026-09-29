@@ -1,0 +1,13 @@
+{
+  "schema": "thinkthen.portable-batch-records/1",
+  "question": "Is it relevant?",
+  "model": "jev-1.13.0",
+  "texts": ["alpha", "café-5544", "omega", "line 2907", "tail"],
+  "compact": ["\"alpha\"", "\"café-5544\"", "\"omega\"", "\"line 2907\"", "\"tail\""],
+  "heads": ["902cf2b465fb0762", "3db0138d194cf000", "00b22856036ff398", "ee04192375591000", "0c3f5e9d2376aedc"],
+  "cut": [false, true, false, true, false],
+  "members": [[0, 1], [2, 3], [4]],
+  "closed": ["content", "content", "end"],
+  "url": "http://127.0.0.1:9/systemone",
+  "digests": ["add3bbdcab5a735d8724f75b5f36e72ccb44c91c095c139fcb59959a2493c3ec", "306dc7fa150326e9c5211a7334c6198b84bd5fdda87d2e68b1ebeae203dd87f2", "d07b695f1608f0acc0d86d24e2f551ea1a0fbe9d946159c1262a207bf29e3c5b"]
+}
