@@ -4,15 +4,24 @@
 
 use std::collections::HashMap;
 use std::ffi::{CStr, c_int};
+use std::sync::{Arc, Mutex};
 
 use rusqlite::ffi::sqlite3;
 use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::{Filters, IndexConstraintOp, IndexInfo};
 use serde_json::json;
-use thinkthen::{CallOptions, Entity, Kind, Recognize, Relate};
+use thinkthen::{Entity, Kind, Recognize, Relate, Settings};
 
-use crate::question::{from_file, named_file, shown, text};
+use crate::many::Store;
+use crate::question::{call_controls, from_file, named_file, shown, text};
 use crate::{Failure, ffi, worker};
+
+/// A scan borrows one immutable answer set, with an optional key selection.
+#[derive(Debug)]
+pub(crate) struct Scan {
+    pub(crate) rows: Arc<Vec<Vec<Value>>>,
+    pub(crate) selected: Option<usize>,
+}
 
 /// The most distinct name and kind pairs one relate call takes.
 const MOST_PAIRS: usize = 255;
@@ -31,25 +40,47 @@ pub(crate) trait Table {
     const REQUIRED: usize;
     /// The answer rows, one value per visible column.
     fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure>;
+    /// The default scan copies only the few scalar hidden arguments.
+    fn scan(
+        db: *mut sqlite3,
+        mask: c_int,
+        filters: &Filters<'_>,
+        _: &Mutex<Store>,
+    ) -> Result<Scan, Failure> {
+        Ok(Scan {
+            rows: Arc::new(Self::rows(db, &arguments::<Self>(mask, filters)?)?),
+            selected: None,
+        })
+    }
 }
 
 /// Bind each usable equality on an argument column, in column order.
 pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
     let mut bound = vec![None; T::COLUMNS - T::FIRST_HIDDEN];
     for (at, constraint) in info.constraints().enumerate() {
+        let lookup = T::NAME.ends_with("_many") && constraint.column() == 0;
+        // A keyed row has TEXT affinity, but SQLite may apply a caller's
+        // collation or coerce a numeric right operand. Only binary text can
+        // use our byte-for-byte candidate lookup; SQLite always rechecks it.
+        if lookup && !matches!(info.collation(at), Ok("BINARY")) {
+            continue;
+        }
         let Some(column) = usize::try_from(constraint.column())
             .ok()
             .and_then(|column| column.checked_sub(T::FIRST_HIDDEN))
+            .or_else(|| lookup.then_some(3))
         else {
             continue;
         };
         if !constraint.is_usable()
             || constraint.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
         {
-            return Ok(false);
+            // An outer-row key equality may be unavailable to this plan.
+            // Leave it to SQLite; required hidden arguments are checked below.
+            continue;
         }
         if let Some(slot) = bound.get_mut(column) {
-            *slot = Some(at);
+            *slot = Some((at, lookup));
         }
     }
     if bound.iter().take(T::REQUIRED).any(Option::is_none) {
@@ -57,12 +88,12 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
     }
     let (mut mask, mut place): (c_int, c_int) = (0, 0);
     for (column, at) in bound.iter().enumerate() {
-        if let Some(at) = at {
+        if let Some((at, visible_lookup)) = at {
             place += 1;
             mask |= 1 << column;
             let mut usage = info.constraint_usage(*at);
             usage.set_argv_index(place);
-            usage.set_omit(true);
+            usage.set_omit(!visible_lookup);
         }
     }
     info.set_idx_num(mask);
@@ -71,7 +102,7 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
 }
 
 /// The argument values `plan` bound, with NULL for an argument not given.
-pub(crate) fn arguments<T: Table>(
+pub(crate) fn arguments<T: Table + ?Sized>(
     mask: c_int,
     filters: &Filters<'_>,
 ) -> Result<Vec<Value>, Failure> {
@@ -99,28 +130,8 @@ fn argument(arguments: &[Value], at: usize, what: &str) -> Result<Option<String>
         .map_or(Ok(None), |value| text(ValueRef::from(value), what))
 }
 
-/// A trailing hidden deadline is milliseconds; an absent or NULL value leaves it unset.
-fn deadline(arguments: &[Value], at: usize) -> Result<Option<i64>, Failure> {
-    let value = arguments.get(at).map_or(ValueRef::Null, ValueRef::from);
-    let millis = match value {
-        ValueRef::Null => return Ok(None),
-        ValueRef::Integer(millis) => millis,
-        ValueRef::Real(real)
-            if real.is_finite()
-                && real.fract() == 0.0
-                && (i64::MIN as f64..-(i64::MIN as f64)).contains(&real) =>
-        {
-            real as i64
-        }
-        _ => {
-            return Err(Failure::usage(format!(
-                "a deadline of {} is not a whole number of milliseconds",
-                shown(value)
-            )));
-        }
-    };
-    CallOptions::new().deadline_millis(millis)?;
-    Ok(Some(millis))
+fn controls(arguments: &[Value], at: usize) -> Result<Settings, Failure> {
+    call_controls(arguments.get(at).map_or(ValueRef::Null, ValueRef::from))
 }
 
 /// Validate a JSON argument or file while retaining its original member order.
@@ -203,7 +214,7 @@ impl Recognizer {
 impl Table for Recognizer {
     const NAME: &'static str = "thinkthen_recognize";
     const SCHEMA: &'static CStr =
-        c"CREATE TABLE x(text, start, end, length, kind, strength, body HIDDEN, kinds HIDDEN, deadline HIDDEN)";
+        c"CREATE TABLE x(text, start, end, length, kind, strength, body HIDDEN, kinds HIDDEN, settings HIDDEN)";
     const FIRST_HIDDEN: usize = 6;
     const COLUMNS: usize = 9;
     const REQUIRED: usize = 1;
@@ -213,8 +224,14 @@ impl Table for Recognizer {
             return Ok(Vec::new());
         };
         let ask = Self::ask(argument(arguments, 1, "the kinds")?.as_deref())?;
-        let deadline = deadline(arguments, 2)?;
-        let found = worker::run(db, deadline, move |engine, options| {
+        let settings = controls(arguments, 2)?;
+        let shared = settings.context().map(str::to_owned);
+        let found = worker::run_settings(db, settings, move |engine, options| {
+            let options = if let Some(shared) = &shared {
+                options.context(shared)
+            } else {
+                options
+            };
             Ok(engine.recognize_with(&ask, &evidence, options)?)
         })?
         .into_value();
@@ -278,9 +295,7 @@ fn admit(order: &mut Vec<Entity>, (name, kind): &(String, String)) -> Result<(),
     Ok(())
 }
 
-/// `thinkthen_relate(table, id_column, name_column, kind_column, rule, …)`:
-/// the edges among a table's entities, one row per pair of rows that hold
-/// an edge's two ends (ADR 0047 item 9).
+/// `thinkthen_relate(query, rules[, settings])`: edges among selected entities.
 #[derive(Debug)]
 pub(crate) struct Relater;
 
@@ -289,12 +304,19 @@ type Read = (Vec<Entity>, HashMap<(String, String), Vec<Value>>);
 
 impl Relater {
     /// One to four inline rules, or one JSON relate section, file, or `'@name'`.
-    fn ask(rules: &[String]) -> Result<Relate, Failure> {
-        if let [only] = rules
-            && (only.starts_with('{') || only.starts_with('@'))
-        {
-            let (whole, file) = file_json(only, "relate")?;
+    fn ask(argument: &str) -> Result<Relate, Failure> {
+        if argument.starts_with('{') || argument.starts_with('@') {
+            let (whole, file) = file_json(argument, "relate")?;
             return read(&whole, file, Relate::from_json);
+        }
+        let rules: Vec<String> = if argument.starts_with('[') {
+            serde_json::from_str(argument)
+                .map_err(|_| Failure::usage("relate rules are a JSON array of text"))?
+        } else {
+            vec![argument.to_owned()]
+        };
+        if rules.is_empty() || rules.len() > 4 {
+            return Err(Failure::usage("thinkthen_relate needs one to four rules"));
         }
         let relations = rules
             .iter()
@@ -307,29 +329,40 @@ impl Relater {
         )
     }
 
-    /// Read the table's entities with a nested read-only `SELECT`.
-    fn entities(db: *mut sqlite3, names: &[String]) -> Result<Read, Failure> {
-        let quote = |name: &String| format!("\"{}\"", name.replace('"', "\"\""));
-        let [table, id, name, kind] = names else {
-            return Err(Failure::defect("relate lost its column names"));
-        };
-        let sql = format!(
-            "SELECT {}, {}, {} FROM {}",
-            quote(id),
-            quote(name),
-            quote(kind),
-            quote(table)
-        );
+    /// Read exactly id, name and optional kind from the caller's read-only SELECT.
+    fn entities(db: *mut sqlite3, query: &str) -> Result<Read, Failure> {
+        if !query
+            .trim_start()
+            .to_ascii_uppercase()
+            .starts_with("SELECT ")
+        {
+            return Err(Failure::usage(
+                "relate takes a query and rules; pass 'SELECT id, name, kind FROM …'",
+            ));
+        }
         let refused = |error: rusqlite::Error| {
-            Failure::usage(format!("thinkthen_relate cannot read {table}: {error}"))
+            Failure::usage(format!("thinkthen_relate cannot read its query: {error}"))
         };
         let connection = ffi::connection(db).map_err(refused)?;
-        let mut statement = connection.prepare(&sql).map_err(refused)?;
+        let mut statement = connection.prepare(query).map_err(refused)?;
+        if !statement.readonly() || !matches!(statement.column_count(), 2 | 3) {
+            return Err(Failure::usage(
+                "relate takes a read-only SELECT returning id, name, kind",
+            ));
+        }
+        let has_kind = statement.column_count() == 3;
         let mut rows = statement.query([]).map_err(refused)?;
         let (mut order, mut ids) = (Vec::new(), HashMap::<(String, String), Vec<Value>>::new());
         while let Some(row) = rows.next().map_err(refused)? {
             let held: Value = row.get(0).map_err(refused)?;
-            let pair = (named(row, 1, "name", &held)?, named(row, 2, "kind", &held)?);
+            let pair = (
+                named(row, 1, "name", &held)?,
+                if has_kind {
+                    named(row, 2, "kind", &held)?
+                } else {
+                    "*".to_owned()
+                },
+            );
             if !ids.contains_key(&pair) {
                 admit(&mut order, &pair)?;
             }
@@ -341,38 +374,35 @@ impl Relater {
 
 impl Table for Relater {
     const NAME: &'static str = "thinkthen_relate";
-    const SCHEMA: &'static CStr = c"CREATE TABLE x(relation, source, target, probability, table_name HIDDEN, id_column HIDDEN, name_column HIDDEN, kind_column HIDDEN, rule_1 HIDDEN, rule_2 HIDDEN, rule_3 HIDDEN, rule_4 HIDDEN, deadline HIDDEN)";
+    const SCHEMA: &'static CStr = c"CREATE TABLE x(relation, source, target, probability, query HIDDEN, rules HIDDEN, settings HIDDEN, legacy_4 HIDDEN, legacy_5 HIDDEN, legacy_6 HIDDEN, legacy_7 HIDDEN, legacy_8 HIDDEN, legacy_9 HIDDEN)";
     const FIRST_HIDDEN: usize = 4;
     const COLUMNS: usize = 13;
-    const REQUIRED: usize = 4;
+    const REQUIRED: usize = 2;
 
     fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
-        let mut names = Vec::new();
-        for (at, what) in [
-            "the table",
-            "the id column",
-            "the name column",
-            "the kind column",
-        ]
-        .iter()
-        .enumerate()
+        if arguments
+            .iter()
+            .skip(3)
+            .any(|value| !matches!(value, Value::Null))
         {
-            names.push(
-                argument(arguments, at, what)?
-                    .ok_or_else(|| Failure::usage(format!("thinkthen_relate needs {what}")))?,
-            );
+            return Err(Failure::usage(
+                "relate takes a query and rules; pass 'SELECT id, name, kind FROM …'",
+            ));
         }
-        let mut rules = Vec::new();
-        for at in 4..8 {
-            rules.extend(argument(arguments, at, "a rule")?.filter(|rule| !rule.trim().is_empty()));
-        }
-        if rules.is_empty() {
-            return Err(Failure::usage("thinkthen_relate needs one to four rules"));
-        }
+        let query = argument(arguments, 0, "the query")?
+            .ok_or_else(|| Failure::usage("thinkthen_relate needs a query"))?;
+        let rules = argument(arguments, 1, "the rules")?
+            .ok_or_else(|| Failure::usage("thinkthen_relate needs rules"))?;
         let ask = Self::ask(&rules)?;
-        let deadline = deadline(arguments, 8)?;
-        let (entities, ids) = Self::entities(db, &names)?;
-        let edges = worker::run(db, deadline, move |engine, options| {
+        let settings = controls(arguments, 2)?;
+        let shared = settings.context().map(str::to_owned);
+        let (entities, ids) = Self::entities(db, &query)?;
+        let edges = worker::run_settings(db, settings, move |engine, options| {
+            let options = if let Some(shared) = &shared {
+                options.context(shared)
+            } else {
+                options
+            };
             Ok(engine.relate_with(&ask, entities, options)?)
         })?
         .into_value();

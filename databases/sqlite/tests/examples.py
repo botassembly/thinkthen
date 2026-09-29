@@ -21,7 +21,7 @@ def test_every_example_answers_as_written() -> None:
     for name, example in EXAMPLES.items():
         held = child(f"""
 db = connect()
-db.execute("SELECT thinkthen_throttle(4)")
+db.execute("SELECT thinkthen_configure(?)", (json.dumps(dict(throttle=4)),))
 for statement in {example.get("setup", [])!r}:
     db.execute(statement).fetchall()
 rows = run(db, {example["sql"]!r})

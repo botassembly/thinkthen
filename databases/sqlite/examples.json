@@ -8,10 +8,6 @@
       "sql": "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now');",
       "expected": "1"
     },
-    "probability": {
-      "sql": "SELECT thinkthen_probability('Is this a complaint?', 'i want a refund now');",
-      "expected": "0.9"
-    },
     "choose": {
       "sql": "SELECT thinkthen_choose('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', 'refund now');",
       "expected": "the refund desk"
@@ -39,14 +35,6 @@
       "sql": "SELECT thinkthen_usage();",
       "expected": "{\"requests_sent\":1,\"cache_answers\":0,\"input_tokens\":0,\"output_tokens\":0}"
     },
-    "warm": {
-      "sql": "SELECT thinkthen_warm('Is this a complaint?', t) FROM (SELECT 'refund now' AS t UNION ALL SELECT 'refund again');",
-      "expected": "2"
-    },
-    "throttle": {
-      "sql": "SELECT thinkthen_throttle(8);",
-      "expected": "8"
-    },
     "recognize": {
       "sql": "SELECT text, kind, start, \"end\" FROM thinkthen_recognize('Maria Chen joined Northwind Freight in Chicago last spring.', 'person,organization,place');",
       "expected": "Maria Chen|person|0|10\nspring.|person|52|59"
@@ -56,8 +44,24 @@
         "CREATE TABLE entities(id INTEGER PRIMARY KEY, name TEXT, kind TEXT)",
         "INSERT INTO entities VALUES (1, 'Maria Chen', 'person'), (2, 'Northwind Freight', 'organization')"
       ],
-      "sql": "SELECT relation, source, target, probability FROM thinkthen_relate('entities', 'id', 'name', 'kind', 'works_for=person:organization');",
+      "sql": "SELECT relation, source, target, probability FROM thinkthen_relate('SELECT id, name, kind FROM entities', 'works_for=person:organization');",
       "expected": "works_for|1|2|0.9"
+    },
+    "decide_many": {
+      "sql": "SELECT key, value, probability FROM thinkthen_decide_many('Is this a complaint?', '{\"7\":\"i want a refund now\"}')",
+      "expected": "7|1|0.9"
+    },
+    "configure": {
+      "sql": "SELECT thinkthen_configure('{\"throttle\":8}')",
+      "expected": "{\"throttle\":8}"
+    },
+    "score_many": {
+      "sql": "SELECT key, value FROM thinkthen_score_many('How strong?', '{\"7\":\"A short note.\"}', '{\"levels\":[\"low\",\"high\"]}')",
+      "expected": "7|0.1"
+    },
+    "choose_many": {
+      "sql": "SELECT key, value, probability FROM thinkthen_choose_many('Which team?', '{\"7\":\"refund now\"}', '{\"options\":[\"billing\",\"shipping\"]}')",
+      "expected": "7|billing|0.9"
     }
   }
 }

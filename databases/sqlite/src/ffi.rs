@@ -6,6 +6,7 @@ use std::borrow::Cow;
 use std::ffi::{CStr, c_char, c_int};
 use std::marker::PhantomData;
 use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::{Arc, Mutex};
 
 use rusqlite::Connection;
 use rusqlite::ffi::{self, sqlite3};
@@ -15,6 +16,7 @@ use rusqlite::vtab::{
     Context as Cell, Filters, IndexInfo, Module, VTab, VTabConfig, VTabConnection, VTabCursor,
 };
 
+use crate::many::{ChooseMany, DecideMany, ScoreMany, Store, TagMany};
 use crate::tables::{self, Recognizer, Relater, Table};
 use crate::{budget, guard, in_sqlite_diagnostics, scalars};
 
@@ -126,8 +128,25 @@ fn init(connection: Connection) -> rusqlite::Result<bool> {
     }
     scalars::register(&connection)?;
     budget::register(&connection)?;
-    connection.create_module(c"thinkthen_recognize", &RECOGNIZE, None)?;
-    connection.create_module(c"thinkthen_relate", &RELATE, None)?;
+    let store = Arc::new(Mutex::new(Store::default()));
+    connection.create_module(c"thinkthen_recognize", &RECOGNIZE, Some(Arc::clone(&store)))?;
+    connection.create_module(c"thinkthen_relate", &RELATE, Some(Arc::clone(&store)))?;
+    connection.create_module(
+        c"thinkthen_decide_many",
+        &DECIDE_MANY,
+        Some(Arc::clone(&store)),
+    )?;
+    connection.create_module(
+        c"thinkthen_choose_many",
+        &CHOOSE_MANY,
+        Some(Arc::clone(&store)),
+    )?;
+    connection.create_module(
+        c"thinkthen_score_many",
+        &SCORE_MANY,
+        Some(Arc::clone(&store)),
+    )?;
+    connection.create_module(c"thinkthen_tag_many", &TAG_MANY, Some(store))?;
     pin();
     Ok(false)
 }
@@ -161,6 +180,10 @@ pub unsafe extern "C" fn sqlite3_thinkthen_init(
 
 const RECOGNIZE: Module<'static, Tab<Recognizer>> = Module::eponymous_only_module();
 const RELATE: Module<'static, Tab<Relater>> = Module::eponymous_only_module();
+const DECIDE_MANY: Module<'static, Tab<DecideMany>> = Module::eponymous_only_module();
+const CHOOSE_MANY: Module<'static, Tab<ChooseMany>> = Module::eponymous_only_module();
+const SCORE_MANY: Module<'static, Tab<ScoreMany>> = Module::eponymous_only_module();
+const TAG_MANY: Module<'static, Tab<TagMany>> = Module::eponymous_only_module();
 
 /// One table-valued function's virtual table.
 #[repr(C)]
@@ -168,6 +191,7 @@ const RELATE: Module<'static, Tab<Relater>> = Module::eponymous_only_module();
 struct Tab<T> {
     base: ffi::sqlite3_vtab,
     db: *mut sqlite3,
+    store: Arc<Mutex<Store>>,
     kind: PhantomData<T>,
 }
 
@@ -177,7 +201,9 @@ struct Tab<T> {
 struct Cursor<T> {
     base: ffi::sqlite3_vtab_cursor,
     db: *mut sqlite3,
-    rows: Vec<Vec<Value>>,
+    store: Arc<Mutex<Store>>,
+    rows: Arc<Vec<Vec<Value>>>,
+    selected: Option<usize>,
     row: usize,
     kind: PhantomData<T>,
 }
@@ -185,12 +211,12 @@ struct Cursor<T> {
 // SAFETY: `Tab` is `repr(C)` with the base first, and its callbacks only
 // register a direct-only, eponymous table and answer from owned rows.
 unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
-    type Aux = ();
+    type Aux = Arc<Mutex<Store>>;
     type Cursor = Cursor<T>;
 
     fn connect(
         db: &mut VTabConnection,
-        _: Option<&()>,
+        store: Option<&Self::Aux>,
         _: &[u8],
         _: &[u8],
         _: &[u8],
@@ -204,6 +230,7 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
             Self {
                 base: ffi::sqlite3_vtab::default(),
                 db: handle,
+                store: Arc::clone(store.ok_or(rusqlite::Error::InvalidQuery)?),
                 kind: PhantomData,
             },
         ))
@@ -217,7 +244,9 @@ unsafe impl<'vtab, T: Table + 'static> VTab<'vtab> for Tab<T> {
         Ok(Cursor {
             base: ffi::sqlite3_vtab_cursor::default(),
             db: self.db,
-            rows: Vec::new(),
+            store: Arc::clone(&self.store),
+            rows: Arc::new(Vec::new()),
+            selected: None,
             row: 0,
             kind: PhantomData,
         })
@@ -233,9 +262,9 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
         filters: &Filters<'_>,
     ) -> rusqlite::Result<()> {
         let db = self.db;
-        self.rows = guard(T::NAME, || {
-            T::rows(db, &tables::arguments::<T>(mask, filters)?)
-        })?;
+        let scan = guard(T::NAME, || T::scan(db, mask, filters, &self.store))?;
+        self.rows = scan.rows;
+        self.selected = scan.selected;
         self.row = 0;
         Ok(())
     }
@@ -246,13 +275,17 @@ unsafe impl<T: Table> VTabCursor for Cursor<T> {
     }
 
     fn eof(&self) -> bool {
-        self.row >= self.rows.len()
+        if let Some(at) = self.selected {
+            self.row > 0 || at >= self.rows.len()
+        } else {
+            self.row >= self.rows.len()
+        }
     }
 
     fn column(&self, cell: &mut Cell, at: c_int) -> rusqlite::Result<()> {
         let value = self
             .rows
-            .get(self.row)
+            .get(self.selected.unwrap_or(self.row))
             .and_then(|row| usize::try_from(at).ok().and_then(|at| row.get(at)))
             .unwrap_or(&Value::Null);
         cell.set_result(value)

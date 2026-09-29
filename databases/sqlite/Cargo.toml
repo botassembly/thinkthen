@@ -23,6 +23,7 @@ crate-type = ["cdylib"]
 thinkthen = { path = "../../crates/thinkthen", default-features = false }
 libc = "=0.2.189"
 rusqlite = { version = "=0.40.2", features = ["loadable_extension", "functions", "vtab"] }
+serde = "=1.0.229"
 serde_json = "=1.0.151"
 
 [profile.release]
