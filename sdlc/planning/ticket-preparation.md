@@ -14,7 +14,7 @@ The handoff ranks ready related batches and states what makes each ready or bloc
 
 The coordinator assigns the next ready ticket or a related family, such as the database tickets. Keep the implementation builder working where file claims permit. Reuse a preparation agent for related investigations; reviewers remain independent of authors. Claim the note and ticket files on main before editing.
 
-Read current main for executable behavior, the active accepted branch for pending decisions, and prior experiment and build records. Cite the source revision and path. Compare these sources before calling a sentence stale or a behavior missing. Refresh only affected facts after another branch lands.
+Read `origin/main` at its named commit for current executable behavior, the active accepted branch for pending decisions, and prior experiment and build records. A shared local branch named `main` can lag worktree pushes; verify the reference before comparing sources. Cite the source revision and path. Compare these sources before calling a sentence stale or a behavior missing. Refresh only affected facts after another branch lands.
 
 Add concise investigation notes to the ticket. A shared record may hold facts common to a family, with a link from each ticket. Include only information that helps the builder:
 
@@ -146,3 +146,5 @@ Before reporting a missing claim, read the exact current main commit and the com
 Before copying an error-policy lesson to another adapter, read its accepted ADR and explicit try/value contract. A send budget can enforce zero additional attempts while an explicit try function returns a safe failure value. Ordinary scalar, aggregate and try forms need not expose the same error shape. A review finding or new test does not silently amend an accepted contract; reconcile the two before changing old expectations. The coordinator's corrected 0219 brief records this failure.
 
 For file locks, trace path and inode ownership through waiters, success, failure and maintenance. Unlinking a locked path can create two independently locked inodes; proving two callers serialize is insufficient if a waiting old opener and a new opener can overlap. Use one controlled boundary sequence for the credible race, not a churn campaign.
+
+A public-binding corpus helper must build the backend executable that it starts. A warm lane can conceal that missing dependency. Verify startup once with the required executable absent and keep the build output path aligned with the launched path. Reuse that shared proof across its callers.
