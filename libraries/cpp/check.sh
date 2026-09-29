@@ -21,7 +21,9 @@ done
 for tool in cargo rustc c++ clang++ make nm readelf ldd node git cp cmp grep mkdir; do
     command -v "$tool" >/dev/null 2>&1 || { echo "cpp: not run: no $tool" >&2; exit 77; }
 done
-"$python_bin" -c 'import jsonschema' || { echo 'cpp: not run: Python jsonschema is unavailable' >&2; exit 77; }
+if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
+    "$python_bin" -c 'import jsonschema' || { echo 'cpp: not run: Python jsonschema is unavailable' >&2; exit 77; }
+fi
 unset THINKTHEN_API_KEY
 lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then

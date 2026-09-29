@@ -121,6 +121,32 @@ def release(name, doc):
                 or py313[1].get("uses") != active[1].get("uses")
                 or (py313[1].get("with") or {}).get("update-environment") in (False, "false")):
             out.append(f"{name}: job {job} must set up Python 3.13 before retaining Python {active_version} for host-setup")
+    build_steps = jobs.get("build", {}).get("steps") or []
+    container = next((step for step in build_steps if "release-container" in (step.get("run") or "")), None)
+    if container and (container.get("env") or {}).get("THINKTHEN_RELEASE_EXPECTED_SHA") != RESOLVED:
+        out.append(f"{name}: build container must receive the resolved SHA")
+    smoke_steps = jobs.get("smoke", {}).get("steps") or []
+    smoke_bundle = next((i for i, step in enumerate(smoke_steps)
+                         if "release-workflow smoke-bundle" in (step.get("run") or "")), None)
+    if smoke_bundle is not None:
+        gate = next((i for i, step in enumerate(smoke_steps)
+                     if "release-workflow go-cpp-gate platform \"$TARGET\" \"$SHA\"" in (step.get("run") or "")
+                     and (step.get("env") or {}).get("SHA") == RESOLVED), None)
+        tools = next((i for i, step in enumerate(smoke_steps)
+                      if "release-workflow go-cpp-tools" in (step.get("run") or "")
+                      and step.get("if") == "matrix.target == 'x86_64-unknown-linux-gnu'"), None)
+        if gate is None or gate >= smoke_bundle:
+            out.append(f"{name}: smoke must gate the resolved Go/C++ family before installed consumers")
+        if tools is None or tools >= smoke_bundle:
+            out.append(f"{name}: x86 smoke must check pinned Go/C++ tools before consumers")
+    draft_steps = jobs.get("draft", {}).get("steps") or []
+    collect_step = next((step for step in draft_steps
+                    if "release-workflow collect" in (step.get("run") or "")), None)
+    collect = (collect_step or {}).get("run")
+    if collect is not None and ("release-workflow go-cpp-gate \"platform/platform-$target\" \"$target\" \"$SHA\"" not in collect
+                            or collect.index("release-workflow go-cpp-gate") > collect.index("release-workflow collect")
+                            or (collect_step.get("env") or {}).get("SHA") != RESOLVED):
+        out.append(f"{name}: draft must gate every target's Go/C++ family before collection")
     outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
     for job in outward:
         spec = jobs.get(job, {})
@@ -352,6 +378,22 @@ def self_test():
          ["release.yml: job draft must need resolve, smoke"]),
         ("maturin", "release.yml", lambda t: t.replace("maturin==1.9.6", "maturin"),
          ["release.yml: job build installs maturin with no version"]),
+        ("go-cpp-build-sha", "release.yml",
+         lambda t: t.replace('THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}"',
+                             'THINKTHEN_RELEASE_EXPECTED_SHA: ignored'),
+         ["release.yml: build container must receive the resolved SHA"]),
+        ("go-cpp-smoke-gate", "release.yml",
+         lambda t: t.replace('run: sdlc/scripts/release-workflow go-cpp-gate platform "$TARGET" "$SHA"',
+                             'run: echo skipped'),
+         ["release.yml: smoke must gate the resolved Go/C++ family before installed consumers"]),
+        ("go-cpp-tool-setup", "release.yml",
+         lambda t: t.replace('run: sdlc/scripts/release-workflow go-cpp-tools "$TARGET" "$RUNNER_TEMP/thinkthen-go"',
+                             'run: echo skipped'),
+         ["release.yml: x86 smoke must check pinned Go/C++ tools before consumers"]),
+        ("go-cpp-draft-gate", "release.yml",
+         lambda t: t.replace('sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"',
+                             'echo skipped'),
+         ["release.yml: draft must gate every target's Go/C++ family before collection"]),
     ]
     bad = 0
     for name, file, plant, expected in cases:
@@ -363,7 +405,8 @@ def self_test():
                 for path in (REPO / ".github/workflows").glob("*.y*ml"):
                     (folder / path.name).write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
                 # Keep each planted rule independent after the real release.yml lands.
-                source = RELEASE if file == "release.yml" else (folder / file).read_text()
+                source = ((REPO / ".github/workflows/release.yml").read_text()
+                          if name.startswith("go-cpp-") else RELEASE) if file == "release.yml" else (folder / file).read_text()
                 (folder / file).write_text(plant(source), encoding="utf-8")
                 got = check(folder)
         if got != expected:
