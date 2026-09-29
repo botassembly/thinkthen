@@ -1,6 +1,6 @@
 # 0289 — Core cap plan tally and Rust Polars (T7)
 
-Status: Coordinator approved for implementation on main `cac3d07ec`; focused implementation candidate is under construction. Issue closure and independent code review remain open.
+Status: Coordinator approved for implementation on main `cac3d07ec`; focused source candidate is ready for fresh High code review after merging main `61350a253`. Issue closure and release qualification remain open.
 
 ## Outcome
 
@@ -64,4 +64,6 @@ struct TallyStart<'a>
 
 The Rust Polars source is feature-gated in `crates/thinkthen/src/public/frame.rs` and `frame/`; there is no `libraries/polars/src` or separate Polars ratchet. `public/options/budget.rs` already owns the reservation count, while `engine/request.rs` carries the selected limit into sends. The limit must be selected for each reservation, since a lower, raised or unset engine can share the process count. The existing `public/bulk.rs` selector is reused by the public plan and `public/results.rs` registers the new Tally module; neither requires a second estimator or facts store. The core planner cannot own a clock, so the Tally belongs at the public boundary while remaining the one type later Python and expression doors will wrap.
 
-The selected Polars proof found that keeping null input positions requires filtering them before a call and restoring them after the typed result; rejecting every nullable column would preserve the old restriction rather than the accepted frame outcome. Source-only feature tests establish this Rust behavior, not an installed package or release artifact. A later call denied by the cap needs its own failure context, distinct from a first send and a status retry; the existing two-case error route is the remaining targeted correction before review.
+The selected Polars proof found that keeping null input positions requires filtering them before a call and restoring them after the typed result; rejecting every nullable column would preserve the old restriction rather than the accepted frame outcome. Source-only feature tests establish this Rust behavior, not an installed package or release artifact. A later call denied by the cap needs its own failure context, distinct from a first send and a status retry. The actual boundary spans `engine/send_budget.rs`, `engine/mod.rs` and `call_facts.rs`, `engine/error.rs`, `public/error.rs`, `cli/failure/convert.rs` and `public/native_batch.rs`, with the public enum variant added to this ticket's inventory. The cohesive private reservation helper keeps `engine/mod.rs` below 500 nonblank lines. An explicit call budget must reserve alongside the process budget, since replacing it would let an unset engine hide attempts from later bounded engines.
+
+The existing Polars package issue retains its three older criteria: the full shared `27-decide-many` case, mid-column deadline, and 20-text one-request assertion. The selected source `polars_door` proof covers a separate chunked case-27 witness and current eager behavior; it is not a whole package-gate receipt.

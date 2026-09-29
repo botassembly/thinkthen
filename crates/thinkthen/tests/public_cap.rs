@@ -96,22 +96,26 @@ fn held_request_exhausts_one_limit_while_raised_and_unset_engines_keep_counting(
         3,
         "only the first ordinary body arrived"
     );
-    let explicit = SendBudget::new();
     let bounded = build(later_listener.base(), Some(5));
-    bounded
+    both_budgets_reserve(&bounded, &question, &later_listener);
+}
+
+fn both_budgets_reserve(engine: &Engine, question: &Question, listener: &Listener) {
+    let explicit = SendBudget::new();
+    engine
         .decide_with(
-            &question,
+            question,
             "explicit and process budget",
             CallOptions::new().send_budget(&explicit, Some(1)),
         )
         .expect("both reservations admit this attempt");
-    assert_eq!(later_listener.count(), 4);
+    assert_eq!(listener.count(), 4);
     assert_eq!(
-        bounded
-            .decide(&question, "process cap now spent")
+        engine
+            .decide(question, "process cap now spent")
             .expect_err("the explicit budget did not replace the process count")
             .send_budget_denial(),
         Some(SendBudgetDenial::BeforeFirstSend)
     );
-    assert_eq!(later_listener.count(), 4);
+    assert_eq!(listener.count(), 4);
 }

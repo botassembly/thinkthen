@@ -18,7 +18,7 @@ pub enum SendBudgetDenial {
     },
 }
 
-/// One process's attempted live sends, shared by its SQL engines.
+/// One owner's attempted live sends, shared by its engine clones.
 /// A forked child starts a fresh count when it first reserves a send.
 #[derive(Clone, Debug)]
 pub struct SendBudget(Arc<BudgetCount>);
