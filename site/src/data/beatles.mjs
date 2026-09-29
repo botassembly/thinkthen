@@ -357,7 +357,7 @@ const ARTICLES = {
     goal: "audit grades saved answers against answers you already know, at any bar, and sends no request.",
     idea: [
       "You already know the right answer for some of your records. `audit` grades saved answers against those answers at any bar. It sends no request.",
-      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's red label reads (without context). It reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The console under the table shows `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
+      "Here Jev was asked whether each of 10 songs is on Abbey Road, from the title alone. The slide's red label reads (without context). The slide reads each answer at the band 0.2:0.8. A red cross marks a wrong answer, and an amber ? marks a not-sure answer. The console under the table shows `audit` on the same 10 songs. The [diff page](/learn/beatles-bench/diff/) asks about them again with context.",
     ],
     see: {
       '1-band': "At the band 0.2:0.8, 3 are right, 2 are wrong, and 5 are not sure.",
