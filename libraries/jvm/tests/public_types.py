@@ -23,7 +23,10 @@ corpus = json.loads((SHARED / "corpus.json").read_text())
 checks = shared.validators(json.loads((ROOT / "specification/result.schema.json").read_text()))
 shared.check_schema(corpus["cases"], checks)
 selected = sys.argv[1] if len(sys.argv) == 2 else None
-assert len(sys.argv) <= 2 and (selected is None or any(case["name"] == selected for case in corpus["cases"])), "unknown J1 case selector"
+runnable = {case["name"] for case in corpus["cases"]
+            if "request" in case and not case.get("schema_only", False)}
+if len(sys.argv) > 2 or (selected is not None and selected not in runnable):
+    raise SystemExit("JVM J1 case selector must name an existing runtime case")
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
 classes = TARGET / "classes/typecase"
 classes.mkdir(parents=True, exist_ok=True)
