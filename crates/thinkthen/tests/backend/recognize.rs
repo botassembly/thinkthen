@@ -352,7 +352,7 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     let counts: Value =
         serde_json::from_str(stdout(&output).lines().nth(1).expect("whole-input counts"))
             .expect("counts JSON");
-    assert_eq!(counts["requests"], 2); // one prepared boundary request, one possible name request
+    assert_eq!(counts["requests"], 9); // one prepared request, at most two per each of four pieces
     assert_eq!(counts["upper_bound"], true);
     let head = [
         "schema",
@@ -372,7 +372,7 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
         "THINKTHEN_API_KEY",
         4,
         1,
-        1
+        8
     ]);
     assert_eq!(Value::from(head.to_vec()), expected);
     assert_eq!(listener.connections(), 0);
@@ -386,6 +386,41 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
         Value::from(String::from_utf8_lossy(&sent[0].body))
     );
     assert_eq!(planned["bytes"], sent[0].body.len());
+}
+
+/// A valid byte profile can fit step one's short kind names but split the
+/// independent step-two questions carrying long kind descriptions.
+#[test]
+fn long_descriptions_split_the_name_stage_more_than_the_boundary_stage() {
+    let limit = profile("description-split", r#""max_request_bytes":2300"#);
+    let description = "Meaningful person category. ".repeat(14);
+    let person = format!("person={description}");
+    let organization = format!("organization={description}");
+    let options = [
+        "--kind",
+        person.as_str(),
+        "--kind",
+        organization.as_str(),
+        "--profile",
+        limit.to_str().expect("profile path"),
+        "--no-cache",
+    ];
+    let listener = Listener::answering(automatic).expect("listener");
+    let planned = local(&listener, &[&options[..], &["--plan"]].concat(), None, ADA);
+    let first = plan_json(&planned);
+    let counts: Value =
+        serde_json::from_str(stdout(&planned).lines().nth(1).expect("whole-input counts"))
+            .expect("counts JSON");
+    assert_eq!(first["request_count"], 1);
+    assert_eq!(first["name_requests_upper_bound"], 8); // four pieces, at most two questions each
+    assert_eq!(counts["requests"], 9);
+    assert_eq!(listener.connections(), 0);
+
+    assert_eq!(
+        stdout(&local(&listener, &options, Some("secret-value"), ADA)),
+        format!("{ADA_AND_ACME}\n")
+    );
+    assert_eq!(listener.requests().len(), 3);
 }
 
 #[test]

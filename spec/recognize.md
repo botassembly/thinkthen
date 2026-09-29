@@ -3,8 +3,9 @@
 `recognize` splits the text into pieces and asks where each piece stands in a name. White space separates pieces, and each punctuation mark or symbol is its own piece, so `Ada met Acme.` is four pieces. Its plan sends nothing. It reports the pieces, the step-one requests it would send with each digest, size in bytes, and body, and an upper bound on the name requests that follow.
 
 ```bash
-printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | sed -n '1p' | jq -c '{schema, pieces, request_count, name_requests_upper_bound, sent: (.requests | length)}' | mustmatch like '{"schema":"thinkthen.recognize-plan/2","pieces":4,"request_count":1,"name_requests_upper_bound":1,"sent":1}'
+printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | sed -n '1p' | jq -c '{schema, pieces, request_count, name_requests_upper_bound, sent: (.requests | length)}' | mustmatch like '{"schema":"thinkthen.recognize-plan/2","pieces":4,"request_count":1,"name_requests_upper_bound":4,"sent":1}'
 printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | sed -n '1p' | jq -c '.requests[0].body_utf8 | fromjson | {state, questions: (.questions | length)}' | mustmatch '{"state":"Ada met Acme.","questions":4}'
+printf 'Ada met Acme.' | env -u THINKTHEN_API_KEY thinkthen recognize --plan | sed -n '2p' | jq -c '{records, requests, upper_bound}' | mustmatch '{"records":1,"requests":5,"upper_bound":true}'
 ```
 
 Demo 44's recording holds one live run of this sentence. The replay needs no key or network, and caller kinds come back unchanged.

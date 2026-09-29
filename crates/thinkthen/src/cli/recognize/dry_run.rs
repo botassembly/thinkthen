@@ -117,9 +117,14 @@ fn planned(
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
-        // Each prepared step-one request can lead to one name-stage request.
-        // Its body depends on the first answer, so only its count is bounded.
-        let name_bound = prepared.len();
+        // Each found name asks at most one kind and one edge question. A
+        // profile may split stage two differently, but a request asks at
+        // least one question and there cannot be more names than pieces.
+        let questions_per_name = if spec.kinds.is_empty() { 1 } else { 2 };
+        let name_bound = pieces
+            .len()
+            .checked_mul(questions_per_name)
+            .ok_or(Failure::Defect("a plan is too large"))?;
         let mut requests = Vec::new();
         for chunk in prepared {
             summary
