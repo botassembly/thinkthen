@@ -13,6 +13,21 @@ function pubspecDependency(path, body) {
     /^dependencies:\n  thinkthen_dart:\n    path: \/[A-Za-z0-9_./-]+$/.test(body);
 }
 
+// Only a declaration/assignment head is changed. A Dart type may contain
+// nested generic brackets; the right hand expression remains byte-for-byte.
+function dartAssignment(line) {
+  const head = /^([ \t]*)(?:(late)[ \t]+)?(?:(final|const|var)[ \t]+)?([^=;]+?)[ \t]*=(?!=|>)/.exec(line);
+  if (!head) return line;
+  const tail = head[4].trim();
+  const variable = /([A-Za-z_]\w*)$/.exec(tail);
+  if (!variable) return line;
+  const type = tail.slice(0, -variable[0].length).trim();
+  if (type && (!/^[A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*(?:<[\w<>,?. \t]+>)?\??$/.test(type) ||
+      (type.match(/</g) || []).length !== (type.match(/>/g) || []).length)) return line;
+  const kind = head[3] === 'var' || (!head[2] && !head[3] && !type) ? 'let' : 'const';
+  return `${head[1]}${kind} ${variable[0]} ${line.slice(head[0].lastIndexOf('='))}`;
+}
+
 // The site rule owns the policy. Bridge only Dart's call/assignment spelling to
 // its supported TypeScript spelling; blank literals/comments before replacing
 // tokens, preserving newlines for the shared rule's line numbers. Interpolation
@@ -58,9 +73,10 @@ function dartForShared(source) {
     code += char; i += 1;
   }
   if (block) return { code, unsupported: line };
-  const calls = /\b[A-Za-z_]\w*[ \t]*\.[ \t]*(ask|decide|many|recognize|relate)[ \t]*\(/g;
-  code = code.replace(calls, (_, method) => `tt.${method === 'many' || method === 'ask' ? 'decide' : method}(`);
-  code = code.replace(/\bfinal\b/g, 'const');
+  const calls = /\b[A-Za-z_]\w*\s*\.\s*(ask|decide|many|recognize|relate)\s*\(/g;
+  code = code.replace(calls, (match, method) =>
+    `tt.${method === 'many' || method === 'ask' ? 'decide' : method}(${(match.match(/\n/g) || []).join('')}`);
+  code = code.split('\n').map(dartAssignment).join('\n');
   return { code, unsupported: interpolation };
 }
 
@@ -173,6 +189,14 @@ function selfTest() {
   const dartRows = [
     ['direct', 'print(door.ask(engine, {}));', 'direct'],
     ['generic', 'final result = door.ask(engine, {});', 'generic'],
+    ['typed generic', 'final Map<String, dynamic> result = door.ask(engine, {});', 'generic'],
+    ['nested typed generic', 'final Map<String, List<int>> result = door.ask(engine, {});', 'generic'],
+    ['typed declaration', 'Map<String, dynamic> answer = door.ask(engine, {});', 'generic'],
+    ['late typed generic', 'late final Map<String, dynamic> result = door.ask(engine, {});', 'generic'],
+    ['var generic', 'var result = door.ask(engine, {});', 'generic'],
+    ['typed named', 'final Map<String, dynamic> refundDecision = door.ask(engine, {});', null],
+    ['multiline generic', 'final result = door\n  .ask(engine, {});', 'generic'],
+    ['multiline direct', 'print(door\n  .ask(engine, {}));', 'direct'],
     ['typed direct', 'if (door.decide(engine, "Q?", "text")) {}', 'direct'],
     ['named', 'final refundDecision = door.ask(engine, {});\nprint(refundDecision);', null],
     ['string', 'final note = "final result = door.ask(engine, {})";', null],
