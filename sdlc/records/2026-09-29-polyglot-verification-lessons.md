@@ -1,5 +1,7 @@
 # Lessons from the polyglot verification program
 
+Fresh Medium read-only review accepted655e9592e against69fcdc819. Focused pages, tickets and diff checks pass. This records conventions and follow-ups; it closes no product issue.
+
 Source check: main e7a899e4a, with standards ownership claimed at69fcdc819. The independent experiment302 reports describe their sealed pins. Their final 14 PASS / 10 FAIL total is historical; the later JVM correction and reviewed Dart/R correction at61350a253 do not constitute a fresh 24-surface run. Privacy and canary successes in those reports remain evidence for their tested bytes.
 
 ## Adopted conventions and remaining work
