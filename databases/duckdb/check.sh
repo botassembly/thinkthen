@@ -69,7 +69,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	"$PY" cpp/verify_interrupt.py --extension "$THINKTHEN_DUCKDB_EXTENSION"
 	sh "$LIMIT" 900 "$PY" tools/conformance.py
 	sh "$LIMIT" 900 "$PY" tools/find_suite.py original_duplicate_and_ties null_empty_and_invalid_units_do_not_send held_find_and_spent_statement_budget
-	sh "$LIMIT" 900 "$PY" tools/verbs_suite.py b13c_try_details_members b13c_try_details_prepared b13c_try_details_blank_context_keeps_good_siblings b13c_try_details_whole_request_failure b13c_context_and_batch_one_wire_identity b13c_warm_first_seen_context b13c_packed_total_admits_one_attempt b13c_try_details_total_one_preserves_answered_rows b13c_try_details_total_zero_sends_nothing b13c_try_details_split_denials b13c_try_details_denied_retry_keeps_later_answer
+	sh "$LIMIT" 900 "$PY" tools/verbs_suite.py b13c_try_details_members b13c_try_details_prepared b13c_try_details_blank_context_keeps_good_siblings b13c_try_details_whole_request_failure b13c_context_and_batch_one_wire_identity b13c_warm_first_seen_context b13c_packed_total_admits_one_attempt b13c_try_details_total_one_preserves_answered_rows b13c_try_details_total_zero_sends_nothing b13c_try_details_split_denials b13c_try_details_denied_retry_keeps_later_answer portable_batch_identity
 	sh "$LIMIT" 900 "$PY" tools/settings_suite.py b13c_warm_zero_budget the_process_request_total_holds_across_calls
 	echo "check: databases/duckdb passes, installed"
 	exit 0

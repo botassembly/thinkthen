@@ -18,6 +18,7 @@ from conditional_backend import ConditionalBackend
 from harness import Backend, case, expect, main, rows, run, said
 from verbs_budget import PACKED_PAIR_BODIES, PackedReplies
 from verbs_complete import complete_question_files_keep_identity, complete_question_refusals_and_nulls, complete_question_rechecks_prepared_authority
+from verbs_portable import portable_batch_identity
 
 REFUND = "Does the writer ask for a refund?"
 SHUFFLED = "(VALUES (1, 'good morning'), (2, NULL), (3, 'refund now'), (4, 'good morning'), (5, NULL), (6, 'refund now')) t(i, x)"
@@ -25,6 +26,7 @@ SHUFFLED = "(VALUES (1, 'good morning'), (2, NULL), (3, 'refund now'), (4, 'good
 case(complete_question_files_keep_identity)
 case(complete_question_refusals_and_nulls)
 case(complete_question_rechecks_prepared_authority)
+case(portable_batch_identity)
 
 
 def column(result: dict) -> list:
