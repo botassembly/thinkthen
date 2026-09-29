@@ -49,7 +49,7 @@ fn string(bytes: &mut Vec<u8>, value: &str) -> Result<(), String> {
     Ok(())
 }
 
-fn run(
+pub(super) fn run(
     engine: &Engine,
     question: &Question,
     texts: Vec<String>,

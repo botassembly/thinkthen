@@ -389,7 +389,7 @@ BINDING_PLANT_BASE = "libraries/rust"
 # A binding's deny.toml is the root file plus its named entries, each reason
 # aside. A binding holds a deny.toml only where this table names it.
 BINDING_DENY = {
-    "databases/duckdb": [("licenses", "exceptions", [{"crate": "zlib-rs", "allow": ["Zlib"]}])],
+    "databases/duckdb": [],
     # pyo3's build helper needs target-lexicon. Ian approved it on 2026-09-25 (ticket 0105).
     "libraries/python": [("licenses", "exceptions", [
         {"crate": "target-lexicon", "allow": ["Apache-2.0 WITH LLVM-exception"]}])],
@@ -770,6 +770,9 @@ def check_bindings() -> None:
         other = {**deny, "bans": {**deny.get("bans", {}), "wildcards": "allow"}}
         seconds = [{**deny, section: {**deny.get(section, {}), key: [*deny.get(section, {}).get(key, []), "planted"]}}
                    for section, key, _ in tables]
+        if name == "databases/duckdb":
+            exceptions = [*deny["licenses"]["exceptions"], {"crate": "zlib-rs", "allow": ["Zlib"]}]
+            seconds.append({**deny, "licenses": {**deny["licenses"], "exceptions": exceptions}})
         if not all(deny_failures(name, planted) for planted in [other, *seconds]):
             fail("binding", f"{name}/deny.toml with a planted extra entry or another difference is refused")
     for name, (filename, values) in NONCARGO_MANIFESTS.items():

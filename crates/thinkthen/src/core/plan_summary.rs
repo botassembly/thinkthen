@@ -22,6 +22,15 @@ pub(crate) struct PlanSummary {
 }
 
 impl PlanSummary {
+    /// Version-one measured high rate, shared by preview and per-attempt admission.
+    /// Callers choose whether to round a whole planned sum or each final body.
+    pub(crate) fn estimated_input_high(bytes: u64) -> Option<u64> {
+        bytes
+            .checked_mul(908)?
+            .checked_add(999)
+            .map(|scaled| scaled / 1000)
+    }
+
     pub(crate) const fn records(&self) -> usize {
         self.records
     }
@@ -76,12 +85,11 @@ impl PlanSummary {
     /// Conservative whole-token band at the measured 0.516/0.908 rates.
     pub(crate) fn estimated_input_tokens(&self) -> Result<(usize, usize), PlanTooLarge> {
         let lower = self.estimated_bytes.checked_mul(516).ok_or(PlanTooLarge)? / 1000;
-        let upper = self
-            .estimated_bytes
-            .checked_mul(908)
-            .and_then(|number| number.checked_add(999))
-            .ok_or(PlanTooLarge)?
-            / 1000;
+        let upper = u64::try_from(self.estimated_bytes)
+            .ok()
+            .and_then(Self::estimated_input_high)
+            .and_then(|value| usize::try_from(value).ok())
+            .ok_or(PlanTooLarge)?;
         Ok((lower, upper))
     }
 

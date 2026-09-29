@@ -43,7 +43,7 @@ pub(crate) struct Cancel<'a> {
     sends: Arc<AtomicUsize>,
     sent_any: Arc<AtomicBool>,
     send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
-    process_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    process_budget: Option<crate::engine::send_budget::ProcessBudget>,
     facts: Option<CallFacts>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,

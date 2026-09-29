@@ -1,0 +1,34 @@
+# Python and R dispatch preparation
+
+Status: coordinator source inspection at main `1e493eee8`. These notes refine accepted preparation tickets 0287 and 0288; they are not implementation, fresh independent review, new prepared-ticket counts or a package pass. Import each individual ticket from preserved preparation commit `8bf14799` when its lane is claimed. The original verification at `680b67ba` remains historical evidence.
+
+## R: separate the engine lifetime from call options
+
+The shutdown feedback correctly identifies the engine replacement refusal, but per-call controls already exist. `libraries/r/thinkthen/R/thinkthen.R::tt_decide`, `tt_choose`, `tt_score` and `tt_tag` accept `batch` and `context`. The native `ffi.rs::tt_decide_column` passes both to `calls.rs::decide`, which applies `CallOptions::batch` and `context` before calling the engine. `tests/facts.R` already runs a default-Max call and later explicit batch-one calls in the same session, with exact request counts and captured bodies. Retain this proof instead of adding another API for an existing route.
+
+`lib.rs::choose_engine` separately compares the process-held engine settings and refuses replacement. Ticket 0288 must retain that ownership rule while completing the shared settings parser, uniform keywords, millisecond deadline, probability carrier and active process cap. `calls/worker.rs::due` currently converts seconds once before work; changing the public unit must preserve one deadline across every internal call and the existing completion receipt. `ffi.rs::deadline_of`, `calls/worker.rs`, `ffi/values.rs`, `calls/render.rs`, the generated extendr wrapper and `tests/facts.R` belong in the refreshed claim, alongside the ticket's broad file families. Check the real declaration generator before editing generated output.
+
+Use the existing facts witness for a bounded same-session explicit Max versus batch-one comparison if current assertions leave any ambiguity. Preserve input NA positions, copied facts and completion receipts. Unknown caught keyword names are Usage; pin the accepted rename sentence for `deadline`. Do not close the entire package issue from this slice. Judge-based `tt_plan` stays in 0297.
+
+## Python: retain every original failure criterion
+
+The detailed experiment302 `16-python/REPORT.md` records seven failed pytest cases, not seven copies of one signature problem. The short preparation summary omitted independent causes. Reconfirm each on current source; classify it before replacing any expectation.
+
+| Original finding | Current source observation and next proof |
+| --- | --- |
+| Private annotate signature | `tests/test_arrow_safety.py` still calls `_annotate_frame` with six arguments; `src/frame.rs` and the public `Engine.annotate` pass seven including token. The native route also returns the owned Call carrier. Repair the low-level ownership fixture to supply the accepted controls and inspect the carrier's value; retain the moved-child and release-pointer assertions. Do not regress the public Call contract to satisfy the old fixture. |
+| Slide frame schema | `tests/test_door.py` still expects four columns. The accepted frame contract adds `failed`. Verify actual typed question columns, the failure column and values; a wider expected column list alone does not prove the backend answered correctly. Original evidence reported failed answers as well as schema drift. |
+| pandas Index | The original report observed an uncaught AttributeError. Current `Engine.decide_many` dispatch differs from that pin and must be exercised before classifying it. Preserve the intended supported-input boundary; a rejected Index must fail safely before a send. |
+| Request cap count | Original shared settings case expected two arrivals but saw one after maximal packing. Retain exact body/count oracles; use explicit batch one only for the intended per-record cap witness and separately prove default packing. The new process total is a distinct cap with its own lifetime. |
+| Held throttle | `tests/test_column_timing.py::test_a_column_holds_the_throttle_in_flight` still expects eight arrivals from an implicitly packed 20-row call. Replace that assumption with a few independently specified groups and held responses. Keep exact admission/count behavior; no scale or narrow latency requirement. |
+| Pydantic on Python beta | The report's preferred host was 3.14.0b4 with Pydantic 2.12.5. Its internal typing API differed from 3.14 final. `check.sh` currently selects the first executable at least3.12 and does not exclude prereleases; its cached venv identity includes checkout/pins but not the selected interpreter. Record interpreter identity for both the chosen host and reused venv. Use a compatible stable cached host when available; a missing offline pin is not a product pass or a reason to weaken the optional-extra tests. |
+
+`test_arrow_safety.py::test_refused_inputs_release_their_batches` also still loops over200 large allocations with an RSS bound and has no stress marker at this source. This is outside Ian's routine functional gate. Move that campaign to the existing explicit stress selection, keeping a small release-ownership functional proof. Do not delete the historical evidence or run the campaign while repairing the signature. Check that the stress selector actually includes the relocated case; a marker alone is insufficient when the runner names an explicit file list.
+
+## Build order and proof boundaries
+
+0283 and0289 have landed. A free host lane can build0287, then the joint0292/0293 Python Judge/Stream batch, then0294–0296 as their accepted dependencies permit. Another free host lane can build0288, then0297. Current SQL builders keep their source claims until landing. Pricing0300 owns shared core/CLI/C only; Python and R facts aggregation remains a later explicitly claimed stage. Their host builders must not copy pricing arithmetic or claim absent priced support.
+
+Use the existing installed R `tests/with-backend.sh` with explicit parent environment and source-matched library path. For Python use the current pinned environment, selected pytest cases and type fixture before a package checkpoint. Parent and child need minimal environments, synthetic keys, owned loopback and scratch HOME/cache/config. Derive actual export inventories from an independent contract; retain exact values, failure kinds, migration sentences and send counts. No provider, repeated stress, all-port gate or release claim follows from this preparation.
+
+Before each handback map all changed signatures through public wrapper, stub, native declaration, generated declaration and direct low-level ownership tests. Record replaced tests, the source and installed receipts, and the unresolved original issue criteria. The next review evaluates whether these notes reduced rediscovery; it must not infer effectiveness from their length.

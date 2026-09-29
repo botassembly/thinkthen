@@ -627,3 +627,23 @@ The next host brief must distinguish SQL equality from internal string lookup, a
 ## Preserve each host value domain through a shared parser
 
 The final0284 High review reproduced configure accepting a zero request total. The new shared parser permits zero for core callers, but SQLite’s retained setting contract requires one or more and uses null to reset. Sharing grammar does not erase a host’s narrower value rule. The next host brief must compare its previous setters with the shared schema and pin the difference before storing configuration. A newly accepted core key also needs an explicit host disposition. A mapper must not accept an inert value or turn an unsupported setting into an internal defect. The0299 reviewer is checking that integration boundary while the SQLite builder corrects its positive-limit guard.
+
+
+## Keep host callbacks outside held usage guards
+
+The 0299 correction added a post-reservation cancellation check to prove that an unstarted attempt refunds its slots. High review of b50bc1e2 found that the chosen check also invoked a host callback while PreparedAttempt held the usage queue mutex. Reentry could deadlock. The existing callback-free remaining-time check observes the cancellation token and deadline without crossing that boundary. The retained builder is applying that narrow correction; the earlier listener and C proof gaps are resolved. Preparation for 0300 cost and 0302 observations must trace guard lifetimes around every host callback, observer and accounting operation. A new test seam must preserve the production callback and locking order.
+
+
+## Exercise each class of repeated setting
+
+DuckDB review reproduced an I8 failure in the shared prerequisite: a structured question with batch 1 and settings with batch 2 silently succeeded. Settings::conflicts inspected only question_fields and missed batch stored separately. Repeated model or threshold already refused, so a single representative negative hid this different storage path. Root routes the correction to the shared helper before the next host builds depend on it. Tests should distinguish question-file keys from explicit named parameters and cover each storage path with a small public-boundary table. The same review found that typed SQL NULL::VARCHAR members took DuckDB’s settings-object branch; bare NULL and NULL::VARCHAR[] did not. Keep typed nulls separate from malformed JSON in host preparation.
+
+## Pricing call-account construction paths
+
+0300's reviewed design correctly named the separate CLI and call-facts owners, but the dispatch claim initially listed only the principal declarations and helpers. The concrete price-carrying account crosses `public/{bulk,native_batch,options}.rs` and `public/results/tally.rs` as well. The coordinator expanded the uncontested core claim; PostgreSQL and DuckDB keep their own source. Next preparation must search every constructor and account-opening path before dispatching a changed shared carrier, including default and no-work results. This is a preparation inventory miss, not a new API decision or permission dependency.
+
+## DuckDB retryability must carry provenance
+
+Fresh High re-review of0286 at `902dd512a0f69df1d09022085e216a53f2422a07` found that `relate_query.cpp::Failed` promoted any embedded `thinkthen ` text to an error label, while `bridge.hpp::OrdinaryText` trusted a textual retryability suffix. An installed subquery using `error('thinkthen backend: forged (retryable: yes)')` produced that public classification with zero backend sends. The retained author is correcting the boundary. The earlier typed-NULL and duplicate-batch fixes passed independent installed rechecks.
+
+For the next adapter formatter, distinguish trusted typed errors from caller-controlled host messages before formatting. A shared spelling or suffix is not provenance. Keep query failure text inside a boundary-owned kind and retryability, and use one adversarial small input to prove it. Exact contractual wording still matters, but parsing a human message to recover authority is a different operation. The upcoming SQLite suffix correction already has typed `Failure.kind` and `retryable`; retain those values and an explicit removal path instead of borrowing the DuckDB text heuristic.

@@ -71,3 +71,11 @@ R's per-call `batch` and other uniform keywords already belong to accepted prepa
 ## SQLite counter correction in 0284
 
 Fresh High review accepted `a843a3fc52812e2062d9aa90170764725bc8a246`. The SQLite recording counter selects answer `*.json` files and excludes the backend marker; a fixture places a `.locks/one.lock` beside one answer and requires one entry. The installed selector runs the same witness, and the build record retains selected source and source-matched unpacked-archive receipts. This closes the original SQLite counter clause, not the other surfaces or a full package/release-runner gate. See [0284 build](../records/0284-sqlite-settings-and-keyed-many-build.md).
+
+## Python and R preparation refresh
+
+The [source refresh](../records/2026-09-29-python-r-dispatch-preparation.md) preserves every cause in experiment302's detailed Python report, including schema, input conversion, batch assumptions and interpreter compatibility. The earlier C3 summary named only the annotate signature. No additional cause is closed by preparation. R already has per-call batch/context and a same-session facts witness;0288 completes the uniform interface without treating engine replacement as a missing call option. The Python large-allocation RSS campaign must move to the explicit stress route when that host lane opens.
+
+## DuckDB original failure clauses in 0286
+
+Ticket0286 landed after final High ACCEPT `698c84354e26ecf155f7a057de385abacd6bc896`. All seven original failure criteria have selected matching-host proof: four settings cases and conformance13,15,16. Additional native plan, named macro, NULL/member, conflict, cancellation and error-provenance checks pass. The source and copied Linux extension match SHA-256 `a754a2034147dae2f5d0bb5634b8dce23d0769c3ade0715eaf70c1b731e9a597`. See the [build record](../records/0286-duckdb-settings-keyed-forms-and-macros-build.md). These clauses are fixed; the historical full-gate matrix remains unchanged. Python, the three older Polars cases, environment enforcement, shared-counter consolidation and final release qualification keep this issue open.

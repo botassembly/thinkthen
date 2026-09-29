@@ -91,7 +91,7 @@ class Backend:
         self.close()
 
 
-def child_env(base: str, folder: Path, extra: dict[str, str] | None = None) -> dict[str, str]:
+def child_env(base: str, folder: Path, extra: dict[str, str] | None = None, *, keyless: bool = False) -> dict[str, str]:
     """A child's whole environment: loopback only, fresh XDG folders."""
     folder.mkdir(parents=True, exist_ok=True)
     for name in ("cache", "config", "home"):
@@ -104,6 +104,8 @@ def child_env(base: str, folder: Path, extra: dict[str, str] | None = None) -> d
         "THINKTHEN_BASE_URL": base,
         **(extra or {}),
     })
+    if keyless:
+        env.pop("THINKTHEN_API_KEY")
     guard(env)
     return env
 
@@ -150,13 +152,14 @@ def run(
     extension: Path = EXTENSION,
     timeout: float = 60,
     wrap: list[str] | None = None,
+    keyless: bool = False,
 ) -> list[dict]:
     """Run statements in one fresh child and return one result per statement.
     A statement given as `[NAME, SQL]` runs on database NAME, a separate
     in-memory database in the same process; a plain one runs on `A`.
     `wrap` runs the child under a tracer such as `strace`."""
     with tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
-        env = child_env(base, Path(folder), extra)
+        env = child_env(base, Path(folder), extra, keyless=keyless)
         done = subprocess.run(
             [*(wrap or []), sys.executable, "-c", CHILD, str(extension), json.dumps(statements)],
             env=env,

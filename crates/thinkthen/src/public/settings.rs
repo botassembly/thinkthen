@@ -1,5 +1,7 @@
 //! The engine builder, and the environment read it captures once.
 
+mod budgets;
+
 use std::fmt;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -62,6 +64,7 @@ pub struct EngineBuilder {
     width: Option<Width>,
     max_requests: Option<usize>,
     max_requests_total: Option<u64>,
+    max_estimated_input_tokens_total: Option<u64>,
     max_request_bytes: usize,
     batch: Option<crate::core::Setting>,
     env_batch: Option<String>,
@@ -85,6 +88,10 @@ impl fmt::Debug for EngineBuilder {
             .field("width", &self.width)
             .field("max_requests", &self.max_requests)
             .field("max_requests_total", &self.max_requests_total)
+            .field(
+                "max_estimated_input_tokens_total",
+                &self.max_estimated_input_tokens_total,
+            )
             .field("max_request_bytes", &self.max_request_bytes)
             .field("batch", &self.batch)
             .field("env_batch", &self.env_batch.is_some())
@@ -119,6 +126,7 @@ impl EngineBuilder {
             width: None,
             max_requests: None,
             max_requests_total: None,
+            max_estimated_input_tokens_total: None,
             max_request_bytes: Backend::DEFAULT_REQUEST_SIZE,
             batch: None,
             env_batch: None,
@@ -268,15 +276,6 @@ impl EngineBuilder {
         }
         self.max_requests = value;
         Ok(self)
-    }
-
-    /// Limit this engine's live attempts against the shared process count.
-    /// `None` leaves this engine unbounded while its sends still count for
-    /// other engines. Zero refuses every live attempt.
-    #[must_use]
-    pub fn max_requests_total(mut self, value: Option<u64>) -> Self {
-        self.max_requests_total = value;
-        self
     }
 
     /// Set the request-byte ceiling for split plans. A lone question still goes alone.
@@ -455,7 +454,10 @@ impl EngineBuilder {
         super::Engine::from_settings(
             settings,
             self.max_requests,
-            self.max_requests_total,
+            (
+                self.max_requests_total,
+                self.max_estimated_input_tokens_total,
+            ),
             profile,
             roots,
             batch,

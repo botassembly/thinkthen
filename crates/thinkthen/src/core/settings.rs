@@ -96,6 +96,7 @@ impl For {
 /// Validated portable settings for one call.
 pub struct Settings {
     question_fields: Vec<(String, Json)>,
+    source_keys: Vec<String>,
     pub(crate) context: Option<String>,
     pub(crate) batch: Option<Setting>,
     /// `-1` means none and `0` is already spent.
@@ -134,6 +135,7 @@ impl Settings {
         let mut result = Self::default();
         let mut member_key = None;
         for (key, value) in fields {
+            result.source_keys.push(key.clone());
             match key.as_str() {
                 "threshold" | "true" | "false" | "options" | "levels" | "labels" | "model" => {
                     result.question_key(key, value, &mut member_key)?;
@@ -228,7 +230,7 @@ impl Settings {
         explicit_keys: &[&str],
         explicit_members: bool,
     ) -> Result<(), SettingsError> {
-        for (key, _) in &self.question_fields {
+        for key in &self.source_keys {
             if explicit_keys.contains(&key.as_str()) {
                 return Err(SettingsError::RepeatedField(key.clone()));
             }
@@ -337,7 +339,9 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
             "timeout" => number().is_some(),
             "max_retries" => number().is_some_and(|count| u32::try_from(count).is_ok()),
             "batch" => Setting::of_json(&value).is_some(),
-            "max_requests_total" => matches!(value, Json::Null) || number().is_some(),
+            "max_requests_total" | "max_estimated_input_tokens_total" => {
+                matches!(value, Json::Null) || number().is_some()
+            }
             _ => return Err(format!("settings JSON has unknown key {}", safe_key(&key))),
         };
         if !valid {

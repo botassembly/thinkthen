@@ -110,6 +110,8 @@ The second output line counts the entire validated input. `requests` counts prep
 {"records":1,"requests":1,"estimated_bytes":120,"estimated_input_tokens":{"lower":61,"upper":109},"upper_bound":false}
 ```
 
+The preview band rounds the sum of prepared bytes; live estimated-input admission rounds each actual attempt separately after cache, retry and split decisions. A plan sends nothing and does not reserve that admission total.
+
 The plan carries the evidence, because the evidence is what leaves the machine. A plan deserves the same care as the request itself. The plan never holds a key.
 
 In record mode `--plan` validates every record before printing. The first line discloses the first prepared request; the second counts the whole input. The first line carries a fifth field, `input`, naming the framing and pointers. When `filter` or `rank` took its framing by default, `input` also carries `"from":"default"`. Batched verbs use the same content, member and byte cuts as execution, without a pause boundary.

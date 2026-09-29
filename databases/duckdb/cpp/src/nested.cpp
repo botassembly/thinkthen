@@ -4,6 +4,7 @@
 #include "nested_result.hpp"
 #include "scalar_owner.hpp"
 #include "scalar_settings.hpp"
+#include "portable.hpp"
 #include "duckdb/common/weak_ptr_ipp.hpp"
 #include "duckdb/execution/expression_executor.hpp"
 #include "duckdb/main/extension/extension_loader.hpp"
@@ -51,7 +52,7 @@ struct NestedBind : FunctionData {
 unique_ptr<FunctionData> BindNested(ClientContext &context, ScalarFunction &function,
                                      vector<unique_ptr<Expression>> &arguments) {
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
-	const auto kind = function.name == "thinkthen_recognize" ? 8 : 9;
+	const auto kind = function.name == "thinkthen_native_recognize" ? 8 : 9;
 	auto bound = make_uniq<NestedBind>(context.shared_from_this(), kind);
 	if (arguments[1]->IsFoldable()) {
 		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[1]);
@@ -66,22 +67,13 @@ unique_ptr<FunctionData> BindNested(ClientContext &context, ScalarFunction &func
 			}
 		}
 	}
-	if (kind == 9 && arguments.size() == 3 && arguments[2]->IsFoldable()) {
-		auto value = ExpressionExecutor::EvaluateScalar(context, *arguments[2]);
-		if (!value.IsNull()) {
-			const auto due = value.GetValue<int64_t>();
-			if (due < -1 || due > 4294967295000LL) {
-				throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
-			}
-		}
-	}
 	return bound;
 }
 
 struct Group {
 	ResolvedQuestion argument;
 	vector<string> members;
-	int64_t deadline;
+	string settings;
 	vector<string> texts;
 	std::map<string, idx_t> seen;
 };
@@ -90,21 +82,26 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 	auto &bound = state.expr.Cast<BoundFunctionExpression>().bind_info->Cast<NestedBind>();
 	auto context = bound.context.lock();
 	if (!context) {
-		throw InvalidInputException("thinkthen defect: the caller session ended");
+		throw OrdinaryError("thinkthen defect: the caller session ended");
 	}
 	auto owner = context->registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	vector<Group> groups;
-	std::map<std::tuple<string, vector<string>, int64_t>, idx_t> known;
+	std::map<std::tuple<string, vector<string>, string>, idx_t> known;
 	std::set<std::pair<string, vector<string>>> validated;
 	std::map<string, ResolvedQuestion> resolved;
 	vector<std::optional<std::pair<idx_t, idx_t>>> slots(args.size());
 	for (idx_t row = 0; row < args.size(); ++row) {
 		auto evidence = args.data[0].GetValue(row);
 		auto argument = args.data[1].GetValue(row);
-		if (evidence.IsNull() || argument.IsNull() ||
-		    (args.ColumnCount() == 3 && args.data[2].GetValue(row).IsNull())) {
+		if (evidence.IsNull() || argument.IsNull()) {
 			continue;
 		}
+		const auto type = args.data[3].GetValue(row).GetValue<string>();
+		if (type != "\"NULL\"" && type != "VARCHAR") {
+			throw InvalidInputException("thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'");
+		}
+		const auto setting = args.data[2].GetValue(row);
+		const auto call = setting.IsNull() ? string("{}") : setting.GetValue<string>();
 		auto members = bound.kind == 8 ? Members(argument) : std::optional<vector<string>>(vector<string>());
 		if (!members) {
 			continue;
@@ -115,13 +112,19 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 			ValidateNested(bound.kind, named, *members);
 			resolved.emplace(raw, std::move(named));
 		}
-		const auto due = args.ColumnCount() == 3 ? args.data[2].GetValue(row).GetValue<int64_t>() : -1;
-		if (due < -1 || due > 4294967295000LL) {
-			throw InvalidInputException("thinkthen usage: the deadline is outside the supported range");
-		}
-		auto [place, fresh] = known.emplace(std::make_tuple(raw, *members, due), groups.size());
+		auto [place, fresh] = known.emplace(std::make_tuple(raw, *members, call), groups.size());
 		if (fresh) {
-			groups.push_back({resolved.at(raw), *members, due, {}, {}});
+			Group group {resolved.at(raw), *members, call, {}, {}};
+			vector<ThinkThenText> views;
+			for (auto &member : group.members) {
+				views.push_back({reinterpret_cast<const uint8_t *>(member.data()), member.size()});
+			}
+			RustReply checked(thinkthen_cpp_validate_portable_nested(
+			    reinterpret_cast<const uint8_t *>(group.argument.text.data()), group.argument.text.size(),
+			    group.argument.from_file ? 1 : 0, views.data(), views.size(),
+			    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), bound.kind));
+			Checked(checked.value);
+			groups.push_back(std::move(group));
 		}
 		auto &group = groups[place->second];
 		auto [position, first] = group.seen.emplace(evidence.GetValue<string>(), group.texts.size());
@@ -134,7 +137,6 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 	const auto settings = Settings(*context);
 	for (auto &group : groups) {
 		const auto budget = owner->Remaining(*context);
-		const auto due = budget < 0 ? group.deadline : group.deadline < 0 ? budget : std::min(group.deadline, budget);
 		vector<ThinkThenText> members, texts;
 		for (auto &member : group.members) {
 			members.push_back({reinterpret_cast<const uint8_t *>(member.data()), member.size()});
@@ -142,10 +144,11 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 		for (auto &text : group.texts) {
 			texts.push_back({reinterpret_cast<const uint8_t *>(text.data()), text.size()});
 		}
-		RustReply reply(thinkthen_cpp_nested_group(reinterpret_cast<const uint8_t *>(group.argument.text.data()),
-		                                           group.argument.text.size(), members.data(), members.size(), texts.data(),
-		                                           texts.size(), due, bound.kind, settings.Bridge(),
-		                                           group.argument.from_file ? 1 : 0, StopFor(*context)));
+		RustReply reply(thinkthen_cpp_portable_nested_group(reinterpret_cast<const uint8_t *>(group.argument.text.data()),
+		                                           group.argument.text.size(), group.argument.from_file ? 1 : 0,
+		                                           members.data(), members.size(), texts.data(), texts.size(),
+		                                           reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
+		                                           bound.kind, budget, settings.Bridge(), StopFor(*context)));
 		Checked(reply.value);
 		answered.push_back(DecodeNested(reply.value.bytes, reply.value.len, texts.size(), bound.kind));
 	}
@@ -162,17 +165,24 @@ void Nested(DataChunk &args, ExpressionState &state, Vector &result) {
 } // namespace
 
 void RegisterNested(ExtensionLoader &loader) {
-	ScalarFunction recognize("thinkthen_recognize",
-	                         {LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR)},
+	ScalarFunction recognize("thinkthen_native_recognize",
+	                         {LogicalType::VARCHAR, LogicalType::LIST(LogicalType::VARCHAR),
+	                          LogicalType::VARCHAR, LogicalType::VARCHAR},
 	                         NestedType(8), Nested, BindNested);
+	recognize.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
 	recognize.SetStability(FunctionStability::VOLATILE);
 	loader.RegisterFunction(recognize);
-	for (auto parameters : {vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR},
-	                        vector<LogicalType>{LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::BIGINT}}) {
-		ScalarFunction function("thinkthen_relations", parameters, NestedType(9), Nested, BindNested);
-		function.SetStability(FunctionStability::VOLATILE);
-		loader.RegisterFunction(function);
-	}
+	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_recognize(input, kinds, settings := NULL) AS "
+	                              "thinkthen_native_recognize(input, kinds, CAST(settings AS VARCHAR), typeof(settings))");
+	ScalarFunction relations("thinkthen_native_relations",
+	                         {LogicalType::VARCHAR, LogicalType::VARCHAR,
+	                          LogicalType::VARCHAR, LogicalType::VARCHAR},
+	                         NestedType(9), Nested, BindNested);
+	relations.null_handling = FunctionNullHandling::SPECIAL_HANDLING;
+	relations.SetStability(FunctionStability::VOLATILE);
+	loader.RegisterFunction(relations);
+	RegisterPortableMacro(loader, "CREATE MACRO thinkthen_relations(input, spec, settings := NULL) AS "
+	                              "thinkthen_native_relations(input, spec, CAST(settings AS VARCHAR), typeof(settings))");
 }
 
 } // namespace duckdb

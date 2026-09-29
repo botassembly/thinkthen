@@ -1,8 +1,6 @@
-# The DuckDB surface (tickets 0110 and 0118, ADR 0047). It is its own
-# workspace with its own lock, and it reaches `thinkthen` only through the
-# public API. `sdlc/scripts/policy.py` holds every table below to the root
-# copies. The C API comes from `libduckdb-sys` alone: every call goes through
-# the raw C API, so the `duckdb` wrapper crate and its arrow tree stay out.
+# Retired C API workspace metadata. The shipped extension is cpp/ with the
+# bridge/ static library; this unpublished crate exports no DuckDB entry.
+# The independent binding policy still checks this manifest and its lock.
 [workspace]
 
 [package]
@@ -15,20 +13,11 @@ license = "MIT"
 publish = false
 
 [lib]
-name = "thinkthen_duckdb"
-crate-type = ["cdylib"]
-
-[features]
-default = []
-# Every test-only door: the R7-7 raise in the SIGINT install window and the
-# R1-10 panic trigger. `check.sh` refuses a shipped build that carries any.
-test-hooks = []
+name = "thinkthen_duckdb_retired"
+crate-type = ["rlib"]
 
 [dependencies]
 thinkthen = { path = "../../crates/thinkthen", default-features = false }
-libduckdb-sys = { version = "=1.10505.0", default-features = false, features = ["loadable-extension"] }
-libc = "0.2.189"
-serde_json = "1.0.151"
 
 [profile.release]
 overflow-checks = true

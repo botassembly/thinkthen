@@ -1,10 +1,8 @@
 //! One complete ordered find set, copied before its worker can detach.
 
-use thinkthen::{Evidence, Question};
+use thinkthen::{Evidence, For, Question, Settings};
 
-use super::{
-    BridgeSettings, BridgeStop, BridgeText, asked, copied_texts, probe, run_detached, text,
-};
+use super::{BridgeSettings, BridgeStop, asked, probe, run_detached};
 use crate::engines;
 
 const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
@@ -74,64 +72,91 @@ fn frame(found: &thinkthen::Found<Indexed>) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
-fn prepared(
-    question_bytes: *const u8,
-    question_len: usize,
-    units: *const BridgeText,
-    count: usize,
-    none: i32,
-) -> Result<(Question, Vec<Indexed>), String> {
-    if none != 0 && none != 1 {
-        return Err("thinkthen defect: find got another none flag".to_owned());
-    }
-    let question = text(question_bytes, question_len)?;
-    let units = validated(copied_texts(units, count)?, none != 0)?;
+struct PreparedFind {
+    question: Question,
+    units: Vec<Indexed>,
+    call: Settings,
+    model: Option<String>,
+}
+
+fn portable(question: &str, units: Vec<String>, settings: &str) -> Result<PreparedFind, String> {
+    let call = Settings::parse(settings)
+        .and_then(|value| {
+            value.check(For::Find)?;
+            Ok(value)
+        })
+        .map_err(|error| crate::errors::RowError::usage(&error.to_string()).text)?;
+    // The shared parser has already rejected duplicate/unknown members. This
+    // read only extracts the validated model for the existing engine builder.
+    let model = serde_json::from_str::<serde_json::Value>(settings)
+        .ok()
+        .and_then(|value| value.get("model")?.as_str().map(str::to_owned));
+    let none = call.none().unwrap_or(false);
+    let units = validated(units, none)?;
     let question = Question::find(question)
-        .and_then(|question| {
-            if none == 0 {
-                Ok(question)
+        .and_then(|value| {
+            if none {
+                value.offering_none()
             } else {
-                question.offering_none()
+                Ok(value)
             }
         })
         .map_err(|error| crate::errors::RowError::from(error).text)?;
-    Ok((question, units))
+    Ok(PreparedFind {
+        question,
+        units,
+        call,
+        model,
+    })
 }
 
-pub(super) fn validate(
-    question_bytes: *const u8,
-    question_len: usize,
-    units: *const BridgeText,
-    count: usize,
-    none: i32,
+pub(super) fn validate_portable(
+    question: &str,
+    units: Vec<String>,
+    settings: &str,
 ) -> Result<Vec<u8>, String> {
-    prepared(question_bytes, question_len, units, count, none).map(|_| Vec::new())
+    portable(question, units, settings).map(|_| Vec::new())
 }
 
-pub(super) struct Input {
-    pub(super) question: *const u8,
-    pub(super) question_len: usize,
-    pub(super) units: *const BridgeText,
-    pub(super) count: usize,
-    pub(super) none: i32,
-    pub(super) deadline_ms: i64,
-    pub(super) settings: BridgeSettings,
-    pub(super) stop: BridgeStop,
-}
-
-pub(super) fn run(input: Input) -> Result<Vec<u8>, String> {
-    let (question, units) = prepared(
-        input.question,
-        input.question_len,
-        input.units,
-        input.count,
-        input.none,
-    )?;
-    let asked = asked(&input.settings)?;
-    let engine = engines::engine_for(&asked, |path| probe(&input.settings, path))?;
+pub(super) fn run_portable(
+    question: &str,
+    units: Vec<String>,
+    settings: &str,
+    query_deadline_ms: i64,
+    session: BridgeSettings,
+    stop: BridgeStop,
+) -> Result<Vec<u8>, String> {
+    let PreparedFind {
+        question,
+        units,
+        call,
+        model,
+    } = portable(question, units, settings)?;
+    let mut asked = asked(&session)?;
+    if let Some(model) = model {
+        asked.model = Some(model);
+    }
+    let engine = engines::engine_for(&asked, |path| probe(&session, path))?;
     let total = asked.max_requests_total;
-    run_detached(input.stop, move |token| {
-        let options = engines::options(input.deadline_ms, &token, total)?;
+    let deadline_ms = match call.deadline_ms() {
+        None | Some(-1) => query_deadline_ms,
+        Some(value) if query_deadline_ms < 0 => value,
+        Some(value) => query_deadline_ms.min(value),
+    };
+    let context = call.context().map(str::to_owned);
+    let batch = if call.batch_max() {
+        Some("max".to_owned())
+    } else {
+        call.batch_records().map(|value| value.to_string())
+    };
+    run_detached(stop, move |token| {
+        let options = engines::options_for(
+            deadline_ms,
+            &token,
+            total,
+            batch.as_deref(),
+            context.as_deref(),
+        )?;
         let found = engine
             .find_with(&question, units, options)
             .map_err(|error| engines::call_error(error, total).text)?;
