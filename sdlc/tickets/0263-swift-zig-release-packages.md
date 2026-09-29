@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md 
 
 # 0263: Pack Swift and Zig source with one matching C archive
 
-Status: design candidate for fresh independent review. This ticket authorizes the bounded local package build only after design acceptance. The original Swift and Zig release issues remain open.
+Status: implementation candidate for fresh independent code review. Fresh design review accepted `e3af7c95`; the [local build record](../records/0263-swift-zig-release-build.md) reports the focused passing package proof. The original Swift and Zig release issues remain open.
 
 ## Outcome and retained behavior
 
@@ -41,3 +41,10 @@ Use Rust 1.95.0 with pinned offline Cargo inputs, Swift 6.4, Zig 0.15.2, Python 
 - Changes: Adds opt-in same-commit Swift/Zig source archives with conditional smoke routing and strict C pairing; installed selectors compile the accepted portable public-bulk fixtures from unpacked product bytes.
 - Proof: One exact three-archive baseline, common preflight in direct and smoke routes, member/header/export identity, three literal captured bodies and sends per installed host, and missing/tampered/C-mismatch/extra-family refusals before consumer startup.
 - Defers: Final release-pin rebuild, actual `ubuntu-24.04` Actions execution, unconditional release presence, public assets or package tags/indexing, direct GitHub SwiftPM/Zig URL installation, macOS/other-host support and all other language packages. The original Swift/Zig issues remain open.
+
+## What the build taught us
+
+- The reviewed exact source inventories were sufficient. SwiftPM's declared type-case target required its test source in the release archive; Zig's `.zon` path list already matched its six source members. Both archived wrappers compiled without adding product APIs or package files.
+- The 0260 portable runners needed only explicit unpacked source/project path inputs. Their existing three-body capture oracle and typed fixtures supplied the installed call proof, so no second scalar consumer or request fixture was added. Each affected Python ratchet rose one line; source language ceilings stayed exact.
+- SwiftPM's sandboxed local wakeup socket stalled the first focused test and left a test-owned lock holder after interruption. The same archived input passed outside that socket restriction. The final clean pin was repacked after README corrections, then both installed calls and four file refusals passed again.
+- The callable three-file preflight gives a passing local baseline; the actual full smoke still requires nine older families. Its missing-file plant proved preflight runs before backend startup. Final release pin, runner, public assets and other-host proof stay with the original Swift/Zig issues.
