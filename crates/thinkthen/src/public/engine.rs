@@ -136,11 +136,13 @@ impl Engine {
     pub(crate) fn from_settings(
         settings: Settings,
         most: Option<usize>,
+        max_requests_total: Option<u64>,
         profile: Option<BackendProfile>,
         roots: Option<Roots>,
         batch: Option<core::Setting>,
     ) -> Result<Self, Error> {
-        let inner = guarded(|| facade::Engine::with_roots(settings, roots).map_err(Error::from))?;
+        let inner = guarded(|| facade::Engine::with_roots(settings, roots).map_err(Error::from))?
+            .with_process_budget(max_requests_total);
         Ok(Self {
             inner: Arc::new(inner),
             most,

@@ -8,13 +8,13 @@ use crate::public::error::Error;
 /// Count-only facts fixed when one call and all of its workers finish.
 #[derive(Clone)]
 pub struct Facts {
-    records: u64,
-    requests_sent: u64,
-    cache_answers: u64,
-    input_tokens: Option<u64>,
-    output_tokens: Option<u64>,
-    seconds: f64,
-    model: Option<String>,
+    pub(super) records: u64,
+    pub(super) requests_sent: u64,
+    pub(super) cache_answers: u64,
+    pub(super) input_tokens: Option<u64>,
+    pub(super) output_tokens: Option<u64>,
+    pub(super) seconds: f64,
+    pub(super) model: Option<String>,
 }
 
 impl fmt::Debug for Facts {

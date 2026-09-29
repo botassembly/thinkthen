@@ -22,6 +22,10 @@ pub(crate) struct PlanSummary {
 }
 
 impl PlanSummary {
+    pub(crate) const fn records(&self) -> usize {
+        self.records
+    }
+
     pub(crate) fn new(upper_bound: bool) -> Self {
         Self {
             upper_bound,
@@ -95,17 +99,17 @@ impl PlanSummary {
 
 #[derive(Debug, Serialize)]
 pub(crate) struct PlanCounts {
-    records: usize,
-    requests: usize,
-    estimated_bytes: usize,
-    estimated_input_tokens: TokenBand,
-    upper_bound: bool,
+    pub(crate) records: usize,
+    pub(crate) requests: usize,
+    pub(crate) estimated_bytes: usize,
+    pub(crate) estimated_input_tokens: TokenBand,
+    pub(crate) upper_bound: bool,
 }
 
 #[derive(Debug, Serialize)]
-struct TokenBand {
-    lower: usize,
-    upper: usize,
+pub(crate) struct TokenBand {
+    pub(crate) lower: usize,
+    pub(crate) upper: usize,
 }
 
 #[cfg(test)]

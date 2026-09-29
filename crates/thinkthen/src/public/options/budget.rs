@@ -1,13 +1,16 @@
 //! One process-scoped send count across SQL engines and retries.
 
 use std::sync::Arc;
+use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
-/// Why a SQL process send budget refused a live attempt.
+/// Why a process send budget refused a live attempt.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum SendBudgetDenial {
     /// No attempt for this call was sent.
     BeforeFirstSend,
+    /// An earlier attempt in this call was sent, but another request was refused.
+    BeforeAdditionalSend,
     /// A retry was refused after this backend status was received.
     BeforeRetry {
         /// The backend status whose retry would cross the process total.
@@ -100,6 +103,13 @@ impl SendBudget {
             }
         }
     }
+}
+
+/// One count for the Rust, command and C constructors in this process.
+/// Each caller still selects its own limit at the reservation.
+pub(crate) fn process_budget() -> SendBudget {
+    static BUDGET: OnceLock<SendBudget> = OnceLock::new();
+    BUDGET.get_or_init(SendBudget::new).clone()
 }
 
 /// Refund a reservation only when usage could not mark the attempt.

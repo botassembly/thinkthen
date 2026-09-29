@@ -1,6 +1,6 @@
 //! Call options, the cancel token, and the one door every public call passes.
 
-mod budget;
+pub(crate) mod budget;
 mod observer;
 
 pub(crate) use budget::SendReservation;
