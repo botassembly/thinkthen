@@ -22,27 +22,43 @@ args = [binary, 'decide', 'asks for a refund', '--dry-run', '--url', 'http://127
 
 def run(stdout_terminal, stderr_terminal, argv=args, evidence=b'Refund me please.'):
     master, slave = pty.openpty()
-    tty.setraw(slave)
-    child = subprocess.Popen(argv, stdin=subprocess.PIPE,
-                             stdout=slave if stdout_terminal else subprocess.PIPE,
-                             stderr=slave if stderr_terminal else subprocess.PIPE,
-                             env=environment)
-    os.close(slave)
-    stdout, stderr = child.communicate(evidence, timeout=10)
-    chunks = []
-    while True:
-        try:
-            chunk = os.read(master, 4096)
-        except OSError as error:
-            if error.errno != errno.EIO:
-                raise
-            break
-        if not chunk:
-            break
-        chunks.append(chunk)
-    os.close(master)
-    assert child.returncode == 0, (child.returncode, stdout, stderr, chunks)
-    return stdout, stderr, b''.join(chunks)
+    child = None
+    try:
+        tty.setraw(slave)
+        child = subprocess.Popen(argv, stdin=subprocess.PIPE,
+                                 stdout=slave if stdout_terminal else subprocess.PIPE,
+                                 stderr=slave if stderr_terminal else subprocess.PIPE,
+                                 env=environment)
+        os.close(slave)
+        slave = None
+        stdout, stderr = child.communicate(evidence, timeout=10)
+        chunks = []
+        while True:
+            try:
+                chunk = os.read(master, 4096)
+            except OSError as error:
+                if error.errno != errno.EIO:
+                    raise
+                break
+            if not chunk:
+                break
+            chunks.append(chunk)
+        assert child.returncode == 0, (child.returncode, stdout, stderr, chunks)
+        return stdout, stderr, b''.join(chunks)
+    finally:
+        if child is not None:
+            if child.poll() is None:
+                try:
+                    child.kill()
+                except ProcessLookupError:
+                    pass
+            child.wait(timeout=2)
+            for pipe in (child.stdin, child.stdout, child.stderr):
+                if pipe is not None:
+                    pipe.close()
+        if slave is not None:
+            os.close(slave)
+        os.close(master)
 
 def plan(line):
     assert line.endswith(b'\n') and line.count(b'\n') == 1, line
@@ -75,6 +91,8 @@ assert json.loads(terminal_stdout)['input']['framing'] == 'lines', terminal_stdo
     let output = Command::new("python3")
         .arg("-c")
         .arg(script)
+        .env_clear()
+        .env("PATH", std::env::var_os("PATH").unwrap_or_default())
         .env("THINKTHEN_BIN", env!("CARGO_BIN_EXE_thinkthen"))
         .env("THINKTHEN_TEST_HOME", env!("CARGO_TARGET_TMPDIR"))
         .output()
