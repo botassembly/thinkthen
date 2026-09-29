@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 # 0268: Start the reviewed language archives in the manual release workflow
 
-Status: design candidate at main `e0af4c90`. [Preparation](../records/0268-release-workflow-language-preparation.md) traced the current four-target workflow and eleven locally proved language packages. No workflow dispatch, container build, public draft, registry or site change has run for this ticket. The concurrent 0267 local complete-bundle receipt must be compared before code is claimed; it is not an Actions result.
+Status: design accepted after fresh independent High review of `e748dcd1`; the coordinator approves the implementation scope recorded in the Lanes table. [Preparation](../records/0268-release-workflow-language-preparation.md) traced the current four-target workflow and eleven locally proved language packages. No workflow dispatch, container build, public draft, registry or site change has run for this ticket. The concurrent 0267 local complete-bundle receipt must be compared before the new pair workflow is integrated; the independent legacy gitless repair may proceed first; it is not an Actions result.
 
 ## Outcome and first boundary
 
