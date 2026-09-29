@@ -1,0 +1,23 @@
+/* MIT license: Copyright (c) 2026 local experiment 295 contributors.
+ * See LICENSE. Self-contained strict JSON tree and answer-shape validator. */
+#ifndef TT_JSON_H
+#define TT_JSON_H
+#include <stddef.h>
+typedef enum { TTJSONObject, TTJSONArray, TTJSONString, TTJSONNumber, TTJSONBoolean, TTJSONNull } TTJSONType;
+typedef struct TTJSON {
+    TTJSONType type;
+    char *text;
+    struct TTJSON **children;
+    char **keys;
+    size_t count;
+} TTJSON;
+/* Null return means malformed JSON, duplicate object key, or wrong answer shape.
+ * The caller owns the returned tree and frees it with tt_json_free. */
+TTJSON *tt_json_parse(const char *text, size_t length);
+void tt_json_free(TTJSON *node);
+const TTJSON *tt_json_get(const TTJSON *object, const char *key);
+/* Validate the C JSON door's exact {value,facts} envelope. Borrowed child. */
+const TTJSON *tt_json_call_value(const TTJSON *root);
+/* kind is "annotate", "recognize", or "relate". */
+int tt_json_answer_shape(const TTJSON *root, const char *kind);
+#endif
