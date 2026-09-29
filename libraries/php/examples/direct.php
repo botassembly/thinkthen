@@ -16,7 +16,7 @@ function assertCallEnvelope(string $json, mixed $expected, string $label, int $e
 $door = new ThinkThen(getenv('TT_LIBRARY'));
 try {
     $answer = $door->decide('Is it?', 'direct-php');
-    if ($answer['outcome'] !== 1 || $answer['probability'] !== 0.9) throw new RuntimeException('direct scalar: ' . json_encode($answer));
+    if ($answer['value']['outcome'] !== 1 || $answer['value']['probability'] !== 0.9) throw new RuntimeException('direct scalar: ' . json_encode($answer));
     $result = $door->call('{"decide":"Is it?","evidence":"direct-json"}');
     assertCallEnvelope($result, true, 'direct JSON');
     echo "DIRECT_PHP_PASS\n";

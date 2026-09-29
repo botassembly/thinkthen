@@ -75,6 +75,13 @@ for name in "$first" "$second" ${third:+"$third"}; do
 	fi
 	cmp -s "$work/actual" "$work/expected" || fail "C identity or manifest differs for $name"
 done
+if [ "$mode" = go-cpp ]; then
+	tar -tzf "$dir/$first" | LC_ALL=C sort >"$work/members" || fail "cannot list $first"
+	printf '%s\n' ./ ./LICENSE ./README.md ./go.mod ./thinkthen.go ./result.go \
+		./thinkthen_test.go ./recovery_test.go ./examples/ ./examples/decide/ \
+		./examples/decide/main.go ./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members"
+	cmp -s "$work/members" "$work/expected-members" || fail 'Go source members differ'
+fi
 if [ "$mode" = swift-zig ]; then
 	# An exact source inventory makes a source archive independently reviewable.
 	for name in "$first" "$second"; do

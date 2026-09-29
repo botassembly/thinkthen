@@ -8,7 +8,7 @@ $settings = getenv('TT_USE_SETTINGS') === '1'
 $door = new ThinkThen($library, $settings);
 try {
     $answer = $door->decide('Is it?', 'consumer-php');
-    if ($answer !== ['outcome' => 1, 'probability' => 0.9]) throw new RuntimeException('scalar mismatch');
+    if ($answer['value'] !== ['outcome' => 1, 'probability' => 0.9] || $answer['facts']['records'] !== 1 || $answer['facts']['requests_sent'] !== 1) throw new RuntimeException('scalar mismatch');
     $envelope = json_decode($door->call('{"decide":"Is it?","evidence":"consumer-json"}'), true, 512, JSON_THROW_ON_ERROR);
     $expected = getenv('TT_PLANT_WRONG_VALUE') === '1' ? false : true;
     if (array_keys($envelope) !== ['value', 'facts'] || $envelope['value'] !== $expected
