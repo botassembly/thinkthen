@@ -96,6 +96,7 @@ impl For {
 /// Validated portable settings for one call.
 pub struct Settings {
     question_fields: Vec<(String, Json)>,
+    source_keys: Vec<String>,
     pub(crate) context: Option<String>,
     pub(crate) batch: Option<Setting>,
     /// `-1` means none and `0` is already spent.
@@ -134,6 +135,7 @@ impl Settings {
         let mut result = Self::default();
         let mut member_key = None;
         for (key, value) in fields {
+            result.source_keys.push(key.clone());
             match key.as_str() {
                 "threshold" | "true" | "false" | "options" | "levels" | "labels" | "model" => {
                     result.question_key(key, value, &mut member_key)?;
@@ -228,7 +230,7 @@ impl Settings {
         explicit_keys: &[&str],
         explicit_members: bool,
     ) -> Result<(), SettingsError> {
-        for (key, _) in &self.question_fields {
+        for key in &self.source_keys {
             if explicit_keys.contains(&key.as_str()) {
                 return Err(SettingsError::RepeatedField(key.clone()));
             }
