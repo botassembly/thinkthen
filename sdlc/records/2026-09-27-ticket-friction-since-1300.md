@@ -595,3 +595,8 @@ The0289 kickoff inventory named nonexistent `libraries/polars/src` and a separat
 The0301 wire preparation found the core fixture, but review also found exact R and TypeScript assertions. After0283 landed, its new whole-plan line added two byte/token literals in already claimed files. Root added their independently derived 13-byte reduction and 809–1,424 band directly to the handoff; High recheck accepted46925b681. Refresh both the copied body and every count derived from it, while keeping changed-question and exchanged-request identities separate.
 
 A staged0289 launch prompt still said to wait for its prerequisite after main already contained it. The worker returned without editing. Root replaced that first line with the actual landed commit and explicit start instruction, then confirmed the worker created its implementation branch. Check that a launch brief describes present authorization rather than an old future condition.
+
+
+## Inventory output producers and discarded attempts
+
+High review of timing design0302 at5e4f424e4 found that the ordinary judgment row writer does not own find, recognize, relate or annotate output. The split path also discards the refused parent result while retaining its send count. The correction must name supported verbs and carry parent observations explicitly; one ordinary row test proves neither route. Header preparation must settle repeated values using the full value list, and copied-reader proof must distinguish a closed outer envelope from closed facts. The retained author is correcting this design before code.
