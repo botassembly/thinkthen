@@ -1,0 +1,3 @@
+# 0259 independent design review
+
+Fresh independent reviewer `sql_scalar_design_review` returned **ACCEPT** for exact ticket commit `88082a28`. The coordinator approved implementation on main `4d83cfbc`. This review accepts the two bounded host fixes under the existing shared SQL contract. It does not approve common third-slot syntax, named arguments or any other proposal in the parent issue. The reviewer called out one implementation trap: SQLite's existing `only()` rejects banded questions, while the new yes-probability scalar must accept a banded decide question. The builder must validate decide kind without reusing that refusal. Code and installed-host proof still require fresh review.
