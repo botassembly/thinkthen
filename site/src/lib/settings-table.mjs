@@ -124,8 +124,9 @@ function uncitedBlocks(blocks) {
 const NO_EFFECT = /\bno effect\b|^not on this surface\b/;
 
 // The settings the site leaves out. The docs leave out the Details flag for now
-// (Ian, 2026-09-28).
-export const LEFT_OUT = new Set(['Details']);
+// (Ian, 2026-09-28). The annotate record failure policy works only with
+// the Details flag, so it stays out with it.
+export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy']);
 
 export function parseSettings(text) {
   const parts = sections(text);
