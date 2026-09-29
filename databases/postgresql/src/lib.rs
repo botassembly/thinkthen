@@ -36,12 +36,26 @@ fn details(
     question: &LoadedQuestion,
     evidence: &str,
     options: thinkthen::CallOptions<'_>,
-) -> Result<Details, Error> {
+    contextual: bool,
+) -> Result<Option<Details>, Error> {
+    if contextual {
+        let row = match question {
+            LoadedQuestion::Question(held) => engine
+                .details_many_with(held, [evidence.to_owned()], options)
+                .next(),
+            LoadedQuestion::Banded(held) => engine
+                .details_many_with(held, [evidence.to_owned()], options)
+                .next(),
+        };
+        return row
+            .transpose()
+            .map(|answer| answer.map(|held| held.into_parts().1));
+    }
     match question {
         LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
         LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
     }
-    .map(thinkthen::Call::into_value)
+    .map(|answer| Some(answer.into_value()))
 }
 
 fn answer_value(answer: thinkthen::Answer) -> Option<bool> {
@@ -61,13 +75,18 @@ fn jsonb(text: &str) -> JsonB {
 }
 
 #[pg_extern(parallel_restricted)]
-fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
+fn thinkthen_annotate(
+    set: Option<&str>,
+    input: Option<&str>,
+    settings: default!(Option<ffi::RawJson>, "NULL"),
+) -> Option<JsonB> {
+    let call = forms::aggregate_controls(settings.as_ref());
     let set = given(set, "question set")
         .parse(thinkthen::QuestionSet::from_json)
         .or_raise();
-    let evidence = evidence?.to_owned();
-    let value = call::run(call::read(), move |engine, options| {
-        let mut records = engine.annotate_with(&set, [evidence.as_str()], options);
+    let input = input?.to_owned();
+    let value = call::run(call, move |engine, options| {
+        let mut records = engine.annotate_with(&set, [input.as_str()], options);
         records
             .next()
             .transpose()

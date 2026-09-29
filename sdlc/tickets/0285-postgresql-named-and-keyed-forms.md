@@ -1,6 +1,6 @@
 # 0285 — PostgreSQL named and keyed forms (T3)
 
-Status: Approved for implementation. The preparation passed fresh High review at `8bf14799`, and the coordinator claimed the PostgreSQL source family on main `020c1718d`. Shared 0283 settings and 0289 plan/cap APIs are landed; implementation and issue closure remain open.
+Status: Candidate built for fresh High code review. The preparation passed fresh High review at `8bf14799`, and the coordinator claimed the PostgreSQL source family on main `020c1718d`. Shared 0283 settings and 0289 plan/cap APIs are landed; implementation and issue closure remain open.
 
 ## Outcome
 
@@ -33,4 +33,4 @@ Installed PG P1 `jsonb` decodes to `records=1`, `requests=1`, 120 bytes, 61–10
 
 ## What the build taught us
 
-Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.
+The build used landed 0283/0289 APIs directly. PostgreSQL delivered SQL SET as `PGC_S_SESSION`; the hook now warns on a nonempty interactive/session assignment without echoing the value, and the next call refuses until reset as ADR0105 requires. A contextual scalar needed the public one-record many path, and a wrong-kind keyed question needed pre-send checking. The old array/warm internal tests gave way to installed keyed packing, cache, removal and cancellation receipts. P1, one exact E1 keyed body, 24 selected installed checks, six conformance IDs and six retained cancellation/failure checks passed; full host and release qualification remain distinct. See the [build record](../records/0285-postgresql-named-and-keyed-forms-build.md).

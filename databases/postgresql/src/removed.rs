@@ -1,9 +1,15 @@
 //! Plain refusals for pre-0.1 forms replaced by named and keyed calls.
 
-use pgrx::datum::Array;
+use pgrx::datum::{Array, JsonB};
 use pgrx::prelude::*;
 
 use crate::call::{self, Refusal};
+
+fn context_moved() -> Refusal {
+    Refusal::usage(
+        "the context argument moved into the settings object or the context named parameter",
+    )
+}
 
 #[pg_extern(name = "thinkthen_warm", parallel_restricted)]
 fn warm(_question: Option<&str>, _input: Option<&str>) -> i64 {
@@ -41,5 +47,73 @@ fn decide_array_context(
 ) -> i64 {
     call::raise(Refusal::usage(
         "the array form was removed; pass a keyed jsonb object to thinkthen_decide_many",
+    ))
+}
+
+#[pg_extern(name = "thinkthen_decide", parallel_restricted)]
+fn decide_context(
+    _question: Option<&str>,
+    _input: Option<&str>,
+    _context: Option<&str>,
+) -> Option<bool> {
+    call::raise(context_moved())
+}
+
+#[pg_extern(name = "thinkthen_choose", parallel_restricted)]
+fn choose_context(
+    _question: Option<&str>,
+    _input: Option<&str>,
+    _members: Option<Array<'_, &str>>,
+    _context: Option<&str>,
+) -> Option<String> {
+    call::raise(context_moved())
+}
+
+#[pg_extern(name = "thinkthen_score", parallel_restricted)]
+fn score_context(
+    _question: Option<&str>,
+    _input: Option<&str>,
+    _members: Option<Array<'_, &str>>,
+    _context: Option<&str>,
+) -> Option<f64> {
+    call::raise(context_moved())
+}
+
+#[pg_extern(name = "thinkthen_tag", parallel_restricted)]
+fn tag_context(
+    _question: Option<&str>,
+    _input: Option<&str>,
+    _members: Option<Array<'_, &str>>,
+    _context: Option<&str>,
+) -> Option<Vec<String>> {
+    call::raise(context_moved())
+}
+
+#[pg_extern(name = "thinkthen_details", parallel_restricted)]
+fn details_context(
+    _question: Option<&str>,
+    _input: Option<&str>,
+    _context: Option<&str>,
+) -> Option<JsonB> {
+    call::raise(context_moved())
+}
+
+#[pg_extern(name = "thinkthen_try_details", parallel_restricted)]
+fn try_details_context(
+    _question: Option<&str>,
+    _input: Option<&str>,
+    _context: Option<&str>,
+) -> Option<JsonB> {
+    call::raise(context_moved())
+}
+
+#[pg_extern(name = "thinkthen_probability", parallel_restricted)]
+fn probability_context(
+    _question: Option<&str>,
+    _input: Option<&str>,
+    _context: Option<&str>,
+) -> Option<f64> {
+    call::raise(Refusal::usage(
+        "thinkthen_probability was removed; read the probability column of thinkthen_decide_many",
     ))
 }

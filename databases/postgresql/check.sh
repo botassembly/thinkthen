@@ -58,9 +58,9 @@ PASSED=0 FAILED=0
 # it. STEPS, when set, names the steps to run, for the planted-bug runs.
 check() {
 	if [ "$profile" = stress ]; then
-		[ "$1" = twenty_thousand_warm_rows ] || return 0
+		[ "$1" = twenty_thousand_keyed_rows ] || return 0
 	else
-		[ "$1" != twenty_thousand_warm_rows ] || return 0
+		[ "$1" != twenty_thousand_keyed_rows ] || return 0
 	fi
 	case " ${STEPS:-$1} " in *" $1 "*) ;; *) return 0 ;; esac
 	set +e
@@ -91,7 +91,7 @@ check a_multiline_needle_must_stay_whole
 now_ms() { echo $((${EPOCHREALTIME/./} / 1000)); }
 within() { [ "$1" -le "$2" ] || { echo "took ${1} ms, over ${2} ms" >&2; return 1; }; }
 Q='{"decide":"Is this a complaint?"}'
-rows() { echo "(SELECT array_agg('record ' || g) FROM generate_series(1, $1) g)"; }
+rows() { echo "(SELECT jsonb_object_agg(g::text, 'record ' || g ORDER BY g) FROM generate_series(1, $1) g)"; }
 # A statement's elapsed milliseconds, read inside the server.
 timed() {
 	q -c "DO \$t\$ DECLARE s timestamptz := clock_timestamp(); n bigint; BEGIN $1; RAISE NOTICE 'elapsed %', round(extract(epoch FROM clock_timestamp() - s) * 1000); END \$t\$;" |
@@ -180,10 +180,10 @@ plain_question_contract() {
 	same "$(q -c "SELECT array_to_string(thinkthen_tag('Which labels apply?', 'Classify this note.', ARRAY['billing','urgent','security']), ',')")" billing,urgent
 	same "$(bcount)" 1
 	fresh generic
-	same "$(q -c "SELECT thinkthen_decide('Does this need attention?', 'A short note.', 'Use this policy note.')")" t
+	same "$(q -c "SELECT thinkthen_decide('Does this need attention?', 'A short note.', context => 'Use this policy note.')")" t
 	same "$(bcount)" 1
 	fresh generic
-	same "$(q -c "SELECT count(*) FROM thinkthen_decide('Does this need attention?', ARRAY['A short note.'])")" 1
+	same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('Does this need attention?', '{\"a\":\"A short note.\"}'::jsonb)")" 1
 	same "$(bcount)" 1
 	fresh generic
 	same "$(q -c "SELECT thinkthen_try_details('Does this need attention?', 'A short note.')->>'status'")" answered
@@ -217,6 +217,7 @@ assert p["upper_bound"] is False and p["first_body_utf8"] == expected, p' "$out"
 	same "$(bcount)" 0
 	for sql in \
 		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"bogus\":1}'::json)" \
+		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"max_estimated_input_tokens_total\":5}'::json)" \
 		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"model\":\"a\",\"model\":\"b\"}'::json)" \
 		"SELECT thinkthen_decide('asks for a refund', 'Refund me please.', settings => '{\"threshold\":\"0.3:0.7\"}'::json, threshold => '0.3:0.7')"; do
 		out=$(q -c "$sql")
@@ -236,6 +237,102 @@ wanted="{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"
 assert bodies == [wanted], (bodies, wanted)'
 }
 check plan_and_named
+e1_keyed_join_body() {
+	fresh arm/full/capture "thinkthen.batch = 'max'"
+	local out
+	out=$(q -c "CREATE TEMP TABLE songs(id integer, title text)" \
+		-c "INSERT INTO songs VALUES (1,'Here Comes the Sun'),(2,'Yellow Submarine'),(5,'Octopus''s Garden'),(9,'Penny Lane'),(14,'A Day in the Life'),(17,'Hey Jude')" \
+		-c "SELECT s.id::text || ':' || d.key FROM songs s JOIN thinkthen_decide_many('The text is the title of a song by the Beatles. It appears on the album Abbey Road.', (SELECT jsonb_object_agg(id, title) FROM songs), '{\"threshold\":\"0.3:0.7\"}'::json) d ON d.key = CAST(s.id AS text) ORDER BY s.id")
+	same "$out" $'1:1\n2:2\n5:5\n9:9\n14:14\n17:17'
+	same "$(bcount)" 1
+	bcapture | python3 -c 'import json, pathlib, sys
+bodies=json.load(sys.stdin)["bodies"]
+expected=pathlib.Path("fixtures/e1.request.json").read_text().removesuffix("\n")
+assert bodies == [expected], (bodies, expected)'
+}
+check e1_keyed_join_body
+ignored_key_warns() {
+	fresh generic
+	local out
+	out=$(q -c "SET thinkthen.api_key = 'ignored-local-fixture'" -c "SELECT thinkthen_decide('Is it red?', 'a red door')" \
+		-c "RESET thinkthen.api_key" -c "SELECT thinkthen_decide('Is it red?', 'a red door')")
+	has "$out" "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment"
+	has "$out" "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment"
+	same "$(tail -n1 <<<"$out")" t
+	same "$(bcount)" 1
+	out=$(q -c "SET thinkthen.api_key = ''")
+	hasnt "$out" WARNING
+}
+check ignored_key_warns
+keyed_request_total() {
+	fresh generic "thinkthen.max_requests_total = 1"
+	local out
+	out=$(q -c '\set VERBOSITY verbose' -c "SET thinkthen.batch = '1'" -c "SET thinkthen.cache = 'off'" \
+		-c "SELECT count(*) FROM thinkthen_decide_many('Is it red?', '{\"a\":\"red one\",\"b\":\"red two\"}'::jsonb)")
+	has "$out" '22023'
+	has "$out" 'thinkthen.max_requests_total allows 1 requests in this backend, and they are spent'
+	same "$(bcount)" 1
+}
+check keyed_request_total
+named_bindings() {
+	fresh generic
+	local out
+	out=$(q -c "SELECT thinkthen_decide('Is it red?', 'red', misspelled => 'x')")
+	has "$out" 'does not exist'
+	same "$(bcount)" 0
+	out=$(q -c "SELECT thinkthen_details('Is it red?', 'red', model => 'judge-b', threshold => '0.3:0.7')->'meta'->>'model'")
+	same "$out" judge-b
+	same "$(bcount)" 1
+	fresh generic
+	out=$(q -c "SELECT thinkthen_choose('Which?', 'one', settings => '{\"options\":[\"first\",\"last\"]}'::json)")
+	same "$out" first
+	same "$(bcount)" 1
+	fresh generic
+	out=$(q -c "SELECT thinkthen_decide('Is it red?', 'red', threshold => '0.3:0.7', settings => '{\"true\":\"A yes means red.\"}'::json)")
+	same "$out" t
+	same "$(bcount)" 1
+}
+check named_bindings
+keyed_all_four_shapes() {
+	fresh generic "thinkthen.batch = 'max'"
+	same "$(q -c "SELECT key || ':' || value::text || ':' || probability::text FROM thinkthen_decide_many('$Q', '{\"a\":\"refund now\"}'::jsonb)")" 'a:true:0.9'
+	same "$(bcount)" 1
+	fresh generic "thinkthen.batch = 'max'"
+	same "$(q -c "SELECT key || ':' || value || ':' || probability::text FROM thinkthen_choose_many('{\"choose\":\"Which team handles this?\",\"options\":[\"the refund desk\",\"other desk\"]}', '{\"a\":\"refund now\"}'::jsonb)")" 'a:the refund desk:0.9'
+	same "$(bcount)" 1
+	fresh generic "thinkthen.batch = 'max'"
+	same "$(q -c "SELECT key || ':' || value::text FROM thinkthen_score_many('{\"score\":\"How strong is the refund claim?\",\"levels\":[\"low\",\"mid\",\"high\"]}', '{\"a\":\"maybe later\"}'::jsonb)")" 'a:0.15'
+	has "$(q -c "SELECT probability FROM thinkthen_score_many('{\"score\":\"How strong?\",\"levels\":[\"low\",\"high\"]}', '{\"a\":\"maybe later\"}'::jsonb)")" 'column "probability" does not exist'
+	same "$(bcount)" 1
+	fresh generic "thinkthen.batch = 'max'"
+	same "$(q -c "SELECT key || ':' || array_to_string(value, ',') FROM thinkthen_tag_many('{\"tag\":\"What is in this text?\",\"labels\":[\"refund\",\"shipping\"]}', '{\"a\":\"the refund and the shipping\"}'::jsonb)")" 'a:refund,shipping'
+	same "$(bcount)" 1
+}
+check keyed_all_four_shapes
+find_settings_choose_the_model() {
+	fresh arm/full/capture
+	local out
+	out=$(q -c "SELECT thinkthen_find('Which unit?', ARRAY['first','second'], '{\"model\":\"judge-b\"}'::json)->>'value'")
+	hasnt "$out" ERROR
+	same "$(bcount)" 1
+	bcapture | python3 -c 'import json,sys
+bodies=json.load(sys.stdin)["bodies"]
+assert len(bodies) == 1 and json.loads(bodies[0])["model"] == "judge-b", bodies'
+}
+check find_settings_choose_the_model
+annotate_settings_do_not_accept_question_fields() {
+	fresh generic
+	local out
+	out=$(q -c "SELECT thinkthen_annotate('@form.json', 'maybe later', '{\"threshold\":0.7}'::json)")
+	has "$out" 'annotate does not take setting `threshold`'
+	out=$(q -c "SELECT thinkthen_annotate('@form.json', 'maybe later', '{\"deadline_ms\":0}'::json)")
+	has "$out" 'thinkthen deadline:'
+	same "$(bcount)" 0
+	out=$(q -c "SELECT thinkthen_annotate('@form.json', 'maybe later', '{\"batch\":\"max\"}'::json)::text")
+	hasnt "$out" ERROR
+	same "$(bcount)" 1
+}
+check annotate_settings_do_not_accept_question_fields
 recognize_and_relate_as_drawn() {
 	fresh generic
 	out=$(q -c "SELECT t.id, n.text, n.kind FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n ORDER BY t.id, n.start" \
@@ -277,17 +374,17 @@ public_holds_nothing() {
 }
 check public_holds_nothing
 batch_signatures_are_extension_owned_and_private() {
-	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_decide(text,text,text)', 'thinkthen_decide(text,text[],text)', 'thinkthen_probability(text,text,text)', 'thinkthen_choose(text,text,text[],text)', 'thinkthen_score(text,text,text[],text)', 'thinkthen_tag(text,text,text[],text)', 'thinkthen_details(text,text,text)', 'thinkthen_try_details(text,text,text)', 'thinkthen_warm(text,text,text)']) AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 9
-	same "$(q -c "SELECT prokind FROM pg_proc WHERE oid = 'thinkthen_warm(text,text,text)'::regprocedure")" a
+	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_decide_many(text,jsonb,json)', 'thinkthen_choose_many(text,jsonb,json)', 'thinkthen_score_many(text,jsonb,json)', 'thinkthen_tag_many(text,jsonb,json)', 'thinkthen_plan(text,jsonb,json)']) AND p.pronargdefaults = 1 AND p.prokind = 'f' AND p.proparallel = 'r' AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 5
+	same "$(q -c "SELECT count(*) FROM pg_proc p WHERE p.oid::regprocedure::text = ANY (ARRAY['thinkthen_decide(text,text,json,text,text,text,text,bigint)', 'thinkthen_choose(text,text,text[],json,text,text,text,text,bigint)', 'thinkthen_score(text,text,text[],json,text,text,text,text,bigint)', 'thinkthen_tag(text,text,text[],json,text,text,text,text,bigint)']) AND p.pronargdefaults >= 6 AND p.proargnames[1] = 'question' AND p.proargnames[2] = 'input'")" 4
 }
 check batch_signatures_are_extension_owned_and_private
 find_signatures_are_owned_and_private() {
 	fresh generic
-	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_find(text,text[])', 'thinkthen_find(text,text[],boolean)']) AND p.provolatile = 'v' AND p.proparallel = 'r' AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 2
+	same "$(q -c "SELECT count(*) FROM pg_proc p JOIN pg_depend d ON d.objid = p.oid AND d.classid = 'pg_proc'::regclass JOIN pg_extension e ON e.oid = d.refobjid AND d.refclassid = 'pg_extension'::regclass WHERE e.extname = 'thinkthen' AND p.oid::regprocedure::text = ANY (ARRAY['thinkthen_find(text,text[],json)', 'thinkthen_find(text,text[],boolean)']) AND p.provolatile = 'v' AND p.proparallel = 'r' AND NOT has_function_privilege('public', p.oid, 'EXECUTE')")" 2
 	grep -q 'thinkthen_find' "$RUNTIME_EXTENSION_DIR/thinkthen--$EXT_VERSION.sql"
 	q -c "CREATE ROLE tt_find_app LOGIN" >/dev/null
 	has "$(PGUSER_AS=tt_find_app q -c "SELECT thinkthen_find('Which?', ARRAY[]::text[])")" 'permission denied for function thinkthen_find'
-	q -c "GRANT EXECUTE ON FUNCTION thinkthen_find(text,text[]) TO tt_find_app" >/dev/null
+	q -c "GRANT EXECUTE ON FUNCTION thinkthen_find(text,text[],json) TO tt_find_app" >/dev/null
 	same "$(PGUSER_AS=tt_find_app q -c "SELECT thinkthen_find('Which?', ARRAY[]::text[]) IS NULL")" t
 	same "$(bcount)" 0
 }
@@ -339,7 +436,7 @@ the_file_gate() {
 	mkdir -p "$RUN/files"
 	cp fixtures/refund.json "$RUN/files/"
 	fresh generic
-	q -c "CREATE ROLE tt_exec LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text) TO tt_exec" >/dev/null
+	q -c "CREATE ROLE tt_exec LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text,text,json,text,text,text,text,bigint) TO tt_exec" >/dev/null
 	out=$(PGUSER_AS=tt_exec q -c "SELECT thinkthen_decide('@/etc/hostname', 'x')")
 	has "$out" "a named file needs pg_read_server_files, or an administrator's thinkthen.file_directory"
 	fresh generic "thinkthen.file_directory = '$RUN/files'"
@@ -352,16 +449,16 @@ the_file_gate() {
 check the_file_gate
 bad_files_name_themselves() {
 	fresh generic
-	for call in "SELECT count(*) FROM thinkthen_decide('@no-such-file.json', ARRAY['a', 'b'])" \
-		"SELECT thinkthen_warm('@no-such-file.json', body) FROM tickets"; do
+	for call in "SELECT thinkthen_decide('@no-such-file.json', 'a')" \
+		"SELECT count(*) FROM thinkthen_decide_many('@no-such-file.json', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb)"; do
 		has "$(q -c "$call")" "thinkthen local: the question file '@no-such-file.json' $DID_NOT_READ"
 	done
-	for call in "SELECT count(*) FROM thinkthen_decide('@broken.json', ARRAY['a', 'b'])" \
-		"SELECT thinkthen_warm('@broken.json', body) FROM tickets"; do
+	for call in "SELECT thinkthen_decide('@broken.json', 'a')" \
+		"SELECT count(*) FROM thinkthen_decide_many('@broken.json', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb)"; do
 		has "$(q -c "$call")" "thinkthen local: the question file '@broken.json' does not parse: "
 	done
-	has "$(q -c "SELECT thinkthen_warm('{\"choose\":\"Which?\",\"options\":[\"a\",\"b\"]}', body) FROM tickets")" \
-		"thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide (retryable: no)"
+	has "$(q -c "SELECT count(*) FROM thinkthen_decide_many('{\"choose\":\"Which?\",\"options\":[\"a\",\"b\"]}', '{\"a\":\"one\"}'::jsonb)")" \
+		'thinkthen usage:'
 	same "$(bcount)" 0
 }
 check bad_files_name_themselves
@@ -374,8 +471,8 @@ deadline_setting_range() {
 	fresh generic
 	has "$(q -c "LOAD 'thinkthen'" -c "SET thinkthen.deadline_ms = -2")" "-2 is outside the valid range for parameter \"thinkthen.deadline_ms\""
 	same "$(q -c "SET thinkthen.deadline_ms = -1" -c "SELECT thinkthen_decide('$Q', 'a')")" t
-	for call in "SELECT thinkthen_decide('$Q', 'b')" "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['c', 'd'])" \
-		"SELECT thinkthen_warm('$Q', body) FROM tickets"; do
+	for call in "SELECT thinkthen_decide('$Q', 'b')" "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"c\":\"c\",\"d\":\"d\"}'::jsonb)" \
+		"SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"first\",\"b\":\"second\"}'::jsonb)"; do
 		out=$(q -c '\set VERBOSITY verbose' -c "SET thinkthen.deadline_ms = 0" -c "$call")
 		has "$out" "57014"
 		has "$out" "thinkthen deadline"
@@ -442,7 +539,7 @@ check single_deadline
 batch_deadline() {
 	fresh arm/held "thinkthen.throttle = 8"
 	start=$(now_ms)
-	held "SET thinkthen.batch = '2'; SET thinkthen.deadline_ms = 1000; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	held "SET thinkthen.batch = '2'; SET thinkthen.deadline_ms = 1000; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 200))"
 	wait "$HELD" || true
 	within $(($(now_ms) - start)) 1500
 	has "$(cat "$RUN/held.out")" "thinkthen deadline"
@@ -452,7 +549,7 @@ batch_deadline() {
 check batch_deadline
 batch_cancel() {
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 200))"
 	bwait 8
 	start=$(now_ms)
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
@@ -468,7 +565,7 @@ batch_cancel() {
 check batch_cancel
 benign_interrupt_finishes() {
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 200))"
 	bwait 8
 	q -c "SELECT pg_log_backend_memory_contexts($(victim))" >/dev/null
 	sleep 0.3
@@ -480,7 +577,7 @@ benign_interrupt_finishes() {
 check benign_interrupt_finishes
 a_timed_out_batch_leaves_the_session_working() {
 	fresh arm/held "thinkthen.throttle = 8"
-	out=$(q -c "SET statement_timeout = '500ms'" -c "SET thinkthen.batch = '2'" -c "SELECT count(*) FROM thinkthen_decide('$Q', $(rows 200))" \
+	out=$(q -c "SET statement_timeout = '500ms'" -c "SET thinkthen.batch = '2'" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 200))" \
 		-c "\\! echo release > $RUN/b.in" -c "RESET statement_timeout" -c "SELECT thinkthen_decide('$Q', 'after')")
 	has "$out" "canceling statement due to statement timeout"
 	same "$(tail -n1 <<<"$out")" t
@@ -490,63 +587,64 @@ check a_timed_out_batch_leaves_the_session_working
 a_small_batch_answers_at_once() {
 	fresh generic "thinkthen.batch = '2'"
 	q -c "SELECT thinkthen_decide('$Q', 'warm up')" >/dev/null
-	ms=$(timed "SELECT count(*) INTO n FROM thinkthen_decide('$Q', ARRAY['a', 'b'])")
+	ms=$(timed "SELECT count(*) INTO n FROM thinkthen_decide_many('$Q', '{\"a\":\"a\",\"b\":\"b\"}'::jsonb)")
 	within "$ms" 90
 }
 check a_small_batch_answers_at_once
 
 echo "== the answer cache"
-# Throttle 32, because each loopback request takes about 41 ms on a reused connection.
-warm_then_decide_sends_nothing() {
-	fresh generic "thinkthen.throttle = 32"
-	pairs="FROM generate_series(1, 20) g"
-	same "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) $pairs")" 20
-	same "$(bcount)" 20
-	same "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) $pairs" -c "SELECT count(*) $pairs WHERE thinkthen_decide('$Q', 'order ' || g)" | tail -1)" 20
-	same "$(q -c "SELECT count(*) $pairs WHERE thinkthen_decide('$Q', 'order ' || g)")" 20
-	same "$(bcount)" 20
+# Keyed input preserves one packed answer and reuses its exact cache identity.
+keyed_answers_reuse_without_sending() {
+    fresh generic "thinkthen.batch = 'max'"
+    local input='{"a":"order 1","b":"order 2","c":"order 3"}'
+    same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '$input'::jsonb)")" 3
+    same "$(bcount)" 1
+    same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '$input'::jsonb)")" 3
+    same "$(bcount)" 1
 }
-check warm_then_decide_sends_nothing
-# Ticket 0129: warm takes the banded file decide uses, and decide then reads the cache.
-warm_takes_the_banded_file_decide_uses() {
-	fresh generic
-	pairs="FROM generate_series(1, 20) g"
-	same "$(q -c "SELECT thinkthen_warm('@refund.json', 'refund ' || g) $pairs")" 20
-	same "$(bcount)" 20
-	same "$(q -c "SELECT count(*) $pairs WHERE thinkthen_decide('@refund.json', 'refund ' || g)")" 20
-	same "$(bcount)" 20
+check keyed_answers_reuse_without_sending
+keyed_banded_file_reuses() {
+    fresh generic "thinkthen.batch = 'max'"
+    local input='{"a":"refund one","b":"refund two"}'
+    same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('@refund.json', '$input'::jsonb)")" 2
+    same "$(bcount)" 1
+    same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('@refund.json', '$input'::jsonb)")" 2
+    same "$(bcount)" 1
 }
-check warm_takes_the_banded_file_decide_uses
+check keyed_banded_file_reuses
+twenty_thousand_keyed_rows() {
+	fresh generic "thinkthen.batch = 'max'" "thinkthen.throttle = 32"
+	local input
+	input=$(rows 20000)
+	same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('$Q', $input)")" 20000
+	local first
+	first=$(bcount)
+	[ "$first" -gt 0 ]
+	same "$(q -c "SELECT count(*) FROM thinkthen_decide_many('$Q', $input)")" 20000
+	same "$(bcount)" "$first"
+}
+check twenty_thousand_keyed_rows
 another_model_sends_again() {
-	fresh generic
-	q -c "SELECT count(*) FROM generate_series(1, 2) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g)" \
-		-c "SELECT count(*) FROM generate_series(1, 2) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-b\"}', 'item ' || g)" >/dev/null
-	same "$(bcount)" 4
+    fresh generic
+    q -c "SELECT count(*) FROM generate_series(1, 2) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-a\"}', 'item ' || g)" \
+      -c "SELECT count(*) FROM generate_series(1, 2) g WHERE thinkthen_decide('{\"decide\":\"Is it red?\",\"model\":\"judge-b\"}', 'item ' || g)" >/dev/null
+    same "$(bcount)" 4
 }
 check another_model_sends_again
-# The warm pass sends each row once, and a second pass sends nothing. A
-# cached row costs a file read, so the second pass takes at most half of
-# the first. Both passes slow together on a busy machine, and the ratio holds.
-twenty_thousand_warm_rows() {
-	fresh generic "thinkthen.throttle = 32"
-	warm="SELECT thinkthen_warm('$Q', 'order ' || g) INTO n FROM generate_series(1, 20000) g"
-	cold=$(QTIMEOUT=180 timed "$warm")
-	same "$(bcount)" 20000
-	cached=$(QTIMEOUT=180 timed "$warm")
-	same "$(bcount)" 20000
-	[ -n "$cold" ]
-	[ -n "$cached" ]
-	echo "         warm passes: cold $cold ms, cached $cached ms"
-	[ $((cached * 2)) -le "$cold" ] || { echo "the cached pass took $cached ms, over half of the cold pass's $cold ms" >&2; return 1; }
+removed_forms_refuse_before_send() {
+    fresh generic
+    local out
+    out=$(q -c "SELECT thinkthen_warm('$Q', 'one')")
+    has "$out" 'thinkthen_warm was removed; pack records with thinkthen_decide_many'
+    out=$(q -c "SELECT thinkthen_probability('$Q', 'one')")
+    has "$out" 'thinkthen_probability was removed; read the probability column of thinkthen_decide_many'
+    out=$(q -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['one'])")
+    has "$out" 'the array form was removed; pass a keyed jsonb object to thinkthen_decide_many'
+    out=$(q -c "SELECT thinkthen_decide('$Q', 'one', 'old context')")
+    has "$out" 'the context argument moved into the settings object or the context named parameter'
+    same "$(bcount)" 0
 }
-check twenty_thousand_warm_rows
-warm_refuses_row_past_limit() {
-	fresh generic
-	has "$(q -c "SELECT thinkthen_warm('$Q', 'order ' || g) FROM generate_series(1, 20001) g")" \
-		"thinkthen usage: thinkthen_warm takes at most 20,000 rows per call (retryable: no)"
-	same "$(bcount)" 0
-}
-check warm_refuses_row_past_limit
+check removed_forms_refuse_before_send
 the_answer_map_is_gone() {
 	fresh generic
 	has "$(q -c "SELECT count(*) FROM thinkthen_usage()" -c "SHOW thinkthen.saved_answer_kb")" \
@@ -564,7 +662,7 @@ check the_environment_seeds_the_cache
 the_cache_setting_names_the_folder() {
 	mkdir -p "$RUN/named-cache"
 	fresh generic "thinkthen.cache = '$RUN/named-cache'"
-	same "$(q -c "SELECT thinkthen_warm('$Q', t) FROM (VALUES ('a'), ('b')) v(t)")" 2
+	same "$(q -c "SELECT thinkthen_decide('$Q', 'a')")" t
 	[ -n "$(find "$RUN/named-cache" -type f | head -1)" ]
 	[ -z "$(find "$CACHEDIR" -type f | head -1)" ]
 }
@@ -573,7 +671,7 @@ check the_cache_setting_names_the_folder
 echo "== engine settings"
 throttle_setting_holds_eight() {
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 64))"
 	bwait 8
 	sleep 0.3
 	same "$(bcount)" 8
@@ -590,7 +688,7 @@ the_throttle_keeps_the_environment() {
 check the_throttle_keeps_the_environment
 request_limit_refuses_before_sending() {
 	fresh generic "thinkthen.max_requests = 3"
-	has "$(q -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c', 'd'])")" \
+	has "$(q -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"a\",\"b\":\"b\",\"c\":\"c\",\"d\":\"d\"}'::jsonb)")" \
 		"thinkthen usage: this engine answers at most 3 records in one call (retryable: no)"
 	fresh generic "thinkthen.max_requests = 0"
 	out=$(q -c '\set VERBOSITY verbose' -c "SELECT thinkthen_decide('$Q', 'a')")
@@ -601,8 +699,8 @@ request_limit_refuses_before_sending() {
 check request_limit_refuses_before_sending
 a_changed_limit_rebuilds() {
 	fresh generic
-	out=$(q -c "SET thinkthen.max_requests = 3" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c'])" \
-		-c "SET thinkthen.max_requests = 2" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['d', 'e', 'f'])")
+	out=$(q -c "SET thinkthen.max_requests = 3" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"a\",\"b\":\"b\",\"c\":\"c\"}'::jsonb)" \
+		-c "SET thinkthen.max_requests = 2" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"d\":\"d\",\"e\":\"e\",\"f\":\"f\"}'::jsonb)")
 	same "$(head -n1 <<<"$out")" 3
 	has "$out" "this engine answers at most 2 records in one call"
 	same "$(bcount)" 3
@@ -658,7 +756,8 @@ try_details_null_skips_settings() {
     fresh generic
     out=$(q -c "SET thinkthen.api_key = 'planted-private-key'" \
         -c "SELECT thinkthen_try_details(NULL, 'private evidence') IS NULL")
-    same "$out" t
+    has "$out" "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment"
+    same "$(tail -n1 <<<"$out")" t
     same "$(bcount)" 0
 }
 check try_details_null_skips_settings
@@ -684,9 +783,9 @@ try_details_keeps_native_timeout() {
 check try_details_keeps_native_timeout
 a_role_limit_applies() {
 	fresh generic
-	q -c "CREATE ROLE tt_limited LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text[]) TO tt_limited" \
+	q -c "CREATE ROLE tt_limited LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide_many(text,jsonb,json) TO tt_limited" \
 		-c "ALTER ROLE tt_limited SET thinkthen.max_requests = 2" >/dev/null
-	has "$(PGUSER_AS=tt_limited q -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['a', 'b', 'c'])")" \
+	has "$(PGUSER_AS=tt_limited q -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"a\",\"b\":\"b\",\"c\":\"c\"}'::jsonb)")" \
 		"this engine answers at most 2 records in one call"
 	same "$(bcount)" 0
 }
@@ -717,43 +816,44 @@ the_total_holds_across_rows() {
 	same "$(bcount)" 3
 	fresh generic "thinkthen.max_requests_total = 1"
 	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
-		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'c', 'd'])")
+		-c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"b\",\"b\":\"a\",\"c\":\"c\",\"d\":\"d\"}'::jsonb)")
 	has "$out" "thinkthen usage: thinkthen.max_requests_total allows 1 requests in this backend, and they are spent (retryable: no)"
 	same "$(bcount)" 1
 }
 check the_total_holds_across_rows
 
-packed_array_preserves_first_occurrence_and_attempts() {
-	fresh generic
-	out=$(q -c "SET thinkthen.batch = '1'" -c "SET thinkthen.cache = 'off'" \
-		-c "SET thinkthen.record = '$RUN/singleton'" \
-		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'b', NULL, 'c', 'd'])")
-	same "$out" 6
-	same "$(bcount)" 4
-	same "$(python3 tests/batching_cases.py singleton "$RUN/singleton")" 'pass singleton'
-	fresh generic
-	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
-		-c "SET thinkthen.record = '$RUN/packed'" \
-		-c "SELECT i::text || ':' || coalesce(decided::text, 'null') FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'b', NULL, 'c', 'd']) ORDER BY i")
-	same "$out" $'0:true\n1:true\n2:true\n3:null\n4:true\n5:true'
-	same "$(bcount)" 2
-	same "$(python3 tests/batching_cases.py packed "$RUN/packed")" 'pass packed'
-	fresh generic
-	out=$(q -c "SET thinkthen.batch = 'max'" -c "SET thinkthen.cache = 'off'" \
-		-c "SET thinkthen.record = '$RUN/max-packed'" \
-		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'b', NULL, 'c', 'd'])")
-	same "$out" 6
-	same "$(bcount)" 1
-	same "$(python3 tests/batching_cases.py max "$RUN/max-packed")" 'pass max'
-	fresh generic "thinkthen.max_requests_total = 1"
-	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.max_retries = 0" \
-		-c "SET thinkthen.cache = 'off'" -c "SET thinkthen.record = '$RUN/one-packed'" \
-		-c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['b', 'a', 'c', 'd'])")
-	has "$out" "thinkthen usage: thinkthen.max_requests_total allows 1 requests in this backend, and they are spent (retryable: no)"
-	same "$(bcount)" 1
-	same "$(python3 tests/batching_cases.py one_of_packed "$RUN/one-packed")" 'pass one_of_packed'
+keyed_batch_preserves_rows_and_attempts() {
+    local input='{"a":"b","b":"a","c":"c","d":"d"}'
+    fresh generic
+    out=$(q -c "SET thinkthen.batch = '1'" -c "SET thinkthen.cache = 'off'" \
+        -c "SET thinkthen.record = '$RUN/singleton'" \
+        -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '$input'::jsonb)")
+    same "$out" 4
+    same "$(bcount)" 4
+    same "$(python3 tests/batching_cases.py singleton "$RUN/singleton")" 'pass singleton'
+    fresh generic
+    out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
+        -c "SET thinkthen.record = '$RUN/packed'" \
+        -c "SELECT key || ':' || coalesce(value::text, 'null') FROM thinkthen_decide_many('$Q', '$input'::jsonb) ORDER BY key")
+    same "$out" $'a:true\nb:true\nc:true\nd:true'
+    same "$(bcount)" 2
+    same "$(python3 tests/batching_cases.py packed "$RUN/packed")" 'pass packed'
+    fresh generic
+    out=$(q -c "SET thinkthen.batch = 'max'" -c "SET thinkthen.cache = 'off'" \
+        -c "SET thinkthen.record = '$RUN/max-packed'" \
+        -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '$input'::jsonb)")
+    same "$out" 4
+    same "$(bcount)" 1
+    same "$(python3 tests/batching_cases.py max "$RUN/max-packed")" 'pass max'
+    fresh generic "thinkthen.max_requests_total = 1"
+    out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.max_retries = 0" \
+        -c "SET thinkthen.cache = 'off'" -c "SET thinkthen.record = '$RUN/one-packed'" \
+        -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '$input'::jsonb)")
+    has "$out" 'thinkthen.max_requests_total allows 1 requests in this backend, and they are spent'
+    same "$(bcount)" 1
+    same "$(python3 tests/batching_cases.py one_of_packed "$RUN/one-packed")" 'pass one_of_packed'
 }
-check packed_array_preserves_first_occurrence_and_attempts
+check keyed_batch_preserves_rows_and_attempts
 
 portable_batch_identity() {
 	fresh arm/full/capture
@@ -764,76 +864,63 @@ portable_batch_identity() {
 }
 check portable_batch_identity
 
-context_overloads_keep_scalar_shapes_and_null_rules() {
-	fresh generic
-	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
-		-c "SET thinkthen.record = '$RUN/context-packed'" \
-		-c "SELECT i::text || ':' || coalesce(decided::text, 'null') FROM thinkthen_decide('$Q', ARRAY['b', 'a'], 'shared reference') ORDER BY i")
-	same "$out" $'0:true\n1:true'
-	same "$(bcount)" 1
-	same "$(python3 tests/batching_cases.py context "$RUN/context-packed")" 'pass context'
-	fresh generic
-	out=$(q -c "SELECT thinkthen_decide('$Q', 'one', 'shared reference')" \
-		-c "SELECT thinkthen_probability('$Q', 'one', 'shared reference')" \
-		-c "SELECT thinkthen_choose('{\"choose\":\"Which?\",\"options\":[\"first\",\"last\"]}', 'one', NULL, 'shared reference')" \
-		-c "SELECT thinkthen_score('{\"score\":\"Which?\",\"levels\":[\"low\",\"high\"]}', 'one', NULL, 'shared reference')" \
-		-c "SELECT array_length(thinkthen_tag('{\"tag\":\"Which?\",\"labels\":[\"first\",\"last\"]}', 'one', NULL, 'shared reference'), 1)" \
-		-c "SELECT (thinkthen_details('$Q', 'one', 'shared reference') ? 'input')::text" \
-		-c "SELECT thinkthen_try_details('$Q', 'one', 'shared reference')->>'status'")
-	same "$out" $'t\n0.9\nfirst\n0.1\n2\nfalse\nanswered'
-	same "$(bcount)" 4
-	fresh generic
-	same "$(q -c "SELECT thinkthen_try_details(NULL, 'one', '   ') IS NULL")" t
-	same "$(q -c "SELECT count(*) FROM thinkthen_decide('$Q', NULL::text[])" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY[]::text[])")" $'0\n0'
-	has "$(q -c "SELECT thinkthen_try_details('$Q', 'one', '   ')->'error'->>'kind'")" usage
-	has "$(q -c "SELECT thinkthen_decide('$Q', 'one', '   ')")" 'context must not be blank'
-	same "$(bcount)" 0
-	fresh generic
-	same "$(q -c "SELECT thinkthen_decide('$Q', 'same')" -c "SELECT thinkthen_decide('$Q', 'same', NULL)")" $'t\nt'
-	same "$(bcount)" 1
+context_settings_keep_shapes_and_legacy_refusal() {
+    fresh generic
+    out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.cache = 'off'" \
+        -c "SET thinkthen.record = '$RUN/context-packed'" \
+        -c "SELECT key || ':' || coalesce(value::text, 'null') FROM thinkthen_decide_many('$Q', '{\"a\":\"b\",\"b\":\"a\"}'::jsonb, '{\"context\":\"shared reference\"}'::json) ORDER BY key")
+    same "$out" $'a:true\nb:true'
+    same "$(bcount)" 1
+    same "$(python3 tests/batching_cases.py context "$RUN/context-packed")" 'pass context'
+    fresh generic
+    same "$(q -c "SELECT thinkthen_decide('$Q', 'one', context => 'shared reference')")" t
+    same "$(bcount)" 1
+    fresh generic
+    out=$(q -c "SET thinkthen.cache = 'off'" \
+        -c "SELECT thinkthen_choose('{\"choose\":\"Which?\",\"options\":[\"first\",\"last\"]}', 'one', context => 'shared reference')" \
+        -c "SELECT thinkthen_score('{\"score\":\"Which?\",\"levels\":[\"low\",\"high\"]}', 'one', context => 'shared reference')" \
+        -c "SELECT array_length(thinkthen_tag('{\"tag\":\"Which?\",\"labels\":[\"first\",\"last\"]}', 'one', context => 'shared reference'), 1)" \
+        -c "SELECT thinkthen_details('$Q', 'one', context => 'shared reference')->>'value'" \
+        -c "SELECT thinkthen_try_details('$Q', 'one', context => 'shared reference')->>'status'")
+    same "$out" $'first\n0.1\n2\ntrue\nanswered'
+    same "$(bcount)" 5
+    fresh generic
+    same "$(q -c "SELECT thinkthen_try_details(NULL, 'one', context => 'shared reference') IS NULL")" t
+    has "$(q -c "SELECT thinkthen_decide('$Q', 'one', 'shared reference')")" 'the context argument moved into the settings object'
+    has "$(q -c "SELECT thinkthen_decide('$Q', 'one', context => '   ')")" '`context` is text that is not blank'
+    same "$(bcount)" 0
 }
-check context_overloads_keep_scalar_shapes_and_null_rules
+check context_settings_keep_shapes_and_legacy_refusal
 
-warm_groups_context_without_projecting_packed_cache() {
-	fresh generic
-	out=$(q -c "SET thinkthen.batch = '2'" -c "SET thinkthen.record = '$RUN/warm-packed'" \
-		-c "SELECT thinkthen_warm('$Q', e, c ORDER BY i) FROM (VALUES (1, 'b', 'first'), (2, 'a', 'first'), (3, 'b', 'first'), (4, 'c', 'second'), (5, 'd', 'second')) v(i,e,c)")
-	same "$out" 4
-	same "$(bcount)" 2
-	same "$(python3 tests/batching_cases.py warm "$RUN/warm-packed")" 'pass warm'
-	# A packed warm entry covers its complete cohort, not a projected singleton.
-	same "$(q -c "SELECT thinkthen_decide('$Q', 'b', 'first')")" t
-	same "$(bcount)" 3
-	fresh generic
-	has "$(q -c "SELECT thinkthen_warm('$Q', e, c ORDER BY i) FROM (VALUES (1, 'ok', 'first'), (2, 'bad', '   ')) v(i,e,c)")" 'context must not be blank'
-	same "$(bcount)" 0
+keyed_contexts_do_not_project_a_scalar_cache_entry() {
+    fresh generic "thinkthen.batch = '2'"
+    out=$(q -c "SET thinkthen.record = '$RUN/context-groups'" \
+        -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"b\",\"b\":\"a\"}'::jsonb, '{\"context\":\"first\"}'::json)" \
+        -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"c\":\"c\",\"d\":\"d\"}'::jsonb, '{\"context\":\"second\"}'::json)")
+    same "$out" $'2\n2'
+    same "$(bcount)" 2
+    same "$(python3 tests/batching_cases.py warm "$RUN/context-groups")" 'pass warm'
+    same "$(q -c "SELECT thinkthen_decide('$Q', 'b', context => 'first')")" t
+    same "$(bcount)" 3
 }
-check warm_groups_context_without_projecting_packed_cache
+check keyed_contexts_do_not_project_a_scalar_cache_entry
 
 batch_setting_and_replay_context_validate_before_send() {
-	fresh generic
-	for setting in 0 +1 -1 1.5 MAX no; do
-		has "$(q -c "SET thinkthen.batch = '$setting'" -c "SELECT count(*) FROM thinkthen_decide('$Q', ARRAY['one', 'two'])")" \
-			'thinkthen.batch is max or a whole number of 1 or more'
-	done
-	same "$(bcount)" 0
-	fresh generic
-	out=$(q -c "SET thinkthen.record = '$RUN/context-replay'" -c "SELECT thinkthen_decide('$Q', 'one', 'alpha')" \
-		-c "SET thinkthen.record = ''" -c "SET thinkthen.replay = '$RUN/context-replay'" \
-		-c "SELECT thinkthen_decide('$Q', 'one', 'beta')")
-	has "$out" 'thinkthen local: the replay folder holds no reply for this request'
-	same "$(bcount)" 1
+    fresh generic
+    for setting in 0 +1 -1 1.5 MAX no; do
+        has "$(q -c "SET thinkthen.batch = '$setting'" -c "SELECT count(*) FROM thinkthen_decide_many('$Q', '{\"a\":\"one\",\"b\":\"two\"}'::jsonb)")" \
+            'thinkthen.batch is max or a whole number of 1 or more'
+    done
+    same "$(bcount)" 0
+    fresh generic
+    out=$(q -c "SET thinkthen.record = '$RUN/context-replay'" -c "SELECT thinkthen_decide('$Q', 'one', context => 'alpha')" \
+        -c "SET thinkthen.record = ''" -c "SET thinkthen.replay = '$RUN/context-replay'" \
+        -c "SELECT thinkthen_decide('$Q', 'one', context => 'beta')")
+    has "$out" 'thinkthen local: the replay folder holds no reply for this request'
+    same "$(bcount)" 1
 }
 check batch_setting_and_replay_context_validate_before_send
 
-warm_keeps_one_deadline_across_question_groups() {
-	fresh arm/delay/250 "thinkthen.throttle = 1"
-	out=$(q -c "SET thinkthen.batch = '1'" -c "SET thinkthen.deadline_ms = 350" \
-		-c "SELECT thinkthen_warm(q, e ORDER BY i) FROM (VALUES (1, '$Q', 'first'), (2, '{\"decide\":\"Is it red?\"}', 'second')) v(i,q,e)")
-	has "$out" 'thinkthen deadline:'
-	same "$(bcount)" 2
-}
-check warm_keeps_one_deadline_across_question_groups
 sql_settings_and_retry_total() {
 	fresh arm/503
 	out=$(q -c "SET thinkthen.max_requests_total = 1" -c "SET thinkthen.max_retries = 1" \
@@ -911,14 +998,16 @@ echo "== secrecy, signals, preload, panics"
 the_key_never_reaches_the_log() {
 	secret=tt-secret-value-4417
 	fresh generic
-	q -c "CREATE ROLE tt_plain LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text, text), thinkthen_usage() TO tt_plain" >/dev/null
+	q -c "CREATE ROLE tt_plain LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_decide(text,text,json,text,text,text,text,bigint), thinkthen_usage() TO tt_plain" >/dev/null
 	out=""
 	for role in tt_plain postgres; do
 		out+=$(PGUSER_AS=$role q -c "SET thinkthen.api_key = '$secret'" -c "SELECT thinkthen_decide('$Q', 'a')")
 		out+=$(PGUSER_AS=$role q -c "SELECT count(*) FROM thinkthen_usage()" -c "SET thinkthen.api_key = '$secret'" -c "SELECT thinkthen_decide('$Q', 'a')")
 	done
 	out+=$(PGOPTIONS="-c thinkthen.api_key=$secret" PGUSER_AS=tt_plain q -c "SELECT thinkthen_decide('$Q', 'a')")
-	same "$(grep -oF "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment (retryable: no)" <<<"$out" | wc -l)" 5
+	has "$out" "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment"
+	same "$(grep -oF "WARNING:  thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)" 4
+	same "$(grep -oF "thinkthen usage: thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment" <<<"$out" | wc -l)" 5
 	hasnt "$out" "$secret"
 	hasnt "$(cat "$LOG")" "$secret"
 	same "$(bcount)" 0
@@ -944,7 +1033,7 @@ signal_masks() {
 	brelease
 	wait "$HELD"
 	fresh arm/held "thinkthen.throttle = 8"
-	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide('$Q', $(rows 64))"
+	held "SET thinkthen.batch = '2'; SELECT count(*) FROM thinkthen_decide_many('$Q', $(rows 64))"
 	bwait 8
 	masks_hold
 	brelease

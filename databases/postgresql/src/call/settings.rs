@@ -86,6 +86,11 @@ fn batch(value: Option<&str>) -> Result<Option<BatchSetting>, Refusal> {
 }
 
 impl Plan {
+    pub(super) fn with_model(mut self, model: &str) -> Self {
+        self.model = Some(model.to_owned());
+        self
+    }
+
     /// Read the four raw values. The throttle's check already holds it to
     /// -1 or 1..=32, and PostgreSQL's range checks hold the others to -1 or more.
     fn of(raw: Raw<'_>) -> Result<Self, Refusal> {
@@ -191,6 +196,11 @@ pub(crate) fn read() -> Call {
 
 /// Read settings without raising recoverable row failures.
 pub(crate) fn read_result() -> Result<Call, Refusal> {
+    if text_of(&API_KEY).is_some_and(|value| !value.is_empty()) {
+        return Err(Refusal::usage(
+            "thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment",
+        ));
+    }
     let cache = text_of(&CACHE);
     let batch = text_of(&BATCH);
     let model = text_of(&MODEL);

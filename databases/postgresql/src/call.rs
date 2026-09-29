@@ -178,6 +178,11 @@ fn spent(total: u64) -> Refusal {
 }
 
 impl Call {
+    pub(crate) fn with_model(mut self, model: &str) -> Self {
+        self.plan = self.plan.with_model(model);
+        self
+    }
+
     pub(crate) fn with_settings(mut self, settings: &Settings) -> Result<Self, Refusal> {
         if let Some(value) = settings.deadline_ms() {
             self.deadline_ms = value;

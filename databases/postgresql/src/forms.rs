@@ -19,6 +19,15 @@ pub(crate) struct Named<'a> {
 fn settings(raw: Option<&RawJson>, named: Named<'_>) -> Result<Settings, Refusal> {
     let original = raw.map_or("{}", |value| value.0.as_str());
     Settings::parse(original).map_err(|error| Refusal::usage(error.to_string()))?;
+    // The core's 0299 key may become valid before this host adopts an active
+    // transport reservation. Never accept it here as an inert setting.
+    let object: serde_json::Value = serde_json::from_str(original)
+        .map_err(|_| Refusal::usage("settings is one JSON object"))?;
+    if object.get("max_estimated_input_tokens_total").is_some() {
+        return Err(Refusal::usage(
+            "max_estimated_input_tokens_total is not supported by this PostgreSQL host",
+        ));
+    }
     let mut merged = original.trim().strip_suffix('}').unwrap_or("{").to_owned();
     for (key, value) in [
         ("threshold", named.threshold),
@@ -68,6 +77,29 @@ pub(crate) fn controls_result(
     Ok((settings, call))
 }
 
+/// Aggregate questions keep their own question fields; only call controls
+/// and the engine's default model can apply to the whole set.
+pub(crate) fn aggregate_controls(raw: Option<&RawJson>) -> Call {
+    let (_, mut call) = controls(raw, Named::default());
+    let Some(raw) = raw else { return call };
+    let value: serde_json::Value = serde_json::from_str(&raw.0)
+        .unwrap_or_else(|_| call::raise(Refusal::usage("settings is one JSON object")));
+    let Some(fields) = value.as_object() else {
+        call::raise(Refusal::usage("settings is one JSON object"));
+    };
+    for key in fields.keys() {
+        if !matches!(key.as_str(), "batch" | "deadline_ms" | "model") {
+            call::raise(Refusal::usage(format!(
+                "annotate does not take setting `{key}`"
+            )));
+        }
+    }
+    if let Some(model) = fields.get("model").and_then(serde_json::Value::as_str) {
+        call = call.with_model(model);
+    }
+    call
+}
+
 pub(crate) fn question(
     argument: Option<&str>,
     members: Option<Array<'_, &str>>,
@@ -91,10 +123,39 @@ pub(crate) fn question_result(
         For::Find => return Err(Refusal::usage("find is not a judgment question")),
     };
     let list = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
-    Given::read_question(argument, key, call::file_directory().as_deref())
+    let asked = Given::read_question(argument, key, call::file_directory().as_deref())
         .and_then(|given| given.with_members(key, list))
         .and_then(|given| given.with_settings(settings, verb))
-        .and_then(|given| given.parse(Question::from_json))
+        .and_then(|given| given.parse(Question::from_json))?;
+    let kind = match &asked {
+        LoadedQuestion::Banded(_) => QuestionKind::Decide,
+        LoadedQuestion::Question(question) => question.kind(),
+    };
+    let wanted = match verb {
+        For::Decide => QuestionKind::Decide,
+        For::Choose => QuestionKind::Choose,
+        For::Score => QuestionKind::Score,
+        For::Tag => QuestionKind::Tag,
+        For::Find => return Err(Refusal::usage("find is not a judgment question")),
+    };
+    if kind != wanted {
+        return Err(Refusal::usage(format!(
+            "a {} call takes a {} question",
+            key_for(verb),
+            key_for(verb)
+        )));
+    }
+    Ok(asked)
+}
+
+const fn key_for(verb: For) -> &'static str {
+    match verb {
+        For::Decide => "decide",
+        For::Choose => "choose",
+        For::Score => "score",
+        For::Tag => "tag",
+        For::Find => "find",
+    }
 }
 
 pub(crate) fn keyed(argument: Option<JsonB>) -> Vec<(String, String)> {

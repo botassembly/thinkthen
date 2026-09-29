@@ -160,14 +160,17 @@ unsafe extern "C-unwind" fn check_ignored_api_key(
     _extra: *mut *mut std::ffi::c_void,
     source: pg_sys::GucSource::Type,
 ) -> bool {
-    if source == pg_sys::GucSource::PGC_S_INTERACTIVE {
+    if matches!(
+        source,
+        pg_sys::GucSource::PGC_S_INTERACTIVE | pg_sys::GucSource::PGC_S_SESSION
+    ) {
         // SAFETY: PostgreSQL passes a live pointer to the proposed NUL-terminated value.
         let proposed = unsafe { *value };
         if !proposed.is_null() && !unsafe { std::ffi::CStr::from_ptr(proposed) }.is_empty() {
             pgrx::ereport!(
                 WARNING,
                 PgSqlErrorCode::ERRCODE_WARNING,
-                "thinkthen.api_key is ignored; set THINKTHEN_API_KEY in the server environment"
+                "thinkthen.api_key is never read; unset it and set THINKTHEN_API_KEY in the server's environment"
             );
         }
     }

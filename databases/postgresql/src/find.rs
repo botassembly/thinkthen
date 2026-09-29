@@ -5,6 +5,9 @@ use pgrx::prelude::*;
 use thinkthen::{Evidence, Question};
 
 use crate::call::{self, OrRaise as _, Refusal};
+use crate::ffi::RawJson;
+use crate::forms::{self, Named};
+use thinkthen::For;
 
 const MAX_TEXT_BYTES: usize = 16 * 1024 * 1024;
 
@@ -59,11 +62,26 @@ fn indexed(array: Array<'_, &str>, none: bool) -> Result<Vec<IndexedEvidence>, R
 fn found(
     question: Option<&str>,
     units: Option<Array<'_, &str>>,
-    none: Option<bool>,
+    raw: Option<RawJson>,
 ) -> Option<JsonB> {
-    let (Some(question), Some(units), Some(none)) = (question, units, none) else {
+    let (Some(question), Some(units)) = (question, units) else {
         return None;
     };
+    let (settings, mut call) = forms::controls(raw.as_ref(), Named::default());
+    settings
+        .check(For::Find)
+        .map_err(|error| Refusal::usage(error.to_string()))
+        .or_raise();
+    let none = settings.none().unwrap_or(false);
+    if let Some(raw) = &raw {
+        // The shared parser has already checked the closed grammar and type.
+        // Find has no question-file model setter, so select its engine here.
+        let value: serde_json::Value = serde_json::from_str(&raw.0)
+            .unwrap_or_else(|_| call::raise(Refusal::usage("settings is one JSON object")));
+        if let Some(model) = value.get("model").and_then(serde_json::Value::as_str) {
+            call = call.with_model(model);
+        }
+    }
     let units = indexed(units, none).or_raise();
     if units.is_empty() {
         return None;
@@ -74,7 +92,7 @@ fn found(
     } else {
         question
     };
-    let answer = call::run(call::read(), move |engine, options| {
+    let answer = call::run(call, move |engine, options| {
         engine
             .find_with(&question, units, options)
             .map(thinkthen::Call::into_value)
@@ -111,16 +129,23 @@ fn found(
 
 /// Find one original unit, or explicit none, in an ordered text array.
 #[pg_extern(name = "thinkthen_find", parallel_restricted)]
-fn thinkthen_find(question: Option<&str>, units: Option<Array<'_, &str>>) -> Option<JsonB> {
-    found(question, units, Some(false))
+fn thinkthen_find(
+    question: Option<&str>,
+    units: Option<Array<'_, &str>>,
+    settings: default!(Option<RawJson>, "NULL"),
+) -> Option<JsonB> {
+    found(question, units, settings)
 }
 
-/// Offer a none candidate alongside every original unit.
+/// The removed positional none form fails with its replacement spelling.
 #[pg_extern(name = "thinkthen_find", parallel_restricted)]
 fn thinkthen_find_none(
     question: Option<&str>,
     units: Option<Array<'_, &str>>,
-    none: Option<bool>,
+    _none: Option<bool>,
 ) -> Option<JsonB> {
-    found(question, units, none)
+    let _ = (question, units);
+    call::raise(Refusal::usage(
+        "find's none and deadline moved into the settings object",
+    ))
 }

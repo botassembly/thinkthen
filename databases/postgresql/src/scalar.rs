@@ -19,10 +19,19 @@ fn judged(
 ) -> Option<thinkthen::Details> {
     let input = input?.to_owned();
     let (settings, call) = forms::controls(settings.as_ref(), named);
+    let contextual = settings.context().is_some();
     let question = forms::question(question, members, verb, &settings);
-    Some(call::run(call, move |engine, options| {
-        details(engine, &question, &input, options)
-    }))
+    Some(
+        call::run(call, move |engine, options| {
+            details(engine, &question, &input, options, contextual)
+        })
+        .unwrap_or_else(|| {
+            call::raise(Refusal::of(
+                thinkthen::ErrorKind::Defect,
+                "details returned no record",
+            ))
+        }),
+    )
 }
 
 #[allow(
@@ -167,11 +176,18 @@ fn details_sql(
         deadline_ms,
     };
     let (settings, call) = forms::controls(settings.as_ref(), named);
+    let contextual = settings.context().is_some();
     let verb = forms::plan_verb(question?, &settings);
     let asked = forms::question(question, None, verb, &settings);
     let input = input?.to_owned();
     let held = call::run(call, move |engine, options| {
-        details(engine, &asked, &input, options)
+        details(engine, &asked, &input, options, contextual)
+    })
+    .unwrap_or_else(|| {
+        call::raise(Refusal::of(
+            thinkthen::ErrorKind::Defect,
+            "details returned no record",
+        ))
     });
     Some(crate::jsonb(&held.to_json()))
 }
@@ -204,11 +220,17 @@ fn try_details(
     };
     let result = (|| {
         let (settings, call) = forms::controls_result(settings.as_ref(), named)?;
+        let contextual = settings.context().is_some();
         let verb = forms::plan_verb_result(question, &settings)?;
         let question = forms::question_result(Some(question), None, verb, &settings)?;
         let input = input.to_owned();
         call::run_result(call, move |engine, options| {
-            details(engine, &question, &input, options)
+            details(engine, &question, &input, options, contextual)
+        })
+        .and_then(|answer| {
+            answer.ok_or_else(|| {
+                Refusal::of(thinkthen::ErrorKind::Defect, "details returned no record")
+            })
         })
     })();
     let value = match result {
