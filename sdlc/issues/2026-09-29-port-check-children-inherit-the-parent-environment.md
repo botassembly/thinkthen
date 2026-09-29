@@ -11,3 +11,7 @@ These test tools should receive explicit required variables and controlled scrat
 Route the affected test children through the existing language helpers or an explicit minimal environment. Keep the real installed-consumer and exact request-count/body assertions. Use a small planted unrelated variable to verify isolation without a broad consumer rebuild, then run only affected focused checks needed for changed environment selection. The existing guard must accept corrected call sites; do not add exemptions or weaken its tables.
 
 The DuckDB test remains under Ian's SQL/DataFrame hold and is not authorized by the independent library batch. Keep that location explicit until the hold ends. A corrected library batch must not claim whole-tree lint green while a held or other reported location remains.
+
+## Library batch complete
+
+Ticket 0276 at independently accepted `9675d47f` fixes all 45 library findings in the 27 claimed files. The planted real PHP backend and consumer, selected source and extracted-package checks, JVM launcher environment stub and ten measured Python ratchets passed. The independent guard scan now reports only the held DuckDB location. That location remains open; no full-lint or all-host qualification is claimed.

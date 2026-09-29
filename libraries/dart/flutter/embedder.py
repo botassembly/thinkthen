@@ -8,6 +8,8 @@ import shutil
 import signal
 import subprocess
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import time
 from fixture import Backend
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / 'checks'))
@@ -22,7 +24,7 @@ logs.mkdir(parents=True, exist_ok=True)
 missing = []
 if shutil.which('ninja') is None:
     missing.append('ninja-build')
-if subprocess.run(['pkg-config', '--exists', 'gtk+-3.0']).returncode != 0:
+if subprocess.run(['pkg-config', '--exists', 'gtk+-3.0'], env=child_env()).returncode != 0:
     missing.append('libgtk-3-dev')
 if missing:
     status = {'status': 'GATE-BLOCKED-SYSTEM-DEPS', 'missing_packages': missing,

@@ -3,6 +3,9 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import tempfile
 
 PACKAGE = Path(__file__).resolve().parent.parent
@@ -22,7 +25,7 @@ subprocess.run([zig, "build", "-j2", f"-Dnative={NATIVE}", "-Dlink-mode=shared",
                 "--build-file", str(PROJECT / "build.zig"),
                 "--cache-dir", str(PACKAGE / "target/scratch/tests-cache"),
                 "--global-cache-dir", str(PACKAGE / "target/cache"), "portable-batch"],
-               cwd=PROJECT, check=True, timeout=120)
+               cwd=PROJECT, env=child_env(HOME=str(PACKAGE / "target/home")), check=True, timeout=120)
 exe = PROJECT / "zig-out/bin/portable-batch"
 assert exe.is_file(), "focused Zig step did not install its consumer"
 backend = subprocess.Popen([str(BACKEND)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
@@ -31,8 +34,7 @@ try:
     port = int(backend.stdout.readline())
     corpus = json.loads(CORPUS.read_text())
     with tempfile.TemporaryDirectory(prefix="zig-portable-", dir=PACKAGE / "target/scratch") as scratch:
-        env = os.environ.copy()
-        env.pop("THINKTHEN_API_KEY", None)
+        env = child_env()
         env.update(HOME=scratch, XDG_CACHE_HOME=scratch, XDG_CONFIG_HOME=scratch,
                    LD_LIBRARY_PATH=str(NATIVE / "lib"), THINKTHEN_CACHE=str(Path(scratch) / "cache"),
                    THINKTHEN_API_KEY="tt-portable-loopback",

@@ -4,6 +4,8 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 from fixture import Backend
 
@@ -16,13 +18,14 @@ cmake = os.environ.get("THINKTHEN_CMAKE_BIN", "cmake")
 header = native / "include/thinkthen.h"
 shared = native / "lib/libthinkthen.so"
 static = native / "lib/libthinkthen.a"
-abi_env = os.environ | {"THINKTHEN_NATIVE_HEADER": str(header), "THINKTHEN_NATIVE_SHARED": str(shared)}
+build_env = child_env(keep=("CC", "CXX", "CMAKE_GENERATOR", "CMAKE_MAKE_PROGRAM"), HOME=str(home))
+abi_env = child_env(THINKTHEN_NATIVE_HEADER=str(header), THINKTHEN_NATIVE_SHARED=str(shared))
 subprocess.run([sys.executable, str(Path(__file__).with_name("exports.py"))], env=abi_env, check=True)
 subprocess.run([cmake, "-S", str(wrapper), "-B", str(build), "-DCMAKE_BUILD_TYPE=Release",
                 f"-DCMAKE_INSTALL_PREFIX={prefix}", f"-DTHINKTHEN_C_HEADER={header}",
-                f"-DTHINKTHEN_NATIVE_SHARED={shared}", f"-DTHINKTHEN_NATIVE_STATIC={static}"], check=True)
-subprocess.run([cmake, "--build", str(build), "--parallel", "2"], check=True)
-subprocess.run([cmake, "--install", str(build)], check=True)
+                f"-DTHINKTHEN_NATIVE_SHARED={shared}", f"-DTHINKTHEN_NATIVE_STATIC={static}"], env=build_env, check=True)
+subprocess.run([cmake, "--build", str(build), "--parallel", "2"], env=build_env, check=True)
+subprocess.run([cmake, "--install", str(build)], env=build_env, check=True)
 for original, installed in ((header, prefix / "include/thinkthen/thinkthen.h"),
                             (shared, prefix / "lib/libthinkthen.so.0"),
                             (static, prefix / "lib/libthinkthen.a")):
@@ -43,10 +46,10 @@ try:
         consumer_build = home / (mode + "-build")
         subprocess.run([cmake, "-S", str(fixture), "-B", str(consumer_build),
                         f"-DCMAKE_PREFIX_PATH={prefix}", "-DCMAKE_BUILD_TYPE=Release",
-                        f"-DTHINKTHEN_LINK_STATIC_C={'ON' if mode == 'static' else 'OFF'}"], check=True)
-        subprocess.run([cmake, "--build", str(consumer_build), "--parallel", "2"], check=True)
+                        f"-DTHINKTHEN_LINK_STATIC_C={'ON' if mode == 'static' else 'OFF'}"], env=build_env, check=True)
+        subprocess.run([cmake, "--build", str(consumer_build), "--parallel", "2"], env=build_env, check=True)
         binary = consumer_build / "consumer"
-        linked = subprocess.check_output(["ldd", str(binary)], text=True)
+        linked = subprocess.check_output(["ldd", str(binary)], text=True, env=child_env())
         if mode == "shared":
             assert "libthinkthen.so.0" in linked and str(prefix / "lib") in linked, linked
             print("CPP_SHARED_LINK " + next(line.strip() for line in linked.splitlines() if "libthinkthen.so.0" in line))

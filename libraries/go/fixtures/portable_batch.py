@@ -5,6 +5,9 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -20,13 +23,11 @@ corpus = json.loads(CORPUS.read_text())
 bodies = [(FIXTURES / f"portable-{at}.request.json").read_text().removesuffix("\n") for at in range(1, 4)]
 assert corpus["schema"] == "thinkthen.portable-batch-records/1" and len(corpus["texts"]) == 5
 
-server = subprocess.Popen([BACKEND], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+server = subprocess.Popen([BACKEND], env=child_env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
 try:
     port = int(server.stdout.readline())
     with tempfile.TemporaryDirectory(prefix="thinkthen-go-portable-") as scratch:
-        env = os.environ.copy()
-        for name in ("THINKTHEN_API_KEY", "THINKTHEN_BASE_URL", "THINKTHEN_CACHE"):
-            env.pop(name, None)
+        env = child_env(HOME=scratch, GOMODCACHE=str(Path(scratch) / "modcache"))
         env.update(THINKTHEN_API_KEY="sk-loopback-go-portable",
                    THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/arm/full/capture/v1",
                    TT_PORTABLE_SETTINGS=json.dumps({"base_url": f"http://127.0.0.1:{port}/arm/full/capture/v1",

@@ -69,9 +69,9 @@ digest <- function(url, body) {
   on.exit(unlink(file))
   writeBin(charToRaw(paste0("systemone\n", url, "\n", body)), file)
   if (nzchar(Sys.which("sha256sum"))) {
-    answer <- system2("sha256sum", shQuote(file), stdout = TRUE)
+    answer <- system2("env", c(clean_env(), shQuote(Sys.which("sha256sum")), shQuote(file)), stdout = TRUE)
   } else if (nzchar(Sys.which("shasum"))) {
-    answer <- system2("shasum", c("-a", "256", shQuote(file)), stdout = TRUE)
+    answer <- system2("env", c(clean_env(), shQuote(Sys.which("shasum")), "-a", "256", shQuote(file)), stdout = TRUE)
   } else stop("the installed SHA-256 host tool is absent", call. = FALSE)
   strsplit(answer[[1L]], " ", fixed = TRUE)[[1L]][[1L]]
 }

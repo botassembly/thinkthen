@@ -6,6 +6,9 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -39,20 +42,18 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cobol-portable-") as scratch:
                     "-o", str(program), str(HERE / "door.cob"),
                     str(target / "src/tt_engine.cob"), str(target / "src/tt_call.cob"),
                     str(target / "src/tt_error.cob"), "-L", str(LIB_DIR),
-                    "-l" + LIB_NAME], check=True, capture_output=True, text=True, timeout=90)
+                    "-l" + LIB_NAME], env=child_env(), check=True, capture_output=True, text=True, timeout=90)
     if INSTALLED:
-        linked = subprocess.check_output(["ldd", program], env={**os.environ, "LD_LIBRARY_PATH": str(LIB_DIR)}, text=True)
+        linked = subprocess.check_output(["ldd", program], env=child_env(LD_LIBRARY_PATH=str(LIB_DIR)), text=True)
         assert str(LIB_DIR / "libthinkthen.so.0") in linked, linked
         print("cobol installed loader:", next(line.strip() for line in linked.splitlines() if "libthinkthen.so.0" in line))
-    server = subprocess.Popen([backend], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
+    server = subprocess.Popen([backend], env=child_env(), stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     try:
         port = int(server.stdout.readline())
         base = f"http://127.0.0.1:{port}/arm/full/capture/v1"
         settings = json.dumps({"base_url": base, "model": corpus["model"], "batch": "max",
                                "cache": False, "max_retries": 0, "throttle": 1})
-        env = os.environ.copy()
-        for name in ("THINKTHEN_API_KEY", "THINKTHEN_BASE_URL", "THINKTHEN_CACHE"):
-            env.pop(name, None)
+        env = child_env()
         env.update(THINKTHEN_API_KEY="sk-loopback-cobol-portable", THINKTHEN_BASE_URL=base,
                    HOME=scratch, THINKTHEN_CACHE=str(target / "cache"),
                    LD_LIBRARY_PATH=str(LIB_DIR))

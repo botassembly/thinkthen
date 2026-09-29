@@ -3,6 +3,8 @@ import json
 import pathlib
 import subprocess
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 root = pathlib.Path(__file__).resolve().parent
 cases = {
@@ -13,6 +15,7 @@ cases = {
 for plant, (marker, expected_exit, expected_bulk) in cases.items():
     before = set((root / 'logs').glob(f'gate-*-{plant}'))
     result = subprocess.run([sys.executable, str(root / 'run.py'), plant], cwd=root,
+                            env=child_env(keep=('TT_FLUTTER', 'TT_NATIVE_LIBRARY', 'PUB_CACHE')),
                             capture_output=True, text=True, timeout=245)
     created = set((root / 'logs').glob(f'gate-*-{plant}')) - before
     if len(created) != 1:

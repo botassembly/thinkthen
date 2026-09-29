@@ -3,6 +3,8 @@ import json
 import pathlib
 import subprocess
 import sys
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 root = pathlib.Path(__file__).resolve().parent
 logs = root.parents[2] / 'target/cpp/logs'
@@ -19,7 +21,9 @@ cases = {
 }
 for plant, (expected_exit, marker) in cases.items():
     existing = set(logs.glob(f'gate-*-{plant}'))
-    process = subprocess.run([sys.executable, str(root / 'run.py'), plant], cwd=root, capture_output=True, text=True, timeout=165)
+    process = subprocess.run([sys.executable, str(root / 'run.py'), plant], cwd=root,
+                             env=child_env(keep=('CPP_CONSUMER', 'CPP_CORPUS_ROOT')),
+                             capture_output=True, text=True, timeout=165)
     created = set(logs.glob(f'gate-*-{plant}')) - existing
     if len(created) != 1:
         raise SystemExit(f'PLANTED_NEGATIVE_MISSING_RECEIPT {plant} {created} {process.stdout} {process.stderr}')
