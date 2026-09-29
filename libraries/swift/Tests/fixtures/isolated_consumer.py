@@ -39,7 +39,7 @@ def execute(label,args,timeout=120):
 try:
     # Direct namespace checks, not host-path checks: the cargo binary and pinned
     # source must not be addressable from the consumer process.
-    execute('namespace',['/bin/sh','-c','test ! -x /usr/bin/cargo && test ! -x /usr/bin/rustc && test ! -e /home/ian/workspace/repos/thinkthen && test ! -e /home/ian/workspace/experiments && echo NAMESPACE_PASS'],timeout=20)
+    execute('namespace',['/bin/sh','-c','test ! -x /usr/bin/cargo && test ! -x /usr/bin/rustc && test ! -e /home && test ! -e /Users && echo NAMESPACE_PASS'],timeout=20)
     pkg='/work/installed package with spaces/package';native='/work/installed package with spaces/native/lib'
     build=execute('swift-build',['/swift/usr/bin/swift','build','--package-path',pkg,'--scratch-path','/work/swift-build','--jobs','2','-Xlinker','-L','-Xlinker',native,'-Xlinker','-rpath','-Xlinker',native],timeout=180)
     # The packaged executable is the independent installed Swift consumer.

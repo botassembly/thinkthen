@@ -1,7 +1,7 @@
 using System;
 using System.Text.Json;
 using ThinkThen;
-foreach (string forbidden in new[] { "/usr/bin/cargo", "/usr/bin/rustc", "/home/ian/workspace/repos/thinkthen", "/home/ian/workspace/experiments/290-thinkthen-csharp-c-interface/stage2/inputs/source" })
+foreach (string forbidden in new[] { "/usr/bin/cargo", "/usr/bin/rustc", "/home", "/Users" })
     if (System.IO.File.Exists(forbidden) || System.IO.Directory.Exists(forbidden)) throw new Exception("source/compiler visible");
 if (Environment.GetEnvironmentVariable("TT_PORTABLE_BATCH") == "1") {
     using var bulk = Engine.Open("{\"batch\":\"max\",\"cache\":false,\"throttle\":1,\"max_retries\":0}");

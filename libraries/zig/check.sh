@@ -64,7 +64,7 @@ python3 "$here/Tests/portable_batch.py"
 python3 "$here/Tests/package_local.py"
 python3 "$here/Tests/guard.py" "$here/target/artifacts/thinkthen-zig-0.0.1-src.tar.gz"
 plant=$(mktemp "$here/target/logs/private-plant-XXXXXX")
-printf '%s\n' '/home/ian/private' >"$plant"
+printf '%s\n' '/home/private/file' >"$plant"
 if python3 "$here/Tests/guard.py" "$plant" >"$plant.log" 2>&1; then echo 'Zig privacy plant passed' >&2; exit 1; fi
 grep -q 'rejected private byte pattern' "$plant.log"
 rm -f "$plant" "$plant.log"

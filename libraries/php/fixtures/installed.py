@@ -16,7 +16,7 @@ PHP = ROOT / "libraries/php"
 NATIVE = ROOT / "libraries/c/target/debug/libthinkthen_c.so"
 HEADER = ROOT / "libraries/c/include/thinkthen.h"
 PACKAGE_FILES = ["LICENSE", "README.md", "autoload.php", "composer.json", "examples/direct.php", "src/ThinkThen.php"]
-PRIVATE_PATTERNS = (b"tt-canary-291", b"/home/ian", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
+PRIVATE_PATTERNS = (b"tt-canary-291", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
 def identical(source, copied):

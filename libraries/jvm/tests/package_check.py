@@ -9,7 +9,7 @@ import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = Path(os.environ.get("THINKTHEN_JVM_OUT", ROOT / "target"))
-BAD = (b"tt-canary-289", b"/home/ian", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
+BAD = (b"tt-canary-289", b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
 def inspect(name, source):

@@ -3,7 +3,7 @@ import pathlib
 import sys
 
 root = pathlib.Path(sys.argv[1])
-needles = (b"/home/ian", b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-")
+needles = (b"/home/", b"/Users/", b"auth.json", b"-----BEGIN PRIVATE KEY-----", b"tt-canary-")
 files = [p for p in root.rglob("*") if p.is_file() and "fixtures" not in p.parts
          and p.suffix in {".go", ".md", ".mod", ".hpp", ".cpp", ".txt", ".in"}]
 assert files, "no source scanned"
