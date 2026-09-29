@@ -408,6 +408,76 @@ The page lists the dialect and library limits named in each proposal. Where the 
 
 Fix the wrong samples: the SQLite relations call (`site/examples/functions/recognize/sqlite.sql:16-19`), the PostgreSQL README choose (`databases/postgresql/README.md:52`), and the DuckDB README's complete-question form (`databases/duckdb/README.md:11-14`, `:26`).
 
+## Ideas from sqlite-jev
+
+[sqlite-jev](https://github.com/mgaitan/sqlite-jev) by Martín Gaitán is a SQLite extension that asks yes/no, choice, and score questions about rows. It meets several of the problems above. This section credits it and lists what ThinkThen can take and what it should avoid. Each idea names the proposal it serves. Links point at commit `1ac946c`.
+
+### Ideas to take
+
+1. **A table function that reads a table and joins back by rowid.** `jev_rows` reads the named columns of a table, packs up to 40 rows into one request, and returns one result row per source row. The caller joins on `source_rowid`. Users get batching from one query, with no warm pass first. This shape fits proposal 6's row-source option and proposal 4's `(query, ...)` form.
+
+   ```sql
+   SELECT t.id, t.subject, round(j.probability, 3) AS urgency
+   FROM jev_rows('tickets', 'The customer explicitly expresses urgency or says work is blocked',
+                 'noul', NULL, json_array('subject', 'message')) AS j
+   JOIN tickets AS t ON t.rowid = j.source_rowid
+   WHERE j.probability >= 0.6;
+   ```
+
+   Source: [README.md lines 8–21](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L8-L21).
+
+2. **One result shape for every question kind.** `jev_rows` always returns `source_rowid`, `answer`, `probability`, `choice`, `score`, and `confidence`. A column that does not apply to the question is NULL. Users learn one set of column names and can switch a question from decide to choose without rewriting the join. This serves proposal 2. Source: [README.md lines 61–62](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L61-L62).
+
+3. **Several columns sent as one labelled record.** The column list turns each row into a JSON object keyed by column name, such as `{"subject": ..., "message": ...}`. The scalar form takes `json_object(...)` for the same result. The model sees field names, and users judge a ticket's subject and body together without string concatenation. ThinkThen takes one text per call. No proposal above covers this.
+
+   ```sql
+   SELECT jev_prob(json_object('subject', subject, 'message', message),
+                   'The customer explicitly expresses urgency')
+   FROM tickets WHERE id = 42;
+   ```
+
+   Source: [README.md lines 144–151](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L144-L151) and [src/jev.c lines 993–999](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/src/jev.c#L993-L999).
+
+4. **A probability function beside the yes/no function, and a threshold argument.** `jev_prob(state, condition)` returns the yes probability. `jev(state, condition, 0.7)` applies a threshold in the call. The README tells users to keep the threshold in SQL so it can rise with the cost of a false yes. This matches proposal 3, and the threshold argument matches proposal 1. Source: [README.md lines 83–85 and 129–140](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L83-L140).
+
+5. **A row limit that refuses before sending and names the fix.** `max_rows` defaults to 500. A larger scan fails before any data leaves, with this message:
+
+   ```text
+   jev: table 'tickets' exceeds max_rows=500; prefilter into a smaller table/view or raise jev_config('max_rows', ...)
+   ```
+
+   An unknown setting lists the valid names, and a missing key names both ways to set it. Users fix the query from the message alone. This fits proposal 7 and gives `thinkthen_max_requests_total` a model for its message. Source: [src/jev.c line 983](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/src/jev.c#L983), [line 736](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/src/jev.c#L736), and [line 374](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/src/jev.c#L374).
+
+6. **One setting function per connection.** `jev_config(name, value)` sets the model, batch size, row limit, and timeout for one connection, and returns the value it set. A call that sets `api_key` returns `set` and never echoes the key. One function is easier to learn than twelve, and a per-connection setting lets two queries in one process differ. This fits proposal 8. ThinkThen keeps the key in the environment, so only the rule that a setting never echoes a secret carries over. Source: [README.md lines 155–167](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L155-L167).
+
+7. **Usage counts that include rows and cache hits.** `jev_stats()` returns requests, input and output tokens, rows judged, and cache hits. ThinkThen's usage lacks rows judged, which proposal 7 can add. The example script ends with `SELECT json(jev_stats())`, so a reader sees what the demo cost. The test suite runs the same batch twice and checks that the request count stays flat. Source: [examples/ticket_triage.sql line 69](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/examples/ticket_triage.sql#L69) and [test/test.sql lines 64–68](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/test/test.sql#L64-L68).
+
+8. **A pip package with a `load` helper.** `uv add sqlite-jev` installs a platform wheel. `sqlite_jev.load(connection)` finds the library, loads it, and turns extension loading off again. A test checks that loading stays off afterwards. ThinkThen's SQLite README asks users to copy `libthinkthen0.so` to `thinkthen.so` by hand. Release archives also ship `SHA256SUMS`. No proposal above covers loading.
+
+   ```python
+   import sqlite3, sqlite_jev
+   connection = sqlite_jev.load(sqlite3.connect(":memory:"))
+   ```
+
+   Source: [README.md lines 169–186](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L169-L186), [python/sqlite_jev/\_\_init\_\_.py](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/python/sqlite_jev/__init__.py), and [test/python_package.py lines 11–21](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/test/python_package.py#L11-L21).
+
+9. **A limits list in the README.** The README tells users that row text leaves the machine, that a scan is not an index, that they should filter with plain SQL first, that counting and date math belong in SQL, and that row text can steer the model. Proposal 10's page can carry the same short list. Source: [README.md lines 262–273](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L262-L273).
+
+10. **One script as test and example.** `test/test.sql` runs against a local mock server, and `test/expected.out` holds its exact output. `examples/ticket_triage.sql` runs the same shapes live. Proposal 10's page can follow this pattern: one SQL file per example, one saved output, and a check that compares them. Source: [test/test.sql](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/test/test.sql) and [test/expected.out](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/test/expected.out).
+
+### Choices to avoid
+
+- **NULL placeholders in positional arguments.** A yes/no call on selected columns must pass `NULL` for the unused labels slot: `jev_rows('tickets', question, 'noul', NULL, json_array(...))`. Named arguments remove this.
+- **The question kind as a string argument with a coined name.** Users must type `'noul'`, `'choice'`, or `'score'`. A typo fails only at run time. Separate function names read better.
+- **A yes/no function with no unsure answer.** `jev()` returns 0 when the probability sits below the threshold, so "no" and "not sure" look the same ([src/jev.c line 614](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/src/jev.c#L614)). Keep ThinkThen's NULL for unsure.
+- **A table name in place of a query.** `jev_rows` takes a table name, needs a rowid table, and reads every row before it returns the first. Users must copy filtered rows into a temporary table first ([README.md lines 120–122](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/README.md#L120-L122)). Proposal 4's query form lets a WHERE clause choose the rows.
+- **A second function for batching.** The README tells users to switch from the scalar form to `jev_rows` for a scan. Proposal 6 should state the request count for the scalar form so users need not learn two forms to control cost.
+- **Batches sent one after another.** `evaluate_rows` sends each batch of 40 and waits before the next. ThinkThen's throttle already sends several at once.
+- **A cache that ends with the connection.** Answers live in memory and vanish when the connection closes. ThinkThen's disk cache and replay outlive the process.
+- **The API key in SQL.** `jev_config('api_key', '...')` puts the key in shell history and query logs. Keep ThinkThen's rule that only the environment holds the key.
+- **No cancel.** A request blocks for up to 90 seconds, and the code never checks for an interrupt. Keep ThinkThen's interrupt check.
+- **Binary values sent as hex text.** A BLOB column becomes a `"hex:..."` string without a warning ([src/jev.c lines 943–953](https://github.com/mgaitan/sqlite-jev/blob/1ac946cdc0d80fd2d77ba0b64deafb456521fdd4/src/jev.c#L943-L953)). Keep ThinkThen's usage error.
+
 ## Acceptance criteria
 
 1. The survey tables above, updated to the new surface, live on the page. Every row cites a registration line or a public signature.
