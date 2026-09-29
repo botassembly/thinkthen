@@ -294,7 +294,7 @@ Future<void> main(List<String> args) async {
       require(
         answer.value.outcome == Outcome.values[outcome] &&
             answer.value.probability == probability,
-        'scalar $text $answer',
+        'scalar $text ${answer.value.outcome}/${answer.value.probability}',
       );
     }
     final described = door.ask(engine, {

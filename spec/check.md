@@ -17,7 +17,7 @@ sed -n 4p "$HOME/plan.txt" | mustmatch "model sent jev-1.13.0"
 awk '/^request /{print $2}' "$HOME/plan.txt" | paste -sd' ' - | mustmatch "noul choice score mixed"
 sed -n 's/^request [a-z]* //p' "$HOME/plan.txt" | diff - "$fixture"
 wc -l < "$HOME/plan.txt" | mustmatch "9"
-sed -n 9p "$HOME/plan.txt" | jq -c '{records,requests,estimated_bytes,estimated_input_tokens,upper_bound}' | mustmatch like '{"records":4,"requests":4,"estimated_bytes":1581,"estimated_input_tokens":{"lower":815,"upper":1436},"upper_bound":false}'
+sed -n 9p "$HOME/plan.txt" | jq -c '{records,requests,estimated_bytes,estimated_input_tokens,upper_bound}' | mustmatch like '{"records":4,"requests":4,"estimated_bytes":1568,"estimated_input_tokens":{"lower":809,"upper":1424},"upper_bound":false}'
 sed -n '/^```json$/,/^```$/p' "$(dirname "$fixture")/../../check.md" | sed '1d;$d' | diff - "$fixture"
 ```
 

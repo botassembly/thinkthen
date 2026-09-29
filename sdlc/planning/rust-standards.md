@@ -62,8 +62,14 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 - The binary reads two hidden, test-only variables. `THINKTHEN_TEST_RETRY_WAIT_MS` keeps retry tests short. `THINKTHEN_TEST_SIGINT_ACK` names an exclusive one-byte carrier acknowledgment used to order SIGINT subprocess tests. Help never shows either setting. Only a build with debug assertions reads them, so a release binary ignores both.
 - Live calls to a paid backend sit outside the ladder in `sdlc/scripts/live`. They run by hand, under a token cap, with Ian's authorization.
 - A claim of secrecy is tested over every command, on the path that succeeds and on each path that fails, and it reads every `Debug` line. One command does not stand for the rest.
-- A test that claims nothing was sent counts the requests on the loopback listener. An exit code and a `--dry-run` prove nothing about a live path.
+- A test that claims nothing was sent counts the requests on the loopback listener. An exit code and `--plan` prove nothing about a live path. Cache prune's `--dry-run` is a separate preview contract.
 - A script that checks something runs from a rung. `probes/replay-check.sh` rotted for a day because no rung ran it, and `spec` runs it now.
+
+Package checks compare exported names with an independent declared public contract. Derive a count from that contract when useful; do not maintain a second literal cardinality or derive the expectation from the implementation under test. Keep exact ABI inventories, request bodies and arrival multisets where they prove behavior. The reviewer checks the oracle and any change to it.
+
+A planted negative must prove the intended rejection, including its cause, rather than merely a nonzero exit. Prefer a stable error kind, code or named assertion marker over incidental prose. Keep exact text when wording, secrecy or a migration message is the contract. A changed result envelope requires checking diagnostic expressions as well as positive assertions.
+
+Run package gates and their children with a minimal explicit environment, using `env -i` or an equivalent allowlist. Declare the host's UTF-8 locale, pinned tool paths, required compiler overrides and owned scratch home/cache directories. Fixtures use fake keys and owned loopback servers. Keep dependency locks unchanged; a missing cached dependency is a prerequisite failure. Parent Cargo configuration and child variable forwarding need separate checks. These rules apply to CI and local proof. The package-environment follow-up below tracks incomplete enforcement; a rule on this page is not a passing receipt.
 
 ## The ladder
 
@@ -71,11 +77,11 @@ Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- 
 | --- | --- | --- |
 | 0 | `sdlc/scripts/install` | Verifies the pinned toolchain and the tools the other rungs need |
 | 1 | `sdlc/scripts/lint` | Policy and bounded source-package/workflow routing checks, the ratchet, the file ceiling, `cargo deny`, `cargo fmt --check`, clippy with warnings denied, `cargo doc` with warnings denied |
-| 2 | `sdlc/scripts/test` | `cargo test --locked --workspace --all-targets --all-features` |
+| 2 | `sdlc/scripts/test` | Selected routine functional cases, parser and secrecy regressions, consumer checks and supporting script checks |
 | 3 | `sdlc/scripts/spec` | The compiled binary against `spec/*.md` |
 | 4 | `sdlc/scripts/surfaces` | Each landed binding's `check.sh` against one loopback backend (ADR 0047) |
 
-Cheapest rung first. The whole ladder runs before any hand-back.
+Run the smallest relevant format, lint and functional checks during each change. The coordinator names a batch checkpoint before full `test`, `spec` or `surfaces` runs. Retain passing receipts when their source and inputs remain valid; rerun the checks affected by a correction or merge. Load, churn, timing and contention belong only in explicit `test-stress --run` jobs. Additional functional cases use `test-full-cases --run`. Neither runs automatically at each handback.
 
 The complete `sdlc/scripts/package` validation is a separate explicit packaging checkpoint and a required step of the manually dispatched release `crate` job before artifact upload. It includes library-only tests, internal doctests, private export probes in both feature profiles, stale archive cleanup, a fresh unpacked source build, transform bytes, and release panic modes; routine lint does not run it.
 
@@ -89,4 +95,5 @@ The complete `sdlc/scripts/package` validation is a separate explicit packaging 
 - Clippy ignores a ban-list path it cannot resolve, and a typo in any ban passes quietly. The dynamic JSON bans were proved in ticket 0001. Every ban added later has to be planted and refused the same way.
 - No tool checks that parsing happens only at the edge or that a validated value has its own type. The reviewing agent checks both and says so in its review.
 - No tool requires a second reviewer before the ceiling rises, the public surface widens, or a dependency lands. The rule is written in `AGENTS.md` only.
+- Minimal environments are not yet enforced for every package gate and child. The [package verification issue](../issues/2026-09-29-nine-package-gates-fail-from-clean-checkouts.md) owns the remaining runner checks, including the release families introduced by 0269–0272. Each correction must prove the intended case executes under the declared environment.
 - The five factory scripts under `sdlc/project/` are absent. Factory 2 runs one pilot repository and this is not it. Copy them when this repository registers.
