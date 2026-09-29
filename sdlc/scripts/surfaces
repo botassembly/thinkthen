@@ -59,12 +59,14 @@ manifest() {
 		libraries/dart) printf '%s\n' 'libraries/dart/pubspec.yaml'; return ;;
 		libraries/swift) printf '%s\n' 'libraries/swift/Package.swift'; return ;;
 		libraries/zig) printf '%s\n' 'libraries/zig/build.zig.zon'; return ;;
+		libraries/go) printf '%s\n' 'libraries/go/go.mod'; return ;;
+		libraries/cpp) printf '%s\n' 'libraries/cpp/CMakeLists.txt'; return ;;
 	esac
 	awk -v at="$2" '!/^#/ && $1 == at { print $1 "/" (NF == 3 ? $3 "/" : "") "Cargo.toml" }' "$1"
 }
 
 noncargo() {
-	case $1 in libraries/php|libraries/csharp|libraries/jvm|libraries/dart|libraries/swift|libraries/zig) return 0 ;; *) return 1 ;; esac
+	case $1 in libraries/php|libraries/csharp|libraries/jvm|libraries/dart|libraries/swift|libraries/zig|libraries/go|libraries/cpp) return 0 ;; *) return 1 ;; esac
 }
 
 registry() {
@@ -127,7 +129,7 @@ if [ "$registry_only" -eq 1 ]; then
 		echo 'surfaces: the registry check passed Dart with a crate-folder override' >&2
 		exit 1
 	fi
-	for surface in swift zig; do
+	for surface in swift zig go cpp; do
 		sed "s|^libraries/$surface  *landed$|libraries/$surface landed src|" sdlc/surfaces.txt >"$planted"
 		if registry "$planted" 2>/dev/null; then
 			echo "surfaces: the registry check passed $surface with a crate-folder override" >&2
