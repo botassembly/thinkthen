@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 import tempfile
 from backend import Backend
 
@@ -24,12 +27,12 @@ for name in ("alpha", "bravo"):
                         str(package / "Sources/ThinkThen.m"), str(package / "Sources/TTJSON.c"),
                         str(package / "Examples/consumer.m"), f"-L{native}", "-lthinkthen",
                         "-lobjc", "-pthread", "-lm", "-o", str(work / "consumer")],
-                       cwd=work, check=True, capture_output=True, timeout=60)
+                       cwd=work, env=child_env(), check=True, capture_output=True, timeout=60)
         barrier = work / "barrier"
         barrier.mkdir()
         server = Backend(barrier)
         try:
-            env = os.environ.copy()
+            env = child_env(HOME=str(work), XDG_CACHE_HOME=str(work / "xdg-cache"))
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{server.server_port}/generic/v1",
                        THINKTHEN_API_KEY="tt-canary-295", THINKTHEN_CACHE=str(work / "cache"),
                        LD_LIBRARY_PATH=str(native))

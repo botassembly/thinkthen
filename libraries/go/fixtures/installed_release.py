@@ -6,6 +6,8 @@ import re
 import shutil
 import subprocess
 import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from children import child_env
 
 from backend import Backend
 
@@ -33,12 +35,10 @@ consumer.mkdir()
     f"replace github.com/botassembly/thinkthen/libraries/go => {module}\n"
 )
 shutil.copy2(module / "examples/decide/main.go", consumer / "main.go")
-abi_env = os.environ | {
-    "THINKTHEN_NATIVE_PREFIX": str(prefix),
-    "THINKTHEN_NATIVE_HEADER": str(native / "include/thinkthen.h"),
-    "THINKTHEN_NATIVE_SHARED": str(native / "lib/libthinkthen.so"),
-    "THINKTHEN_NATIVE_STATIC": str(native / "lib/libthinkthen.a"),
-}
+abi_env = child_env(THINKTHEN_NATIVE_PREFIX=str(prefix),
+                    THINKTHEN_NATIVE_HEADER=str(native / "include/thinkthen.h"),
+                    THINKTHEN_NATIVE_SHARED=str(native / "lib/libthinkthen.so"),
+                    THINKTHEN_NATIVE_STATIC=str(native / "lib/libthinkthen.a"))
 subprocess.run([sys.executable, str(Path(__file__).with_name("abi.py"))], env=abi_env, check=True)
 barrier = home / "barrier"
 barrier.mkdir()
