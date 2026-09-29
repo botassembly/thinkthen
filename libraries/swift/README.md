@@ -1,0 +1,19 @@
+# ThinkThen for Swift
+
+This SwiftPM source package calls the ThinkThen C library. The native library is a separate install. The checked product source runs on Swift 6.4 and Ubuntu 24.04 x86_64. macOS and other targets have not passed this package gate.
+
+From a ThinkThen checkout, build the matching native library and the Swift package:
+
+```sh
+cargo build --locked --offline --manifest-path libraries/c/Cargo.toml --lib
+mkdir -p /tmp/thinkthen-native/lib
+cp libraries/c/target/debug/libthinkthen_c.so /tmp/thinkthen-native/lib/libthinkthen.so
+ln -s libthinkthen.so /tmp/thinkthen-native/lib/libthinkthen.so.0
+swift build --package-path libraries/swift -Xlinker -L -Xlinker /tmp/thinkthen-native/lib -Xlinker -rpath -Xlinker /tmp/thinkthen-native/lib
+```
+
+Use `.package(path: "/absolute/path/to/thinkthen/libraries/swift")` and `.product(name: "ThinkThen", package: "ThinkThen")` in a SwiftPM consumer. Give that consumer the same native library search and runtime path. `Examples/main.swift` shows `Engine.decide`, the generic JSON door, and a cancelled token. Configure `THINKTHEN_BASE_URL` and `THINKTHEN_API_KEY` only when intentionally running the example against a backend. The product gate uses a synthetic loopback backend and sends no provider request.
+
+`Engine()` reads ordinary environment settings. `Engine(settingsJSON:)` passes a JSON settings object to the C constructor; explicit `base_url` and `cache` settings take precedence. Invalid settings fail before a request. `Engine.call` returns the C success JSON envelope with `value` and `facts`; the caller can decode it with Foundation. The typed scalar, bulk, recognize and relate methods return their bare values. A valid unresolved answer is distinct from a thrown `DoorFailure`. `DoorFailure.kind` names usage, backend, deadline, local, cancelled or defect, and `factsJSON` copies the borrowed native failure facts when a started call provides them. Swift strings for questions and JSON requests reject interior NUL; evidence remains byte-counted. `CancelToken()` throws if native allocation fails. Join all calls using an engine or token before releasing either owner, then call `Engine.close()` once.
+
+`sh libraries/swift/check.sh` builds the current C library offline, compares its installed exports with the current header, runs the public J1 corpus and exact request matrix, then builds two isolated source/native archive consumers. The local archives are disposable gate artifacts. The package is not published, and no native archive is embedded or downloaded by SwiftPM. Final release pin, GitHub Actions `ubuntu-24.04`, checksums, distribution and macOS proof remain in the Swift consumer issue.

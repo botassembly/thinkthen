@@ -595,6 +595,8 @@ NONCARGO_MANIFESTS = {
     "libraries/csharp": ("ThinkThen.csproj", {"PackageId": "Botassembly.ThinkThen", "TargetFramework": "net8.0", "Version": "0.0.1"}),
     "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": "0.0.1", "packaging": "pom"}),
     "libraries/dart": ("pubspec.yaml", {"name": "thinkthen_dart", "version": "0.0.1"}),
+    "libraries/swift": ("Package.swift", {"name": "ThinkThen"}),
+    "libraries/zig": ("build.zig.zon", {"name": "thinkthen"}),
 }
 
 
@@ -656,6 +658,24 @@ def dart_manifest_failures(source: str | None, flutter_source: str | None,
 def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
     if source is None:
         return [f"{name} has no package manifest"]
+    if name == "libraries/swift":
+        package = re.search(r'let\s+package\s*=\s*Package\(\s*name:\s*"([^"]+)"', source)
+        if (package is None or package[1] != "ThinkThen" or
+                '.library(name: "ThinkThen", targets: ["ThinkThen"])' not in source or
+                '.systemLibrary(name: "CThinkThen", path: "Sources/CThinkThen")' not in source or
+                '.target(name: "ThinkThen", dependencies: ["CThinkThen"], path: "Sources/ThinkThen")' not in source or
+                '.binaryTarget(' in source or '.package(url:' in source):
+            return ["libraries/swift SwiftPM manifest names the source package and its C door without a binary or remote dependency"]
+        return []
+    if name == "libraries/zig":
+        module = re.search(r'(?m)^\s*\.name\s*=\s*\.([A-Za-z_][A-Za-z_0-9]*)\s*,', source)
+        if (module is None or module[1] != "thinkthen" or
+                not re.search(r'\.version\s*=\s*"0\.0\.1"', source) or
+                not re.search(r'\.minimum_zig_version\s*=\s*"0\.15\.2"', source) or
+                not re.search(r'\.dependencies\s*=\s*\.\{\s*\}', source) or
+                '"src"' not in source or '"build.zig"' not in source):
+            return ["libraries/zig manifest names the Zig 0.15.2 source module with no external dependency"]
+        return []
     if name == "libraries/dart":
         flutter = REPO / "libraries/dart/flutter/pubspec.yaml"
         example = REPO / "libraries/dart/flutter/example/pubspec.yaml"

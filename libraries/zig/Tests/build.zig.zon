@@ -1,0 +1,8 @@
+.{
+    .name = .consumer_fixture,
+    .version = "0.0.0",
+    .fingerprint = 0x704149fbc32f7db5,
+    .minimum_zig_version = "0.15.2",
+    .dependencies = .{ .thinkthen = .{ .path = "../" } },
+    .paths = .{ "" },
+}
