@@ -56,5 +56,5 @@ run_dir=$(mktemp -d "$here/target/logs/package-XXXXXX")
 python3 "$here/tests/isolated_consumer.py" alpha "$run_dir"
 python3 "$here/tests/isolated_consumer.py" beta "$run_dir"
 "$dotnet" build "$here/tests/TypeCase.csproj" -c Release --source "$here/target/scratch/nuget" -v quiet
-python3 "$here/tests/types.py"
+python3 "$here/tests/public_types.py"
 echo 'C# package PASS: exact matrix, installed consumers, J1 corpus'
