@@ -7,6 +7,7 @@ import tempfile
 
 PACKAGE = Path(__file__).resolve().parent.parent
 ROOT = PACKAGE.parents[1]
+PROJECT = Path(os.environ.get("THINKTHEN_PORTABLE_ZIG_PROJECT", PACKAGE / "Tests")).resolve()
 CORPUS = ROOT / "specification/fixtures/batching/portable-records.json"
 EXPECTED = [(ROOT / f"specification/fixtures/batching/portable-{n}.request.json")
             .read_bytes().removesuffix(b"\n") for n in (1, 2, 3)]
@@ -18,11 +19,11 @@ assert (NATIVE / "lib/libthinkthen.so").is_file() and BACKEND.is_file()
 
 zig = os.environ.get("THINKTHEN_ZIG", "zig")
 subprocess.run([zig, "build", "-j2", f"-Dnative={NATIVE}", "-Dlink-mode=shared",
-                "--build-file", str(PACKAGE / "Tests/build.zig"),
+                "--build-file", str(PROJECT / "build.zig"),
                 "--cache-dir", str(PACKAGE / "target/scratch/tests-cache"),
                 "--global-cache-dir", str(PACKAGE / "target/cache"), "portable-batch"],
-               cwd=PACKAGE, check=True, timeout=120)
-exe = PACKAGE / "Tests/zig-out/bin/portable-batch"
+               cwd=PROJECT, check=True, timeout=120)
+exe = PROJECT / "zig-out/bin/portable-batch"
 assert exe.is_file(), "focused Zig step did not install its consumer"
 backend = subprocess.Popen([str(BACKEND)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                            text=True, env={"PATH": os.environ.get("PATH", "/usr/bin:/bin")})

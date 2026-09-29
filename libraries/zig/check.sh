@@ -18,6 +18,29 @@ fi
 mkdir -p "$here/target/native/include" "$here/target/native/lib" "$here/target/home" "$here/target/cache" "$here/target/scratch" "$here/target/logs"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.zig.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Zig installed: C archive missing' >&2; exit 1; }
+    . "$root/sdlc/scripts/scratch.sh"
+    . "$root/sdlc/scripts/installed.sh"
+    installed_scratch
+    release_root=$scratch
+    mkdir "$release_root/package" "$release_root/native" "$release_root/project"
+    tar -xzf "$THINKTHEN_ARTIFACT" -C "$release_root/package"
+    tar -xzf "$THINKTHEN_C_ARTIFACT" -C "$release_root/native"
+    native=$release_root/native
+    tar -xOzf "$THINKTHEN_C_ARTIFACT" ./include/thinkthen.h | cmp - "$native/include/thinkthen.h"
+    tar -xOzf "$THINKTHEN_C_ARTIFACT" ./lib/libthinkthen.so | cmp - "$native/lib/libthinkthen.so"
+    tar -xOzf "$THINKTHEN_C_ARTIFACT" ./lib/libthinkthen.a | cmp - "$native/lib/libthinkthen.a"
+    python3 "$root/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
+    cp "$here/Tests/build.zig" "$here/Tests/portable_batch.zig" "$release_root/project/"
+    sed 's|.path = "../"|.path = "../package"|' "$here/Tests/build.zig.zon" >"$release_root/project/build.zig.zon"
+    export HOME="$here/target/home" ZIG_GLOBAL_CACHE_DIR="$here/target/cache"
+    RUSTC_WRAPPER= CARGO_NET_OFFLINE=true cargo build --locked --offline --manifest-path "$root/Cargo.toml" --package conformance-backend -j2
+    THINKTHEN_PORTABLE_ZIG_PROJECT="$release_root/project" THINKTHEN_NATIVE_ROOT="$native" \
+        python3 "$here/Tests/portable_batch.py"
+    echo 'Zig installed release PASS: three literal portable sends'
+    exit 0
+fi
 case ${THINKTHEN_FOCUSED:-} in
     portable-batch) "$zig" fmt --check "$here/Tests/portable_batch.zig" "$here/Tests/build.zig"; python3 "$here/Tests/portable_batch.py"; exit 0 ;;
     '') ;;
