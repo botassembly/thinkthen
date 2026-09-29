@@ -1,6 +1,6 @@
 # 0260 design: portable content-batch identity
 
-Status: proposed for fresh review at main `0954b1e8`. This records a retained contract and proof plan, not an implemented fixture or a closed register item. Ian may overturn the record-spelling and proof scope. ADR 0048 already fixes the cut and exact-request cache rule; this design does not amend them.
+Status: accepted by fresh read-only design review of `f68d9496`; the coordinator approved the retained contract and claimed the first proof slice at main `94bdf96d`. This records a proof plan, not a closed register item. Ian may overturn the record-spelling and proof scope. ADR 0048 already fixes the cut and exact-request cache rule; this design does not amend them.
 
 ## Identity rule and supported domains
 

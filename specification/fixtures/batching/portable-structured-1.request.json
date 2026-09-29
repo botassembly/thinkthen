@@ -1,0 +1,1 @@
+{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is {\"z\":{\"é\":\"line\\n\\\"\\\\\",\"a\":[-0.0,1e+20]},\"n\":1.0}. Is it relevant?"},"q2":{"type":"noul","instructions":"The text is {\"n\":1,\"tag\":\"cut-1530\"}. Is it relevant?"}}}

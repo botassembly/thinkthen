@@ -21,6 +21,8 @@ use crate::{compile, crate_dir, run, scratch, text};
 
 #[path = "batching.rs"]
 mod batching;
+#[path = "portable.rs"]
+mod portable;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";

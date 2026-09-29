@@ -1,0 +1,14 @@
+{
+  "schema": "thinkthen.portable-structured-batch/1",
+  "compact": [
+    "{\"z\":{\"é\":\"line\\n\\\"\\\\\",\"a\":[-0.0,1e+20]},\"n\":1.0}",
+    "{\"n\":1,\"tag\":\"cut-1530\"}",
+    "{\"n\":1.0,\"tag\":\"cut-1530\"}"
+  ],
+  "heads": ["cc77955809893196", "c92816a409748000", "6f0630ef5ae370ca"],
+  "cut": [false, true, false],
+  "members": [[0, 1], [2]],
+  "closed": ["content", "end"],
+  "url": "http://127.0.0.1:9/systemone",
+  "digests": ["27413220392541db92c8262c99229d750bde87844bdebfcab8fcfc5a093239d6", "5ef4e606e1c55a39bcc5c0e1e43e59d1c24d7ce93713facf1631b63533864586"]
+}

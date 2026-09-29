@@ -18,6 +18,7 @@ use crate::core::render::json_line;
 use crate::core::text::{Evidence, Meaning, ModelName, QuestionText};
 
 mod ceiling;
+mod portable;
 mod refusals;
 
 const LOOPBACK: &str = "http://127.0.0.1:9";

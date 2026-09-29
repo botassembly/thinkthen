@@ -2,6 +2,14 @@
 
 `grouping.txt` holds 25 lines, one record each. It proves where batches close, by ADR 0048 item 2. `crates/thinkthen/src/core/batch/tests.rs` holds the batches below as literals.
 
+## Portable cross-surface corpus
+
+`portable-records.json` pins five selected text values, their exact compact JSON byte spellings, first-eight-byte SHA-256 heads, cut decisions, ordered membership and close reasons. `portable-1.request.json` through `portable-3.request.json` hold complete literal System One bodies. Each fixture file has one final line feed for ordinary text-file handling; that line feed is **not** part of the selected record or transmitted body. The corpus fixes `Is it relevant?`, model `jev-1.13.0`, Max batching, no context, and `http://127.0.0.1:9/systemone` for the three independently calculated exchange digests. A listener's ephemeral URL changes only the digest prefix; its body must still equal the literal file byte for byte. The first two requests hold records 1–2 and 3–4 and close on content; the third holds record 5 and closes at input end. The fifth is a singleton with the established unquoted request form.
+
+The second text contains literal UTF-8 `c3 a9` for `é`. Its compact spelling has hash head `3db0138d194cf000`, a content cut. Hashing the alternative escaped spelling `"caf\u00e9-5544"` would give `72afc19814d82dd9` and move the cut; parsing that escaped JSONL input must instead recover the same selected string and the same three request bodies. `portable-structured.jsonl` gives a separate CLI-only input. Its oracle in `portable-structured.json` and two request files pins nested member order, Unicode, controls, `1` versus `1.0`, `-0.0`, an exponent, and the integer object's content cut. Text-only hosts do not receive those objects as structured values.
+
+The core test reads both oracles. The compiled CLI and public C JSON door independently reach counted loopback listeners and compare actual bodies and returned request identities. These first two host paths are a checkpoint; the applicable remaining host runners and C-wrapper forwarding proofs are still required before register 64 closes. No answer accuracy or token-cost claim follows from this corpus.
+
 ## The content hash
 
 A record's content hash is the SHA-256 of its compact JSON. A line's compact JSON is the line in double quotes. A record is a content cut when the first 8 bytes of its hash, read big-endian, are 0 mod 4,096. So a cut is a line whose first 16 hex digits end in `000`.
