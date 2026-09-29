@@ -45,21 +45,26 @@ public class Matrix {
         check(badSettings.failure.kind()==Door.FailureKind.USAGE && badSettings.failure.factsJson()==null,"pre-call settings refusal");
         try(Door engine=new Door()) {
             for(String state:new String[]{"café","yes","no","unsure"}) {
-                Door.Answer answer=engine.decide(state.equals("unsure")?"{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}":"Is it?",b(state));
-                check(answer.outcome()==(state.equals("no")?0:state.equals("unsure")?2:1),"scalar " +state+" " +answer);
+                Door.TypedResult<Door.Answer> answer=engine.decide(state.equals("unsure")?"{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}":"Is it?",b(state));
+                check(answer.value().outcome()==(state.equals("no")?0:state.equals("unsure")?2:1),"scalar " +state+" " +answer);
             }
-            check(engine.decide("Is it?",new byte[]{'a',0,'b'}).outcome()==1,"counted NUL");
+            check(engine.decide("Is it?",new byte[]{'a',0,'b'}).value().outcome()==1,"counted NUL");
             failed(()->engine.decideMany("Is it?",new byte[][]{b("bulk-before-bad"),b("bulk-middle-bad"),b("bulk-after-bad")},-1,null),2);
             for(String state:new String[]{"malformed-backend","transport-close","retry-status"}) {
                 try { engine.decide("Is it?",b(state),200,null); throw new AssertionError("backend failure passed: "+state); }
                 catch(Door.NativeFailure ex) {check(ex.failure.code()==2||ex.failure.code()==3,"backend failure code "+ex.failure);}
             }
-            check(engine.decide("Is it?",b("post-failure-recovery")).outcome()==1,"recovery after failures");
-            check(engine.decide("Is it?",b("maximum-deadline"),4294967295000L,null).outcome()==1,"maximum deadline");
-            check(engine.decideMany("Is it?",new byte[0][], -1,null).length==0,"empty bulk");
-            Door.Answer[] rows=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("third")},-1,null);
+            Door.TypedResult<Door.Answer> noUsage=engine.decide("Is it?",b("post-failure-recovery"));
+            check(noUsage.value().outcome()==1 && noUsage.facts().records()==1 && noUsage.facts().requestsSent()==1 &&
+                noUsage.facts().inputTokens()==null && noUsage.facts().outputTokens()==null && "jev-1.13.0".equals(noUsage.facts().model()),"reported model without usage");
+            check(engine.decide("Is it?",b("maximum-deadline"),4294967295000L,null).value().outcome()==1,"maximum deadline");
+            Door.TypedResult<Door.Answer[]> empty=engine.decideMany("Is it?",new byte[0][], -1,null);
+            check(empty.value().length==0 && empty.facts().records()==0 && empty.facts().requestsSent()==0 && empty.facts().model()==null,"empty bulk facts");
+            Door.TypedResult<Door.Answer[]> bulk=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("third")},-1,null);
+            Door.Answer[] rows=bulk.value();
+            check(bulk.facts().records()==3 && bulk.facts().requestsSent()>=1,"typed bulk facts");
             check(rows.length==3 && rows[0].probability()==.9 && rows[1].probability()==.1 && rows[2].probability()==.6,"reordered bulk "+Arrays.toString(rows));
-            Door.Answer[] repeated=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("first")},-1,null);
+            Door.Answer[] repeated=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("first")},-1,null).value();
             check(repeated[0].probability()==.9 && repeated[1].probability()==.1 && repeated[2].probability()==.9,"repeated bulk");
             for(int i=0;i<requests.length;i++) {
                 String raw=engine.call(requests[i]);
@@ -80,11 +85,15 @@ public class Matrix {
                     default -> throw new AssertionError("unmapped JSON case "+i);
                 }
             }
-            String named=engine.recognize("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}",b("John Smith"));
+            Door.TypedResult<String> namedCall=engine.recognize("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}",b("John Smith"));
+            String named=namedCall.value();
+            check(namedCall.facts().records()==1 && namedCall.facts().requestsSent()>=1,"typed recognize facts");
             check(named.contains("\"length\""),"typed recognize shape "+named);
-            String defaultKind=engine.recognize("{\"version\":1,\"recognize\":{}}",b("Ada Lovelace"));
+            String defaultKind=engine.recognize("{\"version\":1,\"recognize\":{}}",b("Ada Lovelace")).value();
             check(defaultKind.contains("\"kind\":\"ENTITY\""),"default ENTITY kind "+defaultKind);
-            String edges=engine.relate("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}",new byte[][]{b("{\"name\":\"Third\",\"kind\":\"alert\"}"),b("{\"name\":\"Fourth\",\"kind\":\"alert\"}")});
+            Door.TypedResult<String> edgesCall=engine.relate("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}",new byte[][]{b("{\"name\":\"Third\",\"kind\":\"alert\"}"),b("{\"name\":\"Fourth\",\"kind\":\"alert\"}")});
+            String edges=edgesCall.value();
+            check(edgesCall.facts().records()==1 && edgesCall.facts().requestsSent()>=1,"typed relate facts");
             check(edges.contains("\"edges\""),"typed relate");
             String usage=engine.call("{\"usage\":true}"); check(usage.contains("requests_sent"),"usage");
             try {engine.decide("Is it?\0rest",b("x"));throw new AssertionError("NUL accepted");} catch(IllegalArgumentException expected) {}
@@ -97,14 +106,14 @@ public class Matrix {
             failed(()->engine.decide("Is it?",b("x"),-2,null),1);
             failed(()->engine.decide("Is it?",b("x"),4294967295001L,null),1);
             failed(()->engine.call("bad json"),1);
-            Door.NativeFailure first=failed(()->engine.call("{\"decide\":\"Is it?\",\"evidence\":\"failure-one\"}"),2);
+            Door.NativeFailure first=failed(()->engine.decide("Is it?",b("failure-one")),2);
             check(first.failure.kind()==Door.FailureKind.BACKEND && first.failure.factsJson()!=null && first.failure.factsJson().contains("requests_sent"),"started failure facts");
             String firstMessage=first.failure.message();
             String firstFacts=first.failure.factsJson();
             retained.set(first.failure);
-            failed(()->engine.call("{\"decide\":\"Is it?\",\"evidence\":\"failure-two\"}"),2);
+            failed(()->engine.decide("Is it?",b("failure-two")),2);
             check(first.failure.message().equals(firstMessage) && first.failure.factsJson().equals(firstFacts),"copied failure and facts");
-            try(Door other=new Door()) { check(other.decide("Is it?",b("success")).outcome()==1,"other engine"); }
+            try(Door other=new Door()) { check(other.decide("Is it?",b("success")).value().outcome()==1,"other engine"); }
             try(Door.Token fired=engine.token()) {fired.fire();fired.fire();failed(()->engine.decide("Is it?",b("never-sent"),-1,fired),5);}
             try(Door.Token deadline=engine.token()) {
                 AtomicReference<Throwable> error=new AtomicReference<>();
@@ -129,10 +138,10 @@ public class Matrix {
                 System.out.println("JAVA_HELD_SCALAR_CANCELLED_PASS");
                 failed(()->engine.decide("Is it?",b("never-sent-after"),-1,token),5);
             }
-            check(engine.decide("Is it?",b("recovery-scalar")).outcome()==1,"fresh token recovery");
-            @SuppressWarnings("unchecked") CompletableFuture<Door.Answer>[] concurrent=new CompletableFuture[3];
+            check(engine.decide("Is it?",b("recovery-scalar")).value().outcome()==1,"fresh token recovery");
+            @SuppressWarnings("unchecked") CompletableFuture<Door.TypedResult<Door.Answer>>[] concurrent=new CompletableFuture[3];
             for(int i=0;i<3;i++){final int id=i;concurrent[i]=CompletableFuture.supplyAsync(()->engine.decide("Is it?",b("parallel-"+id)));}
-            for(var f:concurrent)check(f.join().outcome()==1,"concurrent");
+            for(var f:concurrent)check(f.join().value().outcome()==1,"concurrent");
             CompletableFuture<Door.Failure> left=CompletableFuture.supplyAsync(()->failed(()->engine.call("{\"decide\":\"Is it?\",\"evidence\":\"parallel-failure-one\"}"),2).failure);
             CompletableFuture<Door.Failure> right=CompletableFuture.supplyAsync(()->failed(()->engine.call("{\"decide\":\"Is it?\",\"evidence\":\"parallel-failure-two\"}"),2).failure);
             Door.Failure l=left.join(), r=right.join();
@@ -172,7 +181,8 @@ public class Matrix {
             if(capturedFailure.get()!=null)throw new AssertionError("thread-pinned error capture",capturedFailure.get());
             System.out.println("PINNED_VIRTUAL_ERRORS_PASS");
         }
-        check(retained.get()!=null && retained.get().code()==2 && !retained.get().message().isEmpty(),"copied failure survived producing engine teardown");
+        check(retained.get()!=null && retained.get().code()==2 && !retained.get().message().isEmpty() &&
+            retained.get().factsJson()!=null && retained.get().factsJson().contains("\"requests_sent\":1"),"typed failure facts survived producing engine teardown");
         System.out.println("JAVA_MATRIX_PASS");
     }
 }

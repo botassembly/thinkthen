@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0280: Return owned facts from C# and JVM typed calls
 
-Status: Prepared for independent design/API review on main `9c4022428`. No implementation claim yet. [Preparation](../records/0280-csharp-jvm-call-facts-preparation.md) pins current routes, consumers and proof. Ian's every-library-call ruling and the accepted ADR 0106 on `origin/ticket/0277-go-php-call-facts` (`92cb4112` design review; main work-plan approval) settle the pre-0.1 value-with-owned-facts direction for Go/PHP; apply that ownership principle to C#/JVM after coordinator approval of these exact public shapes. ADR 0106 is not yet a file on main. If the decision is to amend it to name these two hosts, make that narrow amendment under a later claim without changing its Go/PHP history. This ticket does not wait for 0277 or 0279 source to land: the C facts ABI is already integrated.
+Status: Design/API accepted by fresh High review `dddf2654` and approved on main `90170b29a`; implementation candidate awaits fresh code review. [Preparation](../records/0280-csharp-jvm-call-facts-preparation.md) pins the source routes and proof. Ian's every-library-call ruling and integrated ADR 0106/0277 (`c4202fbc0`) settle owned per-call facts. The coordinator approved these exact C#/JVM public shapes without an ADR amendment. The C facts ABI was already integrated.
 
 ## Outcome and public shape
 
@@ -39,7 +39,7 @@ The C facts JSON requires `records`, `requests_sent`, `cache_answers`, `seconds`
 - Keeps: Old typed values/order/bytes, JSON call routes, frozen C ABI, six native error kinds, borrowed started-failure snapshot semantics, cancellation/deadline cleanup, C# active-call close wait and JVM join-before-close limit.
 - Changes: C#/JVM direct typed successes become owned value/facts results from the same C `_with_facts_opts` call; all direct callers and package consumers follow that pre-0.1 return change.
 - Proof: Four-method value/facts checks, no-usage and zero-bulk cases, typed failure lifetime, barrier-forced same-engine overlap, exact retained request inventory, current C export/header, matched installed-source consumer and JAR member checks.
-- Defers: Fresh design/API review and implementation claim; richer per-row detail, price/vendor timing/IDs, other wrappers, SQL/DataFrame work, other-platform release artifacts and actual runner/registry publication.
+- Defers: Fresh code review; richer per-row detail, price/vendor timing/IDs, other wrappers, SQL/DataFrame work, other-platform release artifacts and actual runner/registry publication.
 
 ## What preparation taught us
 
@@ -47,4 +47,4 @@ C# has a separate `CallResult` for JSON `CallTyped`, so the typed carrier needs 
 
 ## What the build taught us
 
-Pending implementation and fresh code review. Record any return-shape, decoder, ownership, fixture or package surprise here before landing.
+The matched C library already had the four facts exports. C# and JVM needed explicit ownership of both successful output and facts; a reported model can exist without usage, so the optional fields are decoded independently. The JVM door's new nested records create two actual JAR members, which the exact release validator now names. The source fixtures used held backend arrivals to prove real overlap and typed started failures to prove copied facts survive later calls and close. Focused Linux source and installed-source replay passed; this is not release-runner or published-package qualification. See the [build record](../records/0280-csharp-jvm-call-facts-build.md) for exact checks and limits.
