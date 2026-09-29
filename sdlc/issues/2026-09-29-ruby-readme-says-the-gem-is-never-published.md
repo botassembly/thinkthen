@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-29 by the marketing lead from wave 4 release QA preparation (workspace experiment 218).
+Status: Candidate correction in `ticket/qf-ruby-readme-release`; pending fresh review and root closure. Filed 2026-09-29 by the marketing lead from wave 4 release QA preparation (workspace experiment 218).
 
 # The Ruby README says the gem is never published
 
@@ -11,3 +11,7 @@ A reader of the README concludes the gem cannot be installed from RubyGems. Afte
 ## Done when
 
 The Ruby README states the RubyGems channel the release job publishes to, with the install command from the site catalog.
+
+## Candidate evidence
+
+The [Quick Fix build record](../records/qf-ruby-readme-release.md) traces the current gemspec, guarded release job, catalog command and README wording. The candidate names the channel and conditional install command while retaining the source checkout instructions. It does not claim a version is already published. Root will close this issue and the original Pages row only after fresh review.
