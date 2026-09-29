@@ -426,17 +426,18 @@ const ARTICLES = {
   },
 
   "use-cases": {
-    title: "Agent use cases.",
-    label: "Agent use cases",
-    goal: "Agents use the ten functions to route work, check it, pull facts out of text, and find records.",
+    title: "Jev for agents.",
+    label: "Jev for agents",
+    goal: "A coding agent could ask Jev ten small questions. Each answer comes back with a probability.",
     idea: [
-      "Routing: `decide` picks an easy or a hard model. `choose` picks the agent for each part of a task. `decide` says loop or stop.",
-      "Evaluation: `decide`, `score`, and `rank` ask whether the work is done, whether it is right, and which prompt wins.",
-      "ThinkThen replaces LLM-as-a-judge. An LLM judge writes a grade in free text. A ThinkThen judgment comes back as a probability. `decide` also sets an exit code: 0 for yes, 1 for no, and 3 for not sure. You can check the probabilities against cases a person labeled. That check shows whether 0.8 means about eight in ten for your question.",
-      "Extraction: `tag`, `annotate`, `recognize`, and `relate` pull out tags, names, and relations. Their edges can feed a knowledge graph.",
-      "Retrieval: `filter`, `rank`, and `find` keep, order, and find the records that answer a question.",
+      "These are ideas for Jev inside a coding agent. Most come from [a post by Diogo Almeida](https://x.com/completeskeptic/status/2101894250401271876). Diogo works at TypeSafe, the maker of Jev. Each cell names one decision and quotes the question Jev would answer.",
+      "Permission: \"Should this command run?\" If Jev is unsure, the agent would ask a person. Tool choice: \"Which tool fits this step?\" The agent would load only the top few. Context: \"Does this chunk matter now?\" The agent would hide it, summarize it, or show it whole.",
+      "Model choice: \"Is this step easy?\" An easy step would go to a smaller model. Parallel work: \"Can these tasks run at once?\" The agent would split them. Instructions: \"Is this front-end work?\" The agent would load the style guide.",
+      "Data safety: \"Could this touch secrets?\" The task would run on an approved model. Done check: \"Is the task finished?\" The agent would stop or keep going. Review: \"Does this change do what was asked?\" The agent would approve it or send it back.",
+      "Evaluation: \"Which prompt wins?\" An LLM judge writes a grade in free text. A Jev judgment comes back as a probability, and you can check it against cases a person labeled. ThinkThen added the done check and the prompt comparison.",
     ],
-    takeaway: "Each agent job maps to a function.",
+    credit: "Most ideas from Diogo Almeida.",
+    takeaway: "Each decision is one small question with a probability.",
     link: REPO,
   },
 
