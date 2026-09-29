@@ -170,6 +170,11 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
                         "settings JSON has unknown key max_estimated_input_tokens_total",
                     ));
                 }
+                "usd_per_million_input" | "usd_per_million_output" => {
+                    return Err(Failure::usage(format!(
+                        "settings JSON has unsupported price key {key}"
+                    )));
+                }
                 "model" => next.model = value.as_str().map(str::to_owned),
                 "throttle" => next.throttle = value.as_u64().and_then(|n| u8::try_from(n).ok()),
                 "batch" => next.batch = Some(batch(value)?),

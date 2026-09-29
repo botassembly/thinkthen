@@ -4,7 +4,7 @@
 use std::fmt;
 use std::sync::Arc;
 
-use crate::core::{self, BackendProfile, Value};
+use crate::core::{self, BackendProfile, Prices, Value};
 use crate::engine::facade::Roots;
 use crate::engine::facade::{self, Settings};
 use crate::public::choice::Choice;
@@ -27,6 +27,7 @@ pub struct Engine {
     pub(super) most: Option<usize>,
     pub(crate) profile: Option<BackendProfile>,
     pub(crate) batch: Option<core::Setting>,
+    pub(crate) prices: Option<Prices>,
 }
 
 impl fmt::Debug for Engine {
@@ -137,10 +138,11 @@ impl Engine {
         settings: Settings,
         most: Option<usize>,
         totals: (Option<u64>, Option<u64>),
-        profile: Option<BackendProfile>,
-        roots: Option<Roots>,
+        source: (Option<BackendProfile>, Option<Roots>),
         batch: Option<core::Setting>,
+        prices: Option<Prices>,
     ) -> Result<Self, Error> {
+        let (profile, roots) = source;
         let inner = guarded(|| facade::Engine::with_roots(settings, roots).map_err(Error::from))?
             .with_process_budget(totals.0, totals.1);
         Ok(Self {
@@ -148,7 +150,16 @@ impl Engine {
             most,
             profile,
             batch,
+            prices,
         })
+    }
+
+    /// Estimate the cost of complete reported token totals under this engine's
+    /// caller-selected prices. The caller establishes usage completeness.
+    #[must_use]
+    pub fn estimate_reported_cost(&self, input_tokens: u64, output_tokens: u64) -> Option<String> {
+        self.prices
+            .and_then(|prices| prices.estimate(input_tokens, output_tokens))
     }
 
     /// This process's totals, which start at zero in a forked child.
@@ -356,7 +367,7 @@ impl Engine {
         options.without_context("a single-document call")?;
         let evidence = evidence(text)?;
         let engine = self.asking(question)?;
-        let stop = Stop::begin(options)?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
             let judged = engine
                 .judge(&question.core, question.threshold, evidence, cancel)

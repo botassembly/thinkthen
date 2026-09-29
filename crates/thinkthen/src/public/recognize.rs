@@ -422,7 +422,7 @@ impl Engine {
     ) -> Result<crate::public::Call<Recognized>, Error> {
         options.without_context("recognize")?;
         let engine = self.for_model(ask.0.model.as_ref())?;
-        let stop = Stop::begin(options)?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
             let mut positions = [0; 4];
             let found = engine

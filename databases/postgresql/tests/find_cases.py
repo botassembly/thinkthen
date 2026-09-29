@@ -25,7 +25,7 @@ CASES = {
 def sql(socket, *statements):
     command = ["psql", "-X", "-q", "-At", "-v", "VERBOSITY=verbose", "-h", socket,
                "-U", "postgres", "-d", "postgres"]
-    for statement in statements:
+    for statement in ["SET statement_timeout='30s'", *statements]:
         command += ["-c", statement]
     done = subprocess.run(command, capture_output=True, text=True, timeout=30,
                           check=False, env=child_env())
@@ -55,8 +55,8 @@ def proxy(base, mode):
 
 def verify(socket, mode):
     units, none, probabilities, selected = CASES[mode]
-    statement = (f"SELECT thinkthen_find('Which unit?', {array(units)}, "
-                 f"{'true' if none else 'false'})")
+    setting = "'{\"none\":true}'::json" if none else "NULL::json"
+    statement = f"SELECT thinkthen_find('Which unit?', {array(units)}, {setting})"
     out, error = sql(socket, statement)
     if error:
         raise AssertionError(error)
@@ -77,7 +77,7 @@ def invalid(socket):
     nulls = [
         "SELECT thinkthen_find(NULL, ARRAY['a','b']) IS NULL",
         "SELECT thinkthen_find('Which?', NULL::text[]) IS NULL",
-        "SELECT thinkthen_find('Which?', ARRAY['a','b'], NULL::boolean) IS NULL",
+        "SELECT thinkthen_find('Which?', NULL::text[], NULL::json) IS NULL",
         "SELECT thinkthen_find('Which?', ARRAY[]::text[]) IS NULL",
     ]
     for statement in nulls:
@@ -90,13 +90,16 @@ def invalid(socket):
         "SELECT thinkthen_find('Which?', ARRAY['one','   '])",
         "SELECT thinkthen_find('   ', ARRAY['one','two'])",
         "SELECT thinkthen_find('Which?', array_fill('x'::text, ARRAY[256]))",
-        "SELECT thinkthen_find('Which?', array_fill('x'::text, ARRAY[255]), true)",
+        "SELECT thinkthen_find('Which?', array_fill('x'::text, ARRAY[255]), '{\"none\":true}'::json)",
         "SELECT thinkthen_find('Which?', ARRAY[repeat('x',16777216),'y'])",
     ]
     for statement in refused:
         _, error = sql(socket, statement)
         if "ERROR:  22023: thinkthen usage:" not in error:
             raise AssertionError(f"expected pre-send Usage: {statement}: {error}")
+    _, error = sql(socket, "SELECT thinkthen_find('Which?', ARRAY['one','two'], true)")
+    if "find's none and deadline moved into the settings object" not in error:
+        raise AssertionError(f"old positional none must refuse: {error}")
     _, error = sql(socket, "SELECT thinkthen_find('Which?', ARRAY[1,2])")
     if "ERROR:  42883:" not in error:
         raise AssertionError(f"wrong SQL type must fail at binding: {error}")

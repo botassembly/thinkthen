@@ -21,7 +21,7 @@ FILE = pathlib.Path(__file__).resolve().parents[1] / "examples.json"
 
 def psql(socket: str, statements: list[str]) -> str:
     command = ["psql", "-X", "-q", "-At", "-h", socket, "-U", "postgres", "-d", "postgres"]
-    for statement in statements:
+    for statement in ["SET statement_timeout='30s'", *statements]:
         command += ["-c", statement]
     done = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False,
                           env=child_env())

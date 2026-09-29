@@ -56,7 +56,7 @@ impl Engine {
                 .context_text()
                 .map(|text| core::bytes_sha256(text.as_bytes()));
             let context = options.context_text().map(evidence).transpose()?;
-            let stop = Stop::begin(options)?;
+            let stop = Stop::begin(options)?.with_prices(self.prices);
             let engine = self.asking(question)?;
             batch::start_details(
                 engine,

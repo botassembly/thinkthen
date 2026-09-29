@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The shared Max corpus through PostgreSQL's ordered text-array result."""
+"""The shared Max corpus through PostgreSQL's keyed JSONB result."""
 
 from __future__ import annotations
 
@@ -17,9 +17,10 @@ def quote(value: str) -> str:
 
 
 def query() -> str:
-    texts = ",".join(quote(value) for value in FIXTURE["texts"])
-    return ("SELECT i::text || ':' || coalesce(decided::text, 'null') "
-            f"FROM thinkthen_decide({quote(FIXTURE['question'])}, ARRAY[{texts}]) ORDER BY i")
+    keyed = {str(index): value for index, value in enumerate(FIXTURE["texts"])}
+    return ("SELECT key || ':' || coalesce(value::text, 'null') "
+            f"FROM thinkthen_decide_many({quote(FIXTURE['question'])}, "
+            f"{quote(json.dumps(keyed, ensure_ascii=False))}::jsonb) ORDER BY key")
 
 
 def verify(rows: str, count: str, capture: str) -> None:

@@ -115,6 +115,7 @@
         "seconds": {"type": "number", "minimum": 0},
         "input_tokens": {"type": "integer", "minimum": 0},
         "output_tokens": {"type": "integer", "minimum": 0},
+        "estimated_cost_usd": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.[0-9]{6}$"},
         "model": {"type": "string"}
       }
     },

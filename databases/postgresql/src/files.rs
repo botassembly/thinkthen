@@ -4,7 +4,7 @@
 
 use std::path::{Component, Path, PathBuf};
 
-use thinkthen::ErrorKind;
+use thinkthen::{ErrorKind, For, Settings};
 
 use crate::call::Refusal;
 use crate::ffi;
@@ -219,18 +219,62 @@ impl Given {
         if members.is_empty() {
             return Err(Refusal::usage("the members array is empty"));
         }
-        let mut value: serde_json::Value = serde_json::from_str(&self.json)
+        let value: serde_json::Value = serde_json::from_str(&self.json)
             .map_err(|_| Refusal::usage("the question is not a JSON object"))?;
         let object = value
-            .as_object_mut()
+            .as_object()
             .ok_or_else(|| Refusal::usage("the question is not a JSON object"))?;
         if object.contains_key(key) {
             return Err(Refusal::usage(format!(
                 "the question already names its {key}; pass NULL for the array"
             )));
         }
-        object.insert(key.to_owned(), serde_json::Value::from(members));
-        self.json = value.to_string();
+        // Preserve the source bytes and their member order. The final core
+        // question parse must still see duplicate names in the original JSON.
+        let source = self
+            .json
+            .trim_end()
+            .strip_suffix('}')
+            .ok_or_else(|| Refusal::usage("the question is not a JSON object"))?;
+        let separator = if object.is_empty() { "" } else { "," };
+        let encoded = serde_json::to_string(&members)
+            .map_err(|_| Refusal::of(ErrorKind::Defect, "members could not be written as JSON"))?;
+        self.json = format!("{source}{separator}\"{key}\":{encoded}}}");
+        Ok(self)
+    }
+
+    /// Append the shared parser's question fields without changing their member order.
+    pub(crate) fn with_settings(mut self, settings: &Settings, verb: For) -> Result<Self, Refusal> {
+        if settings == &Settings::default() {
+            return Ok(self);
+        }
+        // Keep the original JSON bytes; the final parse retains duplicate names
+        // and maps a named file's failure to local after settings are appended.
+        let explicit: serde_json::Value = serde_json::from_str(&self.json)
+            .map_err(|_| Refusal::usage("the question is one JSON object"))?;
+        let fields = explicit
+            .as_object()
+            .ok_or_else(|| Refusal::usage("the question is one JSON object"))?;
+        let keys: Vec<_> = fields.keys().map(String::as_str).collect();
+        settings
+            .conflicts(&keys, false)
+            .map_err(|error| Refusal::usage(error.to_string()))?;
+        let extra = settings
+            .question_json(verb, "settings merge")
+            .map_err(|error| Refusal::usage(error.to_string()))?;
+        let Some(first) = extra.find(',') else {
+            return Ok(self);
+        };
+        let suffix = extra
+            .get(first + 1..extra.len() - 1)
+            .ok_or_else(|| Refusal::of(ErrorKind::Defect, "settings lost their fields"))?;
+        let source = self
+            .json
+            .trim_end()
+            .strip_suffix('}')
+            .ok_or_else(|| Refusal::usage("the question is one JSON object"))?;
+        let separator = if fields.is_empty() { "" } else { "," };
+        self.json = format!("{source}{separator}{suffix}}}");
         Ok(self)
     }
 }

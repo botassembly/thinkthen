@@ -389,7 +389,7 @@ impl Engine {
                     "find takes 2 to 255 units"
                 })
             })?;
-        let stop = Stop::begin(options)?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
         stop.run_call(1, |cancel| {
             let found = engine.find(&find, cancel).map_err(Error::from)?;
             observe_find(&stop, &engine, question, &find, &found)?;
@@ -428,7 +428,7 @@ impl Engine {
         Batch::of((|| {
             options.without_context("annotate")?;
             let setting = selected_set_batch(questions, &options, self.batch)?;
-            let stop = Stop::begin(options)?;
+            let stop = Stop::begin(options)?.with_prices(self.prices);
             let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
             batch::start_annotation(engine, set, records.into_iter(), stop, self.most, setting)
         })())
@@ -461,7 +461,7 @@ impl Engine {
     {
         let setting = selected_batch(question, &options, self.batch)?;
         let context = options.context_text().map(evidence).transpose()?;
-        let stop = Stop::begin(options)?;
+        let stop = Stop::begin(options)?.with_prices(self.prices);
         let engine = self.asking(question)?;
         batch::start_planned(
             engine,

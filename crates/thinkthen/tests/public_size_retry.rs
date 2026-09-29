@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 
 use conformance_backend::{Canned, Listener};
 use serde_json::Value;
-use thinkthen::{Engine, Entity, Question, Relate};
+use thinkthen::{Engine, Entity, ErrorKind, Question, Relate};
 
 fn relation_listener() -> Listener {
     Listener::answering(|body| {
@@ -22,7 +22,7 @@ fn relation_listener() -> Listener {
             .map(|name| (name.clone(), serde_json::json!({"type":"noul","noul":0.9})))
             .collect::<serde_json::Map<_, _>>();
         let model = request.get("model").expect("request model");
-        Canned::ok(&serde_json::json!({"model":model,"answers":answers}).to_string())
+        Canned::ok(&serde_json::json!({"model":model,"answers":answers,"usage":{"input_tokens":1,"output_tokens":1}}).to_string())
     })
     .expect("listener")
 }
@@ -49,8 +49,13 @@ fn relation_size_survives_a_model_override_and_a_smaller_profile_wins() {
             .no_cache()
     };
 
-    let default = build().build().expect("default engine");
-    default.relate(&ask, entities()).expect("default relation");
+    let default = build()
+        .prices_usd_per_million("0.25", "0.25")
+        .expect("prices")
+        .build()
+        .expect("default engine");
+    let priced = default.relate(&ask, entities()).expect("default relation");
+    assert_eq!(priced.facts().estimated_cost_usd(), Some("0.000001"));
     let default_sends = listener.count();
     assert_eq!(default_sends, 1, "the default holds this fixed body");
 
@@ -80,6 +85,36 @@ fn relation_size_survives_a_model_override_and_a_smaller_profile_wins() {
         listener.count() - default_sends - smaller_sends > smaller_sends,
         "the profile lowers the setter's ceiling"
     );
+}
+
+#[test]
+fn priced_relate_failure_keeps_complete_started_facts() {
+    let reply = r#"{"model":"jev-1.13.0","answers":{"other":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1,"output_tokens":1}}"#;
+    let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-size-local")
+        .expect("key")
+        .prices_usd_per_million("0.25", "0.25")
+        .expect("prices")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let ask = Relate::from_json(r#"{"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]}}"#).expect("relation");
+    let records = [
+        Entity::new("Ada", "person").expect("entity"),
+        Entity::new("Bea", "person").expect("entity"),
+    ];
+    let error = engine
+        .relate(&ask, records)
+        .expect_err("missing relation answer");
+    assert_eq!(error.kind(), ErrorKind::Backend);
+    assert_eq!(
+        error.facts().and_then(|facts| facts.estimated_cost_usd()),
+        Some("0.000001")
+    );
+    assert_eq!(listener.count(), 1);
 }
 
 #[test]

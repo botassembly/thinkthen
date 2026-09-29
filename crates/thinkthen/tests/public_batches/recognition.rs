@@ -47,7 +47,16 @@ fn recognition_observes_edge_and_stated_relation_in_order() {
         Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers,"usage":{"input_tokens":3,"output_tokens":1}}).to_string())
     })
     .expect("listener");
-    let engine = engine(listener.base());
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-public-batches")
+        .expect("key")
+        .prices_usd_per_million("0.25", "0.25")
+        .expect("prices")
+        .no_cache()
+        .build()
+        .expect("engine");
     let asked = thinkthen::Recognize::builder()
         .kind(thinkthen::Kind::new("person", None).expect("person"))
         .and_then(|builder| {
@@ -103,4 +112,5 @@ fn recognition_observes_edge_and_stated_relation_in_order() {
             .all(|stage| *stage == "boundary")
     );
     assert_eq!(listener.count(), 3);
+    assert_eq!(found.facts().estimated_cost_usd(), Some("0.000003"));
 }

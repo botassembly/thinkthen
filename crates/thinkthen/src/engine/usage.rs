@@ -123,6 +123,9 @@ impl Counters {
             return;
         };
         let totals = queue.totals.checked_add(delta);
+        if totals.is_none() && (delta.input_tokens != 0 || delta.output_tokens != 0) {
+            queue.facts.token_sum_valid = false;
+        }
         queue.totals = totals.unwrap_or(queue.totals);
         let Some(path) = self.path.as_deref() else {
             return;
