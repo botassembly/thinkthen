@@ -31,7 +31,10 @@ SELECT id FROM (
   SELECT id, thinkthen_decide('Does the writer ask for a refund?', body) AS asks_refund FROM tickets
 ) WHERE asks_refund;
 SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team FROM tickets;
-SELECT thinkthen_find('Which statement matches?', list(body ORDER BY id), TRUE) FROM passages;
+SELECT best_passage FROM (
+  SELECT thinkthen_find('Which statement matches?', list(body ORDER BY id), TRUE) AS best_passage
+  FROM passages
+) AS judged WHERE best_passage IS NOT NULL;
 ```
 
 ## Constrain a stored answer
