@@ -1,6 +1,6 @@
 # A run cannot be repeated on purpose, so a loop cannot measure its own noise
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`. Deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement.
 
 ## What happens today
 
@@ -37,3 +37,10 @@ Arize compared Jev against five LLM judges over 517 labeled examples with ten ru
 ## Factual preparation refresh, 2026-09-28
 
 At source `9b766cf9`, `cli/args.rs` and `cli/asking/folders.rs` confirm that `--no-cache` and `--refresh-cache` enable an external fresh-call loop, but neither supplies a repeat count, repeat identity or variation result. Refresh requires an enabled cache and replaces complete answers. `--facts` gives whole-command totals; default `--batch max` can put multiple logical answers in one transport request and cache key. Thus the original built-in-repeat criterion remains distinct from both options. The 50 cases times three runs in `runs/noise-summary.json` are 150 answer observations; its `live_requests: 710` is the cumulative experiment ledger then, not a noise-only send count. The one local flip and the separate 517-example external judge percentages are cohort-specific, not acceptance thresholds. First decide repeat output/order, cache policy and per-repeat accounting; prove fresh values and exact sends with `--batch 1` when a four-send oracle is wanted. See `sdlc/records/2026-09-28-tuning-evidence-refresh.md`.
+
+## Scope note, 2026-09-28
+
+The need varies and existing commands cover part of it. `--no-cache` forces fresh requests, and running the
+question twice plus `diff` answers whether two runs differ. The measured noise (one flip in 150 calls, on a case at
+p 0.49 to 0.52, with a median probability spread of 0.020) remains the case for a per-record repeat option when a
+project needs one.
