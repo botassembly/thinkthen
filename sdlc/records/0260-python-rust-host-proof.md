@@ -1,6 +1,6 @@
 # 0260 public Rust, Python and Polars host proof
 
-Status: candidate for fresh independent code review. This related slice leaves the encoder, cache, transport, adapters and public APIs unchanged. It does not close register 64 while the C-wrapper forwarding and installed-target obligations remain.
+Status: fresh independent code review accepted corrected candidate `cc3a535c`; integrated. This related slice leaves the encoder, cache, transport, adapters and public APIs unchanged. It does not close register 64 while the C-wrapper forwarding and installed-target obligations remain.
 
 The public Rust test calls `Engine::decide_many_with` over the accepted five text values with Max batching, one in-flight request and no cache. Its listener captures the three complete bodies in `portable-{1,2,3}.request.json`. A public `RecordObservation::Question` supplies each original index and exchange digest; the test compares those digests with the literal body and actual loopback URL. Final facts and listener both count five records and three sends. The existing `public_batches/identity.rs` digest helper is now visible to an adjacent 94-line test module, keeping the 490-nonblank-line identity file below the 500-line Rust cap.
 
