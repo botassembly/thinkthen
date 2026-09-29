@@ -40,3 +40,10 @@ Ian asked whether splitting a file into two or three files by a choice is a demo
       | awk -F'\t' '{print $2 > ($1".out.jsonl")}'
 
 It wrote one file per label. How-to 04 splits one file into three piles by yes, no, and unsure. How-to 02 moves files in a folder by label. No how-to splits one file by a `choose` label. Ian wants this shown. It needs a page and no code.
+
+## Marketing notes for 0.1, 2026-09-29
+
+- Row 2 is partly done. Quick Fix `e63efd45` gave the README the key source and the backend lines. The listed price is still missing. Ian ruled that the README links to TypeSafe's site for keys, with no launch coordination.
+- Rows 1 and 7 (install section, exit-code table) are still owed in the README. The install lines must match the channels Ian ruled on 2026-09-29: R publishes through R-universe, and Windows waits on a first GitHub Actions check. The punch list is `mktg/sdlc/planning/2026-09-29-thinkthen-0-1-punch-list.md`.
+- Row 18 may be stale. Ask whether TypeSafe still has a waitlist before the install page tells users to wait a day.
+- After 0.1 ships, marketing runs a clean-machine install of each package from its registry. New stumbles from that run go in this register.
