@@ -46,11 +46,15 @@ def tar_files(data, label):
     with tarfile.open(fileobj=io.BytesIO(data), mode="r:*") as archive:
         files = {}
         dirs = set()
+        seen = set()
+        source_links = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE"}
         for member in archive:
             name = member.name.removeprefix("./")
-            require(name not in files and not name.startswith("/") and ".." not in Path(name).parts,
+            require(name not in seen and not name.startswith("/") and ".." not in Path(name).parts,
                     f"unsafe or repeated {label} member")
+            seen.add(name)
             if label == "source" and member.issym():
+                require(source_links.get(name) == member.linkname, f"unsafe source symlink: {name}")
                 continue
             require(member.isfile() or member.isdir(), f"unsafe {label} member type: {name}")
             if member.isdir():
@@ -78,7 +82,8 @@ def zip_members(data, label):
                     f"unsafe {label} member")
             require(name not in members, f"duplicate {label} member: {name}")
             member_type = (item.external_attr >> 16) & 0o170000
-            require(member_type in (0, 0o040000, 0o100000), f"unsafe {label} ZIP member type: {name}")
+            allowed_type = (0, 0o040000) if item.is_dir() else (0, 0o100000)
+            require(member_type in allowed_type, f"unsafe {label} ZIP member type: {name}")
             if item.is_dir():
                 require(name not in dirs, f"duplicate {label} directory: {name}")
                 dirs.add(name)
@@ -101,7 +106,7 @@ def check_nupkg(data, version, source):
     fixed = {"Botassembly.ThinkThen.nuspec", "lib/net8.0/ThinkThen.dll", "README.md", "LICENSE",
              "_rels/.rels", "[Content_Types].xml"}
     other = set(members) - fixed
-    require(len(other) == 1 and all(re.fullmatch(
+    require(fixed <= set(members) and len(other) == 1 and all(re.fullmatch(
         r"package/services/metadata/core-properties/[0-9a-fA-F-]+\.psmdcp", name) for name in other),
         "nupkg inventory differs")
     require(members["lib/net8.0/ThinkThen.dll"], "empty net8 DLL")

@@ -23,12 +23,34 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def write_tar(path, files, commit=None):
+def write_tar(path, files, commit=None, links=None, directories=()):
     with tarfile.open(path, "w:gz" if path.suffix == ".gz" else "w", pax_headers={"comment": commit} if commit else {}) as archive:
+        for name in directories:
+            info = tarfile.TarInfo(name)
+            info.type = tarfile.DIRTYPE
+            archive.addfile(info)
         for name, data in files.items():
             info = tarfile.TarInfo(name)
             info.size = len(data)
             archive.addfile(info, io.BytesIO(data))
+        for name, target in (links or {}).items():
+            info = tarfile.TarInfo(name)
+            info.type = tarfile.SYMTYPE
+            info.linkname = target
+            archive.addfile(info)
+
+
+SOURCE_LINKS = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE"}
+C_HEADER = b"#define THINKTHEN_VERSION_MAJOR 0\n#define THINKTHEN_VERSION_MINOR 0\n#define THINKTHEN_VERSION_PATCH 1\n"
+
+
+def write_c_tar(path, shared=b"fixture shared library"):
+    write_tar(path, {"./include/thinkthen.h": C_HEADER,
+                     "./lib/libthinkthen.a": b"fixture static library",
+                     "./lib/libthinkthen.so": shared,
+                     "./lib/pkgconfig/thinkthen.pc": b"Name: thinkthen\nVersion: 0.0.1\n"},
+              links={"./lib/libthinkthen.so.0": "libthinkthen.so"},
+              directories=(".", "./include", "./lib", "./lib/pkgconfig"))
 
 
 def write_zip(path, files):
@@ -46,7 +68,7 @@ def save_json(path, data):
     path.write_text(json.dumps(data) + "\n")
 
 
-def run(base, mode, expected):
+def run(base, mode, expected, message=None):
     cmd = [sys.executable, str(HELPER), mode,
            "--source-tar", str(base / "source.tar"), "--source-receipt", str(base / "source.json"),
            "--c-archive", str(base / "out" / f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"),
@@ -57,6 +79,8 @@ def run(base, mode, expected):
                 "--jars", str(base / "jars")]
     result = subprocess.run(cmd, capture_output=True, text=True)
     assert result.returncode == expected, (result.returncode, result.stdout, result.stderr)
+    if message is not None:
+        assert message in result.stderr, (message, result.stderr)
 
 
 def gate(base, expected):
@@ -72,15 +96,16 @@ def gate(base, expected):
 
 def fixture(base):
     source = {
+        "libraries/c/include/thinkthen.h": C_HEADER,
         "libraries/csharp/README.md": b"C# readme\n", "libraries/csharp/LICENSE": b"MIT\n",
         "libraries/jvm/README.md": b"JVM readme\n", "libraries/jvm/LICENSE": b"MIT\n",
         "libraries/jvm/pom.xml": b"<project><groupId>io.github.botassembly</groupId><artifactId>thinkthen-jvm</artifactId><version>0.0.1</version></project>",
     }
-    write_tar(base / "source.tar", source, COMMIT)
+    write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
     save_json(base / "source.json", {"commit": COMMIT, "sha256": sha((base / "source.tar").read_bytes())})
     c_name = f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
     (base / "out").mkdir()
-    write_tar(base / "out" / c_name, {"include/thinkthen.h": b"header"})
+    write_c_tar(base / "out" / c_name)
     c_hash = sha((base / "out" / c_name).read_bytes())
     save_json(base / "c.json", {"name": c_name, "sha256": c_hash})
     (base / "out" / (c_name + ".sha256")).write_text(f"{c_hash}  {c_name}\n")
@@ -191,6 +216,52 @@ def gate_case(label, change):
         print(f"{label}: refused")
 
 
+def changed_zip(data, remove=None, extra_dir=None, symlink=None):
+    output = io.BytesIO()
+    with zipfile.ZipFile(io.BytesIO(data)) as original, zipfile.ZipFile(output, "w") as changed:
+        for item in original.infolist():
+            if item.filename == remove:
+                continue
+            payload = original.read(item)
+            if item.filename == symlink:
+                item.create_system = 3
+                item.external_attr = 0o120777 << 16
+            changed.writestr(item, payload)
+        if extra_dir:
+            changed.writestr(extra_dir, b"")
+    return output.getvalue()
+
+
+def inner_rejection(label, kind, mutate, message):
+    member = f"Botassembly.ThinkThen.{VERSION}.nupkg" if kind == "nupkg" else f"thinkthen-{kind}.jar"
+    family = "csharp" if kind == "nupkg" else "jvm"
+    with tempfile.TemporaryDirectory() as temporary:
+        base = Path(temporary)
+        fixture(base)
+        path = (base / member) if kind == "nupkg" else (base / "jars" / member)
+        altered = mutate(path.read_bytes())
+        path.write_bytes(altered)
+        values = json.loads((base / "managed.json").read_text())
+        values[kind] = sha(altered)
+        save_json(base / "managed.json", values)
+        run(base, "assemble", 1, message)
+    with tempfile.TemporaryDirectory() as temporary:
+        base = Path(temporary)
+        fixture(base)
+        run(base, "assemble", 0)
+        altered = None
+        def change(files):
+            nonlocal altered
+            altered = mutate(files[member])
+            files[member] = altered
+        mutate_outer(base, family, change)
+        values = json.loads((base / "managed.json").read_text())
+        values[kind] = sha(altered)
+        save_json(base / "managed.json", values)
+        run(base, "verify", 1, message)
+    print(f"{label}: assemble and verify refused at {message}")
+
+
 def workflow_mutations():
     checker = importlib.machinery.SourceFileLoader(
         "managed_workflows", str(HELPER.with_name("workflows"))).load_module()
@@ -227,11 +298,11 @@ def main():
         gate(base, 0)
     def source_attack(base, source):
         source["libraries/csharp/README.md"] = b"altered"
-        write_tar(base / "source.tar", source, COMMIT)
+        write_tar(base / "source.tar", source, COMMIT, SOURCE_LINKS)
     case("same Git header, altered source", source_attack)
     def c_attack(base, source):
         path = base / "out" / f"thinkthen-c-{VERSION}-{TARGET}.tar.gz"
-        write_tar(path, {"include/thinkthen.h": b"other valid C"})
+        write_c_tar(path, b"other valid shared library")
         (base / "out" / (path.name + ".sha256")).write_text(f"{sha(path.read_bytes())}  {path.name}\n")
     case("substituted C with matching sidecar", c_attack)
     def inner_attack(base, source):
@@ -262,6 +333,18 @@ def main():
     case("wrong inner package member", lambda base, source: mutate_outer(
         base, "csharp", lambda files: files.__setitem__(
             f"Botassembly.ThinkThen.{VERSION}.nupkg", extra_nupkg(files))))
+    for required in ("_rels/.rels", "[Content_Types].xml"):
+        inner_rejection(f"missing required {required}", "nupkg",
+                        lambda data, required=required: changed_zip(data, remove=required),
+                        "nupkg inventory differs")
+    for kind in ("nupkg", "door"):
+        inner_rejection(f"unexpected {kind} directory", kind,
+                        lambda data: changed_zip(data, extra_dir="surprise/"),
+                        "directory")
+    for kind, name in (("nupkg", "README.md"), ("door", "thinkthen/Door.class")):
+        inner_rejection(f"symlink typed {kind} {name}", kind,
+                        lambda data, name=name: changed_zip(data, symlink=name),
+                        "unsafe")
     gate_case("missing selected family", lambda out: (out / f"thinkthen-jvm-{VERSION}-{TARGET}.tar.gz").unlink())
     gate_case("extra selected suffix", lambda out: (out / "thinkthen-csharp-extra").write_bytes(b"extra"))
     gate_case("wrong selected target", lambda out: (out / f"thinkthen-jvm-{VERSION}-aarch64-unknown-linux-gnu.tar.gz").write_bytes(b"other"))
