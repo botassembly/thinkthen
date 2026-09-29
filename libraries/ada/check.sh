@@ -59,6 +59,9 @@ gprbuild -P "$ROOT/thinkthen.gpr" -j2
 for name in door failure package_bulk; do
   gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/$name.adb" -D "$TARGET" -o "$TARGET/$name" -largs -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
 done
+gcc -std=c11 -Wall -Wextra -I"$REPO/libraries/c/include" -c "$ROOT/checks/facts_boundary.c" -o "$TARGET/facts_boundary_native.o"
+gnatmake -gnat2022 -I"$ROOT/src" "$ROOT/checks/facts_boundary.adb" -D "$TARGET" -o "$TARGET/facts_boundary" \
+  -largs "$TARGET/facts_boundary_native.o" -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
 for name in main direct; do
   gnatmake -gnat2022 -I"$ROOT/checks/legacy" "$ROOT/checks/legacy/$name.adb" -D "$TARGET/legacy" -o "$TARGET/legacy/$name" -largs -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
 done

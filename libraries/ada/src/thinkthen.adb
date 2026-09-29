@@ -112,50 +112,100 @@ package body Thinkthen is
       if Raw.Outcome < 0 or Raw.Outcome > 2 then raise Program_Error with "invalid outcome"; end if;
       return (Value => Outcome'Val (Integer (Raw.Outcome)), Probability => Long_Float (Raw.Probability));
    end Converted;
+   function Decode_Run_Facts (Pointer : chars_ptr; Length : size_t) return Run_Facts;
+   procedure Native_Result_Defect (Error : out Failure) is
+   begin
+      Error := (Kind => Defect, Retryable => False,
+                Text => To_Unbounded_String ("native typed result broke the contract"),
+                Facts_JSON => Null_Unbounded_String);
+   end Native_Result_Defect;
    procedure Decide (Client : in out Engine; Question, Evidence : String;
-                     Result : out Decision; Error : out Failure;
+                     Result : out Decision; Facts : out Run_Facts; Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null) is
       Q, T : Owned_String;
+      Raw_Facts : aliased Owned_String;
+      Facts_Length : aliased size_t := 0;
       Raw : aliased Answer := (Outcome => 123, Probability => -1.0);
       Code : int;
    begin
       Require_C_String (Question);
       Set (Q, Question); Set (T, Evidence);
-      Code := Decide_Opts (Client.Handle, Q.Pointer, T.Pointer, size_t (Evidence'Length),
-                           Deadline_Ms, Raw_Token (Token), Raw'Access);
+      Code := Decide_Facts_Opts (Client.Handle, Q.Pointer, T.Pointer, size_t (Evidence'Length),
+                                 Deadline_Ms, Raw_Token (Token), Raw'Access,
+                                 Raw_Facts.Pointer'Access, Facts_Length'Access);
+      Raw_Facts.Native := True;
       Capture (Client.Handle, Code, Error);
-      Result := (if Code = 0 then Converted (Raw) else (Value => Not_Sure, Probability => 0.0));
+      if Code = 0 then
+         declare
+            Answer_Value : Decision;
+            Read : Run_Facts;
+         begin
+            Answer_Value := Converted (Raw);
+            Read := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+            Result := Answer_Value; Facts := Read;
+         exception
+            when Constraint_Error | Program_Error =>
+               Native_Result_Defect (Error);
+               Result := (Value => Not_Sure, Probability => 0.0); Facts := (others => <>);
+         end;
+      else
+         Result := (Value => Not_Sure, Probability => 0.0); Facts := (others => <>);
+      end if;
    end Decide;
    procedure Decide_Many (Client : in out Engine; Question : String;
                           Evidence : Evidence_Array; Result : out Decision_Array;
-                          Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
+                          Facts : out Run_Facts; Error : out Failure; Deadline_Ms : Interfaces.Integer_64 := -1;
                           Token : access Cancel_Token := null) is
       Q : Owned_String;
       type Owned_Array is array (Positive range <>) of Owned_String;
-      Owned : Owned_Array (Evidence'Range);
-      Texts : aliased Text_Array (0 .. size_t (Evidence'Length) - 1);
-      Lengths : aliased Length_Array (Texts'Range);
-      Answers : aliased Answer_Array (Texts'Range) := (others => (Outcome => 123, Probability => -1.0));
+      Raw_Facts : aliased Owned_String;
+      Facts_Length : aliased size_t := 0;
       Code : int;
    begin
       if Evidence'Length = 0 or Result'Length /= Evidence'Length then
          raise Constraint_Error with "bulk arrays must have equal nonzero length";
       end if;
-      Require_C_String (Question); Set (Q, Question);
-      for I in Evidence'Range loop
-         Set (Owned (I), To_String (Evidence (I)));
-         Texts (size_t (I - Evidence'First)) := Owned (I).Pointer;
-         Lengths (size_t (I - Evidence'First)) := size_t (Length (Evidence (I)));
-      end loop;
-      Code := Decide_Many_Opts (Client.Handle, Q.Pointer, Texts'Address, Lengths'Address,
-                                size_t (Evidence'Length), Deadline_Ms, Raw_Token (Token), Answers'Address);
-      Capture (Client.Handle, Code, Error);
-      if Code = 0 then
-         for I in Result'Range loop Result (I) := Converted (Answers (size_t (I - Result'First))); end loop;
-      else
-         for I in Result'Range loop Result (I) := (Value => Not_Sure, Probability => 0.0); end loop;
-      end if;
+      declare
+         Owned : Owned_Array (Evidence'Range);
+         Texts : aliased Text_Array (0 .. size_t (Evidence'Length) - 1);
+         Lengths : aliased Length_Array (Texts'Range);
+         Answers : aliased Answer_Array (Texts'Range) := (others => (Outcome => 123, Probability => -1.0));
+      begin
+         Require_C_String (Question); Set (Q, Question);
+         for I in Evidence'Range loop
+            Set (Owned (I), To_String (Evidence (I)));
+            Texts (size_t (I - Evidence'First)) := Owned (I).Pointer;
+            Lengths (size_t (I - Evidence'First)) := size_t (Length (Evidence (I)));
+         end loop;
+         Code := Decide_Many_Facts_Opts (Client.Handle, Q.Pointer, Texts'Address, Lengths'Address,
+                                         size_t (Evidence'Length), Deadline_Ms, Raw_Token (Token),
+                                         Answers'Address, Raw_Facts.Pointer'Access, Facts_Length'Access);
+         Raw_Facts.Native := True;
+         Capture (Client.Handle, Code, Error);
+         if Code = 0 then
+            declare
+               Converted_Answers : Decision_Array (Result'Range);
+            begin
+               for I in Result'Range loop
+                  Converted_Answers (I) := Converted (Answers (size_t (I - Result'First)));
+               end loop;
+               declare
+                  Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+               begin
+                  Result := Converted_Answers; Facts := Read;
+               end;
+            exception
+               when Constraint_Error | Program_Error =>
+                  Native_Result_Defect (Error);
+                  for I in Result'Range loop Result (I) := (Value => Not_Sure, Probability => 0.0); end loop;
+                  Facts := (others => <>);
+            end;
+         else
+            for I in Result'Range loop Result (I) := (Value => Not_Sure, Probability => 0.0); end loop;
+            Facts := (others => <>);
+         end if;
+      end;
    end Decide_Many;
    function Bare_Labels (Names : String_List) return Label_Set is
       Result : Label_Set (Names'Range);
@@ -294,7 +344,8 @@ package body Thinkthen is
       end loop;
       return To_String (Result) & (if Described then "}" else "]");
    end Label_Descriptions;
-   function Extract (Object_Text, Name : String) return String;
+   function Extract (Object_Text, Name : String; Optional : Boolean := False;
+                     Facts_Only : Boolean := False) return String;
    function Unquote (Text : String) return Unbounded_String;
    function Decode_Field (Text : String) return Annotated_Field is
       Kind : Answer_Kind;
@@ -344,76 +395,107 @@ package body Thinkthen is
       end if;
    end Call;
    procedure Recognize (Client : in out Engine; Specification, Evidence : String;
-                        Result : out JSON_Result; Error : out Failure;
+                        Result : out JSON_Result; Facts : out Run_Facts; Error : out Failure;
                         Deadline_Ms : Interfaces.Integer_64 := -1;
                         Token : access Cancel_Token := null) is
       Spec, Text : Owned_String;
       Output : aliased Owned_String;
+      Raw_Facts : aliased Owned_String;
       Out_Len : aliased size_t := 0;
+      Facts_Length : aliased size_t := 0;
       Code : int;
    begin
       Require_C_String (Specification); Validate (Specification);
       Set (Spec, Specification); Set (Text, Evidence);
-      Code := Recognize_Opts (Client.Handle, Spec.Pointer, Text.Pointer, size_t (Evidence'Length),
-                              Deadline_Ms, Raw_Token (Token), Output.Pointer'Access, Out_Len'Access);
+      Code := Recognize_Facts_Opts (Client.Handle, Spec.Pointer, Text.Pointer, size_t (Evidence'Length),
+                                    Deadline_Ms, Raw_Token (Token), Output.Pointer'Access, Out_Len'Access,
+                                    Raw_Facts.Pointer'Access, Facts_Length'Access);
+      Output.Native := True; Raw_Facts.Native := True;
       Capture (Client.Handle, Code, Error);
       if Code = 0 then
-         Output.Native := True;
-         declare
-            Data : constant String := Value (Output.Pointer, Out_Len);
          begin
-            Validate (Data);
             declare
-               Shape : constant String := Extract (Data, "entities");
+               Data : constant String := Value (Output.Pointer, Out_Len);
             begin
-               if Shape (Shape'First) /= '[' then raise Constraint_Error with "recognize entities must be an array"; end if;
+               Validate (Data);
+               declare
+                  Shape : constant String := Extract (Data, "entities");
+               begin
+                  if Shape (Shape'First) /= '[' then raise Constraint_Error with "recognize entities must be an array"; end if;
+               end;
+               declare
+                  Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+               begin
+                  Result.JSON := To_Unbounded_String (Data); Facts := Read;
+               end;
             end;
-            Result.JSON := To_Unbounded_String (Data);
+         exception
+            when Constraint_Error | Program_Error =>
+               Native_Result_Defect (Error);
+               Result.JSON := Null_Unbounded_String; Facts := (others => <>);
          end;
-      else Result.JSON := Null_Unbounded_String;
+      else Result.JSON := Null_Unbounded_String; Facts := (others => <>);
       end if;
    end Recognize;
    procedure Relate (Client : in out Engine; Specification : String;
-                     Records : Evidence_Array; Result : out JSON_Result; Error : out Failure;
+                     Records : Evidence_Array; Result : out JSON_Result;
+                     Facts : out Run_Facts; Error : out Failure;
                      Deadline_Ms : Interfaces.Integer_64 := -1;
                      Token : access Cancel_Token := null) is
       Spec : Owned_String;
       Output : aliased Owned_String;
+      Raw_Facts : aliased Owned_String;
       type Owned_Array is array (Positive range <>) of Owned_String;
-      Owned : Owned_Array (Records'Range);
-      Texts : aliased Text_Array (0 .. size_t (Records'Length) - 1);
-      Lengths : aliased Length_Array (Texts'Range);
       Out_Len : aliased size_t := 0;
+      Facts_Length : aliased size_t := 0;
       Code : int;
    begin
       if Records'Length = 0 then raise Constraint_Error with "no records"; end if;
-      Require_C_String (Specification); Validate (Specification); Set (Spec, Specification);
-      for I in Records'Range loop
-         Set (Owned (I), To_String (Records (I)));
-         Texts (size_t (I - Records'First)) := Owned (I).Pointer;
-         Lengths (size_t (I - Records'First)) := size_t (Length (Records (I)));
-      end loop;
-      Code := Relate_Opts (Client.Handle, Spec.Pointer, Texts'Address, Lengths'Address,
-                           size_t (Records'Length), Deadline_Ms, Raw_Token (Token),
-                           Output.Pointer'Access, Out_Len'Access);
-      Capture (Client.Handle, Code, Error);
-      if Code = 0 then
-         Output.Native := True;
-         declare
-            Data : constant String := Value (Output.Pointer, Out_Len);
-         begin
-            Validate (Data);
-            declare
-               Shape : constant String := Extract (Data, "edges");
+      declare
+         Owned : Owned_Array (Records'Range);
+         Texts : aliased Text_Array (0 .. size_t (Records'Length) - 1);
+         Lengths : aliased Length_Array (Texts'Range);
+      begin
+         Require_C_String (Specification); Validate (Specification); Set (Spec, Specification);
+         for I in Records'Range loop
+            Set (Owned (I), To_String (Records (I)));
+            Texts (size_t (I - Records'First)) := Owned (I).Pointer;
+            Lengths (size_t (I - Records'First)) := size_t (Length (Records (I)));
+         end loop;
+         Code := Relate_Facts_Opts (Client.Handle, Spec.Pointer, Texts'Address, Lengths'Address,
+                                    size_t (Records'Length), Deadline_Ms, Raw_Token (Token),
+                                    Output.Pointer'Access, Out_Len'Access,
+                                    Raw_Facts.Pointer'Access, Facts_Length'Access);
+         Output.Native := True; Raw_Facts.Native := True;
+         Capture (Client.Handle, Code, Error);
+         if Code = 0 then
             begin
-               if Shape (Shape'First) /= '[' then raise Constraint_Error with "relate edges must be an array"; end if;
+               declare
+                  Data : constant String := Value (Output.Pointer, Out_Len);
+               begin
+                  Validate (Data);
+                  declare
+                     Shape : constant String := Extract (Data, "edges");
+                  begin
+                     if Shape (Shape'First) /= '[' then raise Constraint_Error with "relate edges must be an array"; end if;
+                  end;
+                  declare
+                     Read : constant Run_Facts := Decode_Run_Facts (Raw_Facts.Pointer, Facts_Length);
+                  begin
+                     Result.JSON := To_Unbounded_String (Data); Facts := Read;
+                  end;
+               end;
+            exception
+               when Constraint_Error | Program_Error =>
+                  Native_Result_Defect (Error);
+                  Result.JSON := Null_Unbounded_String; Facts := (others => <>);
             end;
-            Result.JSON := To_Unbounded_String (Data);
-         end;
-      else Result.JSON := Null_Unbounded_String;
-      end if;
+         else Result.JSON := Null_Unbounded_String; Facts := (others => <>);
+         end if;
+      end;
    end Relate;
-   function Extract (Object_Text, Name : String) return String is
+   function Extract (Object_Text, Name : String; Optional : Boolean := False;
+                     Facts_Only : Boolean := False) return String is
       P : Natural := Object_Text'First;
       Found : Unbounded_String;
       Present : Boolean := False;
@@ -480,6 +562,12 @@ package body Thinkthen is
             if P > Object_Text'Last or else Object_Text (P) /= ':' then raise Constraint_Error with "expected member colon"; end if;
             P := P + 1; Space; Start_Value := P;
             End_Value := Value_End (P);
+            -- specification/result.schema.json closes the facts member set.
+            if Facts_Only and then Key /= "records" and then Key /= "requests_sent" and then
+               Key /= "cache_answers" and then Key /= "seconds" and then
+               Key /= "input_tokens" and then Key /= "output_tokens" and then Key /= "model" then
+               raise Constraint_Error with "unknown facts member";
+            end if;
             if Key = Name then
                if Present then raise Constraint_Error with "duplicate result member: " & Name; end if;
                Found := To_Unbounded_String (Ada.Strings.Fixed.Trim (Object_Text (Start_Value .. End_Value - 1), Ada.Strings.Both));
@@ -490,9 +578,57 @@ package body Thinkthen is
             else exit when Object_Text (P) = '}'; end if;
          end;
       end loop;
-      if not Present then raise Constraint_Error with "missing result field: " & Name; end if;
+      if not Present then
+         if Optional then return ""; end if;
+         raise Constraint_Error with "missing result field: " & Name;
+      end if;
       return To_String (Found);
    end Extract;
+   function Count (Text : String) return Unsigned_64 is
+   begin
+      if Text'Length = 0 then raise Constraint_Error with "missing facts count"; end if;
+      for C of Text loop
+         if C not in '0' .. '9' then raise Constraint_Error with "invalid facts count"; end if;
+      end loop;
+      return Unsigned_64'Value (Text);
+   end Count;
+   function Decode_Run_Facts (Pointer : chars_ptr; Length : size_t) return Run_Facts is
+   begin
+      if Pointer = Null_Ptr or Length = 0 then
+         raise Constraint_Error with "missing native facts";
+      end if;
+      Validate (Value (Pointer, Length));
+      declare
+         Text : constant String := Value (Pointer, Length);
+         Seconds_Text : constant String := Extract (Text, "seconds", Facts_Only => True);
+         Answer : Run_Facts;
+         Input : constant String := Extract (Text, "input_tokens", Optional => True);
+         Output : constant String := Extract (Text, "output_tokens", Optional => True);
+         Model : constant String := Extract (Text, "model", Optional => True);
+      begin
+         Answer.Records := Count (Extract (Text, "records"));
+         Answer.Requests_Sent := Count (Extract (Text, "requests_sent"));
+         Answer.Cache_Answers := Count (Extract (Text, "cache_answers"));
+         if Seconds_Text'Length = 0 or else Seconds_Text (Seconds_Text'First) not in '0' .. '9' then
+            raise Constraint_Error with "invalid facts seconds";
+         end if;
+         Answer.Seconds := Long_Float'Value (Seconds_Text);
+         if not (Answer.Seconds >= 0.0 and Answer.Seconds <= Long_Float'Last) then
+            raise Constraint_Error with "invalid facts seconds";
+         end if;
+         if Input'Length /= 0 then
+            Answer.Has_Input_Tokens := True; Answer.Input_Tokens := Count (Input);
+         end if;
+         if Output'Length /= 0 then
+            Answer.Has_Output_Tokens := True; Answer.Output_Tokens := Count (Output);
+         end if;
+         if Model'Length /= 0 then
+            if Model (Model'First) /= '"' then raise Constraint_Error with "invalid facts model"; end if;
+            Answer.Has_Model := True; Answer.Model := Unquote (Model);
+         end if;
+         return Answer;
+      end;
+   end Decode_Run_Facts;
    function Call_Facts (Result : JSON_Result) return String is
       Data : constant String := To_String (Result.JSON);
       Facts : constant String := Extract (Data, "facts");

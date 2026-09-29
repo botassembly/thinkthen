@@ -150,3 +150,10 @@ Ticket 0280 passed fresh High code review at `3b74fa121`. The four typed C# and 
 ## C++ and Dart typed calls, 2026-09-29
 
 Ticket 0279 passed fresh High code review at `9ff5c0e7c`. Its four typed C++ and Dart routes return owned value/facts through the existing C API; direct consumers and the Flutter facade follow the return shape. Focused proof covers strict decoding, absent usage, empty bulk, held overlap, typed failure lifetime, exact request bodies, installed C++ shared/static consumers and the changed Flutter source test. The frozen C ABI and JSON routes remain. The source-qualified pair does not establish final release archives, other runners or the remaining richer-facts criteria.
+
+
+## 2026-09-29: Remaining typed host carriers
+
+Ticket0282 passed fresh High code review at `3d04590de`. Ada's four typed routes, Objective-C's four routes and counted variants, and COBOL's `TT-DECIDE` now return owned facts from the same C operation. Focused exact-request, malformed/absent facts, independent cleanup, failure lifetime and copied installed-consumer proofs pass. The [build record](../records/0282-ada-objc-cobol-call-facts-build.md) records the Ada correction and each host's limits.
+
+This completes that typed-carrier migration. The umbrella issue remains open for its richer detail, caller-priced cost, backend timing/request-ID and target/package criteria. The old C bare symbols retain ADR0101's compatibility exception. These local source and copied-consumer receipts do not qualify final release archives or actual runners.

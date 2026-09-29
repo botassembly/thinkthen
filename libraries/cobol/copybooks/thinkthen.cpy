@@ -19,6 +19,9 @@
           02 tt-failure-message pic x(512).
           02 tt-failure-facts-length usage binary-double unsigned.
           02 tt-failure-facts-json pic x(8192).
+       01 tt-facts.
+          02 tt-facts-length usage binary-double unsigned.
+          02 tt-facts-json pic x(8192).
        01 tt-field-kind usage binary-long signed.
           88 field-not-sure value 1.
           88 field-failed value 2.

@@ -2,8 +2,44 @@
  * A parsed object is never mutated: map descriptions cross unchanged.
  * Functions accept byte length and never read past the caller's storage. */
 #include "TTJSON.h"
+#include <errno.h>
+#include <math.h>
 #include <stdio.h>
+#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
+static int count(const TTJSON *n) {
+    if (!n || n->type!=TTJSONNumber || !n->text || !n->text_length) return 0;
+    for(size_t i=0;i<n->text_length;i++) if(n->text[i]<'0'||n->text[i]>'9') return 0;
+    errno=0;char *end=NULL;strtoull(n->text,&end,10);
+    return !errno && end && !*end;
+}
+/* A COBOL caller owns copied JSON bytes; reject invalid required/optional facts first. */
+int tt_cobol_facts(const char *json,size_t length) {
+    TTJSON *n=tt_json_parse(json,length);
+    int ok=n && n->type==TTJSONObject && n->count>=4 && n->count<=7;
+    if(ok){
+        ok=count(tt_json_get(n,"records")) && count(tt_json_get(n,"requests_sent")) &&
+           count(tt_json_get(n,"cache_answers"));
+        const TTJSON *seconds=tt_json_get(n,"seconds");
+        if(!seconds||seconds->type!=TTJSONNumber||!seconds->text)ok=0;
+        else{errno=0;char *end=NULL;double value=strtod(seconds->text,&end);
+            if(errno||!end||*end||!isfinite(value)||value<0)ok=0;}
+        const TTJSON *input=tt_json_get(n,"input_tokens"),*output=tt_json_get(n,"output_tokens"),
+                     *model=tt_json_get(n,"model");
+        if(input&&!count(input))ok=0;
+        if(output&&!count(output))ok=0;
+        if(model&&model->type!=TTJSONString)ok=0;
+        for(size_t i=0;i<n->count;i++){
+            const char *key=n->keys[i];size_t len=n->key_lengths[i];
+            if(!((len==7&&!memcmp(key,"records",7))||(len==13&&!memcmp(key,"requests_sent",13))||
+                 (len==13&&!memcmp(key,"cache_answers",13))||(len==7&&!memcmp(key,"seconds",7))||
+                 (len==12&&!memcmp(key,"input_tokens",12))||(len==13&&!memcmp(key,"output_tokens",13))||
+                 (len==5&&!memcmp(key,"model",5))))ok=0;
+        }
+    }
+    tt_json_free(n);return ok?0:1;
+}
 static int description(const TTJSON *n) {
     const TTJSON *a, *b, *c;
     if (n->type==TTJSONString) return 1;

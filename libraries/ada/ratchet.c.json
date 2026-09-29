@@ -1,8 +1,7 @@
 {
   "directory": [
-    "src",
     "checks"
   ],
   "extension": ".c",
-  "max": 214
+  "max": 95
 }
