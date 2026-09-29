@@ -527,3 +527,7 @@ The0261 package build initially tied its manifests to the current checkout HEAD.
 ## Isolate compiled members before claiming one source pin
 
 Fresh0262 design review found that JVM build.sh compiles into persistent class directories, then jars every member. Its package checker compares against the same directories, so a leftover class could pass both checks and enter an archive claimed to come from a clean source commit. Accepted design correction da2ed94a requires a fresh scratch-owned class/JAR output, refusal of nonempty or linked output before compilation, and one planted Stale.class check. The existing source matrices remain. Future archive preparation must trace every member to the current build and distinguish a source-clean checkout from clean compiler output.
+
+## Measure every changed fixture language
+
+Fresh0260 wrapper review found eight inherited C++ fixture lines omitted from0261's counter update. The earlier build and integration checked Python counters but also added a compiled C++ consumer. Corrected6e76d8b1 separates those eight lines from its own23 and restores the exact total. Root checked all52 counters; no other source-count mismatch remained. Preparation and landing must enumerate every extension touched by a fixture, including compiled test consumers, and run each affected ratchet. Existing counters already enforce this; no full build or new test framework is needed.
