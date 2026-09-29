@@ -1,11 +1,11 @@
 #!/bin/sh
 # Validate one fixed managed pair against the C archive that built with it.
 # The one-argument Go/C++ route stays unchanged; release-smoke also calls the
-# csharp-jvm, swift-zig and php-dart modes before their consumers.
+# csharp-jvm, swift-zig, php-dart and ada-objective-c-cobol modes before consumers.
 set -eu
-[ "$#" -ge 1 ] && [ "$#" -le 2 ] && [ -d "$1" ] || { echo 'release-go-cpp-pair: DIR [csharp-jvm|swift-zig|php-dart] required' >&2; exit 2; }
+[ "$#" -ge 1 ] && [ "$#" -le 2 ] && [ -d "$1" ] || { echo 'release-go-cpp-pair: DIR [csharp-jvm|swift-zig|php-dart|ada-objective-c-cobol] required' >&2; exit 2; }
 mode=${2:-go-cpp}
-case $mode in go-cpp | csharp-jvm | swift-zig | php-dart) ;; *) echo "release-go-cpp-pair: unknown mode $mode" >&2; exit 2 ;; esac
+case $mode in go-cpp | csharp-jvm | swift-zig | php-dart | ada-objective-c-cobol) ;; *) echo "release-go-cpp-pair: unknown mode $mode" >&2; exit 2 ;; esac
 dir=$(CDPATH='' cd -- "$1" && pwd)
 repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$repo"
@@ -20,6 +20,7 @@ go-cpp) first=thinkthen-go-$version-$target.tar.gz second=thinkthen-cpp-$version
 csharp-jvm) first=thinkthen-csharp-$version-$target.tar.gz second=thinkthen-jvm-$version-$target.tar.gz ;;
 swift-zig) first=thinkthen-swift-$version-$target.tar.gz second=thinkthen-zig-$version-$target.tar.gz ;;
 php-dart) first=thinkthen-php-$version-$target.tar.gz second=thinkthen-dart-$version-$target.tar.gz ;;
+ada-objective-c-cobol) first=thinkthen-ada-$version-$target.tar.gz second=thinkthen-objective-c-$version-$target.tar.gz third=thinkthen-cobol-$version-$target.tar.gz ;;
 esac
 fail() { echo "release-go-cpp-pair: $*" >&2; exit 1; }
 sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
@@ -40,19 +41,22 @@ for file in "$dir"/*; do
 	swift-zig:thinkthen-swift-*.tar.gz | swift-zig:thinkthen-zig-*.tar.gz | \
 	swift-zig:thinkthen-swift-*.tar.gz.sha256 | swift-zig:thinkthen-zig-*.tar.gz.sha256 | \
 	php-dart:thinkthen-php-*.tar.gz | php-dart:thinkthen-dart-*.tar.gz | \
-	php-dart:thinkthen-php-*.tar.gz.sha256 | php-dart:thinkthen-dart-*.tar.gz.sha256) selected=1 ;;
+	php-dart:thinkthen-php-*.tar.gz.sha256 | php-dart:thinkthen-dart-*.tar.gz.sha256 | \
+	ada-objective-c-cobol:thinkthen-ada-*.tar.gz | ada-objective-c-cobol:thinkthen-objective-c-*.tar.gz | \
+	ada-objective-c-cobol:thinkthen-cobol-*.tar.gz | ada-objective-c-cobol:thinkthen-ada-*.tar.gz.sha256 | \
+	ada-objective-c-cobol:thinkthen-objective-c-*.tar.gz.sha256 | ada-objective-c-cobol:thinkthen-cobol-*.tar.gz.sha256) selected=1 ;;
 	esac
 	[ -n "$selected" ] || continue
-	case $name in "$c" | "$first" | "$second" | "$c.sha256" | "$first.sha256" | "$second.sha256") ;; *) fail "extra family entry $name" ;; esac
+	case $name in "$c" | "$first" | "$second" | "${third:-}" | "$c.sha256" | "$first.sha256" | "$second.sha256" | "${third:-}.sha256") ;; *) fail "extra family entry $name" ;; esac
 done
-for name in "$c" "$first" "$second"; do
+for name in "$c" "$first" "$second" ${third:+"$third"}; do
 	[ -f "$dir/$name" ] && [ ! -L "$dir/$name" ] || fail "missing or linked $name"
 	[ -f "$dir/$name.sha256" ] && [ ! -L "$dir/$name.sha256" ] || fail "missing or linked $name.sha256"
 	digest=$(sha256 "$dir/$name" | awk '{print $1}')
 	[ "$(cat "$dir/$name.sha256")" = "$digest  $name" ] || fail "checksum differs for $name"
 done
 c_digest=$(sha256 "$dir/$c" | awk '{print $1}')
-for name in "$first" "$second"; do
+for name in "$first" "$second" ${third:+"$third"}; do
 	members=$(tar -tzf "$dir/$name") || fail "cannot list $name"
 	[ "$(printf '%s\n' "$members" | grep -xc './THINKTHEN-PACKAGE-INPUTS' || true)" = 1 ] || fail "manifest count differs for $name"
 	tar -xOzf "$dir/$name" ./THINKTHEN-PACKAGE-INPUTS >"$work/actual" || fail "cannot read manifest in $name"
@@ -111,4 +115,54 @@ if [ "$mode" = php-dart ]; then
 		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
 	done
 fi
-case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; swift-zig) echo 'release-go-cpp-pair: swift-zig pass' ;; php-dart) echo 'release-go-cpp-pair: php-dart pass' ;; esac
+if [ "$mode" = ada-objective-c-cobol ]; then
+	tar -tzf "$dir/$c" | LC_ALL=C sort >"$work/members" || fail 'cannot list C members'
+	printf '%s\n' ./ ./include/ ./include/thinkthen.h ./lib/ ./lib/pkgconfig/ \
+		./lib/pkgconfig/thinkthen.pc ./lib/libthinkthen.a ./lib/libthinkthen.so \
+		./lib/libthinkthen.so.0 | LC_ALL=C sort >"$work/expected-members"
+	cmp -s "$work/members" "$work/expected-members" || fail 'C members differ'
+	for name in "$first" "$second" "$third"; do
+		tar -tzf "$dir/$name" | LC_ALL=C sort >"$work/members" || fail "cannot list $name"
+		case $name in
+		"$first")
+			printf '%s\n' ./ ./LICENSE ./README.md ./thinkthen.gpr ./src/ \
+				./src/thinkthen.ads ./src/thinkthen.adb ./src/thinkthen_c.ads \
+				./examples/ ./examples/consumer.adb ./THINKTHEN-PACKAGE-INPUTS \
+				| LC_ALL=C sort >"$work/expected-members" ;;
+		"$second")
+			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./Sources/ \
+				./Sources/ThinkThen.h ./Sources/ThinkThen.m ./Sources/thinkthen.h \
+				./Sources/TTJSON.h ./Sources/TTJSON.c ./Examples/ ./Examples/consumer.m \
+				./THINKTHEN-PACKAGE-INPUTS | LC_ALL=C sort >"$work/expected-members" ;;
+		"$third")
+			printf '%s\n' ./ ./LICENSE ./README.md ./source-package.json ./copybooks/ \
+				./copybooks/thinkthen.cpy ./src/ ./src/TTJSON.c ./src/TTJSON.h \
+				./src/tt_shape.c ./src/tt_engine.cob ./src/tt_error.cob \
+				./src/tt_call.cob ./src/tt_decide.cob ./src/tt_validate.cob \
+				./examples/ ./examples/direct.cob ./examples/settings.cob \
+				./examples/types.cob ./THINKTHEN-PACKAGE-INPUTS \
+				| LC_ALL=C sort >"$work/expected-members" ;;
+		esac
+		cmp -s "$work/members" "$work/expected-members" || fail "source members differ for $name"
+	done
+	python3 - "$dir/$c" "$dir/$first" "$dir/$second" "$dir/$third" <<'PY' || fail 'unsafe archive member type'
+import sys, tarfile
+for index, filename in enumerate(sys.argv[1:]):
+    with tarfile.open(filename, "r:gz") as archive:
+        for member in archive:
+            if index == 0 and member.name == "./lib/libthinkthen.so.0":
+                assert member.issym() and member.linkname == "libthinkthen.so"
+            else:
+                assert member.isfile() or member.isdir(), (filename, member.name)
+PY
+	for name in "$second" "$third"; do
+		tar -xOzf "$dir/$name" ./source-package.json >"$work/package-metadata"
+		case $name in "$second") package_name=thinkthen-objective-c ;; "$third") package_name=thinkthen-cobol ;; esac
+		python3 -c 'import json,sys; p=json.load(open(sys.argv[1])); assert p=={"name":sys.argv[2],"version":sys.argv[3],"source_only":True,"native_dependency":"thinkthen-c","bundles_native":False}' \
+			"$work/package-metadata" "$package_name" "$version" || fail "source package identity differs for $name"
+	done
+	tar -xOzf "$dir/$second" ./Sources/thinkthen.h >"$work/objective-header"
+	tar -xOzf "$dir/$c" ./include/thinkthen.h >"$work/c-header"
+	cmp -s "$work/objective-header" "$work/c-header" || fail 'Objective-C copied C header differs'
+fi
+case $mode in go-cpp) echo 'release-go-cpp-pair: pass' ;; csharp-jvm) echo 'release-go-cpp-pair: csharp-jvm pass' ;; swift-zig) echo 'release-go-cpp-pair: swift-zig pass' ;; php-dart) echo 'release-go-cpp-pair: php-dart pass' ;; ada-objective-c-cobol) echo 'release-go-cpp-pair: ada-objective-c-cobol pass' ;; esac

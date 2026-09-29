@@ -23,11 +23,13 @@ pair=
 managed_pair=
 swift_zig_pair=
 php_dart_pair=
+ada_objc_cobol_pair=
 for file in "$DIR"/*; do
 	case ${file##*/} in thinkthen-go-* | thinkthen-cpp-*) pair=1 ;; esac
 	case ${file##*/} in thinkthen-csharp-* | thinkthen-jvm-*) managed_pair=1 ;; esac
 	case ${file##*/} in thinkthen-swift-* | thinkthen-zig-*) swift_zig_pair=1 ;; esac
 	case ${file##*/} in thinkthen-php-* | thinkthen-dart-*) php_dart_pair=1 ;; esac
+	case ${file##*/} in thinkthen-ada-* | thinkthen-objective-c-* | thinkthen-cobol-*) ada_objc_cobol_pair=1 ;; esac
 done
 if [ -n "$pair" ]; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR"
@@ -40,6 +42,9 @@ if [ -n "$swift_zig_pair" ]; then
 fi
 if [ -n "$php_dart_pair" ]; then
 	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" php-dart
+fi
+if [ -n "$ada_objc_cobol_pair" ]; then
+	sh "$REPO/sdlc/scripts/release-go-cpp-pair" "$DIR" ada-objective-c-cobol
 fi
 
 # The conformance loopback backend, as the surfaces rung starts it.
@@ -102,6 +107,9 @@ for file in "$DIR"/*; do
 		thinkthen-zig-*.tar.gz) surface=libraries/zig ;;
 		thinkthen-php-*.tar.gz) surface=libraries/php ;;
 		thinkthen-dart-*.tar.gz) surface=libraries/dart ;;
+		thinkthen-ada-*.tar.gz) surface=libraries/ada ;;
+		thinkthen-objective-c-*.tar.gz) surface=libraries/objective-c ;;
+		thinkthen-cobol-*.tar.gz) surface=libraries/cobol ;;
 	thinkthen-sqlite-*.tar.gz) surface=databases/sqlite ;;
 	thinkthen-duckdb-*.tar.gz) surface=databases/duckdb ;;
 	thinkthen-postgresql16-*.tar.gz) surface=databases/postgresql ;;
@@ -121,7 +129,9 @@ for file in "$DIR"/*; do
 		if [ "$surface" = libraries/go ] || [ "$surface" = libraries/cpp ] ||
 		   [ "$surface" = libraries/csharp ] || [ "$surface" = libraries/jvm ] ||
 		   [ "$surface" = libraries/swift ] || [ "$surface" = libraries/zig ] ||
-		   [ "$surface" = libraries/php ] || [ "$surface" = libraries/dart ]; then
+		   [ "$surface" = libraries/php ] || [ "$surface" = libraries/dart ] ||
+		   [ "$surface" = libraries/ada ] || [ "$surface" = libraries/objective-c ] ||
+		   [ "$surface" = libraries/cobol ]; then
 			THINKTHEN_ARTIFACT=$file THINKTHEN_C_ARTIFACT="$DIR/thinkthen-c-$V-$(rustc -vV | sed -n 's/^host: //p').tar.gz" \
 				sh "$surface/check.sh" "$port" 3>&-
 		else
