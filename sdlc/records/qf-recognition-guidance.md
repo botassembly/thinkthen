@@ -1,4 +1,4 @@
-# Recognition guidance Quick Fix candidate
+# Recognition guidance Quick Fix
 
 Built on `ticket/qf-recognition-guidance` from `d538edf3` under the accepted [release decision](2026-09-29-recognition-release-decision.md). This is a documentation and compiled-help change. Recognition requests, answers, guards and diagnostics are unchanged.
 
@@ -17,3 +17,7 @@ The scale/shape issue marks only items 7 and 8 fulfilled for the current wording
 ## What the build taught us
 
 The historical scale/shape item 8 named a news-document prompt that ADR 0056 removed. Its live acceptance requirement still named *two* public surfaces, so checking only the manual would have left a real gap. The 0245 guard is a recognition allocation limit after potentially paid name stages; describing it as a zero-send refusal or as standalone `relate`'s 255-entity rule would misstate the executable code. One existing compiled assertion was enough to keep both wording surfaces aligned without another harness.
+
+## Independent review
+
+Fresh independent Medium code review accepted `7c79c607`. The reviewer traced the wording and guard against the executable stages, checked exact subcriterion closure, and independently verified the measured ratchet and policy. The coordinator integrated the unchanged candidate and retained its focused compiled-help proof.
