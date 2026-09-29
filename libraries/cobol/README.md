@@ -1,6 +1,6 @@
 # ThinkThen COBOL source package
 
-This Linux x86_64 GnuCOBOL 4 source package uses a separately built, matching ThinkThen C library. `source-package.json` records that source-only boundary. The COBOL package does not include a native binary. Match the C header and library from one build before linking. No system-wide installer or public release archive exists yet.
+This Linux x86_64 GnuCOBOL 4 source package uses a separately built, matching ThinkThen C library. `source-package.json` records that source-only boundary. The COBOL package does not include a native binary. The local pilot pairs `thinkthen-cobol-0.0.1-x86_64-unknown-linux-gnu.tar.gz` with a separate `thinkthen-c-0.0.1-x86_64-unknown-linux-gnu.tar.gz`. Verify their adjacent SHA-256 files and matching `THINKTHEN-PACKAGE-INPUTS` source and C digest before linking. No system-wide installer or public release archive exists yet.
 
 ## Clone, build, and use from source (Ubuntu 24.04 x86_64)
 

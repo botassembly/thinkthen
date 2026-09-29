@@ -2,7 +2,7 @@
 # release-pack [--reuse] TARGET OUT [PART...] (ticket 0128): pack the release files of one
 # Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
 # each release target builds on its own runner. The parts are command, c, go, cpp, csharp,
-# jvm, swift, zig, php, dart, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
+# jvm, swift, zig, php, dart, ada, objective-c, cobol, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
 # keeps its established parts and source wrappers are explicit pilot parts.
 # Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
 # packs the files each surface check already built in its own build folder, which the
@@ -20,7 +20,7 @@ V=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | h
 source_commit=$(git -C "$REPO" rev-parse HEAD)
 c_built=
 case " $* " in
-*' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '*)
+*' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' ada '* | *' objective-c '* | *' cobol '*)
 	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
 	[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
@@ -186,6 +186,36 @@ dart)
 		cp libraries/dart/lib/src/allocator.dart libraries/dart/lib/src/door.dart \
 			libraries/dart/lib/src/typed.dart "$folder/lib/src/"
 		;;
+ada)
+		mkdir -p "$folder/src" "$folder/examples"
+		cp libraries/ada/LICENSE libraries/ada/README.md libraries/ada/thinkthen.gpr "$folder/"
+		cp libraries/ada/src/thinkthen.ads libraries/ada/src/thinkthen.adb \
+			libraries/ada/src/thinkthen_c.ads "$folder/src/"
+		cp libraries/ada/examples/consumer.adb "$folder/examples/"
+		;;
+objective-c)
+		mkdir -p "$folder/Sources" "$folder/Examples"
+		cmp libraries/objective-c/Sources/thinkthen.h libraries/c/include/thinkthen.h || {
+			echo 'release-pack: Objective-C copied C header differs' >&2; exit 1;
+		}
+		cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
+			libraries/objective-c/source-package.json "$folder/"
+		cp libraries/objective-c/Sources/ThinkThen.h libraries/objective-c/Sources/ThinkThen.m \
+			libraries/objective-c/Sources/thinkthen.h libraries/objective-c/Sources/TTJSON.h \
+			libraries/objective-c/Sources/TTJSON.c "$folder/Sources/"
+		cp libraries/objective-c/Examples/consumer.m "$folder/Examples/"
+		;;
+cobol)
+		mkdir -p "$folder/src" "$folder/copybooks" "$folder/examples"
+		cp libraries/cobol/LICENSE libraries/cobol/README.md libraries/cobol/source-package.json "$folder/"
+		cp libraries/cobol/copybooks/thinkthen.cpy "$folder/copybooks/"
+		cp libraries/cobol/src/TTJSON.c libraries/cobol/src/TTJSON.h \
+			libraries/cobol/src/tt_shape.c libraries/cobol/src/tt_engine.cob \
+			libraries/cobol/src/tt_error.cob libraries/cobol/src/tt_call.cob \
+			libraries/cobol/src/tt_decide.cob libraries/cobol/src/tt_validate.cob "$folder/src/"
+		cp libraries/cobol/examples/direct.cob libraries/cobol/examples/settings.cob \
+			libraries/cobol/examples/types.cob "$folder/examples/"
+		;;
 	esac
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
@@ -199,6 +229,8 @@ part_swift() { part_source_wrapper swift; }
 part_zig() { part_source_wrapper zig; }
 part_php() { part_source_wrapper php; }
 part_dart() { part_source_wrapper dart; }
+part_ada() { part_source_wrapper ada; }
+part_cobol() { part_source_wrapper cobol; }
 
 part_sqlite() {
 	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
@@ -287,7 +319,8 @@ part_first_run() {
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
 for part in "$@"; do
 	case $part in
-	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	objective-c) part_source_wrapper objective-c ;;
+	command | c | go | cpp | csharp | jvm | swift | zig | php | dart | ada | cobol | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac
