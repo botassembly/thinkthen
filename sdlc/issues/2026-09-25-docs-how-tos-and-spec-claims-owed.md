@@ -1,6 +1,6 @@
 # Docs, how-tos, and spec claims owed
 
-Status: Open. Quick Fix qf-h1-h3-h6 settles claims 5 and 6, page 19, and the decision half of page 10.
+Status: Open for its remaining criteria. Quick Fix qf-h1-h3-h6 settles claims 5 and 6 and page 19. Accepted ticket 0241 already supplies the site pages for items 7 and 10, including the bad-record decision's recipe.
 
 This issue merges the open documentation work from twelve older issues: `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, `2026-09-25-docs-how-tos-and-spec-claims-owed.md`, the how-to and verb-hint parts of `2026-09-25-release-and-install-for-0-1.md`, item 8 of the closed `closed/2026-09-21-where-a-user-could-lose-trust-a-first-list.md`, and the one remaining row of `2026-09-25-docs-how-tos-and-spec-claims-owed.md`. They belong together because each asks for words a user reads: a spec sentence, a help line, a message, or a page. Each item was checked against `demos/`, `specification/`, `README.md`, `site/`, and the planning pages on 2026-09-25 at main `44de5c8b`. Work that already landed is listed at the end. ADR 0018 fixes the `demos/` list, so a new page either amends that list or joins the site how-tos.
 
@@ -54,11 +54,7 @@ Done when: the refusals page names a neighbor for each refused job and states te
 
 ### 7. A tool-call guard for a coding agent
 
-**Gap.** Tool gating is the clearest pattern in the 2026-09-20 article: allow, deny, or ask maps to yes, no, and unresolved. `demos/19-no-or-could-not-ask/` gates a risky command with a `case $?`, and it maps to no host. One coding agent's hook contract blocks a call on exit 2, and this tool uses exit 2 for a usage error. No page shows the mapping.
-
-**Fix.** Write a how-to that reads a proposed tool call, asks `decide` with a band, and maps the tool's exit codes to one host's hook contract in a short `case`. Check that host's current contract when the page is written, and say which version it matches.
-
-Done when: a green page shows the guard and its exit mapping against one named host contract.
+Met by [ticket 0241's site guard](../../site/examples/how-tos/bash/agent-tool-guard/1-guard.sh), accepted at `db7e2418`. It maps the three replayed outcomes from demo 19 to Claude Code `PreToolUse` `allow`, `ask`, and `deny`, and denies judge failures. The [0241 build record](../records/0241-site-and-sample-build.md) says the host mapping was checked against the official hooks reference on 2026-09-28. The issue allows one page; a second green demo is not required.
 
 ### 8. A long-lived loop from one process
 
@@ -78,13 +74,7 @@ Done when: one green page or site recipe splits a document into paragraphs and j
 
 ### 10. Skipping a bad record has no decision
 
-The decision half is fixed by Quick Fix qf-h1-h3-h6, 2026-09-26. The roadmap row keeps `--on-error continue` on hold, dated, and says Ian can overturn it.
-
-Still owed: one page that shows how to set bad records aside before a run. The Quick Fix tried a step 5 in `demos/12-keep-going/`, and ADR 0016 refused it: the page reached 132 lines, 985 words, seven asserting blocks, and five steps. The page can be a site recipe for marketing or a new demo that amends ADR 0018's list. This `jq` split worked on `queue.jsonl` with a malformed line planted, and it sent only the good records to `decide`:
-
-`jq -Rr 'def ok: (try fromjson catch null) | type == "object" and (.body | type) == "string"; select(ok | not)' queue.jsonl` prints the aside lines, and `select(ok)` prints the rest.
-
-Done when: one page shows how to set bad records aside before a run.
+The decision half was fixed by Quick Fix qf-h1-h3-h6 on 2026-09-26. The roadmap keeps `--on-error continue` on hold, dated, and says Ian can overturn it. [Ticket 0241's site recipe](../../site/examples/how-tos/bash/set-aside-bad-records/1-split.sh) already sets a malformed line and a non-text body aside, then judges three valid records. Its recorded output shows both aside lines and the judged records. Ticket 0241 passed independent review at `db7e2418`; the original criterion expressly allowed a site recipe. This page criterion is met.
 
 ## Pages that can follow 0.1
 

@@ -19,14 +19,6 @@ ThinkThen answers typed questions about text. Use the command in a shell script 
 
 Some functions use a threshold; others rank or select without one. A `null` value is a valid outcome where the function allows it, never a failed call. The [type contract](specification/types.md) names the answers and failures; the [result contract](specification/result.md) gives their full fields.
 
-```sh
-thinkthen decide 'Does the customer ask for a refund?' < message.txt
-thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --field /body < issues.jsonl
-thinkthen annotate triage.json --jsonl < issues.jsonl
-```
-
-A command names the job, asks the question, and reads text on standard input.
-
 ## Install the command
 
 Build it from a checkout and put it on your `PATH`:
@@ -47,6 +39,25 @@ thinkthen decide 'Does this report say what the person did before the problem ap
 ```
 
 It prints `true`. `demos/27-test-with-no-network` shows how a test replays a recording.
+
+```sh
+thinkthen decide 'Does the customer ask for a refund?' < message.txt
+thinkthen filter 'Does this describe a bug that can be reproduced?' --jsonl --field /body < issues.jsonl
+thinkthen annotate triage.json --jsonl < issues.jsonl
+```
+
+A command names the job, asks the question, and reads text on standard input.
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Complete; yes for one `decide` |
+| 1 / 3 | No / not sure for one `decide`; `3` also means unsure for one `choose` or no match for `find --none` |
+| 2 / 4 / 5 | Usage or input error / backend failure / local file or recording failure |
+| 6 / 7 | Completed partial logical failure / continued missing-pointer rows in `annotate` |
+| 70 | A tool defect |
+| 130 / 143 | Stopped by SIGINT / SIGTERM |
+
+The [full exit-code contract](specification/channels.md#exit-codes) gives the command-specific rules; a valid answer can accompany a nonzero exit.
 
 ## Languages and bindings
 
@@ -82,6 +93,7 @@ The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R ea
 - Code parses the command line. The model reads only the question, the options, and the evidence.
 - Eligible record commands can send many records in one request. `--batch max` is their default; `--batch 1` sends one record per request. Records sharing a request can affect each other's answers, and a threshold tuned at one setting warns when it runs at another.
 - A backend is an address that speaks one wire shape, System One. TypeSafe's Jev is the first System One model. Get your own key through [TypeSafe](https://typesafe.ai/) and put it in `THINKTHEN_API_KEY`. For another System One backend, set `THINKTHEN_BASE_URL` to its base address and put that backend's key in `THINKTHEN_API_KEY`; select its model with `--model` (default `jev-1.13.0`). A local server presenting System One at `localhost`, `127.0.0.1`, or `[::1]` can receive requests without a key when `THINKTHEN_API_KEY` is unset or blank.
+- [TypeSafe's public site](https://typesafe.ai/) advertises Jev input at $42 per billion tokens (checked 2026-09-29). Check your account terms for the rate you will pay.
 - The default address sends the question and evidence to TypeSafe. Its [customer agreement](https://typesafe.ai/legal/mca), [data processing addendum](https://typesafe.ai/legal/data-processing), and [privacy policy](https://typesafe.ai/legal/privacy-policy) describe data handling. The published privacy policy, checked 2026-09-28, gives no fixed API-input retention period. Check the terms governing your account before sending sensitive text.
 - A run can be recorded and replayed with no network. A recording holds the evidence that was sent, so committing one publishes it. A threshold is measured against labeled cases before anyone trusts it.
 
