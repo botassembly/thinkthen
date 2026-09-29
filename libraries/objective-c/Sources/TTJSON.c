@@ -5,7 +5,7 @@
 #include <string.h>
 #include <math.h>
 typedef struct { const char *p,*end; unsigned depth; } Cursor;
-void tt_json_free(TTJSON *n) { if (!n) return; for(size_t i=0;i<n->count;i++){ free(n->keys?n->keys[i]:NULL); tt_json_free(n->children[i]); } free(n->keys); free(n->children); free(n->text); free(n); }
+void tt_json_free(TTJSON *n) { if (!n) return; for(size_t i=0;i<n->count;i++){ free(n->keys?n->keys[i]:NULL); tt_json_free(n->children[i]); } free(n->keys); free(n->key_lengths); free(n->children); free(n->text); free(n); }
 static void ws(Cursor *c) { while(c->p<c->end && (*c->p==' '||*c->p=='\n'||*c->p=='\r'||*c->p=='\t')) c->p++; }
 static int hex4(Cursor *c,unsigned *value) {
     if(c->end-c->p<4)return 0;
@@ -19,13 +19,13 @@ static int hex4(Cursor *c,unsigned *value) {
     }
     return 1;
 }
-static char *str(Cursor *c) {
+static char *str(Cursor *c,size_t *length) {
     if(c->p==c->end || *c->p++!='"')return NULL;
     char *s=malloc((size_t)(c->end-c->p)+1),*out=s;
     if(!s)return NULL;
     while(c->p<c->end){
         unsigned char ch=(unsigned char)*c->p++;
-        if(ch=='"'){*out=0;return s;}
+        if(ch=='"'){*length=(size_t)(out-s);*out=0;return s;}
         if(ch<32)break;
         if(ch=='\\'){
             if(c->p==c->end)break;
@@ -39,7 +39,6 @@ static char *str(Cursor *c) {
                     if(!hex4(c,&low)||low<0xdc00||low>0xdfff)break;
                     scalar=0x10000+((scalar-0xd800)<<10)+(low-0xdc00);
                 }else if(scalar>=0xdc00&&scalar<=0xdfff)break;
-                if(!scalar)break; /* C-string keys cannot contain NUL */
                 if(scalar<0x80)*out++=(char)scalar;
                 else if(scalar<0x800){*out++=(char)(0xc0|(scalar>>6));*out++=(char)(0x80|(scalar&63));}
                 else if(scalar<0x10000){*out++=(char)(0xe0|(scalar>>12));*out++=(char)(0x80|((scalar>>6)&63));*out++=(char)(0x80|(scalar&63));}
@@ -66,30 +65,32 @@ static char *str(Cursor *c) {
     free(s);return NULL;
 }
 static TTJSON *value(Cursor *c);
-static int append(TTJSON *n,TTJSON *child,char *key){ size_t len=n->count+1;TTJSON **p=realloc(n->children,len*sizeof(*p));if(!p)return 0;n->children=p;
- if(n->type==TTJSONObject){char **q=realloc(n->keys,len*sizeof(*q));if(!q)return 0;n->keys=q;}
- n->children[n->count]=child;if(n->keys)n->keys[n->count]=key;n->count=len;return 1; }
+static int append(TTJSON *n,TTJSON *child,char *key,size_t key_length){ size_t len=n->count+1;TTJSON **p=realloc(n->children,len*sizeof(*p));if(!p)return 0;n->children=p;
+ if(n->type==TTJSONObject){char **q=realloc(n->keys,len*sizeof(*q));if(!q)return 0;n->keys=q;size_t *lengths=realloc(n->key_lengths,len*sizeof(*lengths));if(!lengths)return 0;n->key_lengths=lengths;}
+ n->children[n->count]=child;if(n->keys){n->keys[n->count]=key;n->key_lengths[n->count]=key_length;}n->count=len;return 1; }
+static int keyeq(const TTJSON *n,size_t index,const char *key){size_t len=strlen(key);return n->key_lengths[index]==len&&!memcmp(n->keys[index],key,len);}
 static TTJSON *value(Cursor *c){ ws(c);if(c->p==c->end || ++c->depth>64)return NULL;
  TTJSON *n=calloc(1,sizeof(*n));if(!n)return NULL;char ch=*c->p;
  if(ch=='{'||ch=='['){n->type=ch=='{'?TTJSONObject:TTJSONArray;c->p++;ws(c);char close=ch=='{'?'}':']';
   if(c->p<c->end&&*c->p==close){c->p++;goto done;}
-  for(;;){char *key=NULL;if(ch=='{'){key=str(c);if(!key)goto bad;for(size_t i=0;i<n->count;i++)if(!strcmp(n->keys[i],key)){free(key);goto bad;}ws(c);if(c->p==c->end||*c->p++!=':'){free(key);goto bad;}}
-   TTJSON *child=value(c);if(!child){free(key);goto bad;}if(!append(n,child,key)){free(key);tt_json_free(child);goto bad;}
+  for(;;){char *key=NULL;size_t key_length=0;if(ch=='{'){key=str(c,&key_length);if(!key)goto bad;for(size_t i=0;i<n->count;i++)if(n->key_lengths[i]==key_length&&!memcmp(n->keys[i],key,key_length)){free(key);goto bad;}ws(c);if(c->p==c->end||*c->p++!=':'){free(key);goto bad;}}
+   TTJSON *child=value(c);if(!child){free(key);goto bad;}if(!append(n,child,key,key_length)){free(key);tt_json_free(child);goto bad;}
    ws(c);if(c->p==c->end)goto bad;char sep=*c->p++;if(sep==close)break;if(sep!=',')goto bad;ws(c);
   }
- } else if(ch=='"'){n->type=TTJSONString;n->text=str(c);if(!n->text)goto bad;}
+ } else if(ch=='"'){n->type=TTJSONString;n->text=str(c,&n->text_length);if(!n->text)goto bad;}
  else if(ch=='-'||(ch>='0'&&ch<='9')){n->type=TTJSONNumber;const char *start=c->p;
   if(*c->p=='-')c->p++;if(c->p==c->end)goto bad;
   if(*c->p=='0')c->p++;else if(*c->p>='1'&&*c->p<='9')while(c->p<c->end&&isdigit((unsigned char)*c->p))c->p++;else goto bad;
   if(c->p<c->end&&*c->p=='.'){c->p++;if(c->p==c->end||!isdigit((unsigned char)*c->p))goto bad;while(c->p<c->end&&isdigit((unsigned char)*c->p))c->p++;}
   if(c->p<c->end&&(*c->p=='e'||*c->p=='E')){c->p++;if(c->p<c->end&&(*c->p=='+'||*c->p=='-'))c->p++;if(c->p==c->end||!isdigit((unsigned char)*c->p))goto bad;while(c->p<c->end&&isdigit((unsigned char)*c->p))c->p++;}
-  n->text=strndup(start,(size_t)(c->p-start));if(!n->text||!isfinite(strtod(n->text,NULL)))goto bad;
- }else{const char *lit=ch=='t'?"true":ch=='f'?"false":ch=='n'?"null":NULL;if(!lit||(size_t)(c->end-c->p)<strlen(lit)||memcmp(c->p,lit,strlen(lit)))goto bad;c->p+=strlen(lit);n->type=ch=='n'?TTJSONNull:TTJSONBoolean;if(n->type==TTJSONBoolean){n->text=strdup(lit);if(!n->text)goto bad;}}
+  n->text_length=(size_t)(c->p-start);n->text=strndup(start,n->text_length);if(!n->text||!isfinite(strtod(n->text,NULL)))goto bad;
+ }else{const char *lit=ch=='t'?"true":ch=='f'?"false":ch=='n'?"null":NULL;if(!lit||(size_t)(c->end-c->p)<strlen(lit)||memcmp(c->p,lit,strlen(lit)))goto bad;c->p+=strlen(lit);n->type=ch=='n'?TTJSONNull:TTJSONBoolean;if(n->type==TTJSONBoolean){n->text_length=strlen(lit);n->text=strdup(lit);if(!n->text)goto bad;}}
 done:c->depth--;return n;
 bad:tt_json_free(n);c->depth--;return NULL;
 }
 TTJSON *tt_json_parse(const char *s,size_t len){if(!s)return NULL;Cursor c={s,s+len,0};TTJSON *n=value(&c);ws(&c);if(c.p!=c.end){tt_json_free(n);return NULL;}return n;}
-const TTJSON *tt_json_get(const TTJSON *n,const char *key){if(!n||n->type!=TTJSONObject)return NULL;for(size_t i=0;i<n->count;i++)if(!strcmp(n->keys[i],key))return n->children[i];return NULL;}
+const TTJSON *tt_json_get_n(const TTJSON *n,const char *key,size_t length){if(!n||n->type!=TTJSONObject||!key)return NULL;for(size_t i=0;i<n->count;i++)if(n->key_lengths[i]==length&&!memcmp(n->keys[i],key,length))return n->children[i];return NULL;}
+const TTJSON *tt_json_get(const TTJSON *n,const char *key){return key?tt_json_get_n(n,key,strlen(key)):NULL;}
 static int has(const TTJSON *n,const char *key,TTJSONType type){const TTJSON *v=tt_json_get(n,key);return v&&v->type==type;}
 const TTJSON *tt_json_call_value(const TTJSON *root){
  if(!root||root->type!=TTJSONObject||root->count!=2)return NULL;
@@ -98,12 +99,12 @@ const TTJSON *tt_json_call_value(const TTJSON *root){
     !has(f,"records",TTJSONNumber)||!has(f,"requests_sent",TTJSONNumber)||
     !has(f,"cache_answers",TTJSONNumber)||!has(f,"seconds",TTJSONNumber))return NULL;
  for(size_t i=0;i<f->count;i++){
-  const char *k=f->keys[i];const TTJSON *n=f->children[i];
-  if(!strcmp(k,"records")||!strcmp(k,"requests_sent")||!strcmp(k,"cache_answers")||!strcmp(k,"input_tokens")||!strcmp(k,"output_tokens")){
+  const TTJSON *n=f->children[i];
+  if(keyeq(f,i,"records")||keyeq(f,i,"requests_sent")||keyeq(f,i,"cache_answers")||keyeq(f,i,"input_tokens")||keyeq(f,i,"output_tokens")){
    if(n->type!=TTJSONNumber||!n->text||strtod(n->text,NULL)<0||floor(strtod(n->text,NULL))!=strtod(n->text,NULL))return NULL;
-  }else if(!strcmp(k,"seconds")){
+  }else if(keyeq(f,i,"seconds")){
    if(n->type!=TTJSONNumber||!n->text||strtod(n->text,NULL)<0)return NULL;
-  }else if(!strcmp(k,"model")){
+  }else if(keyeq(f,i,"model")){
    if(n->type!=TTJSONString)return NULL;
   }else return NULL;
  }
@@ -111,8 +112,11 @@ const TTJSON *tt_json_call_value(const TTJSON *root){
 }
 static int failure(const TTJSON *n){
  const TTJSON *f=tt_json_get(n,"failed");if(n->type!=TTJSONObject||n->count!=1||!f||f->type!=TTJSONObject||f->count!=2||!has(f,"kind",TTJSONString)||!has(f,"cause",TTJSONString))return 0;
- const char *kind=tt_json_get(f,"kind")->text;
- return !strcmp(kind,"usage")||!strcmp(kind,"backend")||!strcmp(kind,"deadline")||!strcmp(kind,"local")||!strcmp(kind,"cancelled")||!strcmp(kind,"defect");
+ const TTJSON *kind=tt_json_get(f,"kind");
+ #define KIND_IS(name) (kind->text_length==sizeof(name)-1&&!memcmp(kind->text,name,sizeof(name)-1))
+ int valid=KIND_IS("usage")||KIND_IS("backend")||KIND_IS("deadline")||KIND_IS("local")||KIND_IS("cancelled")||KIND_IS("defect");
+ #undef KIND_IS
+ return valid;
 }
 static int field(const TTJSON *n){if(n->type==TTJSONNull||n->type==TTJSONBoolean||n->type==TTJSONString||n->type==TTJSONNumber)return 1;if(failure(n))return 1;
  if(n->type!=TTJSONArray)return 0;for(size_t i=0;i<n->count;i++)if(n->children[i]->type!=TTJSONString)return 0;return 1;}

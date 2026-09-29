@@ -7,8 +7,10 @@ typedef enum { TTJSONObject, TTJSONArray, TTJSONString, TTJSONNumber, TTJSONBool
 typedef struct TTJSON {
     TTJSONType type;
     char *text;
+    size_t text_length; /* decoded bytes; text may contain embedded NUL */
     struct TTJSON **children;
     char **keys;
+    size_t *key_lengths; /* decoded bytes for each object key */
     size_t count;
 } TTJSON;
 /* Null return means malformed JSON, duplicate object key, or wrong answer shape.
@@ -16,6 +18,7 @@ typedef struct TTJSON {
 TTJSON *tt_json_parse(const char *text, size_t length);
 void tt_json_free(TTJSON *node);
 const TTJSON *tt_json_get(const TTJSON *object, const char *key);
+const TTJSON *tt_json_get_n(const TTJSON *object, const char *key, size_t key_length);
 /* Validate the C JSON door's exact {value,facts} envelope. Borrowed child. */
 const TTJSON *tt_json_call_value(const TTJSON *root);
 /* kind is "annotate", "recognize", or "relate". */
