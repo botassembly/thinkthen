@@ -80,6 +80,7 @@ fn a_saved_set_name_keeps_its_pinned_identity_and_warning() {
 mod batching;
 mod cache_versions;
 mod partial_failure;
+mod record_failure;
 mod request_identity;
 mod scheduling;
 mod splitting;
