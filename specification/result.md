@@ -29,7 +29,19 @@ Every result is compact and sits on one line, so one answer is also one record f
 
 ## `--details`
 
-`--details` prints this object in place of the bare value.
+`--details` prints a result object in place of the bare value. For an individual question, check `answer.kind` before reading its fields; `answer.probability` exists only for `yes_no`.
+
+| Command | `answer.kind` | Fields under `answer` | Read `value` as |
+| --- | --- | --- | --- |
+| `decide`, `filter`, plain `rank` | `yes_no` | `probability` (of yes) | Boolean or `null` for `decide`; `true` on a kept `filter` row; `null` for `rank`, which orders by probability |
+| `choose` | `choice` | `pick`, `probabilities`, optional `confidence` | Selected label or `null` |
+| `tag` | `tag` | `probabilities` | Labels that reach the cut, possibly `[]` |
+| `score`, graded `rank` | `score` | `level`, `probabilities`, optional `confidence` | Weighted numeric position |
+| `find` | `find` | `pick`, `probabilities`, optional `confidence` | Selected original unit or `null` |
+
+`pick` and `level` name a leading option even when `value` is `null` or numeric; use `value` for the actionable judgment. The probabilities describe answers, not confidence in the final judgment. `confidence` appears only when the backend reports it. Aggregate `annotate`, `recognize`, and `relate` details have their own [shapes below](#a-detailed-result-keeps-everything) and do not have one outer `answer.kind` from this table.
+
+For example, one detailed `decide` result is:
 
 ```json decide
 {"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Does this ask for a refund?"},"answer":{"kind":"yes_no","probability":0.92},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"982f...88","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":312,"output_tokens":48},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
