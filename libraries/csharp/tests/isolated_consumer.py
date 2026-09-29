@@ -5,8 +5,7 @@ from process_group import run
 from toolchains import dotnet as resolve_dotnet
 R=pathlib.Path(__file__).resolve().parent.parent
 dotnet=resolve_dotnet()
-mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode);work.mkdir()
-install=work/'install with spaces';install.mkdir();home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget';nuget.mkdir()
+mode=sys.argv[1];logs=pathlib.Path(sys.argv[2]);work=logs/('independent consumer '+mode)
 release_package=os.environ.get('THINKTHEN_RELEASE_NUPKG')
 release_c=os.environ.get('THINKTHEN_RELEASE_C_DIR')
 if bool(release_package) != bool(release_c): raise AssertionError('installed release needs both package paths')
@@ -23,6 +22,8 @@ if release_package:
   fields={node.tag.rsplit('}',1)[-1]:(node.text or '').strip() for node in metadata.iter()}
   assert fields['id']=='Botassembly.ThinkThen' and fields['version']=='0.0.1',fields
 archive_path=pathlib.Path(release_c) if release_c else R/'target/artifacts/thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz'
+work.mkdir()
+install=work/'install with spaces';install.mkdir();home=work/'home';home.mkdir();cache=work/'cache';cache.mkdir();nuget=work/'nuget';nuget.mkdir()
 if release_c:
  for name in ('include/thinkthen.h','lib/libthinkthen.so','lib/libthinkthen.a'):
   source=archive_path/name
@@ -49,10 +50,11 @@ try:
  (work/'consumer.log').write_bytes(result.stdout+result.stderr)
  counted={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,'pid':result.pid,'pgid':result.pgid,'exit':result.exit,'signals':result.signals}
  (work/'receipt.json').write_text(json.dumps(counted,indent=2)+'\n')
- assert result.exit==0 and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,(result.exit,result.stdout[-1500:],result.stderr[-1500:])
+ assert result.exit==0 and b'INSTALLED_JSON_ENVELOPE_PASS' in result.stdout and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,(result.exit,result.stdout[-1500:],result.stderr[-1500:])
  assert collections.Counter(server.arrivals)==collections.Counter(['consumer-csharp','consumer-json']) and server.attempts==server.connections==2,counted
  bodies=[json.loads(line) for line in (barrier/'wire-requests.jsonl').read_bytes().splitlines()]
  expected=[{'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'Is it?'}},'state':state} for state in ('consumer-csharp','consumer-json')]
  assert collections.Counter(json.dumps(body,sort_keys=True) for body in bodies)==collections.Counter(json.dumps(body,sort_keys=True) for body in expected),(bodies,expected)
+ print('C# observed bodies:',json.dumps(bodies,sort_keys=True),flush=True)
  print('isolated installed consumer',mode,'PASS 2 exact arrivals',flush=True)
 finally:server.close()

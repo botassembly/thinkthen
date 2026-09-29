@@ -78,6 +78,7 @@ for index, lang in enumerate(("java", "kotlin", "scala")):
     summary = json.loads((trial / "home/summary.json").read_text())
     if RELEASE:
         assert summary["arrivals"] == [f"release-{lang}"] and summary["attempts"] == summary["connections"] == 1, summary
+        print(f"JVM {lang} observed body:", json.dumps(summary["body"], sort_keys=True), flush=True)
         print(f"installed {lang}: one exact body and native load PASS", flush=True)
     else:
         assert len(summary["arrivals"]) == 60 and summary["attempts"] == summary["connections"] == 60, lang
