@@ -10,7 +10,9 @@ import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
-PACKAGE = ROOT / "libraries/cobol"
+PACKAGE = Path(os.environ.get("THINKTHEN_PORTABLE_PACKAGE", ROOT / "libraries/cobol")).resolve()
+INSTALLED = "THINKTHEN_PORTABLE_PACKAGE" in os.environ
+assert (PACKAGE / "src/tt_call.cob").is_file(), "COBOL package source missing"
 NATIVE = Path(os.environ["THINKTHEN_PORTABLE_NATIVE"]).resolve()
 LIB_DIR = NATIVE / "lib" if (NATIVE / "lib").is_dir() else NATIVE
 LIB_NAME = "thinkthen" if LIB_DIR != NATIVE else "thinkthen_c"
@@ -29,6 +31,8 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cobol-portable-") as scratch:
     shutil.copytree(PACKAGE / "copybooks", target / "copybooks")
     program = target / "portable_door"
     header = NATIVE / "include/thinkthen.h" if LIB_DIR != NATIVE else ROOT / "libraries/c/include/thinkthen.h"
+    if INSTALLED:
+        assert header == NATIVE / "include/thinkthen.h" and header.is_file(), "installed C header missing"
     subprocess.run(["cobc", "-x", "-free", "-fstatic-call", "-fno-gen-c-decl-static-call",
                     "-I", str(target / "copybooks"),
                     "-A", f"-include {header} -Wno-incompatible-pointer-types -Wno-implicit-function-declaration",
@@ -36,6 +40,10 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cobol-portable-") as scratch:
                     str(target / "src/tt_engine.cob"), str(target / "src/tt_call.cob"),
                     str(target / "src/tt_error.cob"), "-L", str(LIB_DIR),
                     "-l" + LIB_NAME], check=True, capture_output=True, text=True, timeout=90)
+    if INSTALLED:
+        linked = subprocess.check_output(["ldd", program], env={**os.environ, "LD_LIBRARY_PATH": str(LIB_DIR)}, text=True)
+        assert str(LIB_DIR / "libthinkthen.so.0") in linked, linked
+        print("cobol installed loader:", next(line.strip() for line in linked.splitlines() if "libthinkthen.so.0" in line))
     server = subprocess.Popen([backend], stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True)
     try:
         port = int(server.stdout.readline())
