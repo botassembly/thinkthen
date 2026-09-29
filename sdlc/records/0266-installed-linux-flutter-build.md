@@ -1,6 +1,6 @@
 # 0266 local installed Linux Flutter build
 
-Status: candidate for fresh code review. The reviewed host rehearsal at `99882da1` established the separate extraction and one-call app path. This record covers the final matching package files and shared preflight at clean source `c9a96c25def4acc45e269c844c6a6291cde5a404` on Linux x86-64. It does not qualify a final public release.
+Status: accepted at `75150e84` after final fresh code review. The reviewed host rehearsal at `99882da1` established the separate extraction and one-call app path. This record covers the final matching package files and shared preflight at clean source `c9a96c25def4acc45e269c844c6a6291cde5a404` on Linux x86-64. It does not qualify a final public release.
 
 `release-pack x86_64-unknown-linux-gnu target/0266-final c dart flutter` ran without `--reuse` from that clean commit with offline Cargo and the lane lock. Rust was 1.95.0; Dart was `/home/ian/.local/opt/dart-3.13.4/bin/dart` at 3.13.4; Flutter was `/home/ian/.local/opt/flutter/bin/flutter`, whose installed SDK metadata reported 3.47.5. The host had Xvfb, Ninja, CMake and GTK 3.24.41. The app used the lane's prewarmed offline `ffi-2.2.0` pub cache. The private Flutter archive retained both `publish_to: none` manifests and their sibling `path:` dependencies. It carried no native library. The C header and shared-library member SHA-256 values were `1aa49b91a157b4ef6baed1e72a2195f07e453d61e14c81f5459e7fa55edc7089` and `f4c6d3c651f55f7f3ec08ad3f5bfbb7c9fafdd6cbe274c6969247b8a02c2c18d`.
 
