@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-29 from experiment 413 (`~/workspace/experiments/413-liquid-d1-vs-jev/RESULTS.md`), which ran Liquid's d1 decision model through `thinkthen check` and Beatles Bench's hard subset.
+Status: Open. Filed 2026-09-29 from experiment 413's `RESULTS.md`, which ran Liquid's d1 decision model through `thinkthen check` and Beatles Bench's hard subset.
 
 # The systemone adapter sends null criteria that Liquid's d1 refuses
 
