@@ -102,6 +102,22 @@ say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
     expect(backend.close(), 1, "only the valid call sent")
 
 
+def test_zero_total_refuses_without_replacing_valid_configuration() -> None:
+    """SQLite keeps its 1+ rule and a failed replacement keeps prior settings."""
+    backend = Backend()
+    held = child("""
+db = connect()
+valid = run(db, "SELECT thinkthen_configure(?)", ('{"model":"judge-b","max_requests_total":null}',))
+zero = run(db, "SELECT thinkthen_configure(?)", ('{"max_requests_total":0}',))
+details = run(db, "SELECT thinkthen_details('Is it red?', 'a red door')")
+say(valid=valid, zero=zero, details=details)
+""", environment(backend))
+    expect(held["valid"], [['{"model":"judge-b","max_requests_total":null}']], "null resets the total")
+    expect(held["zero"], "thinkthen usage: a request total is a whole number of 1 or more", "zero refused")
+    expect(json.loads(held["details"][0][0])["meta"]["model"], "judge-b", "prior model survived")
+    expect(backend.close(), 1, "only the valid configuration sent")
+
+
 def test_removed_setters_and_warm_refuse_by_name() -> None:
     backend = Backend()
     held = child("""

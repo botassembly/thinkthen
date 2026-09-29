@@ -101,6 +101,16 @@ fn batch(value: &serde_json::Value) -> Result<BatchSetting, Failure> {
     Ok(BatchSetting::Records(count))
 }
 
+fn request_total(value: &serde_json::Value) -> Result<Option<u64>, Failure> {
+    let total = value.as_u64();
+    if total == Some(0) {
+        return Err(Failure::usage(
+            "a request total is a whole number of 1 or more",
+        ));
+    }
+    Ok(total)
+}
+
 /// The selected cap for a safe SQLite refusal sentence.
 pub(crate) fn total() -> Option<u64> {
     stored().total
@@ -165,7 +175,7 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
                             .map(|n| usize::try_from(n).unwrap_or(usize::MAX)),
                     )
                 }
-                "max_requests_total" => next.total = value.as_u64(),
+                "max_requests_total" => next.total = request_total(value)?,
                 "max_request_bytes" => {
                     next.max_request_bytes = value
                         .as_u64()
