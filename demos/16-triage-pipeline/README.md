@@ -106,6 +106,10 @@ contains the missing pointer and input position, not the original evidence.
 The script writes five successful decisions and one review row; it does not
 pretend that the missing record has a model answer.
 
+This review route requires Python 3. The output directory must not already
+exist. If publication fails, the script removes its staged files and leaves
+any existing destination untouched.
+
 ## Related how-tos
 
 - [How to gate a risky command and fail closed](../19-no-or-could-not-ask/) explains not sure decisions.
