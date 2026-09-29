@@ -1,6 +1,6 @@
 # Quick Fix: put source installation before first use
 
-Status: candidate for fresh Medium review on 2026-09-29. The two issue files remain open for unmatched criteria and launch work. This Quick Fix changes the root README and their status text only. No code, site example, recording, registry recipe or release claim changed.
+Status: accepted at `90376c8f` after fresh independent Medium review on 2026-09-29; see [review record](qf-readme-first-run-review.md). The two issue files remain open for unmatched criteria and launch work. This Quick Fix changes the root README and their status text only. No code, site example, recording, registry recipe or release claim changed.
 
 The README already had working source-checkout build and install commands and a key-free, network-free replay. It placed three ordinary usage examples before installation. This fix moves the existing installation and replay block above those examples without changing the commands or recording. It adds a compact exit-code table from [the current channel contract](../../specification/channels.md#exit-codes): single-input `decide` distinguishes yes/no/unsure at 0/1/3; other commands have their own rules; 2, 4, 5, 6, 7, 70, 130 and 143 remain visible with a link to the complete contract. The register's original four-outcome wording was stale.
 
