@@ -535,3 +535,16 @@ Fresh0260 wrapper review found eight inherited C++ fixture lines omitted from026
 ## Name both artifacts in an identity comparison
 
 During0263 handoff, the coordinator read "first pilot" as the earlier0261/0262 packages. The author meant the first build within0263. The0263 record and fresh reviewer established equality between0263 builds `ebdbb38a` and `7d3e27b7`; their native member hashes differ from0261/0262. The coordinator corrected the review brief and user update. No accepted artifact or test result changed. Future handoffs name both source pins or paths and the compared member hashes instead of relying on relative phrases. A fresh package build and its installed-consumer proof remain valid even when unrelated earlier build bytes differ.
+
+
+## Trace the release source boundary before adding more packages
+
+The0268 preparation found that `release-container` exports `git archive HEAD` and unpacks it without `.git`, while0261 made `release-pack` read HEAD unconditionally. Local checkout pilots could pass while that archived Linux route failed before any part. Fresh High design review accepted the correction plan at `e748dcd1`; no workflow run or fixed implementation is claimed yet. Future release preparation must follow the actual source transport and tool environment for each mode. A successful checkout build does not prove a commit-archive build. Preserve the container-built C and its ABI floor when pairing additional wrappers; a second host-built C is different evidence.
+
+## Probe the native dependency that needs the missing tool
+
+The0267 setup confirmed the pinned musl Rust standard library and a standalone static Rust link. The actual command build then stopped in ring's C build because `x86_64-linux-musl-gcc` was absent. That failure produced no archive. The same source pack advanced with installed Clang through the target-specific `CC_x86_64_unknown_linux_musl` setting. An independent Zig static C probe also passed, but the product path used Clang. Future preparation must distinguish Rust target readiness from a native dependency's compiler requirements and record the successful explicit setting. Do not repeat a complete source matrix to settle one compiler prerequisite.
+
+## Review the cheap gate while the checkpoint builds
+
+The0267 independent code review ran while packaging continued. It found the new omission fixture was not called by routine lint and covered only an absent family in a mostly empty folder. The author is correcting that with a compact otherwise-complete set of selected names, distinct early refusal cases and a routine lint invocation. This is the same selector lesson seen in0260, now at the release-script boundary. Check registration during preparation. The correction does not require rebuilding unchanged native package inputs. Ian subsequently held SQL and DataFrame work; the combined installed checkpoint remains incomplete, and preserved archives must not be reported as an aggregate pass.
