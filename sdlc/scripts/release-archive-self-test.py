@@ -5,6 +5,8 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import io
+import tarfile
 import tempfile
 
 
@@ -69,6 +71,39 @@ def main():
         for kind in parts:
             if len(list((base / "paired").glob(f"thinkthen-{kind}-*.tar.gz"))) != 1:
                 raise AssertionError(f"missing {kind} fixture archive")
+        gate = str(REPO / "sdlc/scripts/release-workflow")
+        expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, commit), "", success=True)
+        missing_pair = base / "missing-pair"
+        shutil.copytree(base / "paired", missing_pair)
+        for file in missing_pair.glob("thinkthen-cpp-*"):
+            file.unlink()
+        expect(run("sh", gate, "go-cpp-gate", str(missing_pair), host, commit),
+               "missing or linked thinkthen-cpp-")
+        another_commit = "0" * 40
+        expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, another_commit),
+               "checkout differs from resolved SHA")
+        altered_source = base / "altered-source"
+        shutil.copytree(base / "paired", altered_source)
+        for family in ("go", "cpp"):
+            name = f"thinkthen-{family}-{version}-{host}.tar.gz"
+            path = altered_source / name
+            repacked = altered_source / f"{family}.tmp"
+            with tarfile.open(path, "r:gz") as archive, tarfile.open(repacked, "w:gz") as output:
+                for member in archive:
+                    if member.name == "./THINKTHEN-PACKAGE-INPUTS":
+                        data = archive.extractfile(member).read().replace(commit.encode(), another_commit.encode())
+                        member.size = len(data)
+                        output.addfile(member, io.BytesIO(data))
+                    else:
+                        output.addfile(member, archive.extractfile(member) if member.isfile() else None)
+            repacked.replace(path)
+            digest = subprocess.check_output(["sha256sum", str(path)], text=True).split()[0]
+            (altered_source / f"{name}.sha256").write_text(f"{digest}  {name}\n")
+        expect(run("sh", gate, "go-cpp-gate", str(altered_source), host, commit),
+               "go source differs from resolved SHA")
+        other_target = "aarch64-unknown-linux-gnu"
+        expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), other_target, commit),
+               "unsupported target has thinkthen-cpp-")
         wrong = env | {"THINKTHEN_ARCHIVED_SOURCE_COMMIT": "0" * 40}
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "wrong"), *parts, cwd=source, env=wrong),
@@ -153,6 +188,23 @@ def main():
             actual = subprocess.check_output(["git", "get-tar-commit-id"], stdin=packed, text=True).strip()
         if actual != commit:
             raise AssertionError("launcher passed a tar from another source commit")
+        fake_go = fake_bin / "fake-go"
+        fake_go.write_text("#!/bin/sh\nprintf '%s\\n' \"$FAKE_GO_VERSION\"\n")
+        fake_go.chmod(0o755)
+        no_python = fake_bin / "no-python"
+        no_python.write_text("#!/bin/sh\nexit 1\n")
+        no_python.chmod(0o755)
+        for version, diagnostic in (
+            ("go version go1.21.9 linux/amd64", "Go 1.22 or newer is required"),
+            ("go version go1.27rc1 linux/amd64", "a stable Go 1.x release is required"),
+            ("go version go2.0.0 linux/amd64", "a stable Go 1.x release is required"),
+            ("go version go1.22.12 linux/amd64", "Python jsonschema is unavailable"),
+            ("go version go1.27.1 linux/amd64", "Python jsonschema is unavailable"),
+        ):
+            version_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
+                                        "THINKTHEN_PYTHON_BIN": str(no_python),
+                                        "FAKE_GO_VERSION": version}
+            expect(run("sh", str(REPO / "libraries/go/check.sh"), "0", env=version_env), diagnostic)
     print("release archive self-test: gitless legacy and controlled Go/C++ inputs pass")
 
 

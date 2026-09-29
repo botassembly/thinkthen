@@ -89,6 +89,59 @@ verify-family)
 	done
 	[ "$count" = "$4" ] || fail "wanted $4 files matching $3, got $count"
 	;;
+go-cpp-gate)
+	[ "$#" = 4 ] || fail 'go-cpp-gate DIR TARGET SHA'
+	dir=$2 target=$3 selected=$4
+	[ -d "$dir" ] || fail "platform directory is missing: $dir"
+	printf '%s\n' "$selected" | grep -Eq '^[0-9a-f]{40}$' || fail 'resolved SHA is invalid'
+	[ "$(git rev-parse HEAD)" = "$selected" ] || fail 'checkout differs from resolved SHA'
+	case $target in
+	x86_64-unknown-linux-gnu)
+		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail 'Go/C++ gate requires its installed x86 host'
+		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir"
+		for family in go cpp; do
+			archive=$dir/thinkthen-$family-$version-$target.tar.gz
+			tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
+				grep -Fxq "source_commit=$selected" || fail "$family source differs from resolved SHA"
+		done
+		;;
+	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin)
+		for file in "$dir"/thinkthen-go-* "$dir"/thinkthen-cpp-*; do
+			[ ! -e "$file" ] && [ ! -L "$file" ] || fail "unsupported target has ${file##*/}"
+		done
+		;;
+	*) fail "no Go/C++ release route for $target" ;;
+	esac
+	;;
+go-cpp-tools)
+	[ "$#" = 3 ] || fail 'go-cpp-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'Go/C++ installed tools require Linux x86-64'
+	for tool in curl sha256sum tar cmake c++ clang++ make nm readelf ldd pkg-config cc gcc node git flock cargo rustc python3; do
+		command -v "$tool" >/dev/null 2>&1 || fail "Go/C++ installed tool is missing: $tool"
+	done
+	python3 -c 'import jsonschema' || fail 'Go/C++ installed checks need Python jsonschema'
+	cmake_version=$(cmake --version | sed -n '1s/^cmake version //p')
+	python3 - "$cmake_version" <<'PY' || fail 'CMake 3.18 or newer is required'
+import sys
+parts = sys.argv[1].split('.')
+assert len(parts) >= 2 and all(part.isdigit() for part in parts)
+assert tuple(map(int, parts[:2])) >= (3, 18)
+PY
+	c++ --version >/dev/null && clang++ --version >/dev/null || fail 'C++ compiler does not run'
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	case $3 in /*) ;; *) fail 'Go setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Go setup output already exists'
+	mkdir -p -- "$3"
+	go_archive=$3/go1.27.1.linux-amd64.tar.gz
+	curl --proto '=https' --tlsv1.2 -fsSL -o "$go_archive" \
+		https://go.dev/dl/go1.27.1.linux-amd64.tar.gz
+	printf '%s  %s\n' 63d339f0da5ab53635a56f2490a7984dfe12dfcff22ad749f63edaf590168445 "$go_archive" |
+		sha256sum -c --quiet || fail 'Go 1.27.1 archive differs from official checksum'
+	tar -xzf "$go_archive" -C "$3"
+	[ "$("$3/go/bin/go" version)" = 'go version go1.27.1 linux/amd64' ] || fail 'Go tool differs from pin'
+	printf '%s\n' "$3/go/bin" >>"$GITHUB_PATH"
+	;;
 npm-assemble)
 	[ "$#" = 3 ] || fail 'npm-assemble INPUT OUT'
 	input=$(CDPATH='' cd -- "$2" && pwd)

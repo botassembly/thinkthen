@@ -58,7 +58,7 @@ jobs:
         env: {TARGET: "${{ matrix.target }}"}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
       - name: Build and pack the target
-        env: {TARGET: "${{ matrix.target }}"}
+        env: {TARGET: "${{ matrix.target }}", THINKTHEN_RELEASE_EXPECTED_SHA: "${{ needs.resolve.outputs.sha }}"}
         run: |
           set -eu
           mkdir -p release-files
@@ -153,12 +153,19 @@ jobs:
         with: {node-version: '22.22.3'}
       - env: {TARGET: "${{ matrix.target }}", RELEASE_SMOKE: '1'}
         run: sdlc/scripts/release-workflow host-setup "$TARGET"
+      - name: Check and install pinned Go/C++ consumer tools
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        env: {TARGET: "${{ matrix.target }}"}
+        run: sdlc/scripts/release-workflow go-cpp-tools "$TARGET" "$RUNNER_TEMP/thinkthen-go"
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: 'platform-${{ matrix.target }}', path: platform}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: npm-package, path: npm-dist}
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with: {name: crate-package, path: crate-dist}
+      - name: Require the selected Go/C++ family
+        env: {TARGET: "${{ matrix.target }}", SHA: "${{ needs.resolve.outputs.sha }}"}
+        run: sdlc/scripts/release-workflow go-cpp-gate platform "$TARGET" "$SHA"
       - env: {TARGET: "${{ matrix.target }}"}
         run: |
           sdlc/scripts/release-workflow smoke-bundle platform npm-dist smoke-files
@@ -184,6 +191,9 @@ jobs:
           NAME: ${{ needs.resolve.outputs.name }}
           SHA: ${{ needs.resolve.outputs.sha }}
         run: |
+          for target in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu aarch64-apple-darwin x86_64-apple-darwin; do
+            sdlc/scripts/release-workflow go-cpp-gate "platform/platform-$target" "$target" "$SHA"
+          done
           sdlc/scripts/release-workflow collect platform npm-dist all-files
           sdlc/scripts/release-workflow draft "$MODE" "$NAME" "$SHA" all-files
 

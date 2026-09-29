@@ -21,7 +21,22 @@ done
 for tool in gofmt cargo rustc cc gcc pkg-config nm readelf node git cp ln grep cat mkdir; do
     command -v "$tool" >/dev/null 2>&1 || { echo "go: not run: no $tool" >&2; exit 77; }
 done
-"$go_bin" version | grep -q 'go1\.22\.' || { echo 'go: not run: Go 1.22 is required' >&2; exit 77; }
+go_version=$("$go_bin" version)
+case $go_version in
+    'go version go1.'*.*' linux/amd64') ;;
+    *) echo 'go: not run: a stable Go 1.x release is required' >&2; exit 77 ;;
+esac
+release=${go_version#go version go1.}
+minor=${release%%.*}
+patch_and_host=${release#*.}
+patch=${patch_and_host%% *}
+case $minor in
+    '' | *[!0-9]*) echo 'go: not run: a stable Go 1.x release is required' >&2; exit 77 ;;
+esac
+case $patch in
+    '' | *[!0-9]*) echo 'go: not run: a stable Go 1.x release is required' >&2; exit 77 ;;
+esac
+[ "$minor" -ge 22 ] || { echo 'go: not run: Go 1.22 or newer is required' >&2; exit 77; }
 "$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 77; }
 export THINKTHEN_GO_BIN="$go_bin"
 unset THINKTHEN_API_KEY
