@@ -1,0 +1,7 @@
+# 0260 Go, C++ and PHP forwarding review and integration
+
+Fresh independent Sol Medium review accepted corrected candidate `6e76d8b1`. It found no functional issue in the actual typed calls, three complete literal request captures, listener counts, source/installed selectors, artifact selection or retained mixed-answer order evidence. Typed results do not expose request digests. Exact observed bodies plus the shared C proof support the explicitly qualified digest inference; the record does not invent returned metadata or infer output permutation from identical answers.
+
+The reviewer found that the C++ ceiling increase combined 23 new portable caller lines with eight inherited installed-release fixture lines. The candidate's exact total was already correct at371; the record and corrective commit now distinguish those changes. Root's scan of all52 source counters confirmed that inherited C++ mismatch was the only genuine failure on the prior main. This integration fixes it. The eight lines were missed when0261's Python fixture counters were checked without its C++ fixture counter.
+
+The coordinator merged the accepted proof and retained the counted focused runs against accepted0261 native bytes, including the Go/C++ unpacked wrapper runs. No product input changed. All affected language counters, record checks and whitespace passed. Eight C-wrapper package groups remain for register64; final release pins and installed-target qualifications remain separately owned.
