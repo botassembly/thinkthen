@@ -286,7 +286,7 @@ export const FUNCTIONS = [
     goal: 'relate asks the model about named entities, one possible edge per pair and rule.',
     primitive: 'Yes or no per allowed entity pair and rule',
     line: 'Find relationships among named entities.',
-    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability.',
+    lede: 'You give it a set of names, the kind of each name, and the relations you care about. <code>relate</code> reads no other text. Jev answers from what it knows about the names. You get back one edge for each related pair, with its probability. For the links a text states, use <code>recognize --relation</code>.',
     takes: 'one set of named entities and relation rules',
     gives: 'one edge for each related pair, with a probability',
     requests: 'It reads one complete set of up to 255 entities and asks a yes/no question per allowed pair and rule. --dry-run prints the requests it would send.',
