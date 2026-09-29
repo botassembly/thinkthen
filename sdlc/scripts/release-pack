@@ -1,8 +1,9 @@
 #!/bin/sh
 # release-pack [--reuse] TARGET OUT [PART...] (ticket 0128): pack the release files of one
 # Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
-# each release target builds on its own runner. The parts are command, c, sqlite, duckdb,
-# postgresql, python, typescript, ruby, and first-run; the default packs them all.
+# each release target builds on its own runner. The parts are command, c, go, cpp, sqlite,
+# duckdb, postgresql, python, typescript, ruby, and first-run; the default keeps its
+# established parts and Go/C++ are explicit pilot parts.
 # Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
 # packs the files each surface check already built in its own build folder, which the
 # `surfaces` rung does. Every cargo call is locked; fetch first where the network is off.

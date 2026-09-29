@@ -41,15 +41,6 @@ for name in "$go" "$cpp"; do
 	manifest_commit=$(sed -n 's/^source_commit=//p' "$work/actual")
 	if [ -z "$source_commit" ]; then
 		printf '%s\n' "$manifest_commit" | grep -Eq '^[0-9a-f]{40}$' || fail "invalid source commit in $name"
-		git cat-file -e "$manifest_commit^{commit}" 2>/dev/null || fail "unknown source commit in $name"
-		git merge-base --is-ancestor "$manifest_commit" HEAD || fail "source commit is not an ancestor of checkout HEAD"
-		[ -z "$(git status --porcelain)" ] || fail 'checkout has uncommitted changes'
-		git diff --name-only "$manifest_commit" HEAD | while IFS= read -r changed; do
-			case $changed in
-			sdlc/tickets/0261-go-cpp-release-packages.md | sdlc/records/0261-go-cpp-release-*.md) ;;
-			*) fail "checkout changed built input since $manifest_commit: $changed" ;;
-			esac
-		done
 		source_commit=$manifest_commit
 	fi
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \

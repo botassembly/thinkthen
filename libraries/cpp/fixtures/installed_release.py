@@ -49,9 +49,12 @@ try:
         linked = subprocess.check_output(["ldd", str(binary)], text=True)
         if mode == "shared":
             assert "libthinkthen.so.0" in linked and str(prefix / "lib") in linked, linked
+            print("CPP_SHARED_LINK " + next(line.strip() for line in linked.splitlines() if "libthinkthen.so.0" in line))
         else:
             assert "libthinkthen.so.0" not in linked, linked
-        result = subprocess.run([str(binary)], cwd=home, env=env, text=True, capture_output=True, timeout=30)
+            print("CPP_STATIC_C_LINK ldd_libthinkthen=absent")
+        mode_env = env | {"THINKTHEN_CACHE": str(home / (mode + "-cache"))}
+        result = subprocess.run([str(binary)], cwd=home, env=mode_env, text=True, capture_output=True, timeout=30)
         assert (result.returncode, result.stdout.strip(), result.stderr) == (0, "outcome=1 probability=0.9", ""), result
         expected = json.loads((Path(__file__).with_name("accepted_requests.jsonl")).read_text().splitlines()[0])
         assert server.requests == [expected] * (1 if mode == "shared" else 2), server.requests
