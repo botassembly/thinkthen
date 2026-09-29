@@ -18,5 +18,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	if answer.Facts.Records != 1 || answer.Facts.RequestsSent != 1 {
+		log.Fatalf("unexpected call facts: %+v", answer.Facts)
+	}
 	fmt.Printf("outcome=%d probability=%.1f\n", answer.Value.Outcome, answer.Value.Probability)
 }
