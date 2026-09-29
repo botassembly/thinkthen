@@ -6,6 +6,7 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+from toolchains import dotnet as resolve_dotnet
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
@@ -34,7 +35,7 @@ try:
                        THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)),
                        LD_LIBRARY_PATH=str(HERE.parent / "target/scratch/lib"))
             request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
-            result = subprocess.run(["dotnet", str(run), request], env=env, capture_output=True, text=True, timeout=40)
+            result = subprocess.run([str(resolve_dotnet()), str(run), request], env=env, capture_output=True, text=True, timeout=40)
             assert result.returncode == 0, (case["name"], result.stderr)
             actual = json.loads(result.stdout)
             if "expected_error" in case:

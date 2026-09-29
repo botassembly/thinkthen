@@ -2,7 +2,7 @@
 
 `Botassembly.ThinkThen` is the local .NET 8 wrapper package. It calls the separately installed ThinkThen C library. `Botassembly.ThinkThen.C` is reserved for the native package; this wrapper does not ship, download, or install that library. Neither package has been published or registered.
 
-Run `sh libraries/csharp/check.sh` from a source checkout with .NET 8, Rust and an offline Cargo cache. The check builds the C library from the same checkout, compares its exports with the current C header, packs the wrapper into a local NuGet feed, and runs the exact backend matrix, two isolated installed NuGet consumers, and the J1 public-binding type corpus. Generated artifacts and receipts stay under `libraries/csharp/target/`.
+Run `sh libraries/csharp/check.sh` from a source checkout with .NET 8, Rust and an offline Cargo cache. The .NET SDK resolves from `dotnet` on `PATH`, or `THINKTHEN_DOTNET` can name its executable. The check builds the C library from the same checkout, compares its exports with the current C header, packs the wrapper into a local NuGet feed, and runs the exact backend matrix, two isolated installed NuGet consumers, and the J1 public-binding type corpus. Generated artifacts and receipts stay under `libraries/csharp/target/`.
 
 For an application on Linux x86_64, build and install the matching native C library separately, then install the local wrapper package:
 

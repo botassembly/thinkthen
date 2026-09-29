@@ -9,8 +9,10 @@ import subprocess
 import sys
 import time
 from backend import Backend
+from toolchains import dotnet as resolve_dotnet
 
 root = pathlib.Path(__file__).resolve().parent.parent
+dotnet = str(resolve_dotnet())
 stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
 logs = root / 'target/logs' / ('run-' + stamp)
 logs.mkdir(parents=True)
@@ -82,12 +84,12 @@ try:
     dll = root / 'tests/bin/Release/net8.0/Consumer.dll'
     status = 0
     if status == 0:
-        status = execute('build', ['/usr/bin/dotnet', 'build', str(root / 'tests/Consumer.csproj'),
+        status = execute('build', [dotnet, 'build', str(root / 'tests/Consumer.csproj'),
                                    '--configuration', 'Release', '--source', str(root / 'target/scratch/nuget'), '-v', 'quiet'], 120)
     if status == 0:
-        status = execute('direct', ['/usr/bin/dotnet', str(dll), 'direct'], 60)
+        status = execute('direct', [dotnet, str(dll), 'direct'], 60)
     if status == 0:
-        status = execute('matrix', ['/usr/bin/dotnet', str(dll), 'matrix'], 120)
+        status = execute('matrix', [dotnet, str(dll), 'matrix'], 120)
     if status == 0:
         states = collections.Counter(str(s) for s in server.arrivals)
         required = {'direct': 1, 'café': 1, 'yes': 1, 'no': 1, 'unsure': 1, 'a\x00b': 1,

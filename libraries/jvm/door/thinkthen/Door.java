@@ -101,7 +101,11 @@ public final class Door implements AutoCloseable {
         return engine;
     }
     public final class Token implements AutoCloseable {
-        private MemorySegment pointer = (MemorySegment) invoke("thinkthen_cancel_token_new");
+        private MemorySegment pointer;
+        private Token() {
+            pointer = (MemorySegment) invoke("thinkthen_cancel_token_new");
+            if (nullPointer(pointer)) throw new IllegalStateException("native cancellation token allocation failed");
+        }
         public synchronized void fire() { if (pointer != null) invoke("thinkthen_cancel", pointer); }
         private synchronized MemorySegment livePointer() { if (pointer == null) throw new IllegalStateException("token closed"); return pointer; }
         @Override public synchronized void close() {

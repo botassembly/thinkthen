@@ -118,22 +118,24 @@ public sealed class Engine : IDisposable
             IntPtr pointers = IntPtr.Zero, lengths = IntPtr.Zero, answers = IntPtr.Zero;
             IntPtr[] entries = new IntPtr[texts.Length];
             int stride = Marshal.SizeOf<Answer>();
+            int pointerBytes = checked(entries.Length * IntPtr.Size);
+            int answerBytes = checked(entries.Length * stride);
             try
             {
-                pointers = Marshal.AllocHGlobal(Math.Max(1, entries.Length * IntPtr.Size));
-                lengths = Marshal.AllocHGlobal(Math.Max(1, entries.Length * IntPtr.Size));
-                answers = Marshal.AllocHGlobal(Math.Max(1, entries.Length * stride));
+                pointers = Marshal.AllocHGlobal(Math.Max(1, pointerBytes));
+                lengths = Marshal.AllocHGlobal(Math.Max(1, pointerBytes));
+                answers = Marshal.AllocHGlobal(Math.Max(1, answerBytes));
                 for (int i = 0; i < entries.Length; i++)
                 {
                     entries[i] = Marshal.AllocHGlobal(Math.Max(1, encoded[i].Length));
                     Marshal.Copy(encoded[i], 0, entries[i], encoded[i].Length);
-                    Marshal.WriteIntPtr(pointers, i * IntPtr.Size, entries[i]);
-                    Marshal.WriteIntPtr(lengths, i * IntPtr.Size, new IntPtr(encoded[i].Length));
-                    Marshal.StructureToPtr(new Answer { Outcome = 123, Probability = -1 }, answers + i * stride, false);
+                    Marshal.WriteIntPtr(pointers, checked(i * IntPtr.Size), entries[i]);
+                    Marshal.WriteIntPtr(lengths, checked(i * IntPtr.Size), new IntPtr(encoded[i].Length));
+                    Marshal.StructureToPtr(new Answer { Outcome = 123, Probability = -1 }, answers + checked(i * stride), false);
                 }
                 int rc = Native.thinkthen_decide_many_opts(ptr, q, pointers, lengths, (nuint)entries.Length, deadline, token, answers);
                 Answer[] result = new Answer[entries.Length];
-                for (int i = 0; i < result.Length; i++) result[i] = Marshal.PtrToStructure<Answer>(answers + i * stride);
+                for (int i = 0; i < result.Length; i++) result[i] = Marshal.PtrToStructure<Answer>(answers + checked(i * stride));
                 if (rc != 0)
                 {
                     if (Array.Exists(result, item => item.Outcome != 123 || item.Probability != -1)) throw new InvalidOperationException("failed bulk changed output");
@@ -188,16 +190,17 @@ public sealed class Engine : IDisposable
             IntPtr pointers = IntPtr.Zero, lengths = IntPtr.Zero, output = IntPtr.Zero;
             nuint outputLength = 123;
             IntPtr[] entries = new IntPtr[encoded.Length];
+            int pointerBytes = checked(entries.Length * IntPtr.Size);
             try
             {
-                pointers = Marshal.AllocHGlobal(Math.Max(1, entries.Length * IntPtr.Size));
-                lengths = Marshal.AllocHGlobal(Math.Max(1, entries.Length * IntPtr.Size));
+                pointers = Marshal.AllocHGlobal(Math.Max(1, pointerBytes));
+                lengths = Marshal.AllocHGlobal(Math.Max(1, pointerBytes));
                 for (int i = 0; i < entries.Length; i++)
                 {
                     entries[i] = Marshal.AllocHGlobal(Math.Max(1, encoded[i].Length));
                     Marshal.Copy(encoded[i], 0, entries[i], encoded[i].Length);
-                    Marshal.WriteIntPtr(pointers, i * IntPtr.Size, entries[i]);
-                    Marshal.WriteIntPtr(lengths, i * IntPtr.Size, new IntPtr(encoded[i].Length));
+                    Marshal.WriteIntPtr(pointers, checked(i * IntPtr.Size), entries[i]);
+                    Marshal.WriteIntPtr(lengths, checked(i * IntPtr.Size), new IntPtr(encoded[i].Length));
                 }
                 int rc = Native.thinkthen_relate_opts(ptr, q, pointers, lengths, (nuint)entries.Length, deadline, token, ref output, ref outputLength);
                 if (rc != 0) { if (output != IntPtr.Zero || outputLength != 123) throw new InvalidOperationException("failed relate changed output"); throw ReadFailure(ptr, rc); }

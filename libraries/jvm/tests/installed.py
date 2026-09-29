@@ -5,20 +5,21 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from toolchains import JDK, KOTLIN, SCALA
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "target"
-JDK = Path("/usr/lib/jvm/java-21-openjdk-amd64")
-KOTLIN = Path("/home/ian/.local/opt/kotlin-2.4.20")
-SCALA = Path("/home/ian/.local/opt/scala3-3.9.0")
 RUN = TARGET / "installed" / datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
 RUN.mkdir(parents=True)
-tools = "bash env ls expr dirname uname readlink basename which sed grep cat tr cut head realpath find rm mkdir python3.12".split()
+tools = "bash env ls expr dirname uname readlink basename which sed grep cat tr cut head realpath find rm mkdir".split()
 mounts = []
 for name in tools:
     source = Path("/usr/bin") / name
     if source.exists():
-        mounts += ["--ro-bind", str(source), "/usr/bin/" + ("python3" if name == "python3.12" else name)]
+        mounts += ["--ro-bind", str(source), "/usr/bin/" + name]
+python = Path("/usr/bin/python3").resolve()
+assert python.is_file(), "installed consumer needs /usr/bin/python3"
+mounts += ["--ro-bind", str(python), "/usr/bin/python3"]
 for index, lang in enumerate(("java", "kotlin", "scala")):
     trial = RUN / f"consumer-{lang}-{index}"
     for folder in ("project/thinkthen", "jars", "native/lib"):
@@ -34,8 +35,7 @@ for index, lang in enumerate(("java", "kotlin", "scala")):
         source = ROOT / ("kotlin" if name.endswith("kt") else "scala") / name
         shutil.copyfile(source, trial / "project" / name)
     command = ["/usr/bin/bwrap", "--clearenv", "--unshare-user", "--unshare-pid", "--unshare-net", "--die-with-parent",
-               "--dir", "/usr", "--dir", "/usr/bin", "--dir", "/opt", "--dir", "/etc", "--dir", "/etc/ssl", "--dir", "/etc/ssl/certs",
-               "--ro-bind", "/etc/java-21-openjdk", "/etc/java-21-openjdk", "--ro-bind", "/etc/ssl/certs/java", "/etc/ssl/certs/java",
+               "--dir", "/usr", "--dir", "/usr/bin", "--dir", "/opt", "--ro-bind", "/etc", "/etc",
                "--ro-bind", "/usr/lib", "/usr/lib", "--ro-bind", "/usr/libexec", "/usr/libexec", "--ro-bind", "/usr/share", "/usr/share",
                "--ro-bind", "/lib64", "/lib64", "--symlink", "usr/lib", "/lib", "--symlink", "usr/bin", "/bin",
                "--ro-bind", str(JDK), "/opt/jdk", "--ro-bind", str(KOTLIN), "/opt/kotlin", "--ro-bind", str(SCALA), "/opt/scala",

@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+from toolchains import JDK, KOTLIN, SCALA
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
@@ -23,13 +24,13 @@ classes = TARGET / "classes/typecase"
 classes.mkdir(parents=True, exist_ok=True)
 jars = TARGET / "jars"
 classpath = ":".join(str(jars / f"thinkthen-{part}.jar") for part in ("door", "kotlin", "scala"))
-java = ["java", "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(TARGET / "native/libthinkthen.so")]
-subprocess.run(["javac", "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java")], check=True)
-subprocess.run(["kotlinc", "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], check=True)
-subprocess.run(["scalac", "-J-XX:ActiveProcessorCount=2", "-classpath", classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], check=True)
+java = [str(JDK / "bin/java"), "--enable-preview", "--enable-native-access=ALL-UNNAMED", "-Dthinkthen.library=" + str(TARGET / "native/libthinkthen.so")]
+subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "-cp", classpath, "-d", str(classes), str(HERE / "TypeCase.java")], check=True)
+subprocess.run([str(KOTLIN / "bin/kotlinc"), "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], check=True)
+subprocess.run([str(SCALA / "bin/scalac"), "-J-XX:ActiveProcessorCount=2", "-classpath", classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], check=True)
 backend, port = shared.start_backend()
 try:
-    for lang, main, runtime in (("java", "TypeCase", ""), ("kotlin", "TypeCaseKt", "/home/ian/.local/opt/kotlin-2.4.20/lib/kotlin-stdlib.jar"), ("scala", "scalaTypeCase", "/home/ian/.local/opt/scala3-3.9.0/lib/scala.jar")):
+    for lang, main, runtime in (("java", "TypeCase", ""), ("kotlin", "TypeCaseKt", str(KOTLIN / "lib/kotlin-stdlib.jar")), ("scala", "scalaTypeCase", str(SCALA / "lib/scala.jar"))):
         count = 0
         with tempfile.TemporaryDirectory(prefix=f"thinkthen-{lang}-types-") as cache:
             for index, case in enumerate(corpus["cases"]):

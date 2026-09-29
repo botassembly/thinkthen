@@ -52,3 +52,7 @@ Twelve consumer languages proven through the landed C door, each with two gated 
 5. Documentation pages per the agreed skeleton; site content belongs to Marketing.
 
 The queue owner now owns execution. Registry account changes and publication remain separate from source integration. Current source has advanced beyond the experiment pin; derive the ABI from the current header and qualify each merged package rather than treating the earlier 21-export inventory as current.
+
+## What the first batch build taught us
+
+The Linux local-package proof can be retained across a narrow review fix, but the native ownership and package boundaries need explicit checks at the host language's edge. A null Java cancellation-token pointer would otherwise be indistinguishable from the C no-token option; C# unmanaged byte counts require checked arithmetic before allocation; and a JSON convenience decoder must accept the complete admitted result grammar, including escaped strings and exponent numbers. Toolchain proof belongs to resolved executables and runtime JARs, not a builder's home path. The first candidate's exact C#/JVM gates passed after those corrections. Local package proof does not qualify final-release archives, GitHub Actions ubuntu-24.04 jobs, registry installation, or another platform; the per-port issues retain those criteria. The next PHP/Dart batch can reuse the narrow non-Cargo surface rule after review without broadening C API binding obligations.
