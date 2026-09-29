@@ -10,6 +10,16 @@ env={'PATH':'/usr/bin:/bin','HOME':str(L/'home'),'XDG_CONFIG_HOME':str(L/'home')
  'LD_LIBRARY_PATH':str(R/'target/native/lib'),'THINKTHEN_BASE_URL':f'http://127.0.0.1:{server.server_port}/generic/v1',
  'THINKTHEN_API_KEY':'tt-canary-294','THINKTHEN_CACHE':str(L/'cache'),'TT_BARRIER_DIR':str(L/'barrier')}
 try:
+    if len(sys.argv)==2 and sys.argv[1]=='facts':
+        result=run([str(R/'target/scratch/swift-matrix'),'facts'],cwd=R,env=env,timeout=30)
+        (L/'facts.log').write_bytes(result.stdout+result.stderr)
+        assert result.exit==0 and b'SWIFT_FACTS_LIFETIME_PASS' in result.stdout,(result.exit,(result.stdout+result.stderr)[-1500:])
+        assert collections.Counter(server.arrivals)==collections.Counter(['hold-facts-one','hold-facts-no-usage','status-401','recovery-scalar']) and server.attempts==server.connections==4,server.arrivals
+        bodies=[json.loads(line) for line in (L/'barrier/requests.jsonl').read_text().splitlines()]
+        assert collections.Counter(row['state'] for row in bodies)==collections.Counter(server.arrivals) and all(row['questions']['q1']['type']=='noul' for row in bodies),bodies
+        status='PASS'
+        print('SWIFT_FACTS_EXACT_4_PASS',flush=True)
+        sys.exit(0)
     for mode in ('direct','matrix'):
         result=run([str(R/'target/scratch/swift-matrix'),mode],cwd=R,env=env,timeout=120)
         (L/(mode+'.log')).write_bytes(result.stdout+result.stderr)

@@ -6,7 +6,11 @@ fn require(ok: bool) !void {
 fn errorCode(engine: *tt.Engine, result: anytype, code: c_int, retryable: bool) !void {
     switch (result) {
         .ok => |value| {
-            _ = value;
+            defer switch (@typeInfo(@TypeOf(value))) {
+                .pointer => engine.allocator.free(value),
+                .@"struct" => value.deinit(engine.allocator),
+                else => unreachable,
+            };
             return error.ExpectedFailure;
         },
         .failed => |f| {
@@ -44,9 +48,13 @@ pub fn main() !void {
     defer engine.deinit();
     const scalar = [_][]const u8{ "yes", "no", "unsure", "caf\xc3\xa9", "a\x00b" };
     for (scalar, 0..) |text, i| {
-        const answer = try engine.decide(if (i == 2) "{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}" else "Is this text?", text, .{});
-        switch (answer) {
-            .ok => |a| try require(a.outcome == (if (i == 1) tt.Outcome.no else if (i == 2) tt.Outcome.unsure else tt.Outcome.yes) and a.probability == (if (i == 1) @as(f64, 0.1) else if (i == 2) @as(f64, 0.5) else @as(f64, 0.9))),
+        const result = try engine.decide(if (i == 2) "{\"decide\":\"Is it?\",\"threshold\":\"0.4:0.8\"}" else "Is this text?", text, .{});
+        switch (result) {
+            .ok => |a| {
+                defer a.deinit(alloc);
+                try require(a.facts.records == 1 and a.facts.requests_sent == 1 and a.facts.cache_answers == 0 and std.math.isFinite(a.facts.seconds));
+                try require(a.value.outcome == (if (i == 1) tt.Outcome.no else if (i == 2) tt.Outcome.unsure else tt.Outcome.yes) and a.value.probability == (if (i == 1) @as(f64, 0.1) else if (i == 2) @as(f64, 0.5) else @as(f64, 0.9)));
+            },
             .failed => |f| {
                 defer engine.freeFailure(f);
                 return error.ScalarFailed;
@@ -55,9 +63,10 @@ pub fn main() !void {
     }
     const rows = [_][]const u8{ "first", "second", "third" };
     switch (try engine.decideMany("Is it?", &rows, .{})) {
-        .ok => |answers| {
-            defer alloc.free(answers);
-            try require(answers.len == 3);
+        .ok => |success| {
+            defer success.deinit(alloc);
+            const answers = success.value;
+            try require(answers.len == 3 and success.facts.records == 3 and success.facts.requests_sent == 1 and success.facts.cache_answers == 0);
             for (answers, 0..) |a, i| {
                 if (a.probability != ([_]f64{ 0.9, 0.1, 0.6 })[i]) std.debug.print("REP IN DRIFT bulk index={d} probability={d} expected={d} outcome={d}\n", .{ i, a.probability, ([_]f64{ 0.9, 0.1, 0.6 })[i], @intFromEnum(a.outcome) });
                 try require(a.probability == ([_]f64{ 0.9, 0.1, 0.6 })[i]);
@@ -68,10 +77,21 @@ pub fn main() !void {
             return error.BulkFailed;
         },
     }
+    switch (try engine.decideMany("Is it?", &rows, .{})) {
+        .ok => |success| {
+            defer success.deinit(alloc);
+            try require(success.value.len == 3 and success.facts.records == 3 and success.facts.requests_sent == 0 and success.facts.cache_answers == 1);
+        },
+        .failed => |f| {
+            defer engine.freeFailure(f);
+            return error.CachedReplayFailed;
+        },
+    }
     const repeated = [_][]const u8{ "first", "second", "first", "second" };
     switch (try engine.decideMany("Is it?", &repeated, .{})) {
-        .ok => |answers| {
-            defer alloc.free(answers);
+        .ok => |success| {
+            defer success.deinit(alloc);
+            const answers = success.value;
             try require(answers.len == 4);
             for (answers, 0..) |answer, i| {
                 const yes = i % 2 == 0;
@@ -86,9 +106,10 @@ pub fn main() !void {
     }
     const empty = [_][]const u8{};
     switch (try engine.decideMany("Is it?", &empty, .{})) {
-        .ok => |answers| {
-            defer alloc.free(answers);
-            try require(answers.len == 0);
+        .ok => |success| {
+            defer success.deinit(alloc);
+            const answers = success.value;
+            try require(answers.len == 0 and success.facts.records == 0 and success.facts.model == null);
         },
         .failed => |f| {
             defer engine.freeFailure(f);
@@ -158,11 +179,12 @@ pub fn main() !void {
     }
     const named = try engine.recognize("{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}", "John Smith", .{});
     switch (named) {
-        .ok => |bytes| {
-            defer alloc.free(bytes);
+        .ok => |success| {
+            defer success.deinit(alloc);
+            const bytes = success.value;
             const parsed = try std.json.parseFromSlice(std.json.Value, alloc, bytes, .{});
             defer parsed.deinit();
-            try require(parsed.value.object.get("entities") != null);
+            try require(parsed.value.object.get("entities") != null and success.facts.records > 0 and success.facts.requests_sent == 2);
         },
         .failed => |f| {
             defer engine.freeFailure(f);
@@ -172,11 +194,12 @@ pub fn main() !void {
     const entity_records = [_][]const u8{ "{\"name\":\"Third\",\"kind\":\"alert\"}", "{\"name\":\"Fourth\",\"kind\":\"alert\"}" };
     const edges = try engine.relate("{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}", &entity_records, .{});
     switch (edges) {
-        .ok => |bytes| {
-            defer alloc.free(bytes);
+        .ok => |success| {
+            defer success.deinit(alloc);
+            const bytes = success.value;
             const parsed = try std.json.parseFromSlice(std.json.Value, alloc, bytes, .{});
             defer parsed.deinit();
-            try require(parsed.value.object.get("edges") != null);
+            try require(parsed.value.object.get("edges") != null and success.facts.records > 0 and success.facts.requests_sent == 1);
         },
         .failed => |f| {
             defer engine.freeFailure(f);
@@ -238,7 +261,10 @@ pub fn main() !void {
     try errorCode(&engine, try engine.decide("Is it?", "negative", .{ .deadline_ms = -2 }), tt.c.THINKTHEN_EUSAGE, false);
     try errorCode(&engine, try engine.decide("Is it?", "too-large", .{ .deadline_ms = 4294967295001 }), tt.c.THINKTHEN_EUSAGE, false);
     switch (try engine.decide("Is it?", "max-boundary", .{ .deadline_ms = 4294967295000 })) {
-        .ok => |a| try require(a.outcome == .yes and a.probability == 0.9),
+        .ok => |a| {
+            defer a.deinit(alloc);
+            try require(a.value.outcome == .yes and a.value.probability == 0.9);
+        },
         .failed => |f| {
             defer engine.freeFailure(f);
             return error.MaxDeadlineFailed;
@@ -261,7 +287,10 @@ pub fn main() !void {
     const failed_bulk = [_][]const u8{ "bulk-first-good", "bulk-middle-bad", "bulk-last-good" };
     try errorCode(&engine, try engine.decideMany("Is it?", &failed_bulk, .{}), tt.c.THINKTHEN_EBACKEND, false);
     switch (try engine.decide("Is it?", "after-errors", .{})) {
-        .ok => |a| try require(a.outcome == .yes),
+        .ok => |a| {
+            defer a.deinit(alloc);
+            try require(a.value.outcome == .yes);
+        },
         .failed => |f| {
             defer engine.freeFailure(f);
             return error.RecoveryAfterErrorsFailed;

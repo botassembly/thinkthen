@@ -13,7 +13,10 @@ fn opened(result: tt.Result(tt.Engine), alloc: std.mem.Allocator) !tt.Engine {
 
 fn yes(engine: *tt.Engine, text: [:0]const u8) !void {
     switch (try engine.decide("Is it?", text, .{})) {
-        .ok => |answer| if (answer.outcome != .yes) return error.WrongAnswer,
+        .ok => |answer| {
+            defer answer.deinit(engine.allocator);
+            if (answer.value.outcome != .yes) return error.WrongAnswer;
+        },
         .failed => |failure| {
             defer engine.freeFailure(failure);
             return error.DecisionFailed;

@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md
 
 # 0281: Owned call facts for Swift and Zig typed methods
 
-Status: Corrected after fresh High design/API review findings; awaiting recheck and root's exact code claim. No implementation is approved by this ticket alone.
+Status: Approved for implementation on main `260b75457` after fresh High design/API ACCEPT `494d59f1`. Candidate built on the claimed branch; fresh code review and landing remain with root.
 
 ## Outcome and retained behavior
 
@@ -50,8 +50,8 @@ Swift `public CallResult<Value: Sendable>: Sendable` has `value` and typed `fact
 - Keeps: Former typed values/order, JSON `call`, options and current Swift no-options forms, six failure kinds, copied started-failure facts, C ABI and existing thread/allocator/close limits.
 - Changes: Four Swift and four Zig typed success returns carry their own owned facts from one existing C operation; all direct callers migrate with them.
 - Proof: Current exact fixtures plus identical packed cache replay with zero new arrivals, strict host conversion table, missing-usage/model distinction, true two-arrival overlap, typed failure/next-call/close lifetime, Zig partial-allocation cleanup, and matching source versus installed receipts.
-- Defers: Fresh High design/API review, root code claim, release runner/published-package qualification, other wrappers, full detail/cost/vendor timing/IDs and held SQL/DataFrame work.
+- Defers: Fresh High code review and landing, release runner/published-package qualification, other wrappers, full detail/cost/vendor timing/IDs and held SQL/DataFrame work.
 
 ## What the build taught us
 
-Pending implementation. Record the failing and passing outside-in witness, changed exact request totals, any consolidated tests, measured growth and duplication choice, artifact identity, source versus installed proof, and remaining limits before landing.
+The [build record](../records/0281-swift-zig-call-facts-build.md) pins the source and copied-package receipts. The byte-identical packed replay adds zero requests, so the old 30/42 ledgers stay exact. A separate four-arrival fixture per host proves two held same-engine successes before release, absent usage with model, typed failure facts, recovery and ownership after close. The Zig post-native allocation fixture uses four distinct sends and the debug allocator. Swift scalar/bulk/recognize/relate facts are checked alongside old values; recognize uses two native requests, which the first strengthened assertion caught and corrected. No old functional case was deleted; the original different repeated-input and cancellation cases retain separate coverage. Measured host growth is Swift 482→608 Swift and 484→494 Python; Zig 988→1247 Zig and 466→476 Python. The added lines are local facts parsing, ownership and selected boundary/overlap proof; we reused each existing backend and runner rather than adding another harness.
