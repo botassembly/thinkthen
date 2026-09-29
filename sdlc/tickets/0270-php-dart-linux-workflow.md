@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 # 0270: Gate PHP and Dart source packages in the Linux x86 release workflow
 
-Status: design accepted at `ed4e3eb9`; [the review record](../records/0270-php-dart-workflow-design-review.md) records the corrected scope and coordinator approval. [Preparation](../records/0270-php-dart-workflow-preparation.md) maps the route and exact prerequisites. The 0268 Go/C++ static wiring landed at `85831aac`. Shared workflow and packer implementation waits for landed 0269 Swift/Zig wiring and comparison of its actual gates. The coordinator separately claims the already-reviewed PHP/Dart selector prerequisites so that independent work can proceed alongside 0269 without editing its files. No implementation or runner qualification is claimed by this status. Ian's SQL and DataFrame hold prevents a container, installed-host, aggregate-smoke or Actions run through the present release route.
+Status: combined static implementation accepted at `889c7a94` after [fresh High code review](../records/0270-php-dart-workflow-code-review.md). The shared workflow and selector code is complete for this checkpoint. Actual workflow packaging and runner qualification remain open. The coordinator permits the separately traced direct PHP/Dart selector check on preserved packages; it invokes no SQL/DataFrame or container path and does not qualify a new workflow build. The aggregate hold remains in force.
 
 ## Bounded outcome and retained route
 
