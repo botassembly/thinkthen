@@ -99,3 +99,7 @@ separate hidden-package campaign. Focused lint, policy, pages, tickets, and
 diff checks are candidate evidence only. The
 coordinator can decide whether an M5 full replay is needed after arranging a
 source-compatible binary; it was not available in this focused proof.
+
+## Independent acceptance and integration
+
+Fresh independent High review accepted `da126032`. The coordinator integrated the unchanged cleanup and publisher and checked the recursive-cleanup guard on main. The full lint criterion remains open: issue0275 separates the hidden package campaign, and the separately filed port child-environment findings remain. No whole-tree lint pass is claimed.
