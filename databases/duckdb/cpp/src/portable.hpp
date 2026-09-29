@@ -4,4 +4,5 @@
 
 namespace duckdb {
 void RegisterPortableDecide(ExtensionLoader &loader);
+void RegisterPortableMacro(ExtensionLoader &loader, const string &sql);
 } // namespace duckdb

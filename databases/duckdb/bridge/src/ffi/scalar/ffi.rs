@@ -15,7 +15,7 @@ use super::{
 };
 use crate::{engines, errors};
 
-fn frame(bytes: &mut Vec<u8>, json: &str) -> Result<(), String> {
+pub(super) fn frame(bytes: &mut Vec<u8>, json: &str) -> Result<(), String> {
     let len = u32::try_from(json.len())
         .map_err(|_| "thinkthen defect: a JSON value is too large".to_owned())?;
     bytes.extend_from_slice(&len.to_ne_bytes());

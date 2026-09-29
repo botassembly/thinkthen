@@ -283,12 +283,25 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		const auto kind = args.data[3].GetValue(row).GetValue<int32_t>();
 		auto [place, fresh] = known.emplace(std::make_tuple(raw, settings, kind), groups.size());
 		if (fresh) {
-			ScalarGroup group {owner->Resolve(*context, raw), settings, kind, {}, {}};
-			RustReply checked(thinkthen_cpp_validate_portable_scalar(
+			ResolvedQuestion resolved;
+			try {
+				resolved = owner->Resolve(*context, raw);
+			} catch (const InvalidInputException &) {
+				if (kind != 3) { throw; }
+				resolved = {raw, false};
+			}
+			ScalarGroup group {std::move(resolved), settings, kind, {}, {}};
+			if (kind != 3) {
+			RustReply checked(kind == 7 ? thinkthen_cpp_validate_portable_annotate(
+			    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
+			    group.question.from_file ? 1 : 0,
+			    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size())
+			    : thinkthen_cpp_validate_portable_scalar(
 			    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
 			    group.question.from_file ? 1 : 0,
 			    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size()));
 			Checked(checked.value);
+			}
 			groups.push_back(std::move(group));
 		}
 		auto &group = groups[place->second];
@@ -302,7 +315,17 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 		for (auto &value : group.texts) {
 			texts.push_back({reinterpret_cast<const uint8_t *>(value.data()), value.size()});
 		}
-		RustReply reply(thinkthen_cpp_portable_scalar_group(
+		RustReply reply(group.kind == 3 ? thinkthen_cpp_portable_try_details_group(
+		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
+		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
+		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
+		    owner->Remaining(*context), session.Bridge(), StopFor(*context))
+		    : group.kind == 7 ? thinkthen_cpp_portable_annotate_group(
+		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
+		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
+		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(),
+		    owner->Remaining(*context), session.Bridge(), StopFor(*context))
+		    : thinkthen_cpp_portable_scalar_group(
 		    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
 		    group.question.from_file ? 1 : 0, texts.data(), texts.size(),
 		    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), group.kind,
@@ -354,6 +377,10 @@ void RegisterMacro(ExtensionLoader &loader, const string &sql) {
 
 } // namespace
 
+void RegisterPortableMacro(ExtensionLoader &loader, const string &sql) {
+	RegisterMacro(loader, sql);
+}
+
 void RegisterPortableDecide(ExtensionLoader &loader) {
 	ScalarFunction native("thinkthen_native_decide",
 	                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
@@ -404,8 +431,8 @@ void RegisterPortableDecide(ExtensionLoader &loader) {
 		                      "CASE WHEN typeof(members) = 'VARCHAR' THEN CAST(members AS VARCHAR) ELSE CAST(settings AS VARCHAR) END, "
 		                      + std::to_string(kind) + ", typeof(members), typeof(settings))");
 	}
-	for (auto kind : {1, 2}) {
-		const string name = kind == 1 ? "probability" : "details";
+	for (auto kind : {1, 2, 3, 7}) {
+		const string name = kind == 1 ? "probability" : kind == 2 ? "details" : kind == 3 ? "try_details" : "annotate";
 		ScalarFunction native("thinkthen_native_" + name,
 		                      {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR,
 		                       LogicalType::INTEGER, LogicalType::VARCHAR},

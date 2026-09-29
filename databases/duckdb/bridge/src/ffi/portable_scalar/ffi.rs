@@ -13,22 +13,6 @@ fn prepare(argument: &str, from_file: bool, settings: &str) -> Result<(String, S
     Ok((written, call))
 }
 
-fn batch_word(settings: &Settings) -> Option<String> {
-    if settings.batch_max() {
-        Some("max".into())
-    } else {
-        settings.batch_records().map(|value| value.to_string())
-    }
-}
-
-fn due(query: i64, call: Option<i64>) -> i64 {
-    match call {
-        None | Some(-1) => query,
-        Some(value) if query < 0 => value,
-        Some(value) => query.min(value),
-    }
-}
-
 /// Check one probability/details question and settings before any chunk member sends.
 ///
 /// # Safety
@@ -74,7 +58,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_scalar_group(
             let question = text(question, question_len)?;
             let settings = text(settings, settings_len)?;
             let (written, call) = prepare(question, from_file != 0, settings)?;
-            let batch = batch_word(&call);
+            let batch = super::portable::batch_word(&call);
             let mut session = session;
             if let Some(word) = &batch {
                 session.batch_bytes = word.as_ptr();
@@ -88,7 +72,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_scalar_group(
                     written.len(),
                     texts,
                     count,
-                    due(query_deadline_ms, call.deadline_ms()),
+                    super::portable::due(query_deadline_ms, call.deadline_ms()),
                     kind,
                     session,
                     0,

@@ -14,9 +14,15 @@ mod find;
 mod listed;
 mod nested;
 mod panic;
+#[path = "ffi/portable/ffi.rs"]
 mod portable;
+#[path = "ffi/portable_aux/ffi.rs"]
+pub(crate) mod portable_aux;
+#[path = "ffi/portable_listed/ffi.rs"]
 mod portable_listed;
+#[path = "ffi/portable_many/ffi.rs"]
 mod portable_many;
+#[path = "ffi/portable_scalar/ffi.rs"]
 mod portable_scalar;
 #[path = "ffi/scalar/ffi.rs"]
 mod scalar;
@@ -74,47 +80,53 @@ pub(crate) fn reply_boundary(call: impl FnOnce() -> Result<Vec<u8>, String>) -> 
     })
 }
 
-/// Validate one whole find row before any row in its chunk can send.
+/// Check a portable find row before another row can send.
 ///
 /// # Safety
-/// The caller retains the question and unit byte ranges through this call.
+/// All byte ranges remain live for this call.
 #[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_find(
+pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_portable_find(
     question: *const u8,
     question_len: usize,
     units: *const BridgeText,
     count: usize,
-    none: i32,
+    settings: *const u8,
+    settings_len: usize,
 ) -> Reply {
-    reply_boundary(|| find::validate(question, question_len, units, count, none))
+    reply_boundary(|| {
+        find::validate_portable(
+            text(question, question_len)?,
+            copied_texts(units, count)?,
+            text(settings, settings_len)?,
+        )
+    })
 }
 
-/// Evaluate one owned find set, returning its original-index result frame.
+/// Ask one complete find set under shared settings.
 ///
 /// # Safety
-/// The C++ caller retains the question, units, settings and stop predicate through this call.
+/// Caller retains all ranges and the stop callback until return.
 #[unsafe(no_mangle)]
-pub(crate) unsafe extern "C" fn thinkthen_cpp_find(
+pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_find(
     question: *const u8,
     question_len: usize,
     units: *const BridgeText,
     count: usize,
-    none: i32,
-    deadline_ms: i64,
-    settings: BridgeSettings,
+    settings: *const u8,
+    settings_len: usize,
+    query_deadline_ms: i64,
+    session: BridgeSettings,
     stop: BridgeStop,
 ) -> Reply {
     reply_boundary(|| {
-        find::run(find::Input {
-            question,
-            question_len,
-            units,
-            count,
-            none,
-            deadline_ms,
-            settings,
+        find::run_portable(
+            text(question, question_len)?,
+            copied_texts(units, count)?,
+            text(settings, settings_len)?,
+            query_deadline_ms,
+            session,
             stop,
-        })
+        )
     })
 }
 

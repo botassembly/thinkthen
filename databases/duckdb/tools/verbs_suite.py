@@ -16,7 +16,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "sqlite" / "tests")
 from conditional_backend import ConditionalBackend
 
 from harness import Backend, case, expect, main, rows, run, said
-from verbs_budget import PACKED_PAIR_BODIES, PackedReplies
+from verbs_budget import (
+    PACKED_PAIR_BODIES, PackedReplies,
+    b13c_try_details_denied_retry_keeps_later_answer,
+    b13c_try_details_split_denials,
+    b13c_try_details_total_zero_sends_nothing,
+)
 from verbs_complete import complete_question_files_keep_identity, complete_question_refusals_and_nulls, complete_question_rechecks_prepared_authority
 from verbs_portable import portable_batch_identity
 
@@ -27,6 +32,9 @@ case(complete_question_files_keep_identity)
 case(complete_question_refusals_and_nulls)
 case(complete_question_rechecks_prepared_authority)
 case(portable_batch_identity)
+case(b13c_try_details_total_zero_sends_nothing)
+case(b13c_try_details_split_denials)
+case(b13c_try_details_denied_retry_keeps_later_answer)
 
 
 def column(result: dict) -> list:
@@ -348,10 +356,10 @@ def b13c_try_details_blank_context_keeps_good_siblings():
     """A bad literal context is one safe Usage row without a transport attempt."""
     with PackedReplies() as backend:
         got = run(["SET threads = 1",
-                   "SELECT thinkthen_try_details('Is it a refund?', x, -1, c) FROM "
+                   "SELECT thinkthen_try_details('Is it a refund?', x, concat('{\"context\":', to_json(c), '}')) FROM "
                    "(VALUES (1,'alpha','shared'),(2,'private evidence','   '),"
                    "(3,'gamma','shared'),(4,NULL,'   ')) t(i,x,c) ORDER BY i",
-                   "SELECT thinkthen_details('Is it a refund?', 'ordinary', -1, '   ')"], backend.base)
+                   "SELECT thinkthen_details('Is it a refund?', 'ordinary', '{\"context\":\"   \"}')"], backend.base)
         values = [json.loads(value) if value else None for value in column(got[1])]
         expect([value["status"] if value else None for value in values],
                ["answered", "failed", "answered", None], "context row outcomes and NULL skip")
@@ -359,7 +367,7 @@ def b13c_try_details_blank_context_keeps_good_siblings():
                "check the row's question and arguments, or raise the process request total when it is spent",
                "retryable": False}, "safe context Usage")
         expect("private evidence" in json.dumps(values[1]), False, "failed context row hides evidence")
-        expect(said(got[2]), "thinkthen usage: context is text, not white space", "ordinary scalar still throws")
+        expect(said(got[2]), "thinkthen usage: `context` is text that is not blank", "ordinary scalar still throws")
         expect(backend.bodies, [b'{"state":"shared","model":"jev-1.13.0","questions":'
                               b'{"q1":{"type":"noul","instructions":"The text is \\"alpha\\". Is it a refund?"},'
                               b'"q2":{"type":"noul","instructions":"The text is \\"gamma\\". Is it a refund?"}}}'],
@@ -388,7 +396,7 @@ def b13c_context_and_batch_one_wire_identity():
     """The final literal context packs two members; batch one retains bare legacy bodies."""
     with PackedReplies() as backend:
         got = run(["SET threads = 1", "SET thinkthen_batch = 'max'",
-                   "SELECT thinkthen_details('Is it a refund?', x, -1, 'shared') "
+                   "SELECT thinkthen_details('Is it a refund?', x, '{\"context\":\"shared\"}') "
                    "FROM (VALUES (1,'alpha'),(2,'beta')) t(i,x) ORDER BY i",
                    "SET thinkthen_batch = '1'",
                    "SELECT thinkthen_details('Is it a refund?', x) "

@@ -1,6 +1,6 @@
 # 0286 — DuckDB settings keyed forms and macros (T4)
 
-Status: Draft preparation. Accepted ADR 0105 settles the outcome; implementation and issue closure remain open.
+Status: Accepted design; C++ host-local implementation is a review candidate. Native STRUCT plan, 0289 process-cap integration, package qualification and issue closure remain open.
 
 ## Outcome
 
@@ -15,9 +15,9 @@ The macro CreateMacroInfo must set info.internal=true. Keep the seven old DuckDB
 
 Register `thinkthen_plan(question, keyed_json[, settings])` returning a native **STRUCT** with `requests`, `records`, `estimated_bytes`, the two-member `estimated_input_tokens` band, `upper_bound` and first request body. Its `VARCHAR` keyed JSON and optional settings take the same converter/core parser as `_many`; it calls 0283's summary through 0289's Engine wrapper. Preserve the vector daily form and the `VARCHAR[]`-members overload. A wrong settings type, invalid JSON or duplicate question/settings key refuses before send. P1 pins the exact no-send body/count/byte/token-band result through the STRUCT, alongside a small valid/invalid DuckDB conversion table.
 
-## Prerequisites and proposed files
+## Prerequisites and implementation files
 
-Prerequisite: T1; T7 before final cap/plan acceptance. Proposed file families: `databases/duckdb/cpp/src/{thinkthen.cpp,scalar_settings.cpp,scalar_settings.hpp,listed_result.cpp,listed_result.hpp,warm.cpp,warm.hpp}; databases/duckdb/src/{lib.rs,scalars.rs,tables.rs,questions.rs}; databases/duckdb/bridge/src/ffi/{settings.rs,listed.rs}; DuckDB tools/README/ratchets`. Refresh exact nested helpers, package member inventories, nonblank source headroom and current Lanes claims before implementation. No source file is claimed by this preparation draft.
+T1's public `Settings` parser is merged. The package route is `cpp/src/{portable,find,nested,relate,thinkthen,warm}.cpp` through the Rust bridge's `ffi/portable*` and `relate/ffi.rs`; `cpp/CMakeLists.txt` explicitly includes the new portable member. Tools, `check.sh`, README and DuckDB ratchets track that route. The older `databases/duckdb/src` Rust loadable crate remains a separate, unshipped source path with old signatures; it was inspected, not used as proof of the C++ package. T7's public `Engine::plan` and active request-cap API from 0289 must merge before the native STRUCT and final cap criterion can be implemented. The eventual build must decide whether that separate Rust loadable source is supported under the same new public contract or retired from source qualification; it cannot be counted as migrated from this C++ proof.
 
 ## Smallest meaningful proof
 
@@ -33,4 +33,8 @@ Installed DuckDB P1 STRUCT carries `records=1`, `requests=1`, 120 bytes, 61–10
 
 ## What the build taught us
 
-Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.
+The actual v1.5.5 catalog needs `CreateMacroInfo` with `internal=true`: scalar `:=` binds positionally. An isolated installed test proved out-of-order named binding and unknown-name refusal. JSON `VARCHAR` settings coexist with native `VARCHAR[]` members, while explicitly NULL settings mean `{}`; an old numeric slot produces the corpus's removal sentence. The six-song vector and keyed calls used one packed request plus a cache answer in one scratch session, and byte-identical bodies when run with separate fresh caches. One cache answer is independent of the six record count.
+
+The retained scalar and find decoders, `try_details` safe failure carrier, recognition result decoder and relate query guard could be reused. The old `thinkthen.cpp` scalar registrations and obsolete private find bridge were deleted after the new calls passed; old warm functional tests were replaced by an outside-in exact removal and zero-send case, while distinct file, invalid-input, secrecy, try-details, and saved-body cases remain. New unsafe C entries live in `ffi.rs` files, as the binding policy requires. The parser and due/batch helpers were shared instead of adding another host settings grammar. The source counters are measured in the [build record](../records/0286-duckdb-settings-keyed-forms-and-macros-build.md).
+
+The current Linux build and byte-identical copied extension are not a release archive or other-platform qualification. The seven prior package failure criteria have selected local receipts in that record. P1's exact native STRUCT, its zero-send plan, and final process-cap behavior have no receipt until 0289 lands; no private core estimator was copied.

@@ -26,49 +26,53 @@ struct Keyed(Vec<(String, String)>);
 
 struct Fields(Vec<(String, Box<RawValue>)>);
 
+struct Ordered;
+
+impl<'de> Visitor<'de> for Ordered {
+    type Value = Fields;
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("one JSON object")
+    }
+    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Fields, M::Error> {
+        let mut fields = Vec::new();
+        while let Some(field) = map.next_entry()? {
+            fields.push(field);
+        }
+        Ok(Fields(fields))
+    }
+}
+
 impl<'de> Deserialize<'de> for Fields {
     fn deserialize<D: Deserializer<'de>>(decoder: D) -> Result<Self, D::Error> {
-        struct Ordered;
-        impl<'de> Visitor<'de> for Ordered {
-            type Value = Fields;
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("one JSON object")
-            }
-            fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Fields, M::Error> {
-                let mut fields = Vec::new();
-                while let Some(field) = map.next_entry()? {
-                    fields.push(field);
-                }
-                Ok(Fields(fields))
-            }
-        }
         decoder.deserialize_map(Ordered)
+    }
+}
+
+struct Entries;
+
+impl<'de> Visitor<'de> for Entries {
+    type Value = Keyed;
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("one keyed JSON object of text values")
+    }
+    fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Keyed, M::Error> {
+        let mut pairs = Vec::new();
+        let mut names = HashSet::new();
+        while let Some((key, value)) = map.next_entry::<String, serde_json::Value>()? {
+            if !names.insert(key.clone()) {
+                return Err(serde::de::Error::custom("a keyed input repeats a key"));
+            }
+            let Some(value) = value.as_str() else {
+                return Err(serde::de::Error::custom("each keyed input value is text"));
+            };
+            pairs.push((key, value.to_owned()));
+        }
+        Ok(Keyed(pairs))
     }
 }
 
 impl<'de> Deserialize<'de> for Keyed {
     fn deserialize<D: Deserializer<'de>>(decoder: D) -> Result<Self, D::Error> {
-        struct Entries;
-        impl<'de> Visitor<'de> for Entries {
-            type Value = Keyed;
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-                formatter.write_str("one keyed JSON object of text values")
-            }
-            fn visit_map<M: MapAccess<'de>>(self, mut map: M) -> Result<Keyed, M::Error> {
-                let mut pairs = Vec::new();
-                let mut names = HashSet::new();
-                while let Some((key, value)) = map.next_entry::<String, serde_json::Value>()? {
-                    if !names.insert(key.clone()) {
-                        return Err(serde::de::Error::custom("a keyed input repeats a key"));
-                    }
-                    let Some(value) = value.as_str() else {
-                        return Err(serde::de::Error::custom("each keyed input value is text"));
-                    };
-                    pairs.push((key, value.to_owned()));
-                }
-                Ok(Keyed(pairs))
-            }
-        }
         decoder.deserialize_map(Entries)
     }
 }
@@ -139,31 +143,15 @@ pub(super) fn parse(
         6 => QuestionKind::Tag,
         _ => return Err("thinkthen defect: unknown keyed kind".into()),
     };
-    if !matches!(&parsed, LoadedQuestion::Question(value) if value.kind() == expected)
-        && !(kind == 0 && matches!(&parsed, LoadedQuestion::Banded(_)))
+    if !(matches!(&parsed, LoadedQuestion::Question(value) if value.kind() == expected)
+        || kind == 0 && matches!(&parsed, LoadedQuestion::Banded(_)))
     {
         return Err(RowError::usage("the question has another kind").text);
     }
     Ok((written, parsed, settings_value))
 }
 
-fn batch_word(settings: &Settings) -> Option<String> {
-    if settings.batch_max() {
-        Some("max".into())
-    } else {
-        settings.batch_records().map(|value| value.to_string())
-    }
-}
-
-fn due(query: i64, call: Option<i64>) -> i64 {
-    match call {
-        None | Some(-1) => query,
-        Some(value) if query < 0 => value,
-        Some(value) => query.min(value),
-    }
-}
-
-fn run(
+struct KeyedCall {
     question: LoadedQuestion,
     input: Keyed,
     call: Settings,
@@ -171,8 +159,45 @@ fn run(
     session: BridgeSettings,
     stop: BridgeStop,
     kind: i32,
+}
+
+fn choice_probability(chosen: Option<&str>, probabilities: &Probabilities) -> Option<f64> {
+    match (chosen, probabilities) {
+        (Some(name), Probabilities::Named(named)) => named
+            .iter()
+            .find(|entry| entry.name() == name)
+            .map(|entry| entry.probability()),
+        _ => None,
+    }
+}
+
+fn row_value(
+    value: &Judgment,
+    probabilities: &Probabilities,
+) -> Result<(serde_json::Value, Option<f64>), String> {
+    match value {
+        Judgment::Choice(chosen) => Ok((
+            json!(chosen),
+            choice_probability(chosen.as_deref(), probabilities),
+        )),
+        Judgment::Score(score) => Ok((json!(score), None)),
+        Judgment::Tags(labels) => Ok((json!(labels), None)),
+        _ => Err("thinkthen defect: a keyed call returned another kind".into()),
+    }
+}
+
+fn run(
+    KeyedCall {
+        question,
+        input,
+        call,
+        query,
+        session,
+        stop,
+        kind,
+    }: KeyedCall,
 ) -> Result<Vec<u8>, String> {
-    let batch_word = batch_word(&call);
+    let batch_word = super::portable::batch_word(&call);
     let session_batch = batch(&session)?;
     let asked = asked(&session)?;
     let engine = engines::engine_for(&asked, |path| probe(&session, path))?;
@@ -181,7 +206,7 @@ fn run(
     let texts: Vec<String> = input.0.iter().map(|(_, value)| value.clone()).collect();
     run_detached(stop, move |token| {
         let options = engines::options_for(
-            due(query, call.deadline_ms()),
+            super::portable::due(query, call.deadline_ms()),
             &token,
             total,
             batch_word.as_deref().or(session_batch.as_deref()),
@@ -213,21 +238,7 @@ fn run(
                 .map_err(|error| engines::call_error(error, total).text)?;
             for ((key, _), value) in input.0.iter().zip(answered) {
                 let details = value.value();
-                let (value, probability) = match details.value() {
-                    Judgment::Choice(chosen) => {
-                        let probability = match (chosen, details.probabilities()) {
-                            (Some(name), Probabilities::Named(named)) => named
-                                .iter()
-                                .find(|entry| entry.name() == name)
-                                .map(|entry| entry.probability()),
-                            _ => None,
-                        };
-                        (json!(chosen), probability)
-                    }
-                    Judgment::Score(score) => (json!(score), None),
-                    Judgment::Tags(labels) => (json!(labels), None),
-                    _ => return Err("thinkthen defect: a keyed call returned another kind".into()),
-                };
+                let (value, probability) = row_value(details.value(), details.probabilities())?;
                 rows.push(json!({"key":key,"value":value,"probability":probability}));
             }
         }
@@ -287,14 +298,14 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_many(
         let (_, question, call) = parse(question, from_file != 0, settings, kind)?;
         let input = serde_json::from_str::<Keyed>(keyed)
             .map_err(|error| RowError::usage(&error.to_string()).text)?;
-        run(
+        run(KeyedCall {
             question,
             input,
             call,
-            query_deadline_ms,
+            query: query_deadline_ms,
             session,
             stop,
             kind,
-        )
+        })
     })
 }

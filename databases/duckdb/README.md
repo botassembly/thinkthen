@@ -6,22 +6,23 @@ A loadable DuckDB v1.5.5 extension that puts the `thinkthen` engine behind SQL. 
 
 | SQL | Returns |
 | --- | --- |
-| `thinkthen_decide(question, text)` | `BOOLEAN`; `NULL` is "not sure" |
-| `thinkthen_probability(question, text)` | `DOUBLE`, the yes probability |
-| `thinkthen_choose(question, text, options)` | `VARCHAR`, or `NULL` when the choice is not sure (below the cut or an exact tie) |
-| `thinkthen_find(question, units[, none[, deadline_ms]])` | a struct with original `index`, `value`, `probability` and ordered `(index, probability)` candidates |
-| `thinkthen_score(question, text, levels)` | `DOUBLE`, the position from 0 for the first level |
-| `thinkthen_tag(question, text, labels)` | `VARCHAR[]` |
-| `thinkthen_annotate(set, text)` | `VARCHAR`, the record's values as JSON |
-| `thinkthen_details(question, text)` | the command's `--details` line, as JSON text |
-| `thinkthen_try_details(question, text)` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
-| `thinkthen_recognize(text, kinds)` | a list of `(text, start, end, length, kind, strength)` |
-| `thinkthen_relations(text, file)` | a list of `(relation, source, source_kind, target, target_kind, probability)` |
-| `thinkthen_relate(query, rules)` | a table of `(relation, source, target, probability)`, one row per edge between the query's ids |
-| `thinkthen_warm(question, text[, context])` | an aggregate: asks distinct texts in first-seen order and returns how many |
+| `thinkthen_decide(question, text[, settings])` | `BOOLEAN`; `NULL` is "not sure" |
+| `thinkthen_probability(question, text[, settings])` | `DOUBLE`, the yes probability |
+| `thinkthen_choose(question, text[, options_or_settings[, settings]])` | `VARCHAR`, or `NULL` below the cut or at an exact tie; `options` may be `VARCHAR[]`, and settings are JSON-object `VARCHAR` |
+| `thinkthen_find(question, units[, settings])` | a struct with original `index`, `value`, `probability` and ordered `(index, probability)` candidates |
+| `thinkthen_score(question, text[, levels_or_settings[, settings]])` | `DOUBLE`, the position from 0 for the first level |
+| `thinkthen_tag(question, text[, labels_or_settings[, settings]])` | `VARCHAR[]` |
+| `thinkthen_decide_many` / `thinkthen_choose_many(question, keyed_json[, settings])` | table rows `(key, value, probability)` |
+| `thinkthen_score_many` / `thinkthen_tag_many(question, keyed_json[, settings])` | table rows `(key, value)` |
+| `thinkthen_annotate(set, text[, settings])` | `VARCHAR`, the record's values as JSON |
+| `thinkthen_details(question, text[, settings])` | the command's `--details` line, as JSON text |
+| `thinkthen_try_details(question, text[, settings])` | an answered JSON envelope, or a safe failed envelope for a recoverable row error |
+| `thinkthen_recognize(text, kinds[, settings])` | a list of `(text, start, end, length, kind, strength)` |
+| `thinkthen_relations(text, file[, settings])` | a list of `(relation, source, source_kind, target, target_kind, probability)` |
+| `thinkthen_relate(query, rules[, settings])` | a table of `(relation, source, target, probability)`, one row per edge between the query's ids |
 | `thinkthen_usage()` | rows `(metric, value)` for `requests_sent`, `cache_answers`, `input_tokens`, and `output_tokens` |
 
-`WHERE` and `ORDER BY` provide filter and rank forms. `thinkthen_find` judges one ordered list per call; build a list from rows with `list(unit ORDER BY ordinal)` to preserve caller order. It accepts 2–255 nonblank units, or 2–254 when `none` is true, and at most 16 MiB of unit text. Equal units keep separate original indexes. A selected none has a non-NULL result with NULL `index` and `value`; a top-level SQL NULL or empty list returns SQL NULL without sending. The question is literal text, including text beginning with `@` or looking like JSON. The four C++ target packages have installed find proof; the Intel result is translated macOS 26 proof, with native Intel and macOS 15 release-runner checks still open. Every other scalar except `thinkthen_recognize` also takes a `BIGINT` deadline in milliseconds. On the C++ extension, decide, probability, details and try-details accept a final literal context after that deadline; choose, score and tag accept it after their members and deadline; warm accepts it as its third argument. Use `-1` for no deadline when supplying context. A `NULL` question or text gives a `NULL` row, as do other `NULL` arguments except try-details' optional `NULL` deadline and a `NULL` context, which mean absent. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
+`WHERE` and `ORDER BY` provide filter and rank forms. `thinkthen_find` judges one ordered list per call; build a list from rows with `list(unit ORDER BY ordinal)` to preserve caller order. It accepts 2–255 nonblank units, or 2–254 when `{"none":true}` is in settings, and at most 16 MiB of unit text. Equal units keep separate original indexes. A selected none has a non-NULL result with NULL `index` and `value`; a top-level SQL NULL or empty list returns SQL NULL without sending. The question is literal text, including text beginning with `@` or looking like JSON. The earlier four C++ target packages have installed find proof; the Intel result is translated macOS 26 proof, with native Intel and macOS 15 release-runner checks still open. Call settings are one JSON object: `threshold`, question members, `model`, `batch`, `context`, `deadline_ms`, and find's `none` where the verb permits them. `NULL` settings and `{}` mean no call settings. `deadline_ms` replaces positional deadline and context slots; `-1` means no deadline, and `0` is spent. A `NULL` question or text gives a `NULL` row. A failure is an error whose text starts `thinkthen <kind>: `, with one of the six kinds, and never reads as `NULL`.
 
 A question is plain text, `'@path.json'`, or the question file's JSON. Choose, score, and tag take plain text and put their members in the list. `thinkthen_annotate` takes a question set file or its JSON. `start`, `end`, and `length` count code points, as DuckDB's string indexing does.
 
@@ -32,7 +33,7 @@ SELECT id FROM (
 ) WHERE asks_refund;
 SELECT id, thinkthen_choose('Which team owns this?', body, ['billing', 'shipping']) AS team FROM tickets;
 SELECT best_passage FROM (
-  SELECT thinkthen_find('Which statement matches?', list(body ORDER BY id), TRUE) AS best_passage
+  SELECT thinkthen_find('Which statement matches?', list(body ORDER BY id), '{"none":true}') AS best_passage
   FROM passages
 ) AS judged WHERE best_passage IS NOT NULL;
 ```
@@ -59,13 +60,13 @@ The details digest includes a question's saved calibration `profile`. A differen
 
 `thinkthen_usage()` returns this process's running totals of requests sent, cache answers and tokens.
 
-`thinkthen_try_details` returns `{"status":"answered","details":...}` with the full scalar details object, or `{"status":"failed","error":{"kind":"usage","message":"check the row's question and arguments, or raise the process request total when it is spent","retryable":false}}`. Compatible distinct rows pack under the selected batch setting; a recoverable usage, local, or backend failure affects only its request's members and does not stop later requests. One partly answered reply keeps good and failed members beside each other without another send. SQL NULL question or text returns SQL NULL; a NULL optional deadline means no deadline. Unresolved answers stay answered with JSON `null` in their details. Failed values omit questions, evidence, keys, paths, and backend addresses. Cancellation, deadlines, and defects still stop the statement.
+`thinkthen_try_details` returns `{"status":"answered","details":...}` with the full scalar details object, or `{"status":"failed","error":{"kind":"usage","message":"check the row's question and arguments, or raise the process request total when it is spent","retryable":false}}`. Compatible distinct rows pack under the selected batch setting; a recoverable usage, local, or backend failure affects only its request's members and does not stop later requests. One partly answered reply keeps good and failed members beside each other without another send. SQL NULL question or text returns SQL NULL; NULL settings mean absent. Unresolved answers stay answered with JSON `null` in their details. Failed values omit questions, evidence, keys, paths, and backend addresses. Cancellation, deadlines, and defects still stop the statement.
 
 ## Settings
 
-The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend address or a key. DuckDB reads these caller-session settings before each call, including `thinkthen_warm`:
+The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, and `THINKTHEN_CACHE`. SQL cannot name a backend address or a key. DuckDB reads these caller-session settings before each call:
 
-- `SET thinkthen_batch = 'max'` fills each compatible vector or warm group up to the backend's limits. `SET thinkthen_batch = '1'` restores one distinct text per request and its old no-context wire identity; another positive decimal sets a member cap. `RESET thinkthen_batch` returns to `THINKTHEN_BATCH`, then a loaded question's `batch`, then `max`. Invalid text is refused before transport. A literal nonblank context is shared across one request and changes `meta.context_sha256` and request digests, not the question digest.
+- `SET thinkthen_batch = 'max'` fills each compatible vector group up to the backend's limits. `SET thinkthen_batch = '1'` restores one distinct text per request and its old no-context wire identity; another positive decimal sets a member cap. `RESET thinkthen_batch` returns to `THINKTHEN_BATCH`, then a loaded question's `batch`, then `max`. Invalid text is refused before transport. A literal nonblank context in call settings is shared across one request and changes `meta.context_sha256` and request digests, not the question digest.
 - `SET thinkthen_throttle = N` caps live requests in flight at N, from 1 through 32. Live requests are capped by the active throttle, or by 4 when none is set. The first throttle holds for the life of the process, and a different one reads `thinkthen usage: throttle 8 is already active for this process; use throttle 8 or drop the throttle argument`.
 - `SET thinkthen_max_requests = N` caps one call's requests. One call covers one chunk of at most 2,048 rows, so the cap does not bound a whole query. `sdlc/issues/2026-09-21-the-scalar-bind-surface-is-unusable-on-duckdbs-stable-c-api.md` names the lever.
 - `SET thinkthen_max_request_bytes = N` sets a positive request-byte ceiling for relation plans. `RESET` keeps the environment value. A single unsplittable question still goes alone.
@@ -73,9 +74,9 @@ The engine starts from the environment: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY
 - `SET thinkthen_cache = 'off'` disables answer caching for that session. `RESET thinkthen_cache` restores the environment's cache choice.
 - `SET thinkthen_model = 'name'` names a model for questions that do not name one. `SET thinkthen_timeout = N` bounds each live attempt to a positive whole number of seconds. `SET thinkthen_max_retries = N` permits a whole number of retries from zero upward.
 - `SET thinkthen_profile = '{...}'` applies one inline version-one backend limits profile. `SET thinkthen_record = '/absolute/folder'` writes every exchange. `SET thinkthen_replay = '/absolute/folder'` reads saved exchanges without a send. SQL record and replay folders follow the caller's current file permissions. A replay miss is a local error and sends nothing.
-- `SET thinkthen_max_requests_total = N` caps live sends across all engines, sessions and warm calls in this process. `N` may be zero. Each actual attempt, including a retry or split half, reserves one unit immediately before transport. A spent total reads `thinkthen usage: this process has spent its request total of N; raise SET thinkthen_max_requests_total or RESET it` and sends nothing further. A packed call may fit several rows in one attempt. When a later attempt is denied, `thinkthen_try_details` keeps completed answers at their SQL positions and returns safe failed Usage values for denied or unstarted rows. Ordinary scalar, vector and warm calls still raise. A forked child starts from zero. `thinkthen status` counts only command sends, not SQL sends.
+- `SET thinkthen_max_requests_total = N` caps live sends across all engines and sessions in this process. `N` may be zero. Each actual attempt, including a retry or split half, reserves one unit immediately before transport. A spent total reads `thinkthen usage: this process has spent its request total of N; raise SET thinkthen_max_requests_total or RESET it` and sends nothing further. A packed call may fit several rows in one attempt. When a later attempt is denied, `thinkthen_try_details` keeps completed answers at their SQL positions and returns safe failed Usage values for denied or unstarted rows. Ordinary scalar and vector calls still raise. A forked child starts from zero. `thinkthen status` counts only command sends, not SQL sends.
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Warm and scalar calls in one session share the selected folder and model; another session keeps its own settings.
+The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Vector and keyed calls in one session share the selected folder and model; another session keeps its own settings.
 
 A bad value's `SET` succeeds, since DuckDB has no check step for an extension setting, and the next call refuses it. The refusal uses the setter's own sentence, so a bad `SET` never wraps into an accepted one. The extension keeps at most 16 resident engines, keyed by all settings that affect an engine. A new plan retires the least recently used idle engine and keeps its requests and tokens in the process total. When all 16 plans are held, the new plan refuses: `16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process`.
 
@@ -101,7 +102,7 @@ SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM staff', ['works_for=p
 
 ## Files and access
 
-An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. SQL cache, record and replay folders pass the same check at execution. `thinkthen_warm` reads `'@file'` through the caller's file system, so that database's file settings decide, and it takes a banded question and ignores the band. It takes a decide question only, and any other reads `thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide` before any request. It retains its `'@~'` refusal and refuses while a relate query runs on the database. Warm uses the calling session's settings. An `'@file'` read stops at 1 MiB and reads `thinkthen local: the question file PATH was not read: it holds more than 1 MiB`.
+An `'@file'` question opens through the calling database's own file system, so `enable_external_access`, `allowed_directories`, `allowed_paths`, and `disabled_filesystems` decide every read, and the extension copies none of them. SQL cache, record and replay folders pass the same check at execution. `thinkthen_warm` now refuses with `thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many`, without sending. An `'@file'` read stops at 1 MiB and reads `thinkthen local: the question file PATH was not read: it holds more than 1 MiB`.
 
 ## Interrupts
 

@@ -230,7 +230,7 @@ FIND_RESULTS = {
 def find(case: dict, base: str, backend: Backend) -> dict:
     question = case["question"]
     sql = (f"SELECT thinkthen_find({quoted(question['find'])}, list(x ORDER BY i), "
-           f"{str(question.get('none', False)).upper()}) FROM {values(question['units'])}")
+           f"{quoted(json.dumps({'none': question.get('none', False)}))}) FROM {values(question['units'])}")
     result = rows(run([sql], base)[0])[0][0]
     observed = backend.capture()
     expect(len(observed), 1, "one captured find body")

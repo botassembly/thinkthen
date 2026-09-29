@@ -76,7 +76,7 @@ pub(super) fn decide(
     Ok((question, settings))
 }
 
-fn batch_word(settings: &Settings) -> Option<String> {
+pub(super) fn batch_word(settings: &Settings) -> Option<String> {
     if settings.batch_max() {
         Some("max".to_owned())
     } else {
@@ -84,7 +84,7 @@ fn batch_word(settings: &Settings) -> Option<String> {
     }
 }
 
-fn due(query: i64, call: Option<i64>) -> i64 {
+pub(super) fn due(query: i64, call: Option<i64>) -> i64 {
     match call {
         None | Some(-1) => query,
         Some(value) if query < 0 => value,

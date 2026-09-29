@@ -49,22 +49,6 @@ fn prepare(
     Ok((question, call))
 }
 
-fn batch_word(settings: &Settings) -> Option<String> {
-    if settings.batch_max() {
-        Some("max".into())
-    } else {
-        settings.batch_records().map(|value| value.to_string())
-    }
-}
-
-fn due(query: i64, call: Option<i64>) -> i64 {
-    match call {
-        None | Some(-1) => query,
-        Some(value) if query < 0 => value,
-        Some(value) => query.min(value),
-    }
-}
-
 /// Check listed question, settings and member conversion before any send.
 ///
 /// # Safety
@@ -122,14 +106,14 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_listed_group(
         };
         let texts = copied_texts(texts, count)?;
         let session_batch = batch(&session)?;
-        let batch = batch_word(&call);
+        let batch = super::portable::batch_word(&call);
         let asked = asked(&session)?;
         let engine = engines::engine_for(&asked, |path| probe(&session, path))?;
         let total = asked.max_requests_total;
         let context = call.context().map(str::to_owned);
         run_detached(stop, move |token| {
             let options = engines::options_for(
-                due(query_deadline_ms, call.deadline_ms()),
+                super::portable::due(query_deadline_ms, call.deadline_ms()),
                 &token,
                 total,
                 batch.as_deref().or(session_batch.as_deref()),

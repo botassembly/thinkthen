@@ -38,6 +38,23 @@ def relate_from_rows_maps_each_entity_back_to_its_ids():
 
 
 @case
+def relate_accepts_settings_and_refuses_find_only_key_before_query():
+    with Backend() as backend:
+        got = run([
+            TABLE,
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], '{\"model\":\"jev-1.13.0\"}') ORDER BY ALL",
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], '{\"none\":true}') ORDER BY ALL",
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], NULL) ORDER BY ALL",
+            "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', ['works_for=person:organization'], '{\"deadline_ms\":0}') ORDER BY ALL",
+        ], backend.base())
+        expect(rows(got[1]), EDGES, "settings result")
+        expect(said(got[2]).startswith("thinkthen usage:"), True, "find-only key refused")
+        expect(rows(got[3]), EDGES, "NULL settings use the prior route")
+        expect(said(got[4]).startswith("thinkthen deadline:"), True, "spent call deadline")
+        expect(backend.count(), 1, "only the valid request identity sends")
+
+
+@case
 def rules_read_as_inline_json_or_a_file():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         spec = '{"version": 1, "relate": {"relations": [{"name": "works_for", "source": "person", "target": "organization"}]}}'

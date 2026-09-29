@@ -32,6 +32,7 @@ Rules ReadRules(ClientContext &context, const Value &value) {
 		throw InvalidInputException("thinkthen usage: the relate rules are NULL or hold a NULL rule");
 	}
 	Rules rules;
+	string call_settings;
 	if (value.type().id() == LogicalTypeId::LIST) {
 		rules.list = true;
 		for (auto &member : ListValue::GetChildren(value)) {
@@ -62,6 +63,7 @@ struct RelateBind : FunctionData {
 	string query;
 	Value rule_input;
 	Rules rules;
+	string call_settings;
 	SessionSettings settings;
 	std::optional<string> search_path;
 	uint64_t seconds = 60;
@@ -72,7 +74,8 @@ struct RelateBind : FunctionData {
 	bool Equals(const FunctionData &other) const override {
 		auto &value = other.Cast<RelateBind>();
 		return context.lock() == value.context.lock() && query == value.query && rules.text == value.rules.text &&
-		       rules.members == value.rules.members && seconds == value.seconds && holding == value.holding;
+		       rules.members == value.rules.members && call_settings == value.call_settings &&
+		       seconds == value.seconds && holding == value.holding;
 	}
 };
 
@@ -83,7 +86,7 @@ unique_ptr<FunctionData> BindRelate(ClientContext &context, TableFunctionBindInp
 	auto bound = make_uniq<RelateBind>();
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	bound->context = context.shared_from_this();
-	if (input.inputs.size() != 2 || input.inputs[0].IsNull()) {
+	if ((input.inputs.size() != 2 && input.inputs.size() != 3) || input.inputs[0].IsNull()) {
 		throw InvalidInputException("thinkthen usage: the relate query is NULL or blank");
 	}
 	bound->query = input.inputs[0].GetValue<string>();
@@ -92,6 +95,8 @@ unique_ptr<FunctionData> BindRelate(ClientContext &context, TableFunctionBindInp
 	}
 	bound->rule_input = input.inputs[1];
 	bound->rules = ReadRules(context, bound->rule_input);
+	bound->call_settings = input.inputs.size() == 3 && !input.inputs[2].IsNull()
+	                           ? input.inputs[2].GetValue<string>() : string("{}");
 	bound->seconds = CountSetting(context, "thinkthen_relate_seconds", 60,
 	                              "a relate time limit is a whole number of seconds, 0 for none");
 	bound->holding = CountSetting(context, "thinkthen_relate_holding_rows", 1000000,
@@ -107,6 +112,8 @@ unique_ptr<FunctionData> BindRelate(ClientContext &context, TableFunctionBindInp
 	RustReply validated(thinkthen_cpp_relate_validate(reinterpret_cast<const uint8_t *>(bound->rules.text.data()),
 	                                                  bound->rules.text.size(), members.data(), members.size(),
 	                                                  bound->rules.list ? 1 : 0, bound->rules.from_file ? 1 : 0,
+	                                                  reinterpret_cast<const uint8_t *>(bound->call_settings.data()),
+	                                                  bound->call_settings.size(),
 	                                                  bound->settings.Bridge()));
 	Checked(validated.value);
 	if (!validated.value.bytes || validated.value.len != 1) {
@@ -185,7 +192,9 @@ vector<RelateRow> Answer(const RelateBind &bound, ClientContext &context, Relate
 	RustReply reply(thinkthen_cpp_relate_rows(reinterpret_cast<const uint8_t *>(bound.rules.text.data()), bound.rules.text.size(),
 	                                       members.data(), members.size(), bound.rules.list ? 1 : 0,
 	                                       bound.rules.from_file ? 1 : 0, id_bytes.data(), name_bytes.data(),
-	                                       kind_bytes.data(), ids.size(), found.remaining_ms, bound.settings.Bridge(), StopFor(context)));
+	                                       kind_bytes.data(), ids.size(), found.remaining_ms,
+	                                       reinterpret_cast<const uint8_t *>(bound.call_settings.data()),
+	                                       bound.call_settings.size(), bound.settings.Bridge(), StopFor(context)));
 	Checked(reply.value);
 	if (!reply.value.bytes) { throw InvalidInputException("thinkthen defect: empty relate reply"); }
 	Reader read(reply.value.bytes, reply.value.len);
@@ -212,6 +221,8 @@ void ScanRelate(ClientContext &context, TableFunctionInput &input, DataChunk &ou
 		RustReply validated(thinkthen_cpp_relate_validate(reinterpret_cast<const uint8_t *>(current.rules.text.data()),
 		                                                  current.rules.text.size(), members.data(), members.size(),
 		                                                  current.rules.list ? 1 : 0, current.rules.from_file ? 1 : 0,
+		                                                  reinterpret_cast<const uint8_t *>(current.call_settings.data()),
+		                                                  current.call_settings.size(),
 		                                                  current.settings.Bridge()));
 		Checked(validated.value);
 		if (!validated.value.bytes || validated.value.len != 1) {
@@ -251,6 +262,9 @@ void RegisterRelate(ExtensionLoader &loader) {
 	config.AddExtensionOption("thinkthen_relate_holding_rows", "Relate plan holding-row limit", LogicalType::BIGINT);
 	TableFunction function("thinkthen_relate", {LogicalType::VARCHAR, LogicalType::ANY}, ScanRelate, BindRelate, InitRelate);
 	loader.RegisterFunction(function);
+	TableFunction with_settings("thinkthen_relate", {LogicalType::VARCHAR, LogicalType::ANY,
+	                                               LogicalType::VARCHAR}, ScanRelate, BindRelate, InitRelate);
+	loader.RegisterFunction(with_settings);
 }
 
 } // namespace duckdb
