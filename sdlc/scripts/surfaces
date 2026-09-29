@@ -4,8 +4,8 @@
 # toolchain, and the rung reports it as not run, never as a pass.
 #
 # `surfaces --registry` is the cheap check `lint` runs. Every landed
-# surface has a check.sh, a ratchet that holds, and a lock `cargo deny`
-# accepts, and every binding folder is a landed surface.
+# surface has a check.sh and a ratchet that holds. Cargo surfaces also pass
+# `cargo deny`; the named non-Cargo package manifests are checked separately.
 set -eu
 
 # `surfaces --release` counts a check that reports "not run" as a failure (ticket 0128).
@@ -52,7 +52,16 @@ feature() {
 
 # A binding's manifest sits in its folder, or in the crate folder a third field names.
 manifest() {
+	case $2 in
+		libraries/php) printf '%s\n' 'libraries/php/composer.json'; return ;;
+		libraries/csharp) printf '%s\n' 'libraries/csharp/ThinkThen.csproj'; return ;;
+		libraries/jvm) printf '%s\n' 'libraries/jvm/pom.xml'; return ;;
+	esac
 	awk -v at="$2" '!/^#/ && $1 == at { print $1 "/" (NF == 3 ? $3 "/" : "") "Cargo.toml" }' "$1"
+}
+
+noncargo() {
+	case $1 in libraries/php|libraries/csharp|libraries/jvm) return 0 ;; *) return 1 ;; esac
 }
 
 registry() {
@@ -62,12 +71,16 @@ registry() {
 		status=1
 	fi
 	for surface in $(landed "$1"); do
+		if noncargo "$surface" && [ "$(awk -v at="$surface" '$1 == at { print NF }' "$1")" -ne 2 ]; then
+			printf 'surfaces: %s non-Cargo entry cannot name a crate folder\n' "$surface" >&2
+			status=1
+		fi
 		if [ ! -f "$surface/check.sh" ]; then
 			printf 'surfaces: %s is landed and has no check.sh\n' "$surface" >&2
 			status=1
 		fi
 		if [ ! -f "$(manifest "$1" "$surface")" ]; then
-			printf 'surfaces: %s is landed and its line names no Cargo.toml\n' "$surface" >&2
+			printf 'surfaces: %s is landed and has no named package manifest\n' "$surface" >&2
 			status=1
 		fi
 	done
@@ -94,6 +107,16 @@ if [ "$registry_only" -eq 1 ]; then
 	{ cat sdlc/surfaces.txt; echo 'libraries/planted landed'; } >"$planted"
 	if registry "$planted" 2>/dev/null; then
 		echo 'surfaces: the registry check passed a landed surface with no check.sh' >&2
+		exit 1
+	fi
+	sed 's|^libraries/csharp  *landed$|libraries/csharp landed src|' sdlc/surfaces.txt >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed a non-Cargo surface with a crate-folder override' >&2
+		exit 1
+	fi
+	sed 's|^libraries/php  *landed$|libraries/php landed src|' sdlc/surfaces.txt >"$planted"
+	if registry "$planted" 2>/dev/null; then
+		echo 'surfaces: the registry check passed PHP with a crate-folder override' >&2
 		exit 1
 	fi
 	# R's crate sits inside its R package. A line without its crate folder fails.
@@ -127,8 +150,10 @@ if [ "$registry_only" -eq 1 ]; then
 		# A binding's own deny.toml, which policy.py checks, replaces the root file.
 		deny=deny.toml
 		if [ -f "$surface/deny.toml" ]; then deny="$surface/deny.toml"; fi
-		cargo deny --offline --manifest-path "$(manifest sdlc/surfaces.txt "$surface")" check --config "$deny" \
-			advisories bans licenses sources
+		if ! noncargo "$surface"; then
+			cargo deny --offline --manifest-path "$(manifest sdlc/surfaces.txt "$surface")" check --config "$deny" \
+				advisories bans licenses sources
+		fi
 	done
 	# The release rule over 0, 77, and 1 in both modes, with the exact lines.
 	got=$(for m in plain release; do for c in 0 77 1; do if verdict "$m" planted "$c"; then echo '-> 0'; else echo '-> 1'; fi; done; done)

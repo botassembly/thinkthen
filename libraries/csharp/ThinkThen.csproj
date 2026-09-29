@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <PackageId>Botassembly.ThinkThen</PackageId>
+    <Version>0.0.1</Version>
+    <Authors>ThinkThen contributors</Authors>
+    <Description>Linux C ABI facade; install matching native archive separately</Description>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeSymbols>false</IncludeSymbols>
+    <DebugType>none</DebugType>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <ItemGroup><Compile Include="src/ThinkThen.cs"/><None Include="LICENSE" Pack="true" PackagePath="/"/><None Include="README.md" Pack="true" PackagePath="/"/></ItemGroup>
+</Project>

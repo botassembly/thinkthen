@@ -50,7 +50,7 @@ It prints `true`. `demos/27-test-with-no-network` shows how a test replays a rec
 
 ## Languages and bindings
 
-The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R each have a native Rust adapter. C exposes a separate C API. The database extensions call the engine inside their hosts. Each linked README shows how to use that binding from source.
+The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R each have a native Rust adapter. C exposes a separate C API. PHP, C#, JVM, and Dart bindings call that C library. The database extensions call the engine inside their hosts. Each linked README shows how to use that binding from source.
 
 | Language or surface | What it is | README |
 | --- | --- | --- |
@@ -60,6 +60,9 @@ The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R ea
 | Ruby | a Ruby binding with a native extension | [libraries/ruby](libraries/ruby/README.md) |
 | R | the package | [libraries/r](libraries/r/README.md) |
 | C | a header and a library for C callers | [libraries/c](libraries/c/README.md) |
+| PHP | an FFI binding that loads the separately installed C library | [libraries/php](libraries/php/README.md) |
+| C# | a .NET 8 wrapper with a separate native library | [libraries/csharp](libraries/csharp/README.md) |
+| Java, Kotlin, Scala | three JVM JARs with a separate native library | [libraries/jvm](libraries/jvm/README.md) |
 | Dart and Flutter | a Dart FFI package and a Linux Flutter consumer | [libraries/dart](libraries/dart/README.md) |
 | Polars | the Rust feature | [libraries/polars](libraries/polars/README.md) |
 | DuckDB | the extension | [databases/duckdb](databases/duckdb/README.md) |

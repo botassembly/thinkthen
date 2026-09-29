@@ -27,3 +27,7 @@ The C header now exports twenty-one symbols at recent pins: `thinkthen_error_fac
 ## Pre-merge re-pin (2026-09-28, pin 71f25087)
 
 ADAPTED-PASS (packing, envelope, 48->40; FFI deprecation noted for J8). Evidence: local experiment's `repin-71f25087-REPORT.md` with the unchanged-gate FAIL preserved as drift record, exact new multisets, and all planted negatives. Contract changes consolidated in `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`; merge input and steps in `2026-09-28-language-merge-runbook.md`.
+
+## Product source integration candidate (2026-09-28)
+
+Ticket 0249's PHP candidate is in `libraries/php/`; [preflight](../records/0249-php-preflight.md) and [build proof](../records/0249-php-build.md) name its current-source gate and remaining review. This does not close the issue. The final release pin, `ubuntu-24.04` build/release path, native archives, and Packagist/direct distribution remain explicit release criteria. The local Linux x86_64 source gate does not claim other hosts or PHP-driven in-flight cancellation.
