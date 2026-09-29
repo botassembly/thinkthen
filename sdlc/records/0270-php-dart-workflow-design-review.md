@@ -1,6 +1,6 @@
 # 0270 PHP/Dart workflow design review
 
-The fresh independent Medium reviewer accepted candidate `ed4e3eb9` after two corrections. The coordinator approves this bounded design within the existing language release outcome. Implementation waits for landed 0269 static wiring and a main lane claim. SQL and DataFrame work, the combined build and installed workflow execution remain held.
+The fresh independent Medium reviewer accepted candidate `ed4e3eb9` after two corrections. The coordinator approves this bounded design within the existing language release outcome. Shared workflow and packer implementation waits for landed 0269 static wiring and a main lane claim. The independent PHP/Dart selector changes may proceed in their own claimed files while 0269 runs. This changes scheduling only: the reviewed behavior and proof limits remain, and fresh code review is still required. SQL and DataFrame work, the combined build and installed workflow execution remain held.
 
 The first candidate promised to check every collected file while extending only a selected-language-family gate. The accepted design checks every selected Go/C++/Swift/Zig/PHP/Dart entry and retains the exact four nonlinked platform folders. Unrelated legacy files retain their existing rules. This corrects the claim without creating another inventory or widening the ticket.
 
