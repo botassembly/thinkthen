@@ -1,6 +1,6 @@
 # 0260 Ada, GNU Objective-C and COBOL host proof
 
-Status: candidate for fresh independent code review. This is a three-package checkpoint under accepted design `f68d9496`, not completion of register 64. It adds focused callers, controllers, checker registration and measured fixture ratchets. Product bindings, C ABI and runtime request construction did not change.
+Status: fresh independent code review accepted `61caadaa`; integrated at main `69518282`. This is a three-package checkpoint under accepted design `f68d9496`, not completion of register 64. It adds focused callers, controllers, checker registration and measured fixture ratchets. Product bindings, C ABI and runtime request construction did not change.
 
 ## Public routes and limits
 
