@@ -60,7 +60,7 @@ A file that holds none of `decide`, `choose`, `tag`, and `score` is refused, and
 
 The question text under the verb's key is a string, an object, or a list. A string that is empty or holds only white space is refused. An object or a list is the instruction the vendor asked for; the tool carries it and never rewrites it into a sentence. An empty object and an empty list are values, not absence. A null, a number, or a boolean is not question text. The same holds wherever this page says TEXT.
 
-`true` and `false` take a string, an object, a list, or `null`. A `null` written in the file is a present criterion, not an absent key. A string that is empty or holds only white space is refused.
+`true` and `false` take a string, an object, a list, or `null`. A `null` written in the file remains a present criterion in the parsed question and its canonical digest, not an absent input key. The System One encoder omits that null description from `noul` wire criteria; it sends only non-null descriptions. A string that is empty or holds only white space is refused.
 
 `options` and `labels` are lists, or maps from each label to its description. A description is a string, an object, a list, or `null`. A label with no description is written as a list entry, or as a map entry whose value is `null`. A description that is `null`, empty, or holds only white space is no description.
 

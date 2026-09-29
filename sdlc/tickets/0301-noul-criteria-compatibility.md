@@ -42,4 +42,6 @@ After local review, the issue's hosted done condition still needs one separately
 
 ## What the build taught us
 
-Complete after implementation. Record exact changed request identities, retained recordings, focused checks and any mismatch between the saved experiment report and a later hosted result.
+The shared encoder now filters only `Json::Null` noul descriptions for both Decide and expanded Tag. The five-row serializer table replaced the older structured-criteria test; a separate identity case proves that explicit-null and absent-side inputs keep different canonical question digests while producing identical request bytes and exchange digests at one URL. No test-only hook was added. The existing structured-file and check listeners prove the public request, four observed sends and exact plan totals. R's rebuilt source package and TypeScript's rebuilt addon pass their selected host assertions against the same encoder. Choice and score null checks remain distinct and unchanged.
+
+The new explicit-null wire body has a different request digest from its former null-bearing body and can match an existing absent-side cache entry. Old recordings were neither rewritten nor relabeled. The 13-byte check-body reduction produces the measured 1,568-byte, 809–1,424-token plan. Local loopback proofs do not establish hosted Liquid acceptance; the issue's separate bounded provider check remains open. No other tests were deleted or consolidated because the core serializer, structured CLI, observed transport, and host package assertions guard different boundaries.
