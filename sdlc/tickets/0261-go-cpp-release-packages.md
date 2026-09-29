@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdl
 
 # 0261: Pack Go and C++ source with one matching C archive
 
-Status: design candidate from main `3a1a23d9`; no executable edit or release qualification has run. The coordinator reserved 0261 and claimed this ticket and its preflight for fresh design review. Owner: Codex.
+Status: fresh independent design review accepted corrected candidate `5100be18`; the coordinator approved implementation and pushed its exact claim at main `26d17115`. No executable edit or release qualification had run at design acceptance. Owner: Codex.
 
 ## Outcome and retained behavior
 
@@ -17,6 +17,8 @@ Use the existing `release-pack` archive/checksum helpers, `release-smoke` file s
 ## File and identity contract
 
 `release-pack TARGET OUT c go cpp` is the explicit pilot route. It builds `part_c` once in non-reuse mode and requires that part in the same invocation before either wrapper part. Keep the existing default part list and `--reuse` behavior for established surfaces; `--reuse` refuses Go/C++ parts until a later reviewed source receipt can establish freshness of reused C bytes. A preexisting file in OUT cannot satisfy the pilot's C prerequisite. Require a clean committed tree for the same-source claim and record `git rev-parse HEAD`, host target, versions, tool versions, build command and all three outer hashes. The C build includes engine dependencies; comparing only the header or `libraries/c/` cannot establish the archive's source pin.
+
+The final evidence commit follows the package build. The preflight therefore accepts the manifest's commit as a known ancestor only when every tracked change since it is confined to this ticket and its 0261 records, and the checkout is clean. This permits record-only descendants without treating a changed engine, wrapper, packer, README or other built input as the same source. The manifest still names one exact source commit; ancestry by itself never proves source freshness.
 
 Name the new files `thinkthen-go-$V-$TARGET.tar.gz` and `thinkthen-cpp-$V-$TARGET.tar.gz` beside the existing `thinkthen-c-$V-$TARGET.tar.gz`, each with the packer's adjacent `.sha256`. The Go archive contains the integrated `LICENSE`, `README.md`, `go.mod`, `thinkthen.go`, its two public-package test files and `examples/decide/main.go`. The C++ archive contains the integrated `LICENSE`, `README.md`, `CMakeLists.txt`, `cmake/ThinkThenCppConfig.cmake.in`, `include/thinkthen/{door,json}.hpp`. Curated gate fixtures stay in the checkout and are copied only into isolated test scratch. Each wrapper archive adds a small strict text manifest with the source commit, target, version, C archive basename and SHA-256. The packer computes this from the C file just made in the same invocation; it never accepts a caller-supplied digest. The private `sdlc/scripts/release-go-cpp-pair DIR` preflight derives `$V` and `$TARGET` from the checked checkout and host. It verifies every outer `.sha256`, the exact manifest fields, equal Go/C++ source commit and C digest, and the SHA-256 of the actual C archive before unpacking a consumer. It reads manifest bytes as fixed data, never sources or evaluates them. It rejects duplicate or malformed manifests and wrong target/version. The actual `release-smoke DIR` calls this same preflight once before it starts either wrapper consumer. This binds package files together; it is not a cryptographic signature or a runtime ABI handshake. Source provenance comes from the clean-commit build receipt and reviewed commands.
 

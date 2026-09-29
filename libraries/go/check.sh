@@ -31,6 +31,18 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     exec "$flock_bin" -w 180 -o "$lock" /bin/sh "$repo/libraries/go/check.sh" "$@"
 fi
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    [ -n "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'go: missing C archive' >&2; exit 1; }
+    . "$repo/sdlc/scripts/scratch.sh"
+    . "$repo/sdlc/scripts/installed.sh"
+    installed_unpack
+    wrapper=$scratch
+    THINKTHEN_ARTIFACT=$THINKTHEN_C_ARTIFACT
+    installed_unpack
+    native=$scratch
+    "$python_bin" fixtures/installed_release.py "$wrapper" "$native"
+    exit
+fi
 out=$repo/target/go
 mkdir -p "$out/native/include" "$out/native/lib/pkgconfig" "$out/cache" "$out/modcache" "$out/consumers"
 node "$repo/sdlc/scripts/ratchet.mjs" ratchet.go.json

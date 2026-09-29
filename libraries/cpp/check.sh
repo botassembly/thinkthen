@@ -29,6 +29,18 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     exec "$flock_bin" -w 180 -o "$lock" /bin/sh "$repo/libraries/cpp/check.sh" "$@"
 fi
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
+if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
+    [ -n "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'cpp: missing C archive' >&2; exit 1; }
+    . "$repo/sdlc/scripts/scratch.sh"
+    . "$repo/sdlc/scripts/installed.sh"
+    installed_unpack
+    wrapper=$scratch
+    THINKTHEN_ARTIFACT=$THINKTHEN_C_ARTIFACT
+    installed_unpack
+    native=$scratch
+    "$python_bin" fixtures/installed_release.py "$wrapper" "$native"
+    exit
+fi
 out=$repo/target/cpp
 mkdir -p "$out/logs" "$out/guard-plant" "$out/consumer-source" \
     "$out/fixture-root/specification/fixtures/types"

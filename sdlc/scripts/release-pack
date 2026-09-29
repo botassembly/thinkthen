@@ -19,6 +19,15 @@ cd -- "$REPO"
 host=$(rustc -vV | sed -n 's/^host: //p')
 [ "$TARGET" = "$host" ] || { echo "release-pack: $TARGET is not this host's target, $host" >&2; exit 2; }
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+source_commit=$(git rev-parse HEAD)
+c_built=
+case " $* " in
+*' go '* | *' cpp '*)
+	[ -z "$reuse" ] || { echo 'release-pack: Go/C++ need a fresh C build, not --reuse' >&2; exit 1; }
+	[ -z "$(git status --porcelain)" ] || { echo 'release-pack: Go/C++ need a clean committed tree' >&2; exit 1; }
+	case " $* " in *' c '*) ;; *) echo 'release-pack: Go/C++ need c in this invocation' >&2; exit 1 ;; esac
+	;;
+esac
 case $TARGET in
 *-apple-darwin) dl=dylib command_target=$TARGET ;;
 *-linux-gnu) dl=so command_target=${TARGET%-gnu}-musl ;;
@@ -94,7 +103,35 @@ part_c() {
 		Cflags: -I\${includedir}
 	EOF
 	pack "thinkthen-c-$V-$TARGET.tar.gz" "$folder"
+	[ -n "$reuse" ] || c_built=1
 }
+
+part_source_wrapper() {
+	[ "$c_built" = 1 ] || { echo "release-pack: $1 needs c built earlier in this invocation" >&2; exit 1; }
+	c_name=thinkthen-c-$V-$TARGET.tar.gz
+	[ -f "$OUT/$c_name" ] || { echo 'release-pack: C archive is missing' >&2; exit 1; }
+	c_digest=$(sha256 "$OUT/$c_name" | awk '{print $1}')
+	folder=$(fresh "$1")
+	case $1 in
+	go)
+		mkdir -p "$folder/examples/decide"
+		cp libraries/go/LICENSE libraries/go/README.md libraries/go/go.mod \
+			libraries/go/thinkthen.go libraries/go/thinkthen_test.go libraries/go/recovery_test.go "$folder/"
+		cp libraries/go/examples/decide/main.go "$folder/examples/decide/"
+		;;
+	cpp)
+		mkdir -p "$folder/cmake" "$folder/include/thinkthen"
+		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
+		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
+		cp libraries/cpp/include/thinkthen/door.hpp libraries/cpp/include/thinkthen/json.hpp "$folder/include/thinkthen/"
+		;;
+	esac
+	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
+		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
+	pack "thinkthen-$1-$V-$TARGET.tar.gz" "$folder"
+}
+part_go() { part_source_wrapper go; }
+part_cpp() { part_source_wrapper cpp; }
 
 part_sqlite() {
 	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
@@ -183,7 +220,7 @@ part_first_run() {
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
 for part in "$@"; do
 	case $part in
-	command | c | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	command | c | go | cpp | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac

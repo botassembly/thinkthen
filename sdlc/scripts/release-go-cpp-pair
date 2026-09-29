@@ -1,0 +1,59 @@
+#!/bin/sh
+# Validate one Go/C++ source pair against the C archive that built with it.
+# This private preflight is also called by release-smoke before either consumer.
+set -eu
+[ "$#" -eq 1 ] && [ -d "$1" ] || { echo 'release-go-cpp-pair: DIR required' >&2; exit 2; }
+dir=$(CDPATH='' cd -- "$1" && pwd)
+repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+cd -- "$repo"
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
+target=$(rustc -vV | sed -n 's/^host: //p')
+source_commit=
+. "$repo/sdlc/scripts/scratch.sh"
+scratch_dir work
+c=thinkthen-c-$version-$target.tar.gz
+go=thinkthen-go-$version-$target.tar.gz
+cpp=thinkthen-cpp-$version-$target.tar.gz
+fail() { echo "release-go-cpp-pair: $*" >&2; exit 1; }
+sha256() { if command -v sha256sum >/dev/null 2>&1; then sha256sum "$@"; else shasum -a 256 "$@"; fi; }
+
+# A different version/target is an extra member, not an alternative match.
+for file in "$dir"/*; do
+	[ -e "$file" ] || [ -L "$file" ] || continue
+	name=${file##*/}
+	case $name in
+	thinkthen-c-*.tar.gz | thinkthen-go-*.tar.gz | thinkthen-cpp-*.tar.gz | \
+	thinkthen-c-*.tar.gz.sha256 | thinkthen-go-*.tar.gz.sha256 | thinkthen-cpp-*.tar.gz.sha256)
+		case $name in "$c" | "$go" | "$cpp" | "$c.sha256" | "$go.sha256" | "$cpp.sha256") ;; *) fail "extra family entry $name" ;; esac ;;
+	esac
+done
+for name in "$c" "$go" "$cpp"; do
+	[ -f "$dir/$name" ] && [ ! -L "$dir/$name" ] || fail "missing or linked $name"
+	[ -f "$dir/$name.sha256" ] && [ ! -L "$dir/$name.sha256" ] || fail "missing or linked $name.sha256"
+	digest=$(sha256 "$dir/$name" | awk '{print $1}')
+	[ "$(cat "$dir/$name.sha256")" = "$digest  $name" ] || fail "checksum differs for $name"
+done
+c_digest=$(sha256 "$dir/$c" | awk '{print $1}')
+for name in "$go" "$cpp"; do
+	members=$(tar -tzf "$dir/$name") || fail "cannot list $name"
+	[ "$(printf '%s\n' "$members" | grep -xc './THINKTHEN-PACKAGE-INPUTS' || true)" = 1 ] || fail "manifest count differs for $name"
+	tar -xOzf "$dir/$name" ./THINKTHEN-PACKAGE-INPUTS >"$work/actual" || fail "cannot read manifest in $name"
+	manifest_commit=$(sed -n 's/^source_commit=//p' "$work/actual")
+	if [ -z "$source_commit" ]; then
+		printf '%s\n' "$manifest_commit" | grep -Eq '^[0-9a-f]{40}$' || fail "invalid source commit in $name"
+		git cat-file -e "$manifest_commit^{commit}" 2>/dev/null || fail "unknown source commit in $name"
+		git merge-base --is-ancestor "$manifest_commit" HEAD || fail "source commit is not an ancestor of checkout HEAD"
+		[ -z "$(git status --porcelain)" ] || fail 'checkout has uncommitted changes'
+		git diff --name-only "$manifest_commit" HEAD | while IFS= read -r changed; do
+			case $changed in
+			sdlc/tickets/0261-go-cpp-release-packages.md | sdlc/records/0261-go-cpp-release-*.md) ;;
+			*) fail "checkout changed built input since $manifest_commit: $changed" ;;
+			esac
+		done
+		source_commit=$manifest_commit
+	fi
+	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
+		"$source_commit" "$target" "$version" "$c" "$c_digest" >"$work/expected"
+	cmp -s "$work/actual" "$work/expected" || fail "C identity or manifest differs for $name"
+done
+echo 'release-go-cpp-pair: pass'
