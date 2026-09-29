@@ -1,6 +1,6 @@
 # Documentation plan
 
-Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. Accepted ticket 0088 added page 45 for the new `relate` command. This page holds the list. Each line names the number, the task, the slice or ticket that turns it green, and its state. A demo number is a folder under `demos/`. New numbers are reserved here and get a folder when their slice starts.
+Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. Later tickets added focused pages, including page 45 for `relate`, page 46 for cache inventory and page 47 for a two-call question. This page holds the list. Each line names the number, the task, the slice or ticket that turns it green, and its state. A demo number is a folder under `demos/`. New numbers are reserved here and get a folder when their slice starts.
 
 The published documentation has three kinds of page. How-tos are the green demos. Reference is `specification/`, with its executable examples in `spec/`. The README is the one tutorial and the one explanation. Nothing is written twice.
 
@@ -33,6 +33,7 @@ ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting
 | 17 | Route a request by how hard it is | 5, rewritten by 0018 | green |
 | 21 | Choose the next action from a list that changes at every step | 7, rewritten by 0018 | green |
 | 41 | Tune a question file and use the same file in the gate | 7b | green |
+| 47 | Split a chained question into two calls | Quick Fix 2026-09-28 | green |
 
 ## Many records
 

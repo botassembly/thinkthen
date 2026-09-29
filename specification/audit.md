@@ -11,6 +11,8 @@ thinkthen decide 'Is it red?' --jsonl --details --replay runs/red < records.json
 thinkthen audit results.jsonl key.jsonl --threshold 0.4 --table
 ```
 
+Before tuning the wording of a question that chains two facts, compare its saved final answers with a host pipeline that asks the two facts separately and passes the first answer into the second call. Audit both final-answer sets against the same key, and count an unresolved first hop in the full cohort even when it produces no second-hop result row. [The replayable two-call how-to](../demos/47-split-a-chained-question/) shows the handoff and review branch. In its measured cohort the direct question got 22 of 60 right; the pipeline got 51 of 59 completed second hops, or 51 of 60 when the one tied first hop counts as wrong. Matching cached second-hop requests reduced sends in that saved run, but a cold run has no equal-cost promise.
+
 ## Command line
 
 ```text
