@@ -31,6 +31,12 @@ pub(crate) enum Command {
     /// it completes without a partial or whole-run failure. The printed
     /// values carry the individual answers.
     ///
+    /// Examples:
+    ///
+    /// printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?'
+    ///
+    /// printf 'Refund me please.' | thinkthen decide 'Does this ask for a refund?' --threshold 0.1:0.9 --details
+    ///
     /// The answer is a bare `true`, `false`, or `null`. The exit code is 0 for
     /// yes, 1 for no, 3 for not sure, and any other code when the run is broken
     /// or interrupted. Under `set -e` or `set -o pipefail` a no or not sure
@@ -58,8 +64,8 @@ pub(crate) enum Command {
     /// that reach `--threshold` in input order. Line and JSONL records return
     /// as they arrived; CSV and TSV records become compact JSON objects. With no
     /// framing flag it reads lines, or JSON Lines when a pointer is given by
-    /// --field or a question file's `on`. It makes one paid request for every
-    /// record.
+    /// --field or a question file's `on`. Records share requests by default;
+    /// --batch 1 asks one record per request.
     ///
     /// A single cut keeps or drops, and there is no third pile. A run that
     /// wants one asks `decide --details` and splits with `jq`:

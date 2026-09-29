@@ -382,6 +382,12 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     }
 
     let long = String::from_utf8_lossy(&long.stdout);
+    let examples = long.split("The answer is a bare").next().unwrap_or("");
+    assert!(
+        examples.contains("printf 'Refund me please.' | thinkthen decide")
+            && examples.contains("--threshold 0.1:0.9 --details"),
+        "{long}"
+    );
     for option in [
         "--threshold",
         "--quiet",
@@ -400,9 +406,6 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     for gone in ["--adapter", "--key-env", "--config"] {
         assert!(!long.contains(gone), "{gone} is still in {long}");
     }
-    // The help states the model a run defaults to, and the adapter owns that
-    // value. Reading it from the constant fails this case if the copy in the
-    // help rots, which is the one place the default model is written twice.
     assert!(
         long.contains(&format!("[default: {DEFAULT_MODEL}]")),
         "the long help does not name the default model {DEFAULT_MODEL}: {long}"
@@ -430,6 +433,14 @@ fn the_short_help_shows_the_everyday_options_and_the_long_help_adds_the_rest() {
     ] {
         assert!(long.contains(cache_rule), "{cache_rule}: {long}");
     }
+}
+
+#[test]
+fn filter_help_names_default_batching() {
+    let filter = run(&["filter", "--help"], &[], b"").expect("the compiled binary runs");
+    let filter = String::from_utf8_lossy(&filter.stdout);
+    assert!(filter.contains("Records share requests by default; --batch 1"));
+    assert!(!filter.contains("one paid request for every record"));
 }
 
 #[test]

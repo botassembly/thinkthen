@@ -2,7 +2,7 @@
 
 `thinkthen decide QUESTION` answers one question about the evidence on standard input and sets the exit code. Nothing on this page reaches a network. Every example either asks the tool about itself or prints the plan and stops.
 
-The short help shows the everyday options. The long help adds the advanced ones and warns about `set -e`.
+The short help shows the everyday options. The long help opens with two runnable examples before its explanation, adds the advanced options, and warns about `set -e`.
 
 ```bash
 thinkthen decide -h | head -1 | mustmatch like "Answer one yes or no question about a text"
@@ -16,6 +16,7 @@ done
 thinkthen decide --help | grep -c -- 'set -e' | mustmatch not like "0"
 thinkthen decide --help | grep -c -- 'defaults to 0.5' | mustmatch not like "0"
 thinkthen decide --help | grep -c -- '\[default: 4\]' | mustmatch not like "0"
+thinkthen decide --help | sed -n '/^Examples:/,/^The answer is/p' | grep -c "printf 'Refund me please.' | thinkthen decide" | mustmatch "2"
 ```
 
 `--dry-run` prints what would be sent, in the four fields the specification fixes, and opens no connection. The plan carries the evidence, because the evidence is what leaves the machine.
