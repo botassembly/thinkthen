@@ -13,10 +13,12 @@ from fixture import Backend
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent / 'checks'))
 from request_identity import matches
 
-root = pathlib.Path(__file__).resolve().parent
+fixture_root = pathlib.Path(__file__).resolve().parent
+root = pathlib.Path(os.environ.get('TT_FLUTTER_SOURCE', fixture_root)).resolve()
 flutter = os.environ['TT_FLUTTER']
 native = pathlib.Path(os.environ['TT_NATIVE_LIBRARY'])
-logs = root / 'logs'
+logs = pathlib.Path(os.environ.get('TT_EMBEDDER_LOGS', root / 'logs')).resolve()
+logs.mkdir(parents=True, exist_ok=True)
 missing = []
 if shutil.which('ninja') is None:
     missing.append('ninja-build')
@@ -96,7 +98,7 @@ try:
                     process.wait(timeout=5)
             result['exit'] = process.returncode
     receipt['arrivals'] = list(server.arrivals)
-    receipt['bodies_match'] = matches(barrier / 'requests.jsonl', root / 'expected-embedder.json')
+    receipt['bodies_match'] = matches(barrier / 'requests.jsonl', fixture_root / 'expected-embedder.json')
     if result.get('marker_seen') and collections.Counter(server.arrivals) == {'flutter-embedder': 1} and receipt['bodies_match']:
         receipt['status'] = 'PASS'
     else:
