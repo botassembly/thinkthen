@@ -18,21 +18,21 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Current open counts after the release hygiene fix
 
-The live queue has 70 to-do rows after accepted audit-output 0256 and the reviewed register114 disposition. The [Every item table](work-plan-2026-09-27.md#every-item) and its current Lanes section own status and assignments. The original 75-row inventory and dated evidence below are history; they must not revive closed issues, superseded platform claims or expired holds. The latest closure mapping and platform evidence remain in the work plan and their reviewed records. Current open rows group as follows:
+The live queue has 67 to-do rows after accepted audit-output0256, the reviewed register114 disposition and the register50/register88/SQL-alias corrections. The [Every item table](work-plan-2026-09-27.md#every-item) and its current Lanes section own status and assignments. The original 75-row inventory and dated evidence below are history; they must not revive closed issues, superseded platform claims or expired holds. The latest closure mapping and platform evidence remain in the work plan and their reviewed records. Current open rows group as follows:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |
-| Platform qualification and release checks |9| Reuse accepted artifact proof; qualify actual runners separately. Private-name recurrence is fixed and independently verified. |
+| Platform qualification and release checks |8| Reuse accepted artifact proof; qualify actual runners separately. Private-name recurrence is fixed and independently verified. |
 | Cross-surface contracts and replay |4| Reviewed preparation; 0247 landed DuckDB complete choose/score/tag with Linux installed proof. All four target routes now have selected installed evidence; native Intel/macOS15 qualification and the broader file-form map remain. |
 | Recognition, relations and batching |10| Preparation accepted; retain distinct measurement, text-cost and record-batching outcomes. |
 | Cache and replay |5| Preparation accepted; 0246 landed the demonstrated zero-budget first-use correction. Broader post-admission and diagnostic criteria remain. |
 | Accounting, timing and budgets |9| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
 | Record failure handling |4| Preparation accepted64749d91. A numbered design must settle the error carrier, recoverable classes, exit precedence and failed-batch policy. |
-| Question controls and uncertainty |7| Refresh accepted rank and environment decisions before proposing new grammar. |
-| Documentation, trust and launch usability |9| Codex-6 fixes the verified SQL alias and contract-page gaps. Marketing owns site; the temporary broader documentation hold has ended. |
+| Question controls and uncertainty |6| Refresh accepted rank and environment decisions before proposing new grammar. |
+| Documentation, trust and launch usability |8| The verified SQL alias and contract-page gaps are fixed. Marketing owns site; the temporary broader documentation hold has ended. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
 | New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
-| **Total** |**70**| Counts are tracked rows, not independent builds. |
+| **Total** |**67**| Counts are tracked rows, not independent builds. |
 
 ## Later intake
 
@@ -46,7 +46,7 @@ Main through06b0803e adds three distinct issues after the75-row snapshot. The th
 
 ## Current preparation
 
-Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers62 rows: the prior55, six tuning-loop intake rows accepted at326ebef7 and the pipeline row accepted atfa512f45. Fifteen have closed or been explicitly retired after review;47 remain open. The audit-output issue closed through0256; preparation alone closed no issue. Fresh review of five test groups found no safe retirement; the corrected evidence is in `../records/2026-09-28-bounded-test-retirement-inventory.md`. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
+Cross-surface5, recognition/batching16 and cache6 passed independent review. Accounting8 passed fresh review at53b28a5 with the Intel current-source refresh. Preparation now covers62 rows: the prior55, six tuning-loop intake rows accepted at326ebef7 and the pipeline row accepted atfa512f45. Seventeen have closed or been explicitly retired after review;45 remain open. The audit-output issue closed through0256; preparation alone closed no issue. Fresh review of five test groups found no safe retirement; the corrected evidence is in `../records/2026-09-28-bounded-test-retirement-inventory.md`. 0248 passed fresh correctness and measurement reviews and closed its issue. The original grouping below is a scheduling snapshot; the live table holds newer package evidence and closures. Intel C++ has now landed with translated proof; native Intel/macOS15 and actual release-runner qualification remain separate.
 
 ## Preparation handoff
 
