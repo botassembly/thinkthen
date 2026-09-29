@@ -7,6 +7,7 @@ import tempfile
 
 PACKAGE = Path(__file__).resolve().parents[2]
 ROOT = PACKAGE.parents[1]
+SOURCE = Path(os.environ.get("THINKTHEN_PORTABLE_SWIFT_SOURCE", PACKAGE)).resolve()
 CORPUS = ROOT / "specification/fixtures/batching/portable-records.json"
 EXPECTED = [(ROOT / f"specification/fixtures/batching/portable-{n}.request.json")
             .read_bytes().removesuffix(b"\n") for n in (1, 2, 3)]
@@ -19,8 +20,8 @@ with tempfile.TemporaryDirectory(prefix="swift-portable-", dir=PACKAGE / "target
     scratch = Path(scratch)
     exe = scratch / "portable-batch"
     swiftc = os.environ.get("THINKTHEN_SWIFTC", "swiftc")
-    subprocess.run([swiftc, "-j", "2", "-I", str(PACKAGE / "Sources/CThinkThen"),
-                    str(PACKAGE / "Sources/ThinkThen/ThinkThen.swift"),
+    subprocess.run([swiftc, "-j", "2", "-I", str(SOURCE / "Sources/CThinkThen"),
+                    str(SOURCE / "Sources/ThinkThen/ThinkThen.swift"),
                     str(PACKAGE / "Tests/fixtures/portable_batch.swift"),
                     "-L", str(NATIVE / "lib"), "-lthinkthen", "-Xlinker", "-rpath",
                     "-Xlinker", str(NATIVE / "lib"), "-o", str(exe)],
