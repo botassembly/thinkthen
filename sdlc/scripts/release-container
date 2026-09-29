@@ -24,8 +24,17 @@ WORK=$(CDPATH='' cd -- "$1" && pwd) OUT=$(CDPATH='' cd -- "$2" && pwd)
 . "$REPO/sdlc/scripts/scratch.sh"
 scratch_dir RUN "$WORK/run.XXXXXX"
 mkdir -p "$RUN/src" "$RUN/out" "$RUN/home/.cargo/registry" "$RUN/cache"
-git -C "$REPO" archive HEAD | tar -x -C "$RUN/src"
+source_commit=$(git -C "$REPO" rev-parse HEAD)
+if [ -n "${THINKTHEN_RELEASE_EXPECTED_SHA:-}" ] && [ "$source_commit" != "$THINKTHEN_RELEASE_EXPECTED_SHA" ]; then
+	echo 'release-container: checkout differs from resolved release SHA' >&2; exit 1
+fi
+git -C "$REPO" archive --format=tar HEAD >"$RUN/source.tar"
+[ "$(git get-tar-commit-id <"$RUN/source.tar")" = "$source_commit" ] || {
+	echo 'release-container: archived commit differs from checkout' >&2; exit 1;
+}
+tar -x -f "$RUN/source.tar" -C "$RUN/src"
 set -- --rm --user "$(id -u):$(id -g)" -v "$RUN:/work" -v "$WORK/cache:/work/cache" -e HOME=/work/home -e TARGET="$TARGET" -e ARCH="$ARCH" -e NODE_ARCH="$NODE_ARCH"
+set -- "$@" -e THINKTHEN_ARCHIVED_SOURCE_TAR=/work/source.tar -e THINKTHEN_ARCHIVED_SOURCE_COMMIT="$source_commit"
 if [ -n "${RELEASE_CARGO_REGISTRY:-}" ]; then
 	set -- "$@" -v "$RELEASE_CARGO_REGISTRY:/work/home/.cargo/registry" -e CARGO_NET_OFFLINE=true
 fi

@@ -23,8 +23,32 @@ dart_built=
 case " $* " in
 *' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' flutter '* | *' ada '* | *' objective-c '* | *' cobol '*)
 	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
-	source_commit=$(git -C "$REPO" rev-parse HEAD) || { echo 'release-pack: source wrappers need a committed source identity' >&2; exit 1; }
-	[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
+	if git -C "$REPO" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+		[ -z "${THINKTHEN_ARCHIVED_SOURCE_TAR:-}${THINKTHEN_ARCHIVED_SOURCE_COMMIT:-}" ] || {
+			echo 'release-pack: archive identity cannot override a repository checkout' >&2; exit 1;
+		}
+		source_commit=$(git -C "$REPO" rev-parse HEAD)
+		[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
+	else
+		case " $* " in *' go '* | *' cpp '*) ;; *) echo 'release-pack: archived source permits only go and cpp wrappers' >&2; exit 1 ;; esac
+		for part in "$@"; do
+			case $part in c | go | cpp) ;; *) echo "release-pack: archived source does not permit $part" >&2; exit 1 ;; esac
+		done
+		case ${THINKTHEN_ARCHIVED_SOURCE_TAR:-} in /*) ;; *) echo 'release-pack: archived source tar path must be absolute' >&2; exit 1 ;; esac
+		[ -f "$THINKTHEN_ARCHIVED_SOURCE_TAR" ] && [ ! -L "$THINKTHEN_ARCHIVED_SOURCE_TAR" ] || {
+			echo 'release-pack: archived source tar is missing or linked' >&2; exit 1;
+		}
+		source_commit=$(git get-tar-commit-id <"$THINKTHEN_ARCHIVED_SOURCE_TAR") || {
+			echo 'release-pack: archived source tar has no Git commit' >&2; exit 1;
+		}
+		printf '%s\n' "$source_commit" | grep -Eq '^[0-9a-f]{40}$' || { echo 'release-pack: archived source commit is invalid' >&2; exit 1; }
+		[ "$source_commit" = "${THINKTHEN_ARCHIVED_SOURCE_COMMIT:-}" ] || {
+			echo 'release-pack: archived source commit differs from selected checkout' >&2; exit 1;
+		}
+		python3 "$REPO/sdlc/scripts/release-archive-tree.py" "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$REPO" || {
+			echo 'release-pack: extracted source differs from selected archive' >&2; exit 1;
+		}
+	fi
 	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
 	c_count=0
 	for part in "$@"; do [ "$part" != c ] || c_count=$((c_count + 1)); done
@@ -263,6 +287,15 @@ cobol)
 			libraries/cobol/examples/types.cob "$folder/examples/"
 		;;
 	esac
+	if [ -n "${THINKTHEN_ARCHIVED_SOURCE_TAR:-}" ]; then
+		case $1 in go | cpp) ;; *) echo "release-pack: archived source does not permit $1" >&2; exit 1 ;; esac
+		find "$folder" -type f | while IFS= read -r copied; do
+			relative=${copied#"$folder"/}
+			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "libraries/$1/$relative" | cmp -s - "$copied" || {
+				echo "release-pack: $1 source differs from archived commit: $relative" >&2; exit 1;
+			}
+		done
+	fi
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
 		"$source_commit" "$TARGET" "$V" "$c_name" "$c_digest" >"$folder/THINKTHEN-PACKAGE-INPUTS"
 	if [ "$1" = flutter ]; then
