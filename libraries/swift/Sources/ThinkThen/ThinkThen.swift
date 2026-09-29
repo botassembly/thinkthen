@@ -163,7 +163,7 @@ public final class Engine: @unchecked Sendable {
                 let rc = thinkthen_decide_with_facts_opts(h, q, bytes, count, deadline, token, &answer, &facts, &factsLen)
                 if rc != 0 {
                     let error = failure(h, rc)
-                    precondition(answer.outcome == 123 && answer.probability == -1, "failure changed output")
+                    precondition(answer.outcome == 123 && answer.probability == -1 && facts == nil && factsLen == 0, "failure changed output")
                     throw error
                 }
                 return try CallResult(value: Answer(answer), facts: decodeFacts(facts, factsLen))
@@ -197,7 +197,7 @@ public final class Engine: @unchecked Sendable {
             }
             if rc != 0 {
                 let error = failure(h, rc)
-                precondition(answers.allSatisfy { $0.outcome == 123 && $0.probability == -1 }, "bulk failure changed output")
+                precondition(answers.allSatisfy { $0.outcome == 123 && $0.probability == -1 } && facts == nil && factsLen == 0, "bulk failure changed output")
                 throw error
             }
             return try CallResult(value: answers.map(Answer.init), facts: decodeFacts(facts, factsLen))
@@ -223,7 +223,7 @@ public final class Engine: @unchecked Sendable {
                 let rc = thinkthen_recognize_with_facts_opts(h, q, bytes, count, -1, nil, &result, &length, &facts, &factsLen)
                 if rc != 0 {
                     let error = failure(h, rc)
-                    precondition(result == nil && length == 991, "recognize failure changed output")
+                    precondition(result == nil && length == 991 && facts == nil && factsLen == 0, "recognize failure changed output")
                     throw error
                 }
                 guard let pointer = result else { throw DoorFailure(code: 6, retryable: false, message: "missing native result") }
@@ -255,7 +255,7 @@ public final class Engine: @unchecked Sendable {
             }
             if rc != 0 {
                 let error = failure(h, rc)
-                precondition(result == nil && length == 991, "relate failure changed output")
+                precondition(result == nil && length == 991 && facts == nil && factsLen == 0, "relate failure changed output")
                 throw error
             }
             guard let pointer = result else { throw DoorFailure(code: 6, retryable: false, message: "missing native result") }
