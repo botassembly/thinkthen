@@ -1,6 +1,8 @@
 use std::io::BufRead;
 
-use crate::core::{Framing, Pointer, Reading, Record, RecordError, RelateSpec, RelationEntity};
+use crate::core::{
+    EntitySetError, Framing, Pointer, Reading, Record, RecordError, RelateSpec, RelationEntity,
+};
 use crate::edge::Chunks;
 use crate::failure::Failure;
 use crate::table::{Kind as TableKind, Rows as TableRows};
@@ -79,6 +81,13 @@ fn lines(
 }
 
 fn admitted(spec: &RelateSpec, pairs: &[(String, String)]) -> Result<Vec<RelationEntity>, Failure> {
-    spec.admit(pairs)
-        .map_err(|error| Failure::Relate(crate::failure::relate::Error::Entities(error)))
+    spec.admit(pairs).map_err(|error| {
+        let error = match error {
+            EntitySetError::TooMany => {
+                crate::failure::relate::Error::TooMany { count: pairs.len() }
+            }
+            other => crate::failure::relate::Error::Entities(other),
+        };
+        Failure::Relate(error)
+    })
 }

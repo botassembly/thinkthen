@@ -11,6 +11,8 @@ pub(crate) enum Error {
     },
     /// The complete entity set is refused before any request.
     Entities(EntitySetError),
+    /// The command saw the complete oversized set; the public core error remains count-free.
+    TooMany { count: usize },
 }
 
 pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
@@ -24,6 +26,16 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
             Some((code, error.to_string()))
         }
         Failure::Relate(Error::Entities(error)) => Some((2, error.to_string())),
+        Failure::Relate(Error::TooMany { count }) => {
+            let count = *count as u128;
+            let possible = count * (count - 1) / 2;
+            Some((
+                2,
+                format!(
+                    "relate takes at most 255 entities; this set has {count}. If all {count} were distinct, an unordered all-kind rule would have {possible} candidate pairs; split the set or narrow by kind"
+                ),
+            ))
+        }
         _ => None,
     }
 }

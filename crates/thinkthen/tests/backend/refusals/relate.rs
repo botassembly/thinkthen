@@ -31,7 +31,7 @@ pub(super) const RELATE: [Refusal; 10] = [
             "a 256th entity",
             &["relate"],
             &["--lines"],
-            "relate takes at most 255 entities",
+            "relate takes at most 255 entities; this set has 256. If all 256 were distinct, an unordered all-kind rule would have 32640 candidate pairs; split the set or narrow by kind",
             2,
         )
     },
