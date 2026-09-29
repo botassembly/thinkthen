@@ -10,6 +10,7 @@
 libraries/rust        landed
 libraries/polars      feature
 libraries/c           landed
+libraries/php         landed
 libraries/csharp      landed
 libraries/jvm         landed
 libraries/python      landed

@@ -1,0 +1,13 @@
+{
+  "name": "botassembly/thinkthen",
+  "description": "ThinkThen PHP binding for the separately installed C library",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": ">=8.3",
+    "ext-ffi": "*"
+  },
+  "autoload": {
+    "files": ["autoload.php"]
+  }
+}

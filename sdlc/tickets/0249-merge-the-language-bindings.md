@@ -6,7 +6,7 @@ opens: libraries sdlc/issues sdlc/tickets
 
 # 0249: Merge the language bindings
 
-Status: **design accepted; first C#/JVM implementation candidate under code review**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). The first local package batch is built and checked; nothing is published and no CI is configured. See `sdlc/records/0249-csharp-jvm-build.md` for candidate proof and remaining host criteria.
+Status: **design accepted; C#/JVM source integrated; PHP registration candidate under code review**. Ian explicitly delivered this handoff and authorized the queue owner to merge all the additional libraries on 2026-09-28. The earlier start hold is released. Each bounded package batch follows independent ticket/code review and focused current-source validation. Filed 2026-09-28 by the consumer-language program (local experiments 273-301). Nothing is published and no release CI is configured. See `sdlc/records/0249-csharp-jvm-build.md` and `sdlc/records/0249-php-build.md` for package proof and remaining host criteria.
 
 Number corrected from 0247 during queue intake because the existing DuckDB lane holds 0247 and the usage-persistence design holds 0248. Scope is retained; the later explicit authorization above releases the start hold. This handoff consolidates existing J8 rows; it is not another independent issue.
 
@@ -60,3 +60,5 @@ The Linux local-package proof can be retained across a narrow review fix, but th
 ## Integration progress
 
 C# and JVM source packages are integrated after fresh High acceptance of `98c1d89b` and the final-pin native verification recorded in `../records/0249-csharp-jvm-build.md`. This completes two of eleven package integrations and supplies C#, Java, Kotlin and Scala. Original per-port release criteria remain open. Go stays in the remaining package list even though the historical priority sentence omitted it.
+
+PHP source and final registration passed independent review at `e9a57a3c`, with rebuilt-source proof in `../records/0249-php-build.md`. Three of eleven source packages are now integrated. The PHP issue retains its separate final-pin, release CI and distribution criteria.
