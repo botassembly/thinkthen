@@ -103,7 +103,22 @@ def main():
                "go source differs from resolved SHA")
         other_target = "aarch64-unknown-linux-gnu"
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), other_target, commit),
-               "unsupported target has thinkthen-cpp-")
+               "unsupported target has thinkthen-go-")
+        fake_curl = fake_bin / "curl"
+        fake_curl.write_text("#!/bin/sh\nwhile [ $# -gt 0 ]; do\n"
+                             "if [ \"$1\" = -o ]; then shift; printf wrong >\"$1\"; exit 0; fi\n"
+                             "shift\ndone\nexit 2\n")
+        fake_curl.chmod(0o755)
+        github_path = base / "github-path"
+        github_path.touch()
+        tool_env = os.environ | {"PATH": str(fake_bin) + os.pathsep + os.environ["PATH"],
+                                 "GITHUB_PATH": str(github_path)}
+        expect(run("sh", gate, "go-cpp-tools", other_target, str(base / "other-tools"), env=tool_env),
+               "Go/C++ installed tools require Linux x86-64")
+        expect(run("sh", gate, "go-cpp-tools", host, str(base / "bad-go"), env=tool_env),
+               "Go 1.27.1 archive differs from official checksum")
+        if github_path.read_text():
+            raise AssertionError("bad Go archive entered the runner path")
         wrong = env | {"THINKTHEN_ARCHIVED_SOURCE_COMMIT": "0" * 40}
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "wrong"), *parts, cwd=source, env=wrong),
@@ -205,6 +220,18 @@ def main():
                                         "THINKTHEN_PYTHON_BIN": str(no_python),
                                         "FAKE_GO_VERSION": version}
             expect(run("sh", str(REPO / "libraries/go/check.sh"), "0", env=version_env), diagnostic)
+        installed_env = os.environ | {"THINKTHEN_GO_BIN": str(fake_go),
+                                      "THINKTHEN_PYTHON_BIN": str(no_python),
+                                      "FAKE_GO_VERSION": "go version go1.27.1 linux/amd64",
+                                      "THINKTHEN_ARTIFACT": str(base / "absent-wrapper"),
+                                      "THINKTHEN_HEAVY_LOCK": str(base / "held-lock"),
+                                      "THINKTHEN_HEAVY_LOCK_HELD": str(base / "held-lock")}
+        for family in ("go", "cpp"):
+            expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=installed_env),
+                   f"{family}: missing C archive")
+            source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}
+            expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env),
+                   f"{family}: not run: Python jsonschema is unavailable")
     print("release archive self-test: gitless legacy and controlled Go/C++ inputs pass")
 
 

@@ -140,10 +140,12 @@ def release(name, doc):
         if tools is None or tools >= smoke_bundle:
             out.append(f"{name}: x86 smoke must check pinned Go/C++ tools before consumers")
     draft_steps = jobs.get("draft", {}).get("steps") or []
-    collect = next((step.get("run") or "" for step in draft_steps
+    collect_step = next((step for step in draft_steps
                     if "release-workflow collect" in (step.get("run") or "")), None)
+    collect = (collect_step or {}).get("run")
     if collect is not None and ("release-workflow go-cpp-gate \"platform/platform-$target\" \"$target\" \"$SHA\"" not in collect
-                            or collect.index("release-workflow go-cpp-gate") > collect.index("release-workflow collect")):
+                            or collect.index("release-workflow go-cpp-gate") > collect.index("release-workflow collect")
+                            or (collect_step.get("env") or {}).get("SHA") != RESOLVED):
         out.append(f"{name}: draft must gate every target's Go/C++ family before collection")
     outward = ("crates", "pypi", "npm", "rubygems", "tap", "publish")
     for job in outward:

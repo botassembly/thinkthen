@@ -37,7 +37,9 @@ case $patch in
     '' | *[!0-9]*) echo 'go: not run: a stable Go 1.x release is required' >&2; exit 77 ;;
 esac
 [ "$minor" -ge 22 ] || { echo 'go: not run: Go 1.22 or newer is required' >&2; exit 77; }
-"$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 77; }
+if [ -z "${THINKTHEN_ARTIFACT:-}" ]; then
+    "$python_bin" -c 'import jsonschema' || { echo 'go: not run: Python jsonschema is unavailable' >&2; exit 77; }
+fi
 export THINKTHEN_GO_BIN="$go_bin"
 unset THINKTHEN_API_KEY
 lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}

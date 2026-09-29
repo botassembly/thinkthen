@@ -120,7 +120,6 @@ go-cpp-tools)
 	for tool in curl sha256sum tar cmake c++ clang++ make nm readelf ldd pkg-config cc gcc node git flock cargo rustc python3; do
 		command -v "$tool" >/dev/null 2>&1 || fail "Go/C++ installed tool is missing: $tool"
 	done
-	python3 -c 'import jsonschema' || fail 'Go/C++ installed checks need Python jsonschema'
 	cmake_version=$(cmake --version | sed -n '1s/^cmake version //p')
 	python3 - "$cmake_version" <<'PY' || fail 'CMake 3.18 or newer is required'
 import sys
