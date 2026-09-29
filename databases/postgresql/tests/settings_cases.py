@@ -21,7 +21,7 @@ def quote(value: str) -> str:
 def query(socket: str, statements: list[str]) -> subprocess.CompletedProcess[str]:
     command = ["psql", "-X", "-q", "-At", "-v", "ON_ERROR_STOP=1", "-h", socket,
                "-U", "postgres", "-d", "postgres"]
-    for statement in statements:
+    for statement in ["SET statement_timeout='30s'", *statements]:
         command += ["-c", statement]
     return subprocess.run(command, capture_output=True, text=True, timeout=30, check=False, env=child_env())
 
@@ -64,8 +64,8 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
                 {"name": name, "source": start, "target": target}]}})
             sql = f"SELECT count(*) FROM thinkthen_relate({quote(source)}, {quote(rule)})"
         elif step.get("verb") == "decide_many":
-            records = "ARRAY[" + ", ".join(quote(value) for value in step["records"]) + "]"
-            sql = f"SELECT * FROM thinkthen_decide({QUESTION}, {records})"
+            records = json.dumps({str(index): value for index, value in enumerate(step["records"])})
+            sql = f"SELECT * FROM thinkthen_decide_many({QUESTION}, {quote(records)}::jsonb)"
         elif "model" in step:
             sql = f"SELECT thinkthen_details({QUESTION}, {quote(step['text'])}) -> 'meta' ->> 'model'"
         else:
@@ -92,7 +92,7 @@ def main() -> None:
     assert corpus["schema"] == "thinkthen.settings-cases/1"
     if sys.argv[1] == "plan":
         for case in corpus["cases"]:
-            # PostgreSQL's array form prevalidates max_requests for its whole call.
+            # PostgreSQL's keyed form prevalidates max_requests for its whole call.
             # The accepted host contract refuses three records before any send.
             sends = 0 if case["id"] == "max-requests-refuses-past-the-limit" else case["steps"][-1]["count"]
             print(case["id"], case["arm"].removesuffix("/v1"), sends, sep="\t")

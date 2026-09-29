@@ -92,10 +92,14 @@ def texts(values):
     return "ARRAY[" + ", ".join(lit(value) for value in values) + "]::text[]"
 
 
+def keyed(values):
+    return lit(json.dumps({str(index): value for index, value in enumerate(values)})) + "::jsonb"
+
+
 def psql(*statements):
     command = ["psql", "-X", "-q", "-At", "-v", "ON_ERROR_STOP=1", "-v", "VERBOSITY=verbose"]
     command += ["-h", SOCKET, "-U", "postgres", "-d", "postgres"]
-    for statement in statements:
+    for statement in ("SET statement_timeout='30s'", *statements):
         command += ["-c", statement]
     done = subprocess.run(command, capture_output=True, text=True, timeout=30, check=False,
                           env=child_env())
@@ -198,7 +202,7 @@ def single(case, success):
 
 def many(case, success):
     records = [exchange["evidence"] for exchange in case["exchanges"]]
-    rows = psql(f"SELECT coalesce(decided::text, 'null') FROM thinkthen_decide({lit(json.dumps(case['question']))}, {texts(records)}) ORDER BY i")
+    rows = psql(f"SELECT coalesce(value::text, 'null') FROM thinkthen_decide_many({lit(json.dumps(case['question']))}, {keyed(records)}) ORDER BY key::int")
     got = [json.loads({"t": "true", "f": "false"}.get(row, row)) for row in rows.splitlines()]
     same("decided", got, [answer["bare"] for answer in success["answers"]])
 
@@ -206,15 +210,15 @@ def many(case, success):
 def selected_rows(case, success):
     records = [exchange["evidence"] for exchange in case["exchanges"]]
     question = lit(json.dumps(case["question"]))
-    input_rows = f"SELECT ordinal - 1 AS i, evidence FROM unnest({texts(records)}) WITH ORDINALITY AS rows(evidence, ordinal)"
+    input_rows = f"SELECT key::int AS i, value AS decided, probability FROM thinkthen_decide_many({question}, {keyed(records)})"
     if case["verb"] == "filter":
         query = (f"WITH input AS MATERIALIZED ({input_rows}), "
-                 f"kept AS MATERIALIZED (SELECT i FROM input WHERE thinkthen_decide({question}, evidence)) "
+                 "kept AS MATERIALIZED (SELECT i FROM input WHERE decided) "
                  "SELECT coalesce(json_agg(i ORDER BY i), '[]'::json) FROM kept")
         wanted = success["operation"]["indexes"]
     else:
         query = (f"WITH input AS MATERIALIZED ({input_rows}), "
-                 f"scored AS MATERIALIZED (SELECT i, thinkthen_probability({question}, evidence) AS probability FROM input) "
+                 "scored AS MATERIALIZED (SELECT i, probability FROM input) "
                  "SELECT coalesce(json_agg(json_build_object('index', i, 'probability', probability) "
                  "ORDER BY probability DESC, i), '[]'::json) FROM scored")
         wanted = success["operation"]["ranking"]
@@ -228,7 +232,8 @@ def found(case, success):
     question = case["question"]
     units = question["units"]
     none = "true" if question.get("none", False) else "false"
-    answer = json.loads(psql(f"SELECT thinkthen_find({lit(question['find'])}, {texts(units)}, {none})"))
+    settings = lit(json.dumps({"none": True})) + "::json" if none == "true" else "NULL::json"
+    answer = json.loads(psql(f"SELECT thinkthen_find({lit(question['find'])}, {texts(units)}, {settings})"))
     operation = success["operation"]
     selected = operation["selected"]
     wanted = {
@@ -297,8 +302,10 @@ def refused(case, kind):
         path.write_text(json.dumps(case["question"]))
         question = lit(f"@{path}")
     try:
-        function = "thinkthen_probability" if case["id"] == "31-usage-rank-blank-question" else "thinkthen_decide"
-        got = psql(f"SELECT {function}({question}, {lit(evidence)})")
+        if case["id"] == "31-usage-rank-blank-question":
+            got = psql(f"SELECT count(*) FROM thinkthen_decide_many({question}, {keyed([evidence])})")
+        else:
+            got = psql(f"SELECT thinkthen_decide({question}, {lit(evidence)})")
     except Failed as error:
         said = str(error)
         if f"ERROR:  {SQLSTATE[kind]}: thinkthen {kind}: " not in said:

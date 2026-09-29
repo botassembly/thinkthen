@@ -4,29 +4,28 @@
 
 ## Functions
 
+The ordinary judgment signature is `question, input[, members][, settings]`. `settings` is PostgreSQL `json`; use `::json` for a positional literal. Its accepted keys and value rules are in [settings](../../specification/settings.md). Optional named parameters use `DEFAULT NULL`, so a call can use `threshold => '0.3:0.7'`, `context => 'reference text'`, `model => 'judge-b'`, `batch => 'max'`, or `deadline_ms => 3000` without filling earlier slots. A named field and the same settings key together refuse before sending. `choose`, `score`, and `tag` accept a `members text[]` parameter; omit it when the JSON question or settings names the list.
+
 | Function | Returns |
 | --- | --- |
-| `thinkthen_decide(question, evidence)` | `true`, `false`, or `NULL` for not sure |
-| `thinkthen_decide(question, evidences text[])` | one row `(i, decided)` per element, `i` from 0 |
-| `thinkthen_probability(question, evidence)` | the yes probability of a decide question |
-| `thinkthen_choose(question, evidence, options text[])` | the picked option, or `NULL` |
-| `thinkthen_score(question, evidence, levels text[])` | the position on the levels |
-| `thinkthen_tag(question, evidence, labels text[])` | the labels that apply, as `text[]` |
-| `thinkthen_find(question, units text[])` or `(question, units text[], none boolean)` | `jsonb` with selected original `index`, `value`, `probability`, and ordered `{index, probability}` candidates |
-| `thinkthen_annotate(set, evidence)` | each question's value, as `jsonb` |
-| `thinkthen_details(question, evidence)` | the engine's detailed result, as `jsonb` |
-| `thinkthen_try_details(question, evidence)` | an answered details envelope or a safe typed failure, as `jsonb` |
-| `thinkthen_warm(question, evidence)` | an aggregate that judges each distinct pair once and fills the answer cache. It takes a decide question only, and any other reads `thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide` before any request |
-| `thinkthen_recognize(body, kinds text[])` or `(body, spec)` | `(text, start, end, length, kind, strength)` rows |
-| `thinkthen_relations(body, spec)` | `(relation, source_text, source_kind, target_text, target_kind, probability)` rows |
-| `thinkthen_relate(query, rules text[])` or `(query, spec)` | `(relation, source, target, probability)` rows, with the query's ids |
-| `thinkthen_usage()` | `(requests_sent, cache_answers, input_tokens, output_tokens)` for this backend |
+| `thinkthen_decide(question, input[, settings])` | `true`, `false`, or SQL `NULL` for an unresolved decision |
+| `thinkthen_choose(question, input[, members][, settings])` | selected text, or SQL `NULL` for no clear pick |
+| `thinkthen_score(question, input[, members][, settings])` | numeric score |
+| `thinkthen_tag(question, input[, members][, settings])` | matching labels as `text[]` |
+| `thinkthen_decide_many`, `thinkthen_choose_many` | keyed `(key, value, probability)` rows |
+| `thinkthen_score_many`, `thinkthen_tag_many` | keyed `(key, value)` rows; probability is not defined for these verbs |
+| `thinkthen_plan(question, keyed_input[, settings])` | `jsonb` request-count and byte/token-band preview, with no send |
+| `thinkthen_find(question, units text[][, settings])` | selected original index, value, probability and ordered candidates as `jsonb` |
+| `thinkthen_annotate(set, input[, settings])` | each question's value as `jsonb`; settings apply batch, deadline or the engine's default model |
+| `thinkthen_details`, `thinkthen_try_details` | detailed answer or recoverable typed result as `jsonb`; both take the judgment's named settings |
+| `thinkthen_recognize`, `thinkthen_relations`, `thinkthen_relate` | their existing typed entity/relation rows |
+| `thinkthen_usage()` | this backend's `(requests_sent, cache_answers, input_tokens, output_tokens)` |
 
-`thinkthen_decide`, `thinkthen_probability`, `thinkthen_choose`, `thinkthen_score`, `thinkthen_tag`, `thinkthen_details`, `thinkthen_try_details`, and `thinkthen_warm` also accept a final literal `context text` argument. This includes the array form of `thinkthen_decide`. `NULL` context keeps the historical request; blank non-`NULL` context raises usage. A context-bearing scalar uses the record wire form and remains one SQL call per row. Arrays pack distinct evidence in first-occurrence order, while preserving every original zero-based slot and SQL `NULL` element in their result. Warm groups by question and context, then packs each group's first-seen distinct evidence. Give an aggregate `ORDER BY` when its visit order must reproduce the same request bytes.
+Each `_many` input is one `jsonb` object from caller keys to text. Join `d.key = CAST(s.id AS text)`; no array position is inferred. PostgreSQL `jsonb` normalizes repeated object keys before the extension sees them. A scalar judges one row per call; `_many` gives the engine the whole keyed set and packs it according to `batch`. The four keyed functions preserve SQL `NULL` on unresolved values and retain the key. Decide and choose report probability on the row; score and tag refuse a probability request. `thinkthen_plan` returns `records`, `requests`, `estimated_bytes`, an `estimated_input_tokens` lower/upper band, `upper_bound`, and `first_body_utf8`. The plan has no key requirement and no network call; `requests` is before cache answers, refusal splits and retries.
 
-A judgment question is plain text, JSON text starting with `{` after leading white space, or a file named with the first-byte `'@refund.json'` spelling. Bare text, including `refund.json`, is a question and never a path. A question set or recognize/relation spec remains JSON or `@file`. For `choose`, `score`, and `tag`, the array joins the question as its options, levels, or labels. Pass `NULL` when a JSON or file question already names them. To ask a literal question beginning with `@` or `{`, use a JSON question or named file.
+A judgment question is plain text, JSON text starting with `{` after leading white space, or a file named with the first-byte `'@refund.json'` spelling. Bare text, including `refund.json`, is a question and never a path. A question set or recognize/relation spec remains JSON or `@file`. To ask a literal question beginning with `@` or `{`, use a JSON question or named file.
 
-Find is different: its question is nonblank literal text, including a literal `@`, and its ordered `text[]` is one set, not independent records. Use `array_agg(unit ORDER BY ordinal)` to preserve the caller's positions and duplicates. Omitted `none` is false; true offers a final none candidate. An empty array or a SQL NULL argument returns SQL NULL without a send. A selected none returns a non-NULL object with null index and value. A NULL array member, blank text, one unit, more than 255 units (254 with none), or more than 16 MiB of combined unit text raises usage before a send. Find uses the existing `thinkthen.deadline_ms` GUC and statement cancellation; it has no per-call deadline or context argument.
+Find's question is nonblank literal text, including a literal `@`. Its ordered `text[]` is one set, not independent records; use `array_agg(unit ORDER BY ordinal)` to preserve positions and duplicates. Settings `{"none":true}` offers a final none candidate. An empty array or SQL NULL argument returns SQL NULL without a send. A selected none returns a non-NULL object with null index and value. A NULL array member, blank text, one unit, more than 255 units (254 with none), or more than 16 MiB of combined unit text raises usage before a send. `deadline_ms` in settings overrides the existing `thinkthen.deadline_ms` GUC for that call. PostgreSQL statement cancellation still applies.
 
 `start`, `end`, and `length` count characters, so `substring(body from start + 1 for length)` is the name. The relate query returns `(id, name)` or `(id, name, kind)`. A two-column query takes bare relation names. Inline rules read `NAME` or `NAME=SOURCE:TARGET`, as the command's `--relation` does. The query may return at most 255 rows.
 
@@ -39,6 +38,8 @@ SELECT id FROM (
 SELECT id, triage->>'team', (triage->>'urgency')::float AS urgency
 FROM tickets, thinkthen_annotate('@form.json', body) AS triage ORDER BY urgency DESC;
 ```
+
+The old `thinkthen_warm`, `thinkthen_probability`, positional context, find's positional `none`, and decide array forms raise `usage` with replacement advice. They do not silently send.
 
 ## Constrain a stored answer
 
@@ -59,7 +60,7 @@ The domain rejects a different non-`NULL` label. A stored `NULL` can represent a
 
 ## Run facts
 
-`thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost or time yet.
+`thinkthen_details(question, evidence)` returns the command's `--details` line for one text as `jsonb`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. `facts.seconds` is elapsed wall time when that result carrier is used; this JSON details view does not invent a price or provider bill.
 
 The details digest includes a question's saved calibration `profile`. A different runtime `thinkthen.profile` name appears as `meta.profile_warning` with `tuned_for` and `running`. The selected runtime profile checks limits before sending.
 
@@ -84,7 +85,7 @@ The details digest includes a question's saved calibration `profile`. A differen
 | `thinkthen.record`, `thinkthen.replay` | superuser | absolute folders for live recording or strict offline replay. Empty keeps the environment value |
 | `thinkthen.cache` | superuser | an absolute answer cache folder. `off` disables it; empty keeps `THINKTHEN_CACHE` or the platform folder |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
-| `thinkthen.api_key` | nobody | never read. A set value refuses the next call |
+| `thinkthen.api_key` | any role | never read by the engine; a nonempty interactive `SET` warns, and the next call refuses until reset |
 
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Set `thinkthen.cache = 'off'` to disable it. An empty value keeps `THINKTHEN_CACHE` or the platform folder.
 
@@ -92,7 +93,7 @@ The folder belongs to the server's operating-system user. Every role whose calls
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 
-`thinkthen.max_requests_total` caps attempted live sends in one backend, including retries and requests inside annotate or relate. An atomic reservation admits every attempt before transport, so a call cannot pass the total. A call with a spent total raises 22023 before sending, including when it could read an answer from cache. Array and warm results are materialized; a spent total raises without returning partial rows, while completed attempts remain counted. Packed warm cache entries cover the exact group cohort, so a later singleton may send again. Set `thinkthen.batch = '1'` when warm is meant to fill the historical scalar cache entries. A new connection forks a backend with a new total. A pool of N connections can spend up to N times its per-backend total. A cancelled call's send already on the wire remains counted. `thinkthen status` counts only command sends.
+`thinkthen.max_requests_total` caps attempted live sends in one backend, including retries and requests inside annotate or relate. An atomic reservation admits every transport attempt. A cache or replay answer can still complete after the send total is spent. A later request or split child that needs transport then raises 22023; previously completed attempts remain counted. A new connection forks a backend with a new total. A pool of N connections can spend up to N times its per-backend total. A cancelled call's send already on the wire remains counted. `thinkthen status` counts only command sends.
 
 ## Errors
 
@@ -135,7 +136,7 @@ $thinkthen_grant$;
 ```
 
 - **Named files.** `'@name'` reads one regular file of at most 1 MiB, opened once and never through a final symlink. The role needs the privileges of `pg_read_server_files`, or the file must sit inside `thinkthen.file_directory`. A confined path is judged before any open and opened beneath the folder with `openat2`. The opened file must have one link and a path inside the folder. Every unreadable cause gives one message, so a refusal tells nothing about the filesystem. `thinkthen_relate` reads no file. It runs its query through SPI.
-- **The key.** The engine reads `THINKTHEN_API_KEY` from the server's environment and nothing else. `SET thinkthen.api_key` succeeds and the next call refuses with 22023, so the value never reaches the log.
+- **The key.** The engine reads `THINKTHEN_API_KEY` from the server's environment and nothing else. `SET thinkthen.api_key` succeeds and a nonempty interactive value warns; the next call refuses with 22023 until reset. A server with `log_statement = all` or `pg_stat_statements` can record the `SET` statement, so do not put a real key there.
 - **The backend.** The engine builds in each backend on its first call, after the fork, from the server's environment. SQL cannot name an address. `_PG_init` registers settings and sends nothing.
 - **Threads.** Each call runs on a worker thread that blocks every signal, so PostgreSQL's handlers run only on the backend thread. Every function is `PARALLEL RESTRICTED`.
 - **One boundary.** `session_replication_role = replica` disables event triggers, so an update script that adds functions carries its own revoke.

@@ -13,12 +13,14 @@
       "expected": "t"
     },
     "batch_context": {
-      "setup": ["SET thinkthen.batch = '2'"],
-      "sql": "SELECT count(*) FROM thinkthen_decide('{\"decide\":\"Is this a complaint?\"}', ARRAY['refund one', 'refund two'], 'Use this policy note.');",
+      "setup": [
+        "SET thinkthen.batch = '2'"
+      ],
+      "sql": "SELECT count(*) FROM thinkthen_decide_many('{\"decide\":\"Is this a complaint?\"}', '{\"a\":\"refund one\",\"b\":\"refund two\"}'::jsonb, '{\"context\":\"Use this policy note.\"}'::json);",
       "expected": "2"
     },
     "probability": {
-      "sql": "SELECT thinkthen_probability('{\"decide\":\"Is this a complaint?\"}', 'i want a refund now');",
+      "sql": "SELECT probability FROM thinkthen_decide_many('{\"decide\":\"Is this a complaint?\"}', '{\"a\":\"i want a refund now\"}'::jsonb);",
       "expected": "0.9"
     },
     "choose": {
@@ -53,10 +55,6 @@
       "sql": "SELECT requests_sent, cache_answers, input_tokens, output_tokens FROM thinkthen_usage();",
       "expected": "0|0|0|0"
     },
-    "warm": {
-      "sql": "SELECT thinkthen_warm('{\"decide\":\"Is this a complaint?\"}', t) FROM (VALUES ('refund now'), ('refund again')) AS v(t);",
-      "expected": "2"
-    },
     "recognize": {
       "sql": "SELECT n.text, n.kind FROM (VALUES ('Maria Chen joined Northwind Freight in Chicago last spring.')) AS v(body), LATERAL thinkthen_recognize(v.body, ARRAY['person','organization','place']) n ORDER BY n.\"start\";",
       "expected": "Maria Chen|person\nspring.|person"
@@ -74,6 +72,10 @@
       ],
       "sql": "SELECT relation, source, target, probability FROM thinkthen_relate('SELECT id, body FROM alerts', ARRAY['caused_by']) WHERE source = 1 ORDER BY target;",
       "expected": "caused_by|1|2|0.9\ncaused_by|1|3|0.9\ncaused_by|1|4|0.9"
+    },
+    "decide_many": {
+      "sql": "SELECT count(*) FROM thinkthen_decide_many('{\"decide\":\"Is this a complaint?\"}', '{\"a\":\"refund now\",\"b\":\"refund again\"}'::jsonb);",
+      "expected": "2"
     }
   }
 }

@@ -5,11 +5,9 @@
 
 use pgrx::datum::{Array, JsonB};
 use pgrx::prelude::*;
-use thinkthen::{Details, Engine, Error, Judgment, LoadedQuestion, Probabilities, Recognize};
+use thinkthen::{Details, Engine, Error, LoadedQuestion, Recognize};
 
-mod array;
 mod call;
-mod context;
 #[allow(
     unsafe_code,
     reason = "the one FFI module: interrupt flags, the signal mask, and descriptor opens"
@@ -17,8 +15,11 @@ mod context;
 mod ffi;
 mod files;
 mod find;
+mod forms;
+mod keyed;
 mod relate;
-mod warm;
+mod removed;
+mod scalar;
 
 use call::{OrRaise as _, Refusal};
 use files::Given;
@@ -30,84 +31,31 @@ fn given(arg: Option<&str>, what: &str) -> Given {
     Given::read(arg, what, call::file_directory().as_deref()).or_raise()
 }
 
-/// The question argument, with the function's members joined under `key`.
-fn question(arg: Option<&str>, key: &str, members: Option<Array<'_, &str>>) -> LoadedQuestion {
-    let members = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
-    Given::read_question(arg, key, call::file_directory().as_deref())
-        .and_then(|held| held.with_members(key, members))
-        .and_then(|held| held.parse(thinkthen::Question::from_json))
-        .or_raise()
-}
-
-fn question_result(arg: Option<&str>) -> Result<LoadedQuestion, Refusal> {
-    Given::read_question(arg, "", call::file_directory().as_deref())?
-        .parse(thinkthen::Question::from_json)
-}
-
-/// A SQL context is literal text. `NULL` keeps the historical request.
-fn context(arg: Option<&str>) -> Option<String> {
-    context_result(arg).or_raise()
-}
-
-fn context_result(arg: Option<&str>) -> Result<Option<String>, Refusal> {
-    let Some(text) = arg else { return Ok(None) };
-    if text.trim().is_empty() {
-        return Err(Refusal::usage("context must not be blank"));
-    }
-    Ok(Some(text.to_owned()))
-}
-
-fn decide(
-    engine: &Engine,
-    question: &LoadedQuestion,
-    evidence: &str,
-    options: thinkthen::CallOptions<'_>,
-) -> Result<thinkthen::Answer, Error> {
-    match question {
-        LoadedQuestion::Question(held) => engine.decide_with(held, evidence, options),
-        LoadedQuestion::Banded(held) => engine.decide_with(held, evidence, options),
-    }
-    .map(thinkthen::Call::into_value)
-}
-
 fn details(
     engine: &Engine,
     question: &LoadedQuestion,
     evidence: &str,
     options: thinkthen::CallOptions<'_>,
-) -> Result<Details, Error> {
+    contextual: bool,
+) -> Result<Option<Details>, Error> {
+    if contextual {
+        let row = match question {
+            LoadedQuestion::Question(held) => engine
+                .details_many_with(held, [evidence.to_owned()], options)
+                .next(),
+            LoadedQuestion::Banded(held) => engine
+                .details_many_with(held, [evidence.to_owned()], options)
+                .next(),
+        };
+        return row
+            .transpose()
+            .map(|answer| answer.map(|held| held.into_parts().1));
+    }
     match question {
         LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
         LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
     }
-    .map(thinkthen::Call::into_value)
-}
-
-/// One judgment's details, run on the worker.
-fn judged(question: LoadedQuestion, evidence: &str, context: Option<String>) -> Details {
-    let evidence = evidence.to_owned();
-    call::run(call::read(), move |engine, options| {
-        if let Some(text) = context.as_deref() {
-            let options = options.context(text);
-            let rows = match &question {
-                LoadedQuestion::Question(held) => engine
-                    .details_many_with(held, [evidence.as_str()], options)
-                    .collect::<Result<Vec<_>, _>>(),
-                LoadedQuestion::Banded(held) => engine
-                    .details_many_with(held, [evidence.as_str()], options)
-                    .collect::<Result<Vec<_>, _>>(),
-            }?;
-            Ok(rows.into_iter().next().map(|row| row.into_parts().1))
-        } else {
-            details(engine, &question, &evidence, options).map(Some)
-        }
-    })
-    .unwrap_or_else(|| {
-        call::raise(Refusal::of(
-            thinkthen::ErrorKind::Defect,
-            "one record yielded no detail",
-        ))
-    })
+    .map(|answer| Some(answer.into_value()))
 }
 
 fn answer_value(answer: thinkthen::Answer) -> Option<bool> {
@@ -127,110 +75,24 @@ fn jsonb(text: &str) -> JsonB {
 }
 
 #[pg_extern(parallel_restricted)]
-fn thinkthen_decide(question: Option<&str>, evidence: Option<&str>) -> Option<bool> {
-    let question = self::question(question, "", None);
-    let evidence = evidence?.to_owned();
-    answer_value(call::run(call::read(), move |engine, options| {
-        decide(engine, &question, &evidence, options)
-    }))
-}
-
-#[pg_extern(parallel_restricted)]
-fn thinkthen_probability(question: Option<&str>, evidence: Option<&str>) -> Option<f64> {
-    let question = self::question(question, "", None);
-    match judged(question, evidence?, None).probabilities() {
-        Probabilities::YesNo { yes } => Some(*yes),
-        Probabilities::Named(_) => call::raise(Refusal::usage(
-            "thinkthen_probability takes a decide question",
-        )),
-    }
-}
-
-#[pg_extern(parallel_restricted)]
-fn thinkthen_choose(
-    question: Option<&str>,
-    evidence: Option<&str>,
-    options: Option<Array<'_, &str>>,
-) -> Option<String> {
-    let question = self::question(question, "options", options);
-    match judged(question, evidence?, None).value() {
-        Judgment::Choice(pick) => pick.clone(),
-        _ => call::raise(Refusal::usage("thinkthen_choose takes a choose question")),
-    }
-}
-
-#[pg_extern(parallel_restricted)]
-fn thinkthen_score(
-    question: Option<&str>,
-    evidence: Option<&str>,
-    levels: Option<Array<'_, &str>>,
-) -> Option<f64> {
-    let question = self::question(question, "levels", levels);
-    match judged(question, evidence?, None).value() {
-        Judgment::Score(position) => Some(*position),
-        _ => call::raise(Refusal::usage("thinkthen_score takes a score question")),
-    }
-}
-
-#[pg_extern(parallel_restricted)]
-fn thinkthen_tag(
-    question: Option<&str>,
-    evidence: Option<&str>,
-    labels: Option<Array<'_, &str>>,
-) -> Option<Vec<String>> {
-    let question = self::question(question, "labels", labels);
-    match judged(question, evidence?, None).value() {
-        Judgment::Tags(held) => Some(held.clone()),
-        _ => call::raise(Refusal::usage("thinkthen_tag takes a tag question")),
-    }
-}
-
-#[pg_extern(parallel_restricted)]
-fn thinkthen_annotate(set: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
+fn thinkthen_annotate(
+    set: Option<&str>,
+    input: Option<&str>,
+    settings: default!(Option<ffi::RawJson>, "NULL"),
+) -> Option<JsonB> {
+    let call = forms::aggregate_controls(settings.as_ref());
     let set = given(set, "question set")
         .parse(thinkthen::QuestionSet::from_json)
         .or_raise();
-    let evidence = evidence?.to_owned();
-    let value = call::run(call::read(), move |engine, options| {
-        let mut records = engine.annotate_with(&set, [evidence.as_str()], options);
+    let input = input?.to_owned();
+    let value = call::run(call, move |engine, options| {
+        let mut records = engine.annotate_with(&set, [input.as_str()], options);
         records
             .next()
             .transpose()
             .map(|record| record.map(|held| held.value_json()))
     });
     value.map(|text| jsonb(&text))
-}
-
-#[pg_extern(parallel_restricted)]
-fn thinkthen_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
-    let question = self::question(question, "", None);
-    Some(jsonb(&judged(question, evidence?, None).to_json()))
-}
-
-/// Return recoverable row failures as safe JSON so a statement can continue.
-#[pg_extern(parallel_restricted)]
-fn thinkthen_try_details(question: Option<&str>, evidence: Option<&str>) -> Option<JsonB> {
-    let (Some(question), Some(evidence)) = (question, evidence) else {
-        return None;
-    };
-    let result = (|| {
-        let question = question_result(Some(question))?;
-        let call = call::read_result()?;
-        let evidence = evidence.to_owned();
-        call::run_result(call, move |engine, options| {
-            details(engine, &question, &evidence, options)
-        })
-    })();
-    let value = match result {
-        Ok(answer) => {
-            let details: serde_json::Value = serde_json::from_str(&answer.to_json())
-                .map_err(|_| Refusal::of(thinkthen::ErrorKind::Defect, "a result is not JSON"))
-                .or_raise();
-            serde_json::json!({"status":"answered","details":details})
-        }
-        Err(error) => error.value().unwrap_or_else(|| call::raise(error)),
-    };
-    Some(JsonB(value))
 }
 
 /// This backend's totals. Tests read differences around a call (0095).
@@ -382,15 +244,6 @@ fn thinkthen_relations(
         })
         .collect();
     TableIterator::new(rows)
-}
-
-/// The array form: one row per element, its place from 0, one worker.
-#[pg_extern(name = "thinkthen_decide", parallel_restricted)]
-fn thinkthen_decide_array(
-    question: Option<&str>,
-    evidences: Option<Array<'_, &str>>,
-) -> TableIterator<'static, (name!(i, i32), name!(decided, Option<bool>))> {
-    array::decide_array(question, evidences, None)
 }
 
 /// R1-10: a test build's panic becomes XX000, and the session lives.
