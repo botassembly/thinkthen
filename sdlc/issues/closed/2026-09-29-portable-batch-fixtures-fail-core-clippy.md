@@ -1,6 +1,6 @@
 # Portable batch fixtures fail core Clippy
 
-Status: Open. Confirmed by the selected integration checkpoint on main `7053849e1` and source inspection.
+Status: Closed. Fixed by the typed portable fixture Quick Fix at `6e0df944`, accepted by fresh Medium code review. Both existing tests and all-target Clippy pass.
 
 The default workspace all-target Clippy check reports eleven disallowed dynamic-JSON uses in `crates/thinkthen/src/core/batch/tests/portable.rs`. Its two fixture tests decode literal corpus files through `serde_json::Value` and construct JSON member arrays, despite the existing core prohibition. These are test code failures; no product request or answer defect is established.
 

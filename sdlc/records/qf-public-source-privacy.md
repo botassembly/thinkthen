@@ -21,3 +21,5 @@ The C# local package check stopped at its preexisting stale README comparison on
 Fresh High code review accepted `4cfe45fbf` after correcting the two historical assertion descriptions. The coordinator integrated the reviewed source without further code changes. The issue closes on the configured scan and preserved package guards. A subsequent routine lint checkpoint retains its own outcome.
 
 The unmodified routine lint checkpoint on the integrated candidate passed the configured 30-name scan, agent size, policy, catalog, ticket, recognize-key, re-key and child-guard self-tests. It exited 1 at the one held DuckDB child-environment finding. Later version, named-answer, Clippy and API-inventory findings remain separate; this run did not reach them. The log is `target/codex-builds/public-source-privacy/integrated-lint.txt` in the coordinator lane. No package build or SQL/DataFrame runtime check ran.
+
+A separate post-merge `surfaces --registry` attempt stopped while obtaining the Cargo advisory database lock outside the workspace sandbox. This attempt is not a passing registry receipt and does not change the focused privacy results. No held runtime consumer ran.

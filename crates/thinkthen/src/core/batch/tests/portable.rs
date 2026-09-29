@@ -1,5 +1,6 @@
 //! Literal portable spelling and cut oracle beside the shared batch planner.
 
+use serde::Deserialize;
 use sha2::{Digest as _, Sha256};
 
 use super::{BatchRecord, Batcher, LOOPBACK, Setting, backend, decide, run, text};
@@ -16,31 +17,47 @@ const BODIES: [&str; 3] = [
     include_str!("../../../../../../specification/fixtures/batching/portable-3.request.json"),
 ];
 
+#[derive(Deserialize)]
+struct PortableFixture {
+    compact: Vec<String>,
+    heads: Vec<String>,
+    cut: Vec<bool>,
+    members: Vec<Vec<usize>>,
+    closed: Vec<String>,
+    digests: Vec<String>,
+}
+
+#[derive(Deserialize)]
+struct TextFixture {
+    texts: Vec<String>,
+    #[serde(flatten)]
+    expected: PortableFixture,
+}
+
 #[test]
 fn selected_text_spelling_sets_the_portable_cuts_and_full_requests() {
-    let corpus: serde_json::Value = serde_json::from_str(CORPUS).expect("literal corpus");
-    let texts = corpus["texts"].as_array().expect("five texts");
-    let compact = corpus["compact"].as_array().expect("five compact strings");
-    let heads = corpus["heads"].as_array().expect("five heads");
-    let cuts = corpus["cut"].as_array().expect("five decisions");
+    let corpus: TextFixture = serde_json::from_str(CORPUS).expect("literal corpus");
+    let texts = &corpus.texts;
+    let PortableFixture {
+        compact,
+        heads,
+        cut: cuts,
+        members: expected_members,
+        closed,
+        digests,
+    } = &corpus.expected;
     assert_eq!(texts.len(), 5);
     assert_eq!((compact.len(), heads.len(), cuts.len()), (5, 5, 5));
     for (at, value) in texts.iter().enumerate() {
-        let selected = text(value.as_str().expect("text"));
+        let selected = text(value);
         let bytes = json_line(&selected.value).expect("selected JSON");
-        assert_eq!(bytes, compact[at].as_str().expect("literal spelling"));
+        assert_eq!(bytes, compact[at]);
         let hash = Sha256::digest(bytes.as_bytes());
-        assert_eq!(hex(&hash[..8]), heads[at].as_str().expect("literal head"));
-        assert_eq!(
-            hash[6] & 0x0f == 0 && hash[7] == 0,
-            cuts[at].as_bool().expect("cut flag")
-        );
+        assert_eq!(hex(&hash[..8]), heads[at]);
+        assert_eq!(hash[6] & 0x0f == 0 && hash[7] == 0, cuts[at]);
     }
 
-    let records = texts
-        .iter()
-        .map(|value| text(value.as_str().expect("text")))
-        .collect();
+    let records = texts.iter().map(|value| text(value)).collect();
     let planned = run(
         Batcher::new(
             backend(LOOPBACK, "jev-1.13.0"),
@@ -58,10 +75,10 @@ fn selected_text_spelling_sets_the_portable_cuts_and_full_requests() {
     for (at, batch) in planned.iter().enumerate() {
         let members: Vec<usize> = (next..next + batch.questions.len()).collect();
         next += members.len();
-        assert_eq!(serde_json::json!(members), corpus["members"][at]);
+        assert_eq!(members, expected_members[at]);
         assert_eq!(
             format!("{:?}", batch.closed).to_ascii_lowercase(),
-            corpus["closed"][at]
+            closed[at]
         );
     }
     assert_eq!(next, 5);
@@ -74,14 +91,8 @@ fn selected_text_spelling_sets_the_portable_cuts_and_full_requests() {
                 .as_bytes()
         );
     }
-    for (batch, digest) in planned
-        .iter()
-        .zip(corpus["digests"].as_array().expect("digests"))
-    {
-        assert_eq!(
-            batch.digest.as_str(),
-            digest.as_str().expect("literal digest")
-        );
+    for (batch, digest) in planned.iter().zip(digests) {
+        assert_eq!(batch.digest.as_str(), digest);
     }
 
     let escaped = Sha256::digest(br#""caf\u00e9-5544""#);
@@ -91,7 +102,7 @@ fn selected_text_spelling_sets_the_portable_cuts_and_full_requests() {
 
 #[test]
 fn structured_selected_values_keep_order_and_numeric_kinds() {
-    let oracle: serde_json::Value = serde_json::from_str(include_str!(
+    let oracle: PortableFixture = serde_json::from_str(include_str!(
         "../../../../../../specification/fixtures/batching/portable-structured.json"
     ))
     .expect("structured oracle");
@@ -103,19 +114,10 @@ fn structured_selected_values_keep_order_and_numeric_kinds() {
     for (at, raw) in rows.iter().enumerate() {
         let selected = Json::parse(raw).expect("structured record");
         let compact = json_line(&selected).expect("compact record");
-        assert_eq!(
-            compact,
-            oracle["compact"][at].as_str().expect("literal compact")
-        );
+        assert_eq!(compact, oracle.compact[at]);
         let hash = Sha256::digest(compact.as_bytes());
-        assert_eq!(
-            hex(&hash[..8]),
-            oracle["heads"][at].as_str().expect("literal head")
-        );
-        assert_eq!(
-            hash[6] & 0x0f == 0 && hash[7] == 0,
-            oracle["cut"][at].as_bool().expect("cut flag")
-        );
+        assert_eq!(hex(&hash[..8]), oracle.heads[at]);
+        assert_eq!(hash[6] & 0x0f == 0 && hash[7] == 0, oracle.cut[at]);
         records.push(BatchRecord {
             evidence: Evidence::new(&compact).expect("evidence"),
             value: selected,
@@ -146,10 +148,10 @@ fn structured_selected_values_keep_order_and_numeric_kinds() {
     for (at, (batch, literal)) in planned.iter().zip(bodies).enumerate() {
         let members: Vec<usize> = (next..next + batch.questions.len()).collect();
         next += members.len();
-        assert_eq!(serde_json::json!(members), oracle["members"][at]);
+        assert_eq!(members, oracle.members[at]);
         assert_eq!(
             format!("{:?}", batch.closed).to_ascii_lowercase(),
-            oracle["closed"][at]
+            oracle.closed[at]
         );
         assert_eq!(
             batch.body,
@@ -158,10 +160,7 @@ fn structured_selected_values_keep_order_and_numeric_kinds() {
                 .expect("fixture newline")
                 .as_bytes()
         );
-        assert_eq!(
-            batch.digest.as_str(),
-            oracle["digests"][at].as_str().expect("literal digest")
-        );
+        assert_eq!(batch.digest.as_str(), oracle.digests[at]);
     }
     assert_eq!(next, 3);
 }
