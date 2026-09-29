@@ -176,3 +176,9 @@ Fixed by Quick Fix qf-h1-h3-h6, 2026-09-26. The `--invert` row answers the surve
 
 - The vocabulary ruling leaves one break: "buckets" beside band talk. It sits in the marketing repository at `products/thinkthen/deck.md:78` and `products/thinkthen/objections.md:30`. The fixed words are "band" and "middle range". Marketing owns the fix.
 - The cost slide says 3.6 cents and names no record. It sits in the marketing repository at `decks/2026-09-21-thinkthen-semantic-commands/slides/34-cost/slide.html:31`. Marketing owns the citation.
+
+## Marketing notes for 0.1, 2026-09-29
+
+- Ian ruled that 0.1 waits for the SQL and data frame redesign (proposed ADR 0105, workspace experiment 2038). A page in this issue that shows SQL or a data frame call should wait for ADR 0105, so it is written once.
+- Page 7 (the tool-call guard) and page 10 (skipping a bad record) are the ones a new user reaches first. Marketing asks that they land before 0.1 over items 11 to 19.
+- The site mirrors how-tos under Ian's site rulings: examples of 10 to 25 lines including output, and no `--details`. A how-to that needs `--details` keeps it in `demos/`, and marketing's site copy leaves it out.

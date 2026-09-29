@@ -2,6 +2,8 @@
 
 Status: open. Filed from ticket 0167 for the marketing lead, who owns `site/`. No external message has been sent.
 
+Claimed by the marketing lead on 2026-09-29 for 0.1. Marketing fixes, replays and lands it, and closes this issue with the commit. SQL examples wait for ADR 0105 (workspace experiment 2038) so each page is rewritten once.
+
 Current main still uses standalone `relate`'s choice planner for different kinds. Ticket 0167 changes that request shape to one yes/no question for every allowed pair, one shared entity state, and at most 400 questions per request. It keeps the edge shape. This issue takes effect when 0167 lands. It supersedes the earlier statement in `2026-09-27-site-relate-samples-after-the-three-steps.md` that relate recordings still replay.
 
 The site examples under `site/examples/beatles/relate/` and `site/examples/functions/relate/` replay request digests from the choice planner. Their recordings will miss after 0167. Rebuild those examples from the landed command and its new recordings. Explain that an edge comes from the model's knowledge of the names, while `recognize --relation` asks what the text states. Remove descriptions of a choice, asking side, option fallback, or per-rule state.

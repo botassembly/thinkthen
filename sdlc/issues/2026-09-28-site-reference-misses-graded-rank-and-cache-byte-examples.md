@@ -2,6 +2,8 @@
 
 Status: open. Owner: marketing under `sdlc/planning/ownership.md`. Filed against main `f1b0acac`. This is a copied website guidance gap, separate from the accepted graded-rank implementation and the original register52 cache/recording reader guides. The build team does not claim site source.
 
+Claimed by the marketing lead on 2026-09-29 for 0.1. Marketing fixes, replays and lands it, and closes this issue with the commit. SQL examples wait for ADR 0105 (workspace experiment 2038) so each page is rewritten once.
+
 ## What a reader sees
 
 `site/src/pages/reference.astro` line81 says rank returns every record with the most likely yes first. Ticket0223 also accepts a saved score question through `rank @FILE`, then orders by its weighted score. The blanket reference sentence omits that shipped command form. Ordinary yes/no rank and library rank retain their existing behavior.
