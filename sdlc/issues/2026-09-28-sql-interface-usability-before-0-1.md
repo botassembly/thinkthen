@@ -538,6 +538,10 @@ Fix the wrong samples: the SQLite relations call (`site/examples/functions/recog
 
 The [2026-09-29 source preparation](../records/2026-09-29-sql-usability-preparation.md) checks this issue against `42b45db6`, classifies each proposal, identifies accepted batching, settings, type and find aliases, and recommends three small release-priority batches. The survey and acceptance criteria above remain the original request. The proposed common SQL slot, named syntax, result shape and host lifetimes are not yet approved API decisions.
 
+## Progress on the two scalar defects
+
+[Ticket 0259](../tickets/0259-sql-scalar-usability.md) has a tested implementation candidate for PostgreSQL plain judgment questions, including native choose/score/tag labels, and SQLite decide yes probability. Its [build record](../records/0259-sql-scalar-build.md) pins installed-host outputs and exact local requests. Fresh code review and landing remain. The historical survey above records the pre-fix source; the twelve original acceptance criteria stay open for their other work, including common SQL syntax, data frame probability, page parity and batching.
+
 ## Related issues
 
 - `2026-09-26-architect-review-04-libraries-and-databases.md` covers identity and warm-total gaps in the same extensions.
