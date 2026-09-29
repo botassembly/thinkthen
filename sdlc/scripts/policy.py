@@ -591,6 +591,7 @@ def deny_failures(name: str, deny: dict) -> list[str]:
 
 
 NONCARGO_MANIFESTS = {
+    "libraries/php": ("composer.json", {"name": "botassembly/thinkthen", "type": "library", "license": "MIT"}),
     "libraries/csharp": ("ThinkThen.csproj", {"PackageId": "Botassembly.ThinkThen", "TargetFramework": "net8.0", "Version": "0.0.1"}),
     "libraries/jvm": ("pom.xml", {"groupId": "io.github.botassembly", "artifactId": "thinkthen-jvm", "version": "0.0.1", "packaging": "pom"}),
 }
@@ -599,6 +600,21 @@ NONCARGO_MANIFESTS = {
 def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
     if source is None:
         return [f"{name} has no package manifest"]
+    if name == "libraries/php":
+        try:
+            fields = json.loads(source)
+        except (json.JSONDecodeError, TypeError):
+            return [f"{name} has invalid JSON package metadata"]
+        if not isinstance(fields, dict):
+            return [f"{name} has invalid JSON package metadata"]
+        expected = NONCARGO_MANIFESTS[name][1]
+        failures = [f"{name} package {key} is not {value}" for key, value in expected.items()
+                    if fields.get(key) != value]
+        if fields.get("require") != {"php": ">=8.3", "ext-ffi": "*"}:
+            failures.append(f"{name} package requirements are not PHP 8.3 and ext-ffi")
+        if fields.get("autoload") != {"files": ["autoload.php"]}:
+            failures.append(f"{name} package autoload does not load autoload.php")
+        return failures
     try:
         root = ET.fromstring(source)
     except ET.ParseError:
@@ -646,6 +662,8 @@ def check_bindings() -> None:
         key, value = next(iter(values.items()))
         if not noncargo_manifest_failures(name, None) or not noncargo_manifest_failures(name, source.replace(value, "planted", 1)):
             fail("binding", f"{name} missing or tampered package manifest is refused")
+        if name == "libraries/php" and not noncargo_manifest_failures(name, source.replace('"autoload.php"', '"planted.php"', 1)):
+            fail("binding", "PHP with a planted autoload path is refused")
     if "libraries/r" in crates and (REPO / crates["libraries/r"] / "Cargo.toml").is_file():
         crate = crates["libraries/r"]
         files = binding_files("libraries/r", crate)
