@@ -534,6 +534,10 @@ Fix the wrong samples: the SQLite relations call (`site/examples/functions/recog
 - Per-row keep-going in pandas, Polars and R column calls, beyond stating today's behavior on the page.
 - Cost in usage beyond what the run-cost issue delivers.
 
+## Preparation at current main
+
+The [2026-09-29 source preparation](../records/2026-09-29-sql-usability-preparation.md) checks this issue against `42b45db6`, classifies each proposal, identifies accepted batching, settings, type and find aliases, and recommends three small release-priority batches. The survey and acceptance criteria above remain the original request. The proposed common SQL slot, named syntax, result shape and host lifetimes are not yet approved API decisions.
+
 ## Related issues
 
 - `2026-09-26-architect-review-04-libraries-and-databases.md` covers identity and warm-total gaps in the same extensions.
