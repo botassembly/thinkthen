@@ -627,3 +627,8 @@ The next host brief must distinguish SQL equality from internal string lookup, a
 ## Preserve each host value domain through a shared parser
 
 The final0284 High review reproduced configure accepting a zero request total. The new shared parser permits zero for core callers, but SQLite’s retained setting contract requires one or more and uses null to reset. Sharing grammar does not erase a host’s narrower value rule. The next host brief must compare its previous setters with the shared schema and pin the difference before storing configuration. A newly accepted core key also needs an explicit host disposition. A mapper must not accept an inert value or turn an unsupported setting into an internal defect. The0299 reviewer is checking that integration boundary while the SQLite builder corrects its positive-limit guard.
+
+
+## Keep host callbacks outside held usage guards
+
+The 0299 correction added a post-reservation cancellation check to prove that an unstarted attempt refunds its slots. High review of b50bc1e2 found that the chosen check also invoked a host callback while PreparedAttempt held the usage queue mutex. Reentry could deadlock. The existing callback-free remaining-time check observes the cancellation token and deadline without crossing that boundary. The retained builder is applying that narrow correction; the earlier listener and C proof gaps are resolved. Preparation for 0300 cost and 0302 observations must trace guard lifetimes around every host callback, observer and accounting operation. A new test seam must preserve the production callback and locking order.
