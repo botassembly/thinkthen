@@ -399,7 +399,12 @@ def self_test():
         if got != wanted:
             bad += 1
             print(f"workflows self-test host Python: wanted {wanted}, got {got}", file=sys.stderr)
-    total = len(cases) + len(host_cases) + 1
+    archive = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-archive-self-test.py")],
+                             capture_output=True, text=True)
+    if archive.returncode != 0:
+        bad += 1
+        print(f"workflows self-test archived release: {archive.stdout}{archive.stderr}", file=sys.stderr)
+    total = len(cases) + len(host_cases) + 2
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

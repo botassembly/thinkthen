@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 # 0268: Start the reviewed language archives in the manual release workflow
 
-Status: design accepted after fresh independent High review of `e748dcd1`; the coordinator approves the implementation scope recorded in the Lanes table. [Preparation](../records/0268-release-workflow-language-preparation.md) traced the current four-target workflow and eleven locally proved language packages. No workflow dispatch, container build, public draft, registry or site change has run for this ticket. The concurrent 0267 local complete-bundle receipt must be compared before the new pair workflow is integrated; the independent legacy gitless repair may proceed first; it is not an Actions result.
+Status: design accepted after fresh independent High review of `e748dcd1`. The [gitless source checkpoint](../records/0268-gitless-provenance-checkpoint.md) is a partial code candidate awaiting fresh High review; it repairs the legacy identity lookup and prepares controlled Go/C++ archive input, without adding language assets to the workflow. [Preparation](../records/0268-release-workflow-language-preparation.md) traced the four-target workflow and eleven locally proved language packages. No workflow dispatch, container build, public draft, registry or site change has run for this ticket. The concurrent 0267 local bundle is not an Actions result and must be compared before the pair workflow is integrated.
 
 ## Outcome and first boundary
 
@@ -37,3 +37,7 @@ The remaining nine locally proved language packages are C#/JVM, Swift/Zig, PHP/D
 - Changes: Repairs the gitless archived-source build boundary and adds a bounded Linux x86 Go/C++ language pair with an explicit before-draft expected-family and installed-smoke gate.
 - Proof: Archive SHA handoff and refusal plants, exact container C/source inputs and glibc bound, historical pair regressions, existing installed public callers, then a separately authorized real Actions rehearsal.
 - Defers: Nine other language wrappers, private Flutter publication, Linux ARM/macOS language qualification, final release pin, registry/site publication and Phase 3b/4 closure.
+
+## What the first checkpoint taught us
+
+The existing Linux container path cannot read Git metadata after `git archive` extraction, so the source lookup must occur only for wrapper parts. An archived wrapper's source SHA and copied files are insufficient to establish the C/Rust inputs built beside it; the [focused checkpoint](../records/0268-gitless-provenance-checkpoint.md) now compares the archived and extracted trees in both directions before `part_c`, including extra Cargo configuration. First review also found that the Docker stand-in was enforcing an identity assertion; it now only captures inputs for independent fixture checks. This does not qualify a manylinux C build or the Go/C++ runner. Their package-list, expected-family, tool setup and installed-smoke work remains this ticket's next claimed slice after fresh High review, without running SQL or DataFrame work under the active hold.
