@@ -2,6 +2,8 @@
 
 Status: ACCEPT `f8670b99` after independent High re-review on 2026-09-29. The reviewer verified the two corrected source claims and their remaining execution limits without tests or builds.
 
+The [accepted follow-up](0271-0272-runner-input-followup.md) resolves the missing GnuCOBOL dependency name through signed `Provides` metadata and confirms Scala’s official release digest. The table below preserves the initial research; use the follow-up for those two conclusions. Actual runner and compiler checks remain open.
+
 This is input research for the accepted [0271](../tickets/0271-ada-objc-cobol-linux-workflow.md) and [0272](../tickets/0272-csharp-jvm-linux-workflow.md) designs, not runner qualification. The [0265](0265-ada-objc-cobol-release-build.md) and [0262](0262-csharp-jvm-release-build.md) versions came from local executions. No compiler, download, install, container, or Actions run occurred for this record. Ubuntu package pages show available versions, not the contents of a future runner image. For Ubuntu packages, first probe an already installed exact version; otherwise use a recorded [Ubuntu archive snapshot](https://snapshot.ubuntu.com/) and its signed apt metadata with explicit package and dependency versions. A mutable current apt index is not a pin.
 
 | Selected prerequisite and local version | Defensible input and integrity | Selector and execution stop to resolve on the actual runner |

@@ -4,14 +4,13 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
 case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) echo 'GNU Objective-C gate unavailable on this host' >&2; exit 77 ;; esac
 case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full) ;; stress) exit 77 ;; *) exit 2 ;; esac
-for tool in gcc cargo flock nm node python3 cmp; do
+for tool in gcc cargo flock nm python3 cmp; do
   command -v "$tool" >/dev/null 2>&1 || { echo "GNU Objective-C gate missing $tool" >&2; exit 77; }
 done
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   for tool in tar ldd; do command -v "$tool" >/dev/null 2>&1 || exit 77; done
   [ -f "$THINKTHEN_ARTIFACT" ] && [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'Objective-C installed: wrapper or C archive missing' >&2; exit 1; }
 fi
-python3 -c 'import jsonschema' >/dev/null 2>&1 || { echo 'GNU Objective-C gate missing Python jsonschema' >&2; exit 77; }
 if [ "${TT_OBJC_LOCKED:-0}" != 1 ]; then
   TT_OBJC_LOCKED=1 exec flock -w 180 -E 75 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-3.lock}" env TT_OBJC_LOCKED=1 "$0" "$@"
 fi
@@ -41,6 +40,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   echo 'GNU Objective-C installed release PASS: five typed rows and three literal sends'
   exit 0
 fi
+command -v node >/dev/null 2>&1 || { echo 'GNU Objective-C gate missing node' >&2; exit 77; }
+python3 -c 'import jsonschema' >/dev/null 2>&1 || { echo 'GNU Objective-C gate missing Python jsonschema' >&2; exit 77; }
 unset THINKTHEN_API_KEY
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
 export CARGO_TARGET_DIR="$REPO/libraries/c/target"
