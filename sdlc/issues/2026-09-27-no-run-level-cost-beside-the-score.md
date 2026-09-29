@@ -31,6 +31,6 @@ At main `23371cc9`, `cli/facts.rs` still reports the whole command, while `trans
 ## Scope note, 2026-09-28
 
 `audit --cases` now carries each result line's `meta.usage` with `usage_scope`, and `status` totals the month. A
-caller can sum the case rows for a run total today. The measured spread (450 against 630 tokens a call for the
+caller can count each saved result line's known usage once; tag and annotation cases can repeat that usage. This gives a saved-row subtotal, not necessarily the whole run, and missing usage stays unknown. The existing `--facts` line reports the command's known totals. The measured spread (450 against 630 tokens a call for the
 album-year wording, and 3,713 against 2,794 for the blob) remains the case for a run-level line when a project
 needs one.
