@@ -1,0 +1,17 @@
+# Prepared contract-page corrections
+
+Status: Quick Fix candidate for independent review. Base main `edcbaf17`. This change updates five public pages and no runtime, tests, schema, site or issue disposition.
+
+## Original criteria and retained limits
+
+Register 50 in local experiment 284 asks every surface to set timeout, retries, profile and replay or refuse them explicitly, with each surface's reach stated on the settings page. The settings matrix already lists those controls. Its two surrounding paragraphs still described Linux ARM64 and both macOS DuckDB packages as the old C API route. The reviewed four-target C++ selector and selected installed settings and caller-session warm proofs supersede that description. This correction says what those packages and checks actually establish. Native Intel package qualification remains ticket 0231; execution on macOS 15 and the complete runner rehearsal remain ticket 0128. Neither is silently counted as register 50's original documentation criterion.
+
+Register 88 in local experiment 284 asks the question-file page and precedence table to show that a saved model beats the configured model. ADRs 0010 and 0033 deliberately omit a model environment variable. The accepted order remains typed `--model`, saved file, engine, configuration, built-in. The pages now give one concrete `configured-1` versus `saved-1` example and show the typed override. The existing `decide_edge` removal test and `backend/cache_configuration` precedence test remain the runtime proof; this Quick Fix changes no resolver.
+
+The [named-answers issue](../issues/2026-09-28-named-answers-lint-fails-on-three-database-readmes.md) identifies one unnamed SQL call in each database README. DuckDB now names its find result `best_passage` and filters its null result on that name. PostgreSQL and SQLite name the chosen `team` before insertion, preserve every row including a not-sure null, then filter the stored `team` in a follow-up query. These are documentation examples, not new SQL functions.
+
+## Proof and lessons
+
+`node sdlc/scripts/named-answers.mjs` passed over 225 code blocks in 86 pages; the prior run reported exactly the three issue lines. With the local CLI rebuilt from this branch, `sdlc/scripts/settings --self-test` passed 10/10 and `sdlc/scripts/settings` found 52 rows, 57 flags, six environment names, 15 question-file keys and zero failures. The earlier invocation with a stale local CLI failed because that binary's help lacked the newly added `--write-to` flag; it was an artifact mismatch, not a settings-page defect. The rebuilt CLI SHA-256 is `054c800b7ca3a65a8e3735dc1c237a533106512fbdafb0e130778ad1472bf057`. In an isolated local configuration home, the documented dry-run read `saved-1` from the saved question over `configured-1` in configuration; adding `--model typed-1` read `typed-1`. Both calls exited zero, used no key and sent nothing.
+
+Preparation correctly identified the two stale platform sentences, the missing worked model example and three SQL names. The build needed no new runtime or test. A previous page edit was paused on a mistaken interpretation of a user question; its exact three-paragraph settings patch was preserved locally and reapplied only after the coordinator restored this claim. Later documentation work should compare the source revision and installed target proof before repeating an old platform paragraph. Root owns the register and issue status after independent review.

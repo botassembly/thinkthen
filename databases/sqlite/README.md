@@ -59,8 +59,11 @@ CREATE TABLE judged (
   team TEXT CHECK (team IN ('billing', 'shipping'))
 );
 INSERT INTO judged
-SELECT id, thinkthen_choose('{"choose":"Which team owns this?","options":["billing","shipping"]}', body)
-FROM tickets;
+SELECT id, team FROM (
+  SELECT id, thinkthen_choose('{"choose":"Which team owns this?","options":["billing","shipping"]}', body) AS team
+  FROM tickets
+) AS choices;
+SELECT id, team FROM judged WHERE team = 'billing';
 ```
 
 The check rejects another non-`NULL` label. A stored `NULL` can represent a choice below the cut or an exact tie. The check permits `NULL`; input-`NULL` behavior follows the function's argument rules above. A failed ThinkThen call raises an error; do not turn it into `NULL` to pass the check. The check reads only the stored `team` value. It does not invoke a ThinkThen function inside the schema, which this extension refuses.
