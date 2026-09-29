@@ -6,10 +6,7 @@ opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sd
 
 # 0271: Prepare Ada, GNU Objective-C and COBOL for the Linux x86 release workflow
 
-Status: prospective design at main `5a1a6e15`, pending fresh independent review and landed 0269/0270 static wiring. No implementation or runner qualification. [Preparation](../records/0271-0272-language-runner-preparation.md) reconciles accepted proof and tools. Ian's SQL/DataFrame hold applies throughout.
-
-
-The independent High design review accepted this ticket at `2d83e3ef` (0271 was unchanged from its `dc2db62d` acceptance). [The review record](../records/0271-0272-language-workflow-design-review.md) preserves the corrections and remaining execution limits. The coordinator approves the bounded design; implementation still requires the preceding workflow and a lane claim.
+Status: design accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approves the bounded design; implementation waits for landed 0270 wiring and a lane claim. [Preparation](../records/0271-0272-language-runner-preparation.md) records the current source and tool boundaries. No implementation, SDK download, compilation or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
 
 ## Outcome and boundaries
 

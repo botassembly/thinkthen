@@ -6,10 +6,7 @@ opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md
 
 # 0272: Prepare C# and JVM managed archives for the Linux x86 release workflow
 
-Status: prospective design at main `5a1a6e15`, after 0271 and pending fresh independent review. No SDK download, compilation or runner qualification. [Preparation](../records/0271-0272-language-runner-preparation.md) maps the source/C handoff. Ian's SQL/DataFrame hold applies.
-
-
-The independent High design review accepted this ticket at `2d83e3ef` (0271 was unchanged from its `dc2db62d` acceptance). [The review record](../records/0271-0272-language-workflow-design-review.md) preserves the corrections and remaining execution limits. The coordinator approves the bounded design; implementation still requires the preceding workflow and a lane claim.
+Status: design accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approves the bounded design; implementation waits for landed 0271 wiring and a lane claim. [Preparation](../records/0271-0272-language-runner-preparation.md) records the current source and tool boundaries. No implementation, SDK download, compilation or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
 
 ## One source pin and one native archive
 
