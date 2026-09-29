@@ -5,9 +5,10 @@ use std::fmt;
 use crate::core::{self, Batcher, PlanSummary};
 
 use super::bulk::selected_batch;
-use super::engine::{DetailQuestion, Engine, Evidence};
+use super::engine::{DetailQuestion, Engine, Evidence, only};
 use super::error::Error;
 use super::options::CallOptions;
+use super::question::Kind;
 
 /// Prepared request counts before cache answers, refusal splits or retries.
 /// The token band is an estimate of the prepared body bytes, not a bill.
@@ -102,6 +103,17 @@ impl Engine {
         I::Item: Evidence,
     {
         let question = question.question();
+        only(
+            question,
+            &[
+                Kind::Decide,
+                Kind::Banded,
+                Kind::Choose,
+                Kind::Tag,
+                Kind::Score,
+            ],
+            "plan",
+        )?;
         let setting = selected_batch(question, &options, self.batch)?;
         let context = options
             .context_text()

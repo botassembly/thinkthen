@@ -4,7 +4,7 @@
 use std::num::NonZeroUsize;
 
 use conformance_backend::{Canned, Listener};
-use thinkthen::{BatchSetting, CallOptions, Engine, Question};
+use thinkthen::{BatchSetting, CallOptions, Engine, ErrorKind, Question};
 
 #[test]
 fn public_plan_reads_every_record_and_discloses_the_same_two_prepared_bodies_without_a_send() {
@@ -47,4 +47,39 @@ fn public_plan_reads_every_record_and_discloses_the_same_two_prepared_bodies_wit
         "a later invalid record refuses the whole preview"
     );
     assert_eq!(listener.count(), 0);
+}
+
+#[test]
+fn plan_refuses_nonordinary_questions_before_disclosing_a_body_or_sending() {
+    let listener =
+        Listener::answering(|_| Canned::status(500, "should not send")).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .no_cache()
+        .build()
+        .expect("keyless engine");
+    let cases = [
+        (Question::rank("Rank these?").expect("rank"), "rank"),
+        (Question::find("Find one?").expect("find"), "find"),
+        (
+            Question::find("Find one?")
+                .expect("find")
+                .offering_none()
+                .expect("none"),
+            "findnone",
+        ),
+    ];
+    for (question, kind) in cases {
+        let error = engine
+            .plan(&question, ["private input"])
+            .expect_err("this kind has no ordinary details_many plan");
+        assert_eq!(error.kind(), ErrorKind::Usage, "{kind}");
+        assert_eq!(
+            error.detail().message(),
+            format!("plan does not take a {kind} question")
+        );
+        assert!(!format!("{error:?}").contains("private input"));
+        assert_eq!(listener.count(), 0, "{kind} disclosed no request body");
+    }
 }
