@@ -62,7 +62,7 @@ done
 for name in main direct; do
   gnatmake -gnat2022 -I"$ROOT/checks/legacy" "$ROOT/checks/legacy/$name.adb" -D "$TARGET/legacy" -o "$TARGET/legacy/$name" -largs -L"$CARGO_TARGET_DIR/debug" -lthinkthen_c
 done
-python3 "$ROOT/checks/types.py"
+python3 "$ROOT/checks/public_types.py"
 python3 "$ROOT/checks/installed.py"
 python3 "$ROOT/checks/failure.py"
 python3 "$ROOT/checks/typed_matrix.py"
