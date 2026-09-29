@@ -1,0 +1,9 @@
+{
+  "directory": [
+    "src",
+    "examples",
+    "checks"
+  ],
+  "extension": ".cob",
+  "max": 981
+}

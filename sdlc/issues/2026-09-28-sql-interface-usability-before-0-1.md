@@ -542,7 +542,7 @@ The [2026-09-29 source preparation](../records/2026-09-29-sql-usability-preparat
 
 - `2026-09-26-architect-review-04-libraries-and-databases.md` covers identity and warm-total gaps in the same extensions.
 - `2026-09-26-settings-some-surfaces-cannot-reach.md` rules on the address and key.
-- `2026-09-27-one-type-contract-for-every-surface.md` and ADR 0082 settle plain SQL return types.
+- `closed/2026-09-27-one-type-contract-for-every-surface.md` and ADR 0082 settle plain SQL return types.
 - `2026-09-26-every-surface-should-give-back-run-facts.md` owns the facts that proposal 3 moves off the data frame idioms' return value.
 - `2026-09-25-site-samples-and-pages-after-the-surfaces-land.md` owns site sample regeneration. Proposal 10 adds the page to it.
 - `2026-09-26-batching-design.md` owns the packing rules that proposal 6 extends.

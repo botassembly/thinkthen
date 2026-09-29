@@ -1,6 +1,6 @@
 # SQL answer-column constraint recipes
 
-Status: accepted for landing after fresh independent review of `be25a5c9`, from main `bf228948`. J7 of `sdlc/issues/2026-09-27-one-type-contract-for-every-surface.md` is already ruled: SQL functions keep their plain return types and callers constrain stored labels. No runtime source, public function signature, provider call, or extension binary changed. J7 closes with this reviewed documentation landing.
+Status: accepted for landing after fresh independent review of `be25a5c9`, from main `bf228948`. J7 of `sdlc/issues/closed/2026-09-27-one-type-contract-for-every-surface.md` is already ruled: SQL functions keep their plain return types and callers constrain stored labels. No runtime source, public function signature, provider call, or extension binary changed. J7 closes with this reviewed documentation landing.
 
 ## Source and literal proof
 

@@ -1,0 +1,422 @@
+[
+  {
+    "state": "café",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is this a decision?"
+      }
+    }
+  },
+  {
+    "state": "yes",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "no",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "unsure",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "café",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "a\u0000b",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "Each question quotes the text it asks about.",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "The text is \"first\". Is it?"
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "The text is \"second\". Is it?"
+      },
+      "q3": {
+        "type": "noul",
+        "instructions": "The text is \"third\". Is it?"
+      }
+    }
+  },
+  {
+    "state": "recovery",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "hold-deadline",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "json-decide",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "choose",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "choice",
+        "instructions": "Which team?",
+        "criteria": {
+          "first": null,
+          "second": null
+        }
+      }
+    }
+  },
+  {
+    "state": "choose-map",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "choice",
+        "instructions": "Which team?",
+        "criteria": {
+          "first": {
+            "what": "First team",
+            "not_for": "Other teams",
+            "examples": [
+              "one"
+            ]
+          },
+          "second": "Second team"
+        }
+      }
+    }
+  },
+  {
+    "state": "tag",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Which labels?\n\nDetermine whether the label \"first\" applies to this item."
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Which labels?\n\nDetermine whether the label \"second\" applies to this item."
+      }
+    }
+  },
+  {
+    "state": "score",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "score",
+        "instructions": "What level?",
+        "criteria": [
+          "Low.",
+          "High."
+        ]
+      }
+    }
+  },
+  {
+    "state": "Each question quotes the text it asks about.",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "The text is \"filter-one\". Is it?"
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "The text is \"filter-two\". Is it?"
+      }
+    }
+  },
+  {
+    "state": "Each question quotes the text it asks about.",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "The text is \"rank-one\". Is it?"
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "The text is \"rank-two\". Is it?"
+      }
+    }
+  },
+  {
+    "state": "[{\"id\":\"u001\",\"evidence\":\"find-one\"},{\"id\":\"u002\",\"evidence\":\"find-two\"}]",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "choice",
+        "instructions": "Which line?",
+        "criteria": {
+          "u001": null,
+          "u002": null
+        }
+      }
+    }
+  },
+  {
+    "state": "annotate-one",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "Maria Chen",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "choice",
+        "instructions": "Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: [[Maria]] Chen",
+        "criteria": {
+          "BEGIN": "first token of a name of two or more tokens",
+          "INSIDE": "a middle token of a name",
+          "END": "last token of a name of two or more tokens",
+          "SINGLE": "a one-token name",
+          "OUT": "not part of a name"
+        }
+      },
+      "q2": {
+        "type": "choice",
+        "instructions": "Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: Maria [[Chen]]",
+        "criteria": {
+          "BEGIN": "first token of a name of two or more tokens",
+          "INSIDE": "a middle token of a name",
+          "END": "last token of a name of two or more tokens",
+          "SINGLE": "a one-token name",
+          "OUT": "not part of a name"
+        }
+      }
+    }
+  },
+  {
+    "state": "Maria Chen",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "choice",
+        "instructions": "In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: [[Maria Chen]]",
+        "criteria": {
+          "person": "A person name.",
+          "none of these": "They are not a proper name, or no listed kind covers what they name."
+        }
+      }
+    }
+  },
+  {
+    "state": {
+      "entities": [
+        {
+          "id": "i1",
+          "name": "First",
+          "kind": "alert"
+        },
+        {
+          "id": "i2",
+          "name": "Second",
+          "kind": "alert"
+        }
+      ]
+    },
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it true that i1 caused by i2?"
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Is it true that i2 caused by i1?"
+      }
+    }
+  },
+  {
+    "state": "John Smith",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "choice",
+        "instructions": "Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: [[John]] Smith",
+        "criteria": {
+          "BEGIN": "first token of a name of two or more tokens",
+          "INSIDE": "a middle token of a name",
+          "END": "last token of a name of two or more tokens",
+          "SINGLE": "a one-token name",
+          "OUT": "not part of a name"
+        }
+      },
+      "q2": {
+        "type": "choice",
+        "instructions": "Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: John [[Smith]]",
+        "criteria": {
+          "BEGIN": "first token of a name of two or more tokens",
+          "INSIDE": "a middle token of a name",
+          "END": "last token of a name of two or more tokens",
+          "SINGLE": "a one-token name",
+          "OUT": "not part of a name"
+        }
+      }
+    }
+  },
+  {
+    "state": "John Smith",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "choice",
+        "instructions": "In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: [[John Smith]]",
+        "criteria": {
+          "person": "A person name.",
+          "none of these": "They are not a proper name, or no listed kind covers what they name."
+        }
+      }
+    }
+  },
+  {
+    "state": {
+      "entities": [
+        {
+          "id": "i1",
+          "name": "Third",
+          "kind": "alert"
+        },
+        {
+          "id": "i2",
+          "name": "Fourth",
+          "kind": "alert"
+        }
+      ]
+    },
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it true that i1 caused by i2?"
+      },
+      "q2": {
+        "type": "noul",
+        "instructions": "Is it true that i2 caused by i1?"
+      }
+    }
+  },
+  {
+    "state": "status-401",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "failure-two",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "settings",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "hold-contract",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "recovery-contract",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  },
+  {
+    "state": "hold-bulk-contract",
+    "model": "jev-1.13.0",
+    "questions": {
+      "q1": {
+        "type": "noul",
+        "instructions": "Is it?"
+      }
+    }
+  }
+]

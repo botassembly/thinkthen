@@ -10,7 +10,7 @@ Status: Design accepted at `3d44d4dd`; the coordinator approved implementation u
 
 ## Outcome and authority
 
-Python accepts ordered standard-library `Enum` classes and direct `Literal[...]` forms wherever it accepts label sets. Its stub names finite question and error kinds and the real annotate row values, including a distinct failure marker. An optional `thinkthen[pydantic]` extra reads Pydantic model/`Field` metadata and provides `thinkthen.pydantic.row_model(question_set)` for validating rows. Ordinary `import thinkthen` and all core calls keep no Pydantic dependency. ADR 0082 and the [type-contract issue](../issues/2026-09-27-one-type-contract-for-every-surface.md) approved this outcome; the public spellings below are routine design choices for review, not another Ian decision.
+Python accepts ordered standard-library `Enum` classes and direct `Literal[...]` forms wherever it accepts label sets. Its stub names finite question and error kinds and the real annotate row values, including a distinct failure marker. An optional `thinkthen[pydantic]` extra reads Pydantic model/`Field` metadata and provides `thinkthen.pydantic.row_model(question_set)` for validating rows. Ordinary `import thinkthen` and all core calls keep no Pydantic dependency. ADR 0082 and the [type-contract issue](../issues/closed/2026-09-27-one-type-contract-for-every-surface.md) approved this outcome; the public spellings below are routine design choices for review, not another Ian decision.
 
 ## Starts from and keeps
 

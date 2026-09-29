@@ -10,7 +10,7 @@ Status: done 2026-09-27 after fresh code review and correction acceptance at `8f
 
 ## Outcome and authority
 
-A library or language port can read one written type contract, validate the C JSON door's request and result shapes, and test its mapping against shared examples. This is Batch J1 in `sdlc/planning/work-plan-2026-09-27.md`, authorized by `sdlc/issues/2026-09-27-one-type-contract-for-every-surface.md` and proposed ADR 0082. J1 supports the ideal state's one Rust engine with the same answers across surfaces. Ian can overturn the issue's recommended mappings. Leave existing tickets unchanged and do not build J2–J8 here.
+A library or language port can read one written type contract, validate the C JSON door's request and result shapes, and test its mapping against shared examples. This is Batch J1 in `sdlc/planning/work-plan-2026-09-27.md`, authorized by `sdlc/issues/closed/2026-09-27-one-type-contract-for-every-surface.md` and proposed ADR 0082. J1 supports the ideal state's one Rust engine with the same answers across surfaces. Ian can overturn the issue's recommended mappings. Leave existing tickets unchanged and do not build J2–J8 here.
 
 ## Starts from and keeps
 

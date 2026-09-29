@@ -6,7 +6,7 @@ opens: sdlc/tickets/0243-rust-choice-descriptions.md sdlc/records/0243-rust-choi
 
 # 0243: Describe typed Rust choices
 
-Status: **Complete after fresh code/API ACCEPT at `3d58af1f`.** Design was accepted at `7d866431`, and the coordinator approved the exact runtime claims in the main Lanes table. This is the existing J4 row, not another type-contract outcome. ADR 0082 and [the type-contract issue](../issues/2026-09-27-one-type-contract-for-every-surface.md) already approve descriptions on `choices!` variants. The [fresh Sol Medium design review](../records/0243-design-review.md) accepted the spelling; the coordinator owns J4 closure.
+Status: **Complete after fresh code/API ACCEPT at `3d58af1f`.** Design was accepted at `7d866431`, and the coordinator approved the exact runtime claims in the main Lanes table. This is the existing J4 row, not another type-contract outcome. ADR 0082 and [the type-contract issue](../issues/closed/2026-09-27-one-type-contract-for-every-surface.md) already approve descriptions on `choices!` variants. The [fresh Sol Medium design review](../records/0243-design-review.md) accepted the spelling; the coordinator owns J4 closure.
 
 ## Starts from
 

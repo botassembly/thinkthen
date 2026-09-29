@@ -1,0 +1,5 @@
+obj/
+lib/
+checks/target/
+checks/logs/
+checks/__pycache__/
