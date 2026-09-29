@@ -1,16 +1,16 @@
 ---
 flow: build
 priority: 256
-opens: sdlc/issues/2026-09-27-audit-writes-the-tuned-bar-in-place.md sdlc/records/0256-audit-output-preflight.md
+opens: sdlc/issues/closed/2026-09-27-audit-writes-the-tuned-bar-in-place.md sdlc/records/0256-audit-output-preflight.md
 ---
 
 # 0256: Write an audited candidate beside its source
 
-Status: fresh Medium design review accepted `4061dabd3b8e54f4f965c30c76c180cb4731f463`. The coordinator approves implementation under the exact Lanes claim and ADR 0102. Existing `--write` remains unchanged. No product completion is claimed before code and focused proof pass independent review. [Preflight](../records/0256-audit-output-preflight.md) records the inspected source and policy boundaries.
+Status: implemented and accepted after fresh Medium code review of `d49bb42cb25c6b9f67ffc83abfcec734df702f59`. The separate-candidate outcome is complete; existing `--write` remains unchanged. [Build proof](../records/0256-audit-output-build.md) records the focused validation and retained limits.
 
 ## Outcome
 
-`thinkthen audit RESULTS KEY --write QUESTIONS --write-to OUTPUT` writes a reusable tuned question file or set at a new named path and leaves `QUESTIONS` byte for byte unchanged. `--write QUESTIONS` alone keeps its current in-place behavior, reports, digest refusal and failure precedence. The new option creates a file even when audit keeps every bar; that file then copies the validated source bytes. Both forms send no request and read no API key. This is the separate-candidate outcome in [the filed issue](../issues/2026-09-27-audit-writes-the-tuned-bar-in-place.md), not a claim that an observed crash damaged an existing file.
+`thinkthen audit RESULTS KEY --write QUESTIONS --write-to OUTPUT` writes a reusable tuned question file or set at a new named path and leaves `QUESTIONS` byte for byte unchanged. `--write QUESTIONS` alone keeps its current in-place behavior, reports, digest refusal and failure precedence. The new option creates a file even when audit keeps every bar; that file then copies the validated source bytes. Both forms send no request and read no API key. This is the separate-candidate outcome in [the filed issue](../issues/closed/2026-09-27-audit-writes-the-tuned-bar-in-place.md), not a claim that an observed crash damaged an existing file.
 
 ## Accepted command and destination rule
 
@@ -24,7 +24,7 @@ Normal success keeps the existing per-bar standard-error report and ordinary aud
 
 ## Evidence
 
-- **Starts from:** [the open issue](../issues/2026-09-27-audit-writes-the-tuned-bar-in-place.md), experiments 296 and 297 as recorded there, and the [reviewed tuning intake](../records/2026-09-28-tuning-loop-intake-preparation.md). Main `e920ae28` writes back in `cli/audit/write.rs::bars`; the in-place overwrite is deliberate, not observed crash corruption.
+- **Starts from:** [the open issue](../issues/closed/2026-09-27-audit-writes-the-tuned-bar-in-place.md), experiments 296 and 297 as recorded there, and the [reviewed tuning intake](../records/2026-09-28-tuning-loop-intake-preparation.md). Main `e920ae28` writes back in `cli/audit/write.rs::bars`; the in-place overwrite is deliberate, not observed crash corruption.
 - **Keeps:** Current `--write` form, error order and exact messages, including its in-place crash/temporary-file ruling; 0135's saved-question digest gate; single/set/recognize/relate question resolution; `rank`/`find` no-bar behavior; threshold byte splices, model and batch decisions, result reports, offline/no-key routing and zero sends.
 - **Changes:** The paired `--write-to` form publishes a fresh, valid tuned file beside an unchanged source. It refuses every existing final destination and uses a complete temporary file plus atomic no-replace link for the new form only.
 - **Proof:** One literal single-question CRLF/escaped-key output and one literal set-member output; source-byte snapshots and parse/reuse; current old-result digest refusal; absent/existing-empty/same-path/symlink/hard-link and parent-failure cases with exact exit, stdout, stderr, zero sends and no residual temporary file in ordinary failures. Retain and run existing in-place assertions. Source-review the final no-replace primitive and narrow policy plants; no provider or stress run.
@@ -38,4 +38,4 @@ Current nonblank counts are audit 214, writer 204, measure 279, command help 415
 
 ## What the build taught us
 
-Pending implementation and fresh code review. Record corrected assumptions, source growth, exact proof and any retained gaps here before landing.
+The [build record](../records/0256-audit-output-build.md) holds exact checks and source growth. The first reusability assertion used the public library parser, which intentionally rejects CLI-only `on`; it was replaced by the actual compiled command's dry-run on the output. Strict Clippy required two small local helpers for the 90-line limit, with no suppression or broader writer framework. The settings checker needed the freshly built command on PATH. Fresh code review found that the new test fixture deleted a predictable scratch path before creating it. The corrected fixture creates each directory exclusively, retries an occupied name, and removes only a directory it successfully claimed. Cleanup ownership was missing from the preparation's test-fixture review. Existing in-place fixtures remain, and the new six-case target proves separate destination behavior. Unsupported hard-link and cleanup-error branches are source-reviewed mappings, not fault-injected runtime results. The old digest and in-place semantics, site ownership and separate tuning-loop reports remain unchanged. Fresh code review still decides whether further proof is needed before the issue can close.

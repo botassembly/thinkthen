@@ -1,8 +1,8 @@
 # Audit
 
-Status: **Settled** by ticket 0113, amended by tickets 0125 and 0135.
+Status: **Settled** by ticket 0113, amended by tickets 0125, 0135 and 0256.
 
-`thinkthen audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, `annotate`, `recognize`, and `relate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. It sends no request and reads no API key.
+`thinkthen audit RESULTS KEY` grades saved answers against an answer key and suggests a bar. It reads `decide`, `filter`, `choose`, `tag`, `score`, `rank`, `find`, `annotate`, `recognize`, and `relate` results. It prints agreement with a Wilson interval, both disagreement directions, precision and f1, AUC, calibration, a coverage curve, and a suggested bar tuned on one part and checked on the other. It shows how steady that bar is across twenty splits. With `--write` it puts a steady bar into the question file the results came from. With `--write QUESTIONS --write-to OUTPUT` it creates a tuned candidate at a new path and keeps the source unchanged. It sends no request and reads no API key.
 
 The definition is a prototype measurement script, with its tests and README. The script's history was removed, so no commit holds it now. `crates/thinkthen/tests/fixtures/measure/README.md` gives the file checksums, and they are the record. Where this page and the prototype disagree, the golden files in that folder decide. "Departures" lists every known difference.
 
@@ -15,7 +15,7 @@ thinkthen audit results.jsonl key.jsonl --threshold 0.4 --table
 
 ```text
 thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--id POINTER] [--seed N] [--target A]
-                            [--optimize accuracy|precision|recall|f1] [--match strict|overlap] [--write QUESTIONS]
+                            [--optimize accuracy|precision|recall|f1] [--match strict|overlap] [--write QUESTIONS] [--write-to OUTPUT]
                             [--curve] [--pooled] [--table]
 ```
 
@@ -28,6 +28,7 @@ thinkthen audit RESULTS KEY [--by question|verb|POINTER] [--threshold RULE] [--i
 - `--optimize M` names the measure a yes/no suggested cut maximizes: `accuracy` (the default), `precision`, `recall`, or `f1`.
 - `--match M` names how a `recognize` name matches a key name: `strict` (the default) or `overlap`. See "Names and edges".
 - `--write QUESTIONS` names the question file or question set the results came from. audit writes the steady bar into it. See "Writing the bar".
+- `--write-to OUTPUT` requires `--write QUESTIONS` and creates a tuned file at a new path. It leaves QUESTIONS unchanged and refuses an existing OUTPUT. See "Writing the bar".
 - `--curve` fills each row's `curve`, and the pooled line's. See "Curve".
 - `--pooled` prints one more line after the rows. See "The pooled line".
 - `--table` prints the results for a person instead of JSONL.
@@ -168,7 +169,7 @@ A `recognize` or `relate` row prints `  matched M, extra X, missed Y: precision 
 
 `--write QUESTIONS` reads the question file or question set, a set when it holds `questions`. It resolves the file with no command-line value and takes its question digest. Every graded line must carry that digest in `meta.question_sha256`, or `meta.questions_sha256` for a set. A file that holds `recognize` or `relate` is that command's question file, and its bar is the top-level `threshold`. audit takes the digest that command prints. A `relate` run under `--lines` nulls the fields, so a `relate` line may carry either of the file's two digests. The digest covers the threshold, so a run with `--threshold` typed beside `@FILE` fails. `rank` and `find` lines skip the check, since they write nothing.
 
-audit follows ReAnchor's rule: keep the current bar unless another scores strictly better. It writes `steady.cut` only when `better` is more than half of `splits`. A `tag` question takes its pooled row's cut. A set member's cut goes to `questions.NAME.threshold`. The value prints in its shortest form, such as `0.42` or `1`. A present member's value bytes change, and every other byte stays. An absent member goes after the object's last member, with the separator copied from before that member's key and its key and colon spacing copied too. When a bar changes, audit writes the whole file once, in place. It prints one standard error line per bar, `TARGET` being `the question` or `question NAME`, and exits 0:
+audit follows ReAnchor's rule: keep the current bar unless another scores strictly better. It writes `steady.cut` only when `better` is more than half of `splits`. A `tag` question takes its pooled row's cut. A set member's cut goes to `questions.NAME.threshold`. The value prints in its shortest form, such as `0.42` or `1`. A present member's value bytes change, and every other byte stays. An absent member goes after the object's last member, with the separator copied from before that member's key and its key and colon spacing copied too. Bare `--write` writes the whole changed file once, in place. Both write forms print one standard error line per bar, `TARGET` being `the question` or `question NAME`, and exit 0:
 
 | Case | Standard error line |
 | --- | --- |
@@ -189,7 +190,11 @@ For a single `decide` file, audit also writes `batch` when it writes a threshold
 | A line names no model | `thinkthen: audit: kept the model for TARGET; a result names no model` |
 | Lines name a blank model | `thinkthen: audit: kept the model for TARGET; a result names a blank model` |
 
-To undo a write, put the old value back by hand or through version control. A second `--write` from the old results refuses, because the digest moved with the threshold. A crash during the write could leave a short file; the file is small, and a temporary file would be one the user did not name.
+To undo an in-place `--write`, put the old value back by hand or through version control. A second write from the old results refuses, because the digest moved with the threshold. A crash during bare `--write` could leave a short file; that old form creates no temporary file the user did not name.
+
+With `--write QUESTIONS --write-to OUTPUT`, audit checks the same source digest and applies the same byte-preserving threshold, model and batch rules to a new file. QUESTIONS remains byte for byte unchanged. OUTPUT must be absent: an existing file, even empty, a directory, a final symlink including dangling, a hard-link alias or QUESTIONS itself is refused. If audit suggests no changed bar, it still creates an exact copy of the validated source. Audit writes the complete output into a create-new temporary file in OUTPUT's directory, then atomically links it at the final name without replacing an existing entry. It removes the temporary name after publication or an error. An unsupported hard-link filesystem fails without publishing a partial OUTPUT. This new-output temporary file is the narrow exception of [ADR 0102](../sdlc/planning/adr/0102-audit-tuned-output.md); bare `--write` retains its old rule. The output is atomically visible under ordinary filesystem behavior, with no fsync or power-loss durability claim and no defense against hostile parent-directory replacement.
+
+If OUTPUT is complete but temporary cleanup fails, audit exits 0 and adds `thinkthen: audit: wrote the --write-to output but could not remove its temporary file` after its normal report. A cleanup failure before publication exits 5 with the separate failure below. Neither case changes QUESTIONS.
 
 ## Failures
 
@@ -219,6 +224,8 @@ A failure prints nothing on standard output and one line on standard error. The 
 | Both inputs `-` | 2 | `thinkthen: audit: only one input may be standard input` |
 | A bad `--threshold` | 2 | `thinkthen: audit: --threshold: ` and the threshold refusal |
 | `--write -` | 2 | `thinkthen: audit: --write needs a file path` |
+| `--write-to` without `--write` | 2 | `thinkthen: audit: --write-to needs --write QUESTIONS` |
+| `--write-to -` with `--write` | 2 | `thinkthen: audit: --write-to needs a file path` |
 | `--write` with `--threshold` | 2 | `thinkthen: audit: --write reads each answer as it ran; drop --threshold` |
 | `--write` with `--by verb` | 2 | `thinkthen: audit: --write grades by question; drop --by verb` |
 | `--write` with a `--by` pointer | 2 | `thinkthen: audit: --write grades by question; drop the --by pointer` |
@@ -229,14 +236,17 @@ A failure prints nothing on standard output and one line on standard error. The 
 | QUESTIONS is not a question file or set a run accepts | 5 | `thinkthen: audit: --write names a file that is not a valid question file` |
 | A line lacks the digest or carries another | 2 | `thinkthen: audit: results line N was not asked from the question file; --write needs --details lines from that file` |
 | The write fails | 5 | `thinkthen: audit: cannot write the question file` |
+| The `--write-to` final entry already exists | 5 | `thinkthen: audit: the --write-to output already exists; choose a new path` |
+| The `--write-to` output cannot be published | 5 | `thinkthen: audit: cannot write the --write-to output` |
+| Output publication fails and temporary cleanup also fails | 5 | `thinkthen: audit: cannot write the --write-to output; could not remove its temporary file` |
 
-A `--write` refusal leaves the file byte for byte.
+A write refusal leaves QUESTIONS byte for byte unchanged in the new-output form. The existing in-place refusal rule remains unchanged.
 
 A bad `--seed`, `--target`, or `--by` gets the ordinary command-line usage error and exits 2.
 
 ## What audit never does
 
-audit routes before any setup. It reads the named inputs and nothing else: no API key, environment variable, configuration file, cache, or usage counter. It opens no socket and starts no process. It writes standard output, standard error, and the one file `--write` names.
+audit routes before any setup. It reads the named inputs and nothing else: no API key, environment variable, configuration file, cache, or usage counter. It opens no socket and starts no process. Bare `--write` may change only the question file it names. The paired `--write-to` form creates only the new OUTPUT and a normally removed temporary file beside it, leaving QUESTIONS unchanged. Both forms write standard output and standard error.
 
 ## Departures
 

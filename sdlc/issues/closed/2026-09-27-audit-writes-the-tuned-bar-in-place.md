@@ -1,6 +1,6 @@
 # Audit writes the tuned bar in place, so a search cannot keep the incumbent
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/296-gepa-question-tuning/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
+Status: closed by ticket 0256 after fresh Medium code review accepted `d49bb42c`. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/296-gepa-question-tuning/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`.
 
 ## What happens today
 
@@ -21,3 +21,7 @@ A flag beside `--write` that writes the tuned file to a named path and leaves th
 ## Factual preparation, 2026-09-28
 
 At main `e58aceae`, `cli/audit/write.rs::bars` checks applicable saved question digests and splices tuned text before `std::fs::write(path, new)`. The original report describes deliberate in-place overwrite, not an observed crash loss. The separate-destination criterion remains open. A design should preserve the incumbent bytes and examine destination aliasing and partial-write failure. This preparation has not chosen an overwrite policy or changed `--write`. See `sdlc/records/2026-09-28-tuning-loop-intake-preparation.md`.
+
+## Resolution
+
+The additive `--write QUESTIONS --write-to OUTPUT` form writes a complete tuned candidate at an absent destination and preserves the source bytes. The old in-place form and digest refusal remain. The complete temporary file is published by a no-replace hard link; existing files and aliases are refused. Six new outside-in cases and ten retained audit cases passed. The fresh reviewer verified the fixture-ownership correction and accepted the original separate-candidate outcome. See [the build record](../../records/0256-audit-output-build.md) for exact checks and the unsupported-filesystem, cleanup and durability limits.

@@ -1,11 +1,14 @@
-//! `audit --write`: put the steady bar into the question file the results came from.
+//! `audit --write`: put the steady bar into its source or a new named output.
 //!
 //! The module reads the one file `--write` names, checks each result line's
-//! question digest against it, and writes it back whole with one
-//! `std::fs::write`. `sdlc/scripts/policy.py` allows that call here alone.
+//! question digest against it, and either writes it back as before or publishes
+//! a complete new file without replacing a destination. Policy confines both
+//! write forms to this module.
 
 use std::collections::BTreeSet;
+use std::io::{ErrorKind, Write as _};
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::cli::measure::Cause;
 use crate::core::measure::Line;
@@ -27,16 +30,17 @@ enum Choice {
     Keep(String),
 }
 
-/// Write each steady bar into the file and return the report, one line per bar.
+/// Write each steady bar into its source or new output and return the report.
 /// A single file that gains a bar also records the one model every results line names.
 ///
 /// # Errors
 ///
 /// Returns [`Cause::Unreadable`] or [`Cause::NotQuestions`] for a file a run
 /// would not accept, [`Cause::Digest`] for a line another question asked, and
-/// [`Cause::Unwritable`] when the new text cannot be written.
+/// a write cause when the new text cannot be stored.
 pub(super) fn bars(
     path: &Path,
+    output: Option<&Path>,
     results: &[Line],
     answers: &[Answer],
     rows: &[Row],
@@ -126,10 +130,69 @@ pub(super) fn bars(
             &mut report,
         )?;
     }
-    if new != text {
+    store(path, output, &text, &new, &mut report)?;
+    Ok(report)
+}
+
+fn store(
+    path: &Path,
+    output: Option<&Path>,
+    old: &str,
+    new: &str,
+    report: &mut String,
+) -> Result<(), Cause> {
+    if let Some(output) = output {
+        if publish_new(output, new.as_bytes())? {
+            report.push_str(&format!(
+                "{}: audit: wrote the --write-to output but could not remove its temporary file\n",
+                crate::core::NAME
+            ));
+        }
+    } else if new != old {
         std::fs::write(path, new).map_err(|_| Cause::Unwritable)?;
     }
-    Ok(report)
+    Ok(())
+}
+
+/// Publish a complete new file without replacing any final directory entry.
+/// The boolean reports a failed temporary unlink after successful publication.
+fn publish_new(output: &Path, bytes: &[u8]) -> Result<bool, Cause> {
+    static NEXT: AtomicU64 = AtomicU64::new(0);
+    match std::fs::symlink_metadata(output) {
+        Ok(_) => return Err(Cause::OutputExists),
+        Err(error) if error.kind() == ErrorKind::NotFound => {}
+        Err(_) => return Err(Cause::OutputWrite),
+    }
+    let parent = output.parent().ok_or(Cause::OutputWrite)?;
+    for _ in 0..64 {
+        let number = NEXT.fetch_add(1, Ordering::Relaxed);
+        let temporary = parent.join(format!(".thinkthen-audit-{number}.tmp"));
+        let mut file = match std::fs::File::create_new(&temporary) {
+            Ok(file) => file,
+            Err(error) if error.kind() == ErrorKind::AlreadyExists => continue,
+            Err(_) => return Err(Cause::OutputWrite),
+        };
+        let written = file.write_all(bytes);
+        drop(file);
+        if written.is_err() {
+            return match std::fs::remove_file(&temporary) {
+                Ok(()) => Err(Cause::OutputWrite),
+                Err(_) => Err(Cause::OutputCleanup),
+            };
+        }
+        let linked = std::fs::hard_link(&temporary, output);
+        let removed = std::fs::remove_file(&temporary);
+        return match (linked, removed) {
+            (Ok(()), Ok(())) => Ok(false),
+            (Ok(()), Err(_)) => Ok(true),
+            (Err(_), Err(_)) => Err(Cause::OutputCleanup),
+            (Err(error), Ok(())) if error.kind() == ErrorKind::AlreadyExists => {
+                Err(Cause::OutputExists)
+            }
+            (Err(_), Ok(())) => Err(Cause::OutputWrite),
+        };
+    }
+    Err(Cause::OutputWrite)
 }
 
 /// Preserve the file's other bytes when its one `decide` threshold is retuned.

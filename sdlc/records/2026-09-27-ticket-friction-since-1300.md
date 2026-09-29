@@ -467,3 +467,9 @@ The C/process-replay preflight review at `2e98af53` found two scope shortcuts be
 ## Match the guard's actual byte and text rules
 
 Experiment 2037's delegated wording cleanup reported a private-name hit in a binary image. Root verification found that the report decoded the binary with invalid UTF-8 bytes ignored. Removing bytes joined otherwise separated characters into a false match. Raw-byte inspection and the actual lint guard, `git grep -I -i -F`, both found no match. The image needed no change. Preserve the original report, correct the repository record before review, and reproduce a check with its actual encoding and binary-file policy before filing another defect. Numeric and artifact-identity checks separately confirmed the four intended wording edits.
+
+## Check fixture ownership and reconcile current issue claims
+
+The 0256 code review found that a new test fixture deleted a predictable temporary directory before creating it. The product publication logic was sound, but the fixture could remove another run's path. The accepted correction at `d49bb42c` uses exclusive creation, retries collisions, and removes only the path the fixture owns. Preparation and review must inspect scratch ownership in tests as well as product code. Six focused cases and strict Clippy passed; the whole suite was not repeated.
+
+The tuning refresh review found accurate new qualifications beside contradictory original issue prose. Its correction must distinguish answer observations from transport sends, qualify cost and accuracy by the actual saved cohort and cache state, and allow for absent row usage. Preserve the requested feature and historical evidence while correcting unsupported current claims in place. Adding a preparation section alone does not resolve inconsistent instructions for the next builder.

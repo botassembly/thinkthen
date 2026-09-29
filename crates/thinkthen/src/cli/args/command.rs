@@ -246,6 +246,8 @@ pub(crate) enum Command {
     ///
     /// --write changes one threshold in the file and prints the old value on
     /// standard error.
+    /// --write QUESTIONS --write-to OUTPUT instead creates a tuned file at a
+    /// new path and keeps QUESTIONS unchanged. An existing OUTPUT is refused.
     ///
     /// audit sends no request and reads no key.
     ///

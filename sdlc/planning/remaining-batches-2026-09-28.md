@@ -18,7 +18,7 @@ This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-2
 
 ## Current open counts after the release hygiene fix
 
-After accepted 0248 correctness and measurement and the private-name cleanup, the live queue has 72 to-do rows after three reviewed platform issue closures, two explicit cache dispositions, separate mapping of an existing status/recovery criterion, six tuning-loop intake rows and the reviewed shared-conformance and cache-status closures. The original private-name tracked-tree issue also moved from blocked to done; its go-live history reset remains with 0128 Phase 4. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
+After accepted 0248 correctness and measurement and the private-name cleanup, the live queue has 71 to-do rows after accepted audit-output 0256 after three reviewed platform issue closures, two explicit cache dispositions, separate mapping of an existing status/recovery criterion, six tuning-loop intake rows and the reviewed shared-conformance and cache-status closures. The original private-name tracked-tree issue also moved from blocked to done; its go-live history reset remains with 0128 Phase 4. Accepted 0246 and 0247 closed narrower implementation steps; their umbrella rows retain explicit criteria. 0250 now adds the reviewed deterministic malformed-key refusal and safe library cure. The original75-row inventory above remains a historical snapshot. Three new rows entered, four already-fixed relation rows were retired with reviewed proof, and0245 fixed register111. 0248 then closed the newer usage-cost issue. Matching the current open IDs to their original families gives:
 
 | Batch | Open rows | Next preparation or action |
 | --- | ---: | --- |
@@ -28,11 +28,11 @@ After accepted 0248 correctness and measurement and the private-name cleanup, th
 | Cache and replay |5| Preparation accepted; 0246 landed the demonstrated zero-budget first-use correction. Broader post-admission and diagnostic criteria remain. |
 | Accounting, timing and budgets |9| The newer usage-cost issue closed after 0248 correctness and bounded measurement; eight original rows remain. Keep optional pacing behind release correctness. |
 | Record failure handling |4| Preparation accepted64749d91. A numbered design must settle the error carrier, recoverable classes, exit precedence and failed-batch policy. |
-| Question controls and uncertainty |8| Refresh accepted rank and environment decisions before proposing new grammar. |
+| Question controls and uncertainty |7| Refresh accepted rank and environment decisions before proposing new grammar. |
 | Documentation, trust and launch usability |9| Marketing owns public documentation; add the reported SQL alias repair after the hold. |
 | Test retirement |1| Preserve distinct functional regressions; inspect named duplicates only. |
 | New language integrations |12| Reuse experiment handoffs, with C++ first; final pin and supported package proof remain. |
-| **Total** |**72**| Counts are tracked rows, not independent builds. |
+| **Total** |**71**| Counts are tracked rows, not independent builds. |
 
 ## Later intake
 

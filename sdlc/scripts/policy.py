@@ -1186,7 +1186,7 @@ MEASURE = (
     "crates/thinkthen/src/cli/diff.rs",
     "crates/thinkthen/src/cli/audit/write.rs",
 )
-# Ticket 0125: `audit --write` writes the one file it names, and only here.
+# Tickets 0125 and 0256: this writer owns in-place writes and new-output publication.
 MEASURE_WRITER = "crates/thinkthen/src/cli/audit/write.rs"
 MEASURE_COMMANDS = ("Audit", "Diff")
 MEASURE_BANNED_WORDS = CATALOG_BANNED_WORDS - {"fs", "File", "stdin", "Stdin"} | {"DirBuilder"}
@@ -1202,7 +1202,7 @@ ROUTER = "crates/thinkthen/src/cli/mod.rs"
 def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
     """Name every capability a measuring command reaches beyond reading its inputs.
 
-    The writer may call `std::fs::write` by its full path, and nothing else that writes.
+    Only the writer may call its exact in-place write or new-output publication primitives.
     """
     held = set(catalog_policy_failures(text, MEASURE_BANNED_WORDS, MEASURE_CRATE_PATHS, set(),
                                        prefix=True))
@@ -1210,7 +1210,15 @@ def measure_policy_failures(text: str, writer: bool = False) -> list[str]:
     for place in range(len(tokens) - 2):
         if tokens[place] in {"fs", "File"} and tokens[place + 1] == "::" \
                 and tokens[place + 2] in MEASURE_WRITES:
-            if writer and tokens[place - 2:place + 3] == ["std", "::", "fs", "::", "write"]:
+            if writer and (
+                tokens[place - 2:place + 3] == ["std", "::", "fs", "::", "write"]
+                or tokens[place - 4:place + 7] ==
+                ["std", "::", "fs", "::", "File", "::", "create_new", "(", "&", "temporary", ")"]
+                or tokens[place - 2:place + 9] ==
+                ["std", "::", "fs", "::", "hard_link", "(", "&", "temporary", ",", "output", ")"]
+                or tokens[place - 2:place + 7] ==
+                ["std", "::", "fs", "::", "remove_file", "(", "&", "temporary", ")"]
+            ):
                 continue
             held.add(f"writes through {tokens[place]}::{tokens[place + 2]}")
     for path, alias in rust_use_paths(tokens):
@@ -1285,6 +1293,12 @@ def check_measure_policy() -> None:
         "std::fs::rename(a, b)",
         "std::fs::OpenOptions::new()",
         "std::fs::File::create(path)",
+        "File::create_new(path)",
+        "fs::hard_link(a, b)",
+        "fs::remove_file(path)",
+        "std::fs::File::create_new(path)",
+        "std::fs::hard_link(path, output)",
+        "std::fs::remove_file(path)",
         "use std::fs::write; write(path, text)",
         "fs::write(path, text)",
     )
@@ -1293,6 +1307,13 @@ def check_measure_policy() -> None:
             fail("measure", f"the planted writer violation {plant!r} is refused")
     if measure_policy_failures("std::fs::write(path, text)", writer=True):
         fail("measure", "the writer's one std::fs::write stays allowed")
+    for control in (
+        "std::fs::File::create_new(&temporary)",
+        "std::fs::hard_link(&temporary, output)",
+        "std::fs::remove_file(&temporary)",
+    ):
+        if measure_policy_failures(control, writer=True):
+            fail("measure", f"the writer's exact new-output call {control!r} stays allowed")
     audit, diff = "if let Some(Command::Audit(a)) = c {}", "if let Some(Command::Diff(a)) = c {}"
     read = "let e = Environment::read();"
     if route_failures(audit + read + diff) != ["Diff returns after Environment::read"] \
