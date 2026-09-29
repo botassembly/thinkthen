@@ -70,7 +70,11 @@ impl From<Error> for Refusal {
     fn from(error: Error) -> Self {
         if matches!(
             error.send_budget_denial(),
-            Some(SendBudgetDenial::BeforeFirstSend | SendBudgetDenial::BeforeRetry { .. })
+            Some(
+                SendBudgetDenial::BeforeFirstSend
+                    | SendBudgetDenial::BeforeAdditionalSend
+                    | SendBudgetDenial::BeforeRetry { .. }
+            )
         ) {
             return spent(settings::current_total());
         }

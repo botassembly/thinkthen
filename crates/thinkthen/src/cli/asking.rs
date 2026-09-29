@@ -92,7 +92,8 @@ pub(crate) fn engine(
             usage: environment.counters(),
         },
         roots,
-    )?)
+    )?
+    .with_process_budget(common.max_requests_total))
 }
 
 /// Where one record's question comes from.

@@ -182,6 +182,28 @@ fn a_plan_counts_a_closed_batch_and_the_later_singleton_without_sending() {
 }
 
 #[test]
+fn a_later_ordinary_command_request_is_refused_by_the_process_cap() {
+    let listener = Listener::answering(answering).expect("listener");
+    let output = decide(
+        listener.base(),
+        &["--batch", "1", "--no-cache", "--max-requests-total", "1"],
+        &[],
+        "line 1\nline 2\n",
+    );
+    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
+    assert_eq!(
+        text(&output.stderr),
+        "thinkthen: the process send budget was spent before another request\nthinkthen: stopped at record 2; 1 record finished\n"
+    );
+    assert_eq!(
+        listener.count(),
+        1,
+        "the later ordinary request was not sent"
+    );
+    assert_eq!(places(&listener.requests()[0].body).len(), 1);
+}
+
+#[test]
 fn plan_refuses_an_invalid_later_record_before_disclosing_any_body() {
     let output = spawn(
         &[
