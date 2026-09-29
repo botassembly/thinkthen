@@ -39,13 +39,11 @@ rm -- "$tmp/annotated.jsonl"
 # The scratch directory is already on the output filesystem. Publish without
 # replacing a name another caller created while the replay was running.
 publish_status=0
-mv -Tn -- "$tmp" "$output" || publish_status=$?
-if [[ -e $tmp ]]; then
-	if [[ -e $output || -L $output ]]; then
-		printf '%s\n' 'review-jsonl: the output directory already exists' >&2
-		exit 2
-	fi
-	((publish_status != 0)) || publish_status=1
+python3 "$HERE/publish-no-replace.py" "$tmp" "$output" || publish_status=$?
+if ((publish_status == 2)); then
+	printf '%s\n' 'review-jsonl: the output directory already exists' >&2
+	exit 2
+elif ((publish_status != 0)); then
 	exit "$publish_status"
 fi
 trap - EXIT HUP INT TERM

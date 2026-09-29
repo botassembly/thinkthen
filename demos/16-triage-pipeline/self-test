@@ -215,6 +215,10 @@ jq -e -s 'length == 5 and all(.[]; .schema == "thinkthen.result/1" and has("poli
 	"$review/decisions.jsonl" >/dev/null
 jq -e -s 'length == 1 and .[0].schema == "thinkthen.record-error/1" and
   .[0].policy == {action:"review",reason:"record_error"}' "$review/review.jsonl" >/dev/null
+mkdir "$work/out-parent/with space"
+"$HERE/review-jsonl" "$work/out-parent/with space/review result"
+test "$(wc -l < "$work/out-parent/with space/review result/decisions.jsonl" | tr -d ' ')" = 5
+test "$(wc -l < "$work/out-parent/with space/review result/review.jsonl" | tr -d ' ')" = 1
 
 printf '%s' caller-data > "$work/out-parent/caller-file"
 mkdir "$work/out-parent/caller-directory"
@@ -240,6 +244,12 @@ set -e
 test "$rc" = 1
 grep -Fx 'review-jsonl: expected a completed run with a skipped record, got 67' "$work/review-failure.err" >/dev/null
 test ! -e "$work/out-parent/review-failure"
+set +e
+"$HERE/review-jsonl" "$work/out-parent/with space/failed result" > "$work/space-failure.out" 2> "$work/space-failure.err"
+rc=$?
+set -e
+test "$rc" = 1
+test ! -e "$work/out-parent/with space/failed result"
 unset REVIEW_MODE
 
 export REVIEW_MODE=wait REVIEW_ENTERED="$work/review-entered" REVIEW_RELEASE="$work/review-release"
