@@ -11,3 +11,18 @@ After merging `origin/main` into `design/2038-sql-dataframe-interface` at `e36ea
 ## Done when
 
 `lint` passes on main, and the demo removes only the path it created, through the guarded cleanup.
+
+## Candidate resolution
+
+The `ticket/qf-triage-cleanup` candidate builds the two JSONL files in a
+same-parent directory made by `scratch_dir`. Its trap removes that directory
+through `scratch_clean` on failure. A no-clobber directory move publishes only
+after the expected annotate exit 7, six schemas, and both transforms pass.
+An existing output file, directory, or symlink is refused; a symlink added
+during replay is also refused without touching its target. The focused replay
+and failure checks are recorded in
+[`qf-triage-cleanup.md`](../records/qf-triage-cleanup.md).
+
+The issue stays open until the coordinator integrates the candidate and runs
+the named `lint` checkpoint on main. The candidate's focused `scratch_lint`
+check passed; it is not a claim about main's full lint rung.

@@ -190,4 +190,73 @@ test "$rc" = 143
 test ! -e "$signal"
 unset TRIAGE_FAKE_MODE TRIAGE_ENTERED TRIAGE_RELEASE
 
+mkdir "$work/review-bin"
+cat > "$work/review-bin/thinkthen" <<'SH'
+#!/bin/sh
+set -eu
+case ${REVIEW_MODE:-replay} in
+	fail) exit 67 ;;
+	wait)
+		: > "$REVIEW_ENTERED"
+		while test ! -e "$REVIEW_RELEASE"; do sleep 0.01; done
+		;;
+esac
+exec "$REVIEW_REAL" "$@"
+SH
+chmod +x "$work/review-bin/thinkthen"
+export PATH="$work/review-bin:$PATH" REVIEW_REAL="$real_thinkthen"
+review="$work/out-parent/review-route"
+"$HERE/review-jsonl" "$review"
+test "$(find "$review" -mindepth 1 -maxdepth 1 -exec basename {} \; | sort)" = "decisions.jsonl
+review.jsonl"
+test "$(wc -l < "$review/decisions.jsonl" | tr -d ' ')" = 5
+test "$(wc -l < "$review/review.jsonl" | tr -d ' ')" = 1
+jq -e -s 'length == 5 and all(.[]; .schema == "thinkthen.result/1" and has("policy"))' \
+	"$review/decisions.jsonl" >/dev/null
+jq -e -s 'length == 1 and .[0].schema == "thinkthen.record-error/1" and
+  .[0].policy == {action:"review",reason:"record_error"}' "$review/review.jsonl" >/dev/null
+
+printf '%s' caller-data > "$work/out-parent/caller-file"
+mkdir "$work/out-parent/caller-directory"
+printf '%s' caller-data > "$work/out-parent/caller-directory/keep"
+ln -s caller-directory "$work/out-parent/caller-symlink"
+for existing in caller-file caller-directory caller-symlink; do
+	set +e
+	"$HERE/review-jsonl" "$work/out-parent/$existing" > "$work/$existing.review.out" 2> "$work/$existing.review.err"
+	rc=$?
+	set -e
+	test "$rc" = 2
+	grep -Fx 'review-jsonl: the output directory already exists' "$work/$existing.review.err" >/dev/null
+done
+test "$(cat "$work/out-parent/caller-file")" = caller-data
+test "$(cat "$work/out-parent/caller-directory/keep")" = caller-data
+test -L "$work/out-parent/caller-symlink"
+
+export REVIEW_MODE=fail
+set +e
+"$HERE/review-jsonl" "$work/out-parent/review-failure" > "$work/review-failure.out" 2> "$work/review-failure.err"
+rc=$?
+set -e
+test "$rc" = 1
+grep -Fx 'review-jsonl: expected a completed run with a skipped record, got 67' "$work/review-failure.err" >/dev/null
+test ! -e "$work/out-parent/review-failure"
+unset REVIEW_MODE
+
+export REVIEW_MODE=wait REVIEW_ENTERED="$work/review-entered" REVIEW_RELEASE="$work/review-release"
+"$HERE/review-jsonl" "$work/out-parent/review-race" > "$work/review-race.out" 2> "$work/review-race.err" &
+child=$!
+wait_for "$REVIEW_ENTERED"
+ln -s caller-directory "$work/out-parent/review-race"
+touch "$REVIEW_RELEASE"
+set +e
+wait "$child"
+rc=$?
+set -e
+child=
+test "$rc" = 2
+test -L "$work/out-parent/review-race"
+test "$(cat "$work/out-parent/caller-directory/keep")" = caller-data
+test -z "$(find "$work/out-parent" -maxdepth 1 -name '.review-jsonl.*' -print)"
+unset REVIEW_MODE REVIEW_ENTERED REVIEW_RELEASE
+
 printf '%s\n' 'triage pipeline: reservation, exact flow, three outputs, and failure cleanup pass'

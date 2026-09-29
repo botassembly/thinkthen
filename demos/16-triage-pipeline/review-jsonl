@@ -7,18 +7,14 @@ if (($# != 1)); then
 	exit 2
 fi
 output=$1
-if ! mkdir -- "$output" 2>/dev/null; then
+parent=$(CDPATH= cd -P -- "$(dirname -- "$output")" && pwd) || exit 2
+output="$parent/$(basename -- "$output")"
+if [[ -e $output || -L $output ]]; then
 	printf '%s\n' 'review-jsonl: the output directory already exists' >&2
 	exit 2
 fi
-cleanup() {
-	status=$?
-	trap - EXIT
-	if ((status != 0)); then rm -rf -- "$output"; fi
-	exit "$status"
-}
-trap cleanup EXIT
-tmp=$(mktemp -d "$output/.staging.XXXXXX")
+. "$HERE/../../sdlc/scripts/scratch.sh"
+scratch_dir tmp "$parent/.review-jsonl.XXXXXX"
 
 status=0
 thinkthen annotate "$HERE/questions.json" --jsonl --details --batch 1 \
@@ -40,5 +36,16 @@ jq -c 'select(.schema == "thinkthen.record-error/1") |
   . + {policy:{action:"review",reason:"record_error"}}' \
 	"$tmp/annotated.jsonl" > "$tmp/review.jsonl"
 rm -- "$tmp/annotated.jsonl"
-mv -- "$tmp/decisions.jsonl" "$tmp/review.jsonl" "$output/"
-rmdir -- "$tmp"
+# The scratch directory is already on the output filesystem. Publish without
+# replacing a name another caller created while the replay was running.
+publish_status=0
+mv -Tn -- "$tmp" "$output" || publish_status=$?
+if [[ -e $tmp ]]; then
+	if [[ -e $output || -L $output ]]; then
+		printf '%s\n' 'review-jsonl: the output directory already exists' >&2
+		exit 2
+	fi
+	((publish_status != 0)) || publish_status=1
+	exit "$publish_status"
+fi
+trap - EXIT HUP INT TERM
