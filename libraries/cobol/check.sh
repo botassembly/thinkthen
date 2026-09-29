@@ -22,6 +22,9 @@ mkdir -p "$TARGET"
 python3 "$ROOT/checks/privacy.py"
 for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
 cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --lib -j2
+ln -sf "$TT_NATIVE" "$CARGO_TARGET_DIR/debug/libthinkthen.so.0"
+CARGO_TARGET_DIR="$REPO/target" cargo build --locked --offline --manifest-path "$REPO/Cargo.toml" --package conformance-backend -j2
+THINKTHEN_PORTABLE_NATIVE="$CARGO_TARGET_DIR/debug" THINKTHEN_BACKEND_BIN="$REPO/target/debug/conformance-backend" python3 "$ROOT/checks/portable_batch.py"
 ln -sf "$TT_NATIVE" "$TARGET/libthinkthen.so.0"
 python3 "$ROOT/checks/exports.py" "$TT_NATIVE" "$TT_HEADER" "$TARGET/exports.txt"
 cc -std=c11 -D_GNU_SOURCE -Wno-misleading-indentation -c "$ROOT/src/TTJSON.c" -o "$TARGET/ttjson.o"
