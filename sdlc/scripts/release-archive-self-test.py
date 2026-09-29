@@ -141,7 +141,7 @@ def main():
         expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), other_target, commit),
                "unsupported target has thinkthen-swift-")
         expect(run("sh", gate, "php-dart-gate", str(base / "paired"), other_target, commit),
-               "unsupported target has thinkthen-dart-")
+               "unsupported target has thinkthen-php-")
         platform = base / "platform"
         platform.mkdir()
         for target in (host, other_target, "aarch64-apple-darwin", "x86_64-apple-darwin"):
