@@ -64,6 +64,8 @@ The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R ea
 | C# | a .NET 8 wrapper with a separate native library | [libraries/csharp](libraries/csharp/README.md) |
 | Java, Kotlin, Scala | three JVM JARs with a separate native library | [libraries/jvm](libraries/jvm/README.md) |
 | Dart and Flutter | a Dart FFI package and a Linux Flutter consumer | [libraries/dart](libraries/dart/README.md) |
+| Ada | a GNAT source package that calls the C library | [libraries/ada](libraries/ada/README.md) |
+| GNU Objective-C | a Linux GNU runtime source package that calls the C library | [libraries/objective-c](libraries/objective-c/README.md) |
 | Polars | the Rust feature | [libraries/polars](libraries/polars/README.md) |
 | DuckDB | the extension | [databases/duckdb](databases/duckdb/README.md) |
 | SQLite | the extension | [databases/sqlite](databases/sqlite/README.md) |

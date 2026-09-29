@@ -19,7 +19,7 @@ checks = shared.validators(json.loads((ROOT / "specification/result.schema.json"
 shared.check_schema(corpus["cases"], checks)
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
 backend, port = shared.start_backend()
-run = HERE / "scratch/door"
+run = HERE / "target/door"
 count = 0
 try:
     with tempfile.TemporaryDirectory(prefix="thinkthen-public-types-") as cache:
@@ -32,7 +32,7 @@ try:
             env = os.environ.copy()
             env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1",
                        THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)),
-                       LD_LIBRARY_PATH=str(HERE / "scratch"))
+                       LD_LIBRARY_PATH=str(HERE / "target"))
             request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
             result = subprocess.run([str(run), request], cwd=HERE, env=env, capture_output=True, text=True, timeout=40)
             assert result.returncode == 0, (case["name"], result.stderr)
@@ -63,7 +63,7 @@ try:
         env.update(THINKTHEN_BASE_URL="http://127.0.0.1:1/generic/v1",
                    THINKTHEN_API_KEY="sk-type-contract-loopback",
                    THINKTHEN_CACHE=str(Path(cache) / "settings"),
-                   LD_LIBRARY_PATH=str(HERE / "scratch"))
+                   LD_LIBRARY_PATH=str(HERE / "target"))
         route = f"http://127.0.0.1:{port}/case/{settings_case['case_id']}/v1"
         request = json.dumps(settings_case["request"], ensure_ascii=False, separators=(",", ":"))
         env["TT_SETTINGS_JSON"] = json.dumps({"base_url": route})

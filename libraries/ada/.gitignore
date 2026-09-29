@@ -1,4 +1,5 @@
 obj/
 lib/
-checks/scratch/
+checks/target/
 checks/logs/
+checks/__pycache__/

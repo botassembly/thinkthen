@@ -1,0 +1,9 @@
+{
+  "directory": [
+    "Sources",
+    "Examples",
+    "checks"
+  ],
+  "extension": ".c",
+  "max": 130
+}
