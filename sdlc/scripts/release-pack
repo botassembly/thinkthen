@@ -18,12 +18,12 @@ REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 host=$(rustc -vV | sed -n 's/^host: //p')
 [ "$TARGET" = "$host" ] || { echo "release-pack: $TARGET is not this host's target, $host" >&2; exit 2; }
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
-source_commit=$(git -C "$REPO" rev-parse HEAD)
 c_built=
 dart_built=
 case " $* " in
 *' go '* | *' cpp '* | *' csharp '* | *' jvm '* | *' swift '* | *' zig '* | *' php '* | *' dart '* | *' flutter '* | *' ada '* | *' objective-c '* | *' cobol '*)
 	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
+	source_commit=$(git -C "$REPO" rev-parse HEAD) || { echo 'release-pack: source wrappers need a committed source identity' >&2; exit 1; }
 	[ -z "$(git -C "$REPO" status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
 	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
 	c_count=0
