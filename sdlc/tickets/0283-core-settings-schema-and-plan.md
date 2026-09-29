@@ -1,15 +1,13 @@
 # 0283 — Core settings schema and plan (T1)
 
-Status: Accepted design at High preparation review `8bf14799`; implementation candidate is ready for fresh High code review. No integrated gate or issue closure is claimed yet.
+Status: Accepted design at High preparation review `8bf14799`; the `674a82041` High code review findings are corrected on this branch for recheck. No integrated gate or issue closure is claimed yet.
 
 ## Outcome
 
 Build `thinkthen.settings/1` and its parser once in the Rust core
 (`crates/thinkthen/src/core` boundary respected: the parser is pure), beside
 one core engine-settings schema shared with the C door's
-`thinkthen_engine_new_with` (ADR 0037), reserving `max_requests_total` until 0289 activates it. Unify
-the deadline as `deadline_ms` milliseconds at every boundary a number crosses
-(Rust keeps `Duration` internally). Replace the asking verbs' `--dry-run` with
+`thinkthen_engine_new_with` (ADR 0037), reserving `max_requests_total` until 0289 activates it. Add canonical numeric `deadline_ms` in Rust, retaining existing Rust seconds/milliseconds methods while their separate-workspace callers migrate through 0284–0291. ADR 0105 makes the every-surface result final at 0291; Rust keeps `Duration` internally. Replace the asking verbs' `--dry-run` with
 `--plan` (first request body plus a whole-input count line; `check --plan`;
 `cache prune --dry-run` stays), moving in the same commit: the `spec/` pages,
 the `specification/` pages and fixtures, the `specification/settings.md`
@@ -36,14 +34,7 @@ Run V1–V11 and I1–I10 from the [independent corpus](../records/2026-09-29-sq
 
 ## Normative Rust public API delta
 
-This additive reviewed contract changes only the named declarations. The rest of the 0278 inventory remains authoritative. The C ABI and result envelopes are unchanged. `Settings` is a pure parsed call value: hosts validate verb applicability and conflicts before converting arguments, and the builder bridge checks the same closed engine schema before C map conversion. There is no accepted `max_requests_total` setter until 0289 installs admission.
-
-### Retired public declarations
-
-```text
-fn CallOptions::deadline_millis(self, i64) -> Result<CallOptions<'a>, Error>
-fn CallOptions::deadline_seconds(self, f64) -> Result<CallOptions<'a>, Error>
-```
+This additive reviewed contract adds only the named declarations. The rest of the 0278 inventory, including both existing Rust deadline methods, remains authoritative. The C ABI and result envelopes are unchanged. `Settings` is a pure parsed call value: hosts validate verb applicability and conflicts before converting arguments, and the builder bridge checks the same closed engine schema before C map conversion. There is no accepted `max_requests_total` setter until 0289 installs admission.
 
 ### Added public declarations
 
@@ -57,6 +48,7 @@ SettingsError::BadBatch
 SettingsError::BadNone
 SettingsError::BlankContext
 SettingsError::DeadlineNotWhole
+SettingsError::DeadlineOutOfRange
 SettingsError::Json(String)
 SettingsError::NotAnObject
 SettingsError::Question(String)
@@ -94,4 +86,4 @@ struct Settings
 
 ## What the build taught us
 
-The accepted preview needs a second output line for whole-input totals while retaining the first prepared request's body. Existing first-record-only tests were wrong under this contract: a malformed later JSON or CSV record now refuses before any disclosure. The stronger regressions pin those two distinct parser boundaries, and the former first-only JSON test was retired. A packed two-record request followed by a singleton uses different wire shapes; counting records does not establish body bytes. The real batcher and group planner supply the bodies while one core summary owns the arithmetic. C's handwritten duplicate scan could be deleted once the shared pure schema validated before map conversion. The parser must become reachable by separate SQL/frame crates, and the numeric Rust deadline name reaches the C door's internal call and frozen API inventory; the accepted claim includes the public module, C door and inventory delta. Cross-crate visibility was invisible to the original CLI-only route: C must use the public builder bridge, while later hosts need the re-exported pure call value. `max_requests_total` is reserved until 0289 activates it, so this ticket never accepts an inert cap.
+The accepted preview needs a second output line for whole-input totals while retaining the first prepared request's body. Existing first-record-only tests were wrong under this contract: a malformed later JSON or CSV record now refuses before any disclosure. The stronger regressions pin those two distinct parser boundaries, and the former first-only JSON test was retired. A packed two-record request followed by a singleton uses different wire shapes; counting records does not establish body bytes. The real batcher and group planner supply the bodies while one core summary owns the arithmetic. C's handwritten duplicate scan could be deleted once the shared pure schema validated before map conversion. The parser must become reachable by separate SQL/frame crates, and the numeric Rust deadline name reaches the C door's internal call and frozen API inventory; the accepted claim includes the public module, C door and inventory delta. Cross-crate visibility was invisible to the original CLI-only route: C must use the public builder bridge, while later hosts need the re-exported pure call value. `max_requests_total` is reserved until 0289 activates it, so this ticket never accepts an inert cap. High code review of `674a82041` found that SQLite, PostgreSQL, DuckDB, Python, R, Ruby and TypeScript still call the existing Rust deadline methods from separate workspaces; removing them here broke intermediate source compilation. They remain temporary source support with exact fractional-second and clearing semantics while the host tickets migrate callers. Ticket 0291 removes them after a whole-tree caller scan, before the final clean-break API freeze. The same review found recognize omitted its possible name-stage requests from the whole-input summary, and the pure settings parser accepted out-of-range integral deadlines. The correction includes those bounded requests and refuses `-2` and max+1 at the shared boundary. This does not create a public 0.1 compatibility promise or host aliases.

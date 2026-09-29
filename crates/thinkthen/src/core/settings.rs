@@ -39,6 +39,9 @@ pub enum SettingsError {
     #[error("`deadline_ms` is a whole number of milliseconds")]
     /// The deadline is not an integral number of milliseconds.
     DeadlineNotWhole,
+    #[error("`deadline_ms` is -1, 0, or at most 4294967295000 milliseconds")]
+    /// The integral deadline is outside the accepted range.
+    DeadlineOutOfRange,
     #[error("`none` is true or false")]
     /// The find-only no-match setting is not Boolean.
     BadNone,
@@ -174,7 +177,12 @@ impl Settings {
 
     fn deadline(value: Json) -> Result<i64, SettingsError> {
         match value {
-            Json::Number(number) => number.as_i64().ok_or(SettingsError::DeadlineNotWhole),
+            Json::Number(number) => {
+                let value = number.as_i64().ok_or(SettingsError::DeadlineNotWhole)?;
+                valid_deadline_ms(value)
+                    .then_some(value)
+                    .ok_or(SettingsError::DeadlineOutOfRange)
+            }
             _ => Err(SettingsError::DeadlineNotWhole),
         }
     }
@@ -291,6 +299,13 @@ impl Settings {
     pub const fn none(&self) -> Option<bool> {
         self.none
     }
+}
+
+/// The accepted numeric host boundary, before any host converts the value to a clock.
+pub(crate) const MAX_DEADLINE_MS: i64 = 4_294_967_295_000;
+
+pub(crate) const fn valid_deadline_ms(value: i64) -> bool {
+    value == -1 || (value >= 0 && value <= MAX_DEADLINE_MS)
 }
 
 /// Validate the engine constructor's closed JSON schema before any host
@@ -430,6 +445,20 @@ mod tests {
         members
             .conflicts(&[], false)
             .expect("NULL members are absent");
+        // V10's boundary is settled before any host can create a deadline.
+        for value in [-1, 0, 4_294_967_295_000_i64] {
+            let text = format!(r#"{{"deadline_ms":{value}}}"#);
+            Settings::parse(&text)
+                .and_then(|settings| settings.check(For::Decide))
+                .expect(&text);
+        }
+        for value in [-2, 4_294_967_295_001_i64] {
+            let text = format!(r#"{{"deadline_ms":{value}}}"#);
+            assert_eq!(
+                Settings::parse(&text),
+                Err(SettingsError::DeadlineOutOfRange)
+            );
+        }
     }
 
     #[test]

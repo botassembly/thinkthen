@@ -347,7 +347,13 @@ fn the_guard_plans_600000_bytes_and_refuses_600001_before_any_send() {
 #[test]
 fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     let listener = Listener::answering(automatic).expect("listener");
-    let plan = plan_json(&run(&listener, &[&KINDS[..], &["--plan"]].concat(), ADA));
+    let output = run(&listener, &[&KINDS[..], &["--plan"]].concat(), ADA);
+    let plan = plan_json(&output);
+    let counts: Value =
+        serde_json::from_str(stdout(&output).lines().nth(1).expect("whole-input counts"))
+            .expect("counts JSON");
+    assert_eq!(counts["requests"], 2); // one prepared boundary request, one possible name request
+    assert_eq!(counts["upper_bound"], true);
     let head = [
         "schema",
         "url",
@@ -374,6 +380,7 @@ fn the_dry_run_prints_the_step_one_requests_a_live_run_sends() {
     let planned = &plan["requests"][0];
     assert_eq!(planned["digest"], result["meta"]["requests"][0]);
     let sent = listener.requests();
+    assert_eq!(sent.len(), 2);
     assert_eq!(
         planned["body_utf8"],
         Value::from(String::from_utf8_lossy(&sent[0].body))

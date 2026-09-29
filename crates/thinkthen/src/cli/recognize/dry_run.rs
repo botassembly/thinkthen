@@ -117,6 +117,9 @@ fn planned(
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
+        // Each prepared step-one request can lead to one name-stage request.
+        // Its body depends on the first answer, so only its count is bounded.
+        let name_bound = prepared.len();
         let mut requests = Vec::new();
         for chunk in prepared {
             summary
@@ -131,6 +134,9 @@ fn planned(
                 });
             }
         }
+        summary
+            .possible_requests(name_bound)
+            .map_err(|_| Failure::Defect("a plan is too large"))?;
         let bound = relation_upper_bound(spec, pieces.len());
         if let Some(bound) = bound {
             summary
@@ -138,10 +144,10 @@ fn planned(
                 .map_err(|_| Failure::Defect("a plan is too large"))?;
         }
         if first.is_none() {
-            first = Some((pieces.len(), requests, bound));
+            first = Some((pieces.len(), requests, name_bound, bound));
         }
     }
-    let Some((pieces, requests, relation_bound)) = first else {
+    let Some((pieces, requests, name_bound, relation_bound)) = first else {
         return Ok(ExitCode::SUCCESS);
     };
     let report = DryRun {
@@ -152,7 +158,7 @@ fn planned(
         from: from_file.then_some(From { question: "file" }),
         pieces,
         request_count: requests.len(),
-        name_requests_upper_bound: requests.len(),
+        name_requests_upper_bound: name_bound,
         relation_pairs_upper_bound: relation_bound,
         relation_requests_upper_bound: relation_bound,
         requests,

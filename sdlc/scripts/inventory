@@ -171,17 +171,14 @@ def apply_delta(items: set[str], page: str) -> set[str]:
 
 
 def apply_0283_delta(items: set[str], page: str) -> set[str]:
-    retired = delta_lines(page, "### Retired public declarations")
     added = delta_lines(page, "### Added public declarations")
-    if retired & added:
-        sys.exit("inventory: 0283 declaration occurs in both delta blocks")
-    if len(retired) != 2 or len(added) != 34:
-        sys.exit("inventory: 0283 delta must have 2 retired and 34 added declarations")
-    if retired - items:
-        sys.exit("inventory: 0283 retired declaration is absent from reviewed contract")
+    if "### Retired public declarations" in page:
+        sys.exit("inventory: 0283 retains existing public declarations during host migration")
+    if len(added) != 35:
+        sys.exit("inventory: 0283 delta must have 35 added declarations")
     if added & items:
         sys.exit("inventory: 0283 added declaration is already in reviewed contract")
-    return (items - retired) | added
+    return items | added
 
 
 def delta_self_test(page: str, items: set[str]) -> None:

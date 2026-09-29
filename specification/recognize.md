@@ -97,7 +97,7 @@ A failed step-1, step-2 or relation request fails that input. It prints no parti
 
 ## Plan
 
-`--plan` needs no key and sends nothing. It validates every record, then prints one compact `thinkthen.recognize-plan/2` object for the first record and a second count line for the whole input. This line marks `upper_bound:true`; future name and relation bodies cannot be known before earlier answers, so its byte sum covers exact prepared step-1 bodies. Keys appear in this order: `schema`, `url`, `model`, `key_env`, optional `from`, `pieces`, `request_count`, `name_requests_upper_bound`, the optional relation bounds, and `requests`.
+`--plan` needs no key and sends nothing. It validates every record, then prints one compact `thinkthen.recognize-plan/2` object for the first record and a second count line for the whole input. This line marks `upper_bound:true`; its request count includes exact prepared step-1 requests plus possible name-stage and relation-stage requests for every input record. Future name and relation bodies cannot be known before earlier answers, so its byte sum and token band cover only exact prepared step-1 bodies. Keys appear in this order: `schema`, `url`, `model`, `key_env`, optional `from`, `pieces`, `request_count`, `name_requests_upper_bound`, the optional relation bounds, and `requests`.
 
 `pieces` counts pieces as step 1 splits them. `request_count` counts the step-1 requests. `name_requests_upper_bound` equals it, because each step-1 request leads to at most one step-2 request. `requests` lists each step-1 request in send order, with its recording `digest`, UTF-8 `bytes`, and exact `body_utf8`. An empty or blank text prints no plan. It exits 2 with `thinkthen: the evidence is empty or blank`, as a live run does.
 
