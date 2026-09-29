@@ -15,3 +15,7 @@ The original severity-3 item says no code change is required, but one success cl
 Recommend that root mark register 45 **non-issue for its remaining terminal-facts clause**, citing the already met documentation and failure-position criteria above. Keep the accepted ordering and failure behavior. If a real user later needs visibility *during* a quiet run, open a separately motivated, lower-priority live-progress design; decide its opt-in channel, cadence, batch-range position and secrecy rules then. Do not graft a periodic progress API onto terminal `thinkthen.run/1` for this lane. Ian can overturn this disposition, but routine criterion routing needs no Ian decision.
 
 No source, test, contract, provider, SQL, DataFrame or site work was done. No old throughput figure was remeasured. The only file claim used is this record; no empty ticket 0274 is created. Root owns the reviewed item-table status change and landing.
+
+## Independent review and decision
+
+Fresh Medium review accepted `0a0adf8a09a82cb0cad672cb30652aa1c29c8d62` after tracing the three scheduler modes, terminal facts emission and failure-position rules. The coordinator adopts the proposed non-issue disposition and updates the item row in this landing. This rejects a redundant or misleading terminal field; it claims no new code fix. No source, test or schema changed.
