@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sd
 
 # 0271: Prepare Ada, GNU Objective-C and COBOL for the Linux x86 release workflow
 
-Status: static candidate built in the codex-3 ticket lane after landed 0270. The design was accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approved the bounded design. [Preparation](../records/0271-0272-language-runner-preparation.md) and the [runner input research](../records/0271-0272-runner-toolchain-inputs.md) record the remaining tool boundaries. The candidate awaits fresh High code review. No native compiler, backend, container, Actions or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
+Status: static code accepted at `72aa3260` after fresh independent High review; actual runner qualification remains open. The design was accepted at `2d83e3ef` after [fresh independent High review](../records/0271-0272-language-workflow-design-review.md). The coordinator approved the bounded design. [Preparation](../records/0271-0272-language-runner-preparation.md) and the [runner input research](../records/0271-0272-runner-toolchain-inputs.md) record the remaining tool boundaries. The [code review record](../records/0271-ada-objc-cobol-workflow-code-review.md) names the accepted scope and retained proof. No native compiler, backend, container, Actions or runner qualification is claimed. Ian’s SQL/DataFrame hold remains in force.
 
 ## Outcome and boundaries
 
