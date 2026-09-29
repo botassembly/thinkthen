@@ -6,7 +6,11 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09
 
 # 0269: Gate Swift and Zig source files in the Linux x86 release workflow
 
-Status: static implementation candidate on the landed 0268 route `85831aac`; focused archived-source and workflow fixtures pass. [Build record](../records/0269-swift-zig-workflow-build.md) separates this static evidence from the pending container, installed consumer, runner and Actions proof. [Preparation](../records/0269-language-workflow-preparation.md) maps this pair and the separately gated PHP/Dart follow-on. The coordinator approved [the design review](../records/0269-language-workflow-design-review.md). Ian's SQL and DataFrame hold prohibits running the current whole release workflow or its complete smoke now. Fresh High code review is pending.
+Status: static implementation accepted at `7c9be931` after [fresh High code review](../records/0269-swift-zig-workflow-code-review.md); focused archived-source and workflow fixtures pass. [Build record](../records/0269-swift-zig-workflow-build.md) separates this static evidence from the pending container, installed consumer, runner and Actions proof. [Preparation](../records/0269-language-workflow-preparation.md) maps this pair and the separately gated PHP/Dart follow-on. The coordinator approved [the design review](../records/0269-language-workflow-design-review.md). Ian's SQL and DataFrame hold prohibits running the current whole release workflow or its complete smoke now. The ticket remains open for that evidence.
+
+## What the build taught us
+
+The existing archive and pair validators needed only a narrow Swift/Zig extension. Reusing their source, C and literal request checks avoided another source matrix or caller. A runner image's tool list is not an execution receipt: the workflow checks the selected Swift identity and executable prerequisites, then verifies the pinned Zig download before use. Missing tools remain a future runner prerequisite. Static source-tamper, missing-archive, extra-file and checksum refusals can be proved while the combined release execution is held.
 
 ## Remaining outcome and order
 
