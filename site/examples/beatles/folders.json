@@ -9,7 +9,6 @@
   "rank": "examples/rank",
   "find": "examples/find",
   "annotate": "examples/annotate",
-  "audit": "examples/audit",
   "blind-spots": "results/runs/2026-09-26-thinkthen-jev",
   "rad": "examples/decide",
   "backends": "examples/decide"

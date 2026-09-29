@@ -19,7 +19,7 @@ The optional Rust Polars door returns `Call<Series>` or `Call<DataFrame>` for ev
 | `recognize` | an object with `entities` and optional beta `relations` |
 | `relate` | one compact name-and-kind edge per line, or no lines when no edge reaches the cut |
 | `filter` | each kept line or JSONL record as it arrived; each kept table row as compact JSON, in input order |
-| `rank` | each line or JSONL record as it arrived and each table row as compact JSON, most likely yes first |
+| `rank` | each line or JSONL record as it arrived and each table row as compact JSON, ordered by probability of yes or by the weighted value of a saved `score` question |
 | `annotate` | one JSON object per record |
 | `find` | the selected line or JSONL record as it arrived; no output when `--none` wins or ties |
 
@@ -36,7 +36,7 @@ Every result is compact and sits on one line, so one answer is also one record f
 ```
 
 - `value` is the bare judgment. For `filter --details`, it is the cut's boolean; `filter` keeps the record when that boolean is true.
-- `question` names the question kind and the text the model received. `filter` and `rank` ask a `decide` question, so their `question.verb` is `decide`.
+- `question` names the question kind and the text the model received. `filter` and ordinary `rank` ask a `decide` question, so their `question.verb` is `decide`. `rank` with a saved `score` question has `question.verb: score`.
 - `answer` is everything the backend said, in thinkthen's own words. No vendor field name appears in it.
 - `threshold` is a number for a single cut, the string `"LOW:HIGH"` for a band, and `null` when none applies. `decide` never prints `null` here, because a rule always exists and the default is the cut of one half. [threshold.md](threshold.md) gives the rule.
 - `meta` carries the run. `usage` may be absent when the backend reports none. `profile_warning` appears only for a calibration mismatch. `batch` appears under `--details` for a batch of two or more records, a split half, or any row with a context. `batch_warning` follows `batch` when a file's tuned setting differs from the run. `context_sha256` appears only when a context was supplied. The other fields are always present.
@@ -53,7 +53,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 ## Five answer kinds
 
-**`yes_no`**, from `decide`, `filter`, and `rank`. It carries `probability`, the probability of yes, and nothing else.
+**`yes_no`**, from `decide`, `filter`, and ordinary `rank`. It carries `probability`, the probability of yes, and nothing else.
 
 **`choice`**, from `choose`.
 
@@ -73,7 +73,7 @@ Settled by ADR 0009 item 2, accepted in ADR 0010. `answer` carries the probabili
 
 `answer.probabilities` holds one entry per label in the order sent. `value` keeps every label whose probability reaches the one cut, in that order. An empty array is a complete successful answer.
 
-**`score`**, from `score`.
+**`score`**, from `score` and `rank` with a saved `score` question.
 
 ```json score
 {"schema":"thinkthen.result/1","value":1.6,"question":{"verb":"score","text":"How much disruption does this report?","levels":["None.","Work continues with a workaround.","Work is blocked."]},"answer":{"kind":"score","level":"Work is blocked.","probabilities":{"None.":0.05,"Work continues with a workaround.":0.30,"Work is blocked.":0.65}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"005c...f5","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":208,"output_tokens":32},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
@@ -93,7 +93,7 @@ The canonical `find` question is compact JSON with keys in this order: `{"verb":
 
 ## Ties by command
 
-For `choose`, `score`, `find`, `rank`, and `recognize` step-2 options, a tie means equal reported probabilities. `recognize` step 1 instead compares accumulated scores of valid tag paths. Those paths can tie even when individual tag probabilities differ. Its duplicate-name rule compares printed strengths. The bare `value` and a detailed answer field can differ because they serve different purposes.
+For `choose`, `score`, `find`, ordinary `rank`, and `recognize` step-2 options, a tie means equal reported probabilities. Graded `rank` compares the computed weighted values instead. `recognize` step 1 instead compares accumulated scores of valid tag paths. Those paths can tie even when individual tag probabilities differ. Its duplicate-name rule compares printed strengths. The bare `value` and a detailed answer field can differ because they serve different purposes.
 
 | Command | Result at a tie | Existing proof |
 | --- | --- | --- |
@@ -101,7 +101,7 @@ For `choose`, `score`, `find`, `rank`, and `recognize` step-2 options, a tie mea
 | `score` | `value` is the probability-weighted position, not a selected level. `answer.level` names the first tied level, which is the lowest tied level | `crates/thinkthen/src/core/answer_tests.rs::a_score_is_the_weighted_position_on_the_levels_it_was_given` proves the value; `crates/thinkthen/src/core/answer.rs::Distribution::leader` defines the detailed level |
 | `tag` | Each label that reaches the cut is included in caller order; labels never compete for one winning place | `crates/thinkthen/src/core/answer_tests.rs::tag_selects_each_label_at_or_above_one_shared_cut_and_empty_succeeds` |
 | `find` | The first tied real unit in input order wins. A top tie involving `none` gives `value: null` and exits 3 when `--none` was supplied | `crates/thinkthen/src/core/find.rs::real_ties_take_the_first_and_any_none_tie_is_unresolved`; `crates/thinkthen/tests/backend/find.rs::a_none_tie_is_unresolved_but_details_keep_the_first_wire_leader` |
-| `rank` | Equal yes probabilities keep input order, including at a `--top` boundary | `crates/thinkthen/src/core/order.rs::the_highest_probability_comes_first_and_an_exact_tie_keeps_input_order` |
+| `rank` | Equal yes probabilities or equal weighted score values keep input order, including at a `--top` boundary | `crates/thinkthen/src/core/order.rs::the_highest_probability_comes_first_and_an_exact_tie_keeps_input_order`; `crates/thinkthen/tests/backend/keeping/graded_rank.rs::graded_rank_orders_weighted_positions_and_keeps_the_earlier_top_tie` |
 | `recognize` | Step-1 tag ties take the earlier tag in its fixed order. Step-2 kind and edge-option ties take the first option asked; a duplicate span and kind at equal strength keeps the first found name | `crates/thinkthen/src/core/recognize/bilou.rs::best_of`, `crates/thinkthen/src/core/recognize.rs::Odds::leader` and `settle` define these paths; no existing test isolates the step-2 tie |
 
 `decide` and `filter` read one yes probability against a rule, while `relate` reads each edge probability against one cut. They do not pick a winner among competing options. An `annotate` question follows its own verb's row above.
@@ -146,7 +146,7 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 | --- | --- | --- | --- |
 | `decide` | `decide` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `filter` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
-| `rank` | `decide` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
+| `rank` | `decide`, `score` | `schema` `value` `input` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `choose` | `choose` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `tag` | `tag` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `batch_warning?` `context_sha256?` |
 | `score` | `score` | `schema` `value` `input?` `question` `answer` `threshold` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` `batch?` `context_sha256?` |
@@ -155,7 +155,7 @@ Each command's detailed row holds these members. A member with a trailing `?` is
 | `recognize` | `recognize` | `schema` `value` `input?` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 | `relate` | `relate` | `schema` `value` `question` `answer` `meta` | `tool` `question_sha256` `url` `model` `usage?` `requests_sent` `cached` `requests` `failed_questions` `profile_warning?` |
 
-`question.verb` names the kind of question asked, not the command. A `filter` row, a `rank` row and a `decide` record row print the same verb, `decide`, and the same members. A reader that needs the command keeps it from the command line that wrote the rows.
+`question.verb` names the kind of question asked, not the command. A `filter` row, an ordinary `rank` row and a `decide` record row print `decide` with the same members. A graded `rank` row from a saved `score` question prints `score` and keeps the same outer members, including its numeric `value`. A reader that needs the command keeps it from the command line that wrote the rows.
 
 ## Record rows
 
@@ -171,10 +171,16 @@ Under `--details`, the full result object also carries `input`, the original rec
 {"schema":"thinkthen.result/1","value":true,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this report a payment failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":0.5,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
 ```
 
-The preceding row is a `decide --details` example. A ranked detailed row keeps the same complete shape, with `value` and `threshold` both `null`:
+The preceding row is a `decide --details` example. An ordinary yes/no ranked detailed row keeps the same complete shape, with `value` and `threshold` both `null`:
 
 ```json rank
 {"schema":"thinkthen.result/1","value":null,"input":{"id":"T-91","body":"Payouts have failed for 3 days."},"question":{"verb":"decide","text":"Does this help diagnose the failure?"},"answer":{"kind":"yes_no","probability":0.97},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"a1e3...df","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
+```
+
+A graded rank row instead keeps the numeric score under `value`, a `score` question and answer, and a null threshold.
+
+```json rank-score
+{"schema":"thinkthen.result/1","value":1.5,"input":"alpha","question":{"verb":"score","text":"How relevant?","levels":["low","middle","high"]},"answer":{"kind":"score","level":"high","probabilities":{"low":0.1,"middle":0.3,"high":0.6}},"threshold":null,"meta":{"tool":"thinkthen 0.4.0","question_sha256":"d20f...21d6","url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":88,"output_tokens":12},"requests_sent":1,"cached":false,"requests":["6b1f...c4"],"failed_questions":0}}
 ```
 
 ## `annotate`
