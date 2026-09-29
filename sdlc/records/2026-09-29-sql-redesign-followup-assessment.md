@@ -1,0 +1,24 @@
+# SQL redesign follow-up assessment
+
+Ian asked a separate Sol Medium agent to check six recommendations against current code and the queue. This read-only assessment used main `9018c1e4c`, experiment2038's `questions.md` and engineering-lessons report, and prepared tickets0283–0298 at `f35bb5826`. No runtime, spike or provider call ran. The coordinator adopts the priorities below; Ian can overturn them.
+
+| Recommendation | Finding and existing owner | Next action |
+| --- | --- | --- |
+| Token cap | Valuable distinct gap. Ian chose request cap plus preview for0.1 and named token cap the first follow-up. A send counter does not bound variable-sized tokens. | Add [one issue](../issues/2026-09-29-token-cap-contract-before-release.md). Settle the public semantics before release; implementation follows0289. Do not invent a hard billed-token or dollar guarantee. |
+| Run facts and cost | `CallFacts.seconds` already records elapsed wall time (`crates/thinkthen/src/public/results/call.rs`). Vendor/server time and caller-priced cost remain distinct gaps. The [every-surface facts issue](../issues/2026-09-26-every-surface-should-give-back-run-facts.md) owns optional cost/full-detail semantics; the [backend timing issue](../issues/2026-09-23-record-the-backends-own-time-for-each-call.md) owns allowlisted server time and request IDs. | Keep both owners. Prepare the remaining optional-field, units, unknown-usage and caller-price API decisions before release, including separate input/output prices. Implement through their existing accounting scope after the shared foundation. Do not duplicate the issues or promise an actual provider bill. |
+| Durable cross-surface status | Real remaining gap, already owned by the [status issue](../issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md). Public builders use in-memory `Counters::new(None)` while the CLI supplies a usage path. ADR0034's product store is count-only and observational. | Prepare the existing durable product-usage ADR after surface contracts settle; retain secrecy, write-policy, old-reader and atomicity requirements. Never use the Git common-directory paid-experiment ledger as a product usage store. Accurate scope documentation remains required before release. |
+| Default rationale | The settings page still records missing reasons. The0.5 decision cut is already Ian's ruling7A; it is not an open retuning question. Timeout/audit/relate defaults need their existing evidence or a recorded rationale. | Add a bounded rationale inventory to0290 and the existing settings-reference owner0140. Loopback can establish resource behavior, not model accuracy or calibration. A changed default requires its own evidence and reviewed disposition. |
+| Per-record cache identity | Ian's ruling3B explicitly assigns its own ADR after0.1. Accepted batching/request identity remains. | Preserve that deferred architectural work. Do not add duplicate pre-release work or change cache keys inside the SQL batch. |
+| Binding-author guide | The shared-parser/edge-conversion pattern belongs with0291 and final shared pages0290. | Add one concise guide and link it from the binding index. Include every-surface preview, exact refusal corpus, explicit child environments and source versus installed-package proof. No separate issue is needed. |
+
+## Contract limits that matter
+
+`SendBudget` reserves attempted sends before I/O, including retries. `engine/request.rs` resolves cache/replay before sending and gets reported usage only after a live reply. `engine/usage/facts.rs` keeps missing usage distinct from zero. A future token admission rule must account for unknown output and failed responses; an observed counter alone cannot enforce an exact pre-send bill. Estimated caller-priced cost must stay distinguishable from provider billing.
+
+The development live ledger authorizes bounded paid experiments in this checkout. Product usage persists user counts under the existing usage contract. Combining those authorities would widen permissions and storage behavior beyond this recommendation.
+
+The independent tuning-value review still defers the separate score-adjacent audit cost feature. Preparing shared facts/cost semantics does not silently re-add that feature to the release. Similarly, an API decision now does not count as implemented product work.
+
+## Batch priority
+
+First finish the shared parser/plan and request-cap foundation, then the host migrations. Before freezing the public API, review token-cap semantics and the existing cost/timing/usage proposals for actual compatibility decisions. Add only the new token-cap row to the item table. Keep implementation gates, current file claims and the originally ruled per-record-cache deferral. The upcoming release is called0.1 in the repository; this assessment does not invent a new release line from conversational numbering.
