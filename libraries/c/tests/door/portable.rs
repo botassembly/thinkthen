@@ -1,9 +1,8 @@
 //! The shared literal batch corpus through the public C JSON door.
 
 use conformance_backend::{Canned, Listener};
-use sha2::{Digest as _, Sha256};
 
-use super::{Script, replies};
+use super::{Script, digest, replies};
 use crate::{compile, crate_dir, run, text};
 
 const CORPUS: &str =
@@ -13,17 +12,6 @@ const BODIES: [&str; 3] = [
     include_str!("../../../../specification/fixtures/batching/portable-2.request.json"),
     include_str!("../../../../specification/fixtures/batching/portable-3.request.json"),
 ];
-
-fn digest(url: &str, body: &[u8]) -> String {
-    let mut bytes = b"systemone\n".to_vec();
-    bytes.extend_from_slice(url.as_bytes());
-    bytes.push(b'\n');
-    bytes.extend_from_slice(body);
-    Sha256::digest(&bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
 
 #[test]
 fn c_json_records_keep_literal_cuts_bodies_and_request_identities() {

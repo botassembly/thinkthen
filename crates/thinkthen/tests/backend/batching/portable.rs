@@ -1,9 +1,8 @@
 //! The portable corpus through a compiled command and its actual listener.
 
-use sha2::{Digest as _, Sha256};
-
 use super::{KEY, details, text};
 use crate::harness::{Canned, Listener, spawn};
+use crate::support::digest;
 
 const CORPUS: &str =
     include_str!("../../../../../specification/fixtures/batching/portable-records.json");
@@ -12,17 +11,6 @@ const BODIES: [&str; 3] = [
     include_str!("../../../../../specification/fixtures/batching/portable-2.request.json"),
     include_str!("../../../../../specification/fixtures/batching/portable-3.request.json"),
 ];
-
-fn digest(url: &str, body: &[u8]) -> String {
-    let mut bytes = b"systemone\n".to_vec();
-    bytes.extend_from_slice(url.as_bytes());
-    bytes.push(b'\n');
-    bytes.extend_from_slice(body);
-    Sha256::digest(&bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
 
 fn answering(body: &[u8]) -> Canned {
     let request: serde_json::Value = serde_json::from_slice(body).expect("request JSON");

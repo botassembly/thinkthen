@@ -6,7 +6,7 @@ opens: sdlc/records/2026-09-28-content-batch-identity-preparation.md
 
 # 0260: Pin portable record spelling and content-batch identity
 
-Status: design accepted after fresh read-only review of `f68d9496`; the coordinator accepted the retained contract and claimed the first proof slice on main `94bdf96d`. The first slice passes focused proof and awaits fresh code review. Register 64 remains open for the other applicable host runners. The [design](../records/0260-portable-batch-identity-design.md), [preflight](../records/0260-portable-batch-identity-preflight.md) and [build record](../records/0260-portable-batch-identity-build.md) distinguish this checkpoint from final closure.
+Status: design accepted after fresh read-only review of `f68d9496`; the coordinator accepted the retained contract and claimed the first proof slice on main `94bdf96d`. The first slice passes focused proof. Fresh code review of `12b5281d` found two integration corrections, now applied for the same reviewer. Register 64 remains open for the other applicable host runners. The [design](../records/0260-portable-batch-identity-design.md), [preflight](../records/0260-portable-batch-identity-preflight.md) and [build record](../records/0260-portable-batch-identity-build.md) distinguish this checkpoint from final closure.
 
 ## Outcome
 
@@ -31,3 +31,5 @@ If a fixture exposes a disagreement within an accepted domain, stop and name the
 The independently written five-text heads and manually fixed request bodies matched the current core, compiled CLI and C JSON door. Escaped `\u00e9` on CLI JSONL normalized to literal UTF-8 `é`, so the first cut and all three request bodies stayed the same; hashing that escape spelling directly would move the cut. The separate structured JSONL arm kept nested member order, `1` versus `1.0`, negative zero and exponent spelling, with the integer record closing its batch.
 
 The C conformance case loop forces batch 1, so the Max proof belongs in a focused adjacent door test. The detailed `meta.requests` field is an array of digest strings, which corrected an initial test assertion. The sandbox blocked local listener binding on the first CLI run; a focused offline rerun with local loopback permission passed. No production encoder, cache or adapter changed. [The build record](../records/0260-portable-batch-identity-build.md) lists exact checks, ratchet growth and every remaining host package. Register 64 stays open after this first slice.
+
+Fresh code review found that the routine root test script did not invoke the new core and CLI cases, and that their CLI/C digest checks copied helpers the existing harnesses already supplied. The correction adds four exact routine selectors and reuses those helpers. It lowers the measured root and C ratchets by ten and eleven lines respectively without changing the literal fixture or product behavior.
