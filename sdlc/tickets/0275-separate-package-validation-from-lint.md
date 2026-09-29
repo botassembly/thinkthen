@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-29-lint-runs-the-full-package-validation.md
 
 # 0275: Separate package validation from routine lint
 
-Status: design candidate for fresh independent review. Source baseline: main `1b1f09d70`. The coordinator may approve this gate routing within Ian's accepted light routine-check outcome.
+Status: implementation candidate after independent High design ACCEPT at `ecf93511b` and coordinator claim on main `982bf442e`. Source baseline: that main after merge. Fresh code review and the coordinator's integrated routine lint checkpoint remain.
 
 ## Outcome and scope
 
@@ -34,4 +34,4 @@ For the focused builder check, run shell/Python syntax and `workflows --self-tes
 
 ## What the build taught us
 
-- Preparation found that the release `crate` job currently calls bare `cargo package`, so removing the lint call alone would strand the full trust proof. Fresh design review found that string/order checks alone also miss a bypassed package failure; the required steps now have exact commands, no conditions or error suppression, and a bypass plant. The accepted builder must report the implemented route, focused results and any corrected assumptions here before landing.
+- Preparation found that the release `crate` job called bare `cargo package`, so removing the lint call alone would strand the full trust proof. Fresh design review found that string/order checks alone miss a bypassed package failure. The implementation now uses exact separate commands and checks unconditional execution, failure propagation and artifact order in the existing workflow checker. Its compact fixture needed the actual five-step crate route; the prior generic checkout plant also needed to change only the build checkout so it kept one intended failure. The [build record](../records/0275-lint-package-build.md) gives the focused results. Root still owns the integrated routine lint run; current-source package execution and an actual Actions runner remain unqualified.
