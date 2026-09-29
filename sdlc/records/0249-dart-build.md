@@ -28,3 +28,9 @@ The public Dart API's JSON route already carries success facts, and `DoorFailure
 ## Remaining limits
 
 The proof is Linux x86_64, shared-library loading, local loopback, and one installed Dart and Flutter SDK. It does not claim Android, iOS, macOS, Windows, static linkage, model-produced non-BMP offsets, CI publication, registry ownership, or a self-contained native-asset package. The existing Dart consumer issue and release/install issue remain open for the release pin, Ubuntu 24.04 CI, `dart pub publish --dry-run`, trusted publishing, per-platform artifacts, and other-host proof. The shared registry/policy lane and ticket 0249 remain with the coordinator.
+
+## Review correction: shared J1 backend startup
+
+Fresh review found that `specification/fixtures/types/check.py` built `conformance-backend` only in its C-only `build()` path. Public Dart, C#, and JVM callers use `start_backend()` directly and could inherit a stale or missing executable. `start_backend()` now builds the backend offline before launching it, with `--target-dir` fixed to this checkout's `target/` so its output matches `BACKEND` even when `CARGO_TARGET_DIR` is set. `build()` still builds the C library for the C-only path; it no longer builds the backend twice. Schema validation remains build-free.
+
+Focused proof moved this worktree's `target/debug/conformance-backend` into an owned temporary folder, asserted the original path absent, set `CARGO_TARGET_DIR=/tmp/thinkthen-dart-unselected-target`, and ran `python3 libraries/dart/checks/types.py` with `TT_DART`, `TT_NATIVE_LIBRARY`, `PUB_CACHE`, and `RUSTC_WRAPPER=`. The 29 public cases passed, a new executable appeared at the expected checkout path, and the prior executable was restored. The command exited 0. No native library or Flutter source changed, so their gate was not repeated for this helper correction.
