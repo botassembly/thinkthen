@@ -1,6 +1,6 @@
 # 0260 native public bulk proof: TypeScript, Ruby and R
 
-Status: candidate for fresh code review. The CLI and C first slice is on main. Register 64 remains open until the other applicable public routes below have equivalent outside-in proof.
+Status: fresh independent code review accepted `73959b19`; integrated with its focused proof retained. The CLI and C first slice is on main. Register 64 remains open until the other applicable public routes below have equivalent outside-in proof.
 
 The public routes are `Engine.decide_many` in TypeScript, `Engine#decide_many` in Ruby and the `tt_decide` column call in R. All three accept the five selected strings as text, including literal `café-5544`. Ruby's object-to-text convenience and R's column conversion are not structured-object paths. Each new routine case loads the accepted `specification/fixtures/batching/portable-records.json` and the three literal request files. The host calls use Max batching, one in-flight request and a fresh cache. Their existing listener harnesses capture exactly three transmitted bodies. Each test compares those bytes to the literal files, checks five ordered accepted rows and the final five-record/three-send account, and checks every row's request digest against the fixture body plus the actual served loopback address. The listener's generic yes response supplies an answer, not the batch oracle. No encoder, engine, cache, adapter or public API source changed.
 

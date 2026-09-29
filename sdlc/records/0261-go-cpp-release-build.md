@@ -1,6 +1,6 @@
 # 0261 local Go/C++ release-package build
 
-Status: candidate for fresh code review. This is a local Linux x86-64 package and installed-consumer proof, not a final release, runner dispatch or publication. The artifact source commit is `d4609b0bec0ec9dc9137a6f8d0579e67d94182d4`. The final checker and evidence commit is later; it does not retroactively change the bytes built from that source commit.
+Status: fresh independent code review accepted `0623703b`; the local pilot is complete and integrated. This is a local Linux x86-64 package and installed-consumer proof, not a final release, runner dispatch or publication. The artifact source commit is `d4609b0bec0ec9dc9137a6f8d0579e67d94182d4`. The final checker and evidence commit is later; it does not retroactively change the bytes built from that source commit.
 
 ## Build input and files
 

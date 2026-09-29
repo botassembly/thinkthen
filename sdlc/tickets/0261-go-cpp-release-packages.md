@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdl
 
 # 0261: Pack Go and C++ source with one matching C archive
 
-Status: fresh independent design review accepted corrected candidate `5100be18`; the coordinator approved implementation and pushed its exact claim at main `26d17115`. No executable edit or release qualification had run at design acceptance. Owner: Codex.
+Status: complete. Fresh independent code review accepted `0623703b`; the coordinator integrated the local pilot. The original Go/C++ release issues remain open for final pin, runner and distribution evidence.
 
 ## Outcome and retained behavior
 

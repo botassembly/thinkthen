@@ -1,0 +1,5 @@
+# 0261 local release pilot review and integration
+
+Fresh independent Sol Medium code review accepted `0623703b`. The reviewer verified the three archive hashes and unchanged archive inputs at the recorded source pin, repeated the four preflight refusal plants, and confirmed that the actual release smoke invokes the same preflight before starting a backend or consumer. The fixed-data manifests bind matching packages; the clean committed build receipt supplies source provenance. A later checkout commit does not invalidate those unchanged package bytes or claim it built them.
+
+The installed Go external-module and C++ shared/static CMake consumers use unpacked wrapper and C bytes. The source gates and legacy full-smoke requirements remain. The coordinator merged the accepted work with the independent native-host tests; no C, engine, Go or C++ archive input changed in that integration. Focused script syntax, measured counters, pages, tickets and whitespace checks passed. The original consumer issues remain open for the final release pin, runner and distribution evidence. No publication or workflow ran.

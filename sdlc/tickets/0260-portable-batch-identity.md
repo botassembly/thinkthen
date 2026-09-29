@@ -6,7 +6,7 @@ opens: sdlc/records/2026-09-28-content-batch-identity-preparation.md
 
 # 0260: Pin portable record spelling and content-batch identity
 
-Status: first core, CLI and C proof accepted at `3a194a88` and integrated; remaining host proof is open. Register64 is not complete. The accepted design `f68d9496` retains the existing runtime contract. The build record lists the finite remaining public routes.
+Status: core, CLI and C proof accepted at `3a194a88`; TypeScript, Ruby and R proof accepted at `73959b19`. Both are integrated; remaining host proof is open. Register64 is not complete. The accepted design `f68d9496` retains the existing runtime contract. The build record lists the finite remaining public routes.
 
 ## Outcome
 
@@ -33,3 +33,5 @@ The independently written five-text heads and manually fixed request bodies matc
 The C conformance case loop forces batch 1, so the Max proof belongs in a focused adjacent door test. The detailed `meta.requests` field is an array of digest strings, which corrected an initial test assertion. The sandbox blocked local listener binding on the first CLI run; a focused offline rerun with local loopback permission passed. No production encoder, cache or adapter changed. [The build record](../records/0260-portable-batch-identity-build.md) lists exact checks, ratchet growth and every remaining host package. Register 64 stays open after this first slice.
 
 Fresh code review found that the routine root test script did not invoke the new core and CLI cases, and that their CLI/C digest checks copied helpers the existing harnesses already supplied. The correction adds four exact routine selectors and reuses those helpers. It lowers the measured root and C ratchets by ten and eleven lines respectively without changing the literal fixture or product behavior.
+
+The native host slice reuses the literal corpus and existing capture helpers. TypeScript, Ruby and R each return five ordered rows, three exact bodies and the expected request identities. Fresh review reran all three cases and the retained R facts case. Its [record](../records/0260-native-host-proof.md) distinguishes source-tree proof from installed-target qualification.
