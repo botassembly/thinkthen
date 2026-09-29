@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-29 by the marketing lead from wave 4 release QA preparation (workspace experiment 218).
+Status: closed. Fresh Medium review accepted Quick Fix `51388c4c2`; the README now describes conditional RubyGems installation and preserves source instructions.
 
 # The Ruby README says the gem is never published
 
@@ -11,3 +11,7 @@ A reader of the README concludes the gem cannot be installed from RubyGems. Afte
 ## Done when
 
 The Ruby README states the RubyGems channel the release job publishes to, with the install command from the site catalog.
+
+## Accepted correction
+
+The [Quick Fix build record](../../records/qf-ruby-readme-release.md) traces the current gemspec, guarded release job, catalog command and README wording. The accepted correction names the channel and conditional install command while retaining the source checkout instructions. It does not claim a version is already published. Fresh Medium review accepted the correction; the coordinator closed this issue and its original Pages row together.
