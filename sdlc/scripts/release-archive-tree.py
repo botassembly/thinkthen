@@ -9,10 +9,12 @@ import tarfile
 
 def compare(archive_path, source_root):
     with tarfile.open(archive_path, "r:") as archive:
+        archived = set()
         for member in archive:
             parts = Path(member.name).parts
             if not parts or any(part in ("", ".", "..") for part in parts):
                 raise ValueError(f"unsafe source member {member.name}")
+            archived.add(Path(*parts))
             extracted = source_root.joinpath(*parts)
             if member.isdir():
                 if not extracted.is_dir() or extracted.is_symlink():
@@ -32,6 +34,10 @@ def compare(archive_path, source_root):
                             raise ValueError(f"source file differs: {member.name}")
             else:
                 raise ValueError(f"unsupported source member: {member.name}")
+        for extracted in sorted(source_root.rglob("*"), key=lambda path: (path.is_dir(), str(path))):
+            relative = extracted.relative_to(source_root)
+            if relative not in archived:
+                raise ValueError(f"unexpected source path: {relative}")
 
 
 if __name__ == "__main__":

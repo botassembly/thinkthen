@@ -22,6 +22,9 @@ def expect(result, text, success=False):
 
 def main():
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
+    if host != "x86_64-unknown-linux-gnu":
+        print(f"release archive self-test: skipped synthetic C fixture on {host}")
+        return
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
     version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
                    if line.startswith('version = "'))
@@ -50,12 +53,13 @@ def main():
         cargo = fake_bin / "cargo"
         cargo.write_text("#!/bin/sh\nprintf 'called\\n' >>\"$THINKTHEN_CARGO_CALLS\"\nexit 0\n")
         cargo.chmod(0o755)
-        native = source / "libraries/c/target/release"
+        native = base / "native-target/release"
         native.mkdir(parents=True)
         (native / "libthinkthen_c.so").write_bytes(b"fixture shared")
         (native / "libthinkthen_c.a").write_bytes(b"fixture static")
         env = os.environ.copy()
         env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
+                   CARGO_TARGET_DIR=str(native.parent),
                    THINKTHEN_CARGO_CALLS=str(base / "cargo-calls"),
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
                    THINKTHEN_ARCHIVED_SOURCE_COMMIT=commit)
@@ -85,6 +89,33 @@ def main():
                    str(base / "native-changed"), *parts, cwd=source, env=env),
                "source file differs: libraries/c/include/thinkthen.h")
         c_header.write_bytes(original_header)
+        c_header.unlink()
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                   str(base / "native-missing"), *parts, cwd=source, env=env),
+               "source file differs: libraries/c/include/thinkthen.h")
+        c_header.symlink_to("../../../LICENSE")
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                   str(base / "native-type"), *parts, cwd=source, env=env),
+               "source file differs: libraries/c/include/thinkthen.h")
+        c_header.unlink()
+        c_header.write_bytes(original_header)
+        source_link = source / "CLAUDE.md"
+        original_link = os.readlink(source_link)
+        source_link.unlink()
+        source_link.symlink_to("README.md")
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                   str(base / "source-link"), *parts, cwd=source, env=env),
+               "source link differs: CLAUDE.md")
+        source_link.unlink()
+        source_link.symlink_to(original_link)
+        extra_config = source / "libraries/c/.cargo/config.toml"
+        extra_config.parent.mkdir()
+        extra_config.write_text("[build]\nrustflags = []\n")
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                   str(base / "extra-config"), *parts, cwd=source, env=env),
+               "unexpected source path: libraries/c/.cargo/config.toml")
+        extra_config.unlink()
+        extra_config.parent.rmdir()
         (source / "libraries/go/README.md").write_text("changed source\n")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "changed"), *parts, cwd=source, env=env),
@@ -95,17 +126,15 @@ def main():
                    str(base / "override"), "go", env=env),
                "archive identity cannot override a repository checkout")
 
-        # The launcher itself checks the real tar identifier before Docker. A fake Docker
-        # writes one output marker only so this focused path need not run SQL packaging.
+        # Capture only the launcher's transport inputs. Assert their identity below.
         docker = fake_bin / "docker"
         docker.write_text("#!/bin/sh\n"
                           "for arg do case $arg in *:/work) root=${arg%:/work} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_COMMIT=*) selected=${arg#*=} ;; "
                           "THINKTHEN_ARCHIVED_SOURCE_TAR=*) tar_path=${arg#*=} ;; esac; done\n"
-                          "[ -n \"$root\" ] && [ \"$tar_path\" = /work/source.tar ] || exit 2\n"
-                          "actual=$(git get-tar-commit-id <\"$root/source.tar\")\n"
-                          "[ \"$actual\" = \"$selected\" ] || exit 3\n"
-                          "printf '%s\\n' \"$actual\" >\"$root/out/receipt\"\n")
+                          "printf '%s\\n' \"$selected\" >\"$root/out/selected-commit\"\n"
+                          "printf '%s\\n' \"$tar_path\" >\"$root/out/selected-tar\"\n"
+                          "cp \"$root/source.tar\" \"$root/out/source.tar\"\n")
         docker.chmod(0o755)
         launcher_env = os.environ.copy()
         launcher_env["PATH"] = str(fake_bin) + os.pathsep + launcher_env["PATH"]
@@ -115,7 +144,14 @@ def main():
         launcher_env["THINKTHEN_RELEASE_EXPECTED_SHA"] = commit
         expect(run("sh", str(REPO / "sdlc/scripts/release-container"), str(base / "container-work"),
                    str(base / "container-out"), env=launcher_env), "", success=True)
-        if (base / "container-out/receipt").read_text().strip() != commit:
+        output = base / "container-out"
+        if (output / "selected-commit").read_text().strip() != commit:
+            raise AssertionError("launcher passed another selected commit")
+        if (output / "selected-tar").read_text().strip() != "/work/source.tar":
+            raise AssertionError("launcher passed another tar path")
+        with (output / "source.tar").open("rb") as packed:
+            actual = subprocess.check_output(["git", "get-tar-commit-id"], stdin=packed, text=True).strip()
+        if actual != commit:
             raise AssertionError("launcher passed a tar from another source commit")
     print("release archive self-test: gitless legacy and controlled Go/C++ inputs pass")
 
