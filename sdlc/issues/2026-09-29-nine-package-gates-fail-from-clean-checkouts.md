@@ -71,3 +71,7 @@ R's per-call `batch` and other uniform keywords already belong to accepted prepa
 ## SQLite counter correction in 0284
 
 Fresh High review accepted `a843a3fc52812e2062d9aa90170764725bc8a246`. The SQLite recording counter selects answer `*.json` files and excludes the backend marker; a fixture places a `.locks/one.lock` beside one answer and requires one entry. The installed selector runs the same witness, and the build record retains selected source and source-matched unpacked-archive receipts. This closes the original SQLite counter clause, not the other surfaces or a full package/release-runner gate. See [0284 build](../records/0284-sqlite-settings-and-keyed-many-build.md).
+
+## Python and R preparation refresh
+
+The [source refresh](../records/2026-09-29-python-r-dispatch-preparation.md) preserves every cause in experiment302's detailed Python report, including schema, input conversion, batch assumptions and interpreter compatibility. The earlier C3 summary named only the annotate signature. No additional cause is closed by preparation. R already has per-call batch/context and a same-session facts witness;0288 completes the uniform interface without treating engine replacement as a missing call option. The Python large-allocation RSS campaign must move to the explicit stress route when that host lane opens.
