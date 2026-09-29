@@ -78,7 +78,7 @@ const BARE = [
   ['score', 'A JSON number.'],
   ['find', 'The selected line or JSONL record as it arrived. Nothing when --none wins or ties.'],
   ['filter', 'Each kept line or JSONL record as it arrived, in input order. A kept table row prints as compact JSON.'],
-  ['rank', 'Every line or record again, most likely yes first.'],
+  ['rank', 'Every line or record again, most likely yes first. With a saved score question, rank @FILE puts the highest score first.'],
   ['annotate', 'One JSON object per record.'],
 ];
 
@@ -204,6 +204,7 @@ const COUNTS = [
   <ul>
     <li>One exchange per file, named <code>DIGEST.json</code>, schema <code>thinkthen.recording/1</code>, five fields in order: <code>schema</code>, <code>adapter</code>, <code>url</code>, <code>request</code>, <code>response</code>.</li>
     <li><code>DIGEST</code> is the SHA-256, in lowercase hex, of the adapter name, a newline, the address, a newline, and the request body exactly as the adapter encoded it. The same command finds the same entry.</li>
+    <li>The digest covers the encoded bytes. When the input is read as one document, <code>hello\n</code> and <code>hello\r\n</code> make two entries, and so do <code>{'{"a":1}'}</code> and <code>{'{"a":1.0}'}</code>. Record framing may strip line ends or re-encode parsed JSON before the digest. <a href="https://github.com/botassembly/thinkthen/blob/main/specification/recording.md">Recording and replay</a> gives the full rule.</li>
     <li>Bodies only, never headers. No key can reach an entry. Only an exchange that succeeded and decoded is saved. A failure is never saved.</li>
     <li>The folder is <code>$XDG_CACHE_HOME/thinkthen</code>, then <code>$HOME/.cache/thinkthen</code> on Linux and <code>$HOME/Library/Caches/thinkthen</code> on macOS. <code>THINKTHEN_CACHE</code> names another one.</li>
     <li>An entry holds the evidence. A folder the tool creates is mode 0700 and each entry is 0600, whatever the umask says.</li>

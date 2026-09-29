@@ -267,7 +267,7 @@ const ARTICLES = {
     title: "relate asks what Jev knows about each pair.",
     goal: "relate asks Jev about each pair of names your rules allow, and a higher bar removes wrong and right edges alike.",
     idea: [
-      "`relate` gets a list of names and their kinds, and no text. Jev answers from what it knows.",
+      "`relate` gets a list of names and their kinds, and no text. Jev answers from what it knows. `recognize --relation` links names by what a text states.",
       "Here four people, five songs, and three albums go in. The rules file names two relations. `sings` runs from a person to a song. `on_album` runs from a song to an album. `relate` asks one yes or no question for each pair a rule allows. Every answer at 0.5 or more comes out as an edge.",
     ],
     files: {

@@ -1,6 +1,6 @@
 # The site reference omits graded rank and concrete cache identity examples
 
-Status: open. Owner: marketing under `sdlc/planning/ownership.md`. Filed against main `f1b0acac`. This is a copied website guidance gap, separate from the accepted graded-rank implementation and the original register52 cache/recording reader guides. The build team does not claim site source.
+Status: closed 2026-09-29 by the marketing lead. The reference's rank row now covers `rank @FILE` with a saved score question. The cache section gives the line-ending and JSON-spelling examples, scoped to input read as one document, notes that record framing may strip line ends or re-encode JSON, and links the recording specification. The fix lands with this closure after fresh read-only review and a green `npm run build`.
 
 Claimed by the marketing lead on 2026-09-29 for 0.1. Marketing fixes, replays and lands it, and closes this issue with the commit. SQL examples wait for ADR 0105 (workspace experiment 2038) so each page is rewritten once.
 

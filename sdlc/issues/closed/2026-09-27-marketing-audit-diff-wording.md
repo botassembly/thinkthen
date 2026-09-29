@@ -1,6 +1,6 @@
 # Update copied audit and diff wording in marketing examples
 
-Status: open. Owner: coordinator for the marketing follow-up. Ticket 0152 Part B changes the command's machine word to `unsure` and its prose count to "not sure"; this repository does not own the marketing copies.
+Status: closed 2026-09-29 by the marketing lead. Beatles Bench 7240b86c keeps the pinned build's audit and diff blocks, which its byte check holds, and adds notes that ThinkThen main at ce04682c prints `0 not sure` and `unsure -> no 44`. The words come from a real run of that build over the bench's saved answers. The marketing vocabulary names `unsure` as the machine word at mktg 3fa82c0. No site page carried the old words. Fresh read-only review accepted the wording.
 
 Claimed by the marketing lead on 2026-09-29 for 0.1. Marketing fixes, replays and lands it, and closes this issue with the commit. SQL examples wait for ADR 0105 (workspace experiment 2038) so each page is rewritten once.
 

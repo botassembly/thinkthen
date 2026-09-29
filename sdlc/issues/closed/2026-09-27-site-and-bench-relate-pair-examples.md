@@ -1,6 +1,6 @@
 # Refresh site and bench relate examples for pair questions
 
-Status: open. Filed from ticket 0167 for the marketing lead, who owns `site/`. No external message has been sent.
+Status: closed 2026-09-29 by the marketing lead. The site's relate examples already replay from pair-planner recordings made after 0167; `npm run build` smoke matched all 97 examples at ce04682c. The site now says that relate answers from knowledge of the names and that `recognize --relation` links names a text states. Beatles Bench 7240b86c labels the relate F1 of 0.719 and its example as historical, names the old choice planner and thinkthen 02dc0b96, and changes no number. A pair-planner rerun of the bench corpus waits for its own ticket. The site change lands with this closure after fresh read-only review.
 
 Claimed by the marketing lead on 2026-09-29 for 0.1. Marketing fixes, replays and lands it, and closes this issue with the commit. SQL examples wait for ADR 0105 (workspace experiment 2038) so each page is rewritten once.
 
