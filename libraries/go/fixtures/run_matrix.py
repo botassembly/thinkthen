@@ -131,8 +131,9 @@ def main():
                            "TT_BARRIER_DIR": str(facts_barrier), "TT_FACTS_PROOF": "1"}
         checked([GO, "test", "-race", "-count=1", "-run", "^TestOwnedFacts$", "."],
                 cwd=configured / "module", env=facts_env)
-        assert facts_server.arrivals.count("success") == 1 and facts_server.arrivals.count(
-            "Each question quotes the text it asks about.") == 1 and facts_server.attempts == 2
+        assert collections.Counter(facts_server.arrivals) == collections.Counter({
+            "hold-facts-scalar": 1, "Each question quotes the text it asks about.": 1,
+            "failure-one": 1, "success": 1}) and facts_server.attempts == 4
     finally:
         facts_server.close()
     print("GO_INSTALLED_MATRIX_PASS 4 consumers x 39 exact full request bodies plus one external module call each")

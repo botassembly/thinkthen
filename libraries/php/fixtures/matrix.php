@@ -35,6 +35,7 @@ function assertTypedFacts(array $result, int $records): void {
 }
 $door = new ThinkThen(getenv('TT_LIBRARY'));
 $retained = null;
+$typedRetained = null;
 if (getenv('TT_FACTS_PROOF') === '1') {
     try {
         $one = $door->decide('Is it?', 'no-usage');
@@ -58,11 +59,21 @@ try {
     }
     check($door->decide('Is it?', "a\0b")['value']['outcome'] === 1, 'counted text NUL');
     failed(fn() => $door->decideMany('Is it?', ['bulk-before-bad','bulk-middle-bad','bulk-after-bad']), 2);
-    foreach (['malformed-backend','transport-close','retry-status'] as $state) {
+    $typedRetained = failed(fn() => $door->decide('Is it?', 'malformed-backend', 200), 2);
+    check($typedRetained->factsJson !== null, 'typed started failure has no facts');
+    $typedFactsJson = $typedRetained->factsJson;
+    $typedFacts = json_decode($typedRetained->factsJson, true, 512, JSON_THROW_ON_ERROR);
+    check($typedFacts['records'] === 0 && $typedFacts['requests_sent'] === 1
+        && $typedFacts['cache_answers'] === 0, 'typed started failure facts');
+    $typedMessage = $typedRetained->getMessage();
+    foreach (['transport-close','retry-status'] as $state) {
         try { $door->decide('Is it?', $state, 200); throw new RuntimeException('backend failure passed'); }
         catch (ThinkThenFailure $e) { check(in_array($e->nativeCode, [2,3], true), 'backend failure code'); }
     }
     check($door->decide('Is it?', 'post-failure-recovery')['value']['outcome'] === 1, 'failure recovery');
+    check($typedRetained->getMessage() === $typedMessage && $typedRetained->factsJson === $typedFactsJson
+        && json_decode($typedRetained->factsJson, true, 512, JSON_THROW_ON_ERROR) === $typedFacts,
+        'typed failure facts changed after later same-engine call');
     check($door->decide('Is it?', 'maximum-deadline', 4294967295000)['value']['outcome'] === 1, 'max deadline');
     $empty = $door->decideMany('Is it?', []);
     assertTypedFacts($empty, 0);
@@ -155,5 +166,9 @@ try {
     check($door->decide('Is it?', 'recovery-scalar')['value']['outcome'] === 1, 'recovery after deadline');
 } finally { $door->close(); }
 check(isset($scalar) && isset($scalar['facts']) && $scalar['facts']['records'] === 1, 'typed facts changed after close');
+check($typedRetained !== null && $typedRetained->getMessage() === $typedMessage
+    && $typedRetained->factsJson === $typedFactsJson
+    && json_decode($typedRetained->factsJson, true, 512, JSON_THROW_ON_ERROR) === $typedFacts,
+    'typed failure facts changed after close');
 check($retained !== null && $retained->nativeCode === 2 && $retained->getMessage() !== '', 'copied error survives engine free');
 echo "PHP_MATRIX_PASS\n";

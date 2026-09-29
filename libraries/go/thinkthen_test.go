@@ -325,9 +325,8 @@ func TestConcurrent(t *testing.T) {
 	requireAnswer(t, replies[2].answer.Value, Yes, .9)
 }
 
-// Run with TT_FACTS_PROOF=1 against the counted no-usage fixture. It leaves
-// the existing exact request inventory unchanged while exercising two live
-// successes on one engine with different owned fact objects.
+// Run with TT_FACTS_PROOF=1 against the counted held/no-usage fixture. Both
+// requests must arrive before either is released, proving native overlap.
 func TestOwnedFacts(t *testing.T) {
 	if os.Getenv("TT_FACTS_PROOF") != "1" {
 		t.Skip("separate owned-facts fixture")
@@ -338,25 +337,65 @@ func TestOwnedFacts(t *testing.T) {
 	var oneErr, manyErr error
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); one, oneErr = e.Decide(context.Background(), "Is it?", "success") }()
+	go func() { defer wg.Done(); one, oneErr = e.Decide(context.Background(), "Is it?", "hold-facts-scalar") }()
 	go func() {
 		defer wg.Done()
-		many, manyErr = e.DecideMany(context.Background(), "Is it?", []string{"no-usage", "yes"})
+		many, manyErr = e.DecideMany(context.Background(), "Is it?", []string{"no-usage", "hold-facts-bulk"})
 	}()
+	scalarArrival := waitMarker(marker(t, "arrived-hold-facts-scalar"))
+	bulkArrival := waitMarker(marker(t, "arrived-hold-facts-bulk"))
+	for _, name := range []string{"release-hold-facts-scalar", "release-hold-facts-bulk"} {
+		if err := release(marker(t, name)); err != nil {
+			t.Error(err)
+		}
+	}
 	wg.Wait()
+	if scalarArrival != nil || bulkArrival != nil {
+		t.Fatalf("calls did not overlap at backend: %v %v", scalarArrival, bulkArrival)
+	}
 	if oneErr != nil || manyErr != nil {
 		t.Fatalf("concurrent typed calls: %v %v", oneErr, manyErr)
 	}
 	requireAnswer(t, one.Value, Yes, .9)
 	requireFacts(t, one.Facts, 1)
 	requireFacts(t, many.Facts, 2)
-	if one.Facts.InputTokens == nil || many.Facts.InputTokens != nil || many.Facts.OutputTokens != nil {
+	if len(many.Value) != 2 || one.Facts.RequestsSent != 1 || many.Facts.RequestsSent != 1 ||
+		one.Facts.InputTokens == nil || many.Facts.InputTokens != nil || many.Facts.OutputTokens != nil {
 		t.Fatalf("reported and omitted usage collapsed: one=%+v many=%+v", one.Facts, many.Facts)
 	}
-	retained := many.Facts
+	oneSnapshot, err := json.Marshal(one)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manySnapshot, err := json.Marshal(many)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = e.Decide(context.Background(), "Is it?", "failure-one")
+	started := requireError(t, err, 2, false)
+	var startedFacts Facts
+	if len(started.Facts) == 0 || json.Unmarshal(started.Facts, &startedFacts) != nil ||
+		startedFacts.Records != 0 || startedFacts.RequestsSent != 1 {
+		t.Fatalf("typed started failure facts: %s", started.Facts)
+	}
+	failureSnapshot := append([]byte(nil), started.Facts...)
+	later, err := e.Decide(context.Background(), "Is it?", "success")
+	if err != nil {
+		t.Fatal(err)
+	}
+	requireFacts(t, later.Facts, 1)
 	e.Close()
-	if many.Facts.Records != retained.Records || many.Facts.InputTokens != nil {
-		t.Fatalf("facts changed after close: %+v", many.Facts)
+	oneAfter, err := json.Marshal(one)
+	if err != nil {
+		t.Fatal(err)
+	}
+	manyAfter, err := json.Marshal(many)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(oneAfter, oneSnapshot) || !reflect.DeepEqual(manyAfter, manySnapshot) ||
+		!reflect.DeepEqual([]byte(started.Facts), failureSnapshot) {
+		t.Fatal("successful or failed call facts changed after later call and close")
 	}
 	for _, data := range []string{`{"records":null,"requests_sent":0,"cache_answers":0,"seconds":0}`, `{"requests_sent":0,"cache_answers":0,"seconds":0}`, `{"records":"1","requests_sent":0,"cache_answers":0,"seconds":0}`} {
 		if _, err := decodeFacts(data); err == nil {
