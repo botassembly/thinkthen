@@ -94,6 +94,38 @@ def check_count():
     return {'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,
       'completions':server.completions,'bulk_completion':server.bulk_completion}
 
+if len(sys.argv) == 2:
+    lang=sys.argv[1]
+    assert lang in ('java','kotlin','scala'),lang
+    try:
+        if lang=='java':
+            execute('release-javac',['/opt/jdk/bin/javac','--enable-preview','--release','21',
+              '-cp',CP,'-d',str(CLASSES),'InstalledJava.java'])
+            run_class='InstalledJava'
+            runtime_cp=CP
+        elif lang=='kotlin':
+            execute('release-kotlinc',['/opt/kotlin/bin/kotlinc','-J-XX:ActiveProcessorCount=2',
+              '-jvm-target','21','-classpath',CP,'InstalledKotlin.kt','-d',str(CLASSES)],timeout=240)
+            run_class='InstalledKotlinKt'
+            runtime_cp=CP+':'+KOTLIN
+        else:
+            execute('release-scalac',['/opt/scala/bin/scalac','-J-XX:ActiveProcessorCount=2',
+              '-classpath',CP,'-d',str(CLASSES),'InstalledScala.scala'],timeout=240)
+            run_class='installedScala'
+            runtime_cp=CP+':'+SCALA
+        output=execute('release-'+lang,JAVA+['-cp',runtime_cp,run_class])
+        assert 'INSTALLED_'+lang.upper()+'_PASS' in output,output
+        expected={'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'Is it?'}},'state':'release-'+lang}
+        captured=[json.loads(path.read_text()) for path in BARRIER.glob('wire-body-*.json')]
+        assert captured==[expected],(captured,expected)
+        summary={'arrivals':server.arrivals,'attempts':server.attempts,'connections':server.connections,
+          'body':captured[0], 'classpath':runtime_cp,'native':'/work/native/lib/libthinkthen.so'}
+        assert summary['arrivals']==['release-'+lang] and summary['attempts']==summary['connections']==1,summary
+        (HOME/'summary.json').write_text(json.dumps(summary,indent=2)+'\n')
+        print('isolated release',lang,'one exact body PASS',flush=True)
+    finally: server.close()
+    sys.exit(0)
+
 try:
     execute('consumer-javac',['/opt/jdk/bin/javac','--enable-preview','--release','21','-cp',CP,'-d',str(CLASSES),
       'Direct.java','Matrix.java','StrictScalar.java','Concurrent.java','BoundedString.java','ResultEnvelopeTest.java','thinkthen/ProbeDoor.java'])

@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md
 
 # 0262: Pack C# and JVM binaries with one matching C archive
 
-Status: design candidate for fresh independent review at main `e81770f1`. No executable file, package, backend, workflow or registry action ran for this ticket. Owner: Codex.
+Status: corrected design accepted by fresh independent review at `da2ed94a`; coordinator approved implementation and pushed the exact claim at main `16e77459`. No package, backend, workflow or registry action had run at design acceptance. Owner: Codex.
 
 ## Outcome and retained behavior
 

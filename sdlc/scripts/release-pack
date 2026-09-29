@@ -1,9 +1,9 @@
 #!/bin/sh
 # release-pack [--reuse] TARGET OUT [PART...] (ticket 0128): pack the release files of one
 # Rust target into OUT, each with a `.sha256` beside it. TARGET is this host's target, since
-# each release target builds on its own runner. The parts are command, c, go, cpp, sqlite,
-# duckdb, postgresql, python, typescript, ruby, and first-run; the default keeps its
-# established parts and Go/C++ are explicit pilot parts.
+# each release target builds on its own runner. The parts are command, c, go, cpp, csharp,
+# jvm, sqlite, duckdb, postgresql, python, typescript, ruby, and first-run; the default
+# keeps its established parts and source wrappers are explicit pilot parts.
 # Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
 # packs the files each surface check already built in its own build folder, which the
 # `surfaces` rung does. Every cargo call is locked; fetch first where the network is off.
@@ -23,10 +23,10 @@ V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1
 source_commit=$(git rev-parse HEAD)
 c_built=
 case " $* " in
-*' go '* | *' cpp '*)
-	[ -z "$reuse" ] || { echo 'release-pack: Go/C++ need a fresh C build, not --reuse' >&2; exit 1; }
-	[ -z "$(git status --porcelain)" ] || { echo 'release-pack: Go/C++ need a clean committed tree' >&2; exit 1; }
-	case " $* " in *' c '*) ;; *) echo 'release-pack: Go/C++ need c in this invocation' >&2; exit 1 ;; esac
+*' go '* | *' cpp '* | *' csharp '* | *' jvm '*)
+	[ -z "$reuse" ] || { echo 'release-pack: source wrappers need a fresh C build, not --reuse' >&2; exit 1; }
+	[ -z "$(git status --porcelain)" ] || { echo 'release-pack: source wrappers need a clean committed tree' >&2; exit 1; }
+	case " $* " in *' c '*) ;; *) echo 'release-pack: source wrappers need c in this invocation' >&2; exit 1 ;; esac
 	;;
 esac
 case $TARGET in
@@ -120,11 +120,28 @@ part_source_wrapper() {
 			libraries/go/thinkthen.go libraries/go/thinkthen_test.go libraries/go/recovery_test.go "$folder/"
 		cp libraries/go/examples/decide/main.go "$folder/examples/decide/"
 		;;
-	cpp)
+cpp)
 		mkdir -p "$folder/cmake" "$folder/include/thinkthen"
 		cp libraries/cpp/LICENSE libraries/cpp/README.md libraries/cpp/CMakeLists.txt "$folder/"
 		cp libraries/cpp/cmake/ThinkThenCppConfig.cmake.in "$folder/cmake/"
 		cp libraries/cpp/include/thinkthen/door.hpp libraries/cpp/include/thinkthen/json.hpp "$folder/include/thinkthen/"
+		;;
+csharp)
+		mkdir -p "$folder/feed"
+		DOTNET_CLI_HOME="$stage/dotnet-home" NUGET_PACKAGES="$stage/nuget" \
+		DOTNET_CLI_TELEMETRY_OPTOUT=1 DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1 \
+		${THINKTHEN_DOTNET:-dotnet} pack libraries/csharp/ThinkThen.csproj -c Release \
+			--source "$folder/feed" -o "$folder" -v quiet
+		[ -f "$folder/Botassembly.ThinkThen.$V.nupkg" ] || { echo 'release-pack: C# nupkg missing' >&2; exit 1; }
+		rmdir "$folder/feed"
+		;;
+jvm)
+		scratch_dir jvm_out
+		THINKTHEN_JVM_OUT=$jvm_out sh libraries/jvm/build.sh
+		THINKTHEN_JVM_OUT=$jvm_out python3 libraries/jvm/tests/package_check.py
+		cp "$jvm_out/jars/thinkthen-door.jar" "$jvm_out/jars/thinkthen-kotlin.jar" \
+			"$jvm_out/jars/thinkthen-scala.jar" libraries/jvm/pom.xml libraries/jvm/LICENSE \
+			libraries/jvm/README.md "$folder/"
 		;;
 	esac
 	printf 'source_commit=%s\ntarget=%s\nversion=%s\nc_archive=%s\nc_sha256=%s\n' \
@@ -133,6 +150,8 @@ part_source_wrapper() {
 }
 part_go() { part_source_wrapper go; }
 part_cpp() { part_source_wrapper cpp; }
+part_csharp() { part_source_wrapper csharp; }
+part_jvm() { part_source_wrapper jvm; }
 
 part_sqlite() {
 	[ -n "$reuse" ] || (cd databases/sqlite && cargo build --locked --quiet --release)
@@ -221,7 +240,7 @@ part_first_run() {
 [ $# -gt 0 ] || set -- command c sqlite duckdb postgresql python typescript ruby first-run
 for part in "$@"; do
 	case $part in
-	command | c | go | cpp | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
+	command | c | go | cpp | csharp | jvm | sqlite | duckdb | postgresql | python | typescript | ruby) "part_$part" ;;
 	first-run) part_first_run ;;
 	*) echo "release-pack: no part named $part" >&2; exit 2 ;;
 	esac

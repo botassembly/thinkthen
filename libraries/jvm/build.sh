@@ -2,6 +2,14 @@
 set -eu
 here=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 out="$here/target"
+if [ -n "${THINKTHEN_JVM_OUT:-}" ]; then
+	case $THINKTHEN_JVM_OUT in /*) ;; *) echo 'jvm build: release output must be absolute' >&2; exit 1 ;; esac
+	[ -d "$THINKTHEN_JVM_OUT" ] && [ ! -L "$THINKTHEN_JVM_OUT" ] &&
+	[ -z "$(find "$THINKTHEN_JVM_OUT" -mindepth 1 -print -quit)" ] || {
+		echo 'jvm build: release output must be an empty real directory' >&2; exit 1;
+	}
+	out=$THINKTHEN_JVM_OUT
+fi
 javac=${THINKTHEN_JDK_HOME:+$THINKTHEN_JDK_HOME/bin/javac}
 javac=${javac:-$(command -v javac || true)}
 jar=${THINKTHEN_JDK_HOME:+$THINKTHEN_JDK_HOME/bin/jar}

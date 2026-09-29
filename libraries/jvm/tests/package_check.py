@@ -2,12 +2,13 @@
 import hashlib
 import io
 import json
+import os
 from pathlib import Path
 import zipfile
 import xml.etree.ElementTree as ET
 
 ROOT = Path(__file__).resolve().parents[1]
-TARGET = ROOT / "target"
+TARGET = Path(os.environ.get("THINKTHEN_JVM_OUT", ROOT / "target"))
 BAD = (b"tt-canary-289", b"/home/ian", b"auth.json", b"-----BEGIN PRIVATE KEY-----")
 
 
