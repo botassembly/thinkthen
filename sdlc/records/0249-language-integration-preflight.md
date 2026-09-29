@@ -1,0 +1,25 @@
+# 0249 language integration preflight
+
+At source `a16da4a5` on 2026-09-28, the source lane is clean and ticket 0249's start hold is released. The source evidence is eleven local experiments (273, 274, 289–295, 300, 301), each port issue, the language merge runbook, the contract drift issue, and the current C header. The earlier priority brief's direction to copy every sealed `stage2/package/` and rebuild a 21-export library is stale. No experiment artifact has been changed or published.
+
+| Destination | Exact source package | Acceptance carried into integration |
+| --- | --- | --- |
+| `libraries/zig/` | 273 `repin/package/` | Named errors, descriptions, typed results and J1 corpus remain. |
+| `libraries/go/` | 274 `repin/package/` | Preserve thread pinning for error copy; decide a real module path before publishing. |
+| `libraries/jvm/` | 289 `repin/package/` | Three corrected JAR examples, FFM safety, full typed contract and J1 corpus remain. |
+| `libraries/csharp/` | 290 `repin/package/` | Named errors, described labels, annotate failure, offsets and J1 corpus remain. |
+| `libraries/php/` | 291 `repin/package/` | Constructor, error facts, typed result work, J1 corpus and FFI deprecation remain. PHP has no proved in-flight cancellation. |
+| `libraries/cobol/` | 292 `repin/package/` | Existing typed copybook plus full J1 runtime corpus remain. |
+| `libraries/ada/` | 293 `repin/package/` | Existing typed accessors plus full J1 runtime corpus remain. |
+| `libraries/swift/` | 294 `repin/package/` | Corrected example, typed deltas, J1 corpus and Apple packaging remain. |
+| `libraries/objective-c/` | 295 `repin/package/` | Existing tokenizer and typed contract plus full J1 runtime corpus remain. |
+| `libraries/dart/` | 300 `stage2/package/` + `repin/package/README.md`; Flutter wrapper `stage3/package/` | Re-run the Dart gate and real Flutter embedder at the current pin; distinguish Linux from other targets. |
+| `libraries/cpp/` | 301 corrected `stage2/package/` | Keep the CMake prefix fix and exact-integer parser refusal; full J1 runtime corpus remains. |
+
+This is eleven packages and thirteen named consumer languages. Java, Kotlin and Scala share one JVM package. The old twelve-language wording preceded C++. The current header has 30 declarations, including typed-facts calls added by 0255. Every new gate must derive and compare the export set against its built native library. Re-pin provenance and gate outcomes remain at the historical source `71f25087`, not the current pin.
+
+First source claim: ticket 0249, this preflight, `libraries/csharp/`, `libraries/jvm/`, their package-local functional fixtures and checks, and README rows for those packages after landing. The C# source is experiment 290 `repin/package/`; the JVM source is experiment 289 `repin/package/`. The C# re-pin passed its NuGet and two isolated installed consumers plus a 30-arrival exact matrix. The JVM re-pin passed three JAR-first installed consumers, each with 60 exact arrivals. Both receipts include sealed original drift failures and corrected planted negatives. They do not prove the current native pin, full J1 runtime corpus, or a registry install. C# `ThinkThen.cs` still exposes integer failure codes and lacks current constructor/error-facts binding. JVM `ResultEnvelope.java` assumes object member order. Those are source changes, not documentation-only cleanup.
+
+Linux has `dotnet`, JDK, Kotlin, Scala and `bwrap`; its current load was 1.33 with 156 GB free at preflight. Build under this lane's lock with isolated output and reduced jobs if load rises. Current product source and its C header supply the native build; compare the resulting symbols and run the copied functional/package gates after adapting paths and fixtures. Use the existing J1 schema corpus and `specification/types.md` to test public values, facts, null versus failure, descriptions, all six errors, settings and Unicode-scalar offsets. Retain each package's original planted negatives and exact request multiset. A macOS toolchain check on M5 becomes useful for Swift and C++; do not claim it from Linux. These checks require no paid provider call.
+
+Accounts and publishing remain separate from source acceptance. The NuGet prefix, Maven namespace, Packagist vendor and pub.dev name are metadata decisions in the runbook; no registry installation has been executed by this lane. The root README has another owner, so add language rows only after the corresponding package passes and coordinate the second merge. The site belongs to Marketing.
