@@ -22,6 +22,8 @@ spec.loader.exec_module(shared)
 corpus = json.loads((SHARED / "corpus.json").read_text())
 checks = shared.validators(json.loads((ROOT / "specification/result.schema.json").read_text()))
 shared.check_schema(corpus["cases"], checks)
+selected = sys.argv[1] if len(sys.argv) == 2 else None
+assert len(sys.argv) <= 2 and (selected is None or any(case["name"] == selected for case in corpus["cases"])), "unknown J1 case selector"
 conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
 classes = TARGET / "classes/typecase"
 classes.mkdir(parents=True, exist_ok=True)
@@ -39,12 +41,13 @@ try:
         count = 0
         with tempfile.TemporaryDirectory(prefix=f"thinkthen-{lang}-types-") as cache:
             for index, case in enumerate(corpus["cases"]):
-                if "request" not in case or case.get("schema_only", False):
+                if "request" not in case or case.get("schema_only", False) or (selected and case["name"] != selected):
                     continue
                 route = case.get("case_id", "generic")
                 if route != "generic":
                     assert route in conformance, case["name"]
-                env = child_env(HOME=cache, JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"))
+                # Java decodes command-line arguments with the native locale charset.
+                env = child_env(HOME=cache, JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"), LC_ALL="C.UTF-8")
                 env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1", THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)))
                 request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
                 cmd = java + ["-cp", f"{classes}:{classpath}" + (f":{runtime}" if runtime else ""), main, request]
