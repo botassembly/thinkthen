@@ -23,7 +23,9 @@ The adapter keeps every body field except the derived three, which it recomputes
 
 The body carries no timing, no request ID, and no price. Jev puts its request ID and server time in the headers `x-typesafe-request-id` and `x-envoy-upstream-service-time`. A recording never keeps headers (`specification/recording.md:60`). The open issue `2026-09-23-record-the-backends-own-time-for-each-call.md` already covers them.
 
-## What each surface gives back
+## What each surface gave back at filing
+
+The table and gap list below are the `cc51986b` audit snapshot, not a current support matrix. The dated C progress and current-source refresh below supersede its negative carrier claims; the original asks remain in force except for ADR 0101's explicit old-C-symbol compatibility exception.
 
 "Details" means the full `thinkthen.result/1` line (`specification/result.md:26-38`, `:96-107`). That line holds:
 
@@ -50,7 +52,7 @@ The body carries no timing, no request ID, and no price. Jev puts its request ID
 | SQLite | Via `thinkthen_details()` for one text, and via `thinkthen_usage()` (`databases/sqlite/src/scalars.rs:155-220`) | No | No | Via details and usage | Full line | Via details | Via details |
 | Raw HTTP, as the docs show it | The docs have no curl example for the endpoint. The only wire example is a JSON body in `backends.md:103-112`, which shows `usage` | No | Not documented | Not applicable | Shown in the body | Not documented. The docs never mention the request-ID header | Shown in the body |
 
-## The gaps
+## The gaps at filing
 
 1. **No surface gives latency.** No code records wall time, server time, or Jev's request ID. The only clocks in the engine and bindings serve deadlines and polling (`crates/thinkthen/src/engine/mod.rs:214-220`). The open issue from 2026-09-23 covers this. Ian ruled that day to keep the times. Nothing has landed.
 
@@ -132,3 +134,7 @@ At main `e8789b76`, accepted ticket 0230 gives successful C JSON-door calls owne
 ## Typed C progress, 2026-09-28
 
 Ticket 0255 passed fresh High code/API review at `41114d20` and landed eight typed `*_with_facts` forms. They return owned facts from the same asking call and retain the existing C layout and symbols. ADR 0101 explicitly preserves the eight old bare symbols as compatibility forms; they do not gain facts. The installed Linux C driver, exact exports and failure/ownership checks passed. Other target packages and this issue's remaining surfaces, cost, server timing and request-ID criteria stay open.
+
+## Factual preparation after typed C facts, 2026-09-28
+
+At main `23371cc9`, `public/results/call.rs` fixes final `Call<T>::facts` at completion; `public/results/observation.rs` supplies ordered question/row detail, and `public/frame.rs` wraps Polars values. Python `src/result.rs`/frame stop, TypeScript `src/door/result.rs`, Ruby `src/call.rs`/`ffi/result.rs`, R `rust/src/calls/account.rs`, and C's JSON and eight additive typed doors convert facts into host carriers. A pre-account refusal has no invented facts; a started failure can carry a final receipt, and absent provider usage stays absent. `cli/facts.rs` prints opt-in whole-command totals, including work omitted from printed filter/rank rows. `conformance/cases.json` already checks usage, requests sent, cached and confidence; DuckDB's current `thinkthen_details` uses full result JSON. These source paths and the 0255 Linux installed driver do not qualify every target package, native Intel or macOS 15, and do not close full-detail/failure parity without each host's exact boundary proof. The original eight C typed names remain bare by ADR 0101, while the eight new names return owned facts. Wall `seconds` is a call/run interval, not the requested per-request backend/server time. Vendor request IDs, caller-priced money, SQL per-call facts (explicitly deferred above) and the public wording/raw exchange remain distinct. Register 61's `meta.usage` field-name criterion is also still open even though its even-share algorithm and prose are settled. See `sdlc/records/2026-09-28-accounting-after-c-facts.md` for the bounded next batches and proof limits.
