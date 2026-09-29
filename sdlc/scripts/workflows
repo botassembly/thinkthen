@@ -103,6 +103,26 @@ def release(name, doc):
             value = [value]
         if set(value) != need:
             out.append(f"{name}: job {job} must need {', '.join(sorted(need))}")
+    crate = jobs.get("crate", {})
+    crate_steps = crate.get("steps") or []
+    def crate_step(predicate):
+        return next((i for i, step in enumerate(crate_steps)
+                     if step.get("if") is None and step.get("continue-on-error") is None
+                     and predicate(step)), None)
+    route = [
+        crate_step(lambda step: (step.get("uses") or "").startswith("actions/checkout@")
+                   and (step.get("with") or {}).get("ref") == RESOLVED),
+        *[crate_step(lambda step, command=command: step.get("run") == command)
+          for command in ("rustup toolchain install 1.95.0 --profile minimal",
+                          "cargo fetch --locked", "sh sdlc/scripts/package")],
+        crate_step(lambda step: (step.get("uses") or "").startswith("actions/upload-artifact@")
+                   and (step.get("with") or {}).get("name") == "crate-package"
+                   and (step.get("with") or {}).get("path") == "target/package/*.crate"
+                   and (step.get("with") or {}).get("if-no-files-found") == "error"),
+    ]
+    if (crate.get("if") is not None or crate.get("continue-on-error") is not None
+            or any(i is None for i in route) or route != sorted(set(route))):
+        out.append(f"{name}: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order")
     for job, active_version, condition in (("build", "3.10", "runner.os == 'macOS'"),
                                            ("smoke", "3.12", None)):
         job_steps = jobs.get(job, {}).get("steps") or []
@@ -290,7 +310,7 @@ def release(name, doc):
     return out
 
 
-def check(folder):
+def check(folder, lint_text=None):
     out = []
     for path in sorted(folder.glob("*.y*ml")):
         text = path.read_text(encoding="utf-8")
@@ -298,6 +318,11 @@ def check(folder):
         out += every(path.name, doc, text)
         if path.name == "release.yml":
             out += release(path.name, doc)
+    if lint_text is None:
+        lint_text = (REPO / "sdlc/scripts/lint").read_text(encoding="utf-8")
+    if (re.search(r"(?m)^[ \t]*(?:sh[ \t]+)?sdlc/scripts/package(?:[ \t]|$)", lint_text)
+            or "head -c 4194304 /dev/urandom" in lint_text):
+        out.append("lint: routine rung must not plant a stale crate or run full package validation")
     return out
 
 
@@ -389,7 +414,16 @@ jobs:
   wheels: {needs: [resolve, build]}
   npm-pack: {needs: [resolve, build]}
   gems: {needs: [resolve, build]}
-  crate: {needs: resolve}
+  crate:
+    needs: resolve
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09
+        with: {ref: "${{ needs.resolve.outputs.sha }}"}
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - run: cargo fetch --locked
+      - run: sh sdlc/scripts/package
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error}
   smoke: {needs: [resolve, build, wheels, npm-pack, gems, crate]}
   draft:
     needs: [resolve, smoke]
@@ -451,6 +485,20 @@ def self_test():
     cases = [
         ("real", None, None, []),
         ("release-ok", "release.yml", lambda t: t, []),
+        ("crate-missing", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n', ''),
+         ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),
+        ("crate-order", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n', '')
+         .replace('      - run: cargo fetch --locked\n', '      - run: sh sdlc/scripts/package\n      - run: cargo fetch --locked\n'),
+         ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),
+        ("crate-bypass-shell", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n',
+                                                                   '      - run: sh sdlc/scripts/package || true\n'),
+         ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),
+        ("crate-bypass-step", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n',
+                                                                  '      - run: sh sdlc/scripts/package\n        continue-on-error: true\n'),
+         ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),
+        ("crate-bypass-condition", "release.yml", lambda t: t.replace('      - run: sh sdlc/scripts/package\n',
+                                                                       '      - run: sh sdlc/scripts/package\n        if: false\n'),
+         ["release.yml: job crate must run resolved checkout, exact unconditional setup, fetch, package, and upload in order"]),
         ("push", "pages.yml", lambda t: t.replace("  workflow_dispatch:", "  push:\n  workflow_dispatch:"),
          ["pages.yml: starts on `push`; only workflow_dispatch may start a workflow"]),
         ("tag-pin", "pages.yml", lambda t: re.sub(r"actions/checkout@[0-9a-f]{40}", "actions/checkout@v4", t),
@@ -477,7 +525,7 @@ def self_test():
                                                             '      - run: echo early\n'
                                                             '      - env: {RELEASE_ARMED: "${{ vars.RELEASE_ARMED }}"}', 1),
          ["release.yml: job pypi must check environment RELEASE_ARMED before any outward step"]),
-        ("checkout", "release.yml", lambda t: t.replace('{ref: "${{ needs.resolve.outputs.sha }}"}', '{ref: main}'),
+        ("checkout", "release.yml", lambda t: t.replace('{ref: "${{ needs.resolve.outputs.sha }}"}', '{ref: main}', 1),
          ["release.yml: job build checks out main, not the resolved SHA"]),
         ("top", "release.yml", lambda t: t.replace("permissions: {}\n", "permissions: {contents: read}\n"),
          ["release.yml: top-level permissions must be {}"]),
@@ -563,6 +611,14 @@ def self_test():
         if got != expected:
             bad += 1
             print(f"workflows self-test {name}: expected {expected}, got {got}", file=sys.stderr)
+    lint = (REPO / "sdlc/scripts/lint").read_text(encoding="utf-8")
+    for name, plant in (("lint-package", "\nsh sdlc/scripts/package\n"),
+                        ("lint-stale", "\nhead -c 4194304 /dev/urandom >target/package/stale.crate\n")):
+        wanted = ["lint: routine rung must not plant a stale crate or run full package validation"]
+        got = check(REPO / ".github/workflows", lint_text=lint + plant)
+        if got != wanted:
+            bad += 1
+            print(f"workflows self-test {name}: expected {wanted}, got {got}", file=sys.stderr)
     host_cases = [(target, smoke) for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
                                                  "aarch64-apple-darwin", "x86_64-apple-darwin")
                   for smoke in (False, True)]
@@ -603,7 +659,7 @@ def self_test():
     if language.returncode != 0:
         bad += 1
         print(f"workflows self-test language tools: {language.stdout}{language.stderr}", file=sys.stderr)
-    total = len(cases) + len(host_cases) + 3
+    total = len(cases) + 2 + len(host_cases) + 3
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 

@@ -144,9 +144,9 @@ jobs:
     steps:
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with: {ref: "${{ needs.resolve.outputs.sha }}", persist-credentials: false}
-      - run: |
-          rustup toolchain install 1.95.0 --profile minimal
-          cargo package --locked --package thinkthen
+      - run: rustup toolchain install 1.95.0 --profile minimal
+      - run: cargo fetch --locked
+      - run: sh sdlc/scripts/package
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with: {name: crate-package, path: target/package/*.crate, if-no-files-found: error, retention-days: 7}
 
