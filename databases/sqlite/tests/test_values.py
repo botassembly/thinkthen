@@ -38,7 +38,7 @@ def test_find_preserves_duplicate_positions_and_strict_ties() -> None:
             held = child(f"""
 db = connect()
 say(result=run(db, "SELECT thinkthen_find(?, ?, ?)",
-               ("Which unit?", {json.dumps(units)!r}, {int(offered)})))
+               ("Which unit?", {json.dumps(units)!r}, {json.dumps({'none': offered})!r})))
 """, environment(backend, THINKTHEN_BASE_URL=proxy.base))
             expect(proxy.count(), 1, "one find request")
         result = json.loads(held["result"][0][0])
@@ -50,40 +50,37 @@ def test_find_null_empty_and_invalid_inputs_never_send() -> None:
     backend = Backend()
     held = child("""
 db = connect()
-good = ['one', 'two']
+good = json.dumps(['one', 'two'])
 bad = [
-    ('question NULL', None, json.dumps(good), 0, -1),
-    ('units NULL', 'Which?', None, 0, -1),
-    ('none NULL', 'Which?', json.dumps(good), None, -1),
-    ('deadline NULL', 'Which?', json.dumps(good), 0, None),
-    ('empty', 'Which?', '[]', 0, -1),
-    ('one', 'Which?', '["one"]', 0, -1),
-    ('member NULL', 'Which?', '["one",null]', 0, -1),
-    ('member number', 'Which?', '["one",7]', 0, -1),
-    ('member blank', 'Which?', '["one","  "]', 0, -1),
-    ('question number', 7, json.dumps(good), 0, -1),
-    ('units number', 'Which?', 7, 0, -1),
-    ('units blob', 'Which?', b'["one","two"]', 0, -1),
-    ('malformed', 'Which?', '[', 0, -1),
-    ('not array', 'Which?', '{}', 0, -1),
-    ('bad none', 'Which?', json.dumps(good), 2, -1),
-    ('bad question', '   ', json.dumps(good), 0, -1),
-    ('bad deadline', 'Which?', json.dumps(good), 0, 0.5),
-    ('too many', 'Which?', json.dumps(['x'] * 256), 0, -1),
-    ('none too many', 'Which?', json.dumps(['x'] * 255), 1, -1),
-    ('too much text', 'Which?', json.dumps(['x' * (16 * 1024 * 1024), 'y']), 0, -1),
+    ('question NULL', None, good, '{}'),
+    ('units NULL', 'Which?', None, '{}'),
+    ('empty', 'Which?', '[]', '{}'),
+    ('one', 'Which?', '["one"]', '{}'),
+    ('member NULL', 'Which?', '["one",null]', '{}'),
+    ('member number', 'Which?', '["one",7]', '{}'),
+    ('member blank', 'Which?', '["one","  "]', '{}'),
+    ('question number', 7, good, '{}'),
+    ('units number', 'Which?', 7, '{}'),
+    ('units blob', 'Which?', b'["one","two"]', '{}'),
+    ('malformed', 'Which?', '[', '{}'),
+    ('not array', 'Which?', '{}', '{}'),
+    ('bad none', 'Which?', good, '{"none":2}'),
+    ('bad question', '   ', good, '{}'),
+    ('bad deadline', 'Which?', good, '{"deadline_ms":0.5}'),
+    ('too many', 'Which?', json.dumps(['x'] * 256), '{}'),
+    ('none too many', 'Which?', json.dumps(['x'] * 255), '{"none":true}'),
+    ('too much text', 'Which?', json.dumps(['x' * (16 * 1024 * 1024), 'y']), '{}'),
 ]
-say(results={name: run(db, 'SELECT thinkthen_find(?, ?, ?, ?)', (q, units, none, deadline)) for
-             name, q, units, none, deadline in bad})
+say(results={name: run(db, 'SELECT thinkthen_find(?, ?, ?)', (q, units, settings)) for
+             name, q, units, settings in bad})
 """, environment(backend))
-    for name in ("question NULL", "units NULL", "none NULL", "deadline NULL", "empty"):
+    for name in ("question NULL", "units NULL", "empty"):
         expect(held["results"][name], [[None]], name)
     for name in ("one", "member NULL", "member number", "member blank", "question number", "units number",
-                 "units blob", "malformed", "not array",
-                 "bad none", "bad question", "bad deadline", "too many", "none too many", "too much text"):
+                 "units blob", "malformed", "not array", "bad none", "bad question", "bad deadline",
+                 "too many", "none too many", "too much text"):
         expect(held["results"][name].startswith("thinkthen usage: "), True, name)
     expect(backend.close(), 0, "all refused inputs send nothing")
-
 
 def test_a_null_text_is_null_and_a_bad_value_is_refused_before_any_send() -> None:
     """Branch case 81 and G11, for every scalar that sends."""
@@ -108,8 +105,7 @@ say(**{{name: [run(db, f"SELECT {{name}}(?, ?)", pair) for pair in (
 
 
 def test_a_banded_question_is_refused_where_it_has_no_answer() -> None:
-    """Decision 4: score, choose, and tag name the two functions that take it. Warm
-    takes a band (ticket 0129) and still refuses a choose question."""
+    """Score, choose and tag refuse a band; removed warm refuses by name."""
     backend = Backend()
     choose = json.dumps({"choose": "Which colour?", "options": ["red", "blue"]})
     held = child(f"""
@@ -119,27 +115,10 @@ say(**{{name: run(db, f"SELECT {{name}}(?, 'a red door')", ({BANDED!r},))
     thinkthen_warm=run(db, "SELECT thinkthen_warm(?, 'a red door')", ({choose!r},)))
 """, environment(backend))
     wanted = "thinkthen usage: {} does not take a banded question; use thinkthen_decide or thinkthen_details"
-    expect(held, {name: wanted.format(name) for name in held} | {
-        "thinkthen_warm": "thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide",
+    expect(held, {name: wanted.format(name) for name in held if name != "thinkthen_warm"} | {
+        "thinkthen_warm": "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many",
     }, "the refusals")
     expect(backend.close(), 0, "sends")
-
-
-def test_warm_step_refusal_discards_pending_groups_without_a_send() -> None:
-    """SQLite finalizes a failed aggregate; the earlier pending row must not flush."""
-    backend = Backend()
-    choose = json.dumps({"choose": "Which colour?", "options": ["red", "blue"]})
-    held = child(f"""
-db = connect()
-db.execute("CREATE TABLE t(i INTEGER, q TEXT, e TEXT)")
-db.executemany("INSERT INTO t VALUES (?, ?, ?)", [(1, "Is it red?", "red door"), (2, {choose!r}, "blue door")])
-warm = run(db, "SELECT thinkthen_warm(q, e) FROM (SELECT q, e FROM t ORDER BY i)")
-usage = json.loads(run(db, "SELECT thinkthen_usage()")[0][0])
-say(warm=warm, requests_sent=usage["requests_sent"])
-""", environment(backend))
-    expect(held, {"warm": "thinkthen usage: thinkthen_warm takes a decide question; ask others with thinkthen_decide",
-                  "requests_sent": 0}, "failed aggregate has no count and no late send")
-    expect(backend.close(), 0, "no send after the step refusal")
 
 
 def test_recognize_counts_offsets_as_substr_does_and_refuses_relations() -> None:
@@ -176,16 +155,16 @@ path = os.environ['SCRATCH'] + '/recognize.json'
 open(path, 'w').write({json.dumps(full)!r})
 bad_path = os.environ['SCRATCH'] + '/bad-recognize.json'
 open(bad_path, 'w').write({json.dumps(bad)!r})
-say(forms=[run(db, 'SELECT thinkthen_recognize_document(?, ?)', ('', spec))
+say(forms=[run(db, 'SELECT thinkthen_relations(?, ?)', ('', spec))
            for spec in ({json.dumps(full)!r}, {json.dumps(bare)!r}, '@' + path, {json.dumps(plain)!r})],
-    refused=[run(db, 'SELECT thinkthen_recognize_document(?, ?)', pair) for pair in (
+    refused=[run(db, 'SELECT thinkthen_relations(?, ?)', pair) for pair in (
         (None, {json.dumps(full)!r}), ('', None), (b'x', {json.dumps(full)!r}),
         (7, {json.dumps(full)!r}), ('x\\x00y', {json.dumps(full)!r}),
         ('', b'{{}}'), ('', 7), ('', '{{}}\\x00'), ('', '{{'),
         ('', {json.dumps(bad)!r}),
         ('', '@' + bad_path),
-    )] + [run(db, "SELECT thinkthen_recognize_document(CAST(x'ff' AS TEXT), '{{}}')"),
-         run(db, "SELECT thinkthen_recognize_document('', CAST(x'ff' AS TEXT))")])
+    )] + [run(db, "SELECT thinkthen_relations(CAST(x'ff' AS TEXT), '{{}}')"),
+         run(db, "SELECT thinkthen_relations('', CAST(x'ff' AS TEXT))")])
 """, environment(backend))
     expect([json.loads(one[0][0]) for one in held["forms"]], [
         {"entities": [], "relations": []}, {"entities": [], "relations": []},
@@ -222,7 +201,7 @@ def test_recognize_document_applies_a_nondefault_relation_threshold() -> None:
     backend = Backend()
     held = child(f"""
 db = connect()
-say(result=[run(db, 'SELECT thinkthen_recognize_document(?, ?)', ({evidence!r}, spec))
+say(result=[run(db, 'SELECT thinkthen_relations(?, ?)', ({evidence!r}, spec))
             for spec in ({json.dumps(question)!r}, {json.dumps(dict(question, relation_threshold=1.0))!r})])
 """, environment(backend))
     low, high = (json.loads(one[0][0]) for one in held["result"])
@@ -235,7 +214,7 @@ RELATE = """
 db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", {rows!r})
-say(edges=run(db, "SELECT relation, source, target FROM thinkthen_relate('e', 'id', 'name', 'kind', 'works_for=person:organization') ORDER BY source, target"))
+say(edges=run(db, "SELECT relation, source, target FROM thinkthen_relate('SELECT id, name, kind FROM e', 'works_for=person:organization') ORDER BY source, target"))
 """
 
 
@@ -258,23 +237,8 @@ def test_relate_refuses_a_blank_name_and_the_256th_pair_before_any_send() -> Non
     expect(backend.close(), 0, "sends")
 
 
-def test_warm_keys_its_groups_by_question_and_text() -> None:
-    """R2-22: two questions over one text are two pairs, and the decide after reads the cache."""
-    backend = Backend()
-    held = child("""
-db = connect()
-db.execute("CREATE TABLE t(q TEXT, body TEXT)")
-db.executemany("INSERT INTO t VALUES (?, ?)", [("Is it red?", "a red door"), ("Is it old?", "a red door"), ("Is it red?", "a red door")])
-warm = run(db, "SELECT thinkthen_warm(q, body) FROM t")
-say(warm=warm, decide=run(db, "SELECT thinkthen_decide('Is it old?', 'a red door')"), usage=json.loads(run(db, "SELECT thinkthen_usage()")[0][0]))
-""", environment(backend))
-    expect((held["warm"], held["decide"]), ([[2]], [[1]]), "the answers")
-    expect((held["usage"]["requests_sent"], held["usage"]["cache_answers"]), (2, 1), "the usage totals")
-    expect(backend.close(), 2, "sends")
-
-
-def test_fourth_context_keeps_scalar_shapes_and_validation_order() -> None:
-    """Context reaches every eligible scalar; the third slot stays deadline."""
+def test_settings_context_keeps_scalar_shapes_and_validation_order() -> None:
+    """The third settings slot reaches values and facts; bad values send nothing."""
     backend = Backend()
     questions = {
         "choose": {"choose": "Which team owns this?", "options": ["billing", "shipping", "other"]},
@@ -284,86 +248,37 @@ def test_fourth_context_keeps_scalar_shapes_and_validation_order() -> None:
     held = child(f"""
 db = connect()
 questions = {questions!r}
-shapes = {{name: run(db, f"SELECT thinkthen_{{name}}(?, 'red door', -1, 'shared context')", (json.dumps(q),))
+settings = '{{"context":"shared context"}}'
+shapes = {{name: run(db, f"SELECT thinkthen_{{name}}(?, 'red door', ?)", (json.dumps(q), settings))
           for name, q in questions.items()}}
 plain = run(db, "SELECT thinkthen_details('Is it red?', 'red door')")
-shapes['decide'] = run(db, "SELECT thinkthen_decide('Is it red?', 'red door', -1, 'shared context')")
-shapes['details'] = run(db, "SELECT thinkthen_details('Is it red?', 'red door', -1, 'shared context')")
-shapes['try'] = run(db, "SELECT thinkthen_try_details('Is it red?', 'red door', -1, 'shared context')")
+shapes['decide'] = run(db, "SELECT thinkthen_decide('Is it red?', 'red door', ?)", (settings,))
+shapes['details'] = run(db, "SELECT thinkthen_details('Is it red?', 'red door', ?)", (settings,))
+shapes['try'] = run(db, "SELECT thinkthen_try_details('Is it red?', 'red door', ?)", (settings,))
 say(shapes=shapes, plain=plain,
-    null=run(db, "SELECT thinkthen_try_details(NULL, 'bad', NULL, '   ')"),
-    slot=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', NULL, 'shared context')"),
-    bad=run(db, "SELECT thinkthen_try_details('Is it red?', 'red door', -1, '   ')"),
-    bad_ordinary=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', -1, '   ')"))
+    null=run(db, "SELECT thinkthen_try_details(NULL, 'bad', ?)", ('{{"context":"  "}}',)),
+    slot=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', -1)"),
+    bad=run(db, "SELECT thinkthen_try_details('Is it red?', 'red door', ?)", ('{{"context":"  "}}',)),
+    bad_ordinary=run(db, "SELECT thinkthen_decide('Is it red?', 'red door', ?)", ('{{"context":"  "}}',)))
 """, environment(backend))
     shapes = held["shapes"]
     expect({name: shapes[name] for name in ("choose", "tag", "score", "decide")},
            {"choose": [["billing"]], "tag": [['["billing","urgent","security"]']],
-            "score": [[0.15]], "decide": [[1]]}, "scalar value shapes")
+            "score": [[0.15]], "decide": [[1]]}, "scalar values")
     plain = json.loads(held["plain"][0][0])
     details = json.loads(shapes["details"][0][0])
-    tried = json.loads(shapes["try"][0][0])
-    expect(tried, {"status": "answered", "details": details}, "try details keeps scalar JSON")
-    expect("input" in details, False, "contextual scalar does not gain record input")
-    expect(details["schema"], "thinkthen.result/1", "details schema")
+    expect(json.loads(shapes["try"][0][0]), {"status": "answered", "details": details}, "try details")
+    expect("input" in details, False, "scalar details omit record input")
     expect(details["meta"]["question_sha256"], plain["meta"]["question_sha256"], "question identity")
-    expect(details["meta"]["context_sha256"], hashlib.sha256(b"shared context").hexdigest(), "literal context identity")
-    expect(details["meta"]["requests"] != plain["meta"]["requests"], True, "context changes request identity")
-    expect(held["null"], [[None]], "try NULL short-circuits before deadline and context")
-    expect(held["slot"], "thinkthen usage: a deadline of NULL is not a whole number of milliseconds", "third argument is deadline")
+    expect(details["meta"]["context_sha256"], hashlib.sha256(b"shared context").hexdigest(), "context identity")
+    expect(details["meta"]["requests"] != plain["meta"]["requests"], True, "context changes request")
+    expect(held["null"], [[None]], "NULL short-circuit")
+    expect(held["slot"], "thinkthen usage: the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'", "old slot refusal")
     safe = {"status": "failed", "error": {"kind": "usage", "message":
             "check the row's question and arguments, or raise the process request total when it is spent", "retryable": False}}
-    expect(json.loads(held["bad"][0][0]), safe, "try bad context is a safe value")
-    expect(held["bad_ordinary"], "thinkthen usage: context is text, not white space", "ordinary bad context raises")
-    expect(backend.close(), 5, "four typed questions plus old and new decide identity, with cache reuse")
-
-
-def test_warm_groups_by_question_and_context_before_scalar_cache_reads() -> None:
-    """First-seen context groups count triples and batch-one warms scalar cache."""
-    backend = Backend()
-    held = child("""
-db = connect()
-db.execute("SELECT thinkthen_batch(1)")
-db.execute("CREATE TABLE t(q TEXT, e TEXT, c TEXT)")
-db.executemany("INSERT INTO t VALUES (?, ?, ?)", [
-    ("Is it red?", "red one", "alpha"),
-    ("Is it red?", "red two", "alpha"),
-    ("Is it red?", "red one", "alpha"),
-    ("Is it red?", "red one", "beta"),
-    ("Is it red?", "red two", "beta"),
-    (None, "ignored", "alpha"),
-    ("Is it red?", None, "beta")])
-warm = run(db, "SELECT thinkthen_warm(q,e,-1,c) FROM t")
-one = run(db, "SELECT thinkthen_decide('Is it red?', 'red one', -1, 'alpha')")
-two = run(db, "SELECT thinkthen_decide('Is it red?', 'red two', -1, 'beta')")
-usage = json.loads(run(db, "SELECT thinkthen_usage()")[0][0])
-say(warm=warm, one=one, two=two, usage=usage)
-""", environment(backend))
-    expect((held["warm"], held["one"], held["two"]), ([[4]], [[1]], [[1]]), "warm count and cached scalars")
-    expect((held["usage"]["requests_sent"], held["usage"]["cache_answers"]), (4, 2), "four distinct context records and two cache hits")
-    expect(backend.close(), 4, "only the distinct warm triples sent")
-
-
-def test_default_packed_warm_reuses_only_the_identical_cohort() -> None:
-    """B0's complete packed key replays; a later singleton has another key."""
-    backend = Backend()
-    held = child("""
-db = connect()
-db.execute("CREATE TABLE r(body TEXT)")
-db.executemany("INSERT INTO r VALUES (?)", [
-    ("i want a refund now",), ("good morning",), ("refund, please",),
-    ("maybe later",), ("see you",)])
-first = run(db, "SELECT thinkthen_warm('Is this a complaint?', body) FROM r")
-again = run(db, "SELECT thinkthen_warm('Is this a complaint?', body) FROM r")
-scalar = run(db, "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund now')")
-usage = json.loads(run(db, "SELECT thinkthen_usage()")[0][0])
-say(first=first, again=again, scalar=scalar, usage=usage)
-""", environment(backend))
-    expect((held["first"], held["again"], held["scalar"]), ([[5]], [[5]], [[1]]), "warm and scalar values")
-    expect((held["usage"]["requests_sent"], held["usage"]["cache_answers"]), (2, 1),
-           "one packed send, one complete-cohort hit, one different singleton send")
-    expect(backend.close(), 2, "packed warm and singleton requests only")
-
+    expect(json.loads(held["bad"][0][0]), safe, "safe failed value")
+    expect(held["bad_ordinary"], "thinkthen usage: `context` is text that is not blank", "bad context")
+    expect(backend.close(), 5, "four typed questions and contextual/plain decide")
 
 def test_usage_refuses_the_reset_spelling() -> None:
     held = child("""
@@ -381,7 +296,8 @@ EVERY_CALL = """
 db = connect()
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(1, "Ada", "person"), (2, "Acme", "organization")])
-calls = ["SELECT thinkthen_throttle(4)", "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
+calls = ["SELECT thinkthen_configure('{}')", "SELECT count(*) FROM thinkthen_decide_many('Is it red?', json_object('7','a red door'))",
+         "SELECT thinkthen_max_requests(NULL)", "SELECT thinkthen_max_requests_total(1000)",
          "SELECT thinkthen_cache('" + os.environ["SCRATCH"] + "/cache')"]
 calls += [f"SELECT {name}('Is it red?', 'a red door'{deadline})" for name in ("thinkthen_decide", "thinkthen_details", "thinkthen_warm") for deadline in ("", ", 0")]
 calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\"a\\",\\"b\\"]}', 'x')",
@@ -389,7 +305,7 @@ calls += ["SELECT thinkthen_choose('{\\"choose\\":\\"Which?\\",\\"options\\":[\\
           "SELECT thinkthen_tag('{\\"tag\\":\\"Which?\\",\\"labels\\":[\\"a\\",\\"b\\"]}', 'x')",
           "SELECT thinkthen_annotate('{\\"version\\":1,\\"questions\\":{\\"k\\":{\\"decide\\":\\"Is it red?\\"}}}', 'x')",
           "SELECT * FROM thinkthen_recognize('Ada joined Acme.', 'person')",
-          "SELECT * FROM thinkthen_relate('e', 'id', 'name', 'kind', 'works_for=person:organization')",
+          "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM e', 'works_for=person:organization')",
           "SELECT thinkthen_decide('@/nonexistent/q.json', 'x')", "SELECT thinkthen_usage()", "SELECT thinkthen_throttle(8)"]
 say(said=[run(db, sql) for sql in calls])
 """
@@ -403,7 +319,7 @@ def test_no_message_carries_the_key_or_the_address_credentials() -> None:
     said = json.dumps([busy, refused])
     expect([secret for secret in (SECRET_KEY, USER, PASSWORD) if secret in said], [], f"the sentinels in {said}")
     expect(sum("thinkthen backend (retryable)" in str(one) for one in busy["said"]), 9, f"the busy errors in {busy}")
-    expect(refused["said"][0], "thinkthen usage: THINKTHEN_BASE_URL: a base address carries no user information", "the refused address")
+    expect("thinkthen usage: THINKTHEN_BASE_URL: a base address carries no user information" in refused["said"], True, "the refused address")
 
 
 def test_a_child_never_sees_the_callers_key() -> None:

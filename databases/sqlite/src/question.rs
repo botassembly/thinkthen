@@ -230,7 +230,8 @@ pub(crate) fn question_with_settings(
     if settings == &Settings::default() {
         return question(argument);
     }
-    let source = if let Some(_) = argument.strip_prefix('@') {
+    let file = argument.starts_with('@');
+    let source = if file {
         Some(named_file(argument, "question")?.0)
     } else if argument.starts_with('{') {
         Some(argument.to_owned())
@@ -243,8 +244,16 @@ pub(crate) fn question_with_settings(
             .map_err(|error| Failure::usage(error.to_string()))?;
         return Ok(Arc::new(Question::from_json(&json)?));
     };
-    let explicit: serde_json::Value = serde_json::from_str(&source)
-        .map_err(|error| Failure::usage(format!("the question is not JSON: {error}")))?;
+    let explicit: serde_json::Value = serde_json::from_str(&source).map_err(|error| {
+        Failure::of(
+            if file {
+                ErrorKind::Local
+            } else {
+                ErrorKind::Usage
+            },
+            format!("the question is not JSON: {error}"),
+        )
+    })?;
     let fields = explicit
         .as_object()
         .ok_or_else(|| Failure::usage("the question is one JSON object"))?;
@@ -262,7 +271,9 @@ pub(crate) fn question_with_settings(
         .conflicts(&explicit_keys, false)
         .map_err(|error| Failure::usage(error.to_string()))?;
     if extra_fields.len() == 1 {
-        return Ok(Arc::new(Question::from_json(&source)?));
+        return Ok(Arc::new(
+            Question::from_json(&source).map_err(|error| from_file(error, file))?,
+        ));
     }
     // The shared writer preserved member-map order. Append only its question
     // fields, leaving the caller's complete JSON bytes in their original order.
@@ -278,7 +289,9 @@ pub(crate) fn question_with_settings(
         .ok_or_else(|| Failure::usage("the question is one JSON object"))?;
     let separator = if fields.is_empty() { "" } else { "," };
     let merged = format!("{original}{separator}{suffix}}}");
-    Ok(Arc::new(Question::from_json(&merged)?))
+    Ok(Arc::new(
+        Question::from_json(&merged).map_err(|error| from_file(error, file))?,
+    ))
 }
 
 /// The question set one argument names, inline JSON or `'@name'`.

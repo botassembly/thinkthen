@@ -77,6 +77,7 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             .check(For::Find)
             .map_err(|error| Failure::usage(error.to_string()))?;
         let none = settings.none().unwrap_or(false);
+        let shared = settings.context().map(str::to_owned);
         let units = units(&source)?;
         if units.is_empty() {
             return Ok(None);
@@ -97,6 +98,11 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
         };
         let answer =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                let options = if let Some(shared) = &shared {
+                    options.context(shared)
+                } else {
+                    options
+                };
                 let call = engine.find_with(&question, units, options)?;
                 let found = call.into_value();
                 let selected = found.selected();

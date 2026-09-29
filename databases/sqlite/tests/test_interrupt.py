@@ -106,22 +106,21 @@ def test_relate_is_cancelled_and_sends_no_more_after_release() -> None:
     Throttle 1 keeps the second request waiting behind the first.
     """
     backend = Backend()
-    setup = """db.execute("SELECT thinkthen_throttle(1)")
+    setup = """db.execute("SELECT thinkthen_configure(?)", ('{"throttle":1}',))
 db.execute("CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)")
 db.executemany("INSERT INTO e VALUES (?, ?, ?)", [(n, f'Person {n}', 'person') for n in range(21)])"""
-    sql = "SELECT * FROM thinkthen_relate('e', 'id', 'name', 'kind', 'knows=person:person')"
+    sql = "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM e', 'knows=person:person')"
     stopped_fast(interrupted(backend, sql, 1, setup))
     settled(backend, 1)
 
 
-def test_a_warm_is_cancelled_mid_batch() -> None:
+def test_a_keyed_call_is_cancelled_mid_batch() -> None:
     """Case 18: eight packed sends are held; cancellation starts no ninth."""
     backend = Backend()
-    setup = """db.execute("SELECT thinkthen_throttle(8)")
-db.execute("SELECT thinkthen_batch(2)")
-db.execute("CREATE TABLE t(body TEXT)")
-db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(20)])"""
-    result = interrupted(backend, "SELECT thinkthen_warm('Is it red?', body) FROM t", 8, setup)
+    setup = """db.execute("SELECT thinkthen_configure(?)", ('{"throttle":8,"batch":2}',))
+db.execute("CREATE TABLE t(id INTEGER, body TEXT)")
+db.executemany("INSERT INTO t VALUES (?,?)", [(at, f"row {at}") for at in range(20)])"""
+    result = interrupted(backend, "SELECT count(*) FROM thinkthen_decide_many('Is it red?', (SELECT json_group_object(id,body) FROM t))", 8, setup)
     stopped_fast(result)
     time.sleep(0.3)
     expect(backend.count(), 8, "sends 300 ms after the interrupt")
@@ -150,26 +149,25 @@ def test_the_cli_prints_the_cancelled_sentence_on_sigint() -> None:
     expect(after < 0.1, True, f"the CLI printed {after} s after the signal")
 
 
-def test_a_fast_warm_stops_soon_after_the_interrupt() -> None:
+def test_a_fast_keyed_call_stops_soon_after_the_interrupt() -> None:
     """On a fast backend SQLite's own step loop may stop first, so only the time is held."""
     backend = Backend()
     code = """
 db = connect()
-db.execute("SELECT thinkthen_throttle(8)")
-db.execute("CREATE TABLE t(body TEXT)")
-db.executemany("INSERT INTO t VALUES (?)", [(f"row {at}",) for at in range(100000)])
+db.execute("SELECT thinkthen_configure(?)", ('{"throttle":8}',))
+packed = json.dumps({str(at): f"row {at}" for at in range(100000)})
 def stop():
     time.sleep(0.5)
     stopped.append(time.monotonic())
     db.interrupt()
 stopped = []
 threading.Thread(target=stop, daemon=True).start()
-error = run(db, "SELECT thinkthen_warm('Is it red?', body) FROM t")
+error = run(db, "SELECT count(*) FROM thinkthen_decide_many(?,?)", ("Is it red?", packed))
 say(error=isinstance(error, str), after=time.monotonic() - stopped[0])
 """
     result = Child(code, environment(backend)).result()
-    expect(result["error"], True, "the warm ended in an error")
-    expect(result["after"] < 1, True, f"the warm stopped {result['after']} s after the interrupt")
+    expect(result["error"], True, "the keyed call ended in an error")
+    expect(result["after"] < 1, True, f"the keyed call stopped {result['after']} s after the interrupt")
 
 
 def cached_calls(count: int) -> dict:
@@ -273,7 +271,7 @@ def test_a_grandchild_hears_its_own_interrupt() -> None:
 
 
 if __name__ == "__main__":
-    stress = {"test_a_fast_warm_stops_soon_after_the_interrupt",
+    stress = {"test_a_fast_keyed_call_stops_soon_after_the_interrupt",
               "test_cached_calls_return_at_once_and_leave_no_thread"}
     only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
     sys.exit(main({name: value for name, value in globals().items()

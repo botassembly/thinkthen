@@ -301,8 +301,14 @@ fn annotate(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             return Ok(None);
         };
         let questions = set(&argument)?;
+        let shared = settings.context().map(str::to_owned);
         let record =
             worker::run_settings(ffi::handle_of(context), settings, move |engine, options| {
+                let options = if let Some(shared) = &shared {
+                    options.context(shared)
+                } else {
+                    options
+                };
                 match engine.annotate_with(&questions, [evidence], options).next() {
                     Some(record) => Ok(record?.value_json()),
                     None => Err(Failure::defect("annotate returned no record")),
@@ -338,6 +344,72 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
 
 mod find;
 
+fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlite::Result<()> {
+    for name in [
+        "thinkthen_decide",
+        "thinkthen_choose",
+        "thinkthen_score",
+        "thinkthen_tag",
+        "thinkthen_details",
+        "thinkthen_try_details",
+        "thinkthen_annotate",
+        "thinkthen_find",
+    ] {
+        let sentence = if name == "thinkthen_find" {
+            "find's none and deadline moved into the settings object"
+        } else {
+            "the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'"
+        };
+        connection.create_scalar_function(
+            name,
+            4,
+            volatile,
+            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence).into()) },
+        )?;
+    }
+    for (name, sentence) in [
+        (
+            "thinkthen_warm",
+            "thinkthen_warm was removed; pack records with thinkthen_decide_many",
+        ),
+        (
+            "thinkthen_probability",
+            "thinkthen_probability was removed; read probability from thinkthen_decide_many or thinkthen_choose_many",
+        ),
+    ] {
+        connection.create_scalar_function(
+            name,
+            -1,
+            volatile,
+            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence).into()) },
+        )?;
+    }
+    for name in [
+        "throttle",
+        "batch",
+        "max_requests",
+        "max_request_bytes",
+        "max_requests_total",
+        "cache",
+        "model",
+        "timeout",
+        "max_retries",
+        "profile",
+        "record",
+        "replay",
+    ] {
+        let full = format!("thinkthen_{name}");
+        let sentence = format!("thinkthen_{name} was replaced by thinkthen_configure");
+        connection.create_scalar_function(
+            full.as_str(),
+            -1,
+            volatile,
+            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence.clone()).into()) },
+        )?;
+    }
+    Ok(())
+}
+
 /// Register the scalar functions for direct calls, without deterministic flags.
 pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     let volatile = FunctionFlags::SQLITE_UTF8 | FunctionFlags::SQLITE_DIRECTONLY;
@@ -370,61 +442,6 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
     }
     connection.create_scalar_function("thinkthen_usage", -1, volatile, usage)?;
     connection.create_scalar_function("thinkthen_configure", 1, volatile, settings::configure)?;
-    for name in [
-        "thinkthen_decide",
-        "thinkthen_choose",
-        "thinkthen_score",
-        "thinkthen_tag",
-        "thinkthen_details",
-        "thinkthen_try_details",
-        "thinkthen_annotate",
-        "thinkthen_find",
-    ] {
-        let sentence = if name == "thinkthen_find" {
-            "find's none and deadline moved into the settings object"
-        } else {
-            "the deadline and context moved into the settings object; pass '{\"deadline_ms\": …, \"context\": …}'"
-        };
-        connection.create_scalar_function(
-            name,
-            4,
-            volatile,
-            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence).into()) },
-        )?;
-    }
-    connection.create_scalar_function(
-        "thinkthen_warm",
-        -1,
-        volatile,
-        |_| -> rusqlite::Result<String> {
-            Err(Failure::usage(
-                "thinkthen_warm was removed; pack records with thinkthen_decide_many",
-            )
-            .into())
-        },
-    )?;
-    for name in [
-        "throttle",
-        "batch",
-        "max_requests",
-        "max_request_bytes",
-        "max_requests_total",
-        "cache",
-        "model",
-        "timeout",
-        "max_retries",
-        "profile",
-        "record",
-        "replay",
-    ] {
-        let full = format!("thinkthen_{name}");
-        let sentence = format!("thinkthen_{name} was replaced by thinkthen_configure");
-        connection.create_scalar_function(
-            full.as_str(),
-            -1,
-            volatile,
-            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence.clone()).into()) },
-        )?;
-    }
+    register_removed(connection, volatile)?;
     Ok(())
 }

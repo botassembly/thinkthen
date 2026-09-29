@@ -61,6 +61,8 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 		step "$test, installed"
 		sh "$LIMIT" 300 "$python" "$test"
 	done
+	step "keyed rows, slot reuse and the JSON-only package counter, installed"
+	sh "$LIMIT" 300 "$python" -c 'import sys; sys.path.insert(0, "tests"); from test_redesign import test_six_song_e1_keyed_join_sends_one_exact_packed_body as e1, test_keyed_decide_reuses_one_packed_reply_across_key_probes as keyed, test_two_alternating_slots_reuse_rows_with_disk_cache_disabled as slots; from test_settings import test_recording_counter_excludes_lock_files as counter; e1(); keyed(); slots(); counter()'
 	step "selected find value, budget and interrupt boundaries, installed"
 	sh "$LIMIT" 300 "$python" -c 'import sys; sys.path.insert(0, "tests"); from test_values import test_find_preserves_duplicate_positions_and_strict_ties as answers, test_find_null_empty_and_invalid_inputs_never_send as invalid; from test_try_budget import test_find_uses_the_scalar_budget_and_total_before_a_second_send as budget; from test_interrupt import test_find_is_cancelled_while_its_one_send_is_held as interrupt; answers(); invalid(); budget(); interrupt()'
 	step "the pinned native host's successful and failed load results, installed"

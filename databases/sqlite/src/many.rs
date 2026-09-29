@@ -14,6 +14,7 @@ use crate::tables::{Scan, Table};
 use crate::{Failure, worker};
 
 type Rows = Arc<Vec<Vec<Value>>>;
+type HeldRows = (Rows, Arc<HashMap<String, usize>>);
 
 /// A slot owns its argument bytes; no SQLite-owned pointer escapes xFilter.
 #[derive(Debug)]
@@ -41,7 +42,7 @@ impl Store {
         question: &[u8],
         keyed: &[u8],
         settings: &[u8],
-    ) -> Option<(Rows, Arc<HashMap<String, usize>>)> {
+    ) -> Option<HeldRows> {
         let at = self
             .slots
             .iter()
@@ -124,6 +125,48 @@ fn selected(rows: Rows, positions: Arc<HashMap<String, usize>>, lookup: Option<S
     }
 }
 
+fn answer_columns(detail: &thinkthen::Details, kind: &str) -> Result<(Value, Value), Failure> {
+    match detail.value() {
+        Judgment::Decision(answer) if kind == "thinkthen_decide_many" => {
+            let value = match answer {
+                thinkthen::Answer::Yes => Value::Integer(1),
+                thinkthen::Answer::No => Value::Integer(0),
+                thinkthen::Answer::Unsure => Value::Null,
+            };
+            let Probabilities::YesNo { yes } = detail.probabilities() else {
+                return Err(Failure::defect("a decide answer held no yes probability"));
+            };
+            Ok((value, Value::Real(*yes)))
+        }
+        Judgment::Choice(label) if kind == "thinkthen_choose_many" => {
+            let probability = match (label, detail.probabilities()) {
+                (Some(label), Probabilities::Named(named)) => named
+                    .iter()
+                    .find(|item| item.name() == label)
+                    .map_or(Value::Null, |item| Value::Real(item.probability())),
+                _ => Value::Null,
+            };
+            Ok((
+                label
+                    .as_ref()
+                    .map_or(Value::Null, |label| Value::Text(label.clone())),
+                probability,
+            ))
+        }
+        Judgment::Score(value) if kind == "thinkthen_score_many" => {
+            Ok((Value::Real(*value), Value::Null))
+        }
+        Judgment::Tags(labels) if kind == "thinkthen_tag_many" => Ok((
+            Value::Text(
+                serde_json::to_string(labels)
+                    .map_err(|_| Failure::defect("tags could not be encoded"))?,
+            ),
+            Value::Null,
+        )),
+        _ => Err(Failure::defect("a packed answer held another kind")),
+    }
+}
+
 fn scan(
     db: *mut sqlite3,
     mask: c_int,
@@ -179,57 +222,7 @@ fn scan(
             LoadedQuestion::Banded(asked) => engine.details_many_with(asked, texts, options),
         };
         details
-            .map(|row| {
-                let (_, detail) = row?.into_parts();
-                let (value, probability) = match detail.value() {
-                    Judgment::Decision(answer) if kind == "thinkthen_decide_many" => {
-                        let value = match answer {
-                            thinkthen::Answer::Yes => Value::Integer(1),
-                            thinkthen::Answer::No => Value::Integer(0),
-                            thinkthen::Answer::Unsure => Value::Null,
-                        };
-                        let probability = match detail.probabilities() {
-                            Probabilities::YesNo { yes } => Value::Real(*yes),
-                            _ => {
-                                return Err(Failure::defect(
-                                    "a decide answer held no yes probability",
-                                ));
-                            }
-                        };
-                        (value, probability)
-                    }
-                    Judgment::Choice(label) if kind == "thinkthen_choose_many" => {
-                        let probability = if let (Some(label), Probabilities::Named(named)) =
-                            (label, detail.probabilities())
-                        {
-                            named
-                                .iter()
-                                .find(|item| item.name() == label)
-                                .map_or(Value::Null, |item| Value::Real(item.probability()))
-                        } else {
-                            Value::Null
-                        };
-                        (
-                            label
-                                .as_ref()
-                                .map_or(Value::Null, |label| Value::Text(label.clone())),
-                            probability,
-                        )
-                    }
-                    Judgment::Score(value) if kind == "thinkthen_score_many" => {
-                        (Value::Real(*value), Value::Null)
-                    }
-                    Judgment::Tags(labels) if kind == "thinkthen_tag_many" => (
-                        Value::Text(
-                            serde_json::to_string(labels)
-                                .map_err(|_| Failure::defect("tags could not be encoded"))?,
-                        ),
-                        Value::Null,
-                    ),
-                    _ => return Err(Failure::defect("a packed answer held another kind")),
-                };
-                Ok((value, probability))
-            })
+            .map(|row| answer_columns(&row?.into_parts().1, kind))
             .collect::<Result<Vec<_>, Failure>>()
     })?;
     if keys.len() != values.len() {

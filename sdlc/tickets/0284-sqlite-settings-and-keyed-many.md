@@ -1,6 +1,6 @@
 # 0284 — SQLite settings and keyed many (T2)
 
-Status: Accepted for implementation. SQLite-local work is in progress; plan and active cap acceptance depend on ticket 0289.
+Status: Accepted for implementation. SQLite-local source and selected pinned-host proof are complete; plan and active cap acceptance depend on ticket 0289.
 
 ## Outcome
 
@@ -39,4 +39,4 @@ On the installed pinned SQLite host, P1 returns native JSON text decoding to `re
 
 The existing SQLite virtual-table callback copies every hidden argument into owned `Value`s before it calls the table implementation. A connection-owned row store therefore needs a borrowed `xFilter` path, not only a new table body. The pinned host proved that a visible `key =` equality can be passed into that path while the packed answer rows stay shared. The portable five-record fixture also remained a three-request call after replacing the warm aggregate with a keyed table.
 
-The prepared old settings corpus and package tests still invoke setters, warm and positional deadlines. Their assertions require migration to the accepted call shape; compilation alone cannot qualify the installed extension. Ticket 0289 is still required for `Engine::plan` and active `max_requests_total`.
+The prepared old settings corpus and package tests invoked setters, warm and positional deadlines. Their selected consumers now use the accepted call shape and retain exact removed-name refusals. The installed selector was extended for keyed rows, alternating slots and the JSON-only package counter; a newly copied archive remains unqualified. Ticket 0289 is still required for `Engine::plan_with` and active `max_requests_total`. The first correlated query failed when the planner rejected an unavailable outer-row key constraint; leaving that optional equality to SQLite fixed the plan. Its actual default packed input sent three requests, not one, and the second 1,000-row probe sent none. The bounded 100,000-row aggregate-once join passed once without a repeated performance run. A named question file with nondefault settings also needed its existing `local` error mapping. Details and the source/installed distinction are in the build record.

@@ -69,7 +69,9 @@ pub(crate) fn plan<T: Table>(info: &mut IndexInfo) -> Result<bool, Failure> {
         if !constraint.is_usable()
             || constraint.operator() != IndexConstraintOp::SQLITE_INDEX_CONSTRAINT_EQ
         {
-            return Ok(false);
+            // An outer-row key equality may be unavailable to this plan.
+            // Leave it to SQLite; required hidden arguments are checked below.
+            continue;
         }
         if let Some(slot) = bound.get_mut(column) {
             *slot = Some(at);

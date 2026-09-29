@@ -87,6 +87,18 @@ static STORED: Mutex<Stored> = Mutex::new(Stored {
 static ENGINE: OnceLock<Engine> = OnceLock::new();
 static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
 
+fn batch(value: &serde_json::Value) -> Result<BatchSetting, Failure> {
+    if value.as_str() == Some("max") {
+        return Ok(BatchSetting::Max);
+    }
+    let count = value
+        .as_u64()
+        .and_then(|count| usize::try_from(count).ok())
+        .and_then(NonZeroUsize::new)
+        .ok_or_else(|| Failure::usage("settings batch has an invalid value"))?;
+    Ok(BatchSetting::Records(count))
+}
+
 /// Keep one count across every engine and every call in this process.
 pub(crate) fn send_budget() -> (&'static SendBudget, Option<u64>) {
     (SEND_BUDGET.get_or_init(SendBudget::new), stored().total)
@@ -156,22 +168,7 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
                 "base_url" => return Err(Failure::usage("settings JSON has unknown key base_url")),
                 "model" => next.model = value.as_str().map(str::to_owned),
                 "throttle" => next.throttle = value.as_u64().and_then(|n| u8::try_from(n).ok()),
-                "batch" => {
-                    next.batch = Some(match value.as_str() {
-                        Some("max") => BatchSetting::Max,
-                        _ => BatchSetting::Records(
-                            NonZeroUsize::new(
-                                usize::try_from(value.as_u64().ok_or_else(|| {
-                                    Failure::usage("settings batch has an invalid value")
-                                })?)
-                                .map_err(|_| {
-                                    Failure::usage("settings batch has an invalid value")
-                                })?,
-                            )
-                            .ok_or_else(|| Failure::usage("settings batch has an invalid value"))?,
-                        ),
-                    })
-                }
+                "batch" => next.batch = Some(batch(value)?),
                 "max_requests" => {
                     next.max_requests = Some(
                         value
