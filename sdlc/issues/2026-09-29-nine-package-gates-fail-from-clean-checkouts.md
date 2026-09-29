@@ -35,3 +35,13 @@ The [Quick Fix build record](../records/2026-09-29-clean-package-gates-quick-fix
 ## Evidence
 
 Local experiment 302 `experiments/302-polyglot-package-verification/`: one folder per surface with REPORT.md and logs; `FINDINGS.md` consolidates; `waves.log` is the run record. Inputs sealed at the pin.
+
+## Final full-24 re-verification (2026-09-29, pin 4c0ef210)
+
+After the five fixes merged at e90de34a7 and the call-facts tickets 0275-0281 landed: **14 PASS, 10 FAIL**, all gates required to pass under minimal `env -i` environments this time. Evidence: local experiment 302 `finalcheck-4c0ef210/` (24 reports) and `FINAL-RUN-SUMMARY.md`.
+
+- **The five fixes hold green** (zig, objective-c, c, rust, typescript).
+- **New finding — JVM locale masking**: java, kotlin, and scala gates fail in a clean environment because the JVM decodes non-ASCII command-line arguments as ASCII without LANG/LC_ALL; round one passed by ambient-locale accident. One-line fix (export LC_ALL=C.UTF-8 in libraries/jvm/check.sh or move non-ASCII off the CLI); belongs in the environment-hardening sweep.
+- **New regressions between pins, likely from the call-facts wave**: dart and flutter gates fail on one stale planted-negative expected-message (`wrong-probability`, PLANTED_NEGATIVE_WRONG_REASON, in checks/plant-check.py and flutter/plant-check.py); R fails shared conformance case 40-decide-counters deterministically ("the engine is already set with batch = Max; start a new R session to change it" — session-pinned settings interaction).
+- **Unchanged opens**: python (contract ruling pending), polars (stale batch tests, held lane), duckdb (held lane), sqlite (same record-sends-every-time counter bug as originally filed — the *.json filter fix has not landed).
+- **Typescript note stands**: export check still asserts a literal count; derive it from the binding source.
