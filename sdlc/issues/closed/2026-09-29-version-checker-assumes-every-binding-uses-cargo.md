@@ -1,6 +1,6 @@
 # Version checker assumes every binding uses Cargo
 
-Status: Open. Confirmed on integrated main `7053849e1` by the selected lint checkpoint and source inspection.
+Status: Closed. Fixed by the version-checker Quick Fix at `8963c6daa`, accepted by fresh Medium code review. Normal checking reads 69 version locations and all 25 focused cases pass.
 
 `sdlc/scripts/versions::manifests` appends `Cargo.toml` for every landed registry surface. Eleven landed language wrappers use other package formats. The normal check reports eleven absent Cargo version lines; its self-test raises `FileNotFoundError` while copying one of those nonexistent manifests. Both prevent the version gate from checking the repository as shipped.
 

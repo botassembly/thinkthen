@@ -1,0 +1,23 @@
+# Quick Fix: language version checking
+
+The original failure on main `24e48a22d` was `versions` reporting eleven nonexistent wrapper `Cargo.toml` files and `versions --self-test` raising `FileNotFoundError` at the first copy. The registry listed landed PHP, C#, JVM, Dart, Swift, Zig, Go, C++, Ada, Objective-C and COBOL wrappers whose actual package formats are not Cargo.
+
+## Metadata and retained checks
+
+The checker now maps the nine landed Cargo surfaces to their exact manifests, including the R nested crate and the three existing database manifests. It reads each non-Cargo package's actual required metadata. C# uses `ThinkThen.csproj` plus its static `.nuspec` version; JVM uses `pom.xml`; Dart uses its package and both Flutter pubspec versions; Zig uses `build.zig.zon` and `build.zig`; C++ uses `CMakeLists.txt`; Objective-C and COBOL use their `source-package.json` versions. PHP Composer, Swift Package.swift, Go go.mod and Ada project files carry package identity but no product version field; their releases derive version from the tag or paired C artifact. No version field was added to them. The copied Swift and Objective-C C headers retain all five existing C-header version checks. Swift identity is anchored to the package declaration, so names in products or targets cannot mask a renamed package.
+
+The root crate version, other original static copies, every tracked readable Cargo lock package entry, `--tag vX.Y.Z`, and byte equality of the two installer copies remain checked. Unknown landed surfaces, missing or malformed required metadata, and unreadable locks now report a failure. `--set` reads and validates the registry, metadata, lock contents, installer equality, and every version slot before writing any file. The existing refused-update byte comparison is retained. The check does not parse or build any language package, prove release archive provenance, or qualify SQL/DataFrame hosts.
+
+## Focused proof
+
+Fresh Medium review of `d7a5d5bbb` found that Zig's `build.zig` also holds a numeric ABI triple and two separate ABI diagnostics, and that the first Swift identity pattern matched a product/target name after a package rename. New copied-source plants reproduced both failures before correction: Zig's stale numeric or second diagnostic passed normal checking, `--set 9.8.7` left all three Zig copies stale, and a Swift package rename passed both normal checking and `--set`. The correction checks and updates the three numeric components and each diagnostic independently, and anchors Swift identity to `let package = Package(` followed by its `name` field.
+
+`CARGO_NET_OFFLINE=true RUSTC_WRAPPER= CARGO_BUILD_RUSTC_WRAPPER= CARGO_BUILD_JOBS=2 python3 sdlc/scripts/versions` now exits 0 with `versions: 69 places read 0.0.1`; `--self-test` exits 0 with 25/25 copied-source cases. The original 21 cases remain, with four new refusal cases for stale Zig numeric ABI, stale second diagnostic, renamed Swift package, and unchanged bytes on refused `--set` after that rename. The existing successful `--set` case also pins the updated Zig triple `9, 8, 7` and both `package ABI 9.8.7` diagnostics. `python3 -m py_compile sdlc/scripts/versions`, `python3 sdlc/scripts/pages`, `python3 sdlc/scripts/tickets`, and diff checks passed. Offline policy passed with `RUSTC_WRAPPER=/usr/bin/env CARGO_BUILD_RUSTC_WRAPPER=/usr/bin/env`; the earlier failed command set only `CARGO_NET_OFFLINE=true`, so the machine's configured `sccache` remained active and was denied in the planted `cargo tree` checks. The command log does not establish a failure with blank wrapper overrides. Set the intended wrapper explicitly on each new shell command.
+
+## What the build taught us
+
+The registry is a surface list, not a Cargo manifest list. A versionless wrapper still needs a checked metadata identity, and a failed read must be found before `--set` writes. The copied package and header version fields are real version copies; Zig also enforces an embedded ABI triple at build time and repeats the ABI version in two diagnostics. A focused read of the other newly supported wrappers' current build/package entry files found no comparable omitted build-enforced version copy. The checker only proves static synchronization; no Zig or other wrapper build, publication, or SQL/DataFrame host qualification was run.
+
+## Review and integration
+
+Fresh Medium review accepted `8963c6daa` after independently checking the Zig ABI copies, anchored Swift identity, all 25 cases and the corrected policy command account. The coordinator integrated the reviewed checker unchanged. This closes the metadata gate defect; the full lint rung and release qualification retain their separate limits.
