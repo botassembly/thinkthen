@@ -1,0 +1,9 @@
+# 0268 Go/C++ workflow code review
+
+The independent High reviewer accepted static workflow candidate `72de17666b8f512c7381c4cca8c687381767a805` on 2026-09-29. Ticket 0268 remains open for actual container, installed-consumer and runner proof. Ian's SQL and DataFrame hold prevents the combined release execution.
+
+The first review of `49cd7499` found that an unexpected Go/C++ ZIP could bypass the archive-only pair validator and that an extra platform folder could bypass the draft's four-folder checks. Both could reach collection. The corrected selected-family check rejects every unexpected Go/C++ prefixed member. Collection requires exactly four nonlinked platform folders and checks their selected-family names before creating output. The reviewer traced the draft calls, shell variables and real-collector fixture and accepted both corrections. The fixture's positive case checks the copied files; the two refusal cases require absent output paths.
+
+The reviewer also accepted the resolved source SHA handoff, one manylinux C invocation, pinned Go archive checksum before use, and the source-only jsonschema preflight. The reviewer performed source inspection without running fixtures or builds. The coordinator then merged the candidate and ran `workflows --self-test` with all 31 cases passing, plain `workflows`, changed shell syntax, Python syntax, pages, tickets and the diff check. The prior unchanged policy result is retained. No native compilation, tool download, container, backend, SQL, DataFrame or Actions run occurred.
+
+The accepted code does not prove C member hashes, the glibc floor, installed public calls, actual runner setup or a four-target release. Preserve the earlier local 0261 receipt as prior evidence. No original consumer issue closes from this checkpoint, and no draft, registry or publication action is authorized by it.
