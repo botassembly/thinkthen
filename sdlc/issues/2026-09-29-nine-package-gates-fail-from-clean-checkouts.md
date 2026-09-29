@@ -45,3 +45,16 @@ After the five fixes merged at e90de34a7 and the call-facts tickets 0275-0281 la
 - **New regressions between pins, likely from the call-facts wave**: dart and flutter gates fail on one stale planted-negative expected-message (`wrong-probability`, PLANTED_NEGATIVE_WRONG_REASON, in checks/plant-check.py and flutter/plant-check.py); R fails shared conformance case 40-decide-counters deterministically ("the engine is already set with batch = Max; start a new R session to change it" — session-pinned settings interaction).
 - **Unchanged opens**: python (contract ruling pending), polars (stale batch tests, held lane), duckdb (held lane), sqlite (same record-sends-every-time counter bug as originally filed — the *.json filter fix has not landed).
 - **Typescript note stands**: export check still asserts a literal count; derive it from the binding source.
+
+
+## Current routing after the final report
+
+At current main `f1802619d`, the five full-gate passes above remain independently measured at `4c0ef210`. The later JVM locale correction is already landed at `5f53b3a58`; its [focused receipt](../records/qf-jvm-j1-offset.md) proves case41 through Java, Kotlin and Scala under an explicit UTF-8 child locale. It does not change the historical 14/10 table.
+
+The coordinator owns a bounded [Dart/Flutter and R harness correction](../records/qf-package-counter-and-negative-diagnostics.md). R must keep its current session-settings contract: case40's counter measurement belongs in a fresh child because the ordinary answer checks already warmed the first child's cache. Dart's consumers should print the asserted outcome and probability, preserving the exact planted-negative marker. Do not weaken the marker to accept an object identity string. Fresh review and landing are required before these criteria close.
+
+SQLite0284 includes the `*.json` counter filter; DuckDB0286 retains all seven reported cases. Polars0289 and Python0287 retain their package criteria. The accepted SQL/frame ADRs ended the earlier design hold; the historical phrase “contract ruling pending” is no longer their scheduling state. These are active or dependency-ordered builds, not externally blocked items.
+
+The detailed receipts also name unresolved qualification concerns outside the six corrected harness paths: Flutter's wrapper `pub get --offline` rewrote its locked `vector_math` when that version was absent; a Flutter check child lost the Cargo-wrapper override; Ruby fixture reads need an explicit UTF-8 environment; and Ruby's local `file://` dependency plant conflicts with a globally forced Cargo offline setting. Carry these to the package environment/release batch, refresh current source before changing it, and require locked dependency resolution. A missing cached dependency is an environment prerequisite, never permission to validate a silently changed lock. No new full-gate count is asserted here.
+
+The TypeScript literal export count is not a remaining defect by itself. Its test also compares the three public export name sets. Keep an independent expected surface; deriving the expected count from the same actual output could conceal a missing export.
