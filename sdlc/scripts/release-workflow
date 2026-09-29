@@ -25,6 +25,22 @@ go_cpp_names() {
 		fi
 	done
 }
+swift_zig_names() {
+	dir=$1 target=$2
+	for file in "$dir"/thinkthen-swift* "$dir"/thinkthen-zig*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		name=${file##*/}
+		if [ "$target" = x86_64-unknown-linux-gnu ]; then
+			case $name in
+			"thinkthen-swift-$version-$target.tar.gz" | "thinkthen-swift-$version-$target.tar.gz.sha256" | \
+			"thinkthen-zig-$version-$target.tar.gz" | "thinkthen-zig-$version-$target.tar.gz.sha256") ;;
+			*) fail "unexpected Swift/Zig family entry $name" ;;
+			esac
+		else
+			fail "unsupported target has $name"
+		fi
+	done
+}
 case ${1:-} in
 host-setup)
 	[ "$#" = 2 ] || fail 'host-setup TARGET'
@@ -127,6 +143,55 @@ go-cpp-gate)
 		;;
 	*) fail "no Go/C++ release route for $target" ;;
 	esac
+	;;
+swift-zig-gate)
+	[ "$#" = 4 ] || fail 'swift-zig-gate DIR TARGET SHA'
+	dir=$2 target=$3 selected=$4
+	[ -d "$dir" ] || fail "platform directory is missing: $dir"
+	printf '%s\n' "$selected" | grep -Eq '^[0-9a-f]{40}$' || fail 'resolved SHA is invalid'
+	[ "$(git rev-parse HEAD)" = "$selected" ] || fail 'checkout differs from resolved SHA'
+	case $target in
+	x86_64-unknown-linux-gnu)
+		[ "$(rustc -vV | sed -n 's/^host: //p')" = "$target" ] || fail 'Swift/Zig gate requires its installed x86 host'
+		swift_zig_names "$dir" "$target"
+		sh "$repo/sdlc/scripts/release-go-cpp-pair" "$dir" swift-zig
+		for family in swift zig; do
+			archive=$dir/thinkthen-$family-$version-$target.tar.gz
+			tar -xOzf "$archive" ./THINKTHEN-PACKAGE-INPUTS |
+				grep -Fxq "source_commit=$selected" || fail "$family source differs from resolved SHA"
+		done
+		;;
+	aarch64-unknown-linux-gnu | aarch64-apple-darwin | x86_64-apple-darwin)
+		swift_zig_names "$dir" "$target"
+		;;
+	*) fail "no Swift/Zig release route for $target" ;;
+	esac
+	;;
+swift-zig-tools)
+	[ "$#" = 3 ] || fail 'swift-zig-tools TARGET OUT'
+	[ "$2" = x86_64-unknown-linux-gnu ] && [ "$(uname -s):$(uname -m)" = Linux:x86_64 ] ||
+		fail 'Swift/Zig installed tools require Linux x86-64'
+	for tool in curl sha256sum tar swift swiftc cargo python3 node nm bwrap flock git; do
+		command -v "$tool" >/dev/null 2>&1 || fail "Swift/Zig installed tool is missing: $tool"
+	done
+	[ "$(swift --version)" = 'Swift version 6.4 (swift-6.4-RELEASE)
+Target: x86_64-unknown-linux-gnu' ] || fail 'Swift tool differs from 6.4 release pin'
+	[ "$(swiftc --version)" = 'Swift version 6.4 (swift-6.4-RELEASE)
+Target: x86_64-unknown-linux-gnu' ] || fail 'Swift compiler differs from 6.4 release pin'
+	bwrap --version >/dev/null || fail 'bubblewrap cannot run'
+	[ -n "${GITHUB_PATH:-}" ] && [ -f "$GITHUB_PATH" ] || fail 'GitHub path handoff is missing'
+	case $3 in /*) ;; *) fail 'Zig setup output must be absolute' ;; esac
+	[ ! -e "$3" ] && [ ! -L "$3" ] || fail 'Zig setup output already exists'
+	mkdir -p -- "$3"
+	zig_archive=$3/zig-x86_64-linux-0.15.2.tar.xz
+	curl --proto '=https' --tlsv1.2 -fsSL -o "$zig_archive" \
+		https://ziglang.org/download/0.15.2/zig-x86_64-linux-0.15.2.tar.xz
+	printf '%s  %s\n' 02aa270f183da276e5b5920b1dac44a63f1a49e55050ebde3aecc9eb82f93239 "$zig_archive" |
+		sha256sum -c --quiet || fail 'Zig 0.15.2 archive differs from official checksum'
+	tar -xJf "$zig_archive" -C "$3"
+	zig_dir=$3/zig-x86_64-linux-0.15.2
+	[ "$("$zig_dir/zig" version)" = 0.15.2 ] || fail 'Zig tool differs from pin'
+	printf '%s\n' "$zig_dir" >>"$GITHUB_PATH"
 	;;
 go-cpp-tools)
 	[ "$#" = 3 ] || fail 'go-cpp-tools TARGET OUT'
@@ -256,6 +321,7 @@ collect)
 		folder=$2/platform-$target
 		[ -d "$folder" ] && [ ! -L "$folder" ] || fail "platform folder is missing or linked: platform-$target"
 		go_cpp_names "$folder" "$target"
+		swift_zig_names "$folder" "$target"
 	done
 	mkdir -p "$4"
 	for folder in "$2"/*; do

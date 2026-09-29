@@ -65,7 +65,8 @@ def main():
                    THINKTHEN_CARGO_CALLS=str(base / "cargo-calls"),
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
                    THINKTHEN_ARCHIVED_SOURCE_COMMIT=commit)
-        parts = ("c", "go", "cpp")
+        # Keep the held SQL/DataFrame families out of execution; their allowlist is unchanged.
+        parts = ("c", "go", "cpp", "swift", "zig")
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "paired"), *parts, cwd=source, env=env), "", success=True)
         for kind in parts:
@@ -73,14 +74,35 @@ def main():
                 raise AssertionError(f"missing {kind} fixture archive")
         gate = str(REPO / "sdlc/scripts/release-workflow")
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, commit), "", success=True)
+        expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, commit), "", success=True)
+        for family, relative in (("swift", "Sources/ThinkThen/ThinkThen.swift"),
+                                 ("zig", "src/thinkthen.zig")):
+            copied = source / "libraries" / family / relative
+            original = copied.read_bytes()
+            copied.write_bytes(original + b"\n// altered archived wrapper\n")
+            output = base / f"{family}-changed"
+            expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
+                       str(output), *parts, cwd=source, env=env),
+                   f"source file differs: libraries/{family}/{relative}")
+            if output.exists():
+                raise AssertionError(f"changed {family} source created package output")
+            copied.write_bytes(original)
         missing_pair = base / "missing-pair"
         shutil.copytree(base / "paired", missing_pair)
         for file in missing_pair.glob("thinkthen-cpp-*"):
             file.unlink()
         expect(run("sh", gate, "go-cpp-gate", str(missing_pair), host, commit),
                "missing or linked thinkthen-cpp-")
+        missing_swift = base / "missing-swift"
+        shutil.copytree(base / "paired", missing_swift)
+        for file in missing_swift.glob("thinkthen-swift-*"):
+            file.unlink()
+        expect(run("sh", gate, "swift-zig-gate", str(missing_swift), host, commit),
+               "missing or linked thinkthen-swift-")
         another_commit = "0" * 40
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), host, another_commit),
+               "checkout differs from resolved SHA")
+        expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), host, another_commit),
                "checkout differs from resolved SHA")
         altered_source = base / "altered-source"
         shutil.copytree(base / "paired", altered_source)
@@ -104,6 +126,8 @@ def main():
         other_target = "aarch64-unknown-linux-gnu"
         expect(run("sh", gate, "go-cpp-gate", str(base / "paired"), other_target, commit),
                "unsupported target has thinkthen-go-")
+        expect(run("sh", gate, "swift-zig-gate", str(base / "paired"), other_target, commit),
+               "unsupported target has thinkthen-swift-")
         platform = base / "platform"
         platform.mkdir()
         for target in (host, other_target, "aarch64-apple-darwin", "x86_64-apple-darwin"):
@@ -120,7 +144,7 @@ def main():
         collected = base / "collected"
         expect(run("sh", gate, "collect", str(platform), str(npm), str(collected)), "", success=True)
         expected_files = {f"thinkthen-{kind}-{version}-{host}.tar.gz{suffix}"
-                          for kind in ("c", "go", "cpp") for suffix in ("", ".sha256")}
+                          for kind in ("c", "go", "cpp", "swift", "zig") for suffix in ("", ".sha256")}
         expected_files |= {f"fixture-{target}.bin" for target in
                            (other_target, "aarch64-apple-darwin", "x86_64-apple-darwin")}
         expected_files |= {f"thinkthen-{version}.tgz", f"thinkthen-{version}.tgz.sha256"}
@@ -136,6 +160,16 @@ def main():
         if refused_output.exists():
             raise AssertionError("extra Go asset created collected output")
         extra_go.unlink()
+        extra_swift = platform / f"platform-{host}/thinkthen-swift-extra.zip"
+        extra_swift.write_bytes(b"unselected release asset")
+        expect(run("sh", gate, "swift-zig-gate", str(extra_swift.parent), host, commit),
+               "unexpected Swift/Zig family entry thinkthen-swift-extra.zip")
+        refused_output = base / "refused-swift-assets"
+        expect(run("sh", gate, "collect", str(platform), str(base / "no-npm"), str(refused_output)),
+               "unexpected Swift/Zig family entry thinkthen-swift-extra.zip")
+        if refused_output.exists():
+            raise AssertionError("extra Swift asset created collected output")
+        extra_swift.unlink()
         extra_platform = platform / "platform-extra"
         extra_platform.mkdir()
         (extra_platform / "unselected.zip").write_bytes(b"unselected release asset")
@@ -157,8 +191,12 @@ def main():
                "Go/C++ installed tools require Linux x86-64")
         expect(run("sh", gate, "go-cpp-tools", host, str(base / "bad-go"), env=tool_env),
                "Go 1.27.1 archive differs from official checksum")
+        expect(run("sh", gate, "swift-zig-tools", other_target, str(base / "other-zig"), env=tool_env),
+               "Swift/Zig installed tools require Linux x86-64")
+        expect(run("sh", gate, "swift-zig-tools", host, str(base / "bad-zig"), env=tool_env),
+               "Zig 0.15.2 archive differs from official checksum")
         if github_path.read_text():
-            raise AssertionError("bad Go archive entered the runner path")
+            raise AssertionError("bad tool archive entered the runner path")
         wrong = env | {"THINKTHEN_ARCHIVED_SOURCE_COMMIT": "0" * 40}
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "wrong"), *parts, cwd=source, env=wrong),
@@ -272,7 +310,7 @@ def main():
             source_env = installed_env | {"THINKTHEN_ARTIFACT": ""}
             expect(run("sh", str(REPO / f"libraries/{family}/check.sh"), "0", env=source_env),
                    f"{family}: not run: Python jsonschema is unavailable")
-    print("release archive self-test: gitless legacy and controlled Go/C++ inputs pass")
+    print("release archive self-test: gitless legacy, Go/C++ and Swift/Zig inputs pass")
 
 
 if __name__ == "__main__":
