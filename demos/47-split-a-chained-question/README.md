@@ -4,7 +4,7 @@ Status: green
 
 Verbs: `choose`
 
-Use this when one question asks for a fact through another fact. In this public music-catalog example, the first call finds a song's album. The second asks for that album's year.
+Use this when one question asks for a fact through another fact. In this public music-catalog example, the first call finds a song's album. The second asks for that album's year. The two `choose` calls and their options are in [run.sh](run.sh).
 
 ```bash
 set -euo pipefail
