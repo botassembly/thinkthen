@@ -491,3 +491,6 @@ The 0257 design review caught unspecified concrete JSON types and a parity fixtu
 ## Follow generated documentation to its consumer check
 
 The contract-page fix `9df4e2cc` introduced an internal ticket citation in the settings prose. The repository settings inventory and named-answer checks passed, but the website renders that prose and its `site/scripts/check-settings.mjs` rejects such citations. Marketing filed the reproducible regression in `8a112348`. The source owner must remove the public bookkeeping and run the generated Settings check after rebuilding the page. Keep platform qualification evidence in SDLC. A source inventory check cannot replace the check for the generated consumer; this miss does not justify another core test or all-surface campaign.
+
+
+The bounded correction passed fresh review at `d6a01ecd`: generation produced 99 pages and the actual consumer accepted all 51 settings. The next 0257 review found its new `--cases` flag absent from that same settings inventory, contrary to its accepted ADR note. It also found a three-field assertion where the preflight promised a complete literal fallback row. Correct the plan/ADR omission and full fixture, then run both the CLI settings inventory and generated consumer. Reuse unchanged audit evidence; neither finding calls for a broad core or port rerun.
