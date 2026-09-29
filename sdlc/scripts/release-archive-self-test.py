@@ -48,7 +48,7 @@ def main():
         fake_bin = base / "bin"
         fake_bin.mkdir()
         cargo = fake_bin / "cargo"
-        cargo.write_text("#!/bin/sh\nexit 0\n")
+        cargo.write_text("#!/bin/sh\nprintf 'called\\n' >>\"$THINKTHEN_CARGO_CALLS\"\nexit 0\n")
         cargo.chmod(0o755)
         native = source / "libraries/c/target/release"
         native.mkdir(parents=True)
@@ -56,6 +56,7 @@ def main():
         (native / "libthinkthen_c.a").write_bytes(b"fixture static")
         env = os.environ.copy()
         env.update(PATH=str(fake_bin) + os.pathsep + env["PATH"],
+                   THINKTHEN_CARGO_CALLS=str(base / "cargo-calls"),
                    THINKTHEN_ARCHIVED_SOURCE_TAR=str(archive),
                    THINKTHEN_ARCHIVED_SOURCE_COMMIT=commit)
         parts = ("c", "go", "cpp")
@@ -88,6 +89,8 @@ def main():
         expect(run("sh", str(source / "sdlc/scripts/release-pack"), host,
                    str(base / "changed"), *parts, cwd=source, env=env),
                "source file differs: libraries/go/README.md")
+        if (base / "cargo-calls").read_text().splitlines() != ["called"]:
+            raise AssertionError("an archived-source refusal reached Cargo")
         expect(run("sh", str(REPO / "sdlc/scripts/release-pack"), host,
                    str(base / "override"), "go", env=env),
                "archive identity cannot override a repository checkout")
