@@ -1,0 +1,9 @@
+{
+  "directory": [
+    "src",
+    "examples",
+    "checks"
+  ],
+  "extension": ".adb",
+  "max": 1361
+}

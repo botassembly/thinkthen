@@ -50,7 +50,7 @@ It prints `true`. `demos/27-test-with-no-network` shows how a test replays a rec
 
 ## Languages and bindings
 
-The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R each have a native Rust adapter. C exposes a separate C API. PHP, C#, JVM, Dart, Go, and C++ bindings call that C library. The database extensions call the engine inside their hosts. Each linked README shows how to use that binding from source.
+The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R each have a native Rust adapter. C exposes a separate C API. PHP, C#, JVM, Dart, Swift, Zig, Go, C++, Ada, GNU Objective-C, and COBOL bindings call that C library. The database extensions call the engine inside their hosts. Each linked README shows how to use that binding from source.
 
 | Language or surface | What it is | README |
 | --- | --- | --- |
@@ -66,8 +66,11 @@ The command and bindings use the Rust engine. Python, TypeScript, Ruby, and R ea
 | Swift | a SwiftPM source package with a separate native library | [libraries/swift](libraries/swift/README.md) |
 | Zig | a Zig source module with a separate native library | [libraries/zig](libraries/zig/README.md) |
 | Dart and Flutter | a Dart FFI package and a Linux Flutter consumer | [libraries/dart](libraries/dart/README.md) |
+| Ada | a GNAT source package that calls the C library | [libraries/ada](libraries/ada/README.md) |
+| GNU Objective-C | a Linux GNU runtime source package that calls the C library | [libraries/objective-c](libraries/objective-c/README.md) |
 | Go | a cgo source module with a separate native library | [libraries/go](libraries/go/README.md) |
 | C++ | a header-only CMake package with a separate native library | [libraries/cpp](libraries/cpp/README.md) |
+| COBOL | a GnuCOBOL 4 source package with a separate native library | [libraries/cobol](libraries/cobol/README.md) |
 | Polars | the Rust feature | [libraries/polars](libraries/polars/README.md) |
 | DuckDB | the extension | [databases/duckdb](databases/duckdb/README.md) |
 | SQLite | the extension | [databases/sqlite](databases/sqlite/README.md) |

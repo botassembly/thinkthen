@@ -599,6 +599,9 @@ NONCARGO_MANIFESTS = {
     "libraries/zig": ("build.zig.zon", {"name": "thinkthen"}),
     "libraries/go": ("go.mod", {"module": "github.com/botassembly/thinkthen/libraries/go"}),
     "libraries/cpp": ("CMakeLists.txt", {"project": "thinkthen_cpp"}),
+    "libraries/ada": ("thinkthen.gpr", {"name": "ThinkThen"}),
+    "libraries/objective-c": ("source-package.json", {"name": "thinkthen-objective-c"}),
+    "libraries/cobol": ("source-package.json", {"name": "thinkthen-cobol"}),
 }
 
 
@@ -660,6 +663,23 @@ def dart_manifest_failures(source: str | None, flutter_source: str | None,
 def noncargo_manifest_failures(name: str, source: str | None) -> list[str]:
     if source is None:
         return [f"{name} has no package manifest"]
+    if name == "libraries/ada":
+        if (not re.search(r"(?m)^project ThinkThen is$", source) or
+                not re.search(r'for Source_Dirs use \("src"\);', source) or
+                not re.search(r'for Library_Name use "thinkthen_ada";', source) or
+                not re.search(r'for Library_Kind use "static";', source)):
+            return ["libraries/ada GNAT project names its source-only static binding"]
+        return []
+    if name in ("libraries/objective-c", "libraries/cobol"):
+        try:
+            package = json.loads(source)
+        except (json.JSONDecodeError, TypeError):
+            package = None
+        expected = {"name": NONCARGO_MANIFESTS[name][1]["name"], "version": "0.0.1",
+                    "source_only": True, "native_dependency": "thinkthen-c", "bundles_native": False}
+        if package != expected:
+            return [f"{name} source manifest names a separate matching C native dependency and no bundled binary"]
+        return []
     if name == "libraries/go":
         if re.fullmatch(r"module github\.com/botassembly/thinkthen/libraries/go\n\ngo 1\.22\n", source) is None:
             return ["libraries/go go.mod names the Go 1.22 source module without remote dependencies"]
@@ -759,6 +779,8 @@ def check_bindings() -> None:
             fail("binding", f"{name} missing or tampered package manifest is refused")
         if name == "libraries/php" and not noncargo_manifest_failures(name, source.replace('"autoload.php"', '"planted.php"', 1)):
             fail("binding", "PHP with a planted autoload path is refused")
+        if name in ("libraries/objective-c", "libraries/cobol") and not noncargo_manifest_failures(name, source.replace('"bundles_native": false', '"bundles_native": true', 1)):
+            fail("binding", f"{name} with a planted bundled native library is refused")
         if name == "libraries/dart":
             flutter = (REPO / "libraries/dart/flutter/pubspec.yaml").read_text()
             example = (REPO / "libraries/dart/flutter/example/pubspec.yaml").read_text()

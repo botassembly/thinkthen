@@ -18,6 +18,9 @@ libraries/swift       landed
 libraries/zig         landed
 libraries/go          landed
 libraries/cpp         landed
+libraries/ada         landed
+libraries/objective-c landed
+libraries/cobol       landed
 libraries/python      landed
 libraries/typescript  landed
 libraries/ruby        landed

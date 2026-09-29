@@ -1,0 +1,20 @@
+# ThinkThen Ada
+
+GNAT 13.3 / gprbuild, Linux x86_64 glibc. This is the source package for the Linux Ada binding; no release archive has been published. The Ada sources are distributed separately from the matching versioned native archive `thinkthen-c-0.0.1-x86_64-linux-gnu.tar.gz`. Install both and verify the package and native manifests; `thinkthen.h` is an exact pinned match. The native archive contains libthinkthen.so, soname symlink, header, LICENSE. Keep the native library available via a trusted rpath or LD_LIBRARY_PATH, not a world-writable directory.
+
+From a source checkout, build the native library and Ada package before copying their outputs into a project (the release job will instead supply a matching versioned native archive):
+
+```sh
+git clone https://github.com/botassembly/thinkthen.git
+cd thinkthen
+cargo build --locked --offline --release -p thinkthen-c --manifest-path libraries/c/Cargo.toml
+cd libraries/ada
+gprbuild -P thinkthen.gpr -j2
+# Copy this directory's src/ and thinkthen.gpr (or an installed Ada source archive)
+# plus libraries/c/target/release/libthinkthen_c.so and libraries/c/include/thinkthen.h
+# into your project, preserving their matching version and header manifest.
+```
+
+The source checkout must already contain its Cargo dependencies for `--offline`; acquire dependencies in an authorized setup step if needed. The Cargo build's `libthinkthen_c.so` is installed as `libthinkthen.so` (soname `libthinkthen.so.0`) in a trusted library directory. Link Ada clients against both `-lthinkthen_ada` and `-lthinkthen`, with that `lib/` on the link and runtime search path. For example, after `gprbuild` and installing the native library, compile the example with `gnatmake -gnat2022 -Isrc examples/consumer.adb -D obj -o obj/consumer -largs -L/path/to/native/lib -lthinkthen -Wl,-rpath,/path/to/native/lib`, then run `obj/consumer` with a configured backend. Consult `examples/consumer.adb`. `Call_Value` extracts the value of the generic C JSON door's `{\"value\":VALUE,\"facts\":FACTS}` envelope; `Call_Facts` checks the four required facts members before returning them; the installed consumer tests all seven when its fixture supplies them. The `.gpr` project is suitable for a future Alire wrapper; no Alire index submission occurs. No Alire publication, GitHub Actions run, release binary or Apple claim is made here. The release ticket owns those steps.
+
+`Engine` and `Cancel_Token` are controlled owners. Do not finalize an owner while another Ada task is using it: a joined task scope around the call is required. C strings are copied and released even on exceptions. Failure kind, retryability and message are captured on the calling Ada task; raw C codes stay private. `Null_Answer` is distinct from `Failed_Answer`. `Bare_Labels` accepts an ordered list and `Label_Descriptions` serializes it to a bare JSON list; ordered label/description pairs serialize to a map. A set cannot mix bare and described entries: the usage exception names the offending label. The pinned question-file schema accepts those two forms, not per-label optional descriptions in a mixed set. Structured descriptions are kept as the original JSON object, not flattened. The C ABI remains JSON for open-shaped results. `Decode_Field` distinguishes failed annotate markers from null; `Entities` and `Edges` decode returned JSON into Ada records and reject missing shape fields. Entity start/end/length offsets count **Unicode code points, zero-based with exclusive end** (not UTF-8 bytes or UTF-16 units). The Ada layer validates JSON syntax; the pinned native Rust parser authoritatively enforces the question grammar. The gate proves representative schema parity with `specification/question-file.schema.json` (positive and negative cases). There is no Ada-side Draft 2020-12 JSON Schema validator and no new runtime dependency. The product check runs the current J1 corpus through the public Ada JSON door. `Configure` accepts JSON settings; `Failure_Facts` returns a caller-owned snapshot after a started failure.

@@ -1,0 +1,8 @@
+{
+  "directory": [
+    "src",
+    "checks"
+  ],
+  "extension": ".h",
+  "max": 24
+}
