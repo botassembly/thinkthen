@@ -47,8 +47,34 @@ backend_count <- function() {
   }
 }
 
+capture <- function() {
+  output <- Sys.getenv("TT_BACKEND_OUT")
+  before <- length(grep("^\\{", readLines(output)))
+  backend_say("capture")
+  repeat {
+    lines <- grep("^\\{", readLines(output), value = TRUE)
+    if (length(lines) > before) {
+      return(jsonlite::fromJSON(lines[[length(lines)]], simplifyVector = FALSE)$bodies)
+    }
+    Sys.sleep(0.02)
+  }
+}
+
 # A base address on this file's backend, for an arm other than generic.
 arm <- function(path) paste0(Sys.getenv("TT_BACKEND_ORIGIN"), "/", path)
+
+# The exchange identity over the actual loopback address and a literal body.
+digest <- function(url, body) {
+  file <- tempfile()
+  on.exit(unlink(file))
+  writeBin(charToRaw(paste0("systemone\n", url, "\n", body)), file)
+  if (nzchar(Sys.which("sha256sum"))) {
+    answer <- system2("sha256sum", shQuote(file), stdout = TRUE)
+  } else if (nzchar(Sys.which("shasum"))) {
+    answer <- system2("shasum", c("-a", "256", shQuote(file)), stdout = TRUE)
+  } else stop("the installed SHA-256 host tool is absent", call. = FALSE)
+  strsplit(answer[[1L]], " ", fixed = TRUE)[[1L]][[1L]]
+}
 
 # The count a call adds.
 sent_by <- function(expr) {

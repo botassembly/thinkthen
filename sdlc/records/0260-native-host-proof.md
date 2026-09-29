@@ -1,0 +1,24 @@
+# 0260 native public bulk proof: TypeScript, Ruby and R
+
+Status: candidate for fresh code review. The CLI and C first slice is on main. Register 64 remains open until the other applicable public routes below have equivalent outside-in proof.
+
+The public routes are `Engine.decide_many` in TypeScript, `Engine#decide_many` in Ruby and the `tt_decide` column call in R. All three accept the five selected strings as text, including literal `café-5544`. Ruby's object-to-text convenience and R's column conversion are not structured-object paths. Each new routine case loads the accepted `specification/fixtures/batching/portable-records.json` and the three literal request files. The host calls use Max batching, one in-flight request and a fresh cache. Their existing listener harnesses capture exactly three transmitted bodies. Each test compares those bytes to the literal files, checks five ordered accepted rows and the final five-record/three-send account, and checks every row's request digest against the fixture body plus the actual served loopback address. The listener's generic yes response supplies an answer, not the batch oracle. No encoder, engine, cache, adapter or public API source changed.
+
+The TypeScript case is in `tests/verbs.test.mjs`; the normal `check.sh` wildcard invokes it. The Ruby case is in `tests/test_batch_facts.rb`; the normal `test_*.rb` loop invokes it. The R case is `tests/portable_batch_identity.R`; the normal `tests/*.R` loop invokes it. R's existing `facts.R` now uses the same capture and digest helpers in `tests/helper.R`; this removes duplicated test plumbing. No new fixture copy, hasher, listener, conformance framework or provider call was added. The installed-file modes of the TypeScript and Ruby checks select their existing conformance and example files, so this source-tree batch does not claim an installed artifact proof.
+
+The prior native artifacts were older than the accepted core fixture change. I rebuilt the TypeScript addon with pinned Node 22.22.3 and the current source, rebuilt the Ruby extension with pinned Ruby 3.4.11 and LLVM 18, and installed the current R source package into the local `rlib` before retaining any host result. A direct `sccache` invocation failed under the sandbox, so the builds used `RUSTC_WRAPPER=`. The first Ruby build command pointed to absent LLVM 19; the successful build used the installed LLVM 18. The first R assertion compared numeric indexes with integer indexes; after correcting that test comparison, the unchanged captured request proof passed.
+
+Focused results: TypeScript portable test 1/1; Ruby portable test 1/1 with seven assertions; R portable test four checks and backend count 3/3; existing R `facts.R` 16 checks and count 8/8. Source ratchets rise from 1,157 to 1,175 TypeScript `.mjs` lines (+18), 2,285 to 2,307 Ruby `.rb` lines (+22), and 1,842 to 1,863 R `.R` lines (+21). I checked the existing listener, digest, fixture and runner code for duplication before raising those exact ceilings. The new R case needs 20 nonblank lines; moving capture and digest to the shared helper preserves the existing `facts.R` proof without adding a second implementation. No Rust file changed. Focused syntax, policy and ratchet checks are listed with the review handoff.
+
+## Finite remaining public routes
+
+| Route | Remaining proof obligation |
+| --- | --- |
+| Public Rust library | Call the five-text Max bulk API through the public crate and compare literal bodies, row digests and three sends. |
+| Python bulk and supported column/frame doors | Pass the same five strings through each advertised public text route. Preserve host missing-value rules and ordered rows. |
+| Rust Polars feature | Pass the public string column route through the shared Max corpus. |
+| SQLite, PostgreSQL, DuckDB | Each public SQL aggregate must demonstrate deterministic five-text order, literal bodies, digests and sends under its own NULL and transaction rules. SQL work is separately owned. |
+| PHP, C#, JVM Java/Kotlin/Scala, Dart, Swift, Zig, Go, C++, Ada, GNU Objective-C and COBOL | The accepted C corpus proves the common native door. Each package still needs a public forwarding call with returned ordered rows, digest identities and counted sends. A single common C driver does not prove each adapter call. Go/C++ release packaging is separately owned. |
+| TypeScript, Ruby, R installed targets | Existing installed-artifact modes need their own provenance and public forwarding qualification; the focused source-tree cases above do not assert it. |
+
+The shared corpus covers text-only host domains. The separate structured CLI oracle remains limited to hosts that accept structured records. Register 19 answer and settings parity and the repeated-wire-text issue remain separate from register 64.

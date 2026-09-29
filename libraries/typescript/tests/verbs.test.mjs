@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createServer } from 'node:http';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createRequire } from 'node:module';
@@ -187,6 +187,25 @@ test('packed and batch-one calls expose exact bodies, ordered details, and final
   const digest = recordingDigest(backend.base(), backend.bodies[0]);
   assert.deepEqual(value.packed.details.map((row) => row.requests), [[digest], [digest], [digest]]);
   assert.deepEqual(value.packed.details.map((row) => row.index), [0, 1, 2]);
+});
+
+test('portable Max content cuts reach the public TypeScript bulk call', async (t) => {
+  const backend = await captured(t);
+  const fixture = (name) => readFileSync(new URL(`../../../specification/fixtures/batching/${name}`, import.meta.url), 'utf8').replace(/\n$/, '');
+  const corpus = JSON.parse(fixture('portable-records.json'));
+  const bodies = [1, 2, 3].map((n) => fixture(`portable-${n}.request.json`));
+  const { value, error } = await ask(backend, `
+    const engine = new tt.Engine({ cache: false, throttle: 1 });
+    return engine.decide_many(${JSON.stringify(corpus.question)}, ${JSON.stringify(corpus.texts)});`);
+  assert.equal(error, undefined, JSON.stringify(error));
+  assert.deepEqual(backend.bodies, bodies, 'literal request bytes and ordered content cuts');
+  assert.deepEqual(value.value, Array(5).fill(true));
+  assert.deepEqual(value.details.map((row) => row.index), [0, 1, 2, 3, 4]);
+  assert.equal(value.facts.records, 5);
+  assert.equal(value.facts.requests_sent, 3);
+  const digests = bodies.map((body) => recordingDigest(backend.base(), body));
+  assert.deepEqual(value.details.map((row) => row.requests),
+    [[digests[0]], [digests[0]], [digests[1]], [digests[1]], [digests[2]]]);
 });
 
 test('runtime-label many calls preserve ordered descriptions and bare versus null score levels', async (t) => {
