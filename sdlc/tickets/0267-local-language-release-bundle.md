@@ -6,7 +6,7 @@ opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/records/0249-r
 
 # 0267: Require the installed language files in one local Linux release bundle
 
-Status: design candidate at main `060feb92`; no implementation or new package proof. Build waits for reviewed 0265 Ada/GNU Objective-C/COBOL and 0266 private Flutter file routes to land. The [preparation](../records/0267-release-bundle-preparation.md) maps the accepted 0128 and 0261–0264 work and the two active lanes.
+Status: presence selection implemented at `e85dc343`, with its focused refusal fixture registered in routine lint. A one-pin local pack produced 18 of 21 planned archives before the new SQL/DataFrame hold. The complete installed checkpoint is **held and unverified**: no `release-smoke --source-packages` run started. The [preparation](../records/0267-release-bundle-preparation.md) and [held build record](../records/0267-local-bundle-build.md) give the exact boundary. Accepted 0265 and 0266 routes have landed.
 
 ## Concrete gap and bounded outcome
 
