@@ -1,6 +1,6 @@
 # 0305: Measure the test suite
 
-Status: ready. Lane claude-3. Read only. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5.
+Status: measured. Lane claude-3. Read only. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5.
 
 ## Outcome
 
