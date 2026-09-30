@@ -11,8 +11,8 @@ use std::sync::Mutex;
 use serde_json::json;
 use serde_json::value::RawValue;
 use thinkthen::{
-    AttemptObservation, BatchSetting, CallOptions, CancelToken, Engine, Facts, Judgment, LoadedQuestion, Question,
-    QuestionSet,
+    AttemptObservation, BatchSetting, CallOptions, CancelToken, Engine, Facts, Judgment,
+    LoadedQuestion, Question, QuestionSet,
 };
 
 use crate::door;
@@ -95,16 +95,27 @@ pub(crate) fn call(
     let options = controls(&request, door::options(deadline_ms, token)?)?;
     let attempts = Mutex::new(Vec::<AttemptObservation>::new());
     let collect = |event| {
-        if let Ok(mut held) = attempts.lock() { held.push(event); }
+        if let Ok(mut held) = attempts.lock() {
+            held.push(event);
+        }
     };
-    let options = if request.attempts { options.observe_attempt(&collect) } else { options };
+    let options = if request.attempts {
+        options.observe_attempt(&collect)
+    } else {
+        options
+    };
     let (value, facts) = answer(engine, &request, options)?;
     if request.attempts {
-        let mut events = attempts.lock().map_err(|_| Failure::defect("attempt collection failed"))?;
+        let mut events = attempts
+            .lock()
+            .map_err(|_| Failure::defect("attempt collection failed"))?;
         events.sort_by_key(AttemptObservation::ordinal);
         let events = serde_json::to_string(&*events)
             .map_err(|_| Failure::defect("attempts could not be written"))?;
-        return Ok(format!("{{\"value\":{value},\"facts\":{},\"attempts\":{events}}}", crate::failures::facts_json(&facts)));
+        return Ok(format!(
+            "{{\"value\":{value},\"facts\":{},\"attempts\":{events}}}",
+            crate::failures::facts_json(&facts)
+        ));
     }
     Ok(format!(
         "{{\"value\":{value},\"facts\":{}}}",

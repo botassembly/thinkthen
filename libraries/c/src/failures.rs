@@ -2,15 +2,14 @@
 //! the recording thread, and the panic guard every exported symbol runs
 //! behind.
 
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::ffi::{CStr, CString};
 use std::fmt;
-use std::panic::{AssertUnwindSafe, catch_unwind};
-use std::sync::{Arc, Mutex, Once, PoisonError, Weak};
+use std::sync::{Arc, Mutex, PoisonError, Weak};
 use std::thread::ThreadId;
 
-use thinkthen::{Engine, ErrorKind, Facts};
+use thinkthen::{Engine, ErrorKind, Facts, contained};
 
 /// The header's success code.
 pub(crate) const OK: i32 = 0;
@@ -188,61 +187,19 @@ thread_local! {
     /// The calling thread's last failed `thinkthen_engine_new`, which the
     /// error functions report for a null engine. A built engine clears it.
     static UNBUILT: RefCell<Option<Last>> = const { RefCell::new(None) };
-    /// Suppress the previous panic hook only while this binding owns the thread.
-    static DOOR_DEPTH: Cell<usize> = const { Cell::new(0) };
-}
-
-static DOOR_HOOK: Once = Once::new();
-
-fn install_hook() {
-    DOOR_HOOK.call_once(|| {
-        let previous = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |info| {
-            if !DOOR_DEPTH
-                .try_with(|depth| depth.get() != 0)
-                .unwrap_or(false)
-            {
-                previous(info);
-            }
-        }));
-    });
-}
-
-struct DoorDepth(usize);
-
-impl Drop for DoorDepth {
-    fn drop(&mut self) {
-        DOOR_DEPTH.with(|depth| depth.set(self.0));
-    }
-}
-
-fn in_door<T>(body: impl FnOnce() -> T) -> T {
-    install_hook();
-    let prior = DOOR_DEPTH.with(|depth| {
-        let prior = depth.get();
-        depth.set(prior.saturating_add(1));
-        prior
-    });
-    let _restore = DoorDepth(prior);
-    body()
 }
 
 /// Build an engine and keep it, or record why none came for the calling
 /// thread; a panic while building records the defect kind.
 pub(crate) fn built<E: Into<Failure>>(build: impl FnOnce() -> Result<Engine, E>) -> Option<Engine> {
-    in_door(|| {
-        let (engine, last) = match catch_unwind(AssertUnwindSafe(build)) {
-            Ok(Ok(engine)) => (Some(engine), None),
-            Ok(Err(error)) => (None, Some(error.into())),
-            Err(payload) => {
-                std::mem::forget(payload);
-                (None, Some(Failure::defect("a panic built no engine")))
-            }
-        };
-        // After teardown the slot is gone, and a null engine reads no failure.
-        let _ = UNBUILT.try_with(|slot| slot.replace(last.map(Last::of)));
-        engine
-    })
+    let (engine, last) = match contained(build) {
+        Some(Ok(engine)) => (Some(engine), None),
+        Some(Err(error)) => (None, Some(error.into())),
+        None => (None, Some(Failure::defect("a panic built no engine"))),
+    };
+    // After teardown the slot is gone, and a null engine reads no failure.
+    let _ = UNBUILT.try_with(|slot| slot.replace(last.map(Last::of)));
+    engine
 }
 
 /// Read the calling thread's last failed build, if one is held.
@@ -342,14 +299,11 @@ pub(crate) fn facts(held: Option<&Held>) -> *const std::ffi::c_char {
 /// `try_with`, so a call after thread-local teardown, such as a free from
 /// an `atexit` handler, exits clean (R2-7).
 pub(crate) fn guard<T>(held: Option<&Held>, fallback: T, body: impl FnOnce() -> T) -> T {
-    in_door(|| {
-        catch_unwind(AssertUnwindSafe(body)).unwrap_or_else(|payload| {
-            std::mem::forget(payload);
-            if let Some(held) = held {
-                held.fail(Failure::defect("a panic crossed the C door"));
-            }
-            fallback
-        })
+    contained(body).unwrap_or_else(|| {
+        if let Some(held) = held {
+            held.fail(Failure::defect("a panic crossed the C door"));
+        }
+        fallback
     })
 }
 
@@ -360,12 +314,9 @@ pub(crate) fn guard_completed<T>(
     fallback: T,
     body: impl FnOnce(&mut Option<Facts>) -> T,
 ) -> T {
-    in_door(|| {
-        catch_unwind(AssertUnwindSafe(|| body(completed))).unwrap_or_else(|payload| {
-            std::mem::forget(payload);
-            held.fail(Failure::defect("a panic crossed the C door").completed(completed.as_ref()));
-            fallback
-        })
+    contained(|| body(completed)).unwrap_or_else(|| {
+        held.fail(Failure::defect("a panic crossed the C door").completed(completed.as_ref()));
+        fallback
     })
 }
 

@@ -43,14 +43,15 @@ impl Drop for DiagnosticDepth {
 }
 
 /// Mark work owned by the engine on this thread, including worker threads.
+/// A thread past its local-storage teardown runs `work` unmarked.
 pub(crate) fn with_engine_diagnostics<T>(work: impl FnOnce() -> T) -> T {
     install_diagnostic_hook();
-    let prior = DIAGNOSTIC_DEPTH.with(|depth| {
+    let prior = DIAGNOSTIC_DEPTH.try_with(|depth| {
         let prior = depth.get();
         depth.set(prior.saturating_add(1));
         prior
     });
-    let _restore = DiagnosticDepth(prior);
+    let _restore = prior.ok().map(DiagnosticDepth);
     work()
 }
 
