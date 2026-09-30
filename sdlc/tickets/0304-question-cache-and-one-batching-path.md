@@ -246,13 +246,14 @@ fn process_requests_sent() -> u64
   - `pair_chunks`, `relation_ceiling`, `ask_chunks_with_plan`, the `PREPARATIONS` counter and `PairPlan`'s re-exports go. `ask_profile` and `PreparedRequest::with_profile` serve tests only.
   - Relate's partial replay on `spec/relate.md` now exits 5 and names the failed question's key, because ADR 0111 section 6 never stores a failed answer. Exit 6 with the good answer kept is proven on loopback. `specification/relate.md`, `recognize.md` and `result.md` say question key where they said request digest, and `CHANGELOG.md` records the change.
   - The shared settings case `request-bytes-splits-relations` turns the cache off in both steps. Its second step asked the same pairs, which the question cache now answers without a send.
-  - The ratchet falls by 423 lines to 107,481, from 107,904 on main after 0334. The removed old-store tests, `pair_chunks` and the chunked sender outweigh `each.rs`, the shared fixture and the new proofs.
-- Proof, counted on the loopback backend in `tests/backend/question_cache_steps.rs`:
+  - The ratchet falls by 384 lines to 107,520, from 107,904 on main after 0334. The removed old-store tests, `pair_chunks` and the chunked sender outweigh `each.rs`, the shared fixture and the new proofs.
+- Proof, counted on the loopback backend in `tests/backend/question_cache_steps.rs` unless named:
   - Relate over 420 pairs sends a request of 400 questions and one of 20, stores 420 answers, and a rerun sends zero requests and prints the same bytes.
   - Adding a rule to a cached relate run sends only that rule's 3 questions, and the output equals an uncached run.
   - A relate reply with one wrong-kind answer exits 6 and stores the good answer. The rerun sends one request holding one question.
   - A cached recognize rerun sends zero requests across all three steps. Adding a line sends exactly the questions that line asks alone, and the output equals an uncached run.
   - `find.rs` `cache_records_once_and_then_replays_without_a_key_or_second_request` keeps `find`'s zero-send rerun.
+  - `relate/ceiling.rs` `one_job_sends_the_planned_requests_past_the_pipeline_window`: with one job, 9,900 pairs go as 24 requests of 400 and one of 300, as the plan counts. Review found the first build closed a request of 192 once the window of 8,192 questions filled. Each step's input cap is now all its questions, so the window holds them all.
   - `batching.rs` `a_failed_request_sends_no_later_request`: `decide --jobs 2` whose line 2 request fails while line 1's is out sends 2 requests and prints line 1. It sent 3 before the stop rule.
   - The shared conformance cases, including `18-find-second`, `19-find-none`, 41 to 50, `51-same-kind-alerts` and `52-cross-kind-staff`, replay converted fixtures through `cache convert` and compare every question key.
 - Deleted tests, with their replacements. Each drove only the old recorder through `find`:
@@ -263,8 +264,8 @@ fn process_requests_sent() -> u64
 - Checks: `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, `lint` in a clean checkout, the C door tests and Polars, and the surface checks for Python, TypeScript, Ruby, R, C#, Go, SQLite, DuckDB and PostgreSQL.
 - Defers:
   - The command's many-line recognize still runs lines through `schedule::over_records`. Slice 5 moves that runner with the other `Engine::records` callers, per the prep's option (b).
-  - `ask_chunks`, `facade::split` and `prepared_request.rs` stay for `check`, the conformance runner and tests until slice 5.
-  - The C door's typed relate rows, which 0314 slice 2 deferred, are not taken here.
+  - `ask_chunks`, `facade::split` and `prepared_request.rs` stay for `check`, the conformance runner and tests until slice 5, though ADR 0111 step 4 lists `ask_chunks`. The facade conformance runner (`cli/conformance_tests/runner.rs`) still sends `recognize` and `relate` through `ask_chunks`; the command conformance test and the loopback cases run the new path.
+  - The C door's typed relate rows, which 0314 slice 2 deferred, are not taken here. `sdlc/issues/2026-09-30-c-door-relate-rows-have-no-owner.md` holds them.
   - The site's recognize and relate replay folders stay unconverted, per `sdlc/issues/2026-09-30-site-replay-folders-have-no-fixture.md`.
 
 ## What the build taught us

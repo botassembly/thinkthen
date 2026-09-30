@@ -10,7 +10,7 @@ use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{Backend, BackendProfile, ModelName, Plan, Question, Reply, Usage};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::pipeline::{self, Asker, Failed, Flow, MOST_INPUTS, Packing};
+use crate::engine::pipeline::{self, Asker, Failed, Flow, Packing};
 
 use super::{Answered, Engine};
 
@@ -90,6 +90,13 @@ impl Asks {
         &self.questions
     }
 
+    /// The most questions one request may hold beside the step's bound. It
+    /// is every question, so the pipeline's window, a multiple of it, holds
+    /// them all and never closes a request early.
+    fn inputs(&self) -> usize {
+        self.len().max(1)
+    }
+
     /// The requests these questions make with nothing cached. A question
     /// that cannot go alone refuses them all, so nothing is sent.
     pub(crate) fn requests(
@@ -98,7 +105,7 @@ impl Asks {
         profile: Option<&BackendProfile>,
         bound: Bound,
     ) -> Result<Vec<Request>, Error> {
-        let mut packer = packer(backend, profile, bound)?;
+        let mut packer = packer(backend, profile, bound, self.inputs())?;
         let mut closed = Vec::new();
         for (place, ask) in self.asks.iter().enumerate() {
             packer
@@ -121,6 +128,7 @@ fn packer(
     backend: &Backend,
     profile: Option<&BackendProfile>,
     bound: Bound,
+    inputs: usize,
 ) -> Result<Packer<usize>, Error> {
     let model = pack::model_json(backend.model().as_str())
         .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
@@ -131,7 +139,7 @@ fn packer(
             usize::MAX
         },
         profile: profile.cloned(),
-        inputs: MOST_INPUTS,
+        inputs,
         questions: bound.questions,
         context: false,
     };
@@ -211,7 +219,7 @@ impl Engine {
         }
         let planned = asks.requests(&self.backend, self.profile(), bound)?.len();
         let packing = Packing {
-            inputs: None,
+            inputs: Some(asks.inputs()),
             questions: bound.questions,
             sized: bound.sized,
             context: false,

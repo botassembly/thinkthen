@@ -249,3 +249,36 @@ fn a_full_line_set_plans_inside_the_child_deadline() {
     assert_eq!(run["request_count"], 162);
     assert_eq!(questions(&run).last(), Some(&370));
 }
+
+/// With one job, 9,900 pairs still go as full requests of 400 and one of
+/// 300, as the plan counts them: the pipeline window holds every question,
+/// so no request closes early (ticket 0304 slice 4).
+#[test]
+fn one_job_sends_the_planned_requests_past_the_pipeline_window() {
+    let listener = crate::harness::Listener::answering(super::answered).expect("listener");
+    let names = (0..100)
+        .map(|place| format!(r#"{{"name":"Name{place}","kind":"item"}}"#))
+        .collect::<Vec<_>>()
+        .join(",");
+    let input = format!("[{names}]");
+    let rule = "r=item:item";
+    let planned = super::run(
+        &listener,
+        &[rule, "--jobs", "1", "--plan"],
+        input.as_bytes(),
+    );
+    assert_eq!(super::plan_json(&planned)["request_count"], 25);
+    let output = super::run(&listener, &[rule, "--jobs", "1"], input.as_bytes());
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    let sizes: Vec<usize> = listener
+        .requests()
+        .iter()
+        .map(|request| crate::recognize::questions(&request.body).len())
+        .collect();
+    assert_eq!(sizes, [[400; 24].as_slice(), &[300]].concat());
+}
