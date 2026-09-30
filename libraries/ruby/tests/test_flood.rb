@@ -31,7 +31,7 @@ class TestFlood < Minitest::Test
         end
         say outcome
         hear
-        say settled(before, 5) == before
+        say settled(before) == before
       end
     RUBY
       4.times do

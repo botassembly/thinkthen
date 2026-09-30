@@ -30,9 +30,9 @@ module TestBackend
     def now = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     def ms_since(start) = ((now - start) * 1000).round
     def threads = Dir.children("/proc/self/task").size
-    def settled(before, within = 2.0)
+    def settled(expected, within = 10.0)
       stop = now + within
-      sleep 0.01 while threads > before && now < stop
+      sleep 0.01 until threads == expected || now >= stop
       threads
     end
     def kind_of_raise

@@ -23,7 +23,7 @@ class TestInterruptBatch < Minitest::Test
     backend.release
     child.tell
     now_threads, before = child.hear
-    assert_equal before + 1, now_threads, "the detached worker did not end within 2 s"
+    assert_equal before + 1, now_threads, "the detached worker did not end within 10 s"
     assert_equal 8, backend.count, "the released worker sent again"
     child.tell
     assert_operator child.hear, :<, 1000, "the following decide waited on held throttle slots"
