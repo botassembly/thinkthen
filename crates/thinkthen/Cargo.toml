@@ -25,7 +25,7 @@ cli = ["dep:clap", "dep:csv-core", "dep:signal-hook"]
 bundled-sqlite = ["rusqlite/bundled"]
 host-sqlite = []
 # The Rust Polars door (ticket 0130). Off by default.
-polars = ["dep:polars", "dep:polars-core", "polars/lazy"]
+polars = ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"]
 
 [dependencies]
 arc-swap = "=1.7.1"

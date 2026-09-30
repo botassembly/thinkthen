@@ -312,6 +312,7 @@ def check_crates() -> None:
         {"polars": ["dep:polars", "dep:polars-core", "dep:clap"]},
         {"polars": ["dep:polars"]},
         {"host-sqlite": ["rusqlite/bundled"]},
+        {"polars": ["dep:polars", "dep:polars-core", "polars/lazy"]},
         {"default": ["cli"]},
     ):
         if not feature_failures({**manifest, "features": {**manifest.get("features", {}), **plant}}):
@@ -346,10 +347,10 @@ def feature_failures(manifest: dict) -> list[str]:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
         "default": ["cli", "bundled-sqlite"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
-        "polars": ["dep:polars", "dep:polars-core", "polars/lazy"],
+        "polars": ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"],
         "bundled-sqlite": ["rusqlite/bundled"], "host-sqlite": [],
     }:
-        held.append("the default cli feature selects only command dependencies, polars selects its two pinned crates with lazy, "
+        held.append("the default cli feature selects only command dependencies, polars selects its two pinned crates with lazy and the bundled SQLite, "
                     "bundled-sqlite bundles rusqlite's SQLite, and host-sqlite adds nothing")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")

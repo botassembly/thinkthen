@@ -30,7 +30,7 @@ export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTH
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/polars"
 set -- --locked --offline --package thinkthen --features polars
 cargo clippy "$@" --lib --bins --test 'polars_*' -- -D warnings
-cargo clippy "$@" --no-default-features --features bundled-sqlite --lib -- -D warnings
+cargo clippy "$@" --no-default-features --lib -- -D warnings
 if [ "$profile" = stress ]; then
     cargo test "$@" --test polars_throttle two_hundred_series_records_match_the_slice -- --ignored --exact
     exit 0
