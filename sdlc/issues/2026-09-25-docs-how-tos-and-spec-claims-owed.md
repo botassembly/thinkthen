@@ -1,4 +1,4 @@
-Status: Open for thirteen pages that can follow 0.1. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
+Status: Open for thirteen pages that can follow 0.1. Ticket 0350 wrote page 11 as how-to 48. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
 
 Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future docs ticket after 0.1; marketing for page 23.
 
@@ -8,7 +8,6 @@ A new page either joins the `demos/` list under ADR 0018 or becomes a site how-t
 
 ## Pages owed
 
-11. **A first cut before a job over 255 candidates.** `find` and `relate` take at most 255 units. Show `grep`, a query or an index narrowing a long list, then `find` or `relate` on the survivors. This closes stumble-register row 9.
 12. **Grep a folder by meaning and print `file:line`.** Use `jq -Rc '{file: input_filename, n: input_line_number, text: .}'`, then `filter --jsonl --field /text`, then print `file:line: text`.
 13. **Diagnose a failed agent trace.** `find --none` picks the failing step and `choose` names the kind of error.
 14. **Ask a question about the answers.** `annotate` fills a form per ticket, `jq` groups the answers, and a second `decide` asks whether a group is one outage.

@@ -62,6 +62,7 @@ So no demo asks whether something is good. Every demo asks about a visible fact,
 | 06 | [Put the best matches first](06-top-search-hits/) | `rank` | green |
 | 12 | [Resume a long run that stopped](12-keep-going/) | `decide` | green |
 | 15 | [Find the line that answers a question](15-find-the-line/) | `find` | green |
+| 48 | [Make a first cut before a long list](48-first-cut-a-long-list/) | `find` | green |
 
 ## Many questions at once
 

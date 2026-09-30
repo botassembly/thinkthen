@@ -4,8 +4,12 @@
 set -eu
 
 cd -- "$(dirname -- "$0")"
+REPO=$(CDPATH= cd -- ../.. && pwd)
+. "$REPO/sdlc/scripts/scratch.sh"
 
 : "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
+
+scratch_dir scratch
 
 # Each step carries its own list of actions, so each record asks its own
 # question and writes its own entry. A digest names the address and the request
@@ -13,6 +17,7 @@ cd -- "$(dirname -- "$0")"
 # --details and --raw change no digest and every block replays these three.
 thinkthen choose 'Which of these actions should be taken next?' \
 	--jsonl --field /state --options /actions --input steps.jsonl \
-	--record recording/ >/dev/null
+	--record "$scratch" >/dev/null
 
-ls -1 recording/ | wc -l | tr -d ' '
+cp -- "$scratch/thinkthen.sqlite" recording/
+thinkthen cache convert recording/

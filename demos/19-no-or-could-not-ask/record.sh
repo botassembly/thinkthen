@@ -4,8 +4,12 @@
 set -eu
 
 cd -- "$(dirname -- "$0")"
+REPO=$(CDPATH= cd -- ../.. && pwd)
+. "$REPO/sdlc/scripts/scratch.sh"
 
 : "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
+
+scratch_dir scratch
 
 # One exchange per proposed command answers every block that gets an answer.
 # A digest names the address and the request bytes, and --threshold, --quiet,
@@ -13,8 +17,9 @@ cd -- "$(dirname -- "$0")"
 # block that shows a miss asks a question this folder was never given.
 for proposed in proposed/list.txt proposed/fetch.txt proposed/wipe.txt; do
 	thinkthen decide 'Does this command only read, and leave every file and every setting on the machine unchanged?' \
-		--quiet --record recording/ <"$proposed" && exit=0 || exit=$?
+		--quiet --record "$scratch" <"$proposed" && exit=0 || exit=$?
 	printf 'recorded %s, exit %s\n' "$proposed" "$exit"
 done
 
-ls -1 recording/
+cp -- "$scratch/thinkthen.sqlite" recording/
+thinkthen cache convert recording/

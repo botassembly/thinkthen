@@ -7,11 +7,16 @@
 set -eu
 
 cd -- "$(dirname -- "$0")"
+REPO=$(CDPATH= cd -- ../.. && pwd)
+. "$REPO/sdlc/scripts/scratch.sh"
 
 : "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
 
+scratch_dir scratch
+
 thinkthen decide @convention.json --jsonl --batch 1 --details \
-	--cache recording/ --input hunks.jsonl |
+	--cache "$scratch" --input hunks.jsonl |
 	jq -c '{file: .input.file, yes: .value, p: .answer.probability}'
 
-ls -1 recording/ | wc -l | tr -d ' '
+cp -- "$scratch/thinkthen.sqlite" recording/
+thinkthen cache convert recording/

@@ -302,7 +302,7 @@ fn process_requests_sent() -> u64
 - Defers:
   - `core/batch.rs` stays. What remains in it is the quote form and the batch setting parse, which every path uses; ADR 0111 section 1 keeps both. Renaming it is churn with no behavior. Ian can overturn this.
   - The SQL hosts' question store proofs from Debt 003 go back to `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md`, Debt 010, reopened.
-  - Demo record scripts write beside their committed fixture: `sdlc/issues/2026-09-30-demo-record-scripts-write-beside-their-fixture.md`.
+  - Demo record scripts write beside their committed fixture: `sdlc/issues/closed/2026-09-30-demo-record-scripts-write-beside-their-fixture.md`.
   - Site folders: marketing runs the command below. Debt 007 part 1 holds it.
   - `libraries/typescript/NOTES.md` line 14 still describes the retired backend marker. The bindings lane owns that file; its next edit there drops the line.
 

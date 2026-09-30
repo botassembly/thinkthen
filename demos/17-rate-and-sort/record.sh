@@ -4,16 +4,21 @@
 set -eu
 
 cd -- "$(dirname -- "$0")"
+REPO=$(CDPATH= cd -- ../.. && pwd)
+. "$REPO/sdlc/scripts/scratch.sh"
 
 : "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
+
+scratch_dir scratch
 
 for request in requests/*.txt; do
 	thinkthen score 'How hard is this request to answer?' \
 		'A canned reply answers it.' \
 		'One person can answer it after a look at the account.' \
 		'It needs a specialist and more than one system.' \
-		--record recording/ <"$request" >/dev/null && exit=0 || exit=$?
+		--record "$scratch" <"$request" >/dev/null && exit=0 || exit=$?
 	printf 'recorded %s, exit %s\n' "$request" "$exit"
 done
 
-ls -1 recording/
+cp -- "$scratch/thinkthen.sqlite" recording/
+thinkthen cache convert recording/
