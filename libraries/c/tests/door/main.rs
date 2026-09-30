@@ -43,12 +43,16 @@ fn scratch(name: &str) -> PathBuf {
     folder
 }
 
-/// The shared library's file extension: `dylib` on macOS, `so` elsewhere.
-const DL: &str = if cfg!(target_os = "macos") {
-    "dylib"
+/// The shared library and its link name as `release-pack` lays them out, and
+/// the prefix Mach-O puts before every name (ticket 0351).
+const MAC: bool = cfg!(target_os = "macos");
+const DL: &str = if MAC { "dylib" } else { "so" };
+const SONAME: &str = if MAC {
+    "libthinkthen.0.dylib"
 } else {
-    "so"
+    "libthinkthen.so.0"
 };
+const PREFIX: &str = if MAC { "_" } else { "" };
 
 /// The built door as a release archive lays it out: `libthinkthen.so`, its
 /// soname link `libthinkthen.so.0`, and `libthinkthen.a`, in one folder. On
@@ -95,12 +99,7 @@ fn archive() -> &'static Path {
             .output()
             .expect("sh ran");
         assert!(localized.status.success(), "{}", text(&localized.stderr));
-        let soname = if cfg!(target_os = "macos") {
-            "libthinkthen.0.dylib"
-        } else {
-            "libthinkthen.so.0"
-        };
-        std::os::unix::fs::symlink(format!("libthinkthen.{DL}"), folder.join(soname))
+        std::os::unix::fs::symlink(format!("libthinkthen.{DL}"), folder.join(SONAME))
             .expect("the soname link");
         folder
     })
@@ -267,8 +266,7 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
 /// ADR 0111's 2026-09-30 amendment: the static library defines exactly the
 /// header's functions as global names. The bundled SQLite's `sqlite3_` names
 /// and Rust's runtime names stay local, so a program can link its own SQLite
-/// or a second Rust static library beside it. Gates every release. Mach-O
-/// names carry a leading underscore, which the comparison drops (ticket 0351).
+/// or a second Rust static library beside it. Gates every release.
 #[test]
 fn the_static_library_exports_exactly_the_header_symbols() {
     let exported = child::command("nm", &[])
@@ -279,13 +277,7 @@ fn the_static_library_exports_exactly_the_header_symbols() {
     let mut names: Vec<String> = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))
-        .map(|name| {
-            if cfg!(target_os = "macos") {
-                name.strip_prefix('_').unwrap_or(name)
-            } else {
-                name
-            }
-        })
+        .map(|name| name.strip_prefix(PREFIX).unwrap_or(name))
         .map(str::to_owned)
         .collect();
     assert!(
