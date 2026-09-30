@@ -198,11 +198,7 @@ impl Choice<'_> {
         match &self.named {
             None => {
                 Backend::resolve(self.url, None, asked.unwrap_or(unnamed_model)).map(|backend| {
-                    let rate = self.rated.iter().find(|entry| {
-                        Backend::resolve(Some(&entry.base), None, unnamed_model)
-                            .is_ok_and(|base| base.url() == backend.url())
-                    });
-                    let rate = rate.and_then(|entry| entry.per_minute);
+                    let rate = self.unnamed_rate(&backend);
                     backend.with_per_minute(rate)
                 })
             }
@@ -217,6 +213,15 @@ impl Choice<'_> {
                     .with_per_minute(named.per_minute)
             }),
         }
+    }
+
+    /// The rate of the rated built-in whose own base posts to this backend's URL.
+    fn unnamed_rate(&self, backend: &Backend) -> Option<NonZeroU32> {
+        let posts_here = |entry: &&Named| {
+            Backend::resolve(Some(&entry.base), None, backend.model().as_str())
+                .is_ok_and(|base| base.url() == backend.url())
+        };
+        self.rated.iter().find(posts_here)?.per_minute
     }
 
     /// The key variables this choice reads, in order.
