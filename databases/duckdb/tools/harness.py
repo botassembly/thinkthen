@@ -205,6 +205,30 @@ def case(function):
     return function
 
 
+# Ticket 0352: a speed bound needs an idle machine. A `timed` case runs in
+# the routine and the stress profiles, and checks its bound only under stress.
+STRESS = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+TIMED: set[str] = set()
+
+
+def timed(function):
+    TIMED.add(function.__name__)
+    return case(function)
+
+
+def within(started: float, limit: float, what: str) -> None:
+    """Under the stress profile, `what` took under `limit` seconds since `started`."""
+    took = time.monotonic() - started
+    if STRESS and took >= limit:
+        raise AssertionError(f"{what} took {took * 1000:.0f} ms, over {limit * 1000:.0f} ms")
+
+
+def select(stress: set[str]) -> None:
+    """Keep this profile's cases: the stress campaigns or the routine ones, and every timed case."""
+    CASES[:] = [function for function in CASES
+                if function.__name__ in TIMED or (function.__name__ in stress) == STRESS]
+
+
 def main() -> int:
     """Run every registered case, or the ones named on the command line."""
     named = set(sys.argv[1:])

@@ -171,7 +171,7 @@ def test_tally_waits_for_two_started_held_calls(backend, tmp_path):
     assert backend.count() == 2
     backend.release()
     assert child.stdout.readline().strip() == "[True, True] 2 2 0"
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 2
 
 
@@ -215,7 +215,7 @@ def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
     except tt.Cancelled as error:
         print(error.kind, hasattr(error, "completion"), flush=True)
         sys.stdin.readline()
-        done = error.completion.result(timeout=5)
+        done = error.completion.result(timeout=60)
         print(done.outcome, done.facts["records"], done.facts["requests_sent"], flush=True)
         try: print("later", next(stream), flush=True)
         except StopIteration:
@@ -230,7 +230,7 @@ def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
     child.stdin.flush()
     assert child.stdout.readline().strip() == "failed 1 1"
     assert child.stdout.readline().strip() == "terminal 1 1"
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 1
 
 
@@ -263,7 +263,7 @@ def test_stream_second_reader_refuses_while_first_waits(backend, tmp_path):
     child.stdin.write("released\n")
     child.stdin.flush()
     assert child.stdout.readline().strip() == "finished 1 1"
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 1
 
 
@@ -283,7 +283,7 @@ def test_dropped_stream_releases_its_native_worker(backend, tmp_path):
     print(next(stream))
     del stream
     gc.collect()
-    until = time.monotonic() + 2
+    until = time.monotonic() + 30
     while threads() != baseline and time.monotonic() < until:
         time.sleep(0.01)
     print(read, threads() == baseline)

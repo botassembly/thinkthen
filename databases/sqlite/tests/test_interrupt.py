@@ -2,8 +2,10 @@
 """Interrupts reach every call that can send (ticket 0109 decision 6).
 
 Each held test sends its interrupt only once the backend's count reads the
-stated number, and arms a release 2 s after the signal, so a planted run
-fails on its assertion instead of waiting out the request timeout.
+stated number, and arms a release 30 s after the signal, so a planted run
+fails on its assertion instead of waiting out the request timeout. The
+routine run proves the cancelled sentence arrives while the reply is held;
+the stress profile also times it against 100 ms (ticket 0352).
 
 These tests also guard the hand-extended API table in `src/ffi.rs`. The
 rusqlite loadable bindings end at SQLite 3.34, so `ApiRoutines` adds the
@@ -25,6 +27,7 @@ import time
 from helper import CLI, LIB, Backend, Child, environment, expect, main
 
 CANCELLED = "thinkthen cancelled: the call was cancelled (retryable: no)"
+STRESS = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
 
 # The child runs `sql` on `db` and interrupts `target` when the parent says
 # go. It reports the error and the time from the interrupt to the return,
@@ -50,7 +53,7 @@ def interrupted(backend: Backend, sql: str, sends: int, setup: str = "") -> dict
     held = Child(HELD.format(sql=sql, setup=setup), environment(backend, "arm/held"))
     expect(backend.wait(sends), sends, "sends before the interrupt")
     held.send()
-    release = threading.Timer(2, backend.release)
+    release = threading.Timer(30, backend.release)
     release.start()
     result = held.read()
     release.cancel()
@@ -58,8 +61,10 @@ def interrupted(backend: Backend, sql: str, sends: int, setup: str = "") -> dict
 
 
 def stopped_fast(result: dict) -> None:
+    """The call ended cancelled, within 100 ms under the stress profile."""
     expect(result["error"], CANCELLED, "the error")
-    expect(result["after"] is not None and result["after"] < 0.1, True, f"returned {result['after']} s after the interrupt")
+    expect(result["after"] is not None, True, "the interrupt ran")
+    expect(not STRESS or result["after"] < 0.1, True, f"returned {result['after']} s after the interrupt")
 
 
 def settled(backend: Backend, sends: int) -> None:
@@ -136,7 +141,7 @@ def test_the_cli_prints_the_cancelled_sentence_on_sigint() -> None:
         env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
     )
     expect(backend.wait(1), 1, "sends before the signal")
-    release = threading.Timer(2, backend.release)
+    release = threading.Timer(30, backend.release)
     release.start()
     signalled = time.monotonic()
     cli.send_signal(signal.SIGINT)
@@ -146,7 +151,7 @@ def test_the_cli_prints_the_cancelled_sentence_on_sigint() -> None:
     release.cancel()
     cli.kill()
     expect(CANCELLED in line, True, f"the CLI printed {line!r}")
-    expect(after < 0.1, True, f"the CLI printed {after} s after the signal")
+    expect(not STRESS or after < 0.1, True, f"the CLI printed {after} s after the signal")
 
 
 def test_a_fast_keyed_call_stops_soon_after_the_interrupt() -> None:
@@ -181,7 +186,7 @@ before, started = threads(), time.monotonic()
 for _ in range(int(os.environ["COUNT"])):
     db.execute("SELECT thinkthen_decide('Is it red?', 'a red door')").fetchall()
 took = time.monotonic() - started
-settled = time.monotonic() + 1
+settled = time.monotonic() + 30
 while threads() > before and time.monotonic() < settled:
     time.sleep(0.01)
 say(took=took, before=before, after=threads())
@@ -199,7 +204,7 @@ def test_one_cached_call_leaves_no_thread() -> None:
 
 
 def test_cached_calls_return_at_once_and_leave_no_thread() -> None:
-    """R3-22: 200 cached answers take under 2 s, and within 1 s no thread outlives them."""
+    """R3-22: 200 cached answers take under 2 s, and no thread outlives them."""
     result = cached_calls(200)
     expect(result["took"] < 2, True, f"200 cached calls took {result['took']} s")
     expect(result["after"], result["before"], "threads after the calls")
@@ -253,7 +258,7 @@ def forked(depth: int) -> None:
     backend.round()
     expect(backend.wait(2), 2, "the forked call is held")
     held.send()
-    release = threading.Timer(2, backend.release)
+    release = threading.Timer(30, backend.release)
     release.start()
     result = held.result()
     release.cancel()
@@ -273,6 +278,8 @@ def test_a_grandchild_hears_its_own_interrupt() -> None:
 if __name__ == "__main__":
     stress = {"test_a_fast_keyed_call_stops_soon_after_the_interrupt",
               "test_cached_calls_return_at_once_and_leave_no_thread"}
-    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
+    # These run in both profiles; each checks its 100 ms bound only under stress.
+    timed = {name for name in globals() if name.startswith("test_") and name not in stress
+             and name != "test_one_cached_call_leaves_no_thread"}
     sys.exit(main({name: value for name, value in globals().items()
-                   if name.startswith("test_") and (name in stress) == only_stress}))
+                   if name.startswith("test_") and (name in timed or (name in stress) == STRESS)}))

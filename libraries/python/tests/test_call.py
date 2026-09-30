@@ -439,7 +439,7 @@ def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, 
         judge = engine.decide("Is it late?", tally=tally)
         gate = threading.Barrier(2)
         def ask(text):
-            gate.wait(timeout=5)
+            gate.wait(timeout=60)
             return judge(text).value
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             done = list(pool.map(ask, ["one", "two"]))
@@ -651,7 +651,7 @@ def test_held_stop_has_a_retryable_final_receipt(backend, tmp_path):
         else:
             raise AssertionError("held worker was final")
         sys.stdin.readline()
-        final = receipt.result(timeout=3)
+        final = receipt.result(timeout=60)
         assert final.outcome == "failed"
         assert (final.facts["records"], final.facts["requests_sent"]) == (0, 1)
         assert receipt.done and final.details is not None
@@ -668,7 +668,7 @@ def test_held_stop_has_a_retryable_final_receipt(backend, tmp_path):
     child.stdin.write("released\n")
     child.stdin.flush()
     assert child.stdout.readline().strip() == "final 1"
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 1
 
 
@@ -683,7 +683,7 @@ def test_system_exit_retains_type_code_and_completion(backend, tmp_path):
         receipt = error.completion
         print("exit", error.code, receipt.done, flush=True)
         sys.stdin.readline()
-        final = receipt.result(timeout=3)
+        final = receipt.result(timeout=60)
         print("final", final.outcome, final.facts["requests_sent"], flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
@@ -693,7 +693,7 @@ def test_system_exit_retains_type_code_and_completion(backend, tmp_path):
     child.stdin.write("released\n")
     child.stdin.flush()
     assert child.stdout.readline().strip() == "final failed 1"
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 1
 
 

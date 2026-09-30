@@ -30,7 +30,7 @@ def test_held_request_does_not_pull_ahead(backend, tmp_path):
     time.sleep(0.3)
     assert backend.count() == 1
     backend.release()
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 20
 
 

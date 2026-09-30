@@ -5,11 +5,18 @@ Each call runs in a child on the held arm, whose replies wait for a
 in flight, so a stop never lands before the send it should cut short.
 Children print ``time.monotonic()``, which reads one system clock, so the
 parent measures from its own signal to the child's ``Cancelled``.
+
+The routine run proves order: ``Cancelled`` arrives while the reply is still
+held, and nothing is sent after it. The 100 ms promise needs an idle machine,
+so each test's ``within_100_ms`` twin checks it under the stress profile
+(ticket 0352).
 """
 
 import os
 import signal
 import time
+
+import pytest
 
 import thinkthen as tt
 from conftest import child_env, start
@@ -29,7 +36,7 @@ HOLD = f"""
         token.cancel()
     def settle():
         sys.stdin.readline()
-        ended = time.monotonic() + 2
+        ended = time.monotonic() + 30
         while tt._thinkthen._live_workers() and time.monotonic() < ended:
             time.sleep(0.01)
         print("live", tt._thinkthen._live_workers(), flush=True)
@@ -38,6 +45,20 @@ HOLD = f"""
 STOP = """
     threading.Thread(target=stop, daemon=True).start()
 """
+
+
+@pytest.fixture(params=[
+    pytest.param(None, id="order"),
+    pytest.param(0.1, id="within_100_ms", marks=pytest.mark.stress),
+])
+def within(request):
+    """No bound in the routine run; 100 ms under the stress profile."""
+    return request.param
+
+
+def quick(took, within):
+    """The stop's delay meets the bound, when this twin has one."""
+    assert within is None or took < within, took
 
 
 def stamp(child):
@@ -67,7 +88,7 @@ def settle(backend, child, sent):
     child.stdin.write("released\n")
     child.stdin.flush()
     assert child.stdout.readline().split() == ["live", "0"]
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == sent
 
 
@@ -100,11 +121,11 @@ def test_a_token_cancelled_before_the_call_sends_nothing(backend, tmp_path):
         print("cancelled", time.monotonic(), error)
     """, child_env(backend, tmp_path, "arm/held"))
     assert stamp(child)[0] == "cancelled"
-    assert child.wait(timeout=10) == 0
+    assert child.wait(timeout=60) == 0
     assert backend.count() == 0
 
 
-def test_a_token_stops_a_held_batch_before_next_request(backend, tmp_path):
+def test_a_token_stops_a_held_batch_before_next_request(backend, tmp_path, within):
     """R1-24: a token cancelled during a 200-text batch raises within one
     tick, and no send follows the first held request."""
     child = start(HOLD + STOP + """
@@ -115,11 +136,11 @@ def test_a_token_stops_a_held_batch_before_next_request(backend, tmp_path):
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
-    assert stopped(child, "cancelled", lambda: tell_child(child)) < 0.1
+    quick(stopped(child, "cancelled", lambda: tell_child(child)), within)
     settle(backend, child, 1)
 
 
-def test_a_token_stops_a_held_single_send(backend, tmp_path):
+def test_a_token_stops_a_held_single_send(backend, tmp_path, within):
     """Other acceptance: the 50 ms tick reads the caller's token during one
     blocking send, so ``Cancelled`` arrives within 100 ms."""
     child = start(HOLD + STOP + """
@@ -130,7 +151,7 @@ def test_a_token_stops_a_held_single_send(backend, tmp_path):
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
-    assert stopped(child, "cancelled", lambda: tell_child(child)) < 0.1
+    quick(stopped(child, "cancelled", lambda: tell_child(child)), within)
     settle(backend, child, 1)
 
 
@@ -153,11 +174,11 @@ def test_a_token_fired_as_the_reply_lands_cancels_the_call(backend, tmp_path):
     assert child.stdout.readline().strip() == "stopped"
     backend.release()
     assert child.stdout.readline().strip() == "cancelled the call was cancelled"
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
     assert backend.count() == 1
 
 
-def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path):
+def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path, within):
     """R4-23 (single): ``SIGINT`` during one held send raises ``Cancelled``
     within 100 ms, and the send is not repeated."""
     child = start(HOLD + """
@@ -168,11 +189,11 @@ def test_ctrl_c_stops_a_held_single_send_at_once(backend, tmp_path):
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
-    assert stopped(child, "cancelled", lambda: signal_child(child)) < 0.1
+    quick(stopped(child, "cancelled", lambda: signal_child(child)), within)
     settle(backend, child, 1)
 
 
-def test_ctrl_c_stops_a_held_batch_at_once(backend, tmp_path):
+def test_ctrl_c_stops_a_held_batch_at_once(backend, tmp_path, within):
     """Amendment change 3: ``SIGINT`` with a send held raises within 100 ms.
     After release the worker ends without another send."""
     child = start(HOLD + """
@@ -183,11 +204,11 @@ def test_ctrl_c_stops_a_held_batch_at_once(backend, tmp_path):
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
-    assert stopped(child, "cancelled", lambda: signal_child(child)) < 0.1
+    quick(stopped(child, "cancelled", lambda: signal_child(child)), within)
     settle(backend, child, 1)
 
 
-def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path):
+def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path, within):
     """R2-25: only a ``KeyboardInterrupt`` becomes ``Cancelled``. A handler
     that exits surfaces its own ``SystemExit``."""
     child = start(HOLD + """
@@ -201,11 +222,11 @@ def test_a_handlers_system_exit_passes_through_unchanged(backend, tmp_path):
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
-    assert stopped(child, "exit", lambda: signal_child(child)) < 0.1
+    quick(stopped(child, "exit", lambda: signal_child(child)), within)
     settle(backend, child, 1)
 
 
-def test_ctrl_c_stops_a_held_polars_column_at_once(backend, tmp_path):
+def test_ctrl_c_stops_a_held_polars_column_at_once(backend, tmp_path, within):
     """R4-23, the Polars half: a column ``score`` runs on the detachable
     worker, so ``SIGINT`` with a send held raises within 100 ms and the
     count stays at 1. Regression: a column run on the
@@ -220,5 +241,5 @@ def test_ctrl_c_stops_a_held_polars_column_at_once(backend, tmp_path):
     settle()
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
-    assert stopped(child, "cancelled", lambda: signal_child(child)) < 0.1
+    quick(stopped(child, "cancelled", lambda: signal_child(child)), within)
     settle(backend, child, 1)

@@ -2,14 +2,17 @@
 guard (ticket 0110 decisions 7, 8, 13, and 14).
 
 A child loads the extension and runs queries on the held arm. The parent
-reads the backend's count, sends SIGINT, and times the child's answer.
-The `test-hooks` build serves only R7-7 and R1-10.
+reads the backend's count, sends SIGINT, and reads the child's answer while
+the reply is still held. The stress profile also times the answer against
+the 100 ms promise (ticket 0352). The `test-hooks` build serves only R7-7
+and R1-10.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import select
 import signal
 import subprocess
 import sys
@@ -17,7 +20,8 @@ import tempfile
 import time
 from pathlib import Path
 
-from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, said
+from harness import EXTENSION, STRESS, Backend, case, child_env, expect, main, said, timed, within
+from harness import select as select_cases
 
 CANCELLED = "thinkthen cancelled: the call was cancelled (retryable: no)"
 
@@ -87,7 +91,8 @@ def texts(count: int, tag: str) -> str:
 
 def held_cancel(query: str, in_flight: int) -> None:
     """Send SIGINT once `in_flight` requests are held, read `cancelled`
-    within 100 ms, release, and see the count stay put."""
+    before the release (within 100 ms under stress), release, and see the
+    count stay put."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         child = Child(backend.base("arm/held"), Path(folder))
         try:
@@ -97,10 +102,8 @@ def held_cancel(query: str, in_flight: int) -> None:
             expect(backend.wait(in_flight), in_flight, "requests in flight")
             started = child.interrupt()
             answer = child.read()
-            took = time.monotonic() - started
+            within(started, 0.1, "the cancel")
             expect(said(answer), CANCELLED, "the held query")
-            if took > 0.1:
-                raise AssertionError(f"cancelled after {took * 1000:.0f} ms, over 100 ms")
             backend.release()
             time.sleep(0.2)
             expect(backend.count(), in_flight, "the count after release")
@@ -111,14 +114,14 @@ def held_cancel(query: str, in_flight: int) -> None:
             child.close()
 
 
-@case
+@timed
 def r5_23_a_held_batch_stops_within_100_ms():
     # The lazy default packs these 64 rows into one held request. Cancellation
     # must stop that request without admitting a second one after release.
     held_cancel(f"SELECT thinkthen_choose('Which team?', x, ['billing', 'shipping']) FROM (VALUES {texts(64, 'batch')}) t(x)", 1)
 
 
-@case
+@timed
 def a_held_details_call_stops_within_100_ms():
     held_cancel("SELECT thinkthen_details('Is it a refund?', 'one held text')", 1)
 
@@ -126,26 +129,31 @@ def a_held_details_call_stops_within_100_ms():
 PAIR = "SELECT * FROM thinkthen_relate('SELECT * FROM (VALUES (1, ''Ada'', ''person''), (2, ''Acme'', ''organization'')) v(id, name, kind)', ['works_for=person:organization'])"
 
 
-@case
+@timed
 def a_held_relate_stops_within_100_ms():
     held_cancel(PAIR, 1)
 
 
-@case
+@timed
 def the_bridge_stops_a_running_relate_query_within_100_ms():
     """Decision 7: the SIGINT reaches the kept connection's running query
-    through the bridge, not only the engine call after it."""
+    through the bridge, not only the engine call after it. The routine run
+    repeats the signal until the answer comes, since a SIGINT before the scan
+    starts stops nothing; the stress run times one signal after 0.5 s."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         child = Child(backend.base(), Path(folder))
         try:
             child.ask("SELECT * FROM thinkthen_relate('SELECT i AS id, ''n'' AS name, ''k'' AS kind FROM range(100000000000) t(i) WHERE i < 0', ['near'])")
-            time.sleep(0.5)
-            started = child.interrupt()
+            if STRESS:
+                time.sleep(0.5)
+                started = child.interrupt()
+            else:
+                started = child.interrupt()
+                while not select.select([child.process.stdout], [], [], 0.05)[0]:
+                    started = child.interrupt()
             answer = child.read()
-            took = time.monotonic() - started
+            within(started, 0.1, "the cancel")
             expect(said(answer), CANCELLED, "the running relate query")
-            if took > 0.1:
-                raise AssertionError(f"cancelled after {took * 1000:.0f} ms, over 100 ms")
             expect(backend.count(), 0, "counted sends")
         finally:
             child.close()
@@ -187,10 +195,8 @@ def held_queries_stop_together(rounds: int):
                     started = time.monotonic()
                     child.send_signal(signal.SIGINT)
                     answers = [json.loads(child.stdout.readline()) for _ in range(width)]
-                    took = time.monotonic() - started
+                    within(started, 0.1, f"run {run_number} with {width} queries")
                     expect([said(answer) for answer in answers], [CANCELLED] * width, f"run {run_number} with {width} queries")
-                    if took > 0.1:
-                        raise AssertionError(f"run {run_number} with {width} queries stopped after {took * 1000:.0f} ms")
                     backend.release()
                     time.sleep(0.2)
                     expect(backend.count(), width, "the count after release")
@@ -245,7 +251,9 @@ def signal_between_queries(rounds: int):
         try:
             for index in range(rounds):
                 child.interrupt()
-                time.sleep(0.02)
+                # The host handler counts the signal, so the query goes only after it landed.
+                child.ask("seen")
+                expect(child.read(), {"seen": index + 1}, f"round {index} signal")
                 child.ask(f"SELECT thinkthen_decide('Is it a refund?', 'after {index}')")
                 expect(child.read(), {"rows": [[True]]}, f"round {index}")
         finally:
@@ -365,7 +373,7 @@ def r3_13_an_siginfo_host_handler_gets_the_number_and_sender():
                 child.kill()
 
 
-STRESS = r"""
+CHURN = r"""
 import signal, sys, threading
 import duckdb
 signal.signal(signal.SIGINT, lambda number, frame: None)
@@ -398,7 +406,7 @@ def r5_21_ten_thousand_signals_while_four_threads_allocate():
     under 60 s with exit 0."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         child = subprocess.Popen(
-            [sys.executable, "-c", STRESS, str(EXTENSION)],
+            [sys.executable, "-c", CHURN, str(EXTENSION)],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, env=child_env(backend.base(), Path(folder)),
         )
         try:
@@ -423,6 +431,5 @@ if __name__ == "__main__":
               "r2_14_a_signal_between_queries_stops_nothing",
               "r6_6_a_chained_host_handler_sees_every_signal",
               "r5_21_ten_thousand_signals_while_four_threads_allocate"}
-    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
-    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
+    select_cases(stress)
     sys.exit(main())

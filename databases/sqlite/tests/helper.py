@@ -84,20 +84,20 @@ class Backend:
 
     def count(self) -> int:
         self._say("count")
-        return int(self.counts.get(timeout=5))
+        return int(self.counts.get(timeout=30))
 
     def capture(self) -> list[str]:
         """Exact bodies from the bounded, opted-in recognize case arm."""
         self._say("capture")
-        held = json.loads(self.counts.get(timeout=5))
+        held = json.loads(self.counts.get(timeout=30))
         if "error" in held:
             raise AssertionError(held["error"])
         return held["bodies"]
 
     def wait(self, least: int) -> int:
-        """The count once it reads at least `least`, or at 5 s."""
+        """The count once it reads at least `least`, or at 30 s."""
         self._say(f"wait {least}")
-        return int(self.waits.get(timeout=10).split()[1])
+        return int(self.waits.get(timeout=60).split()[1])
 
     def release(self) -> None:
         self._say("release")
@@ -109,7 +109,7 @@ class Backend:
         assert self.process.stdin is not None
         self.process.stdin.close()
         self.process.wait(timeout=10)
-        return int(self.counts.get(timeout=5))
+        return int(self.counts.get(timeout=30))
 
 
 def environment(backend: Backend | None, arm: str = "generic", **extra: str) -> dict[str, str]:

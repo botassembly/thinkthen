@@ -18,21 +18,40 @@ SETUP = """
 
 
 def test_a_short_column_shares_one_deadline_and_token(backend, tmp_path):
-    """A bounded column stops under each public call-wide control."""
+    """A bounded column stops under each public call-wide control. The
+    deadline is shorter than one delayed reply. The token fires once the
+    held arm counts the first throttle's sends, so no timer races a reply,
+    and nothing is sent after it (ticket 0352)."""
     printed = run(SETUP + """
     try:
         engine.score(urgent, pl.Series(texts[:12]), deadline_ms=50).value
     except tt.DeadlineError:
         print("deadline")
+    """, child_env(backend, tmp_path, "arm/delay/100"))
+    assert printed.splitlines() == ["deadline"]
+    assert backend.count() <= 8
+    held = Backend()
+    try:
+        child = start(SETUP + """
     token = tt.CancelToken()
-    threading.Timer(0.05, token.cancel).start()
+    def stop():
+        sys.stdin.readline()
+        token.cancel()
+    threading.Thread(target=stop, daemon=True).start()
     try:
         engine.score(urgent, pl.Series(texts[12:24]), token=token).value
     except tt.Cancelled:
-        print("cancelled")
-    """, child_env(backend, tmp_path, "arm/delay/100"))
-    assert printed.splitlines() == ["deadline", "cancelled"]
-    assert backend.count() <= 16
+        print("cancelled", flush=True)
+    """, child_env(held, tmp_path, "arm/held"))
+        assert held.wait(8) == 8
+        child.stdin.write("stop\n")
+        child.stdin.flush()
+        assert child.stdout.readline().strip() == "cancelled", child.stderr.read()
+        held.release()
+        assert child.wait(timeout=60) == 0, child.stderr.read()
+        assert held.count() == 8
+    finally:
+        held.close()
 
 
 @pytest.mark.stress
@@ -68,7 +87,7 @@ def test_one_deadline_and_one_token_cover_a_column(backend, tmp_path):
     assert child.stdout.readline().strip() == "cancelled"
     time.sleep(0.3)
     assert backend.count() - at_stop <= 8
-    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert child.wait(timeout=60) == 0, child.stderr.read()
 
 
 @pytest.mark.stress
@@ -122,7 +141,7 @@ def test_a_column_holds_the_throttle_in_flight(tmp_path):
             time.sleep(0.3)
             assert backend.count() == 8, shape
             backend.release()
-            assert child.wait(timeout=10) == 0, child.stderr.read()
+            assert child.wait(timeout=60) == 0, child.stderr.read()
         finally:
             backend.close()
 

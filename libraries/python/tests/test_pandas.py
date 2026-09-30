@@ -456,7 +456,7 @@ def test_a_series_stops_at_the_held_request(tmp_path):
             time.sleep(0.3)
             assert backend.count() == 1, records
             backend.release()
-            assert child.wait(timeout=10) == 0, child.stderr.read()
+            assert child.wait(timeout=60) == 0, child.stderr.read()
         finally:
             backend.close()
 

@@ -40,7 +40,7 @@ say(error=run(db, "SELECT thinkthen_decide('Is it red?', 'a red door', ?)",
 """, environment(backend, "arm/held"))
     try:
         expect(backend.wait(1), 1, "one held request arrived")
-        answer = held.result(timeout=5)
+        answer = held.result(timeout=60)
         expect(answer["error"],
                "thinkthen deadline: the deadline of 200 ms passed before the call answered (retryable: no)",
                "the call stopped before release")

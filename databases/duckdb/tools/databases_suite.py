@@ -10,13 +10,12 @@ result, and a failed statement prints its error.
 from __future__ import annotations
 
 import json
-import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 
-from harness import CASES, EXTENSION, Backend, case, child_env, expect, main
+from harness import EXTENSION, Backend, case, child_env, expect, main, select
 
 PRELUDE = r"""
 import json, os, sys, time
@@ -40,19 +39,33 @@ def edges(con, table="t"):
 """
 
 
-def script(body: str, base: str, *, extension: Path = EXTENSION, timeout: float = 120) -> list:
+def script(body: str, base: str, *, extension: Path = EXTENSION, timeout: float = 120,
+           held: Backend | None = None) -> list:
+    """Run `body` in a child. With `held`, the child's first standard-input
+    line comes once that backend counts one request, so the script can wait
+    for its own held send without a sleep (ticket 0352)."""
     with tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
-        done = subprocess.run(
+        child = subprocess.Popen(
             [sys.executable, "-c", PRELUDE + body, str(extension), folder],
             env=child_env(base, Path(folder) / "env"),
-            capture_output=True,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout,
-            check=False,
         )
-    if done.returncode != 0:
-        raise AssertionError(f"the child exited {done.returncode}: {done.stderr[-600:]}")
-    return [json.loads(line) for line in done.stdout.splitlines() if line.strip()]
+        try:
+            if held is not None:
+                expect(held.wait(1), 1, "the held request")
+                child.stdin.write("held\n")
+                child.stdin.flush()
+            out, err = child.communicate(timeout=timeout)
+        finally:
+            if child.poll() is None:
+                child.kill()
+                child.communicate()
+    if child.returncode != 0:
+        raise AssertionError(f"the child exited {child.returncode}: {err[-600:]}")
+    return [json.loads(line) for line in out.splitlines() if line.strip()]
 
 
 @case
@@ -183,12 +196,13 @@ import signal, threading
 signal.signal(signal.SIGINT, lambda number, frame: None)
 a = db(); staff(a, 1)
 held = threading.Thread(target=lambda: say(["held", edges(a.cursor())]))
-held.start(); time.sleep(1)
+held.start(); sys.stdin.readline()
 second = a.cursor(); second.execute("SET thinkthen_relate_seconds = 1")
 say(["queued", edges(second)])
 os.kill(os.getpid(), signal.SIGINT); held.join()
 """,
             backend.base("arm/held"),
+            held=backend,
         )
         expect(dict(got), {"queued": "Invalid Input Error: thinkthen deadline: the relate query waited past its 1-second limit in the queue behind another relate on this database and did not run; retry after that relate ends or raise SET thinkthen_relate_seconds (0 turns the limit off) (retryable: no)", "held": "Invalid Input Error: thinkthen cancelled: the call was cancelled (retryable: no)"}, "the two relates")
         expect(backend.count(), 1, "counted sends")
@@ -233,6 +247,5 @@ say(a.execute(f"SELECT thinkthen_decide('@{sys.argv[2]}/q.json', 'refund now')")
 
 if __name__ == "__main__":
     stress = {"r3_23_idle_databases_cost_little"}
-    only_stress = os.environ.get("THINKTHEN_TEST_PROFILE") == "stress"
-    CASES[:] = [function for function in CASES if (function.__name__ in stress) == only_stress]
+    select(stress)
     sys.exit(main())
