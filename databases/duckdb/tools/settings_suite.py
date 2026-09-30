@@ -314,7 +314,23 @@ def settings_keep_the_environments_seeding():
 
 
 @case
-def volatile_scalars_are_not_folded_at_plan_time():
+def only_a_private_named_folder_caches():
+    """Ticket 0318: the platform cache stays off, and a named folder that
+    others can write is refused before any send."""
+    with Backend() as backend, tempfile.TemporaryDirectory() as folder:
+        got = run([ASK, ASK], backend.base(), extra={"THINKTHEN_CACHE": ""})
+        expect([rows(item) for item in got], [[[True]], [[True]]], "both answer")
+        expect(backend.count(), 2, "no platform cache answers the second call")
+        open_folder = Path(folder) / "open"
+        open_folder.mkdir()
+        open_folder.chmod(0o777)
+        got = run([f"SET thinkthen_cache = '{open_folder}'", ASK], backend.base())
+        expect(said(got[1]), "thinkthen usage: the answer folder belongs to another user or others can write it, so they could choose its answers; make it this process user's own with mode 0700, or name another folder (retryable: no)", "open folder")
+        expect(backend.count(), 2, "a refused folder sends nothing")
+        expect(list(open_folder.iterdir()), [], "a refused folder stays empty")
+
+
+
     with Backend() as backend:
         got = run(["EXPLAIN SELECT thinkthen_decide('q', 'a constant text')"], backend.base(), timeout=30)
         rows(got[0])

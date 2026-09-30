@@ -1,6 +1,6 @@
 # Surfaces write judged text to disk without saying so
 
-Status: open. The disclosure and off/move instructions landed with reviewed 0163 source `0292cba2`. SQL cache defaults and expiry decisions remain open; SQL off switches belong to 0149.
+Status: Closed. The disclosure and off/move instructions landed with reviewed 0163 source `0292cba2`. Ticket 0318 settles the SQL default: the SQL extensions cache only in a folder an operator names. Expiry waits for the clearing ticket ADR 0111 names.
 
 ## What happens
 

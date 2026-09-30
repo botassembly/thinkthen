@@ -99,6 +99,8 @@ def child_env(base: str, folder: Path, extra: dict[str, str] | None = None, *, k
     env = clean_env(**{
         "HOME": str(folder / "home"),
         "XDG_CACHE_HOME": str(folder / "cache"),
+        # Ticket 0318: a SQL host caches only in a folder the operator names.
+        "THINKTHEN_CACHE": str(folder / "cache" / "named"),
         "XDG_CONFIG_HOME": str(folder / "config"),
         "THINKTHEN_API_KEY": FAKE_KEY,
         "THINKTHEN_BASE_URL": base,

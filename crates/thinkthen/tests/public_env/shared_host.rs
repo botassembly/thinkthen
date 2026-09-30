@@ -31,73 +31,63 @@ const REFUSED: &str = "Usage: the answer folder belongs to another user or other
 #[test]
 fn a_shared_host_caches_only_in_a_private_named_folder() {
     let listener = listener();
-    let base = listener.base().to_owned();
     let home = folder("shared-host");
-    let xdg = home.join("xdg");
-    let named = home.join("named");
-    let open = home.join("open");
-    let group = home.join("group");
-    with_mode(&xdg, 0o700);
-    with_mode(&open, 0o777);
-    with_mode(&group, 0o770);
-    let path = |p: &Path| p.to_str().expect("utf-8").to_owned();
-    let (xdg_s, named_s, open_s, group_s) = (path(&xdg), path(&named), path(&open), path(&group));
-    let cache_at_open = format!("cache_at={open_s}");
-    let replay_open = format!("replay={open_s}");
-    // Each row: the case, the named cache variable, the argument, and
-    // whether the second ask came from a cache.
-    let rows: [(&str, Option<&str>, &str, Option<bool>); 6] = [
-        ("platform default stays off", None, "", Some(false)),
+    let at = |name: &str, mode: u32| {
+        let path = home.join(name);
+        with_mode(&path, mode);
+        path.to_str().expect("utf-8").to_owned()
+    };
+    let (xdg, named, group, open) = (
+        at("xdg", 0o700),
+        at("named", 0o700),
+        at("group", 0o770),
+        at("open", 0o777),
+    );
+    let (cache_at, replay) = (format!("cache_at={open}"), format!("replay={open}"));
+    // The case, THINKTHEN_CACHE (empty is unset), the argument, and the
+    // sends for two equal asks; `None` is a refused build.
+    let rows = [
+        ("the platform default stays off", "", "", Some(2)),
+        ("a private named folder caches", named.as_str(), "", Some(1)),
         (
-            "THINKTHEN_CACHE names a private folder",
-            Some(&named_s),
+            "a group-writable named folder caches",
+            group.as_str(),
             "",
-            Some(true),
+            Some(1),
         ),
         (
-            "THINKTHEN_CACHE names a group-writable folder",
-            Some(&group_s),
-            "",
-            Some(true),
-        ),
-        (
-            "THINKTHEN_CACHE names an open folder",
-            Some(&open_s),
+            "an open THINKTHEN_CACHE is refused",
+            open.as_str(),
             "",
             None,
         ),
-        ("cache_at names an open folder", None, &cache_at_open, None),
-        ("replay names an open folder", None, &replay_open, None),
+        ("an open cache_at is refused", "", cache_at.as_str(), None),
+        ("an open replay is refused", "", replay.as_str(), None),
     ];
-    for (name, cache, argument, cached) in rows {
+    for (name, cache, argument, sends) in rows {
         let before = listener.count();
-        let mut environment = vec![
-            ("XDG_CACHE_HOME", xdg_s.as_str()),
-            ("THINKTHEN_BASE_URL", base.as_str()),
-            ("THINKTHEN_API_KEY", "sk-test"),
-            (ARGUMENT, argument),
-        ];
-        if let Some(cache) = cache {
-            environment.push(("THINKTHEN_CACHE", cache));
-        }
-        let lines = in_child("shared-host", &environment);
-        let sends = listener.count() - before;
-        match cached {
-            None => {
-                assert_eq!(lines, REFUSED, "{name}");
-                assert_eq!(sends, 0, "{name}: a refused build sends nothing");
-            }
-            Some(cached) => {
-                let second = lines.lines().nth(1).expect("two asks");
-                assert!(
-                    second.starts_with(&format!("sent {} cached {cached} ", u8::from(!cached))),
-                    "{name}: {lines}"
-                );
-                assert_eq!(sends, if cached { 1 } else { 2 }, "{name}");
-            }
-        }
+        let lines = in_child(
+            "shared-host",
+            &[
+                ("XDG_CACHE_HOME", &xdg),
+                ("THINKTHEN_BASE_URL", listener.base()),
+                ("THINKTHEN_API_KEY", "sk-test"),
+                ("THINKTHEN_CACHE", cache),
+                (ARGUMENT, argument),
+            ],
+        );
+        assert_eq!(
+            listener.count() - before,
+            sends.unwrap_or(0),
+            "{name}: {lines}"
+        );
+        assert_eq!(sends.is_none(), lines == REFUSED, "{name}: {lines}");
     }
-    assert_eq!(entries(&xdg), 0, "the platform folder stays empty");
+    assert_eq!(
+        entries(Path::new(&xdg)),
+        0,
+        "the platform folder stays empty"
+    );
 }
 
 #[cfg(unix)]
