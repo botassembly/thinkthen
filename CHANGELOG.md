@@ -24,6 +24,8 @@ Every engine built from the environment adds its requests, retries, live tokens 
 
 The C door adds `thinkthen_plan_json`, a no-send preview of a judgment call that needs no key. It returns the planned records, requests, body bytes, input-token band and first request body as the result schema's `plan` object, which the schema now generates from the Rust type (tickets 0291 and 0314).
 
+The Go and C++ libraries gain a public `plan` over `thinkthen_plan_json` and read facts, recognize and relate results as plain JSON. Go drops its `Facts` struct; C++ drops `CallFacts`, `Entity`, `Recognized`, `RelatedEntity` and `Edge`. Go names its error kinds, and both read an annotate member as unresolved, a value or a failure. C++ `call`, `recognize` and `relate` take a deadline (tickets 0291 and 0314).
+
 The default model is the pinned version `jev-1.13.0`, not the alias `jev-latest`, so a vendor's move of its alias moves no default answer (ticket 0159).
 
 Python and Ruby calls now raise cancellation when the caller's token fires before a held reply reaches the call, including when both happen in one wait tick (ticket 0168).
