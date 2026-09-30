@@ -6,7 +6,7 @@ Owner: one SQL host ticket for items 1, 2, 3, 9 and 10 after 0304 slice 4, which
 
 Kind: debt
 
-Pay when: before 0.1 for items 1, 2, 3, 9 and 10. Items 6 and 7 are features, paid when a user asks after 0.1.
+Pay when: before 0.1 for items 1, 2, 3, 9 and 10; item 10 sooner, at the next change to either host's `thinkthen_plan`. Items 6 and 7 are features, paid when a user asks after 0.1.
 
 Keeping it leaves the SQL hosts holding copies of engine code, so a new plan member, rule form or refusal can reach the C door and miss SQL.
 

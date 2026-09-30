@@ -6,7 +6,7 @@ Ian asked on 2026-09-29 for a page about Liquid's d1 decision model, its API, an
 
 ## Facts for the page
 
-Sources: experiment 413's `RESULTS.md`, the README's Liquid line, and the closed [null-criteria issue](closed/2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md).
+Sources: experiment 413's `RESULTS.md`, the README's Liquid line, and the closed [null-criteria issue](2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md).
 
 - The address is `https://api.liquid.ai/decisions/v1`. ThinkThen posts to its `systemone` endpoint with no adapter change.
 - The model is `d1:free`, listed by `GET /decisions/v1/models`. That endpoint's metadata reads release date 2026-09-22, while Ian named the public launch day as 2026-09-29. The page carries the launch day and notes the metadata.

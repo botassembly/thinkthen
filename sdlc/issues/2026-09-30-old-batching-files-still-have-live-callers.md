@@ -26,11 +26,11 @@ Since 0304 slice 2 (`1fbbe08e0`), the seven record functions keep their answers 
 
 - `cli/cache.rs` calls `engine/cache_prune` for `unused`, `prune` and `prune --dry-run`.
 - `engine/cache_prune/scan.rs:84-103` (`scan_final`) skips every name that is not a digest file, so it never sees `thinkthen.sqlite`. It filters names before it opens a file, so no run was needed.
-- `cli/status.rs:158-205` (`cache_status`) counts entries and bytes through `cache_prune::inspect`, and `status --json` stays `thinkthen.status/1` (`cli/status.rs:134`).
+- `cli/status.rs:158-205` (`cache_status`) counts entries and bytes through `cache_prune::inspect`. `status --json` is already `thinkthen.status/2` since ticket 0334, with no question store fields.
 
 So `cache prune` cannot shrink the question store, `--answered-by-other-than` cannot remove an old model's answers from it, and `status` does not count it. The model-mismatch message tells users to run that prune (`specification/result.md:248`). `find`, `recognize` and `relate` still write old entries until 0304 slice 4, so prune still trims those.
 
-Slice 5 does what ADR 0111 says (`adr/0111…:232`): `cache prune` and `cache unused` keep their selectors as SQL over the store's `taken_at`, `answered_by` and keys, delete states no answer uses, then run `PRAGMA incremental_vacuum`. `status` counts the store and moves to `thinkthen.status/2`. ADR 0114 says whichever of slice 5 and ticket 0334 lands second adds its fields to `status/2`; 0334 has landed, so slice 5 adds its cache fields.
+Slice 5 does what ADR 0111 says (`adr/0111…:232`): `cache prune` and `cache unused` keep their selectors as SQL over the store's `taken_at`, `answered_by` and keys, delete states no answer uses, then run `PRAGMA incremental_vacuum`. `status` counts the store. ADR 0114 says whichever of slice 5 and ticket 0334 lands second adds its fields to `status/2`; 0334 has landed, so slice 5 adds its cache fields there.
 
 ## The recording page describes the retired backend marker
 
@@ -40,7 +40,7 @@ ADR 0111, section 3, removed the backend marker and the folder gate: "This remov
 
 - Line 50: the first write-capable use of a folder binds it to the backend address, and a later mismatch exits 5 naming the resolved endpoint.
 - Lines 51 to 54: the marker's schema, its write order and the unmarked-folder rules.
-- Lines 46 and 115: the prune target and selection over old entries only.
+- Lines 32 to 34 and 115 to 117: the prune target and selection over old entries only.
 - Line 119: "Prune ignores and preserves `.thinkthen-backend.json`."
 
 The build follows the ADR. It writes no marker, and a hand-written marker naming another address does not stop `--cache` from sending. But `thinkthen status --json` still reports `cache.binding` as `unbound`, `matching` or `mismatched` (`cli/status.rs:45,191,273`), a field the specification does not list and the ADR retired.
