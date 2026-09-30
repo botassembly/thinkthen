@@ -353,7 +353,7 @@ struct Written<'a> {
 /// The request body this resolved question asks over one fixed evidence.
 fn request(settled: &Resolved) -> Vec<u8> {
     let question = settled.question().expect("a question").clone();
-    let plan = Plan::new(
+    let plan = Plan::authored(
         Evidence::new("Refund me please.").expect("not blank"),
         settled.model().clone(),
         vec![question],

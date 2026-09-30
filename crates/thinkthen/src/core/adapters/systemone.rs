@@ -19,7 +19,9 @@ use crate::core::text::ModelName;
 
 pub(crate) use crate::core::adapters::systemone::recorded::decoder;
 pub(crate) use crate::core::adapters::systemone::request::encode;
-pub(crate) use crate::core::adapters::systemone::request::{encode_raw, join, parts};
+pub(crate) use crate::core::adapters::systemone::request::{
+    drops_any, drops_detail, drops_detail_of, encode_raw, join, parts,
+};
 pub(crate) use crate::core::adapters::systemone::response::{
     decode, decode_answers, decode_observed, decode_questions,
 };
@@ -224,7 +226,7 @@ pub(crate) mod tests {
 
     /// One plan of one question over one evidence.
     fn one(state: &str, question: Question) -> Plan {
-        Plan::new(
+        Plan::authored(
             Evidence::new(state).expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
             vec![question],
@@ -234,7 +236,7 @@ pub(crate) mod tests {
 
     /// A plan of one yes/no question per text, over one evidence.
     pub(crate) fn plan_for(state: &str, questions: &[&str]) -> Plan {
-        Plan::new(
+        Plan::authored(
             Evidence::new(state).expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
             questions

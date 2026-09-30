@@ -9,6 +9,7 @@ use std::fmt;
 
 use crate::core::adapters::built_in::backends::BUILT_INS;
 use crate::core::backend::{Backend, BackendError, KEY_VAR};
+use crate::core::plan::Descriptions;
 
 /// One named backend: a built-in or a configuration entry.
 #[derive(Clone, Eq, PartialEq)]
@@ -17,6 +18,7 @@ pub(crate) struct Named {
     base: String,
     keys: Vec<String>,
     model: String,
+    descriptions: Descriptions,
 }
 
 impl fmt::Debug for Named {
@@ -27,18 +29,22 @@ impl fmt::Debug for Named {
             .field("base", &"<withheld>")
             .field("keys", &self.keys)
             .field("model", &self.model)
+            .field("descriptions", &self.descriptions)
             .finish()
     }
 }
 
 impl Named {
     /// A configuration entry, whose fields the configuration reader checked.
+    /// Its descriptions travel as authored, since the file names no form
+    /// (ADR 0115 section 5).
     pub(crate) fn new(name: &str, base: &str, key: &str, model: &str) -> Self {
         Self {
             name: name.to_owned(),
             base: base.to_owned(),
             keys: vec![key.to_owned()],
             model: model.to_owned(),
+            descriptions: Descriptions::Authored,
         }
     }
 
@@ -52,6 +58,7 @@ impl Named {
                 base: built_in.base.to_owned(),
                 keys: built_in.keys.iter().map(|&key| key.to_owned()).collect(),
                 model: built_in.model.to_owned(),
+                descriptions: built_in.descriptions,
             })
     }
 
@@ -174,7 +181,8 @@ impl Choice<'_> {
                 Some(self.url.unwrap_or(&named.base)),
                 None,
                 asked.unwrap_or(&named.model),
-            ),
+            )
+            .map(|backend| backend.with_descriptions(named.descriptions)),
         }
     }
 
@@ -194,7 +202,10 @@ impl Choice<'_> {
             .map_or(KEY_VAR, String::as_str)
     }
 
-    /// Refuse a built-in's key variable at another built-in's host (ADR 0114 section 5).
+    /// Refuse a built-in's key variable at another built-in's host (ADR 0114
+    /// section 5). A built-in whose base is loopback is no other built-in's
+    /// host, because any program on this machine may listen there and the
+    /// user named that address (ADR 0115 section 2).
     ///
     /// # Errors
     ///
@@ -214,6 +225,7 @@ impl Choice<'_> {
                 built_in.name != owner.name
                     && Backend::resolve(Some(built_in.base), None, built_in.model)
                         .ok()
+                        .filter(|base| !base.is_loopback())
                         .is_some_and(|base| base.host().map(comparable).as_ref() == Some(&host))
             });
             if let Some(other) = other {

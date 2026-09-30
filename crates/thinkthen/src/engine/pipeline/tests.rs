@@ -35,7 +35,10 @@ impl Asker for Lines {
             no: None,
         };
         let plan = quoted_plan(
-            ModelName::new(crate::core::DEFAULT_MODEL).map_err(|_| ())?,
+            (
+                ModelName::new(crate::core::DEFAULT_MODEL).map_err(|_| ())?,
+                crate::core::Descriptions::Authored,
+            ),
             Evidence::new(format!("line {input}")).map_err(|_| ())?,
             None,
             vec![question],

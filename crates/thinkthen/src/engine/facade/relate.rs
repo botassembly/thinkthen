@@ -63,8 +63,13 @@ pub(crate) fn relations(
         });
     };
     let mut asks = Asks::default();
-    let plan = Plan::new(planned.evidence, backend.model().clone(), planned.questions)
-        .map_err(|_| Error::Defect("relation planned no questions"))?;
+    let plan = Plan::new(
+        planned.evidence,
+        backend.model().clone(),
+        backend.descriptions(),
+        planned.questions,
+    )
+    .map_err(|_| Error::Defect("relation planned no questions"))?;
     asks.add(backend, &plan)?;
     let requests = asks.requests(backend, profile, Bound::pairs(profile))?;
     let mut questions_per_rule = vec![0; rules.len()];

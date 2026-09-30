@@ -2,6 +2,7 @@
 
 use super::{Named, Tier, choose, find};
 use crate::core::BackendError;
+use crate::core::plan::Descriptions;
 
 fn configured() -> Vec<Named> {
     vec![
@@ -18,6 +19,12 @@ fn configured() -> Vec<Named> {
             "m",
         ),
         Named::new("second", "https://api.typesafe.ai/v1", "SECOND_KEY", "m"),
+        Named::new(
+            "stolen-ollama",
+            "https://api.liquid.ai/decisions/v1",
+            "OLLAMA_API_KEY",
+            "m",
+        ),
     ]
 }
 
@@ -108,7 +115,7 @@ fn names_are_checked_before_they_are_looked_up() {
     }
     assert_eq!(
         find("nowhere", &[]).map_err(|error| error.to_string()),
-        Err("unknown backend `nowhere`; the built-in backends are `liquid` and `typesafe`, and the configuration file may name more".to_owned())
+        Err("unknown backend `nowhere`; the built-in backends are `liquid`, `ollama` and `typesafe`, and the configuration file may name more".to_owned())
     );
     assert!(
         find("local-d1", &[]).is_err(),
@@ -182,6 +189,28 @@ fn a_built_in_key_never_goes_to_the_other_built_in_host() {
         ("typesafe", None, None),
         ("second", None, None),
         ("local-d1", Some("https://api.liquid.ai/decisions/v1"), None),
+        // ADR 0115: `OLLAMA_API_KEY` never goes to another built-in's host,
+        // and a loopback built-in base is no other built-in's host.
+        (
+            "ollama",
+            Some("https://api.typesafe.ai/v1"),
+            refusal("ollama", "OLLAMA_API_KEY", "ollama", "typesafe"),
+        ),
+        (
+            "ollama",
+            Some("https://API.liquid.ai./decisions/v1"),
+            refusal("ollama", "OLLAMA_API_KEY", "ollama", "liquid"),
+        ),
+        (
+            "stolen-ollama",
+            None,
+            refusal("stolen-ollama", "OLLAMA_API_KEY", "ollama", "liquid"),
+        ),
+        ("ollama", None, None),
+        ("ollama", Some("https://ollama.example/v1"), None),
+        ("liquid", Some("http://localhost:8080/v1"), None),
+        ("liquid", Some("http://localhost:11434/v1"), None),
+        ("typesafe", Some("http://localhost:11434/v1"), None),
     ];
     for (name, url, expected) in cases {
         let choice = choose(&[(Some(name), url)], &configured).expect("a known backend");
@@ -234,6 +263,34 @@ fn models_and_keys_follow_the_path() {
             .model()
             .as_str(),
         "configured-model"
+    );
+    // ADR 0115: only `ollama` sends descriptions as text, at any address.
+    for (name, url, form) in [
+        ("ollama", None, Descriptions::Text),
+        (
+            "ollama",
+            Some("https://ollama.example/v1"),
+            Descriptions::Text,
+        ),
+        ("liquid", None, Descriptions::Authored),
+        ("typesafe", None, Descriptions::Authored),
+        ("local-d1", None, Descriptions::Authored),
+    ] {
+        let choice = choose(&[(Some(name), url)], &configured).expect("a backend");
+        let backend = choice.backend(None, "unused").expect("an address");
+        assert_eq!(backend.descriptions(), form, "{name} {url:?}");
+    }
+    let ollama = choose(&[(Some("ollama"), None)], &configured).expect("ollama");
+    assert_eq!(ollama.keys(), ["OLLAMA_API_KEY"]);
+    let backend = ollama.backend(None, "unused").expect("ollama");
+    assert_eq!(
+        backend.url().as_str(),
+        "http://localhost:11434/v1/systemone"
+    );
+    assert_eq!(backend.model().as_str(), "nimble");
+    assert_eq!(
+        unnamed.backend(None, "m").expect("default").descriptions(),
+        Descriptions::Authored
     );
     assert!(format!("{:?}", configured[0]).contains("<withheld>"));
     assert!(!format!("{:?}", configured[0]).contains("8080"));

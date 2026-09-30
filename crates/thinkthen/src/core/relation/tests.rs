@@ -93,7 +93,7 @@ fn pair_questions_keep_rule_order_ids_and_wording() {
             .collect::<Vec<_>>();
         assert_eq!(got, case.expected, "{}", case.name);
         let body = built_in::encode(
-            &Plan::new(
+            &Plan::authored(
                 planned.evidence,
                 ModelName::new("local-1").expect("model"),
                 planned.questions,

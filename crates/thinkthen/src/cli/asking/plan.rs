@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use super::JudgingInput;
 use super::judged::{Planner, Records};
+use crate::core::adapters::built_in;
 use crate::core::pack::{self, Entry, PackLimits, Packer};
 use crate::core::{Backend, Evidence, PlanDocument, PlanSummary, Reading, Sources, json_line};
 use crate::edge;
@@ -46,7 +47,7 @@ pub(super) fn packed(
     let planner = Planner {
         asks: &configuration.asks,
         reading,
-        model: backend.model(),
+        asked: backend.asked(),
         context,
         profile: configuration.profile.as_ref(),
         limits: Limits::new(configuration.profile.as_ref()),
@@ -63,9 +64,13 @@ pub(super) fn packed(
     let mut summary = PlanSummary::new(false);
     let mut seen = HashSet::new();
     let mut closed = Vec::new();
+    let mut dropped = false;
     for held in records {
         let held = held.map_err(|placed| placed.cause)?;
-        let asks = planner.asks(backend.url(), &held.record)?;
+        let plan = planner.plan(&held.record)?;
+        dropped |= built_in::drops_detail(&plan);
+        let asks = pack::asks(backend.url(), &plan)
+            .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
@@ -84,6 +89,7 @@ pub(super) fn packed(
             .map_err(|error| planner.refused(error))?;
     }
     closed.extend(packer.close());
+    crate::cli::check::say_dropped_detail(dropped)?;
     for request in &closed {
         summary
             .request(&request.body)

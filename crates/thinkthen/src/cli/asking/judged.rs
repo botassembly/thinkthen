@@ -11,8 +11,8 @@ use super::{Asks, Judging, JudgingInput, RowContext, table_kind};
 use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError};
 use crate::core::{
-    AnswerOutcome, BackendProfile, BatchError, Evidence, ModelName, Plan, Reading, Record, Reply,
-    Setting, Url, Usage, quoted_plan, quoted_plan_of,
+    AnswerOutcome, BackendProfile, BatchError, Descriptions, Evidence, ModelName, Plan, Reading,
+    Record, Reply, Setting, Url, Usage, quoted_plan, quoted_plan_of,
 };
 use crate::edge;
 use crate::engine::facade::{self, Judgment};
@@ -70,7 +70,7 @@ pub(super) fn records(
 pub(super) struct Planner<'a> {
     pub(super) asks: &'a Asks,
     pub(super) reading: &'a Reading,
-    pub(super) model: &'a ModelName,
+    pub(super) asked: (ModelName, Descriptions),
     pub(super) context: Option<Evidence>,
     pub(super) profile: Option<&'a BackendProfile>,
     pub(super) limits: Limits,
@@ -84,7 +84,7 @@ impl Planner<'_> {
         let planned = if self.reading.streams() {
             let batch = self.reading.batch_record(record)?;
             quoted_plan_of(
-                self.model.clone(),
+                self.asked.clone(),
                 batch.evidence,
                 &batch.value,
                 self.context.as_ref(),
@@ -93,7 +93,7 @@ impl Planner<'_> {
             )
         } else {
             quoted_plan(
-                self.model.clone(),
+                self.asked.clone(),
                 self.reading.evidence(record)?,
                 None,
                 vec![question],
@@ -272,7 +272,7 @@ pub(super) fn run(
         planner: Planner {
             asks: &judging.asks,
             reading,
-            model: judging.engine.backend().model(),
+            asked: judging.engine.backend().asked(),
             context,
             profile: judging.engine.profile(),
             limits: Limits::new(judging.engine.profile()),

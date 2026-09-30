@@ -372,7 +372,7 @@ fn a_retry_started_inside_the_budget_ends_its_send_as_the_deadline() {
 fn request() -> (Backend, Plan, PreparedRequest) {
     let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "jev-latest")
         .expect("backend");
-    let plan = Plan::new(
+    let plan = Plan::authored(
         Evidence::new("evidence").expect("evidence"),
         ModelName::new("jev-latest").expect("model"),
         vec![Question::Decide {

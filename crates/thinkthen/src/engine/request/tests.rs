@@ -24,7 +24,7 @@ fn request() -> (Backend, Plan, PreparedRequest) {
 }
 
 fn question_plan(model: &str) -> Plan {
-    Plan::new(
+    Plan::authored(
         Evidence::new("evidence").expect("evidence"),
         ModelName::new(model).expect("model"),
         vec![Question::Decide {

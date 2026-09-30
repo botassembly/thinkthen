@@ -283,7 +283,7 @@ fn assert_only(listeners: &[Listener], letter: &str, place: usize, index: usize)
         let wanted = if *name == letter {
             only(place, 2)
         } else {
-            [0; 7]
+            [0; 8]
         };
         assert_eq!(by_marker(listener), wanted, "{index} {name}");
     }

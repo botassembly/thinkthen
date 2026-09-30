@@ -71,7 +71,8 @@ fn parent_state(engine: &Engine) -> Arc<super::State> {
 /// Send one request through the parent's state, as a parent thread would.
 fn ask_as_parent(engine: &Engine, parent: &super::State) -> Result<(), Error> {
     let evidence = Evidence::new("parent").expect("evidence");
-    let plan = Plan::new(evidence, engine.backend.model().clone(), vec![decide()]).expect("plan");
+    let plan =
+        Plan::authored(evidence, engine.backend.model().clone(), vec![decide()]).expect("plan");
     let cancel = Cancel::default();
     let transport = engine.transport(parent);
     request::ask_profile(

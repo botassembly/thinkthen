@@ -4,7 +4,7 @@ use crate::core::adapters::systemone::tests::{plan_for, urgency_plan};
 use crate::core::{AnswerOutcome, Evidence, Labels, ModelName, Plan, Question, QuestionText};
 
 fn mixed_choice_plan() -> Plan {
-    Plan::new(
+    Plan::authored(
         Evidence::new("Help!").expect("evidence"),
         ModelName::new("jev-latest").expect("model"),
         vec![

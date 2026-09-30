@@ -240,7 +240,8 @@ impl Engine {
     pub(crate) fn with_model(&self, model: ModelName) -> Result<Self, Error> {
         let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
             .map_err(|_| Error::Defect("a resolved address was refused again"))?
-            .with_request_size(self.backend.ceiling());
+            .with_request_size(self.backend.ceiling())
+            .with_descriptions(self.backend.descriptions());
         Ok(Self {
             backend,
             ..self.clone()
@@ -304,7 +305,7 @@ impl Engine {
         cancel: &Cancel,
     ) -> Result<Judgment, Error> {
         let plan = quoted_plan(
-            self.backend.model().clone(),
+            self.backend.asked(),
             evidence,
             None,
             vec![question.clone()],

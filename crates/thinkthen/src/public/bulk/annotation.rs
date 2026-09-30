@@ -72,7 +72,7 @@ impl Asker for Annotating {
                 .map(|&place| self.question(place))
                 .collect::<Result<Vec<_>, _>>()?;
             let plan = quoted_plan(
-                self.backend.model().clone(),
+                self.backend.asked(),
                 evidence,
                 None,
                 questions,

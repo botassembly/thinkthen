@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use super::Judging;
 use super::asker::{self, Framed};
+use crate::core::adapters::built_in;
 use crate::core::pack::{self, Entry, PackError, Packer};
 use crate::core::{PlanDocument, PlanSummary, Reading, json_line};
 use crate::edge;
@@ -81,6 +82,13 @@ pub(super) fn dry_run(
         return Ok(ExitCode::SUCCESS);
     };
     judging.mismatch().print_once()?;
+    crate::cli::check::say_dropped_detail(
+        judging
+            .set()
+            .questions()
+            .iter()
+            .any(|named| built_in::drops_detail_of(backend.descriptions(), named.question())),
+    )?;
     let on = judging
         .set()
         .questions()

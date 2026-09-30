@@ -281,7 +281,7 @@ mod tests {
     }
 
     fn plan() -> Plan {
-        Plan::new(
+        Plan::authored(
             Evidence::new("Help! My payouts have been failing for 3 days.").expect("not blank"),
             ModelName::new("jev-latest").expect("not blank"),
             vec![Question::Decide {

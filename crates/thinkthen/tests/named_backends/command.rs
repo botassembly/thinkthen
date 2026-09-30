@@ -91,7 +91,7 @@ fn two_backends_at_one_address_and_model_share_answers_and_never_keys() {
     assert_eq!(again, answers);
     assert_eq!(
         by_marker(&target),
-        [0; 7],
+        [0; 8],
         "the second backend sent nothing"
     );
     assert_eq!(target.count(), 2);
@@ -124,7 +124,7 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
     };
     let invalid = "thinkthen: a backend name uses 1 to 32 lowercase letters, digits, and hyphens\n"
         .to_owned();
-    let unknown = "thinkthen: unknown backend `nowhere`; the built-in backends are `liquid` and `typesafe`, and the configuration file may name more\n".to_owned();
+    let unknown = "thinkthen: unknown backend `nowhere`; the built-in backends are `liquid`, `ollama` and `typesafe`, and the configuration file may name more\n".to_owned();
     let marker = "Sk_config_marker_0334";
     let entry = |body: &str| {
         format!(r#"{{"schema":"thinkthen.config/1","backends":{{"local-d1":{body}}}}}"#)
@@ -225,7 +225,7 @@ fn a_plan_a_recording_a_replay_and_check_name_the_backend_variable_and_hold_no_k
     assert_eq!(again, answers);
     assert_eq!(
         by_marker(&target),
-        [0; 7],
+        [0; 8],
         "a replay reads no key and sends nothing"
     );
     assert_eq!(target.count(), 2);

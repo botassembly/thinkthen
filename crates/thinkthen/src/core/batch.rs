@@ -9,7 +9,7 @@ use thiserror::Error;
 
 use crate::core::backend_profile::{BackendProfile, LimitKind, ProfileLimit};
 use crate::core::json::Json;
-use crate::core::plan::Plan;
+use crate::core::plan::{Descriptions, Plan};
 use crate::core::question::Question;
 use crate::core::render::json_line;
 use crate::core::text::{Evidence, ModelName, QuestionText};
@@ -106,7 +106,7 @@ fn bounded(profile: Option<&BackendProfile>, record: &Evidence) -> Result<(), Ba
 /// the record as its state and goes unquoted. A quoted record over the
 /// profile's evidence limit is refused.
 pub(crate) fn quoted_plan(
-    model: ModelName,
+    model: (ModelName, Descriptions),
     record: Evidence,
     context: Option<&Evidence>,
     base: Vec<Question>,
@@ -119,7 +119,7 @@ pub(crate) fn quoted_plan(
 /// The same plan with `value` quoted, which for a stream's record is the
 /// JSON value a batch has always quoted: a whole JSON record as itself.
 pub(crate) fn quoted_plan_of(
-    model: ModelName,
+    (model, descriptions): (ModelName, Descriptions),
     record: Evidence,
     value: &crate::core::Json,
     context: Option<&Evidence>,
@@ -139,7 +139,7 @@ pub(crate) fn quoted_plan_of(
         None if context.is_some() => return Err(BatchError::StructuredQuestionWithContext),
         None => (record, base),
     };
-    Plan::new(evidence, model, questions).map_err(|_| defect())
+    Plan::new(evidence, model, descriptions, questions).map_err(|_| defect())
 }
 
 fn text(question: &mut Question) -> &mut QuestionText {

@@ -10,9 +10,9 @@ use serde_json::value::RawValue;
 
 use crate::core::adapters::systemone::{EncodeError, wire_name};
 use crate::core::json::Json;
-use crate::core::plan::Plan;
-use crate::core::question::{Labels, Question};
-use crate::core::text::{Description, QuestionText};
+use crate::core::plan::{Descriptions, Plan};
+use crate::core::question::Question;
+use crate::core::text::QuestionText;
 
 /// The body one request carries, as the tests read it back. [`join`] writes
 /// it: `state` is a string for text evidence and the object or list itself
@@ -214,31 +214,34 @@ fn written<T: Serialize + ?Sized>(value: &T) -> Result<String, EncodeError> {
 
 /// Expand logical tag questions into one wire yes/no question per label.
 fn questions(plan: &Plan) -> Result<Questions, EncodeError> {
+    let form = plan.descriptions();
     let mut written = Vec::new();
     for question in plan.questions() {
         match question {
             Question::Tag { text, labels } => {
+                let described = labels
+                    .descriptions()
+                    .map(|(label, held)| Ok((label, sent(form, held.map(|held| held.as_json()))?)))
+                    .collect::<Result<Vec<_>, EncodeError>>()?;
                 // A string question over only string descriptions keeps the
                 // sentence every older request carried. One structured value
                 // turns every label into the array form instead, so no JSON is
                 // ever interpolated into a sentence.
-                let sentence = tag_sentence(text, labels);
-                for (label, description) in labels.descriptions() {
-                    let instructions = tag_instructions(text, label, description, sentence)?;
+                let sentence = tag_sentence(text, &described);
+                for (label, description) in &described {
+                    let instructions =
+                        tag_instructions(text, label, description.as_ref(), sentence)?;
                     written.push((
                         wire_name(written.len()),
                         RequestQuestion::Noul {
                             instructions,
-                            criteria: NoulCriteria::described(
-                                description.map(Description::as_json),
-                                None,
-                            ),
+                            criteria: NoulCriteria::described(description.as_ref(), None),
                         },
                     ));
                 }
             }
             _ => {
-                let Some(question) = RequestQuestion::asking(question) else {
+                let Some(question) = RequestQuestion::asking(question, form)? else {
                     return Err(EncodeError::of(&"a tag question was not expanded"));
                 };
                 written.push((wire_name(written.len()), question));
@@ -248,13 +251,89 @@ fn questions(plan: &Plan) -> Result<Questions, EncodeError> {
     Ok(Questions(written))
 }
 
-/// The sentence a string-only tag question keeps, or none when the text or one
-/// description is structured.
-fn tag_sentence<'a>(text: &'a QuestionText, labels: &Labels) -> Option<&'a str> {
-    text.as_json().as_str().filter(|_| {
-        labels
+/// One description as the plan's form sends it, or `None` for no description
+/// (ADR 0115 section 3). `Authored` sends each one exactly as written.
+///
+/// `Text` is a temporary workaround for an Ollama bug, owned by the debt issue
+/// `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md`.
+/// It sends a string as written, an object's nonblank string `what` alone, any
+/// other object or list as its compact JSON text, and no empty object or null.
+fn sent(form: Descriptions, held: Option<&Json>) -> Result<Option<Json>, EncodeError> {
+    let Some(held) = held else {
+        return Ok(None);
+    };
+    if form == Descriptions::Authored {
+        return Ok(Some(held.clone()));
+    }
+    Ok(match held {
+        Json::Null => None,
+        Json::Object(members) if members.is_empty() => None,
+        Json::String(_) => Some(held.clone()),
+        Json::Object(members) => {
+            let what = members
+                .iter()
+                .find(|(name, _)| name == "what")
+                .and_then(|(_, what)| what.as_str())
+                .filter(|what| !what.trim().is_empty());
+            Some(Json::String(match what {
+                Some(what) => what.to_owned(),
+                None => written(held)?,
+            }))
+        }
+        _ => Some(Json::String(written(held)?)),
+    })
+}
+
+/// Whether sending this plan turns a description object or list into text,
+/// which `check` and `--plan` report (ADR 0115 section 4).
+pub(crate) fn drops_detail(plan: &Plan) -> bool {
+    plan.questions()
+        .iter()
+        .any(|question| drops_detail_of(plan.descriptions(), question))
+}
+
+/// Whether this form turns one of this question's descriptions into text.
+pub(crate) fn drops_detail_of(form: Descriptions, question: &Question) -> bool {
+    let held: Vec<&Json> = match question {
+        Question::Decide { yes, no, .. } => [yes, no]
+            .into_iter()
+            .flatten()
+            .map(crate::core::text::Meaning::as_json)
+            .collect(),
+        Question::Choose {
+            options: labels, ..
+        }
+        | Question::Score { levels: labels, .. }
+        | Question::Tag { labels, .. } => labels
             .descriptions()
-            .all(|(_, described)| described.is_none_or(|held| held.as_json().as_str().is_some()))
+            .filter_map(|(_, held)| held.map(crate::core::text::Description::as_json))
+            .collect(),
+    };
+    drops_any(form, held)
+}
+
+/// Whether this form turns one of these descriptions, an object or a list,
+/// into text. Only `Text` does, the Ollama workaround the debt issue
+/// `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` owns.
+pub(crate) fn drops_any<'a>(form: Descriptions, held: impl IntoIterator<Item = &'a Json>) -> bool {
+    form == Descriptions::Text
+        && held.into_iter().any(|held| match held {
+            Json::Object(members) => !members.is_empty(),
+            Json::Array(_) => true,
+            _ => false,
+        })
+}
+
+/// The sentence a string-only tag question keeps, or none when the text or one
+/// sent description is structured.
+fn tag_sentence<'a>(
+    text: &'a QuestionText,
+    described: &[(&String, Option<Json>)],
+) -> Option<&'a str> {
+    text.as_json().as_str().filter(|_| {
+        described
+            .iter()
+            .all(|(_, held)| held.as_ref().is_none_or(|held| held.as_str().is_some()))
     })
 }
 
@@ -263,7 +342,7 @@ fn tag_sentence<'a>(text: &'a QuestionText, labels: &Labels) -> Option<&'a str> 
 fn tag_instructions(
     text: &QuestionText,
     label: &str,
-    description: Option<&Description>,
+    description: Option<&Json>,
     sentence: Option<&str>,
 ) -> Result<Json, EncodeError> {
     match sentence {
@@ -276,7 +355,7 @@ fn tag_instructions(
         None => {
             let mut members = vec![("label".to_owned(), Json::String(label.to_owned()))];
             if let Some(description) = description {
-                members.push(("description".to_owned(), description.as_json().clone()));
+                members.push(("description".to_owned(), description.clone()));
             }
             Ok(Json::Array(vec![
                 text.as_json().clone(),
@@ -287,44 +366,43 @@ fn tag_instructions(
 }
 
 impl RequestQuestion {
-    /// Write one question in the shape its verb asks for.
-    fn asking(question: &Question) -> Option<Self> {
-        Some(match question {
+    /// Write one question in the shape its verb asks for, each description in
+    /// the plan's form.
+    fn asking(question: &Question, form: Descriptions) -> Result<Option<Self>, EncodeError> {
+        let meaning = |held: &Option<crate::core::text::Meaning>| {
+            sent(form, held.as_ref().map(crate::core::text::Meaning::as_json))
+        };
+        Ok(Some(match question {
             Question::Decide { text, yes, no } => Self::Noul {
                 instructions: text.as_json().clone(),
-                criteria: NoulCriteria::described(
-                    yes.as_ref().map(crate::core::text::Meaning::as_json),
-                    no.as_ref().map(crate::core::text::Meaning::as_json),
-                ),
+                criteria: NoulCriteria::described(meaning(yes)?.as_ref(), meaning(no)?.as_ref()),
             },
             Question::Choose { text, options } => Self::Choice {
                 instructions: text.as_json().clone(),
                 criteria: Criteria(
                     options
                         .descriptions()
-                        .map(|(name, described)| {
-                            (name.clone(), described.map(|held| held.as_json().clone()))
+                        .map(|(name, held)| {
+                            Ok((name.clone(), sent(form, held.map(|held| held.as_json()))?))
                         })
-                        .collect(),
+                        .collect::<Result<_, EncodeError>>()?,
                 ),
             },
             Question::Score { text, levels } => Self::Score {
                 instructions: text.as_json().clone(),
                 criteria: levels
                     .descriptions()
-                    .map(|(name, described)| {
-                        described.map_or_else(
-                            || Json::String(name.clone()),
-                            |held| match held.as_json() {
-                                Json::Null => Json::Object(Vec::new()),
-                                held => held.clone(),
-                            },
-                        )
+                    .map(|(name, held)| {
+                        Ok(match sent(form, held.map(|held| held.as_json()))? {
+                            None => Json::String(name.clone()),
+                            Some(Json::Null) => Json::Object(Vec::new()),
+                            Some(held) => held,
+                        })
                     })
-                    .collect(),
+                    .collect::<Result<_, EncodeError>>()?,
             },
-            Question::Tag { .. } => return None,
-        })
+            Question::Tag { .. } => return Ok(None),
+        }))
     }
 }
 

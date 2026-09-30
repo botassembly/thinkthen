@@ -18,6 +18,8 @@
 mod builder;
 #[path = "named_backends/command.rs"]
 mod command;
+#[path = "named_backends/ollama.rs"]
+mod ollama;
 #[path = "named_backends/precedence.rs"]
 mod precedence;
 #[path = "named_backends/support.rs"]

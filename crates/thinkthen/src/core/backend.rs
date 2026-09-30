@@ -3,6 +3,7 @@
 use thiserror::Error;
 
 use crate::core::adapters::built_in;
+use crate::core::plan::Descriptions;
 use crate::core::text::{BlankTextError, ModelName, Url};
 
 pub(crate) mod named;
@@ -17,11 +18,12 @@ pub(crate) const KEY_VAR: &str = "THINKTHEN_API_KEY";
 pub(crate) const KEY_IN_ADDRESS: &str =
     "the backend address contains the API key; keep the key out of the address";
 
-/// Where one request goes and which model it names.
+/// Where one request goes, which model it names, and how its descriptions travel.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Backend {
     url: Url,
     model: ModelName,
+    descriptions: Descriptions,
     request_size: usize,
 }
 
@@ -94,6 +96,7 @@ impl Backend {
         Self {
             url,
             model,
+            descriptions: Descriptions::Authored,
             request_size: DEFAULT_REQUEST_SIZE,
         }
     }
@@ -119,8 +122,16 @@ impl Backend {
         Ok(Self {
             url: address(url.or(base).unwrap_or(built_in::DEFAULT_BASE))?,
             model: ModelName::new(model)?,
+            descriptions: Descriptions::Authored,
             request_size: DEFAULT_REQUEST_SIZE,
         })
+    }
+
+    /// Send descriptions in this form. Only a named backend sets one other
+    /// than [`Descriptions::Authored`] (ADR 0115).
+    pub(crate) const fn with_descriptions(mut self, descriptions: Descriptions) -> Self {
+        self.descriptions = descriptions;
+        self
     }
 
     /// Carry the command's resolved request size into both planners.
@@ -161,6 +172,18 @@ impl Backend {
     #[must_use]
     pub(crate) const fn model(&self) -> &ModelName {
         &self.model
+    }
+
+    /// How this backend's descriptions travel.
+    #[must_use]
+    pub(crate) const fn descriptions(&self) -> Descriptions {
+        self.descriptions
+    }
+
+    /// The model and description form every plan for this backend carries.
+    #[must_use]
+    pub(crate) fn asked(&self) -> (ModelName, Descriptions) {
+        (self.model.clone(), self.descriptions)
     }
 
     /// The request-byte ceiling a relation plan splits under and a batch closes at.
