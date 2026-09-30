@@ -2,6 +2,8 @@
 
 Status: open. Found in the 0322 slice 2 code review. Owner: none yet.
 
+Ticket: 0346, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+
 Kind: debt
 
 Pay when: `libraries/c/check.sh` or `sdlc/scripts/test` runs the door tests under nextest.

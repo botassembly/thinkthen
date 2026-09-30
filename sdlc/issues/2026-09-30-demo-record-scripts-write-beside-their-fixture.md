@@ -2,6 +2,8 @@
 
 Status: open. Found by ticket 0304 slice 5 while it deleted the old entries beside each demo's `thinkthen.jsonl`.
 
+Ticket: 0350, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+
 Kind: debt
 
 Pay when: a demo is next recorded live, before 0.1.

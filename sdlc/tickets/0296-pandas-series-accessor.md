@@ -1,6 +1,6 @@
 # 0296 — pandas Series accessor (F5)
 
-Status: deferred. Independent feature; build after ADR 0111 slice 1 if pandas matters for 0.1. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
+Status: deferred until after the 0.1 release, by the queue batches Quick Fix of 2026-09-30, a coordinator default Ian can overturn. Python already takes a pandas `Series` in the four verbs and returns one with the caller's index and name (`libraries/python/README.md`); the `.tt` accessor is additive sugar, so shipping it later breaks no consumer. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
 
 ## Outcome
 

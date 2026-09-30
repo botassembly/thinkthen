@@ -1,104 +1,92 @@
 # Issue priorities, 2026-09-30
 
-Status: current, refreshed 2026-09-30 evening by the debt and issue sweep. It orders the 31 open issues in `sdlc/issues/`, 14 of them `Kind: debt`. The sweep checked every issue against main `88649ec0d`. None was already fixed. Nine merged into same-family issues and moved to `closed/`, so the count went from 40 to 31 and debt from 15 to 14. Git history holds the earlier page and its investigations. Later the same evening a records Quick Fix closed rank 16 and filed rank 19a, so 31 issues stay open, 13 of them debt. Then ticket 0340 closed ranks 1 to 4, and 0314 slice 4c filed two debt issues, ranked 4a and 23a. The pm adoption Quick Fix closed rank 17 and filed rank 32, an idea. 31 issues stay open, 14 of them debt. Ian can overturn any rank, owner or trigger.
+Status: current, rewritten 2026-09-30 night by the queue batches Quick Fix against main `d8018dd96`. It classifies every open issue and remaining ticket, then groups the ready work into lane batches. Git history holds the earlier ranked table. Ian can overturn any class, batch or default below.
 
-## How the ranks were set
+Main today: 0304 complete (the old store and batching code are gone, `5b7ec74c1`), 0314 and 0291 landed (every port reads the Rust schema), 0322 complete, 0338 (test binaries 44 to 11), 0339 (ollama), 0341 (stale connection), 0342 (relate menu) and 0343 (rate setting). Running: lane claude-1 builds 0335 slice 2 (a replay smoke per binding, paying the R and Dart check debts); lane claude-2 builds 0344 (both-ways edges carry `"either":true`).
 
-Ruling 10: no public release before 0.1, and 0.1 waits for every surface and binding. "Blocks 0.1" means the release cannot ship on every channel without it. 0.1 blockers come first, in the order they can start. Then work that can start now, then work waiting on a slice, then later features. Size is small, medium or large.
+## Batches
 
-## Ranked table
+Each batch is one lane's work in one area of files, so batches running at once do not collide. A batch of two tickets builds them in order in one lane. Each ticket lands as its own merge; the two tickets of a batch may land as one merge when both pass their checks together. Every batch also edits `CHANGELOG.md` and `sdlc/ratchet.json`; landers take those one at a time and rebase.
 
-| Rank | Issue | Blocks 0.1 | Owner | Waits for | Size |
+| Order | Batch | Work | Files it touches | Starts | Runs beside |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | closed: `closed/2026-09-30-postgresql-check-keeps-wall-clock-limits-under-load.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
-| 2 | closed: `closed/2026-09-30-ordered-output-test-races-the-next-request-under-load.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
-| 3 | closed: `closed/2026-09-30-graded-rank-tests-rewrite-one-question-file-in-place.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
-| 4 | closed: `closed/2026-09-30-duckdb-split-denials-case-failed-once-under-load.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
-| 4a | `2026-09-30-dart-check-never-runs-under-the-surfaces-rung.md` (debt) | yes, a checkpoint tag needs every surface | none yet | nothing | small |
-| 5 | `2026-09-30-static-library-exports-sqlite-symbols.md` (debt) | yes | a new ticket with one M5 proof | nothing | medium |
-| 6 | `2026-09-25-public-library-api-gaps.md` (debt) | yes, items 1, 2, 3, 9, 10 | item 10 a Quick Fix now; one SQL host ticket for 1, 2, 3, 9; 6 and 7 after 0.1 | 0304 slice 4 for items 1, 2, 3, 9 | medium |
-| 7 | `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | marketing | nothing | small |
-| 8 | `2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` (debt) | yes | a Quick Fix | 0304 slice 4 (`public/relate.rs`) | small |
-| 9 | `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | ticket 0342: the single-answer menu and the precision statement; then a relate ticket for the both-ways edge shape | 0304 slice 4; the shape waits for 0314 slice 4 | medium |
-| 10 | `2026-09-30-audit-and-diff-lost-the-batch-setting.md` (debt) | yes | 0304 slice 5, or a Quick Fix | 0304 slice 4 | small |
-| 11 | `2026-09-30-old-batching-files-still-have-live-callers.md` (debt) | yes | 0304 slices 4 and 5 | 0304 slice 4 | large |
-| 12 | `2026-09-30-site-replay-folders-have-no-fixture.md` (debt) | yes, before the site goes public | 0304 slice 5; marketing for items 2 to 4 | 0304 slice 5 | medium |
-| 13 | `2026-09-20-new-user-stumble-register.md` | yes, rows 9, 18, 19 | page 11 of rank 25 for row 9; 0128 Phase 4 for row 18; marketing for row 19 | row 9 on 0304 slice 4 | small |
-| 14 | `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | marketing's overhead benchmark, then the queue owner | the benchmark run | small |
-| 15 | `2026-09-25-release-and-install-for-0-1.md` | yes, it is 0.1 | ticket 0128 phases 3b and 4; Ian dispatches | every rank above; Ian's registry accounts | large |
-| 16 | closed: `closed/2026-09-30-how-to-list-has-two-hand-kept-copies.md` (debt, paid 2026-09-30) | no | done | nothing | small |
-| 17 | closed: `closed/2026-09-30-debt-issues-lack-the-three-ruled-fields.md` (closed by the pm adoption Quick Fix) | no | done | nothing | small |
-| 18 | `2026-09-26-count-secure-connections-at-sixteen-jobs.md` | no | the queue owner, a loopback experiment | nothing | small |
-| 19 | `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md` | no | the queue owner; the calls traced to rank 19a, the exit 4 waits for a live run with `--details` | the next live bench run | small |
-| 19a | `closed/2026-09-30-test-stress-writes-the-real-usage-totals.md` (severity 2, closed) | no | the queue owner, a Quick Fix in `sdlc/scripts/test-stress` | nothing | small |
-| 20 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | the queue owner | the release QA suite's edge list | medium |
-| 21 | `2026-09-29-docs-page-naming-supported-providers.md` | no, except the Liquid timeout line for stumble row 19 | marketing | nothing | small |
-| 22 | `2026-09-26-every-surface-should-give-back-run-facts.md` | no | 0314 slice 4 for item 1; tickets 0300 and 0302 for items 2 and 3; marketing for item 6 | 0314 slice 4 | large |
-| 23 | `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (debt) | no | upstream (ollama/ollama#18718); ticket 0339 builds the workaround | Ollama; 0339 after 0304 slice 4 | small |
-| 23a | `2026-09-30-flutter-strict-consumer-copies-dart-bravo.md` (debt) | no | none yet | the next Flutter fixture change, or before 0.1 | small |
-| 24 | `2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md` (debt) | no | upstream (Zig) | a Zig release | small |
-| 25 | `2026-09-25-docs-how-tos-and-spec-claims-owed.md` | page 11 only | a docs ticket; marketing for page 23 | page 11 on 0304 slice 4 (`find` fixtures) | large |
-| 26 | `2026-09-25-recognize-and-relate-scale-and-shape.md` | no | a ticket after 0304 slice 4 | 0304 slice 4 | large |
-| 27 | `2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md` | no | a ticket after 0.1 | 0304 slice 4 | medium |
-| 28 | `2026-09-23-annotate-options-from-a-file-or-a-record.md` | no | a ticket after 0.1 | 0304 slice 4 | medium |
-| 29 | `2026-09-30-polars-door-cannot-test-lazy-streaming.md` (debt) | no | none until a user asks | a user, or clean advisories | small |
-| 30 | `2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md` | no | tickets after 0.1 | nothing | large |
-| 31 | `2026-09-24-rank-by-graded-relevance-for-search-reranking.md` | no | none until a user asks | a user | small |
-| 32 | `2026-09-30-opentelemetry-traces-after-0-1.md` (idea) | no | none until 0.1 ships | the 0.1 release | medium |
+| 1 | B1 demos | ticket 0350: record scripts write a clean fixture; a demo of a first cut before a list over 255 (Debt 024, docs page 11, stumble row 9) | `demos/*/record.sh`, one new `demos/NN-*/` folder, `demos/README.md`, three issue files | now | lanes claude-1 and claude-2, then B2 and B3 |
+| 2 | B2 batch setting | ticket 0349: `audit` and `diff` read `meta.batch_setting` (Debt 008) | `crates/thinkthen/src/cli/{audit.rs,audit/,diff.rs,asking/row.rs}`, `core/result/batch_warning.rs`, `specification/{result.md,result.schema.json}`, ADR 0085, `tests/backend/{audit_write,diff}.rs` | when 0344 lands (both edit the schema) | B1, B3, lane claude-1 |
+| 3 | B3 reader and C door | ticket 0345: one capped question-file reader (Debt 011); then ticket 0346: C door rows from the crate's types and door tests in their own folders (Debts 012, 025) | `crates/thinkthen/src/public/{question.rs,relate.rs}` and one new reader module, `cli/question_text.rs`, `libraries/c/src/{door.rs,call.rs}`, `libraries/c/tests/door/`, `libraries/typescript/src/door.rs`, `libraries/ruby/src/ffi/question_file.rs`, `libraries/python/src/asked.rs`, `specification/question-file.md` | when 0344 lands (both edit `asked.rs`) | B1, B2, lane claude-1 |
+| 4 | B4 SQL hosts | ticket 0347: the SQL hosts call the public API (Debt 018 items 1, 2, 3, 9, 10); then ticket 0348: SQL store proofs (Debt 010) | `databases/{sqlite,duckdb,postgresql}/` sources, tests and harnesses; `crates/thinkthen/src/public/{error.rs,engine.rs,question.rs}`; `core/relate_file.rs` | when 0344 and 0335 slice 2 land; lands after B3, which also edits `public/question.rs` | B5, B6 |
+| 5 | B5 macOS archive | ticket 0351: the macOS static library and R package export no SQLite names (Debt 001), with an M5 proof | `libraries/c/localize.sh`, `libraries/r/check.sh`, `libraries/r/thinkthen/src/Makevars*`, the symbol gate in `libraries/c/tests/door/main.rs` | when 0335 slice 2 lands; its door-test edit rebases on 0346 | B4, B6 |
+| 6 | B6 binding checks | two Quick Fixes, ready as written: `libraries/zig/check.sh` runs `run_matrix.py facts` and `facts-allocation`; the Flutter host test keeps only its facade call and drops `strict.dart` (issue text names the counts and fixture to move) | `libraries/zig/check.sh`, `libraries/dart/flutter/` | when 0335 slice 2 lands (it edits both check scripts) | B4, B5 |
 
-## Blocks 0.1
+Order follows the brief: 0.1 blockers first (B1 to B5), then debt that slows builders (B6: every Dart consumer change is made twice until the Flutter copy goes). B4 and B5 are also blockers, but they wait on lane claude-1. Four lanes run at most: now lanes 1 and 2 plus B1; after 0344, B1, B2 and B3 beside lane 1; after 0335 slice 2, B4, B5 and B6 as lanes free.
 
-Every debt with `Pay when: before 0.1`, then the other blockers:
+Work outside the lanes:
 
-1. Load flakes, ranks 1 to 4. Ticket 0340 pays ranks 1 to 3 now.
-2. The macOS static library and R package, rank 5.
-3. The SQL host copies of engine code, rank 6, items 1, 2, 3, 9 and 10.
-4. The capped reader and the uncapped loaders, rank 8.
-5. The audit and diff batch warning, rank 10.
-6. What 0304 slices 4 and 5 must move, and the SQL host store proofs, rank 11.
-7. The site smoke and its fixtures, rank 12.
-8. Marketing: the reference page (rank 7), the overhead line (rank 14), the Liquid timeout line (rank 21).
-9. The relate default and the both-ways edge shape, rank 9.
-10. Stumble rows 9, 18 and 19, rank 13.
-11. The release itself, rank 15.
+- **R1, the relate decision run.** One capped paid Beatles Bench run through `sdlc/scripts/live` (ruling 13) on the 0342 menu, after 0344 lands so the bench pins one commit. Conditions and bar: `sdlc/issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run". Blocks 0.1.
+- **E1, the loopback TLS count.** A local experiment, no network: `sdlc/issues/2026-09-26-count-secure-connections-at-sixteen-jobs.md`, "A loopback count first". Any lane or a `pi-job`; it becomes a ticket only if the count exceeds 16.
+- **Marketing, owner of `site/`.** Blocks 0.1: the reference page (`2026-09-30-reference-page-exit-codes-and-key-rule-drift.md`); the providers and Liquid d1 pages, including the `--timeout 90` line for stumble row 19 (`2026-09-29-docs-page-naming-supported-providers.md`); the site recording conversion, the five `--dry-run` examples and the site checks (`2026-09-30-site-replay-folders-have-no-fixture.md`, which holds the conversion command); the overhead benchmark for the README line (`2026-09-29-readme-key-backend-and-overhead-lines.md`).
+- **Ian.** The release rehearsal dispatch (ticket 0128 phase 3b) after 0351's M5 proof, then phase 4 and the registry accounts already on his list.
 
-## Debt by trigger
+## Every open issue
 
-| Trigger | Debt |
-| --- | --- |
-| Now, in ticket 0340 | ranks 1 to 4 |
-| Before 0.1, can start now | rank 5; rank 6 item 10 |
-| Before 0.1, after 0304 slice 4 | rank 6 items 1, 2, 3, 9; rank 8; rank 10 |
-| 0304 slice 5 lands | ranks 11 and 12 |
-| The next docs ticket | none; rank 16 paid 2026-09-30 |
-| Upstream fixes | rank 23 (Ollama), rank 24 (Zig) |
-| A user asks | rank 29; rank 6 items 6 and 7 |
+35 open. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
 
-## Ready as tickets now
+| Issue | Blocks 0.1 | Class | Owner or trigger |
+| --- | --- | --- | --- |
+| `2026-09-30-demo-record-scripts-write-beside-their-fixture.md` (Debt 024) | yes | batch | B1, 0350 |
+| `2026-09-25-docs-how-tos-and-spec-claims-owed.md` | page 11 only | batch for page 11 | B1, 0350; pages 12 to 24 after 0.1; page 23 marketing |
+| `2026-09-20-new-user-stumble-register.md` | rows 9, 18, 19 | batch for row 9 | B1 for row 9; ticket 0128 phase 4 for row 18; marketing for row 19 |
+| `2026-09-30-audit-and-diff-lost-the-batch-setting.md` (Debt 008) | yes | batch | B2, 0349 |
+| `2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` (Debt 011) | yes | batch | B3, 0345 |
+| `2026-09-30-c-door-relate-rows-have-no-owner.md` (Debt 012) | yes | batch | B3, 0346 |
+| `2026-09-30-c-door-tests-race-under-nextest.md` (Debt 025) | no | batch | B3, 0346 |
+| `2026-09-25-public-library-api-gaps.md` (Debt 018) | items 1, 2, 3, 9, 10 | batch | B4, 0347; items 6 and 7 after 0.1 |
+| `2026-09-30-sql-host-store-proofs-are-partial.md` (Debt 010) | yes | batch | B4, 0348 |
+| `2026-09-30-static-library-exports-sqlite-symbols.md` (Debt 001) | yes | batch | B5, 0351 |
+| `2026-09-30-zig-check-skips-its-facts-lifetime-modes.md` (debt) | no | batch | B6 Quick Fix |
+| `2026-09-30-flutter-strict-consumer-copies-dart-bravo.md` (Debt 021) | yes, by its trigger | batch | B6 Quick Fix |
+| `2026-09-30-dart-check-never-runs-under-the-surfaces-rung.md` (Debt 022) | yes | running | lane claude-1, 0335 slice 2 |
+| `2026-09-30-r-check-rebuilds-every-dependency.md` (Debt 019) | no | running | lane claude-1, 0335 slice 2 |
+| `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | running, then outside | lane claude-2, 0344, for the shape; then R1 |
+| `2026-09-26-count-secure-connections-at-sixteen-jobs.md` | no | outside | E1 |
+| `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | outside | marketing |
+| `2026-09-29-docs-page-naming-supported-providers.md` | the Liquid timeout line | outside | marketing |
+| `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing; our conversion proof landed with 0304 slice 5 |
+| `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | waits | marketing's overhead benchmark, then the queue owner writes one sentence |
+| `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | waits | every blocker above; Ian's rehearsal dispatch and registry accounts |
+| `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | waits | the release QA suite's edge list |
+| `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream, ollama/ollama#18718 |
+| `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md` (Debt 020) | no | waits | upstream ureq-proto; Ian's resend choice has a recorded default: keep the rule |
+| `2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md` (Debt 002) | no | waits | upstream Zig |
+| `2026-09-30-polars-door-cannot-test-lazy-streaming.md` (Debt 004) | no | waits | a user, or clean advisories |
+| `2026-09-24-rank-by-graded-relevance-for-search-reranking.md` | no | waits | a user |
+| `2026-09-26-every-surface-should-give-back-run-facts.md` | no | after 0.1 | tickets 0300 and 0302 stay open for it |
+| `2026-09-25-recognize-and-relate-scale-and-shape.md` | no | after 0.1 | a relate ticket |
+| `2026-09-26-relation-pairs-span-every-mention-and-the-whole-text.md` | no | after 0.1 | coordinator default 3 below |
+| `2026-09-23-annotate-options-from-a-file-or-a-record.md` | no | after 0.1 | a ticket |
+| `2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md` | no | after 0.1 | tickets per part |
+| `2026-09-30-batch-command-runs-many-questions-in-one-process.md` (idea) | no | after 0.1 | stays as an idea |
+| `2026-09-30-opentelemetry-traces-after-0-1.md` (idea) | no | after 0.1 | stays as an idea |
+| `2026-09-30-proxy-service-for-shared-limits-and-traces.md` (idea) | no | after 0.1 | stays as an idea |
 
-None of these touches the files lanes 1 to 3 edit: lane 1's flake tests and `databases/postgresql/check.sh`, lane 2's `libraries/` ports, and lane 3's crate, conformance and binding test files.
+Closed by this Quick Fix: `closed/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`, paid by `87602e2ad` (the unexplained calls) and `f0308dd9d` (ticket 0341, the one cause found for a lone exit 4).
 
-1. **Rank 6 item 10, Quick Fix.** Outcome: SQLite's and PostgreSQL's `thinkthen_plan` serialize the crate's `PlanEstimate`, and their plan checks pass with no byte changed. Touches `databases/sqlite/src/scalars/plan.rs` and `databases/postgresql/src/keyed.rs`.
-2. **Rank 5, ticket.** Outcome: the macOS `libthinkthen.a` defines only the header's `thinkthen_` functions, the macOS R package exports no `sqlite3_` name, and a check proves both on the M5. Touches `libraries/c/localize.sh` and the R package build. Its M5 proof should come before Ian's rehearsal dispatch, so the rehearsal's macOS jobs confirm it.
-3. **Rank 16, Quick Fix. Done 2026-09-30.** Outcome: the how-tos are listed once, and the other file points to that list. Touches `demos/README.md` and `sdlc/planning/documentation-plan.md`.
-4. **Rank 18, experiment.** Outcome: a loopback TLS count of the connections a `--jobs 16` run opens. It becomes a ticket only if the count exceeds 16.
-5. **Rank 19, investigation. Done 2026-09-30; it found rank 19a.** Outcome: the extra usage calls are traced to their runs by comparing `status --json` totals with the bench's logs, with no paid call.
-6. **Rank 7, marketing.** Outcome: the reference page matches `channels.md` and `backends.md`, and the three site links name `closed/` paths.
+## Remaining tickets
 
-Rank 17 follows ticket 0340's landing, so the Severity and number fields go onto the final debt list.
-
-## Waiting on a slice
-
-- **0304 slice 4** (lane 3): rank 6 items 1, 2, 3, 9 (outcome: PostgreSQL uses a public relate rule parser and `thinkthen::Error`, the SQL hosts share one usage total and one rule for a loaded question); rank 8 (outcome: one crate reader returns the text or a typed reason, and every surface maps it, with the Rust and Python loaders refusing over 1 MiB); rank 9 (outcome: relate's single-answer relations ask one choice with none of these, kept if the paid bench run beats F1 0.523, in ticket 0342; both-ways edges print an unordered pair in a later relate ticket after 0314 slice 4); rank 10 (outcome: `audit` and `diff` read the batch setting again and restore ADR 0085's warning); rank 11 items 1 and 2; rank 23's workaround (ticket 0339); ranks 25 (page 11), 26, 27 and 28.
-- **0304 slice 5**: ranks 11 and 12, then marketing's site items in rank 12.
-- **0314 slice 4** (lane 2): rank 22 item 1; after it, rank 9's both-ways edge shape.
-- **0335 slice 2**: none on this list. Ticket 0340 is moving rank 1's timing limits out of the routine check.
+- **0335** slice 2 and **0344**: running in lanes claude-1 and claude-2.
+- **0345 to 0351**: drafted here, ready, in batches B1 to B5.
+- **0334**: landed. Its deferred ADR 0114 build slice 2, a `backend` setting in each binding and SQL extension, waits until after 0.1: engines built from the environment already honor `THINKTHEN_BACKEND` and the configuration file's `backend`.
+- **0290**: withdrawn. Its E1 to E9 corpus would duplicate `conformance/`, and ADR 0111 changed the bodies it would pin. Its page items moved to page 24 of the docs issue.
+- **0295** and **0296**: deferred until after 0.1. Python already judges Polars and pandas Series in one engine call; the expression namespace and the `.tt` accessor are additive.
+- **0300** and **0302**: open for the other hosts, after 0.1, under the run facts issue.
+- Older Codex tickets whose status lines stop short of landed (for example 0268 to 0273) hold release runner work that the release issue owns.
 
 ## Coordinator defaults
 
-Taken 2026-09-30 under the workspace rule to record reviewed choices and proceed. Ian can overturn each one.
+Taken under the workspace rule to record reviewed choices and proceed. Ian can overturn each one.
 
-1. Both-ways relate edges get an unordered `pair` shape before 0.1, in a relate ticket after 0314 slice 4 (ticket 0342 split it out, because the shape reaches the binding files that slice rewrites), because a breaking change after 0.1 costs every consumer (rank 9).
-2. Ian's `rehearse` dispatch waits for 0304 slice 3 and the PostgreSQL macOS ticket 0336; both have landed.
-3. Relation pairs keep the whole text for 0.1, with the distance limit as an opt-in, because natural text with a relation three sentences apart was never measured (rank 27).
-4. Homebrew stays a Mac option; the curl script covers Linux (rank 15, item 3).
+1. Both-ways relate edges get their shape before 0.1. Ticket 0344 chose a trailing `"either":true` member over a `pair` array, so directed edges keep their bytes and there is one edge shape.
+2. The release rehearsal waits for 0351's M5 proof, so its macOS jobs confirm the archive.
+3. Relation pairs keep the whole text for 0.1, with a distance limit as an opt-in later.
+4. Homebrew stays a Mac option; the curl script covers Linux.
+5. 0290 is withdrawn, and 0295 and 0296 wait until after 0.1 (above).
+6. `Engine::usage` stays per engine, and its doc says so (0347). Command rows carry `meta.batch_setting` for ADR 0085's warning (0349).

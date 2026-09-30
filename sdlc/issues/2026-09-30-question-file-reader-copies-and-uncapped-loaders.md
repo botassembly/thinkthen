@@ -2,6 +2,8 @@
 
 Status: open. Filed by the Quick Fix that capped the command's question file. Owner: a Quick Fix after 0304 slice 4 lands, since slice 4 edits `public/relate.rs`.
 
+Ticket: 0345, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+
 Kind: debt
 
 Pay when: before 0.1, since the uncapped Rust and Python loaders can exhaust memory.

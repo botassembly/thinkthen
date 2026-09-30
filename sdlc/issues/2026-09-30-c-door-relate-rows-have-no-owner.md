@@ -2,6 +2,8 @@
 
 Status: open. Filed by ticket 0304 slice 4 at landing. Owner: none.
 
+Ticket: 0346, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+
 Kind: debt
 
 Pay when: 0314 slice 4's C bridge family builds typed `annotate` and record-array rows, or before the 0.1 release candidate.

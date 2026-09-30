@@ -2,6 +2,8 @@
 
 Status: open. Reopened on 2026-09-30 when ticket 0304 slice 5 paid the rest of Debt 003 (`closed/2026-09-30-old-batching-files-still-have-live-callers.md`), into which this issue had merged. Owner: none yet.
 
+Ticket: 0348, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+
 Kind: debt
 
 Pay when: before 0.1.

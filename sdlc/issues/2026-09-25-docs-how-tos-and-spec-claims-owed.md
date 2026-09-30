@@ -21,6 +21,7 @@ A new page either joins the `demos/` list under ADR 0018 or becomes a site how-t
 21. **Terminal recordings** scripted with VHS under `--replay`.
 22. **A published skill file** that teaches an agent the verbs, the exit codes and `--plan`.
 23. **Site search and a sitemap.** This one belongs to marketing.
+24. **SQL and frame contract pages.** From withdrawn ticket 0290: a count and dialect table in each SQL README, DuckDB's macros (ticket 0286) in its README, SQLite's and PostgreSQL's one-call-per-row limit, and the Python frame pages' lazy limits. Each claim names the test that proves it.
 
 Pages 20 to 23 moved here on 2026-09-30 from the release issue's "Moved to the docs issue" list, which ticket 0128 deferred to this issue.
 
