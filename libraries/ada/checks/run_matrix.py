@@ -9,7 +9,7 @@ import signal
 import subprocess
 import sys
 import time
-from backend import Backend
+from backend import Backend, one_record
 
 root = pathlib.Path(__file__).resolve().parent
 stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
@@ -78,7 +78,7 @@ try:
                   for x in required if not (isinstance(x,str) and x in old_rows)}
         counts[key(shared)] = sum(key(y) == key(shared) for y in backend.arrivals)
         bodies = [json.loads(line) for line in (barrier/'request-bodies.jsonl').read_text().splitlines()]
-        packed = [body for body in bodies if body['state'] == shared]
+        packed = [body for body in bodies if one_record(body)['state'] == shared]
         actual_rows = []
         for body in packed:
             rows = []
