@@ -437,7 +437,7 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
 fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
     let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
     let url = format!("http://{}/v1", listener.local_addr().expect("address"));
-    let tally = Arc::new([AtomicUsize::new(0), AtomicUsize::new(0), AtomicUsize::new(0)]);
+    let tally: Arc<[AtomicUsize; 3]> = Arc::default();
     let server = Arc::clone(&tally);
     thread::spawn(move || {
         for stream in listener.incoming().take(2) {
@@ -480,6 +480,6 @@ fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
     assert_eq!(first.expect("first answer").requests_sent, 1);
     assert_eq!(second.expect("second answer").requests_sent, 1);
     let seen = tally.each_ref().map(|count| count.load(Ordering::SeqCst));
-    assert_eq!(seen, [2, 2, 0], "connections, requests read, requests dropped");
+    assert_eq!(seen, [2, 2, 0], "connections, requests read, dropped");
     assert_eq!(counts.snapshot().requests_sent, 2);
 }
