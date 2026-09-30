@@ -7,6 +7,9 @@ set -eu
 unset THINKTHEN_API_KEY
 here=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 cd -- "$here"
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. ../../sdlc/scripts/scratch.sh
+usage_home
 profile=${THINKTHEN_TEST_PROFILE:-routine}
 case $profile in routine|full|stress) ;; *) echo "sqlite: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS

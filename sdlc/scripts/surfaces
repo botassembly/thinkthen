@@ -219,6 +219,8 @@ fi
 
 registry sdlc/surfaces.txt
 . "$(dirname -- "$0")/scratch.sh"
+# ADR 0113: a check that bypasses its own scratch usage folder writes this decoy and fails the rung.
+usage_guard
 . "$(dirname -- "$0")/installed.sh"
 backend_start
 

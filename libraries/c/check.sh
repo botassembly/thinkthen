@@ -12,6 +12,8 @@ fi
 
 command -v cc >/dev/null 2>&1 || { echo 'libraries/c: no C compiler' >&2; exit 77; }
 . ../../sdlc/scripts/scratch.sh
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+usage_home
 scratch_dir cache
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 	# The installed-file mode (ticket 0128): the slide builds from the unpacked archive alone,

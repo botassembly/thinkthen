@@ -13,6 +13,8 @@ set -eu
 . "$(dirname -- "$0")/verdict.sh"
 . "$(dirname -- "$0")/scratch.sh"
 . "$(dirname -- "$0")/installed.sh"
+# ADR 0113: the smoked installs write a scratch usage folder, never the real one.
+usage_home
 source_packages= command_only=
 case ${1:-} in --source-packages) source_packages=1; shift ;; --command) command_only=1; shift ;; esac
 [ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke [--source-packages | --command] DIR' >&2; exit 2; }

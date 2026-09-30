@@ -9,6 +9,9 @@ if [ "$profile" = stress ]; then
     echo 'rust: not run: no port load campaign'
     exit 77
 fi
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. ../../sdlc/scripts/scratch.sh
+usage_home
 
 cargo fmt --check
 cargo clippy --locked --offline --all-targets -- -D warnings

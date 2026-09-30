@@ -10,6 +10,8 @@ case $profile in routine|full|stress) ;; *) echo "typescript: unknown THINKTHEN_
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+usage_home
 # macOS has no `timeout` (ticket 0128).
 LIMIT=$repo/sdlc/scripts/time-limit
 node_home="$HOME/.cache/thinkthen-toolchains/node-v22.22.3-linux-x64"

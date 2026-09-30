@@ -21,6 +21,8 @@ unset THINKTHEN_API_KEY
 export THINKTHEN_API_KEY=sk-polars-loopback
 export THINKTHEN_BASE_URL=http://127.0.0.1:9/v1
 . sdlc/scripts/scratch.sh
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+usage_home
 scratch_dir scratch
 export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTHEN_CACHE="$scratch/thinkthen"
 

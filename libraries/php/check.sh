@@ -27,6 +27,9 @@ done
 export THINKTHEN_PHP_BIN="$php_bin" THINKTHEN_PYTHON_BIN="$python_bin"
 export THINKTHEN_BWRAP_BIN="$bwrap_bin" THINKTHEN_FLOCK_BIN="$flock_bin" THINKTHEN_GIT_BIN="$git_bin"
 unset THINKTHEN_API_KEY
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. "$repo/sdlc/scripts/scratch.sh"
+usage_home
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -f "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'PHP installed: C archive missing' >&2; exit 1; }
     for tool in cargo nm readelf; do command -v "$tool" >/dev/null 2>&1 || exit 77; done

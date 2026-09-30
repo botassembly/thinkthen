@@ -47,6 +47,9 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     export THINKTHEN_HEAVY_LOCK_HELD="$lock"
     exec "$flock_bin" -w 180 -o "$lock" /bin/sh "$repo/libraries/go/check.sh" "$@"
 fi
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. "$repo/sdlc/scripts/scratch.sh"
+usage_home
 export CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER=
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     [ -n "${THINKTHEN_C_ARTIFACT:-}" ] || { echo 'go: missing C archive' >&2; exit 1; }
