@@ -17,12 +17,16 @@ use crate::public::error::Error;
 pub struct Facts {
     pub(super) cache_answers: u64,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "String"))]
     pub(super) estimated_cost_usd: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "u64"))]
     pub(super) input_tokens: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "String"))]
     pub(super) model: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "u64"))]
     pub(super) output_tokens: Option<u64>,
     pub(super) records: u64,
     pub(super) requests_sent: u64,

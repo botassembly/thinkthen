@@ -917,32 +917,20 @@
           "type": "integer"
         },
         "estimated_cost_usd": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "input_tokens": {
           "format": "uint64",
           "minimum": 0,
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": "integer"
         },
         "model": {
-          "type": [
-            "string",
-            "null"
-          ]
+          "type": "string"
         },
         "output_tokens": {
           "format": "uint64",
           "minimum": 0,
-          "type": [
-            "integer",
-            "null"
-          ]
+          "type": "integer"
         },
         "records": {
           "format": "uint64",

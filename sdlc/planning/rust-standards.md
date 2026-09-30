@@ -31,7 +31,7 @@ Clippy settings: functions up to 90 lines, 6 arguments, cognitive complexity 20,
 
 The binary writes to standard output through one locked writer passed down as a value. It never calls the print macros.
 
-Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- -D warnings`, and `lint` compares the tables in `Cargo.toml` and `clippy.toml` against the accepted copies so nobody weakens them quietly. The package allows the disallowed-path lint groups at its root and the private core forbids them, because Clippy reads one configuration for the whole package. `policy.py` also checks every core source and dependency root.
+Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- -D warnings`, and `lint` compares the tables in `Cargo.toml` and `clippy.toml` against the accepted copies so nobody weakens them quietly. The package allows the disallowed-path lint groups at its root and the private core forbids them, because Clippy reads one configuration for the whole package. Unit-test builds lift the three dynamic-JSON lints, `disallowed_methods`, `disallowed_types`, and `disallowed_macros`, in core so the derived schema code compiles. Clippy on the non-test library still enforces them. `policy.py` also checks every core source and dependency root.
 
 ## Size
 

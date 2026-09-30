@@ -45,7 +45,7 @@ Every output a surface reads has one Rust type that serializes it. The schema is
 | Call error | a `CallError` form of the public error: `kind`, `retryable`, `message` |
 | C door reply | a public `DoorReply` envelope: `value`, `facts`, optional `attempts` |
 
-The annotate union is bool, label, labels, number, null or failure. A not sure answer is JSON `null`. A failure is always an object with one member, `failed`. No answered value is ever an object, so the two cannot be confused in JSON. The schema states this as a `oneOf` with the failure branch closed.
+The annotate union is bool, label, labels, number, null or failure. A not sure answer is JSON `null`. A failure is always an object with one member, `failed`. No answered value is ever an object, so the two cannot be confused in JSON. The schema states this as an `anyOf` with the failure branch closed. The derive emits `anyOf`. It stays unambiguous because no `value` branch is an object and `failed` is a closed object. (Amended in 0314 slice 1; the first draft said `oneOf`.)
 
 Questions enter results as the `question` member. That member's type is part of the result schema. The question-file input grammar is not; see section 3.
 
