@@ -97,7 +97,9 @@ fn an_inherited_engine_and_a_child_engine_share_one_request_total() {
     in_child(|| {
         let sent = answer(inherited.decide(&decide(), "inherited")) == Some(Answer::Yes);
         let own = capped().expect("the child's capped engine");
-        sent && answer(own.decide(&decide(), "own")).is_none()
+        let refused = own.decide(&decide(), "own").err();
+        sent && refused.and_then(|error| error.send_budget_denial())
+            == Some(thinkthen::SendBudgetDenial::BeforeFirstSend)
     })
     .expect("the child's two engines counted against one process total");
     assert_eq!(backend.count(), 1, "the child's second engine sent nothing");
