@@ -40,6 +40,7 @@ const fn refused_price(message: &'static str) -> ConfigError {
 
 pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 
+const SHARED_BACKENDS: &str = "the configuration file is writable by another user, so its `backends` are refused; keep it writable by its owner alone";
 const UNKNOWN: &str = "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`";
 const SCHEMA: &str = "configuration field `schema` must be `thinkthen.config/1`";
 const CACHE_BYTES: &str =
@@ -104,6 +105,10 @@ impl Config {
         };
         let mut parsed = Self::parse(&bytes)?;
         parsed.shared = fs::metadata(path).is_ok_and(|metadata| writable_by_another(&metadata));
+        if parsed.shared && !parsed.named.is_empty() {
+            // Another user could name any variable here, and so send any secret in the environment.
+            return Err(refused(SHARED_BACKENDS));
+        }
         Ok(parsed)
     }
 

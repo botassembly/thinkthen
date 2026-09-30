@@ -200,7 +200,7 @@ impl Choice<'_> {
     ///
     /// Returns [`BackendError::KeyElsewhere`], which names no address and no key.
     pub(crate) fn guard(&self, backend: &Backend) -> Result<(), BackendError> {
-        let (Some(named), Some(host)) = (&self.named, backend.host()) else {
+        let (Some(named), Some(host)) = (&self.named, backend.host().map(comparable)) else {
             return Ok(());
         };
         for variable in &named.keys {
@@ -214,7 +214,7 @@ impl Choice<'_> {
                 built_in.name != owner.name
                     && Backend::resolve(Some(built_in.base), None, built_in.model)
                         .ok()
-                        .is_some_and(|base| base.host() == Some(host))
+                        .is_some_and(|base| base.host().map(comparable).as_ref() == Some(&host))
             });
             if let Some(other) = other {
                 return Err(BackendError::KeyElsewhere {
@@ -227,6 +227,33 @@ impl Choice<'_> {
         }
         Ok(())
     }
+}
+
+/// A host as DNS reads it: ASCII percent escapes decoded, lower case, and
+/// trailing dots dropped, so `api.liquid.ai.` and `api%2Eliquid.ai` compare
+/// equal to `api.liquid.ai`.
+fn comparable(host: &str) -> String {
+    let bytes = host.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while let Some(&byte) = bytes.get(index) {
+        let escaped = (byte == b'%')
+            .then(|| bytes.get(index + 1..index + 3))
+            .flatten()
+            .and_then(|pair| std::str::from_utf8(pair).ok())
+            .and_then(|pair| u8::from_str_radix(pair, 16).ok());
+        if let Some(value) = escaped {
+            decoded.push(value);
+            index += 3;
+        } else {
+            decoded.push(byte);
+            index += 1;
+        }
+    }
+    String::from_utf8_lossy(&decoded)
+        .to_ascii_lowercase()
+        .trim_end_matches('.')
+        .to_owned()
 }
 
 #[cfg(test)]

@@ -150,6 +150,31 @@ fn a_built_in_key_never_goes_to_the_other_built_in_host() {
             None,
             refusal("stolen", "TYPESAFE_API_KEY", "typesafe", "liquid"),
         ),
+        (
+            "typesafe",
+            Some("https://api.liquid.ai./decisions/v1"),
+            refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"),
+        ),
+        (
+            "typesafe",
+            Some("https://api.liquid.ai../v1"),
+            refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"),
+        ),
+        (
+            "typesafe",
+            Some("https://api%2Eliquid.ai/x"),
+            refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"),
+        ),
+        (
+            "typesafe",
+            Some("https://api%2eLIQUID%2Eai%2e/x"),
+            refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"),
+        ),
+        (
+            "liquid",
+            Some("https://api.typesafe.ai./v1"),
+            refusal("liquid", "LIQUIDAI_API_KEY", "liquid", "typesafe"),
+        ),
         ("typesafe", Some("https://sub.api.liquid.ai/v1"), None),
         ("typesafe", Some("https://gateway.example/v1"), None),
         ("liquid", Some("http://127.0.0.1:9/v1"), None),

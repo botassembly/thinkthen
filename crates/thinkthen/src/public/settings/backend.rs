@@ -22,8 +22,8 @@ pub(super) struct Captured {
     pub(super) config_backend: Option<String>,
     pub(super) config_model: Option<ModelName>,
     pub(super) configured: Vec<Named>,
-    /// Each named variable that was set: its key, or `None` when it is not UTF-8.
-    pub(super) keys: BTreeMap<String, Option<Secret>>,
+    /// Each named variable that was set and nonblank.
+    pub(super) keys: BTreeMap<String, Secret>,
 }
 
 impl fmt::Debug for Captured {
@@ -93,7 +93,10 @@ impl EngineBuilder {
             Some(key) => Some(key.clone()),
             None => {
                 choice.guard(&backend).map_err(Error::refused)?;
-                first_key(&captured.keys, &choice.keys())?
+                choice
+                    .keys()
+                    .iter()
+                    .find_map(|name| captured.keys.get(*name).cloned())
             }
         };
         Ok(Selected {
@@ -102,20 +105,4 @@ impl EngineBuilder {
             variable: choice.key_variable().to_owned(),
         })
     }
-}
-
-/// The first set variable of `names`, in order. A selected variable that is
-/// not UTF-8 is refused by name.
-fn first_key(
-    keys: &BTreeMap<String, Option<Secret>>,
-    names: &[&str],
-) -> Result<Option<Secret>, Error> {
-    for name in names {
-        match keys.get(*name) {
-            Some(Some(key)) => return Ok(Some(key.clone())),
-            Some(None) => return Err(Error::usage(format!("{name} is not valid UTF-8"))),
-            None => {}
-        }
-    }
-    Ok(None)
 }

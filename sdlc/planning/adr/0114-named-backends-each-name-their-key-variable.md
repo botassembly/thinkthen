@@ -50,6 +50,7 @@ The file keeps the schema `thinkthen.config/1` and gains two optional fields. AD
 - The file holds variable names and never a key. The `key_env` pattern refuses most pasted keys, because keys hold lowercase letters or hyphens. The tool still never echoes a `key_env` value it refuses.
 - Each refusal exits 5, as every configuration refusal does today, names the field, and never repeats a value. The draft said exit 2; ticket 0334 found the existing refusals exit 5 and kept one code for the file. The existing unknown-field sentence omits ADR 0108's two price fields today. It becomes `the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends``, which also closes that gap.
 - The tool still reads the file and never creates or edits it. The warning for a file another user can write stays word for word. Its reason now covers the key variable as well as the address.
+- A file another user can write may not hold `backends`. An entry can name any variable, so such a file could send any secret in the environment to any host. The refusal exits 5 with `the configuration file is writable by another user, so its `backends` are refused; keep it writable by its owner alone`. The review of ticket 0334 raised it, and the builder took it as a default Ian can overturn.
 
 A keyless local server takes an entry whose `key_env` names a variable left unset. Today's loopback rule then sends no `Authorization` header.
 
@@ -91,7 +92,7 @@ Every existing key rule applies to the selected key unchanged. A key holding a c
 
 ### 5. A built-in's key never goes to another built-in's host
 
-The rule: when the selected backend reads a variable that a built-in backend lists, and the host of the final posting URL equals the host of a different built-in backend's base, the call is refused. The comparison is exact ASCII host equality after today's host lower-casing. It ignores port and path. `api.typesafe.ai` and `api.liquid.ai` are the two known hosts today. A subdomain does not match.
+The rule: when the selected backend reads a variable that a built-in backend lists, and the host of the final posting URL equals the host of a different built-in backend's base, the call is refused. The comparison is exact ASCII host equality after today's host lower-casing, with ASCII percent escapes decoded and trailing dots dropped, so `api.liquid.ai.` and `api%2Eliquid.ai` match `api.liquid.ai`; the review of ticket 0334 found both spellings passing the plain comparison. It ignores port and path. `api.typesafe.ai` and `api.liquid.ai` are the two known hosts today. A subdomain does not match.
 
 The refusal exits 2 before any key is read, any cache or recording is opened, or any connection is made. It prints no address and no key. Its whole standard error line reads:
 

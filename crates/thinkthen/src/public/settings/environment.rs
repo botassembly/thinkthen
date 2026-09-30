@@ -87,12 +87,12 @@ impl EngineBuilder {
 }
 
 /// Capture `THINKTHEN_API_KEY` and each nonblank variable a built-in or a
-/// configuration entry names. `THINKTHEN_API_KEY` keeps today's UTF-8 refusal;
-/// another variable that is not UTF-8 is refused only when a build selects it.
-fn keys(config: &Config) -> Result<BTreeMap<String, Option<Secret>>, Error> {
+/// configuration entry names. `THINKTHEN_API_KEY` keeps today's UTF-8 refusal.
+/// Another variable that is not UTF-8 counts as unset, as the command reads it.
+fn keys(config: &Config) -> Result<BTreeMap<String, Secret>, Error> {
     let mut keys = BTreeMap::new();
     if let Some(key) = variable(KEY_VAR)? {
-        keys.insert(KEY_VAR.to_owned(), Some(Secret(key.into())));
+        keys.insert(KEY_VAR.to_owned(), Secret(key.into()));
     }
     let named = named::built_in_keys().map(str::to_owned).chain(
         config
@@ -104,14 +104,8 @@ fn keys(config: &Config) -> Result<BTreeMap<String, Option<Secret>>, Error> {
         if keys.contains_key(&name) {
             continue;
         }
-        match variable(&name) {
-            Ok(Some(key)) => {
-                keys.insert(name, Some(Secret(key.into())));
-            }
-            Ok(None) => {}
-            Err(_) => {
-                keys.insert(name, None);
-            }
+        if let Ok(Some(key)) = variable(&name) {
+            keys.insert(name, Secret(key.into()));
         }
     }
     Ok(keys)

@@ -135,6 +135,7 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
     let cases: Vec<Case<'_>> = vec![
         (vec!["--backend", "typesafe", "--url", LIQUID_BASE], vec![], String::new(), refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"), 2),
         (vec!["--backend", "liquid", "--url", TYPESAFE_BASE], vec![], String::new(), refusal("liquid", "LIQUIDAI_API_KEY", "liquid", "typesafe"), 2),
+        (vec!["--backend", "typesafe", "--url", "https://API.liquid.ai./decisions/v1"], vec![], String::new(), refusal("typesafe", "TYPESAFE_API_KEY", "typesafe", "liquid"), 2),
         (vec!["--backend", "stolen"], vec![], stolen.clone(), refusal("stolen", "TYPESAFE_API_KEY", "typesafe", "liquid"), 2),
         (vec![], vec![], stolen.replace(r#""backends""#, r#""backend":"stolen","backends""#), refusal("stolen", "TYPESAFE_API_KEY", "typesafe", "liquid"), 2),
         (vec!["--backend", "Liquid"], vec![], String::new(), invalid.clone(), 2),

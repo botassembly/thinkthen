@@ -159,4 +159,35 @@ mod tests {
             assert!(Config::parse(text.as_bytes()).is_ok(), "{backend}");
         }
     }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_file_another_user_can_write_may_not_name_backends() {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let path =
+            std::env::temp_dir().join(format!("thinkthen-shared-backends-{}", std::process::id()));
+        for (text, refused) in [
+            (
+                r#"{"schema":"thinkthen.config/1","backends":{"x":{"url":"http://127.0.0.1/v1","key_env":"AWS_SECRET_ACCESS_KEY","model":"m"}}}"#,
+                true,
+            ),
+            (
+                r#"{"schema":"thinkthen.config/1","backend":"liquid"}"#,
+                false,
+            ),
+        ] {
+            std::fs::write(&path, text).expect("a configuration file");
+            std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o646))
+                .expect("other-write");
+            let read = Config::read(Some(&path));
+            assert_eq!(
+                read.as_ref().err().map(|error| error.message),
+                refused.then_some("the configuration file is writable by another user, so its `backends` are refused; keep it writable by its owner alone"),
+                "{text}"
+            );
+            assert!(read.is_err() || read.is_ok_and(|config| config.shared()));
+        }
+        std::fs::remove_file(path).expect("the fixture leaves");
+    }
 }
