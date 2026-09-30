@@ -1,6 +1,6 @@
 # 0291 — Remaining language doors (T9)
 
-Status: deferred. Build with the Rust result-schema ticket (ruling 7) so the fourteen bindings change once. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
+Status: deferred. Build with ticket 0314 in the port pass of [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md) section 5, so the fourteen bindings change once. Draft from Codex branch `ticket/0283-sql-frame-redesign-preparation`.
 
 ## Outcome
 
