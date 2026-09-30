@@ -1,8 +1,5 @@
 {
-  "directory": [
-    "src",
-    "tests/source"
-  ],
+  "directory": ["src", "tests/source"],
   "extension": ".cs",
   "max": 600
 }
