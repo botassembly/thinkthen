@@ -1,6 +1,6 @@
 # DuckDB conformance fails three singleton cases
 
-Status: closed 2026-09-30. The runner now selects batch 1 for every case whose saved requests each hold one question (quick fix 0320).
+Status: closed 2026-09-30. The runner now selects batch 1 for every case, as the C door and PostgreSQL runners do (quick fix 0320). A full `databases/duckdb/check.sh` run passes: conformance total=54 pass=53 fail=0 not_run=1, and every later suite passes.
 
 ## What happens
 
