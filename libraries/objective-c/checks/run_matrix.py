@@ -8,7 +8,7 @@ import signal
 import subprocess
 import sys
 import time
-from backend import Backend
+from backend import Backend, one_record
 
 root = pathlib.Path(__file__).resolve().parent
 stamp = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
@@ -73,7 +73,7 @@ try:
         counts = {key(x): sum(key(y) == key(x) for y in backend.arrivals) for x in required}
         expected = {key(x): (5 if x == packed_state else 2 if x in ('Maria Chen', 'John Smith', 'failure-two') else 1) for x in required}
         packed = [tuple(q['instructions'] for q in request['questions'].values())
-                  for request in backend.requests if request['state'] == packed_state]
+                  for request in backend.requests if one_record(request)['state'] == packed_state]
         expected_packed = [tuple('The text is ' + json.dumps(row) + '. Is it?' for row in rows)
                            for rows in (('filter-one','filter-two'),('rank-one','rank-two'),
                                         ('first','second','third'),('hold-reverse-1','hold-reverse-2'),
@@ -105,7 +105,8 @@ try:
                                        cwd=root, capture_output=True, text=True, timeout=35)
             if (completed.returncode != 0 or 'OBJC_HELD_OVERLAP_PASS' not in completed.stdout or
                 collections.Counter(overlap_backend.arrivals) != collections.Counter(['hold-overlap-a', 'hold-overlap-b']) or
-                any(request['questions'] != {'q1': {'instructions': 'Is it?', 'type': 'noul'}}
+                any(request['state'] != packed_state or
+                    one_record(request)['questions'] != {'q1': {'instructions': 'Is it?', 'type': 'noul'}}
                     for request in overlap_backend.requests)):
                 status = 'FAIL:overlap'
         finally:

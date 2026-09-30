@@ -3,7 +3,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
-from backend import Backend
+from backend import Backend, one_record
 
 HERE = Path(__file__).resolve().parent
 with tempfile.TemporaryDirectory(prefix="thinkthen-objc-negative-") as name:
@@ -19,7 +19,7 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-objc-negative-") as name:
         result = subprocess.run([str(HERE / "target/main"), "basic"], env=env,
                                 capture_output=True, text=True, timeout=40)
         assert result.returncode != 0 and "FAIL: detailed decision true at 0.9" in result.stderr, (result.returncode, result.stderr)
-        assert any(request["state"] == "json-decide" for request in backend.requests)
+        assert any(one_record(request)["state"] == "json-decide" for request in backend.requests)
         print("GNU Objective-C wrong detailed answer rejected at probability assertion")
     finally:
         backend.close()
