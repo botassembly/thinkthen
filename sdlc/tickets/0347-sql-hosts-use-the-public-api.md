@@ -1,6 +1,6 @@
 # 0347: The SQL hosts call the public API instead of copying engine code
 
-Status: in progress. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4. Pays items 1, 2, 3, 9 and 10 of Debt 018, `sdlc/issues/2026-09-25-public-library-api-gaps.md`. Starts after tickets 0344 and 0335 slice 2 land, because 0344 edits `databases/postgresql/src/relate.rs` and 0335 slice 2 edits the SQLite and DuckDB check scripts.
+Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4. Pays items 1, 2, 3, 9 and 10 of Debt 018, `sdlc/issues/2026-09-25-public-library-api-gaps.md`. Starts after tickets 0344 and 0335 slice 2 land, because 0344 edits `databases/postgresql/src/relate.rs` and 0335 slice 2 edits the SQLite and DuckDB check scripts.
 
 ## Outcome
 
@@ -28,7 +28,7 @@ SQLite, DuckDB and PostgreSQL hold no copy of engine code that the public API co
 - The C door, R, Ruby, Python, TypeScript and the Polars tests still match both arms of `LoadedQuestion`. They can drop the match at their next change; the SQL hosts were this ticket's scope.
 - The SQL extensions keep their own 1 MiB file readers. `read_question_file` opens a path itself, and SQLite needs a nonblocking open with a regular-file rule, and PostgreSQL an `openat2` confined open, so neither fits it.
 - Lines: the three SQL hosts lost 197 nonblank Rust lines (SQLite 2,838 to 2,797, DuckDB 4,207 to 4,139, PostgreSQL 3,052 to 2,964). The crate grew 203, most of them the new public API test page.
-- Checks: `sdlc/scripts/test` (1,280 passed), `spec` (24 demos green), workspace clippy with `-D warnings`, `policy.py`, `tickets`, the C door tests (31 passed), the Polars check, and the SQLite (53 of 55 cases, 2 not run as on main), DuckDB (53 of 55) and PostgreSQL (89 steps, 52 of 55 cases, 3 not run as on main) checks passed. The plan pins passed byte for byte in SQLite and PostgreSQL.
+- Checks: `sdlc/scripts/test` (1,280 passed), `spec` (24 demos green), workspace clippy with `-D warnings`, `policy.py`, `tickets`, the C door tests (31 passed), `lint` in a clean checkout (inventory 559 items), the Polars check, and the SQLite (53 of 55 cases, 2 not run as on main), DuckDB (53 of 55) and PostgreSQL (89 steps, 52 of 55 cases, 3 not run as on main) checks passed. The plan pins passed byte for byte in SQLite and PostgreSQL.
 
 ## Public API delta
 
