@@ -152,13 +152,15 @@ def succeeded(port, case):
         if found.relations is not None:
             result["relations"] = [
                 {"relation": one.relation, "source": recognized(one.source),
-                 "target": recognized(one.target), "probability": one.probability}
+                 "target": recognized(one.target), "probability": one.probability,
+                 **({"either": True} if one.either else {})}
                 for one in found.relations]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "relate":
         edges = engine.relate(case["entities"], case["question"]).value
         result = [{"relation": edge.relation, "source": entity(edge.source),
-                   "target": entity(edge.target), "probability": edge.probability}
+                   "target": entity(edge.target), "probability": edge.probability,
+                   **({"either": True} if edge.either else {})}
                   for edge in edges]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "annotate":

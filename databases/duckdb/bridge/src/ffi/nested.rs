@@ -92,6 +92,7 @@ pub(super) fn run(
                 string(&mut bytes, relation.target().text())?;
                 string(&mut bytes, relation.target().kind())?;
                 bytes.extend_from_slice(&relation.probability().to_ne_bytes());
+                bytes.push(u8::from(relation.either()));
             }
         }
     }

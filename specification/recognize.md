@@ -83,6 +83,8 @@ An edge repeats both complete names:
 {"relation":"works_for","source":{"text":"Maria Chen","start":0,"end":10,"length":10,"kind":"person","strength":0.9987},"target":{"text":"Northwind Freight","start":18,"end":35,"length":17,"kind":"organization","strength":0.997},"probability":1.0}
 ```
 
+A relation of an `either` rule ends with `"either":true`, and its ends are in the order the names were found; a directed relation writes no `either` member, as in [relate.md](relate.md#output).
+
 `relations` is absent when no rule was supplied. It is an empty list when rules were supplied and no edge passed.
 
 ## The guard

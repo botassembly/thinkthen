@@ -706,7 +706,8 @@ tt_recognize <- function(input, kinds = NULL,
         source_kind = vapply(links, function(one) one$source$kind, ""),
         target = vapply(links, function(one) one$target$text, ""),
         target_kind = vapply(links, function(one) one$target$kind, ""),
-        relation = .tt_na(links, "", "relation"), probability = .tt_na(links, 0, "probability")))
+        relation = .tt_na(links, "", "relation"), probability = .tt_na(links, 0, "probability"),
+        either = .tt_na(links, FALSE, "either")))
       held[[live[[i]]]] <- frame
     }
   }
@@ -741,7 +742,8 @@ tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NUL
     target = vapply(edges, function(one) one$target$name, ""),
     relation = .tt_na(edges, "", "relation"), probability = .tt_na(edges, 0, "probability"),
     source_kind = vapply(edges, function(one) one$source$kind, ""),
-    target_kind = vapply(edges, function(one) one$target$kind, ""))), native)
+    target_kind = vapply(edges, function(one) one$target$kind, ""),
+    either = .tt_na(edges, FALSE, "either"))), native)
   })
 }
 

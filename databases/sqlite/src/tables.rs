@@ -374,9 +374,9 @@ impl Relater {
 
 impl Table for Relater {
     const NAME: &'static str = "thinkthen_relate";
-    const SCHEMA: &'static CStr = c"CREATE TABLE x(relation, source, target, probability, query HIDDEN, rules HIDDEN, settings HIDDEN, legacy_4 HIDDEN, legacy_5 HIDDEN, legacy_6 HIDDEN, legacy_7 HIDDEN, legacy_8 HIDDEN, legacy_9 HIDDEN)";
-    const FIRST_HIDDEN: usize = 4;
-    const COLUMNS: usize = 13;
+    const SCHEMA: &'static CStr = c"CREATE TABLE x(relation, source, target, probability, either, query HIDDEN, rules HIDDEN, settings HIDDEN, legacy_4 HIDDEN, legacy_5 HIDDEN, legacy_6 HIDDEN, legacy_7 HIDDEN, legacy_8 HIDDEN, legacy_9 HIDDEN)";
+    const FIRST_HIDDEN: usize = 5;
+    const COLUMNS: usize = 14;
     const REQUIRED: usize = 2;
 
     fn rows(db: *mut sqlite3, arguments: &[Value]) -> Result<Vec<Vec<Value>>, Failure> {
@@ -422,6 +422,7 @@ impl Table for Relater {
                     source.clone(),
                     target.clone(),
                     Value::Real(edge.probability()),
+                    Value::Integer(i64::from(edge.either())),
                 ]
             }));
         }

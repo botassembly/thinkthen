@@ -403,17 +403,21 @@ pub(crate) struct Edge {
     target: Entity,
     #[pyo3(get)]
     probability: f64,
+    /// The edge holds both ways; its ends are in input order.
+    #[pyo3(get)]
+    either: bool,
 }
 
 #[pymethods]
 impl Edge {
     fn __repr__(&self) -> String {
         format!(
-            "Edge(relation={:?}, source={}, target={}, probability={})",
+            "Edge(relation={:?}, source={}, target={}, probability={}, either={})",
             self.relation,
             self.source.__repr__(),
             self.target.__repr__(),
-            self.probability
+            self.probability,
+            if self.either { "True" } else { "False" }
         )
     }
 }
@@ -427,6 +431,7 @@ impl From<&thinkthen::Edge> for Edge {
             source: entity(edge.source()),
             target: entity(edge.target()),
             probability: edge.probability(),
+            either: edge.either(),
         }
     }
 }
@@ -443,17 +448,21 @@ pub(crate) struct Relation {
     target: RecognizedEntity,
     #[pyo3(get)]
     probability: f64,
+    /// The relation holds both ways; its ends are in the order found.
+    #[pyo3(get)]
+    either: bool,
 }
 
 #[pymethods]
 impl Relation {
     fn __repr__(&self) -> String {
         format!(
-            "Relation(relation={:?}, source={}, target={}, probability={})",
+            "Relation(relation={:?}, source={}, target={}, probability={}, either={})",
             self.relation,
             self.source.__repr__(),
             self.target.__repr__(),
-            self.probability
+            self.probability,
+            if self.either { "True" } else { "False" }
         )
     }
 }
@@ -497,6 +506,7 @@ impl From<&thinkthen::Recognized> for Recognized {
                         source: RecognizedEntity::from(one.source()),
                         target: RecognizedEntity::from(one.target()),
                         probability: one.probability(),
+                        either: one.either(),
                     })
                     .collect()
             }),

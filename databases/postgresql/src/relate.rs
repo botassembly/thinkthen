@@ -26,6 +26,7 @@ type Edges = TableIterator<
         name!(source, i64),
         name!(target, i64),
         name!(probability, f64),
+        name!(either, bool),
     ),
 >;
 
@@ -162,6 +163,7 @@ fn relate(query: &str, ask: impl FnOnce(bool) -> Result<Relate, Refusal>) -> Edg
                     source,
                     target,
                     edge.probability(),
+                    edge.either(),
                 ));
             }
         }
@@ -185,6 +187,7 @@ fn thinkthen_relate(
         name!(source, i64),
         name!(target, i64),
         name!(probability, f64),
+        name!(either, bool),
     ),
 > {
     call::guarded(|| {
@@ -215,6 +218,7 @@ fn thinkthen_relate_file(
         name!(source, i64),
         name!(target, i64),
         name!(probability, f64),
+        name!(either, bool),
     ),
 > {
     call::guarded(|| {

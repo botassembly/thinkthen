@@ -178,6 +178,7 @@ run_case <- function(case, served) {
         same("relation", unlist(relations[at, c("relation", "source", "target")], use.names = FALSE),
              c(one$relation, one$source$text, one$target$text))
         same("probability", relations$probability[[at]], one$probability)
+        same("either", relations$either[[at]], isTRUE(one$either))
       }
     },
     relate = {
@@ -185,10 +186,10 @@ run_case <- function(case, served) {
                              kind = vapply(case$entities, `[[`, "", "kind"), stringsAsFactors = FALSE)
       edges <- tt_relate(entities, relations = paste0("@", file))$value
       want <- answers[[1]]$bare
-      key <- function(relation, source, target) paste(relation, source, target, sep = "|")
-      got <- stats::setNames(edges$probability, key(edges$relation, edges$source, edges$target))
+      key <- function(relation, source, target, either) paste(relation, source, target, either, sep = "|")
+      got <- stats::setNames(edges$probability, key(edges$relation, edges$source, edges$target, edges$either))
       expected <- vapply(want, function(one) one$probability, 0)
-      names(expected) <- vapply(want, function(one) key(one$relation, one$source$name, one$target$name), "")
+      names(expected) <- vapply(want, function(one) key(one$relation, one$source$name, one$target$name, isTRUE(one$either)), "")
       same("edges", got[order(names(got))], expected[order(names(expected))])
     }
   )

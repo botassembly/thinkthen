@@ -340,6 +340,7 @@ pub struct Relation {
     source: RecognizedEntity,
     target: RecognizedEntity,
     probability: f64,
+    either: bool,
 }
 
 impl Relation {
@@ -365,6 +366,13 @@ impl Relation {
     #[must_use]
     pub fn probability(&self) -> f64 {
         self.probability
+    }
+
+    /// Whether the relation holds both ways. Its ends are then in the order
+    /// the names were found.
+    #[must_use]
+    pub fn either(&self) -> bool {
+        self.either
     }
 }
 
@@ -456,6 +464,7 @@ impl Engine {
                             source: RecognizedEntity(edge.source),
                             target: RecognizedEntity(edge.target),
                             probability: edge.probability,
+                            either: edge.either,
                         })
                         .collect()
                 }),

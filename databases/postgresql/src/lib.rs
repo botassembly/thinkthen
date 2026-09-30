@@ -227,6 +227,7 @@ fn thinkthen_relations(
         name!(target_text, String),
         name!(target_kind, String),
         name!(probability, f64),
+        name!(either, bool),
     ),
 > {
     call::guarded(|| {
@@ -249,6 +250,7 @@ fn thinkthen_relations(
                     target.text().to_owned(),
                     target.kind().to_owned(),
                     held.probability(),
+                    held.either(),
                 )
             })
             .collect();

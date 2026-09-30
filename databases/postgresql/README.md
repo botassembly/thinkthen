@@ -18,7 +18,7 @@ The ordinary judgment signature is `question, input[, members][, settings]`. `se
 | `thinkthen_find(question, units text[][, settings])` | selected original index, value, probability and ordered candidates as `jsonb` |
 | `thinkthen_annotate(set, input[, settings])` | each question's value as `jsonb`; settings apply batch, deadline or the engine's default model |
 | `thinkthen_details`, `thinkthen_try_details` | detailed answer or recoverable typed result as `jsonb`; both take the judgment's named settings |
-| `thinkthen_recognize`, `thinkthen_relations`, `thinkthen_relate` | their existing typed entity/relation rows |
+| `thinkthen_recognize`, `thinkthen_relations`, `thinkthen_relate` | their typed entity and relation rows; a relation row's last column, `either`, is true for a both-ways rule, whose ends are then in input order |
 | `thinkthen_usage()` | this backend's `(requests_sent, cache_answers, input_tokens, output_tokens)` |
 
 Each `_many` input is one `jsonb` object from caller keys to text. Join `d.key = CAST(s.id AS text)`; no array position is inferred. PostgreSQL `jsonb` normalizes repeated object keys before the extension sees them. A scalar judges one row per call; `_many` gives the engine the whole keyed set and packs it according to `batch`. The four keyed functions preserve SQL `NULL` on unresolved values and retain the key. Decide and choose report probability on the row; score and tag refuse a probability request. `thinkthen_plan` returns `records`, `requests`, `estimated_bytes`, an `estimated_input_tokens` lower/upper band, `upper_bound`, and `first_body_utf8`. The plan has no key requirement and no network call; `requests` is before cache answers, refusal splits and retries.

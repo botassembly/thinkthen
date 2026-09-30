@@ -185,6 +185,7 @@ def relations(case: dict, base: str) -> list:
             "source": [found["source"], found["source_kind"]],
             "target": [found["target"], found["target_kind"]],
             "probability": found["probability"],
+            "either": found["either"],
         }
         for found in rows(got[0])[0][0]
     ]
@@ -197,6 +198,7 @@ def relations_wanted(case: dict) -> list:
             "source": [found["source"]["text"], found["source"]["kind"]],
             "target": [found["target"]["text"], found["target"]["kind"]],
             "probability": found["probability"],
+            "either": found.get("either", False),
         }
         for found in expected(case)[0].get("relations") or []
     ]
@@ -210,8 +212,8 @@ def related(case: dict, base: str) -> list:
     got = run([f"SELECT * FROM thinkthen_relate({quoted(query)}, {quoted(json.dumps(case['question']))})"], base, extra=BATCH_ONE)
     kinds = {entity["name"]: entity["kind"] for entity in case["entities"]}
     return [
-        {"relation": relation, "source": {"name": source, "kind": kinds[source]}, "target": {"name": target, "kind": kinds[target]}, "probability": probability}
-        for relation, source, target, probability in rows(got[0])
+        {"relation": relation, "source": {"name": source, "kind": kinds[source]}, "target": {"name": target, "kind": kinds[target]}, "probability": probability, **({"either": True} if either else {})}
+        for relation, source, target, probability, either in rows(got[0])
     ]
 
 

@@ -32,7 +32,7 @@ Each SQL call still needs the caller's judgment about whether to spend. Correlat
 | `thinkthen_annotate(questions, input[, settings])` | named judgments as JSON text |
 | `thinkthen_recognize(input, kinds[, settings])` | rows of names, offsets, kinds and strengths |
 | `thinkthen_relations(input, spec)` | complete recognition JSON, including relations |
-| `thinkthen_relate(query, rules[, settings])` | rows of relation, source id, target id and probability |
+| `thinkthen_relate(query, rules[, settings])` | rows of relation, source id, target id, probability, and `either`, 1 for an edge of a both-ways rule (its ends then in query order) and 0 otherwise |
 | `thinkthen_plan(question, keyed_json[, settings])` | JSON text with planned records, requests, bytes, input token band and the first exact request body as `first_body_utf8` |
 | `thinkthen_usage()` | cumulative request, cache-answer and reported token totals; the process also adds them to the command's usage totals when it exits, so `thinkthen status` shows them (ADR 0113) |
 | `thinkthen_configure(json)` | the selected engine settings object, before engine build |

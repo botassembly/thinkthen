@@ -81,8 +81,8 @@ struct RelateBind : FunctionData {
 
 unique_ptr<FunctionData> BindRelate(ClientContext &context, TableFunctionBindInput &input,
                                      vector<LogicalType> &types, vector<string> &names) {
-	types = {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE};
-	names = {"relation", "source", "target", "probability"};
+	types = {LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::VARCHAR, LogicalType::DOUBLE, LogicalType::BOOLEAN};
+	names = {"relation", "source", "target", "probability", "either"};
 	auto bound = make_uniq<RelateBind>();
 	context.registered_state->GetOrCreate<StatementOwner>(OWNER_KEY);
 	bound->context = context.shared_from_this();
@@ -128,6 +128,7 @@ struct RelateRow {
 	string source;
 	string target;
 	double probability;
+	bool either;
 };
 
 struct RelateState : GlobalTableFunctionState {
@@ -157,6 +158,10 @@ public:
 		if (len - at < sizeof(double)) { throw OrdinaryError("thinkthen defect: short relate probability"); }
 		double value;
 		std::memcpy(&value, bytes + at, sizeof(value)); at += sizeof(value); return value;
+	}
+	bool Flag() {
+		if (len - at < 1 || bytes[at] > 1) { throw OrdinaryError("thinkthen defect: bad relate either flag"); }
+		return bytes[at++] == 1;
 	}
 	bool Done() const { return at == len; }
 private:
@@ -201,7 +206,7 @@ vector<RelateRow> Answer(const RelateBind &bound, ClientContext &context, Relate
 	vector<RelateRow> edges;
 	const auto count = read.Count();
 	for (uint32_t row = 0; row < count; ++row) {
-		edges.push_back({read.Text(), read.Text(), read.Text(), read.Probability()});
+		edges.push_back({read.Text(), read.Text(), read.Text(), read.Probability(), read.Flag()});
 	}
 	if (!read.Done()) { throw OrdinaryError("thinkthen defect: trailing relate reply bytes"); }
 	return edges;
@@ -249,6 +254,7 @@ void ScanRelate(ClientContext &context, TableFunctionInput &input, DataChunk &ou
 		output.SetValue(1, row, Value(edge.source));
 		output.SetValue(2, row, Value(edge.target));
 		output.SetValue(3, row, Value::DOUBLE(edge.probability));
+		output.SetValue(4, row, Value::BOOLEAN(edge.either));
 	}
 	state.at += count;
 	output.SetCardinality(count);

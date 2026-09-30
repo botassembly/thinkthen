@@ -289,8 +289,8 @@ def recognized(case, success):
     rows = psql(f"SELECT json_agg(json_build_object('text', text, 'start', start, 'end', \"end\", 'length', length, 'kind', kind, 'strength', strength)) FROM thinkthen_recognize({text}, {spec})")
     same("entities", json.loads(rows) or [], want["entities"])
     if "relations" in want:
-        rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 'source', json_build_object('text', source_text, 'kind', source_kind), 'target', json_build_object('text', target_text, 'kind', target_kind), 'probability', probability)) FROM thinkthen_relations({text}, {spec})")
-        wanted = [dict(one, source=pair(one["source"]), target=pair(one["target"])) for one in want["relations"]]
+        rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 'source', json_build_object('text', source_text, 'kind', source_kind), 'target', json_build_object('text', target_text, 'kind', target_kind), 'probability', probability, 'either', either)) FROM thinkthen_relations({text}, {spec})")
+        wanted = [dict(one, source=pair(one["source"]), target=pair(one["target"]), either=one.get("either", False)) for one in want["relations"]]
         same("relations", json.loads(rows) or [], wanted)
 
 
@@ -298,8 +298,8 @@ def related(case, success):
     entities = case["entities"]
     values = ", ".join(f"({n}, {lit(one['name'])}, {lit(one['kind'])})" for n, one in enumerate(entities))
     query = lit(f"SELECT * FROM (VALUES {values}) v(id, body, kind)")
-    rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 's', source, 't', target, 'probability', probability)) FROM thinkthen_relate({query}, {lit(json.dumps(case['question']))})")
-    got = [{"relation": one["relation"], "source": entities[one["s"]], "target": entities[one["t"]], "probability": one["probability"]} for one in json.loads(rows) or []]
+    rows = psql(f"SELECT json_agg(json_build_object('relation', relation, 's', source, 't', target, 'probability', probability, 'either', either)) FROM thinkthen_relate({query}, {lit(json.dumps(case['question']))})")
+    got = [{"relation": one["relation"], "source": entities[one["s"]], "target": entities[one["t"]], "probability": one["probability"], **({"either": True} if one["either"] else {})} for one in json.loads(rows) or []]
     order = lambda edge: (edge["relation"], edge["source"]["name"], edge["target"]["name"])  # noqa: E731
     same("result", sorted(got, key=order), sorted(success["answers"][0]["bare"], key=order))
 

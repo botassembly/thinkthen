@@ -770,6 +770,9 @@
     },
     "entityEdge": {
       "properties": {
+        "either": {
+          "type": "boolean"
+        },
         "probability": {
           "format": "double",
           "type": "number"
@@ -1804,6 +1807,9 @@
     },
     "relatedEntityEdge": {
       "properties": {
+        "either": {
+          "type": "boolean"
+        },
         "probability": {
           "format": "double",
           "type": "number"

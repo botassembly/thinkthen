@@ -312,18 +312,70 @@
         ]
       },
       "case_id": "51-same-kind-alerts",
-      "expect_count": 5,
-      "expect_first_edge": {
-        "relation": "caused_by",
-        "source": {
-          "name": "Checkout returns 500 at the payment step.",
-          "kind": "alert"
-        },
-        "target": {
-          "name": "The payments database ran out of disk space.",
-          "kind": "alert"
-        },
-        "probability": 0.71
+      "response": {
+        "edges": [
+          {
+            "relation": "caused_by",
+            "source": {
+              "name": "Checkout returns 500 at the payment step.",
+              "kind": "alert"
+            },
+            "target": {
+              "name": "The payments database ran out of disk space.",
+              "kind": "alert"
+            },
+            "probability": 0.71
+          },
+          {
+            "relation": "caused_by",
+            "source": {
+              "name": "Card charges are failing for every customer.",
+              "kind": "alert"
+            },
+            "target": {
+              "name": "Checkout returns 500 at the payment step.",
+              "kind": "alert"
+            },
+            "probability": 0.65
+          },
+          {
+            "relation": "caused_by",
+            "source": {
+              "name": "Card charges are failing for every customer.",
+              "kind": "alert"
+            },
+            "target": {
+              "name": "The payments database ran out of disk space.",
+              "kind": "alert"
+            },
+            "probability": 0.73
+          },
+          {
+            "relation": "caused_by",
+            "source": {
+              "name": "The nightly export ran two hours late.",
+              "kind": "alert"
+            },
+            "target": {
+              "name": "The payments database ran out of disk space.",
+              "kind": "alert"
+            },
+            "probability": 0.55
+          },
+          {
+            "relation": "same_as",
+            "source": {
+              "name": "Checkout returns 500 at the payment step.",
+              "kind": "alert"
+            },
+            "target": {
+              "name": "Card charges are failing for every customer.",
+              "kind": "alert"
+            },
+            "probability": 0.61,
+            "either": true
+          }
+        ]
       }
     },
     {

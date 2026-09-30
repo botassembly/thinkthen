@@ -43,7 +43,13 @@ Bare output writes one compact edge per line in rule and pair question order. En
 {"relation":"works_for","source":{"name":"Ada","kind":"person"},"target":{"name":"Acme","kind":"organization"},"probability":0.84}
 ```
 
-Directed output keeps the rule's direction. Unordered output puts endpoints in input order. No edge appears twice. A probability equal to the cut is accepted.
+Directed output keeps the rule's direction and writes no `either` member. An edge of an `either` rule ends with `"either":true`, and its `source` and `target` are the pair in input order, naming no direction:
+
+```json
+{"relation":"same_as","source":{"name":"Ada","kind":"person"},"target":{"name":"A. Lovelace","kind":"person"},"probability":0.9,"either":true}
+```
+
+No edge appears twice. A probability equal to the cut is accepted. The flag is output only: no question, request or cache key carries it.
 
 Every rule without `single` asks one yes/no question per allowed pair in rule, source, then target order. A question reads `Is it true that i1 READS i2?`, using the rule's `reads`. `either` asks each unordered pair once and reads `Is it true that i1 READS i2, or that i2 READS i1?`. Directed rules ask both directions when both match. Every request carries the same state of entities whose kinds a rule names, in input order, with no `relation` field. Wildcards match every kind.
 

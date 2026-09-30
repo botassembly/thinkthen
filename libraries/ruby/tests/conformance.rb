@@ -171,14 +171,14 @@ def check(one)
     bare = { "entities" => found.entities.map { |e| entity(e) } }
     unless found.relations.nil?
       bare["relations"] = found.relations.map do |r|
-        { "relation" => r.relation, "source" => entity(r.source), "target" => entity(r.target), "probability" => r.probability }
+        { "relation" => r.relation, "source" => entity(r.source), "target" => entity(r.target), "probability" => r.probability, **(r.either ? { "either" => true } : {}) }
       end
     end
     same("result", bare, success["answers"][0]["bare"])
   in ["relate", _]
     pair = ->(e) { { "name" => e.name, "kind" => e.kind } }
     edges = engine.relate(one["entities"], relations: held["relate"]["relations"], threshold: held["threshold"]).value
-    same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability } },
+    same("result", edges.map { |e| { "relation" => e.relation, "source" => pair.(e.source), "target" => pair.(e.target), "probability" => e.probability, **(e.either ? { "either" => true } : {}) } },
          success["answers"][0]["bare"])
   in ["annotate", _]
     whole = one.key?("record")

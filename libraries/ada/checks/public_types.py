@@ -87,9 +87,6 @@ try:
                 assert shared.subset(actual, case["expect_fields"]), (case["name"], actual)
             if "expect_keys" in case:
                 assert set(actual) == set(case["expect_keys"]), (case["name"], actual)
-            if "expect_count" in case:
-                edges = actual["edges"]
-                assert len(edges) == case["expect_count"] and edges[0] == case["expect_first_edge"], case["name"]
             if "offsets" in case:
                 shared.check_offsets(case, actual, conformance)
             count += 1

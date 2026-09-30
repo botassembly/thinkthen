@@ -13,7 +13,7 @@ use std::path::{Path, PathBuf};
 use conformance_backend::Backend;
 use serde::Deserialize;
 use serde_json::value::RawValue;
-use thinkthen::{Engine, Entity, LoadedQuestion, QuestionSet, Recognize, Relate};
+use thinkthen::{Edge, Engine, Entity, LoadedQuestion, QuestionSet, Recognize, Relate};
 
 use crate::harness::spawn;
 
@@ -68,7 +68,7 @@ fn each_json_method_prints_the_commands_bytes_on_the_shared_cases() {
         }
     }
     assert!(failures.is_empty(), "{failures:#?}");
-    assert_eq!(compared, 62);
+    assert_eq!(compared, 63);
 }
 
 /// Compare every text of one case; the count of texts compared.
@@ -115,6 +115,11 @@ fn compare(backend: &Backend, case: &Case) -> Compared {
             let ask = Recognize::load(&path).map_err(|error| error.to_string())?;
             let text = case.text.as_deref().unwrap_or_default();
             let found = engine.recognize(&ask, text).map_err(|e| e.to_string())?;
+            let flags = found.value().relations().unwrap_or_default();
+            flagged(
+                flags.iter().map(|one| one.either()),
+                &found.value().to_json(),
+            )?;
             same(
                 found.value().to_json() + "\n",
                 &command(case, &path, &base, text, false)?,
@@ -135,10 +140,25 @@ fn compare(backend: &Backend, case: &Case) -> Compared {
                 .iter()
                 .map(|edge| edge.to_json() + "\n")
                 .collect();
+            flagged(edges.value().iter().map(Edge::either), &lines)?;
             // Each edge counts, so a case whose edges all vanished shows in the total.
             same(lines, &command(case, &path, &base, given, false)?).map(|_| edges.value().len())
         }
         _ => Ok(0),
+    }
+}
+
+/// Ticket 0344: the typed `either` flags count the JSON's `"either":true`
+/// members, so the accessor and the printed edge agree.
+fn flagged(flags: impl Iterator<Item = bool>, json: &str) -> Result<(), String> {
+    let typed = flags.filter(|flag| *flag).count();
+    let printed = json.matches(r#""either":true}"#).count();
+    if typed == printed {
+        Ok(())
+    } else {
+        Err(format!(
+            "{typed} typed both-ways edges, {printed} printed in\n{json}"
+        ))
     }
 }
 

@@ -246,6 +246,7 @@ fn no_recognize_debug_line_shows_the_evidence() {
         source: name.clone(),
         target: name.clone(),
         probability: 0.8,
+        either: false,
     };
     let edges = crate::core::Odds(vec![(EVIDENCE.to_owned(), 0.9)]);
     let lines = crate::core::Reading::new(crate::core::Framing::Lines, Vec::new())

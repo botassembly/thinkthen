@@ -197,7 +197,7 @@ class TestErrors < Minitest::Test
       require "pp"
       found = T.recognize("x MARK-Ana", kinds: %w[MARK-kind]).value
       first, last = found.entities
-      relation = T::Relation.new("knows", first, last, 0.5)
+      relation = T::Relation.new("knows", first, last, 0.5, false)
       values = [relation, T::Recognized.new(found.entities, [relation]), found,
                 T.relate([%w[MARK-Ana MARK-kind], %w[MARK-Bo MARK-kind]], relations: %w[knows]).value.first,
                 T.rank("Is it urgent?", %w[MARK-one]).value.first, T.find("Which?", %w[MARK-one MARK-two]).value, T::Found.new]
@@ -209,10 +209,10 @@ class TestErrors < Minitest::Test
     ends = "source=#<struct ThinkThen::Entity name=<8 bytes withheld>, kind=<9 bytes withheld>>, " \
            "target=#<struct ThinkThen::Entity name=<7 bytes withheld>, kind=<9 bytes withheld>>"
     assert_equal [
-      "#<struct ThinkThen::Relation relation=\"knows\", source=#{one}, target=#{two}, probability=0.5>",
+      "#<struct ThinkThen::Relation relation=\"knows\", source=#{one}, target=#{two}, probability=0.5, either=false>",
       "#<struct ThinkThen::Recognized entities=2, relations=1>",
       "#<struct ThinkThen::Recognized entities=2, relations=nil>",
-      "#<struct ThinkThen::Edge relation=\"knows\", #{ends}, probability=0.9>",
+      "#<struct ThinkThen::Edge relation=\"knows\", #{ends}, probability=0.9, either=false>",
       "#<struct ThinkThen::Ranked index=0, record=<8 bytes withheld>, probability=0.9>",
       "#<struct ThinkThen::Found index=0, unit=<8 bytes withheld>, probability=0.9>",
       "#<struct ThinkThen::Found index=nil, unit=nil, probability=nil>"
