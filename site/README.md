@@ -14,7 +14,7 @@ npm install
 npm run build
 ```
 
-`npm run build` does eight things in order:
+`npm run build` does these things in order:
 
 1. `scripts/write-version.mjs` writes `public/version.json` with the commit it is building.
 2. `scripts/check-samples.mjs` checks the rules in `WRITING.md` that a script can see: line length, asserts, whole details, no comments, and a goal on every page.
@@ -22,12 +22,16 @@ npm run build
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 6. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-7. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
-8. `scripts/check-links.mjs` fails the build on a broken internal link.
+7. `pagefind --site dist` builds the search index from each page's `main`. The Markdown twins, the redirects, the 404 page and the search page stay out.
+8. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
+9. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
+10. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.
+11. `scripts/check-cards.mjs` fails the build when a page lacks its social card.
+12. `scripts/check-head.mjs` fails the build when a page lacks its canonical link, icons, manifest or theme colours, or when the sitemap, the search index, `robots.txt` or the home page's JSON-LD is wrong.
 
 A page reads a setting's default, range or allowed values with `setting('Name')` from `src/lib/settings-table.mjs`: `.default`, `.number`, `.range`, `.bounds`, `.allowed`, `.note`, `.defaultOn('decide')` and `.surface('Configuration file')`. A name the table does not hold fails the build at that call.
 
-`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the settings check, and the link check on the last build.
+`npm run dev` serves the site while you work. `npm run check` runs the sample check, the slide check, the smoke run, the settings check, the link check, the card check and the head check on the last build.
 
 ## Writing a page
 
@@ -77,6 +81,20 @@ Check by hand:
 curl -s https://thinkthen.dev/version.json
 ```
 
+## Search
+
+The search box in the header sends the words to `/search/`, where Pagefind's own interface shows the results. The index is plain files under `dist/pagefind/`, so search needs no server. It exists only after `npm run build`, so search does not work under `npm run dev`.
+
+## The icons
+
+`favicon.ico` (16, 32 and 48 pixels), `apple-touch-icon.png` (180), `icon-192.png` and `icon-512.png` sit in `public/`. `scripts/build-icons.mjs` renders them from `public/brand/thinkthen-mark-dark.svg` with resvg. Run it when the mark changes, and commit what it writes:
+
+```
+npm run icons
+```
+
+`site.webmanifest` names the two large icons. The SVG marks stay as the icon for any browser that reads SVG.
+
 ## The noindex switch
 
 The site stays unlinked until launch, so every page carries `<meta name="robots" content="noindex">`. One constant turns it off:
@@ -85,7 +103,7 @@ The site stays unlinked until launch, so every page carries `<meta name="robots"
 src/data/catalog.mjs  ->  export const NOINDEX = true;
 ```
 
-Set it to `false`, build, and the tag is gone from every page.
+Set it to `false`, build, and the tag is gone from every page. `robots.txt` follows the same constant: it turns every crawler away while `NOINDEX` is true, and names the sitemap once it is false. The 404 and search pages keep `noindex` always.
 
 ## The palette
 
