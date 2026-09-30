@@ -35,4 +35,4 @@ Each count ran the old and new test binaries or scripts in the same way, at 1-mi
 - An equality on a moving count (`count == 4`) is a race. Hold the backend, let rounds go one at a time, and stop on `>=`.
 - A test's reader thread adds its own delay between the command's write and the test's event. Leave the pipe unread and poll it at the moment that matters.
 - The PostgreSQL routine run still has 88 steps. The stress run has 8, and all passed at load 18.
-- `sdlc/scripts/test` passed 1,293 tests; `spec` passed. The crate ratchet rose 49 lines and the DuckDB Python ratchet 4, as the commits say.
+- `sdlc/scripts/test` passed 1,293 tests; `spec` passed. The crate ratchet rose 47 lines, after dropping the unused `Observed::Output` variant, and the DuckDB Python ratchet 4, as the commits say.
