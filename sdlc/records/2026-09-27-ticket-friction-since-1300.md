@@ -699,3 +699,9 @@ The0297 correction at87327e597 passed the original identity checks, then the sam
 ## An error-format migration also changes its conformance reader
 
 SQLite error-format review at8eda286ae confirmed the product formatter and explicit plain removals, then found an omitted test consumer. The shared `tests/conformance.py` still matched the old prefix marker and treated new yes, new no and no suffix alike as nonretryable. Representative new exact-message tests did not restore this checker's lost assertion. The retained author owns the correction and a discriminating parser or shared-case proof. Future formatting preparation must search both exact-string assertions and parsers; a green checker with a defaulted field can silently lose coverage.
+
+## A new input route must preserve refusal and terminal-state rules
+
+Fresh High review of Python0292/0293/0294 at `2735c2b8f669501b5b79cfa26cf905b2619904d2` found three installed-wheel defects. After SIGINT raised Cancelled and its receipt recorded one admitted request, another stream read returned its answer. An eager filter refused a band while the iterator route sent and answered. Planning accepted a set that judge application refused. These were distinct boundaries missing from the selected successful cases. The reviewer also separated the four-row close witness from the unmeasured maximum look-ahead ceiling. The author owns the corrections and precise proof wording; the same reviewer checks the corrected candidate.
+
+The reusable lesson is to compare validation across eager, iterator and plan routes, and to exercise the next operation after a terminal event. A truthful completion receipt does not establish that later values are inaccessible. Carry these facts into the next Python frame brief after Ian's current-only night wrap-up; no new preparation pass is authorized tonight. Preserve the unchanged installed proof and rebuild once after the correction's source checks pass.
