@@ -1,6 +1,6 @@
 # 0329: Link the static Zig consumer with LLD
 
-Status: built 2026-09-30; awaiting a fresh code review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 1.
+Status: landed 2026-09-30. A fresh code review accepted it after one round of fixes. Owner: Claude. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 1.
 
 ## Outcome
 
@@ -12,7 +12,7 @@ A Zig consumer that links `libthinkthen.a` in Debug runs every matrix case, incl
 - Keeps: the shared link path, the header checks, the system libraries, and every consumer build flag.
 - Changes: `linkNative` in `libraries/zig/build.zig` sets `use_llvm` and `use_lld` for the static mode. LLD keeps section alignment. The Zig ratchet rises from 1,247 to 1,251 for these four lines.
 - Proof: the static matrix passes under the loopback backend. `libraries/zig/check.sh` passes: shared matrix, settings, bulk, and all four installed consumers (`shared-0`, `shared-1`, `static-0`, `static-1`) with 42 exact request bodies each.
-- Defers: an upstream Zig report. Remove the flags once Zig's own linker keeps merged constant alignment.
+- Defers: an upstream Zig report, tracked in `sdlc/issues/2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md`. Remove the flags once Zig's own linker keeps merged constant alignment. The release run (`portable_batch.py`) links shared only, so `Tests/installed.py` alone guards static mode.
 
 ## What the build taught us
 
