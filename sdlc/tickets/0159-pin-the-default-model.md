@@ -38,7 +38,7 @@ Read from `origin/main` `40eae81e`, the base of this branch.
 - A recording's digest covers the request body, and the body names the model (`recording.md`, "An entry"). Changing the default changes every default digest, so every replay of a default request misses.
 - Recordings replayed by a gate that ask for `jev-latest`: 40 entries under `crates/thinkthen`, 131 under `demos/`, 80 under `transforms/rows`, the default request bodies in `conformance/cases.json`, and 879 under `probes/01` to `probes/09`, which the `spec` rung replays through `probes/replay-check.sh`. `site/recordings` holds 193 and `site/examples` 54. The marketing lead owns `site/`, and its hand-run build replays them (`.github/workflows/pages.yml`).
 - `audit --write` writes only a threshold (`specification/audit.md`, "Writing the bar"). The question digest leaves the model out (`question-file.md` canonical rule 1). A file tuned under one model runs under the next with no sign. Architect review 05, finding 2.1, and review 08, item 1, found it.
-- A record whose replies name two model versions stops at exit 4 with "the backend returned different model versions for one record; pin --model and rerun with --record or --cache" (`cli/failure.rs:344-351`, `public/error.rs:220`, `result.md` line 154). Local experiment 273, report 03, finding 2-5, showed that a cache causes it. After the alias moves, unchanged groups replay from the cache under the old version and an edited group answers live under the new one. The advice to use a cache is then wrong (`sdlc/issues/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md`).
+- A record whose replies name two model versions stops at exit 4 with "the backend returned different model versions for one record; pin --model and rerun with --record or --cache" (`cli/failure.rs:344-351`, `public/error.rs:220`, `result.md` line 154). Local experiment 273, report 03, finding 2-5, showed that a cache causes it. After the alias moves, unchanged groups replay from the cache under the old version and an edited group answers live under the new one. The advice to use a cache is then wrong (`sdlc/issues/closed/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md`).
 
 ## Design
 
@@ -267,7 +267,7 @@ Contract 2; state and timing 1; reach 3; proof 1; cost of error 2; total 9. Fina
 
 ## Deferred gaps
 
-- The mixed-model cache fix: treat a cached group answered by another version as a miss, or allow mixed versions and list them. It waits on this pin by the backlog's placement, and the pin makes the fault appear only when a user types an alias. `sdlc/issues/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md` keeps it.
+- The mixed-model cache fix: treat a cached group answered by another version as a miss, or allow mixed versions and list them. It waits on this pin by the backlog's placement, and the pin makes the fault appear only when a user types an alias. `sdlc/issues/closed/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md` keeps it.
 - Architect review 05, finding 2.2: a warning or refusal when one run's rows name more than one model version. The pin removes the default path. The run loop belongs to ticket 0146, so the check waits for it.
 - Architect review 08, item 1: a freshness rule for an alias in the cache key, and a mode that sends again and replaces. Both matter only for a typed alias after this ticket.
 - A `model` member in a question set, so `audit --write` can record a set's model.
@@ -284,7 +284,7 @@ Contract 2; state and timing 1; reach 3; proof 1; cost of error 2; total 9. Fina
 
 ## Closes
 
-Ruling 8 and the pin half of ruling 2 in `sdlc/issues/closed/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md`, which then has no open item. Question 1 of the 0.1 backlog. The message half of `sdlc/issues/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md`. Finding 2.1 of `sdlc/issues/2026-09-26-architect-review-05-answer-contract.md` for single files, and the default half of item 1 in `sdlc/issues/2026-09-26-architect-review-08-cache.md`.
+Ruling 8 and the pin half of ruling 2 in `sdlc/issues/closed/2026-09-22-what-the-vendors-founder-said-about-where-the-model-goes.md`, which then has no open item. Question 1 of the 0.1 backlog. The message half of `sdlc/issues/closed/2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md`. Finding 2.1 of `sdlc/issues/2026-09-26-architect-review-05-answer-contract.md` for single files, and the default half of item 1 in `sdlc/issues/closed/2026-09-26-architect-review-08-cache.md`.
 
 ## Evidence
 

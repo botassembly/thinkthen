@@ -65,7 +65,7 @@ The build of ticket 0154 edits each page and removes the old sentence in the sam
 
 ## Overlap with the recognize ADR
 
-Ticket 0147's ADR 0050 extends the built-in ceiling to recognize word and `confirm` questions, and names one piece at an address with no ceiling and no profile. Once this ADR is built, every address has a request size, so that case no longer exists. Ticket 0147 edits ADR 0040 and `backends.md` line 17. This ADR edits neither until ticket 0147 lands.
+Ticket 0147's first draft planned an ADR 0050 that extends the built-in ceiling to recognize word and `confirm` questions, and names one piece at an address with no ceiling and no profile. Once this ADR is built, every address has a request size, so that case no longer exists. Ticket 0147 edits ADR 0040 and `backends.md` line 17. This ADR edits neither until ticket 0147 lands. That ADR was never written; ticket 0147 wrote ADR 0056 instead.
 
 ## What Ian can overturn
 

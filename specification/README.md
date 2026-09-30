@@ -28,7 +28,7 @@ The names table in [`../README.md`](../README.md) fixes the four names: question
 | [recognize.md](recognize.md) | `recognize` and its beta relation output | Settled |
 | [relate.md](relate.md) | `relate`, complete entity sets, relation plans, and edges | Settled |
 | [transform.md](transform.md) | `transform list` and `transform show`, the read-only catalog of built-in `jq` transforms | Settled |
-| [audit.md](audit.md) | `audit`, which grades saved `decide` and `choose` answers against an answer key | Settled |
+| [audit.md](audit.md) | `audit`, which grades the saved answers of all ten commands against an answer key | Settled |
 | [diff.md](diff.md) | `diff`, which shows the saved answers that changed between two runs or two cuts | Settled |
 | [check.md](check.md) | `check`, which sends four fixed requests to a named backend and reports whether it works with this tool | Settled |
 | [settings.md](settings.md) | Reference: every setting, its default, and its spelling on each surface, with a link to the page that fixes it | Settled |
@@ -52,5 +52,9 @@ Each section carries one of three words. **Settled** means code may be built aga
 | `rank QUESTION` | Prints records by yes probability, or by the weighted value of a saved `score` question |
 | `annotate FILE` | Asks a saved question set and adds one field per question |
 | `find QUESTION` | Picks the unit that best answers a question, out of a set the model sees at once |
+| `recognize [KIND]...` | Finds every name in one text and gives each one a kind |
 | `relate RELATION...` | Finds named relationships in one complete entity set |
+| `audit RESULTS KEY` | Grades saved answers against an answer key and suggests a bar |
+| `diff A [B]` | Shows the saved answers that changed between two runs or two cuts |
+| `transform list`, `transform show NAME` | Lists and prints the built-in `jq` transforms |
 | `check` | Checks that a backend you name works with this tool, and exits 0 only when nothing is critical |

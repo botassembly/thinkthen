@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-29 from experiment 413's `RESULTS.md`. Ticket 0301 is implementing the correction accepted in [ADR 0110](../planning/adr/0110-noul-null-criteria-wire-omission.md).
+Status: Open for the hosted check only. Ticket 0301 is complete and built the correction accepted in [ADR 0110](../planning/adr/0110-noul-null-criteria-wire-omission.md). The separately authorized hosted `thinkthen check` against Liquid's d1 remains. Filed 2026-09-29 from experiment 413's `RESULTS.md`.
 
 # The systemone adapter sends null criteria that Liquid's d1 refuses
 

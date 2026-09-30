@@ -199,9 +199,6 @@ jvm)
 swift)
 		mkdir -p "$folder/Examples" "$folder/Sources/CThinkThen/include" \
 			"$folder/Sources/ThinkThen" "$folder/Tests/TypeCase"
-		cmp libraries/swift/Sources/CThinkThen/include/thinkthen.h libraries/c/include/thinkthen.h || {
-			echo 'release-pack: Swift vendored C header differs' >&2; exit 1;
-		}
 		cp libraries/swift/LICENSE libraries/swift/README.md libraries/swift/Package.swift "$folder/"
 		cp libraries/swift/Examples/main.swift "$folder/Examples/"
 		cp libraries/swift/Sources/CThinkThen/module.modulemap "$folder/Sources/CThinkThen/"
@@ -266,9 +263,6 @@ ada)
 		;;
 objective-c)
 		mkdir -p "$folder/Sources" "$folder/Examples"
-		cmp libraries/objective-c/Sources/thinkthen.h libraries/c/include/thinkthen.h || {
-			echo 'release-pack: Objective-C copied C header differs' >&2; exit 1;
-		}
 		cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
 			libraries/objective-c/source-package.json "$folder/"
 		cp libraries/objective-c/Sources/ThinkThen.h libraries/objective-c/Sources/ThinkThen.m \
@@ -292,7 +286,10 @@ cobol)
 		case $1 in go | cpp | swift | zig | php | dart | ada | objective-c | cobol) ;; *) echo "release-pack: archived source does not permit $1" >&2; exit 1 ;; esac
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
-			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "libraries/$1/$relative" | cmp -s - "$copied" || {
+			member=libraries/$1/$relative
+			# A linked source, such as the shared C header, is compared with the file it names.
+			[ ! -L "$member" ] || member=$(python3 -c 'import os, sys; print(os.path.normpath(os.path.join(os.path.dirname(sys.argv[1]), os.readlink(sys.argv[1]))))' "$member")
+			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$member" | cmp -s - "$copied" || {
 				echo "release-pack: $1 source differs from archived commit: $relative" >&2; exit 1;
 			}
 		done

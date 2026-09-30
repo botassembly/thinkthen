@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: open for items 3 and 4. Ticket 0147 settled item 1, and ticket 0167, complete 2026-09-27, settled item 2. Filed 2026-09-26 by the marketing lead from a fresh architect review.
 
 # Architect review 10: `recognize` and `relate`
 
@@ -10,7 +10,7 @@ Severity 1 means a wrong answer, data loss, a security problem or a hang. Severi
 
 ## 1. One kind gives that kind to every name the model detects (severity 1)
 
-Settled by ticket 0147, landed 2026-09-27. Every run with kinds asks the kind question with `none of these`, so a name no listed kind covers is dropped. Item 2 stays open for standalone `relate`.
+Settled by ticket 0147, landed 2026-09-27. Every run with kinds asks the kind question with `none of these`, so a name no listed kind covers is dropped. Ticket 0167 settled item 2.
 
 Evidence. Live, `recognize person` labeled `Acme Corp` (0.99) and `Paris` (0.79) as `person`. Replayed real Jev detection answers label a song, an island, a studio and an album as `person` at 0.98 to 0.99. `facade/recognize.rs:219-231` sets the kind probability to 1.0, and the detection question at `recognize.rs:7` asks about every kind of named entity.
 
@@ -20,7 +20,7 @@ Direction. With one kind, ask the kind question against an implicit "something e
 
 ## 2. A cross-kind relation keeps at most one edge per asking name, and the asking side depends on unrelated names (severity 1)
 
-Carried by ticket 0167, ready for review 2026-09-27. ADR 0057 moves `relate` to one yes/no question per pair.
+Settled by ticket 0167, complete 2026-09-27. ADR 0057 moves `relate` to one yes/no question per pair.
 
 Evidence. Live, "John Lennon wrote Help!, Girl and In My Life" gave 1 of 3 edges (0.81, 0.12, 0.02). In replay, the same facts gave 0 edges with 3 songs and 3 edges after adding an unrelated fourth song. Code: `relation.rs:188-257` and `:194`. ADR 0019 makes the options total one. The bench states the same effect on real duets.
 

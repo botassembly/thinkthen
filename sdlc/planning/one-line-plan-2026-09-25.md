@@ -1,5 +1,7 @@
 # Surfaces in one batch
 
+Historical. [cleanup-2026-09-30.md](cleanup-2026-09-30.md) sets the current order of work.
+
 Written 2026-09-25 by Claude. Ian accepted this order the same morning. It replaces the one-surface-at-a-time order in `one-line-plan-2026-09-24.md`, including C before every other surface. Ian can overturn it.
 
 ## Why

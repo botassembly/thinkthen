@@ -288,8 +288,16 @@ def workflow_mutations():
     assert any("receipt capture order" in item for item in findings), findings
 
 
+def tracked_links():
+    """Every symlink Git tracks passes the source capture check."""
+    helper = importlib.machinery.SourceFileLoader("managed_pair", str(HELPER)).load_module()
+    data = subprocess.check_output(["git", "archive", "--format=tar", "HEAD"], cwd=HELPER.parents[2])
+    helper.tar_files(data, "source")
+
+
 def main():
     workflow_mutations()
+    tracked_links()
     with tempfile.TemporaryDirectory() as temporary:
         base = Path(temporary)
         fixture(base)

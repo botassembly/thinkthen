@@ -1,5 +1,7 @@
 # Add a C++ binding
 
+Status: open. Ticket 0249 landed the C++ source package. The supported release channel remains.
+
 Filed 2026-09-28 by the marketing lead, on Ian's instruction: "I definitely want to support C++. I'm going to have the team work on that as well." Ian ranks C++ ahead of COBOL.
 
 ## Current status

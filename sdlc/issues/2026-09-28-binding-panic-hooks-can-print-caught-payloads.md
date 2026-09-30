@@ -1,6 +1,6 @@
 # Python, Ruby and TypeScript panic hooks can print caught payloads
 
-Status: open. Confirmed by bounded source inspection on main `f45dae96`, following the 0226 preparation inventory. The returned errors are already fixed text. This issue records the earlier panic-hook path and disposal risk; it does not claim that a real credential or user evidence has appeared in production diagnostics.
+Status: open for the non-Linux target-package proofs only. Ticket 0306 settled the source: Python, Ruby and TypeScript call the shared `thinkthen::contained` guard and keep no hook of their own. Confirmed by bounded source inspection on main `f45dae96`, following the 0226 preparation inventory. The returned errors are already fixed text. This issue records the earlier panic-hook path and disposal risk; it does not claim that a real credential or user evidence has appeared in production diagnostics.
 
 ## Current boundaries
 

@@ -10,7 +10,7 @@ ThinkThen answers typed questions about text. Use the command in a shell script 
 | `choose` | which one option fits best | a label, or `null` when none wins |
 | `tag` | which labels apply | a JSON array of labels |
 | `score` | where the text falls on a scale | a number on that scale |
-| `filter` | the same yes/no of each record in a stream | the records that pass, byte for byte, in input order |
+| `filter` | the same yes/no of each record in a stream | the records that pass, in input order; a CSV or TSV row prints as JSON |
 | `rank` | the same yes/no question or saved score question of each record | the records, highest probability or score first |
 | `find` | which unit best answers the question | that unit, or no output (exit 3) when `--none` wins or ties |
 | `annotate` | a saved set of named questions of each record | records with named answers or failure markers |
