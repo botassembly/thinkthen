@@ -3,7 +3,7 @@
 use std::sync::Mutex;
 
 use serde_json::{Value, json};
-use thinkthen::{Batch, Call, Facts, FailureCause, Judgment, Probabilities, RecordObservation};
+use thinkthen::{Batch, Call, Facts, Judgment, RecordObservation};
 
 use super::{Call as NativeCall, Failure};
 use thinkthen::{
@@ -50,98 +50,17 @@ pub(super) fn batch<T>(
     })
 }
 
-pub(super) fn put(held: &mut Value, key: &str, value: Value) {
-    if let Some(fields) = held.as_object_mut() {
-        fields.insert(key.to_owned(), value);
-    }
-}
-
-pub(super) fn facts(value: &Facts) -> Value {
-    let mut held = json!({
-        "records": value.records(),
-        "requests_sent": value.requests_sent(),
-        "cache_answers": value.cache_answers(),
-        "seconds": value.seconds(),
-    });
-    if let Some(tokens) = value.input_tokens() {
-        put(&mut held, "input_tokens", json!(tokens));
-    }
-    if let Some(tokens) = value.output_tokens() {
-        put(&mut held, "output_tokens", json!(tokens));
-    }
-    if let Some(model) = value.model() {
-        put(&mut held, "model", json!(model));
-    }
-    held
-}
-
+/// Each question event as the crate serializes it. A row event has no JSON
+/// form, so it is skipped; a question event always serializes.
 #[derive(Default)]
 pub(super) struct Observed(Mutex<Vec<Value>>);
 
 impl Observed {
     pub(super) fn capture(&self, event: RecordObservation<'_>) {
-        let RecordObservation::Question {
-            index,
-            member,
-            stage,
-            position,
-            detail,
-        } = event
-        else {
+        if matches!(event, RecordObservation::Row { .. }) {
             return;
-        };
-        let mut held = json!({
-            "index": index,
-            "position": position,
-            "question_sha256": detail.question_sha256(),
-            "model": detail.model(),
-            "url": detail.url(),
-            "requests": detail.requests(),
-            "requests_sent": detail.requests_sent(),
-            "cached": detail.cached(),
-            "failed_questions": detail.failed_questions(),
-        });
-        if let Some(member) = member {
-            put(&mut held, "member", json!(member));
         }
-        if let Some(stage) = stage {
-            put(&mut held, "stage", json!(stage));
-        }
-        if let Some(answer) = detail.value() {
-            put(&mut held, "answer", judgment(answer));
-        }
-        if let Some(failure) = detail.failure() {
-            put(
-                &mut held,
-                "failed",
-                json!({"kind":"backend","cause":failure_name(failure)}),
-            );
-        }
-        if let Some(probabilities) = detail.probabilities() {
-            put(
-                &mut held,
-                "probabilities",
-                match probabilities {
-                    Probabilities::YesNo { yes } => json!(yes),
-                    Probabilities::Named(rows) => json!(
-                        rows.iter()
-                            .map(|row| (row.name(), row.probability()))
-                            .collect::<Vec<_>>()
-                    ),
-                },
-            );
-        }
-        if let Some(confidence) = detail.confidence() {
-            put(&mut held, "confidence", json!(confidence));
-        }
-        if let Some(usage) = detail.usage() {
-            put(
-                &mut held,
-                "usage",
-                json!({"input_tokens":usage.input_tokens(),"output_tokens":usage.output_tokens()}),
-            );
-        }
-        if let Ok(mut rows) = self.0.lock() {
+        if let (Ok(held), Ok(mut rows)) = (serde_json::to_value(&event), self.0.lock()) {
             rows.push(held);
         }
     }
@@ -163,17 +82,6 @@ pub(super) fn judgment(value: &Judgment) -> Value {
         Judgment::Choice(pick) => json!(pick),
         Judgment::Score(score) => json!(score),
         Judgment::Tags(labels) => json!(labels),
-    }
-}
-
-fn failure_name(value: FailureCause) -> &'static str {
-    match value {
-        FailureCause::MissingAnswer => "missing_answer",
-        FailureCause::WrongKind => "wrong_kind",
-        FailureCause::MissingProbability => "missing_probability",
-        FailureCause::InvalidProbability => "invalid_probability",
-        FailureCause::InvalidDistribution => "invalid_distribution",
-        FailureCause::UnexpectedProbability => "unexpected_probability",
     }
 }
 

@@ -61,9 +61,9 @@ impl Failure {
             "retryable": self.retryable,
             "message": self.message,
         });
-        if let Some(facts) = &self.facts {
-            result::put(&mut error, "facts", result::facts(facts));
-            result::put(&mut error, "details", details.clone());
+        if let (Some(facts), Some(fields)) = (&self.facts, error.as_object_mut()) {
+            fields.insert("facts".to_owned(), json!(facts));
+            fields.insert("details".to_owned(), details.clone());
         }
         json!({ "err": error }).to_string()
     }
@@ -228,7 +228,7 @@ pub(crate) fn answer(engine: Option<&Engine>, call: &Call, token: &CancelToken) 
         Ok(finished) => format!(
             "{{\"ok\":{{\"value\":{},\"facts\":{},\"details\":{details}}}}}",
             finished.value,
-            result::facts(&finished.facts),
+            json!(finished.facts),
         ),
         Err(failure) => failure.envelope_with(&details),
     }
@@ -299,21 +299,14 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
     })
 }
 
-/// The engine's counters as one JSON object.
+/// The engine's counters as one JSON object, as the crate serializes them.
 pub(crate) fn usage(engine: Option<&Engine>) -> String {
     guarded(|| {
         let counters = match engine {
             Some(engine) => engine.usage(),
             None => thinkthen::usage()?,
         };
-        Ok(json!({
-            "requests_sent": counters.requests_sent(),
-            "retries": counters.retries(),
-            "cache_answers": counters.cache_answers(),
-            "input_tokens": counters.input_tokens(),
-            "output_tokens": counters.output_tokens(),
-        })
-        .to_string())
+        Ok(json!(counters).to_string())
     })
 }
 
