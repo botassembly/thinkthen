@@ -27,8 +27,16 @@ NOT_RUN = {
     "defect": "no SQL form: no outside boundary reaches an internal invariant failure",
 }
 TYPED = {"decide": "thinkthen_decide", "choose": "thinkthen_choose", "tag": "thinkthen_tag", "score": "thinkthen_score"}
-FAILED = re.compile(r"^thinkthen (\w+)( \(retryable\))?: ")
+FAILED = re.compile(r"thinkthen (usage|local|backend|cancelled|deadline|defect): (.+) \(retryable: (yes|no)\)", re.DOTALL)
 SENDING_ERRORS = {"21-backend-fault": 1, "23-cancelled-fault": 1}
+
+
+def failure(text: str | None) -> tuple[str, bool]:
+    """Read the complete ordinary SQL error; shared cases have no removal stubs."""
+    match = FAILED.fullmatch(text or "")
+    if match is None:
+        raise AssertionError(f"the case succeeded or lacked the SQL error form: {text!r}")
+    return match[1], match[3] == "yes"
 
 
 def form(case: dict) -> str | None:
@@ -129,11 +137,9 @@ def refused(case: dict, backend: Backend) -> None:
     results = asked(steps, env, setup)
     backend.release()
     error = next((one for one in results if isinstance(one, str)), None)
-    match = FAILED.match(error or "")
-    if not match:
-        raise AssertionError(f"the case succeeded or failed unnamed: {results}")
-    same("kind", match[1], case["expect"]["error"]["kind"])
-    same("retryable", bool(match[2]), False)
+    kind, retryable = failure(error)
+    same("kind", kind, case["expect"]["error"]["kind"])
+    same("retryable", retryable, case["expect"]["error"].get("retryable", False))
     same("sent", backend.close(), SENDING_ERRORS.get(ident, 0))
 
 
