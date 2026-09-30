@@ -204,8 +204,8 @@ pub(crate) enum Command {
     /// Each record can make paid requests in three steps: one boundary question
     /// per text piece; one kind question per found name when kinds are given,
     /// plus an edge question when its span can change; then questions for the
-    /// relation pairs allowed by rules. --plan prints every record's exact
-    /// boundary requests and upper bounds for later requests.
+    /// relation pairs allowed by rules. --plan prints the first record's exact
+    /// boundary requests and upper bounds for the whole input.
     ///
     /// A record run exits 0 when it completes without a partial or whole-run
     /// failure. The printed values carry the individual answers.
