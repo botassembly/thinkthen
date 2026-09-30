@@ -115,8 +115,7 @@ class TestEngineSettings < Minitest::Test
     p1 = corpus.fetch("cases").find { |one| one["name"] == "plan-p1" }
     given = p1.fetch("plan_input")
     assert_equal({}, given.fetch("settings"))
-    TestBackend.with(<<~RUBY) do |backend, child|
-      ENV.delete("THINKTHEN_API_KEY")
+    TestBackend.with(<<~RUBY, extra: { "THINKTHEN_API_KEY" => nil }) do |backend, child|
       question, input = JSON.parse(hear)
       say T.plan(question, input)
       begin
