@@ -174,6 +174,20 @@ fn build(plan: &Plan) -> Result<Engine, Error> {
     Ok(engine)
 }
 
+/// Flush every engine this backend built. A call can hold the list when
+/// `FATAL` reaches `proc_exit`, so a busy list skips the flush rather than
+/// waiting on a lock its holder never releases.
+pub(crate) fn finish_usage() {
+    let Ok(all) = ENGINES.try_lock() else {
+        return;
+    };
+    let kept: Vec<Engine> = all.iter().map(|(_, engine)| engine.clone()).collect();
+    drop(all);
+    for engine in kept {
+        engine.finish_usage();
+    }
+}
+
 /// This backend's totals: requests sent, cache answers, input and output tokens.
 pub(crate) fn totals() -> [u64; 4] {
     engines().iter().fold([0; 4], |sum, (_, engine)| {
@@ -313,6 +327,9 @@ pub(crate) fn run_result<T: Send + 'static>(
         .iter()
         .find(|(plan, _)| *plan == call.plan)
         .map(|(_, engine)| engine.clone());
+    if held.is_none() {
+        ffi::flush_usage_at_exit();
+    }
     let millis = call.deadline_ms;
     let due = u64::try_from(millis)
         .ok()

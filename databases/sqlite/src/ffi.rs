@@ -1,11 +1,11 @@
 //! Every `unsafe` block of the binding (ADR 0047 item 3): the entry point,
-//! the host's API table, the library pin, the connection handle, and the
-//! virtual-table glue.
+//! the host's API table, the library pin, the connection handle, the
+//! virtual-table glue, and the exit hook that flushes the usage totals.
 
 use std::borrow::Cow;
 use std::ffi::{CStr, c_char, c_int};
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicPtr, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicPtr, Ordering};
 use std::sync::{Arc, Mutex};
 
 use rusqlite::Connection;
@@ -52,6 +52,24 @@ fn version_refusal(host: c_int) -> Option<String> {
             host % 1_000
         )
     })
+}
+
+/// Flush the process engine's usage totals at exit (ADR 0113), registered
+/// once when the first engine is built. The C library also runs a library's
+/// `atexit` hook when that library is unloaded, and a reload registers it again.
+pub(crate) fn flush_usage_at_exit() {
+    static REGISTERED: AtomicBool = AtomicBool::new(false);
+    if REGISTERED.swap(true, Ordering::AcqRel) {
+        return;
+    }
+    // SAFETY: the hook is a plain function of this library, which the C
+    // library runs at exit or when it unloads the library.
+    let _registered = unsafe { libc::atexit(flush_usage) };
+}
+
+/// The exit hook. A panic stays inside `thinkthen::contained`.
+extern "C" fn flush_usage() {
+    let _flushed = thinkthen::contained(crate::settings::finish_usage);
 }
 
 /// Whether SQLite has interrupted the connection. Read on the calling thread only.

@@ -1,6 +1,7 @@
 //! Every `unsafe` line of the extension: PostgreSQL's interrupt flags, the
 //! signal mask a worker starts under, the file privilege check, the
-//! descriptor opens behind the named-file gate, and the throttle's check.
+//! descriptor opens behind the named-file gate, the throttle's check, and
+//! the exit hook that flushes the usage totals.
 
 use std::ffi::c_int;
 use std::fs::File;
@@ -112,6 +113,22 @@ pub(crate) fn spawn_masked(
         libc::pthread_sigmask(libc::SIG_SETMASK, &raw const before, std::ptr::null_mut());
     }
     spawned
+}
+
+/// Flush this backend's usage totals when it exits (ADR 0113). Registered
+/// once, on the backend thread, before the backend builds its first engine.
+pub(crate) fn flush_usage_at_exit() {
+    static REGISTERED: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+    if REGISTERED.swap(true, std::sync::atomic::Ordering::AcqRel) {
+        return;
+    }
+    // SAFETY: called on the backend thread; the hook lives for the process.
+    unsafe { pg_sys::on_proc_exit(Some(flush_usage), Datum::from(0)) };
+}
+
+/// The exit hook. A panic stays inside `thinkthen::contained`.
+unsafe extern "C-unwind" fn flush_usage(_code: c_int, _arg: Datum) {
+    let _flushed = thinkthen::contained(crate::call::finish_usage);
 }
 
 /// Register `thinkthen.throttle` with a check, so PostgreSQL refuses a bad

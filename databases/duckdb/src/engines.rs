@@ -142,6 +142,23 @@ static ENGINES: Mutex<Registry> = Mutex::new(Registry {
     kept: Vec::new(),
 });
 
+/// Flush every engine this process kept (ADR 0113). A busy registry skips
+/// the flush rather than waiting on a lock, and a registry another process
+/// built, as in a forked child, is left alone.
+pub(crate) fn finish_usage() {
+    let kept: Vec<Arc<Engine>> = match ENGINES.try_lock() {
+        Ok(held) if held.pid == std::process::id() => held
+            .kept
+            .iter()
+            .map(|entry| Arc::clone(&entry.engine))
+            .collect(),
+        _ => return,
+    };
+    for engine in kept {
+        engine.finish_usage();
+    }
+}
+
 fn registry() -> std::sync::MutexGuard<'static, Registry> {
     let mut held = ENGINES.lock().unwrap_or_else(PoisonError::into_inner);
     let pid = std::process::id();
@@ -260,6 +277,7 @@ pub(crate) fn engine_for_typed(
         engine: Arc::clone(&built),
         used,
     });
+    crate::usage_ffi::flush_usage_at_exit();
     Ok(built)
 }
 
