@@ -35,11 +35,11 @@ fn named_folder_mode_warns_once_before_keyless_cache_and_replay_hits() {
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
     for (label, mode, selector, quiet, warning) in [
         ("private-cache", 0o700, "cache", false, false),
-        ("group-cache", 0o770, "cache", false, true),
+        ("group-cache", 0o770, "cache", false, false),
         ("world-replay", 0o777, "replay", false, true),
         ("environment-cache", 0o777, "environment", false, true),
         ("private-read-only-replay", 0o500, "replay", false, false),
-        ("quiet-group-cache", 0o770, "cache", true, true),
+        ("quiet-other-cache", 0o707, "cache", true, true),
     ] {
         let cache = folder(&format!("named-trust-{label}"));
         let entry = plant(&cache, listener.base()).expect("bound entry");
@@ -133,7 +133,7 @@ fn trust_warning_precedes_the_refresh_cost_warning() {
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
     let cache = folder("named-trust-refresh-order");
     plant(&cache, listener.base()).expect("bound entry");
-    fs::set_permissions(&cache, fs::Permissions::from_mode(0o770)).expect("folder mode");
+    fs::set_permissions(&cache, fs::Permissions::from_mode(0o707)).expect("folder mode");
     let output = spawn(
         &[
             "decide",
