@@ -334,30 +334,31 @@ pub(crate) fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
 ///
 /// The hostile replay route also drives the record verbs. Each route is its own
 /// test, so the runner spreads the 518 spawns across its threads.
-fn sweep_route(named: &str) {
+fn sweep_route(named: &str) -> io::Result<()> {
     let route = PATHS
         .iter()
         .find(|route| route.named == named)
-        .expect("the route stays in the matrix");
+        .ok_or_else(|| io::Error::other("the route left the matrix"))?;
     for verb in VERBS {
         for (view, framing) in WAYS {
-            sweep(route, verb, view, framing).expect("the compiled binary runs");
+            sweep(route, verb, view, framing)?;
         }
     }
     let relate = VERBS
         .into_iter()
         .find(|(name, _, _)| *name == "relate")
-        .expect("relate stays in the matrix");
+        .ok_or_else(|| io::Error::other("relate left the matrix"))?;
     for (view, framing) in TABLE_WAYS {
-        sweep(route, relate, view, framing).expect("the compiled binary runs");
+        sweep(route, relate, view, framing)?;
     }
     if route.damage == Some(HOSTILE) {
         for verb in RECORD_VERBS {
             for (view, framing) in RECORD_WAYS {
-                sweep(route, verb, view, framing).expect("the compiled binary runs");
+                sweep(route, verb, view, framing)?;
             }
         }
     }
+    Ok(())
 }
 
 macro_rules! sweep_tests {
@@ -365,7 +366,7 @@ macro_rules! sweep_tests {
         $(
             #[test]
             fn $test() {
-                sweep_route($named);
+                sweep_route($named).expect("the compiled binary runs");
             }
         )*
 
