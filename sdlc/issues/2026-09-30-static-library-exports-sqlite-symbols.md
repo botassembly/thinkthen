@@ -2,9 +2,9 @@ Status: Open for macOS. Filed 2026-09-30 by ticket 0304 slice 3a. Ticket 0304 sl
 
 Kind: debt
 
-Pay when: before 0.1; ticket 0304 slice 3b pays it.
+Pay when: before 0.1. Ticket 0304 slice 3b paid the Linux part; the macOS part remains.
 
-Keeping it ships static libraries that clash with a consumer's own SQLite, and the inverted test passes while the leak stays.
+Keeping it ships a macOS static library and R package whose `sqlite3_` names clash with a consumer's own SQLite.
 
 # The static libraries export the bundled SQLite's symbols
 

@@ -136,7 +136,7 @@ Decision for 3d, 2026-09-30: option 1. One throttle per process stays, per Ian's
   - The R package links its archive with `-Wl,--exclude-libs,ALL` on Linux, so its shared object exports no `sqlite3_` name. A build before the change exported 285. R finds its routines through their registration.
   - The Go, Zig and C++ setup steps in each README use `localize.sh`.
   - The SQLite and C door shared cases each run on a scratch cache folder and require one answer row in `thinkthen.sqlite` for each good question key.
-  - Host statics stay, as the prep note recommends: the engine maps, SQLite's `STORED` and `ENGINE`, the parsed-question caches, and SQLite's per-connection deadline `REGISTRY` are host state with no other home. The PostgreSQL and DuckDB send-limit copies (`ACTIVE_THROTTLE`, `SEND_BUDGET`) go to 3d part 2.
+  - Host statics stay, as the prep note recommends: the engine maps, SQLite's `STORED` and `ENGINE`, the parsed-question caches, and SQLite's per-connection deadline `REGISTRY` are host state with no other home. The PostgreSQL and DuckDB send-limit copies (`ACTIVE_THROTTLE`, `SEND_BUDGET`) go to slice 3e, as 3d's Defers say.
   - Ratchets: the crate rises by 82 lines for `annotate_each_with` and its two helpers, the C door by 45, SQLite by 35 source and 84 test lines, DuckDB by 2 source and 30 test lines, the Go fixtures by 4, and R by 5.
 - Proof, offline and counted on the loopback backend:
   - `libraries/c/tests/door/main.rs` `the_static_library_exports_exactly_the_header_symbols`: the archive's global names equal the header's 30 functions, and none starts with `sqlite3_`. A C program linked the localized archive beside the system's static SQLite. The Go check's `abi.py` asserts the same set on its installed archive.
@@ -149,11 +149,9 @@ Decision for 3d, 2026-09-30: option 1. One throttle per process stays, per Ian's
   - Every check the change reaches passed, one at a time: `test`, `spec`, workspace clippy, `policy.py`, `tickets`, `lint` in a clean checkout, the C door tests, and the Polars, C#, JVM, Swift, Go, C++, PHP, Ada, Objective-C, COBOL, Zig, Dart, SQLite, DuckDB, PostgreSQL, Python, TypeScript, Ruby and R checks.
 - Defers:
   - The macOS static library still exports SQLite's names. One M5 try of `cc -r -Wl,-exported_symbols_list` wrote an object Apple's `nm` could not read. `sdlc/issues/2026-09-30-static-library-exports-sqlite-symbols.md` stays open for macOS, to the release rehearsal.
-  - DuckDB's `TRY()` refuses volatile functions, so SQL cannot keep a failed annotate row beside its neighbours' values in one statement. The neighbours' answers reach the store, and a rerun reads them.
-  - The DuckDB and PostgreSQL shared case runners do not yet count store rows. DuckDB's harness deletes each child's folder when the child ends, so the count needs a harness change.
-  - 3d part 2: the SQL hosts' send-limit copies.
-  - PostgreSQL has no test that pins a missing-pointer row failing alone. It calls annotate one record at a time, as SQLite does.
-  - The prep note's store edge rows through the extension on the 3.50.0 host (hit, miss, read-only replay, busy wait). The SQLite shared cases cover hit and miss. 3b added no read-only replay or busy wait row.
+  - DuckDB's `TRY()` refuses volatile functions, so SQL cannot keep a failed annotate row beside its neighbours' values in one statement. The neighbours' answers reach the store, and a rerun reads them. This is DuckDB's behavior, not debt.
+  - Slice 3e: the SQL hosts' send-limit copies, as 3d's Defers say.
+  - `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md` owns three proof gaps. The DuckDB and PostgreSQL shared case runners do not count store rows. PostgreSQL has no test that pins a missing-pointer row failing alone. The SQLite extension has no read-only replay or busy wait row on the 3.50.0 host.
 
 ### Slice 3c evidence
 
