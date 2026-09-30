@@ -37,6 +37,9 @@ mod details;
 #[path = "public_batches/tiers.rs"]
 mod tiers;
 
+#[path = "public_batches/cache.rs"]
+mod cache;
+
 #[path = "../src/test_deadline/wait.rs"]
 #[allow(dead_code, reason = "only the child deadline bounds the churn here")]
 mod wait;
@@ -393,8 +396,10 @@ fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
     assert!(backend.count() <= stopped, "a send without its record");
 }
 
+/// Batch 1 returns each row before it reads the next record, as
+/// `specification/records.md` promises, so it holds one send. Batch 2 fills
+/// the throttle, by ADR 0111 section 4.
 #[test]
-#[ignore = "known failing: see sdlc/issues/2026-09-30-public-batch-holds-one-send-under-a-throttle.md"]
 fn a_batch_keeps_a_throttle_of_sends_in_flight_while_they_are_held() {
     let _serial = serial();
     let backend = Backend::start().expect("backend");
@@ -410,7 +415,9 @@ fn a_batch_keeps_a_throttle_of_sends_in_flight_while_they_are_held() {
         let batch = engine.filter_with(
             &asked,
             records,
-            CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+            CallOptions::new().batch(BatchSetting::Records(
+                std::num::NonZeroUsize::new(2).expect("two"),
+            )),
         );
         assert!(batch.take(5).all(|row| row.is_ok()));
         watcher.join().expect("watcher")
