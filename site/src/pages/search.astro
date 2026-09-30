@@ -1,0 +1,26 @@
+---
+// Goal: let a reader find any page on the site by the words on it.
+import Base from '../layouts/Base.astro';
+---
+<Base title="Search" description="Search every page of the ThinkThen site." noindex>
+  <h1>Search</h1>
+  <div id="search" class="search-page">
+    <noscript><p>Search needs JavaScript. The <a href="/functions/">Functions</a> and <a href="/reference/">Reference</a> pages list everything else.</p></noscript>
+  </div>
+  <p class="search-failed" hidden>Search could not load. The <a href="/functions/">Functions</a> and <a href="/reference/">Reference</a> pages list everything else.</p>
+  <link rel="stylesheet" href="/pagefind/pagefind-ui.css">
+  <script is:inline src="/pagefind/pagefind-ui.js"></script>
+  <script is:inline>
+    (function () {
+      var q = new URLSearchParams(location.search).get('q') || '';
+      var box = document.getElementById('site-search');
+      if (box) box.value = q;
+      if (typeof PagefindUI !== 'function') {
+        document.querySelector('.search-failed').hidden = false;
+        return;
+      }
+      var ui = new PagefindUI({ element: '#search', showImages: false, autofocus: !q, resetStyles: false });
+      if (q) ui.triggerSearch(q);
+    })();
+  </script>
+</Base>

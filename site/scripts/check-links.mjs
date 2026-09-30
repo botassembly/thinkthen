@@ -3,6 +3,8 @@
 // land on a file in dist/. The one exception is the install path of a
 // binding with no page yet. BINDING_PATHS_WITHOUT_PAGES in catalog.mjs lists
 // them. A listed path that has a page fails too, so the list stays exact.
+// A link with a #fragment must also find that id or name on the page it
+// lands on, and a bare #fragment must find it on its own page.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,13 +25,28 @@ const files = walk(DIST);
 const html = files.filter((f) => f.endsWith('.html'));
 const have = new Set(files.map((f) => '/' + path.relative(DIST, f).split(path.sep).join('/')));
 
-function lands(href) {
+// The built file a link lands on, or null.
+function target(href) {
   const clean = href.split('#')[0].split('?')[0];
-  if (!clean) return true;
-  if (have.has(clean)) return true;
-  if (have.has(clean.replace(/\/$/, '') + '/index.html')) return true;
-  if (clean === '/' && have.has('/index.html')) return true;
-  return false;
+  if (have.has(clean)) return clean;
+  const index = clean.replace(/\/$/, '') + '/index.html';
+  if (have.has(index)) return index;
+  return null;
+}
+const lands = (href) => !href.split('#')[0].split('?')[0] || target(href) !== null;
+
+const anchors = new Map();
+function idsOf(file) {
+  if (!anchors.has(file)) {
+    const body = fs.readFileSync(path.join(DIST, file), 'utf8');
+    anchors.set(file, new Set([...body.matchAll(/\s(?:id|name)="([^"]+)"/g)].map((m) => m[1])));
+  }
+  return anchors.get(file);
+}
+function fragmentOf(href) {
+  const at = href.indexOf('#');
+  if (at < 0 || at === href.length - 1) return null;
+  try { return decodeURIComponent(href.slice(at + 1)); } catch { return href.slice(at + 1); }
 }
 
 const withoutPage = new Set(BINDING_PATHS_WITHOUT_PAGES);
@@ -40,6 +57,7 @@ if (stale.length) {
 }
 
 const broken = [];
+const brokenAnchors = [];
 const strayCode = [];
 // A draft post builds only when THINKTHEN_DRAFTS=1 asks for it. A normal
 // build that holds one fails, so a draft cannot deploy by accident.
@@ -50,7 +68,14 @@ for (const file of html) {
   if (body.includes('data-draft')) drafts.push(from);
   if (/<\/table>\s*<code(?:\s|>)/i.test(body)) strayCode.push(from);
   for (const m of body.matchAll(/(?:href|src)="(\/[^"]*)"/g)) {
-    if (!lands(m[1]) && !withoutPage.has(m[1])) broken.push(`${from} -> ${m[1]}`);
+    if (withoutPage.has(m[1])) continue;
+    if (!lands(m[1])) { broken.push(`${from} -> ${m[1]}`); continue; }
+    const frag = fragmentOf(m[1]);
+    if (frag && !idsOf(target(m[1])).has(frag)) brokenAnchors.push(`${from} -> ${m[1]}`);
+  }
+  for (const m of body.matchAll(/href="(#[^"]*)"/g)) {
+    const frag = fragmentOf(m[1]);
+    if (frag && !idsOf(from).has(frag)) brokenAnchors.push(`${from} -> ${m[1]}`);
   }
 }
 
@@ -65,9 +90,15 @@ if (broken.length) {
   process.exit(1);
 }
 
+if (brokenAnchors.length) {
+  console.error(`links to a missing anchor: ${brokenAnchors.length}`);
+  for (const b of [...new Set(brokenAnchors)].sort()) console.error('  ' + b);
+  process.exit(1);
+}
+
 if (strayCode.length) {
   console.error(`stray code tag after a table: ${strayCode.join(', ')}`);
   process.exit(1);
 }
 
-console.log(`link check: ${html.length} pages, every internal link lands, apart from ${withoutPage.size} binding install paths with no page yet`);
+console.log(`link check: ${html.length} pages, every internal link and anchor lands, apart from ${withoutPage.size} binding install paths with no page yet`);
