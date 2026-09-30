@@ -1,6 +1,6 @@
 # 0312: Trim process pedantry
 
-Status: in progress
+Status: built, awaiting code review
 
 Lane claude-1. Branch `ticket/0312-trim-process`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 8.
 
@@ -30,3 +30,24 @@ The process docs are short and hold only rules that prevented real, recurring de
 | `named-answers.mjs` | sample code names answers and reads exit codes safely | keep: code samples, shared with the site |
 | `tickets` | five Evidence bullets | keep: workspace rule |
 | `policy.py` seam and catalog words | vendor and effect names stay behind their boundaries | keep: architecture |
+
+## Build result
+
+| Check | Result |
+| --- | --- |
+| `sdlc/scripts/lint` | pass, exit 0; `CLAUDE.md` 3,351/5,000 characters |
+| `python3 sdlc/scripts/tickets` | 0 evidence failures |
+| `sh sdlc/scripts/demos-self-test` | 10 cases pass |
+| `python3 sdlc/scripts/pages --self-test`, `pages` | pass; 26 pages, every relative link resolves |
+| `sdlc/scripts/demos` over the real pages | 23 green, 0 red, with the lane's existing `target/debug/thinkthen` |
+
+Word counts: `ticket-preparation.md` 4,056 to 706. `AGENTS.md` 637 to 457 words, 4,572 to 3,351 characters. `sdlc/tickets/README.md` 77 to 168 words, because it now states the short form.
+
+Removed: `sdlc/scripts/pages-self-test`; the vocabulary scan, help scan, and ADR 0016 layout rules in `demos`; the list, title, state, and front-window agreement in `pages`. Scripts lost about 590 lines. ADR 0016, `demos/README.md`, `documentation-plan.md`, and `sdlc/scripts/README.md` now describe what the scripts check.
+
+## What the build taught us
+
+- Most of the demo runner's rules measured page shape. Only four protect a proof: an asserting block, no silent `bash` block, no `like ""`, and no `set +e`. The `--replay` folder guard keeps demos off the network.
+- The three-way how-to list agreement existed because the list has three copies. The check policed a duplication instead of removing it.
+- `quality-plan.md` still proposes a vocabulary lint over the marketing word list. It is a proposal; ruling 8 now weighs against it.
+- The real demo run used the lane's prebuilt binary. The spec rung rebuilds first; this change touches no Rust, so the result stands.
