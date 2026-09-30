@@ -1,6 +1,6 @@
 # The PostgreSQL check keeps wall-clock limits that fail under load
 
-Status: open. Found by ticket 0304 slice 3e's PostgreSQL runs. Owner: none.
+Status: closed on 2026-09-30 by ticket 0340. Each routine step keeps its order and count proofs and records its time; a `STEP_within_N_ms` twin checks the limit only under the stress profile.
 
 Kind: debt
 

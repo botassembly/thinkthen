@@ -1,6 +1,6 @@
 # The graded rank tests rewrite one question file in place
 
-Status: open. Found by ticket 0304 slice 3e's `sdlc/scripts/test` run. Owner: none.
+Status: closed on 2026-09-30 by ticket 0340. `question()` writes a per-process name and renames it into place. Under load, 35 of 800 runs failed before and 0 of 800 after.
 
 Kind: debt
 

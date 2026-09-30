@@ -1,6 +1,6 @@
 # The ordered output test races the next request under load
 
-Status: open. Found by ticket 0304 slice 3e's `sdlc/scripts/test` run. Owner: none.
+Status: closed on 2026-09-30 by ticket 0340. The test reads no standard output until request 6 arrives, then checks that record 1's row already waits in the pipe. Under load, 3 of 2,400 runs failed before and 0 of 2,400 after.
 
 Kind: debt
 

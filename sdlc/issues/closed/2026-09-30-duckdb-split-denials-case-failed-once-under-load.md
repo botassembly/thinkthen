@@ -1,6 +1,6 @@
 # The DuckDB split-denials case failed once under load
 
-Status: open. Found by ticket 0304 slice 3a's first surface sweep. Owner: none.
+Status: closed on 2026-09-30 by ticket 0340. The cause was the test's HTTP/1.0 server: it closed each connection without saying so, ureq reused the connection, and the second send failed as "the backend did not answer". The fixture now sends `Connection: close`. The dependency bug is `2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md`.
 
 Kind: debt
 

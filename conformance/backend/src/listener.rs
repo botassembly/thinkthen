@@ -130,13 +130,11 @@ impl Canned {
 /// What a listener answers one request with.
 pub(crate) type Reply = dyn Fn(&Recorded) -> Canned + Send + Sync;
 
-/// One request or output event, ordered as the scheduling test observes it.
+/// One event a listener reports as it happens.
 #[derive(Debug)]
 pub enum Observed {
     /// A request reached the listener.
     Request,
-    /// One line reached the process reading standard output.
-    Output(String),
 }
 
 /// One request the listener read, kept for the assertions to compare.

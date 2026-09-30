@@ -47,6 +47,10 @@ class PackedReplies:
                 else:
                     status, headers, reply = 200, {"Content-Type": "application/json"}, answer(questions)
                 self.send_response(status)
+                # An HTTP/1.0 server closes after each reply. ureq-proto 0.6.4 pools the
+                # connection unless the reply says so, and a reused one fails under load.
+                # Issue: sdlc/issues/2026-09-30-ureq-reuses-a-connection-after-an-http-1-0-reply.md
+                self.send_header("Connection", "close")
                 for name, value in headers.items():
                     self.send_header(name, value)
                 self.send_header("Content-Length", str(len(reply)))
