@@ -74,6 +74,9 @@ def load_door():
     door.thinkthen_free_string.argtypes = [ctypes.c_void_p]
     door.thinkthen_error_code.argtypes = [ctypes.c_void_p]
     door.thinkthen_error_code.restype = ctypes.c_int
+    door.thinkthen_plan_json.argtypes = [ctypes.c_void_p, ctypes.c_char_p,
+                                         ctypes.POINTER(ctypes.c_void_p), ctypes.POINTER(ctypes.c_size_t)]
+    door.thinkthen_plan_json.restype = ctypes.c_int
     return door
 
 
@@ -134,6 +137,26 @@ def call(door, port, case, cache):
         door.thinkthen_engine_free(engine)
 
 
+def plan(door, port, case, cache):
+    """A plan case runs with no key, and the backend it could reach answers nothing."""
+    os.environ["THINKTHEN_BASE_URL"] = f"http://127.0.0.1:{port}/generic/v1"
+    os.environ.pop("THINKTHEN_API_KEY", None)
+    os.environ["THINKTHEN_CACHE"] = str(cache)
+    engine = door.thinkthen_engine_new()
+    assert engine, f"{case['name']}: C engine build"
+    try:
+        request = json.dumps(case["plan_input"], ensure_ascii=False, separators=(",", ":")).encode()
+        out, length = ctypes.c_void_p(), ctypes.c_size_t()
+        code = door.thinkthen_plan_json(engine, request, ctypes.byref(out), ctypes.byref(length))
+        assert code == 0, f"{case['name']}: C plan returned error {code}"
+        try:
+            return json.loads(ctypes.string_at(out, length.value))
+        finally:
+            door.thinkthen_free_string(out)
+    finally:
+        door.thinkthen_engine_free(engine)
+
+
 def check_offsets(case, actual, conformance):
     source = conformance[case["case_id"]]
     assert source["text"] == "Le café 😀 Maria Chen arrived."
@@ -153,6 +176,11 @@ def check_runtime(cases, checks, conformance):
     try:
         with tempfile.TemporaryDirectory(prefix="thinkthen-types-") as folder:
             for index, case in enumerate(cases):
+                if "plan_input" in case:
+                    actual = plan(door, port, case, Path(folder) / str(index))
+                    assert checks["plan"].is_valid(actual), f"{case['name']}: actual plan schema"
+                    assert actual == case["response"], f"{case['name']}: wrong C plan: {actual!r}"
+                    continue
                 if "request" not in case or case.get("schema_only", False):
                     continue
                 if "case_id" in case and case["case_id"] != "generic":

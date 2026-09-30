@@ -1,8 +1,8 @@
 # 0314: Rust owns the result schema
 
-Status: slice 3 landed; slice 4 waits on 0304 slice 3
+Status: in progress; slice 4a landed, the port families follow as 4b to 4g
 
-Lane claude-1. Branch `ticket/0314-rust-result-schema`. Design: [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md). Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 7 and 8. Builds with [0291](0291-remaining-language-doors.md), so the fourteen C-door bindings change once.
+Lane claude-2 from slice 4 (claude-1 before). Branch `ticket/0314-rust-result-schema`. Design: [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md). Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 7 and 8. Builds with [0291](0291-remaining-language-doors.md), so the fourteen C-door bindings change once.
 
 ## Outcome
 
@@ -32,6 +32,7 @@ impl Serialize for Counters
 impl Serialize for DoorReply
 impl Serialize for ErrorKind
 impl Serialize for Facts
+impl Serialize for PlanEstimate
 impl Serialize for RecordObservation
 impl Serialize for Usage
 struct DoorReply
@@ -61,6 +62,16 @@ Branch `ticket/0314-s3-native-bindings`.
 - Line counts against main: R 340 added, 689 deleted; Ruby 136 added, 303 deleted; Python 314 added, 471 deleted. The crate gains 200 lines and its ceiling rises by 200 to 105668: 97 for the question-event type, 65 for the tally's cost sum and its test, and 38 for the tally's model rule and its edge-case table. Binding ceilings: R Rust 2236 to 1863, Ruby Rust 1434 to 1268, Python Rust 7383 to 7247, Python package 4580 to 4580. The review fix adds R's and Ruby's written-event check and removes Python's summing type. R's own code rises 2353 to 2379 and Ruby's 2324 to 2325, because the host now shapes frames and values from the JSON.
 - Defers: TypeScript builds the same detail JSON by hand; it moves to the crate's `Serialize` in slice 4. The Python pandas 2 lane waits for a networked machine.
 
+## Slice 4a build: the C bridge
+
+Branch `ticket/0314-s4-remaining-ports`. Built with ticket 0291's first family.
+
+- Starts from: main `6c29039b9`. `PlanEstimate` had accessors and no serialized form. SQLite and PostgreSQL build their plan JSON with `json!` and name the body `first_body_utf8`; DuckDB returns a `STRUCT` with `first_body`; Python returns a dict with `first_body` bytes. The C door had no plan export, and `libraries/c/src/ffi.rs` held 499 nonblank lines.
+- Keeps: every existing C symbol and signature, the ten-verb `thinkthen_call` grammar and its `{value,facts}` reply, every door byte, and `PlanEstimate`'s accessors.
+- Changes: `PlanEstimate` derives `Serialize` and the schema's `plan` definition, with its token band as `{lower, upper}` and its body as `first_body_utf8`; `impl Serialize for PlanEstimate` joins slice 1's added public declarations above, the one block `sdlc/scripts/inventory` reads. The C door adds `thinkthen_plan_json`, which serializes that type. It and `thinkthen_question_file`, the two no-send exports that hand back owned JSON text, move to `ffi/texts/ffi.rs`, so `ffi.rs` drops to 473 lines. The type corpus gains a runtime `plan_input` case and a schema-only rejection. `libraries/BINDING-AUTHOR.md` states the thin-port rule, the three additions and 0291's proof rules.
+- Proof: `libraries/c/tests/door/plan.rs` runs `tests/c/plan.c` under AddressSanitizer with no key. P1 prints the exact bytes `databases/duckdb/tools/plan_suite.py` pins: 1 record, 1 request, 182 bytes, the 93 to 166 token band and the quoted first body. The loopback listener counts zero requests. Thirteen refusal rows, a null engine and two null out pointers each return `THINKTHEN_EUSAGE`, and the rows leave both outputs unchanged. The header-derived export tests see the new symbol in the shared library and in the localized static library, laid out as `release-pack` writes the archive. A receipt from a packed and installed archive waits for the release rehearsal. `specification/fixtures/types/self-test` passes 54 cases, the plan case through the real door. The C surface check passes.
+- Defers: the port families, 4b to 4g, in ADR 0112 section 5's order. SQLite's and PostgreSQL's hand-built plan JSON is debt in `sdlc/issues/2026-09-30-sql-hosts-build-plan-json-by-hand.md`.
+
 ## What the build taught us
 
 - Core forbade the dynamic-JSON lints, and every derive in core trips them: the derived schema code calls `json!`, `to_value`, and `Map`. Core now lifts `disallowed_methods`, `disallowed_types`, and `disallowed_macros` under `cfg(test)` only. Production builds keep all three forbidden, and `policy.py` still scans every core source, tests included, for file, environment, socket, clock, and process paths. The alternative was hand `JsonSchema` impls for about fifty core types outside core, the hand copy ADR 0112 rejects. Ian can overturn.
@@ -71,3 +82,5 @@ Branch `ticket/0314-s3-native-bindings`.
 - Every definition the corpus and port checks name keeps its name. Unused hand names gave way to derived ones: `judgmentQuestion` is `question`, the five answer definitions are `answer`, `edge` and `recognizedRelation` are `relatedEntityEdge` and `entityEdge`, and `probability`, `annotateQuestion`, and `judgmentFields` are gone. `doorRequest` moved to `question-file.schema.json`; `types/check.py` and the Dart parity script read it there.
 - `FindQuestionOwned` and `FindAnswer` dropped their hand `Serialize` for a derive with a serde struct tag; their bytes are unchanged. `QuestionText`, `Meaning`, `Record`, and `RecognizeSpec` print any JSON in the schema. A typed recognize question is a deferred gap. `Json` and `Threshold` are the only hand `JsonSchema` forms; they sit in `schema_forms.rs`, outside `core`, so every test build has them, including the `--no-default-features` package run.
 - Proof: the drift test passes; it failed on a one-byte edit of the committed file and on a `probe` field added to `Meta`; `sh specification/fixtures/types/self-test` passes 55 cases against the real door; `sh specification/fixtures/question-file/self-test` passes with `doorRequest`; `cargo tree -e normal` for `crates/thinkthen`, `libraries/c`, and `libraries/python` shows no `schemars`.
+- Slice 4a: `default_engine` stays in the crate. 0304 slice 3a deferred it to this pass, but it holds an engine, not a limit, and the Python, TypeScript, Ruby and R module functions share it. Moving it into each binding would copy one lazy cell four times. Ian can overturn.
+- Slice 4a: the plan body member is `first_body_utf8`, as SQLite and PostgreSQL already print it. Ticket 0291 drafted `first_request_body_utf8`; two shipped hosts outweigh a draft. The plan object carries no `schema` member, as the SQL hosts' plans carry none; the generated schema's `plan` definition describes it.
