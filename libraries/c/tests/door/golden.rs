@@ -13,8 +13,7 @@ use serde_json::json;
 use crate::cases::{Script, replies};
 use crate::{compile, crate_dir, run, text};
 
-const SETTINGS: &str =
-    r#"{"cache":false,"max_retries":0,"usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#;
+const SETTINGS: &str = r#"{"cache":false,"max_retries":0,"usd_per_million_input":"0.25","usd_per_million_output":"0.25"}"#;
 
 const FACTS: &str = r#""facts":{"cache_answers":0,"estimated_cost_usd":"0.000001","input_tokens":1,"model":"jev-1.13.0","output_tokens":1,"records":1,"requests_sent":1,"seconds":0}"#;
 
@@ -50,30 +49,59 @@ fn every_door_reply_keeps_its_bytes() {
         script.ask("call", &[&full, &request.to_string()]);
     }
     script.ask("settings", &[&broken, SETTINGS]);
-    script.ask("call", &[&broken, &json!({"annotate":set,"records":["one"]}).to_string()]);
+    script.ask(
+        "call",
+        &[
+            &broken,
+            &json!({"annotate":set,"records":["one"]}).to_string(),
+        ],
+    );
     script.ask("call", &[&broken, &asked[0].to_string()]);
     script.ask("facts", &[&broken, "-"]);
-    let output = run(&compile(&crate_dir().join("tests/c/driver.c")), "", &script.0);
+    let output = run(
+        &compile(&crate_dir().join("tests/c/driver.c")),
+        "",
+        &script.0,
+    );
     assert!(output.status.success(), "{}", text(&output.stderr));
     let said: Vec<String> = replies(&output.stdout)
         .expect("framed replies")
         .into_iter()
-        .map(|(code, body)| format!("{code} {}", steady(&body.replace(backend.origin(), "ORIGIN"))))
+        .map(|(code, body)| {
+            format!(
+                "{code} {}",
+                steady(&body.replace(backend.origin(), "ORIGIN"))
+            )
+        })
         .collect();
-    let expected: Vec<String> = GOLDEN.iter().map(|line| line.replace("{FACTS}", FACTS)).collect();
+    let expected: Vec<String> = GOLDEN
+        .iter()
+        .map(|line| line.replace("{FACTS}", FACTS))
+        .collect();
     assert_eq!(said, expected);
 }
 
 /// The reply with each elapsed time and request digest printed as 0. A
 /// digest covers the request, which names the loopback port.
 fn steady(body: &str) -> String {
-    const VARYING: [&str; 5] = ["\"seconds\":", "\"wall_ms\":", "\"server_ms\":", "\"request_sha256\":\"", "\"requests\":[\""];
+    const VARYING: [&str; 5] = [
+        "\"seconds\":",
+        "\"wall_ms\":",
+        "\"server_ms\":",
+        "\"request_sha256\":\"",
+        "\"requests\":[\"",
+    ];
     let mut out = String::new();
     let mut rest = body;
-    while let Some(at) = VARYING.iter().filter_map(|key| rest.find(key).map(|at| at + key.len())).min() {
+    while let Some(at) = VARYING
+        .iter()
+        .filter_map(|key| rest.find(key).map(|at| at + key.len()))
+        .min()
+    {
         out.push_str(&rest[..at]);
         out.push('0');
-        rest = rest[at..].trim_start_matches(|c: char| c.is_ascii_hexdigit() || matches!(c, '.' | '-'));
+        rest = rest[at..]
+            .trim_start_matches(|c: char| c.is_ascii_hexdigit() || matches!(c, '.' | '-'));
     }
     out + rest
 }

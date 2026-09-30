@@ -10,8 +10,8 @@ use std::sync::Mutex;
 
 use serde_json::value::RawValue;
 use thinkthen::{
-    AttemptObservation, BatchSetting, CallOptions, CancelToken, DoorReply, Engine, Facts, Judgment, LoadedQuestion,
-    Question, QuestionSet,
+    AttemptObservation, BatchSetting, CallOptions, CancelToken, DoorReply, Engine, Facts, Judgment,
+    LoadedQuestion, Question, QuestionSet,
 };
 
 use crate::door;
@@ -86,18 +86,28 @@ pub(crate) fn call(
     let options = controls(&request, door::options(deadline_ms, token)?)?;
     let attempts = Mutex::new(Vec::<AttemptObservation>::new());
     let collect = |event| {
-        if let Ok(mut held) = attempts.lock() { held.push(event); }
+        if let Ok(mut held) = attempts.lock() {
+            held.push(event);
+        }
     };
-    let options = if request.attempts { options.observe_attempt(&collect) } else { options };
+    let options = if request.attempts {
+        options.observe_attempt(&collect)
+    } else {
+        options
+    };
     let (value, facts) = answer(engine, &request, options)?;
     let attempts = if request.attempts {
-        let mut events = attempts.into_inner().map_err(|_| Failure::defect("attempt collection failed"))?;
+        let mut events = attempts
+            .into_inner()
+            .map_err(|_| Failure::defect("attempt collection failed"))?;
         events.sort_by_key(AttemptObservation::ordinal);
         Some(events)
     } else {
         None
     };
-    written(serde_json::to_string(&DoorReply::new(value, facts, attempts)?))
+    written(serde_json::to_string(&DoorReply::new(
+        value, facts, attempts,
+    )?))
 }
 
 fn controls<'a>(
@@ -251,7 +261,11 @@ fn answer(
             let ranked = engine.rank_with(&asked, records.iter().map(String::as_str), options)?;
             Ok((
                 written(serde_json::to_string(
-                    &ranked.value().iter().map(|row| *row.input()).collect::<Vec<_>>(),
+                    &ranked
+                        .value()
+                        .iter()
+                        .map(|row| *row.input())
+                        .collect::<Vec<_>>(),
                 ))?,
                 ranked.facts().clone(),
             ))

@@ -42,7 +42,7 @@ Every output a surface reads has one Rust type that serializes it. The schema is
 | `meta` and usage | `Meta`, `Usage` |
 | Annotate member | `AnnotatedValue`: `Answered(Value)` or `Failed(FailedValue)` |
 | Call facts | `public::Facts`, which gains `Serialize` |
-| Call error | a `CallError` form of the public error: `kind`, `retryable`, `message` |
+| Call error | a `CallError` form of the public error: `kind`, `retryable`, `message`. It exists only in the schema, as a test type, until a surface prints one. (Amended in 0314 slice 2.) |
 | C door reply | a public `DoorReply` envelope: `value`, `facts`, optional `attempts` |
 
 The annotate union is bool, label, labels, number, null or failure. A not sure answer is JSON `null`. A failure is always an object with one member, `failed`. No answered value is ever an object, so the two cannot be confused in JSON. The schema states this as an `anyOf` with the failure branch closed. The derive emits `anyOf`. It stays unambiguous because no `value` branch is an object and `failed` is a closed object. (Amended in 0314 slice 1; the first draft said `oneOf`.)
@@ -98,7 +98,7 @@ All packages are 0.0.1 and unreleased, so removing typed classes needs no deprec
 - Python: the `Facts` class becomes the same read-only mapping every other result already is. Its error classes stay.
 - TypeScript and PHP: nothing to delete.
 
-The C door itself stops building JSON by hand. `call.rs` and `failures.rs` serialize `DoorReply`, `Facts` and `CallError`. Today's `facts` bytes come from an unordered `json!` map, so their keys print in sorted order; the struct fields take that same order, and door output stays byte-identical.
+The C door itself stops building JSON by hand. `call.rs` and `failures.rs` serialize `DoorReply` and `Facts`. The door has no JSON call error: a failed call returns a code, a message and facts. (Amended in 0314 slice 2.) Today's `facts` bytes come from an unordered `json!` map, so their keys print in sorted order; the struct fields take that same order, and door output stays byte-identical.
 
 ### 5. How this combines with 0291
 
@@ -126,7 +126,7 @@ Per ruling 7, these wait:
 Each slice lands green: `cargo test --workspace`, `policy.py`, fresh code review.
 
 1. **Generated schema.** Add the dev-dependency, the derives, the `with` forms, the per-verb definitions, `Facts` serialization, `CallError`, `DoorReply` and the drift test. Regenerate `result.schema.json`; move `doorRequest` to the question-file schema and point `types/check.py` at it. No output byte changes. Proof: the drift test passes, fails on a one-byte edit of the committed file, and fails when a field is added to `Meta` without regenerating; `sh specification/fixtures/types/self-test` passes with every corpus verdict unchanged, or a changed verdict is an extra-member case the commit names under the compatibility rule; `sh specification/fixtures/question-file/self-test` passes with `doorRequest`; `cargo tree -e normal` for `crates/thinkthen`, `libraries/c` and `libraries/python` shows no `schemars`.
-2. **The C door serializes typed replies.** First add one golden assertion of today's exact reply and error-facts bytes with every optional facts key present, and land it green on the hand-built code. Then `call.rs` and `failures.rs` use `DoorReply`, `Facts` and `CallError`. Proof: the golden assertion passes unchanged after the switch; the C door's existing tests pass; the types self-test passes against the real door; every port's `public_types.py` or `type_cases.py` passes unchanged.
+2. **The C door serializes typed replies.** First add one golden assertion of today's exact reply and error-facts bytes with every optional facts key present, and land it green on the hand-built code. Then `call.rs` and `failures.rs` use `DoorReply` and `Facts`. The door has no JSON call error; it returns a code, a message and facts. Proof: the golden assertion passes unchanged after the switch; the C door's existing tests pass; the types self-test passes against the real door; every port's `public_types.py` or `type_cases.py` passes unchanged.
 3. **Native bindings, right after slice 2.** R and Ruby read serialized JSON; Python's `Facts` becomes a mapping. Proof: each binding's conformance run passes; R case 41 still reports positions `11..20`; slice 4's null, failure, error-kind and extra-member cases pass.
 4. **Port families, with 0291.** One family at a time, in section 5's order, after ADR 0111 slice 3. Proof per port: its corpus check passes against the generated schema; one shared annotate case with a `null` member and a `failed` member returns unresolved and failure distinctly through the public binding; one usage failure surfaces as the named `usage` kind with code 1; one row carrying an unknown extra member reads without error; 0291's P1 plan, deadline, cap and refusal proof passes; the family's deleted files and line count are in the build record.
 
