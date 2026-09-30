@@ -3,6 +3,7 @@
 
 import json
 import pathlib
+import sqlite3
 import subprocess
 import sys
 
@@ -78,8 +79,13 @@ def run_case(socket: str, case: dict, folder: pathlib.Path) -> None:
             wanted = str(step.get("model", step.get("edges", "t")))
             assert done.returncode == 0 and done.stdout.strip() == wanted, (case["id"], done.stdout, done.stderr)
     if "entries" in case:
-        saved = sum(path.suffix == ".json" and path.name != ".thinkthen-backend.json"
-                    for path in folder.rglob("*"))
+        # A recording keeps one store row per question (ADR 0111 section 3).
+        store = folder / "thinkthen.sqlite"
+        saved = 0
+        if store.is_file():
+            with sqlite3.connect(store) as connection:
+                saved = connection.execute("SELECT count(*) FROM answers").fetchone()[0]
+            connection.close()
         assert saved == case["entries"], (case["id"], saved)
 
 

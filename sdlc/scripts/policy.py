@@ -311,6 +311,8 @@ def check_crates() -> None:
         {"default": ["cli", "polars"]},
         {"polars": ["dep:polars", "dep:polars-core", "dep:clap"]},
         {"polars": ["dep:polars"]},
+        {"host-sqlite": ["rusqlite/bundled"]},
+        {"default": ["cli"]},
     ):
         if not feature_failures({**manifest, "features": {**manifest.get("features", {}), **plant}}):
             fail("dependencies", f"the planted features {plant} are refused")
@@ -343,10 +345,12 @@ def feature_failures(manifest: dict) -> list[str]:
     if optional != {"clap", "csv-core", "signal-hook", "polars", "polars-core"}:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
-        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
+        "default": ["cli", "bundled-sqlite"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
         "polars": ["dep:polars", "dep:polars-core", "polars/lazy"],
+        "bundled-sqlite": ["rusqlite/bundled"], "host-sqlite": [],
     }:
-        held.append("the default cli feature selects only command dependencies, and polars selects its two pinned crates with lazy")
+        held.append("the default cli feature selects only command dependencies, polars selects its two pinned crates with lazy, "
+                    "bundled-sqlite bundles rusqlite's SQLite, and host-sqlite adds nothing")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")
     if manifest.get("dependencies", {}).get("polars-core") != {
@@ -354,17 +358,17 @@ def feature_failures(manifest: dict) -> list[str]:
         "features": ["dtype-struct"],
     }:
         held.append("polars-core activates only dtype-struct, under the optional Polars feature")
-    # ADR 0111 section 3: the question store's SQLite, bundled so every host
-    # runs the same one, pinned exactly. Every surface reaches the store, so it
-    # sits outside the command feature.
+    # ADR 0111 section 3: the question store's SQLite, pinned exactly. Every
+    # surface reaches the store, so it sits outside the command feature. The
+    # bundled-sqlite feature bundles it; the SQLite extension runs on its host's.
     rusqlite = manifest.get("dependencies", {}).get("rusqlite", {})
     if not (
         isinstance(rusqlite, dict)
         and str(rusqlite.get("version", "")).startswith("=")
         and {key: value for key, value in rusqlite.items() if key != "version"}
-        == {"default-features": False, "features": ["bundled"]}
+        == {"default-features": False}
     ):
-        held.append("rusqlite is pinned exactly, not optional, with default features off and only bundled on")
+        held.append("rusqlite is pinned exactly, not optional, with default features off and no feature of its own")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES["thinkthen"]:
         held.append("thinkthen declares the accepted development dependency set")
     return held
@@ -419,6 +423,8 @@ BINDING_PLANTS = (
     ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),
     ("default features", "Cargo.toml", lambda text: text.replace(
         "default-features = false", "default-features = true")),
+    ("host SQLite outside the SQLite extension", "Cargo.toml", lambda text: text.replace(
+        '"bundled-sqlite"', '"host-sqlite"')),
     ("dependency on another binding", "Cargo.toml", lambda text: text.replace(
         "[dependencies]\n", '[dependencies]\nthinkthen-c = { path = "../c" }\n')),
     ("renamed thinkthen with default features", "Cargo.toml", lambda text: text.replace(
@@ -553,10 +559,14 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
                      else dependency, specification) for table in tables
                     for kind in ("dependencies", "dev-dependencies", "build-dependencies", "patch")
                     for dependency, specification in table.get(kind, {}).items()]
+    # ADR 0111: the SQLite extension runs the question store on its host's
+    # SQLite, and every other binding bundles its own.
+    sqlite = "host-sqlite" if name == "databases/sqlite" else "bundled-sqlite"
     if [(kind, specification) for kind, dependency, specification in dependencies
             if dependency == "thinkthen"] != [("dependencies", {
-                "path": posixpath.relpath("crates/thinkthen", crate), "default-features": False})]:
-        held.append(f"{name} depends on thinkthen once, by path, with default features off")
+                "path": posixpath.relpath("crates/thinkthen", crate), "default-features": False,
+                "features": [sqlite]})]:
+        held.append(f"{name} depends on thinkthen once, by path, with default features off and only {sqlite} on")
     for _, dependency, specification in dependencies:
         path = specification.get("path") if isinstance(specification, dict) else None
         reached = posixpath.relpath(posixpath.normpath(posixpath.join(REPO.as_posix(), crate, path)),
@@ -837,6 +847,9 @@ def check_bindings() -> None:
     sqlite = "databases/sqlite"
     if sqlite in crates or (REPO / sqlite / "Cargo.lock").is_file():
         files = binding_files(sqlite, crates.get(sqlite, sqlite))
+        bundled = files["Cargo.toml"].replace('"host-sqlite"', '"bundled-sqlite"')
+        if bundled == files["Cargo.toml"] or not binding_failures(sqlite, {**files, "Cargo.toml": bundled}):
+            fail("binding", "the SQLite extension with a bundled SQLite beside its host's is refused")
         lock = files["Cargo.lock"]
         drifted = [lock.replace(f'name = "{name}"\nversion = "{version}"', f'name = "{name}"\nversion = "{version}9"', 1)
                    for name, version in (("libsqlite3-sys", "0.38.2"), ("cc", "1.4.7"))]
@@ -1194,7 +1207,13 @@ ENGINE_REFUSED_ROOTS = {"public"}
 
 
 def engine_policy_failures(text: str) -> list[str]:
-    return sorted(set(reverse_failures(rust_tokens(text), ENGINE_REFUSED_ROOTS)))
+    tokens = rust_tokens(text)
+    held = reverse_failures(tokens, ENGINE_REFUSED_ROOTS)
+    # An alias of the crate root or an ancestor can later name public unseen.
+    if any(aliases_outer_root(path, alias) for path, alias in rust_use_paths(tokens)) or any(
+            root == "self" and alias is not None for root, alias in extern_crates(tokens)):
+        held.append("alias of the crate root or an ancestor")
+    return sorted(set(held))
 
 
 def check_engine_policy() -> None:
@@ -1209,6 +1228,9 @@ def check_engine_policy() -> None:
         ("use super::super::public::Error;", ["reverse import of public", "reverse reference to public"]),
         ("use crate::{core, public::Error};", ["reverse import of public"]),
         ("use crate::public as p;", ["reverse import of public", "reverse reference to public"]),
+        ("use crate as c; c::public::Error::new();", ["alias of the crate root or an ancestor"]),
+        ("use super::super as up;", ["alias of the crate root or an ancestor"]),
+        ("extern crate self as root;", ["alias of the crate root or an ancestor"]),
         ("// crate::public::Error", []),
         ('const TEXT: &str = "crate::public::Error";', []),
         ("use crate::core::Answer; crate::engine::budget::SendBudget::new();", []),

@@ -101,7 +101,9 @@ finally:
          'json-decide','choose','tag','score',
          'annotate-one','annotate-on','Ada Lovelace','failure-one','failure-two','success',
          'hold-deadline','recovery-scalar','hold-native','native-recovery')})
-    expected['Each question quotes the text it asks about.'] = 6
+    # The repeated first/second bulk call reads the question cache the
+    # first/second/third call wrote (ADR 0111), so it sends nothing.
+    expected['Each question quotes the text it asks about.'] = 5
     expected.update({'Maria Chen': 2, 'John Smith': 2})
     expected['[{"id":"u001","evidence":"find-one"},{"id":"u002","evidence":"find-two"}]'] = 1
     expected['[{"id":"u001","evidence":"find-none"},{"id":"u002","evidence":"find-another"}]'] = 1
@@ -114,7 +116,7 @@ finally:
     observed_bodies = collections.Counter(map(canonical, bodies))
     accepted_bodies = collections.Counter(canonical(json.loads(line)) for line in
         (ROOT/'fixtures/accepted_requests.jsonl').read_text().splitlines())
-    assert sum(accepted_bodies.values()) == 40, 'accepted full-body fixture is incomplete'
+    assert sum(accepted_bodies.values()) == 39, 'accepted full-body fixture is incomplete'
     packed=[]
     for request in bodies:
         # A request quoting one record is that record's own request, not a packed batch.
@@ -127,7 +129,7 @@ finally:
                 rows.append(json.loads(match.group(1)))
             packed.append(rows)
     expected_packed=[['bulk-before-bad','bulk-middle-bad','bulk-after-bad'],
-                     ['first','second','third'],['first','second'],
+                     ['first','second','third'],
                      ['filter-one','filter-two'],['rank-one','rank-two'],
                      [f'hold-bulk-{i}' for i in range(1,7)]]
     (RUN/'packed-rows.json').write_text(json.dumps(packed,indent=2)+'\n')

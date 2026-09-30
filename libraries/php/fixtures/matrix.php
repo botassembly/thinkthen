@@ -41,7 +41,8 @@ if (getenv('TT_FACTS_PROOF') === '1') {
         $one = $door->decide('Is it?', 'no-usage');
         assertTypedFacts($one, 1);
         check(!array_key_exists('input_tokens', $one['facts']) && !array_key_exists('output_tokens', $one['facts']), 'scalar omitted usage');
-        $many = $door->decideMany('Is it?', ['no-usage', 'yes']);
+        // Another question, so the cache the scalar call wrote cannot answer 'no-usage' (ADR 0111).
+        $many = $door->decideMany('Is it now?', ['no-usage', 'yes']);
         assertTypedFacts($many, 2);
         check(!array_key_exists('input_tokens', $many['facts']) && !array_key_exists('output_tokens', $many['facts']), 'bulk omitted usage');
         $saved = $one['facts'];

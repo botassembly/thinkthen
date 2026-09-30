@@ -39,8 +39,8 @@ begin
             "typed bulk result order");
    Decide_Many (Client, "Is it?", Basic, Answers, Facts, Error);
    Require (Error.Kind = None and Answers (3).Probability = 0.6 and Facts.Records = 3 and
-            Facts.Requests_Sent = 0 and Facts.Cache_Answers = 1,
-            "identical packed reply is one cache answer");
+            Facts.Requests_Sent = 0 and Facts.Cache_Answers = 3,
+            "identical bulk answers each question from the cache");
    declare
       Empty : Evidence_Array (1 .. 0);
       Empty_Answers : Decision_Array (1 .. 0);

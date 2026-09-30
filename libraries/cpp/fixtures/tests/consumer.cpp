@@ -276,7 +276,7 @@ int main() {
                 check(corpusNames.insert(item.at("name").get<std::string>()).second,
                       "shared J1 corpus name occurs exactly once");
             }
-            check(corpusCount==55 && corpusNames.size()==55,"J1 corpus 55 unique cases present");
+            check(corpusCount==52 && corpusNames.size()==52,"J1 corpus 52 unique cases present");
             int partialCases = 0;
             for (const auto& item : cases.at("cases")) if (item.at("name")=="17-annotate-partial") {
                 ++partialCases;

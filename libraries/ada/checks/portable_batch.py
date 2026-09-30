@@ -1,5 +1,4 @@
 """Shared five-text Max case through the public Ada bulk procedure."""
-import collections
 import json
 import os
 from pathlib import Path
@@ -8,6 +7,7 @@ import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env
+from portable import one_portable_request
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -20,7 +20,6 @@ LIB_DIR = NATIVE / "lib" if (NATIVE / "lib").is_dir() else NATIVE
 LIB_NAME = "thinkthen" if LIB_DIR != NATIVE else "thinkthen_c"
 FIXTURE = ROOT / "specification/fixtures/batching"
 corpus = json.loads((FIXTURE / "portable-records.json").read_text())
-bodies = [(FIXTURE / f"portable-{n}.request.json").read_text().removesuffix("\n") for n in range(1, 4)]
 backend = Path(os.environ.get("THINKTHEN_BACKEND_BIN", ROOT / "target/debug/conformance-backend"))
 assert corpus["schema"] == "thinkthen.portable-batch-records/1" and len(corpus["texts"]) == 5
 
@@ -60,8 +59,9 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-ada-portable-") as scratch:
         count = int(server.stdout.readline())
         server.stdin.write("capture\n"); server.stdin.flush()
         captured = json.loads(server.stdout.readline())
-        assert count == 3 and collections.Counter(captured["bodies"]) == collections.Counter(bodies), (count, captured)
-        print("ada portable: five typed rows, three exact requests")
+        assert count == 1, (count, captured)
+        one_portable_request(captured["bodies"])
+        print("ada portable: five typed rows, one request with the fixture questions")
     finally:
         server.stdin.close()
         server.wait(timeout=10)

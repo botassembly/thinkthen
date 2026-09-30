@@ -1,6 +1,4 @@
 """Shared five-text Max case through the public bounded COBOL TT-CALL door."""
-import collections
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -9,6 +7,7 @@ import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env
+from portable import one_portable_request, question_keys
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -21,7 +20,6 @@ LIB_DIR = NATIVE / "lib" if (NATIVE / "lib").is_dir() else NATIVE
 LIB_NAME = "thinkthen" if LIB_DIR != NATIVE else "thinkthen_c"
 FIXTURE = ROOT / "specification/fixtures/batching"
 corpus = json.loads((FIXTURE / "portable-records.json").read_text())
-bodies = [(FIXTURE / f"portable-{n}.request.json").read_text().removesuffix("\n") for n in range(1, 4)]
 backend = Path(os.environ.get("THINKTHEN_BACKEND_BIN", ROOT / "target/debug/conformance-backend"))
 assert corpus["schema"] == "thinkthen.portable-batch-records/1" and len(corpus["texts"]) == 5
 request = json.dumps({"decide": corpus["question"], "records": corpus["texts"],
@@ -61,26 +59,23 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cobol-portable-") as scratch:
                              text=True, timeout=60)
         assert run.returncode == 0, (run.stdout, run.stderr)
         result = json.loads(run.stdout)
-        assert set(result) == {"value", "facts"} and result["facts"]["requests_sent"] == 3, result
+        assert set(result) == {"value", "facts"} and result["facts"]["requests_sent"] == 1, result
         rows = result["value"]
         assert len(rows) == 5
-        groups = (0, 0, 1, 1, 2)
-        digests = [hashlib.sha256(b"systemone\n" + (base + "/systemone").encode()
-                                  + b"\n" + body.encode()).hexdigest() for body in bodies]
         for at, row in enumerate(rows):
             assert (row["input"] == corpus["texts"][at] and row["value"] is True
                     and row["answer"]["probability"] == 0.9), row
-            assert row["meta"]["requests"] == [digests[groups[at]]], row
-            if at < 4:
-                assert row["meta"]["batch"]["closed"] == "content" and row["meta"]["batch"]["records"] == 2, row
-            else:
-                assert "batch" not in row["meta"], row
+            assert "batch" not in row["meta"], row
         server.stdin.write("count\n"); server.stdin.flush()
         count = int(server.stdout.readline())
         server.stdin.write("capture\n"); server.stdin.flush()
         captured = json.loads(server.stdout.readline())
-        assert count == 3 and collections.Counter(captured["bodies"]) == collections.Counter(bodies), (count, captured)
-        print("cobol portable: five JSON rows and digests, three exact requests")
+        assert count == 1, (count, captured)
+        one_portable_request(captured["bodies"])
+        # Each row names its own question's key (ADR 0111).
+        keys = question_keys(base + "/systemone", captured["bodies"][0])
+        assert [row["meta"]["requests"] for row in rows] == [[key] for key in keys], rows
+        print("cobol portable: five JSON rows and keys, one request with the fixture questions")
     finally:
         server.stdin.close()
         server.wait(timeout=10)

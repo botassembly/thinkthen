@@ -10,7 +10,7 @@ The slice 2 check runs `nm -D` on `libthinkthen.so` only, so it never saw the st
 
 ## Proof
 
-`libraries/c/tests/door/main.rs` `the_static_library_still_exports_sqlite_symbols_until_slice_3b` runs `nm -g --defined-only` on the archive's `libthinkthen.a`. It asserts at least one `sqlite3_` symbol, so it pins the known failure and fails once the leak is fixed.
+`libraries/c/tests/door/main.rs` `the_static_library_still_exports_sqlite_symbols_until_slice_3b` runs `nm -g --defined-only` on the archive's `libthinkthen.a`. It asserts at least one `sqlite3_` symbol, so it pins the known failure and fails once the leak is fixed. The inverted test is a placeholder, not a gate. It must become a gate that requires zero `sqlite3_` symbols before any release.
 
 ## Where to fix it
 
@@ -18,4 +18,4 @@ Slice 3b of ticket 0304. Link the static library's objects into one relocatable 
 
 ## Done when
 
-Neither static library exports a `sqlite3_` symbol, the C door test asserts zero, and this issue moves to `closed/`.
+Neither static library exports a `sqlite3_` symbol, the C door test asserts zero as a gate that runs before any release, and this issue moves to `closed/`.

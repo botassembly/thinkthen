@@ -8,6 +8,9 @@ import json
 import pathlib
 import sys
 
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
+from portable import one_portable_request  # noqa: E402
+
 FOLDER = pathlib.Path(__file__).resolve().parents[3] / "specification" / "fixtures" / "batching"
 FIXTURE = json.loads((FOLDER / "portable-records.json").read_text())
 
@@ -26,10 +29,11 @@ def query() -> str:
 def verify(rows: str, count: str, capture: str) -> None:
     assert FIXTURE["schema"] == "thinkthen.portable-batch-records/1"
     assert rows.splitlines() == [f"{index}:true" for index in range(5)], rows
-    assert count == "3", count
+    # The content cut is gone (ADR 0111), so the five texts ride one request.
+    assert count == "1", count
     bodies = [(FOLDER / f"portable-{number}.request.json").read_text().removesuffix("\n") for number in range(1, 4)]
     observed = json.loads(pathlib.Path(capture).read_text())
-    assert sorted(observed["bodies"]) == sorted(bodies) and len(observed["bodies"]) == 3, observed
+    one_portable_request(observed["bodies"])
     fixed = [hashlib.sha256(f"systemone\n{FIXTURE['url']}\n{body}".encode()).hexdigest() for body in bodies]
     assert fixed == FIXTURE["digests"], (fixed, FIXTURE["digests"])
 

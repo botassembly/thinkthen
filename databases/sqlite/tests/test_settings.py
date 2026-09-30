@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import sqlite3
 import sys
 import tempfile
 import time
@@ -17,8 +18,12 @@ CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/settings.jso
 
 
 def recording_entries(folder: str) -> int:
-    return sum(path.is_file() and path.name != ".thinkthen-backend.json"
-               for path in pathlib.Path(folder).rglob("*.json"))
+    """The answers a recording keeps: one store row per question (ADR 0111)."""
+    store = pathlib.Path(folder) / "thinkthen.sqlite"
+    if not store.is_file():
+        return 0
+    with sqlite3.connect(store) as connection:
+        return connection.execute("SELECT count(*) FROM answers").fetchone()[0]
 
 
 def test_recording_counter_excludes_lock_files() -> None:
@@ -29,7 +34,11 @@ def test_recording_counter_excludes_lock_files() -> None:
         (root / ".locks" / "one.lock").write_text("lock")
         (root / "one.json").write_text("{}")
         (root / ".thinkthen-backend.json").write_text("{}")
-        expect(recording_entries(folder), 1, "only recorded JSON answers count")
+        with sqlite3.connect(root / "thinkthen.sqlite") as connection:
+            connection.execute("CREATE TABLE answers(key TEXT)")
+            connection.execute("INSERT INTO answers VALUES ('one')")
+        connection.close()
+        expect(recording_entries(folder), 1, "only the store's answer rows count")
 
 
 def test_shared_settings_corpus() -> None:
@@ -155,7 +164,7 @@ say(config=run(db, "SELECT thinkthen_configure(?)", ('{"throttle":8}',)),
     expect(held["first"], [[1]], "first answer")
     expect(held["second"], [[1]], "cache answer")
     expect(backend.close(), 1, "one send")
-    expect(any(path.suffix == ".json" for path in pathlib.Path(env["THINKTHEN_CACHE"]).rglob("*.json")), True, "seeded cache")
+    expect(recording_entries(env["THINKTHEN_CACHE"]), 1, "seeded cache")
 
 
 def test_a_platform_cache_stays_off_and_an_open_named_folder_is_refused() -> None:

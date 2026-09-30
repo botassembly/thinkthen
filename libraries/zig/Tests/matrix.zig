@@ -80,7 +80,7 @@ pub fn main() !void {
     switch (try engine.decideMany("Is it?", &rows, .{})) {
         .ok => |success| {
             defer success.deinit(alloc);
-            try require(success.value.len == 3 and success.facts.records == 3 and success.facts.requests_sent == 0 and success.facts.cache_answers == 1);
+            try require(success.value.len == 3 and success.facts.records == 3 and success.facts.requests_sent == 0 and success.facts.cache_answers == 3);
         },
         .failed => |f| {
             defer engine.freeFailure(f);

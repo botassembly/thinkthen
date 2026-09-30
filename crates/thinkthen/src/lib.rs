@@ -10,6 +10,12 @@
     )
 )]
 
+// ADR 0111: the question store's SQLite is a choice every build makes.
+#[cfg(not(any(feature = "bundled-sqlite", feature = "host-sqlite")))]
+compile_error!(
+    "enable thinkthen's bundled-sqlite feature, or host-sqlite in a SQLite extension that initializes rusqlite's loadable API"
+);
+
 mod core;
 
 mod config;

@@ -4,7 +4,8 @@
 Each case runs in its own child process on the backend's case arm, because
 the extension's engine reads its address once per process. Expected request
 digests were recorded against the canonical URL, so each is recomputed for
-the URL the backend served. Every case reports pass, FAIL, or not run. A
+the URL the backend served. A record function's row lists the question keys
+of ADR 0111 section 2 in place of request digests. Every case reports pass, FAIL, or not run. A
 not-run reason comes only from `NOT_RUN`, the forms with no SQL spelling,
 and the three counts must sum to the file's case count. An optional
 argument names another cases file; the planted-failure test uses it.
@@ -21,10 +22,12 @@ import re
 import sys
 
 from helper import ROOT, Backend, child, environment
+from portable import question_keys
 
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
     "defect": "no SQL form: no outside boundary reaches an internal invariant failure",
+    "groups": "one record's groups were recorded as separate requests, and ADR 0111 section 5 packs them into one",
 }
 TYPED = {"decide": "thinkthen_decide", "choose": "thinkthen_choose", "tag": "thinkthen_tag", "score": "thinkthen_score"}
 FAILED = re.compile(r"thinkthen (usage|local|backend|cancelled|deadline|defect): (.+) \(retryable: (yes|no)\)", re.DOTALL)
@@ -43,6 +46,8 @@ def form(case: dict) -> str | None:
     """The NOT_RUN key for a case with no SQL spelling, or None."""
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "defect"
+    if case["verb"] == "annotate" and "record" in case and len(case.get("exchanges", [])) > 1:
+        return "groups"
     return None
 
 
@@ -150,7 +155,10 @@ def check(case: dict, backend: Backend) -> None:
     arm = f"case/{case['id']}" + ("/capture" if relations or case["verb"] == "find" else "")
     served = backend.base(arm) + "/systemone"
     exchanges = case.get("exchanges", [])
-    renamed = {digest(CANONICAL, one["request"]): digest(served, one["request"]) for one in exchanges}
+    # Find, recognize and relate keep request digests until slice 4 of ticket 0304.
+    keyed = case["verb"] not in ("find", "recognize", "relate")
+    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"]) if keyed
+               else digest(served, one["request"]) for one in exchanges}
     success = swap(case["expect"]["success"], renamed)
     texts = [one["evidence"] for one in exchanges]
     env = environment(backend, arm)
@@ -185,8 +193,12 @@ def check(case: dict, backend: Backend) -> None:
         expected = answers[0]
         same("value", details["value"], expected["bare"])
         same("answer", details["answer"], expected["details"]["answer"])
-        for name in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+        for name in ("model", "question_sha256", "usage", "requests_sent", "cached"):
             same(name, details["meta"].get(name, "absent"), expected["details"].get(name, "absent"))
+        # A request stands for the list of its keys, so a row reads the flattened list.
+        requests = [key for held in expected["details"].get("requests", []) for key in held]
+        same("requests", details["meta"].get("requests", "absent"),
+             requests if "requests" in expected["details"] else "absent")
         same("url", details["meta"]["url"], served)
         typed = {1: True, 0: False}.get(typed, typed) if verb == "decide" else typed
         same("typed", json.loads(typed) if verb == "tag" else typed, expected["bare"])

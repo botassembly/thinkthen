@@ -18,7 +18,7 @@ void main(List<String> args) {
     );
     if (answers.value.length != 5 ||
         answers.facts.records != 5 ||
-        answers.facts.requestsSent != 3 ||
+        answers.facts.requestsSent != 1 ||
         answers.value.any(
           (answer) => answer.outcome != Outcome.yes || answer.probability != .9,
         )) {

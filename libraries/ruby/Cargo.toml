@@ -17,7 +17,7 @@ crate-type = ["cdylib"]
 name = "thinkthen_ruby"
 
 [dependencies]
-thinkthen = { path = "../../crates/thinkthen", default-features = false }
+thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 magnus = { version = "=0.7.1", features = ["rb-sys"] }
 rb-sys = "=0.9.130"
 # The call's worker blocks asynchronous signals with `pthread_sigmask`.

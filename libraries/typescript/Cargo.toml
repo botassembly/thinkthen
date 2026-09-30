@@ -16,7 +16,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
-thinkthen = { path = "../../crates/thinkthen", default-features = false }
+thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 napi = { version = "=2.16.17", default-features = false, features = ["napi8"] }
 napi-derive = "=2.16.13"
 serde_json = "=1.0.151"

@@ -65,9 +65,9 @@ public class Matrix {
             check(bulk.facts().records()==3 && bulk.facts().requestsSent()>=1,"typed bulk facts");
             check(rows.length==3 && rows[0].probability()==.9 && rows[1].probability()==.1 && rows[2].probability()==.6,"reordered bulk "+Arrays.toString(rows));
             Door.TypedResult<Door.Answer[]> cached=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("third")},-1,null);
-            check(cached.facts().records()==3 && cached.facts().cacheAnswers()==1 && cached.facts().requestsSent()==0 &&
+            check(cached.facts().records()==3 && cached.facts().cacheAnswers()==3 && cached.facts().requestsSent()==0 &&
                 cached.value().length==3 && cached.value()[0].probability()==.9 && cached.value()[1].probability()==.1 && cached.value()[2].probability()==.6,
-                "identical bulk replays one cached response");
+                "identical bulk answers each question from the cache");
             Door.Answer[] repeated=engine.decideMany("Is it?",new byte[][]{b("first"),b("second"),b("first")},-1,null).value();
             check(repeated[0].probability()==.9 && repeated[1].probability()==.1 && repeated[2].probability()==.9,"repeated bulk");
             for(int i=0;i<requests.length;i++) {

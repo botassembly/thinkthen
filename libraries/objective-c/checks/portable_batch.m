@@ -17,7 +17,7 @@ int main(int argc, char **argv) {
     }
     int code = [client manyBytes:"Is it relevant?" questionLength:15 texts:texts
                        lengths:lengths count:5 deadline:-1 token:nil answers:answers facts:&facts failure:&failure];
-    if (code || facts.records != 5 || facts.requests_sent != 3 || facts.cache_answers != 0) return 4;
+    if (code || facts.records != 5 || facts.requests_sent != 1 || facts.cache_answers != 0) return 4;
     for (size_t at = 0; at < 5; ++at)
         if (answers[at].outcome != TTOutcomeYes || answers[at].probability != 0.9) return 5;
     tt_failure_clear(&failure);

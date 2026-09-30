@@ -20,6 +20,7 @@ import tempfile
 from pathlib import Path
 
 from harness import ROOT, Backend, expect, rows, run, said
+from portable import question_keys
 from signal_suite import CANCELLED, held_cancel
 
 CASES = Path(os.environ.get("THINKTHEN_CONFORMANCE_CASES", ROOT.parent.parent / "conformance" / "cases.json"))
@@ -30,12 +31,15 @@ BATCH_ONE = {"THINKTHEN_BATCH": "1"}
 # The one closed list of reasons a case does not run here.
 NOT_RUN = {
     "internal_invariant_failure": "the private shared panic-boundary proof replaces the retired C API test hook",
+    "groups": "one record's groups were recorded as separate requests, and ADR 0111 section 5 packs them into one",
 }
 
 
 def reason(case: dict) -> str | None:
     if case.get("operation", {}).get("injection") == "internal_invariant_failure":
         return NOT_RUN["internal_invariant_failure"]
+    if case["verb"] == "annotate" and "record" in case and len(case.get("exchanges", [])) > 1:
+        return NOT_RUN["groups"]
     return NOT_RUN.get(case["verb"])
 
 
@@ -96,10 +100,11 @@ def single(case: dict, base: str) -> list:
 
 def single_wanted(case: dict, base: str) -> list:
     served = base + "/systemone"
-    renamed = {digest(CANONICAL, one["request"]): digest(served, one["request"]) for one in case["exchanges"]}
+    # A recorded request digest stands for its questions' keys (ADR 0111 section 7); a row reads them flattened.
+    renamed = {digest(CANONICAL, one["request"]): question_keys(served, one["request"]) for one in case["exchanges"]}
     wanted = []
     for answer in case["expect"]["success"]["answers"]:
-        details = answer["details"] | {"requests": [renamed[held] for held in answer["details"]["requests"]]}
+        details = answer["details"] | {"requests": [key for held in answer["details"]["requests"] for key in renamed[held]]}
         wanted.append({"bare": answer["bare"], "answer": details["answer"], "url": served} | {name: details.get(name, "absent") for name in FIELDS})
     return wanted
 

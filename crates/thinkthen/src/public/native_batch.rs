@@ -91,11 +91,12 @@ impl Native<'_> {
     }
 }
 
-/// One native row, or the stop that ends the vector: a fatal error, or a
-/// spent budget that leaves every later row spent.
+/// One native row, or the fatal error that ends the vector. A spent budget
+/// fails only the rows of the request it denied: a row another request
+/// already answered keeps its answer, and every later request is denied
+/// before it sends (ticket 0240).
 enum Taken {
     Row(Box<RecoverableDetails>),
-    Spent,
     Fatal(Error),
 }
 
@@ -113,7 +114,7 @@ fn take(native: &Native<'_>, row: Row<Decisions>) -> Taken {
         },
         Err(Failed::Asker(Miss::Refused(error))) => one(failed(&error)),
         Err(Failed::Pack { error, .. }) => one(failed(&packed(error))),
-        Err(Failed::Engine { error, .. }) if error.spent() => Taken::Spent,
+        Err(Failed::Engine { error, .. }) if error.spent() => one(spent()),
         Err(Failed::Engine { error, .. })
             if !matches!(
                 error.kind(),
@@ -186,22 +187,20 @@ impl Engine {
                     results.push(*row);
                     Flow::Continue
                 }
-                Taken::Spent => {
-                    ended = Some(Ok(()));
-                    Flow::Stop
-                }
                 Taken::Fatal(error) => {
-                    ended = Some(Err(error));
+                    ended = Some(error);
                     Flow::Stop
                 }
             });
             engine
                 .ask_all(&asker, packing, host, cancel)
                 .map_err(Error::from)?;
-            if let Some(Err(error)) = ended {
+            if let Some(error) = ended {
                 return Err(error);
             }
-            results.resize_with(count, spent);
+            if results.len() != count {
+                return Err(Error::defect("a native batch lost its result rows"));
+            }
             Ok(results)
         })
     }

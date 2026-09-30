@@ -1,7 +1,5 @@
 """Run the accepted Java, Kotlin, and Scala installed consumers from product-built JARs."""
 import datetime
-import collections
-import hashlib
 import json
 import os
 from pathlib import Path
@@ -9,7 +7,11 @@ import shutil
 import subprocess
 import zipfile
 import xml.etree.ElementTree as ET
+import sys
 from toolchains import JDK, KOTLIN, SCALA
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from portable import one_portable_request, question_keys  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[1]
 TARGET = ROOT / "target"
@@ -81,22 +83,20 @@ for index, lang in enumerate(("java", "kotlin", "scala")):
     summary = json.loads((trial / "home/summary.json").read_text())
     if PORTABLE:
         fixture = ROOT.parents[1] / "specification/fixtures/batching"
-        expected = [(fixture / f"portable-{n}.request.json").read_bytes().removesuffix(b"\n") for n in (1, 2, 3)]
         observed = [path.read_bytes() for path in (trial / "home/barrier").glob("wire-body-*.json")]
-        assert collections.Counter(observed) == collections.Counter(expected), (lang, observed)
-        assert summary["attempts"] == summary["connections"] == 3, summary
+        one_portable_request(observed)
+        assert summary["attempts"] == summary["connections"] == 1, summary
         if lang != "java":
             returned = json.loads((trial / "project/portable-result.json").read_text())
-            assert returned["facts"]["records"] == 5 and returned["facts"]["requests_sent"] == 3, returned
+            assert returned["facts"]["records"] == 5 and returned["facts"]["requests_sent"] == 1, returned
             rows = returned["value"]
             corpus = json.loads((fixture / "portable-records.json").read_text())
             assert len(rows) == 5, rows
-            digests = [hashlib.sha256(b"systemone\n" + summary["url"].encode() + b"\n" + body).hexdigest()
-                       for body in expected]
+            keys = question_keys(summary["url"], observed[0])
             for at, row in enumerate(rows):
                 assert row["input"] == corpus["texts"][at] and row["value"] is True, row
-                assert row["meta"]["requests"] == [digests[[0, 0, 1, 1, 2][at]]], row
-        print(f"installed {lang}: five public rows, three exact bodies and sends PASS", flush=True)
+                assert row["meta"]["requests"] == [keys[at]], row
+        print(f"installed {lang}: five public rows, one request with the fixture questions PASS", flush=True)
     elif RELEASE:
         assert summary["arrivals"] == [f"release-{lang}"] and summary["attempts"] == summary["connections"] == 1, summary
         print(f"JVM {lang} observed body:", json.dumps(summary["body"], sort_keys=True), flush=True)

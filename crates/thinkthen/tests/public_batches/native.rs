@@ -273,15 +273,7 @@ fn native_denied_retry_is_usage_without_a_second_send() {
     let listener =
         Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
             .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .and_then(|builder| builder.api_key("sk-public-batches"))
-        .and_then(|builder| builder.throttle(THROTTLE))
-        .map(EngineBuilder::no_cache)
-        .map(|builder| builder.max_retries(1))
-        .and_then(EngineBuilder::build)
-        .expect("engine");
-    let result = engine
+    let result = retrying(listener.base())
         .details_many_recoverable_with(
             &question(),
             &["alpha".to_owned()],
@@ -301,6 +293,69 @@ fn native_denied_retry_is_usage_without_a_second_send() {
         }
     ));
     assert_eq!(listener.requests().len(), 1);
+}
+
+/// An engine with one retry, no cache and the shared throttle.
+fn retrying(base: &str) -> Engine {
+    Engine::builder()
+        .base_url(base)
+        .and_then(|builder| builder.api_key("sk-public-batches"))
+        .and_then(|builder| builder.throttle(THROTTLE))
+        .map(EngineBuilder::no_cache)
+        .map(|builder| builder.max_retries(1))
+        .and_then(EngineBuilder::build)
+        .expect("engine")
+}
+
+/// Ticket 0240: a retry denied by the send budget fails only its own
+/// request's rows. A later request that answered first keeps its answers.
+#[test]
+fn native_denied_retry_keeps_a_later_request_answered_first() {
+    let _serial = serial();
+    let answered = std::sync::Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
+    let held = std::sync::Arc::clone(&answered);
+    let listener = Listener::answering(move |body| {
+        let (done, signal) = &*held;
+        let mut done = done.lock().expect("flag");
+        if String::from_utf8_lossy(body).contains("alpha") {
+            let _waited = signal
+                .wait_timeout_while(done, std::time::Duration::from_secs(5), |done| !*done)
+                .expect("wait");
+            return Canned::status(503, "busy").asking("retry-after-ms", "0");
+        }
+        *done = true;
+        signal.notify_all();
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#)
+    })
+    .expect("listener");
+    let budget = SendBudget::new();
+    let texts = ["alpha", "beta", "gamma", "delta"].map(str::to_owned);
+    let result = retrying(listener.base())
+        .details_many_recoverable_with(
+            &question(),
+            &texts,
+            CallOptions::new()
+                .batch(BatchSetting::Records(
+                    std::num::NonZeroUsize::new(2).expect("two"),
+                ))
+                .send_budget(&budget, Some(2)),
+        )
+        .expect("safe denied retry beside a later answer");
+    let answered: Vec<bool> = result
+        .value()
+        .iter()
+        .map(|row| matches!(row, thinkthen::RecoverableDetails::Answered(_)))
+        .collect();
+    assert_eq!(answered, [false, false, true, true]);
+    assert!(result.value()[..2].iter().all(|row| matches!(
+        row,
+        thinkthen::RecoverableDetails::Failed {
+            kind: ErrorKind::Usage,
+            retryable: false,
+            cause: None
+        }
+    )));
+    assert_eq!(listener.requests().len(), 2);
 }
 
 #[test]
