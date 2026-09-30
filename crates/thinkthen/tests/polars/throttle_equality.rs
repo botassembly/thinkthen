@@ -73,42 +73,40 @@ fn held_in_flight(call: impl Fn(&Engine, usize) + Sync) -> (usize, usize) {
 fn a_series_runs_at_the_throttle_as_a_slice_does() {
     common::alone(
         "throttle_equality::a_series_runs_at_the_throttle_as_a_slice_does",
-        series_and_slice_share_the_throttle,
+        || {
+            let texts = common::distinct(TEXTS);
+            let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
+            let series = Series::new("body".into(), refs.as_slice());
+            let question = Question::decide("Does this ask for a refund?")
+                .expect("a question")
+                .cut();
+
+            equal_answers(&question, &series, &refs, TEXTS);
+
+            // Exactly two held requests, then the third arrives only after release.
+            let slice = held_in_flight(|engine, index| {
+                let _answered: Vec<_> = engine
+                    .decide_many_with(&question, [refs[index]], singleton())
+                    .collect();
+            });
+            assert_eq!(slice, (2, TEXTS), "the slice in flight on the held arm");
+            let decide = held_in_flight(|engine, index| {
+                let one = Series::new("body".into(), &[refs[index]]);
+                let _answered = engine.decide_series(&question, &one, singleton());
+            });
+            assert_eq!(decide, slice, "decide_series in flight on the held arm");
+            let score = Question::score("How urgent is this?")
+                .and_then(|builder| builder.level("low", None))
+                .and_then(|builder| builder.level("high", None))
+                .and_then(thinkthen::ScoreBuilder::build)
+                .expect("a score question");
+            let scored = held_in_flight(|engine, index| {
+                let one = Series::new("body".into(), &[refs[index]]);
+                let _answered = engine.score_series(&score, &one, singleton());
+            });
+            assert_eq!(scored, (2, TEXTS), "score_series in flight on the held arm");
+        },
     );
-}
-
-fn series_and_slice_share_the_throttle() {
-    let texts = common::distinct(TEXTS);
-    let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
-    let series = Series::new("body".into(), refs.as_slice());
-    let question = Question::decide("Does this ask for a refund?")
-        .expect("a question")
-        .cut();
-
-    equal_answers(&question, &series, &refs, TEXTS);
-
-    // Exactly two held requests, then the third arrives only after release.
-    let slice = held_in_flight(|engine, index| {
-        let _answered: Vec<_> = engine
-            .decide_many_with(&question, [refs[index]], singleton())
-            .collect();
-    });
-    assert_eq!(slice, (2, TEXTS), "the slice in flight on the held arm");
-    let decide = held_in_flight(|engine, index| {
-        let one = Series::new("body".into(), &[refs[index]]);
-        let _answered = engine.decide_series(&question, &one, singleton());
-    });
-    assert_eq!(decide, slice, "decide_series in flight on the held arm");
-    let score = Question::score("How urgent is this?")
-        .and_then(|builder| builder.level("low", None))
-        .and_then(|builder| builder.level("high", None))
-        .and_then(thinkthen::ScoreBuilder::build)
-        .expect("a score question");
-    let scored = held_in_flight(|engine, index| {
-        let one = Series::new("body".into(), &[refs[index]]);
-        let _answered = engine.score_series(&score, &one, singleton());
-    });
-    assert_eq!(scored, (2, TEXTS), "score_series in flight on the held arm");
 }
 
 #[test]
