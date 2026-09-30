@@ -218,6 +218,18 @@ fn tt_question_check(body: Robj) -> Crossed<String> {
     })
 }
 
+/// Read a question file under the crate's one 1 MiB cap.
+#[extendr]
+fn tt_question_file(path: Robj) -> Crossed<String> {
+    thinkthen::read_question_file(text_of(&path, "a question file")?).map_err(|reason| {
+        let message = match reason {
+            thinkthen::QuestionFileError::TooLarge => "the question file is too large",
+            _ => "the question file could not be read",
+        };
+        crate::packed(thinkthen::ErrorKind::Local.name(), false, message)
+    })
+}
+
 /// Validate keyword settings with the shared core grammar before a send.
 #[extendr]
 fn tt_settings_check(body: Robj, kind: Robj) -> Crossed<()> {
@@ -500,6 +512,7 @@ fn tt_engine_set(
 extendr_module! {
     mod thinkthen;
     fn tt_question_check;
+    fn tt_question_file;
     fn tt_settings_check;
     fn tt_decide_column;
     fn tt_plan_column;

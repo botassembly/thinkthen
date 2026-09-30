@@ -22,6 +22,12 @@ check("mixed file and keywords refuse before send", sent_by(check("mixed file ki
   identical(kind_of(tt_question(file = saved, decide = "Other?")), "usage"))) == 0L)
 check("an unreadable question file is local", sent_by(check("unreadable kind",
   identical(kind_of(tt_question(file = paste0(saved, "-missing"))), "local"))) == 0L)
+over <- tempfile(fileext = ".json")
+writeChar(paste0('{"decide":"Is it?"}', strrep(" ", 1048577L - 19L)), over, eos = NULL)
+for (large in c(over, "/dev/zero")) {
+  check("an overlarge question file is local", sent_by(check("overlarge sentence",
+    identical(message_of(tt_question(file = large)), "the question file is too large"))) == 0L)
+}
 invalid <- tempfile(fileext = ".json")
 writeLines('{"decide":', invalid)
 check("an invalid question file is local", sent_by(check("invalid kind",
@@ -40,5 +46,5 @@ values <- tt_score(tt_question(file = scored), c("one", "two"), batch = 1L)$valu
 check("profiled score keeps two values", isTRUE(all.equal(values, c(0.1, 0.1))))
 check("profiled score keeps one request per row", backend_count() - before == 2L)
 
-unlink(c(saved, scored, invalid, running))
+unlink(c(saved, scored, invalid, running, over))
 finish("profile", 3L)

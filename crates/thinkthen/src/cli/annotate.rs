@@ -1,6 +1,5 @@
 //! Apply one saved question set to documents or record streams.
 
-use std::fs;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
@@ -213,7 +212,7 @@ fn input_looks_like_set(arguments: &AnnotateArguments) -> bool {
         .common
         .input
         .as_deref()
-        .and_then(|path| fs::read_to_string(path).ok())
+        .and_then(|path| crate::read_question_file(path).ok())
         .is_some_and(|text| QuestionSet::parse(&text).is_ok())
 }
 

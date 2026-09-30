@@ -84,3 +84,17 @@ fn a_question_file_of_one_mib_runs_and_one_byte_more_is_refused_before_any_reque
         "no command reached the backend: {sent:?}"
     );
 }
+
+/// Ticket 0345: `annotate` looks at `--input` to name a swapped question set
+/// under the same cap, so a broken set beside `--input /dev/zero` fails at once.
+#[test]
+fn a_broken_question_set_beside_an_endless_input_fails_without_reading_it_all() {
+    let broken = written("size-annotate-broken", r#"{"version":1,"questions":{}}"#);
+    let output = run(
+        &["annotate", &broken, "--input", "/dev/zero", "--plan"],
+        b"",
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
+}
