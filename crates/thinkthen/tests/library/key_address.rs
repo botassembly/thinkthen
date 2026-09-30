@@ -4,6 +4,7 @@
     reason = "a failed fixture must stop the boundary proof"
 )]
 
+#[cfg(feature = "cli")]
 use std::fs;
 use std::process::Command;
 
@@ -127,6 +128,7 @@ fn safe_gateway_url_keeps_result_identity_but_not_debug_text() {
     assert_eq!(listener.count(), 1);
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn command_refuses_before_plan_status_or_recording_output() {
     let home = std::env::temp_dir().join(format!(

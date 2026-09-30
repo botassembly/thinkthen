@@ -25,6 +25,7 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     )]
 }
 
+#[cfg(feature = "cli")]
 /// The command's own `status --json` under this cache home.
 fn status(home: &Path) -> serde_json::Value {
     let output = run::output(
@@ -41,6 +42,7 @@ fn status(home: &Path) -> serde_json::Value {
         .clone()
 }
 
+#[cfg(feature = "cli")]
 /// A listener that answers `503` to the arrivals named, and `ANSWERED` otherwise.
 fn failing_at(busy: &'static [usize]) -> Listener {
     let arrivals = AtomicUsize::new(0);
@@ -54,6 +56,7 @@ fn failing_at(busy: &'static [usize]) -> Listener {
     .expect("a loopback listener")
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn the_command_and_a_seeded_engine_add_to_one_total() {
     let listener = failing_at(&[1]);
@@ -70,7 +73,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("the command starts");
-    let command = wait::finish(child, "thinkthen decide").expect("the command runs");
+    let command = crate::wait::finish(child, "thinkthen decide").expect("the command runs");
     assert!(
         command.status.success(),
         "{}",
@@ -91,6 +94,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
     );
 }
 
+#[cfg(feature = "cli")]
 #[test]
 fn a_cached_rerun_sends_nothing_and_adds_a_cache_answer() {
     let listener = listener();

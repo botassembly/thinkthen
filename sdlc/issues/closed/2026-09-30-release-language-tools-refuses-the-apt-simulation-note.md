@@ -1,4 +1,4 @@
-Status: open. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b.
+Status: Closed by the quick fix landed as `Land quick fix: release builds clear host setup, apt, offline crates, and library tests`. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b. Resolution: `ensure_packages` in `sdlc/scripts/release-language-tools.py` no longer requires the plan to start with `Reading package lists`. `selected_plan` reads only `Inst` lines and skips the rest. It still refuses a plan with no `Inst` line, a malformed or duplicate `Inst` line, or a removal. The good acquisition fixture in `sdlc/scripts/release-language-tools-self-test.py` now starts with apt's four-line simulation note, and it failed on the old check.
 
 Kind: bug
 

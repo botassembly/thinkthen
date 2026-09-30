@@ -27,6 +27,14 @@ UNPINNED = [
     (re.compile(r"gem install[^\n]*\brubygems-update\b(?! -v)"), "installs gem with no version"),
 ]
 RESOLVED = "${{ needs.resolve.outputs.sha }}"
+# Release containers build offline from the crates host-setup fetches. Every tracked
+# lock file joins that fetch list or this table, which says why no release build reads it.
+UNFETCHED_LOCKS = {
+    "conformance/consumer/Cargo.lock": "a test consumer no release job builds",
+    "libraries/r/thinkthen/src/rust/Cargo.lock": "R-universe builds R against the published crate",
+    "libraries/rust/Cargo.lock": "the Rust examples surface, which no release job builds",
+    "probes/churn-0086/Cargo.lock": "an experiment probe",
+}
 ARMED_STEP = {"env": {"RELEASE_ARMED": "${{ vars.RELEASE_ARMED }}"},
               "run": '[ "$RELEASE_ARMED" = true ]'}
 
@@ -310,6 +318,16 @@ def release(name, doc):
     return out
 
 
+def fetch_gaps(setup_text):
+    """Name each tracked lock file whose manifest host-setup does not fetch."""
+    block = re.search(r"for manifest in (.*?); do", setup_text, re.S)
+    fetched = set(block.group(1).replace("\\\n", " ").split()) if block else set()
+    locks = subprocess.run(["git", "ls-files", "*Cargo.lock"], cwd=REPO, capture_output=True, text=True,
+                           check=True).stdout.split()
+    return [f"release-workflow: host-setup must fetch {lock[:-4]}toml or list {lock} as unread"
+            for lock in locks if lock not in UNFETCHED_LOCKS and f"{lock[:-4]}toml" not in fetched]
+
+
 def check(folder, lint_text=None):
     out = []
     for path in sorted(folder.glob("*.y*ml")):
@@ -326,8 +344,12 @@ def check(folder, lint_text=None):
     return out
 
 
-def host_setup_calls(target, smoke):
-    """Run the real setup branch while a temporary PATH records its host calls."""
+def host_setup_calls(target, smoke, uv_line="uv 0.9.17 (0a1b2c3d4 2025-12-09)"):
+    """Run the real setup branch while a temporary PATH records its host calls.
+
+    A stray uv sits on PATH and fails if run, as on a runner image with its own uv.
+    The pinned uv lives where pip put it and prints uv_line.
+    """
     with tempfile.TemporaryDirectory(prefix="thinkthen-host-setup-") as tmp:
         root = pathlib.Path(tmp)
         bin_dir = root / "bin"
@@ -342,12 +364,14 @@ rustc) case $1 in
   esac ;;
 cargo) [ "$1 $2" != 'deny --version' ] || echo 'cargo-deny 0.19.4' ;;
 maturin) echo 'maturin 1.15.0' ;;
-python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac ;;
+python3) case " $* " in *' uv==0.9.17 '*) touch "$FAKE_UV_READY"; echo uv-install >> "$FAKE_LOG" ;; esac
+  case $1 in -c) case $2 in *find_uv_bin*) echo "$FAKE_ROOT/pinned/uv" ;; esac ;; esac ;;
 python3.13) [ "$1" != --version ] || {
   touch "$FAKE_PY313_READY"; echo py313-ready >> "$FAKE_LOG"; echo 'Python 3.13.0';
 } ;;
-uv) [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
-  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo 'uv 0.9.17'; } ;;
+uv) case $0 in "$FAKE_ROOT/pinned/uv") ;; *) echo 'a stray uv ran' >&2; exit 93 ;; esac
+  [ -f "$FAKE_UV_READY" ] || { echo 'uv was not installed' >&2; exit 91; }
+  [ "$1" != --version ] || { echo uv-check >> "$FAKE_LOG"; echo "$FAKE_UV_LINE"; } ;;
 uname) case $1 in -s) case $FAKE_TARGET in *apple*) echo Darwin ;; *) echo Linux ;; esac ;;
   -m) case $FAKE_TARGET in aarch64*) echo arm64 ;; *) echo x86_64 ;; esac ;; esac ;;
 xcrun) echo "$FAKE_ROOT/sdk" ;;
@@ -372,15 +396,22 @@ esac
         for name in ("rustc", "rustup", "cargo", "maturin", "uv", "uname", "sh", "xcrun", "brew", "shasum",
                      "python3", "python3.12", "python3.13"):
             (bin_dir / name).symlink_to(route.name)
+        (root / "pinned").mkdir()
+        (root / "pinned/uv").symlink_to(route)
         log = root / "calls"
         env = os.environ.copy()
         env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
                    TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
+                   FAKE_UV_LINE=uv_line, GITHUB_PATH=str(root / "github-path"),
                    RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
-        return result, log.read_text().splitlines() if log.exists() else []
+        calls = log.read_text().splitlines() if log.exists() else []
+        handoff = root / "github-path"
+        if handoff.exists():
+            calls.append(f"path {handoff.read_text().strip().replace(str(root), '$ROOT')}")
+        return result, calls
 
 
 # A release workflow that keeps every rule. Each self-test case breaks one.
@@ -619,6 +650,19 @@ def self_test():
         if got != wanted:
             bad += 1
             print(f"workflows self-test {name}: expected {wanted}, got {got}", file=sys.stderr)
+    setup = (REPO / "sdlc/scripts/release-workflow").read_text(encoding="utf-8")
+    wanted = ["release-workflow: host-setup must fetch databases/duckdb/bridge/Cargo.toml "
+              "or list databases/duckdb/bridge/Cargo.lock as unread"]
+    got = fetch_gaps(setup.replace("databases/duckdb/bridge/Cargo.toml ", ""))
+    if got != wanted:
+        bad += 1
+        print(f"workflows self-test fetch-list: expected {wanted}, got {got}", file=sys.stderr)
+    result, calls = host_setup_calls("aarch64-apple-darwin", False, uv_line="uv 0.9.18")
+    if (result.returncode != 1 or calls != ["py313-ready", "uv-install", "uv-check"]
+            or not result.stderr.endswith("/pinned/uv printed 'uv 0.9.18'\n")):
+        bad += 1
+        print(f"workflows self-test uv-pin: exit {result.returncode}, calls {calls}, stderr {result.stderr}",
+              file=sys.stderr)
     host_cases = [(target, smoke) for target in ("x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu",
                                                  "aarch64-apple-darwin", "x86_64-apple-darwin")
                   for smoke in (False, True)]
@@ -626,12 +670,12 @@ def self_test():
         result, calls = host_setup_calls(target, smoke)
         if "apple" in target:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
-                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch"]
+                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
         else:
             wanted = ["libraries/ruby/setup-ruby.sh "]
         if smoke and "apple" not in target:
             wanted = ["py313-ready", "uv-install", "uv-check", *wanted,
-                      "databases/duckdb/tools/setup.sh --fetch"]
+                      "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
         if result.returncode != 0 or calls != wanted:
             bad += 1
             print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "
@@ -659,7 +703,7 @@ def self_test():
     if language.returncode != 0:
         bad += 1
         print(f"workflows self-test language tools: {language.stdout}{language.stderr}", file=sys.stderr)
-    total = len(cases) + 2 + len(host_cases) + 3
+    total = len(cases) + 4 + len(host_cases) + 3
     print(f"workflows self-test: {total - bad}/{total} cases hold")
     return 1 if bad else 0
 
@@ -668,6 +712,7 @@ def main(argv):
     if argv == ["--self-test"]:
         return self_test()
     out = check(REPO / ".github/workflows")
+    out += fetch_gaps((REPO / "sdlc/scripts/release-workflow").read_text(encoding="utf-8"))
     if not out:
         managed = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-managed-pair-self-test.py")],
                                  capture_output=True, text=True)

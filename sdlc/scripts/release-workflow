@@ -222,7 +222,8 @@ host-setup)
 	[ "$(rustc --version)" = "rustc 1.95.0 (59807616e 2026-04-14)" ] || fail 'Rust 1.95.0 pin changed'
 	case $(rustc --print sysroot) in "${RUSTUP_HOME:-$HOME/.rustup}"/toolchains/*) ;; *) fail 'Rust does not use the isolated official rustup sysroot' ;; esac
 	for manifest in Cargo.toml libraries/c/Cargo.toml databases/sqlite/Cargo.toml databases/duckdb/Cargo.toml \
-		databases/postgresql/Cargo.toml libraries/python/Cargo.toml libraries/typescript/Cargo.toml libraries/ruby/Cargo.toml; do
+		databases/duckdb/bridge/Cargo.toml databases/postgresql/Cargo.toml libraries/python/Cargo.toml \
+		libraries/typescript/Cargo.toml libraries/ruby/Cargo.toml; do
 		cargo fetch --locked --manifest-path "$manifest"
 	done
 	if [ "$(cargo deny --version 2>/dev/null || true)" != 'cargo-deny 0.19.4' ]; then
@@ -236,7 +237,14 @@ host-setup)
 		command -v python3.13 >/dev/null || fail 'the pinned DuckDB host needs Python 3.13'
 		case $(python3.13 --version) in 'Python 3.13.'*) ;; *) fail 'the DuckDB Python 3.13 pin is unavailable' ;; esac
 		python3 -m pip install --disable-pip-version-check 'uv==0.9.17'
-		[ "$(uv --version)" = 'uv 0.9.17' ] || fail 'uv version differs from pin'
+		# Another uv may come first on the runner's path, so run the copy pip just installed.
+		uv_bin=$(python3 -c 'import uv; print(uv.find_uv_bin())')
+		uv_read=$("$uv_bin" --version)
+		case $uv_read in 'uv 0.9.17' | 'uv 0.9.17 '*) ;; *) fail "uv version differs from pin: $uv_bin printed '$uv_read'" ;; esac
+		PATH=${uv_bin%/*}:$PATH
+		export PATH
+		# Later steps, such as the installed Python check, run uv too.
+		[ -z "${GITHUB_PATH:-}" ] || printf '%s\n' "${uv_bin%/*}" >>"$GITHUB_PATH"
 	fi
 	if [ "$(uname -s)" = Darwin ]; then
 		. databases/postgresql/runtime-darwin.env

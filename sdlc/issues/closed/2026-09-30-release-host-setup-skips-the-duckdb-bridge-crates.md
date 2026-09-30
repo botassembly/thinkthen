@@ -1,4 +1,4 @@
-Status: open. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b.
+Status: Closed by the quick fix landed as `Land quick fix: release builds clear host setup, apt, offline crates, and library tests`. Found by the second release rehearsal, run 36780048676, on 2026-09-30. Owner: ticket 0128 Phase 3b. Resolution: `host-setup` fetches `databases/duckdb/bridge/Cargo.toml`. `sdlc/scripts/workflows` requires every tracked `Cargo.lock` to have its manifest in the host-setup fetch list, or to appear in `UNFETCHED_LOCKS` with the reason no release build reads it. Four lock files sit in that table: the conformance consumer, the R package's crate, the Rust examples, and one probe. A self-test case drops the bridge from the list and requires the finding.
 
 Kind: bug
 

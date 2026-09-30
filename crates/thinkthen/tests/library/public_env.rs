@@ -22,7 +22,6 @@ mod shared_host;
 mod usage_totals;
 
 use crate::run;
-use crate::wait;
 
 use std::fs;
 use std::io::Write as _;
@@ -469,7 +468,7 @@ fn a_seeded_engine_equals_one_given_each_value_and_the_command_plan() {
             .envs(environment)
             .stdin(fs::File::open(config.join("evidence")).unwrap())
             .stdout(std::process::Stdio::piped());
-        let plan = wait::finish(command.spawn().expect("the command runs"), "the plan")
+        let plan = crate::wait::finish(command.spawn().expect("the command runs"), "the plan")
             .expect("the command ends");
         let plan = String::from_utf8_lossy(&plan.stdout);
         assert!(
