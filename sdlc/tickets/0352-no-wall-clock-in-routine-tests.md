@@ -11,9 +11,9 @@ This ticket delivers it for `test`, `spec`, and the Python, DuckDB and SQLite su
 ## Evidence
 
 - Starts from: ticket 0340, which fixed the first load flakes, and the closed issues it and later tickets settled. These are `2026-09-24-parallel-lock-test-fails-under-load.md`, `2026-09-24-the-global-queue-concurrency-check-fails-under-load.md`, `2026-09-24-the-model-mismatch-cancel-check-fails-under-load.md`, `2026-09-30-duckdb-split-denials-case-failed-once-under-load.md`, `2026-09-30-ordered-output-test-races-the-next-request-under-load.md`, `2026-09-30-process-cap-test-races-two-records.md` and `2026-09-30-relate-host-interrupt-test-fails-under-load.md`. Ticket 0342 narrowed the relate interrupt race and did not remove it. Ticket 0351 recorded one timing test that failed once under load. Python and DuckDB surface checks passed only on a rerun. A loaded baseline on main failed 1 of 5 runs of `sdlc/scripts/test`, in the batching ceiling test.
-- Keeps: every cancellation, deadline, pacing and ordering regression. Each moved millisecond promise keeps a stress twin under `test-stress --run`. The relate stop while four sends overlap keeps its old form as the stress case `overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight`.
+- Keeps: every cancellation, deadline, pacing and ordering regression. Each moved millisecond promise keeps a stress twin under `test-stress --run`. The relate stop while four sends overlap keeps its old 60- and 40-entity rows as the stress case `overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight`. The port twins run under `THINKTHEN_TEST_PROFILE=stress` through `surfaces --stress`. Python selects them with the `stress` mark. DuckDB's `harness.py` selects them by name. SQLite's `check.sh` selects them in `test_interrupt.py`, `test_usage.py` and `test_try_budget.py`.
 - Changes: the rules and the list below.
-- Proof: `sdlc/scripts/test` under 24 busy processes, before and after, in the table below. The Python, DuckDB and SQLite surface checks pass after. `test-stress --run` passes on a quiet machine. `spec` runs replayed document examples and two probes. Its only timed wait is the triage demo's file wait, which this ticket raises to 30 s. A search of `spec`'s inputs found no other sleep or elapsed-time check.
+- Proof: `sdlc/scripts/test` and the Python, DuckDB and SQLite surface checks under 24 busy processes, before and after, in the tables below. `test-stress --run` passes on a quiet machine. `spec` runs replayed document examples and two probes. Its only timed wait is the triage demo's file wait, which this ticket raises to 30 s. A search of `spec`'s inputs found no other sleep or elapsed-time check.
 - Defers: the other binding checks, filed as Debt 027. The C door tests, which ticket 0346 owns. The engine's 50 ms input pause, which a stalled reader thread can still reach. The margins named under Exceptions.
 
 ## Rules
@@ -62,9 +62,9 @@ Rust command tests (`tests/backend`):
 
 Rust library tests:
 
-- The relate host-interrupt test runs at throttle 1 in a fresh copy of the test binary. The check fires at exactly four sends, and nothing more is sent. At throttle 4, overlapping replies could leave no moment with no send out, so the check could miss every chance. The throttle-4 form moves to `public_controls/overlap.rs` as a stress case.
+- The relate host-interrupt test runs at throttle 1 in a fresh copy of the test binary. The check fires at exactly four sends, and nothing more is sent. At throttle 4, overlapping replies could leave no moment with no send out, so the check could miss every chance. The throttle-4 form, with both its 60- and 40-entity rows, moves to `public_controls/overlap.rs` as a stress case. It also runs alone, since another row's explicit throttle would narrow it.
 - The profile-split test holds the alpha reply until beta's is written. The order test holds each slow reply until the fast one beside it is written.
-- Waits in the cap, estimated, batch attempt, interactive and native tests rise to 30 s. The retry-after tests ask for 30 s and allow 10 s.
+- Waits in the cap, estimated, batch attempt, interactive and native tests rise to 30 s. `public_controls.rs`'s shared `BOUND` rises from 3 s to 30 s. It guards the fired-check and call-facts waits, and the deadline parsing rows only need a valid value. The retry-after tests ask for 30 s and allow 10 s.
 
 Consumer:
 
@@ -73,7 +73,7 @@ Consumer:
 Python, DuckDB and SQLite surfaces:
 
 - A stop test's 100 ms bound applies only under the stress profile. The routine run checks that the cancel arrived while the reply was held.
-- The Python release test drives the held arm from the parent. The column-timing test splits into a deadline half and a held-token half.
+- The Python release test drives the held arm from the parent. The column-timing test splits into a deadline half and a held-token half. The token fires once the held arm counts the first send, because a column call sends one request before it widens.
 - DuckDB's `harness.py` adds `timed` cases, which run in both profiles and time only under stress. The signal cases repeat SIGINT until the answer arrives. The queued-relate case waits for a stdin line instead of sleeping.
 - SQLite's conformance and interrupt tests wait on held requests. `check.sh` runs the usage and try-budget files under stress too.
 - Waits rise to 30 or 60 s across these tests.

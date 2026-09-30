@@ -49,7 +49,9 @@ pub(crate) fn start(
     environment: &[(&str, &str)],
     evidence: &[u8],
 ) -> io::Result<Child> {
-    let mut child = command(arguments, environment).stdin(Stdio::piped()).spawn()?;
+    let mut child = command(arguments, environment)
+        .stdin(Stdio::piped())
+        .spawn()?;
     let mut input = child
         .stdin
         .take()

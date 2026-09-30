@@ -20,8 +20,8 @@ SETUP = """
 def test_a_short_column_shares_one_deadline_and_token(backend, tmp_path):
     """A bounded column stops under each public call-wide control. The
     deadline is shorter than one delayed reply. The token fires once the
-    held arm counts the first throttle's sends, so no timer races a reply,
-    and nothing is sent after it (ticket 0352)."""
+    held arm counts the first send, whose reply it holds, so no timer races
+    a reply, and nothing is sent after it (ticket 0352)."""
     printed = run(SETUP + """
     try:
         engine.score(urgent, pl.Series(texts[:12]), deadline_ms=50).value
@@ -43,13 +43,13 @@ def test_a_short_column_shares_one_deadline_and_token(backend, tmp_path):
     except tt.Cancelled:
         print("cancelled", flush=True)
     """, child_env(held, tmp_path, "arm/held"))
-        assert held.wait(8) == 8
+        assert held.wait(1) == 1
         child.stdin.write("stop\n")
         child.stdin.flush()
         assert child.stdout.readline().strip() == "cancelled", child.stderr.read()
         held.release()
         assert child.wait(timeout=60) == 0, child.stderr.read()
-        assert held.count() == 8
+        assert held.count() == 1
     finally:
         held.close()
 

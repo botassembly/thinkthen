@@ -6,7 +6,7 @@ use std::thread;
 use conformance_backend::Backend;
 use thinkthen::{CallOptions, Entity, ErrorKind, Relate};
 
-use super::{Runs, engine, kind, serial};
+use super::{Runs, alone, engine, kind, serial};
 
 /// Shared pair requests fill the default throttle of 4. The host check runs
 /// only while no send is out, so it fires at the first such moment after
@@ -17,8 +17,28 @@ use super::{Runs, engine, kind, serial};
 #[test]
 #[ignore = "overlapping sends on a loaded machine; run sdlc/scripts/test-stress --run"]
 fn a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight() {
-    let _serial = serial();
-    let entities = (0..60)
+    // Another row's explicit throttle would narrow this one, so it runs alone.
+    alone(
+        "overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight",
+        || {
+            let _serial = serial();
+            // Forty entities make exactly four requests, so that row stops at four.
+            for count in [60, 40] {
+                let stopped_at = stop_during_overlap(count);
+                let expected = if count == 40 { 4..=4 } else { 4..=8 };
+                assert!(
+                    expected.contains(&stopped_at),
+                    "{count} entities stopped at {stopped_at}"
+                );
+            }
+        },
+    );
+}
+
+/// Relate `count` entities at the default throttle, stop at the first quiet
+/// moment after four sends, and return the send count at the stop.
+fn stop_during_overlap(count: usize) -> usize {
+    let entities = (0..count)
         .map(|n| Entity::new(&format!("service {n}"), "service").expect("entity"))
         .collect::<Vec<_>>();
     let backend = Backend::start().expect("backend");
@@ -45,12 +65,19 @@ fn a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight() {
         });
         held.relate_with(&ask, entities, CallOptions::new().interrupt(&check))
     });
-    assert!(runs.all_on(thread::current().id()), "a check ran on a worker");
-    assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
+    assert!(
+        runs.all_on(thread::current().id()),
+        "a check ran on a worker"
+    );
+    assert_eq!(
+        kind(&result),
+        Some(ErrorKind::Cancelled),
+        "{count} entities"
+    );
     let stopped_at = stopped_at
         .into_inner()
         .unwrap_or_else(PoisonError::into_inner)
         .expect("the check fired");
-    assert_eq!(backend.count(), stopped_at, "nothing new was sent");
-    assert!((4..=8).contains(&stopped_at), "stopped at {stopped_at}");
+    assert_eq!(backend.count(), stopped_at, "{count}: nothing new was sent");
+    stopped_at
 }

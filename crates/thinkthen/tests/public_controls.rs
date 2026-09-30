@@ -27,7 +27,7 @@ use thinkthen::{
 
 const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":3,"output_tokens":1}}"#;
 const MOST: &str = "4294967295 seconds";
-const BOUND: Duration = Duration::from_secs(3);
+const BOUND: Duration = Duration::from_secs(30);
 
 #[path = "../src/test_deadline/child.rs"]
 mod child;
@@ -406,7 +406,11 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
             let stopped_at = stopped_at
                 .into_inner()
                 .unwrap_or_else(PoisonError::into_inner);
-            assert_eq!(stopped_at, Some(4), "the check fired after the fourth reply");
+            assert_eq!(
+                stopped_at,
+                Some(4),
+                "the check fired after the fourth reply"
+            );
             assert_eq!(backend.count(), 4, "nothing new was sent");
         },
     );
@@ -428,7 +432,13 @@ fn alone(path: &str, body: impl FnOnce()) {
         binary.to_str().expect("a UTF-8 test binary path"),
         &["HOME", "XDG_CACHE_HOME", "TMPDIR"],
     )
-    .args(["--exact", path, "--nocapture", "--test-threads=1"])
+    .args([
+        "--exact",
+        path,
+        "--include-ignored",
+        "--nocapture",
+        "--test-threads=1",
+    ])
     .env(ALONE, path)
     .stdin(Stdio::null())
     .stdout(Stdio::piped())

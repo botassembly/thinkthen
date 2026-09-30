@@ -120,7 +120,10 @@ fn an_input_or_output_error_retires_a_pending_wait_before_returning() -> Tested 
         };
         let started = Instant::now();
         assert!(run(input, output).is_err());
-        assert!(started.elapsed() < PROMPT, "pending wait delayed error return");
+        assert!(
+            started.elapsed() < PROMPT,
+            "pending wait delayed error return"
+        );
         let text = String::from_utf8(bytes.lock().map_err(|_| "capture poisoned")?.clone())?;
         let port: u16 = text.lines().next().ok_or("no port line")?.parse()?;
         // Under `cargo test` another test may be starting a child at this
@@ -226,9 +229,7 @@ fn still_held(answer: &Receiver<Answer>) {
 
 /// Require the generic answer.
 fn answered(answer: &Receiver<Answer>) -> Tested {
-    let (status, body) = answer
-        .recv_timeout(LINE)?
-        .ok_or("the request failed")?;
+    let (status, body) = answer.recv_timeout(LINE)?.ok_or("the request failed")?;
     assert_eq!((status.as_str(), body.as_str()), ("HTTP/1.1 200 X", ANSWER));
     Ok(())
 }
