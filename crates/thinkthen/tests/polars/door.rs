@@ -1,11 +1,11 @@
 //! The door's own rules: its refusals, the failed marker, a failed decide
 //! row, chunked and sliced columns, the caller's frame columns, and empty
-//! columns. No engine here sets a throttle, and no request is held.
+//! columns. Only `batching` sets a throttle, of one, and no request is held.
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
 mod batching;
-mod common;
+use crate::common;
 
 use conformance_backend::Backend;
 use thinkthen::polars::prelude::{DataFrame, DataType, IntoColumn, NamedFrom, Series};

@@ -1,9 +1,10 @@
-//! Existing distinct command behavior kept as one focused case.
+//! Existing distinct command behavior, one test per verb so they spread over
+//! the runner.
 
 use super::*;
 
 #[test]
-fn filter_prints_a_subsequence_of_its_input_and_rank_a_permutation_of_it() -> io::Result<()> {
+fn filter_prints_a_subsequence_of_its_input() -> io::Result<()> {
     for count in 0..8_usize {
         let input = spread(count);
         let lines: Vec<&str> = input.lines().collect();
@@ -28,6 +29,15 @@ fn filter_prints_a_subsequence_of_its_input_and_rank_a_permutation_of_it() -> io
             }
             assert!(kept.len() <= count, "filter {count} {cut} printed too much");
         }
+    }
+    Ok(())
+}
+
+#[test]
+fn rank_prints_a_permutation_of_its_input() -> io::Result<()> {
+    for count in 0..8_usize {
+        let input = spread(count);
+        let lines: Vec<&str> = input.lines().collect();
 
         for top in [None, Some(1_usize), Some(3), Some(99)] {
             let listener = by_place()?;

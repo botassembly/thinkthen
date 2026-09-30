@@ -11,10 +11,7 @@ use std::time::Duration;
 
 pub(crate) use conformance_backend::{Canned, Listener, Observed};
 
-#[path = "../../../src/test_deadline/wait.rs"]
-mod wait;
-
-pub(crate) use wait::finish;
+pub(crate) use crate::wait::finish;
 
 /// Run the compiled binary with no environment but what the case names.
 ///

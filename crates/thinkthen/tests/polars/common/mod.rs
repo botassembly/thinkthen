@@ -8,6 +8,7 @@
 #![allow(dead_code, reason = "each test file uses its own part of the helper")]
 
 use std::path::PathBuf;
+use std::process::{Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use thinkthen::polars::prelude::{NamedFrom, Series};
@@ -60,4 +61,34 @@ pub(crate) fn column(texts: &[&str]) -> Series {
 /// This many distinct texts.
 pub(crate) fn distinct(count: usize) -> Vec<String> {
     (0..count).map(|place| format!("note {place}")).collect()
+}
+
+/// Names the one test a rerun child runs.
+const ALONE: &str = "THINKTHEN_TEST_POLARS_ALONE";
+
+/// Run `body` alone in a fresh copy of this test binary, because the
+/// throttle is process-wide (ticket 0077). `path` names the test in the
+/// binary. The child keeps the fake key, the loopback address and the scratch
+/// usage folder `check.sh` set; `builder` refuses any other key.
+pub(crate) fn alone(path: &str, body: impl FnOnce()) {
+    if std::env::var_os(ALONE).is_some_and(|chosen| chosen == path) {
+        body();
+        return;
+    }
+    let child = Command::new(std::env::current_exe().expect("this test binary"))
+        .args(["--exact", path, "--nocapture", "--test-threads=1"])
+        .env(ALONE, path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("the child starts");
+    let output = crate::wait::finish(child, path).expect("the child ends");
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "{said}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(said.contains("1 passed"), "the child ran {path}");
 }

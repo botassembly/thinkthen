@@ -14,7 +14,7 @@ The speed test of ticket 0145, batching design ticket S1. It measures requests, 
 
 ## The gate
 
-`crates/thinkthen/tests/speed.rs` runs `measure.py gate` in the `test` rung against the loopback backend's generic arm. It needs no engine and no real key: each command gets the made-up key `loopback-not-a-key`. Each command runs in a private home with `--no-cache`, and `thinkthen status --json` there gives its requests. The test checks that count against the socket.
+`crates/thinkthen/tests/backend/speed.rs` runs `measure.py gate` in the `test` rung against the loopback backend's generic arm. It needs no engine and no real key: each command gets the made-up key `loopback-not-a-key`. Each command runs in a private home with `--no-cache`, and `thinkthen status --json` there gives its requests. The test checks that count against the socket.
 
 The list rule, in order:
 

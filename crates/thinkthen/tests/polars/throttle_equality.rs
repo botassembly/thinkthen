@@ -1,14 +1,14 @@
 //! A Series crosses at the throttle as a slice does: the proof Ian named for
 //! Polars on 2026-09-21, applied to Rust.
 //!
-//! The throttle is process-wide (0077), so this file holds one test and runs
-//! in its own process. Each run gets its own backend, cache folder, and
+//! The throttle is process-wide (0077), so the routine test reruns itself
+//! alone in a fresh process, and the stress test runs alone by name. Each run gets its own backend, cache folder, and
 //! engine at throttle 2. Each backend is the one the caller's `base_url`
 //! names, so a door that built its own engine would count nothing here.
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
-mod common;
+use crate::common;
 
 use std::sync::{Arc, Barrier};
 use std::thread;
@@ -71,6 +71,13 @@ fn held_in_flight(call: impl Fn(&Engine, usize) + Sync) -> (usize, usize) {
 
 #[test]
 fn a_series_runs_at_the_throttle_as_a_slice_does() {
+    common::alone(
+        "throttle_equality::a_series_runs_at_the_throttle_as_a_slice_does",
+        series_and_slice_share_the_throttle,
+    );
+}
+
+fn series_and_slice_share_the_throttle() {
     let texts = common::distinct(TEXTS);
     let refs: Vec<&str> = texts.iter().map(String::as_str).collect();
     let series = Series::new("body".into(), refs.as_slice());

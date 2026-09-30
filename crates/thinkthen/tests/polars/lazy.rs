@@ -2,7 +2,7 @@
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
-mod common;
+use crate::common;
 
 use conformance_backend::{Canned, Listener};
 use serde_json::{Map, Value, json};

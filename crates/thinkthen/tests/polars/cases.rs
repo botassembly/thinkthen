@@ -7,7 +7,7 @@
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
-mod common;
+use crate::common;
 
 use std::collections::BTreeMap;
 

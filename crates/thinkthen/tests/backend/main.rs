@@ -1,14 +1,25 @@
 //! The compiled binary against a loopback backend, as one test binary.
 //!
-//! The three pages below share `harness`, and one binary compiles it once. A
+//! The pages below share `harness`, and one binary compiles it once. A
 //! module split over several test binaries would leave part of the harness
 //! unused in each one, and `rust-standards.md` lets no test file paste a
-//! suppression at its top.
+//! suppression at its top. Every other command-line page joins this binary
+//! too, each with its own helpers (ticket 0338).
 #![cfg(feature = "cli")]
 
 #[path = "../../src/test_deadline/child.rs"]
 mod child;
 mod harness;
+#[allow(
+    clippy::expect_used,
+    reason = "a measurement fixture that cannot run stops the proof"
+)]
+#[path = "../support/measure.rs"]
+mod measure_support;
+#[path = "../../src/test_deadline/run.rs"]
+mod run;
+#[path = "../../src/test_deadline/wait.rs"]
+mod wait;
 
 mod address;
 mod annotate;
@@ -114,3 +125,29 @@ mod terminal;
 mod threshold_args;
 mod timeout;
 mod wire;
+
+// The command-line pages that were their own binaries until ticket 0338.
+mod audit;
+mod audit_cases;
+mod audit_model;
+mod audit_output;
+mod audit_refusals;
+mod audit_sets;
+mod audit_verbs;
+mod audit_write;
+mod cache_convert;
+mod choose_and_score_edge;
+mod decide_edge;
+mod demo_runner;
+mod diff;
+mod dry_run_terminal;
+mod find_edge;
+mod hints;
+mod named_backends;
+mod question_file;
+mod relate_edge;
+mod settings_cases;
+mod speed;
+mod status;
+mod transform;
+mod version;

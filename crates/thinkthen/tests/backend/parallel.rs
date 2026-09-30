@@ -189,37 +189,43 @@ fn no_more_requests_are_in_flight_than_the_jobs_asked_for() {
     }
 }
 
-#[test]
-fn every_number_of_jobs_prints_the_bytes_that_one_job_prints() {
-    // The property the whole parallel path rests on: output never depends on
-    // --jobs, on standard output or on standard error, finished or stopped.
-    let refused = format!("{}{{\"id\":\"R-4\",\"note\":\"no body\"}}\n", records(3));
-    let runs: [(&str, &[&str]); 3] = [
-        (&records(6), &[]),
-        (&refused, &[]),
-        (&records(6), &["--max-retries", "0"]),
-    ];
+/// The property the whole parallel path rests on: output never depends on
+/// --jobs, on standard output or on standard error, finished or stopped.
+/// Each input is its own test, so the three spread over the runner.
+fn every_number_of_jobs_prints_what_one_job_prints(input: &str, extra: &[&str]) {
+    let reply: fn(&[u8]) -> Canned = if extra.contains(&"--max-retries") {
+        stopping_at_three
+    } else {
+        later_sooner
+    };
+    let mut first: Option<(Option<i32>, String, String)> = None;
+    for jobs in ["1", "2", "3", "5", "8", "32"] {
+        let listener = Listener::answering(reply).expect("a loopback listener");
+        let arguments = [&["--jsonl", "--field", "/body", "--jobs", jobs][..], extra].concat();
+        let output = decide(listener.base(), &arguments, input).expect("the compiled binary runs");
+        let seen = (output.status.code(), printed(&output), said(&output));
 
-    for (input, extra) in runs {
-        let reply: fn(&[u8]) -> Canned = if extra.contains(&"--max-retries") {
-            stopping_at_three
-        } else {
-            later_sooner
-        };
-        let mut first: Option<(Option<i32>, String, String)> = None;
-        for jobs in ["1", "2", "3", "5", "8", "32"] {
-            let listener = Listener::answering(reply).expect("a loopback listener");
-            let arguments = [&["--jsonl", "--field", "/body", "--jobs", jobs][..], extra].concat();
-            let output =
-                decide(listener.base(), &arguments, input).expect("the compiled binary runs");
-            let seen = (output.status.code(), printed(&output), said(&output));
-
-            match first.as_ref() {
-                None => first = Some(seen),
-                Some(one) => assert_eq!(&seen, one, "{jobs} jobs over {input}"),
-            }
+        match first.as_ref() {
+            None => first = Some(seen),
+            Some(one) => assert_eq!(&seen, one, "{jobs} jobs over {input}"),
         }
     }
+}
+
+#[test]
+fn every_number_of_jobs_prints_the_bytes_that_one_job_prints() {
+    every_number_of_jobs_prints_what_one_job_prints(&records(6), &[]);
+}
+
+#[test]
+fn every_number_of_jobs_prints_the_refusal_that_one_job_prints() {
+    let refused = format!("{}{{\"id\":\"R-4\",\"note\":\"no body\"}}\n", records(3));
+    every_number_of_jobs_prints_what_one_job_prints(&refused, &[]);
+}
+
+#[test]
+fn every_number_of_jobs_prints_the_stop_that_one_job_prints() {
+    every_number_of_jobs_prints_what_one_job_prints(&records(6), &["--max-retries", "0"]);
 }
 
 #[test]

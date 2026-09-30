@@ -111,7 +111,7 @@ fn serve(replies: Vec<Reply>) -> (Server, Receiver<()>) {
     let (received_send, received) = channel();
     let (release, released) = channel::<()>();
     let thread = thread::spawn(move || {
-        let mut connections = 0;
+        let (mut connections, mut released_once) = (0, false);
         for reply in replies {
             let (mut stream, _) = listener.accept().expect("request");
             connections += 1;
@@ -127,12 +127,17 @@ fn serve(replies: Vec<Reply>) -> (Server, Receiver<()>) {
                 }
                 Reply::Hold => {
                     let _held = released.recv();
+                    released_once = true;
                     continue;
                 }
             };
             stream.write_all(written.as_bytes()).expect("response");
         }
-        let _released = released.recv_timeout(SECOND * 2);
+        // `finish` sends one release. A held reply took it, so the test is
+        // finishing now; waiting again would only spend the 2 s bound.
+        if !released_once {
+            let _released = released.recv_timeout(SECOND * 2);
+        }
         listener.set_nonblocking(true).expect("nonblocking");
         let later =
             !matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock);

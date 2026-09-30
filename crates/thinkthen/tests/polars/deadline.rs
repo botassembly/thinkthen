@@ -4,11 +4,11 @@
 //! `CallOptions` has no getters, so the door passes the caller's value whole
 //! or not at all. One deadline test therefore covers the deadline, the
 //! cancel token, and the interrupt check. The throttle is process-wide, so
-//! this file holds one test and runs in its own process.
+//! the test reruns itself alone in a fresh process.
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
-mod common;
+use crate::common;
 
 use std::thread;
 use std::time::Duration;
@@ -20,6 +20,13 @@ use thinkthen::{BatchSetting, CallOptions, ErrorKind, Question};
 
 #[test]
 fn a_deadline_stops_a_score_column_mid_batch() {
+    common::alone(
+        "deadline::a_deadline_stops_a_score_column_mid_batch",
+        held_past_the_deadline,
+    );
+}
+
+fn held_past_the_deadline() {
     let backend = Backend::start().expect("a backend");
     let engine = common::builder(&format!("{}/arm/held/v1", backend.origin()))
         .throttle(1)
