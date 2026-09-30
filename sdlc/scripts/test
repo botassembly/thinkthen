@@ -51,7 +51,7 @@ else
     sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
 fi
 smoke=$!
-trap 'kill -- -"$smoke" 2>/dev/null || kill "$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; scratch_clean' EXIT
+trap 'code=$?; set +e; kill -TERM -"$smoke" 2>/dev/null || kill "$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; scratch_clean; exit "$code"' EXIT
 
 # nextest runs the same tests in about half the time; cargo test is the fallback.
 if cargo nextest --version >/dev/null 2>&1; then
