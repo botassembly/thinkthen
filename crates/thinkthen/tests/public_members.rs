@@ -309,8 +309,8 @@ fn a_bulk_row_carries_the_yes_probability_details_reads() {
         bodies,
         [
             r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"a low one\". Refund?"},"q2":{"type":"noul","instructions":"The text is \"a high one\". Refund?"}}}"#,
-            r#"{"state":"a low one","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Refund?"}}}"#,
-            r#"{"state":"a high one","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Refund?"}}}"#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"a low one\". Refund?"}}}"#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"a high one\". Refund?"}}}"#,
         ]
     );
 }

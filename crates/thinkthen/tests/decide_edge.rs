@@ -62,10 +62,10 @@ fn a_url_alone_names_the_base_and_the_key_variable_does_not_change() {
         concat!(
             r#"{"url":"http://127.0.0.1:1/v1/systemone","model":"local-1","#,
             r#""key_env":"THINKTHEN_API_KEY","#,
-            r#""request":{"state":"Refund me please.","model":"local-1","#,
-            r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}"#,
+            r#""request":{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+            r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund"}}}}"#,
             "\n",
-            r#"{"records":1,"requests":1,"estimated_bytes":117,"estimated_input_tokens":{"lower":60,"upper":107},"upper_bound":false}"#,
+            r#"{"records":1,"requests":1,"estimated_bytes":179,"estimated_input_tokens":{"lower":92,"upper":163},"upper_bound":false}"#,
             "\n",
         )
     );
@@ -83,10 +83,10 @@ fn the_plan_holds_four_fields_and_names_the_key_variable_without_reading_it() {
         concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","#,
-            r#""request":{"state":"Refund me please.","model":"jev-1.13.0","#,
-            r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}}"#,
+            r#""request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","#,
+            r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me please.\". asks for a refund"}}}}"#,
             "\n",
-            r#"{"records":1,"requests":1,"estimated_bytes":120,"estimated_input_tokens":{"lower":61,"upper":109},"upper_bound":false}"#,
+            r#"{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false}"#,
             "\n",
         )
     );
@@ -234,7 +234,8 @@ fn an_option_may_sit_before_the_question_and_a_dash_ends_the_options() {
 
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(
-        printed.contains(r#""instructions":"--asks for a refund""#),
+        printed
+            .contains(r#""instructions":"The text is \"Refund me please.\". --asks for a refund""#),
         "{printed}"
     );
     assert_eq!(output.status.code(), Some(0));

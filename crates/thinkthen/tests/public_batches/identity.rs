@@ -319,18 +319,23 @@ fn context_and_later_record_overflow_keep_zero_send_and_ordered_prefix() {
     assert_eq!(listener.count(), 1);
 }
 
+/// A group request's question count and its count of distinct quoted records.
 fn group_request_shape(body: &[u8]) -> (usize, usize) {
     let body: serde_json::Value = serde_json::from_slice(body).expect("group request");
-    (
-        body.get("questions")
-            .and_then(serde_json::Value::as_object)
-            .expect("questions")
-            .len(),
-        body.get("state")
-            .and_then(|state| state.get("records"))
-            .and_then(serde_json::Value::as_array)
-            .map_or(1, Vec::len),
-    )
+    let questions = body
+        .get("questions")
+        .and_then(serde_json::Value::as_object)
+        .expect("questions");
+    let quoted = questions
+        .values()
+        .map(|question| {
+            let asked = question["instructions"]
+                .as_str()
+                .expect("text instructions");
+            asked.rsplit_once(". ").expect("a quoted record").0
+        })
+        .collect::<std::collections::BTreeSet<_>>();
+    (questions.len(), quoted.len())
 }
 
 fn initial_group_requests(

@@ -67,10 +67,18 @@ fn named_groups_pack_two_rows_and_keep_ordered_observations() {
     );
     let body: serde_json::Value = serde_json::from_slice(&requests[0].body).expect("body");
     assert_eq!(
-        body["state"]["records"],
-        serde_json::json!(["alpha", "beta"])
+        body["state"],
+        "Each question quotes the text it asks about."
     );
-    assert_eq!(body["questions"].as_object().expect("questions").len(), 4);
+    assert_eq!(
+        body["questions"],
+        serde_json::json!({
+            "q1": {"type": "noul", "instructions": "The text is \"alpha\". First?"},
+            "q2": {"type": "noul", "instructions": "The text is \"alpha\". Second?"},
+            "q3": {"type": "noul", "instructions": "The text is \"beta\". First?"},
+            "q4": {"type": "noul", "instructions": "The text is \"beta\". Second?"},
+        })
+    );
 }
 
 #[test]

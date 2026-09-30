@@ -13,13 +13,13 @@ fn a_file_holds_the_whole_question_and_the_plan_says_so_setting_by_setting() {
             r#""key_env":"THINKTHEN_API_KEY","#,
             r#""from":{"question":"file","true":"file","false":"file","#,
             r#""threshold":"file","on":"default","model":"file"},"#,
-            r#""request":{"state":"Refund me please.","model":"jev-1.13.0","#,
+            r#""request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","#,
             r#""questions":{"q1":{"type":"noul","#,
-            r#""instructions":"Does this message ask for a refund?","#,
+            r#""instructions":"The text is \"Refund me please.\". Does this message ask for a refund?","#,
             r#""criteria":{"true":"The writer asks for money back.","#,
             r#""false":"The writer asks for anything else."}}}}}"#,
             "\n",
-            r#"{"records":1,"requests":1,"estimated_bytes":237,"estimated_input_tokens":{"lower":122,"upper":216},"upper_bound":false}"#,
+            r#"{"records":1,"requests":1,"estimated_bytes":299,"estimated_input_tokens":{"lower":154,"upper":272},"upper_bound":false}"#,
             "\n",
         )
     );
@@ -49,7 +49,10 @@ fn each_typed_setting_replaces_the_files_and_the_plan_names_the_command_line() {
         br#"{"body":"Refund me please."}"#,
     );
     assert!(over.contains(r#""on":"command line""#), "{over}");
-    assert!(over.contains(r#""state":"Refund me please.""#), "{over}");
+    assert!(
+        over.contains(r#""instructions":"The text is \"Refund me please.\". Does this message ask for a refund?""#),
+        "{over}"
+    );
 
     let plan = printed(&["decide", &file, "--plan", "--true", "Money back."]);
     assert!(plan.contains(r#""true":"Money back.""#), "{plan}");
