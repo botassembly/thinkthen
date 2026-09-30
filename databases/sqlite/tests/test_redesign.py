@@ -27,6 +27,8 @@ say(good=good, invalid=invalid, repeated=repeated, conflict=conflict, choice=cho
            '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"Refund me please.\\". asks for a refund"}}}',
            "independent 182-byte first body")
     expect(len(plan["first_body_utf8"].encode()), 182, "P1 first body byte count")
+    expect(held["good"][0][0], json.dumps(plan, sort_keys=True, separators=(",", ":")),
+           "P1 plan text: compact, members in alphabetical order, byte for byte")
     choice = json.loads(held["choice"][0][0])
     expect((choice["records"], choice["requests"]), (1, 1), "choose settings plan")
     expect(all(member in choice["first_body_utf8"] for member in ("billing", "shipping")), True,

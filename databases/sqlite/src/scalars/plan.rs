@@ -4,7 +4,7 @@ use std::num::NonZeroUsize;
 
 use rusqlite::functions::Context;
 use rusqlite::types::ValueRef;
-use thinkthen::{BatchSetting, CallOptions, For, LoadedQuestion, QuestionKind};
+use thinkthen::{BatchSetting, CallOptions, For, QuestionKind};
 
 use crate::many::keyed;
 use crate::question::{call_settings, question, question_with_settings, text};
@@ -12,15 +12,12 @@ use crate::{Failure, guard, settings};
 
 fn verb(argument: &str, source: &str) -> Result<For, Failure> {
     if argument.starts_with('{') || argument.starts_with('@') {
-        return match &*question(argument)? {
-            LoadedQuestion::Banded(_) => Ok(For::Decide),
-            LoadedQuestion::Question(asked) => match asked.kind() {
-                QuestionKind::Decide => Ok(For::Decide),
-                QuestionKind::Choose => Ok(For::Choose),
-                QuestionKind::Score => Ok(For::Score),
-                QuestionKind::Tag => Ok(For::Tag),
-                _ => Err(Failure::usage("plan takes a judgment question")),
-            },
+        return match question(argument)?.kind() {
+            QuestionKind::Decide => Ok(For::Decide),
+            QuestionKind::Choose => Ok(For::Choose),
+            QuestionKind::Score => Ok(For::Score),
+            QuestionKind::Tag => Ok(For::Tag),
+            _ => Err(Failure::usage("plan takes a judgment question")),
         };
     }
     let object: serde_json::Value = serde_json::from_str(source)
@@ -70,26 +67,10 @@ pub(super) fn plan(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             options = options.context(shared);
         }
         let engine = settings::engine()?;
-        let estimate = match &*asked {
-            LoadedQuestion::Question(question) => engine.plan_with(question, records, options)?,
-            LoadedQuestion::Banded(question) => engine.plan_with(question, records, options)?,
-        };
-        let (lower, upper) = estimate.estimated_input_tokens();
-        let first_body = estimate
-            .first_body()
-            .map(std::str::from_utf8)
-            .transpose()
-            .map_err(|_| Failure::defect("the planned body was not UTF-8"))?;
-        Ok(Some(
-            serde_json::json!({
-                "records": estimate.records(),
-                "requests": estimate.requests(),
-                "estimated_bytes": estimate.estimated_bytes(),
-                "estimated_input_tokens": {"lower": lower, "upper": upper},
-                "upper_bound": estimate.upper_bound(),
-                "first_body_utf8": first_body,
-            })
-            .to_string(),
-        ))
+        let estimate = engine.plan_with(&*asked, records, options)?;
+        // A `Value` keeps its members in alphabetical order, as this text always had.
+        let written = serde_json::to_value(&estimate)
+            .map_err(|_| Failure::defect("the plan did not serialize"))?;
+        Ok(Some(written.to_string()))
     })?)
 }

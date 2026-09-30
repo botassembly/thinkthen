@@ -4,7 +4,7 @@
     reason = "the retained scalar boundary copies all borrowed bytes"
 )]
 
-use thinkthen::{For, LoadedQuestion, QuestionKind, Settings};
+use thinkthen::{For, QuestionKind, Settings};
 
 use crate::errors::RowError;
 
@@ -16,15 +16,12 @@ use crate::engines;
 
 /// The portable keyed kind of an asking question, for the calls that take any of them.
 pub(super) fn asking_kind(argument: &str, from_file: bool, call: &str) -> Result<i32, RowError> {
-    Ok(match super::question_typed(argument, from_file)? {
-        LoadedQuestion::Banded(_) => 0,
-        LoadedQuestion::Question(value) => match value.kind() {
-            QuestionKind::Decide => 0,
-            QuestionKind::Choose => 4,
-            QuestionKind::Score => 5,
-            QuestionKind::Tag => 6,
-            _ => return Err(RowError::usage(&format!("{call} needs an asking question"))),
-        },
+    Ok(match super::question_typed(argument, from_file)?.kind() {
+        QuestionKind::Decide => 0,
+        QuestionKind::Choose => 4,
+        QuestionKind::Score => 5,
+        QuestionKind::Tag => 6,
+        _ => return Err(RowError::usage(&format!("{call} needs an asking question"))),
     })
 }
 

@@ -70,7 +70,7 @@ pub(super) fn decide(
             .map_err(usage)?
     };
     let question = Question::from_json(&written).map_err(|error| RowError::from(error).text)?;
-    if matches!(&question, LoadedQuestion::Question(held) if held.kind() != QuestionKind::Decide) {
+    if question.kind() != QuestionKind::Decide {
         return Err(RowError::usage("the question has another kind").text);
     }
     Ok((question, settings))
@@ -158,15 +158,10 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_decide_group(
                 call_batch.as_deref().or(session_batch.as_deref()),
                 context.as_deref(),
             )?;
-            let rows = match &question {
-                LoadedQuestion::Question(value) => engine
-                    .decide_many_with(value, copied, options)
-                    .collect::<Result<Vec<_>, _>>(),
-                LoadedQuestion::Banded(value) => engine
-                    .decide_many_with(value, copied, options)
-                    .collect::<Result<Vec<_>, _>>(),
-            }
-            .map_err(|error| engines::call_error(error, total).text)?;
+            let rows = engine
+                .decide_many_with(&question, copied, options)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|error| engines::call_error(error, total).text)?;
             Ok(rows
                 .into_iter()
                 .map(|row| match row.value() {

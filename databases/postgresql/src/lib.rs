@@ -21,7 +21,7 @@ mod relate;
 mod removed;
 mod scalar;
 
-use call::{OrRaise as _, Refusal};
+use call::OrRaise as _;
 use files::Given;
 
 pgrx::pg_module_magic!();
@@ -39,23 +39,15 @@ fn details(
     contextual: bool,
 ) -> Result<Option<Details>, Error> {
     if contextual {
-        let row = match question {
-            LoadedQuestion::Question(held) => engine
-                .details_many_with(held, [evidence.to_owned()], options)
-                .next(),
-            LoadedQuestion::Banded(held) => engine
-                .details_many_with(held, [evidence.to_owned()], options)
-                .next(),
-        };
-        return row
+        return engine
+            .details_many_with(question, [evidence.to_owned()], options)
+            .next()
             .transpose()
             .map(|answer| answer.map(|held| held.into_parts().1));
     }
-    match question {
-        LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
-        LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
-    }
-    .map(|answer| Some(answer.into_value()))
+    engine
+        .details_with(question, evidence, options)
+        .map(|answer| Some(answer.into_value()))
 }
 
 fn answer_value(answer: thinkthen::Answer) -> Option<bool> {
@@ -69,7 +61,7 @@ fn answer_value(answer: thinkthen::Answer) -> Option<bool> {
 fn jsonb(text: &str) -> JsonB {
     JsonB(
         serde_json::from_str(text)
-            .map_err(|_| Refusal::of(thinkthen::ErrorKind::Defect, "a result is not JSON"))
+            .map_err(|_| call::defect("a result is not JSON"))
             .or_raise(),
     )
 }
@@ -110,8 +102,13 @@ fn thinkthen_usage() -> TableIterator<
 > {
     call::guarded(|| {
         let wide = |value: u64| i64::try_from(value).unwrap_or(i64::MAX);
-        let [sent, cached, input, output] = call::totals();
-        TableIterator::once((wide(sent), wide(cached), wide(input), wide(output)))
+        let counts = call::totals();
+        TableIterator::once((
+            wide(counts.requests_sent()),
+            wide(counts.cache_answers()),
+            wide(counts.input_tokens()),
+            wide(counts.output_tokens()),
+        ))
     })
 }
 

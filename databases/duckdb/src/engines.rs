@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use std::num::NonZeroUsize;
-use thinkthen::{BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error};
+use thinkthen::{BatchSetting, CallOptions, CancelToken, Counters, Engine, EngineBuilder, Error};
 
 use crate::errors::{RowError, usage};
 
@@ -129,14 +129,14 @@ struct Entry {
 struct Registry {
     pid: u32,
     clock: u64,
-    historical: [u64; 4],
+    historical: Counters,
     kept: Vec<Entry>,
 }
 
 static ENGINES: Mutex<Registry> = Mutex::new(Registry {
     pid: 0,
     clock: 0,
-    historical: [0; 4],
+    historical: Counters::ZERO,
     kept: Vec::new(),
 });
 
@@ -163,7 +163,7 @@ fn registry() -> std::sync::MutexGuard<'static, Registry> {
     if held.pid != pid {
         held.pid = pid;
         held.clock = 0;
-        held.historical = [0; 4];
+        held.historical = Counters::ZERO;
         held.kept.clear();
     }
     held
@@ -187,21 +187,8 @@ impl Registry {
             .map(|(at, _)| at)
             .ok_or_else(|| usage("16 ThinkThen engine settings plans are in use; finish a holding query, reuse current settings, or start a new process"))?;
         let old = self.kept.remove(at);
-        add_counts(&mut self.historical, &old.engine);
+        self.historical = self.historical + old.engine.usage();
         Ok(())
-    }
-}
-
-fn add_counts(total: &mut [u64; 4], engine: &Engine) {
-    let counts = engine.usage();
-    let each = [
-        counts.requests_sent(),
-        counts.cache_answers(),
-        counts.input_tokens(),
-        counts.output_tokens(),
-    ];
-    for (sum, value) in total.iter_mut().zip(each) {
-        *sum = sum.saturating_add(value);
     }
 }
 
@@ -424,15 +411,16 @@ pub(crate) fn within_total_typed(
 /// Historical counters and the counters of every resident engine, summed.
 pub(crate) fn usage_totals() -> [(&'static str, u64); 4] {
     let engines = registry();
-    let mut totals = engines.historical;
-    for entry in &engines.kept {
-        add_counts(&mut totals, &entry.engine);
-    }
-    let [requests, cache, input, output] = totals;
+    let totals = engines.historical
+        + engines
+            .kept
+            .iter()
+            .map(|entry| entry.engine.usage())
+            .sum::<Counters>();
     [
-        ("requests_sent", requests),
-        ("cache_answers", cache),
-        ("input_tokens", input),
-        ("output_tokens", output),
+        ("requests_sent", totals.requests_sent()),
+        ("cache_answers", totals.cache_answers()),
+        ("input_tokens", totals.input_tokens()),
+        ("output_tokens", totals.output_tokens()),
     ]
 }

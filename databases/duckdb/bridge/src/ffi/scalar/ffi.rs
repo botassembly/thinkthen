@@ -102,14 +102,10 @@ impl TryGroup {
             }
             return Ok(());
         };
-        let answered = match match &self.question {
-            LoadedQuestion::Question(held) => self
-                .engine
-                .details_many_recoverable_with(held, valid, options),
-            LoadedQuestion::Banded(held) => self
-                .engine
-                .details_many_recoverable_with(held, valid, options),
-        } {
+        let result = self
+            .engine
+            .details_many_recoverable_with(&self.question, valid, options);
+        let answered = match result {
             Ok(answered) => answered,
             Err(error) if error.send_budget_denial().is_some() => {
                 let failed = safe_failure(ErrorKind::Usage, false)?;
@@ -256,17 +252,11 @@ fn details(
         scope.batch,
         scope.context,
     )?;
-    let rows = match question {
-        LoadedQuestion::Question(held) => engine
-            .details_many_with(held, texts, options)
-            .map(|row| row.map(|row| row.value().to_scalar_json()))
-            .collect::<Result<Vec<_>, _>>(),
-        LoadedQuestion::Banded(held) => engine
-            .details_many_with(held, texts, options)
-            .map(|row| row.map(|row| row.value().to_scalar_json()))
-            .collect::<Result<Vec<_>, _>>(),
-    }
-    .map_err(|error| engines::call_error(error, scope.total).text)?;
+    let rows = engine
+        .details_many_with(question, texts, options)
+        .map(|row| row.map(|row| row.value().to_scalar_json()))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| engines::call_error(error, scope.total).text)?;
     let mut bytes = Vec::new();
     for json in rows {
         frame(&mut bytes, &json)?;
@@ -281,37 +271,21 @@ fn decisions(
     kind: i32,
     scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
-    let answers: Vec<(Answer, f64)> = match question {
-        LoadedQuestion::Question(held) => engine
-            .decide_many_with(
-                held,
-                texts,
-                engines::options_for(
-                    scope.due,
-                    scope.token,
-                    scope.total,
-                    scope.batch,
-                    scope.context,
-                )?,
-            )
-            .map(|row| row.map(|row| (*row.value(), row.probability())))
-            .collect::<Result<Vec<_>, _>>(),
-        LoadedQuestion::Banded(held) => engine
-            .decide_many_with(
-                held,
-                texts,
-                engines::options_for(
-                    scope.due,
-                    scope.token,
-                    scope.total,
-                    scope.batch,
-                    scope.context,
-                )?,
-            )
-            .map(|row| row.map(|row| (*row.value(), row.probability())))
-            .collect::<Result<Vec<_>, _>>(),
-    }
-    .map_err(|error| engines::call_error(error, scope.total).text)?;
+    let answers: Vec<(Answer, f64)> = engine
+        .decide_many_with(
+            question,
+            texts,
+            engines::options_for(
+                scope.due,
+                scope.token,
+                scope.total,
+                scope.batch,
+                scope.context,
+            )?,
+        )
+        .map(|row| row.map(|row| (*row.value(), row.probability())))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| engines::call_error(error, scope.total).text)?;
     if kind == 1 {
         Ok(answers
             .into_iter()
@@ -407,11 +381,9 @@ fn try_answer(
 ) -> Result<String, errors::RowError> {
     let options = engines::options(scope.due, scope.token, scope.total)
         .map_err(|_| errors::RowError::usage("the deadline is outside the supported range"))?;
-    let details = match question {
-        LoadedQuestion::Question(held) => engine.details_with(held, evidence, options),
-        LoadedQuestion::Banded(held) => engine.details_with(held, evidence, options),
-    }
-    .map_err(|error| engines::call_error(error, scope.total))?;
+    let details = engine
+        .details_with(question, evidence, options)
+        .map_err(|error| engines::call_error(error, scope.total))?;
     if let Some(error) = cut {
         return Err(error);
     }

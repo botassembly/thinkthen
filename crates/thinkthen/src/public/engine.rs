@@ -13,7 +13,7 @@ use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop, guarded};
 use crate::public::pull;
-use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
+use crate::public::question::{ChooseQuestion, Kind, LoadedQuestion, Question, TagQuestion};
 use crate::public::results::{self, Answer, Call, Counters, Details};
 use crate::public::settings::EngineBuilder;
 
@@ -96,10 +96,20 @@ impl<C: Choice> Sealed for TagQuestion<C> {
         &self.0
     }
 }
+impl Sealed for LoadedQuestion {
+    fn question(&self) -> &Question {
+        match self {
+            LoadedQuestion::Question(question) => question,
+            LoadedQuestion::Banded(banded) => &banded.0,
+        }
+    }
+}
 impl DecisionQuestion for Question {}
 impl DecisionQuestion for crate::public::question::BandedQuestion {}
+impl DecisionQuestion for LoadedQuestion {}
 impl DetailQuestion for Question {}
 impl DetailQuestion for crate::public::question::BandedQuestion {}
+impl DetailQuestion for LoadedQuestion {}
 impl<C: Choice> DetailQuestion for ChooseQuestion<C> {}
 impl<C: Choice> DetailQuestion for TagQuestion<C> {}
 
@@ -173,7 +183,11 @@ impl Engine {
         self.inner.finish_usage();
     }
 
-    /// This process's totals, which start at zero in a forked child.
+    /// This engine's totals: the sends, cache answers and tokens of calls
+    /// made through it and its clones. Another engine in the same process
+    /// counts its own, from zero; add several with `Counters`' `Sum`. A
+    /// forked child starts from zero. The durable usage totals of ADR 0113
+    /// give the view across engines and processes.
     #[must_use]
     pub fn usage(&self) -> Counters {
         let counts = guarded(|| self.inner.usage().map_err(Error::from));

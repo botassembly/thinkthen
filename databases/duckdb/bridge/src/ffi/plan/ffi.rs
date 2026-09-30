@@ -1,7 +1,7 @@
 //! A keyed SQL preview through the public, send-free engine planner.
 #![allow(unsafe_code, reason = "the bridge copies caller-owned plan arguments")]
 
-use thinkthen::{LoadedQuestion, QuestionKind};
+use thinkthen::QuestionKind;
 
 use crate::engines;
 use crate::errors::RowError;
@@ -13,15 +13,12 @@ fn kind(argument: &str, from_file: bool) -> Result<i32, String> {
         return Ok(0);
     }
     let parsed = super::question_typed(argument, from_file).map_err(|error| error.text)?;
-    let kind = match parsed {
-        LoadedQuestion::Banded(_) => 0,
-        LoadedQuestion::Question(question) => match question.kind() {
-            QuestionKind::Decide => 0,
-            QuestionKind::Choose => 4,
-            QuestionKind::Score => 5,
-            QuestionKind::Tag => 6,
-            _ => return Err(RowError::usage("plan takes an ordinary question").text),
-        },
+    let kind = match parsed.kind() {
+        QuestionKind::Decide => 0,
+        QuestionKind::Choose => 4,
+        QuestionKind::Score => 5,
+        QuestionKind::Tag => 6,
+        _ => return Err(RowError::usage("plan takes an ordinary question").text),
     };
     Ok(kind)
 }
@@ -65,11 +62,9 @@ fn plan(
         call_batch.as_deref().or(session_batch.as_deref()),
         context.as_deref(),
     )?;
-    let estimate = match &question {
-        LoadedQuestion::Question(value) => engine.plan_with(value, texts, options),
-        LoadedQuestion::Banded(value) => engine.plan_with(value, texts, options),
-    }
-    .map_err(|error| RowError::from(error).text)?;
+    let estimate = engine
+        .plan_with(&question, texts, options)
+        .map_err(|error| RowError::from(error).text)?;
     let (lower, upper) = estimate.estimated_input_tokens();
     let body = estimate.first_body();
     let mut output = Vec::new();
