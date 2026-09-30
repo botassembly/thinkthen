@@ -13,11 +13,11 @@ found <- called$value
 check("a frame a record, NA an empty frame", length(found) == 3L && identical(names(found[[1]]), columns) &&
       identical(nrow(found[[2]]), 0L) && identical(names(found[[2]]), columns))
 check("recognize aggregates live positions and keeps their original indexes",
-      identical(called$facts$records, 2) && called$facts$requests_sent >= 1 &&
+      identical(called$facts$records, 2L) && called$facts$requests_sent >= 1 &&
       identical(sort(unique(vapply(called$details, `[[`, 0, "index"))), c(0, 2)))
 all_missing <- tt_recognize(c(NA_character_, NA_character_), "person")
 check("all missing recognition has no-work facts and no question event",
-      identical(all_missing$facts$records, 0) && identical(all_missing$facts$requests_sent, 0) &&
+      identical(all_missing$facts$records, 0L) && identical(all_missing$facts$requests_sent, 0L) &&
       is.null(all_missing$facts$model) && length(all_missing$details) == 0L)
 check("the one-based offsets slice each name in R", identical(substring(sentence, found[[1]]$start, found[[1]]$end), found[[1]]$text) &&
       identical(found[[1]]$length, found[[1]]$end - found[[1]]$start + 1))

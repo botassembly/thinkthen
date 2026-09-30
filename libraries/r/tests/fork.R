@@ -7,6 +7,6 @@ before <- tt_usage()
 job <- parallel::mcparallel(c(tt_decide("Q?", "in the child")$value, tt_usage()$requests_sent))
 got <- parallel::mccollect(job, timeout = 60)[[1]]
 # The child counts from zero after the fork, so it reports its one send.
-check("the forked child answers and counts its own send", identical(got, c(1, 1)))
+check("the forked child answers and counts its own send", identical(got, c(1L, 1L)))
 check("the parent's counters do not move", identical(tt_usage(), before))
 finish("fork", 2L)

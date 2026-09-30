@@ -20,8 +20,8 @@
     tryCatch(list(value = expr), error = function(e) .tt_error_condition(e))
   }
   if (is.null(held$cond) && is.null(held$interrupt) &&
-      is.list(held$value) && isTRUE(held$value$tt_envelope)) {
-    envelope <- held$value
+      is.list(held$value) && is.character(held$value$tt_envelope)) {
+    envelope <- jsonlite::parse_json(held$value$tt_envelope)
     if (!is.null(envelope$error)) {
       held <- .tt_error_condition(simpleError(envelope$error))
       if (!is.null(held$cond)) {
@@ -94,7 +94,16 @@
 }
 
 tt_completion <- function() tt_completion_new()
-tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle))
+tt_completion_read <- function(handle) jsonlite::parse_json(.tt_call(tt_completion_read_native(handle)))
+
+# A JSON list's values as one vector, with null as NA.
+# With a field, each value is that field of one JSON object.
+.tt_na <- function(values, na, field = NULL) {
+  vapply(values, function(one) {
+    if (!is.null(field)) one <- one[[field]]
+    if (is.null(one)) na else one
+  }, na)
+}
 
 # One engine error as data: the interrupt marker, or its condition.
 .tt_error_condition <- function(e) {
@@ -372,17 +381,17 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
   context <- bound$context
   if (bound$kind == "decide") {
     input <- as.character(input)
-    code <- rep(NA_integer_, length(input))
+    answer <- rep(NA, length(input))
     probability <- rep(NA_real_, length(input))
     live <- !is.na(input)
     native <- .tt_call(tt_decide_column(question_json, input[live],
                                         as.integer(which(live) - 1L), deadline_ms,
                                         batch, context, completion))
-    code[live] <- native$value$answer
-    probability[live] <- native$value$probability
-    answer <- .tt_result(ifelse(code < 0L, NA, code == 1L), native)
-    answer$probability <- probability
-    return(answer)
+    answer[live] <- .tt_na(native$value$answer, NA)
+    probability[live] <- .tt_na(native$value$probability, NA_real_)
+    held <- .tt_result(answer, native)
+    held$probability <- probability
+    return(held)
   }
   empty <- switch(bound$kind, choose = NULL, score = NA_real_, tag = character())
   held <- .tt_column(question, input, deadline_ms, empty, batch, context, completion)
@@ -475,11 +484,13 @@ tt_decide <- function(question, input, threshold = NULL, true = NULL, false = NU
   native <- .tt_call(tt_column(unclass(question)[["json"]], input[live],
                                 as.integer(which(live) - 1L), deadline_ms,
                                 batch, context, completion))
-  cells[live] <- native$value$value
+  documents <- native$value
+  cells[live] <- lapply(documents, function(one) one$value)
   answer <- .tt_result(cells, native)
   if (unclass(question)[["kind"]] == "choose") {
     probability <- rep(NA_real_, length(input))
-    probability[live] <- native$value$probability
+    probability[live] <- vapply(documents, function(one)
+      if (is.null(one$value)) NA_real_ else one$answer$probabilities[[one$value]], numeric(1))
     answer$probability <- probability
   }
   answer
@@ -541,7 +552,7 @@ tt_filter <- function(question, records, threshold = NULL,
     texts <- as.character(records)
     if (anyNA(texts)) .tt_usage("filter takes no NA records; tt_decide answers NA for those rows")
     native <- .tt_call(tt_filter_places(question$json, texts, deadline_ms, batch, context, completion))
-    .tt_result(records[native$value], native)
+    .tt_result(records[.tt_na(native$value, NA_integer_)], native)
   })
 }
 
@@ -555,8 +566,9 @@ tt_rank <- function(question, records, top = NULL,
     native <- .tt_call(tt_rank_all(.tt_text(question, "rank"), texts, deadline_ms,
                                     batch, context, completion))
     ranked <- native$value
-    held <- data.frame(place = ranked$place, record = records[ranked$place],
-                       probability = ranked$probability, stringsAsFactors = FALSE)
+    place <- .tt_na(ranked$place, NA_integer_)
+    held <- data.frame(place = place, record = records[place],
+                       probability = .tt_na(ranked$probability, NA_real_), stringsAsFactors = FALSE)
     .tt_result(if (!is.null(top)) utils::head(held, top) else held, native)
   })
 }
@@ -577,7 +589,7 @@ tt_find <- function(question, units, none = FALSE, ..., deadline_ms = NULL, comp
 # One answer cell as its kind's bare shape.
 .tt_bare <- function(cell, kind) {
   switch(kind,
-    decide = if (cell < 0L) NA else cell == 1L,
+    decide = if (is.null(cell)) NA else cell,
     choose = if (is.null(cell)) NA_character_ else cell,
     score = cell,
     tag = as.character(cell)
@@ -604,7 +616,7 @@ tt_annotate <- function(file, data, on, ..., deadline_ms = NULL, batch = NULL, c
   base <- as.data.frame(data, stringsAsFactors = FALSE)
   for (at in seq_along(held$names)) {
     kind <- held$kinds[[at]]
-    cells <- held$columns[[at]]
+    cells <- lapply(held$rows, function(row) row[[held$names[[at]]]])
     failed <- vapply(cells, function(cell) is.list(cell) && !is.null(cell$failed), logical(1))
     bare <- lapply(seq_along(cells), function(i) if (failed[[i]]) cells[[i]] else .tt_bare(cells[[i]], kind))
     base[[held$names[[at]]]] <- if (any(failed) || kind == "tag") bare else
@@ -683,9 +695,18 @@ tt_recognize <- function(input, kinds = NULL,
   if (length(live)) {
     found <- native$value
     for (i in seq_along(live)) {
-      frame <- .tt_frame(found[[i]][c("text", "start", "end", "length", "kind", "strength")])
-      links <- .tt_frame(found[[i]]$relations)
-      if (nrow(links)) attr(frame, "relations") <- links
+      entities <- found[[i]]$entities
+      frame <- .tt_frame(list(text = .tt_na(entities, "", "text"),
+        start = .tt_na(entities, 0, "start") + 1, end = .tt_na(entities, 0, "end"),
+        length = .tt_na(entities, 0, "length"), kind = .tt_na(entities, "", "kind"),
+        strength = .tt_na(entities, 0, "strength")))
+      links <- found[[i]]$relations
+      if (length(links)) attr(frame, "relations") <- .tt_frame(list(
+        source = vapply(links, function(one) one$source$text, ""),
+        source_kind = vapply(links, function(one) one$source$kind, ""),
+        target = vapply(links, function(one) one$target$text, ""),
+        target_kind = vapply(links, function(one) one$target$kind, ""),
+        relation = .tt_na(links, "", "relation"), probability = .tt_na(links, 0, "probability")))
       held[[live[[i]]]] <- frame
     }
   }
@@ -714,7 +735,13 @@ tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NUL
   kinds <- as.character(entities$kind)
   if (anyNA(named) || anyNA(kinds)) .tt_usage("relate takes no NA name or kind")
   native <- .tt_call(tt_relate_frame(spec, !is.null(path), named, kinds, deadline_ms, completion))
-  .tt_result(.tt_frame(native$value), native)
+  edges <- native$value
+  .tt_result(.tt_frame(list(
+    source = vapply(edges, function(one) one$source$name, ""),
+    target = vapply(edges, function(one) one$target$name, ""),
+    relation = .tt_na(edges, "", "relation"), probability = .tt_na(edges, 0, "probability"),
+    source_kind = vapply(edges, function(one) one$source$kind, ""),
+    target_kind = vapply(edges, function(one) one$target$kind, ""))), native)
   })
 }
 
@@ -728,12 +755,12 @@ tt_details <- function(question, input, threshold = NULL,
       .tt_usage("input is one nonmissing string")
     }
     native <- .tt_call(tt_details_one(question$json, input, deadline_ms, completion))
-    .tt_result(jsonlite::fromJSON(native$value, simplifyVector = FALSE), native)
+    native
   })
 }
 
-# The counters of the engine in use, as doubles.
-tt_usage <- function() .tt_call(tt_usage_counters())
+# The counters of the engine in use.
+tt_usage <- function() jsonlite::parse_json(.tt_call(tt_usage_counters()))
 
 # The engine settings (ADR 0017 section 5). NULL keeps what the environment
 # gives. The key stays on THINKTHEN_API_KEY alone.

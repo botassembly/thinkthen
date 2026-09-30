@@ -184,8 +184,8 @@ fn tt_completion_claim(value: Robj) -> Crossed<()> {
 }
 
 #[extendr]
-fn tt_completion_read_native(value: Robj) -> Crossed<List> {
-    Ok(calls::render::receipt(required_completion(&value)?.read()))
+fn tt_completion_read_native(value: Robj) -> Crossed<String> {
+    calls::render::receipt(&required_completion(&value)?.read())
 }
 
 #[extendr]
@@ -400,7 +400,7 @@ fn tt_details_one(
 }
 
 #[extendr]
-fn tt_usage_counters() -> Crossed<List> {
+fn tt_usage_counters() -> Crossed<String> {
     calls::counters()
 }
 

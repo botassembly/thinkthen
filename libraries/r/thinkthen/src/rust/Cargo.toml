@@ -23,6 +23,8 @@ path = "document.rs"
 [dependencies]
 thinkthen = { path = "../../../../../crates/thinkthen", default-features = false }
 extendr-api = "=0.8.2"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.151", features = ["raw_value"] }
 
 [profile.release]
 overflow-checks = true

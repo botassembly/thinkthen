@@ -383,6 +383,8 @@ name = "thinkthen-r"
 version = "0.0.1"
 dependencies = [
  "extendr-api",
+ "serde",
+ "serde_json",
  "thinkthen",
 ]
 

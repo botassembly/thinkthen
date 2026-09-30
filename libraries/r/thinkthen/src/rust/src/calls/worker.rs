@@ -67,7 +67,7 @@ pub(crate) fn call_owned<T: Send + 'static>(
             let account = Account::new(positions);
             let observer = |event: thinkthen::RecordObservation<'_>| account.observe(event, None);
             let result = work(engine, options.observe(&observer), &account);
-            let snapshot = account.finish(false);
+            let snapshot = account.finish();
             if let Some(held) = &receipt {
                 let kind = result.as_ref().map_or_else(
                     |error| error.split('\u{1f}').next().unwrap_or("defect").to_owned(),
@@ -133,13 +133,7 @@ fn on_worker_with_receipt<T: Send + 'static>(
         .spawn(move || {
             let answer = thinkthen::contained(body).unwrap_or_else(|| {
                 if let Some(held) = &worker_receipt {
-                    held.settle(
-                        "defect".to_owned(),
-                        super::account::Snapshot {
-                            facts: None,
-                            details: Vec::new(),
-                        },
-                    );
+                    held.settle("defect".to_owned(), super::account::Snapshot::empty());
                 }
                 Err(defect("the call panicked"))
             });

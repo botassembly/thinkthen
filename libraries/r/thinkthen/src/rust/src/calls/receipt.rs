@@ -48,10 +48,7 @@ impl Receipt {
         if matches!(*state, State::Claimed) {
             *state = State::Terminal {
                 kind,
-                snapshot: Snapshot {
-                    facts: None,
-                    details: Vec::new(),
-                },
+                snapshot: Snapshot::empty(),
             };
         }
     }
