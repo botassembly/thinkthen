@@ -1,6 +1,6 @@
 # 0314: Rust owns the result schema
 
-Status: in progress; slice 4a landed, the port families follow as 4b to 4g
+Status: landed. Slices 1 to 3 and the port pass landed; the port pass landed as slices 4a (`d13a43284`), 4b (`88649ec0d`), 4c (`7e97cdb05`), 4d (`a406ce419`) and 4e (`2aaf18368`), each after a fresh review's ACCEPT. The installed-archive runs wait for the release rehearsal that slice 4a names.
 
 Lane claude-2 from slice 4 (claude-1 before). Branch `ticket/0314-rust-result-schema`. Design: [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md). Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 7 and 8. Builds with [0291](0291-remaining-language-doors.md), so the fourteen C-door bindings change once.
 
