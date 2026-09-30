@@ -20,7 +20,7 @@ use serde_json::{Value, json};
 use crate::args::{Cli, Command as Verb};
 use crate::edge::Environment;
 use crate::engine::http::{Client, Exchange, Key};
-use crate::engine::{Cancel, WIDTH_CHILD, Width, Widths, process_width};
+use crate::engine::{Cancel, Width, Widths, limits};
 use crate::failure::{Failure, report};
 
 mod facade_tests;
@@ -76,7 +76,7 @@ pub(crate) fn in_child_at(path: &str) {
 /// Only a child started by [`in_child`] runs the body of an ignored test.
 pub(crate) fn child() -> bool {
     let chosen = env::var_os(CHILD).is_some();
-    WIDTH_CHILD.store(chosen, Ordering::Release);
+    limits::WIDTH_CHILD.store(chosen, Ordering::Release);
     chosen
 }
 
@@ -171,7 +171,7 @@ fn command_setup_child() {
     let reads = Arc::new(AtomicUsize::new(0));
     assert_eq!(decide(None, &reads).expect("omitted"), ExitCode::SUCCESS);
     assert_eq!(
-        process_width().selected(),
+        limits::process().widths.selected(),
         None,
         "an omitted --jobs selects nothing"
     );
@@ -179,7 +179,7 @@ fn command_setup_child() {
         decide(Some("4"), &reads).expect("explicit"),
         ExitCode::SUCCESS
     );
-    assert_eq!(process_width().selected(), Width::new(4).ok());
+    assert_eq!(limits::process().widths.selected(), Width::new(4).ok());
     assert_eq!(
         decide(Some("4"), &reads).expect("the same width"),
         ExitCode::SUCCESS
@@ -209,7 +209,7 @@ fn command_setup_child() {
         requests_counted(&environment),
     );
     assert_eq!(after, before, "no connection, request, key, or count");
-    assert_eq!(process_width().selected(), Width::new(4).ok());
+    assert_eq!(limits::process().widths.selected(), Width::new(4).ok());
 }
 
 #[test]
@@ -334,7 +334,7 @@ fn two_engines_share_the_cap() {
         Client::new(
             Duration::from_secs(timeout),
             false,
-            crate::engine::process_width(),
+            &limits::process().widths,
         )
     });
     let (most, _) = thread::scope(|scope| {

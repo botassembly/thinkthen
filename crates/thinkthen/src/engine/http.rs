@@ -167,7 +167,7 @@ impl Client {
         Self {
             agent: config.build().into(),
             timeout,
-            width: crate::engine::client_width(widths),
+            width: crate::engine::limits::client_width(widths),
             every: None,
         }
     }
@@ -255,7 +255,7 @@ impl Client {
     ) -> Result<HttpAnswer, Error> {
         let (before_attempt, after_reservation, marked) = hooks;
         exchange.key.check_control()?;
-        let gates = backoff::process_gates(cancel)?;
+        let gates = &crate::engine::limits::of(std::process::id(), cancel)?.gates;
         let mut wait = exchange.retry_wait;
         let mut retries = 0;
         let mut last_status = None;

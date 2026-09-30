@@ -1,12 +1,13 @@
-//! One retry gate and one pacer per posting address, shared by this process's engines.
+//! One retry gate and one pacer per posting address. `engine::limits` holds
+//! the one set this process's engines share.
 
 use std::collections::HashMap;
 use std::num::NonZeroU32;
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
+use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::{Cancel, process};
 
 #[derive(Debug, Default)]
 pub(crate) struct Gates {
@@ -270,17 +271,4 @@ fn the_rate_variable_takes_whole_numbers_from_1_to_60000() {
         interval(NonZeroU32::new(600), false),
         Some(Duration::from_millis(100))
     );
-}
-
-static PROCESS_GATES: process::Guarded<&'static Gates> = process::Guarded::empty();
-
-/// A child process replaces inherited locks before looking inside the table.
-pub(crate) fn process_gates(cancel: &Cancel<'_>) -> Result<&'static Gates, Error> {
-    PROCESS_GATES
-        .current(
-            std::process::id(),
-            crate::engine::rebuild_wait(cancel),
-            || Ok(&*Box::leak(Box::new(Gates::default()))),
-        )
-        .map(|gates| *gates)
 }

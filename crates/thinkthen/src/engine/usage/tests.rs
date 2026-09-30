@@ -59,7 +59,7 @@ fn an_uncountable_attempt_is_refused_before_transport() {
     let result = Client::new(
         Duration::from_secs(1),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     )
     .post_observed_with_retry(&exchange, &Cancel::default(), &counts, |_| ());
 

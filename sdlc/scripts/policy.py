@@ -1614,11 +1614,11 @@ def check_measure_policy() -> None:
 
 
 # Ticket 0077: every live attempt passes the one process width gate in the
-# HTTP module, so no other production file reaches the HTTP library, and only
-# the one accessor names the process width state.
+# HTTP module, so no other production file reaches the HTTP library. Ticket
+# 0304 slice 3d: only the one accessor names the process send limits.
 HTTP_DOOR = "crates/thinkthen/src/engine/http.rs"
-WIDTH_DOOR = "crates/thinkthen/src/engine/mod.rs"
-WIDTH_STATE = "PROCESS_WIDTH"
+WIDTH_DOOR = "crates/thinkthen/src/engine/limits.rs"
+WIDTH_STATE = "PROCESS_LIMITS"
 # Ticket 0078: an embedding host keeps its signal dispositions.
 ENGINE = "crates/thinkthen/src/engine/"
 
@@ -1650,15 +1650,15 @@ def check_doors() -> None:
     }
     sources = {relative: rust_tokens(text) for relative, text in text_sources.items()}
     if WIDTH_STATE not in sources.get(WIDTH_DOOR, []):
-        fail("doors", f"{WIDTH_DOOR} holds the process width state")
+        fail("doors", f"{WIDTH_DOOR} holds the process send limits")
     for failure in door_failures(sources):
         fail("doors", failure)
     plants = (
         ("crates/thinkthen/src/cli/find.rs", "ureq::post(url).send(body)"),
         ("crates/thinkthen/src/engine/request.rs", "use ureq::Agent;"),
-        ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::PROCESS_WIDTH.select(None)"),
-        ("crates/thinkthen/src/engine/width_tests.rs", "&super::PROCESS_WIDTH"),
-        (WIDTH_DOOR, "fn second() -> &'static Widths { &PROCESS_WIDTH }"),
+        ("crates/thinkthen/src/cli/schedule.rs", "crate::engine::limits::PROCESS_LIMITS.current()"),
+        ("crates/thinkthen/src/engine/width_tests.rs", "&super::limits::PROCESS_LIMITS"),
+        (WIDTH_DOOR, "fn second() -> &'static Limits { &PROCESS_LIMITS }"),
         ("crates/thinkthen/src/engine/recorder.rs", "signal_hook::flag::register(SIGXFSZ, flag)"),
     )
     for relative, text in plants:
@@ -1667,7 +1667,7 @@ def check_doors() -> None:
             fail("doors", f"the planted door {text[-60:]!r} in {relative} is refused")
     controls = (
         ("crates/thinkthen/src/cli/find.rs", "// ureq stays in the HTTP module"),
-        ("crates/thinkthen/src/cli/find.rs", 'const NOTE: &str = "PROCESS_WIDTH";'),
+        ("crates/thinkthen/src/cli/find.rs", 'const NOTE: &str = "PROCESS_LIMITS";'),
         ("crates/thinkthen/src/engine/http/tests.rs", "ureq::Error::HostNotFound"),
         ("crates/thinkthen/src/engine/host_signal_tests.rs", "signal_hook::flag::register"),
         ("crates/thinkthen/src/cli/file_size.rs", "signal_hook::flag::register"),

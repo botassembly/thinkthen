@@ -177,7 +177,7 @@ fn post(
         max_retries: 1,
         retry_wait: Duration::from_millis(10),
     };
-    Client::new(timeout, false, crate::engine::process_width()).post_observed(
+    Client::new(timeout, false, &crate::engine::limits::process().widths).post_observed(
         &exchange,
         cancel,
         || {
@@ -231,7 +231,7 @@ fn accounting_that_outlasts_the_budget_sends_nothing() {
     let _absent = fs::remove_dir_all(&folder);
     let counts = Counters::new(Some(folder.clone()));
 
-    let result = Client::new(SECOND * 30, false, crate::engine::process_width())
+    let result = Client::new(SECOND * 30, false, &crate::engine::limits::process().widths)
         .post_observed_with_retry(
             &exchange,
             &within(Duration::from_millis(200)),
@@ -264,7 +264,7 @@ fn a_held_response_has_one_visible_in_flight_attempt() {
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
     };
-    let client = Client::new(SECOND * 2, false, crate::engine::process_width());
+    let client = Client::new(SECOND * 2, false, &crate::engine::limits::process().widths);
     thread::scope(|scope| {
         let sending = scope.spawn(|| {
             client.post_observed_with_retry(&exchange, &Cancel::default(), &counts, |_| ())

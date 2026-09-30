@@ -96,7 +96,9 @@ pub(crate) struct Engine {
     roots: Option<Roots>,
     usage_path: Option<PathBuf>,
     recording: bool,
-    send_budget: Option<crate::engine::send_budget::ProcessBudget>,
+    /// The request and estimated input limits this engine selects against
+    /// the process totals, which its state holds.
+    send_budget: Option<(Option<u64>, Option<u64>)>,
     state: Arc<Guarded<State>>,
 }
 
@@ -108,6 +110,8 @@ pub(super) struct State {
     recorder: Recorder,
     pub(super) usage: Arc<Counters>,
     pub(super) width: usize,
+    /// The process request and estimated input totals.
+    total: crate::engine::budget::SendBudget,
 }
 
 /// One typed judgment and the metadata its result carries.
@@ -131,11 +135,7 @@ impl Engine {
         limit: Option<u64>,
         estimated_limit: Option<u64>,
     ) -> Self {
-        self.send_budget = Some(crate::engine::send_budget::ProcessBudget {
-            budget: crate::engine::budget::process_budget(),
-            requests: limit,
-            estimated: estimated_limit,
-        });
+        self.send_budget = Some((limit, estimated_limit));
         self
     }
 
@@ -177,11 +177,12 @@ impl Engine {
             state: Arc::new(Guarded::empty()),
         };
         let (usage, cancel) = (settings.usage, Cancel::default());
-        let state = engine
-            .state
-            .current(pid, crate::engine::rebuild_wait(&cancel), || {
-                engine.fresh(pid, usage, &cancel)
-            })?;
+        let state =
+            engine
+                .state
+                .current(pid, crate::engine::limits::rebuild_wait(&cancel), || {
+                    engine.fresh(pid, usage, &cancel)
+                })?;
         engine.recording = state.recorder.reported();
         Ok(engine)
     }
@@ -196,7 +197,8 @@ impl Engine {
             storage.cache_answers,
         )?
         .with_refresh(storage.refresh_cache);
-        let widths = crate::engine::process_width_of(pid, cancel)?;
+        let limits = crate::engine::limits::of(pid, cancel)?;
+        let widths = &limits.widths;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
         let secure = self.backend.is_secure();
         let client = match self.roots.as_ref() {
@@ -208,6 +210,7 @@ impl Engine {
             recorder,
             usage,
             width,
+            total: limits.total.clone(),
         })
     }
 
@@ -217,7 +220,7 @@ impl Engine {
     pub(super) fn state(&self, cancel: &Cancel) -> Result<Arc<State>, Error> {
         let pid = std::process::id();
         self.state
-            .current(pid, crate::engine::rebuild_wait(cancel), || {
+            .current(pid, crate::engine::limits::rebuild_wait(cancel), || {
                 let usage = Arc::new(Counters::new(self.usage_path.clone()));
                 self.fresh(pid, usage, cancel)
             })
@@ -421,7 +424,13 @@ impl Engine {
             max_retries: self.max_retries,
             retry_wait: self.retry_wait,
             usage: &state.usage,
-            send_budget: self.send_budget.clone(),
+            send_budget: self.send_budget.map(|(requests, estimated)| {
+                crate::engine::send_budget::ProcessBudget {
+                    budget: state.total.clone(),
+                    requests,
+                    estimated,
+                }
+            }),
         }
     }
 }

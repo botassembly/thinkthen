@@ -186,7 +186,7 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
     let client = Client::new(
         Duration::from_secs(2),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     );
     let attempts = Cell::new(0_u32);
     let exchange = Exchange {
@@ -233,7 +233,7 @@ fn a_token_fired_before_the_final_check_counts_and_sends_nothing() {
     let client = Client::new(
         Duration::from_secs(1),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     );
     let result = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| {
         token.store(true, Ordering::Release);
@@ -274,7 +274,7 @@ fn cancellation_after_reservation_refunds_both_process_charges() {
     let client = Client::new(
         Duration::from_secs(1),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     );
     let refused = client.post_observed_after_reservation(&exchange, &stopped, &counts, || {
         token.store(true, Ordering::Release);
@@ -333,7 +333,7 @@ fn a_deadline_while_width_is_held_reserves_no_send() {
     let client = Client::new(
         Duration::from_secs(1),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     )
     .gated(&WIDTH);
     let refused = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
@@ -379,7 +379,7 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
     let client = Client::new(
         Duration::from_secs(1),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     );
     let refused = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
     server.join().expect("server");
@@ -400,7 +400,7 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
     let client = Client::new(
         Duration::from_secs(4),
         false,
-        crate::engine::process_width(),
+        &crate::engine::limits::process().widths,
     );
     let observed = Cell::new(0_u32);
     let counts = Counters::new(None);

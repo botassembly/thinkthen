@@ -78,6 +78,33 @@ fn a_warm_parent_engine_and_its_clone_answer_in_the_child() {
     );
 }
 
+#[test]
+fn an_inherited_engine_and_a_child_engine_share_one_request_total() {
+    let _one = ONE_AT_A_TIME
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let capped = || {
+        Engine::builder()
+            .base_url(&base)?
+            .api_key(KEY)?
+            .no_cache()
+            .max_requests_total(Some(1))
+            .build()
+    };
+    let inherited = capped().expect("the parent's capped engine");
+    in_child(|| {
+        let sent = answer(inherited.decide(&decide(), "inherited")) == Some(Answer::Yes);
+        let own = capped().expect("the child's capped engine");
+        let refused = own.decide(&decide(), "own").err();
+        sent && refused.and_then(|error| error.send_budget_denial())
+            == Some(thinkthen::SendBudgetDenial::BeforeFirstSend)
+    })
+    .expect("the child's two engines counted against one process total");
+    assert_eq!(backend.count(), 1, "the child's second engine sent nothing");
+}
+
 #[allow(
     clippy::expect_used,
     reason = "a failed local certificate fixture must stop this proof"

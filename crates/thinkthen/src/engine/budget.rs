@@ -2,20 +2,18 @@
 //! public API re-exports [`SendBudget`].
 
 use std::sync::Arc;
-use std::sync::OnceLock;
-use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use crate::core::SendBudgetDenial;
+use crate::engine::process::Guarded;
 
 /// One owner's attempted live sends, shared by its engine clones.
 /// A forked child starts a fresh count when it first reserves a send.
 #[derive(Clone, Debug)]
-pub struct SendBudget(Arc<BudgetCount>);
+pub struct SendBudget(Arc<Guarded<BudgetCount>>);
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct BudgetCount {
-    owner: AtomicU32,
-    resetting: AtomicU32,
     sent: AtomicU64,
     estimated: AtomicU64,
 }
@@ -30,37 +28,21 @@ impl SendBudget {
     /// Start a process-scoped budget with no sends counted.
     #[must_use]
     pub fn new() -> Self {
-        Self(Arc::new(BudgetCount {
-            owner: AtomicU32::new(std::process::id()),
-            resetting: AtomicU32::new(0),
-            sent: AtomicU64::new(0),
-            estimated: AtomicU64::new(0),
-        }))
+        Self(Arc::new(Guarded::empty()))
     }
 
-    fn reset_after_fork(&self) {
-        let pid = std::process::id();
-        loop {
-            let previous = self.0.owner.load(Ordering::Acquire);
-            if previous == pid {
-                return;
-            }
-            let marker = self.0.resetting.load(Ordering::Acquire);
-            if marker == pid {
-                std::hint::spin_loop();
-            } else if self
-                .0
-                .resetting
-                .compare_exchange(marker, pid, Ordering::AcqRel, Ordering::Acquire)
-                .is_ok()
-            {
-                self.0.sent.store(0, Ordering::Release);
-                self.0.estimated.store(0, Ordering::Release);
-                self.0.owner.store(pid, Ordering::Release);
-                self.0.resetting.store(0, Ordering::Release);
-                return;
-            }
-        }
+    /// The counts process `pid` owns. The rebuild allocates two counters, so
+    /// a thread that finds another rebuilding only yields.
+    fn count(&self, pid: u32) -> Arc<BudgetCount> {
+        let Ok(count) = self.0.current(
+            pid,
+            || {
+                std::thread::yield_now();
+                Ok::<(), std::convert::Infallible>(())
+            },
+            || Ok(BudgetCount::default()),
+        );
+        count
     }
 
     /// Reserve the version-one estimate of one final encoded request body.
@@ -69,16 +51,16 @@ impl SendBudget {
         limit: Option<u64>,
         bytes: usize,
     ) -> Result<EstimatedReservation, ()> {
-        self.reset_after_fork();
+        let count = self.count(std::process::id());
         let bytes = u64::try_from(bytes).map_err(|_| ())?;
         let amount = crate::core::PlanSummary::estimated_input_high(bytes).ok_or(())?;
-        let mut spent = self.0.estimated.load(Ordering::Acquire);
+        let mut spent = count.estimated.load(Ordering::Acquire);
         loop {
             let next = spent.checked_add(amount).ok_or(())?;
             if limit.is_some_and(|limit| next > limit) {
                 return Err(());
             }
-            match self.0.estimated.compare_exchange_weak(
+            match count.estimated.compare_exchange_weak(
                 spent,
                 next,
                 Ordering::AcqRel,
@@ -86,7 +68,7 @@ impl SendBudget {
             ) {
                 Ok(_) => {
                     return Ok(EstimatedReservation {
-                        count: Arc::clone(&self.0),
+                        count,
                         amount,
                         committed: false,
                     });
@@ -101,11 +83,11 @@ impl SendBudget {
         limit: Option<u64>,
         last_status: Option<u16>,
     ) -> Result<SendReservation, SendBudgetDenial> {
-        self.reset_after_fork();
+        let count = self.count(std::process::id());
         let denial = last_status.map_or(SendBudgetDenial::BeforeFirstSend, |last_status| {
             SendBudgetDenial::BeforeRetry { last_status }
         });
-        let mut sent = self.0.sent.load(Ordering::Acquire);
+        let mut sent = count.sent.load(Ordering::Acquire);
         loop {
             if limit.is_some_and(|limit| sent >= limit) {
                 return Err(denial);
@@ -113,14 +95,13 @@ impl SendBudget {
             let Some(next) = sent.checked_add(1) else {
                 return Err(denial);
             };
-            match self
-                .0
+            match count
                 .sent
                 .compare_exchange_weak(sent, next, Ordering::AcqRel, Ordering::Acquire)
             {
                 Ok(_) => {
                     return Ok(SendReservation {
-                        count: Arc::clone(&self.0),
+                        count,
                         committed: false,
                     });
                 }
@@ -128,13 +109,6 @@ impl SendBudget {
             }
         }
     }
-}
-
-/// One count for the Rust, command and C constructors in this process.
-/// Each caller still selects its own limit at the reservation.
-pub(crate) fn process_budget() -> SendBudget {
-    static BUDGET: OnceLock<SendBudget> = OnceLock::new();
-    BUDGET.get_or_init(SendBudget::new).clone()
 }
 
 /// Refund a reservation only when usage could not mark the attempt.
@@ -159,17 +133,18 @@ impl Drop for SendReservation {
 
 #[cfg(test)]
 #[test]
-fn inherited_budget_and_reset_marker_do_not_block_a_child() {
+fn a_forked_child_counts_from_zero() {
     let budget = SendBudget::new();
-    budget.reserve(None, None).expect("parent send").commit();
-    let other_pid = std::process::id().wrapping_add(1);
-    budget.0.owner.store(other_pid, Ordering::Release);
-    budget.0.resetting.store(other_pid, Ordering::Release);
-    budget
-        .reserve(Some(1), None)
-        .expect("fresh child total")
-        .commit();
-    assert!(budget.reserve(Some(1), None).is_err());
+    budget.reserve(Some(1), None).expect("parent send").commit();
+    assert!(
+        budget.reserve(Some(1), None).is_err(),
+        "the parent is spent"
+    );
+    // A forked child is the parent's memory under another process ID. The
+    // rebuild rule, including a marker the parent left, is `process/tests.rs`.
+    let child = budget.count(std::process::id().wrapping_add(1));
+    assert_eq!(child.sent.load(Ordering::Acquire), 0);
+    assert_eq!(child.estimated.load(Ordering::Acquire), 0);
 }
 
 /// An estimated-input reservation, refunded unless transport starts.
