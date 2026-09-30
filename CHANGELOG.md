@@ -30,6 +30,8 @@ Python and Ruby calls now raise cancellation when the caller's token fires befor
 
 On the command, `decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annotate` keep one answer for each question in `thinkthen.sqlite`, so a longer run over the same records sends only the new records' questions. A partial reply keeps its good answers, and a rerun asks only the failed question. `meta.requests` and each annotate answer's `request` now name question keys, and `meta.batch` and `meta.batches` are gone from these rows. `--facts` counts `cache_answers` as questions. An old cache of digest entries is ignored by these commands until you run `thinkthen cache convert DIR`, which writes `thinkthen.jsonl`. It marks each answer read from an old entry with origin `converted`, or `quoted` for an entry already in the quoted form or one `--quote` rewrote (ticket 0304, ADR 0111).
 
+The Rust library's `decide_many`, `filter`, `rank`, `choose_many`, `score_many`, `tag_many`, `details_many` and `annotate` run on the command's question pipeline. Their rows list question keys in `meta.requests` and carry no `meta.batch`. A longer call over the same records sends only the new records' questions, and an annotate record's groups pack together. `Max` now sends the open request after 50 ms with no new record, and a 413 sends both halves of the refused request (ticket 0304 slice 3a, ADR 0111).
+
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
 
 Every surface refuses an API key holding any control character, not only a line break, and says `the API key contains a control character` (ticket 0321).
@@ -42,4 +44,5 @@ This is the first release. These changes break earlier builds from main:
 
 - `--record` no longer stops at a conflicting entry. It replaces the answer stored under the same question key (ticket 0304).
 - `meta.batch` and `meta.batches` are gone from the rows of the command's record functions (ticket 0304).
+- `meta.batch` is gone from the Rust library's batch rows, and `meta.requests` names question keys (ticket 0304).
 - `thinkthen cache convert DIR` deletes `thinkthen.sqlite` after it merges the file's answers into `thinkthen.jsonl` (ticket 0304).

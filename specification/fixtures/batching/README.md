@@ -1,6 +1,8 @@
 # batching fixtures
 
-`grouping.txt` holds 25 lines, one record each. It proves where batches close, by ADR 0048 item 2. `crates/thinkthen/src/core/batch/tests.rs` holds the batches below as literals.
+ADR 0111 removed the content cut, and ticket 0304 slice 3a removed the last batcher that used it. The request files stay the byte oracle for quoted questions. The cuts, memberships, close reasons and digests below are history of ADR 0048's batcher.
+
+`grouping.txt` holds 25 lines, one record each. It proved where batches closed, by ADR 0048 item 2.
 
 ## Portable cross-surface corpus
 
