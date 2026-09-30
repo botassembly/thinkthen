@@ -103,6 +103,8 @@ t.facts.requests_sent
 
 The Rust door gains a `decide_expr` family — `decide_expr`, `choose_expr`, `score_expr`, `tag_expr`, with the `probability` Struct on decide and choose only (ruling 5A; score and tag have none) — over Polars' Rust lazy expression API, taking the core tally of item 6 at build time, with `token=` and a deadline that bounds each morsel call (Rust keeps `Duration` inside `CallOptions`; milliseconds are named only where a number crosses). This is the one place the design tracks a changing Polars Rust UDF interface rather than the stable Python `map_batches`; F7 holds that coupling, and the door's pinned Polars re-export (0.55) keeps the version honest. Python carries the same demand through F4; F7 serves Rust-native pipelines. F7 carries the same `filter`-judges-every-row statement and proof as F4 (item 5): judge after the cheap filters, in a `with_columns`-shaped select.
 
+2026-09-30: Ticket 0307 dropped `polars/streaming` from the `polars` feature. The coordinator made that call under Ian's "lighter" ruling. This repo no longer proves the streaming engine or morsel cuts. Streaming is the user's opt-in. The lazy proof stands.
+
 ### 8. Process safety
 
 - **Threads.** Judges and tallies are shared freely. A stream has one reader; a second thread calling `next()` mid-pull gets a `UsageError`. Polars pool threads each start an engine call under the one process throttle.

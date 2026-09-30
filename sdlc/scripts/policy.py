@@ -31,8 +31,8 @@ ALLOWED_LICENSES = {
 # quietly cover a crate that lands later. All three are permissive and carry no
 # copyleft term, and there is no HTTPS in Rust without them. A crate listed here
 # that stops needing its exception fails the check, so the list cannot rot.
-# The `polars` feature adds named metadata exceptions in tickets 0130 and
-# 0298; cargo-deny separately checks licenses in the active dependency graph.
+# The `polars` feature adds named metadata exceptions in ticket 0130;
+# cargo-deny separately checks licenses in the active dependency graph.
 LICENSE_EXCEPTIONS = {
     "ring": {"ISC"},
     "rustls-webpki": {"ISC"},
@@ -44,10 +44,6 @@ LICENSE_EXCEPTIONS = {
     "slotmap": {"Zlib"},
     "xxhash-rust": {"BSL-1.0"},
     "ar_archive_writer": {"Apache-2.0 WITH LLVM-exception"},
-    # Ticket 0298's pinned lazy/streaming graph: flate2 and zstd's native pair.
-    "zlib-rs": {"Zlib"},
-    "zstd-safe": {"BSD-3-Clause"},
-    "zstd-sys": {"BSD-3-Clause"},
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
@@ -340,9 +336,9 @@ def feature_failures(manifest: dict) -> list[str]:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
         "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
-        "polars": ["dep:polars", "dep:polars-core", "polars/lazy", "polars/streaming"],
+        "polars": ["dep:polars", "dep:polars-core", "polars/lazy"],
     }:
-        held.append("the default cli feature selects only command dependencies, and polars selects its two pinned crates with lazy and streaming")
+        held.append("the default cli feature selects only command dependencies, and polars selects its two pinned crates with lazy")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")
     if manifest.get("dependencies", {}).get("polars-core") != {
