@@ -82,9 +82,10 @@ Ticket 0322. Each slice lands green with the full suite, workspace clippy, `poli
 
 1. **Builds now: persistence, exit flush and isolation.** `from_env` seeds the usage path. `Engine::finish_usage()` and the three host hooks land. The test isolation above lands. Proof:
    - Into one scratch usage folder, the command sends one request and a Rust `from_env` engine sends two, one a retry after a 503. `thinkthen status --json` then reports requests equal to the listener's arrivals (3), retries 1, and the tokens the replies reported.
-   - The C door sends one request and frees its engine. `status` reports one.
+   - The C door sends one request and frees its engine. Its month file reports one.
    - The SQLite extension answers one row and its process exits without a sleep while the test holds the usage lock for about 300 ms. `status` reports one. SQLite loads the extension, answers, closes, reopens, answers and exits; `status` reports two.
    - PostgreSQL `check.sh` opens two connections that each send one request and disconnect while the check holds the usage lock for about 300 ms. The server user's `status` then reports two.
+   - A DuckDB process answers one row and exits while the test holds the usage lock. Its month file reports one.
    - Each exit proof fails without its hook. The build removes the hook once, watches the proof fail, and the record says so.
    - A parent writes, then a child of a fork calls `finish_usage()` while the parent's writer holds its queue lock. The child returns promptly, and the files count the parent's attempts once.
    - The same calls through `EngineBuilder::new()` leave the usage folder absent.
