@@ -6,7 +6,9 @@ mod common;
 
 use conformance_backend::{Canned, Listener};
 use serde_json::{Map, Value, json};
-use thinkthen::polars::prelude::{DataFrame, DataType, IntoLazy, NamedFrom, Series, col};
+use thinkthen::polars::prelude::{
+    DataFrame, DataType, IntoLazy, LazyFrame, NamedFrom, Series, col,
+};
 use thinkthen::{
     BatchSetting, CancelToken, Engine, PolarsEngine, PolarsExprOptions, Question, QuestionKind,
     Tally,
@@ -310,4 +312,53 @@ fn a_shared_token_stops_a_later_evaluation_without_a_send() {
     assert!(error.to_string().contains("cancel"), "{error}");
     assert_eq!(listener.count(), 1, "no later request was admitted");
     assert_eq!(tally.facts().requests_sent(), 1);
+}
+
+/// Ticket 0304 slice 3c: a cached lazy frame collected twice sends nothing
+/// the second time, and a later slice of one frame sends only its new
+/// questions. Counted on the loopback listener.
+#[test]
+fn a_cached_lazy_frame_collected_twice_sends_nothing_the_second_time() {
+    let listener = listener();
+    let engine = common::engine(listener.base());
+    let texts = common::distinct(30);
+    let cells = texts
+        .iter()
+        .map(|text| Some(text.as_str()))
+        .collect::<Vec<_>>();
+    let source = frame(&cells);
+    let expression = engine
+        .decide_expr(&decide(), col("body"), PolarsExprOptions::new())
+        .expect("expression");
+    let collect = |rows: LazyFrame| {
+        rows.with_columns([expression.clone().alias("judged")])
+            .collect()
+            .expect("lazy collect")
+    };
+    let first = collect(source.clone().lazy());
+    assert_eq!(
+        (listener.count(), listener.questions()),
+        (1, 30),
+        "the first collect asks every row in one request"
+    );
+    let second = collect(source.clone().lazy());
+    assert_eq!(listener.count(), 1, "the second collect sends nothing");
+    assert_eq!(first, second, "the cache answers each row alike");
+
+    let head = collect(source.clone().lazy().slice(0, 10));
+    assert_eq!(head.height(), 10);
+    assert_eq!(listener.count(), 1, "a cached slice sends nothing");
+    let wider = frame(
+        &common::distinct(40)
+            .iter()
+            .map(|text| Some(text.as_str()))
+            .collect::<Vec<_>>(),
+    );
+    let tail = collect(wider.lazy().slice(25, 10));
+    assert_eq!(tail.height(), 10);
+    assert_eq!(
+        (listener.count(), listener.questions()),
+        (2, 35),
+        "the later slice asks only its own five new rows"
+    );
 }
