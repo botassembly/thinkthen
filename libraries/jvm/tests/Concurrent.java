@@ -27,14 +27,14 @@ public class Concurrent {
             @SuppressWarnings("unchecked") Door.TypedResult<Door.Answer>[] results = new Door.TypedResult[calls.length];
             for (int index=0;index<calls.length;index++) {
                 results[index]=calls[index].join();
-                if (results[index].value().outcome()!=1 || results[index].facts().requestsSent()!=1 ||
-                        (index<2 && results[index].facts().seconds()<=0))
+                if (results[index].value().outcome()!=1 || ((Number)results[index].facts().get("requests_sent")).longValue()!=1 ||
+                        (index<2 && ((Number)results[index].facts().get("seconds")).doubleValue()<=0))
                     throw new AssertionError("overlapping caller result/facts");
             }
             owned=results;
         }
-        if (owned[0].facts()==owned[1].facts() || !"jev-1.13.0".equals(owned[0].facts().model()) ||
-                !"jev-1.13.0".equals(owned[1].facts().model())) throw new AssertionError("owned facts after close");
+        if (owned[0].facts()==owned[1].facts() || !"jev-1.13.0".equals(owned[0].facts().get("model")) ||
+                !"jev-1.13.0".equals(owned[1].facts().get("model"))) throw new AssertionError("owned facts after close");
         System.out.println("INDEPENDENT_CONCURRENT_PASS");
     }
 }

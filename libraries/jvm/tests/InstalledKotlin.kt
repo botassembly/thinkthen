@@ -1,5 +1,5 @@
 import thinkthen.Door
-import thinkthen.ResultEnvelope
+import thinkthen.Json
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -8,7 +8,7 @@ fun main() {
         Door("""{"cache":false,"throttle":1,"max_retries":0}""").use { door ->
             val request = """{"decide":"Is it relevant?","records":["alpha","café-5544","omega","line 2907","tail"],"details":true,"call":{"batch":"max"}}"""
             val result = KotlinFacade(door).call(request)
-            check(ResultEnvelope.value(result).startsWith("["))
+            check((Json.parseObject(result)["value"]) is List<*>)
             Files.writeString(Path.of("portable-result.json"), result)
             println("PORTABLE_BATCH_KOTLIN_PASS")
         }
@@ -16,7 +16,7 @@ fun main() {
     }
     Door().use { door ->
         val answer = KotlinFacade(door).decide("Is it?", "release-kotlin")
-        check(answer.value().outcome() == 1 && answer.value().probability() == 0.9 && answer.facts().records() == 1L && answer.facts().requestsSent() == 1L)
+        check(answer.value().outcome() == 1 && answer.value().probability() == 0.9 && (answer.facts()["records"] as Number).toLong() == 1L && (answer.facts()["requests_sent"] as Number).toLong() == 1L)
         println("INSTALLED_KOTLIN_PASS")
     }
 }

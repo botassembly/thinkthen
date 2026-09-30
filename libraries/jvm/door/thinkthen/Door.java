@@ -16,12 +16,28 @@ import static java.lang.foreign.ValueLayout.*;
 /** Java 21 preview FFM binding for the immutable ThinkThen C door. */
 public final class Door implements AutoCloseable {
     public record Answer(int outcome, double probability) {}
-    public record Facts(long records, long requestsSent, long cacheAnswers, double seconds,
-                        Long inputTokens, Long outputTokens, String model) {}
-    public record TypedResult<T>(T value, Facts facts) {}
+    /** A call's value and its facts object; the result schema describes the facts. */
+    public record TypedResult<T>(T value, Map<String, Object> facts) {}
     public enum Outcome { NO, YES, NOT_SURE }
     public enum FailureKind { USAGE, BACKEND, DEADLINE, LOCAL, CANCELLED, DEFECT }
     public record Failure(int code, FailureKind kind, boolean retryable, String message, String factsJson) {}
+    /** One member of an annotate row's value or answers (ADR 0112 section 4). */
+    public sealed interface AnnotatedField {
+        /** JSON null: the question was not sure. */
+        record Unresolved() implements AnnotatedField {}
+        record Answered(Object value) implements AnnotatedField {}
+        /** The one-member object {"failed": {...}}. */
+        record Failed(String kind, String cause) implements AnnotatedField {}
+    }
+    /** Read one member as Json reads it. No answered value is an object, so an object that is not a failure is an error. */
+    public static AnnotatedField field(Object member) {
+        if (member == null) return new AnnotatedField.Unresolved();
+        if (!(member instanceof Map<?, ?> object)) return new AnnotatedField.Answered(member);
+        if (!(object.get("failed") instanceof Map<?, ?> failed))
+            throw new IllegalArgumentException("annotate member is an object but not a failure");
+        return new AnnotatedField.Failed(failed.get("kind") instanceof String kind ? kind : "",
+            failed.get("cause") instanceof String cause ? cause : "");
+    }
     public static Outcome outcome(Answer answer) {
         return switch (answer.outcome()) { case 0 -> Outcome.NO; case 1 -> Outcome.YES;
             case 2 -> Outcome.NOT_SURE; default -> throw new IllegalStateException("invalid native outcome"); };
@@ -56,6 +72,7 @@ public final class Door implements AutoCloseable {
         register(linker, symbols, "thinkthen_recognize_with_facts_opts", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, ADDRESS, JAVA_LONG, JAVA_LONG, ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS));
         register(linker, symbols, "thinkthen_relate_opts", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, ADDRESS, ADDRESS, JAVA_LONG, JAVA_LONG, ADDRESS, ADDRESS, ADDRESS));
         register(linker, symbols, "thinkthen_relate_with_facts_opts", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, ADDRESS, ADDRESS, JAVA_LONG, JAVA_LONG, ADDRESS, ADDRESS, ADDRESS, ADDRESS, ADDRESS));
+        register(linker, symbols, "thinkthen_plan_json", FunctionDescriptor.of(JAVA_INT, ADDRESS, ADDRESS, ADDRESS, ADDRESS));
         register(linker, symbols, "thinkthen_free_string", FunctionDescriptor.ofVoid(ADDRESS));
     }
     private static void register(Linker linker, SymbolLookup symbols, String name, FunctionDescriptor descriptor) {
@@ -91,8 +108,8 @@ public final class Door implements AutoCloseable {
         MemorySegment pointer = slot.get(ADDRESS, 0);
         if (!nullPointer(pointer)) invoke("thinkthen_free_string", pointer);
     }
-    static Facts copyFacts(MemorySegment pointer, long length) {
-        return ResultEnvelope.facts(copyCounted(pointer, length));
+    static Map<String, Object> copyObject(MemorySegment pointer, long length) {
+        return Json.parseObject(copyCounted(pointer, length));
     }
     static Failure failure(MemorySegment engine) {
         int code = (int) invoke("thinkthen_error_code", engine);
@@ -149,7 +166,7 @@ public final class Door implements AutoCloseable {
                     throw new NativeFailure(error);
                 }
                 try { return new TypedResult<>(new Answer(out.get(JAVA_INT, 0), out.get(JAVA_DOUBLE, 8)),
-                    copyFacts(facts.get(ADDRESS, 0), factsLength.get(JAVA_LONG, 0))); }
+                    copyObject(facts.get(ADDRESS, 0), factsLength.get(JAVA_LONG, 0))); }
                 finally { freeOutput(facts); }
             }
         }
@@ -170,7 +187,7 @@ public final class Door implements AutoCloseable {
                 try {
                     Answer[] result = new Answer[n];
                     for (int i=0;i<n;i++) result[i]=new Answer(out.get(JAVA_INT,i*16L),out.get(JAVA_DOUBLE,i*16L+8));
-                    return new TypedResult<>(result, copyFacts(facts.get(ADDRESS,0),factsLength.get(JAVA_LONG,0)));
+                    return new TypedResult<>(result, copyObject(facts.get(ADDRESS,0),factsLength.get(JAVA_LONG,0)));
                 } finally { freeOutput(facts); }
             }
         }
@@ -187,9 +204,36 @@ public final class Door implements AutoCloseable {
             }
         }
     }
-    public TypedResult<String> recognize(String spec, byte[] text) { return structured("thinkthen_recognize_with_facts_opts", spec, new byte[][]{text}); }
-    public TypedResult<String> relate(String spec, byte[][] records) { return structured("thinkthen_relate_with_facts_opts", spec, records); }
-    private TypedResult<String> structured(String fn, String spec, byte[][] values) {
+    /**
+     * Preview a judgment call through thinkthen_plan_json and return the result schema's plan
+     * object. verb is decide, choose, score or tag. question is bare question text, or one
+     * question object when it starts with "{", as decide reads it. settingsJson is null or a
+     * thinkthen.settings/1 object. The preview needs no key, reads no cache and sends nothing.
+     */
+    public Map<String, Object> plan(String verb, String question, String[] input, String settingsJson) {
+        StringBuilder json = new StringBuilder("{\"verb\":").append(Json.quote(verb)).append(",\"question\":")
+            .append(question.strip().startsWith("{") ? question : Json.quote(question)).append(",\"input\":[");
+        for (int i = 0; i < input.length; i++) json.append(i == 0 ? "" : ",").append(Json.quote(input[i]));
+        json.append(']');
+        if (settingsJson != null) json.append(",\"settings\":").append(settingsJson);
+        MemorySegment e = live();
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment request = cstr(arena, json.append('}').toString()), out = arena.allocate(ADDRESS), len = arena.allocate(JAVA_LONG);
+            synchronized (Thread.currentThread()) {
+                if ((int) invoke("thinkthen_plan_json", e, request, out, len) != 0) throw new NativeFailure(failure(e));
+                try { return copyObject(out.get(ADDRESS, 0), len.get(JAVA_LONG, 0)); } finally { freeOutput(out); }
+            }
+        }
+    }
+    public TypedResult<Map<String, Object>> recognize(String spec, byte[] text) { return recognize(spec, text, -1, null); }
+    public TypedResult<Map<String, Object>> recognize(String spec, byte[] text, long deadlineMs, Token token) {
+        return structured("thinkthen_recognize_with_facts_opts", spec, new byte[][]{text}, deadlineMs, token);
+    }
+    public TypedResult<Map<String, Object>> relate(String spec, byte[][] records) { return relate(spec, records, -1, null); }
+    public TypedResult<Map<String, Object>> relate(String spec, byte[][] records, long deadlineMs, Token token) {
+        return structured("thinkthen_relate_with_facts_opts", spec, records, deadlineMs, token);
+    }
+    private TypedResult<Map<String, Object>> structured(String fn, String spec, byte[][] values, long deadlineMs, Token token) {
         MemorySegment e = live();
         try (Arena arena = Arena.ofConfined()) {
             MemorySegment q=cstr(arena,spec), out=arena.allocate(ADDRESS), len=arena.allocate(JAVA_LONG);
@@ -198,20 +242,19 @@ public final class Door implements AutoCloseable {
             Object[] args;
             if (fn.equals("thinkthen_recognize_with_facts_opts")) {
                 text=bytes(arena,values[0]);
-                args=new Object[]{e,q,text,(long)values[0].length,-1L,MemorySegment.NULL,out,len,facts,factsLen};
+                args=new Object[]{e,q,text,(long)values[0].length,deadlineMs,tokenPointer(token),out,len,facts,factsLen};
             } else {
                 int n=values.length;
                 MemorySegment ptrs=arena.allocate(Math.max(1L,Math.multiplyExact((long)n,ADDRESS.byteSize())),ADDRESS.byteAlignment());
                 MemorySegment lens=arena.allocate(Math.max(1L,Math.multiplyExact((long)n,JAVA_LONG.byteSize())),JAVA_LONG.byteAlignment());
                 for(int i=0;i<n;i++){ptrs.setAtIndex(ADDRESS,i,bytes(arena,values[i]));lens.setAtIndex(JAVA_LONG,i,values[i].length);}
-                args=new Object[]{e,q,ptrs,lens,(long)n,-1L,MemorySegment.NULL,out,len,facts,factsLen};
+                args=new Object[]{e,q,ptrs,lens,(long)n,deadlineMs,tokenPointer(token),out,len,facts,factsLen};
             }
             synchronized (Thread.currentThread()) {
                 int rc=(int)invoke(fn,args);
                 if(rc!=0)throw new NativeFailure(failure(e));
                 try {
-                    String value=copyCounted(out.get(ADDRESS,0),len.get(JAVA_LONG,0));
-                    return new TypedResult<>(value,copyFacts(facts.get(ADDRESS,0),factsLen.get(JAVA_LONG,0)));
+                    return new TypedResult<>(copyObject(out.get(ADDRESS,0),len.get(JAVA_LONG,0)),copyObject(facts.get(ADDRESS,0),factsLen.get(JAVA_LONG,0)));
                 } finally {try {freeOutput(out);} finally {freeOutput(facts);}}
             }
         }

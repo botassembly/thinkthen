@@ -39,8 +39,43 @@ subprocess.run([str(JDK / "bin/javac"), "--enable-preview", "--release", "21", "
 subprocess.run([str(KOTLIN / "bin/kotlinc"), "-J-XX:ActiveProcessorCount=2", "-jvm-target", "21", "-classpath", classpath, str(HERE / "TypeCase.kt"), "-d", str(classes)], env=compiler_env, check=True)
 subprocess.run([str(SCALA / "bin/scalac"), "-J-XX:ActiveProcessorCount=2", "-classpath", classpath, "-d", str(classes), str(HERE / "TypeCase.scala")], env=compiler_env, check=True)
 backend, port = shared.start_backend()
+FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
+                                   "severity": "answered", "topics": "answered"}]}
+
+
+def type_case(args, env, name, lang="java"):
+    main, runtime = {"java": ("TypeCase", ""), "kotlin": ("TypeCaseKt", str(KOTLIN / "lib/kotlin-stdlib.jar")),
+                     "scala": ("scalaTypeCase", str(SCALA / "lib/scala.jar"))}[lang]
+    cmd = java + ["-cp", f"{classes}:{classpath}" + (f":{runtime}" if runtime else ""), main, *args]
+    result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=40)
+    assert result.returncode == 0, (lang, name, result.stderr)
+    return json.loads(result.stdout)
+
+
+def sent():
+    backend.stdin.write("count\n")
+    backend.stdin.flush()
+    return int(backend.stdout.readline())
+
+
 try:
-    for lang, main, runtime in (("java", "TypeCase", ""), ("kotlin", "TypeCaseKt", str(KOTLIN / "lib/kotlin-stdlib.jar")), ("scala", "scalaTypeCase", str(SCALA / "lib/scala.jar"))):
+    if selected is None:
+        # Ticket 0291, before any case sends: P1 and one invalid plan run with
+        # no key through the public Door.plan; the zero budgets and the zero
+        # cap refuse; the backend has read no request.
+        with tempfile.TemporaryDirectory(prefix="thinkthen-jvm-plan-") as cache:
+            env = child_env(HOME=cache, JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"), LC_ALL="C.UTF-8",
+                            THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/generic/v1", THINKTHEN_CACHE=cache)
+            p1 = next(case for case in corpus["cases"] if case["name"] == "plan-p1")
+            actual = type_case(["plan", json.dumps(p1["plan_input"])], env, "plan-p1")
+            assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
+            invalid = dict(p1["plan_input"], settings={"batch": 0})
+            assert type_case(["plan", json.dumps(invalid)], env, "plan-batch-0") == {"failed": {"kind": "usage", "code": 1}}
+            env["THINKTHEN_API_KEY"] = "sk-type-contract-loopback"
+            assert type_case(["limits"], env, "limits") == {"limits": "pass"}
+            assert sent() == 0, "a plan or a refused call sent a request"
+            print("java plan P1, usage refusal, zero budgets and zero cap: zero sends", flush=True)
+    for lang in ("java", "kotlin", "scala"):
         count = 0
         with tempfile.TemporaryDirectory(prefix=f"thinkthen-{lang}-types-") as cache:
             for index, case in enumerate(corpus["cases"]):
@@ -53,12 +88,13 @@ try:
                 env = child_env(HOME=cache, JAVA_HOME=str(JDK), JAVACMD=str(JDK / "bin/java"), LC_ALL="C.UTF-8")
                 env.update(THINKTHEN_BASE_URL=f"http://127.0.0.1:{port}/{'generic' if route == 'generic' else 'case/' + route}/v1", THINKTHEN_API_KEY="sk-type-contract-loopback", THINKTHEN_CACHE=str(Path(cache) / str(index)))
                 request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
-                cmd = java + ["-cp", f"{classes}:{classpath}" + (f":{runtime}" if runtime else ""), main, request]
-                result = subprocess.run(cmd, env=env, capture_output=True, text=True, timeout=40)
-                assert result.returncode == 0, (lang, case["name"], result.stderr)
-                actual = json.loads(result.stdout)
+                actual = type_case([request], env, case["name"], lang)
+                if lang == "java" and case["name"] in FIELDS:
+                    # The shared null and failed annotate members, read through Door.field.
+                    env["THINKTHEN_CACHE"] = str(Path(cache) / f"{index}-fields")
+                    assert type_case(["fields", request], env, case["name"]) == FIELDS[case["name"]], case["name"]
                 if "expected_error" in case:
-                    assert actual["error"] == "usage", (lang, case["name"], actual)
+                    assert actual == {"failed": {"kind": "usage", "code": 1}}, (lang, case["name"], actual)
                     count += 1
                     continue
                 if case["definition"] != "usage":

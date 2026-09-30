@@ -6,6 +6,6 @@ import scala.concurrent.ExecutionContext
   val door = new Door()
   try println(new ScalaFacade(door).call(request))
   catch { case failure: Door.NativeFailure =>
-    println(s"{\"error\":\"${failure.failure.kind().name.toLowerCase}\"}")
+    println(s"{\"failed\":{\"kind\":\"${failure.failure.kind().name.toLowerCase}\",\"code\":${failure.failure.code()}}}")
   } finally door.close()
 }

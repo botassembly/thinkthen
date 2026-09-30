@@ -1,5 +1,5 @@
 import thinkthen.Door
-import thinkthen.ResultEnvelope
+import thinkthen.Json
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import scala.concurrent.{Await, ExecutionContext, Future, Promise}
@@ -38,7 +38,7 @@ final class ScalaFacade(engine: Door)(using ExecutionContext) {
       try { engine.decide("Is it?", "scala-never-sent".getBytes(StandardCharsets.UTF_8), -1L, token); throw new AssertionError("fired token worked") }
       catch { case ex: Door.NativeFailure => assert(ex.failure.code() == 5) }
     } finally token.close()
-    assert(ResultEnvelope.value(facade.call("{\"decide\":\"Is it?\",\"evidence\":\"scala-json\"}")) == "true")
+    assert(Json.parseObject(facade.call("{\"decide\":\"Is it?\",\"evidence\":\"scala-json\"}")).get("value") == java.lang.Boolean.TRUE)
     val barrier = Path.of(System.getenv("TT_BARRIER_DIR"))
     val held = facade.decideAsync("Is it?", "hold-scala")
     try {

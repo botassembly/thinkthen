@@ -120,7 +120,8 @@ def fixture(base):
     jars.mkdir()
     managed = {"nupkg": sha(nupkg.read_bytes())}
     classes = {
-        "door": "Door$Answer Door$Facts Door$TypedResult Door$Failure Door$FailureKind Door$NativeFailure Door$Outcome Door$Token Door ResultEnvelope$Reader ResultEnvelope$Value ResultEnvelope".split(),
+        "door": ("Door$Answer Door$TypedResult Door$Failure Door$FailureKind Door$NativeFailure Door$Outcome Door$Token Door$AnnotatedField "
+                 "Door$AnnotatedField$Unresolved Door$AnnotatedField$Answered Door$AnnotatedField$Failed Door Json$Reader Json").split(),
         "kotlin": "KotlinCallerKt KotlinFacade$RunningDecision KotlinFacade".split(),
         "scala": "ScalaCaller$package$ ScalaCaller$package ScalaFacade$RunningDecision ScalaFacade scalaCaller".split(),
     }
