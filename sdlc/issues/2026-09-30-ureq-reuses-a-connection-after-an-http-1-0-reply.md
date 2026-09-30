@@ -25,3 +25,18 @@ Python's `http.server` replies over HTTP/1.0 and closes after each reply. The Du
 ## What should happen
 
 Either ureq-proto honors HTTP/1.0 closing, or the engine asks for no reuse after an HTTP/1.0 reply. The second is a product change to `engine/http.rs`. Until one lands, a Python fixture that serves two sends to one engine sends `Connection: close`.
+
+## The idle case, and the choice left to Ian
+
+Ticket 0341 asked whether the same reuse can fail a real send. It can, through a second path. ureq probes a pooled connection before reuse and skips it when the server's close has arrived. A hosted backend closes an idle connection at its keep-alive limit. When the client sends just before that close reaches it, the send fails at exit 4 with `the backend closed the connection before a reply and may have received the request; it was not sent again`. On loopback the window was a millisecond or two, and 6 of 120 sends at the edge failed. A modeled 20 ms network delay made every send inside the window fail. The server read none of those requests.
+
+0341 set ureq's idle age to one second, down from 15. A backend that keeps idle connections longer than one second plus the round trip can no longer race. Common server defaults run 2 seconds and up. Measured: 60 of 60 edge sends failed before, and 0 of 60 after.
+
+Left open: a backend with a keep-alive wait under one second plus the round trip still races; 119 of 120 edge sends failed at a 200 ms wait. Only a resend heals that. `specification/backends.md` and ticket 0089 forbid resending any transport failure, because the engine cannot tell an unread request from one a backend received and may bill. 0089 names this cost and leaves the lever to Ian.
+
+Choice for Ian:
+
+1. Keep the rule (default). A short keep-alive backend can fail a run at exit 4. The user reruns, and `thinkthen status` shows the extra request.
+2. Resend once when a reused connection closes before any reply byte, within a short time of the write. This heals the race. A backend that received the request and then dropped the connection could bill it twice. It needs a spec change and a ticket.
+
+Recommendation: keep the rule until a user reports a backend whose keep-alive wait is under a second. No hosted backend thinkthen names is known to use one.

@@ -427,3 +427,59 @@ fn a_refused_attempt_is_observed_once_and_returned_without_a_retry() {
         Err(Error::Transport(TransportKind::Refused))
     ));
 }
+
+/// Ticket 0341. The server models a keep-alive timeout under one second whose
+/// close has not reached the client: it drops, unread, any request that comes
+/// back on a connection after the client idled. A reused connection would fail
+/// that send as a premature close; the pool opens a new one instead.
+#[test]
+#[allow(clippy::excessive_nesting, reason = "per-connection server fixture")]
+fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("listener");
+    let url = format!("http://{}/v1", listener.local_addr().expect("address"));
+    let tally: Arc<[AtomicUsize; 3]> = Arc::default();
+    let server = Arc::clone(&tally);
+    thread::spawn(move || {
+        for stream in listener.incoming().take(2) {
+            let (mut stream, tally) = (stream.expect("connection"), Arc::clone(&server));
+            tally[0].fetch_add(1, Ordering::SeqCst);
+            thread::spawn(move || {
+                let (mut request, mut whole) = ([0_u8; 4096], Vec::new());
+                while !whole.ends_with(b"\r\n\r\n{}") {
+                    let read = stream.read(&mut request).expect("request");
+                    assert!(read > 0, "the whole request arrives");
+                    whole.extend_from_slice(&request[..read]);
+                }
+                tally[1].fetch_add(1, Ordering::SeqCst);
+                stream
+                    .write_all(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
+                    .expect("reply");
+                if stream.read(&mut request).is_ok_and(|read| read > 0) {
+                    tally[2].fetch_add(1, Ordering::SeqCst);
+                }
+            });
+        }
+    });
+    let key = Key::of("");
+    let exchange = Exchange {
+        url: &url,
+        body: b"{}",
+        key: &key,
+        max_retries: 0,
+        retry_wait: Duration::from_millis(1),
+    };
+    let widths = &crate::engine::limits::process().widths;
+    let client = Client::new(Duration::from_secs(5), false, widths);
+    let counts = Counters::new(None);
+    let cancel = crate::engine::Cancel::default();
+
+    let first = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
+    thread::sleep(Duration::from_millis(1200));
+    let second = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
+
+    assert_eq!(first.expect("first answer").requests_sent, 1);
+    assert_eq!(second.expect("second answer").requests_sent, 1);
+    let seen = tally.each_ref().map(|count| count.load(Ordering::SeqCst));
+    assert_eq!(seen, [2, 2, 0], "connections, requests read, dropped");
+    assert_eq!(counts.snapshot().requests_sent, 2);
+}
