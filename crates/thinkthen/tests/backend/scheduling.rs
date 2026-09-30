@@ -206,39 +206,40 @@ fn ordered_output_bounds_every_dispatched_row() {
         .write_all(records(8).as_bytes())
         .expect("the records are written");
 
+    // The unemitted window holds (jobs + 1) x --batch inputs, which is five
+    // here, so records 2 to 5 answer while record 1 is held, and record 6
+    // waits for record 1's row.
     let deadline = Instant::now() + Duration::from_secs(2);
     let mut started = 0;
-    while started < 4 && Instant::now() < deadline {
+    while started < 5 && Instant::now() < deadline {
         started += listener.requests().len();
         thread::yield_now();
     }
-    if started != 4 {
+    thread::sleep(Duration::from_millis(200));
+    started += listener.requests().len();
+    if started != 5 {
         let _ = child.kill();
         let _ = child.wait();
     }
     assert_eq!(
-        started, 4,
-        "four requests start before record 1 is released"
+        started, 5,
+        "five requests start before record 1 is released"
     );
-    for _ in 0..4 {
+    for _ in 0..5 {
         assert!(matches!(events.recv(), Ok(Observed::Request)));
     }
-    for _ in 0..3 {
+    for _ in 0..4 {
         completed
             .recv_timeout(Duration::from_secs(2))
-            .expect("rows 2 through 4 answer while row 1 is held");
+            .expect("rows 2 through 5 answer while row 1 is held");
     }
-    assert!(
-        listener.requests().is_empty(),
-        "a fifth request started early"
-    );
 
     release.wait();
     let first = events
         .recv_timeout(Duration::from_secs(2))
         .expect("an output or request event follows record 1 release");
     let Observed::Output(first) = first else {
-        panic!("request 5 started before record 1 reached standard output");
+        panic!("request 6 started before record 1 reached standard output");
     };
     assert!(first.contains(r#""id":"R-1""#), "{first}");
     drop(input);

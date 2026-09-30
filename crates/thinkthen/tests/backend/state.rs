@@ -15,7 +15,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::plant_recording;
+use crate::support::plant_fixture;
 
 /// The response the listener gives to the one question a case asks.
 const ANSWERED: &str = concat!(
@@ -338,6 +338,7 @@ fn a_request_limit_counts_the_complete_body_with_a_structured_state() {
 
 #[test]
 fn an_unquoted_entry_answers_no_run_and_the_quoted_entry_answers_its_own() {
+    const NOUL: &str = r#"{"type":"noul","noul":0.92}"#;
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("state-recording");
     let url = "http://127.0.0.1:9/v1/systemone";
     // The bytes a version before ADR 0111 sent for one named text field: the
@@ -347,7 +348,7 @@ fn an_unquoted_entry_answers_no_run_and_the_quoted_entry_answers_its_own() {
         r#"{"state":"Payouts failed.","model":"local-1","#,
         r#""questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}"#,
     );
-    plant_recording(&folder, url, old.as_bytes(), ANSWERED).expect("a recorded exchange");
+    plant_fixture(&folder, url, old.as_bytes(), &[NOUL], None).expect("a fixture");
     let output = decide(
         "http://127.0.0.1:9/v1",
         &[
@@ -362,7 +363,7 @@ fn an_unquoted_entry_answers_no_run_and_the_quoted_entry_answers_its_own() {
     assert_eq!(output.status.code(), Some(5));
     let said = String::from_utf8_lossy(&output.stderr);
     assert!(
-        said.contains("the replay folder holds no entry named"),
+        said.contains("the replay folder holds no answer for question `"),
         "{said}"
     );
 
@@ -373,7 +374,7 @@ fn an_unquoted_entry_answers_no_run_and_the_quoted_entry_answers_its_own() {
         r#""questions":{"q1":{"type":"noul","#,
         r#""instructions":"The text is \"Payouts failed.\". Does this report a payment failure?"}}}"#,
     );
-    plant_recording(&folder, url, quoted.as_bytes(), ANSWERED).expect("a recorded exchange");
+    plant_fixture(&folder, url, quoted.as_bytes(), &[NOUL], None).expect("a fixture");
     let output = decide(
         "http://127.0.0.1:9/v1",
         &[

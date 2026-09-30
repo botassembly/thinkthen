@@ -4,7 +4,7 @@ use std::io;
 
 use super::set;
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::digest;
+use crate::support::keys;
 use serde_json::{Value, json};
 
 mod field_failure;
@@ -64,8 +64,8 @@ fn pointer_miss_is_one_error_row_and_later_record_is_answered() -> io::Result<()
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, FIRST_REQUEST.as_bytes());
     assert_eq!(requests[1].body, THIRD_REQUEST.as_bytes());
-    let first = digest(listener.url(), FIRST_REQUEST.as_bytes());
-    let third = digest(listener.url(), THIRD_REQUEST.as_bytes());
+    let first = keys(listener.url(), FIRST_REQUEST.as_bytes()).remove(0);
+    let third = keys(listener.url(), THIRD_REQUEST.as_bytes()).remove(0);
     let lines: Vec<&[u8]> = output
         .stdout
         .split(|byte| *byte == b'\n')
@@ -179,7 +179,7 @@ fn default_stops_at_the_pointer_and_a_later_backend_failure_stays_terminal() -> 
         json!({"schema":"thinkthen.record-error/1","at":2,
         "failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}})
     );
-    assert_eq!(terminal.stderr, b"thinkthen: 1 record skipped\nthinkthen: the backend answered with status 401: the key was refused\nthinkthen: stopped at record 3; 2 records finished\n");
+    assert_eq!(terminal.stderr, b"thinkthen: 1 record skipped\nthinkthen: stopped at record 3; the request for records 3 to 3 failed: the backend answered with status 401: the key was refused; 2 records finished\n");
     let requests = backend.requests();
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, FIRST_REQUEST.as_bytes());
@@ -215,7 +215,7 @@ fn details_preserve_shadowed_input_while_bare_mode_refuses_it() -> io::Result<()
     );
     assert!(detailed.stderr.is_empty());
     let row: Value = serde_json::from_slice(&detailed.stdout)?;
-    let request = digest(listener.url(), FIRST_REQUEST.as_bytes());
+    let request = keys(listener.url(), FIRST_REQUEST.as_bytes()).remove(0);
     assert_eq!(
         row,
         json!({"schema":"thinkthen.result/1",

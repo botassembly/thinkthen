@@ -170,7 +170,7 @@ fn replay_only_creates_no_lock_directory() {
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("a listener");
     let recorded = spawn(
         &[
-            "decide",
+            "find",
             QUESTION,
             "--url",
             listener.base(),
@@ -187,7 +187,7 @@ fn replay_only_creates_no_lock_directory() {
     fs::remove_dir_all(cache.join(".locks")).expect("lock folder removed for the replay check");
     let replayed = spawn(
         &[
-            "decide",
+            "find",
             QUESTION,
             "--url",
             listener.base(),

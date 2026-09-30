@@ -11,13 +11,17 @@ const NAMED: &str = "thinkthen: the recording folder could not be read or writte
 
 #[test]
 fn a_default_cache_that_fails_names_the_default_cache() {
-    // A private default cache whose backend marker is not JSON fails every run.
+    // A private default cache whose store is no database fails every run.
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join("default-cache-storage");
     let _absent = fs::remove_dir_all(&root);
     let named = root.join("thinkthen");
     fs::create_dir_all(&named).expect("cache folder");
     fs::set_permissions(&named, fs::Permissions::from_mode(0o700)).expect("private folder");
-    fs::write(named.join(".thinkthen-backend.json"), b"not json").expect("marker");
+    fs::write(
+        named.join("thinkthen.sqlite"),
+        b"not a database, padded well past the length of one sqlite header",
+    )
+    .expect("store");
     let root_text = root.to_str().expect("a UTF-8 path");
     let named_text = named.to_str().expect("a UTF-8 path");
     let listener =

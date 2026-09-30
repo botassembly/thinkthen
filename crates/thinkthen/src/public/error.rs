@@ -264,6 +264,13 @@ fn message(error: &EngineError) -> String {
         EngineError::ReplyTooLarge(limit) => return reply_too_large(*limit),
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),
         EngineError::ReplayMiss(_) => "the replay folder holds no reply for this request",
+        EngineError::QuestionMiss(_) => "the replay folder holds no answer for this question",
+        EngineError::StoreAmbiguous => {
+            "the replay folder holds both thinkthen.jsonl and thinkthen.sqlite; run thinkthen cache convert on it"
+        }
+        EngineError::StoreHotJournal => {
+            "the replay folder holds an unfinished write; open it once with write access"
+        }
         EngineError::Entry(..) | EngineError::CacheEntry => {
             "the cache or recording folder holds a malformed entry"
         }

@@ -25,7 +25,7 @@ agreement=6/6"
 
 `questions.json` asks whether the message requests a credential, which queue owns it, and how urgent it is. Every question points at `/body`. The id, subject, and `reviewed_action` stay local. `--details` restores the complete TSV row under `input`.
 
-The six recording files hold one request per ticket. Pass `--batch 1` through the scripts to replay those exact requests; the default packs records differently. The three answers in each replayed row name the same request digest, which proves that the questions rode together.
+The six recording files hold one request per ticket. Pass `--batch 1` through the scripts to replay those exact requests; the default packs records differently. Each answer names its own question key, because the cache stores one answer per question.
 
 ## Step 1: judge once, then apply policy once
 
@@ -60,7 +60,7 @@ work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 ./triage "$work/triage" --batch 1 --replay recording/
-jq -s -e 'all(.[]; ([.answers[].request] | unique | length) == 1)' "$work/triage"/*.jsonl >/dev/null
+jq -s -e 'all(.[]; ([.answers[].request] | unique | length) == (.answers | length))' "$work/triage"/*.jsonl >/dev/null
 jq -c '{id: .input.id, values: .value, policy}' "$work/triage/block.jsonl" \
   | mustmatch '{"id":"SUP-1044","values":{"credential_request":true,"queue":"account","urgency":1.02},"policy":{"action":"block","reason":"credential_request"}}'
 ```
@@ -83,7 +83,7 @@ printf '%s\n' '{"value":{"credential_request":false,"queue":null,"urgency":0}}' 
 - The output directory must not exist. This prevents a second run from mixing old and new rows.
 - A question name may collide with an input member in `--details`: the original stays under `input`, and the answer appears under `value` and `answers`. Bare output still refuses the collision. Keep policy code pointed at the detailed answer, not an original input member with the same name.
 - `/body` is the disclosure boundary. `--plan` shows the exact request without sending it. Detailed output still contains the full local row, including `reviewed_action`, so treat the three files as audit data.
-- Changing one question changes the whole packed request and its cache digest. A rerun asks and pays for all three questions again, and an answer near its cut can move.
+- Changing one question changes only that question's cache key. A rerun asks and pays for that question alone. An answer near its cut can move when its neighbours in the request change.
 - The policy refuses missing, malformed, and unknown values. It never silently drafts them.
 
 ## Route one missing record to review

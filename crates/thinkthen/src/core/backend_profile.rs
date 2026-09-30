@@ -43,7 +43,7 @@ pub(crate) struct BackendProfile {
     pub(crate) max_evidence_bytes: Option<usize>,
     pub(crate) max_request_bytes: Option<usize>,
     pub(crate) max_questions: Option<usize>,
-    max_options: Option<usize>,
+    pub(crate) max_options: Option<usize>,
 }
 
 impl BackendProfile {

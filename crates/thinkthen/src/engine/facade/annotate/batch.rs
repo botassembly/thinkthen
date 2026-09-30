@@ -81,6 +81,7 @@ pub(super) fn project_group(
                 replayed: answered.replayed,
                 parent_request: parent.map(|(attempt, _)| attempt.digest.clone()),
                 parent_sent,
+                keys: None,
                 batch: Some(AnnotateBatchMeta::new(
                     group + 1,
                     answered.request.as_str().to_owned(),
@@ -88,7 +89,6 @@ pub(super) fn project_group(
                 )),
                 parent_batch,
             }],
-            model: Some(answered.reply.model().clone()),
         });
     }
     Ok(fragments)

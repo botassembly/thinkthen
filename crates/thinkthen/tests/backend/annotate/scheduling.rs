@@ -1,5 +1,11 @@
 //! The global request queue used by `annotate`.
 
+#![allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "a failed fixture setup or a missing field should stop the boundary test"
+)]
+
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
@@ -7,13 +13,30 @@ use std::process::{Command, Stdio};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::set;
+use super::{one_question, set};
 use crate::harness::{Canned, Gathering, Listener, finish, spawn};
 
 pub(super) fn yes(model: &str, input: u64, output: u64) -> String {
     format!(
         r#"{{"model":"{model}","answers":{{"q1":{{"type":"noul","noul":0.9}}}},"usage":{{"input_tokens":{input},"output_tokens":{output}}}}}"#
     )
+}
+
+/// A reply that answers every question of `body` yes with the named usage.
+pub(super) fn all_yes(body: &[u8], model: &str, input: u64, output: u64) -> String {
+    let request: serde_json::Value = serde_json::from_slice(body).expect("a request");
+    let answers: serde_json::Map<String, serde_json::Value> = request["questions"]
+        .as_object()
+        .expect("questions")
+        .keys()
+        .map(|name| (name.clone(), serde_json::json!({"type":"noul","noul":0.9})))
+        .collect();
+    serde_json::json!({
+        "model": model,
+        "answers": answers,
+        "usage": {"input_tokens": input, "output_tokens": output},
+    })
+    .to_string()
 }
 
 pub(super) fn grouped(name: &str, count: usize) -> PathBuf {
@@ -43,19 +66,8 @@ pub(super) fn folder(name: &str) -> PathBuf {
     path
 }
 
-fn entries(path: &Path) -> usize {
-    fs::read_dir(path).map_or(0, |entries| {
-        entries
-            .filter_map(Result::ok)
-            .filter(|entry| {
-                let path = entry.path();
-                path.extension().is_some_and(|value| value == "json")
-                    && path
-                        .file_name()
-                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-            })
-            .count()
-    })
+fn stored(cache: &Path) -> usize {
+    crate::support::stored(cache).expect("the store").len()
 }
 
 #[test]
@@ -70,11 +82,10 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 usage_home.to_str().expect("usage cache home"),
             ),
         ];
-        let answer = yes("local-1", 10, 2);
         let gathering = Gathering::new(jobs.min(6));
-        let listener = Listener::answering(move |_| {
+        let listener = Listener::answering(move |body| {
             gathering.hold();
-            Canned::ok(&answer)
+            Canned::ok(&all_yes(body, "local-1", 10, 2))
         })
         .expect("a listener");
         let output = spawn(
@@ -88,6 +99,8 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
                 "--jobs",
                 &jobs.to_string(),
                 "--no-cache",
+                "--profile",
+                &one_question().to_string_lossy(),
             ],
             &environment,
             grouped_input(1, 6).as_bytes(),
@@ -104,9 +117,9 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
         }
         assert_eq!(listener.peak(), jobs.min(6), "document at {jobs}");
 
-        let answer = yes("local-1", 10, 2);
         let listener =
-            Listener::answering(move |_| Canned::ok(&answer).after(25)).expect("a listener");
+            Listener::answering(|body| Canned::ok(&all_yes(body, "local-1", 10, 2)).after(25))
+                .expect("a listener");
         let input = format!("{}\n{}\n", grouped_input(1, 2), grouped_input(2, 2));
         let stream_file = grouped("two-groups", 2);
         let output = spawn(
@@ -131,16 +144,13 @@ fn one_global_queue_bounds_document_and_stream_requests_at_jobs_1_4_and_32() {
         assert_eq!(output.status.code(), Some(0), "stream at {jobs}");
         assert_eq!(output.stdout.lines().count(), 2, "stream at {jobs}");
         let requests = listener.requests();
-        assert_eq!(requests.len(), 4, "stream at {jobs}");
+        // Both groups of one record share its request.
+        assert_eq!(requests.len(), 2, "stream at {jobs}");
         if jobs == 1 {
             for (place, request) in requests.iter().enumerate() {
-                let record = place / 2 + 1;
-                let group = place % 2;
                 let body = String::from_utf8_lossy(&request.body);
-                assert!(
-                    body.contains(&format!("record {record} group {group}")),
-                    "{body}"
-                );
+                let holds = |group| body.contains(&format!("record {} group {group}", place + 1));
+                assert!(holds(0) && holds(1), "{body}");
             }
         }
         assert!(listener.peak() <= jobs, "stream at {jobs}");
@@ -152,7 +162,6 @@ fn an_observed_failure_starts_nothing_else_and_keeps_paid_completions() {
     let cache = folder("annotate-global-stop");
     let named = cache.to_string_lossy();
     let failed = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
-    let answer = yes("local-1", 10, 2);
     let listener = Listener::answering({
         let failed = std::sync::Arc::clone(&failed);
         move |body| {
@@ -162,13 +171,15 @@ fn an_observed_failure_starts_nothing_else_and_keeps_paid_completions() {
             {
                 Canned::status(500, "{}")
             } else {
-                Canned::ok(&answer).after(40)
+                Canned::ok(&all_yes(body, "local-1", 10, 2)).after(40)
             }
         }
     })
     .expect("a listener");
     let file = grouped("stop-groups", 2);
-    let input = format!("{}\n{}\n", grouped_input(1, 2), grouped_input(2, 2));
+    let input: String = (1..=3)
+        .map(|record| format!("{}\n", grouped_input(record, 2)))
+        .collect();
     let args = [
         "annotate",
         &file.to_string_lossy(),
@@ -180,7 +191,7 @@ fn an_observed_failure_starts_nothing_else_and_keeps_paid_completions() {
         "--batch",
         "1",
         "--jobs",
-        "3",
+        "2",
         "--max-retries",
         "0",
         "--cache",
@@ -192,9 +203,10 @@ fn an_observed_failure_starts_nothing_else_and_keeps_paid_completions() {
         input.as_bytes(),
     )
     .expect("failed run");
+    // Record 3 waits for a free worker and never starts; record 2 was paid.
     assert_eq!(first.status.code(), Some(4));
-    assert_eq!(listener.requests().len(), 3);
-    assert_eq!(entries(&cache), 2);
+    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(stored(&cache), 2);
 
     let second = spawn(
         &args,
@@ -203,9 +215,9 @@ fn an_observed_failure_starts_nothing_else_and_keeps_paid_completions() {
     )
     .expect("resumed run");
     assert_eq!(second.status.code(), Some(0));
-    assert_eq!(second.stdout.lines().count(), 2);
+    assert_eq!(second.stdout.lines().count(), 3);
     assert_eq!(listener.requests().len(), 2);
-    assert_eq!(entries(&cache), 4);
+    assert_eq!(stored(&cache), 6);
 }
 
 #[test]
@@ -254,7 +266,7 @@ fn a_cache_can_mix_replayed_and_live_groups_with_checked_usage() {
 }
 
 #[test]
-fn annotate_equal_groups_share_one_cache_request() {
+fn annotate_equal_records_share_one_request() {
     let cache = folder("annotate-equal-cache-digest");
     let named = cache.to_string_lossy();
     let file = grouped("one-shared-group", 1);
@@ -284,52 +296,23 @@ fn annotate_equal_groups_share_one_cache_request() {
     .expect("annotate run");
 
     assert_eq!(output.status.code(), Some(0));
+    // The second record joins the first one's request in flight, so neither
+    // row comes from the store.
+    let sent = listener.requests();
+    assert_eq!(sent.len(), 1);
+    let key = crate::support::keys(listener.url(), &sent[0].body);
     let rows = String::from_utf8_lossy(&output.stdout);
     assert_eq!(rows.lines().count(), 2);
-    assert_eq!(rows.matches(r#""cached":false"#).count(), 1);
-    assert_eq!(rows.matches(r#""cached":true"#).count(), 1);
-    assert_eq!(rows.matches(r#""requests_sent":1"#).count(), 1);
-    assert_eq!(rows.matches(r#""requests_sent":0"#).count(), 1);
-    assert_eq!(listener.requests().len(), 1);
-}
-
-#[test]
-fn a_model_mismatch_cancels_groups_that_have_not_started() {
-    // One request at a time, so the engine reads group 1's other model before
-    // it could send group 2. The count then depends on no timing at all.
-    let listener = Listener::answering(|body| {
-        let model = if String::from_utf8_lossy(body).contains("group 1") {
-            "jev-1.3"
-        } else {
-            "jev-1.2"
-        };
-        Canned::ok(&yes(model, 1, 1))
-    })
-    .expect("a listener");
-    let file = grouped("model-stop", 4);
-    let output = spawn(
-        &[
-            "annotate",
-            &file.to_string_lossy(),
-            "--url",
-            listener.base(),
-            "--model",
-            "jev-latest",
-            "--jobs",
-            "1",
-        ],
-        &[("THINKTHEN_API_KEY", "sk-test-value")],
-        grouped_input(1, 4).as_bytes(),
-    )
-    .expect("the run");
-    assert_eq!(output.status.code(), Some(4));
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(rows.matches(r#""cached":false"#).count(), 2);
+    let requests = format!(r#""requests":["{}"]"#, key[0]);
+    assert_eq!(rows.matches(&requests).count(), 2, "{rows}");
 }
 
 #[test]
 fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
-    let answer = yes("local-1", 1, 1);
-    let listener = Listener::answering(move |_| Canned::ok(&answer).after(20)).expect("a listener");
+    let listener =
+        Listener::answering(|body| Canned::ok(&all_yes(body, "local-1", 1, 1)).after(20))
+            .expect("a listener");
     let file = grouped("broken-pipe", 2);
     let usage_home = folder("broken-pipe-usage");
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"))
@@ -385,7 +368,9 @@ fn a_closed_output_pipe_stops_annotate_quietly_and_bounds_read_ahead() {
     drop(input);
     assert_eq!(status.code(), Some(0));
     let sent = listener.requests().len();
-    assert!(sent <= 12, "broken pipe sent {sent} requests");
+    // One request a record. The window holds (4 + 1) records, and it slides
+    // by the rows written before the closed pipe shows.
+    assert!(sent <= 8, "broken pipe sent {sent} requests");
 }
 
 #[test]
@@ -450,15 +435,22 @@ fn a_backend_failure_after_the_output_pipe_closes_stays_quiet() {
     assert_eq!(result.status.code(), Some(0));
     assert!(result.stderr.is_empty());
     assert_eq!(listener.requests().len(), 3);
-    assert_eq!(entries(&cache), 2);
+    assert_eq!(stored(&cache), 2);
 }
 
 #[test]
 fn usage_overflow_fails_safely() {
-    let first = yes("local-1", u64::MAX, 1);
-    let second = yes("local-1", 1, 1);
-    let listener =
-        Listener::serving(vec![Canned::ok(&first), Canned::ok(&second)]).expect("a listener");
+    // One question a request; the two requests' totals overflow together.
+    let sent = std::sync::atomic::AtomicBool::new(false);
+    let listener = Listener::answering(move |body| {
+        let input = if sent.swap(true, std::sync::atomic::Ordering::SeqCst) {
+            1
+        } else {
+            u64::MAX
+        };
+        Canned::ok(&all_yes(body, "local-1", input, 1))
+    })
+    .expect("a listener");
     let file = grouped("usage-overflow", 2);
     let output = spawn(
         &[
@@ -469,6 +461,8 @@ fn usage_overflow_fails_safely() {
             "--model",
             "local-1",
             "--details",
+            "--profile",
+            &one_question().to_string_lossy(),
         ],
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         grouped_input(1, 2).as_bytes(),

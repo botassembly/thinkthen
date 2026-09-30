@@ -2,7 +2,7 @@
 
 use std::fs;
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use super::{KEY, details, folder, text};
 use crate::harness::{Canned, Listener, spawn};
@@ -51,7 +51,7 @@ fn a_context_rides_the_batch_and_names_its_raw_bytes() {
             row["meta"]["context_sha256"],
             "d3c9ec5006fd22bc389a26bbe49c06abbde5b1c8bd459cf4430f21b264aa2730"
         );
-        assert_eq!(row["meta"]["batch"]["records"], 2);
+        assert!(row["meta"].get("batch").is_none());
     }
 }
 
@@ -95,7 +95,6 @@ fn a_context_is_in_batch_one_and_the_dry_run_plan() {
     }
     let rows = details(&at_one);
     assert_eq!(rows.len(), 2);
-    assert!(rows.iter().all(|row| row["meta"]["batch"]["setting"] == 1));
 
     let planned = spawn(
         &[&base[..], &["--plan", "--url", listener.base()]].concat(),
@@ -211,7 +210,7 @@ fn a_refused_context_batch_keeps_the_context_in_both_halves() {
     assert_eq!(rows.len(), 4);
     assert!(
         rows.iter()
-            .all(|row| row["meta"]["batch"]["split"] == json!(true))
+            .all(|row| row["meta"]["attempts"][0]["status"] == 413)
     );
 }
 

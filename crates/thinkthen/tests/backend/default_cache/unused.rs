@@ -56,7 +56,6 @@ fn state(folder: &Path) -> io::Result<State> {
 }
 
 struct Fixture {
-    source: PathBuf,
     recording: PathBuf,
     manifest: PathBuf,
     xdg: PathBuf,
@@ -74,7 +73,6 @@ impl Fixture {
         let manifest_root = folder(&format!("unused-{label}-manifests"));
         fs::create_dir(&manifest_root)?;
         Ok(Self {
-            source,
             recording,
             manifest: manifest_root.join("used.txt"),
             xdg: manifest_root.join("unused-xdg"),
@@ -95,33 +93,11 @@ impl Fixture {
 
 #[cfg(unix)]
 #[test]
-fn one_detailed_replay_supplies_the_complete_used_list() {
+/// A replay's `meta.requests` names question keys by ADR 0111; `cache
+/// unused` reads request digests until slice 5, so the caller supplies them.
+fn supplied_digests_name_the_unused_entries_without_editing_the_folder() {
     let case = Fixture::new("one-run").expect("scratch fixtures");
     let before = state(&case.recording).expect("before state");
-    let replay = spawn(
-        &[
-            "decide",
-            "Does the customer ask for money back?",
-            "--model",
-            "jev-1.13.0",
-            "--details",
-            "--replay",
-            case.recording.to_str().expect("folder path"),
-        ],
-        &[("XDG_CACHE_HOME", case.xdg.to_str().expect("xdg path"))],
-        &fs::read(case.source.join("message.txt")).expect("one message"),
-    )
-    .expect("offline replay");
-    assert_eq!(replay.status.code(), Some(0), "{replay:?}");
-    let detailed: serde_json::Value =
-        serde_json::from_slice(&replay.stdout).expect("detailed result");
-    let requests = detailed["meta"]["requests"]
-        .as_array()
-        .expect("request digests");
-    assert_eq!(requests.len(), 1);
-    assert_eq!(requests[0].as_str(), Some(USED));
-    assert_eq!(state(&case.recording).expect("after replay"), before);
-
     let cases = [
         (
             format!("{USED}\n"),

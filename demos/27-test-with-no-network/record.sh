@@ -5,12 +5,16 @@
 set -eu
 
 cd -- "$(dirname -- "$0")"
+REPO=$(CDPATH= cd -- ../.. && pwd)
+. "$REPO/sdlc/scripts/scratch.sh"
 
 : "${THINKTHEN_API_KEY:?the tool reads this variable, and it holds no value}"
 
 # vague.txt is left unrecorded on purpose. The page replays it to show what a
 # miss looks like.
-sh triage.sh report.txt --record recording/ && exit=0 || exit=$?
+scratch_dir scratch
+sh triage.sh report.txt --record "$scratch" && exit=0 || exit=$?
 printf 'recorded report.txt, exit %s\n' "$exit"
 
-ls -1 recording/
+cp -- "$scratch/thinkthen.sqlite" recording/
+thinkthen cache convert recording/

@@ -46,11 +46,6 @@ impl GroupBatcher {
     pub(crate) fn finish(&mut self) -> Result<Option<Batch>, BatchError> {
         self.0.finish()
     }
-
-    /// Close an open slice only when upstream input itself pauses.
-    pub(crate) fn pause(&mut self) -> Result<Option<Batch>, BatchError> {
-        self.0.pause()
-    }
 }
 
 /// Rebuild one refused group request as two complete, ordered group slices.

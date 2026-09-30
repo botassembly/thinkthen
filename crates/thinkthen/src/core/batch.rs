@@ -28,7 +28,7 @@ mod questions;
 pub(crate) use groups::{GroupBatcher, GroupMember, group_halves};
 #[cfg(test)]
 pub(crate) use questions::halves;
-pub(crate) use questions::{halves_with_questions, quoted_plan};
+pub(crate) use questions::{halves_with_questions, quoted, quoted_plan, quoted_plan_of};
 
 /// A record closes its batch when its content hash is 0 mod this.
 const CUT: u64 = 4_096;

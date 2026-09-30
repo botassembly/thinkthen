@@ -1,11 +1,9 @@
-//! A cache keeps no reply that failed a question, and reads one as a miss.
-//!
-//! ADR 0053 item 6 and its amendment. `--record` alone and `--replay` alone
-//! keep a partial reply as the live run gave it.
+//! A partial reply stores its good answers and never a failed one, so the
+//! next run asks only the failed question, by ADR 0111 section 6.
 
 use std::fs;
 use std::io;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use conformance_backend::Backend;
 
@@ -23,7 +21,8 @@ const FAILED: Printed = (
 );
 const ANSWERED: Printed = ("{\"ready\":true,\"kind\":\"bug\"}\n", Some(0));
 const REFUSED: Printed = ("", Some(4));
-const RESPONSE: &str = "  \"response\": ";
+/// A replay of the question whose live answer failed is a miss.
+const MISSED: Printed = ("", Some(5));
 const KEY: (&str, &str) = ("THINKTHEN_API_KEY", "sk-cache-partial");
 
 /// An empty folder under the test's own scratch space.
@@ -76,90 +75,46 @@ impl Runs {
     }
 }
 
-/// The recording entries in a folder: its files named for a digest.
-fn entries(folder: &str) -> Vec<PathBuf> {
-    let listed = fs::read_dir(folder).into_iter().flatten().flatten();
-    let digest = |path: &PathBuf| path.file_name().is_some_and(|name| name.len() == 69);
-    listed.map(|entry| entry.path()).filter(digest).collect()
+/// The answers a folder's live store holds, or none when it has no store.
+fn answers(folder: &str) -> io::Result<usize> {
+    let folder = Path::new(folder);
+    if !folder.join("thinkthen.sqlite").exists() {
+        return Ok(0);
+    }
+    Ok(crate::support::stored(folder)?.len())
 }
 
-fn only_entry(folder: &str) -> io::Result<PathBuf> {
-    let mut found = entries(folder);
-    assert_eq!(found.len(), 1, "{folder}");
-    found.pop().ok_or_else(|| io::Error::other("no entry"))
-}
-
-/// Replace an entry's response line, keep its request line, and give back the
-/// old line and the new text.
-fn set_response(entry: &Path, to: impl FnOnce(&str) -> String) -> io::Result<(String, String)> {
-    let text = fs::read_to_string(entry)?;
-    let old = text.lines().find(|kept| kept.starts_with(RESPONSE));
-    let old = old.ok_or_else(|| io::Error::other("no response line"))?;
-    let written = text.replacen(old, &to(old), 1);
-    fs::write(entry, &written)?;
-    Ok((old.to_owned(), written))
-}
-
+/// The arm drops the last answer of every request. The first run's request
+/// asks both questions and stores the decide answer. The rerun asks the
+/// choice alone, whose reply then holds no answer at all, so it is refused.
 #[test]
-fn a_cache_keeps_no_failed_question() -> io::Result<()> {
+fn a_cache_stores_the_good_answers_and_asks_only_the_failed_question_again() -> io::Result<()> {
     let runs = Runs::new("keeps")?;
-    for sent in [1, 2] {
-        runs.annotate(ARM, &[], FAILED, sent)?;
-        assert!(entries(&runs.default_cache()).is_empty(), "default cache");
-    }
+    runs.annotate(ARM, &[], FAILED, 1)?;
+    assert_eq!(answers(&runs.default_cache())?, 1, "default cache");
+    runs.annotate(ARM, &[], REFUSED, 2)?;
+    assert_eq!(answers(&runs.default_cache())?, 1, "default cache");
     let (cache, both, decided) = (scratch("cache"), scratch("both"), scratch("decided"));
-    for sent in [3, 4] {
-        runs.annotate(ARM, &["--cache", &cache], FAILED, sent)?;
-        assert!(entries(&cache).is_empty(), "--cache keeps none");
-    }
-    for sent in [5, 6] {
-        runs.annotate(ARM, &["--record", &both, "--replay", &both], FAILED, sent)?;
-        assert!(entries(&both).is_empty(), "one folder for both keeps none");
-    }
+    runs.annotate(ARM, &["--cache", &cache], FAILED, 3)?;
+    runs.annotate(ARM, &["--cache", &cache], REFUSED, 4)?;
+    assert_eq!(answers(&cache)?, 1, "--cache keeps the good answer");
+    runs.annotate(ARM, &["--record", &both, "--replay", &both], FAILED, 5)?;
+    runs.annotate(ARM, &["--record", &both, "--replay", &both], REFUSED, 6)?;
+    assert_eq!(
+        answers(&both)?,
+        1,
+        "one folder for both keeps the good answer"
+    );
     let recorded = scratch("recorded");
     runs.annotate(ARM, &["--record", &recorded], FAILED, 7)?;
-    runs.annotate(ARM, &["--replay", &recorded], FAILED, 7)?;
+    assert_eq!(answers(&recorded)?, 1, "--record keeps the good answer");
+    runs.annotate(ARM, &["--replay", &recorded], MISSED, 7)?;
     for sent in [8, 9] {
         runs.decide(ARM, &["--cache", &decided], REFUSED, sent)?;
-        assert!(entries(&decided).is_empty(), "every question failed");
+        assert_eq!(answers(&decided)?, 0, "every question failed");
     }
     let whole = Runs::new("whole")?;
     whole.annotate(GENERIC, &[], ANSWERED, 1)?;
     whole.annotate(GENERIC, &[], ANSWERED, 1)?;
-    Ok(())
-}
-
-#[test]
-fn a_cache_reads_a_partial_entry_as_a_miss() -> io::Result<()> {
-    let runs = Runs::new("miss")?;
-    let armed = scratch("armed");
-    runs.annotate(ARM, &["--record", &armed], FAILED, 1)?;
-    let entry = only_entry(&armed)?;
-    let (partial, planted) = set_response(&entry, |old| old.replacen("0.9", "0.8", 1))?;
-    for sent in [2, 3] {
-        runs.annotate(ARM, &["--cache", &armed], FAILED, sent)?;
-        assert_eq!(fs::read_to_string(&entry)?, planted, "the old entry stays");
-    }
-    runs.annotate(ARM, &["--replay", &armed], FAILED, 3)?;
-
-    let fixed = scratch("fixed");
-    runs.annotate(GENERIC, &["--record", &fixed], ANSWERED, 4)?;
-    set_response(&only_entry(&fixed)?, |_| partial.clone())?;
-    runs.annotate(GENERIC, &["--replay", &fixed], FAILED, 4)?;
-    runs.annotate(GENERIC, &["--cache", &fixed], ANSWERED, 5)?;
-    runs.annotate(GENERIC, &["--cache", &fixed], ANSWERED, 5)?;
-
-    runs.annotate(GENERIC, &[], ANSWERED, 6)?;
-    set_response(&only_entry(&runs.default_cache())?, |_| partial.clone())?;
-    runs.annotate(GENERIC, &[], ANSWERED, 7)?;
-    runs.annotate(GENERIC, &[], ANSWERED, 7)?;
-
-    let broken = scratch("broken");
-    runs.decide(GENERIC, &["--record", &broken], ("true\n", Some(0)), 8)?;
-    let entry = only_entry(&broken)?;
-    let answers = format!("{RESPONSE}{{\"model\":\"jev-latest\",\"answers\":{{}}}}");
-    let (_, planted) = set_response(&entry, |_| answers)?;
-    runs.decide(GENERIC, &["--cache", &broken], REFUSED, 8)?;
-    assert_eq!(fs::read_to_string(&entry)?, planted, "the entry stays");
     Ok(())
 }

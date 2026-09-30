@@ -37,6 +37,7 @@ impl Gate {
 pub(crate) struct Counts {
     pub(crate) connections: AtomicUsize,
     pub(crate) requests: AtomicUsize,
+    pub(crate) questions: AtomicUsize,
     pub(crate) in_flight: AtomicUsize,
     pub(crate) peak: AtomicUsize,
 }

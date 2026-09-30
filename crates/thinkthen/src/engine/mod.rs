@@ -534,7 +534,7 @@ pub(crate) fn client_width(process: &'static Widths) -> &'static Widths {
     process
 }
 
-pub(crate) mod annotate_schedule;
+pub(crate) mod annotate_batching;
 pub(crate) mod backoff;
 pub(crate) mod cache_lock;
 pub(crate) mod cache_prune;
@@ -548,12 +548,16 @@ mod facade_tests;
 #[cfg(unix)]
 mod host_signal_tests;
 pub(crate) mod http;
+#[cfg(feature = "cli")]
+pub(crate) mod pipeline;
 pub(crate) mod prepared_request;
 pub(crate) mod process;
 pub(crate) mod recorder;
 pub(crate) mod request;
 pub(crate) mod roots;
 pub(crate) mod schedule;
+#[cfg(feature = "cli")]
+pub(crate) mod store;
 pub(crate) mod usage;
 #[cfg(test)]
 mod width_tests;

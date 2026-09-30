@@ -1,5 +1,5 @@
-//! One record to one request, and one reply to one row. `batched.rs` sends
-//! `decide`, `filter`, `rank` and `choose` over a stream in batches.
+//! What a judging run asks, and the one row each record's answers make.
+//! `judged.rs` sends every record through the question pipeline.
 //!
 //! `judge.rs` decides what a run keeps and what view it prints in.
 
@@ -7,82 +7,41 @@ use std::io::Read;
 use std::io::{self, Write as _};
 use std::num::NonZeroUsize;
 use std::process::ExitCode;
-use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 use crate::core::{
-    Backend, BackendProfile, BatchMeta, Evidence, Framing, Outcome, Pointer, Question,
-    QuestionText, Reading, Record, Resolved, Setting, Sources, Threshold,
+    Backend, BackendProfile, Framing, Outcome, Pointer, Question, QuestionText, Reading, Record,
+    Resolved, Setting, Sources, Threshold,
 };
 
 use crate::args::Common;
 use crate::edge::{self, Environment};
 use crate::engine::Width;
 use crate::engine::facade::{Engine, Settings, Storage};
-use crate::engine::{AttemptSink, Cancel};
 use crate::failure::Failure;
 use crate::judge::{Asked, Keeping, View};
 use crate::profile::{self, Mismatch};
 use crate::public::AttemptObservation;
-use crate::schedule::{self, Judged, Output};
-use crate::table::{Kind as TableKind, Rows as TableRows};
+use crate::schedule::{self, Output};
+use crate::table::Kind as TableKind;
 
-mod batch_meta;
-mod batched;
 mod context;
 mod folders;
+mod judged;
 mod plan;
 mod reading;
 mod row;
 
 use context::Context;
 pub(crate) use folders::Folders;
-use plan::{plan, plan_record, print_plan};
 use reading::read_by;
 
+/// What one row shows beside its answer: the line it arrived as, the keys
+/// of its questions, and its requests' attempts.
 struct RowContext<'a> {
     arrived: Option<&'a [u8]>,
-    batch: Option<BatchMeta>,
+    requests: Vec<String>,
     attempts: Vec<AttemptObservation>,
-}
-
-/// One request's events only; every clone of the command cancel shares its ordinal.
-struct Observed {
-    cancel: Cancel<'static>,
-    events: Option<Arc<Mutex<Vec<AttemptObservation>>>>,
-}
-
-impl Observed {
-    fn new(cancel: &Cancel<'static>, detailed: bool) -> Self {
-        if !detailed {
-            return Self {
-                cancel: cancel.clone(),
-                events: None,
-            };
-        }
-        let events = Arc::new(Mutex::new(Vec::new()));
-        let collected = Arc::clone(&events);
-        let sink = AttemptSink::new(move |event| {
-            if let Ok(mut events) = collected.lock() {
-                events.push(event);
-            }
-        });
-        Self {
-            cancel: cancel.with_attempt_sink(sink),
-            events: Some(events),
-        }
-    }
-
-    fn events(&self) -> Vec<AttemptObservation> {
-        let mut events = self
-            .events
-            .as_ref()
-            .and_then(|events| events.lock().ok().map(|events| events.clone()))
-            .unwrap_or_default();
-        events.sort_by_key(AttemptObservation::ordinal);
-        events.dedup_by_key(|event| event.ordinal());
-        events
-    }
 }
 
 /// Build the one engine a command calls, from what the command resolved.
@@ -164,6 +123,16 @@ pub(crate) enum Asks {
 }
 
 impl Asks {
+    /// The verb a replay failure over one document names.
+    const fn verb(&self) -> &'static str {
+        match self {
+            Self::Fixed(Question::Decide { .. }) => "decide",
+            Self::Fixed(Question::Tag { .. }) => "tag",
+            Self::Fixed(Question::Score { .. }) => "score",
+            Self::Fixed(Question::Choose { .. }) | Self::FromRecord { .. } => "choose",
+        }
+    }
+
     /// Build the question this record is asked.
     fn of(&self, record: &Record) -> Result<Question, Failure> {
         match self {
@@ -174,14 +143,6 @@ impl Asks {
             }),
         }
     }
-}
-
-/// One record, the question it was asked, and the evidence it is asked of.
-#[derive(Debug)]
-struct Sending {
-    record: Record,
-    question: Question,
-    evidence: Evidence,
 }
 
 /// The one question every record is asked, which every verb but one has.
@@ -313,88 +274,7 @@ pub(crate) fn run(
         ),
     };
 
-    if let Some(setting) = batch {
-        return batched::run(configuration, &reading, source, setting, output);
-    }
-
-    if let Some(kind) = table_kind(common) {
-        return over_table(configuration, &reading, source, kind, output);
-    }
-
-    let mut chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
-
-    if common.dry_run {
-        return plan(
-            &configuration.backend,
-            configuration.profile.as_ref(),
-            &configuration.mismatch,
-            &reading,
-            &configuration.planning(),
-            chunks.map(|(_, row)| row),
-            output.writer(),
-        );
-    }
-
-    let judging = Judging::new(configuration)?;
-    if !judging.streams {
-        let bytes = first(&mut chunks)?.unwrap_or_default();
-        let judged = judging.row(&reading, &bytes)?;
-        let outcome = judged.outcome;
-        output.take(judged)?;
-        return Ok(exit_code(outcome));
-    }
-    schedule::over_records(
-        &judging.engine,
-        &|bytes: &Vec<u8>| judging.row(&reading, bytes),
-        chunks.map(place),
-        judging.environment.cancel(),
-        output,
-    )
-}
-
-fn first(
-    chunks: &mut impl Iterator<Item = (usize, Result<Vec<u8>, Failure>)>,
-) -> Result<Option<Vec<u8>>, Failure> {
-    chunks.next().map(|(_, row)| row).transpose()
-}
-
-fn place(
-    (at, row): (usize, Result<Vec<u8>, Failure>),
-) -> Result<(usize, Vec<u8>), schedule::Placed> {
-    row.map(|bytes| (at, bytes))
-        .map_err(|error| schedule::Placed::at(error, at))
-}
-
-fn over_table(
-    configuration: JudgingInput<'_>,
-    reading: &Reading,
-    source: Box<dyn std::io::BufRead + Send>,
-    kind: TableKind,
-    output: &mut Output<'_>,
-) -> Result<ExitCode, Failure> {
-    let rows = TableRows::new(source, kind)?;
-    if configuration.common.dry_run {
-        return plan_record(
-            &configuration.backend,
-            configuration.profile.as_ref(),
-            &configuration.mismatch,
-            reading,
-            &configuration.planning(),
-            rows,
-            output.writer(),
-        );
-    }
-    let judging = Judging::new(configuration)?;
-    schedule::over_records(
-        &judging.engine,
-        &|record| judging.typed_row(reading, record),
-        rows.enumerate().map(|(place, row)| {
-            row.map(|record| (place + 1, record))
-                .map_err(|error| schedule::Placed::at(error, place + 1))
-        }),
-        judging.environment.cancel(),
-        output,
-    )
+    judged::run(configuration, &reading, source, batch, output)
 }
 
 fn table_kind(common: &Common) -> Option<TableKind> {
@@ -402,15 +282,6 @@ fn table_kind(common: &Common) -> Option<TableKind> {
         .csv
         .then_some(TableKind::Csv)
         .or_else(|| common.tsv.then_some(TableKind::Tsv))
-}
-
-/// Read one record and the question it is asked, which both paths do.
-fn asked_of(reading: &Reading, record: Record, asks: &Asks) -> Result<Sending, Failure> {
-    Ok(Sending {
-        question: asks.of(&record)?,
-        evidence: reading.evidence(&record)?,
-        record,
-    })
 }
 
 /// One question over one engine, asked of every record in turn.
@@ -470,21 +341,6 @@ impl Judging<'_> {
             mismatch,
             context,
         })
-    }
-
-    /// Ask one record and build the line its answer prints.
-    ///
-    /// Nothing here touches the writer, so a worker thread may call it and the
-    /// one thread that owns standard output prints the lines in input order.
-    fn row(&self, reading: &Reading, bytes: &[u8]) -> Result<Judged, Failure> {
-        let record = reading
-            .record(bytes)
-            .map_err(|error| Failure::record(error, reading.streams()))?;
-        self.finish_row(reading, record, Some(bytes))
-    }
-
-    fn typed_row(&self, reading: &Reading, record: &Record) -> Result<Judged, Failure> {
-        self.finish_row(reading, record.clone(), None)
     }
 }
 

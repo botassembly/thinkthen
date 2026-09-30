@@ -179,11 +179,9 @@ impl Output<'_> {
     }
 
     pub(crate) fn take(&mut self, judged: Judged) -> Result<bool, Failure> {
-        if self.model_guard {
-            let model = judged
-                .model
-                .as_ref()
-                .ok_or(Failure::Defect("a guarded row has no answer model"))?;
+        // A row the store answered wholly names no live model, so it takes
+        // no part in the check, by ADR 0111 section 4.
+        if let (true, Some(model)) = (self.model_guard, judged.model.as_ref()) {
             match &self.run_model {
                 Some(first) if first != model => return Err(Failure::RunModelsDiffer),
                 None => self.run_model = Some(model.clone()),

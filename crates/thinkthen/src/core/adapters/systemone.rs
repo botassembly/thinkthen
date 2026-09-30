@@ -8,6 +8,7 @@
 //! model a request carries when nothing else names one, and the path the
 //! endpoint sits under. Nothing outside this module names any of the four.
 
+mod recorded;
 mod request;
 mod response;
 
@@ -15,9 +16,12 @@ use thiserror::Error;
 
 use crate::core::text::ModelName;
 
+pub(crate) use crate::core::adapters::systemone::recorded::decoder;
 pub(crate) use crate::core::adapters::systemone::request::encode;
-pub(crate) use crate::core::adapters::systemone::request::encode_raw;
-pub(crate) use crate::core::adapters::systemone::response::{decode, decode_observed};
+pub(crate) use crate::core::adapters::systemone::request::{encode_raw, join, parts};
+pub(crate) use crate::core::adapters::systemone::response::{
+    decode, decode_answers, decode_observed, decode_questions,
+};
 
 /// The name this adapter answers to, in the recording key and the entry.
 ///

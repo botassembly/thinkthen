@@ -45,21 +45,21 @@ SCRIPT
 
 ## Step 1: record the exchange once
 
-Run the script for real, with `THINKTHEN_API_KEY` set, and add `--record` and a folder. The command calls the backend, prints its answer, and writes the exchange into the folder.
+Run the script for real, with `THINKTHEN_API_KEY` set, and add `--record` and a scratch folder. The command calls the backend, prints its answer, and stores each answer in `thinkthen.sqlite` in that folder. `thinkthen cache convert` then merges the scratch file into the committed `thinkthen.jsonl`.
 
 ```sh
-sh triage.sh report.txt --record recording/
+sh triage.sh report.txt --record scratch/
+cp scratch/thinkthen.sqlite recording/
+thinkthen cache convert recording/
 ```
 
-The file name is the digest of the wire shape, the address, and the request bytes, so the same command finds it again. An entry holds the request body and the response body, and never a header, so no key can reach it. `quoted` marks an entry rewritten into the quoted request form of ADR 0111.
+`thinkthen.jsonl` holds one line for each shared state, then one line for each answer, sorted, so a review reads it as text. Each answer is stored under its question key: the SHA-256 of the adapter, the address, the model, the shared state and the question as sent. An answer line holds the question and the answer, and never a header, so no key can reach it.
 
 ```bash
 set -euo pipefail
 
-jq -r 'input_filename, (keys_unsorted | join(","))' \
-  recording/0ed34b6bd25833f67c85dc4c6754fe95de803ad7271f79f8a7edda94965487f8.json \
-  | mustmatch "recording/0ed34b6bd25833f67c85dc4c6754fe95de803ad7271f79f8a7edda94965487f8.json
-schema,adapter,url,request,response,quoted"
+jq -r 'select(has("key")) | keys_unsorted | join(",")' recording/thinkthen.jsonl \
+  | mustmatch "key,url,model,state,question,answer,answered_by,input_tokens,output_tokens,taken_at,origin"
 ```
 
 `record.sh` in this folder is the script that made the recording. It runs through `sdlc/scripts/live`, the one door for a paid call.
@@ -80,7 +80,7 @@ env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
 
 ## Step 3: know a replay miss when you see one
 
-`vague.txt` was never recorded, so the folder holds no answer for it. `--replay` opens no connection, so the run ends in a local failure, exit 5, and the message on standard error carries the digest, which is the name the entry would have had.
+`vague.txt` was never recorded, so the folder holds no answer for it. `--replay` opens no connection, so the run ends in a local failure, exit 5, and the message on standard error carries the missing question's key.
 
 ```bash
 set -euo pipefail
@@ -97,7 +97,7 @@ said=$(env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --quiet --replay recording/ < vague.txt 2>&1 >/dev/null) && rc=0 || rc=$?
 printf 'rc=%s %s\n' "$rc" "$said" \
-  | mustmatch 'rc=5 thinkthen: the decide request for one document: the replay folder holds no entry named `3ba7fb93dc55f768a2be2c800b5890469427077daa29acfa4cf002e9e2051955.json`; the entry name covers the backend interface, address, and request'
+  | mustmatch 'rc=5 thinkthen: the decide request for one document: the replay folder holds no answer for question `bdd549264706825ecdea6fd3dc98f854f0aeb2e50ffe35c00157c53ccd60f70b`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent'
 ```
 
 Record the missing case and the test passes again. A recording is grown one case at a time.
@@ -105,9 +105,9 @@ Record the missing case and the test passes again. A recording is grown one case
 ## What can go wrong
 
 - **A miss is exit 5, and it is not a no.** A script that reads the answer through an `if` with an `else` turns a miss into a no. Read the code with `case`, as `triage.sh` does.
-- **Any change to the request makes a new entry.** The digest covers the question text, the evidence bytes, the model name, and the address. Change a word in the question or add a line to the input file and the old entry no longer answers. `--threshold`, `--quiet`, and `--details` change nothing that is sent, so they never cost a new entry.
+- **Any change to a question makes a new answer.** The key covers the question text, the evidence bytes, the model name, and the address. Change a word in the question or in the input file and the old answer no longer answers. `--threshold`, `--quiet`, and `--details` change nothing that is sent, so they never cost a new answer.
 - **A recording holds the evidence.** The request body carries whatever the script read. Record only text that may be kept, and keep a recording of private input out of version control.
-- **A failed request is never recorded.** Only an exchange that came back and decoded is written, so a folder never grows an entry that replays an error.
+- **A failed answer is never recorded.** Only an answer that came back and decoded is written, so a folder never grows an entry that replays an error.
 - **`--plan` beside either option is a usage error, exit 2.** A plan sends nothing and reads nothing.
 
 ## Related how-tos

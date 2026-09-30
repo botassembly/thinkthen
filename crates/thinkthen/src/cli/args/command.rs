@@ -302,6 +302,17 @@ pub(crate) enum CacheCommand {
     Prune(PruneArguments),
     /// Report valid entries absent from a complete caller-supplied digest list.
     Unused(UnusedArguments),
+    /// Merge a folder's old entries, live file and fixture into thinkthen.jsonl.
+    Convert(ConvertArguments),
+}
+
+#[derive(Args, Debug)]
+pub(crate) struct ConvertArguments {
+    /// The recording or cache folder to convert. Its old files stay.
+    pub(crate) directory: PathBuf,
+    /// Also write each single-record exchange in the quoted form.
+    #[arg(long)]
+    pub(crate) quote: bool,
 }
 
 #[derive(Args, Debug)]

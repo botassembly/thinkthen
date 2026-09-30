@@ -16,7 +16,6 @@ use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Batch, BatchError, Evidence, Find, FindAnswer,
     ModelName, Outcome, Plan, Question, Threshold, Value, quoted_plan,
 };
-use crate::engine::annotate_schedule;
 use crate::engine::error::Error;
 use crate::engine::http::Client;
 use crate::engine::prepared_request::{PreparedRequest, PreparedRequests};
@@ -27,9 +26,8 @@ use crate::engine::schedule;
 use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
 
-pub(crate) use crate::engine::annotate_schedule::{
-    GroupPlanError, GroupPlanner, GroupRequest, GroupWork, InputPort as GroupPort,
-    Outcome as GroupOutcome, Prepared,
+pub(crate) use crate::engine::annotate_batching::{
+    GroupPlanError, GroupPlanner, GroupRequest, GroupWork,
 };
 pub(crate) use crate::engine::http::{Key, Roots};
 pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
@@ -37,9 +35,7 @@ pub(crate) use crate::engine::roots::Error as RootsError;
 pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
-pub(crate) use annotate::{
-    Annotation, GroupAnswer, GroupBatchFailure, PreparedGroup, assemble, check_model,
-};
+pub(crate) use annotate::{Annotation, GroupAnswer, PreparedGroup, QuestionAnswer, assemble};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
@@ -111,11 +107,11 @@ pub(crate) struct Engine {
 /// The retained pool and its width gate, the recorder and cache coordinator,
 /// the process counters, and the width this process's calls follow.
 #[derive(Debug)]
-struct State {
-    client: Client,
+pub(super) struct State {
+    pub(super) client: Client,
     recorder: Recorder,
-    usage: Arc<Counters>,
-    width: usize,
+    pub(super) usage: Arc<Counters>,
+    pub(super) width: usize,
 }
 
 /// One typed judgment and the metadata its result carries.
@@ -222,7 +218,7 @@ impl Engine {
     /// The one door to the retained state. It compares this process with the
     /// state's owner first, and a forked child gets fresh state and fresh
     /// counters before anything inherited is touched.
-    fn state(&self, cancel: &Cancel) -> Result<Arc<State>, Error> {
+    pub(super) fn state(&self, cancel: &Cancel) -> Result<Arc<State>, Error> {
         let pid = std::process::id();
         self.state
             .current(pid, crate::engine::rebuild_wait(cancel), || {
@@ -257,11 +253,16 @@ impl Engine {
     /// proven to be this machine takes an empty key, which sends no
     /// authorization header, so a local server that checks none needs no
     /// pretend secret. Every other address still refuses.
-    fn key(&self) -> Result<Key, Error> {
+    pub(super) fn key(&self) -> Result<Key, Error> {
         match (self.key)() {
             Err(Error::NoKey(_)) if self.backend.is_loopback() => Ok(Key::new(String::new())),
             read => read,
         }
+    }
+
+    /// The folders this engine's calls replay from and record to.
+    pub(super) const fn storage(&self) -> &Storage {
+        &self.storage
     }
 
     /// Whether a folder the caller named, rather than the private default, is in use.
@@ -448,45 +449,6 @@ impl Engine {
         )
     }
 
-    /// Answer each input's question groups over this engine's width, in input order.
-    #[expect(
-        clippy::too_many_arguments,
-        reason = "the grouped scheduler keeps each typed host callback explicit"
-    )]
-    pub(crate) fn groups<T, S, A, W, G, R, E>(
-        &self,
-        streams: bool,
-        cancel: &Cancel,
-        start_reader: impl FnOnce(Receiver<()>, GroupPort<T, G, E>),
-        prepare: impl Fn(T) -> Result<Prepared<S, A, W>, E>,
-        answer: &(impl Fn(W) -> Result<G, E> + Sync),
-        accept: impl Fn(&mut A, G) -> Result<(), E>,
-        finish: impl Fn(S, A) -> Result<Completed<R, E>, E>,
-        emit: impl FnMut(R) -> Result<bool, E>,
-    ) -> Result<GroupOutcome<E>, E>
-    where
-        T: Send + 'static,
-        W: Send,
-        G: Send,
-        R: Send,
-        E: From<Error> + Send,
-    {
-        let width = self.state(cancel)?.width;
-        annotate_schedule::run(
-            width,
-            streams,
-            cancel,
-            start_reader,
-            prepare,
-            answer,
-            accept,
-            finish,
-            emit,
-            |message| E::from(Error::Defect(message)),
-            E::from,
-        )
-    }
-
     fn ask(&self, plan: &Plan, cancel: &Cancel) -> Result<Answered, Error> {
         let state = self.state(cancel)?;
         request::ask_profile(
@@ -500,7 +462,7 @@ impl Engine {
         )
     }
 
-    fn transport<'a>(&self, state: &'a State) -> Transport<'a> {
+    pub(super) fn transport<'a>(&self, state: &'a State) -> Transport<'a> {
         Transport {
             client: &state.client,
             max_retries: self.max_retries,

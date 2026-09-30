@@ -92,7 +92,6 @@ fn tag_expands_wire_questions_but_reads_one_logical_outcome_per_record() {
     );
     assert_eq!(rows[0]["value"], json!(["billing"]));
     assert_eq!(rows[1]["value"], json!(["urgent"]));
-    assert_eq!(rows[0]["meta"]["batch"]["records"], 2);
 }
 
 #[test]
@@ -133,7 +132,6 @@ fn score_uses_ordered_levels_and_shares_an_equal_record() {
     );
     assert_eq!(rows[0]["value"], rows[2]["value"]);
     assert_ne!(rows[0]["value"], rows[1]["value"]);
-    assert_eq!(rows[1]["meta"]["batch"]["records"], 3);
 }
 
 #[test]
@@ -321,8 +319,22 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
     assert_eq!(details(&output).len(), 5);
 }
 
+/// Answers every wire question of one request with a no.
+fn noes(body: &[u8]) -> Canned {
+    let request: Value = serde_json::from_slice(body).expect("request");
+    let answers: serde_json::Map<String, Value> = request["questions"]
+        .as_object()
+        .expect("questions")
+        .keys()
+        .map(|key| (key.clone(), json!({"type":"noul","noul":0.1})))
+        .collect();
+    Canned::ok(&json!({"model":"local-1","answers":answers}).to_string())
+}
+
+/// One record whose questions pass a limit together splits across requests,
+/// one question each, by ADR 0111 section 4, and its row reads them all.
 #[test]
-fn an_explicit_profile_refuses_one_tag_before_a_send() {
+fn a_tag_record_over_a_limit_splits_its_labels_across_requests() {
     let directory = folder("tag-profile-wire-limit");
     fs::create_dir_all(&directory).expect("profile directory");
     let profile = format!("{directory}/profile.json");
@@ -331,36 +343,32 @@ fn an_explicit_profile_refuses_one_tag_before_a_send() {
         r#"{"schema":"thinkthen.backend-profile/1","name":"tag-wire","max_questions":1}"#,
     )
     .expect("profile");
-    let listener = Listener::serving(Vec::new()).expect("listener");
-    let output = run(
-        listener.base(),
-        "tag",
-        &["billing", "urgent"],
-        &["--profile", &profile],
-        "one\n",
-    );
-    assert_eq!(output.status.code(), Some(2), "{}", text(&output.stderr));
-    assert_eq!(listener.count(), 0);
-}
-
-#[test]
-fn a_soft_byte_setting_still_sends_one_tag_record() {
-    let answer = json!({"model":"local-1","answers":{
-        "q1":{"type":"noul","noul":0.1},
-        "q2":{"type":"noul","noul":0.1}
-    }})
-    .to_string();
-    let listener = Listener::serving(vec![Canned::ok(&answer)]).expect("listener");
-    let output = run(
-        listener.base(),
-        "tag",
-        &["billing", "urgent"],
-        &["--max-request-bytes", "10"],
-        "one\n",
-    );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
-    assert_eq!(details(&output)[0]["value"], json!([]));
-    assert_eq!(listener.requests().len(), 1);
+    for limit in [
+        ["--profile", profile.as_str()],
+        ["--max-request-bytes", "10"],
+    ] {
+        let listener = Listener::answering(noes).expect("listener");
+        let output = run(
+            listener.base(),
+            "tag",
+            &["billing", "urgent"],
+            &limit,
+            "one\n",
+        );
+        assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+        assert_eq!(details(&output)[0]["value"], json!([]));
+        let sizes: Vec<usize> = listener
+            .requests()
+            .iter()
+            .map(|request| {
+                let body: Value = serde_json::from_slice(&request.body).expect("request");
+                body["questions"]
+                    .as_object()
+                    .map_or(0, serde_json::Map::len)
+            })
+            .collect();
+        assert_eq!(sizes, [1, 1], "{limit:?}");
+    }
 }
 
 #[test]
@@ -397,14 +405,15 @@ fn a_tag_batch_halves_once_and_counts_the_refused_request() {
                 .map_or(0, serde_json::Map::len)
         })
         .collect();
-    assert_eq!(wires, [6, 4, 2]);
+    // The asks halve, so a record's two labels may ride different halves.
+    assert_eq!(wires, [6, 3, 3]);
     let rows = details(&output);
     assert_eq!(rows.len(), 3);
     assert!(
         rows.iter()
             .all(|row| row["value"] == json!(["billing", "urgent"]))
     );
-    assert_eq!(rows[0]["meta"]["batch"]["split"], true);
+    assert_eq!(rows[0]["meta"]["attempts"][0]["status"], 413);
     let facts: Value = serde_json::from_slice(&output.stderr).expect("facts");
     assert_eq!(facts["requests_sent"], 3);
     assert_eq!(facts["records"], 3);

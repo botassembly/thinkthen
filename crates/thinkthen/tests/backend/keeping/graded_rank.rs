@@ -1,5 +1,10 @@
 //! Saved score questions order command records without changing ordinary rank.
 
+#![allow(
+    clippy::expect_used,
+    reason = "a failed fixture setup or a missing field should stop the boundary test"
+)]
+
 use std::fs;
 use std::io;
 use std::path::PathBuf;
@@ -86,7 +91,9 @@ fn assert_literal_bodies(requests: &[conformance_backend::Recorded]) {
 fn assert_present_fixture_digest(row: &Value, body: &str, url: &str) {
     let digests = row.pointer("/meta/requests").and_then(Value::as_array);
     assert_eq!(digests.map(Vec::len), Some(1));
-    let expected = crate::support::digest(url, body.as_bytes());
+    let [expected] = crate::support::keys(url, body.as_bytes())
+        .try_into()
+        .expect("one question");
     assert_eq!(
         row.pointer("/meta/requests/0").and_then(Value::as_str),
         Some(expected.as_str())

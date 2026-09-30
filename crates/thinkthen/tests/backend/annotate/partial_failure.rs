@@ -5,7 +5,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::digest;
+use crate::support::keys;
 
 fn questions(name: &str, body: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate-partial");
@@ -69,11 +69,10 @@ fn bare_and_detailed_rows_distinguish_failed_from_not_sure() -> io::Result<()> {
 
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
-    let request = digest(listener.url(), &requests[0].body);
-    let request = request.as_str();
-    assert_eq!(row["meta"]["requests"], serde_json::json!([request]));
-    for name in ["good", "failed", "not_sure"] {
-        assert_eq!(row["answers"][name]["request"], request);
+    let asked = keys(listener.url(), &requests[0].body);
+    assert_eq!(row["meta"]["requests"], serde_json::json!(asked));
+    for (name, key) in ["good", "failed", "not_sure"].into_iter().zip(&asked) {
+        assert_eq!(&row["answers"][name]["request"], key);
     }
 
     let failed = row["answers"]["failed"]
@@ -261,8 +260,8 @@ fn a_later_whole_run_failure_keeps_its_code_and_stop_boundary() -> io::Result<()
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
         concat!(
-            "thinkthen: the backend answered with status 401: the key was refused\n",
-            "thinkthen: stopped at record 2; 1 record finished\n",
+            "thinkthen: stopped at record 2; the request for records 2 to 2 failed: ",
+            "the backend answered with status 401: the key was refused; 1 record finished\n",
         )
     );
     assert_eq!(listener.requests().len(), 2);
@@ -270,7 +269,7 @@ fn a_later_whole_run_failure_keeps_its_code_and_stop_boundary() -> io::Result<()
 }
 
 #[test]
-fn a_recorded_partial_reply_replays_with_the_same_result() -> io::Result<()> {
+fn a_recorded_partial_reply_replays_its_failed_question_as_a_miss() -> io::Result<()> {
     let file = questions(
         "recorded-partial",
         r#"{"version":1,"questions":{"good":{"decide":"good?"},"failed":{"decide":"failed?"}}}"#,
@@ -301,17 +300,22 @@ fn a_recorded_partial_reply_replays_with_the_same_result() -> io::Result<()> {
         b"The invoice failed.",
     )?;
     assert_eq!(first.status.code(), Some(6));
+    let sent = listener.requests();
+    assert_eq!(sent.len(), 1);
+    let failed = keys(listener.url(), &sent[0].body).remove(1);
 
     let mut replay = common.to_vec();
     replay.extend(["--replay", recording.as_ref()]);
+    // Failed answers are never stored, so the replay misses that question.
     let second = spawn(&replay, &[], b"The invoice failed.")?;
-    assert_eq!(second.status.code(), Some(6));
-    assert_eq!(listener.requests().len(), 1);
+    assert!(listener.requests().is_empty());
+    assert!(second.stdout.is_empty());
+    assert_eq!(second.status.code(), Some(5));
     assert_eq!(
-        String::from_utf8_lossy(&first.stdout)
-            .replace(r#""requests_sent":1"#, r#""requests_sent":0"#)
-            .replace(r#""cached":false"#, r#""cached":true"#),
-        String::from_utf8_lossy(&second.stdout)
+        String::from_utf8_lossy(&second.stderr),
+        format!(
+            "thinkthen: the annotate request: the replay folder holds no answer for question `{failed}`; the key is the SHA-256 of the adapter, address, model, shared state and question as sent\n"
+        )
     );
     Ok(())
 }

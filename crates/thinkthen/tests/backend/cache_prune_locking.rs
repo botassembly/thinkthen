@@ -1,4 +1,7 @@
 //! The folder gate keeps pruning in the digest-lock namespace.
+//!
+//! `find` still uses the request-level store and its digest locks until
+//! ADR 0111 slice 4, so these tests run it.
 
 use conformance_backend::Rendezvous;
 use std::fs;
@@ -12,10 +15,10 @@ use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, Observed, finish, process_has_file};
 
-const QUESTION: &str = "asks for a refund";
-const EVIDENCE: &str = "Refund me please.";
+const QUESTION: &str = "Which unit asks for a refund?";
+const EVIDENCE: &str = "Refund me please.\nThanks for the fix.\n";
 const ANSWER: &str = concat!(
-    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"#,
+    r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u001","probabilities":{"u001":0.9,"u002":0.1}}},"#,
     r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
 );
 
@@ -58,7 +61,7 @@ fn decide(base: &str, folder: &str) -> io::Result<Reaped> {
         .env("HOME", env!("CARGO_TARGET_TMPDIR"))
         .env("THINKTHEN_API_KEY", "sk-test-value")
         .args([
-            "decide",
+            "find",
             QUESTION,
             "--url",
             base,

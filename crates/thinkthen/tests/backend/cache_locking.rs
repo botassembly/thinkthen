@@ -1,4 +1,7 @@
 //! Cache-lock ownership, failure release, and private filesystem state.
+//!
+//! `find` still uses the request-level store and its digest locks until
+//! ADR 0111 slice 4, so these tests run it.
 
 use std::fs;
 use std::io::{self, Write as _};
@@ -14,10 +17,10 @@ use crate::harness::process_has_file;
 use crate::harness::{Canned, Listener, Observed, finish, spawn};
 use crate::result_assertions::normalized_details;
 
-const QUESTION: &str = "asks for a refund";
-const EVIDENCE: &str = "Refund me please.";
+const QUESTION: &str = "Which unit asks for a refund?";
+const EVIDENCE: &str = "Refund me please.\nThanks for the fix.\n";
 const ANSWER: &str = concat!(
-    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"#,
+    r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u001","probabilities":{"u001":0.9,"u002":0.1}}},"#,
     r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
 );
 
@@ -30,7 +33,7 @@ fn folder(name: &str) -> PathBuf {
 
 fn arguments<'a>(base: &'a str, folder: &'a str) -> [&'a str; 13] {
     [
-        "decide",
+        "find",
         QUESTION,
         "--url",
         base,

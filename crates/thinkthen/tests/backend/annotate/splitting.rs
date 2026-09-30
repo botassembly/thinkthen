@@ -10,7 +10,7 @@ use std::path::{Path, PathBuf};
 
 use super::set;
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::{digest, plant_backend_identity, plant_recording};
+use crate::support::keys;
 
 const FIRST_TWO: &str = concat!(
     r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"evidence\". first?"},"#,
@@ -107,7 +107,7 @@ fn exact_limits_keep_the_historical_body_and_one_unit_over_splits_longest_prefix
         serde_json::from_slice(&exact_output.stdout).expect("exact result");
     assert_eq!(
         exact_row["meta"]["requests"],
-        serde_json::json!([digest(exact_listener.url(), complete.as_bytes())])
+        serde_json::json!(keys(exact_listener.url(), complete.as_bytes()))
     );
 
     let split = profile(
@@ -147,10 +147,13 @@ fn exact_limits_keep_the_historical_body_and_one_unit_over_splits_longest_prefix
     assert_eq!(row["meta"]["cached"], false);
     assert_eq!(
         row["meta"]["requests"],
-        serde_json::json!([
-            digest(split_listener.url(), FIRST_TWO.as_bytes()),
-            digest(split_listener.url(), THIRD.as_bytes())
-        ])
+        serde_json::json!(
+            [
+                keys(split_listener.url(), FIRST_TWO.as_bytes()),
+                keys(split_listener.url(), THIRD.as_bytes()),
+            ]
+            .concat()
+        )
     );
 }
 
@@ -209,16 +212,16 @@ fn question_and_option_limits_split_or_refuse_before_any_send() {
 }
 
 #[test]
-fn every_chunk_of_every_group_is_preflighted_before_the_first_send() {
+fn every_question_of_every_group_is_preflighted_before_the_first_send() {
     let questions = set(
         "later-impossible-group",
         concat!(
             r#"{"version":1,"questions":{"first":{"decide":"first?","on":"/left"},"#,
             r#""second":{"decide":"second?","on":"/left"},"#,
-            r#""impossible":{"tag":"topics?","labels":["a","b","c"],"on":"/right"}}}"#,
+            r#""impossible":{"choose":"pick?","options":["a","b","c"],"on":"/right"}}}"#,
         ),
     );
-    let limit = profile("two-wire-questions", r#""max_questions":2"#);
+    let limit = profile("two-options-later", r#""max_options":2"#);
     let listener = Listener::serving(Vec::new()).expect("listener");
     let mut arguments = vec![
         "annotate",
@@ -239,6 +242,10 @@ fn every_chunk_of_every_group_is_preflighted_before_the_first_send() {
     .expect("annotate");
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(listener.connections(), 0);
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        "thinkthen: profile two-options-later allows at most 2 options; this request has 3\n"
+    );
 }
 
 #[test]
@@ -248,16 +255,30 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
     let cache = root.join("answers");
     let questions = three_questions("mixed-cache");
     let two = profile("mixed-two", r#""max_questions":2"#);
-    let listener = Listener::serving(vec![Canned::status(500, "{}"), Canned::ok(THIRD_REPLY)])
-        .expect("listener");
-    plant_recording(
-        &cache,
-        listener.url(),
-        FIRST_TWO.as_bytes(),
-        FIRST_TWO_REPLY,
-    )
-    .expect("first chunk cached");
-    plant_backend_identity(&cache, listener.url()).expect("cache binding");
+    let listener = Listener::serving(vec![
+        Canned::ok(FIRST_TWO_REPLY),
+        Canned::status(500, "{}"),
+        Canned::ok(THIRD_REPLY),
+    ])
+    .expect("listener");
+    // A run of the first two questions alone stores their answers.
+    let seed = set(
+        "mixed-seed",
+        r#"{"version":1,"questions":{"first":{"decide":"first?"},"second":{"decide":"second?"}}}"#,
+    );
+    let seed_home = root.join("seed-usage");
+    let seeded = run(
+        &seed,
+        &two,
+        &listener,
+        &["--cache", cache.to_str().expect("cache")],
+        &[
+            ("THINKTHEN_API_KEY", "key"),
+            ("XDG_CACHE_HOME", seed_home.to_str().expect("seed usage")),
+        ],
+    );
+    assert_eq!(seeded.status.code(), Some(0));
+    assert_eq!(listener.requests().len(), 1);
     let root_name = root.to_string_lossy().into_owned();
     let output = run(
         &questions,
@@ -302,12 +323,13 @@ fn mixed_cache_and_retry_accounting_keeps_logical_order() {
     )
     .expect("status");
     let status: serde_json::Value = serde_json::from_slice(&status.stdout).expect("status JSON");
+    // Cache answers count questions: two in the mixed run, three replayed.
     assert_eq!(status["usage"]["this_month"]["requests_sent"], 2);
-    assert_eq!(status["usage"]["this_month"]["cache_answers"], 3);
+    assert_eq!(status["usage"]["this_month"]["cache_answers"], 5);
 }
 
 #[test]
-fn partial_failures_keep_their_chunk_digest_and_missing_usage_removes_the_total() {
+fn partial_failures_keep_their_question_keys_and_missing_usage_removes_the_total() {
     let questions = three_questions("split-partial");
     let two = profile("partial-two", r#""max_questions":2"#);
     let partial = concat!(
@@ -335,11 +357,11 @@ fn partial_failures_keep_their_chunk_digest_and_missing_usage_removes_the_total(
         serde_json::json!({"failed":{"kind":"backend","cause":"wrong_kind"}})
     );
     assert_eq!(row["value"]["third"], true);
-    let first_digest = digest(listener.url(), FIRST_TWO.as_bytes());
-    let third_digest = digest(listener.url(), THIRD.as_bytes());
-    assert_eq!(row["answers"]["first"]["request"], first_digest);
-    assert_eq!(row["answers"]["second"]["request"], first_digest);
-    assert_eq!(row["answers"]["third"]["request"], third_digest);
+    let first_two = keys(listener.url(), FIRST_TWO.as_bytes());
+    let third = keys(listener.url(), THIRD.as_bytes());
+    assert_eq!(row["answers"]["first"]["request"], first_two[0]);
+    assert_eq!(row["answers"]["second"]["request"], first_two[1]);
+    assert_eq!(row["answers"]["third"]["request"], third[0]);
 }
 
 #[test]
@@ -365,7 +387,7 @@ fn different_models_across_chunks_keep_the_safe_failure() {
 }
 
 /// Edge rows 9 and 10: `--plan` prints the first request a live run sends
-/// and counts the requests each `on` group makes.
+/// and counts the requests each `on` group joins.
 #[test]
 fn the_plan_shows_each_request() {
     let dry_run = |set: &Path, extra: &[&str], input: &[u8]| {
@@ -414,7 +436,7 @@ fn the_plan_shows_each_request() {
         (100, Some(r#"The text is "evidence". Question 100?"#))
     );
 
-    // Row 10: two `on` groups and no profile print the first group's request.
+    // Row 10: two `on` groups and no profile share one request.
     let two = set(
         "plan-two-groups",
         r#"{"version":1,"questions":{"concise":{"decide":"Is this concise?","on":"/summary"},"refund":{"decide":"Does this ask for a refund?","on":"/body"}}}"#,
@@ -423,11 +445,12 @@ fn the_plan_shows_each_request() {
         dry_run(&two, &[], br#"{"summary":"Short note.","body":"Refund me."}"#),
         (concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","#,
-            r#""on":{"concise":["/summary"],"refund":["/body"]},"request_count":2,"group_requests":[1,1],"#,
+            r#""on":{"concise":["/summary"],"refund":["/body"]},"request_count":1,"group_requests":[1,1],"#,
             r#""request":{"state":"Each question quotes the text it asks about.","model":"local-1","#,
-            r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Short note.\". Is this concise?"}}}}"#,
+            r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Short note.\". Is this concise?"},"#,
+            r#""q2":{"type":"noul","instructions":"The text is \"Refund me.\". Does this ask for a refund?"}}}}"#,
             "\n",
-            r#"{"records":1,"requests":2,"estimated_bytes":354,"estimated_input_tokens":{"lower":182,"upper":322},"upper_bound":false}"#,
+            r#"{"records":1,"requests":1,"estimated_bytes":266,"estimated_input_tokens":{"lower":137,"upper":242},"upper_bound":false}"#,
             "\n",
         )
         .to_owned(), Some(0))

@@ -7,7 +7,9 @@ use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::result_assertions::normalized_details;
-use crate::support::{DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_recording};
+use crate::support::{
+    DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_fixture, stored,
+};
 
 mod replay_context;
 
@@ -55,12 +57,13 @@ fn decide(base: &str, arguments: &[&str], key: Option<&str>) -> io::Result<Outpu
 /// The key a case sends when the case is not about the key itself.
 const KEY: Option<&str> = Some("sk-test-value");
 
-/// Record one answered exchange into the folder and give the entry it wrote.
+/// Record one answer into the folder, merge it into the folder's fixture
+/// with `cache convert`, and give the fixture's text.
 ///
-/// Every case below starts from a folder holding one entry. The listener is
-/// given back at the URL the entry's digest was taken over, and it holds a
-/// second answer for the case that asks it something more.
-fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
+/// Every case below starts from a folder holding one answer. The listener is
+/// given back at the URL the key was taken over, and it holds a second
+/// answer for the case that asks it something more.
+fn recorded(folder: &Path) -> io::Result<(Listener, String)> {
     let listener = Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(ANSWERED)])?;
     let output = decide(
         listener.base(),
@@ -70,41 +73,29 @@ fn recorded(folder: &Path) -> io::Result<(Listener, String, String)> {
     if output.status.code() != Some(0) {
         return Err(io::Error::other("the recording run answered"));
     }
-    let (name, written) = only_entry(folder)?;
-    Ok((listener, name, written))
+    let converted = spawn(&["cache", "convert", &folder.to_string_lossy()], &[], b"")?;
+    if converted.status.code() != Some(0) {
+        return Err(io::Error::other("the folder converted"));
+    }
+    let written = fs::read_to_string(folder.join("thinkthen.jsonl"))?;
+    Ok((listener, written))
 }
 
-/// Write the entry the default address would record for this response.
-fn plant(folder: &Path, response: &str) -> Option<String> {
+/// Write the fixture the default address answers this one question from,
+/// and give its key.
+fn plant(folder: &Path) -> io::Result<String> {
     let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "asks for a refund");
     let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
-    plant_recording(folder, &url, &request, response)
-}
-
-/// The one entry a folder holds, as the file name and the text inside it.
-pub(crate) fn only_entry(folder: &Path) -> io::Result<(String, String)> {
-    let mut entries = Vec::new();
-    for entry in fs::read_dir(folder)? {
-        let path = entry?.path();
-        if path.extension().is_some_and(|value| value == "json")
-            && path
-                .file_name()
-                .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-        {
-            entries.push(path);
-        }
-    }
-    entries.sort();
-    let [file] = entries.as_slice() else {
-        return Err(io::Error::other(format!("one entry, found {entries:?}")));
-    };
-    let name = file
-        .file_name()
-        .ok_or_else(|| io::Error::other("an entry has a name"))?;
-    Ok((
-        name.to_string_lossy().into_owned(),
-        fs::read_to_string(file)?,
-    ))
+    let keys = plant_fixture(
+        folder,
+        &url,
+        &request,
+        &[r#"{"type":"noul","noul":0.92}"#],
+        Some((312, 48)),
+    )?;
+    keys.into_iter()
+        .next()
+        .ok_or_else(|| io::Error::other("one key"))
 }
 
 #[test]
@@ -133,9 +124,11 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
         (listener.base().to_owned(), output)
     };
 
-    let (name, written) = only_entry(&folder).expect("one recorded entry");
-    assert!(name.ends_with(".json"), "{name}");
-    assert_eq!(name.len(), 69, "{name}");
+    assert_eq!(stored(&folder).expect("the store").len(), 1);
+    let written = String::from_utf8_lossy(
+        &fs::read(folder.join("thinkthen.sqlite")).expect("the store file"),
+    )
+    .into_owned();
     for header in [
         "authorization",
         "Authorization",
@@ -176,7 +169,7 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
 #[test]
 fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
     let folder = folder("no-key");
-    let name = plant(&folder, ANSWERED).expect("an entry the default address answers");
+    plant(&folder).expect("a fixture the default address answers");
     let asked: [&str; 2] = ["decide", "asks for a refund"];
 
     // The run reads THINKTHEN_API_KEY, which env_clear leaves unset. Without a
@@ -205,16 +198,14 @@ fn a_replay_at_the_default_address_reads_no_key_and_opens_no_connection() {
         "{printed}"
     );
     assert!(printed.contains(r#""model":"jev-1.13.0""#), "{printed}");
-    assert!(name.ends_with(".json"), "{name}");
 }
 
 /// `meta`, pinned field by field in the order it prints them.
 #[test]
 fn meta_holds_the_url_the_model_the_usage_and_the_cached_flag() {
     let folder = folder("meta");
-    let name = plant(&folder, ANSWERED).expect("an entry the default address answers");
-    assert!(name.ends_with(".json"), "{name}");
-    let request = name.strip_suffix(".json").expect("a recording name");
+    let key = plant(&folder).expect("a fixture the default address answers");
+    let request = key.as_str();
 
     let output = run(
         &[
@@ -246,10 +237,10 @@ fn meta_holds_the_url_the_model_the_usage_and_the_cached_flag() {
 }
 
 #[test]
-fn replay_reads_only_the_requested_entry_and_safely_refuses_it_when_malformed() {
+fn replay_reads_only_the_fixture_and_safely_refuses_it_when_malformed() {
     const MALFORMED: &[u8] = b"{\n\"private\":\"DO_NOT_ECHO\"\n";
     let folder = folder("lazy-replay");
-    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
+    let (listener, _) = recorded(&folder).expect("one recorded answer");
     assert_eq!(
         listener.requests().len(),
         1,
@@ -267,7 +258,7 @@ fn replay_reads_only_the_requested_entry_and_safely_refuses_it_when_malformed() 
     assert_eq!(output.stdout, b"true\n");
     assert!(output.stderr.is_empty());
 
-    fs::write(folder.join(&name), MALFORMED).expect("the requested entry is writable");
+    fs::write(folder.join("thinkthen.jsonl"), MALFORMED).expect("the fixture is writable");
     let output = decide(
         listener.base(),
         &["--replay", &folder.to_string_lossy()],
@@ -278,25 +269,25 @@ fn replay_reads_only_the_requested_entry_and_safely_refuses_it_when_malformed() 
     assert!(output.stdout.is_empty());
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        format!(
-            "thinkthen: the entry `{name}` was refused: the file is not a recording entry: \
-             the JSON at line 3 column 0 is not one\n"
-        )
+        "thinkthen: the entry `thinkthen.jsonl` was refused: line 1 is not a question entry\n"
     );
     assert!(!String::from_utf8_lossy(&output.stderr).contains("DO_NOT_ECHO"));
     assert_eq!(listener.requests().len(), 0, "replays open no connection");
 }
 
 #[test]
-fn an_entry_that_records_another_exchange_is_refused_by_name() {
+fn an_answer_that_records_another_question_is_refused_by_name() {
     let folder = folder("damaged");
-    let (listener, name, written) = recorded(&folder).expect("one recorded entry");
+    let (listener, written) = recorded(&folder).expect("one recorded answer");
     let edited = written.replace(
-        r#"The text is \"Refund me please.\"."#,
-        r#"The text is \"Something else.\"."#,
+        r#"The text is \\\"Refund me please.\\\"."#,
+        r#"The text is \\\"Something else.\\\"."#,
     );
-    assert_ne!(edited, written, "the entry holds the request it recorded");
-    fs::write(folder.join(&name), edited).expect("the entry is writable");
+    assert_ne!(
+        edited, written,
+        "the fixture holds the question it recorded"
+    );
+    fs::write(folder.join("thinkthen.jsonl"), edited).expect("the fixture is writable");
 
     let output = decide(
         listener.base(),
@@ -307,10 +298,10 @@ fn an_entry_that_records_another_exchange_is_refused_by_name() {
 
     assert_eq!(output.status.code(), Some(5));
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains(&name), "{message}");
+    assert!(message.contains("thinkthen.jsonl"), "{message}");
     assert!(message.contains("damaged or hand-edited"), "{message}");
 
-    fs::write(folder.join(&name), "not an entry at all").expect("the entry is writable");
+    fs::write(folder.join("thinkthen.jsonl"), "not an entry at all").expect("writable");
     let output = decide(
         listener.base(),
         &["--replay", &folder.to_string_lossy()],
@@ -319,7 +310,7 @@ fn an_entry_that_records_another_exchange_is_refused_by_name() {
     .expect("the compiled binary runs");
     assert_eq!(output.status.code(), Some(5));
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains(&name), "{message}");
+    assert!(message.contains("thinkthen.jsonl"), "{message}");
 }
 
 #[test]
@@ -395,23 +386,34 @@ fn mode(path: &Path) -> io::Result<u32> {
 
 #[cfg(unix)]
 #[test]
-fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
+fn a_recording_is_written_for_its_owner_alone_and_leaves_no_side_file() {
     let folder = folder("private");
-    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED), Canned::ok(ANSWERED)])
+        .expect("a loopback listener");
+    let output = decide(
+        listener.base(),
+        &["--record", &folder.to_string_lossy()],
+        KEY,
+    )
+    .expect("the compiled binary runs");
+    assert_eq!(output.status.code(), Some(0));
 
     // A recording holds the evidence, so neither the folder the tool made nor
-    // the entry inside it is readable by anybody else, whatever the umask says.
+    // the store inside it is readable by anybody else, whatever the umask says.
+    // The rollback journal leaves no side file once the write commits.
     assert_eq!(mode(&folder).expect("the folder is there"), 0o700);
-    assert_eq!(
-        mode(&folder.join(&name)).expect("the entry is there"),
-        0o600
-    );
+    let store = folder.join("thinkthen.sqlite");
+    assert_eq!(mode(&store).expect("the store is there"), 0o600);
+    let names: Vec<_> = fs::read_dir(&folder)
+        .expect("the folder is there")
+        .filter_map(|entry| entry.ok().map(|found| found.file_name()))
+        .collect();
+    assert_eq!(names, ["thinkthen.sqlite"]);
 
-    // The same exchange into a folder where a directory already holds the
-    // entry's name. The hard link fails, and the temporary file the entry was
-    // written under goes with it, so nothing private is left behind.
+    // A directory standing where the store would go is a storage failure,
+    // and nothing else is left beside it.
     let blocked = folder.join("blocked");
-    fs::create_dir_all(blocked.join(&name)).expect("a directory stands where the entry would go");
+    fs::create_dir_all(blocked.join("thinkthen.sqlite")).expect("a directory takes the name");
     let output = decide(
         listener.base(),
         &["--record", &blocked.to_string_lossy()],
@@ -423,20 +425,21 @@ fn a_recording_is_written_for_its_owner_alone_and_leaves_no_partial_file() {
     let left: Vec<_> = fs::read_dir(&blocked)
         .expect("the folder is there")
         .filter_map(|entry| entry.ok().map(|found| found.file_name()))
-        .filter(|found| found != name.as_str())
+        .filter(|found| found != "thinkthen.sqlite")
         .collect();
     assert!(left.is_empty(), "{left:?}");
 }
 
 #[test]
-fn an_entry_that_cannot_be_read_is_not_reported_as_a_miss() {
+fn a_fixture_that_cannot_be_read_is_not_reported_as_a_miss() {
     let folder = folder("unreadable");
-    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
+    let (listener, _) = recorded(&folder).expect("one recorded answer");
 
-    // A directory standing where the entry stood is there and cannot be read.
-    // Calling that a miss would tell the user to record what was already recorded.
-    fs::remove_file(folder.join(&name)).expect("the entry is removable");
-    fs::create_dir(folder.join(&name)).expect("a directory takes the name");
+    // A directory standing where the fixture stood is there and cannot be
+    // read. Calling that a miss would tell the user to record what was
+    // already recorded.
+    fs::remove_file(folder.join("thinkthen.jsonl")).expect("the fixture is removable");
+    fs::create_dir(folder.join("thinkthen.jsonl")).expect("a directory takes the name");
     let output = decide(
         listener.base(),
         &["--replay", &folder.to_string_lossy()],
@@ -450,7 +453,7 @@ fn an_entry_that_cannot_be_read_is_not_reported_as_a_miss() {
         message.contains("could not be read or written"),
         "{message}"
     );
-    assert!(!message.contains("no entry named"), "{message}");
+    assert!(!message.contains("holds no answer"), "{message}");
 }
 
 #[test]
@@ -473,18 +476,12 @@ fn a_failed_exchange_is_never_recorded() {
         .expect("the compiled binary runs");
 
         assert_eq!(output.status.code(), Some(4));
-        let files = fs::read_dir(&folder)
-            .expect("recording preflight made the private folder")
-            .filter_map(Result::ok)
-            .map(|entry| entry.path())
-            .filter(|path| {
-                path.extension().is_some_and(|value| value == "json")
-                    && path
-                        .file_name()
-                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-            })
-            .collect::<Vec<_>>();
-        assert!(files.is_empty(), "a failed exchange installs no entry");
+        if folder.join("thinkthen.sqlite").exists() {
+            assert!(
+                stored(&folder).expect("the store").is_empty(),
+                "a failed exchange stores no answer"
+            );
+        }
     }
 }
 
@@ -498,8 +495,12 @@ fn cache_is_the_two_options_on_one_folder_and_stands_beside_neither() {
     // with the listener spent and no key in the environment.
     let output = decide(listener.base(), &["--cache", &named], KEY).expect("the binary runs");
     assert_eq!(output.status.code(), Some(0));
-    let (_, written) = only_entry(&folder).expect("one recorded entry");
-    assert!(written.contains(r#""adapter": "systemone""#), "{written}");
+    let written = stored(&folder).expect("the store");
+    assert_eq!(written.len(), 1, "one answer");
+    assert_eq!(
+        written[0]["url"],
+        format!("{}/{ENDPOINT_PATH}", listener.base())
+    );
     assert_eq!(listener.requests().len(), 1, "the first run paid once");
 
     let output =

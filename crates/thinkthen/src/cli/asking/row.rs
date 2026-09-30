@@ -1,47 +1,15 @@
 //! Complete one judged record and render its requested view.
 
-use super::{Judging, RowContext, asked_of};
+use super::{Judging, RowContext};
 use crate::core::{Outcome, Question, Reading, Record, RecordValue, Value, json_line};
 use crate::engine::facade::Judgment;
 use crate::failure::Failure;
 use crate::judge::Keeping;
-use crate::result_json::{Run, decision_with_batch};
+use crate::result_json::{Run, decision_row};
 use crate::schedule::Judged;
 
 impl Judging<'_> {
-    pub(super) fn finish_row(
-        &self,
-        reading: &Reading,
-        record: Record,
-        arrived: Option<&[u8]>,
-    ) -> Result<Judged, Failure> {
-        let sending = asked_of(reading, record, &self.asks)?;
-        let observed = super::Observed::new(self.environment.cancel(), self.view.details);
-        let judged = self
-            .engine
-            .judge(
-                &sending.question,
-                self.threshold,
-                sending.evidence,
-                &observed.cancel,
-            )
-            .map_err(|error| {
-                Failure::from(error).with_replay_document(&sending.question, self.streams)
-            })?;
-        self.row_of(
-            reading,
-            sending.record,
-            sending.question,
-            &judged,
-            RowContext {
-                arrived,
-                batch: None,
-                attempts: observed.events(),
-            },
-        )
-    }
-
-    /// Build the line one answered record prints. Both paths share it.
+    /// Build the line one answered record prints.
     pub(super) fn row_of(
         &self,
         reading: &Reading,
@@ -77,14 +45,14 @@ impl Judging<'_> {
                         .map(|context| context.digest().to_owned()),
                 };
                 let input = self.streams.then_some(record);
-                Some(decision_with_batch(
+                Some(decision_row(
                     run,
                     judged,
                     question,
                     self.threshold,
                     shown,
                     input,
-                    context.batch,
+                    context.requests,
                     context.attempts,
                 )?)
             } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {

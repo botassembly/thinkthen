@@ -1,7 +1,6 @@
 //! Command parsing, input framing, output, diagnostics, and exit codes.
 
 pub(crate) mod annotate;
-pub(crate) mod annotate_schedule;
 pub(crate) mod args;
 pub(crate) mod asked;
 pub(crate) mod asking;
@@ -190,6 +189,7 @@ fn run(cli: &Cli, environment: &Environment, writer: impl Write) -> Result<ExitC
         Some(Command::Cache(arguments)) => match &arguments.command {
             args::CacheCommand::Prune(arguments) => cache::prune(arguments, environment, writer),
             args::CacheCommand::Unused(arguments) => cache::unused(arguments, writer),
+            args::CacheCommand::Convert(arguments) => cache::convert(arguments),
         },
         Some(Command::Status(arguments)) => status::run(arguments, environment, writer),
         Some(Command::Check(arguments)) => check::run(arguments, environment, writer),

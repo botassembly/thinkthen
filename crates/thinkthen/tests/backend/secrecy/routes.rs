@@ -87,6 +87,8 @@ pub(crate) struct Route {
     /// Two routes can share an exit code, so a route that would otherwise pass
     /// on a neighbour's refusal pins the sentence it means.
     pub(crate) says: Option<&'static str>,
+    /// What names the refusal when the damaged file is a question fixture.
+    pub(crate) fixture_says: Option<&'static str>,
     /// Whether the run carries the key at all.
     pub(crate) keyed: bool,
 }
@@ -108,6 +110,7 @@ pub(crate) const PATHS: [Route; 17] = [
         primed: true,
         damage: None,
         says: None,
+        fixture_says: None,
         keyed: true,
     },
     // The entry is damaged after it is written, so the reply the run reads is
@@ -121,6 +124,9 @@ pub(crate) const PATHS: [Route; 17] = [
         primed: true,
         damage: Some(DAMAGED),
         says: Some("the file is not a recording entry: the JSON at line 1 column 105 is not one"),
+        fixture_says: Some(
+            "the entry `thinkthen.jsonl` was refused: line 1 is not a question entry",
+        ),
         keyed: true,
     },
     // The entry parses and every field of it is hostile text, so the refusal
@@ -137,6 +143,7 @@ pub(crate) const PATHS: [Route; 17] = [
             "the entry names a schema this version does not read, \
              and this version reads `thinkthen.recording/1`",
         ),
+        fixture_says: Some("records a different question, so the file was damaged or hand-edited"),
         keyed: true,
     },
     route(
@@ -196,6 +203,7 @@ pub(crate) const PATHS: [Route; 17] = [
         primed: false,
         damage: None,
         says: Some("`THINKTHEN_API_KEY` is unset or blank, so no key is sent"),
+        fixture_says: None,
         keyed: false,
     },
 ];
@@ -217,6 +225,7 @@ const fn route(
         primed: false,
         damage: None,
         says: None,
+        fixture_says: None,
         keyed: true,
     }
 }

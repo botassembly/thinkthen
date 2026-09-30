@@ -3,7 +3,7 @@
 use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::{decide, digest, encoded_decide};
+use crate::support::{decide, digest, encoded_decide, keys};
 
 /// The response a backend gives when it answers the one question that was asked.
 const ANSWERED: &str = concat!(
@@ -122,7 +122,11 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     let viewed = detailed.requests();
     let viewed = viewed.first().expect("one request reached the listener");
     assert_eq!(sent.body, viewed.body, "the view changes no request byte");
+    // `meta.requests` lists question keys; an attempt names the body it sent.
     let request = digest(detailed.url(), &viewed.body);
+    let [key] = keys(detailed.url(), &viewed.body)
+        .try_into()
+        .expect("one question");
 
     assert_eq!(
         zero_wall_ms(&String::from_utf8_lossy(&output.stdout)),
@@ -135,12 +139,13 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
                 r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
-                r#""requests_sent":1,"cached":false,"requests":["{request}"],"failed_questions":0,"#,
+                r#""requests_sent":1,"cached":false,"requests":["{key}"],"failed_questions":0,"#,
                 r#""attempts":[{{"ordinal":1,"request_sha256":"{request}","wall_ms":0,"outcome":"ok","status":200}}]}}}}"#,
                 "\n",
             ),
             url = detailed.url(),
             request = request,
+            key = key,
         )
     );
     assert_eq!(output.status.code(), Some(0));

@@ -6,7 +6,7 @@ use std::thread;
 
 use crate::harness::{Canned, Listener, spawn};
 use crate::support::{
-    DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, plant_backend_identity,
+    DEFAULT_BASE, DEFAULT_MODEL, ENDPOINT_PATH, encoded_decide, keys, plant_fixture,
     plant_recording,
 };
 
@@ -26,12 +26,17 @@ fn run(arguments: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
     spawn(arguments, environment, EVIDENCE.as_bytes())
 }
 
+fn url() -> String {
+    format!("{DEFAULT_BASE}/{ENDPOINT_PATH}")
+}
+
+fn body() -> Vec<u8> {
+    encoded_decide(EVIDENCE, DEFAULT_MODEL, "asks for a refund")
+}
+
+/// `cache prune` keeps the request-level entries until ADR 0111 slice 5.
 fn plant(folder: &Path, response: &str) -> Option<String> {
-    let request = encoded_decide(EVIDENCE, DEFAULT_MODEL, "asks for a refund");
-    let url = format!("{DEFAULT_BASE}/{ENDPOINT_PATH}");
-    let name = plant_recording(folder, &url, &request, response)?;
-    plant_backend_identity(folder, &url)?;
-    Some(name)
+    plant_recording(folder, &url(), &body(), response)
 }
 
 fn usage(status: &Output, name: &str) -> Option<u64> {
@@ -186,12 +191,14 @@ fn replay_of_a_missing_directory_is_a_miss_and_creates_nothing() {
     )
     .expect("replay refusal");
     assert_eq!(output.status.code(), Some(5));
-    let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.starts_with(
-        "thinkthen: the decide request for one document: the replay folder holds no entry named `"
-    ));
-    assert!(
-        message.ends_with("`; the entry name covers the backend interface, address, and request\n")
+    let [key] = keys(&url(), &body()).try_into().expect("one question");
+    assert_eq!(
+        String::from_utf8_lossy(&output.stderr),
+        format!(
+            "thinkthen: the decide request for one document: the replay folder holds no answer \
+             for question `{key}`; the key is the SHA-256 of the adapter, address, model, \
+             shared state and question as sent\n"
+        )
     );
     assert!(!missing.exists());
 }
@@ -206,12 +213,26 @@ mod unused;
 
 #[cfg(unix)]
 #[test]
-fn replay_locks_a_read_only_directory_without_changing_it() {
+fn replay_reads_a_read_only_directory_without_changing_it() {
     use std::os::unix::fs::PermissionsExt as _;
 
+    // A failed earlier run may have left the folder read-only.
+    let scratch = Path::new(env!("CARGO_TARGET_TMPDIR")).join("read-only-replay");
+    let _writable = fs::set_permissions(&scratch, fs::Permissions::from_mode(0o700));
     let folder = folder("read-only-replay");
-    let name = plant(&folder, ANSWERED).expect("entry");
-    fs::set_permissions(folder.join(name), fs::Permissions::from_mode(0o400)).expect("entry mode");
+    plant_fixture(
+        &folder,
+        &url(),
+        &body(),
+        &[r#"{"type":"noul","noul":0.92}"#],
+        None,
+    )
+    .expect("fixture");
+    fs::set_permissions(
+        folder.join("thinkthen.jsonl"),
+        fs::Permissions::from_mode(0o400),
+    )
+    .expect("fixture mode");
     fs::set_permissions(&folder, fs::Permissions::from_mode(0o500)).expect("folder mode");
     let before = fs::metadata(&folder)
         .expect("before metadata")
@@ -281,6 +302,25 @@ fn prune_opened_folder(prune: &mut std::process::Child, folder: &Path) -> io::Re
     }
 }
 
+/// `find` keeps the request-level store, its partials and its folder gate
+/// until ADR 0111 slice 4.
+#[cfg(target_os = "linux")]
+fn find(options: &[&str], environment: &[(&str, &str)]) -> io::Result<Output> {
+    let mut arguments = vec!["find", "Which unit asks for a refund?"];
+    arguments.extend_from_slice(options);
+    spawn(
+        &arguments,
+        environment,
+        b"Refund me please.\nThanks for the fix.\n",
+    )
+}
+
+#[cfg(target_os = "linux")]
+const FOUND: &str = concat!(
+    r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u001","probabilities":{"u001":0.9,"u002":0.1}}},"#,
+    r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
+);
+
 #[cfg(target_os = "linux")]
 #[test]
 fn prune_waits_for_a_live_partial_and_preserves_its_installed_entry() {
@@ -298,7 +338,7 @@ fn prune_waits_for_a_live_partial_and_preserves_its_installed_entry() {
     let listener = Listener::answering_with_events(
         {
             let release = Arc::clone(&release);
-            move |_| Canned::ok(ANSWERED).after_release(Arc::clone(&release))
+            move |_| Canned::ok(FOUND).after_release(Arc::clone(&release))
         },
         events,
     )
@@ -306,8 +346,8 @@ fn prune_waits_for_a_live_partial_and_preserves_its_installed_entry() {
     let base = listener.base().to_owned();
     thread::scope(|scope| {
         let writer = scope.spawn(|| {
-            run(
-                &["decide", "asks for a refund", "--cache", named, "--details"],
+            find(
+                &["--cache", named, "--details"],
                 &[
                     ("THINKTHEN_API_KEY", "sk-test-value"),
                     ("THINKTHEN_BASE_URL", &base),
@@ -352,19 +392,8 @@ fn prune_waits_for_a_live_partial_and_preserves_its_installed_entry() {
         assert_eq!(answered.status.code(), Some(0));
         assert_eq!(pruned.status.code(), Some(0));
         assert_eq!(listener.requests().len(), 1);
-        let replayed = run(
-            &[
-                "decide",
-                "asks for a refund",
-                "--replay",
-                named,
-                "--url",
-                &base,
-                "--details",
-            ],
-            &[],
-        )
-        .expect("replay installed entry");
+        let replayed = find(&["--replay", named, "--url", &base, "--details"], &[])
+            .expect("replay installed entry");
         assert_eq!(replayed.status.code(), Some(0));
         let (written, _, _) =
             crate::result_assertions::normalized_details(&answered).expect("writer details");

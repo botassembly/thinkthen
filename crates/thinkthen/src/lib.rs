@@ -36,9 +36,9 @@ mod schema_tests;
 mod cli;
 
 #[cfg(feature = "cli")]
-pub(crate) use cli::{annotate, args, asking, edge, failure, judge, profile, table};
+pub(crate) use cli::schedule;
 #[cfg(feature = "cli")]
-pub(crate) use cli::{annotate_schedule, schedule};
+pub(crate) use cli::{annotate, args, asking, edge, failure, judge, profile, table};
 
 #[cfg(feature = "cli")]
 pub use cli::entry;

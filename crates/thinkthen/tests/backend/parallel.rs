@@ -1,5 +1,10 @@
 //! The compiled binary with several requests in flight, and the cache that resumes.
 
+#![allow(
+    clippy::expect_used,
+    reason = "a failed fixture setup or a missing field should stop the boundary test"
+)]
+
 use std::fs;
 use std::io;
 use std::io::{BufRead, BufReader, Write};
@@ -126,20 +131,12 @@ fn folder(name: &str) -> PathBuf {
     path
 }
 
-/// How many entries the folder holds.
+/// How many answers the folder's store holds; each record here asks one question.
 fn entries(folder: &Path) -> usize {
-    fs::read_dir(folder).map_or(0, |entries| {
-        entries
-            .filter_map(Result::ok)
-            .filter(|entry| {
-                let path = entry.path();
-                path.extension().is_some_and(|value| value == "json")
-                    && path
-                        .file_name()
-                        .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-            })
-            .count()
-    })
+    if !folder.join("thinkthen.sqlite").exists() {
+        return 0;
+    }
+    crate::support::stored(folder).expect("the store").len()
 }
 
 #[test]
@@ -449,8 +446,15 @@ fn equal_cache_misses_send_once_at_every_supported_width() {
         assert_eq!(output.status.code(), Some(0), "{}", said(&output));
         let rows = printed(&output);
         assert_eq!(rows.lines().count(), 16);
-        assert_eq!(rows.matches(r#""cached":false"#).count(), 1);
-        assert_eq!(rows.matches(r#""cached":true"#).count(), 15);
+        // A row the call's in-flight map answers is not from the store, so
+        // how many rows say `cached: false` depends on timing. The one send
+        // is counted once across the rows all the same.
+        let cached = rows.matches(r#""cached":true"#).count();
+        assert!(cached < 16, "jobs {jobs}: {rows}");
+        assert_eq!(rows.matches(r#""cached":false"#).count() + cached, 16);
+        let sent = rows.matches(r#""requests_sent":1,"#).count();
+        assert_eq!(rows.matches(r#""requests_sent":0,"#).count() + sent, 16);
+        assert_eq!(sent, 1, "jobs {jobs}: the rows count one send");
         assert_eq!(listener.requests().len(), 1, "jobs {jobs}");
         assert_eq!(entries(&cache), 1);
     }

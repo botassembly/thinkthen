@@ -15,6 +15,8 @@ use self::fault::{StorageStageName, maybe_fail, maybe_fail_io};
 mod fault;
 mod identity;
 
+pub(crate) use identity::require_private;
+
 #[cfg(test)]
 pub(crate) fn fail_cleanup() {
     fault::STORAGE_FAULT.with(|value| value.set(Some(fault::StorageStage::Cleanup)));

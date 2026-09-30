@@ -5,7 +5,7 @@ use std::fs;
 use std::path::PathBuf;
 
 #[test]
-fn a_refused_group_batch_halves_once_and_keeps_request_order() {
+fn a_refused_batch_halves_once_and_keeps_request_order() {
     let file = set(
         "batch-halve",
         r#"{"version":1,"questions":{"ready":{"decide":"Ready?"}}}"#,
@@ -78,12 +78,15 @@ fn a_refused_group_batch_halves_once_and_keeps_request_order() {
         .map(|line| serde_json::from_slice(line).expect("row JSON"))
         .collect();
     assert_eq!(rows.len(), 3);
-    for (at, row) in rows.iter().enumerate() {
-        assert_eq!(row["meta"]["requests"].as_array().map(Vec::len), Some(2));
-        assert_eq!(row["meta"]["batches"].as_array().map(Vec::len), Some(2));
-        assert_eq!(row["meta"]["batches"][0]["records"], 3);
-        assert_eq!(row["meta"]["batches"][0]["position"], at + 1);
-        assert_eq!(row["meta"]["batches"][1]["split"], true);
+    // The first half counts the refused parent attempt.
+    let sent: Vec<&Value> = rows
+        .iter()
+        .map(|row| &row["meta"]["requests_sent"])
+        .collect();
+    assert_eq!(sent, [&json!(1), &json!(1), &json!(1)]);
+    for row in &rows {
+        assert_eq!(row["meta"]["requests"].as_array().map(Vec::len), Some(1));
+        assert!(row["meta"].get("batches").is_none(), "{row}");
         assert_eq!(row["value"]["ready"], true);
     }
 }

@@ -370,8 +370,8 @@ fn record_finishes_the_started_row_stops_before_another_and_completes_cache() {
             String::from_utf8_lossy(&output.stderr),
             "thinkthen: stopped by a signal; 1 record finished, 0 records from a recording\n"
         );
-        let (_name, entry) = crate::recordings::only_entry(&cache).expect("one cache entry");
-        assert!(serde_json::from_str::<serde_json::Value>(&entry).is_ok());
+        let stored = crate::support::stored(&cache).expect("the cache");
+        assert_eq!(stored.len(), 1, "the first record's one answer");
     }
 }
 
