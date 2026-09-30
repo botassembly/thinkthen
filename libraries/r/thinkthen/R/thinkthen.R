@@ -231,6 +231,9 @@ tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle
 
 # One threshold as the file grammar writes it: a cut, or a band as "lo:hi".
 .tt_threshold_value <- function(threshold) {
+  if (is.character(threshold) && length(threshold) == 1L && !is.na(threshold)) {
+    return(threshold[[1L]])
+  }
   if (!is.numeric(threshold) || anyNA(threshold) || !length(threshold) ||
       length(threshold) > 2L || any(threshold < 0) || any(threshold > 1)) {
     .tt_usage("threshold must be one or two numbers in [0, 1]")
