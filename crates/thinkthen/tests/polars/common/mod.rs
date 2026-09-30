@@ -8,7 +8,7 @@
 #![allow(dead_code, reason = "each test file uses its own part of the helper")]
 
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
 use thinkthen::polars::prelude::{NamedFrom, Series};
@@ -68,15 +68,27 @@ const ALONE: &str = "THINKTHEN_TEST_POLARS_ALONE";
 
 /// Run `body` alone in a fresh copy of this test binary, because the
 /// throttle is process-wide (ticket 0077). `path` names the test in the
-/// binary. The child keeps the fake key, the loopback address and the scratch
-/// usage folder `check.sh` set; `builder` refuses any other key.
+/// binary. The child gets the fake key, the loopback address, and the
+/// scratch cache, configuration and usage folders `check.sh` set.
 pub(crate) fn alone(path: &str, body: impl FnOnce()) {
     if std::env::var_os(ALONE).is_some_and(|chosen| chosen == path) {
         body();
         return;
     }
-    let child = Command::new(std::env::current_exe().expect("this test binary"))
+    guarded();
+    let binary = std::env::current_exe().expect("this test binary");
+    let mut command = crate::child::command(
+        binary.to_str().expect("a UTF-8 test binary path"),
+        &["HOME", "XDG_CACHE_HOME", "XDG_CONFIG_HOME", "TMPDIR"],
+    );
+    for name in ["THINKTHEN_BASE_URL", "THINKTHEN_CACHE"] {
+        if let Some(value) = std::env::var_os(name) {
+            command.env(name, value);
+        }
+    }
+    let child = command
         .args(["--exact", path, "--nocapture", "--test-threads=1"])
+        .env("THINKTHEN_API_KEY", FAKE_KEY)
         .env(ALONE, path)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())

@@ -3,6 +3,8 @@
 //! The deadline and throttle tests each rerun alone in a fresh process,
 //! because the throttle is process-wide (ticket 0077).
 
+#[path = "../../src/test_deadline/child.rs"]
+mod child;
 #[allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 mod common;
 #[path = "../../src/test_deadline/wait.rs"]
