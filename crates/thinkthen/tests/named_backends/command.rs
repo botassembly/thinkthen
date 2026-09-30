@@ -95,6 +95,19 @@ fn two_backends_at_one_address_and_model_share_answers_and_never_keys() {
         "the second backend sent nothing"
     );
     assert_eq!(target.count(), 2);
+    // A spend guard reads these two paths; `thinkthen.status/2` keeps them where status/1 had them.
+    let status = home.run(&["status", "--json"], &[]);
+    let (stdout, _) = said(&status);
+    let value: serde_json::Value = serde_json::from_str(&stdout).expect("one JSON object");
+    assert_eq!(value["schema"], "thinkthen.status/2");
+    assert_eq!(
+        value.pointer("/usage/total/requests_sent"),
+        Some(&serde_json::json!(2))
+    );
+    assert_eq!(
+        value.pointer("/usage/total/input_tokens"),
+        Some(&serde_json::json!(18))
+    );
     home.assert_no_marker_in_files();
 }
 
