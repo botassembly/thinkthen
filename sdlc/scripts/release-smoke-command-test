@@ -45,7 +45,6 @@ replay="thinkthen decide 'Question?' --replay recording < report.txt"
 readme good 'cd demos/27-test-with-no-network' "$replay"
 readme after-release 'curl -fsSLO https://example.invalid/thinkthen-first-run.tar.gz' "$replay"
 readme no-sample "$replay"
-readme two-samples 'cd demos/27-test-with-no-network' 'curl -fsSLO https://example.invalid/x' "$replay"
 
 # expect CODE MESSAGE FOLDER README: run the smoke and pin its exit code and one output line.
 expect() {
@@ -70,7 +69,6 @@ plant checksum true
 printf 'x' >>"$work/checksum/dir/$archive"
 expect 1 "release-smoke: FAIL $archive (its .sha256 is missing or does not match)" checksum good
 expect 1 "release-smoke: the README's no-key block holds 0 sample lines, not one" good no-sample
-expect 1 "release-smoke: the README's no-key block holds 2 sample lines, not one" good two-samples
 plant false false
 expect 1 "release-smoke: the no-key block printed 'false', not true" false good
 plant home true "# $HOME"

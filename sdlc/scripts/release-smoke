@@ -24,6 +24,12 @@ V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
 README=${THINKTHEN_README:-$REPO/README.md}
 
+# Each file matches the checksum in its .sha256 beside it.
+checksum() {
+	(cd -- "$DIR" && sha256 -c "$1.sha256" >/dev/null 2>&1) ||
+		{ echo "release-smoke: FAIL $1 (its .sha256 is missing or does not match)"; return 1; }
+}
+
 # Every library file, unpacked, holds neither the builder's home nor the PostgreSQL test probe. The
 # checks' own scans read their builds, and this one reads the files a user installs.
 scan() {
@@ -79,10 +85,7 @@ if [ -n "$command_only" ]; then
 	for name in $wanted; do
 		[ -f "$DIR/$name" ] || { echo "release-smoke: missing $name" >&2; exit 1; }
 	done
-	for name in "$archive" thinkthen-first-run.tar.gz; do
-		(cd -- "$DIR" && sha256 -c "$name.sha256" >/dev/null 2>&1) ||
-			{ echo "release-smoke: FAIL $name (its .sha256 is missing or does not match)" >&2; exit 1; }
-	done
+	for name in "$archive" thinkthen-first-run.tar.gz; do checksum "$name" >&2 || exit 1; done
 	backend_start
 	scan "$DIR/$archive" >&2 || exit 1
 	command_check "$DIR/$archive" || exit 1
@@ -181,11 +184,7 @@ for file in "$DIR"/*; do
 	case $name in
 	*.sha256) continue ;;
 	esac
-	if ! (cd -- "$DIR" && sha256 -c "$name.sha256" >/dev/null 2>&1); then
-		echo "release-smoke: FAIL $name (its .sha256 is missing or does not match)"
-		failed=1
-		continue
-	fi
+	checksum "$name" || { failed=1; continue; }
 	# The rung packs the command's debug build, so the scan reads the libraries alone.
 	case $name in thinkthen-"$V"-*.tar.gz) ;; *) scan "$file" || { failed=1; continue; } ;; esac
 	case $name in
