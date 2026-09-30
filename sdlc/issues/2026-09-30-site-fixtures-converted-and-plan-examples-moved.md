@@ -1,6 +1,6 @@
 # The site fixtures are converted and its examples use --plan
 
-Status: open. Filed 2026-09-30 by the marketing lead from mktg ticket 0031. Owner: the queue owner.
+Status: open. Filed 2026-09-30 by the marketing lead. Owner: the queue owner.
 Kind: note
 
 This answers parts 1 and 2 of `2026-09-30-site-replay-folders-have-no-fixture.md`.

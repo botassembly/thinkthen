@@ -6,7 +6,7 @@ Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
 
 No routine rung (`test`, `spec`, the surface checks) depends on how fast the machine runs.
 
-This ticket delivers it for `test`, `spec`, and the Python, DuckDB and SQLite surface checks. The other binding checks remain as Debt 027.
+This ticket delivers it for `test`, `spec`, and the Python, DuckDB and SQLite surface checks. The other binding checks remain as Debt 029.
 
 ## Evidence
 
@@ -14,7 +14,7 @@ This ticket delivers it for `test`, `spec`, and the Python, DuckDB and SQLite su
 - Keeps: every cancellation, deadline, pacing and ordering regression. Each moved millisecond promise keeps a stress twin under `test-stress --run`. The relate stop while four sends overlap keeps its old 60- and 40-entity rows as the stress case `overlap::a_host_interrupt_while_relate_sends_overlap_stops_between_four_and_eight`. The port twins run under `THINKTHEN_TEST_PROFILE=stress` through `surfaces --stress`. Python selects them with the `stress` mark. DuckDB's `harness.py` selects them by name. SQLite's `check.sh` selects them in `test_interrupt.py`, `test_usage.py` and `test_try_budget.py`.
 - Changes: the rules and the list below.
 - Proof: `sdlc/scripts/test` and the Python, DuckDB and SQLite surface checks under 24 busy processes, before and after, in the tables below. `test-stress --check` finds all twelve Rust filters. The four new or renamed Rust stress cases pass alone on a quiet machine. The port stress twins were not run in this build. `spec` runs replayed document examples and two probes. Its only timed wait is the triage demo's file wait, which this ticket raises to 30 s. A search of `spec`'s inputs found no other sleep or elapsed-time check.
-- Defers: the other binding checks, filed as Debt 027. The C door tests, which ticket 0346 owns. The engine's 50 ms input pause, which a stalled reader thread can still reach, filed as Debt 028. The margins named under Exceptions.
+- Defers: the other binding checks, filed as Debt 029. The C door tests, which ticket 0346 owns. The engine's 50 ms input pause, which a stalled reader thread can still reach, filed as Debt 030. The margins named under Exceptions.
 
 ## Rules
 
