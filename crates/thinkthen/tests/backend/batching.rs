@@ -470,15 +470,16 @@ fn each_row_carries_its_share() {
 /// later record's request goes (ticket 0304 slice 4).
 #[test]
 fn a_failed_request_sends_no_later_request() {
-    // Line 1's request answers only once line 2's has failed, so it is still
-    // out at the failure however loaded the machine is (ticket 0352).
+    // Line 1's request answers a full second after line 2's failure is
+    // written, a wide margin for the run to read the failure first. The
+    // margin counts from the failure, not from line 1's send (ticket 0352).
     let failed = Tally::new();
     let listener = Listener::answering(move |body| {
         if first(body) == 2 {
             Canned::status(500, "{}").notifying(failed.sender())
         } else {
             failed.wait_for(1);
-            answering(body)
+            answering(body).after(1_000)
         }
     })
     .expect("a loopback listener");
