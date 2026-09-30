@@ -503,17 +503,7 @@ fn remove_partial(path: &Path) -> io::Result<()> {
 }
 
 fn make_folder(folder: &Path) -> Result<(), Error> {
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::DirBuilderExt as _;
-        fs::DirBuilder::new()
-            .recursive(true)
-            .mode(0o700)
-            .create(folder)
-            .map_err(storage)
-    }
-    #[cfg(not(unix))]
-    fs::create_dir_all(folder).map_err(storage)
+    cache_lock::create_private(folder).map_err(storage)
 }
 
 fn storage(_error: io::Error) -> Error {

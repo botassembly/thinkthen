@@ -14,6 +14,8 @@ Every surface paces its HTTP attempts to 1,000 a minute for each `https://` addr
 
 Every surface reads `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the estimated input admission total from ticket 0299. A request whose estimate would pass it is refused before it is sent. The command flag, the Rust setter, and the C key outrank the variable (ticket 0311).
 
+The SQL extensions cache only in a named folder and refuse a folder another user owns or others can write (ticket 0318).
+
 The default model is the pinned version `jev-1.13.0`, not the alias `jev-latest`, so a vendor's move of its alias moves no default answer (ticket 0159).
 
 Python and Ruby calls now raise cancellation when the caller's token fires before a held reply reaches the call, including when both happen in one wait tick (ticket 0168).

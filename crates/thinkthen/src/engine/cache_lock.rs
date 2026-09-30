@@ -198,14 +198,25 @@ pub(crate) fn sync_directory(folder: &Path) -> io::Result<()> {
 }
 
 fn make_private(folder: &Path) -> io::Result<()> {
+    create_private(folder)?;
     #[cfg(unix)]
     {
-        use std::os::unix::fs::{DirBuilderExt as _, PermissionsExt as _};
+        use std::os::unix::fs::PermissionsExt as _;
+        fs::set_permissions(folder, fs::Permissions::from_mode(0o700))?;
+    }
+    Ok(())
+}
+
+/// Create a missing folder, and any missing parents, with mode 0700. An
+/// existing folder keeps its mode.
+pub(crate) fn create_private(folder: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt as _;
         fs::DirBuilder::new()
             .recursive(true)
             .mode(0o700)
-            .create(folder)?;
-        fs::set_permissions(folder, fs::Permissions::from_mode(0o700))
+            .create(folder)
     }
     #[cfg(not(unix))]
     fs::create_dir_all(folder)

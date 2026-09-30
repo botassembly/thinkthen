@@ -14,6 +14,8 @@ What an integrator hits. A database administrator adds `thinkthen_decide(body)` 
 
 Direction. State the default and its content on every library and SQL README and in the settings table. Consider defaulting the cache off for SQL extensions, or on only when an administrator names a folder. Consider an expiry setting.
 
+Settled. Ticket 0163 put the disclosure on every README and the settings table. Ticket 0318 turns the SQL extensions' platform cache off, so a SQL cache runs only in a folder an operator names, and documents that every PostgreSQL role shares a named folder. Expiry waits for the clearing ticket ADR 0111 names.
+
 ## 2. Anyone who can write a named cache or recording folder decides the answers (severity 2)
 
 Evidence. Explicit `--cache`, `--record` and `--replay` folders at mode `0777` were accepted. Only the default folder is checked for `0700` (`recorder.rs:137-139`). Entries carry no integrity check. Changing `"noul": 0.93` to `0.01` in one entry flipped the next run from `true` to `false`, with `requests_sent: 0` and `cached: true`. `--replay` gave the same result. The spec treats every file field as untrusted text for printing (`recording.md:62`), and it says nothing about the folder deciding answers.
@@ -21,6 +23,8 @@ Evidence. Explicit `--cache`, `--record` and `--replay` folders at mode `0777` w
 What an integrator hits. A shared `THINKTHEN_CACHE` on a team volume, a CI cache restored across branches, or a committed recording edited in a pull request silently changes gate decisions.
 
 Direction. Say in `recording.md` and `SECURITY.md` that a folder's writers control its answers. Refuse or warn on group- or world-writable folders the tool did not create. Consider an optional keyed check on entries.
+
+Settled. `recording.md` and `SECURITY.md` say that a folder's writers control its answers. Ticket 0303 makes the command warn on a named folder with another owner or the other-write bit. Ticket 0318 makes the SQL extensions refuse such a folder. Library callers apply the rule themselves. Ticket 0318 defers the keyed check and records why.
 
 ## 3. ADR 0004 still promises that a key never crosses hosts (severity 2)
 

@@ -275,7 +275,7 @@ fn request_bytes(value: Option<i64>) -> Result<Option<usize>, RowError> {
 
 fn checked(asked: &Asked) -> Result<(Key, EngineBuilder), RowError> {
     let refused = RowError::from;
-    let mut builder = EngineBuilder::from_env().map_err(refused)?;
+    let mut builder = EngineBuilder::from_env().map_err(refused)?.shared_host();
     let throttle = asked
         .throttle
         .map(|value| {

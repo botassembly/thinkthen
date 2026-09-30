@@ -158,6 +158,32 @@ say(config=run(db, "SELECT thinkthen_configure(?)", ('{"throttle":8}',)),
     expect(any(path.suffix == ".json" for path in pathlib.Path(env["THINKTHEN_CACHE"]).rglob("*.json")), True, "seeded cache")
 
 
+def test_a_platform_cache_stays_off_and_an_open_named_folder_is_refused() -> None:
+    """Ticket 0318: SQL caches only in a folder the operator names, and
+    refuses a named folder that others can write."""
+    backend = Backend()
+    env = environment(backend)
+    del env["THINKTHEN_CACHE"]
+    twice = """
+db = connect()
+say(first=run(db, "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund')"),
+    second=run(db, "SELECT thinkthen_decide('Is this a complaint?', 'i want a refund')"))
+"""
+    held = child(twice, env)
+    expect((held["first"], held["second"]), ([[1]], [[1]]), "both answer")
+    expect(backend.close(), 2, "no platform cache answers the second call")
+    expect(list(pathlib.Path(env["XDG_CACHE_HOME"]).rglob("*")), [], "the platform folder stays empty")
+    backend = Backend()
+    env = environment(backend)
+    folder = pathlib.Path(env["SCRATCH"]) / "open"
+    folder.mkdir()
+    folder.chmod(0o777)
+    held = child(twice.replace("db = connect()", "db = connect()\ndb.execute('SELECT thinkthen_configure(?)', ('{\"cache\":\"%s\"}',))" % folder), env)
+    refusal = "thinkthen usage: the answer folder belongs to another user or others can write it, so they could choose its answers; make it this process user's own with mode 0700, or name another folder (retryable: no)"
+    expect((held["first"], held["second"]), (refusal, refusal), "open folder refused")
+    expect(backend.close(), 0, "a refused folder sends nothing")
+
+
 def test_environment_token_cap_refuses_before_any_send() -> None:
     """Regression: from_env stops reading THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL."""
     backend = Backend()

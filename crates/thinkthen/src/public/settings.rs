@@ -3,6 +3,7 @@
 mod budgets;
 mod environment;
 mod prices;
+mod server;
 
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -75,6 +76,7 @@ pub struct EngineBuilder {
     env_batch: Option<String>,
     cache: Cache,
     seeded: Option<Seeded>,
+    server: bool,
     timeout: Duration,
     max_retries: u32,
     profile: Option<Profile>,
@@ -103,6 +105,7 @@ impl fmt::Debug for EngineBuilder {
             .field("env_batch", &self.env_batch.is_some())
             .field("cache", &self.cache)
             .field("seeded", &self.seeded)
+            .field("server", &self.server)
             .field("timeout", &self.timeout)
             .field("max_retries", &self.max_retries)
             .field("profile", &self.profile)
@@ -140,6 +143,7 @@ impl EngineBuilder {
             env_batch: None,
             cache: Cache::Default,
             seeded: None,
+            server: false,
             timeout: Duration::from_secs(30),
             max_retries: 3,
             profile: None,
@@ -351,7 +355,9 @@ impl EngineBuilder {
     /// # Errors
     ///
     /// Returns [`Error::Usage`] when the default cache is selected and no
-    /// folder is available, or when a different throttle is already active.
+    /// folder is available, when a different throttle is already active, or
+    /// when a [`EngineBuilder::shared_host`] folder is not private. Returns
+    /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),
@@ -398,7 +404,7 @@ impl EngineBuilder {
             retry_wait: Duration::from_secs(1),
             width: self.width,
             per_minute: self.per_minute,
-            storage: self.storage()?,
+            storage: self.served(self.storage()?)?,
             key: Arc::new(move || {
                 key.as_ref()
                     .map(|Secret(value)| Key::new(value.as_ref().to_owned()))
@@ -444,7 +450,10 @@ impl EngineBuilder {
             Cache::Off => return Ok(Storage::default()),
             Cache::At(folder) => (folder.clone(), false),
             Cache::Default => match &self.seeded {
-                Some(seeded) if !seeded.enabled && seeded.platform => return Ok(Storage::default()),
+                Some(seeded) if seeded.platform && (self.server || !seeded.enabled) => {
+                    return Ok(Storage::default());
+                }
+                None if self.server => return Ok(Storage::default()),
                 Some(seeded) => (
                     seeded
                         .folder

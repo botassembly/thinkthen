@@ -209,6 +209,8 @@ fresh() {
 	[ -z "${BPID:-}" ] || backend_stop
 	backend_start
 	CACHEDIR=$(mktemp -d "$RUN/cache.XXXXXX")
+	# UNNAMED_CACHE=1 starts the server with no THINKTHEN_CACHE (ticket 0318).
+	[ -z "${UNNAMED_CACHE:-}" ] || CACHEDIR=
 	cp "$RUN/postgresql.conf.base" "$DATA/postgresql.conf"
 	for line in "$@"; do echo "$line" >>"$DATA/postgresql.conf"; done
 	[ ! -f "$LOG" ] || cat "$LOG" >>"$RUN/server.all"

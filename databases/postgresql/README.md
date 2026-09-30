@@ -83,13 +83,13 @@ The details digest includes a question's saved calibration `profile`. A differen
 | `thinkthen.max_retries` | any role | status retries, 0 or more; -1 keeps the environment value |
 | `thinkthen.profile` | any role | version-one backend profile as JSON text; empty keeps the environment value |
 | `thinkthen.record`, `thinkthen.replay` | superuser | absolute folders for live recording or strict offline replay. Empty keeps the environment value |
-| `thinkthen.cache` | superuser | an absolute answer cache folder. `off` disables it; empty keeps `THINKTHEN_CACHE` or the platform folder |
+| `thinkthen.cache` | superuser | an absolute answer cache folder. `off` disables it; empty keeps `THINKTHEN_CACHE`, or no cache when that is unset |
 | `thinkthen.file_directory` | superuser | the one folder an unprivileged role may read named files from |
 | `thinkthen.api_key` | any role | never read by the engine; a nonempty interactive `SET` warns, and the next call refuses until reset |
 
-The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Set `thinkthen.cache = 'off'` to disable it. An empty value keeps `THINKTHEN_CACHE` or the platform folder.
+The answer cache is off unless an administrator names a folder, by `THINKTHEN_CACHE` in the server's environment or by `thinkthen.cache`. The platform folder under the server's home is never used (ticket 0318). Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it. So a call refuses, before any request, a named cache, record or replay folder that another operating-system user owns or others can write; make it the server user's own with mode 0700. `cache prune` is the only thing that removes entries. Set `thinkthen.cache = 'off'` to disable a cache `THINKTHEN_CACHE` names.
 
-The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
+The folder belongs to the server's operating-system user. Every role whose calls resolve to the same folder shares its answers, so row text leaves the database's own access control, row-level security included, and `meta.cached` tells one role that another already judged the same text. Name a shared folder only when every calling role may see every judged row. When roles must not share answers, give each its own folder with `ALTER ROLE ... SET thinkthen.cache`.
 
 The throttle holds for the whole backend process. The first explicit throttle stays until the backend exits. A later equal value works; a different value raises usage with the active width. An administrator's `ALTER ROLE ... SET` applies an engine setting to one role.
 
