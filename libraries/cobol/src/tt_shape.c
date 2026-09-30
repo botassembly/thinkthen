@@ -62,7 +62,7 @@ int tt_cobol_member(const char *json,size_t length,const char *name,size_t name_
     const TTJSON *member=NULL;
     if(n->type==TTJSONObject) member=tt_json_get_n(n,name,name_length);
     else if(n->type==TTJSONArray&&name_length&&name_length<10){
-        size_t index=0;for(size_t i=0;i<name_length;i++) index=name[i]>='0'&&name[i]<='9'?index*10+(size_t)(name[i]-'0'):0;
+        size_t index=0;for(size_t i=0;i<name_length;i++){if(name[i]<'0'||name[i]>'9'){index=0;break;}index=index*10+(size_t)(name[i]-'0');}
         if(index&&index<=n->count) member=n->children[index-1];
     }
     int result=!member?1:member->source_length>capacity?2:0;
