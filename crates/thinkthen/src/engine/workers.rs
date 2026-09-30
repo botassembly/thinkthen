@@ -38,7 +38,7 @@ struct DiagnosticDepth(usize);
 
 impl Drop for DiagnosticDepth {
     fn drop(&mut self) {
-        DIAGNOSTIC_DEPTH.with(|depth| depth.set(self.0));
+        let _ = DIAGNOSTIC_DEPTH.try_with(|depth| depth.set(self.0));
     }
 }
 

@@ -37,6 +37,7 @@ pub use native_batch::RecoverableDetails;
 pub(crate) use options::budget::process_budget;
 pub use options::{
     BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
+    contained, uncontained,
 };
 pub(crate) use options::{EstimatedReservation, SendReservation};
 pub use plan::PlanEstimate;

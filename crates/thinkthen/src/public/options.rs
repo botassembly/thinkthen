@@ -450,8 +450,40 @@ impl<'a> Stop<'a> {
 
 /// Run one engine call and turn any panic below the door into a defect.
 pub(crate) fn guarded<T>(call: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
-    catch_unwind(AssertUnwindSafe(|| workers::with_engine_diagnostics(call)))
-        .unwrap_or_else(|_| Err(Error::defect("the engine panicked below the public door")))
+    contained(call)
+        .unwrap_or_else(|| Err(Error::defect("the engine panicked below the public door")))
+}
+
+/// Run `body` and return `None` if it panics, with no trace of the panic.
+///
+/// This is the one panic guard every binding boundary uses. A panic inside
+/// `body` on this thread skips the host's panic hook, so its message reaches
+/// no output. The payload is forgotten inside the guard without running its
+/// destructor, so a payload whose drop panics again stays silent too. A panic
+/// on any other thread still reaches the host's hook. The first call installs
+/// one process hook that keeps the previous hook for everything else.
+pub fn contained<T>(body: impl FnOnce() -> T) -> Option<T> {
+    catch_unwind(AssertUnwindSafe(|| {
+        workers::with_engine_diagnostics(|| match catch_unwind(AssertUnwindSafe(body)) {
+            Ok(value) => Some(value),
+            Err(payload) => {
+                std::mem::forget(payload);
+                None
+            }
+        })
+    }))
+    .unwrap_or_else(|payload| {
+        std::mem::forget(payload);
+        None
+    })
+}
+
+/// Run host code inside [`contained`] work under the host's own panic hook.
+///
+/// Use it for a host callback, or to drop a host-owned value, so the host's
+/// diagnostics still report the host's own panics.
+pub fn uncontained<T>(body: impl FnOnce() -> T) -> T {
+    workers::with_host_diagnostics(body)
 }
 
 impl fmt::Debug for Stop<'_> {

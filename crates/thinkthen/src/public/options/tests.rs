@@ -112,8 +112,19 @@ fn diagnostic_boundary_child() {
     assert_eq!(resumed.downcast_ref::<&str>(), Some(&"host cancel marker"));
     assert!(joined.load(Ordering::Acquire));
 
+    assert_eq!(
+        super::contained(|| panic_any("binding key evidence secret")),
+        None::<()>
+    );
+    assert_eq!(super::contained(|| panic_any(Exploding)), None::<()>);
+    let hosted = super::contained(|| {
+        catch_unwind(|| super::uncontained(|| panic_any("host callback marker"))).is_err()
+    });
+    assert_eq!(hosted, Some(true));
+
     let _unrelated = std::thread::spawn(|| panic_any("unrelated host marker")).join();
     assert_eq!(guarded(|| Ok(7)).ok(), Some(7));
+    assert_eq!(super::contained(|| 7), Some(7));
 }
 
 #[test]
@@ -139,8 +150,10 @@ fn engine_diagnostics_hide_worker_payloads_and_preserve_host_hook() {
         assert!(!stream.contains("worker key evidence secret"));
         assert!(!stream.contains("scoped key evidence secret"));
         assert!(!stream.contains("drop key evidence secret"));
+        assert!(!stream.contains("binding key evidence secret"));
     }
     assert!(stderr.contains("prior hook: host stop marker"));
     assert!(stderr.contains("prior hook: host cancel marker"));
+    assert!(stderr.contains("prior hook: host callback marker"));
     assert!(stderr.contains("prior hook: unrelated host marker"));
 }
