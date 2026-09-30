@@ -41,11 +41,11 @@
             "what": "Affirmative answer."
           }
         },
-        "instructions": "Is it?",
+        "instructions": "The text is \"described\". Is it?",
         "type": "noul"
       }
     },
-    "state": "described"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
@@ -92,111 +92,111 @@
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"annotate-one\". Is it?",
         "type": "noul"
       }
     },
-    "state": "annotate-one"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"backend-failure\". Is it?",
         "type": "noul"
       }
     },
-    "state": "backend-failure"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"configured\". Is it?",
         "type": "noul"
       }
     },
-    "state": "configured"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"flutter-facade\". Is it?",
         "type": "noul"
       }
     },
-    "state": "flutter-facade"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"hold-deadline\". Is it?",
         "type": "noul"
       }
     },
-    "state": "hold-deadline"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"hold-scalar\". Is it?",
         "type": "noul"
       }
     },
-    "state": "hold-scalar"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"json-decide\". Is it?",
         "type": "noul"
       }
     },
-    "state": "json-decide"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"no\". Is it?",
         "type": "noul"
       }
     },
-    "state": "no"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"recovery-scalar\". Is it?",
         "type": "noul"
       }
     },
-    "state": "recovery-scalar"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"unsure\". Is it?",
         "type": "noul"
       }
     },
-    "state": "unsure"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"yes\". Is it?",
         "type": "noul"
       }
     },
-    "state": "yes"
+    "state": "Each question quotes the text it asks about."
   },
   {
     "model": "jev-1.13.0",

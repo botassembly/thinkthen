@@ -3,10 +3,10 @@
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "Is it?",
+        "instructions": "The text is \"flutter-embedder\". Is it?",
         "type": "noul"
       }
     },
-    "state": "flutter-embedder"
+    "state": "Each question quotes the text it asks about."
   }
 ]
