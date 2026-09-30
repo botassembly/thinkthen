@@ -70,6 +70,7 @@ fn pair_questions_keep_rule_order_ids_and_wording() {
                 target: (*target).to_owned(),
                 reads: (*name).to_owned(),
                 either: *either,
+                single: false,
             })
             .collect::<Vec<_>>();
         let planned = plan_pairs(case.text, &entities, &rules, case.lead)
@@ -129,6 +130,7 @@ fn an_unordered_edge_keeps_input_endpoint_order_at_the_cut() {
         target: "organization".to_owned(),
         reads: "partners with".to_owned(),
         either: true,
+        single: false,
     }];
     let planned = plan_pairs(None, &entities, &rules, Lead::Known)
         .expect("plan")

@@ -442,6 +442,24 @@
       "valid": true
     },
     {
+      "name": "relate-single",
+      "verb": "relate",
+      "file": {
+        "version": 1,
+        "relate": {
+          "relations": [
+            {
+              "name": "located_in",
+              "source": "city",
+              "target": "country",
+              "single": true
+            }
+          ]
+        }
+      },
+      "valid": true
+    },
+    {
       "name": "relate-defaults",
       "verb": "relate",
       "file": {

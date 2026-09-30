@@ -3,8 +3,8 @@ use std::io::{ErrorKind, Write};
 use serde::Serialize;
 
 use crate::core::{
-    AnswerOutcome, Backend, BackendFailure, Framing, Meta, ProfileWarning, RelateQuestion,
-    RelateSpec, RelationEdge, RelationEntity, RequestMeta, json_line, reaches_cut,
+    AnswerOutcome, Backend, BackendFailure, Framing, Meta, Pick, ProfileWarning, RelateAsk,
+    RelateQuestion, RelateSpec, RelationEdge, RelationEntity, RequestMeta, json_line, reaches_cut,
 };
 use crate::engine::facade::{Execution, Logical};
 use crate::failure::Failure;
@@ -34,7 +34,7 @@ struct Answers<'a> {
     questions: Vec<Entry<'a>>,
 }
 
-/// One yes/no pair answer or recoverable failure.
+/// One yes/no pair or menu answer, or a recoverable failure.
 #[derive(Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateEntry"))]
 struct Entry<'a> {
@@ -53,7 +53,8 @@ struct Entry<'a> {
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateBody"))]
 struct Body<'a> {
     source: &'a RelationEntity,
-    target: &'a RelationEntity,
+    /// A menu's top candidate, or null when `none` wins or the menu failed.
+    target: Option<&'a RelationEntity>,
     #[serde(flatten)]
     judged: Option<Judged>,
 }
@@ -66,11 +67,19 @@ struct Judged {
 }
 
 impl Judged {
-    /// A real candidate or yes/no answer, accepted by the shared relation cut.
+    /// A yes/no answer, accepted by the shared relation cut.
     fn at(probability: f64, threshold: f64) -> Self {
         Self {
             probability,
             accepted: reaches_cut(probability, threshold),
+        }
+    }
+
+    /// A menu's top label, accepted only as a target at the cut.
+    fn picked(pick: Pick, threshold: f64) -> Self {
+        Self {
+            probability: pick.probability,
+            accepted: pick.accepted(threshold),
         }
     }
 }
@@ -140,22 +149,39 @@ fn entry<'a>(
         AnswerOutcome::Answered(answer) => (Some(answer), None),
         AnswerOutcome::Failed(failure) => (None, Some(failure)),
     };
-    let probability = answer
-        .map(|answer| {
-            answer
-                .yes()
-                .ok_or(Failure::Defect("a relation H answer has the wrong kind"))
-        })
-        .transpose()?;
-    let body = Body {
-        source: endpoint(entities, logical.pair.source)?,
-        target: endpoint(entities, logical.pair.target)?,
-        judged: probability.map(|probability| Judged::at(probability, threshold)),
+    let wrong = || Failure::Defect("a relation answer has the wrong kind");
+    let (method, body) = match &logical.asked {
+        RelateAsk::Pair(pair) => {
+            let probability = answer
+                .map(|answer| answer.yes().ok_or_else(wrong))
+                .transpose()?;
+            let body = Body {
+                source: endpoint(entities, pair.source)?,
+                target: Some(endpoint(entities, pair.target)?),
+                judged: probability.map(|probability| Judged::at(probability, threshold)),
+            };
+            ("yes_no", body)
+        }
+        RelateAsk::Menu(menu) => {
+            let pick = answer
+                .map(|answer| Pick::of(menu, answer).ok_or_else(wrong))
+                .transpose()?;
+            let target = pick
+                .and_then(|pick| pick.target)
+                .map(|place| endpoint(entities, place))
+                .transpose()?;
+            let body = Body {
+                source: endpoint(entities, menu.source)?,
+                target,
+                judged: pick.map(|pick| Judged::picked(pick, threshold)),
+            };
+            ("choice", body)
+        }
     };
     Ok(Entry {
         relation: &logical.relation.name,
         reads: &logical.relation.reads,
-        method: "yes_no",
+        method,
         direction: if logical.relation.either {
             "either"
         } else {

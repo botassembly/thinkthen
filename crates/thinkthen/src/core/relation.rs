@@ -73,6 +73,11 @@ pub(crate) struct RelationRule {
     pub(crate) target: String,
     pub(crate) reads: String,
     pub(crate) either: bool,
+    /// Each source has at most one target, so the rule asks one menu per
+    /// source (ticket 0342). Written only when true, so a rule without it
+    /// keeps its question digest.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub(crate) single: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -172,6 +177,10 @@ fn entity_id(place: usize) -> String {
 #[path = "relation/pairs.rs"]
 mod pairs;
 pub(crate) use pairs::{Lead, Pair, count_pairs, pair_edges, plan_pairs};
+
+#[path = "relation/menu.rs"]
+mod menu;
+pub(crate) use menu::{Pick, RelateAsk, plan_relate, relate_edge};
 
 #[cfg(test)]
 #[path = "relation/tests.rs"]

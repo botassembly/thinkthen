@@ -100,6 +100,7 @@ fn command_rule(text: &str) -> Result<RelationRule, Failure> {
         source,
         target,
         either: false,
+        single: false,
         reads: name.replace('_', " "),
     })
 }

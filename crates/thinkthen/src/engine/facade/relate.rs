@@ -1,10 +1,11 @@
-//! Relations between given entities, planned as one ordered set of pair questions.
+//! Relations between given entities, planned as one ordered set of pair and
+//! menu questions.
 
 use super::each::{Models, summed};
 use super::{Answered, Asks, Bound, Engine, Request};
 use crate::core::{
-    AnswerOutcome, Backend, BackendProfile, Lead, ModelName, Pair, Plan, Question, RelateSpec,
-    RelationEdge, RelationEntity, RelationRule, Usage, pair_edges, plan_pairs,
+    AnswerOutcome, Backend, BackendProfile, ModelName, Plan, Question, RelateAsk, RelateSpec,
+    RelationEdge, RelationEntity, RelationRule, Usage, plan_relate, relate_edge,
 };
 use crate::engine::Cancel;
 use crate::engine::error::Error;
@@ -13,17 +14,17 @@ use crate::engine::error::Error;
 /// with nothing cached.
 pub(crate) struct PreparedRelations {
     pub(crate) rules: Vec<RelationRule>,
-    pub(crate) pairs: Vec<Pair>,
+    pub(crate) asked: Vec<RelateAsk>,
     pub(crate) asks: Asks,
     pub(crate) requests: Vec<Request>,
     pub(crate) questions_per_rule: Vec<usize>,
     pub(crate) requests_per_rule: Vec<usize>,
 }
 
-/// One logical pair answer, including a recoverable failure.
+/// One logical pair or menu answer, including a recoverable failure.
 pub(crate) struct Logical {
     pub(crate) relation: RelationRule,
-    pub(crate) pair: Pair,
+    pub(crate) asked: RelateAsk,
     pub(crate) outcome: AnswerOutcome,
     pub(crate) request: String,
 }
@@ -50,14 +51,14 @@ pub(crate) fn relations(
     profile: Option<&BackendProfile>,
 ) -> Result<PreparedRelations, Error> {
     let rules = spec.relations.clone();
-    let Some(planned) = plan_pairs(None, entities, &rules, Lead::Known)
-        .map_err(|_| Error::Defect("relation planning failed"))?
+    let Some(planned) =
+        plan_relate(entities, &rules).map_err(|_| Error::Defect("relation planning failed"))?
     else {
         return Ok(PreparedRelations {
             questions_per_rule: vec![0; rules.len()],
             requests_per_rule: vec![0; rules.len()],
             rules,
-            pairs: Vec::new(),
+            asked: Vec::new(),
             asks: Asks::default(),
             requests: Vec::new(),
         });
@@ -73,30 +74,31 @@ pub(crate) fn relations(
     asks.add(backend, &plan)?;
     let requests = asks.requests(backend, profile, Bound::pairs(profile))?;
     let mut questions_per_rule = vec![0; rules.len()];
-    for pair in &planned.pairs {
+    for asked in &planned.asked {
         *questions_per_rule
-            .get_mut(pair.rule)
+            .get_mut(asked.rule())
             .ok_or(Error::Defect("a pair names no rule"))? += 1;
     }
     let mut requests_per_rule = vec![0; rules.len()];
     for request in &requests {
         let mut previous = None;
         for place in &request.places {
-            let pair = planned
-                .pairs
+            let rule = planned
+                .asked
                 .get(*place)
-                .ok_or(Error::Defect("a request exceeds its pairs"))?;
-            if previous != Some(pair.rule) {
+                .ok_or(Error::Defect("a request exceeds its pairs"))?
+                .rule();
+            if previous != Some(rule) {
                 *requests_per_rule
-                    .get_mut(pair.rule)
+                    .get_mut(rule)
                     .ok_or(Error::Defect("a pair names no rule"))? += 1;
-                previous = Some(pair.rule);
+                previous = Some(rule);
             }
         }
     }
     Ok(PreparedRelations {
         rules,
-        pairs: planned.pairs,
+        asked: planned.asked,
         asks,
         requests,
         questions_per_rule,
@@ -147,18 +149,18 @@ impl Engine {
                 }
             })?;
             add_meta(&mut execution, &answered)?;
-            let pair = prepared
-                .pairs
+            let asked = prepared
+                .asked
                 .get(place)
                 .ok_or(Error::Defect("a relation reply exceeds its pairs"))?;
             let relation = prepared
                 .rules
-                .get(pair.rule)
+                .get(asked.rule())
                 .ok_or(Error::Defect("a pair names no rule"))?;
             for outcome in answered.reply.outcomes() {
                 let logical = Logical {
                     relation: relation.clone(),
-                    pair: *pair,
+                    asked: asked.clone(),
                     outcome: outcome.clone(),
                     request: answered.request.as_str().to_owned(),
                 };
@@ -186,11 +188,11 @@ fn add_logical(
 ) {
     if let AnswerOutcome::Answered(answer) = &logical.outcome {
         execution.answered += 1;
-        execution.edges.extend(pair_edges(
+        execution.edges.extend(relate_edge(
             entities,
             rules,
-            std::slice::from_ref(&logical.pair),
-            std::slice::from_ref(answer),
+            &logical.asked,
+            answer,
             threshold,
         ));
     } else {

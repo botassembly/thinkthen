@@ -243,6 +243,10 @@
         },
         "either": {
           "type": "boolean"
+        },
+        "single": {
+          "description": "Each source has at most one target, so `relate` asks one menu per source. `recognize` refuses it, and `relate` refuses it beside `either`.",
+          "type": "boolean"
         }
       }
     },

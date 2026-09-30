@@ -24,12 +24,15 @@ pub(crate) struct Pair {
 }
 
 /// Whether a rule side, `*` or one kind, admits `kind`.
-fn admits(side: &str, kind: &str) -> bool {
+pub(super) fn admits(side: &str, kind: &str) -> bool {
     side == "*" || side == kind
 }
 
 /// Keep the first mention of each admitted name and kind, in input order.
-fn asked_names<E: RelationEntityView>(names: &[E], rules: &[RelationRule]) -> Vec<usize> {
+pub(super) fn asked_names<E: RelationEntityView>(
+    names: &[E],
+    rules: &[RelationRule],
+) -> Vec<usize> {
     let mut seen = HashSet::new();
     names
         .iter()
@@ -125,43 +128,68 @@ pub(crate) fn plan_pairs<E: RelationEntityView>(
     lead: Lead,
 ) -> Result<Option<PairPlan>, RelationPlanError> {
     let asked = asked_names(names, rules);
-    let kind = |at: usize| names.get(at).map_or("", |name| name.kind());
     let mut questions = Vec::new();
     let mut pairs = Vec::new();
     for (rule_place, rule) in rules.iter().enumerate() {
-        let ordered = asked
-            .iter()
-            .enumerate()
-            .flat_map(|left| asked.iter().enumerate().map(move |right| (left, right)));
-        for ((left, source), (right, target)) in ordered {
-            if !allowed(rule, (left, kind(*source)), (right, kind(*target))) {
-                continue;
-            }
-            questions.push(Question::Decide {
-                text: QuestionText::new(pair_words(rule, left, right, lead))
-                    .map_err(|_| RelationPlanError)?,
-                yes: None,
-                no: None,
-            });
-            pairs.push(Pair {
-                rule: rule_place,
-                source: *source,
-                target: *target,
-            });
+        for (question, pair) in rule_pairs(names, &asked, (rule_place, rule), lead)? {
+            questions.push(question);
+            pairs.push(pair);
         }
     }
     if questions.is_empty() {
         return Ok(None);
     }
+    Ok(Some(PairPlan {
+        evidence: kept_evidence(text, names, &asked)?,
+        questions,
+        pairs,
+    }))
+}
+
+/// One rule's pair questions over the asked names, in source then target order.
+pub(super) fn rule_pairs<E: RelationEntityView>(
+    names: &[E],
+    asked: &[usize],
+    (rule_place, rule): (usize, &RelationRule),
+    lead: Lead,
+) -> Result<Vec<(Question, Pair)>, RelationPlanError> {
+    let kind = |at: usize| names.get(at).map_or("", |name| name.kind());
+    let ordered = asked
+        .iter()
+        .enumerate()
+        .flat_map(|left| asked.iter().enumerate().map(move |right| (left, right)));
+    let mut planned = Vec::new();
+    for ((left, source), (right, target)) in ordered {
+        if !allowed(rule, (left, kind(*source)), (right, kind(*target))) {
+            continue;
+        }
+        let question = Question::Decide {
+            text: QuestionText::new(pair_words(rule, left, right, lead))
+                .map_err(|_| RelationPlanError)?,
+            yes: None,
+            no: None,
+        };
+        let pair = Pair {
+            rule: rule_place,
+            source: *source,
+            target: *target,
+        };
+        planned.push((question, pair));
+    }
+    Ok(planned)
+}
+
+/// The shared state of the asked names, which carry ids `i1` onward.
+pub(super) fn kept_evidence<E: RelationEntityView>(
+    text: Option<&str>,
+    names: &[E],
+    asked: &[usize],
+) -> Result<Evidence, RelationPlanError> {
     let kept: Vec<E> = asked
         .iter()
         .filter_map(|at| names.get(*at).cloned())
         .collect();
-    Ok(Some(PairPlan {
-        evidence: state_evidence(text, &kept)?,
-        questions,
-        pairs,
-    }))
+    state_evidence(text, &kept)
 }
 
 /// The edges whose yes probability reaches `cut`, in question order.
@@ -226,6 +254,7 @@ mod count_tests {
                     target: target.into(),
                     reads: "is near".into(),
                     either,
+                    single: false,
                 };
                 check(vec![rule.clone()]);
                 check(vec![rule.clone(), rule]);
@@ -244,6 +273,7 @@ mod count_tests {
             target: "place".into(),
             reads: "works in".into(),
             either: false,
+            single: false,
         };
         assert_eq!(
             count_pairs(&names, std::slice::from_ref(&rule)),
@@ -282,6 +312,7 @@ mod count_tests {
             target: "*".into(),
             reads: "near".into(),
             either: false,
+            single: false,
         };
         assert_eq!(
             count_pairs(&names[..63], std::slice::from_ref(&rule)).questions,

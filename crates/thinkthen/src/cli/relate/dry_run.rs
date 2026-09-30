@@ -84,7 +84,7 @@ pub(super) fn write(
             target: &rule.target,
             reads: &rule.reads,
             either: rule.either,
-            method: "yes_no",
+            method: if rule.single { "choice" } else { "yes_no" },
             fallback: None,
             logical_questions: *questions,
             request_count: *requests,

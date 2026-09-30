@@ -79,6 +79,7 @@ impl RelationRule {
             target: nonblank(target, "a relation target")?,
             reads: name.replace('_', " "),
             either: false,
+            single: false,
         }))
     }
 

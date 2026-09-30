@@ -1712,7 +1712,14 @@
           "$ref": "#/$defs/relatedEntity"
         },
         "target": {
-          "$ref": "#/$defs/relatedEntity"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/relatedEntity"
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       },
       "required": [
@@ -1829,6 +1836,9 @@
         },
         "reads": {
           "type": "string"
+        },
+        "single": {
+          "type": "boolean"
         },
         "source": {
           "type": "string"
