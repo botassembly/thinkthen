@@ -42,7 +42,6 @@ const RUN: &[&str] = &[
     "12-score-upper",
     "17-annotate-mixed",
     "17-annotate-partial",
-    "18-annotate-two-groups",
     "27-decide-many",
     "28-decide-many-repeated-texts",
     "32-score-equal-distribution",
@@ -70,6 +69,10 @@ const NOT_RUN: &[(&str, &str)] = &[
         "a question as JSON text or a file, and the door takes built questions",
     ),
     ("40", "counters, and the door adds none"),
+    (
+        "18-annotate-two-groups",
+        "one request per group, and ADR 0111 section 5 packs a record's groups into one",
+    ),
 ];
 
 /// One case as written: its id, verb, question bytes, and evidence texts.

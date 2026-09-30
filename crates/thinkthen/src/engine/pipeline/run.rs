@@ -366,6 +366,7 @@ impl<'a, A: Asker> Run<'a, A> {
         if let Ok(model) = ModelName::new(found.answered_by.clone()) {
             self.counts.usage.answered_by(&model);
         }
+        cancel.answered_by(&found.answered_by);
         Ok(Answered {
             key: ask.key,
             answer: Ok(Arc::from(found.answer)),

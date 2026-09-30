@@ -1,8 +1,10 @@
-//! The shared literal batch corpus through the public C JSON door.
+//! The shared literal batch corpus through the public C JSON door. The content
+//! cut is gone, by ADR 0111, so every record rides one request, and each row's
+//! key is the key of its fixture question.
 
 use conformance_backend::{Canned, Listener};
 
-use super::{Script, digest, replies};
+use super::{Script, keys, replies};
 use crate::{compile, crate_dir, run, text};
 
 const CORPUS: &str =
@@ -14,7 +16,7 @@ const BODIES: [&str; 3] = [
 ];
 
 #[test]
-fn c_json_records_keep_literal_cuts_bodies_and_request_identities() {
+fn c_json_records_keep_fixture_questions_and_keys_in_one_request() {
     let corpus: serde_json::Value = serde_json::from_str(CORPUS).expect("literal corpus");
     let listener = Listener::answering(|body| {
         let request: serde_json::Value = serde_json::from_slice(body).expect("request JSON");
@@ -48,30 +50,28 @@ fn c_json_records_keep_literal_cuts_bodies_and_request_identities() {
     let result: serde_json::Value = serde_json::from_str(&replies[1].1).expect("call result");
     let rows = result["value"].as_array().expect("five rows");
     assert_eq!(rows.len(), 5);
-    assert_eq!(result["facts"]["requests_sent"], 3);
+    assert_eq!(result["facts"]["requests_sent"], 1);
     let sent = listener.requests();
-    assert_eq!(sent.len(), 3);
-    let groups = [0, 0, 1, 1, 2];
-    let mut digests = Vec::new();
-    for (at, (request, literal)) in sent.iter().zip(BODIES).enumerate() {
-        let body = literal
-            .strip_suffix('\n')
-            .expect("fixture newline")
-            .as_bytes();
-        assert_eq!(request.body, body, "request {at}");
-        digests.push(digest(listener.url(), body));
-    }
+    assert_eq!(sent.len(), 1, "no content cut remains, by ADR 0111");
+    let body: serde_json::Value = serde_json::from_slice(&sent[0].body).expect("request");
+    let fixture: Vec<serde_json::Value> = BODIES
+        .iter()
+        .flat_map(|literal| {
+            let literal: serde_json::Value = serde_json::from_str(literal).expect("fixture");
+            (1..=literal["questions"]
+                .as_object()
+                .map_or(0, serde_json::Map::len))
+                .map(move |place| literal["questions"][format!("q{place}")].clone())
+        })
+        .collect();
+    let questions: Vec<serde_json::Value> = (1..=5)
+        .map(|place| body["questions"][format!("q{place}")].clone())
+        .collect();
+    assert_eq!(questions, fixture, "each question keeps the fixture bytes");
+    let keys = keys(listener.url(), &sent[0].body).expect("question keys");
     for (at, row) in rows.iter().enumerate() {
         assert_eq!(row["input"], corpus["texts"][at]);
-        assert_eq!(row["meta"]["requests"][0], digests[groups[at]]);
-        if at < 4 {
-            assert_eq!(row["meta"]["batch"]["closed"], "content");
-            assert_eq!(row["meta"]["batch"]["records"], 2);
-        } else {
-            assert!(
-                row["meta"].get("batch").is_none(),
-                "singleton keeps old shape"
-            );
-        }
+        assert_eq!(row["meta"]["requests"], serde_json::json!([keys[at]]));
+        assert!(row["meta"].get("batch").is_none(), "{at}");
     }
 }

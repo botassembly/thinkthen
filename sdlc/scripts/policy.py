@@ -468,11 +468,13 @@ def binding_files(name: str, crate: str) -> dict[str, str]:
     return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny.is_file() else files
 
 
-def lock_tree(lock: dict, roots: tuple[str, ...] = ("thinkthen",)) -> set[tuple[str, str]]:
+def lock_tree(lock: dict, roots: tuple[str, ...] = ("thinkthen",),
+              skip: frozenset[tuple[str, str]] = frozenset()) -> set[tuple[str, str]]:
     """The name and version of every package in the resolved tree of `roots`.
 
-    The root lock's tree also holds thinkthen's development dependencies, so it
-    is a superset of the normal tree a binding resolves.
+    The walk does not enter a package in `skip`. The root lock's tree also holds
+    thinkthen's development dependencies, so it is a superset of the normal
+    tree a binding resolves.
     """
     packages = lock.get("package", [])
 
@@ -485,7 +487,7 @@ def lock_tree(lock: dict, roots: tuple[str, ...] = ("thinkthen",)) -> set[tuple[
     waiting = [found for root in roots for found in named(root)]
     while waiting:
         pair = waiting.pop()
-        if pair not in reached:
+        if pair not in reached and pair not in skip:
             reached.add(pair)
             package = next(package for package in packages if (package["name"], package["version"]) == pair)
             waiting += [found for spec in package.get("dependencies", []) for found in named(spec)]
@@ -570,14 +572,18 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
         held.append(f"{name} copies the root release profile")
     ours, theirs = lock_tree(lock), lock_tree(tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8")))
     # A crate the binding pins to the root's exact version, such as the SQLite
-    # extension's rusqlite, resolves once with the binding's features. The
-    # packages beneath it that only those features add are the binding's own.
+    # extension's rusqlite, resolves once with the binding's features. A
+    # package beneath it whose name the root tree never holds is the binding's
+    # own, and so is whatever only such packages reach. A package the root tree
+    # names keeps the root's version, so a changed libsqlite3-sys is drift.
     pinned = {(dependency, specification["version"][1:]) for kind, dependency, specification in dependencies
               if kind == "dependencies" and isinstance(specification, dict)
               and str(specification.get("version", "")).startswith("=")}
     shared = {pair for pair in pinned if pair in theirs}
-    beneath = lock_tree(lock, tuple(f"{name} {version}" for name, version in sorted(shared))) - shared
-    drift = ours - theirs - beneath
+    named = {name for name, _ in theirs}
+    own = frozenset(pair for pair in lock_tree(lock, tuple(f"{name} {version}" for name, version in sorted(shared)))
+                    if pair[0] not in named)
+    drift = lock_tree(lock, skip=own) - theirs
     if not ours or drift:
         held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
                     f"{sorted(drift) or 'thinkthen is absent'}")
@@ -828,6 +834,25 @@ def check_bindings() -> None:
         planted = {**base, relative: plant(base.get(relative, ""))}
         if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
             fail("binding", f"the planted {label} is refused")
+    sqlite = "databases/sqlite"
+    if sqlite in crates or (REPO / sqlite / "Cargo.lock").is_file():
+        files = binding_files(sqlite, crates.get(sqlite, sqlite))
+        lock = files["Cargo.lock"]
+        drifted = [lock.replace(f'name = "{name}"\nversion = "{version}"', f'name = "{name}"\nversion = "{version}9"', 1)
+                   for name, version in (("libsqlite3-sys", "0.38.2"), ("cc", "1.4.7"))]
+        extension_only = [
+            lock.replace('name = "hashlink"\nversion = "0.12.2"', 'name = "hashlink"\nversion = "0.12.29"', 1),
+            lock.replace(' "hashlink",\n "libsqlite3-sys",', ' "hashlink",\n "libsqlite3-sys",\n "planted-only",', 1)
+            + '\n[[package]]\nname = "planted-only"\nversion = "1.0.0"\n',
+        ]
+        drift = "databases/sqlite/Cargo.lock resolves thinkthen's tree"
+        if (any(text == lock for text in [*drifted, *extension_only])
+                or not all(any(drift in held for held in binding_failures(sqlite, {**files, "Cargo.lock": text}))
+                           for text in drifted)
+                or any(any(drift in held for held in binding_failures(sqlite, {**files, "Cargo.lock": text}))
+                       for text in extension_only)):
+            fail("binding", "a planted libsqlite3-sys or cc version beneath rusqlite is drift; "
+                            "a changed hashlink or a package only the extension adds is not")
 
 
 # Ticket 0130: the Rust Polars door is the `polars` feature of `thinkthen`. Its
@@ -1183,6 +1208,7 @@ def check_engine_policy() -> None:
         ("crate::public::process_budget()", ["reverse reference to public"]),
         ("use super::super::public::Error;", ["reverse import of public", "reverse reference to public"]),
         ("use crate::{core, public::Error};", ["reverse import of public"]),
+        ("use crate::public as p;", ["reverse import of public", "reverse reference to public"]),
         ("// crate::public::Error", []),
         ('const TEXT: &str = "crate::public::Error";', []),
         ("use crate::core::Answer; crate::engine::budget::SendBudget::new();", []),

@@ -351,8 +351,11 @@ fn a_slice_and_an_iterator_give_equal_ordered_results_and_partial_rows() {
     );
 }
 
+/// Batch 1 returns each row before it pulls the next record, as
+/// `specification/records.md` promises, so it reads no record ahead of its
+/// rows, even while its one send is held.
 #[test]
-fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
+fn a_batch_of_one_reads_no_record_ahead_of_its_rows() {
     let _serial = serial();
     let backend = Backend::start().expect("backend");
     let engine = engine(&format!("{}/arm/held/v1", backend.origin()));
@@ -362,7 +365,6 @@ fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
         pulled.fetch_add(1, Ordering::SeqCst);
         format!("record {at}")
     });
-    let bound = usize::from(THROTTLE) + 1;
     let (held_pull, rows) = thread::scope(|scope| {
         let watcher = scope.spawn(|| {
             // The first send holds, and the pull stops behind it.
@@ -382,18 +384,15 @@ fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
             assert!(batch.next().is_some_and(|row| row.is_ok()));
             rows += 1;
             let ahead = pulled.load(Ordering::SeqCst) - rows;
-            assert!(ahead <= bound, "{ahead} records read ahead of {rows} rows");
+            assert_eq!(ahead, 0, "records read ahead of {rows} rows");
         }
         drop(batch);
         (watcher.join().expect("watcher"), rows)
     });
-    assert!(
-        held_pull <= bound,
-        "{held_pull} records read while every send was held"
-    );
+    assert_eq!(held_pull, 1, "records read while the send was held");
     let stopped = pulled.load(Ordering::SeqCst);
-    assert!(stopped <= rows + bound, "a dropped batch kept reading");
-    assert!(backend.count() <= stopped, "a send without its record");
+    assert_eq!(stopped, rows, "a dropped batch kept reading");
+    assert_eq!(backend.count(), stopped, "one send for each record");
 }
 
 /// Batch 1 returns each row before it reads the next record, as

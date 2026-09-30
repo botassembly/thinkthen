@@ -394,6 +394,7 @@ name = "thinkthen-c"
 version = "0.0.1"
 dependencies = [
  "conformance-backend",
+ "rusqlite",
  "serde_json",
  "sha2",
  "thinkthen",

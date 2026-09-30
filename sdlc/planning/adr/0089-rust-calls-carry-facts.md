@@ -32,7 +32,9 @@ ADRs 0048, 0053 and 0055 continue to fix batch shape, limits and shares. ADR 005
 
 ## Accepted 0212 source-boundary clarification
 
-Status: Ian approved the ADR 0053 caller-owned iterator amendment on 2026-09-28. It does not change the accepted `Call<T>` or facts decision. A synchronous Rust `Batch::next()` may remain in a caller-owned `Iterator::next()` until a record or end arrives. No send or row observation can be promised while that call blocks. A `Max` batch closes only on an actual batch boundary for this input type; explicit `BatchSetting::Records(1)` preserves one-record interactive progress without pulling the next caller item first. Once a batch closes, the accepted ordered stop, worker join, final facts and caller-thread observation rules above still apply. The 50 ms command pause is unchanged.
+Status: Ian approved the ADR 0053 caller-owned iterator amendment on 2026-09-28. It does not change the accepted `Call<T>` or facts decision.
+
+Superseded by ADR 0111 section 4, built in ticket 0304 slice 3a. The library has an idle timer now: its background pipeline closes the open request after 50 ms with no new record, including while a caller's `Iterator::next()` blocks. The `Records(1)` promise below still holds. A synchronous Rust `Batch::next()` may remain in a caller-owned `Iterator::next()` until a record or end arrives. No send or row observation can be promised while that call blocks. A `Max` batch closes only on an actual batch boundary for this input type; explicit `BatchSetting::Records(1)` preserves one-record interactive progress without pulling the next caller item first. Once a batch closes, the accepted ordered stop, worker join, final facts and caller-thread observation rules above still apply. The 50 ms command pause is unchanged.
 
 ## Additive 0230 dynamic details bridge
 

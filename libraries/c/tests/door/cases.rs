@@ -3,8 +3,13 @@
 //! Each case runs in its own `tests/c/driver.c` process, through the JSON door
 //! and, where one fits, a typed function. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. One case does not apply to the door:
+//! backend served. A record function's row lists question keys by ADR 0111,
+//! so its digests become the keys of the request each digest named. Two cases
+//! do not apply to the door:
 //!
+//! - `18-annotate-two-groups` recorded each group in its own request, and ADR
+//!   0111 section 5 packs a record's groups into one, as the command's wire run
+//!   and the public API consumer also skip it.
 //! - `25-defect-fault` injects an internal invariant failure, which no outside
 //!   boundary reaches. The panic test in `src/failures.rs` covers the kind.
 
@@ -26,7 +31,7 @@ mod portable;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 1] = ["25-defect-fault"];
+const SKIPPED: [&str; 2] = ["18-annotate-two-groups", "25-defect-fault"];
 
 type Checked<T = ()> = Result<T, String>;
 pub(crate) type Members = BTreeMap<String, Box<RawValue>>;
@@ -69,7 +74,7 @@ fn every_applicable_shared_case_passes_through_the_door() {
             not_run += 1;
             writeln!(
                 std::io::stderr().lock(),
-                "{id}: not run by the C door (internal injection)"
+                "{id}: not run by the C door (internal injection or repacked)"
             )
             .expect("write skipped case to stderr");
             continue;
@@ -187,13 +192,18 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
         .cloned()
         .unwrap_or_default();
     let served = format!("{base}/systemone");
-    let renamed: BTreeMap<String, String> = exchanges
-        .iter()
-        .map(|exchange| {
-            let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
-            (digest(CANONICAL, request), digest(&served, request))
-        })
-        .collect();
+    // `find`, `recognize` and `relate` keep request digests until slice 4.
+    let keyed = !matches!(verb.as_str(), "find" | "recognize" | "relate");
+    let mut renamed = BTreeMap::new();
+    for exchange in &exchanges {
+        let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
+        let now = if keyed {
+            json!(keys(&served, request)?)
+        } else {
+            json!(digest(&served, request))
+        };
+        renamed.insert(digest(CANONICAL, request), now);
+    }
     let success = swap(&expect["success"], &renamed);
     let texts: Vec<String> = exchanges
         .iter()
@@ -400,9 +410,19 @@ fn single(plain: &Reply, detailed: &Reply, expected: &Value, served: &str) -> Ch
     let at = |from: &Value, name| from.get(name).unwrap_or(&absent).clone();
     let confidence = |from: &Value| at(&from["answer"], "confidence");
     same("confidence", &confidence(&details), &confidence(wanted))?;
-    for name in "model question_sha256 requests usage requests_sent cached".split(' ') {
+    for name in "model question_sha256 usage requests_sent cached".split(' ') {
         same(name, &at(&details["meta"], name), &at(wanted, name))?;
     }
+    // A keyed request stands for the list of its keys, so a row of one
+    // request's questions reads the flattened list.
+    let requests = match &wanted["requests"] {
+        Value::Array(held) => held
+            .iter()
+            .flat_map(|one| one.as_array().cloned().unwrap_or_else(|| vec![one.clone()]))
+            .collect(),
+        other => other.clone(),
+    };
+    same("requests", &at(&details["meta"], "requests"), &requests)?;
     same("url", &details["meta"]["url"], &json!(served))
 }
 
@@ -645,9 +665,43 @@ fn digest(url: &str, request: &[u8]) -> String {
         .collect()
 }
 
-fn swap(value: &Value, renamed: &BTreeMap<String, String>) -> Value {
+/// Every question key of one request body, in wire order, by ADR 0111
+/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
+/// one question as the body carries them, joined by line feeds.
+pub(crate) fn keys(url: &str, body: &[u8]) -> Checked<Vec<String>> {
+    let parts: Members = serde_json::from_slice(body).map_err(|error| error.to_string())?;
+    let part = |name: &str| {
+        parts
+            .get(name)
+            .map(|raw| raw.get())
+            .ok_or(format!("no {name}"))
+    };
+    let (model, state) = (part("model")?, part("state")?);
+    let questions: Members =
+        serde_json::from_str(part("questions")?).map_err(|error| error.to_string())?;
+    let mut placed = Vec::new();
+    for (name, question) in &questions {
+        let place: usize = name[1..]
+            .parse()
+            .map_err(|_| format!("no qN name: {name}"))?;
+        placed.push((place, question.get()));
+    }
+    placed.sort_by_key(|(place, _)| *place);
+    Ok(placed
+        .into_iter()
+        .map(|(_, question)| {
+            let joined = ["systemone", url, model, state, question].join("\n");
+            Sha256::digest(joined.as_bytes())
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect()
+        })
+        .collect())
+}
+
+fn swap(value: &Value, renamed: &BTreeMap<String, Value>) -> Value {
     match value {
-        Value::String(held) => json!(renamed.get(held).unwrap_or(held)),
+        Value::String(held) => renamed.get(held).cloned().unwrap_or_else(|| json!(held)),
         Value::Array(items) => items.iter().map(|item| swap(item, renamed)).collect(),
         Value::Object(fields) => fields
             .iter()

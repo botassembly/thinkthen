@@ -240,6 +240,29 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
     assert_eq!(version.join("."), env!("CARGO_PKG_VERSION"));
 }
 
+/// Known failing, pinned inverted: the static library exports the bundled
+/// SQLite's global `sqlite3_` symbols, which clash with a host's own SQLite
+/// at link time. The `nm -D` check above reads only the shared library.
+/// Slice 3b of ticket 0304 localizes them and flips this assertion to zero.
+/// See `sdlc/issues/2026-09-30-static-library-exports-sqlite-symbols.md`.
+#[test]
+fn the_static_library_still_exports_sqlite_symbols_until_slice_3b() {
+    let exported = child::command("nm", &[])
+        .args(["-g", "--defined-only"])
+        .arg(archive().join("libthinkthen.a"))
+        .output()
+        .expect("nm");
+    let leaked = text(&exported.stdout)
+        .lines()
+        .filter_map(|line| line.split_whitespace().nth(2))
+        .filter(|name| name.starts_with("sqlite3_"))
+        .count();
+    assert!(
+        leaked > 0,
+        "the static library no longer exports sqlite3_ symbols: flip this test to zero and close the issue"
+    );
+}
+
 /// Every function the header declares: a `thinkthen_` name followed by `(`
 /// outside a comment.
 fn declared(header: &str) -> Vec<String> {
