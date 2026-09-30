@@ -21,6 +21,7 @@
 // A repo with no sdlc/ratchet.json has not adopted a ceiling; that is a
 // choice, not a fault, and this exits quiet — same as the sealed gate.
 
+import { spawnSync } from "node:child_process";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -48,21 +49,31 @@ function nonBlank(source) {
   return source.split("\n").filter((line) => line.trim().length > 0).length;
 }
 
-function loc(dir) {
-  let n = 0;
+function files(dir) {
+  const found = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const p = join(dir, entry.name);
     // Build output under `target` is never source (ticket 0093).
-    if (entry.isDirectory()) n += entry.name === "target" ? 0 : loc(p);
-    else if (entry.name.endsWith(extension)) n += nonBlank(readFileSync(p, "utf8"));
+    if (entry.isDirectory()) { if (entry.name !== "target") found.push(...files(p)); }
+    else if (entry.name.endsWith(extension)) found.push(p);
   }
-  return n;
+  return found;
+}
+
+// A file Git ignores is a build copy, such as the C header a binding check
+// copies in, and never source. Outside a Git checkout every file counts.
+function unignored(paths) {
+  const ignored = spawnSync("git", ["-C", REPO, "check-ignore", "--stdin", "-z"], { input: paths.join("\0"), encoding: "utf8" });
+  if (ignored.status !== 0) return paths;
+  const skip = new Set(ignored.stdout.split("\0"));
+  return paths.filter((p) => !skip.has(p));
 }
 
 // `directory` names one folder or a list of them (thinkthen ticket 0092 adds
 // the conformance backend beside the crate).
 const folders = [directory].flat();
-const total = folders.reduce((sum, folder) => sum + loc(resolve(BASE, folder)), 0);
+const counted = unignored(folders.flatMap((folder) => files(resolve(BASE, folder))));
+const total = counted.reduce((sum, p) => sum + nonBlank(readFileSync(p, "utf8")), 0);
 const named = folders.join(" + ");
 if (total !== max) {
   const remedy = total < max ? `lower it to ${total}` : `raise it to ${total}`;
