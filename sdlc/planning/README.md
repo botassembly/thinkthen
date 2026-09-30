@@ -9,6 +9,7 @@
 - [ticket-preparation.md](ticket-preparation.md): how a ticket is prepared and reviewed.
 - [issue-priorities-2026-09-30.md](issue-priorities-2026-09-30.md): the ranked open issues, their 0.1 blockers, owners, and the tickets ready now.
 - [test-split-2026-09-30.md](test-split-2026-09-30.md): the test inventory for ticket 0335, with times, groups, and the replay smoke per binding.
+- [bench-handoff.md](bench-handoff.md): answers for the public Beatles Bench team: the three places for tests, the `status --json` fields, the tags, and how to send a hard case as a recording.
 - [mainline-readiness-2026-09-23.md](mainline-readiness-2026-09-23.md): the checked main/worktree snapshot, quality and release assessment, and completion checklist for ticket 0074. Budget: 12,000 characters.
 - [prospective-bash-rust-python-plan.md](prospective-bash-rust-python-plan.md): the short completion overview for the command, engine, and libraries. Tickets are written as work begins. Budget: 4,000 characters.
 - `flat-verbs-review.md`: a review of Ian's flat-verb redesign of 2026-09-19, with one recommended surface. Ian accepted it, and ADR 0007 records the decision.

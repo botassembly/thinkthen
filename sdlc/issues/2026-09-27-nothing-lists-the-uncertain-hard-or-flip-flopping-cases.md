@@ -59,3 +59,7 @@ probability, so a person can rank cases by proximity to the cut today, and `audi
 accuracy|precision|recall|f1` tunes the suggested cut for the named measure. The label simulation's evidence (ten to
 sixty uncertainty-picked labels held 0.724 against 0.711 at the default cut and 0.697 for the full-pool tune)
 remains the case for a built-in selector when a project needs one.
+
+## The Beatles Bench plan, 2026-09-30
+
+The public Beatles Bench plans three pieces that cover part of this need from outside thinkthen. Bench ticket 0022 writes one JSON summary per function, pinned to thinkthen tags. Bench ticket 0023 runs one sample at a time. A repeat pass lists the answers near the cut and the answers that flip between runs. A ticket that takes this issue can check its order against those lists. `../planning/bench-handoff.md` gathers the bench's other asks.

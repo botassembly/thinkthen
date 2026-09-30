@@ -1,6 +1,6 @@
 # 0335: Split tests between the gate and the release suite
 
-Status: slice 1 landed; slice 2 waits for 0304 slices 3b and 3d, including 3d's SQL-host part (3a and 3c landed). Slice 3 moved to ticket 0338. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue: `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
+Status: slice 1 landed; slice 2 waits for 0304 slices 3b and 3d, including 3d's SQL-host part (3a and 3c landed). Slice 3 moved to ticket 0338. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue, closed into this ticket: `sdlc/issues/closed/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
 
 ## Outcome
 
@@ -13,6 +13,12 @@ Status: slice 1 landed; slice 2 waits for 0304 slices 3b and 3d, including 3d's 
 - Changes: in two slices, below, and ticket 0338. Delete 6 wording-only or duplicate tests and check steps; merge 6 tests into kept tests; rewrite 1 test in place; move 2 probe self-tests from `test` to `spec`; add one replay smoke per binding.
 - Proof: per slice, `sdlc/scripts/test` wall time and test count before and after under stated load; each deleted or merged test names the kept test that catches its regression, with a mutation run where the pair is not obvious; each smoke fails once against a planted broken package before it passes.
 - Defers: moving the per-surface matrices, the full per-surface replay and the installed-artifact checks until the release suite runs bindings; the long waits in `engine::deadline_tests` and `cli::schedule::width_tests` and merging test binaries, to ticket 0338; `transforms/sweep/test.sh`'s 5.1 s.
+
+## Three places for tests
+
+The Beatles Bench team set this split on 2026-09-30. The inventory's "Three places" table holds it. This repository's gate keeps mechanics against recordings. The public Beatles Bench publishes accuracy, cost and speed; that is not release QA work. The private release QA suite checks release candidates live.
+
+Keep rule: the error paths stay in this repository's loopback tests, because the release QA suite does not fake the service. These are retries, server errors, status 520, oversized replies and dropped connections. No slice moves or deletes one of these tests.
 
 ## Slices
 
@@ -34,7 +40,7 @@ The per-surface matrices move when the release suite runs bindings. That is the 
 ## Answers to the issue
 
 1. **List the redundant tests and retire them in the lead's own tickets.** The inventory names each test by group, and this ticket's slices retire them.
-2. **Name a release-candidate commit before each release.** Yes. Before each release, the queue owner records the candidate commit hash in the release ticket and in the plan's progress log. No tag is pushed. Ruling 10 holds releases until 0.1, so the first candidate comes with 0.1.
+2. **Name a release-candidate commit before each release.** Yes. The coordinator tags the candidate `rc/VERSION-rc.N` before the release suite runs, per `sdlc/planning/worktrees.md` "Landing commits and tags", and the release ticket names the commit. Ruling 10 holds releases until 0.1, so the first tag is `rc/0.1.0-rc.1`, when the 0.1 blockers clear.
 3. **Keep the specification the contract.** Yes. Every exit code and sentence the gate pins comes from `specification/`, and a change to one lands in the specification in the same commit. The smoke takes its question and expected answer from `conformance/`.
 
 Ian can overturn the slice order, the 90 s target, and the choice to move probe self-tests to `spec`.

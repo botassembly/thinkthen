@@ -1,6 +1,16 @@
 # Test split between the gate and the release suite, 2026-09-30
 
-Status: inventory for ticket 0335. Measured on `origin/main` at `2b3cb67ea` in lane claude-4. Test names in the merge table rechecked on main after 0304 slice 3c (`ec130d3ee`). Nothing in tests or code changed. The issue is `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Ian can overturn each grouping.
+Status: inventory for ticket 0335. Measured on `origin/main` at `2b3cb67ea` in lane claude-4. Test names in the merge table rechecked on main after 0304 slice 3c (`ec130d3ee`). Nothing in tests or code changed. The issue, now closed into ticket 0335, is `sdlc/issues/closed/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Ian can overturn each grouping.
+
+## Three places
+
+The Beatles Bench team set this split on 2026-09-30. "The release suite" on this page means the private release QA suite.
+
+| Place | Visibility | What it runs |
+| --- | --- | --- |
+| This repository's gate | public | Mechanics against recordings, with no network |
+| The Beatles Bench | public | Accuracy, cost and speed per function, published |
+| The release QA suite | private | Live checks, installed packages, every surface, edge cases, a real-prose reading set, and pass or fail on release candidates |
 
 ## Conditions
 
@@ -54,6 +64,7 @@ About 400 of the 430 library unit tests: question parsing (`core::question_file`
 - `speed::the_speed_gate_holds_and_names_each_fault`. It counts the requests each function sends through the command. That is batching behavior, not wording.
 - `demo_runner::a_page_whose_assertion_is_wrong_fails_the_run`. `demos-self-test` has no case for a wrong assertion, so this is the only proof that the runner can fail.
 - The `transforms/*/test.sh` tables and `sdlc/live-test`. They prove shipped `jq` files and the paid-call ledger.
+- The error paths against the loopback backend: retries, server errors, status 520, oversized replies and dropped connections. The release QA suite does not fake the service, so these tests stay here.
 
 ### Duplicates to merge or delete
 

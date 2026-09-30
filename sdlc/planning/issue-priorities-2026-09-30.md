@@ -20,7 +20,7 @@ Ian's direction for this phase: no public release before 0.1, and 0.1 waits for 
 | 3 | `2026-09-30-postgresql-extension-does-not-build-on-macos.md` | The PostgreSQL extension uses Linux-only `openat2`, `O_PATH` and `/proc/self/fd`, so it neither builds nor reads confined files on macOS | yes | a new ticket (draft below) | M5 or a macOS runner for proof | File the ticket now | medium |
 | 4 | `2026-09-25-release-and-install-for-0-1.md` | 0.1 itself: the four-runner rehearsal, the version bump, publishing, the tap, R-universe, the history reset | yes | ticket 0128 phases 3b and 4; Ian dispatches | ranks 1 and 3; 0304 slice 3 in full; rank 10 before the site goes public; rank 11's sentence joins Phase 4's one README commit. Rank 5 runs inside this rehearsal and release | Ian dispatches `rehearse` once 0304 slice 3 and rank 3 land | large |
 | 5 | `2026-09-26-language-packages-need-a-release.md` | Eleven C-door packages are built and checked on one Linux host and published nowhere | yes | ticket 0128 with tickets 0268 to 0273; Ian's registry accounts | part of rank 4's rehearsal and release; Ian's one-time NuGet, Packagist, Maven Central and pub.dev setup | Rebuild at the release commit inside rank 4 | large |
-| 6 | `2026-09-30-split-tests-between-the-gate-and-release-qa.md` | The gate still holds tests the release QA suite should own, and it lacks one replay smoke per binding | no | ticket 0335 slices 2 and 3 | 0304 slices 3a to 3d; the 0305 cleanup | Start slice 2 when 3d lands | medium |
+| 6 | `2026-09-30-split-tests-between-the-gate-and-release-qa.md` | The gate still holds tests the release QA suite should own, and it lacks one replay smoke per binding | no | ticket 0335 slice 2 and ticket 0338 | 0304 slices 3b and 3d | Closed into ticket 0335 on 2026-09-30; the issue is in `closed/` | medium |
 | 7 | `2026-09-25-public-library-api-gaps.md` | Items 1, 2, 3 and 9 make the SQL hosts copy engine code: per-engine counters, a private relate-rule parser, no public `Error` constructor, a hand match on `LoadedQuestion` | no | ticket 0304 slice 3b for items 1 and 9; a follow-up ticket for items 2 and 3; items 6 and 7 after 0.1 | 0304 slice 3b | After 3b lands, recheck items 1 and 9 and write one ticket for what remains | medium |
 | 8 | `2026-09-30-objective-c-headers-collide-on-macos.md` | `release-pack` puts the C header `thinkthen.h` beside `ThinkThen.h` in the Objective-C package | no | ticket 0337 | nothing | Closed by ticket 0337; the issue is in `closed/` | small |
 | 9 | `2026-09-26-every-surface-should-give-back-run-facts.md` | Five parts remain: full detail on every host, attempt times past ticket 0302, caller prices past ticket 0300, SQL per-call facts, the docs | no | tickets 0300 and 0302 for items 2 and 3; 0314 slice 4 for item 1; marketing for item 6 | 0314 slice 4, which waits for 0304 slice 3, for item 1 | Item 5 settled by ticket 0337; the rest waits | large |
@@ -44,6 +44,16 @@ Ian's direction for this phase: no public release before 0.1, and 0.1 waits for 
 Blockers in the top ten: ranks 1, 3, 4, 5 and 10. Ranks 11 and 12 also block 0.1. Rank 11 waits on marketing's benchmark; rank 12 waits on the release run and page 11 of rank 19.
 
 The release issue's item 7 lists the Objective-C collision as a macOS release defect. This page ranks it as no blocker, for the reason given under rank 8. The issue text stays as filed; the ticket that fixes it should correct item 7 when it lands.
+
+## Filed after this page, unranked
+
+From the Beatles Bench team's feedback of 2026-09-30 (`bench-handoff.md`). None blocks 0.1. The next triage ranks them.
+
+| Issue | Problem | Owner | Next step | Size |
+| --- | --- | --- | --- | --- |
+| `2026-09-30-command-question-file-has-no-size-cap.md` | The command reads a question file of any size; the libraries cap it at 1 MiB | a future Quick Fix | Apply the libraries' cap and sentence | small |
+| `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md` | One live batching request exited 4 once; about 1,000 usage calls are unexplained | none | Investigate from logs; no paid call without authorization | small |
+| `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | About a third of the spec's "no calls" edges show only after a real send | queue owner | Feed the release QA suite's findings into `specification/` | medium |
 
 ## Investigations
 
