@@ -32,7 +32,7 @@ func requireError(t *testing.T, err error, code int, retry bool) *Error {
 		t.Fatalf("want code %d retry=%t, got %v", code, retry, err)
 	}
 	kinds := []string{"", "usage", "backend", "deadline", "local", "cancelled", "defect"}
-	if failure.Kind != kinds[code] {
+	if failure.Kind.String() != kinds[code] || int(failure.Kind) != code {
 		t.Fatalf("want failure kind %s, got %s", kinds[code], failure.Kind)
 	}
 	return failure
@@ -43,14 +43,20 @@ func requireAnswer(t *testing.T, a Answer, outcome Outcome, p float64) {
 		t.Fatalf("want %d %.1f got %+v", outcome, p, a)
 	}
 }
-func requireFacts(t *testing.T, facts Facts, records uint64) {
+func requireFacts(t *testing.T, raw json.RawMessage, records float64) map[string]any {
 	t.Helper()
-	if facts.Records != records || facts.Seconds < 0 || (records > 0 && (facts.Model == nil || *facts.Model != "jev-1.13.0")) {
-		t.Fatalf("typed call facts for %d records: %+v", records, facts)
+	var facts map[string]any
+	if err := json.Unmarshal(raw, &facts); err != nil {
+		t.Fatalf("call facts are not an object: %s", raw)
 	}
-	if records == 0 && (facts.RequestsSent != 0 || facts.CacheAnswers != 0) {
-		t.Fatalf("empty bulk did work: %+v", facts)
+	seconds, ok := facts["seconds"].(float64)
+	if facts["records"] != records || !ok || seconds < 0 || (records > 0 && facts["model"] != "jev-1.13.0") {
+		t.Fatalf("typed call facts for %v records: %s", records, raw)
 	}
+	if records == 0 && (facts["requests_sent"] != float64(0) || facts["cache_answers"] != float64(0)) {
+		t.Fatalf("empty bulk did work: %s", raw)
+	}
+	return facts
 }
 func TestMatrix(t *testing.T) {
 	e := engine(t)
@@ -95,9 +101,9 @@ func TestMatrix(t *testing.T) {
 	if err != nil || len(empty.Value) != 0 {
 		t.Fatalf("empty bulk %v %v", empty, err)
 	}
-	requireFacts(t, empty.Facts, 0)
-	if empty.Facts.InputTokens != nil || empty.Facts.OutputTokens != nil {
-		t.Fatalf("empty bulk invented usage: %+v", empty.Facts)
+	emptyFacts := requireFacts(t, empty.Facts, 0)
+	if emptyFacts["input_tokens"] != nil || emptyFacts["output_tokens"] != nil {
+		t.Fatalf("empty bulk invented usage: %s", empty.Facts)
 	}
 	requests := []string{
 		`{"decide":"Is it?","evidence":"json-decide","details":true}`,
@@ -212,12 +218,12 @@ func TestMatrix(t *testing.T) {
 		}
 	}
 	named, err := e.Recognize(context.Background(), `{"version":1,"recognize":{"kinds":{"person":"A person's name."}}}`, "John Smith")
-	if err != nil || !strings.Contains(named.Value, `"entities"`) {
+	if err != nil || !strings.Contains(string(named.Value), `"entities"`) {
 		t.Fatalf("typed recognize: %s %v", named.Value, err)
 	}
 	requireFacts(t, named.Facts, 1)
 	edges, err := e.Relate(context.Background(), `{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}`, []string{`{"name":"Third","kind":"alert"}`, `{"name":"Fourth","kind":"alert"}`})
-	if err != nil || !strings.Contains(edges.Value, `"edges"`) {
+	if err != nil || !strings.Contains(string(edges.Value), `"edges"`) {
 		t.Fatalf("typed relate: %s %v", edges.Value, err)
 	}
 	requireFacts(t, edges.Facts, 1)
@@ -274,12 +280,6 @@ func TestMatrix(t *testing.T) {
 	_, err = e.Decide(expired, "Is it?", "x")
 	if failure, ok := err.(*Error); !ok || failure.Code != 5 && failure.Code != 3 {
 		t.Fatalf("spent context %v", err)
-	}
-	zero, cancel := context.WithTimeout(context.Background(), 0)
-	defer cancel()
-	_, err = e.Decide(zero, "Is it?", "x")
-	if err == nil {
-		t.Fatal("zero deadline should fail")
 	}
 	e.Close()
 	if saved.Message != copyMessage {
@@ -357,11 +357,13 @@ func TestOwnedFacts(t *testing.T) {
 		t.Fatalf("concurrent typed calls: %v %v", oneErr, manyErr)
 	}
 	requireAnswer(t, one.Value, Yes, .9)
-	requireFacts(t, one.Facts, 1)
-	requireFacts(t, many.Facts, 2)
-	if len(many.Value) != 2 || one.Facts.RequestsSent != 1 || many.Facts.RequestsSent != 1 ||
-		one.Facts.InputTokens == nil || many.Facts.InputTokens != nil || many.Facts.OutputTokens != nil {
-		t.Fatalf("reported and omitted usage collapsed: one=%+v many=%+v", one.Facts, many.Facts)
+	oneFacts := requireFacts(t, one.Facts, 1)
+	manyFacts := requireFacts(t, many.Facts, 2)
+	_, manyInput := manyFacts["input_tokens"]
+	_, manyOutput := manyFacts["output_tokens"]
+	if len(many.Value) != 2 || oneFacts["requests_sent"] != float64(1) || manyFacts["requests_sent"] != float64(1) ||
+		oneFacts["input_tokens"] == nil || manyInput || manyOutput {
+		t.Fatalf("reported and omitted usage collapsed: one=%s many=%s", one.Facts, many.Facts)
 	}
 	oneSnapshot, err := json.Marshal(one)
 	if err != nil {
@@ -373,9 +375,9 @@ func TestOwnedFacts(t *testing.T) {
 	}
 	_, err = e.Decide(context.Background(), "Is it?", "failure-one")
 	started := requireError(t, err, 2, false)
-	var startedFacts Facts
+	var startedFacts map[string]any
 	if len(started.Facts) == 0 || json.Unmarshal(started.Facts, &startedFacts) != nil ||
-		startedFacts.Records != 0 || startedFacts.RequestsSent != 1 {
+		startedFacts["records"] != float64(0) || startedFacts["requests_sent"] != float64(1) {
 		t.Fatalf("typed started failure facts: %s", started.Facts)
 	}
 	failureSnapshot := append([]byte(nil), started.Facts...)
@@ -396,11 +398,6 @@ func TestOwnedFacts(t *testing.T) {
 	if !reflect.DeepEqual(oneAfter, oneSnapshot) || !reflect.DeepEqual(manyAfter, manySnapshot) ||
 		!reflect.DeepEqual([]byte(started.Facts), failureSnapshot) {
 		t.Fatal("successful or failed call facts changed after later call and close")
-	}
-	for _, data := range []string{`{"records":null,"requests_sent":0,"cache_answers":0,"seconds":0}`, `{"requests_sent":0,"cache_answers":0,"seconds":0}`, `{"records":"1","requests_sent":0,"cache_answers":0,"seconds":0}`} {
-		if _, err := decodeFacts(data); err == nil {
-			t.Fatalf("malformed required native facts accepted: %s", data)
-		}
 	}
 }
 func marker(t *testing.T, name string) string {
@@ -608,5 +605,86 @@ func TestSettingsConstructor(t *testing.T) {
 		t.Fatal("unknown setting built an engine")
 	} else {
 		requireError(t, err, 1, false)
+	}
+}
+
+// ADR 0112 section 4: null is unresolved, {"failed": ...} is a failure, and
+// a failure's unknown extra member reads without error.
+func TestReadField(t *testing.T) {
+	for _, tc := range []struct {
+		member string
+		want   Field
+	}{
+		{`null`, Field{State: Unresolved}},
+		{` true`, Field{State: Answered, Value: json.RawMessage(`true`)}},
+		{`"billing"`, Field{State: Answered, Value: json.RawMessage(`"billing"`)}},
+		{`["billing","urgent"]`, Field{State: Answered, Value: json.RawMessage(`["billing","urgent"]`)}},
+		{`1.2`, Field{State: Answered, Value: json.RawMessage(`1.2`)}},
+		{`{"failed":{"kind":"backend","cause":"missing_probability","later":1}}`, Field{State: Failed, Kind: "backend", Cause: "missing_probability"}},
+	} {
+		got, err := ReadField(json.RawMessage(tc.member))
+		if err != nil || !reflect.DeepEqual(got, tc.want) {
+			t.Fatalf("%s: got %+v %v", tc.member, got, err)
+		}
+	}
+	for _, member := range []string{`{"failed":null}`, `{"team":"billing"}`, `{`, ``} {
+		if _, err := ReadField(json.RawMessage(member)); err == nil {
+			t.Fatalf("%s read as an answer", member)
+		}
+	}
+}
+
+// Ticket 0291 P1, run with no key against a counted backend: the plan and
+// its refusal send nothing.
+func TestPlan(t *testing.T) {
+	if os.Getenv("THINKTHEN_API_KEY") != "" {
+		t.Fatal("the plan fixture runs with no key")
+	}
+	e := engine(t)
+	plan, err := e.Plan("decide", "asks for a refund", []string{"Refund me please."}, json.RawMessage(`{}`))
+	var got map[string]any
+	if err != nil || json.Unmarshal(plan, &got) != nil || got["records"] != float64(1) || got["requests"] != float64(1) ||
+		got["estimated_bytes"] != float64(182) || got["upper_bound"] != false {
+		t.Fatalf("P1 plan: %s %v", plan, err)
+	}
+	_, err = e.Plan("decide", "asks for a refund", []string{"Refund me please."}, json.RawMessage(`{"batch":0}`))
+	requireError(t, err, 1, false)
+	e.Close()
+	if _, err = e.Plan("decide", "asks for a refund", nil, nil); !errors.Is(err, ErrClosed) {
+		t.Fatalf("closed engine planned: %v", err)
+	}
+}
+
+// Ticket 0291: a zero budget and an active cap of zero each refuse before
+// the counted backend hears a request.
+func TestLimits(t *testing.T) {
+	capped, err := NewWith(`{"max_requests_total":0,"cache":false}`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer capped.Close()
+	_, err = capped.Decide(context.Background(), "Is it?", "capped")
+	if failure := requireError(t, err, 1, false); !strings.Contains(failure.Message, "process send budget") {
+		t.Fatalf("cap refusal: %v", failure)
+	}
+	e := engine(t)
+	zero, cancel := context.WithTimeout(context.Background(), 0)
+	defer cancel()
+	for _, call := range []func() error{
+		func() error { _, err := e.Decide(zero, "Is it?", "zero-decide"); return err },
+		func() error { _, err := e.DecideMany(zero, "Is it?", []string{"zero-many"}); return err },
+		func() error { _, err := e.Call(zero, `{"decide":"Is it?","evidence":"zero-call"}`); return err },
+		func() error {
+			_, err := e.Recognize(zero, `{"version":1,"recognize":{"kinds":{"person":"A person's name."}}}`, "zero-recognize")
+			return err
+		},
+		func() error {
+			_, err := e.Relate(zero, `{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]}}`, []string{`{"name":"A","kind":"alert"}`, `{"name":"B","kind":"alert"}`})
+			return err
+		},
+	} {
+		if failure := requireError(t, call(), 3, false); failure.Kind != KindDeadline {
+			t.Fatalf("zero budget: %v", failure)
+		}
 	}
 }

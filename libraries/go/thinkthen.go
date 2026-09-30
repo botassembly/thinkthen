@@ -31,9 +31,29 @@ import (
 var ErrEmbeddedNUL = errors.New("NUL in a C-string argument")
 var ErrClosed = errors.New("ThinkThen engine is closed")
 
+// ErrorKind names a failure with the C door's codes 1 to 6.
+type ErrorKind int
+
+const (
+	KindUsage ErrorKind = 1 + iota
+	KindBackend
+	KindDeadline
+	KindLocal
+	KindCancelled
+	KindDefect
+)
+
+func (k ErrorKind) String() string {
+	names := [...]string{"", "usage", "backend", "deadline", "local", "cancelled", "defect"}
+	if k > 0 && int(k) < len(names) {
+		return names[k]
+	}
+	return "defect"
+}
+
 type Error struct {
 	Code      int
-	Kind      string
+	Kind      ErrorKind
 	Retryable bool
 	Message   string
 	Facts     json.RawMessage
@@ -53,10 +73,9 @@ type Engine struct {
 // Go may reschedule a goroutine between cgo calls. Copy the borrowed message
 // before unlocking that thread, even when constructing a new engine.
 func failure(raw *C.thinkthen_engine, code C.int) error {
-	kinds := [...]string{"", "usage", "backend", "deadline", "local", "cancelled", "defect"}
-	kind := "defect"
-	if code > 0 && int(code) < len(kinds) {
-		kind = kinds[code]
+	kind := KindDefect
+	if code >= C.int(KindUsage) && code <= C.int(KindDefect) {
+		kind = ErrorKind(code)
 	}
 	borrowed := C.thinkthen_error_facts_json(raw)
 	var facts json.RawMessage
@@ -118,12 +137,9 @@ func copyCountedResult(result *C.char, length C.size_t) (string, error) {
 	}
 	return C.GoStringN(result, C.int(length)), nil
 }
-func copyFacts(result *C.char, length C.size_t) (Facts, error) {
+func copyJSON(result *C.char, length C.size_t) (json.RawMessage, error) {
 	value, err := copyCountedResult(result, length)
-	if err != nil {
-		return Facts{}, err
-	}
-	return decodeFacts(value)
+	return json.RawMessage(value), err
 }
 func buffer(s string) unsafe.Pointer {
 	if len(s) == 0 {
@@ -239,7 +255,7 @@ func (e *Engine) Decide(ctx context.Context, question, evidence string) (Result[
 	if err != nil {
 		return Result[Answer]{}, err
 	}
-	owned, err := copyFacts(facts, factsLen)
+	owned, err := copyJSON(facts, factsLen)
 	if err != nil {
 		return Result[Answer]{}, err
 	}
@@ -264,7 +280,7 @@ func (e *Engine) DecideMany(ctx context.Context, question string, evidence []str
 		if code != 0 {
 			return Result[[]Answer]{}, failure(raw, code)
 		}
-		owned, err := copyFacts(facts, factsLen)
+		owned, err := copyJSON(facts, factsLen)
 		if err != nil {
 			return Result[[]Answer]{}, err
 		}
@@ -320,7 +336,7 @@ func (e *Engine) DecideMany(ctx context.Context, question string, evidence []str
 			return Result[[]Answer]{}, err
 		}
 	}
-	owned, err := copyFacts(facts, factsLen)
+	owned, err := copyJSON(facts, factsLen)
 	if err != nil {
 		return Result[[]Answer]{}, err
 	}
@@ -348,29 +364,69 @@ func (e *Engine) Call(ctx context.Context, request string) (string, error) {
 	return C.GoString(result), nil
 }
 
+// Plan previews a judgment call through thinkthen_plan_json and returns the
+// result schema's plan object. verb is decide, choose, score or tag. question
+// is bare question text, or one question object when it starts with "{", as
+// Decide reads it. settings is nil or a thinkthen.settings/1 object. The
+// preview needs no key, reads no cache and sends nothing.
+func (e *Engine) Plan(verb, question string, input []string, settings json.RawMessage) (json.RawMessage, error) {
+	asked, _ := json.Marshal(question) // a Go string always encodes
+	if trimmed := strings.TrimSpace(question); strings.HasPrefix(trimmed, "{") {
+		asked = []byte(trimmed)
+	}
+	if input == nil {
+		input = []string{}
+	}
+	request, err := json.Marshal(struct {
+		Verb     string          `json:"verb"`
+		Question json.RawMessage `json:"question"`
+		Input    []string        `json:"input"`
+		Settings json.RawMessage `json:"settings,omitempty"`
+	}{verb, asked, input, settings})
+	if err != nil { // a question object or settings that is not JSON
+		return nil, &Error{Code: int(KindUsage), Kind: KindUsage, Message: err.Error()}
+	}
+	q := C.CString(string(request)) // encoding/json escapes every NUL
+	defer C.free(unsafe.Pointer(q))
+	e.mu.RLock()
+	defer e.mu.RUnlock()
+	if e.raw == nil {
+		return nil, ErrClosed
+	}
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	var out *C.char
+	var length C.size_t
+	if code := C.thinkthen_plan_json(e.raw, q, &out, &length); code != 0 {
+		return nil, failure(e.raw, code)
+	}
+	defer C.thinkthen_free_string(out)
+	return copyJSON(out, length)
+}
+
 // Recognize and Relate use their typed JSON-returning C entry points.
-func (e *Engine) Recognize(ctx context.Context, spec, evidence string) (Result[string], error) {
+func (e *Engine) Recognize(ctx context.Context, spec, evidence string) (Result[json.RawMessage], error) {
 	q, err := checkedCString(spec)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
 	defer C.free(unsafe.Pointer(q))
 	b := buffer(evidence)
 	defer C.free(b)
 	out := (*unsafe.Pointer)(C.malloc(C.size_t(unsafe.Sizeof(uintptr(0)))))
 	if out == nil {
-		return Result[string]{}, errors.New("cannot allocate result pointer")
+		return Result[json.RawMessage]{}, errors.New("cannot allocate result pointer")
 	}
 	defer C.free(unsafe.Pointer(out))
 	*out = nil
 	length := (*C.size_t)(C.malloc(C.size_t(unsafe.Sizeof(C.size_t(0)))))
 	if length == nil {
-		return Result[string]{}, errors.New("cannot allocate result length")
+		return Result[json.RawMessage]{}, errors.New("cannot allocate result length")
 	}
 	defer C.free(unsafe.Pointer(length))
 	raw, token, ms, leave, err := e.enter(ctx)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
 	defer leave()
 	var facts *C.char
@@ -379,38 +435,37 @@ func (e *Engine) Recognize(ctx context.Context, spec, evidence string) (Result[s
 	defer C.thinkthen_free_string(facts)
 	defer C.thinkthen_free_string((*C.char)(*out))
 	if code != 0 {
-		return Result[string]{}, failure(raw, code)
+		return Result[json.RawMessage]{}, failure(raw, code)
 	}
-	result := (*C.char)(*out)
-	value, err := copyCountedResult(result, *length)
+	value, err := copyJSON((*C.char)(*out), *length)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
-	owned, err := copyFacts(facts, factsLen)
+	owned, err := copyJSON(facts, factsLen)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
-	return Result[string]{Value: value, Facts: owned}, nil
+	return Result[json.RawMessage]{Value: value, Facts: owned}, nil
 }
-func (e *Engine) Relate(ctx context.Context, spec string, records []string) (Result[string], error) {
+func (e *Engine) Relate(ctx context.Context, spec string, records []string) (Result[json.RawMessage], error) {
 	q, err := checkedCString(spec)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
 	defer C.free(unsafe.Pointer(q))
 	n := len(records)
 	width := unsafe.Sizeof((*C.char)(nil))
 	if uintptr(n) > ^uintptr(0)/width || uintptr(n) > ^uintptr(0)/unsafe.Sizeof(C.size_t(0)) {
-		return Result[string]{}, errors.New("too many records")
+		return Result[json.RawMessage]{}, errors.New("too many records")
 	}
 	ptrs := C.malloc(C.size_t(uintptr(n) * width))
 	if ptrs == nil && n > 0 {
-		return Result[string]{}, errors.New("cannot allocate pointers")
+		return Result[json.RawMessage]{}, errors.New("cannot allocate pointers")
 	}
 	defer C.free(ptrs)
 	sizes := C.malloc(C.size_t(uintptr(n) * unsafe.Sizeof(C.size_t(0))))
 	if sizes == nil && n > 0 {
-		return Result[string]{}, errors.New("cannot allocate lengths")
+		return Result[json.RawMessage]{}, errors.New("cannot allocate lengths")
 	}
 	defer C.free(sizes)
 	if n > 0 {
@@ -428,18 +483,18 @@ func (e *Engine) Relate(ctx context.Context, spec string, records []string) (Res
 	}
 	out := (*unsafe.Pointer)(C.malloc(C.size_t(unsafe.Sizeof(uintptr(0)))))
 	if out == nil {
-		return Result[string]{}, errors.New("cannot allocate result pointer")
+		return Result[json.RawMessage]{}, errors.New("cannot allocate result pointer")
 	}
 	defer C.free(unsafe.Pointer(out))
 	*out = nil
 	length := (*C.size_t)(C.malloc(C.size_t(unsafe.Sizeof(C.size_t(0)))))
 	if length == nil {
-		return Result[string]{}, errors.New("cannot allocate result length")
+		return Result[json.RawMessage]{}, errors.New("cannot allocate result length")
 	}
 	defer C.free(unsafe.Pointer(length))
 	raw, token, ms, leave, err := e.enter(ctx)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
 	defer leave()
 	var facts *C.char
@@ -448,16 +503,15 @@ func (e *Engine) Relate(ctx context.Context, spec string, records []string) (Res
 	defer C.thinkthen_free_string(facts)
 	defer C.thinkthen_free_string((*C.char)(*out))
 	if code != 0 {
-		return Result[string]{}, failure(raw, code)
+		return Result[json.RawMessage]{}, failure(raw, code)
 	}
-	result := (*C.char)(*out)
-	value, err := copyCountedResult(result, *length)
+	value, err := copyJSON((*C.char)(*out), *length)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
-	owned, err := copyFacts(facts, factsLen)
+	owned, err := copyJSON(facts, factsLen)
 	if err != nil {
-		return Result[string]{}, err
+		return Result[json.RawMessage]{}, err
 	}
-	return Result[string]{Value: value, Facts: owned}, nil
+	return Result[json.RawMessage]{Value: value, Facts: owned}, nil
 }
