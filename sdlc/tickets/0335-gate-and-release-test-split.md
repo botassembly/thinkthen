@@ -1,18 +1,18 @@
 # 0335: Split tests between the gate and the release suite
 
-Status: slice 1 landed; slice 2 waits for 0304 slice 3a to 3d. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue: `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
+Status: slice 1 landed; slice 2 waits for 0304 slices 3b and 3d, including 3d's SQL-host part (3a and 3c landed). Slice 3 moved to ticket 0338. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue: `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
 
 ## Outcome
 
-`sdlc/scripts/test` stays network-free and focused on mechanics, and it loads every binding once. Each binding gets one replay smoke in the rung: it loads the installed-shape package, asks one recorded question, and checks the answer and a zero request count. Duplicate and wording-only tests are gone. Per-surface function matrices and installed-package checks move to the release suite once it runs them. After a library change the rung takes 90 s or less at a 1-minute load of 16 or less, smokes included. Today it takes 82.5 s without them.
+`sdlc/scripts/test` stays network-free and focused on mechanics, and it loads every binding once. Each binding gets one replay smoke in the rung: it loads the installed-shape package, asks one recorded question, and checks the answer and a zero request count. Duplicate and wording-only tests are gone. Per-surface function matrices and installed-package checks move to the release suite once it runs them. After a library change the rung takes 90 s or less at a 1-minute load of 16 or less, smokes included. It took 82.5 s before slice 1 and about 29 s on a warm build after it, without smokes.
 
 ## Evidence
 
 - Starts from: record 0305 and ticket 0317 (cut lists and timings), and one measured run of `sdlc/scripts/test` on `2b3cb67ea`: 82.5 s wall at load 13 to 19, 1,289 nextest tests in 17.5 s, 18 consumer tests, one doctest, and 13 shell self-tests. The inventory holds the groups, the per-step times and the named tests.
 - Keeps: the dense-logic unit tables, the command-line exact-output tests, the split secrecy sweep, the refusal sweep in `backend/refusals.rs`, the question-file secrecy test, the library retry-header and split-identity tests the inventory lists, the Rust library tests, the `conformance/` replays, `speed`, the demo runner's failing-page test, the transform tables and `live-test`. No parser, secrecy, cancellation, cache-miss, invalid-input or conflict regression goes before a stronger test holds it. The routine `surfaces` rung keeps its 31 cases per binding.
-- Changes: in three slices, below. Delete 6 wording-only or duplicate tests and check steps; merge 6 tests into kept tests; rewrite 1 test in place; move 2 probe self-tests from `test` to `spec`; add one replay smoke per binding.
+- Changes: in two slices, below, and ticket 0338. Delete 6 wording-only or duplicate tests and check steps; merge 6 tests into kept tests; rewrite 1 test in place; move 2 probe self-tests from `test` to `spec`; add one replay smoke per binding.
 - Proof: per slice, `sdlc/scripts/test` wall time and test count before and after under stated load; each deleted or merged test names the kept test that catches its regression, with a mutation run where the pair is not obvious; each smoke fails once against a planted broken package before it passes.
-- Defers: moving the per-surface matrices, the full per-surface replay and the installed-artifact checks until the release suite runs bindings; the long waits in `engine::deadline_tests` and `cli::schedule::width_tests`; `transforms/sweep/test.sh`'s 5.1 s; merging test binaries.
+- Defers: moving the per-surface matrices, the full per-surface replay and the installed-artifact checks until the release suite runs bindings; the long waits in `engine::deadline_tests` and `cli::schedule::width_tests` and merging test binaries, to ticket 0338; `transforms/sweep/test.sh`'s 5.1 s.
 
 ## Slices
 
@@ -25,9 +25,9 @@ Status: slice 1 landed; slice 2 waits for 0304 slice 3a to 3d. Plan: `sdlc/plann
    - Expected: the rung falls to about 60 s.
 2. **After 0304 slice 3a to 3d land.** The C door and Polars tests are green on main and the library runs on `ask_all`.
    - Add `THINKTHEN_TEST_PROFILE=smoke` to each `check.sh` and a `sdlc/scripts/smoke` that `test` calls, four at a time beside nextest, with one shared target folder for the Cargo bindings. The inventory gives the steps and the cost per binding.
-   - Merge the 6 batching, retry and JSON duplicates in the inventory's table. Each row names the kept test and the mutation run that must pass before the old test goes. A mutation the kept test misses keeps the old test.
+   - Merge the 6 batching, retry and JSON duplicates in the inventory's table. Each row names the kept test and the mutation run that must pass before the old test goes. A mutation the kept test misses keeps the old test. 3a renamed or replaced four of the named tests; the table uses the names on main after 3c.
    - If the smokes push the rung over 90 s, move the slowest smokes to the routine `surfaces` rung and record why.
-3. **After the 0305 cleanup removes the process-wide statics and the shared test locks.** The `SERIAL` locks in `public_controls` and `public_batches` go, the deadline and width tests lose their long waits, and the test binaries may merge. Then the rung aims at 60 s after a library change.
+3. **Moved to ticket 0338.** The "0305 cleanup" this slice waited for was never filed. Ticket 0338 now holds it: the shared test locks, the long waits in the deadline and width tests, and merging test binaries. This ticket lands after slice 2.
 
 The per-surface matrices move when the release suite runs bindings. That is the suite owner's work; this repository retires them in its own ticket then.
 
