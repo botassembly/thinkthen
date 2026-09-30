@@ -29,4 +29,4 @@ Ticket 0223 passed fresh independent code review at `0e242567` and integration c
 
 ## Command documentation completed
 
-Quick Fix `782b0aea` passed fresh Medium review and completes the five-page 0223 handoff, command index and root table. The executable result consumer keeps exact ordinary and graded-rank shapes. The [copied-site reference issue](2026-09-28-site-reference-misses-graded-rank-and-cache-byte-examples.md) belongs to marketing. This does not implement optional weights or RRF.
+Quick Fix `782b0aea` passed fresh Medium review and completes the five-page 0223 handoff, command index and root table. The executable result consumer keeps exact ordinary and graded-rank shapes. The [copied-site reference issue](closed/2026-09-28-site-reference-misses-graded-rank-and-cache-byte-examples.md) belongs to marketing. This does not implement optional weights or RRF.
