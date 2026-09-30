@@ -83,20 +83,43 @@ fn facade_answer(
 
 /// One exchange's replayed answer, or `None` for the miss a failed question
 /// makes. The store keeps no failed answer, by ADR 0111 section 6, so replay
-/// misses the question a backend failed. The decoding check reads that
-/// failure from the recorded body.
+/// misses a question the backend failed. The miss is accepted only when this
+/// exchange expects a failure; the decoding check reads that failure from the
+/// recorded body.
 fn replayed(
     engine: &Engine,
     case: &super::Case,
     request: &Asked,
+    place: usize,
     exchange: &super::Exchange,
     success: &super::Success,
 ) -> Option<Answered> {
     match facade_answer(engine, case, request, &exchange.evidence) {
         Ok(answered) => Some(answered),
-        Err(EngineError::QuestionMiss(_)) if success.failed_questions > 0 => None,
+        Err(EngineError::QuestionMiss(_))
+            if success
+                .answers
+                .iter()
+                .any(|answer| answer.exchange == place && answer.details.failure.is_some()) =>
+        {
+            None
+        }
         Err(error) => panic!("{}: {error:?}", case.id),
     }
+}
+
+/// The failed and answered counts an exchange expects, for one the replay
+/// cannot read whole.
+fn unread(success: &super::Success, place: usize) -> (usize, usize) {
+    let expected = success
+        .answers
+        .iter()
+        .filter(|answer| answer.exchange == place);
+    let failed = expected
+        .clone()
+        .filter(|answer| answer.details.failure.is_some())
+        .count();
+    (failed, expected.count() - failed)
 }
 
 #[test]
@@ -109,7 +132,7 @@ fn every_case_crosses_the_private_facade_under_replay() {
     let document: Document = serde_json::from_str(CASES).expect("shared document");
     let backend_url = Url::new(&document.backend_url).expect("canonical URL");
     let backend = Backend::from_parts(backend_url, ModelName::new(DEFAULT_MODEL).expect("model"));
-    'cases: for case in &document.cases {
+    for case in &document.cases {
         if let Some(expected) = &case.expect.error {
             run_fault(case, &expected.kind);
             continue;
@@ -134,14 +157,18 @@ fn every_case_crosses_the_private_facade_under_replay() {
         let mut values = Vec::<Value>::new();
         let mut odds = Vec::new();
         let mut failed_questions = 0;
+        let mut unread_answers = 0;
         for (place, exchange) in case.exchanges.iter().enumerate() {
             let request = if case.verb == "find" {
                 find_asked(case).expect("find plan")
             } else {
                 asked(case, place, exchange).expect("case plan")
             };
-            let Some(answered) = replayed(&engine, case, &request, exchange, success) else {
-                continue 'cases;
+            let Some(answered) = replayed(&engine, case, &request, place, exchange, success) else {
+                let (failed, answered) = unread(success, place);
+                failed_questions += failed;
+                unread_answers += answered;
+                continue;
             };
             assert!(answered.replayed, "{}", case.id);
             assert_eq!(answered.requests_sent, 0, "{}", case.id);
@@ -197,11 +224,15 @@ fn every_case_crosses_the_private_facade_under_replay() {
         assert_eq!(failed_questions, success.failed_questions, "{}", case.id);
         assert_eq!(
             success.answers.len(),
-            values.len() + failed_questions,
+            values.len() + failed_questions + unread_answers,
             "{}",
             case.id
         );
-        validate_operation(case, success, &odds, &values).expect("expected operation output");
+        // The operation reads every good answer, so it runs only when the
+        // replay read them all.
+        if unread_answers == 0 {
+            validate_operation(case, success, &odds, &values).expect("expected operation output");
+        }
         if let Some(counters) = &success.counters {
             command::counters(case, counters);
         }

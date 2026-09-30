@@ -331,3 +331,6 @@ fn file_bytes(connection: &Connection) -> Result<u64, Error> {
     })?;
     u64::try_from(pages.saturating_mul(page)).map_err(|_| Error::RecordingStorage)
 }
+
+#[cfg(test)]
+mod tests;

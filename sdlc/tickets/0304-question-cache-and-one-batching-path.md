@@ -283,26 +283,28 @@ fn process_requests_sent() -> u64
   - 1,549 old files went: every tracked `DIGEST.json` and `.thinkthen-backend.json` outside `probes/` and `site/`. Before the deletion, `cache convert` on each folder left its committed `thinkthen.jsonl` byte for byte unchanged. `sdlc/scripts/rekey-model` and its fixture went, because every recording it served is already re-keyed.
   - Captured conformance cases name a recording folder, and the runner checks each question key's answer and model in that folder's `thinkthen.jsonl`. The profile case `tag-over` became `tag-over-splits`, because the packer now splits a tag's labels across requests.
   - `specification/recording.md` describes the one store, with the marker paragraphs and old prune rules gone. The size and splitting sections of `specification/backends.md`, the prune and unused rows of `settings.md`, the `requests` row of `result.md`, the `--used` help, ten demo READMEs and `CHANGELOG.md` follow.
-  - The ratchet falls by 3,757 lines, from 109,349 on main after 0342 to 105,592. Across the slice, Rust lost 6,099 lines and gained 2,032; the deleted entries held 10,948 lines of JSON.
+  - The ratchet falls by 3,659 lines, from 109,349 on main after 0342 to 105,690. Across the slice, Rust lost 6,099 lines and gained 2,032; the deleted entries held 10,948 lines of JSON.
 - Proof:
   - `tests/backend/default_cache/prune.rs`, on real cached runs: the alias and unknown-model refusals change no byte, with and without `--dry-run`, and a newer model's answer stays; `--max-size` removes the oldest answer first and the file shrinks; `--older-than` selects by `taken_at` and leaves old entries, a stray file and a directory untouched; an unreadable folder exits 5 before any change.
   - `default_cache.rs` `cache_prune_removes_every_answer_under_a_one_byte_target`, and `status` then counts 0.
   - `tests/backend/default_cache/unused.rs`: supplied keys name the unused answer from a fixture and from the live store, and every manifest refusal, a folder holding both files, and a damaged fixture leave the folder unchanged.
   - `tests/status.rs`: a cached run counts 1 answer, the file's bytes and 1 old entry, keeps `requests_sent` 1 and `input_tokens` 312 at their paths, and a damaged store exits 5; a retired marker is ignored; old entries are counted by name without reading their bytes.
   - `tests/cache_convert.rs` converts written old entries twice to identical bytes, keeping the old files, since the demos no longer hold old entries.
-  - The facade conformance runner replays every shared case through `ask_each`. `17-annotate-partial` misses its failed question under replay, as ADR 0111 section 6 says, and the case's decoding check still reads the failure.
+  - The facade conformance runner replays every shared case through `ask_each`. `17-annotate-partial` misses its failed question under replay, as ADR 0111 section 6 says. The runner accepts a miss only in an exchange that expects a failure, still checks every other exchange and the case's totals, and the decoding check still reads the failure.
 - Retained regressions and their replacements:
   - Marker, digest-lock and temporary-file tests went with the files they drove. The store's own tests in `engine/store/tests.rs` hold the busy wait, a stop during a wait, a read-only replay that writes nothing and a hot journal.
   - `a_received_usage_report_survives_a_refused_logical_reply`: `default_cache/usage.rs` `a_live_reply_counts_valid_usage_when_its_only_answer_is_refused` and `systemone/response_tests.rs` `validated_usage_survives_when_every_answer_is_refused`.
   - `a_spent_deadline_stops_a_prepared_request_before_its_key`: `engine/deadline_tests.rs` `a_spent_deadline_opens_no_connection_and_observes_no_attempt`, `engine/pipeline/tests.rs` `a_spent_deadline_or_a_fired_cancel_stops_before_reading`, and `cli/edge/deadline_tests.rs` `a_spent_deadline_on_every_direct_path_sends_nothing`.
   - `a_replayed_answer_takes_no_permit`: a permit is taken only inside `Client::post`, and a replay never reaches the client. Every replay test that counts zero loopback requests holds this.
   - The two prune tests over digest-shaped symlinks and bad entries went, because prune no longer reads those files.
+  - `age_is_strict_and_model_selection_forms_a_union` and `allocated_size_stays_at_the_target_and_leaves_one_byte_over`: `engine/store/prune/tests.rs` `age_is_strict_models_form_a_union_and_the_target_keeps_an_exact_fit` holds an answer exactly `--older-than` old, one a second older, the union of both selectors, and a store exactly at and one byte over its target. It fails with either comparison flipped.
 - Checks, on the rebase onto 0342 (`16ba34321`): `sdlc/scripts/test`, `spec` with `settings`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, and `lint` in a clean checkout pass. The C door, Polars and PostgreSQL checks pass against one loopback backend; PostgreSQL runs because its runner fixture names a recording folder now. No other binding changed.
 - Defers:
   - `core/batch.rs` stays. What remains in it is the quote form and the batch setting parse, which every path uses; ADR 0111 section 1 keeps both. Renaming it is churn with no behavior. Ian can overturn this.
   - The SQL hosts' question store proofs from Debt 003 go back to `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md`, Debt 010, reopened.
   - Demo record scripts write beside their committed fixture: `sdlc/issues/2026-09-30-demo-record-scripts-write-beside-their-fixture.md`.
   - Site folders: marketing runs the command below. Debt 007 part 1 holds it.
+  - `libraries/typescript/NOTES.md` line 14 still describes the retired backend marker. The bindings lane owns that file; its next edit there drops the line.
 
 Marketing runs, from the repo root, with a build of this commit:
 
@@ -450,3 +452,4 @@ What the review fixes found:
 - Lane 1's keep-alive test, landed in 0341 while this slice was open, read the per-answer send count this slice removed. It now reads the process counter after each send.
 - Review found that prune read and chose its answers before it took the write lock. A run refreshing an answer in that gap could lose it to `--older-than`. The selection, the deletes and the state cleanup now run in one `BEGIN IMMEDIATE` transaction.
 - 0342 rewrote the relate sentence of `specification/backends.md` while this slice rewrote the same paragraph. The rebase kept 0342's menu wording inside the one-packer paragraph.
+- The second review found two dropped prune edge tests, the strict age and the exact target, and a runner that skipped a whole case on one expected miss. A table over `select` now holds the edges, and the runner skips only the exchange that expects the failure.
