@@ -12,6 +12,8 @@ The call's `facts` object may add `estimated_cost_usd` when its engine has both 
 
 The optional Rust Polars eager door returns `Call<Series>` or `Call<DataFrame>` for every completed column or frame call. Its value keeps the typed Polars shape and its facts count that invocation after all of its batches finish. A started failure returns an error with final facts; a refusal before work starts has no invented account. The lazy `decide_expr`, `choose_expr`, `score_expr` and `tag_expr` family returns a Polars `Expr`, with nullable positions preserved. Decide and choose may return a `Struct{value, probability}`; score and tag refuse probability. Each evaluated morsel is a separate call, whose facts go to a caller-owned `Tally` when supplied. The existing observer supplies eager row details when requested.
 
+A caller-owned `Tally` sums the facts of the calls it records. Its `estimated_cost_usd` adds each call's rounded six-decimal estimate, so it can differ from one rounding of the same work by up to n/2 micro-dollars for n calls. The member is absent when any recorded call lacked an estimate and when the tally recorded no call. Its `model` ignores calls that got no reply, as the command's `model` does; a replied call without a model or with a different model clears it.
+
 ## The bare value
 
 | Command | Default standard output |

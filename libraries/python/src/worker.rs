@@ -338,6 +338,7 @@ where
         controls,
         move |options| {
             let started = tally.as_ref().map(Tally::start);
+            // An empty tally times a call whose error carries no facts.
             let span = Tally::new();
             let spanned = span.start();
             let observer = |event: RecordObservation<'_>| on_worker.push(event);
