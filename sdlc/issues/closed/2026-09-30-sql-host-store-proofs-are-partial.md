@@ -1,6 +1,8 @@
 # The SQL hosts' question store proofs are partial
 
-Status: open. Reopened on 2026-09-30 when ticket 0304 slice 5 paid the rest of Debt 003 (`closed/2026-09-30-old-batching-files-still-have-live-callers.md`), into which this issue had merged. Owner: ticket 0348, batch B4 of `../planning/issue-priorities-2026-09-30.md`.
+Status: closed 2026-09-30 by ticket 0348. Reopened on 2026-09-30 when ticket 0304 slice 5 paid the rest of Debt 003 (`2026-09-30-old-batching-files-still-have-live-callers.md`), into which this issue had merged.
+
+Resolution: paid by ticket 0348. The DuckDB and PostgreSQL shared case runners count answer rows in each case's `thinkthen.sqlite`, one per good question, as the SQLite and C door runners do. DuckDB's harness counts each child's rows before it deletes the folder. `databases/sqlite/tests/test_store.py` replays from a read-only folder with no file or directory metadata change, and pins a lookup that waits while another connection holds the store, then answers and stores. Each count and test failed once against a planted empty store.
 
 Kind: debt
 

@@ -1294,7 +1294,8 @@ conformance() {
 		*) fail=$((fail + 1)) ;;
 		esac
 	done 3< "$plan_file"
-	echo "         conformance: total=54 selected=$selected pass=$pass fail=$fail not_run=$skipped unselected=$((54 - selected))"
+	total=$(python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["case_count"])' ../../conformance/cases.json)
+	echo "         conformance: total=$total selected=$selected pass=$pass fail=$fail not_run=$skipped unselected=$((total - selected))"
 	same "$((pass + fail + skipped))" "$selected"
 	same "$fail" 0
 }
