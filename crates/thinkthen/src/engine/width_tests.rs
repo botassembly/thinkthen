@@ -67,7 +67,7 @@ fn waiter(
 fn blocked(signals: &Receiver<()>, count: usize) {
     for _ in 0..count {
         signals
-            .recv_timeout(SECOND * 2)
+            .recv_timeout(SECOND * 30)
             .expect("the waiter blocked on a full gate");
     }
 }
@@ -185,7 +185,7 @@ fn a_lower_first_width_holds_every_waiter_until_the_old_attempts_drain() {
     }
     drop(fallback.pop());
     for _ in 0..waiters.len() {
-        let (name, seen) = entered.recv_timeout(SECOND * 2).expect("drained room");
+        let (name, seen) = entered.recv_timeout(SECOND * 30).expect("drained room");
         assert_eq!(seen, 1, "one attempt at a time after width 1");
         nobody_entered(&entered);
         waiters[name].release.send(()).expect("release");
@@ -211,7 +211,7 @@ fn a_higher_first_width_wakes_waiters_without_passing_it() {
     assert_eq!(widths.select(Some(width(8))), Ok(width(8)));
     for _ in 0..4 {
         let (_, seen) = entered
-            .recv_timeout(SECOND * 2)
+            .recv_timeout(SECOND * 30)
             .expect("new room wakes one");
         assert!(seen <= 8, "{seen} attempts at width 8");
     }
@@ -220,7 +220,7 @@ fn a_higher_first_width_wakes_waiters_without_passing_it() {
 
     drop(fallback);
     for _ in 0..2 {
-        let (_, seen) = entered.recv_timeout(SECOND * 2).expect("freed room");
+        let (_, seen) = entered.recv_timeout(SECOND * 30).expect("freed room");
         assert!(seen <= 8, "{seen} attempts at width 8");
     }
     for waiter in waiters {
@@ -259,7 +259,7 @@ fn post(
         max_retries: 2,
         retry_wait: Duration::from_millis(10),
     };
-    Client::new(SECOND * 2, false, &crate::engine::limits::process().widths)
+    Client::new(SECOND * 30, false, &crate::engine::limits::process().widths)
         .gated(widths)
         .post_observed(&exchange, cancel, || {
             attempts.fetch_add(1, Ordering::SeqCst);
@@ -342,14 +342,14 @@ fn a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one() {
                 max_retries: 1,
                 retry_wait: Duration::from_millis(10),
             };
-            Client::new(SECOND * 2, false, &crate::engine::limits::process().widths)
+            Client::new(SECOND * 30, false, &crate::engine::limits::process().widths)
                 .gated(widths)
                 .post_observed(&exchange, &Cancel::default(), || {
                     attempts.fetch_add(1, Ordering::SeqCst);
                     during_attempts.fetch_max(widths.active(), Ordering::SeqCst);
                 })
         });
-        busy.recv_timeout(SECOND * 2).expect("the busy answer");
+        busy.recv_timeout(SECOND * 30).expect("the busy answer");
         // The retry waits 600 ms; this permit must come free well before.
         let within = Cancel::default().with_deadline(Deadline::after(Duration::from_millis(400)));
         let taken = widths.acquire(&within).expect("the wait holds no permit");

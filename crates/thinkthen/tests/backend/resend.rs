@@ -118,21 +118,22 @@ fn a_reset_after_the_whole_request_is_sent_once() {
 
 #[test]
 fn a_stall_past_the_timeout_is_sent_once() {
+    // The reply waits a minute, so only the 1 s timeout ends the call (ticket 0352).
     let listener =
-        Listener::answering(|_| Canned::ok(ANSWERED).after(2_500)).expect("a loopback listener");
+        Listener::answering(|_| Canned::ok(ANSWERED).after(60_000)).expect("a loopback listener");
     let started = Instant::now();
 
     let output =
         decide(&listener, &["--timeout", "1"], &[], EVIDENCE).expect("the compiled binary runs");
 
     failed_once(&listener, &output, TIMED_OUT);
-    assert!(started.elapsed() < Duration::from_secs(2));
+    assert!(started.elapsed() < Duration::from_secs(30));
 }
 
 #[test]
 fn a_stalled_two_record_batch_names_timeout_advice() {
     let listener =
-        Listener::answering(|_| Canned::ok(ANSWERED).after(2_500)).expect("a loopback listener");
+        Listener::answering(|_| Canned::ok(ANSWERED).after(60_000)).expect("a loopback listener");
     let output = decide(
         &listener,
         &["--jsonl", "--batch", "2", "--timeout", "1", "--no-cache"],

@@ -258,18 +258,18 @@ fn cancellation_while_waiting_for_input_requests_nothing_more() {
         outcome_send.send(outcome).expect("returned outcome");
     });
     let asked = asked_recv
-        .recv_timeout(Duration::from_secs(2))
+        .recv_timeout(Duration::from_secs(30))
         .expect("request receiver");
     asked
-        .recv_timeout(Duration::from_secs(2))
+        .recv_timeout(Duration::from_secs(30))
         .expect("first input request");
     waiting
-        .recv_timeout(Duration::from_secs(2))
+        .recv_timeout(Duration::from_secs(30))
         .expect("runner entered recv_timeout");
 
     cancel.fire();
     let outcome = outcome_recv
-        .recv_timeout(Duration::from_secs(2))
+        .recv_timeout(Duration::from_secs(30))
         .expect("cancelled runner returns")
         .expect("cancelled outcome");
     runner.join().expect("runner thread");
@@ -342,7 +342,7 @@ fn cancellation_with_work_in_flight_ignores_later_input_and_joins() {
     later_input.wait();
     release.wait();
     let result = outcome
-        .recv_timeout(Duration::from_secs(2))
+        .recv_timeout(Duration::from_secs(30))
         .expect("the cancelled run returns")
         .expect("the runner returns metadata");
     runner.join().expect("runner thread");

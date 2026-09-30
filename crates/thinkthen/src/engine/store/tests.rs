@@ -228,16 +228,25 @@ fn a_lookup_waits_through_another_writer_and_then_answers() {
     let mut store = Store::open(folder.path(), Mode::Cache, false, None).expect("open");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
-    let released = std::thread::spawn(move || {
-        std::thread::sleep(Duration::from_millis(300));
-        holder.execute_batch("COMMIT").expect("unlock");
+    // The flag goes up just before the commit, so a lookup that answered
+    // without waiting for the writer sees it down (ticket 0352).
+    let committing = std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false));
+    let released = std::thread::spawn({
+        let committing = std::sync::Arc::clone(&committing);
+        move || {
+            std::thread::sleep(Duration::from_millis(300));
+            committing.store(true, std::sync::atomic::Ordering::SeqCst);
+            holder.execute_batch("COMMIT").expect("unlock");
+        }
     });
-    let started = Instant::now();
     let found = store
         .lookup(&[key("a")], &Cancel::default())
         .expect("lookup");
     assert!(found[0].is_some());
-    assert!(started.elapsed() >= Duration::from_millis(250));
+    assert!(
+        committing.load(std::sync::atomic::Ordering::SeqCst),
+        "the lookup answered before the writer let go"
+    );
     released.join().expect("holder");
 }
 
@@ -258,8 +267,9 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
         Err(Error::RecordingStorage)
     ));
     let waited = started.elapsed();
+    // The holder never lets go, so only the limit ends this wait; the bound is a hang guard.
     assert!(
-        waited < Duration::from_secs(1),
+        waited < Duration::from_secs(10),
         "the limit ends the wait: {waited:?}"
     );
     let cancel = Cancel::default();
@@ -271,7 +281,7 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
     ));
     let waited = started.elapsed();
     assert!(
-        waited < Duration::from_secs(1),
+        waited < Duration::from_secs(10),
         "the stop ends the wait: {waited:?}"
     );
     holder.execute_batch("ROLLBACK").expect("unlock");

@@ -99,10 +99,27 @@ fn rows_keep_input_order_when_replies_finish_out_of_order() {
     let _serial = serial();
     let number = |record: &str| -> usize { record["record ".len()..].parse().expect("a number") };
     let odd = move |record: &str| number(record) % 2 == 1;
+    // Each slow reply waits until the fast one beside it has answered, so the
+    // order holds however loaded the machine is (ticket 0352).
+    let behind = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let (answered, fast) = std::sync::mpsc::channel();
+    let _releaser = {
+        let behind = std::sync::Arc::clone(&behind);
+        thread::spawn(move || {
+            for _ in 0..2 {
+                let _answered = fast.recv_timeout(Duration::from_secs(30));
+                behind.wait();
+            }
+        })
+    };
     let listener = Listener::answering(move |body| {
         let slow = quoted(body).iter().any(|record| number(record) % 4 == 1);
         let reply = every(body, |record| if odd(record) { 0.9 } else { 0.1 });
-        if slow { reply.after(120) } else { reply }
+        if slow {
+            reply.after_release(std::sync::Arc::clone(&behind))
+        } else {
+            reply.notifying(answered.clone())
+        }
     })
     .expect("listener");
     let engine = engine(listener.base());

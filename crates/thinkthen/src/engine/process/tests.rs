@@ -16,7 +16,7 @@ use super::Guarded;
 const PARENT: u32 = 41;
 const CHILD: u32 = 42;
 const OTHER: u32 = 43;
-const BOUND: Duration = Duration::from_secs(5);
+const BOUND: Duration = Duration::from_secs(30);
 
 type Built = Result<&'static str, &'static str>;
 type Called = (Result<Arc<&'static str>, &'static str>, usize);

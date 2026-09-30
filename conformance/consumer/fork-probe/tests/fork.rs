@@ -43,6 +43,14 @@ fn folder(name: &str) -> PathBuf {
     folder
 }
 
+/// Wait until `path` exists, or 60 s pass.
+fn appears(path: &Path) {
+    let cap = Instant::now() + Duration::from_secs(60);
+    while !path.exists() && Instant::now() < cap {
+        thread::sleep(Duration::from_millis(10));
+    }
+}
+
 fn decide() -> Question {
     Question::decide("Is this urgent?").map_or_else(
         |_| unreachable!("the text is not blank"),
@@ -383,9 +391,14 @@ fn a_parents_concurrent_question_never_waits_for_a_forked_child() {
             (result, Instant::now())
         });
         thread::sleep(Duration::from_millis(200));
+        // The child stays until the waiter has its answer, so the waiter
+        // cannot have waited for it. The 60 s cap only stops a hang
+        // (ticket 0352).
+        let gate = folder("child-gate");
+        let seen = gate.clone();
         let child = scope.spawn(|| {
-            in_child(|| {
-                thread::sleep(Duration::from_secs(8));
+            in_child(move || {
+                appears(&seen);
                 true
             })
         });
@@ -394,9 +407,10 @@ fn a_parents_concurrent_question_never_waits_for_a_forked_child() {
         backend.release();
         assert_eq!(owner.join().expect("the owner"), Some(Answer::Yes));
         let (answer, done) = waiter.join().expect("the waiter");
+        std::fs::write(&gate, "done").expect("the child's gate");
         assert_eq!(answer, Some(Answer::Yes));
         assert!(
-            done - released < Duration::from_secs(4),
+            done - released < Duration::from_secs(30),
             "the waiter waited for the child: {:?}",
             done - released
         );
@@ -404,6 +418,7 @@ fn a_parents_concurrent_question_never_waits_for_a_forked_child() {
             .join()
             .expect("the child thread")
             .expect("the child slept and left");
+        let _removed = std::fs::remove_file(&gate);
     });
     assert_eq!(backend.count(), 2, "separate calls do not coalesce");
 }

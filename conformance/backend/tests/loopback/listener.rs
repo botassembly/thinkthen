@@ -226,8 +226,8 @@ fn a_held_reply_releases_normally_and_retirement_interrupts_an_unreleased_reply(
         drop(listener);
         let _ = retired.send(());
     });
-    assert_eq!(done.recv_timeout(Duration::from_secs(1)), Ok(()));
-    assert_eq!(wake.recv_timeout(Duration::from_secs(1)), Ok(false));
+    assert_eq!(done.recv_timeout(PATIENCE), Ok(()));
+    assert_eq!(wake.recv_timeout(PATIENCE), Ok(false));
     let mut body = String::new();
     stream.read_to_string(&mut body)?;
     assert!(
@@ -247,8 +247,9 @@ fn retirement_cancels_a_gate_during_the_reply_delay() -> Tested {
         {
             let release = Arc::clone(&release);
             move |_| {
+                // Past PATIENCE, so a retirement that waited out the delay fails.
                 Canned::ok("too late")
-                    .after(10_000)
+                    .after(60_000)
                     .after_release(Arc::clone(&release))
             }
         },
@@ -269,8 +270,8 @@ fn retirement_cancels_a_gate_during_the_reply_delay() -> Tested {
         drop(listener);
         let _ = retired.send(());
     });
-    assert_eq!(done.recv_timeout(Duration::from_secs(1)), Ok(()));
-    assert_eq!(wake.recv_timeout(Duration::from_secs(1)), Ok(false));
+    assert_eq!(done.recv_timeout(PATIENCE), Ok(()));
+    assert_eq!(wake.recv_timeout(PATIENCE), Ok(false));
     let mut body = String::new();
     stream.read_to_string(&mut body)?;
     assert!(
@@ -304,7 +305,7 @@ fn retirement_cancels_a_gate_when_the_reply_exits_before_its_wait() -> Tested {
         let _ = awoken.send(release.wait());
     });
     drop(listener);
-    assert_eq!(wake.recv_timeout(Duration::from_secs(1)), Ok(false));
+    assert_eq!(wake.recv_timeout(PATIENCE), Ok(false));
     participant.join().map_err(|_| "participant panicked")?;
     Ok(())
 }

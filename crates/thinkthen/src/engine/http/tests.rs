@@ -184,7 +184,7 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
     let url = format!("http://{address}/v1/systemone");
     let key = Key::of("sk-test-value");
     let client = Client::new(
-        Duration::from_secs(2),
+        Duration::from_secs(30),
         false,
         &crate::engine::limits::process().widths,
     );
@@ -194,7 +194,7 @@ fn cancellation_during_a_retry_wait_starts_no_second_attempt() {
         body: b"{}",
         key: &key,
         max_retries: 1,
-        retry_wait: Duration::from_secs(1),
+        retry_wait: Duration::from_secs(30),
     };
 
     let result = client.post_observed(&exchange, &cancel, || {
@@ -369,15 +369,15 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
         body: b"{}",
         key: &key,
         max_retries: 1,
-        retry_wait: Duration::from_secs(1),
+        retry_wait: Duration::from_secs(30),
     };
     let budget = crate::engine::budget::SendBudget::new();
     let cancel = crate::engine::Cancel::default()
-        .with_deadline(crate::engine::Deadline::after(Duration::from_millis(200)))
+        .with_deadline(crate::engine::Deadline::after(Duration::from_secs(1)))
         .with_send_budget(Some((budget.clone(), Some(2))));
     let counts = Counters::new(None);
     let client = Client::new(
-        Duration::from_secs(1),
+        Duration::from_secs(30),
         false,
         &crate::engine::limits::process().widths,
     );

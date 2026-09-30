@@ -230,7 +230,8 @@ fn accounting_that_outlasts_the_budget_sends_nothing() {
         );
 
     assert_eq!(deadline_of(result), Duration::from_millis(200));
-    assert!(started.elapsed() < SECOND, "the call returned promptly");
+    // A hang guard, never a speed claim; the accept below proves no attempt went out.
+    assert!(started.elapsed() < SECOND * 10, "the call returned");
     assert!(matches!(listener.accept(), Err(error) if error.kind() == ErrorKind::WouldBlock));
     assert_eq!(counts.snapshot().requests_sent, 0);
     assert_eq!(counts.snapshot().retries, 0);

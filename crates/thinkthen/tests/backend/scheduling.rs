@@ -122,7 +122,7 @@ fn raw_child(
 }
 
 fn wait_promptly(child: &mut Child) -> io::Result<Option<ExitStatus>> {
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         if let Some(status) = child.try_wait()? {
             return Ok(Some(status));
@@ -161,7 +161,7 @@ fn an_answer_arrives_before_the_next_record_at_one_job_and_the_default() {
                 .write_all(record(place).as_bytes())
                 .expect("one record is written");
             input.flush().expect("the record reaches the process");
-            let line = output.recv_timeout(Duration::from_secs(2));
+            let line = output.recv_timeout(Duration::from_secs(30));
             if line.is_err() {
                 let _ = child.kill();
                 let _ = child.wait();
@@ -229,7 +229,7 @@ fn ordered_output_bounds_every_dispatched_row() {
     }
     for _ in 0..4 {
         completed
-            .recv_timeout(Duration::from_secs(10))
+            .recv_timeout(Duration::from_secs(30))
             .expect("rows 2 through 5 answer while row 1 is held");
     }
     // A late sixth request only makes this pass wrongly, never fail wrongly.

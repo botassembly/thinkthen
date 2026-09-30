@@ -56,13 +56,13 @@ fn a_terminal_batch_error_keeps_the_joined_late_reply_in_final_facts() {
         let listener = &listener;
         let helper = scope.spawn(move || {
             let began = Instant::now();
-            while listener.count() < 2 && began.elapsed() < Duration::from_secs(3) {
+            while listener.count() < 2 && began.elapsed() < Duration::from_secs(30) {
                 thread::sleep(Duration::from_millis(5));
             }
             assert_eq!(listener.count(), 2, "both requests started");
             assert!(beta.wait(), "release later reply for join");
             notice
-                .recv_timeout(Duration::from_secs(3))
+                .recv_timeout(Duration::from_secs(30))
                 .expect("later attempt observed first");
             assert!(alpha.wait(), "release failed first request");
         });
@@ -143,13 +143,13 @@ fn attempt_callback_panic_waits_for_a_held_later_worker() {
             let released = &released;
             let helper = scope.spawn(move || {
                 let began = Instant::now();
-                while listener.count() < 2 && began.elapsed() < Duration::from_secs(3) {
+                while listener.count() < 2 && began.elapsed() < Duration::from_secs(30) {
                     thread::sleep(Duration::from_millis(5));
                 }
                 assert_eq!(listener.count(), 2, "later worker is already in flight");
                 assert!(first.wait(), "release first reply");
                 notice
-                    .recv_timeout(Duration::from_secs(3))
+                    .recv_timeout(Duration::from_secs(30))
                     .expect("callback fired");
                 assert!(later.wait(), "release later reply");
                 released.store(1, Ordering::SeqCst);
@@ -215,7 +215,7 @@ fn dropping_a_lazy_batch_drains_attempts_and_resumes_panic_after_join() {
         let listener = &listener;
         scope.spawn(|| {
             let began = Instant::now();
-            while listener.count() < 2 && began.elapsed() < Duration::from_secs(3) {
+            while listener.count() < 2 && began.elapsed() < Duration::from_secs(30) {
                 thread::sleep(Duration::from_millis(5));
             }
             assert_eq!(listener.count(), 2, "later attempt was already sent");

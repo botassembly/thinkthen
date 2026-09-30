@@ -49,6 +49,31 @@ pub(crate) fn start(
     environment: &[(&str, &str)],
     evidence: &[u8],
 ) -> io::Result<Child> {
+    let mut child = command(arguments, environment).stdin(Stdio::piped()).spawn()?;
+    let mut input = child
+        .stdin
+        .take()
+        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
+    let _ = input.write_all(evidence);
+    drop(input);
+    Ok(child)
+}
+
+/// Run as `spawn` does, with standard input read from a file. Evidence past
+/// the pipe buffer then never waits on this process's write, so no input
+/// pause can close a batch early on a loaded machine (ticket 0352).
+pub(crate) fn spawn_file(
+    arguments: &[&str],
+    environment: &[(&str, &str)],
+    evidence: &std::path::Path,
+) -> io::Result<Output> {
+    let child = command(arguments, environment)
+        .stdin(std::fs::File::open(evidence)?)
+        .spawn()?;
+    finish(child, &format!("thinkthen {}", arguments.join(" ")))
+}
+
+fn command(arguments: &[&str], environment: &[(&str, &str)]) -> Command {
     static SPAWNS: AtomicUsize = AtomicUsize::new(0);
     let home = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
         "spawn-home-{}-{}",
@@ -61,20 +86,49 @@ pub(crate) fn start(
         .env("HOME", home)
         .env("THINKTHEN_TEST_RETRY_WAIT_MS", "1")
         .args(arguments)
-        .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     for (name, value) in environment {
         command.env(name, value);
     }
-    let mut child = command.spawn()?;
-    let mut input = child
-        .stdin
-        .take()
-        .ok_or_else(|| io::Error::other("no pipe to standard input"))?;
-    let _ = input.write_all(evidence);
-    drop(input);
-    Ok(child)
+    command
+}
+
+/// Counts the replies written with `Canned::notifying(tally.sender())`, so a
+/// held reply can wait for others to be written first (ticket 0352). The
+/// wait gives up after `FAILSAFE`, so a missing reply fails on counts.
+#[derive(Default)]
+pub(crate) struct Tally {
+    written: Mutex<usize>,
+    changed: Condvar,
+}
+
+impl Tally {
+    pub(crate) fn new() -> std::sync::Arc<Self> {
+        std::sync::Arc::default()
+    }
+
+    /// A sender for `Canned::notifying` that counts each written reply.
+    pub(crate) fn sender(self: &std::sync::Arc<Self>) -> std::sync::mpsc::Sender<()> {
+        let (sender, written) = std::sync::mpsc::channel::<()>();
+        let tally = std::sync::Arc::clone(self);
+        std::thread::spawn(move || {
+            while written.recv().is_ok() {
+                *tally.written.lock().unwrap_or_else(PoisonError::into_inner) += 1;
+                tally.changed.notify_all();
+            }
+        });
+        sender
+    }
+
+    /// Wait until `wanted` replies are written, or `FAILSAFE` passes.
+    pub(crate) fn wait_for(&self, wanted: usize) {
+        let written = self.written.lock().unwrap_or_else(PoisonError::into_inner);
+        let _written = self
+            .changed
+            .wait_timeout_while(written, FAILSAFE, |written| *written < wanted)
+            .unwrap_or_else(PoisonError::into_inner);
+    }
 }
 
 /// Holds each of the first `wanted` requests until all of them are in flight.

@@ -111,7 +111,7 @@ fn a_closed_reader_ends_filter_while_its_input_remains_open() {
     assert_eq!(first, "keep first\n");
     drop(reader);
 
-    let deadline = Instant::now() + Duration::from_secs(2);
+    let deadline = Instant::now() + Duration::from_secs(30);
     let status = loop {
         if let Some(status) = child.try_wait().expect("filter status") {
             break status;

@@ -354,7 +354,9 @@ fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
         connection
             .execute_batch("BEGIN EXCLUSIVE")
             .expect("the lock");
-        held.send(()).expect("a signal");
+        // The lock's start time rides the signal, so the wait below is
+        // measured from the lock itself however late this thread is woken.
+        held.send(std::time::Instant::now()).expect("a signal");
         std::thread::sleep(std::time::Duration::from_millis(300));
         live(
             &connection,
@@ -366,14 +368,13 @@ fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
         .expect("a row");
         connection.execute_batch("COMMIT").expect("a commit");
     });
-    holding.recv().expect("the writer holds the lock");
-    let started = std::time::Instant::now();
+    let started = holding.recv().expect("the writer holds the lock");
     let (code, said) = convert(&folder, &[]).expect("a run");
     let waited = started.elapsed();
     writer.join().expect("the writer");
     assert_eq!(code, Some(0), "{said}");
     assert!(
-        waited >= std::time::Duration::from_millis(250),
+        waited >= std::time::Duration::from_millis(300),
         "{waited:?}"
     );
     let written = answers(&folder).expect("answers");

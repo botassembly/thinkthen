@@ -15,7 +15,7 @@ use std::time::{Duration, Instant};
 
 use serde_json::{Map, Value, json};
 
-use crate::harness::{Canned, Gathering, Listener, finish, spawn};
+use crate::harness::{Canned, Gathering, Listener, Tally, finish, spawn};
 
 mod audited;
 mod ceiling;
@@ -316,7 +316,7 @@ fn a_pause_sends_the_open_batch() {
             .write_all(lines(1..=3).as_bytes())
             .expect("three records are written");
         writer.flush().expect("the records reach the pipe");
-        let deadline = Instant::now() + Duration::from_secs(5);
+        let deadline = Instant::now() + Duration::from_secs(30);
         while listener.count() == 0 && Instant::now() < deadline {
             thread::sleep(Duration::from_millis(10));
         }
@@ -470,11 +470,15 @@ fn each_row_carries_its_share() {
 /// later record's request goes (ticket 0304 slice 4).
 #[test]
 fn a_failed_request_sends_no_later_request() {
-    let listener = Listener::answering(|body| {
+    // Line 1's request answers only once line 2's has failed, so it is still
+    // out at the failure however loaded the machine is (ticket 0352).
+    let failed = Tally::new();
+    let listener = Listener::answering(move |body| {
         if first(body) == 2 {
-            Canned::status(500, "{}")
+            Canned::status(500, "{}").notifying(failed.sender())
         } else {
-            answering(body).after(200)
+            failed.wait_for(1);
+            answering(body)
         }
     })
     .expect("a loopback listener");

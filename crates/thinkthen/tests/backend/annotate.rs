@@ -4,7 +4,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-use crate::harness::{Canned, Listener, spawn};
+use crate::harness::{Canned, Listener, Tally, spawn};
 
 const ANSWERED: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92},"#,
@@ -393,12 +393,16 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
 
 #[test]
 fn the_first_group_failure_wins_when_the_second_finishes_first() {
-    let listener = Listener::answering(|body| {
+    // The slow group answers once the fast one has, however loaded the
+    // machine is (ticket 0352).
+    let fast = Tally::new();
+    let listener = Listener::answering(move |body| {
         let body = String::from_utf8_lossy(body);
         if body.contains(r#""instructions":"The text is \"slow\". "#) {
-            Canned::status(422, "{}").after(40)
+            fast.wait_for(1);
+            Canned::status(422, "{}")
         } else {
-            Canned::status(401, "{}")
+            Canned::status(401, "{}").notifying(fast.sender())
         }
     })
     .expect("a listener");

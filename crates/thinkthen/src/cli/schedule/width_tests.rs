@@ -333,7 +333,7 @@ fn two_engines_share_the_cap() {
     let held = held("never busy");
     let url = held.listener.url();
     let finished = AtomicUsize::new(0);
-    let clients = [5, 7].map(|timeout| {
+    let clients = [30, 31].map(|timeout| {
         Client::new(
             Duration::from_secs(timeout),
             false,

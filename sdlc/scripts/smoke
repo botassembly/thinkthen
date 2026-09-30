@@ -33,7 +33,7 @@ one() {
 	tries=0
 	until [ -s "$work/out" ]; do
 		tries=$((tries + 1))
-		[ "$tries" -le 100 ] || { echo "smoke: FAIL $1 (the loopback backend printed no port)"; return 1; }
+		[ "$tries" -le 300 ] || { echo "smoke: FAIL $1 (the loopback backend printed no port)"; return 1; }
 		sleep 0.1
 	done
 	port=$(head -n 1 "$work/out")

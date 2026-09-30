@@ -51,7 +51,7 @@ class Backend:
         return int(self.process.stdout.readline())
 
     def wait(self, least):
-        """The count once it reads at least ``least``, or at 5 s."""
+        """The count once it reads at least ``least``, or at 30 s."""
         self.say(f"wait {least}")
         line = self.process.stdout.readline()
         assert line.startswith("wait "), line

@@ -34,7 +34,7 @@ The pure-core integration test validates this file offline through the productio
 
 ## The loopback backend
 
-`conformance/backend` is an offline backend every surface's tests can start. Run `cargo run --package conformance-backend`. It binds 127.0.0.1 on a free port and prints the port on its first line. A `count` line on standard input prints the requests read so far. A `release` line lets every held reply go, now and from here on. A `round` line lets go the replies held at that moment, and a reply that arrives later holds again. A `wait N` line later prints `wait K`, where K is the count once it reads at least N, or at 5 s. Closing standard input prints the final count and exits without waiting for a pending `wait`. The command's own tests use its library in process.
+`conformance/backend` is an offline backend every surface's tests can start. Run `cargo run --package conformance-backend`. It binds 127.0.0.1 on a free port and prints the port on its first line. A `count` line on standard input prints the requests read so far. A `release` line lets every held reply go, now and from here on. A `round` line lets go the replies held at that moment, and a reply that arrives later holds again. A `wait N` line later prints `wait K`, where K is the count once it reads at least N, or at 30 s. Closing standard input prints the final count and exits without waiting for a pending `wait`. The command's own tests use its library in process.
 
 A caller picks an arm by the base it gives, because the engine appends `/systemone` to any base.
 

@@ -2,15 +2,20 @@
 
 use std::fs;
 
-use super::{QUESTION, answering, decide, folder, places, text};
-use crate::harness::{Listener, spawn};
+use super::{KEY, QUESTION, answering, decide, folder, places, text};
+use crate::harness::{Listener, spawn, spawn_file};
 
 type Case<'a> = (&'a str, Vec<&'a str>, Vec<(&'a str, &'a str)>, &'a [usize]);
 
-fn sized() -> String {
-    (1..=3)
+/// Three 40,000-byte lines in a file. Through a pipe they would outgrow its
+/// buffer, and a loaded machine could pause the writer past the batch pause.
+fn sized(directory: &str) -> String {
+    let input: String = (1..=3)
         .map(|at| format!("{}line {at}\n", "a".repeat(39_994)))
-        .collect()
+        .collect();
+    let file = format!("{directory}/sized.txt");
+    fs::write(&file, input).expect("the sized input");
+    file
 }
 
 fn profile(path: &str, name: &str, limit: usize) -> String {
@@ -23,11 +28,36 @@ fn profile(path: &str, name: &str, limit: usize) -> String {
     file
 }
 
+/// Run `decide` as the batching `decide` does, reading the input file.
+fn decide_file(
+    base: &str,
+    extra: &[&str],
+    environment: &[(&str, &str)],
+    input: &str,
+) -> std::process::Output {
+    let fixed = [
+        "decide",
+        QUESTION,
+        "--lines",
+        "--url",
+        base,
+        "--model",
+        "jev-1.13.0",
+    ];
+    let arguments = [&fixed[..], extra].concat();
+    spawn_file(
+        &arguments,
+        &[environment, &[KEY]].concat(),
+        std::path::Path::new(input),
+    )
+    .expect("the command runs")
+}
+
 #[test]
 fn the_request_size_closes_batches_at_every_address() {
-    let input = sized();
     let directory = folder("size-profiles");
     fs::create_dir_all(&directory).expect("profile folder");
+    let input = sized(&directory);
     let wide = profile(&directory, "wide", 200_000);
     let small = profile(&directory, "small", 50_000);
     let cases: [Case<'_>; 6] = [
@@ -61,7 +91,7 @@ fn the_request_size_closes_batches_at_every_address() {
     for (name, extra, environment, expected) in cases {
         let listener = Listener::answering(answering).expect("a loopback listener");
         let extra = [&["--no-cache", "--jobs", "1"][..], extra.as_slice()].concat();
-        let output = decide(listener.base(), &extra, &environment, &input);
+        let output = decide_file(listener.base(), &extra, &environment, &input);
         assert_eq!(
             output.status.code(),
             Some(0),

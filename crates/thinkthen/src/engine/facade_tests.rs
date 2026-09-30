@@ -35,7 +35,7 @@ fn settings(base: &str) -> Settings {
     Settings {
         backend: Backend::resolve(Some(base), None, DEFAULT_MODEL).expect("backend"),
         profile: None,
-        timeout: Duration::from_secs(5),
+        timeout: Duration::from_secs(30),
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         width: None,

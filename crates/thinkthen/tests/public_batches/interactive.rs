@@ -21,7 +21,7 @@ fn held_input(
                 stage = 2;
                 pulls.fetch_add(1, Ordering::SeqCst);
                 release
-                    .recv_timeout(Duration::from_secs(3))
+                    .recv_timeout(Duration::from_secs(30))
                     .expect("release held caller input");
                 None
             }
@@ -97,7 +97,7 @@ fn batch_one_returns_before_the_next_held_input_while_max_waits_for_close() {
     let (row, held) = thread::scope(|scope| {
         let watcher = scope.spawn(|| {
             let began = Instant::now();
-            while pulled_max.load(Ordering::SeqCst) < 2 && began.elapsed() < Duration::from_secs(3)
+            while pulled_max.load(Ordering::SeqCst) < 2 && began.elapsed() < Duration::from_secs(30)
             {
                 thread::sleep(Duration::from_millis(5));
             }

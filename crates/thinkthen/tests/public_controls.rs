@@ -13,6 +13,7 @@
 mod call_facts;
 
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
+use std::process::Stdio;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Mutex, MutexGuard, PoisonError};
 use std::thread::{self, ThreadId};
@@ -28,10 +29,14 @@ const DECIDED: &str = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","n
 const MOST: &str = "4294967295 seconds";
 const BOUND: Duration = Duration::from_secs(3);
 
+#[path = "../src/test_deadline/child.rs"]
+mod child;
 #[path = "public_controls/fired.rs"]
 mod fired;
 #[path = "public_controls/stopped.rs"]
 mod stopped;
+#[path = "../src/test_deadline/wait.rs"]
+mod wait;
 
 /// Guards the process state the engine still holds: `PROCESS_LIMITS` in
 /// `engine/limits.rs`, one throttle, 429 gate, pacer and request total per
@@ -282,8 +287,8 @@ fn a_stop_at_the_throttle_gate_sends_nothing_new_and_sent_work_finishes() {
 #[test]
 fn a_stop_during_a_retry_wait_sends_nothing_new() {
     let _serial = serial();
-    // The backend asks for a ten-second wait, so an early end is plain on a loaded machine.
-    let busy = Listener::answering(|_| Canned::status(503, "").asking("retry-after", "10"))
+    // The backend asks for a 30 s wait, so the 10 s bound is a hang guard (ticket 0352).
+    let busy = Listener::answering(|_| Canned::status(503, "").asking("retry-after", "30"))
         .expect("listener");
     let busy_engine = engine(busy.base());
     let asked = question();
@@ -297,12 +302,12 @@ fn a_stop_during_a_retry_wait_sends_nothing_new() {
     assert!(runs.all_on(thread::current().id()));
     assert_eq!(busy.count(), 1, "the retry after the wait never went");
     assert!(
-        started.elapsed() < Duration::from_secs(5),
+        started.elapsed() < Duration::from_secs(10),
         "the wait ended early"
     );
 
     let deadline_busy =
-        Listener::answering(|_| Canned::status(503, "").asking("retry-after", "10"))
+        Listener::answering(|_| Canned::status(503, "").asking("retry-after", "30"))
             .expect("deadline listener");
     let deadline_engine = engine(deadline_busy.base());
     let started = Instant::now();
@@ -311,7 +316,7 @@ fn a_stop_during_a_retry_wait_sends_nothing_new() {
     assert_eq!(kind(&result), Some(ErrorKind::Deadline));
     assert_eq!(deadline_busy.count(), 1, "one first attempt, no retry");
     assert!(
-        started.elapsed() < Duration::from_secs(5),
+        started.elapsed() < Duration::from_secs(10),
         "the wait ended early"
     );
 }
@@ -350,69 +355,92 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
     );
 }
 
-/// Shared pair requests fill the throttle of 4. The host check runs only
-/// while no send is out, so it fires at the first such moment after four
-/// sends, and nothing is sent after it fires. Forty entities make exactly
-/// four requests. The 60-entity race is narrower, not gone: replies that
-/// overlap until the call ends leave no quiet moment. Ticket 0342 replaced a check on exactly four sends, which
-/// missed its moment and failed 7 runs in 50 at load 13.
+/// The host check runs only while no send of the call is out. At the
+/// default throttle of 4, replies that overlap can leave no such moment
+/// before the call ends, so at load 13 the old check at 4 missed it (ticket
+/// 0342) and a check at 4 or more still could (ticket 0352). One send at a
+/// time leaves that moment after every reply, so the check fires at exactly
+/// four sends with more pairs left, and nothing is sent after it. The
+/// throttle is chosen once per process, so the row runs alone.
 #[test]
 fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
-    let _serial = serial();
-    for count in [60, 40] {
-        let entities = (0..count)
-            .map(|n| Entity::new(&format!("service {n}"), "service").expect("entity"))
-            .collect::<Vec<_>>();
-        let backend = Backend::start().expect("backend");
-        let held = engine(&format!("{}/arm/held/v1", backend.origin()));
-        let ask = Relate::from_json(
-            r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
-        ).expect("relate file");
-        let runs = Runs::default();
-        let stopped_at = Mutex::new(None);
-        let check = || {
-            let sent = backend.count();
-            runs.record(sent);
-            let mut held = stopped_at.lock().unwrap_or_else(PoisonError::into_inner);
-            if sent >= 4 {
-                held.get_or_insert(sent);
-            }
-            held.is_some()
-        };
-        let result = thread::scope(|scope| {
-            scope.spawn(|| {
-                backend.wait(4);
-                backend.release();
-            });
-            held.relate_with(&ask, entities.clone(), CallOptions::new().interrupt(&check))
-        });
-        assert!(
-            runs.all_on(thread::current().id()),
-            "a check ran on a worker"
-        );
-        assert_eq!(
-            kind(&result),
-            Some(ErrorKind::Cancelled),
-            "{count} entities"
-        );
-        let stopped_at = stopped_at
-            .into_inner()
-            .unwrap_or_else(PoisonError::into_inner)
-            .expect("the check fired");
-        assert_eq!(
-            backend.count(),
-            stopped_at,
-            "{count} entities: nothing new was sent"
-        );
-        assert!(
-            if count == 40 {
-                stopped_at == 4
-            } else {
-                (4..=8).contains(&stopped_at)
-            },
-            "{count} entities stopped at {stopped_at}"
-        );
+    alone(
+        "a_host_interrupt_during_relate_chunks_sends_nothing_new",
+        || {
+            let _serial = serial();
+            let entities = (0..60)
+                .map(|n| Entity::new(&format!("service {n}"), "service").expect("entity"))
+                .collect::<Vec<_>>();
+            let backend = Backend::start().expect("backend");
+            backend.release();
+            let one_at_a_time = Engine::builder()
+                .base_url(&format!("{}/arm/held/v1", backend.origin()))
+                .and_then(|builder| builder.api_key("sk-public-controls"))
+                .and_then(|builder| builder.throttle(1))
+                .map(thinkthen::EngineBuilder::no_cache)
+                .and_then(thinkthen::EngineBuilder::build)
+                .expect("engine");
+            let ask = Relate::from_json(
+                r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
+            ).expect("relate file");
+            let runs = Runs::default();
+            let stopped_at = Mutex::new(None);
+            let check = || {
+                let sent = backend.count();
+                runs.record(sent);
+                let mut held = stopped_at.lock().unwrap_or_else(PoisonError::into_inner);
+                if sent >= 4 {
+                    held.get_or_insert(sent);
+                }
+                held.is_some()
+            };
+            let result =
+                one_at_a_time.relate_with(&ask, entities, CallOptions::new().interrupt(&check));
+            assert!(
+                runs.all_on(thread::current().id()),
+                "a check ran on a worker"
+            );
+            assert_eq!(kind(&result), Some(ErrorKind::Cancelled));
+            let stopped_at = stopped_at
+                .into_inner()
+                .unwrap_or_else(PoisonError::into_inner);
+            assert_eq!(stopped_at, Some(4), "the check fired after the fourth reply");
+            assert_eq!(backend.count(), 4, "nothing new was sent");
+        },
+    );
+}
+
+/// Names the one row a rerun child runs.
+const ALONE: &str = "THINKTHEN_TEST_CONTROLS_ALONE";
+
+/// Run `body` alone in a fresh copy of this test binary, because the first
+/// explicit throttle selects the process's width for good (ticket 0077).
+/// Nextest already runs each row alone; `cargo test` and `package` do not.
+fn alone(path: &str, body: impl FnOnce()) {
+    if std::env::var_os(ALONE).is_some_and(|chosen| chosen == path) {
+        body();
+        return;
     }
+    let binary = std::env::current_exe().expect("this test binary");
+    let child = child::command(
+        binary.to_str().expect("a UTF-8 test binary path"),
+        &["HOME", "XDG_CACHE_HOME", "TMPDIR"],
+    )
+    .args(["--exact", path, "--nocapture", "--test-threads=1"])
+    .env(ALONE, path)
+    .stdin(Stdio::null())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()
+    .expect("the child starts");
+    let output = wait::finish(child, path).expect("the child ends");
+    let said = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "{said}\n{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(said.contains("1 passed"), "the child ran {path}");
 }
 
 #[test]

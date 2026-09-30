@@ -197,6 +197,10 @@ fn profile_splits_each_incompatible_named_group_before_sending() {
     let _serial = serial();
     let (alpha_sender, alpha_answered) = std::sync::mpsc::channel();
     let (beta_sender, beta_answered) = std::sync::mpsc::channel();
+    // Alpha's first chunk answers only after beta's has, so the order holds
+    // on a loaded machine (ticket 0352).
+    let alpha_held = std::sync::Arc::new(conformance_backend::Rendezvous::new(2));
+    let held = std::sync::Arc::clone(&alpha_held);
     let listener = Listener::answering(move |body| {
         let request: serde_json::Value = serde_json::from_slice(body).expect("request");
         assert_eq!(
@@ -206,7 +210,7 @@ fn profile_splits_each_incompatible_named_group_before_sending() {
         let text = String::from_utf8_lossy(body);
         if text.contains("alpha") && text.contains("First?") {
             Canned::ok(DECIDED)
-                .after(150)
+                .after_release(std::sync::Arc::clone(&held))
                 .notifying(alpha_sender.clone())
         } else if text.contains("beta") && text.contains("First?") {
             Canned::ok(DECIDED).notifying(beta_sender.clone())
@@ -216,10 +220,11 @@ fn profile_splits_each_incompatible_named_group_before_sending() {
     })
     .expect("listener");
     let completion = thread::spawn(move || {
-        beta_answered
-            .recv_timeout(Duration::from_secs(2))
-            .expect("later row answered");
-        alpha_answered.try_recv().is_err()
+        let beta = beta_answered.recv_timeout(Duration::from_secs(30));
+        let before = alpha_answered.try_recv().is_err();
+        assert!(alpha_held.wait(), "alpha's first chunk is released");
+        beta.expect("later row answered");
+        before
     });
     let engine = Engine::builder()
         .base_url(listener.base())
