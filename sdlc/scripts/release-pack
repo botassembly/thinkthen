@@ -276,7 +276,8 @@ cobol)
 		cp libraries/cobol/src/TTJSON.c libraries/cobol/src/TTJSON.h \
 			libraries/cobol/src/tt_shape.c libraries/cobol/src/tt_engine.cob \
 			libraries/cobol/src/tt_error.cob libraries/cobol/src/tt_call.cob \
-			libraries/cobol/src/tt_decide.cob libraries/cobol/src/tt_validate.cob "$folder/src/"
+			libraries/cobol/src/tt_decide.cob libraries/cobol/src/tt_validate.cob \
+			libraries/cobol/src/tt_plan.cob "$folder/src/"
 		cp libraries/cobol/examples/direct.cob libraries/cobol/examples/settings.cob \
 			libraries/cobol/examples/types.cob "$folder/examples/"
 		;;

@@ -39,7 +39,7 @@ procedure division.
        move 0 to return-code
        goback
     end-if
-    call "TT-CALL" using engine request-text request-length
+    call "TT-CALL" using engine request-text request-length tt-deadline-ms
        result-text result-length tt-failure
     if tt-failure-code = 0
        display result-text(1:result-length)
@@ -51,11 +51,11 @@ procedure division.
     goback.
 print-error.
     evaluate true
-       when failure-usage display '{"error":"usage"}'
-       when failure-backend display '{"error":"backend"}'
-       when failure-deadline display '{"error":"deadline"}'
-       when failure-local display '{"error":"local"}'
-       when failure-cancelled display '{"error":"cancelled"}'
-       when failure-defect display '{"error":"defect"}'
-       when other display '{"error":"unknown"}'
+       when failure-usage display '{"failed":{"kind":"usage","code":1}}'
+       when failure-backend display '{"failed":{"kind":"backend","code":2}}'
+       when failure-deadline display '{"failed":{"kind":"deadline","code":3}}'
+       when failure-local display '{"failed":{"kind":"local","code":4}}'
+       when failure-cancelled display '{"failed":{"kind":"cancelled","code":5}}'
+       when failure-defect display '{"failed":{"kind":"defect","code":6}}'
+       when other display '{"failed":{"kind":"unknown","code":0}}'
     end-evaluate.

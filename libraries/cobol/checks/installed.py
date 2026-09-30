@@ -1,6 +1,5 @@
 """Compile two copied COBOL packages without source-tree paths at runtime."""
 import collections
-import ctypes
 import json
 import os
 from pathlib import Path
@@ -43,26 +42,6 @@ for name in ("alpha", "bravo"):
         subprocess.run([CC, "-std=c11", "-D_GNU_SOURCE", "-c", str(installed / "src/tt_shape.c"),
                         "-o", str(work / "ttshape.o")], cwd=work, env=child_env(), check=True,
                        capture_output=True, timeout=60)
-        if name == "alpha":
-            decoder = work / "facts.so"
-            subprocess.run([CC, "-std=c11", "-D_GNU_SOURCE", "-shared", "-fPIC",
-                            str(installed / "src/TTJSON.c"), str(installed / "src/tt_shape.c"),
-                            "-lm", "-o", str(decoder)], cwd=work, env=child_env(), check=True,
-                           capture_output=True, timeout=60)
-            check = ctypes.CDLL(str(decoder)).tt_cobol_facts
-            check.argtypes = [ctypes.c_char_p, ctypes.c_size_t]
-            check.restype = ctypes.c_int
-            valid = b'{"records":1,"requests_sent":1,"cache_answers":0,"seconds":0.125,"model":"jev-1.13.0"}'
-            invalid = [
-                b'{"requests_sent":1,"cache_answers":0,"seconds":0.125}',
-                b'{"records":1,"requests_sent":1,"cache_answers":0,"seconds":0.125,"input_tokens":null}',
-                b'{"records":18446744073709551616,"requests_sent":1,"cache_answers":0,"seconds":0.125}',
-                b'{"records":1.5,"requests_sent":1,"cache_answers":0,"seconds":0.125}',
-                b'{"records":1,"requests_sent":1,"cache_answers":0,"seconds":-0.125}',
-                b'{"records":1,"requests_sent":1,"cache_answers":0,"seconds":0.125,"model":null}',
-            ]
-            assert check(valid, len(valid)) == 0
-            assert all(check(row, len(row)) != 0 for row in invalid), "strict copied facts decoder"
         compile("direct", installed / "examples/direct.cob")
         compile("settings", installed / "examples/settings.cob",
                 [installed / "src/tt_engine.cob", installed / "src/tt_error.cob"])

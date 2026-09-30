@@ -9,10 +9,12 @@ working-storage section.
 01 result-ptr usage pointer.
 01 native-length usage binary-double unsigned.
 01 idx usage binary-double unsigned.
+01 no-token usage pointer.
 linkage section.
 01 engine usage pointer.
 01 request-text pic x(8192).
 01 request-length usage binary-double unsigned.
+01 deadline-ms usage binary-double signed.
 01 result-text pic x(8192).
 01 result-length usage binary-double unsigned.
 01 failure-row.
@@ -21,7 +23,7 @@ linkage section.
    02 failure-message pic x(512).
    02 failure-facts-length usage binary-double unsigned.
    02 failure-facts-json pic x(8192).
-procedure division using engine request-text request-length
+procedure division using engine request-text request-length deadline-ms
    result-text result-length failure-row.
     move spaces to result-text failure-message failure-facts-json
     move 0 to result-length failure-code failure-retryable
@@ -39,8 +41,10 @@ procedure division using engine request-text request-length
        end-if
     end-perform
     move x"00" to request-text(request-length + 1:1)
-    call "thinkthen_call" using by value engine
-       by reference request-text returning result-ptr
+    set no-token to null
+    call "thinkthen_call_opts" using by value engine
+       by reference request-text by value size is 8 deadline-ms no-token
+       returning result-ptr
     if result-ptr = null
        call "TT-CAPTURE-ERROR" using engine failure-row
        goback
