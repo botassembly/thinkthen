@@ -123,11 +123,13 @@ pub(crate) fn guarded<T>(body: impl FnOnce() -> T) -> T {
     }
 }
 
-/// Whether a payload is one pgrx raises and reports itself.
+/// Whether a payload is one pgrx raises and reports itself. A rethrown
+/// `RustPanic` carries a panic's payload, so it is not.
 fn pgrx_raised(payload: &(dyn Any + Send)) -> bool {
-    payload.is::<CaughtError>()
-        || payload.is::<ErrorReportWithLevel>()
-        || payload.is::<ErrorReport>()
+    match payload.downcast_ref::<CaughtError>() {
+        Some(caught) => !matches!(caught, CaughtError::RustPanic { .. }),
+        None => payload.is::<ErrorReportWithLevel>() || payload.is::<ErrorReport>(),
+    }
 }
 
 /// Unwrap a value or raise its failure.
