@@ -7,13 +7,13 @@ case ${1:-} in
     REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
     count=$(jq -r '.case_count' "$REPO/conformance/cases.json")
     rows=$(jq -r '.cases | length' "$REPO/conformance/cases.json")
-    [ "$count" = 54 ] && [ "$rows" = 54 ] || {
-        echo 'test-full-cases: canonical corpus is not 54 cases' >&2
+    [ "$count" = 55 ] && [ "$rows" = 55 ] || {
+        echo 'test-full-cases: canonical corpus is not 55 cases' >&2
         exit 1
     }
-    echo 'THINKTHEN_CONFORMANCE_IDS is unset; canonical cases: 54'
+    echo 'THINKTHEN_CONFORMANCE_IDS is unset; canonical cases: 55'
     echo 'sdlc/scripts/test (the whole workspace suite, doctests, consumer, self-tests)'
-    echo 'surfaces --full-functional (all 54 shared cases)'
+    echo 'surfaces --full-functional (all 55 shared cases)'
     exit 0 ;;
 --run) ;;
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;

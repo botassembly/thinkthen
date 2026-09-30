@@ -4,7 +4,7 @@ Run as ``python tests/conformance.py PORT`` with a conformance backend on
 that loopback port. Each success case runs on its own case arm, with each
 expected request digest recomputed for the URL the backend served. Every
 selected case ends as pass, fail, or not run with its reason, and the three
-counts sum to the selected count. With no ID file the runner selects all 54.
+counts sum to the selected count. With no ID file the runner selects all 55.
 A case is not run only by a rule the library
 cannot meet, never by its id. Each typed, ``decide_many``, and ``annotate``
 case also runs over a Polars column or frame, and must give the list form's

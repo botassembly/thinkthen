@@ -24,7 +24,7 @@ The tag's notes stay on tag `surfaces-wave7-frozen-2026-09-24b` as history. Thes
 ## Deviations from the ticket
 
 - Decision 9 names `Question::choose_labels` and `tag_labels`. The keyword builders write the question file's JSON and call `Question::from_json` for every verb. Both routes reach the same engine rules, and one route keeps keywords and files on one digest.
-- The ticket's conformance case numbers come from the tag's file. Main's `conformance/cases.json` has 54 cases. The accent-and-emoji offsets case is `41-offsets-past-an-accent-and-an-emoji`, and the counters case is `40-decide-counters`.
+- The ticket's conformance case numbers come from the tag's file. Main's `conformance/cases.json` has 55 cases. The accent-and-emoji offsets case is `41-offsets-past-an-accent-and-an-emoji`, and the counters case is `40-decide-counters`.
 - Five cases do not run, each with its reason printed: two `none: true` finds, the two-group annotate that reads parts of a record, the injected defect, and the question-file loader.
 - `test_errors.rb` keeps only the set boundaries. The conformance runner's error paths hold every other fault kind.
 - The pinned-Ruby guard and the deny run with its `file://` plant live in `check.sh`. `lint` reaches Ruby only through `surfaces --registry`, and this port changes no ladder script.
