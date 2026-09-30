@@ -4,6 +4,14 @@ use super::{answering, decide, details, folder, lines, places, rows, text};
 use crate::harness::{Canned, Listener};
 use serde_json::json;
 
+const SPLIT_ORDINALS: [[Option<u64>; 2]; 5] = [
+    [Some(1), Some(2)],
+    [Some(1), Some(2)],
+    [Some(1), Some(2)],
+    [Some(1), Some(3)],
+    [Some(1), Some(3)],
+];
+
 fn sent(listener: &Listener) -> Vec<usize> {
     listener
         .requests()
@@ -72,14 +80,7 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
                     .iter()
                     .map(|event| event["ordinal"].as_u64())
                     .collect();
-                assert_eq!(
-                    ordinals,
-                    if place < 3 {
-                        [Some(1), Some(2)]
-                    } else {
-                        [Some(1), Some(3)]
-                    }
-                );
+                assert_eq!(ordinals, SPLIT_ORDINALS[place]);
                 assert_eq!(row["meta"]["attempts"][0]["outcome"], "status");
                 assert_eq!(row["meta"]["attempts"][0]["status"], status);
                 assert_ne!(
