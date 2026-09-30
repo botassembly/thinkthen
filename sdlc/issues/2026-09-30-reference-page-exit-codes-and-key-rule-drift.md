@@ -11,3 +11,12 @@ Status: Open. Filed 2026-09-30 by ticket 0309 for marketing, which owns `site/` 
 ## Done when
 
 The reference page lists every exit code `channels.md` defines, names 8 as the only reserved code, and states the local-server key rule.
+
+## Two links now point at closed issues
+
+Commit `cbe466b26` moved closed issues to `sdlc/issues/closed/`. Two site links still use the old path:
+
+- `site/src/pages/reference.astro` links to architect review 07.
+- `site/src/articles/code-that-understands.md` line 65 links to architect review 12.
+
+Add `closed/` to both paths.
