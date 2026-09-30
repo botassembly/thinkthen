@@ -16,6 +16,8 @@ The final installed selection across these three tickets passed **17/17** (18 un
 
 No full Python gate, shared corpus, package/release archive, other platform, stress or provider check ran. Source and installed Linux results establish these selected boundaries only. The examples catalog retains its historical `decide_many` entry key for existing catalog consumers; its executable expression now uses `tt.decide`.
 
+No prior functional test was deleted or consolidated. The older input, nullable Arrow, parser, secrecy, cancellation, cache and conflict cases assert distinct boundaries; the new Judge, Stream and Tally cases assert returned carriers, request bodies and lifetimes those cases cannot observe. The one large allocation test remains in its existing opt-in stress lane and was not run.
+
 ## What the build taught us
 
 The preparation's old pandas Index refusal was superseded by ADR 0107; an Index now takes the eager path. The shape route initially passed some reiterables straight to the native list reader and changed a preexisting bytes refusal. Materializing ordered reiterables and preserving the exact bytes/column Usage boundaries corrected both; the selected old tests passed with zero sends. The public Stream class needed an explicit module export, and the stub needed separate construction and application keyword sets so it does not promise `deadline_ms` on an omitted-input Judge. A captured Judge needs one validated question for both plan and execution; a separate mutable metadata copy would have repeated the R 0297 divergence. Upcoming 0295/0296 frame idioms should reuse this Judge/Tally carrier and preserve nullable input positions and structural Arrow validation before skipping null payloads.
