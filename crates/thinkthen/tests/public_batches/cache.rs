@@ -112,7 +112,11 @@ fn rows_keep_input_order_when_replies_finish_out_of_order() {
             }
         })
     };
+    // Each pair in flight also meets before either answers, so the fast
+    // reply cannot finish before the slow request arrives.
+    let pair = std::sync::Barrier::new(2);
     let listener = Listener::answering(move |body| {
+        pair.wait();
         let slow = quoted(body).iter().any(|record| number(record) % 4 == 1);
         let reply = every(body, |record| if odd(record) { 0.9 } else { 0.1 });
         if slow {
