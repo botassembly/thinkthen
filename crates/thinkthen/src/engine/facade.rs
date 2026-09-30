@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Batch, Evidence, Find, FindAnswer, ModelName,
-    Outcome, Plan, Question, Threshold, Value,
+    Outcome, Plan, Question, Threshold, Value, quoted_plan,
 };
 use crate::engine::annotate_schedule;
 use crate::engine::error::Error;
@@ -292,12 +292,13 @@ impl Engine {
         evidence: Evidence,
         cancel: &Cancel,
     ) -> Result<Judgment, Error> {
-        let plan = Plan::new(
-            evidence,
+        let plan = quoted_plan(
             self.backend.model().clone(),
+            evidence,
+            None,
             vec![question.clone()],
         )
-        .map_err(|_| Error::Defect("a plan of one question asks nothing"))?;
+        .map_err(|_| Error::Defect("a plan of one question could not be quoted"))?;
         let answered = self.ask(&plan, cancel)?;
         let answer = only_answer(&answered)?;
         let (value, outcome) = answer.read(threshold);

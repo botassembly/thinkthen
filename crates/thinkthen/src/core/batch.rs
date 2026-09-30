@@ -1,12 +1,12 @@
 //! Batches: runs of consecutive records that share one request, by ADR 0048
 //! items 1 and 2.
 //!
-//! A batch of decide questions without a context sends `QUOTED` as its
-//! evidence, by ADR 0055, and other kinds send `{"records":[…]}`. Each distinct
-//! record gets one quoted question. A batch of one distinct record without
-//! a context sends today's request of that record, byte for byte. The batcher
-//! keeps running byte counts, so it encodes each record once and each batch
-//! once, and it checks every closed body against those counts.
+//! Every batch sends the context, or `QUOTED` without one, as its state, and
+//! each distinct record gets its own quoted questions, a batch of one
+//! included, by ADR 0111 section 1. A question written as JSON cannot take the
+//! quote, so its record goes alone as the state. The batcher keeps running
+//! byte counts, so it encodes each record once and each batch once, and it
+//! checks every closed body against those counts.
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -21,7 +21,6 @@ use crate::core::json::Json;
 use crate::core::plan::Plan;
 use crate::core::question::Question;
 use crate::core::recording::{Digest, Exchange};
-use crate::core::render::json_line;
 use crate::core::text::{Evidence, QuestionText};
 
 mod groups;
@@ -29,7 +28,7 @@ mod questions;
 pub(crate) use groups::{GroupBatcher, GroupMember, group_halves};
 #[cfg(test)]
 pub(crate) use questions::halves;
-pub(crate) use questions::halves_with_questions;
+pub(crate) use questions::{halves_with_questions, quoted_plan};
 
 /// A record closes its batch when its content hash is 0 mod this.
 const CUT: u64 = 4_096;
@@ -37,8 +36,8 @@ const CUT: u64 = 4_096;
 /// A batch closes when it holds this many records, repeats included.
 const MEMBERS: usize = 4_096;
 
-/// The evidence of a batch of decide questions without a context, by ADR 0055.
-const QUOTED: &str = "Each question quotes the text it asks about.";
+/// The state of every quoted request without a context, by ADR 0111.
+pub(crate) const QUOTED: &str = "Each question quotes the text it asks about.";
 
 /// How many records a batch may hold: as many as fit, or at most `N`.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -140,7 +139,6 @@ struct Joined {
     question: Option<Vec<Question>>,
     wire: usize,
     share: usize,
-    line_len: usize,
 }
 
 /// Plans batches from records in input order.
@@ -151,11 +149,11 @@ pub(crate) struct Batcher {
     grouped: bool,
     size: Option<usize>,
     context: Option<Evidence>,
-    /// The batched evidence: the context, `QUOTED`, or `None` for the records' list.
-    shared: Option<Evidence>,
+    /// The state every quoted request sends: the context or `QUOTED`.
+    shared: Evidence,
     /// The batched body's bytes with no record in it.
     skeleton: usize,
-    /// The bytes of `{"records":[]}`, or of the shared evidence.
+    /// The bytes of the shared state.
     evidence: usize,
     open: Open,
 }
@@ -168,7 +166,6 @@ struct Open {
     seen: BTreeMap<(String, String), usize>,
     members: Vec<usize>,
     bytes: usize,
-    lines: usize,
     wires: usize,
 }
 
@@ -204,17 +201,11 @@ impl Batcher {
             Setting::Max => None,
             Setting::Records(most) => Some(most.get()),
         };
-        let shared = if let Some(context) = &context {
-            Some(context.clone())
-        } else if !grouped && matches!(question.first(), Some(Question::Decide { .. })) {
-            Some(Evidence::new(QUOTED).map_err(|_| defect())?)
-        } else {
-            None
+        let shared = match &context {
+            Some(context) => context.clone(),
+            None => Evidence::new(QUOTED).map_err(|_| defect())?,
         };
-        let evidence = match &shared {
-            Some(shared) => shared.as_text().map_err(|_| defect())?.len(),
-            None => json_line(&records(Vec::new())).map_err(|_| defect())?.len(),
-        };
+        let evidence = shared.as_text().map_err(|_| defect())?.len();
         let mut batcher = Self {
             backend,
             profile,
@@ -265,7 +256,6 @@ impl Batcher {
 
     fn add(&mut self, joined: Joined, key: (String, String)) {
         self.open.bytes += joined.share + self.join_bytes(joined.wire);
-        self.open.lines += joined.line_len + usize::from(!self.open.distinct.is_empty());
         self.open.wires += joined.wire;
         self.open.seen.insert(key, self.open.distinct.len());
         self.open.members.push(self.open.distinct.len());
@@ -278,27 +268,15 @@ impl Batcher {
         if self.open.distinct.is_empty() {
             0
         } else {
-            self.separators() + names(self.open.wires, wire)
+            1 + names(self.open.wires, wire)
         }
-    }
-
-    /// Two separators join a record, in the evidence list and the questions, or one beside a context.
-    fn separators(&self) -> usize {
-        if self.context.is_some() { 1 } else { 2 }
     }
 
     /// Whether the open batch and this record fit every limit in the batched form.
     fn fits(&self, joined: &Joined) -> bool {
         let body = self.skeleton + self.open.bytes + joined.share + self.join_bytes(joined.wire);
-        let evidence = self.listed(self.open.lines + joined.line_len + 1);
-        self.over(body, evidence, self.open.wires + joined.wire)
+        self.over(body, self.evidence, self.open.wires + joined.wire)
             .is_none()
-    }
-
-    /// The batched evidence's bytes: the shared evidence, or the records' list
-    /// with `lines` bytes of records and commas.
-    fn listed(&self, lines: usize) -> usize {
-        self.evidence + if self.shared.is_some() { 0 } else { lines }
     }
 
     /// The first limit these counts pass, with its value and the count.
@@ -396,12 +374,9 @@ impl Batcher {
     /// counts and the profile.
     fn built(&self) -> Result<(Plan, Vec<u8>), BatchError> {
         let Open {
-            distinct,
-            bytes,
-            lines,
-            ..
+            distinct, bytes, ..
         } = &self.open;
-        let batched = self.context.is_some() || distinct.len() > 1;
+        let batched = distinct.first().is_some_and(|held| held.question.is_some());
         let plan = match distinct.first() {
             Some(only) if !batched => Plan::new(
                 only.record.evidence.clone(),
@@ -418,8 +393,7 @@ impl Batcher {
         };
         let body = built_in::encode(&plan).map_err(|_| defect())?;
         let evidence = plan.evidence().as_text().map_err(|_| defect())?;
-        if batched && (body.len(), evidence.len()) != (self.skeleton + *bytes, self.listed(*lines))
-        {
+        if batched && (body.len(), evidence.len()) != (self.skeleton + *bytes, self.evidence) {
             return Err(BatchError::Defect(
                 "a batch's body differs from its counted bytes",
             ));
@@ -432,13 +406,9 @@ impl Batcher {
         Ok((plan, body))
     }
 
-    /// The batched plan of these records: the shared evidence or their values.
+    /// The batched plan of these records under the shared state.
     fn plan(&self, pairs: &[(&Json, &[Question])]) -> Result<Plan, BatchError> {
-        let values = || records(pairs.iter().map(|(value, _)| (*value).clone()).collect());
-        let evidence = match &self.shared {
-            Some(shared) => shared.clone(),
-            None => Evidence::structured(values()).map_err(|_| defect())?,
-        };
+        let evidence = self.shared.clone();
         let questions = pairs
             .iter()
             .flat_map(|(_, questions)| questions.iter().cloned())
@@ -457,11 +427,11 @@ impl Batcher {
     /// which two copies of it side by side reveal.
     fn skeleton(&self) -> Result<usize, BatchError> {
         let probe = Json::String("0".to_owned());
-        let asked = self.quoted("\"0\"", &self.question)?.ok_or_else(defect)?;
+        let asked = questions::quote("\"0\"", &self.question)?.ok_or_else(defect)?;
         let (wire, one) = self.measured(&[(&probe, &asked)])?;
         let (_, two) = self.measured(&[(&probe, &asked), (&probe, &asked)])?;
         let share = two
-            .checked_sub(one + self.separators() + names(wire, wire))
+            .checked_sub(one + 1 + names(wire, wire))
             .ok_or_else(defect)?;
         one.checked_sub(share).ok_or_else(defect)
     }
@@ -469,11 +439,6 @@ impl Batcher {
     fn model(&self) -> crate::core::text::ModelName {
         self.backend.model().clone()
     }
-}
-
-/// `{"records":[…]}` over these values.
-fn records(values: Vec<Json>) -> Json {
-    Json::Object(vec![("records".to_owned(), Json::Array(values))])
 }
 
 /// The text every question kind asks, where the quote prefix goes.

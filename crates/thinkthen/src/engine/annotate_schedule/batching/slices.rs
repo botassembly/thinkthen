@@ -1,7 +1,7 @@
 //! Profile slices of one normalized annotation group.
 
 use super::{GroupPlanError, GroupPlanner, GroupRequest, GroupWork, Slice};
-use crate::core::{Batch, BatchRecord, GroupBatcher, Plan, Question, QuestionSet};
+use crate::core::{Batch, BatchRecord, GroupBatcher, Question, QuestionSet, quoted_plan};
 use crate::engine::facade::Engine;
 use std::collections::VecDeque;
 
@@ -27,9 +27,10 @@ impl GroupPlanner {
                     value: evidence.as_json(),
                     evidence,
                 };
-                let plan = Plan::new(
-                    selected.evidence.clone(),
+                let plan = quoted_plan(
                     engine.backend().model().clone(),
+                    selected.evidence.clone(),
+                    None,
                     group.questions.clone(),
                 )
                 .map_err(|_| GroupPlanError::Defect("an annotate group asks nothing"))?;

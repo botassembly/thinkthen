@@ -8,7 +8,7 @@ use std::process::ExitCode;
 use crate::core::adapters::built_in;
 use crate::core::{
     Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, QuestionSetError, Reading,
-    ReadingError, Record, RecordError, Setting,
+    ReadingError, Record, RecordError, Setting, quoted_plan,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -472,6 +472,6 @@ fn plan_for(
                 )))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    Plan::new(evidence, backend.model().clone(), questions)
+    quoted_plan(backend.model().clone(), evidence, None, questions)
         .map_err(|_| PrepareError::Other(Failure::Defect("an annotate group asks nothing")))
 }

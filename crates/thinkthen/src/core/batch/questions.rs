@@ -3,12 +3,14 @@
 use sha2::{Digest as _, Sha256};
 
 use super::{
-    Batch, BatchError, BatchRecord, Batcher, CUT, Closed, Joined, MEMBERS, Open, Question, Setting,
-    defect, text,
+    Batch, BatchError, BatchRecord, Batcher, CUT, Closed, Joined, MEMBERS, Open, QUOTED, Question,
+    Setting, defect, text,
 };
 use crate::core::backend::Backend;
 use crate::core::backend_profile::BackendProfile;
+use crate::core::plan::Plan;
 use crate::core::render::json_line;
+use crate::core::text::ModelName;
 use crate::core::text::{Evidence, QuestionText};
 
 impl Batcher {
@@ -70,7 +72,7 @@ impl Batcher {
         line: &str,
         base: Vec<Question>,
     ) -> Result<Joined, BatchError> {
-        let question = self.quoted(line, &base)?;
+        let question = quote(line, &base)?;
         let (wire, alone) = match &question {
             Some(asked) => self.measured(&[(&record.value, asked)])?,
             None => (base.len(), self.skeleton),
@@ -82,26 +84,48 @@ impl Batcher {
             question,
             wire,
             share,
-            line_len: line.len(),
         })
     }
+}
 
-    /// Keep this row's complete options when quoting its text.
-    pub(super) fn quoted(
-        &self,
-        line: &str,
-        base: &[Question],
-    ) -> Result<Option<Vec<Question>>, BatchError> {
-        let mut questions = base.to_vec();
-        for question in &mut questions {
-            let Some(asked) = text(question).as_json().as_str().map(str::to_owned) else {
-                return Ok(None);
-            };
-            *text(question) =
-                QuestionText::new(format!("The text is {line}. {asked}")).map_err(|_| defect())?;
-        }
-        Ok(Some(questions))
+/// These questions with `line`, a record's compact JSON, quoted at the head
+/// of each one's text, keeping every option. `None` when a question is
+/// written as JSON and cannot take the quote.
+pub(super) fn quote(line: &str, base: &[Question]) -> Result<Option<Vec<Question>>, BatchError> {
+    let mut questions = base.to_vec();
+    for question in &mut questions {
+        let Some(asked) = text(question).as_json().as_str().map(str::to_owned) else {
+            return Ok(None);
+        };
+        *text(question) =
+            QuestionText::new(format!("The text is {line}. {asked}")).map_err(|_| defect())?;
     }
+    Ok(Some(questions))
+}
+
+/// The plan one record sends outside a batch, in the same quoted form a
+/// batch sends, by ADR 0111 section 1: the context or `QUOTED` as the state,
+/// and the record quoted in each question. A question written as JSON takes
+/// the record as its state and goes unquoted.
+pub(crate) fn quoted_plan(
+    model: ModelName,
+    record: Evidence,
+    context: Option<&Evidence>,
+    base: Vec<Question>,
+) -> Result<Plan, BatchError> {
+    let line = json_line(&record.as_json()).map_err(|_| defect())?;
+    let (evidence, questions) = match quote(&line, &base)? {
+        Some(quoted) => (
+            match context {
+                Some(context) => context.clone(),
+                None => Evidence::new(QUOTED).map_err(|_| defect())?,
+            },
+            quoted,
+        ),
+        None if context.is_some() => return Err(BatchError::StructuredQuestionWithContext),
+        None => (record, base),
+    };
+    Plan::new(evidence, model, questions).map_err(|_| defect())
 }
 
 /// Rebuild a fixed-question refused batch as two ordinary requests.

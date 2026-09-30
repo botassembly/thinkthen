@@ -6,6 +6,7 @@ use std::process::ExitCode;
 use super::{Asks, JudgingInput, asked_of};
 use crate::core::{
     Backend, BackendProfile, Plan, PlanDocument, PlanSummary, Reading, Record, Sources, json_line,
+    quoted_plan,
 };
 use crate::edge;
 use crate::engine::facade;
@@ -74,12 +75,13 @@ pub(super) fn plan_record(
     let mut first = None;
     for record in records {
         let sending = asked_of(reading, record?, planning.asks)?;
-        let plan = Plan::new(
-            sending.evidence,
+        let plan = quoted_plan(
             backend.model().clone(),
+            sending.evidence,
+            None,
             vec![sending.question],
         )
-        .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+        .map_err(|_| Failure::Defect("a plan of one question could not be quoted"))?;
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
