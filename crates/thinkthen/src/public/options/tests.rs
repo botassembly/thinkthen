@@ -10,6 +10,15 @@ use super::{CallOptions, Stop, guarded};
 use crate::engine::{Cancel, workers};
 use crate::public::error::{Error, ErrorKind};
 
+/// A payload whose disposal panics again with its own marker.
+struct Exploding;
+
+impl Drop for Exploding {
+    fn drop(&mut self) {
+        panic_any("drop key evidence secret");
+    }
+}
+
 fn wait_for_host_check(held: mpsc::Receiver<()>, joined: Arc<AtomicBool>) {
     held.recv().expect("host check releases worker");
     joined.store(true, Ordering::Release);
@@ -63,6 +72,10 @@ fn diagnostic_boundary_child() {
     let error = scoped.expect_err("scoped worker panic becomes a defect");
     assert_eq!(error.kind(), ErrorKind::Defect);
     assert!(!error.retryable());
+
+    let dropped: Result<(), Error> = guarded(|| panic_any(Exploding));
+    let error = dropped.expect_err("a payload that panics on drop is a defect");
+    assert_eq!(error.kind(), ErrorKind::Defect);
 
     let (release, held) = mpsc::channel();
     let joined = Arc::new(AtomicBool::new(false));
@@ -125,6 +138,7 @@ fn engine_diagnostics_hide_worker_payloads_and_preserve_host_hook() {
     for stream in [&*stdout, &*stderr] {
         assert!(!stream.contains("worker key evidence secret"));
         assert!(!stream.contains("scoped key evidence secret"));
+        assert!(!stream.contains("drop key evidence secret"));
     }
     assert!(stderr.contains("prior hook: host stop marker"));
     assert!(stderr.contains("prior hook: host cancel marker"));
