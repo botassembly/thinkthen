@@ -448,4 +448,5 @@ What the review fixes found:
 - Deleting the demos' old entries removed the input of three `cache convert` tests. The tests now write old entries themselves.
 - `status` opens the store read-only, so it never creates the file. A missing file counts zero and a damaged one exits 5.
 - Lane 1's keep-alive test, landed in 0341 while this slice was open, read the per-answer send count this slice removed. It now reads the process counter after each send.
-
+- Review found that prune read and chose its answers before it took the write lock. A run refreshing an answer in that gap could lose it to `--older-than`. The selection, the deletes and the state cleanup now run in one `BEGIN IMMEDIATE` transaction.
+- 0342 rewrote the relate sentence of `specification/backends.md` while this slice rewrote the same paragraph. The rebase kept 0342's menu wording inside the one-packer paragraph.
