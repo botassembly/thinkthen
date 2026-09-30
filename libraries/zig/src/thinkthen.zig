@@ -3,7 +3,7 @@ pub const c = @cImport({
     @cInclude("thinkthen.h");
 });
 
-pub const Outcome = enum { yes, no, unsure };
+pub const Outcome = enum(c_int) { yes = 1, no = 0, unsure = 2 };
 pub const Answer = struct { outcome: Outcome, probability: f64 };
 
 /// Free message with the allocator passed to Engine.init, even when construction failed.
@@ -22,70 +22,53 @@ pub fn releaseFailure(allocator: std.mem.Allocator, failure: Failure) void {
 pub fn Result(comptime T: type) type {
     return union(enum) { ok: T, failed: Failure };
 }
-pub const CallFacts = struct {
-    records: u64,
-    requests_sent: u64,
-    cache_answers: u64,
-    seconds: f64,
-    input_tokens: ?u64,
-    output_tokens: ?u64,
-    model: ?[]u8,
-    pub fn deinit(self: CallFacts, allocator: std.mem.Allocator) void {
-        if (self.model) |model| allocator.free(model);
-    }
-};
+/// Facts, and a plan, are the engine's JSON as a host value per
+/// specification/result.schema.json. A reader ignores members it does not know.
+pub const Json = std.json.Parsed(std.json.Value);
 /// Release every successful typed result with the engine's original allocator,
 /// even after the engine closes. Failure values use releaseFailure instead.
 pub fn CallResult(comptime T: type) type {
     return struct {
         value: T,
-        facts: CallFacts,
+        facts: Json,
         pub fn deinit(self: @This(), allocator: std.mem.Allocator) void {
-            self.facts.deinit(allocator);
+            self.facts.deinit();
             if (T == []Answer or T == []u8) allocator.free(self.value);
         }
     };
 }
-fn count(object: std.json.ObjectMap, key: []const u8) !u64 {
-    const value = object.get(key) orelse return error.InvalidAbiFacts;
-    if (value != .number_string) return error.InvalidAbiFacts;
-    const digits = value.number_string;
-    if (digits.len == 0) return error.InvalidAbiFacts;
-    for (digits) |digit| if (digit < '0' or digit > '9') return error.InvalidAbiFacts;
-    return std.fmt.parseInt(u64, digits, 10) catch error.InvalidAbiFacts;
-}
-fn optionalCount(object: std.json.ObjectMap, key: []const u8) !?u64 {
-    if (!object.contains(key)) return null;
-    return try count(object, key);
-}
-fn factsFromNative(allocator: std.mem.Allocator, raw: [*c]u8, len: usize) !CallFacts {
+fn factsFromNative(allocator: std.mem.Allocator, raw: [*c]u8, len: usize) !Json {
     if (raw == null) return error.InvalidAbiFacts;
-    const parsed = std.json.parseFromSlice(std.json.Value, allocator, raw[0..len], .{ .parse_numbers = false }) catch |err| switch (err) {
-        error.OutOfMemory => return err,
-        else => return error.InvalidAbiFacts,
+    // Copy every string: the native text is freed when the call returns.
+    return std.json.parseFromSlice(std.json.Value, allocator, raw[0..len], .{ .allocate = .alloc_always }) catch |err| switch (err) {
+        error.OutOfMemory => err,
+        else => error.InvalidAbiFacts,
     };
-    defer parsed.deinit();
-    if (parsed.value != .object) return error.InvalidAbiFacts;
-    const object = parsed.value.object;
-    const seconds_value = object.get("seconds") orelse return error.InvalidAbiFacts;
-    if (seconds_value != .number_string) return error.InvalidAbiFacts;
-    const seconds = std.fmt.parseFloat(f64, seconds_value.number_string) catch return error.InvalidAbiFacts;
-    if (!std.math.isFinite(seconds) or seconds < 0) return error.InvalidAbiFacts;
-    var model: ?[]u8 = null;
-    if (object.get("model")) |value| {
-        if (value != .string) return error.InvalidAbiFacts;
-        model = try allocator.dupe(u8, value.string);
-    }
-    errdefer if (model) |owned| allocator.free(owned);
-    return .{
-        .records = try count(object, "records"),
-        .requests_sent = try count(object, "requests_sent"),
-        .cache_answers = try count(object, "cache_answers"),
-        .seconds = seconds,
-        .input_tokens = try optionalCount(object, "input_tokens"),
-        .output_tokens = try optionalCount(object, "output_tokens"),
-        .model = model,
+}
+
+/// One annotate member, per ADR 0112 section 4: JSON null is unresolved,
+/// `{"failed": {"kind", "cause"}}` is a failure, and any other value is an
+/// answer. No answered value is an object.
+pub const Field = union(enum) {
+    unresolved,
+    answered: std.json.Value,
+    failed: struct { kind: FailureKind, cause: []const u8 },
+};
+/// Any other object is error.NotAField. Members of the failure other than
+/// kind and cause are ignored.
+pub fn readField(member: std.json.Value) error{NotAField}!Field {
+    const object = switch (member) {
+        .null => return .unresolved,
+        .object => |object| object,
+        else => return .{ .answered = member },
     };
+    if (object.count() != 1) return error.NotAField;
+    const failure = object.get("failed") orelse return error.NotAField;
+    if (failure != .object) return error.NotAField;
+    const kind = failure.object.get("kind") orelse return error.NotAField;
+    const cause = failure.object.get("cause") orelse return error.NotAField;
+    if (kind != .string or cause != .string) return error.NotAField;
+    return .{ .failed = .{ .kind = std.meta.stringToEnum(FailureKind, kind.string) orelse return error.NotAField, .cause = cause.string } };
 }
 pub const Options = struct { deadline_ms: i64 = c.THINKTHEN_NO_DEADLINE, cancel: ?*c.thinkthen_cancel_token = null };
 
@@ -180,6 +163,33 @@ pub const Engine = struct {
         errdefer self.allocator.free(value);
         return .{ .ok = .{ .value = value, .facts = try factsFromNative(self.allocator, facts, facts_len) } };
     }
+    /// Preview a decide, choose, score or tag call through thinkthen_plan_json
+    /// without a key, a cache read or a send. A question starting with `{` is a
+    /// question object and is sent as written; other text is the bare question.
+    /// `settings` is one thinkthen.settings/1 object. Free a successful plan
+    /// with deinit.
+    pub fn plan(self: *Engine, verb: []const u8, question: []const u8, input: []const []const u8, settings: ?[]const u8) !Result(Json) {
+        // Both spliced texts must each be one JSON object.
+        for ([_]?[]const u8{ if (questionObject(question)) question else null, settings }) |given| {
+            const text = std.mem.trim(u8, given orelse continue, " \t\r\n");
+            if (!std.mem.startsWith(u8, text, "{") or !try std.json.validate(self.allocator, text)) return error.NotJsonObject;
+        }
+        var body: std.Io.Writer.Allocating = .init(self.allocator);
+        defer body.deinit();
+        planInput(&body.writer, verb, question, input, settings) catch return error.OutOfMemory;
+        const request = try body.toOwnedSliceSentinel(0);
+        defer self.allocator.free(request);
+        try checkCString(request);
+        var raw: [*c]u8 = null;
+        var len: usize = 0;
+        const code = c.thinkthen_plan_json(self.raw, request.ptr, &raw, &len);
+        if (code != c.THINKTHEN_OK) return .{ .failed = try self.failed(code) };
+        defer c.thinkthen_free_string(raw);
+        return .{ .ok = std.json.parseFromSlice(std.json.Value, self.allocator, raw[0..len], .{ .allocate = .alloc_always }) catch |err| switch (err) {
+            error.OutOfMemory => return err,
+            else => return error.InvalidAbiJson,
+        } };
+    }
     pub fn relate(self: *Engine, spec: [:0]const u8, records: []const []const u8, options: Options) !Result(CallResult([]u8)) {
         try checkCString(spec);
         const pointers = try self.allocator.alloc([*c]const u8, records.len);
@@ -216,39 +226,27 @@ fn capture(allocator: std.mem.Allocator, engine: ?*c.thinkthen_engine, code: c_i
     return .{ .code = code, .kind = kind, .retryable = retryable, .message = copied_message, .facts_json = copied_facts };
 }
 fn convert(raw: c.thinkthen_answer) error{InvalidAbiAnswer}!Answer {
-    const outcome: Outcome = switch (raw.outcome) {
-        c.THINKTHEN_YES => .yes,
-        c.THINKTHEN_NO => .no,
-        c.THINKTHEN_UNSURE => .unsure,
-        else => return error.InvalidAbiAnswer,
-    };
+    const outcome = std.meta.intToEnum(Outcome, raw.outcome) catch return error.InvalidAbiAnswer;
     return .{ .outcome = outcome, .probability = raw.probability };
+}
+/// The closed thinkthen.plan-input/1 object. As Go's Engine.Plan, a question
+/// starting with `{` is spliced as written, so its key order is the caller's.
+fn planInput(w: *std.Io.Writer, verb: []const u8, question: []const u8, input: []const []const u8, settings: ?[]const u8) std.Io.Writer.Error!void {
+    try w.writeAll("{\"verb\":");
+    try std.json.Stringify.encodeJsonString(verb, .{}, w);
+    try w.writeAll(",\"question\":");
+    if (questionObject(question)) try w.writeAll(std.mem.trim(u8, question, " \t\r\n")) else try std.json.Stringify.encodeJsonString(question, .{}, w);
+    try w.writeAll(",\"input\":");
+    try std.json.Stringify.value(input, .{}, w);
+    if (settings) |text| {
+        try w.writeAll(",\"settings\":");
+        try w.writeAll(std.mem.trim(u8, text, " \t\r\n"));
+    }
+    try w.writeByte('}');
+}
+fn questionObject(question: []const u8) bool {
+    return std.mem.startsWith(u8, std.mem.trimLeft(u8, question, " \t\r\n"), "{");
 }
 fn checkCString(text: [:0]const u8) error{EmbeddedNul}!void {
     if (std.mem.indexOfScalar(u8, text, 0) != null) return error.EmbeddedNul;
-}
-
-test "owned facts reject malformed required and present optional fields" {
-    const alloc = std.testing.allocator;
-    const good = "{\"records\":18446744073709551615,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125}";
-    const facts = try factsFromNative(alloc, @ptrCast(@constCast(good.ptr)), good.len);
-    defer facts.deinit(alloc);
-    try std.testing.expect(facts.records == std.math.maxInt(u64) and facts.seconds == 0.125 and facts.input_tokens == null and facts.model == null);
-    const bad = [_][]const u8{
-        "{\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":null,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":true,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":-1,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":0,\"requests_sent\":1.5,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":\"1\",\"seconds\":0.125}",
-        "{\"records\":18446744073709551616,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":\"0.125\"}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":-0.125}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":true}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":null}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":1e999}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125,\"input_tokens\":null}",
-        "{\"records\":0,\"requests_sent\":0,\"cache_answers\":0,\"seconds\":0.125,\"model\":1}",
-    };
-    for (bad) |json| try std.testing.expectError(error.InvalidAbiFacts, factsFromNative(alloc, @ptrCast(@constCast(json.ptr)), json.len));
 }

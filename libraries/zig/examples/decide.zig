@@ -16,7 +16,9 @@ pub fn main() !void {
     switch (try engine.decide("Is this a complaint?", "I demand a refund today", .{})) {
         .ok => |answer| {
             defer answer.deinit(allocator);
-            if (answer.facts.records != 1 or answer.facts.requests_sent != 1) return error.WrongFacts;
+            // Facts are host JSON: read the members you need and ignore the rest.
+            const facts = answer.facts.value.object;
+            if (facts.get("records").?.integer != 1 or facts.get("requests_sent").?.integer != 1) return error.WrongFacts;
             std.debug.print("{s} {d:.2}\n", .{ @tagName(answer.value.outcome), answer.value.probability });
         },
         .failed => |failure| {
