@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"The text is \"I Me Mine\". The text is the title of a song by the Beatles. Which was the first album to include it?","criteria":{"a":"With the Beatles","b":"Revolver","c":"Magical Mystery Tour","d":"Let It Be"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"d","confidence":0.5,"probabilities":{"b":0.1,"d":0.62,"c":0.25,"a":0.03}}},"usage":{"input_tokens":357,"output_tokens":46}},
+  "quoted": true
+}

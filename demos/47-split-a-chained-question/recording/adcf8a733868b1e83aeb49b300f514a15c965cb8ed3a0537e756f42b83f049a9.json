@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"The text is \"It Won't Be Long\". The text is the title of a song by the Beatles. Which was the first album to include it?","criteria":{"a":"Rubber Soul","b":"With the Beatles","c":"Revolver","d":"Yellow Submarine"}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"b","confidence":0.22,"probabilities":{"b":0.41,"d":0.06,"c":0.12,"a":0.41}}},"usage":{"input_tokens":359,"output_tokens":46}},
+  "quoted": true
+}
