@@ -102,12 +102,15 @@ def single_wanted(case: dict, base: str) -> list:
     return wanted
 
 
+def batching(case: dict) -> dict | None:
+    """Batch 1 when each saved request holds one question; `packed_default` pins the packed body."""
+    requests = [json.loads(exchange["request"]) for exchange in case["exchanges"]]
+    single = len(requests) > 1 and all(len(request["questions"]) == 1 for request in requests)
+    return {"THINKTHEN_BATCH": "1"} if single else None
+
+
 def decide(case: dict, base: str) -> list:
-    # These saved exchanges pin singleton request identity. The default packed
-    # route has a separate installed exact-body witness below.
-    single = {"27-decide-many", "28-decide-many-repeated-texts"}
-    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in single else None
-    got = run([f"SELECT thinkthen_decide({quoted(json.dumps(case['question']))}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=extra)
+    got = run([f"SELECT thinkthen_decide({quoted(json.dumps(case['question']))}, x) FROM {values(evidence(case))} ORDER BY i"], base, extra=batching(case))
     return [value for (value,) in rows(got[0])]
 
 
@@ -136,17 +139,15 @@ def packed_default() -> None:
 
 def filtered(case: dict, base: str) -> list:
     table = values(evidence(case)) if case["exchanges"] else "(SELECT 0 AS i, 'none' AS x WHERE false) t"
-    extra = {"THINKTHEN_BATCH": "1"} if case["id"] == "13-filter-records" else None
-    got = run([f"SELECT i FROM {table} WHERE thinkthen_decide({quoted(json.dumps(case['question']))}, x) ORDER BY i"], base, extra=extra)
+    got = run([f"SELECT i FROM {table} WHERE thinkthen_decide({quoted(json.dumps(case['question']))}, x) ORDER BY i"], base, extra=batching(case))
     return [index for (index,) in rows(got[0])]
 
 
 def ranked(case: dict, base: str) -> list:
-    extra = {"THINKTHEN_BATCH": "1"} if case["id"] in {"15-rank-records", "16-rank-stable-tie"} else None
     got = run(
         [f"SELECT i, thinkthen_probability({quoted(json.dumps(case['question']))}, x) AS p FROM {values(evidence(case))} ORDER BY p DESC, i"],
         base,
-        extra=extra,
+        extra=batching(case),
     )
     return [{"index": index, "probability": probability} for index, probability in rows(got[0])]
 
@@ -163,6 +164,7 @@ def annotated(case: dict, base: str) -> list:
     got = run(
         [f"SELECT thinkthen_annotate({quoted(json.dumps(case['question_set']))}, x) FROM {values(record(case))} ORDER BY i"],
         base,
+        extra=batching(case),
     )
     answers = []
     by_text = dict(zip(record(case), [json.loads(value) for (value,) in rows(got[0])], strict=True))

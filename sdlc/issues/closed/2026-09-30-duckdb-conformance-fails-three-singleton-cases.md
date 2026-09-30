@@ -1,6 +1,6 @@
 # DuckDB conformance fails three singleton cases
 
-Status: open. Found by the ticket 0318 build.
+Status: closed 2026-09-30. The runner now selects batch 1 for every case whose saved requests each hold one question (quick fix 0320).
 
 ## What happens
 
