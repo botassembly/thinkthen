@@ -67,8 +67,8 @@ Ranked by value against size, across the whole repo. Blocking items come first, 
 - Area 5 item 1, `Engine::usage()` promising process totals: 0347 changed the doc to "This engine's totals" (`8439ee2b7`, landed `efc6a6a99`).
 - Area 10 item 1 and area 12 item 2, the four rehearsal bugs (uv on macOS, the apt note, the DuckDB bridge crates, five library tests that start the command): landed at `f080fd50c`. The fix review filed Debt 028 for the gate gap.
 - Area 9 item 3, SQL hosts copying engine code: 0347 (`efc6a6a99`). It did not block 0.1.
-- Area 20 item 1, the site's fifteen replay folders, and the five `--dry-run` examples: marketing converted them in mktg 0031 (`ebe9bb7a2`). The site smoke passes 97 of 97. Parts 3 and 4 of the site issue remain.
-- The reference page, in part: mktg 0031 added exit 7, reserved only 8, and named `thinkthen.status/2` (`ebe9bb7a2`). Exits 130 and 143, the local and named-backend key rules, and three moved links remain.
+- Area 20 item 1, the site's fifteen replay folders, and the five `--dry-run` examples: marketing converted them in its site ticket (`ebe9bb7a2`). The site smoke passes 97 of 97. Parts 3 and 4 of the site issue remain.
+- The reference page, in part: the same site ticket added exit 7, reserved only 8, and named `thinkthen.status/2` (`ebe9bb7a2`). Exits 130 and 143, the local and named-backend key rules, and three moved links remain.
 - The relate decision run (R1) and docs page 11 were done before the graded commit.
 
 ## Unconfirmed claims, rechecked
