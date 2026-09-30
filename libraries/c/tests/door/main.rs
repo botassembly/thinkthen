@@ -69,7 +69,7 @@ fn sweep(parent: &Path, own: &str) {
         .flatten()
         .filter_map(|entry| entry.file_name().into_string().ok())
         .filter_map(|name| name.strip_suffix(".lock").map(str::to_owned))
-        .filter(|name| name != own)
+        .filter(|name| name != own && parent.join(name).exists())
         .collect();
     for name in names {
         // The lock stays held while the folder goes, so a new process with
