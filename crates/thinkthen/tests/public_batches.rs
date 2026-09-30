@@ -362,7 +362,8 @@ fn a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows() {
     let bound = usize::from(THROTTLE) + 1;
     let (held_pull, rows) = thread::scope(|scope| {
         let watcher = scope.spawn(|| {
-            backend.wait(usize::from(THROTTLE));
+            // The first send holds, and the pull stops behind it.
+            backend.wait(1);
             thread::sleep(Duration::from_millis(300));
             let held_pull = pulled.load(Ordering::SeqCst);
             backend.release();

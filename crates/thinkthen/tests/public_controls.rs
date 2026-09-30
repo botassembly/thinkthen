@@ -398,7 +398,8 @@ fn a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new() {
         .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN));
     let rows: Vec<_> = thread::scope(|scope| {
         scope.spawn(|| {
-            backend.wait(4);
+            // The batch holds on its first send.
+            backend.wait(1);
             thread::sleep(Duration::from_millis(400));
             backend.release();
         });
