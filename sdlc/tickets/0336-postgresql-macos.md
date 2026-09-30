@@ -1,10 +1,10 @@
 # 0336: The PostgreSQL extension builds and confines file reads on macOS
 
-Status: in progress
+Status: landed
 
 ## Outcome
 
-`cargo pgrx package` builds the PostgreSQL extension on macOS. A confined `@file` read under `thinkthen.file_directory` works there. macOS opens the file with `openat` and `O_NOFOLLOW_ANY` and reads the descriptor's path with `fcntl(F_GETPATH)`. Linux keeps `openat2` and `/proc/self/fd`. Closes `sdlc/issues/2026-09-30-postgresql-extension-does-not-build-on-macos.md`.
+`cargo pgrx package` builds the PostgreSQL extension on macOS. A confined `@file` read under `thinkthen.file_directory` works there. macOS opens the file with `openat` and `O_NOFOLLOW_ANY` and reads the descriptor's path with `fcntl(F_GETPATH)`. Linux keeps `openat2` and `/proc/self/fd`. Closes `sdlc/issues/closed/2026-09-30-postgresql-extension-does-not-build-on-macos.md`.
 
 ## Evidence
 
@@ -19,3 +19,11 @@ Status: in progress
 `O_NOFOLLOW_ANY` refuses a symlink at any step (macOS 11 and later; the release targets 15.0). macOS is deliberately stricter than Linux in two ways. A middle symlink that stays inside the folder reads on Linux and refuses on macOS. The folder needs read permission on macOS, where Linux's `O_PATH` needs only search permission. Both fail safe with the same refusal. The `..` refusal stays with the spelling check. A directory renamed out of the base during the open leaves a descriptor whose `F_GETPATH` path is outside, and the inside-the-base check refuses it.
 
 The macOS link flag lives in the package wrapper. `policy.py` refuses a PostgreSQL build script and a `.cargo/config.toml`, and the check's `RUSTFLAGS` would replace a config file's flags anyway.
+
+## What the build taught us
+
+- The compile errors hid a link error. With `ffi.rs` fixed, `cargo pgrx package` still failed on macOS with undefined PostgreSQL symbols. `cargo pgrx new` puts the dynamic lookup flag in `.cargo/config.toml`, which this repo lacks and `policy.py` refuses; a build script is refused too. The package wrapper now adds it.
+- A scratch server can load a packed extension without touching the Homebrew keg: replace `MODULE_PATHNAME` in the SQL file with the dylib's absolute path and run it. That made the M5 proof light.
+- The 16.14 in experiment 218 was zerobrew's keg on the M5. Homebrew's formula API still names 16.15 with both pinned hashes, so the pin stays.
+- The first Linux check failed `single_cancel` at 308 ms against a 200 ms bound, at host load 17 on 16 cores. The three cancel steps passed three reruns. They touch no file open.
+- Review caught that macOS is stricter than Linux on middle symlinks and folder permission. The README now says so.
