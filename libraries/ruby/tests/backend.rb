@@ -144,11 +144,12 @@ module TestBackend
     )
   end
 
-  # Start a backend and a child on one arm, yield both, and clean up.
+  # Start a backend and a child on one arm, yield both, and clean up. A nil
+  # value in extra leaves that name out of the child's environment.
   def self.with(script, arm: "generic", extra: {})
     backend = Backend.new
     Dir.mktmpdir do |root|
-      child = Child.new(env(backend.url(arm), root, extra.transform_values { |value| value.to_s.gsub("ROOT", root).gsub("PORT", backend.port.to_s) }), script)
+      child = Child.new(env(backend.url(arm), root, extra.transform_values { |value| value&.to_s&.gsub("ROOT", root)&.gsub("PORT", backend.port.to_s) }), script)
       yield backend, child, root
     ensure
       begin

@@ -25,6 +25,7 @@ use thinkthen::{
 
 use crate::call::Ask;
 
+mod plan;
 mod question_file;
 mod result;
 use crate::{Controls, Crossing, Fault, Handoff, Settings, Taken, class_name, guarded, start};
@@ -344,7 +345,7 @@ impl EngineValue {
         input: Value,
         own: &CancelValue,
         caller: Option<&CancelValue>,
-        deadline: Option<f64>,
+        deadline_ms: Option<i64>,
         batch: Option<Value>,
         context: Option<String>,
     ) -> Result<Value, Error> {
@@ -364,7 +365,7 @@ impl EngineValue {
                 asked,
                 own.0.clone(),
                 Controls {
-                    deadline,
+                    deadline_ms,
                     batch,
                     context,
                 },
@@ -433,6 +434,7 @@ fn new_engine(ruby: &Ruby, options: RHash) -> Result<EngineValue, Error> {
             .map(|value| batch_of(ruby, value))
             .transpose()?
             .flatten(),
+        max_requests_total: read(ruby, options, "max_requests_total")?,
     };
     checked(ruby, guarded(|| settings.build())).map(|engine| EngineValue { engine })
 }
@@ -479,6 +481,7 @@ fn init(ruby: &Ruby) -> Result<(), Error> {
     let engine = native.define_class("Engine", ruby.class_object())?;
     engine.define_method("call", method!(EngineValue::call, 8))?;
     engine.define_method("usage", method!(EngineValue::usage, 0))?;
+    engine.define_method("plan", method!(EngineValue::plan, 4))?;
     native.define_module_function("default_engine", function!(default_engine, 0))?;
     native.define_module_function("engine", function!(new_engine, 1))?;
     native.define_module_function("question", function!(question, 1))?;

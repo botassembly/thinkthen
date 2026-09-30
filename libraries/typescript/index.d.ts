@@ -103,8 +103,10 @@ export interface FindOptions extends CallOptions {
 /** `true`, `false`, or `null` when the answer is unsure. */
 export type Answer = boolean | null;
 
-/** Final facts of this call alone, including rows omitted from its value. */
+/** Final facts of this call alone, including rows omitted from its value.
+ * Facts are the engine's JSON, so a member not named here still reads. */
 export interface Facts {
+  readonly [member: string]: unknown;
   readonly records: number;
   readonly requests_sent: number;
   readonly cache_answers: number;
@@ -200,6 +202,18 @@ export interface FailedField {
   failed: { kind: 'backend'; cause: FailureCause };
 }
 
+/** The failure of one annotate answer, or null for any value; null is unresolved, never a failure. */
+export function failed(member: unknown): FailedField['failed'] | null;
+
+/** A decide answer's code in the C door: YES 1, NO 0, UNSURE 2. */
+export const YES: 1;
+export const NO: 0;
+export const UNSURE: 2;
+export type Outcome = typeof YES | typeof NO | typeof UNSURE;
+
+/** YES, NO, or UNSURE for a decide answer. */
+export function outcome(answer: Answer): Outcome;
+
 /** One annotated value: an answer, a pick, a position, labels, or the marker. */
 export type AnnotatedField = Answer | string | number | string[] | FailedField;
 
@@ -272,6 +286,19 @@ export interface RelateOptions extends CallOptions {
   threshold?: number;
 }
 
+export interface PlanOptions { batch?: 'max' | number; context?: string; }
+
+/** The requests a call would send: the result schema's `plan` object. */
+export interface Plan {
+  readonly records: number;
+  readonly requests: number;
+  readonly estimated_bytes: number;
+  readonly estimated_input_tokens: { readonly lower: number; readonly upper: number };
+  readonly upper_bound: boolean;
+  readonly first_body_utf8: string | null;
+  readonly [member: string]: unknown;
+}
+
 /** This process's totals. Failed calls and retries count, and nothing resets them. */
 export interface Usage {
   requests_sent: number;
@@ -284,6 +311,8 @@ export interface Usage {
 /** The engine's failure, its kind, and whether the same call may pass later. */
 export class ThinkThenError extends Error {
   kind: 'usage' | 'backend' | 'local' | 'cancelled' | 'deadline' | 'defect';
+  /** The kind's code in the C door: usage 1, backend 2, deadline 3, local 4, cancelled 5, defect 6. */
+  code: 1 | 2 | 3 | 4 | 5 | 6;
   retryable: boolean;
   facts?: Facts;
   details?: readonly QuestionObservation[];
@@ -298,6 +327,8 @@ export interface EngineOptions {
   throttle?: number;
   /** Refuse a call over more records than this. */
   maxRequests?: number;
+  /** Refuse a live send once the process has sent this many; every engine counts. */
+  maxRequestsTotal?: number;
   /** Request-byte ceiling for a split plan; a lone question still goes alone. */
   maxRequestBytes?: number;
   /** `false` reads and writes no cache; a string names the cache folder. */
@@ -333,6 +364,8 @@ export interface Verbs {
   details(question: string | Question | QuestionSpec, text: string, options?: CallOptions): Promise<Call<Details>>;
   recognize(text: string, options?: RecognizeOptions): Promise<Call<Recognized>>;
   relate(entities: readonly Entity[], options?: RelateOptions): Promise<Call<Edge[]>>;
+  /** Preview a decide, choose, score, or tag call: nothing is read from a key or cache, and nothing is sent. */
+  plan(question: string | Question | QuestionSpec, records: readonly string[], options?: PlanOptions): Plan;
   usage(): Usage;
 }
 
@@ -354,6 +387,7 @@ export class Engine implements Verbs {
   details: Verbs['details'];
   recognize: Verbs['recognize'];
   relate: Verbs['relate'];
+  plan: Verbs['plan'];
   usage: Verbs['usage'];
 }
 
@@ -379,3 +413,4 @@ export const details: Verbs['details'];
 export const recognize: Verbs['recognize'];
 export const relate: Verbs['relate'];
 export const usage: Verbs['usage'];
+export const plan: Verbs['plan'];

@@ -13,6 +13,8 @@ CORPUS = ROOT / "specification/fixtures/types/corpus.json"
 SPEC = importlib.util.spec_from_file_location("types_check", ROOT / "specification/fixtures/types/check.py")
 checks_module = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(checks_module)
+FIELDS = {"17-annotate-partial": [{"refund": "unresolved", "team": "failed backend missing_probability",
+                                   "severity": "answered", "topics": "answered"}]}
 
 
 def main():
@@ -23,8 +25,39 @@ def main():
     conformance = {case["id"]: case for case in json.loads((ROOT / "conformance/cases.json").read_text())["cases"]}
     backend, port = checks_module.start_backend()
     run_count = 0
+
+    def php(args, env, name, stdin=""):
+        process = subprocess.run([os.environ.get("THINKTHEN_PHP_BIN", "/usr/bin/php8.3"), "-d", "ffi.enable=1",
+                                  str(PHP / "fixtures/type_case.php"), *args],
+                                 input=stdin, text=True, capture_output=True, env=env, timeout=30)
+        assert process.returncode == 0 and not process.stderr, (name, process.returncode, process.stderr)
+        return json.loads(process.stdout)
+
+    def sent():
+        backend.stdin.write("count\n")
+        backend.stdin.flush()
+        return int(backend.stdout.readline())
+
     try:
         with tempfile.TemporaryDirectory(prefix="thinkthen-php-types-") as folder:
+            # Ticket 0291, before any case sends: P1 and one invalid plan run
+            # with no key through ThinkThen::plan; the zero cap and the zero
+            # budgets refuse; the backend has read no request.
+            env = {"PATH": "/usr/bin:/bin", "HOME": folder, "XDG_CACHE_HOME": folder,
+                   "THINKTHEN_BASE_URL": f"http://127.0.0.1:{port}/generic/v1",
+                   "THINKTHEN_CACHE": str(Path(folder) / "plan"),
+                   "TT_LIBRARY": str(ROOT / "libraries/c/target/debug/libthinkthen_c.so")}
+            p1 = next(case for case in cases if case["name"] == "plan-p1")
+            given = p1["plan_input"]
+            plan = ["plan", given["verb"], given["question"]]
+            actual = php([*plan, json.dumps(given["settings"]), *given["input"]], env, "plan-p1")
+            assert actual == p1["response"] and checks["plan"].is_valid(actual), actual
+            invalid = php([*plan, json.dumps({"batch": 0}), *given["input"]], env, "plan-batch-0")
+            assert invalid == {"failed": {"kind": "usage", "code": 1}}, invalid
+            assert php(["helper"], env, "helper") == {"helper": "pass"}
+            env["THINKTHEN_API_KEY"] = "sk-type-contract-loopback"
+            assert php(["limits"], env, "limits") == {"limits": "pass"}
+            assert sent() == 0, "a plan or a refused call sent a request"
             for index, case in enumerate(cases):
                 if "request" not in case or case.get("schema_only", False):
                     continue
@@ -36,11 +69,12 @@ def main():
                        "THINKTHEN_API_KEY": "sk-type-contract-loopback",
                        "THINKTHEN_CACHE": str(Path(folder) / str(index)),
                        "TT_LIBRARY": str(ROOT / "libraries/c/target/debug/libthinkthen_c.so")}
-                process = subprocess.run([os.environ.get("THINKTHEN_PHP_BIN", "/usr/bin/php8.3"), "-d", "ffi.enable=1", str(PHP / "fixtures/type_case.php")],
-                                         input=json.dumps(case["request"], ensure_ascii=False, separators=(",", ":")),
-                                         text=True, capture_output=True, env=env, timeout=30)
-                assert process.returncode == 0 and not process.stderr, (case["name"], process.returncode, process.stderr)
-                actual = json.loads(process.stdout)
+                request = json.dumps(case["request"], ensure_ascii=False, separators=(",", ":"))
+                actual = php([], env, case["name"], request)
+                if case["name"] in FIELDS:
+                    # The shared null and failed annotate members, read through ThinkThen::failed.
+                    env["THINKTHEN_CACHE"] = str(Path(folder) / f"{index}-fields")
+                    assert php(["fields"], env, case["name"], request) == FIELDS[case["name"]], case["name"]
                 if "expected_error" in case:
                     assert actual == {"failed": {"kind": "usage", "code": 1}}, case["name"]
                     run_count += 1
@@ -64,7 +98,7 @@ def main():
                 run_count += 1
     finally:
         checks_module.stop_backend(backend)
-    print(f"PHP_TYPE_CORPUS_PASS {len(cases)} schema cases, {run_count} public binding cases")
+    print(f"PHP_TYPE_CORPUS_PASS {len(cases)} schema cases, {run_count} public binding cases, plan P1, limits and annotate fields")
 
 
 if __name__ == "__main__":

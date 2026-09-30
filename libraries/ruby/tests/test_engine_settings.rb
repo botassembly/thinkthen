@@ -105,4 +105,36 @@ class TestEngineSettings < Minitest::Test
   ensure
     other&.close
   end
+
+  # Ticket 0291's P1 through the public plan, with no key: the exact plan
+  # object of the shared corpus. A batch of 0 refuses as usage with code 1,
+  # and neither reaches the backend. ThinkThen.failed and ThinkThen.outcome
+  # read an annotate answer and a decide answer.
+  def test_plan_previews_p1_with_no_key_and_sends_nothing
+    corpus = JSON.parse(File.read(File.expand_path("../../../specification/fixtures/types/corpus.json", __dir__)))
+    p1 = corpus.fetch("cases").find { |one| one["name"] == "plan-p1" }
+    given = p1.fetch("plan_input")
+    assert_equal({}, given.fetch("settings"))
+    TestBackend.with(<<~RUBY, extra: { "THINKTHEN_API_KEY" => nil }) do |backend, child|
+      question, input = JSON.parse(hear)
+      say T.plan(question, input)
+      begin
+        T.plan(question, input, batch: 0)
+      rescue T::UsageError => e
+        say [e.kind, e.code]
+      end
+      failure = { "failed" => { "kind" => "backend", "cause" => "missing_answer", "surprise" => 1 } }
+      say [T.failed(failure), [nil, true, "billing", 1.2, %w[billing], {}, failure.merge("other" => 1)].map { |one| T.failed(one) }]
+      say [true, false, nil].map { |one| T.outcome(one) }
+    RUBY
+      child.tell(JSON.generate([given.fetch("question"), given.fetch("input")]))
+      assert_equal p1.fetch("response"), child.hear
+      assert_equal ["usage", 1], child.hear
+      assert_equal [{ "kind" => "backend", "cause" => "missing_answer", "surprise" => 1 }, [nil] * 7], child.hear
+      assert_equal [1, 0, 2], child.hear
+      status, errors = child.finish
+      assert status.success?, errors
+      assert_equal 0, backend.count
+    end
+  end
 end

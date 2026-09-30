@@ -21,19 +21,44 @@ class TestErrors < Minitest::Test
     assert_equal ["a refusal", "usage", false], lines[1]
   end
 
-  # nil and -1 mean none, 0 is spent, and every other value refuses before
-  # any request. A float the shim converted itself would panic into
-  # DefectError, and the class check would turn red.
+  # deadline_ms counts whole milliseconds: nil and -1 mean none, 0 is spent,
+  # and every other value refuses before any request, a number past 64 bits
+  # included. A value the shim converted itself would panic into DefectError,
+  # and the class check would turn red.
   def test_the_deadline_bounds_refuse_before_any_request
     lines, count = TestBackend.run(<<~RUBY)
-      [nil, -1, 0, -2, 4_294_967_296, 1e300, Float::INFINITY, Float::NAN, true, "soon"].each_with_index do |deadline, place|
-        say [deadline.inspect, kind_of_raise { T.decide("Is it urgent?", "text \#{place}", deadline: deadline) }]
+      [nil, -1, 0, -2, 4_294_967_296_000, 2**64, 1.5, Float::INFINITY, Float::NAN, true, "soon"].each_with_index do |deadline, place|
+        say [deadline.inspect, kind_of_raise { T.decide("Is it urgent?", "text \#{place}", deadline_ms: deadline) }]
       end
     RUBY
     assert_equal [%w[nil none], %w[-1 none], %w[0 DeadlineError], %w[-2 UsageError],
-                  %w[4294967296 UsageError], %w[1.0e+300 UsageError], %w[Infinity UsageError],
-                  %w[NaN UsageError], %w[true UsageError], %w["soon" UsageError]], lines
+                  %w[4294967296000 UsageError], %w[18446744073709551616 UsageError], %w[1.5 UsageError],
+                  %w[Infinity UsageError], %w[NaN UsageError], %w[true UsageError], %w["soon" UsageError]], lines
     assert_equal 2, count
+  end
+
+  # Ticket 0291: each kind carries its C code, a zero process cap refuses
+  # the first live send as usage, and a spent deadline_ms stops recognize and
+  # relate as deadline. The backend reads none of them.
+  def test_codes_the_zero_cap_and_spent_budgets_send_nothing
+    lines, count = TestBackend.run(<<~RUBY)
+      say T::Error::CODES.values_at(*%w[usage backend deadline local cancelled defect])
+      capped = T::Engine.new(max_requests_total: 0, cache: false)
+      begin
+        capped.decide("Is it urgent?", "capped")
+      rescue T::UsageError => e
+        say [e.kind, e.code, e.message.include?("process send budget")]
+      end
+      pairs = [%w[First alert], %w[Second alert]]
+      [-> { T.recognize("Ada Lovelace", deadline_ms: 0) },
+       -> { T.relate(pairs, relations: { caused_by: %w[alert alert] }, deadline_ms: 0) }].each do |call|
+        call.call
+      rescue T::DeadlineError => e
+        say [e.kind, e.code]
+      end
+    RUBY
+    assert_equal [[1, 2, 3, 4, 5, 6], ["usage", 1, true], ["deadline", 3], ["deadline", 3]], lines
+    assert_equal 0, count
   end
 
   # The conformance runner holds the engine's fault kinds. A set is the
@@ -143,9 +168,9 @@ class TestErrors < Minitest::Test
       [-> { T::Engine.new(base_url: base.sub("127.0.0.1", "user:hunter2@127.0.0.1") + "/generic/v1") },
        -> { T::Engine.new(base_url: base + "/arm/refuse/v1", cache: false).decide("Is it urgent?", "text") },
        -> { T::Engine.new(base_url: base + "/arm/status/401/v1", cache: false).decide("Is it urgent?", "text") },
-       -> { T.decide("Is it urgent?", "text", deadline: "soon") },
+       -> { T.decide("Is it urgent?", "text", deadline_ms: "soon") },
        -> { T.decide("Is it urgent?", "text", cancel: T::Cancel.new.tap(&:cancel)) },
-       -> { T.decide("Is it urgent?", "text", deadline: 0) }].each do |call|
+       -> { T.decide("Is it urgent?", "text", deadline_ms: 0) }].each do |call|
         call.call
       rescue T::Error => e
         seen << e.message << e.inspect << e.full_message

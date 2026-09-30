@@ -28,12 +28,12 @@ test('details equals the command --details document for the same question and te
   }
 });
 
-test('index.js, index.mjs, and index.d.ts export the same twenty names', () => {
+test('index.js, index.mjs, and index.d.ts export the same twenty-six names', () => {
   const cjs = Object.keys(createRequire(import.meta.url)('../index.js')).sort();
   const mjs = Object.keys(esm).filter((name) => name !== 'default').sort();
   const types = readFileSync(new URL('../index.d.ts', import.meta.url), 'utf8');
   const declared = [...types.matchAll(/^export (?:class|function|const) (\w+)/gm)].map((match) => match[1]);
-  assert.equal(cjs.length, 20);
+  assert.equal(cjs.length, 26);
   assert.deepEqual(mjs, cjs);
   assert.deepEqual([...new Set(declared)].sort(), cjs);
 });

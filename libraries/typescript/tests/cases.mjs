@@ -164,6 +164,10 @@ async function check(tt, one, origin, folder) {
       }
       const expected = records.map(() => ({}));
       for (const answer of success.answers) expected[one.record ? 0 : answer.exchange][answer.name] = answer.bare;
+      // tt.failed reads the failure marker; null stays unresolved.
+      const read = (row) => Object.fromEntries(Object.entries(row).map(([name, member]) => [name,
+        tt.failed(member) ? `failed ${tt.failed(member).cause}` : member === null ? 'unresolved' : 'answered']));
+      same('fields', rows.map(read), expected.map(read));
       return same('rows', rows, expected);
     }
     case 'find': {

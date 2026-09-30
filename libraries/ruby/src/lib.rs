@@ -109,7 +109,7 @@ struct Handoff {
 }
 
 struct Controls {
-    deadline: Option<f64>,
+    deadline_ms: Option<i64>,
     batch: Option<BatchSetting>,
     context: Option<String>,
 }
@@ -216,6 +216,7 @@ struct Settings {
     replay: Option<String>,
     profile: Option<String>,
     batch: Option<BatchSetting>,
+    max_requests_total: Option<i64>,
 }
 
 impl Settings {
@@ -270,6 +271,11 @@ impl Settings {
         }
         if let Some(setting) = self.batch {
             builder = builder.batch(setting);
+        }
+        if let Some(value) = self.max_requests_total {
+            let value = u64::try_from(value)
+                .map_err(|_| Fault::usage("max_requests_total is a whole number of 0 or more"))?;
+            builder = builder.max_requests_total(Some(value));
         }
         Ok(builder.build()?)
     }

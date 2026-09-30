@@ -27,6 +27,13 @@ done
 export THINKTHEN_PHP_BIN="$php_bin" THINKTHEN_PYTHON_BIN="$python_bin"
 export THINKTHEN_BWRAP_BIN="$bwrap_bin" THINKTHEN_FLOCK_BIN="$flock_bin" THINKTHEN_GIT_BIN="$git_bin"
 unset THINKTHEN_API_KEY
+# Run one command under the named lock. A caller that already holds it, such
+# as the surfaces rung, exports THINKTHEN_HEAVY_LOCK_HELD; waiting on it again
+# would only time out.
+locked() {
+    held=$1; shift
+    if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" = "$held" ]; then "$@"; else "$flock_bin" -w 180 -o "$held" "$@"; fi
+}
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$repo/sdlc/scripts/scratch.sh"
 usage_home
@@ -42,7 +49,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     "$python_bin" "$repo/sdlc/scripts/check-c-exports.py" "$native/include/thinkthen.h" "$native/lib/libthinkthen.so"
     readelf -d "$native/lib/libthinkthen.so" | grep -q 'Library soname: \[libthinkthen.so.0\]'
     [ "$(readlink "$native/lib/libthinkthen.so.0")" = libthinkthen.so ] || exit 1
-    "$flock_bin" -w 180 -o "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
+    locked "${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-7.lock}" \
         env CARGO_TARGET_DIR="$repo/target" CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
         cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
     THINKTHEN_RELEASE_PHP_DIR="$package" THINKTHEN_RELEASE_C_DIR="$native" \
@@ -65,9 +72,9 @@ node "$repo/sdlc/scripts/ratchet.mjs" ratchet.py.json
 "$python_bin" -c 'import json; p=json.load(open("composer.json")); assert p["name"]=="botassembly/thinkthen" and p["require"]=={"php":">=8.3","ext-ffi":"*"}'
 for file in src/*.php examples/*.php fixtures/*.php; do "$php_bin" -d ffi.enable=1 -l "$file" >/dev/null; done
 lock=${THINKTHEN_HEAVY_LOCK:-/run/user/1000/thinkthen-codex-6.lock}
-"$flock_bin" -w 180 -o "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
+locked "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
-"$flock_bin" -w 180 -o "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
+locked "$lock" env CARGO_NET_OFFLINE=true CARGO_BUILD_RUSTC_WRAPPER= RUSTC_WRAPPER= \
     cargo build --locked --offline --manifest-path "$repo/Cargo.toml" --package conformance-backend -j2
 THINKTHEN_PORTABLE_LIBRARY="$repo/libraries/c/target/debug/libthinkthen_c.so" "$python_bin" fixtures/portable_batch.py
 "$python_bin" fixtures/abi.py

@@ -1,5 +1,5 @@
 //! The one module holding Node-API items: the engine class, the call handle,
-//! and the three functions `index.js` calls.
+//! and the functions `index.js` calls.
 #![allow(
     unsafe_code,
     reason = "the napi macros emit the module registration code"
@@ -40,6 +40,24 @@ pub fn engine(options: String) -> Result<NativeEngine> {
 #[napi]
 pub fn usage(engine: Option<&NativeEngine>) -> String {
     door::usage(engine.map(|held| &held.engine))
+}
+
+/// Preview one question over its records as a `plan` envelope; nothing is sent.
+#[napi]
+pub fn plan(
+    engine: Option<&NativeEngine>,
+    spec: String,
+    records: String,
+    batch: Option<String>,
+    context: Option<String>,
+) -> String {
+    door::plan(
+        engine.map(|held| &held.engine),
+        &spec,
+        &records,
+        &batch,
+        &context,
+    )
 }
 
 /// Read one bounded, validated local question as an error envelope.

@@ -61,6 +61,12 @@ export async function sample(text: string, message: string, inbox: string[], rev
   const retries: number = engine.usage().retries;
   void retries;
 
+  const planned: tt.Plan = new tt.Engine({ maxRequestsTotal: 0 }).plan('Refund?', reviews, { batch: 'max' });
+  const band: number = planned.estimated_input_tokens.upper + tt.plan({ tag: 'Which?', labels: ['a'] }, reviews).requests;
+  const code: tt.Outcome = tt.outcome(answered);
+  const failure = tt.failed(rows[0]?.['team']);
+  const why: tt.FailureCause | undefined = failure?.cause;
+  void band; void code; void why;
   const field = rows[0]?.['team'];
   if (field !== null && typeof field === 'object' && 'failed' in field) {
     const cause: tt.FailureCause = field.failed.cause;
@@ -69,7 +75,7 @@ export async function sample(text: string, message: string, inbox: string[], rev
   try {
     await tt.decide('Refund?', text);
   } catch (error) {
-    if (error instanceof tt.ThinkThenError && error.kind === 'cancelled') {
+    if (error instanceof tt.ThinkThenError && error.kind === 'cancelled' && error.code === 5) {
       const receipt: tt.Completion<unknown> | undefined = error.completion;
       const report = await receipt?.wait();
       if (report && 'ok' in report) { const final: tt.Facts = report.ok.facts; void final; }
