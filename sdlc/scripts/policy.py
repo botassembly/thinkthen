@@ -32,7 +32,7 @@ ALLOWED_LICENSES = {
 # copyleft term, and there is no HTTPS in Rust without them. A crate listed here
 # that stops needing its exception fails the check, so the list cannot rot.
 # The `polars` feature adds named metadata exceptions in tickets 0130 and
-# 0298; cargo-deny separately checks the active graph and shipping notices.
+# 0298; cargo-deny separately checks licenses in the active dependency graph.
 LICENSE_EXCEPTIONS = {
     "ring": {"ISC"},
     "rustls-webpki": {"ISC"},

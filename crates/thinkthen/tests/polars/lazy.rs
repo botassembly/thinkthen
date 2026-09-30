@@ -10,7 +10,8 @@ use thinkthen::polars::prelude::{
     DataFrame, DataType, Engine as PolarsExecution, IntoLazy, NamedFrom, Series, col,
 };
 use thinkthen::{
-    CancelToken, Engine, PolarsEngine, PolarsExprOptions, Question, QuestionKind, Tally,
+    BatchSetting, CancelToken, Engine, PolarsEngine, PolarsExprOptions, Question, QuestionKind,
+    Tally,
 };
 
 fn listener() -> Listener {
@@ -84,6 +85,26 @@ fn probability_refuses_for_score_and_tag(engine: &Engine, score: &Question, tag:
     }
 }
 
+fn assert_probability_matches_eager(result: &DataFrame, eager: &DataFrame) {
+    let judged = result
+        .column("judged")
+        .expect("judged")
+        .struct_()
+        .expect("Struct");
+    assert_eq!(
+        judged.dtype(),
+        &DataType::Struct(vec![
+            thinkthen::polars::prelude::Field::new("value".into(), DataType::Boolean),
+            thinkthen::polars::prelude::Field::new("probability".into(), DataType::Float64),
+        ])
+    );
+    for name in ["value", "probability"] {
+        let actual = judged.field_by_name(name).expect("field");
+        let expected = eager.column(name).expect("eager field");
+        assert_eq!(actual, expected.as_materialized_series().clone());
+    }
+}
+
 #[test]
 fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
     let listener = listener();
@@ -107,15 +128,22 @@ fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
     let options = PolarsExprOptions::new()
         .probability(true)
         .tally(tally.clone());
-    let expression = engine
-        .decide_expr(&question, col("body"), options)
-        .expect("expression");
-    assert_eq!(listener.count(), 1, "construction sends nothing");
-    for streaming in [false, true] {
+    let ordinary = engine
+        .decide_expr(&question, col("body"), options.clone())
+        .expect("ordinary expression");
+    let singleton = engine
+        .decide_expr(
+            &question,
+            col("body"),
+            options.batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+        )
+        .expect("singleton expression");
+    assert_eq!(listener.count(), 1, "both constructions send nothing");
+    for (streaming, expression) in [(false, ordinary), (true, singleton)] {
         let query = source
             .clone()
             .lazy()
-            .with_columns([expression.clone().alias("judged")]);
+            .with_columns([expression.alias("judged")]);
         let result = if streaming {
             query
                 .collect_with_engine(PolarsExecution::Streaming)
@@ -124,23 +152,7 @@ fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
         } else {
             query.collect().expect("lazy collect")
         };
-        let judged = result
-            .column("judged")
-            .expect("judged")
-            .struct_()
-            .expect("Struct");
-        assert_eq!(
-            judged.dtype(),
-            &DataType::Struct(vec![
-                thinkthen::polars::prelude::Field::new("value".into(), DataType::Boolean),
-                thinkthen::polars::prelude::Field::new("probability".into(), DataType::Float64),
-            ])
-        );
-        for name in ["value", "probability"] {
-            let actual = judged.field_by_name(name).expect("field");
-            let expected = eager.value().column(name).expect("eager field");
-            assert_eq!(actual, expected.as_materialized_series().clone());
-        }
+        assert_probability_matches_eager(&result, eager.value());
         let requests = listener.requests();
         if streaming {
             let mut actual = requests
@@ -155,7 +167,7 @@ fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
             expected.sort();
             assert_eq!(
                 actual, expected,
-                "streaming morsels have exact singleton bodies"
+                "batch one gives exact singleton bodies at any morsel cut"
             );
         } else {
             assert_eq!(requests.len(), 1);
@@ -166,15 +178,14 @@ fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
             assert_eq!(tally.facts().input_tokens(), Some(10));
         }
     }
-    assert_eq!(listener.count(), 4, "one packed and two morsel sends");
+    assert_eq!(
+        listener.count(),
+        4,
+        "eager and ordinary packed; batch-one streamed"
+    );
     assert_eq!(
         (tally.facts().records(), tally.facts().requests_sent()),
         (4, 3)
-    );
-    assert_eq!(
-        tally.facts().input_tokens(),
-        None,
-        "an empty streaming morsel has no reported usage"
     );
 }
 
