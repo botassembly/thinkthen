@@ -130,6 +130,7 @@ const nav = [
   </div>
 </header>
 
+<p id="copy-said" class="visually-hidden" aria-live="polite"></p>
 <main data-pagefind-body={noindex ? undefined : ''}><div class="wrap"><slot /><p class="repo-link">On GitHub: <a href={repo}>{repo.replace('https://', '')}</a></p></div></main>
 
 <footer class="bottom">
@@ -196,13 +197,36 @@ const nav = [
     });
   });
 
+  // Copy the exact runnable text. When the browser cannot copy, say so and
+  // select the same text, so the reader can copy it by hand. A screen
+  // reader hears both outcomes through the one live region.
+  var said = document.getElementById('copy-said');
+  function tell(b, word, keep) {
+    var was = b.dataset.was || b.textContent;
+    b.dataset.was = was;
+    b.textContent = word;
+    said.textContent = '';
+    setTimeout(function () { said.textContent = keep; }, 50);
+    clearTimeout(b.timer);
+    b.timer = setTimeout(function () { b.textContent = was; }, 2000);
+  }
+  function selectCopy(pre) {
+    var range = document.createRange();
+    range.selectNodeContents(pre.querySelector('[data-copy-range]') || pre.querySelector('code') || pre);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
   document.querySelectorAll('button.copy').forEach(function (b) {
     b.addEventListener('click', function () {
       var pre = b.closest('.block').querySelector('pre');
-      var text = pre.dataset.copy || pre.innerText;
-      navigator.clipboard.writeText(text).then(function () {
-        var was = b.textContent; b.textContent = 'Copied'; setTimeout(function () { b.textContent = was; }, 1200);
-      }, function () {});
+      var text = pre.dataset.copy;
+      function failed() {
+        selectCopy(pre);
+        tell(b, 'Copy failed', 'Copy failed. The text is selected. Press Control C or Command C to copy it.');
+      }
+      if (!navigator.clipboard || !navigator.clipboard.writeText) { failed(); return; }
+      navigator.clipboard.writeText(text).then(function () { tell(b, 'Copied', 'Copied'); }, failed);
     });
   });
 })();
