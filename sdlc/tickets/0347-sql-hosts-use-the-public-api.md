@@ -22,6 +22,14 @@ SQLite, DuckDB and PostgreSQL hold no copy of engine code that the public API co
 
 ## What the build taught us
 
+- Decision, which Ian can overturn: PostgreSQL's inline relate rules now read as the command reads them. `ANY` reads as any kind, so `caused_by=ANY:ANY` passes a two-column query. An empty side, a blank name or a control character now gets the extension's one relate-rule sentence instead of the library's blank-text sentence. The copy had drifted from the command on exactly these rows, which is what Debt 018 item 2 named. No check or case pinned the old behavior. `relate.rs` pins the new rows.
+- `LoadedQuestion::kind` covered as many matches as the trait did. Twelve of the removed matches only asked which kind a loaded question holds.
+- The spent-budget sentence rode on `From<Error> for Refusal`. With `Refusal` gone, `call::run_result` maps it once, and every engine call passes through there.
+- The C door, R, Ruby, Python, TypeScript and the Polars tests still match both arms of `LoadedQuestion`. They can drop the match at their next change; the SQL hosts were this ticket's scope.
+- The SQL extensions keep their own 1 MiB file readers. `read_question_file` opens a path itself, and SQLite needs a nonblocking open with a regular-file rule, and PostgreSQL an `openat2` confined open, so neither fits it.
+- Lines: the three SQL hosts lost 197 nonblank Rust lines (SQLite 2,838 to 2,797, DuckDB 4,207 to 4,139, PostgreSQL 3,052 to 2,964). The crate grew 203, most of them the new public API test page.
+- Checks: `sdlc/scripts/test` (1,280 passed), `spec` (24 demos green), workspace clippy with `-D warnings`, `policy.py`, `tickets`, the C door tests (31 passed), the Polars check, and the SQLite (53 of 55 cases, 2 not run as on main), DuckDB (53 of 55) and PostgreSQL (89 steps, 52 of 55 cases, 3 not run as on main) checks passed. The plan pins passed byte for byte in SQLite and PostgreSQL.
+
 ## Public API delta
 
 ### Added public declarations
