@@ -3,13 +3,13 @@
 - Status: **Proposed**, 2026-09-30. Ian can overturn each item.
 - Date: 2026-09-30
 
-Ian asked for several providers with separate API keys in one environment. One machine holds a TypeSafe key and a Liquid key at once. A shell script, a program, and the cache must all use both without mixing the keys. `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` stay the primary story. This ADR partly reverses ADR 0010's configuration section and amends ADR 0033 and `specification/backends.md`. Ticket 0334 builds it after ADR 0111 slice 3.
+Ian asked for several providers with separate API keys in one environment. A user may hold a TypeSafe key and a Liquid key at once. A shell script, a program, and the cache must all use both without mixing the keys. `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` stay the primary story. This ADR partly reverses ADR 0010's configuration section and amends ADR 0033 and `specification/backends.md`. Ticket 0334 builds it after ADR 0111 slice 3.
 
 ## Context
 
 Today one key variable serves every address. `THINKTHEN_API_KEY` holds the key. `--url`, then `THINKTHEN_BASE_URL`, then the configuration file's `url`, then `https://api.typesafe.ai/v1` names the address. `specification/backends.md` says "No option names another variable." ADR 0010 removed named profiles because two variables and `--model` said everything a profile held. ADR 0032 later gave `--profile` limits and a calibration name only. ADR 0033 made the configuration file `thinkthen.config/1`, read only, with `url`, `model`, `cache`, `cache_bytes`, and later ADR 0108's two price fields.
 
-With one key variable, a user who works with two providers must swap two variables in front of each command. A user whose `THINKTHEN_API_KEY` holds a TypeSafe key and who points `THINKTHEN_BASE_URL` at Liquid sends the TypeSafe key to Liquid. Ian's machine holds exactly that shape: `THINKTHEN_API_KEY` currently equals the TypeSafe key, and `LIQUIDAI_API_KEY` holds the Liquid key.
+With one key variable, a user who works with two providers must swap two variables in front of each command. A user whose `THINKTHEN_API_KEY` holds a TypeSafe key and who points `THINKTHEN_BASE_URL` at Liquid sends the TypeSafe key to Liquid. A common setup holds one provider's key in `THINKTHEN_API_KEY` and each provider's key in that provider's own variable, such as `LIQUIDAI_API_KEY`.
 
 ADR 0010 held that the key goes to the address the user named, because naming the address is the user's own act. This ADR keeps that rule. It adds names that pair an address with its own key variable, so naming the backend names both.
 
@@ -24,7 +24,7 @@ ADR 0010 held that the key goes to the address the user named, because naming th
 
 The `typesafe` base is today's default address. The `liquid` base and model are the ones the README gives for Liquid's d1. A backend name uses 1 to 32 lowercase ASCII letters, digits, and hyphens.
 
-The built-in table lives under `crates/thinkthen/src/core/adapters/`, because `typesafe` is a vendor word and `policy.py` holds vendor words behind the adapter.
+The built-in table lives in a child module of `crates/thinkthen/src/core/adapters/systemone/`, because both built-ins speak System One, `typesafe` is a vendor word, and `policy.py` holds vendor words behind the adapter. The builder confirms that `policy.py` exempts the child module. If it does not, the ticket declares the module in `adapters.rs`. `adapters.rs` keeps choosing the one adapter every run uses.
 
 ### 2. The configuration file names more backends and never holds a key
 
@@ -48,7 +48,7 @@ The file keeps the schema `thinkthen.config/1` and gains two optional fields. AD
 - `backends` maps a name to an object with exactly three required fields. `url` is a base that passes today's address rules. `key_env` is the name of an environment variable, matching `[A-Z_][A-Z0-9_]*`. `model` is a nonblank model name. No other field is accepted.
 - An entry may not reuse a built-in name. The refusal is `configuration backend names a built-in backend; choose another name`.
 - The file holds variable names and never a key. The `key_env` pattern refuses most pasted keys, because keys hold lowercase letters or hyphens. The tool still never echoes a `key_env` value it refuses.
-- Each refusal exits 2, names the field, and never repeats a value. The existing unknown-field sentence becomes `the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `backend`, and `backends``.
+- Each refusal exits 2, names the field, and never repeats a value. The existing unknown-field sentence omits ADR 0108's two price fields today. It becomes `the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends``, which also closes that gap.
 - The tool still reads the file and never creates or edits it. The warning for a file another user can write stays word for word. Its reason now covers the key variable as well as the address.
 
 A keyless local server takes an entry whose `key_env` names a variable left unset. Today's loopback rule then sends no `Authorization` header.
@@ -60,8 +60,11 @@ A setting's tier decides, as `specification/settings.md` states for every settin
 | Tier | Names a backend | Names an address |
 | --- | --- | --- |
 | Typed | `--backend NAME` | `--url BASE` |
-| Environment | `EngineBuilder::backend` and each library's `backend` engine setting, then `THINKTHEN_BACKEND` | `EngineBuilder::base_url`, then `THINKTHEN_BASE_URL` |
+| Engine setting | `EngineBuilder::backend` and each library's `backend` engine or SQL session setting | `EngineBuilder::base_url` and each library's address setting |
+| Environment | `THINKTHEN_BACKEND` | `THINKTHEN_BASE_URL` |
 | Configuration | `backend` | `url` |
+
+`specification/settings.md` places engine settings in the environment tier. This ADR splits that tier in two for the backend and the address. An explicit engine setting outranks a captured variable, as `EngineBuilder::base_url` outranks a captured `THINKTHEN_BASE_URL` today. So an explicit `EngineBuilder::backend` ignores a captured `THINKTHEN_BASE_URL` by rule 5, and an explicit `base_url` ignores a captured `THINKTHEN_BACKEND` by rule 6. `EngineBuilder::from_env` today folds `THINKTHEN_BASE_URL` and the configuration's `url` into one captured address. The builder must keep them apart and remember the tier of each.
 
 The rules:
 
@@ -73,13 +76,14 @@ The rules:
 6. A higher tier's address outranks a lower tier's backend. `THINKTHEN_BASE_URL` set in the shell outranks `backend` in the configuration file and takes the unnamed path.
 7. No tier names either: the unnamed path at the built-in address, as today.
 
-The recommendation placed the library engine setting and the SQL setting last, after the configuration file. `specification/settings.md` puts every engine-level library setting and SQL session setting in the environment tier. So this ADR puts `backend` there too, above the configuration file, as `base_url` and `batch` sit today. An explicit setter outranks what `EngineBuilder::from_env` captured, as it does for `base_url`.
-
+The recommendation placed the library engine setting and the SQL setting last, after the configuration file. `specification/settings.md` puts every engine-level library setting and SQL session setting in the environment tier. So this ADR puts `backend` there too, above the configuration file, as `base_url` and `batch` sit today, in the engine-setting row above the variables. 
 The model on the named path is `--model`, then the question file's `model`, then the engine's `model`, then the backend's model. The configuration's top-level `model` and `jev-1.13.0` apply only on the unnamed path.
 
 ### 4. The key on the named path
 
-A named backend reads only its own key variables, in the table's order. The first nonblank value wins. `THINKTHEN_API_KEY` is not read on the named path, unless a configuration entry names it as its `key_env`. On a bare Rust builder, an explicit `api_key` setter still supplies the key; section 5's refusal applies to it.
+A named backend reads only its own key variables, in the table's order. The first nonblank value wins. `THINKTHEN_API_KEY` is not read on the named path, unless a configuration entry names it as its `key_env`.
+
+In the Rust library, `EngineBuilder::from_env` captures each nonblank variable that a built-in or a configuration entry names, into a withheld map. `EngineBuilder::backend` selects from that map, so no setter reads the environment. An explicit `api_key` setter outranks every variable on any builder, as a typed key does today. It reads no variable, so section 5 does not apply to it; the caller chose both the key and the backend. A bare `Engine::builder()` reads no configuration and captures no variable. There `backend` accepts a built-in name and sets its address and model; the caller supplies the key with `api_key`, or the build fails with the exit-4 sentence below. A configured name on a bare builder is an unknown backend.
 
 The recommendation kept `THINKTHEN_API_KEY` as an override on every path. The code and Ian's own environment show a conflict. If `THINKTHEN_API_KEY` outranked the backend's variable, then `--backend liquid` on Ian's machine would send the TypeSafe key to Liquid on every call. So `THINKTHEN_API_KEY` stays the key of the unnamed path and overrides no named backend. `THINKTHEN_BASE_URL` still overrides a backend named in the configuration file, by rule 6. Ian can overturn this: the alternative lets `THINKTHEN_API_KEY` outrank every backend's variable, and a user whose key belongs to one provider must then unset it before naming another.
 
@@ -104,7 +108,7 @@ An unknown host passes. A user who types `--backend typesafe --url https://gatew
 - An invalid backend name exits 2 with `a backend name uses 1 to 32 lowercase letters, digits, and hyphens` and repeats nothing.
 - An unknown valid name exits 2 with `unknown backend `NAME`; the built-in backends are `liquid` and `typesafe`, and the configuration file may name more`. The builder writes the built-in list from the table.
 - `thinkthen check` treats a named backend as a named address. Its refusal becomes `check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file`.
-- `thinkthen status` prints `backend NAME` or `backend none`, and `key_variable NAME` for the variable it would read. `api_key_set` keeps its meaning for that variable. No line holds a key.
+- `thinkthen status` takes `--backend` and prints `backend NAME` or `backend none`, and `key_variable NAME` for the first variable it would read. `api_key_set` keeps its meaning for that variable. `status --json` gains `name` (a string or null) and `key_variable` in its `backend` object, and `url_source` and `model_source` gain the value `backend` when a named backend supplied the value. Adding fields to the closed object moves it to `thinkthen.status/2`. ADR 0111 slice 5 already moves `status` to that version; whichever lands second adds its fields to it, before any release. No line holds a key.
 - `--help` for `--backend` names no provider, so the vendor word stays behind the adapter.
 - A program holds one engine per backend at once. Each engine keeps its own backend, address, and key. One command run uses one backend. A shell script mixes backends by naming one on each command.
 
@@ -120,7 +124,9 @@ ADR 0111's question key hashes the adapter name, the posting URL, the model, the
 | ADR 0010, ruling 2 | The two variables stay the unnamed path. Built-in backends add their own key variables |
 | ADR 0033 | `thinkthen.config/1` gains `backend` and `backends` |
 | `specification/backends.md` | "No option names another variable" gives way to sections 1 to 5 |
-| `specification/settings.md` | New rows for the backend, `THINKTHEN_BACKEND`, and each built-in key variable |
+| `specification/settings.md` | New rows for the backend, `THINKTHEN_BACKEND`, and each built-in key variable. The environment tier splits for the backend and the address (section 3) |
+| `specification/recording.md` | The configuration file's field list gains `backend` and `backends` |
+| `AGENTS.md`, `SECURITY.md` | "The key from `THINKTHEN_API_KEY`" becomes the key of the selected backend's variable, sent only to its address |
 
 ## Build order
 
@@ -139,11 +145,16 @@ The recommendation Ian received, as built:
 
 The coordinator's adjustments where the code conflicted, each stated above:
 
-4. The library and SQL setting sits in the environment tier, above the configuration file (section 3).
+4. The library and SQL setting sits above the environment variables and the configuration file (section 3).
 5. `THINKTHEN_API_KEY` is not read on the named path (section 4).
 6. The refusal guards a built-in's own variable at another built-in's host, and unknown hosts pass (section 5).
+
+Items 4 to 6 depart from the recommendation, so they wait for Ian as open questions 3 to 5.
 
 ## Open questions for Ian
 
 1. Which other providers should become built-ins, and under which variable names?
 2. Is the refusal in section 5 too strict or too loose? The options are the current rule, own host or loopback only, or no refusal.
+3. May `THINKTHEN_API_KEY` stay off the named path (section 4)? The alternative lets it outrank every backend's variable, which sends one provider's key to another whenever both are set.
+4. May the refusal move from `THINKTHEN_API_KEY` to the built-in variables (section 5)? Keeping it on `THINKTHEN_API_KEY` would break the README's documented Liquid path.
+5. May the library and SQL `backend` setting outrank the configuration file (section 3), as every engine setting does today?
