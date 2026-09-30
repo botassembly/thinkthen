@@ -4,7 +4,7 @@ Status: **Settled**, amended by ADR 0048, for the wire shape, the key, the addre
 
 `thinkthen` speaks one wire shape, System One, by ruling 1 of ADR 0010. Another model is reached by a server that presents that shape at another address. Every token count and probability in an example here is illustrative.
 
-A backend is an address and a model. `THINKTHEN_BASE_URL` or the configuration file's `url` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. An explicit profile may add a stable name and local limits. It never selects either value.
+A backend is an address and a model. `THINKTHEN_BASE_URL` or the configuration file's `url` names the address, `THINKTHEN_API_KEY` holds the key, and `--model` names the model. A named backend pairs an address with its own key variables and a model; see [Named backends](#named-backends). An explicit profile may add a stable name and local limits. It never selects either value.
 
 
 The optional `max_estimated_input_tokens_total` setting admits each final encoded body using `ceil(body bytes × 908 / 1000)` (`encoded-body-bytes-908-v1`). The process retains each started attempt's estimate, including failed replies, retries and refusal-split children; a stopped attempt before transport refunds it. Cache and replay answers add no charge. Each engine selects its own limit against the retained sum. This is an estimated input admission bound, not a hard provider token, output, dollar or billing cap. A future coefficient or body-coverage change needs a new version and review. `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` sets the limit on every surface; an explicit flag, setter or C key outranks it.
@@ -33,14 +33,40 @@ Opt-in live attempt observations inspect only `x-envoy-upstream-service-time` an
 
 ## The key
 
-Settled by ADR 0010.
+Settled by ADR 0010 and ADR 0114.
 
-The key is read from `THINKTHEN_API_KEY`. No option names another variable.
+With no backend named, the key is read from `THINKTHEN_API_KEY`. A named backend reads only its own key variables, in order, and the first nonblank one wins; `THINKTHEN_API_KEY` is not read unless a configuration entry names it as its `key_env`. The rules below apply to whichever key was selected.
 
-- A key variable that is absent or empty is exit code 4. An empty variable counts as absent. The message names the variable and never a value.
+- A key variable that is absent or empty is exit code 4. An empty variable counts as absent. The message names the variable and never a value. A named backend's message names its first key variable: `the environment variable `LIQUIDAI_API_KEY` is unset or blank, so no key is sent`.
 - No key appears in a plan, a result, a recording, a log line, or an error.
 - A key holding a control character, such as a line feed, a tab, an escape, or DEL, is a usage error before any send. It says `the API key contains a control character` and repeats no part of the key.
-- **The key goes to the address the user named.** A nonblank effective key that occurs verbatim anywhere in the resolved posting URL is refused first with `the backend address contains the API key; keep the key out of the address`. The check compares exact UTF-8 bytes without decoding or rewriting the URL. Otherwise a run pointed at another address carries the key of `THINKTHEN_API_KEY` and nothing else.
+- **The key goes to the address the user named.** A nonblank effective key that occurs verbatim anywhere in the resolved posting URL is refused first with `the backend address contains the API key; keep the key out of the address`. The check compares exact UTF-8 bytes without decoding or rewriting the URL. Otherwise a run pointed at another address carries the selected key and nothing else.
+
+## Named backends
+
+Settled by ADR 0114. Ian can overturn each default it records.
+
+Two backends are built in:
+
+| Name | Base | Key variables, first nonblank wins | Model |
+| --- | --- | --- | --- |
+| `typesafe` | `https://api.typesafe.ai/v1` | `TYPESAFE_API_KEY` | `jev-1.13.0` |
+| `liquid` | `https://api.liquid.ai/decisions/v1` | `LIQUIDAI_API_KEY`, then `LIQUID_API_KEY` | `d1:free` |
+
+The configuration file may name more backends under `backends`, each with exactly `url`, `key_env`, and `model`, and may name the default under `backend`; [recording.md](recording.md) lists the file's fields. An entry may not reuse a built-in name. `key_env` matches `[A-Z_][A-Z0-9_]*`, and the file never holds a key. A backend name uses 1 to 32 lowercase ASCII letters, digits, and hyphens.
+
+`--backend NAME`, `EngineBuilder::backend`, `THINKTHEN_BACKEND`, and the configuration's `backend` name a backend. The tiers run typed (`--backend`, `--url`), then the engine setting (`EngineBuilder::backend`, `EngineBuilder::base_url`), then the environment (`THINKTHEN_BACKEND`, `THINKTHEN_BASE_URL`), then the configuration file (`backend`, `url`). The first tier that names a backend or an address decides, and lower tiers are ignored:
+
+- A backend and no address: the backend's base, key variables, and model apply.
+- An address and no backend: the unnamed path applies exactly as before, with `THINKTHEN_API_KEY`.
+- Both: the backend's key variables and model apply at that tier's address. `--backend liquid --url http://127.0.0.1:8080/v1` sends the Liquid key to the loopback server.
+- A lower tier's address never replaces a higher tier's backend, and a higher tier's address outranks a lower tier's backend. `THINKTHEN_BASE_URL` in the shell outranks `backend` in the configuration file.
+
+On the named path the model is `--model`, then the question file's `model`, then the engine's `model`, then the backend's model. The configuration's top-level `model` and `jev-1.13.0` apply only on the unnamed path.
+
+When the selected backend reads a variable a built-in lists, and the final posting URL's host equals another built-in's host, the call is refused with exit 2 before any key is read, any cache or recording opens, or any connection is made. The host comparison is exact after lower-casing and ignores port and path; a subdomain does not match. The whole standard error line reads, for example, `thinkthen: backend `typesafe` reads `TYPESAFE_API_KEY`, the key of backend `typesafe`, which never goes to the address of backend `liquid``. An unknown host passes, because the user named it. An explicit `EngineBuilder::api_key` reads no variable and skips this rule.
+
+An invalid name exits 2 with `a backend name uses 1 to 32 lowercase letters, digits, and hyphens`. An unknown valid name exits 2 with `unknown backend `NAME`; the built-in backends are `liquid` and `typesafe`, and the configuration file may name more`. `Engine::builder()` knows only the built-ins and captures no key, so its caller supplies one with `api_key`; a missing key fails the first live call as on the unnamed path. The cache key never holds a key or a backend name, so two backends at one posting URL and model share answers, and backends at different URLs never mix.
 
 ## The address
 
@@ -54,7 +80,7 @@ A proxy carries an `https://` request and never an `http://` one. The HTTP clien
 
 By default, HTTPS verifies the certificate chain and hostname against the bundled Mozilla roots. A process can set `THINKTHEN_CA_BUNDLE` to an absolute local PEM file to **replace** those roots for engines it builds from the environment; a Rust caller can use `EngineBuilder::ca_bundle(path)` on a bare or environment-built builder, with the explicit setter winning. `SSL_CERT_FILE` is not read. A bundle is at most 2 MiB and holds 1 to 256 matched `CERTIFICATE` blocks with only ASCII whitespace between them. An unreadable file is a local error; a relative path, wrong PEM label, malformed block, empty file, oversize file, or too many certificates is a usage error. Errors name the setting and cause, not the path or certificate contents. The selected roots are parsed once before the engine can send and are retained across model changes and fork reconstruction; a new engine reads a changed file. A named bundle is checked even for an engine that will only replay saved answers. The CLI still checks the resolved URL against its one optional key snapshot first; root validation follows before transport key use, an Authorization header, or a send. `status` builds no HTTP client and need not open the bundle. Command plan paths that build no engine also do not open it. The grouped annotate plan builds a preview engine and validates a named CA bundle before printing. An invalid or untrusted certificate never falls back to Mozilla roots or disables verification. Native libraries and SQL hosts inherit only the process environment source in this first setting; they have no per-instance or SQL spelling for the CA path.
 
-`--url` names a base and takes no companion option. It is the command-line spelling of `THINKTHEN_BASE_URL`, it outranks the variable, and the key rule above does not change when it is given. ADR 0031 puts it in short help because the address determines whether a first request reaches the default hosted service.
+`--url` names a base. It is the command-line spelling of `THINKTHEN_BASE_URL`, it outranks the variable, and the key rule above does not change when it is given. Beside `--backend`, it sends that backend's key to the named address. ADR 0031 puts it in short help because the address determines whether a first request reaches the default hosted service.
 
 Space around a base is dropped. A scheme is read without regard to case and written back in lower case. A base has a host; a hostless base is a usage error reported as `a base address has a host`. Literal ASCII letters in an unbracketed host are also written in lower case, so equivalent DNS host-case spellings keep one resolved URL and recording digest. Punycode labels follow that ASCII rule. Percent escapes in the host, non-ASCII host bytes, bracketed IPv6 text, port spelling, and path bytes keep the case the caller typed. The parser does no percent decoding, Unicode case folding, IDNA conversion, IPv6 canonicalization, port normalization, or path normalization. A port is digits naming a number from 0 to 65535, or there is no colon at all. An empty port, a signed number, and a number past 65535 are each a usage error, because a port a socket cannot carry would be dropped and the request would go somewhere the caller did not name. A base carrying user information, a query, or a fragment is a usage error, because the address is printed in a plan and kept in a recording. The refusal message names the rule and never the base it refused. A base that is empty or holds only white space is a usage error too. The path is kept as typed, and a plan, every recording entry, and the cache folder's identity all hold it. A path token other than the configured key is written into every recording; the tool cannot infer which arbitrary segment is sensitive. An exact configured-key collision is refused before the path reaches a plan, digest, or folder. Keep a secret in `THINKTHEN_API_KEY` and never in the address.
 
