@@ -1,6 +1,6 @@
 # 0335: Split tests between the gate and the release suite
 
-Status: ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue: `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
+Status: slice 1 landed; slice 2 waits for 0304 slice 3a to 3d. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue: `sdlc/issues/2026-09-30-split-tests-between-the-gate-and-release-qa.md`. Inventory: `sdlc/planning/test-split-2026-09-30.md`.
 
 ## Outcome
 
@@ -38,3 +38,13 @@ The per-surface matrices move when the release suite runs bindings. That is the 
 3. **Keep the specification the contract.** Yes. Every exit code and sentence the gate pins comes from `specification/`, and a change to one lands in the specification in the same commit. The smoke takes its question and expected answer from `conformance/`.
 
 Ian can overturn the slice order, the 90 s target, and the choice to move probe self-tests to `spec`.
+
+## What the build taught us
+
+Slice 1 landed every item the slice names. The rung ran 42.1 s and 39.9 s before and 29.3 s and 29.1 s after, each on a warm build under the lane's own heavy lock, at 1-minute loads of 9.8 to 13.6 before and 10.4 to 14.3 after. Nextest ran 1,289 tests before and 1,288 after. The consumer's 18 tests moved under nextest and took 8.2 s, down from about 10 s. One fork test with a long wait, `a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives`, now bounds that step alone. The expected 60 s assumed a library rebuild. A warm run falls further, because the rebuild no longer hides behind 17 s of probe self-tests.
+
+`spec` now runs both probe self-tests beside the checkpoint pages, and it passed. Deleting the demo page run left `demo_runner::a_page_whose_assertion_is_wrong_fails_the_run` as the proof that the runner can fail. The TypeScript and DuckDB binding checks lost only sentence checks. Python lost its deadline-sentence test and the `check.sh` step that checked each test `NOTES.md` names exists. Their code rows stay, and ADR 0038 and the Python `NOTES.md` no longer promise the retired checks.
+
+No item was deferred for the 0304 slice 3a collision. The slice touched two files that branch also edits, `sdlc/ratchet.json` and `libraries/python/ratchet.py.json`. Each holds one measured number, so the second lander remeasures it with `node sdlc/scripts/ratchet.mjs`.
+
+The Python and DuckDB checks passed. The TypeScript check failed one test, `details equals the command --details document for the same question and text`, on a request digest this slice does not touch. It is filed as `sdlc/issues/2026-09-30-typescript-details-request-digest-differs-from-the-command.md`.

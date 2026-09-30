@@ -134,7 +134,7 @@ packed=$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process
 [ "$(node -p 'require("./package.json").license')" = MIT ] || fail 'package.json names no MIT license'
 [ "$(grep -c -- "$HOME" "$addon" || true)" = 0 ] || fail "$addon names $HOME"
 
-step 'flags, pins, one guard, no unsafe, and the pinned sentence'
+step 'flags, pins, one guard, and no unsafe'
 if grep -hE '^[^#]*cargo (build|test|clippy)' check.sh build-addon.sh | grep -vE -- '--locked.*--offline|--offline.*--locked'; then
     fail 'a cargo call above lacks --locked or --offline'
 fi
@@ -146,9 +146,6 @@ node -e 'const d = require("./package.json").devDependencies; for (const [n, v] 
     fail 'a dev dependency is not an exact version'
 [ "$(grep -rc 'catch_unwind(' src | awk -F: '{ n += $2 } END { print n }')" = 0 ] || fail 'src catches panics outside thinkthen::contained'
 ! grep -rnP '\bunsafe\b' src || fail 'src holds unsafe'
-for page in README.md index.d.ts; do
-    grep -q 'No deadline is spelled null, left out, or -1.' "$page" || fail "$page lacks the deadline sentence"
-done
 if [ -n "$missing" ]; then
     echo "typescript: not run; the steps above passed, and $missing is missing"
     exit 77

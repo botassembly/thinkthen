@@ -114,13 +114,6 @@ home=$("$python" -c 'import sys; print(sys.base_prefix)')
 LD_LIBRARY_PATH="$libdir${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" PYTHONHOME=$home \
 	cargo test --quiet --no-default-features --lib --locked --offline
 
-echo "== every test NOTES.md names for a refused shape exists (R7-8)"
-cited=$(sed -n 's/.*proved by `\([a-z0-9_]*\)`.*/\1/p' NOTES.md)
-[ -n "$cited" ] || { echo "NOTES.md names no proving test" >&2; exit 1; }
-for name in $cited; do
-	grep -rqE "(fn|def) $name\(" src tests || { echo "NOTES.md names a missing test: $name" >&2; exit 1; }
-done
-
 echo "== the extension, with the test-only probe feature"
 VIRTUAL_ENV=$venv maturin develop --quiet --locked --offline --features probe
 

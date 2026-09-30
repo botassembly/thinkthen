@@ -52,7 +52,7 @@ Ticket 0110 ports the extension onto `thinkthen`'s public API and carries this A
 
 ## Amendment of 2026-09-25: the ported extension, part two (ticket 0118)
 
-Ticket 0118 ports relate onto `thinkthen`'s public API and completes this amendment. `databases/duckdb/tools/source_checks.py` reads each sentence in bold below, in both parts, and fails when one leaves (R2-29). Ian can overturn each point.
+Ticket 0118 ports relate onto `thinkthen`'s public API and completes this amendment. The sentences in bold below, in both parts, are the rulings. Ticket 0335 retired the `source_checks.py` step that pinned them (R2-29). Ian can overturn each point.
 
 - **Relate from rows.** **The relate query returns `id, name, kind` or `id, name`, rows with the same name and kind become one entity, and each edge returns one row per pair of their ids.** The rules read as a list of command-grammar rules, a rules file's JSON, or `@file` through the caller's own file system.
 - **The row cap and the time limit.** **Relate reads at most 255 rows, under `LIMIT 256`, and more is `usage`.** **`SET thinkthen_relate_seconds` bounds the query and the engine call, and `memory_limit` stays the hard bound for a step that holds its input.** A timer interrupts the kept connection at the limit, and the plan-size guard refuses a large holding step before the query runs.
@@ -61,6 +61,6 @@ Ticket 0118 ports relate onto `thinkthen`'s public API and completes this amendm
 
 ## Amendment of 2026-09-25: warm reads `@file` (ticket 0129)
 
-This replaces part one's warm point. `source_checks.py` reads the sentence in bold. Ian can overturn it.
+This replaces part one's warm point. The sentence in bold is the ruling. Ian can overturn it.
 
 - **Warm.** **The aggregate reads `@file` through the kept connection of the database that registered it, under that database's gate, and runs on the engine the environment describes.** LOAD gives each kept connection a process-wide serial, and the aggregate carries it. DuckDB's database-wide file settings decide each read. Warm refuses `'@~'` paths, because `home_directory` is a session setting the kept connection does not share. It refuses at once while a relate query runs on the kept connection, since a warm inside that query would wait on the gate its own query holds.

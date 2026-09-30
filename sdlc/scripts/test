@@ -1,6 +1,7 @@
 #!/bin/sh
 # The full functional suite: every workspace test, the doctests, the external
 # consumer, and the shell self-tests. Stress checks have their own entry point.
+# The finished probes' self-tests run in spec (ticket 0335).
 set -eu
 if [ "$(uname -s)" = Linux ]; then
     if [ "$(id -ru)" -eq 0 ]; then
@@ -42,17 +43,16 @@ usage_guard
 
 # nextest runs the same tests in about half the time; cargo test is the fallback.
 if cargo nextest --version >/dev/null 2>&1; then
-    cargo nextest run --locked --offline --workspace --all-targets
+    runner='nextest run'
 else
-    cargo test --locked --offline --workspace --all-targets
+    runner=test
 fi
+cargo $runner --locked --offline --workspace --all-targets
 cargo test --locked --offline --workspace --doc
-cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
-    --target-dir target/consumer
+cargo $runner --locked --offline --manifest-path conformance/consumer/Cargo.toml \
+    --target-dir target/consumer --workspace
 sh specification/fixtures/question-file/self-test
 sh specification/fixtures/types/self-test
-sh probes/probability-total-0038/self-test
-sh probes/find-0040/self-test
 sh conformance/children/test.sh
 sh transforms/compare/test.sh
 sh transforms/cost/test.sh
