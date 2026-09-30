@@ -1,6 +1,6 @@
 # 0315: Usage lock wait and retry jitter
 
-Status: built, awaiting code review. Lane claude-4. Branch `ticket/0315-usage-lock-and-jitter`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order items 4 and 8. Issue: `sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md`, items 2 and 3.
+Status: landed. Lane claude-4. Branch `ticket/0315-usage-lock-and-jitter`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order items 4 and 8. Issue: `sdlc/issues/2026-09-26-architect-review-07-throughput-limits-cost.md`, items 2 and 3.
 
 ## Outcome
 
@@ -17,3 +17,5 @@ The usage writer waits for another process's usage lock with no fixed short slee
 ## What the build taught us
 
 The issue's severity 2 item was stale: ticket 0225 had already bounded the wait and chosen skip-with-warning. Check the spec before trusting a review's line numbers. The standard library has no lock with a timeout, so a short poll stays; waiting on the existing condition variable lets finish cut the pause short without a new signal.
+
+The landing gate found main red from earlier landings: four `demo_runner` tests pinned checks ticket 0312 removed, and `tests/public_env.rs` sat at 501 lines. This ticket fixed both in its own commit.
