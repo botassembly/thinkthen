@@ -144,11 +144,7 @@ fn number_of(value: &Robj, what: &str) -> Crossed<Option<f64>> {
         && value
             .class()
             .is_none_or(|mut names| names.next() == Some("AsIs") && names.next().is_none());
-    let refused = || {
-        usage(&format!(
-            "{what} is seconds as a number, -1 for no deadline, or NULL"
-        ))
-    };
+    let refused = || usage(&format!("{what} is a whole number or NULL"));
     // SAFETY: the value is a length-one double or integer vector R handed this call.
     let (held, na) = match value.rtype() {
         Rtype::Doubles if plain => unsafe {
@@ -162,17 +158,14 @@ fn number_of(value: &Robj, what: &str) -> Crossed<Option<f64>> {
         _ => return Err(refused()),
     };
     if na {
-        return Err(usage(&format!(
-            "{what} is NA: pass -1 for no deadline, seconds as a number, or NULL"
-        )));
+        return Err(usage(&format!("{what} is NA: pass a whole number or NULL")));
     }
     Ok(Some(held))
 }
 
-/// The deadline argument (ADR 0041): `NULL` is none, and the engine's
-/// `deadline_seconds` rules the number.
+/// The deadline argument is whole milliseconds, `-1`, or `NULL`.
 fn deadline_of(value: &Robj) -> Crossed<Option<f64>> {
-    number_of(value, "the deadline")
+    number_of(value, "deadline_ms")
 }
 
 #[extendr]
@@ -222,6 +215,29 @@ fn tt_question_check(body: Robj) -> Crossed<String> {
         thinkthen::LoadedQuestion::Question(held) => format!("{:?}", held.kind()).to_lowercase(),
         thinkthen::LoadedQuestion::Banded(_) => "decide".to_owned(),
     })
+}
+
+/// Validate keyword settings with the shared core grammar before a send.
+#[extendr]
+fn tt_settings_check(body: Robj, kind: Robj) -> Crossed<()> {
+    let parsed = thinkthen::Settings::parse(&text_of(&body, "settings")?)
+        .map_err(|error| usage(&error.to_string()))?;
+    let verb = match text_of(&kind, "question kind")?.as_str() {
+        "decide" => thinkthen::For::Decide,
+        "choose" => thinkthen::For::Choose,
+        "score" => thinkthen::For::Score,
+        "tag" => thinkthen::For::Tag,
+        _ => return Err(usage("the question kind is invalid")),
+    };
+    // The complete question is subsequently checked from its raw JSON.
+    // Decide has no required members, so its key dispositions can be
+    // checked immediately. Other verbs get that check on the full question.
+    if verb == thinkthen::For::Decide {
+        parsed
+            .check(verb)
+            .map_err(|error| usage(&error.to_string()))?;
+    }
+    Ok(())
 }
 
 #[extendr]
@@ -456,6 +472,7 @@ fn tt_engine_set(
     model: Robj,
     throttle: Robj,
     max_requests: Robj,
+    max_requests_total: Robj,
     max_request_bytes: Robj,
     cache: Robj,
     timeout: Robj,
@@ -477,6 +494,7 @@ fn tt_engine_set(
         model: optional(&model, "model")?,
         throttle: whole_of(&throttle, "throttle")?,
         max_requests: whole_of(&max_requests, "max_requests")?,
+        max_requests_total: whole_of(&max_requests_total, "max_requests_total")?,
         max_request_bytes: whole_of(&max_request_bytes, "max_request_bytes")?,
         cache,
         timeout: whole_of(&timeout, "timeout")?,
@@ -491,6 +509,7 @@ fn tt_engine_set(
 extendr_module! {
     mod thinkthen;
     fn tt_question_check;
+    fn tt_settings_check;
     fn tt_decide_column;
     fn tt_column;
     fn tt_filter_places;
