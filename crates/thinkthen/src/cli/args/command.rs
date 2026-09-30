@@ -187,7 +187,7 @@ pub(crate) enum Command {
     /// completes without a partial or whole-run failure. The printed values
     /// carry the individual answers. A completed run with one or more failed
     /// questions exits 6. In JSONL detailed batch-one mode, --on-error
-    /// continue emits a safe row for a missing on pointer and continues;
+    /// continue emits a safe error record for a missing on pointer and continues;
     /// a completed run with skipped records exits 7.
     #[command(
         after_help = "Examples:\n\nthinkthen annotate checks.json < message.txt\nthinkthen annotate checks.json --input message.txt\nthinkthen annotate checks.json --jsonl --details --batch 1 --on-error continue < cases.jsonl\n"

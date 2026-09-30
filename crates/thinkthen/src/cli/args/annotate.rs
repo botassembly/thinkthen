@@ -28,7 +28,7 @@ pub(crate) struct AnnotateArguments {
     #[arg(long, hide = true)]
     pub(crate) raw: bool,
 
-    /// Continue after a missing question-set `on` pointer, printing an error row.
+    /// Continue after a missing question-set `on` pointer, printing an error record.
     /// Requires --jsonl --details --batch 1. Other failures still stop.
     #[arg(long, value_name = "POLICY")]
     pub(crate) on_error: Option<String>,

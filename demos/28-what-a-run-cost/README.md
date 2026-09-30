@@ -4,33 +4,25 @@ Status: green
 
 Verbs: `decide`
 
-One live request may carry several judged records, and a run has no price-based spending cap. Use this page to estimate a finished run under your selected prices, to see what one case costs before you scale to a hundred thousand of them, and to confirm that a replayed run made no new paid request.
+A request may judge several records. Estimate a finished run at your prices, check one case before scaling, and confirm replay's zero new spend. No price-based dollar cap is enforced.
 
 ## Input
 
-`../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` hold forty judged rows each. Every row carries `meta.usage`, the token counts the backend reported, and `meta.replayed`, the older name of `meta.cached`, which says whether a backend or stored exchanges answered.
-
-`../../transforms/rows/recording/` holds the eighty exchanges both runs were made from. A recording keeps request bodies and never headers, so no key is in it.
-
-The transform is `../../transforms/cost/cost.jq`. The price of a million input tokens is an argument, because a price is a fact about a contract and not about a run.
+`../../transforms/rows/runs/run-a.jsonl` and `../../transforms/rows/runs/run-b.jsonl` each hold forty judged rows with reported `meta.usage` and legacy `meta.replayed` (now `meta.cached`). `../../transforms/rows/recording/` holds their eighty request and response bodies, without headers or keys. The input-only transform `../../transforms/cost/cost.jq` takes your contract's input price as an argument.
 
 ## Add up one run
 
 ```bash
 set -euo pipefail
-
 jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
   ../../transforms/rows/runs/run-a.jsonl | jq -c . \
   | mustmatch '{"rows":40,"no_usage":[],"charged":{"rows":40,"input_tokens":11784,"output_tokens":840},"replayed":{"rows":0,"input_tokens":0,"output_tokens":0},"usd":0.000495,"usd_per_million_input":0.042}'
 ```
 
-Forty cases cost five hundredths of a cent. `no_usage` is empty, so every row reported its tokens and no count was guessed.
-
-Several runs add up in one call, because `jq` reads as many files as you name.
+These forty cases cost five hundredths of a cent. `no_usage` is empty: no token count was guessed. `jq` can add multiple run files in one call.
 
 ```bash
 set -euo pipefail
-
 jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
   ../../transforms/rows/runs/run-a.jsonl ../../transforms/rows/runs/run-b.jsonl \
   | jq -c '{rows, charged, usd}' \
@@ -41,7 +33,6 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
 
 ```bash
 set -euo pipefail
-
 jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
   ../../transforms/rows/runs/run-a.jsonl \
   | jq -c '{tokens_per_case: (.charged.input_tokens / .charged.rows),
@@ -50,17 +41,16 @@ jq -n --argjson usd_per_million_input 0.042 -f ../../transforms/cost/cost.jq \
   | mustmatch '{"tokens_per_case":294.6,"usd_per_100k_cases":1.237}'
 ```
 
-The messages in this case file run about twenty-five words. The block above measured 294.6 input tokens a case from `run-a.jsonl`. The question and the wire shape are most of it, so a short message is not a cheap one, and doubling the length of the evidence does not double the bill.
+For roughly twenty-five-word messages, `run-a.jsonl` measured 294.6 input tokens per case. The question and wire shape add cost; evidence length alone does not predict it.
 
 ## A replayed row spent nothing
 
-The rows above came from a backend. The same command against the recording opens no connection and reads no key, and the transform keeps its tokens out of the money.
+The recording opens no connection and reads no key. The transform excludes replayed tokens from cost.
 
 ```bash
 set -euo pipefail
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
-
 question=$(cat ../../transforms/rows/question.txt)
 example=$(jq -c 'select(.id == "C-01")' ../../transforms/rows/cases.jsonl)
 
@@ -89,11 +79,11 @@ tail -n 1 "$work/priced.stderr" | jq -c '{requests_sent, estimated_cost_usd}' \
   | mustmatch '{"requests_sent":0,"estimated_cost_usd":"0.000000"}'
 ```
 
-The replayed tokens are reported but add no new estimated spend. The configured `--facts` line prices only this run's new sends; it shows zero after replay. The input-only transform above remains a comparison with the earlier workflow.
+Replay reports tokens but no new spend. Configured `--facts` prices new sends with your input and output prices; this replay shows zero. The earlier transform prices input only.
 
 ### A text record with no usage
 
-`--lines` keeps the original text in `input`, so a cost report cannot assume every input has an id. Missing usage stays visible and the text is not echoed.
+`--lines` keeps text in `input`, which need not have an id. Missing usage stays visible without echoing the text.
 
 ```bash
 set -e
@@ -117,9 +107,9 @@ sh ../../transforms/cost/example.sh | jq -c '{rows, usd}' | mustmatch '{"rows":4
 - **A transform stops with exit 5.** `jq` exits 5 for a line it cannot parse and for an error the transform raises.
 - **A missing entry in the recording is exit 5 too, from the tool.** `thinkthen` names the entry it wanted. A body that differs by one byte from the recorded one is a different entry, so evidence read through a pipe has to arrive exactly as it did when the exchange was recorded.
 - **Assuming a zero for a missing count.** A backend that reports no usage leaves `meta.usage` absent. Those rows are listed in `no_usage` and add nothing, so a total is never quietly short.
-- **Pricing output tokens with the input price.** They are reported beside the input tokens and never converted. The model answers with numbers, so output is small, and only the input side is worth watching.
-- **Reading the price from this page.** 0.042 for a million input tokens is what the hosted service charged on 2026-09-19. Another address has another price, and the argument exists so nobody hard-codes one.
-- **A loop over files has no dollar cap.** Each file is its own run. Request and estimated-input admission limits can stop sends, but neither caps a provider bill. `sdlc/scripts/live` is the door for a paid call in this repository, and it refuses at the ledger's limit.
+- **Mistaking the input-only transform for a two-price estimate.** It uses one caller-supplied input price; configured `--facts` uses separate input and output prices. Neither is a provider bill.
+- **Copying this page's price.** The sample input price was observed on 2026-09-19; use the prices in your own contract.
+- **Assuming a dollar cap.** Request and estimated-input limits can stop sends, but do not cap a provider bill. Paid calls here go through `sdlc/scripts/live` and its ledger limit.
 
 ## Related how-tos
 
