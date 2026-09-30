@@ -2,9 +2,13 @@
 //!
 //! Each success case runs on its own case arm. Expected request digests were
 //! recorded against the canonical URL, so each is recomputed for the URL the
-//! backend served. One case does not apply to the library:
-//! `25-defect-fault` injects an internal invariant failure, which no outside
-//! boundary reaches. The crate's own panic-door test covers the defect kind.
+//! backend served. A record function's row lists question keys by ADR 0111,
+//! so its digests become the keys of the request each digest named. Two cases
+//! do not apply to the library: `25-defect-fault` injects an internal
+//! invariant failure, which no outside boundary reaches, and the crate's own
+//! panic-door test covers the defect kind. `18-annotate-two-groups` recorded
+//! each group in its own request, and ADR 0111 section 5 packs a record's
+//! groups into one, as the command's wire run also skips it.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::fmt;
@@ -17,14 +21,14 @@ use serde::de::{MapAccess, Visitor};
 use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use thinkthen::{
-    Annotated, BatchSetting, CallOptions, Choice, Description, Details, Engine, Entity, Error,
-    FailureCause, Judgment, Kind, LoadedQuestion, Probabilities, Question, QuestionSet, Recognize,
-    Recognized, Relate, RelationRule,
+    Annotated, BatchSetting, CallOptions, Choice, Description, Engine, Entity, Error, FailureCause,
+    Judgment, Kind, LoadedQuestion, Question, QuestionSet, Recognize, Recognized, Relate,
+    RelationRule,
 };
 
 const CASES: &str = include_str!("../../../../cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
-const SKIPPED: [&str; 1] = ["25-defect-fault"];
+const SKIPPED: [&str; 2] = ["18-annotate-two-groups", "25-defect-fault"];
 
 /// The saved many-record exchanges contain one request body per record.
 fn singleton_requests<'a>() -> CallOptions<'a> {
@@ -33,7 +37,7 @@ fn singleton_requests<'a>() -> CallOptions<'a> {
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
 pub(crate) use crate::values::same;
-use crate::values::{digest, selected_ids, swap};
+use crate::values::{detailed, digest, keys, selected_ids, swap};
 
 thinkthen::choices! { enum Team { Billing => "billing", Shipping => "shipping", Other => "other" } }
 thinkthen::choices! { enum Mark { Billing => "billing", Urgent => "urgent", Security => "security" } }
@@ -122,7 +126,7 @@ fn every_applicable_shared_case_passes_through_the_public_api() {
             not_run += 1;
             writeln!(
                 std::io::stderr().lock(),
-                "{id}: not run by the public API (internal invariant injection)"
+                "{id}: not run by the public API (internal invariant injection or repacked)"
             )
             .expect("write skipped case to stderr");
             continue;
@@ -166,13 +170,21 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let base = format!("{}/case/{id}/v1", backend.origin());
     let served = format!("{base}/systemone");
     let exchanges = case["exchanges"].as_array().cloned().unwrap_or_default();
-    let renamed: BTreeMap<String, String> = exchanges
-        .iter()
-        .map(|exchange| {
-            let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
-            (digest(CANONICAL, request), digest(&served, request))
-        })
-        .collect();
+    // `find`, `recognize` and `relate` keep request digests until slice 4.
+    let keyed = !matches!(
+        case["verb"].as_str().unwrap_or_default(),
+        "find" | "recognize" | "relate"
+    );
+    let mut renamed = BTreeMap::new();
+    for exchange in &exchanges {
+        let request = exchange["request"].as_str().unwrap_or_default().as_bytes();
+        let now = if keyed {
+            json!(keys(&served, request)?)
+        } else {
+            json!(digest(&served, request))
+        };
+        renamed.insert(digest(CANONICAL, request), now);
+    }
     let success = swap(&case["expect"]["success"], &renamed);
     let texts: Vec<&str> = exchanges
         .iter()
@@ -326,52 +338,6 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
         "cache_answers": after.cache_answers() - before.cache_answers(),
     });
     same("counters", &moved, counters)
-}
-
-fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
-    let wanted = &expected["details"];
-    let answer = &wanted["answer"];
-    let probabilities = match details.probabilities() {
-        Probabilities::YesNo { yes } => ("probability", json!(yes)),
-        Probabilities::Named(named) => (
-            "probabilities",
-            named
-                .iter()
-                .map(|one| (one.name().to_owned(), json!(one.probability())))
-                .collect(),
-        ),
-    };
-    same(probabilities.0, &probabilities.1, &answer[probabilities.0])?;
-    if let Some(level) = answer.get("level") {
-        same("level", &json!(details.nearest()), level)?;
-    }
-    same("model", &json!(details.model()), &wanted["model"])?;
-    same(
-        "question_sha256",
-        &json!(details.question_sha256()),
-        &wanted["question_sha256"],
-    )?;
-    same("requests", &json!(details.requests()), &wanted["requests"])?;
-    same(
-        "confidence",
-        &json!(details.confidence()),
-        &answer["confidence"],
-    )?;
-    let usage = details.usage().map(|usage| {
-        json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()})
-    });
-    same("usage", &json!(usage), &wanted["usage"])?;
-    same(
-        "requests_sent",
-        &json!(details.requests_sent()),
-        &wanted["requests_sent"],
-    )?;
-    same("cached", &json!(details.cached()), &wanted["cached"])?;
-    let served = json!(format!("{base}/systemone"));
-    same("url", &json!(details.url()), &served)?;
-    let line: Value =
-        serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
-    same("line url", &line["meta"]["url"], &served)
 }
 
 /// With `one`, the case names one record, and every answer reads it.

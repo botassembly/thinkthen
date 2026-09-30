@@ -93,7 +93,7 @@ try:
     if status == 0:
         states = collections.Counter(str(s) for s in server.arrivals)
         required = {'direct': 1, 'café': 1, 'yes': 1, 'no': 1, 'unsure': 1, 'a\x00b': 1,
-                    'packed:first,second,third': 1, 'packed:first,second': 1, 'json-decide': 1,
+                    'packed:first,second,third': 1, 'json-decide': 1,
                     'choose': 1, 'tag': 1, 'score': 1,
                     'packed:filter-one,filter-two': 1, 'packed:rank-one,rank-two': 1,
                     '[{"id":"u001","evidence":"find-one"},{"id":"u002","evidence":"find-two"}]': 1,
@@ -104,6 +104,8 @@ try:
                     'success': 1, 'hold-deadline': 1, 'hold-scalar': 1,
                     'recovery-scalar': 1, 'hold-facts-one': 1, 'hold-facts-two': 1,
                     'packed:hold-bulk-1,hold-bulk-2,hold-bulk-3,hold-bulk-4,hold-bulk-5,hold-bulk-6': 1}
+        # The repeated first/second bulk call reads the question cache the
+        # first/second/third call wrote (ADR 0111), so it sends nothing.
         # New literal request multiset: specification/records.md "Order and requests"
         # and ADR 0048 item 1 put six held rows into one counted POST.
         status = 'PASS' if (states == required

@@ -76,6 +76,52 @@ digest <- function(url, body) {
   strsplit(answer[[1L]], " ", fixed = TRUE)[[1L]][[1L]]
 }
 
+# The raw members of one compact JSON object, as the body spells them.
+raw_members <- function(text) {
+  chars <- strsplit(text, "", fixed = TRUE)[[1L]]
+  at <- 2L
+  members <- list()
+  string_end <- function(i) {
+    i <- i + 1L
+    while (chars[[i]] != "\"") i <- i + if (chars[[i]] == "\\") 2L else 1L
+    i
+  }
+  value_end <- function(i) {
+    if (chars[[i]] == "\"") return(string_end(i))
+    if (!(chars[[i]] %in% c("{", "["))) {
+      while (!(chars[[i + 1L]] %in% c(",", "}", "]"))) i <- i + 1L
+      return(i)
+    }
+    depth <- 0L
+    repeat {
+      if (chars[[i]] == "\"") i <- string_end(i)
+      else if (chars[[i]] %in% c("{", "[")) depth <- depth + 1L
+      else if (chars[[i]] %in% c("}", "]")) { depth <- depth - 1L; if (depth == 0L) return(i) }
+      i <- i + 1L
+    }
+  }
+  while (chars[[at]] != "}") {
+    close <- string_end(at)
+    name <- paste(chars[(at + 1L):(close - 1L)], collapse = "")
+    end <- value_end(close + 2L)
+    members[[name]] <- paste(chars[(close + 2L):end], collapse = "")
+    at <- end + 1L
+    if (chars[[at]] == ",") at <- at + 1L
+  }
+  members
+}
+
+# Every question key of one request body, in wire order, by ADR 0111
+# section 2: the adapter, the URL, the model, the state and one question as
+# the body carries them, joined by line feeds.
+question_keys <- function(url, body) {
+  parts <- raw_members(body)
+  questions <- raw_members(parts$questions)
+  questions <- questions[order(as.integer(sub("^q", "", names(questions))))]
+  vapply(questions, function(one) digest(url, paste(parts$model, parts$state, one, sep = "\n")), "",
+         USE.NAMES = FALSE)
+}
+
 # The count a call adds.
 sent_by <- function(expr) {
   before <- backend_count()

@@ -1,21 +1,6 @@
-//! Refused parent requests and their one eligible split at the public boundary.
+//! Refused requests and their one split at the public boundary.
 
 use super::*;
-use sha2::{Digest as _, Sha256};
-
-pub(super) fn digest(url: &str, body: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(b"systemone\n");
-    hasher.update(url.as_bytes());
-    hasher.update(b"\n");
-    hasher.update(body);
-    hasher
-        .finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
-}
-
 fn packed() -> CallOptions<'static> {
     CallOptions::new().batch(BatchSetting::Records(
         std::num::NonZeroUsize::new(2).expect("two"),
@@ -82,17 +67,12 @@ fn named_groups_pack_two_rows_and_keep_ordered_observations() {
 }
 
 #[test]
-fn overlapping_named_groups_emit_only_the_fully_assembled_prefix() {
+fn a_record_with_no_usable_question_stops_after_the_usable_prefix() {
     let _serial = serial();
-    let listener = Listener::answering(|body| {
-        let request: serde_json::Value = serde_json::from_slice(body).expect("request");
-        let questions = request["questions"].to_string();
-        let answers = if questions.contains("Group A?") {
-            serde_json::json!({"q3":{"type":"noul","noul":0.9}})
-        } else {
-            serde_json::json!({"q1":{"type":"noul","noul":0.9},"q3":{"type":"noul","noul":0.9}})
-        };
-        Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers}).to_string())
+    // One request holds every record's two groups: q1 and q2 for the first
+    // record, q3 and q4 for the second, q5 and q6 for the third.
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q2":{"type":"noul","noul":0.9},"q5":{"type":"noul","noul":0.9},"q6":{"type":"noul","noul":0.9}}}"#)
     })
     .expect("listener");
     let engine = engine(listener.base());
@@ -135,9 +115,9 @@ fn overlapping_named_groups_emit_only_the_fully_assembled_prefix() {
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((1, 2))
+        Some((1, 1))
     );
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.requests().len(), 1);
     assert_eq!(
         *seen.lock().expect("events"),
         [
@@ -151,7 +131,7 @@ fn overlapping_named_groups_emit_only_the_fully_assembled_prefix() {
 }
 
 #[test]
-fn named_group_refused_parent_and_halves_keep_request_identity() {
+fn a_halved_request_keeps_one_question_key_per_member() {
     let _serial = serial();
     let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#;
     let listener = Listener::serving(vec![
@@ -197,37 +177,17 @@ fn named_group_refused_parent_and_halves_keep_request_identity() {
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
-    let digests = requests
-        .iter()
-        .map(|one| digest(listener.url(), &one.body))
-        .collect::<Vec<_>>();
+    let keys = super::identity::question_keys(listener.url(), &requests[0].body);
+    let member = |index: usize, name: &str, key: usize, sent: u64| {
+        (index, name.to_owned(), vec![keys[key].clone()], sent)
+    };
     assert_eq!(
         *seen.lock().expect("events"),
         [
-            (
-                0,
-                "first".to_owned(),
-                vec![digests[0].clone(), digests[1].clone()],
-                2
-            ),
-            (
-                0,
-                "second".to_owned(),
-                vec![digests[0].clone(), digests[1].clone()],
-                0
-            ),
-            (
-                1,
-                "first".to_owned(),
-                vec![digests[0].clone(), digests[2].clone()],
-                1
-            ),
-            (
-                1,
-                "second".to_owned(),
-                vec![digests[0].clone(), digests[2].clone()],
-                0
-            ),
+            member(0, "first", 0, 1),
+            member(0, "second", 1, 1),
+            member(1, "first", 2, 1),
+            member(1, "second", 3, 0),
         ]
     );
 }
@@ -388,7 +348,7 @@ fn a_later_profile_group_refuses_before_any_request() {
 }
 
 #[test]
-fn a_refused_parent_and_both_halves_keep_exact_request_shares() {
+fn a_refused_request_and_both_halves_keep_exact_send_shares() {
     let _serial = serial();
     let listener = Listener::serving(vec![
         Canned::status(413, "too large"),
@@ -431,17 +391,11 @@ fn a_refused_parent_and_both_halves_keep_exact_request_shares() {
         })
         .collect::<Vec<_>>();
     assert_eq!(sizes, [2, 1, 1]);
-    let digests = requests
-        .iter()
-        .map(|request| digest(listener.url(), &request.body))
-        .collect::<Vec<_>>();
+    let keys = super::identity::question_keys(listener.url(), &requests[0].body);
     let seen = seen.lock().expect("observations");
     assert_eq!(
         seen.as_slice(),
-        [
-            (0, vec![digests[0].clone(), digests[1].clone()], 2),
-            (1, vec![digests[0].clone(), digests[2].clone()], 1),
-        ]
+        [(0, vec![keys[0].clone()], 2), (1, vec![keys[1].clone()], 1)]
     );
 }
 

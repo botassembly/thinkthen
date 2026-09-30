@@ -9,7 +9,7 @@ pub use call::{Call, DoorReply, Facts};
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;
-pub(crate) use member::{Member, ParentReceipt};
+pub(crate) use member::Member;
 mod observation;
 #[cfg(test)]
 pub(crate) use observation::QuestionJson;
@@ -214,6 +214,7 @@ impl Details {
         question: &Question,
         backend: &Backend,
         profile: Option<&BackendProfile>,
+        requests: Vec<String>,
     ) -> Result<Self, Error> {
         let answer = &judged.answer;
         let probabilities = match (answer.yes(), answer.named()) {
@@ -246,6 +247,7 @@ impl Details {
             question.threshold,
             judged.value.clone(),
             None,
+            requests.clone(),
         )
         .map_err(|_| written())?;
         Ok(Self {
@@ -255,7 +257,7 @@ impl Details {
             model: reply.model().as_str().to_owned(),
             question_sha256,
             profile_warning: warning,
-            requests: vec![judged.answered.request.as_str().to_owned()],
+            requests,
             requests_sent: judged.answered.requests_sent,
             cached: judged.answered.replayed,
             usage: reply.usage().map(usage),
@@ -310,7 +312,7 @@ impl Details {
             .map(|warning| (warning.tuned_for(), warning.running()))
     }
 
-    /// The recording digest of each request behind the result.
+    /// The question key of each answer behind the result, by ADR 0111.
     #[must_use]
     pub fn requests(&self) -> &[String] {
         &self.requests

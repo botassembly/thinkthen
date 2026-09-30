@@ -59,8 +59,8 @@ pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
 };
-pub(crate) use crate::core::batch::{Batch, BatchError, BatchRecord, Batcher, Setting};
-pub(crate) use crate::core::batch::{GroupBatcher, group_halves, quoted_plan, quoted_plan_of};
+pub(crate) use crate::core::batch::{BatchError, BatchRecord, Setting};
+pub(crate) use crate::core::batch::{quoted_plan, quoted_plan_of};
 pub use crate::core::budget::{EstimatedInputDenial, SendBudgetDenial};
 #[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
@@ -108,9 +108,9 @@ pub(crate) use crate::core::reply::{
 };
 pub(crate) use crate::core::result::SCHEMA as RESULT_SCHEMA;
 pub(crate) use crate::core::result::{
-    AnnotateBatchMeta, AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry,
-    AnnotatedFailure, AnnotatedValue, BatchMeta, BatchSetting, BatchWarning, DecisionResult, Meta,
-    NamedValues, ProfileWarning, RecordValue, RequestMeta, Usage, share,
+    AnnotateMeta, AnnotateResult, AnnotatedAnswer, AnnotatedEntry, AnnotatedFailure,
+    AnnotatedValue, BatchSetting, BatchWarning, DecisionResult, Meta, NamedValues, ProfileWarning,
+    RecordValue, RequestMeta, Usage, share,
 };
 pub use crate::core::result::{AttemptObservation, AttemptOutcome};
 pub(crate) use crate::core::text::{

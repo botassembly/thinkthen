@@ -9,9 +9,9 @@ use std::thread;
 use super::{Judging, PrepareError, plan_for};
 use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask};
-use crate::core::{AnswerOutcome, ModelName, Question, Reading, Record, Reply, Url, Usage};
+use crate::core::{AnswerOutcome, Question, Reading, Record, Url};
 use crate::engine::facade::{GroupAnswer, QuestionAnswer};
-use crate::engine::pipeline::{Answered, Asker, Failed, Flow, Input, Packing, Port};
+use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Input, Packing, Port};
 use crate::failure::{Failure, ReplayContext};
 use crate::schedule::{Judged, Output, Placed};
 
@@ -122,7 +122,7 @@ fn grouped(judging: &Judging<'_>, answers: &[Answered]) -> Result<Vec<GroupAnswe
                 .split_at_checked(pack::wire_count(&question))
                 .ok_or(Failure::Defect("an annotate question lost its answers"))?;
             rest = after;
-            let answer = one(place, question, own)?;
+            let answer = QuestionAnswer::read(place, question, own)?;
             match answer.reply.outcomes() {
                 [AnswerOutcome::Answered(_)] => usable = true,
                 _ => failed = failed.or_else(|| first_failure(own)),
@@ -154,29 +154,6 @@ fn first_failure(own: &[Answered]) -> Option<(&DecodeError, (usize, usize))> {
     })
 }
 
-/// One set question's outcome from its wire answers.
-fn one(place: usize, question: Question, own: &[Answered]) -> Result<QuestionAnswer, Failure> {
-    let model = own.first().map_or("", |answered| &*answered.answered_by);
-    let stored: Vec<_> = own
-        .iter()
-        .map(|answered| answered.answer.as_deref().map_err(DecodeError::cause))
-        .collect();
-    let outcomes = pack::read(std::slice::from_ref(&question), &stored, model)
-        .map_err(|error| Failure::from(crate::engine::error::Error::from(error)))?;
-    let usage = own.iter().try_fold(Usage::new(0, 0), |total, answered| {
-        total.checked_plus(answered.usage?)
-    });
-    let model =
-        ModelName::reported(model).map_err(|_| Failure::Defect("a reply named no model"))?;
-    Ok(QuestionAnswer {
-        place,
-        reply: Reply::new(model, outcomes, usage),
-        keys: own.iter().map(|answered| answered.key.hex()).collect(),
-        requests_sent: own.iter().map(|answered| answered.requests_sent).sum(),
-        cached: own.iter().all(|answered| answered.cached),
-    })
-}
-
 /// Annotate every input and print each row in input order.
 pub(super) fn run<I>(
     judging: &Judging<'_>,
@@ -198,6 +175,7 @@ where
         inputs: inputs_cap,
         context: false,
         detailed: false,
+        continues: false,
     };
     let parse = Parser::of(judging, reading);
     let mut ended = Ended::default();
@@ -207,10 +185,12 @@ where
         .ask_all(
             &asker,
             packing,
-            move |asks, port: Port<Held, Refused>| {
-                thread::spawn(move || parse.feed(inputs, &asks, &port));
-            },
-            |_, result| ended.take(result, judging, output),
+            pipeline::reader(
+                move |asks, port: Port<Held, Refused>| {
+                    thread::spawn(move || parse.feed(inputs, &asks, &port));
+                },
+                |_, result| ended.take(result, judging, output),
+            ),
             cancel,
         )
         .map_err(Failure::from)?;

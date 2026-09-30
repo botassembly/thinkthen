@@ -34,7 +34,7 @@ func TestPortableBatch(t *testing.T) {
 	if len(rows.Value) != len(corpus.Texts) {
 		t.Fatalf("expected five ordered answers, got %d", len(rows.Value))
 	}
-	if rows.Facts.Records != 5 || rows.Facts.RequestsSent != 3 {
+	if rows.Facts.Records != 5 || rows.Facts.RequestsSent != 1 {
 		t.Fatalf("portable bulk facts: %+v", rows.Facts)
 	}
 	for at, answer := range rows.Value {

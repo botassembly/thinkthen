@@ -200,13 +200,16 @@ plain_question_contract() {
 	fresh arm/full/capture
 	digest=$(q -c "SELECT thinkthen_details('Does this need attention?', 'A short note.')->'meta'->'requests'->>0")
 	same "$(bcount)" 1
+	# A row names its question keys, not a request digest (ADR 0111 section 2).
 	bcapture | python3 -c '
-import hashlib, json, sys
+import json, sys
+sys.path.insert(0, "../../conformance/children")
+from portable import question_keys
 case = next(one for one in json.load(open("../../conformance/cases.json"))["cases"] if one["id"] == "02-decide-no")
 bodies = json.load(sys.stdin)["bodies"]
 assert bodies == [case["exchanges"][0]["request"]], (bodies, case["exchanges"][0]["request"])
 address = f"http://127.0.0.1:{sys.argv[1]}/arm/full/capture/v1/systemone"
-expected = hashlib.sha256(b"systemone\n" + address.encode() + b"\n" + bodies[0].encode()).hexdigest()
+expected = question_keys(address, bodies[0])[0]
 assert sys.argv[2] == expected, (sys.argv[2], expected)
 ' "$BPORT" "$digest"
 	has "$(q -c "SELECT thinkthen_decide('{broken', 'A short note.')")" "thinkthen usage:"
@@ -1017,7 +1020,7 @@ batch_setting_and_replay_context_validate_before_send() {
     out=$(q -c "SET thinkthen.record = '$RUN/context-replay'" -c "SELECT thinkthen_decide('$Q', 'one', context => 'alpha')" \
         -c "SET thinkthen.record = ''" -c "SET thinkthen.replay = '$RUN/context-replay'" \
         -c "SELECT thinkthen_decide('$Q', 'one', context => 'beta')")
-    has "$out" 'thinkthen local: the replay folder holds no reply for this request'
+    has "$out" 'thinkthen local: the replay folder holds no answer for this question'
     same "$(bcount)" 1
 }
 check batch_setting_and_replay_context_validate_before_send
@@ -1057,7 +1060,7 @@ sql_settings_and_retry_total() {
 		-c "SELECT thinkthen_decide('$Q', 'saved')" -c "SET thinkthen.record = ''" \
 		-c "SET thinkthen.replay = '$RUN/saved'" -c "SELECT thinkthen_decide('$Q', 'saved')" \
 		-c "SELECT thinkthen_decide('$Q', 'missing')")
-	has "$out" "thinkthen local: the replay folder holds no reply for this request"
+	has "$out" "thinkthen local: the replay folder holds no answer for this question"
 	same "$(bcount)" 1
 	q -c "CREATE ROLE tt_setting LOGIN" -c "GRANT EXECUTE ON FUNCTION thinkthen_usage() TO tt_setting" >/dev/null
 	has "$(PGUSER_AS=tt_setting q -c "SELECT count(*) FROM thinkthen_usage()" -c "SET thinkthen.record = '$RUN/other'")" \

@@ -5,14 +5,16 @@ from pathlib import Path
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from urllib.parse import unquote, urlparse
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
+from portable import one_portable_request  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[3]
 HERE = Path(__file__).resolve().parent
 CORPUS = ROOT / "specification/fixtures/batching/portable-records.json"
-EXPECTED = [(ROOT / f"specification/fixtures/batching/portable-{n}.request.json")
-            .read_bytes().removesuffix(b"\n") for n in (1, 2, 3)]
 RELEASE_PACKAGE = os.environ.get("THINKTHEN_RELEASE_DART_DIR")
 RELEASE_NATIVE = os.environ.get("THINKTHEN_RELEASE_C_DIR")
 FFI_SHA256 = "6d7fd89431262d8f3125e81b50d3847a091d846eafcd4fdb88dd06f36d705a45"
@@ -95,12 +97,12 @@ try:
         assert done.returncode == 0 and "DART_PORTABLE_BATCH_PASS" in done.stdout, done.stderr
     backend.stdin.write("count\n")
     backend.stdin.flush()
-    assert int(backend.stdout.readline()) == 3
+    assert int(backend.stdout.readline()) == 1
     backend.stdin.write("capture\n")
     backend.stdin.flush()
     actual = [body.encode() for body in json.loads(backend.stdout.readline())["bodies"]]
-    assert sorted(actual) == sorted(EXPECTED), "literal body membership changed"
-    print("Dart public bulk: five values, three literal bodies and sends")
+    one_portable_request(actual)
+    print("Dart public bulk: five values, one request with the fixture questions")
 finally:
     backend.stdin.close()
     assert backend.wait(timeout=10) == 0

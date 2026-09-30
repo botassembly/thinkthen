@@ -2,7 +2,7 @@
 
 use serde::Serialize;
 
-use super::{BatchMeta, BatchWarning, ProfileWarning, RequestMeta, Usage};
+use super::{BatchWarning, ProfileWarning, RequestMeta, Usage};
 use crate::core::text::{ModelName, Url};
 
 /// Who answered, how, at what cost, from a backend or from a recording.
@@ -21,8 +21,6 @@ pub(crate) struct Meta {
     failed_questions: usize,
     #[serde(skip_serializing_if = "Option::is_none")]
     profile_warning: Option<ProfileWarning>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    batch: Option<BatchMeta>,
     #[serde(skip_serializing_if = "Option::is_none")]
     batch_warning: Option<BatchWarning>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -51,7 +49,6 @@ impl Meta {
             requests,
             failed_questions,
             profile_warning,
-            batch,
             batch_warning,
             context_sha256,
         } = request_meta;
@@ -66,7 +63,6 @@ impl Meta {
             requests,
             failed_questions,
             profile_warning,
-            batch,
             batch_warning,
             context_sha256,
             attempts: None,

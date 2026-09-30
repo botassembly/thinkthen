@@ -21,12 +21,14 @@ import tempfile
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
 from children import child_env  # noqa: E402  the shared helper, ticket 0127
+from portable import question_keys  # noqa: E402  the ADR 0111 question key
 
 CASES = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "cases.json"
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 NOT_RUN = {
     "23-cancelled-fault": "not run: SQL has no token; the R1-22 and R2-24 tests cover cancel",
     "25-defect-fault": "not run: no outside boundary reaches a defect; the panic-probe test covers XX000",
+    "18-annotate-two-groups": "not run: one record's groups were recorded as separate requests, and ADR 0111 section 5 packs them into one",
 }
 # The arm and server setting of each fault case; every other case runs on its own case arm.
 FAULTS = {
@@ -137,9 +139,16 @@ def url(case):
 
 
 def served(case):
+    """Each recorded request digest, renamed for the served URL. A record
+    function's row lists its question keys (ADR 0111 section 2), so its
+    digest maps to its request's keys. Find, recognize and relate keep
+    request digests until slice 4 of ticket 0304."""
+    keyed = case["verb"] not in ("find", "recognize", "relate")
     renamed = {}
     for exchange in case.get("exchanges", []):
-        renamed[digest(CANONICAL, exchange["request"])] = digest(url(case), exchange["request"])
+        request = exchange["request"]
+        renamed[digest(CANONICAL, request)] = (question_keys(url(case), request) if keyed
+                                               else digest(url(case), request))
     return renamed
 
 
@@ -160,8 +169,12 @@ def detailed(got, want):
     if "level" in wanted:
         same("level", answer.get("level"), wanted["level"])
     same("confidence", answer.get("confidence", "absent"), wanted.get("confidence", "absent"))
-    for key in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+    for key in ("model", "question_sha256", "usage", "requests_sent", "cached"):
         same(key, got["meta"].get(key, "absent"), want["details"].get(key, "absent"))
+    # A request stands for the list of its keys, so a row reads the flattened list.
+    wanted = want["details"].get("requests")
+    same("requests", got["meta"].get("requests", "absent"),
+         "absent" if wanted is None else [key for held in wanted for key in held])
 
 
 TYPED = {
@@ -259,11 +272,14 @@ def captured(case, path):
 
 def annotated(case, success):
     question_set = lit(json.dumps(case["question_set"]))
-    failed = 0
+    failed, records = 0, {}
     for want in success["answers"]:
         evidence = json.dumps(case["record"]) if "record" in case else case["exchanges"][want["exchange"]]["evidence"]
-        record = json.loads(psql(f"SELECT thinkthen_annotate({question_set}, {lit(evidence)})"))
-        got = record.get(want["name"])
+        # One call per record: a failed answer is never stored (ADR 0111
+        # section 5), so a second call would ask the failed question alone.
+        if evidence not in records:
+            records[evidence] = json.loads(psql(f"SELECT thinkthen_annotate({question_set}, {lit(evidence)})"))
+        got = records[evidence].get(want["name"])
         failed += isinstance(got, dict) and "failed" in got
         same(want["name"], got, want["bare"])
     same("failed", failed, success.get("failed_questions", 0))

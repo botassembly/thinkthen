@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-30 by ticket 0317. Owner: ticket 0304 slice 3a, which moves the public Rust API onto `ask_all`.
+Status: Closed by ticket 0304 slice 3a. Filed 2026-09-30 by ticket 0317. Resolution: batch 1 holds one send by contract, and batch 2 now fills the throttle, so the test runs at batch 2 without `#[ignore]`.
 
 # A public batch keeps one send in flight where its contract promises a throttle's worth
 
@@ -6,7 +6,7 @@ Status: Open. Filed 2026-09-30 by ticket 0317. Owner: ticket 0304 slice 3a, whic
 
 A pulled public batch with `BatchSetting::Records(1)` and throttle 2 keeps one send in flight while that send is held. The loopback backend counts 1 request and nothing more until it releases the reply. The contract says the batch keeps a throttle's worth of sends in flight.
 
-Two tests hid the gap. `public_batches::a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows` waited for 2 held requests. `public_controls::a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new` waited for 4. Each wait saw 1 request and gave up at the backend's 5 s bound. Neither test asserted the count its wait returned, so both passed. Record 0305 measured both at 5.4 s on 2026-09-29, so the gap already existed then. Ticket 0317 changed both waits to 1, which removes 10 s of test time and keeps every assertion.
+Two tests hid the gap. `public_batches::a_batch_reads_its_input_at_most_one_throttle_ahead_of_its_rows` (now `a_batch_of_one_reads_no_record_ahead_of_its_rows`) waited for 2 held requests. `public_controls::a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new` waited for 4. Each wait saw 1 request and gave up at the backend's 5 s bound. Neither test asserted the count its wait returned, so both passed. Record 0305 measured both at 5.4 s on 2026-09-29, so the gap already existed then. Ticket 0317 changed both waits to 1, which removes 10 s of test time and keeps every assertion.
 
 On 2026-09-30, `public_controls::a_stop_during_a_batch_or_a_cache_lock_wait_sends_nothing_new` failed once under machine load during ticket 0322's checks and passed on rerun. Ticket 0322 does not touch that path.
 
@@ -15,6 +15,10 @@ On 2026-09-30, `public_controls::a_stop_during_a_batch_or_a_cache_lock_wait_send
 - `sdlc/issues/closed/2026-09-26-batching-design.md`: "`--jobs N` means N batches in flight."
 - `libraries/polars/README.md`: a column takes "the same batch path as a slice of strings, at the same throttle".
 - `libraries/r/NOTES.md`: `batch = 2L` with enough records "fills eight held request slots under throttle 8".
+
+## The batch-1 premise was wrong
+
+At batch 1 the contract promises each row returns before the next record is read: ADR 0053, ADR 0089, `specification/records.md` line 95 and `libraries/rust/README.md` line 28. One held send at batch 1 is therefore the promised behavior, not a gap. The throttle's worth applies from batch 2, where one pulled row can leave further records in flight.
 
 ## Proof it fails
 

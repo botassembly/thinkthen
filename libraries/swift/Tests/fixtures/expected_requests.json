@@ -365,20 +365,6 @@
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
-        "instructions": "The text is \"first\". Is it?",
-        "type": "noul"
-      },
-      "q2": {
-        "instructions": "The text is \"second\". Is it?",
-        "type": "noul"
-      }
-    },
-    "state": "Each question quotes the text it asks about."
-  },
-  {
-    "model": "jev-1.13.0",
-    "questions": {
-      "q1": {
         "instructions": "The text is \"hold-bulk-1\". Is it?",
         "type": "noul"
       },

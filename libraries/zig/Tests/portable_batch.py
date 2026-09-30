@@ -6,14 +6,13 @@ import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env
+from portable import one_portable_request
 import tempfile
 
 PACKAGE = Path(__file__).resolve().parent.parent
 ROOT = PACKAGE.parents[1]
 PROJECT = Path(os.environ.get("THINKTHEN_PORTABLE_ZIG_PROJECT", PACKAGE / "Tests")).resolve()
 CORPUS = ROOT / "specification/fixtures/batching/portable-records.json"
-EXPECTED = [(ROOT / f"specification/fixtures/batching/portable-{n}.request.json")
-            .read_bytes().removesuffix(b"\n") for n in (1, 2, 3)]
 NATIVE = Path(os.environ.get("THINKTHEN_NATIVE_ROOT", PACKAGE / "target/native"))
 BACKEND = ROOT / "target/debug/conformance-backend"
 assert (NATIVE / "lib/libthinkthen.so").is_file() and BACKEND.is_file()
@@ -44,12 +43,12 @@ try:
         assert done.returncode == 0 and "ZIG_PORTABLE_BATCH_PASS" in done.stderr, done.stderr
     backend.stdin.write("count\n")
     backend.stdin.flush()
-    assert int(backend.stdout.readline()) == 3
+    assert int(backend.stdout.readline()) == 1
     backend.stdin.write("capture\n")
     backend.stdin.flush()
     actual = [body.encode() for body in json.loads(backend.stdout.readline())["bodies"]]
-    assert sorted(actual) == sorted(EXPECTED), "literal body membership changed"
-    print("Zig public bulk: five values, three literal bodies and sends")
+    one_portable_request(actual)
+    print("Zig public bulk: five values, one request with the fixture questions")
 finally:
     backend.stdin.close()
     assert backend.wait(timeout=10) == 0

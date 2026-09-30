@@ -188,7 +188,17 @@ fn dynamic_records_wrap_facts_and_stop_without_partial_json() {
     assert_eq!(wrapped["value"][1]["input"], "beta");
     assert_eq!(wrapped["value"][0]["value"], "first");
     assert_eq!(wrapped["value"][1]["value"], "second");
-    assert_eq!(wrapped["value"][1]["meta"]["batch"]["position"], 2);
+    let keys = |row: &Value| row["meta"]["requests"].as_array().map(Vec::len);
+    assert_eq!(
+        keys(&wrapped["value"][0]),
+        Some(1),
+        "one question key a row"
+    );
+    assert_ne!(
+        wrapped["value"][0]["meta"]["requests"],
+        wrapped["value"][1]["meta"]["requests"]
+    );
+    assert!(wrapped["value"][1]["meta"].get("batch").is_none());
     assert_eq!(got[2].0, 2, "a failed second row has no partial JSON");
     assert!(!got[2].1.starts_with('{'));
     let stopped: Value = serde_json::from_str(&got[3].1).expect("failure facts");
@@ -257,7 +267,7 @@ fn call_batch_controls_request_count_and_refuses_scalar_context_before_send() {
     assert_eq!(singles["facts"]["requests_sent"], 3);
     assert_eq!(contextual["facts"]["requests_sent"], 1);
     assert_eq!(contextual["value"][0]["input"], "alpha");
-    assert_eq!(contextual["value"][1]["meta"]["batch"]["position"], 2);
+    assert!(contextual["value"][1]["meta"]["requests"][0].is_string());
     assert_eq!(
         contextual["value"][0]["meta"]["context_sha256"],
         "3fecbe9f8bf58be501d407aed3249b1a6b404b035b0aace505df40089de5a9c1"

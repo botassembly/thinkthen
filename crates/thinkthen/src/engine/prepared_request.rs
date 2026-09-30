@@ -187,6 +187,7 @@ fn checked_body(plan: &Plan, profile: Option<&BackendProfile>) -> Result<Vec<u8>
     Ok(body)
 }
 
+#[derive(Clone)]
 pub(crate) struct Answered {
     pub(crate) reply: Reply,
     pub(crate) replayed: bool,

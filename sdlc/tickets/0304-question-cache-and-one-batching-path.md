@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: slice 2 landed; slice 3 ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: slice 3a landed; slices 3b, 3c and 3d next. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -87,6 +87,44 @@ Cache clearing and expiry.
   - Slice 5: the store's folder-is-a-file check repeats `Recorder::of_private`'s; one goes.
   - Cache clearing and expiry.
 
+### Slice 3 split
+
+Slice 3 lands in four parts, one at a time. 3b, 3c and 3d touch disjoint files once 3a lands, so they can build in parallel lanes.
+
+- **3a. The public Rust API on `ask_all`.** Detailed below.
+- **3b. The C door and the SQL hosts.** They already call the public `*_with` methods, so 3a moves their batching. 3b removes the SQL host statics that 0323 named (`ACTIVE_THROTTLE`, `SEND_BUDGET`, the engine maps, SQLite's `STORED`, `ENGINE` and budget registry), proves an SQL row with a missing pointer fails alone while its neighbours answer, and runs every SQL and C conformance case on the question store. It also fixes the two facts of ADR 0111's 2026-09-30 amendment:
+  - The SQLite extension's store runs on the host's SQLite, through `thinkthen`'s `host-sqlite` feature from 3a. The extension's 3.50.0 floor already covers the store's need for 3.24 (`ON CONFLICT DO UPDATE`). The store opens connections on the pipeline's background thread, so 3b refuses a single-thread host when a cache, record or replay folder is named, with its own sentence. rusqlite's thread-mode check at open stays as the backstop. A host that names no folder makes no background SQLite call, so a refusal at load was rejected (`sdlc/planning/0304-slices-3b-3d-prep.md`, option A).
+  - `libthinkthen.a` and R's static library export about 285 global `sqlite3_` symbols. 3b localizes them with a partial link before archiving, flips `the_static_library_still_exports_sqlite_symbols_until_slice_3b` to require zero, and closes `sdlc/issues/2026-09-30-static-library-exports-sqlite-symbols.md`.
+  - The inverted symbol check is a placeholder, not a gate. It must become a gate that requires zero `sqlite3_` symbols before any release.
+- **3c. Polars eager and lazy.** Polars calls the public batch methods, so 3a moves its batching. 3c proves a lazy frame collected twice sends nothing the second time and removes any frame-only batching left.
+- **3d. One owner for the send limits.** It waits for Ian's ruling on the process-wide throttle, below.
+
+The process-wide throttle is an Ian ruling. ADR 0017's amendment from ticket 0077 says one process has one throttle, and a second engine with another throttle is refused. `PROCESS_WIDTH`, `WIDTH_CHILD` and the 1 ms `REBUILD_POLL` exist to keep that ruling safe across a fork. `PROCESS_GATES` (the 429 gate and the pacer) and `process_budget` (the request total) follow the same per-process rule. Cleanup step 4 lists process-wide statics as hacks. The two conflict, so 3a keeps them and 3d waits. Options for Ian:
+
+1. Keep one process throttle, pacer, gate and request total. The statics stay as honest process state, as signals do. 3d only replaces the 1 ms poll with the 50 ms stop check. Cost: small. Recommended, because every engine in a process sends against one account's rate limit.
+2. Give each engine its own throttle, pacer, gate and request total, and drop the "already active for this process" refusal. Every static and the fork rebuild for them go. Cost: the settings, records and backends pages, and the Python, TypeScript, PostgreSQL and DuckDB tests that pin the refusal. Two engines in one process could then send twice the rate.
+
+Decision for 3d, 2026-09-30: option 1. One throttle per process stays, per Ian's ruling in ticket 0077, and 3d replaces the 1 ms `REBUILD_POLL` with the pipeline's 50 ms stop check. This is a coordinator default. Ian can overturn it.
+
+### Slice 3a evidence
+
+- Starts from: slice 2 (`1fbbe08e0`) and its Defers; ADR 0111 section 4 (the public Rust API row and the host demand bridge) and section 10; ticket 0323's inventory of engine imports of `public`; `sdlc/issues/closed/2026-09-30-public-batch-holds-one-send-under-a-throttle.md`.
+- Keeps: every public name and signature; lazy `Batch` pulls, input order, the stop at the first failed record, `facts()`; `BatchSetting::Records(1)` returning each row before the next pull, as `specification/records.md` and `libraries/rust/README.md` promise; recoverable native rows and the spent rows after a send-budget denial; the wire bytes of slice 1; key secrecy and no key read on replay.
+- Changes:
+  - `filter`, `decide_many`, `choose_many`, `score_many`, `tag_many`, `rank`, `details_many`, `annotate` and `details_many_recoverable_with` run on `Engine::ask_all`. `ask_all` runs on a background thread. The calling thread is the host: it pulls a record on each ask and returns on each row.
+  - Public rows lose `meta.batch` and list question keys in `meta.requests`, as the command's rows did in slice 2. A cached rerun answers from the store.
+  - `public/batch/planned*`, `public/batch/annotation.rs`, the planning in `public/native_batch.rs`, `engine/facade/native_batch.rs`, `engine/facade/annotate/batch.rs`, `engine/facade/split.rs` and `engine/annotate_batching.rs` go, unless slice 4's functions still need a piece.
+  - The pipeline and the store build without the `cli` feature, so rusqlite leaves it.
+  - `SendBudget` and its reservations move from `public` into `engine`, with `public` re-exporting them. `engine` then names nothing from `public`, and `policy.py` refuses an engine reference to `public` as it refuses a core one.
+- Proof, offline and counted on the loopback backend:
+  - Through the public Rust API, 100 records and then 120 that include them send one request holding exactly records 101 to 120, and the second run reports 100 cache answers.
+  - The throttle issue's test passes. Its batch-1 form contradicts the interactive promise above, so the test runs at batch 2 and fills throttle 2, and the interactive test keeps batch 1 at one send.
+  - A stop during a pulled batch sends nothing new and joins every worker; rows keep input order with slow and fast replies mixed.
+  - `policy.py` refuses a planted engine reference to `public`.
+  - `sdlc/scripts/test`, `spec`, workspace clippy, `policy.py`, `tickets` and `lint` pass, with any binding whose build breaks fixed at its call site.
+  - After rebasing onto main, every surface check passes, run one at a time: Rust, Polars, C, PHP, C#, JVM, Dart, Swift, Zig, Go, C++, Ada, Objective-C, COBOL, Python, TypeScript, Ruby, R, DuckDB, SQLite and PostgreSQL. Dart runs with the pinned Dart and Flutter under `~/.local/opt` and `PUB_CACHE=$HOME/.pub-cache`, because its source check otherwise reads an empty scratch pub cache. In the first sweep, DuckDB's `b13c_try_details_split_denials` failed once at total 2 with every slot failed, while the machine's load average was near 14. The rerun passed, and the case then passed 90 of 90 runs alone and six at a time. The one failure stays unexplained. Main must stay green on surfaces, so 3b, 3c and 3d can build in parallel lanes. The Ruby check runs now that the pinned Ruby 3.4.11 is installed. The TypeScript check includes `shapes.test.mjs` "details equals the command --details document", which slice 2 turned red on main.
+- Defers: 3b, 3c and 3d above; `default_engine`, which holds an engine rather than a limit and which the Python, TypeScript, Ruby and R module functions call, to the binding pass of ticket 0314; slice 4's `find`, `recognize` and `relate`; slice 5's old store.
+
 ## What the build taught us
 
 ### Slice 1
@@ -121,3 +159,36 @@ What the build found:
 - rusqlite sets a 5-second busy timeout on every connection. The store turns it off, so its own wait, which checks the stop, is the only one.
 - `listener.requests()` drains its list, and a rerun test must reuse the same listener, because the address is part of every key.
 - Running demo 12 in place committed a `thinkthen.sqlite`. The demo now caches in a scratch copy, and `policy.py` refuses the file.
+
+### Slice 3a
+
+What the build changed beyond the evidence list:
+
+- An annotate record's groups share one state, so its questions pack into one request, by ADR 0111 section 5. The consumer's parts test and the shared case `18-annotate-two-groups` recorded one request per group. The consumer now reads every question of a request, and it skips case 18 as the command's wire run does.
+- A 413 on a stopping stream now sends both halves, by ADR 0111 section 6. The old path stopped after the first half.
+- `thinkthen decide --plan` and the public plan count real option counts through `pipeline::options`. The command plan passed 0 before.
+- A single public call listed only its first question key in its details. A tag call has one key per label, and `public_json` caught the gap. `keyed` now passes every key through.
+- The library now needs rusqlite, so every consumer lock gained it. The SQLite extension also pins rusqlite, so Cargo resolves one rusqlite with both crates' features. `policy.py` now exempts the packages beneath a crate that a binding pins to the root's exact version. Otherwise its lock check read the extension's own packages as drift in thinkthen's tree.
+- That unification also joined `bundled` and `loadable_extension` in one `libsqlite3-sys` inside the SQLite extension. ADR 0111 expected two SQLite copies there. The review found the first 3a build broke the extension: the bindings came from the bundled 3.53.2 header, so the load refused the pinned 3.50.0 host, and every call aborted. `thinkthen` now has a `bundled-sqlite` feature, which every binding names, and a `host-sqlite` feature, which only the SQLite extension names; the library refuses to compile with neither, and `policy.py` enforces each binding's choice. The `polars` feature turns on `bundled-sqlite`, and the package and inventory scripts name it beside `--no-default-features`. The store then runs on the host's SQLite. ADR 0111's 2026-09-30 amendment records it. 3b refuses a single-thread host only when a cache, record or replay folder is named, and a refusal at load was rejected. The library also refuses to compile with both features on, because the store runs on one SQLite.
+- ADR 0111 coalesces misses only within one call. The fork probe's digest-lock test therefore counts two sends for two concurrent single calls, and it keeps its proof that the parent's call never waits for a forked child.
+- A cache on a folder that holds only `thinkthen.jsonl` imports it into `thinkthen.sqlite` beside it. The old folder binding refusal no longer applies to the record functions, because each key names its URL.
+- The type corpus lost its three `meta.batch` and `meta.batches` shape cases with the schema definitions they checked.
+- The ratchet fell from 108,545 to 105,563 lines, because the old batchers, their tests and the batch receipts went.
+
+What the review fixes found:
+
+- The Polars tests and the C door tests run outside `sdlc/scripts/test`, and both still pinned content cuts, request digests and case 18. They now read question keys, skip case 18 as the consumer does, and the portable fixture's five questions ride one request. The C door's settings case counts answer rows in `thinkthen.sqlite`.
+- A call answered wholly from the store lost its `model` fact, because a stored answer told the process usage but not the call's facts. The C door's typed facts test caught it; the stored path now tells both.
+- `policy.py`'s lock exemption skipped every package beneath a shared exact pin, so a changed `libsqlite3-sys` would have passed. It now skips only packages whose name the root tree never holds, and what only they reach. Planted locks prove a changed `libsqlite3-sys` or `cc` fails and a changed `hashlink` or an extension-only package passes. `hashlink` is absent from the root tree, so its version has nothing to drift from.
+- The batch-1 read-ahead test now pins the real figure: no record read ahead of its rows, one read while the send is held.
+- The throttle issue moved to `closed/` with a note that its batch-1 premise was wrong.
+- The Python, TypeScript, R and Ruby binding checks pinned the same old shapes. Their portable, conformance, facts and settings tests now read question keys, one portable request and answer rows in the store. A repeated record in one packed call shares its question's answer and usage share, as a cached row does, so row usage can sum past the call's live tokens. The TypeScript key helper reads raw member bytes, because `JSON.parse` moves number-like keys first. R and the pinned Ruby read no SQLite without a new package, so their settings entry checks require the store and no old entry.
+- Python's and TypeScript's cache-folder tests also met ADR 0113's usage totals under the cache home. Ticket 0326 fixed that on main, and the rebase kept its assertions.
+
+What the second review found:
+
+- The SQLite extension failed on every call, as above. Its surface check now passes on the pinned host.
+- The surface checks over the C door and the SQL hosts still pinned the old counts, so they move in 3a rather than 3b. Each portable check reads one request through `conformance/children/portable.py`, which also holds the shared question key helper. The Go, PHP, C#, JVM, Swift and Zig matrices send one request fewer, because the repeated first/second bulk call reads the question cache the first/second/third call wrote. Every cached bulk replay now counts three cache answers, one per question. The C++ type corpus count fell to 52 with the removed `meta.batch` cases. PHP's omitted-usage proof asks its bulk call another question, so the scalar call's cache entry cannot answer it.
+- The DuckDB check caught a real regression. A retry denied by the send budget ended the whole native vector, so a later request that had already answered lost its rows. Ticket 0240 keeps those rows. `details_many_recoverable_with` now fails only the denied request's rows; every later request is denied before it sends. `native_denied_retry_keeps_a_later_request_answered_first` failed before the fix.
+- PostgreSQL's two replay-miss tests now expect the store's sentence, "the replay folder holds no answer for this question". Its annotate conformance calls annotate once per record, because ADR 0111 section 5 never stores a failed answer, so a second call resent the failed question.
+- `policy.py` refused an engine reference to `public` but not an alias of the crate root, such as `use crate as c; c::public::Error`. It now refuses any alias of the crate root or an ancestor in `engine`, as it does in `core`, with three planted forms.

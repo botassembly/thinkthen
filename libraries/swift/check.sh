@@ -76,4 +76,4 @@ grep -q 'rejected private byte pattern' "$plant.log"
 rm -f "$plant" "$plant.log"
 python3 "$here/Tests/fixtures/isolated_consumer.py" alpha "$here/target/logs"
 python3 "$here/Tests/fixtures/isolated_consumer.py" beta "$here/target/logs"
-echo 'Swift package PASS: public J1, 30 exact bodies, two installed consumers'
+echo 'Swift package PASS: public J1, 29 exact bodies, two installed consumers'

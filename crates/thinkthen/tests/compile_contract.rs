@@ -1,7 +1,7 @@
 //! Compile-pass and compile-fail fixtures for the frozen public contract.
 //!
 //! One table holds every fixture. Each row becomes one binary of an outside
-//! crate that depends on `thinkthen` with default features off, and one
+//! crate that depends on `thinkthen` with default features off and `bundled-sqlite` on, and one
 //! `cargo check` compiles them all. A pass row must compile clean. A fail row
 //! must fail with its error code and a phrase from the diagnostic, never a
 //! line number, so compiler decoration can move without breaking the table.
@@ -194,7 +194,7 @@ fn every_contract_fixture_compiles_or_fails_as_its_row_says() {
     let manifest = format!(
         "[package]\nname = \"contract-fixtures\"\nversion = \"0.0.0\"\nedition = \"2024\"\n\
          publish = false\n\n[workspace]\n\n[dependencies]\n\
-         thinkthen = {{ path = {:?}, default-features = false }}\n",
+         thinkthen = {{ path = {:?}, default-features = false, features = [\"bundled-sqlite\"] }}\n",
         library.display().to_string()
     );
     fs::write(crate_dir.join("Cargo.toml"), manifest).unwrap();

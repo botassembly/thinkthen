@@ -13,7 +13,7 @@ nix = { version = "0.29", default-features = false, features = ["process", "sign
 
 [dev-dependencies]
 conformance-backend = { path = "../../backend" }
-thinkthen = { path = "../../../crates/thinkthen", default-features = false }
+thinkthen = { path = "../../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 
 [lints.rust]
 missing_debug_implementations = "forbid"

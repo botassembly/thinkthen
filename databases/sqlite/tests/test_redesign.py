@@ -230,10 +230,10 @@ exists = run(db, "SELECT count(*) FROM t WHERE EXISTS (SELECT 1 FROM thinkthen_d
 say(exists=exists)
 """, environment(backend, "generic"))
     expect(waiting.read(timeout=60), {"correlated": [[1000]]}, "correlated rows")
-    expect(backend.count(), 3, "three sends for the one thousand packed records")
+    expect(backend.count(), 1, "one send for the one thousand packed records, with no content cut (ADR 0111)")
     waiting.send()
     expect(waiting.result(timeout=60), {"exists": [[1000]]}, "EXISTS rows")
-    expect(backend.close(), 3, "no new send for the second thousand key probes")
+    expect(backend.close(), 1, "no new send for the second thousand key probes")
 
 
 def test_aggregate_once_join_is_bounded_at_one_hundred_thousand() -> None:

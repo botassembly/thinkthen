@@ -13,7 +13,7 @@ use crate::public::options::Stop;
 use crate::public::recognize::Recognized;
 use crate::public::relate::Edge;
 
-use super::{Answer, Details, Judgment, NamedProbability, Probabilities, Usage, judgment, usage};
+use super::{Answer, Judgment, NamedProbability, Probabilities, Usage, judgment, usage};
 
 /// One completed question or input row, delivered on the caller's thread.
 /// The borrowed fields exist only during the callback.
@@ -289,10 +289,6 @@ pub(crate) struct ObservedQuestion {
 }
 
 impl ObservedQuestion {
-    pub(crate) fn prepend_request(&mut self, digest: String) {
-        self.requests.insert(0, digest);
-    }
-
     pub(crate) fn from_annotated(
         entry: &core::AnnotatedEntry,
         profile: Option<&ProfileName>,
@@ -380,23 +376,6 @@ impl ObservedQuestion {
             cached,
             failed_questions: usize::from(failure.is_some()),
         })
-    }
-
-    pub(crate) fn from_details(details: &Details) -> Self {
-        Self {
-            question_sha256: details.question_sha256.clone(),
-            value: Some(details.value.clone()),
-            failure: None,
-            probabilities: Some(details.probabilities.clone()),
-            confidence: details.confidence,
-            model: details.model.clone(),
-            url: details.url.clone(),
-            requests: details.requests.clone(),
-            requests_sent: details.requests_sent,
-            usage: details.usage,
-            cached: details.cached,
-            failed_questions: 0,
-        }
     }
 }
 

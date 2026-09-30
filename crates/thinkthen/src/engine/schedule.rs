@@ -19,18 +19,16 @@ pub(crate) struct Completed<R, E> {
     pub(crate) value: R,
     /// Number of finished records answered from a recording.
     pub(crate) replayed: usize,
-    pub(crate) partial_failure: bool,
     pub(crate) records: usize,
     pub(crate) stop: Option<E>,
 }
 
 impl<R, E> Completed<R, E> {
     /// One record's row, with no stop after it.
-    pub(crate) const fn one(value: R, replayed: bool, partial_failure: bool) -> Self {
+    pub(crate) const fn one(value: R, replayed: bool) -> Self {
         Self {
             value,
             replayed: if replayed { 1 } else { 0 },
-            partial_failure,
             records: 1,
             stop: None,
         }
@@ -431,7 +429,7 @@ mod tests {
                     answer_started.wait();
                     answer_release.wait();
                     answer_active.fetch_sub(1, Ordering::SeqCst);
-                    Ok::<_, &'static str>(Completed::one(*item, false, false))
+                    Ok::<_, &'static str>(Completed::one(*item, false))
                 },
                 |value| {
                     emitted_send.send(value).expect("emitted result");
@@ -498,7 +496,7 @@ mod tests {
             },
             &move |item| {
                 gathered.wait();
-                Ok::<_, ()>(Completed::one(*item, false, false))
+                Ok::<_, ()>(Completed::one(*item, false))
             },
             |_| Ok(true),
             |_| (),

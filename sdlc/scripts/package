@@ -6,10 +6,10 @@ set -eu
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 
-cargo build --locked --offline --package thinkthen --lib --no-default-features
+cargo build --locked --offline --package thinkthen --lib --no-default-features --features bundled-sqlite
 # Ticket 0086: the library graph carries no command-only crate, and on Unix it
 # keeps `nix` with `signal` for the host signal owner (ticket 0078).
-graph=$(cargo tree --locked --offline --package thinkthen --no-default-features -e normal,build --prefix none -f '{p} {f}')
+graph=$(cargo tree --locked --offline --package thinkthen --no-default-features --features bundled-sqlite -e normal,build --prefix none -f '{p} {f}')
 if printf '%s\n' "$graph" | grep -Eq '^(clap|csv-core|signal-hook) '; then
     printf '%s\n' 'package: command dependency entered the library-only graph' >&2
     exit 1
@@ -27,8 +27,8 @@ test "$targets" = "bin lib" \
 # its old path, so every test that starts the command carries
 # `#![cfg(feature = "cli")]` and compiles to nothing here. The next command
 # runs the public doctests.
-cargo test --locked --offline --package thinkthen --no-default-features --all-targets
-cargo test --locked --offline --package thinkthen --doc --no-default-features
+cargo test --locked --offline --package thinkthen --no-default-features --features bundled-sqlite --all-targets
+cargo test --locked --offline --package thinkthen --doc --no-default-features --features bundled-sqlite
 
 # Ticket 0104: `cargo package` rewrites a stale crate without truncating it, and
 # `tar` then refuses the trailing bytes. Plant a longer one, then remove it.
@@ -56,7 +56,7 @@ mkdir "$isolated/empty" "$isolated/out"
 tar -xzf "$crate" -C "$source" --strip-components=1
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$built" \
-    cargo build --quiet --locked --offline --manifest-path "$source/Cargo.toml" --lib --no-default-features
+    cargo build --quiet --locked --offline --manifest-path "$source/Cargo.toml" --lib --no-default-features --features bundled-sqlite
 RUSTUP_TOOLCHAIN=$(sed -n 's/^channel = "\([^"]*\)"$/\1/p' rust-toolchain.toml) \
 CARGO_TARGET_DIR="$built" \
     cargo build --quiet --locked --offline --manifest-path "$source/Cargo.toml" --bin thinkthen
@@ -81,7 +81,7 @@ done
 test -z "$(ls -A "$isolated/empty")" \
 	|| { printf '%s\n' 'package: the unpacked build wrote into its folder' >&2; exit 1; }
 
-cargo rustc --locked --offline --release --package thinkthen --lib --no-default-features \
+cargo rustc --locked --offline --release --package thinkthen --lib --no-default-features --features bundled-sqlite \
     -- --print cfg | grep -Fx 'panic="unwind"' >/dev/null
 RUSTFLAGS='-C panic=abort' cargo rustc --locked --offline --release --package thinkthen \
     --bin thinkthen -- --print cfg | grep -Fx 'panic="abort"' >/dev/null

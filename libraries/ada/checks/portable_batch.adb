@@ -16,7 +16,7 @@ begin
    Configure (Client, Ada.Environment_Variables.Value ("TT_PORTABLE_SETTINGS"), Error);
    if Error.Kind /= None then raise Program_Error with "settings rejected"; end if;
    Decide_Many (Client, "Is it relevant?", Texts, Answers, Facts, Error);
-   if Error.Kind /= None or Facts.Records /= 5 or Facts.Requests_Sent /= 3 then
+   if Error.Kind /= None or Facts.Records /= 5 or Facts.Requests_Sent /= 1 then
       raise Program_Error with "bulk facts changed";
    end if;
    for I in Answers'Range loop

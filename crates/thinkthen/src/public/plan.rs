@@ -1,8 +1,15 @@
-//! A typed view of the pure full-input request planner.
+//! A typed view of the packer: the requests a call would send with an
+//! empty store, before any is sent.
 
+use std::collections::HashSet;
 use std::fmt;
 
-use crate::core::{self, Batcher, PlanSummary};
+use crate::core::PlanSummary;
+use crate::core::pack::{self, Entry, Packer};
+use crate::engine::pipeline::{self, Asker as _};
+
+use super::asking::{Decisions, Miss, Text, packed};
+use super::pull;
 
 use super::bulk::selected_batch;
 use super::engine::{DetailQuestion, Engine, Evidence, only};
@@ -120,45 +127,54 @@ impl Engine {
             .map(super::engine::evidence)
             .transpose()?;
         let engine = self.asking(question)?;
-        let mut batcher = Batcher::new(
-            engine.backend().clone(),
-            engine.profile().cloned(),
-            question.core.clone(),
-            setting,
-            context,
-        )
-        .map_err(Error::refused)?;
+        let asker = Decisions::new(&engine, question, context.clone());
+        let too_large = || Error::usage("the planned input is too large to count");
+        let model = pack::model_json(engine.backend().model().as_str())
+            .map_err(|_| Error::defect("a model could not be written as JSON"))?;
+        let mut packer = Packer::new(
+            engine.pack_limits(pull::packing(setting, context.is_some(), false)),
+            model,
+        );
+        if let Some(context) = &context {
+            let state = pack::state(context)
+                .map_err(|_| Error::defect("a context could not be written as JSON"))?;
+            packer.check_state(&state).map_err(packed)?;
+        }
         let mut summary = PlanSummary::new(false);
-        for item in records {
-            if let Some(most) = self.most.filter(|most| summary.records() >= *most) {
+        let mut seen = HashSet::new();
+        let mut closed = Vec::new();
+        for (at, item) in records.into_iter().enumerate() {
+            if let Some(most) = self.most.filter(|most| at >= *most) {
                 return Err(Error::usage(format!(
                     "this engine answers at most {most} records in one call"
                 )));
             }
-            let text = item.evidence();
-            let record = core::BatchRecord {
-                evidence: super::engine::evidence(text)?,
-                value: core::Json::String(text.to_owned()),
+            let text = Text {
+                at,
+                text: item.evidence().to_owned(),
             };
-            let mut closed = Vec::new();
-            batcher.push(record, &mut closed).map_err(Error::refused)?;
-            summary
-                .record()
-                .map_err(|_| Error::usage("the planned input is too large to count"))?;
-            for batch in closed {
-                summary
-                    .batch(&batch)
-                    .map_err(|_| Error::usage("the planned input is too large to count"))?;
-            }
+            let asks = asker.asks(&text).map_err(|miss| match miss {
+                Miss::Refused(error) => error,
+                Miss::Failed(_) => Error::defect("a plan read an answer"),
+            })?;
+            summary.record().map_err(|_| too_large())?;
+            let entries = asks
+                .into_iter()
+                .filter(|ask| seen.insert(ask.key))
+                .map(|ask| Entry {
+                    options: pipeline::options(&ask),
+                    state: ask.state,
+                    question: ask.question,
+                    item: (),
+                })
+                .collect();
+            packer.add(entries, &mut closed).map_err(packed)?;
         }
-        if let Some(batch) = batcher.finish().map_err(Error::refused)? {
-            summary
-                .batch(&batch)
-                .map_err(|_| Error::usage("the planned input is too large to count"))?;
+        closed.extend(packer.close());
+        for request in &closed {
+            summary.request(&request.body).map_err(|_| too_large())?;
         }
-        let counts = summary
-            .counts()
-            .map_err(|_| Error::usage("the planned input is too large to count"))?;
+        let counts = summary.counts().map_err(|_| too_large())?;
         Ok(PlanEstimate {
             records: counts.records,
             requests: counts.requests,

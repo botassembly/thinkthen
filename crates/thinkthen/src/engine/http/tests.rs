@@ -260,7 +260,7 @@ fn cancellation_after_reservation_refunds_both_process_charges() {
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
     };
-    let budget = crate::public::SendBudget::new();
+    let budget = crate::engine::budget::SendBudget::new();
     let selected = Some(crate::engine::send_budget::ProcessBudget {
         budget: budget.clone(),
         requests: Some(1),
@@ -323,7 +323,7 @@ fn a_deadline_while_width_is_held_reserves_no_send() {
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
     };
-    let budget = crate::public::SendBudget::new();
+    let budget = crate::engine::budget::SendBudget::new();
     let facts = crate::engine::CallFacts::new();
     let cancel = crate::engine::Cancel::default()
         .with_deadline(crate::engine::Deadline::after(Duration::from_millis(60)))
@@ -371,7 +371,7 @@ fn a_deadline_during_retry_backoff_reserves_only_the_first_send() {
         max_retries: 1,
         retry_wait: Duration::from_secs(1),
     };
-    let budget = crate::public::SendBudget::new();
+    let budget = crate::engine::budget::SendBudget::new();
     let cancel = crate::engine::Cancel::default()
         .with_deadline(crate::engine::Deadline::after(Duration::from_millis(200)))
         .with_send_budget(Some((budget.clone(), Some(2))));

@@ -1,6 +1,7 @@
 """The shared engine-setting corpus through the Python keyword boundary."""
 import json
 import pathlib
+import sqlite3
 
 import pytest
 
@@ -57,4 +58,6 @@ print(json.dumps(result))
                 assert got["model"] == step["model"]
         assert backend.count() == step["count"]
     if "entries" in case:
-        assert len([path for path in folder.glob("*.json") if not path.name.startswith(".thinkthen-")]) == case["entries"]
+        # A recording keeps one row per question answer, by ADR 0111.
+        with sqlite3.connect(folder / "thinkthen.sqlite") as store:
+            assert store.execute("SELECT count(*) FROM answers").fetchone()[0] == case["entries"]

@@ -6,65 +6,6 @@
       },
       "type": "array"
     },
-    "annotateBatchMeta": {
-      "properties": {
-        "closed": {
-          "type": "string"
-        },
-        "group": {
-          "format": "uint",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "position": {
-          "format": "uint",
-          "minimum": 1,
-          "type": "integer"
-        },
-        "records": {
-          "format": "uint",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "request": {
-          "type": "string"
-        },
-        "requests_sent": {
-          "format": "uint64",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "setting": {
-          "$ref": "#/$defs/batchSetting"
-        },
-        "split": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "usage": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/tokenUsage"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "group",
-        "request",
-        "setting",
-        "records",
-        "position",
-        "closed",
-        "requests_sent"
-      ],
-      "type": "object"
-    },
     "annotateDetails": {
       "properties": {
         "answers": {
@@ -125,15 +66,6 @@
     },
     "annotateMeta": {
       "properties": {
-        "batches": {
-          "items": {
-            "$ref": "#/$defs/annotateBatchMeta"
-          },
-          "type": [
-            "array",
-            "null"
-          ]
-        },
         "cached": {
           "type": "boolean"
         },
@@ -416,55 +348,6 @@
           "type": "string"
         }
       ]
-    },
-    "batchMeta": {
-      "properties": {
-        "closed": {
-          "type": "string"
-        },
-        "position": {
-          "format": "uint",
-          "minimum": 1,
-          "type": "integer"
-        },
-        "records": {
-          "format": "uint",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "requests_sent": {
-          "format": "uint64",
-          "minimum": 0,
-          "type": "integer"
-        },
-        "setting": {
-          "$ref": "#/$defs/batchSetting"
-        },
-        "split": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "usage": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/tokenUsage"
-            },
-            {
-              "type": "null"
-            }
-          ]
-        }
-      },
-      "required": [
-        "setting",
-        "records",
-        "position",
-        "closed",
-        "requests_sent"
-      ],
-      "type": "object"
     },
     "batchSetting": {
       "anyOf": [
@@ -1130,16 +1013,6 @@
           "type": [
             "array",
             "null"
-          ]
-        },
-        "batch": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/batchMeta"
-            },
-            {
-              "type": "null"
-            }
           ]
         },
         "batch_warning": {

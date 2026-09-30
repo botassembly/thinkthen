@@ -1,0 +1,347 @@
+//! The calling thread as the host of one pipeline call, by ADR 0111
+//! section 4: `ask_all` runs on a background thread, and the calling thread
+//! pulls a caller record on each ask and returns on each row. The caller's
+//! records never leave its thread, so they need not be `Send`.
+
+use std::collections::VecDeque;
+use std::sync::Arc;
+use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
+use std::thread::{self, JoinHandle};
+use std::time::Duration;
+
+use crate::engine::facade;
+use crate::engine::pipeline::{Asker, Failed, Flow, Host, Input, Packing, Port};
+use crate::public::asking::Text;
+use crate::public::engine::Evidence;
+use crate::public::error::Error;
+use crate::public::options::{Stop, guarded};
+use crate::public::results::Facts;
+
+use super::batch::{Batch, Source};
+
+/// How often a waiting pull runs the caller's check and drains attempts.
+const TICK: Duration = Duration::from_millis(50);
+
+pub(crate) type Row<A> = Result<<A as Asker>::Row, Failed<<A as Asker>::Error>>;
+type PortOf<A> = Port<<A as Asker>::Input, <A as Asker>::Error>;
+
+enum Event<A: Asker> {
+    Port(Port<A::Input, A::Error>),
+    Ask,
+    Row(Row<A>),
+    End(Result<(), Error>),
+}
+
+/// The coordinator's side: each ask and each row goes to the calling thread.
+struct Bridge<A: Asker>(Sender<Event<A>>);
+
+impl<A: Asker> Host<A> for Bridge<A> {
+    fn ask(&mut self) -> bool {
+        self.0.send(Event::Ask).is_ok()
+    }
+
+    fn row(&mut self, _place: usize, result: Row<A>) -> Flow {
+        let failed = result.is_err();
+        if self.0.send(Event::Row(result)).is_err() || failed {
+            Flow::Stop
+        } else {
+            Flow::Continue
+        }
+    }
+}
+
+/// Turn one pipeline row and the caller's record into the batch's item, or
+/// `None` for a row the batch leaves out. It runs on the calling thread. A
+/// row with no record is the refusal of a record past the engine's limit,
+/// or the call's stop.
+pub(crate) type Pair<'a, A, I, T> =
+    Box<dyn FnMut(&Stop<'_>, usize, Option<I>, Row<A>) -> Result<Option<T>, Error> + 'a>;
+
+/// What one pulled call holds besides its records.
+pub(crate) struct Call<'a> {
+    pub(crate) engine: Arc<facade::Engine>,
+    pub(crate) stop: Stop<'a>,
+    pub(crate) packing: Packing,
+    pub(crate) most: Option<usize>,
+}
+
+/// Start `asker` over `records` and return the lazy batch of its rows.
+pub(crate) fn start<'a, A, I, T: 'a>(
+    call: Call<'a>,
+    asker: A,
+    records: I,
+    pair: Pair<'a, A, I::Item, T>,
+) -> Batch<'a, T>
+where
+    A: Asker<Input = Text> + Send + 'static,
+    A::Row: Send + 'static,
+    A::Error: From<Error> + Send + 'static,
+    I: Iterator + 'a,
+    I::Item: Evidence,
+{
+    let (events, received) = channel();
+    let cancel = call.stop.shared();
+    let (engine, packing) = (call.engine, call.packing);
+    let coordinator = thread::spawn(move || {
+        let ended = guarded(|| {
+            engine
+                .ask_all(
+                    &asker,
+                    packing,
+                    |port| {
+                        let _sent = events.send(Event::Port(port));
+                        Bridge(events.clone())
+                    },
+                    &cancel,
+                )
+                .map_err(Error::from)
+        });
+        let _sent = events.send(Event::End(ended));
+    });
+    Batch::from_source(Box::new(Pull {
+        items: records,
+        held: VecDeque::new(),
+        ready: VecDeque::new(),
+        pair,
+        events: received,
+        port: None,
+        stop: call.stop,
+        facts: None,
+        fed: 0,
+        completed: 0,
+        most: call.most,
+        interactive: packing.inputs == Some(1),
+        deferred: false,
+        coordinator: Some(coordinator),
+    }))
+}
+
+struct Pull<'a, A: Asker, I: Iterator, T> {
+    items: I,
+    held: VecDeque<I::Item>,
+    ready: VecDeque<Result<T, Error>>,
+    pair: Pair<'a, A, I::Item, T>,
+    events: Receiver<Event<A>>,
+    port: Option<Port<A::Input, A::Error>>,
+    stop: Stop<'a>,
+    facts: Option<Facts>,
+    fed: usize,
+    completed: usize,
+    most: Option<usize>,
+    /// Batch 1 returns each row before it pulls the next record.
+    interactive: bool,
+    deferred: bool,
+    coordinator: Option<JoinHandle<()>>,
+}
+
+impl<A, I, T> Source<T> for Pull<'_, A, I, T>
+where
+    A: Asker<Input = Text>,
+    A::Error: From<Error>,
+    I: Iterator,
+    I::Item: Evidence,
+{
+    fn pull(&mut self) -> Option<Result<T, Error>> {
+        if self.deferred && self.coordinator.is_some() {
+            self.deferred = false;
+            self.feed();
+        }
+        loop {
+            if let Some(row) = self.ready.pop_front() {
+                return Some(row);
+            }
+            self.coordinator.as_ref()?;
+            if self.stop.interrupted() {
+                self.stop.fire();
+            }
+            let event = if self.stop.polls() {
+                match self.events.recv_timeout(TICK) {
+                    Ok(event) => event,
+                    Err(RecvTimeoutError::Timeout) => continue,
+                    Err(RecvTimeoutError::Disconnected) => ended_early(),
+                }
+            } else {
+                self.events.recv().unwrap_or_else(|_| ended_early())
+            };
+            if let Some(ended) = self.take(event) {
+                return ended;
+            }
+            if self.deferred && self.ready.is_empty() && self.fed == self.completed {
+                self.deferred = false;
+                self.feed();
+            }
+        }
+    }
+
+    fn facts(&self) -> Option<&Facts> {
+        self.facts.as_ref()
+    }
+}
+
+fn ended_early<A: Asker>() -> Event<A> {
+    Event::End(Err(Error::defect("the record scheduler ended early")))
+}
+
+impl<A, I, T> Pull<'_, A, I, T>
+where
+    A: Asker<Input = Text>,
+    A::Error: From<Error>,
+    I: Iterator,
+    I::Item: Evidence,
+{
+    /// Take one event; `Some` once the call has ended.
+    fn take(&mut self, event: Event<A>) -> Option<Option<Result<T, Error>>> {
+        match event {
+            Event::Port(port) => self.port = Some(port),
+            Event::Ask if self.interactive && self.fed > self.completed => self.deferred = true,
+            Event::Ask => self.feed(),
+            Event::Row(row) => self.row(row),
+            Event::End(ended) => {
+                let joined = self.join();
+                let ended = self.stop.finish(joined.and(ended));
+                let facts = self.stop.facts();
+                self.facts = Some(facts.clone());
+                return Some(ended.err().map(|error| Err(error.with_facts(facts))));
+            }
+        }
+        None
+    }
+
+    /// Answer one ask with the caller's next record, its end, or the refusal
+    /// of one record past the engine's limit.
+    fn feed(&mut self) {
+        let input = match self.items.next() {
+            None => Input::End,
+            Some(_) if self.most.is_some_and(|most| self.fed >= most) => {
+                Input::Failed(A::Error::from(Error::usage(format!(
+                    "this engine answers at most {} records in one call",
+                    self.fed
+                ))))
+            }
+            Some(item) => {
+                let text = item.evidence().to_owned();
+                self.held.push_back(item);
+                self.fed += 1;
+                Input::Item(Text {
+                    at: self.fed - 1,
+                    text,
+                })
+            }
+        };
+        if let Some(port) = &self.port {
+            let _sent = port.send(input);
+        }
+    }
+
+    fn row(&mut self, row: Row<A>) {
+        let item = match &row {
+            Err(Failed::Stopped(_)) => None,
+            _ => self.held.pop_front(),
+        };
+        let paired = (self.pair)(&self.stop, self.completed, item, row);
+        if self.stop.observer_panicked() {
+            let error = self.end(Error::cancelled());
+            self.ready.push_back(Err(error));
+            return;
+        }
+        if paired.is_ok() {
+            self.completed += 1;
+            self.stop.shared().finished_records(1);
+        }
+        match paired {
+            Ok(Some(value)) => self.ready.push_back(Ok(value)),
+            Ok(None) => {}
+            Err(error) => {
+                let error = self.end(error);
+                self.ready.push_back(Err(error));
+            }
+        }
+    }
+
+    /// Stop the call at a failed row, join it, and give the error its facts.
+    fn end(&mut self, error: Error) -> Error {
+        let _joined = self.join();
+        self.deferred = false;
+        let error = match self.stop.finish::<()>(Err(error)) {
+            Err(error) => error,
+            Ok(()) => Error::defect("a failed batch returned a value"),
+        };
+        let facts = self.stop.facts();
+        self.facts = Some(facts.clone());
+        error.with_facts(facts)
+    }
+}
+
+impl<A: Asker, I: Iterator, T> Pull<'_, A, I, T> {
+    /// Stop the coordinator and join it, draining attempts while it winds down.
+    fn join(&mut self) -> Result<(), Error> {
+        let Some(coordinator) = self.coordinator.take() else {
+            return Ok(());
+        };
+        self.stop.fire();
+        self.port = None;
+        while !coordinator.is_finished() {
+            self.stop.drain_attempts();
+            match self.events.recv_timeout(TICK) {
+                Ok(_) | Err(RecvTimeoutError::Timeout) => {}
+                Err(RecvTimeoutError::Disconnected) => break,
+            }
+        }
+        let joined = coordinator
+            .join()
+            .map_err(|_| Error::defect("the record scheduler panicked"));
+        self.stop.drain_attempts();
+        self.stop.resume_panic_after_join();
+        joined
+    }
+}
+
+impl<A: Asker, I: Iterator, T> Drop for Pull<'_, A, I, T> {
+    fn drop(&mut self) {
+        let _joined = self.join();
+    }
+}
+
+/// A host whose records are all in hand: each ask sends the next at once,
+/// and each row goes to `take` on the coordinator's thread.
+pub(crate) struct Eager<A: Asker, F> {
+    port: Port<A::Input, A::Error>,
+    inputs: std::vec::IntoIter<A::Input>,
+    take: F,
+}
+
+impl<A: Asker, F: FnMut(Row<A>) -> Flow> Host<A> for Eager<A, F> {
+    fn ask(&mut self) -> bool {
+        let input = self.inputs.next().map_or(Input::End, Input::Item);
+        self.port.send(input).is_ok()
+    }
+
+    fn row(&mut self, _place: usize, row: Row<A>) -> Flow {
+        (self.take)(row)
+    }
+}
+
+/// Start an eager host over `inputs`.
+pub(crate) fn eager<A: Asker, F: FnMut(Row<A>) -> Flow>(
+    inputs: Vec<A::Input>,
+    take: F,
+) -> impl FnOnce(PortOf<A>) -> Eager<A, F> {
+    move |port| Eager {
+        port,
+        inputs: inputs.into_iter(),
+        take,
+    }
+}
+
+/// The packing one public call asks for.
+pub(crate) fn packing(setting: crate::core::Setting, context: bool, continues: bool) -> Packing {
+    Packing {
+        inputs: match setting {
+            crate::core::Setting::Records(most) => Some(most.get()),
+            crate::core::Setting::Max => None,
+        },
+        context,
+        detailed: false,
+        continues,
+    }
+}

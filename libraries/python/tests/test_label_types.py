@@ -1,9 +1,8 @@
 """Python label forms preserve the existing native request identity."""
 
-import hashlib
 import json
 
-from conftest import child_env, run
+from conftest import child_env, question_keys, run
 from test_call import capturing_filter_listener
 
 
@@ -128,7 +127,7 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
                     b'{"q1":{"type":"score","instructions":"The text is \\"Alice\\". Urgency?",'
                     b'"criteria":["low","very high"]}}}')
         assert groups[15] == groups[16] == [expected]
-        digest = hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + expected).hexdigest()
+        digest = question_keys(url, expected)[0]
         assert digests[15] == digests[16] == [[digest], 1]
         assert json.loads(groups[17][0])["questions"]["q1"]["criteria"] == [{}, "very high"]
         assert digests[17][0] != [digest]

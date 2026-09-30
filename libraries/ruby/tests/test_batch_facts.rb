@@ -1,16 +1,18 @@
 # frozen_string_literal: true
 
 # A captured default request and final account through the actual Ruby host.
-require "digest"
 require "minitest/autorun"
 require "socket"
 require_relative "backend"
+require_relative "keys"
 
 class TestBatchFacts < Minitest::Test
-  def test_portable_max_content_cuts_through_public_ruby_bulk_call
+  # ADR 0111 cuts no content, so the portable corpus rides one request.
+  def test_portable_questions_ride_one_request_through_public_ruby_bulk_call
     folder = File.expand_path("../../../specification/fixtures/batching", __dir__)
     corpus = JSON.parse(File.read(File.join(folder, "portable-records.json")))
-    expected = (1..3).map { |index| File.read(File.join(folder, "portable-#{index}.request.json")).delete_suffix("\n") }
+    fixtures = (1..3).map { |index| JSON.parse(File.read(File.join(folder, "portable-#{index}.request.json"))) }
+    expected = fixtures.flat_map { |body| body.fetch("questions").sort_by { |id, _| id.delete_prefix("q").to_i }.map(&:last) }
     script = <<~RUBY
       result = T::Engine.new(cache: false, throttle: 1).decide_many(#{corpus.fetch("question").inspect}, #{corpus.fetch("texts").inspect})
       say [result.value, result.facts, result.details]
@@ -19,14 +21,16 @@ class TestBatchFacts < Minitest::Test
       values, facts, details = child.hear
       status, errors = child.finish
       assert status.success?, errors
-      assert_equal expected, backend.capture, "literal request bytes and ordered content cuts"
-      assert_equal 3, backend.count
+      bodies = backend.capture
+      assert_equal 1, bodies.size
+      assert_equal 1, backend.count
+      sent = JSON.parse(bodies.first).fetch("questions")
+      assert_equal expected, sent.sort_by { |id, _| id.delete_prefix("q").to_i }.map(&:last), "the fixture questions in order"
       assert_equal [true] * 5, values
       assert_equal [0, 1, 2, 3, 4], details.map { |row| row.fetch("index") }
-      assert_equal [5, 3], facts.values_at("records", "requests_sent")
-      hashes = expected.map { |body| Digest::SHA256.hexdigest("systemone\n#{backend.url('arm/full/capture')}/systemone\n#{body}") }
-      assert_equal [[hashes[0]], [hashes[0]], [hashes[1]], [hashes[1]], [hashes[2]]],
-                   details.map { |row| row.fetch("requests") }
+      assert_equal [5, 1], facts.values_at("records", "requests_sent")
+      keys = QuestionKeys.of("#{backend.url('arm/full/capture')}/systemone", bodies.first)
+      assert_equal keys.map { |key| [key] }, details.map { |row| row.fetch("requests") }
     end
   end
 
@@ -223,9 +227,8 @@ class TestBatchFacts < Minitest::Test
       assert_equal [true, true, true], values
       assert_equal [3, 1, 0, 6, 3], facts.values_at("records", "requests_sent", "cache_answers", "input_tokens", "output_tokens")
       assert_equal [0, 1, 2], details.map { |row| row.fetch("index") }
-      assert_equal 1, details.map { |row| row.fetch("requests").first }.uniq.size
-      digest = Digest::SHA256.hexdigest("systemone\n#{url}/systemone\n#{body}")
-      assert_equal [digest], details.first.fetch("requests")
+      alpha, beta = QuestionKeys.of("#{url}/systemone", body)
+      assert_equal [[alpha], [beta], [alpha]], details.map { |row| row.fetch("requests") }, "a repeated record shares its question"
       assert_equal inspection.include?("alpha"), false
       assert_equal inspection.include?("beta"), false
       assert_equal 2, JSON.parse(body).fetch("questions").size
@@ -237,8 +240,8 @@ class TestBatchFacts < Minitest::Test
       assert_equal %w[billing billing], chosen
       assert_equal [2, 1], chosen_facts.values_at("records", "requests_sent")
       assert_equal [0, 1], chosen_details.map { |row| row.fetch("index") }
-      choice_digest = Digest::SHA256.hexdigest("systemone\n#{url}/systemone\n#{expected_choice}")
-      assert_equal [[choice_digest], [choice_digest]], chosen_details.map { |row| row.fetch("requests") }
+      assert_equal QuestionKeys.of("#{url}/systemone", expected_choice).map { |key| [key] },
+                   chosen_details.map { |row| row.fetch("requests") }
     end
   ensure
     listener&.close

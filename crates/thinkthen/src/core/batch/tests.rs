@@ -1,46 +1,15 @@
-//! Design tests 1, 2 and 3 of the batching design, over fixture files and the
-//! batches `specification/fixtures/batching/README.md` works out by hand.
+//! The quoted form of one record, by ADR 0111 section 1. The packer tests
+//! in `pack` cover how questions join into requests.
 
-use std::num::NonZeroUsize;
-
-use super::{Batch, BatchError, BatchRecord, Batcher, Closed, Setting};
-use crate::core::Pointer;
-use crate::core::adapters::systemone::tests::{TEAMS, team_plan};
-use crate::core::backend::Backend;
+use super::{BatchError, QUOTED, quoted_plan, quoted_plan_of};
+use crate::core::adapters::built_in;
 use crate::core::backend_profile::{BackendProfile, LimitKind};
 use crate::core::json::Json;
-use crate::core::question::{Labels, Question};
-use crate::core::recording::Exchange;
-use crate::core::records::{Framing, Reading, Record};
-use crate::core::render::json_line;
-use crate::core::text::{Evidence, Meaning, QuestionText};
+use crate::core::question::Question;
+use crate::core::text::{Evidence, ModelName, QuestionText};
 
-mod ceiling;
-mod portable;
-mod refusals;
-
-const LOOPBACK: &str = "http://127.0.0.1:9";
-const BUILT_IN: &str = "https://api.typesafe.ai/v1";
-const SONG: &str = "The text is the title of a song by the Beatles.";
-const GROUPING: &str = include_str!("../../../../../specification/fixtures/batching/grouping.txt");
-
-macro_rules! fixture {
-    ($name:literal) => {
-        include_str!(concat!(
-            "../../../../../specification/fixtures/systemone/",
-            $name,
-            ".request.json"
-        ))
-    };
-}
-
-fn backend(url: &str, model: &str) -> Backend {
-    Backend::resolve(Some(url), None, model).expect("backend")
-}
-
-fn profile(limits: &str) -> Option<BackendProfile> {
-    let text = format!(r#"{{"schema":"thinkthen.backend-profile/1","name":"test",{limits}}}"#);
-    Some(BackendProfile::parse(&text).expect("profile"))
+fn model() -> ModelName {
+    ModelName::new("jev-latest").expect("model")
 }
 
 fn decide(text: &str) -> Question {
@@ -49,18 +18,6 @@ fn decide(text: &str) -> Question {
         yes: None,
         no: None,
     }
-}
-
-fn text(record: &str) -> BatchRecord {
-    let evidence = Evidence::new(record).expect("evidence");
-    BatchRecord {
-        value: evidence.as_json(),
-        evidence,
-    }
-}
-
-fn loopback() -> Backend {
-    backend(LOOPBACK, "jev-latest")
 }
 
 /// A question written as JSON, which cannot take the quote prefix.
@@ -73,426 +30,84 @@ fn structured() -> Question {
     }
 }
 
-fn records(count: usize) -> Setting {
-    Setting::Records(NonZeroUsize::new(count).expect("positive"))
+fn evidence(text: &str) -> Evidence {
+    Evidence::new(text).expect("evidence")
 }
 
-/// The fixture's bytes written compact, keys in their order, without a newline.
-fn compact(fixture: &str) -> Vec<u8> {
-    json_line(&Json::parse(fixture).expect("fixture JSON"))
-        .expect("compact")
-        .into_bytes()
+fn body(record: &str, question: Question, context: Option<&Evidence>) -> String {
+    let plan = quoted_plan(model(), evidence(record), context, vec![question], None);
+    String::from_utf8(built_in::encode(&plan.expect("plan")).expect("body")).expect("text")
 }
 
-/// Every batch a batcher closes over these records, or the first refusal.
-fn run(mut batcher: Batcher, records: Vec<BatchRecord>) -> Result<Vec<Batch>, BatchError> {
-    let mut batches = Vec::new();
-    for record in records {
-        batcher.push(record, &mut batches)?;
-    }
-    batches.extend(batcher.finish()?);
-    Ok(batches)
-}
+const URGENT: &str = "Help! My payouts have been failing for 3 days.";
 
-fn batches(
-    backend: Backend,
-    profile: Option<BackendProfile>,
-    question: Question,
-    setting: Setting,
-    records: Vec<BatchRecord>,
-) -> Vec<Batch> {
-    let batcher = Batcher::new(backend, profile, question, setting, None).expect("batcher");
-    run(batcher, records).expect("batches")
-}
-
-/// Each batch as its record count and why it closed.
-fn shape(batches: &[Batch]) -> Vec<(usize, Closed)> {
-    batches
-        .iter()
-        .map(|batch| (batch.questions.len(), batch.closed))
-        .collect()
-}
-
-/// The quoted request of one urgent record, written out by hand.
-const URGENT_QUOTED: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is \"Help! My payouts have been failing for 3 days.\". Does this convey urgency?"}}}"#;
-
-/// A batch of one takes the quoted form every batch takes, by ADR 0111
-/// section 1, and a question written as JSON keeps its record as the state.
 #[test]
-fn a_batch_of_one_takes_the_quoted_form() {
-    let urgent = || text("Help! My payouts have been failing for 3 days.");
-    let digest = Exchange::new(loopback().url(), URGENT_QUOTED.as_bytes()).digest();
-    for setting in [records(1), Setting::Max] {
-        let question = decide("Does this convey urgency?");
-        let found = batches(loopback(), None, question, setting, vec![urgent()]);
-        let [batch] = found.as_slice() else {
-            panic!("one batch, not {}", found.len())
-        };
-        assert_eq!(String::from_utf8_lossy(&batch.body), URGENT_QUOTED);
-        assert_eq!(batch.digest, digest);
-        assert_eq!(batch.questions, [0]);
-    }
-    let found = batches(loopback(), None, structured(), Setting::Max, vec![urgent()]);
-    let [batch] = found.as_slice() else {
-        panic!("one batch, not {}", found.len())
-    };
+fn a_record_is_quoted_in_its_question_and_a_json_question_keeps_it_as_the_state() {
     assert_eq!(
-        String::from_utf8_lossy(&batch.body),
+        body(URGENT, decide("Does this convey urgency?"), None),
+        r#"{"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is \"Help! My payouts have been failing for 3 days.\". Does this convey urgency?"}}}"#
+    );
+    let context = evidence("shared context");
+    assert!(body("x", decide("Q"), Some(&context)).starts_with(r#"{"state":"shared context","#));
+    assert_eq!(
+        body(URGENT, structured(), None),
         r#"{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":{"ask":"urgent?"}}}}"#
     );
+    assert_eq!(
+        quoted_plan(
+            model(),
+            evidence("x"),
+            Some(&context),
+            vec![structured()],
+            None
+        )
+        .err(),
+        Some(BatchError::StructuredQuestionWithContext)
+    );
 }
 
 #[test]
-fn each_batch_body_matches_its_fixture() {
-    let three = ["Come Together", "Say \"hello\"\nthen leave", "Because"];
-    let mails = ["My card was charged twice.", "The parcel never arrived."];
-    let choose = Question::Choose {
-        text: QuestionText::new("Which team owns this request?").expect("text"),
-        options: Labels::options(TEAMS.iter().map(|team| (*team).to_owned()).collect())
-            .expect("options"),
-    };
-    let meant = Question::Decide {
-        text: QuestionText::new("The record names a song on Abbey Road.").expect("text"),
-        yes: Some(Meaning::new("The album is Abbey Road.").expect("yes")),
-        no: Some(Meaning::new("Another album.").expect("no")),
-    };
-    let csv = Reading::new(Framing::Csv, Vec::new()).expect("reading");
-    let rows = [("Come Together", "Abbey Road"), ("Help!", "Help!")].map(|(title, album)| {
-        let row = [("title", title), ("album", album)]
-            .map(|(key, cell)| (key.to_owned(), cell.to_owned()));
-        csv.batch_record(&Record::string_fields(row.to_vec()))
-            .expect("row")
-    });
-    let duplicate = ["Come Together", "Because", "Come Together"];
-    let context = "Come Together appears on Abbey Road.\nBecause appears on Abbey Road.\n";
-    let cases: [BodyCase<'_>; 5] = [
-        (
-            decide(SONG),
-            three.map(text).into(),
+fn a_json_record_is_quoted_compact_in_its_own_key_order() {
+    for (value, expected) in [
+        ("7", "The text is 7. Q"),
+        (r#"{"b":2,"a":1}"#, r#"The text is {"b":2,"a":1}. Q"#),
+    ] {
+        let plan = quoted_plan_of(
+            model(),
+            evidence(value),
+            &Json::parse(value).expect("json"),
             None,
-            fixture!("batch-three"),
-            vec![0, 1, 2],
-        ),
-        (
-            decide("It appears on the album Abbey Road."),
-            ["Come Together", "Help!"].map(text).into(),
-            Some(context),
-            fixture!("batch-context"),
-            vec![0, 1],
-        ),
-        (
-            choose,
-            mails.map(text).into(),
+            vec![decide("Q")],
             None,
-            fixture!("batch-choose"),
-            vec![0, 1],
-        ),
-        (meant, rows.into(), None, fixture!("batch-csv"), vec![0, 1]),
-        (
-            decide(SONG),
-            duplicate.map(text).into(),
-            None,
-            fixture!("batch-duplicate"),
-            vec![0, 1, 0],
-        ),
-    ];
-    for (question, records, context, fixture, questions) in cases {
-        let context = context.map(|held| Evidence::new(held).expect("context"));
-        let batcher =
-            Batcher::new(loopback(), None, question, Setting::Max, context).expect("batcher");
-        let found = run(batcher, records).expect("batches");
-        let [batch] = found.as_slice() else {
-            panic!("one batch, not {}", found.len())
+        )
+        .expect("plan");
+        let [Question::Decide { text, .. }] = plan.questions() else {
+            panic!("one decide question")
         };
-        assert_eq!(String::from_utf8_lossy(&batch.body), fixture.trim_end());
-        assert_eq!(
-            (batch.questions.clone(), batch.closed),
-            (questions, Closed::End)
-        );
-        let debug = format!("{batch:?}");
-        assert!(
-            !debug.contains("Come") && !debug.contains("card"),
-            "{debug}"
-        );
+        assert_eq!(text.as_json().as_str(), Some(expected));
     }
-}
-
-/// The grouping fixture's lines, with a line inserted after a position if given.
-fn grouping(insert: Option<(usize, &str)>) -> Vec<BatchRecord> {
-    let mut lines: Vec<&str> = GROUPING.lines().collect();
-    if let Some((after, line)) = insert {
-        lines.insert(after, line);
-    }
-    lines.into_iter().map(text).collect()
-}
-
-#[test]
-fn batches_close_where_the_readme_says() {
-    use Closed::{Content, End, Limit, Size};
-    let eight = || profile(r#""max_questions":8"#);
-    let plan =
-        |setting, insert| batches(loopback(), eight(), decide(SONG), setting, grouping(insert));
-    let original = plan(Setting::Max, None);
-    assert_eq!(
-        shape(&original),
-        [(8, Content), (8, Limit), (1, Content), (8, End)]
-    );
-    let fives = plan(records(5), None);
-    assert_eq!(
-        shape(&fives),
-        [
-            (5, Size),
-            (3, Content),
-            (5, Size),
-            (4, Content),
-            (5, Size),
-            (3, End)
-        ]
-    );
-    let digests = |found: &[Batch]| {
-        found
-            .iter()
-            .map(|batch| batch.digest.clone())
-            .collect::<Vec<_>>()
-    };
-    let before = digests(&original);
-    let plain = plan(Setting::Max, Some((3, "line 24")));
-    assert_eq!(
-        shape(&plain),
-        [(8, Limit), (1, Content), (8, Limit), (1, Content), (8, End)]
-    );
-    let kept = digests(&plain);
-    assert_ne!(kept.first(), before.first());
-    assert_eq!(kept.get(2..), before.get(1..));
-    let cut = plan(Setting::Max, Some((12, "line 10633")));
-    assert_eq!(
-        shape(&cut),
-        [(8, Content), (5, Content), (5, Content), (8, End)]
-    );
-    let kept = digests(&cut);
-    assert_eq!((kept.first(), kept.get(3)), (before.first(), before.get(3)));
-    assert!(!kept.contains(&before[1]) && !kept.contains(&before[2]));
-}
-
-#[test]
-fn a_half_whose_last_member_is_a_content_cut_closes_during_push() {
-    let records = grouping(None).into_iter().take(8).collect();
-    let [first, second] = super::halves(&loopback(), None, &decide(SONG), None, records)
-        .expect("both halves form one request");
-    assert_eq!(
-        shape(&[first, second]),
-        [(4, Closed::End), (4, Closed::Content)]
-    );
-}
-
-/// A body fixture's question, records, context, fixture, and each record's first question.
-type BodyCase<'a> = (
-    Question,
-    Vec<BatchRecord>,
-    Option<&'a str>,
-    &'a str,
-    Vec<usize>,
-);
-
-/// A limit case's backend, profile, question, records, and expected batches.
-type LimitCase = (
-    Backend,
-    Option<BackendProfile>,
-    Question,
-    Vec<BatchRecord>,
-    Vec<(usize, Closed)>,
-);
-
-/// Three records of `bytes` bytes each, from distinct letters.
-fn sized(bytes: usize) -> Vec<BatchRecord> {
-    ["a", "b", "c"]
-        .map(|letter| text(&letter.repeat(bytes)))
-        .into()
-}
-
-#[test]
-fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
-    use Closed::{End, Limit};
-    let three = || {
-        ["Come Together", "Say \"hello\"\nthen leave", "Because"]
-            .map(text)
-            .into()
-    };
-    let body = compact(fixture!("batch-three")).len();
-    let state = super::QUOTED.len();
-    let urgent = || text("Help! My payouts have been failing for 3 days.");
-    let alone = URGENT_QUOTED.len();
-    let twelve = || {
-        ('a'..='l')
-            .map(|letter| text(&letter.to_string()))
-            .collect()
-    };
-    let cases: [LimitCase; 6] = [
-        (
-            loopback(),
-            profile(&format!(r#""max_request_bytes":{body}"#)),
-            decide(SONG),
-            three(),
-            vec![(3, End)],
-        ),
-        (
-            loopback(),
-            profile(&format!(r#""max_request_bytes":{}"#, body - 1)),
-            decide(SONG),
-            three(),
-            vec![(2, Limit), (1, End)],
-        ),
-        (
-            loopback(),
-            profile(&format!(r#""max_evidence_bytes":{state}"#)),
-            decide(SONG),
-            three(),
-            vec![(3, End)],
-        ),
-        (
-            loopback(),
-            profile(&format!(r#""max_request_bytes":{alone}"#)),
-            decide("Does this convey urgency?"),
-            vec![urgent(), urgent(), urgent()],
-            vec![(3, End)],
-        ),
-        (
-            loopback(),
-            profile(r#""max_request_bytes":802"#),
-            decide("Q"),
-            twelve(),
-            vec![(12, End)],
-        ),
-        (
-            loopback(),
-            profile(r#""max_request_bytes":801"#),
-            decide("Q"),
-            twelve(),
-            vec![(11, Limit), (1, End)],
-        ),
-    ];
-    check(cases);
-    let below = Batcher::new(
-        loopback(),
-        profile(&format!(r#""max_evidence_bytes":{}"#, state - 1)),
-        decide(SONG),
-        Setting::Max,
-        None,
-    )
-    .expect("batcher");
-    assert!(
-        matches!(run(below, three()), Err(BatchError::Profile(limit)) if limit.kind == LimitKind::EvidenceBytes),
-        "an evidence limit below the fixed sentence refuses every request"
-    );
 }
 
 #[test]
 fn the_evidence_limit_bounds_each_quoted_record() {
-    let state = super::QUOTED.len();
+    let state = QUOTED.len();
+    let profile = BackendProfile::parse(&format!(
+        r#"{{"schema":"thinkthen.backend-profile/1","name":"test","max_evidence_bytes":{state}}}"#
+    ))
+    .expect("profile");
     let bounded = |bytes: usize| {
-        let batcher = Batcher::new(
-            loopback(),
-            profile(&format!(r#""max_evidence_bytes":{state}"#)),
-            decide(SONG),
-            Setting::Max,
+        quoted_plan(
+            model(),
+            evidence(&"x".repeat(bytes)),
             None,
+            vec![decide("Q")],
+            Some(&profile),
         )
-        .expect("batcher");
-        run(batcher, sized(bytes))
     };
-    assert!(
-        bounded(state).is_ok(),
-        "a record at the evidence limit passes"
-    );
+    assert!(bounded(state).is_ok(), "a record at the limit passes");
     assert!(
         matches!(bounded(state + 1), Err(BatchError::Profile(limit))
             if limit.kind == LimitKind::EvidenceBytes && limit.actual == state + 1),
-        "the evidence limit bounds each quoted record as well as the state"
-    );
-}
-
-/// Plan each case at `Max` and compare its batches' sizes and reasons.
-fn check<const N: usize>(cases: [LimitCase; N]) {
-    for (backend, profile, question, records, expected) in cases {
-        assert_eq!(
-            shape(&batches(backend, profile, question, Setting::Max, records)),
-            expected
-        );
-    }
-}
-
-#[test]
-fn questions_copies_and_refusals_follow_the_batch_rules() {
-    use Closed::{End, Limit, Size};
-    let tag = Question::Tag {
-        text: QuestionText::new("Which topics?").expect("text"),
-        labels: Labels::tags(["a", "b", "c"].map(|label| (label.to_owned(), None)).into())
-            .expect("labels"),
-    };
-    let tags = batches(
-        loopback(),
-        profile(r#""max_questions":8"#),
-        tag,
-        Setting::Max,
-        ["x", "y", "z"].map(text).into(),
-    );
-    assert_eq!(shape(&tags), [(2, Limit), (1, End)]);
-    assert_eq!(
-        tags.first().map(|batch| batch.questions.clone()),
-        Some(vec![0, 3])
-    );
-    let structured = structured();
-    let alone = batches(
-        loopback(),
-        None,
-        structured,
-        Setting::Max,
-        ["x", "x", "y"].map(text).into(),
-    );
-    assert_eq!(shape(&alone), [(1, Size), (1, Size), (1, Size)]);
-    assert!(batches(loopback(), None, decide("Q"), Setting::Max, Vec::new()).is_empty());
-    let context = Evidence::new("shared context").expect("context");
-    let batcher = Batcher::new(
-        loopback(),
-        None,
-        decide("Q"),
-        records(1),
-        Some(context.clone()),
-    );
-    let each = run(batcher.expect("batcher"), ["x", "y"].map(text).into()).expect("batches");
-    assert_eq!(shape(&each), [(1, Size), (1, Size)]);
-    assert!(each.iter().all(|batch| batch.plan.evidence() == &context));
-    let reading =
-        Reading::new(Framing::Jsonl, vec![Pointer::new("/n").expect("pointer")]).expect("reading");
-    let objects = [
-        r#"{"n":7}"#,
-        r#"{"n":{"a":1,"b":2}}"#,
-        r#"{"n":{"b":2,"a":1}}"#,
-    ]
-    .map(|line| {
-        reading
-            .batch_record(&reading.record(line.as_bytes()).expect("record"))
-            .expect("selected")
-    });
-    let found = batches(loopback(), None, decide("Q"), Setting::Max, objects.into());
-    let [batch] = found.as_slice() else {
-        panic!("one batch")
-    };
-    let questions: Vec<String> = batch
-        .plan
-        .questions()
-        .iter()
-        .map(|question| match question {
-            Question::Decide { text, .. } => text.as_json().as_str().expect("text").to_owned(),
-            _ => panic!("a decide question"),
-        })
-        .collect();
-    assert_eq!(
-        questions,
-        [
-            r#"The text is 7. Q"#,
-            r#"The text is {"a":1,"b":2}. Q"#,
-            r#"The text is {"b":2,"a":1}. Q"#
-        ]
+        "the evidence limit bounds each quoted record"
     );
 }

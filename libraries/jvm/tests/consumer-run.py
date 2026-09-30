@@ -61,7 +61,8 @@ def check_count():
       'hold-kotlin','kotlin-recovery','hold-scala','scala-recovery',
       'parallel-independent-0','parallel-independent-1','parallel-independent-2']
     expected=collections.Counter({s:1 for s in required})
-    expected['Each question quotes the text it asks about.']=6
+    # The repeated first/second bulk call reads the question cache (ADR 0111).
+    expected['Each question quotes the text it asks about.']=5
     expected.update({'Maria Chen':2,'John Smith':2,'hold-contract':1,'recovery-contract':1,
       'hold-contract-plant':1,'recovery-contract-plant':1})
     expected.update({'[{"id":"u001","evidence":"find-one"},{"id":"u002","evidence":"find-two"}]':1,
@@ -70,12 +71,12 @@ def check_count():
         expected[normalized({'entities':[{'id':'i1','name':first,'kind':'alert'},
           {'id':'i2','name':second,'kind':'alert'}]})]=1
     assert arrivals==expected,('exact wire-state counts',arrivals-expected,expected-arrivals)
-    # records.md §Batching and backends.md §Request-size: six logical record
-    # groups now travel in six full requests. Assert each actual packed wire
+    # records.md §Batching and backends.md §Request-size: five logical record
+    # groups now travel in five full requests. Assert each actual packed wire
     # body, not only the identical shared-evidence state string.
     def signature(request):return normalized(request)
     packed_groups=[('bulk-before-bad','bulk-middle-bad','bulk-after-bad'),
-      ('first','second','third'),('first','second'),('filter-one','filter-two'),
+      ('first','second','third'),('filter-one','filter-two'),
       ('rank-one','rank-two'),tuple('hold-bulk-'+str(i) for i in range(1,7))]
     packed_expected=collections.Counter(signature({'state':'Each question quotes the text it asks about.',
       'model':'jev-1.13.0', 'questions':{'q'+str(i+1):{'type':'noul','instructions':'The text is '+json.dumps(name)+'. Is it?'} for i,name in enumerate(group)}}) for group in packed_groups)

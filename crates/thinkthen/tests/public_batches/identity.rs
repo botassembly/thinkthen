@@ -3,15 +3,43 @@
 use super::*;
 use sha2::{Digest as _, Sha256};
 
-pub(super) fn request_digest(url: &str, body: &[u8]) -> String {
-    let mut hash = Sha256::new();
-    hash.update(b"systemone\n");
-    hash.update(url.as_bytes());
-    hash.update(b"\n");
-    hash.update(body);
-    hash.finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
+/// Every question key of one request body, in wire order, by ADR 0111
+/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
+/// one question as the body carries them, joined by line feeds.
+pub(super) fn question_keys(url: &str, body: &[u8]) -> Vec<String> {
+    use serde_json::value::RawValue;
+    #[derive(serde::Deserialize)]
+    struct Parts<'a> {
+        #[serde(borrow)]
+        state: &'a RawValue,
+        #[serde(borrow)]
+        model: &'a RawValue,
+        #[serde(borrow)]
+        questions: std::collections::BTreeMap<String, &'a RawValue>,
+    }
+    let parts: Parts<'_> = serde_json::from_slice(body).expect("a request body");
+    let mut questions: Vec<_> = parts
+        .questions
+        .into_iter()
+        .map(|(name, question)| (name[1..].parse::<usize>().expect("a qN name"), question))
+        .collect();
+    questions.sort_by_key(|(place, _)| *place);
+    questions
+        .into_iter()
+        .map(|(_, question)| {
+            let joined = [
+                "systemone",
+                url,
+                parts.model.get(),
+                parts.state.get(),
+                question.get(),
+            ]
+            .join("\n");
+            Sha256::digest(joined.as_bytes())
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect()
+        })
         .collect()
 }
 
@@ -53,13 +81,13 @@ fn assert_retry_receipts(listener: &Listener, details: &Mutex<Vec<RetryReceipt>>
         [
             (
                 0,
-                vec![request_digest(listener.url(), &alpha.body)],
+                question_keys(listener.url(), &alpha.body),
                 Some((3, 1)),
                 listener.url().to_owned()
             ),
             (
                 1,
-                vec![request_digest(listener.url(), &beta.body)],
+                question_keys(listener.url(), &beta.body),
                 Some((5, 2)),
                 listener.url().to_owned()
             ),
@@ -68,7 +96,7 @@ fn assert_retry_receipts(listener: &Listener, details: &Mutex<Vec<RetryReceipt>>
 }
 
 #[test]
-fn duplicate_records_use_the_shared_literal_request_and_digest() {
+fn duplicate_records_share_one_question_key_in_one_literal_request() {
     let _serial = serial();
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#)
@@ -123,13 +151,15 @@ fn duplicate_records_use_the_shared_literal_request_and_digest() {
     let expected =
         include_str!("../../../../specification/fixtures/systemone/batch-duplicate.request.json");
     assert_eq!(requests[0].body, expected.trim_end().as_bytes());
-    let digest = request_digest(listener.url(), &requests[0].body);
+    let [come_together, because] =
+        <[String; 2]>::try_from(question_keys(listener.url(), &requests[0].body))
+            .expect("two distinct questions");
     assert_eq!(
         *seen.lock().expect("observations"),
         [
-            (0, vec![digest.clone()], 1),
-            (1, vec![digest.clone()], 0),
-            (2, vec![digest], 0)
+            (0, vec![come_together.clone()], 1),
+            (1, vec![because], 0),
+            (2, vec![come_together], 0)
         ]
     );
 }
@@ -258,11 +288,11 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
         )
         .next()
         .expect("strict replay miss")
-        .expect_err("changed context missed the recorded request");
+        .expect_err("changed context missed the recorded question");
     assert_eq!(missed.kind(), ErrorKind::Local);
     assert_eq!(
         missed.to_string(),
-        "the replay folder holds no reply for this request"
+        "the replay folder holds no answer for this question"
     );
     assert_eq!(listener.count(), 1, "strict replay opened no new send");
     std::fs::remove_dir_all(folder).expect("remove recording");
@@ -338,34 +368,13 @@ fn group_request_shape(body: &[u8]) -> (usize, usize) {
     (questions.len(), quoted.len())
 }
 
-fn initial_group_requests(
-    listener: Listener,
-    held: &conformance_backend::Rendezvous,
-) -> Result<(Listener, Vec<conformance_backend::Recorded>), &'static str> {
-    let began = Instant::now();
-    let mut seen = Vec::new();
-    while seen.len() < 2 && began.elapsed() < Duration::from_secs(3) {
-        seen.extend(listener.requests());
-        if seen.len() < 2 {
-            thread::sleep(Duration::from_millis(5));
-        }
-    }
-    if seen.len() != 2 {
-        return Err("two requests did not arrive before either reply");
-    }
-    if !held.wait() {
-        return Err("the listener retired before releasing both replies");
-    }
-    Ok((listener, seen))
-}
-
+/// Every group of a record shares the fixed state, so a record's questions
+/// ride one request, by ADR 0111 section 5. Under a limit of eight
+/// questions, each record of five questions closes the request before it.
 #[test]
-fn unequal_group_closes_send_the_oldest_open_fragment_first() {
+fn a_question_limit_packs_whole_records_and_every_group_together() {
     let _serial = serial();
-    let held = std::sync::Arc::new(conformance_backend::Rendezvous::new(3));
-    let first_release = std::sync::Arc::clone(&held);
-    let arrivals = AtomicUsize::new(0);
-    let listener = Listener::answering(move |body| {
+    let listener = Listener::answering(|body| {
         let request: serde_json::Value = serde_json::from_slice(body).expect("request");
         let answers = request["questions"]
             .as_object()
@@ -373,13 +382,7 @@ fn unequal_group_closes_send_the_oldest_open_fragment_first() {
             .keys()
             .map(|name| (name.clone(), serde_json::json!({"type":"noul","noul":0.9})))
             .collect::<serde_json::Map<_, _>>();
-        let reply =
-            Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers}).to_string());
-        if arrivals.fetch_add(1, Ordering::SeqCst) < 2 {
-            reply.after_release(std::sync::Arc::clone(&first_release))
-        } else {
-            reply
-        }
+        Canned::ok(&serde_json::json!({"model":"jev-latest","answers":answers}).to_string())
     })
     .expect("listener");
     let engine = Engine::builder()
@@ -405,15 +408,7 @@ fn unequal_group_closes_send_the_oldest_open_fragment_first() {
         r#"{"a":"a4","b":"b4"}"#,
     ];
     let mut rows = engine.annotate(&set, records);
-    let (values, listener, first_two) = thread::scope(|scope| {
-        let helper = scope.spawn(move || initial_group_requests(listener, &held));
-        let values = rows.by_ref().collect::<Result<Vec<_>, _>>();
-        let (listener, first_two) = helper
-            .join()
-            .expect("release helper")
-            .expect("two requests");
-        (values.expect("rows"), listener, first_two)
-    });
+    let values = rows.by_ref().collect::<Result<Vec<_>, _>>().expect("rows");
     assert_eq!(
         values.iter().map(|row| row.input()).collect::<Vec<_>>(),
         records.iter().collect::<Vec<_>>()
@@ -422,21 +417,12 @@ fn unequal_group_closes_send_the_oldest_open_fragment_first() {
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((5, 4))
+        Some((5, 5))
     );
-    let mut admitted = first_two
+    let shapes = listener
+        .requests()
         .iter()
         .map(|request| group_request_shape(&request.body))
         .collect::<Vec<_>>();
-    admitted.sort_unstable();
-    assert_eq!(admitted, [(5, 5), (8, 2)]);
-    let mut sent = first_two;
-    sent.extend(listener.requests());
-    assert_eq!(sent.len(), 4, "one request for each complete group slice");
-    let mut shapes = sent
-        .iter()
-        .map(|request| group_request_shape(&request.body))
-        .collect::<Vec<_>>();
-    shapes.sort_unstable();
-    assert_eq!(shapes, [(4, 1), (5, 5), (8, 2), (8, 2)]);
+    assert_eq!(shapes, [(5, 2); 5], "five questions over two quoted parts");
 }

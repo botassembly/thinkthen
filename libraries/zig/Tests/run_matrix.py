@@ -44,10 +44,12 @@ with tempfile.TemporaryDirectory(prefix="zig-matrix-", dir=ROOT) as folder:
             print("Zig post-native facts allocation faults exact=4 PASS")
         else:
             case("example", [str(PACKAGE / "zig-out/bin/thinkthen-example")], 1, "yes 0.90")
-            case("matrix", [str(BIN / "matrix")], 32, "matrix: ten verbs")
-            case("allocation", [str(BIN / "allocation")], 34, "allocation: bulk indexes")
-            case("concurrent", [str(BIN / "concurrent"), "--callers-only"], 37, "concurrent: three callers PASS")
-            case("held", [str(BIN / "concurrent"), "--holds-only"], 42, "fresh-token recovery recovery-scalar PASS")
+            # The repeated first/second bulk call reads the question cache (ADR 0111),
+            # so every later count is one lower.
+            case("matrix", [str(BIN / "matrix")], 31, "matrix: ten verbs")
+            case("allocation", [str(BIN / "allocation")], 33, "allocation: bulk indexes")
+            case("concurrent", [str(BIN / "concurrent"), "--callers-only"], 36, "concurrent: three callers PASS")
+            case("held", [str(BIN / "concurrent"), "--holds-only"], 41, "fresh-token recovery recovery-scalar PASS")
             (ROOT / "observed_requests.json").write_text(json.dumps(backend.arrivals, ensure_ascii=False, indent=2) + "\n")
             expected = json.loads((PACKAGE / "Tests/expected_requests.json").read_text())
             normalize = lambda rows: Counter(json.dumps(row, ensure_ascii=False, sort_keys=True, separators=(",", ":")) for row in rows)

@@ -3,10 +3,23 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 import tempfile
 from pathlib import Path
 
 from harness import Backend, expect, rows, run, said
+
+
+def recording_entries(folder: str) -> int:
+    """The answers a recording keeps: one store row per question (ADR 0111)."""
+    store = Path(folder) / "thinkthen.sqlite"
+    if not store.is_file():
+        return 0
+    with sqlite3.connect(store) as connection:
+        count = connection.execute("SELECT count(*) FROM answers").fetchone()[0]
+    connection.close()
+    return count
+
 
 def shared_settings_corpus():
     """Run every shared engine-setting row through the DuckDB SQL surface."""
@@ -67,6 +80,4 @@ def shared_settings_corpus():
                 else:
                     expect(backend.count(), step["count"], f"{label} listener count")
             if "entries" in shared:
-                expect(sum(path.is_file() and path.suffix == ".json" and path.name != ".thinkthen-backend.json"
-                           for path in Path(folder).rglob("*")),
-                       shared["entries"], f"{shared['id']} saved entries")
+                expect(recording_entries(folder), shared["entries"], f"{shared['id']} saved entries")

@@ -86,8 +86,8 @@ static class Program
         Check(firstBulk.Facts.Records == 3 && firstBulk.Facts.RequestsSent >= 1 && firstBulk.Facts.Model == "jev-1.13.0", "typed bulk facts");
         for (int i = 0; i < rows.Length; i++) AnswerIs(rows[i], new[] {1,0,1}[i], new[] {.9,.1,.6}[i]);
         var cachedBulk = engine.DecideMany("Is it?", "first", "second", "third");
-        Check(cachedBulk.Facts.Records == 3 && cachedBulk.Facts.CacheAnswers == 1 && cachedBulk.Facts.RequestsSent == 0 &&
-            cachedBulk.Value.Select(a => a.Probability).SequenceEqual(new[] {.9,.1,.6}), "identical bulk replays one cached response");
+        Check(cachedBulk.Facts.Records == 3 && cachedBulk.Facts.CacheAnswers == 3 && cachedBulk.Facts.RequestsSent == 0 &&
+            cachedBulk.Value.Select(a => a.Probability).SequenceEqual(new[] {.9,.1,.6}), "identical bulk answers each question from the cache");
         rows = engine.DecideMany("Is it?", "first", "second", "first", "second").Value;
         Check(rows.Select(a => a.Probability).SequenceEqual(new[] {.9,.1,.9,.1}), "bulk cache/order");
         var empty = engine.DecideMany("Is it?");

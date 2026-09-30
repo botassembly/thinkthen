@@ -7,15 +7,18 @@ use std::sync::Arc;
 use crate::core::{self, BackendProfile, Prices, Value};
 use crate::engine::facade::Roots;
 use crate::engine::facade::{self, Settings};
+use crate::engine::pipeline::Flow;
+use crate::public::asking::{Decisions, Text};
 use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop, guarded};
+use crate::public::pull;
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
-use crate::public::results::{
-    self, Answer, Call, Counters, Details, ObservedQuestion, ObservedRow, QuestionDetail,
-    RecordObservation,
-};
+use crate::public::results::{self, Answer, Call, Counters, Details};
 use crate::public::settings::EngineBuilder;
+
+/// One judgment and the question keys behind it.
+type Keyed = (facade::Judgment, Vec<String>);
 
 /// One engine: its settings, its connection pool, its cache, and its counters.
 ///
@@ -338,14 +341,16 @@ impl Engine {
             ],
             "details",
         )?;
-        self.judge(question, evidence, options)?.try_map(|judged| {
-            Details::of(
-                &judged,
-                question,
-                self.inner.backend(),
-                self.profile.as_ref(),
-            )
-        })
+        self.keyed(question, evidence, options)?
+            .try_map(|(judged, keys)| {
+                Details::of(
+                    &judged,
+                    question,
+                    self.inner.backend(),
+                    self.profile.as_ref(),
+                    keys,
+                )
+            })
     }
 
     /// The facade engine that asks this question's model.
@@ -372,30 +377,43 @@ impl Engine {
         text: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<facade::Judgment>, Error> {
+        Ok(self
+            .keyed(question, text, options)?
+            .map(|(judged, _)| judged))
+    }
+
+    /// One text's judgment and the question keys behind it.
+    fn keyed(
+        &self,
+        question: &Question,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<Keyed>, Error> {
         options.without_context("a single-document call")?;
-        let evidence = evidence(text)?;
+        evidence(text)?;
         let engine = self.asking(question)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
+        let asker = Decisions::new(&engine, question, None);
+        let packing = pull::packing(core::Setting::Max, false, false);
+        let input = Text {
+            at: 0,
+            text: text.to_owned(),
+        };
         stop.run_call(1, |cancel| {
-            let judged = engine
-                .judge(&question.core, question.threshold, evidence, cancel)
+            let mut taken = None;
+            let host = pull::eager(vec![input], |row| {
+                taken = Some(row);
+                Flow::Stop
+            });
+            engine
+                .ask_all(&asker, packing, host, cancel)
                 .map_err(Error::from)?;
-            if stop.observing() {
-                let details = Details::of(&judged, question, engine.backend(), engine.profile())?;
-                let observed = ObservedQuestion::from_details(&details);
-                stop.observe(RecordObservation::Question {
-                    index: 0,
-                    member: None,
-                    stage: None,
-                    position: 0,
-                    detail: QuestionDetail::of(&observed),
-                });
-                stop.observe(RecordObservation::Row {
-                    index: 0,
-                    value: ObservedRow::Judgment(details.value()),
-                });
-            }
-            Ok(judged)
+            let row = taken.ok_or_else(|| Error::defect("a single call returned no row"))?;
+            let keys = row
+                .as_ref()
+                .map_or_else(|_| Vec::new(), |decided| decided.keys.clone());
+            crate::public::bulk::judged(&stop, question, engine.backend(), 0, row)
+                .map(|judged| (judged, keys))
         })
     }
 }

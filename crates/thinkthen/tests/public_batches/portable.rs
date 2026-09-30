@@ -1,4 +1,6 @@
-//! The public bulk call must retain the literal portable Max boundaries.
+//! The public bulk call keeps the portable fixture's question bytes. The
+//! content cut is gone, by ADR 0111, so every record rides one request, and
+//! each row's key is the key of its fixture question.
 
 use super::*;
 use serde_json::{Map, Value, json};
@@ -12,7 +14,7 @@ const BODIES: [&str; 3] = [
 ];
 
 #[test]
-fn public_bulk_keeps_portable_max_bodies_and_row_identities() {
+fn public_bulk_keeps_portable_question_bytes_and_keys_in_one_request() {
     let _serial = serial();
     let corpus: Value = serde_json::from_str(CORPUS).expect("literal corpus");
     let texts: Vec<&str> = corpus["texts"]
@@ -65,32 +67,36 @@ fn public_bulk_keeps_portable_max_bodies_and_row_identities() {
     assert_eq!(
         call.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((5, 3))
+        Some((5, 1))
     );
-    let expected: Vec<&[u8]> = BODIES
-        .iter()
-        .map(|body| body.strip_suffix('\n').expect("fixture newline").as_bytes())
-        .collect();
-    // Two requests may be in flight, so they can arrive in either order.
     let requests = listener.requests();
-    let mut arrived: Vec<&[u8]> = requests.iter().map(|sent| sent.body.as_slice()).collect();
-    arrived.sort_unstable();
-    let mut sorted = expected.clone();
-    sorted.sort_unstable();
-    assert_eq!(arrived, sorted);
-    let hashes: Vec<_> = expected
+    assert_eq!(requests.len(), 1);
+    let sent: Value = serde_json::from_slice(&requests[0].body).expect("request");
+    let fixture: Vec<Value> = BODIES
         .iter()
-        .map(|body| super::identity::request_digest(listener.url(), body))
+        .flat_map(|body| {
+            let body: Value = serde_json::from_str(body).expect("fixture body");
+            let mut questions: Vec<(usize, Value)> = body["questions"]
+                .as_object()
+                .expect("questions")
+                .iter()
+                .map(|(name, question)| (name[1..].parse().expect("qN"), question.clone()))
+                .collect();
+            questions.sort_by_key(|(place, _)| *place);
+            questions.into_iter().map(|(_, question)| question)
+        })
         .collect();
+    let questions: Vec<Value> = (1..=5)
+        .map(|place| sent["questions"][format!("q{place}")].clone())
+        .collect();
+    assert_eq!(questions, fixture, "each question keeps the fixture bytes");
+    let keys = super::identity::question_keys(listener.url(), &requests[0].body);
     assert_eq!(
         *seen.lock().expect("observations"),
-        [
-            (0, vec![hashes[0].clone()]),
-            (1, vec![hashes[0].clone()]),
-            (2, vec![hashes[1].clone()]),
-            (3, vec![hashes[1].clone()]),
-            (4, vec![hashes[2].clone()]),
-        ]
+        keys.into_iter()
+            .enumerate()
+            .map(|(index, key)| (index, vec![key]))
+            .collect::<Vec<_>>()
     );
-    assert_eq!(listener.count(), 3);
+    assert_eq!(listener.count(), 1);
 }

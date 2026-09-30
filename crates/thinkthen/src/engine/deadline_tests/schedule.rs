@@ -47,7 +47,7 @@ fn reader<T: Send + 'static>(
 }
 
 const fn done<T>(value: T) -> Result<Completed<T, &'static str>, &'static str> {
-    Ok(Completed::one(value, false, false))
+    Ok(Completed::one(value, false))
 }
 
 #[test]

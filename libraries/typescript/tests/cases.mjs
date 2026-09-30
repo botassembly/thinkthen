@@ -10,10 +10,54 @@ const CANONICAL = 'https://api.typesafe.ai/v1/systemone';
 
 /** Cases this surface cannot express, each with its reason. */
 const NOT_RUN = {
+  '18-annotate-two-groups': 'its recording holds one request per group, and ADR 0111 section 5 packs a record\'s groups into one',
   '25-defect-fault': 'no input makes the engine panic; the Rust unit test covers the binding guard',
 };
 
 const digest = (url, request) => createHash('sha256').update(`systemone\n${url}\n${request}`).digest('hex');
+
+// The end of the JSON value that starts at `at` in compact `text`.
+function valueEnd(text, at) {
+  let depth = 0;
+  for (let i = at; i < text.length; i += 1) {
+    const ch = text[i];
+    if (ch === '"') {
+      for (i += 1; text[i] !== '"'; i += 1) if (text[i] === '\\') i += 1;
+      if (depth === 0) return i + 1;
+    } else if (ch === '{' || ch === '[') depth += 1;
+    else if (ch === '}' || ch === ']') {
+      depth -= 1;
+      if (depth === 0) return i + 1;
+    } else if (depth === 0 && (ch === ',' || ch === '}')) return i;
+  }
+  return text.length;
+}
+
+// Each member of the compact JSON object at `at`, as its key and raw value
+// bytes, so an object's key order survives where JSON.parse would sort it.
+function rawMembers(text, at) {
+  const members = [];
+  let i = at + 1;
+  while (text[i] !== '}') {
+    const keyEnd = valueEnd(text, i);
+    const key = JSON.parse(text.slice(i, keyEnd));
+    const close = valueEnd(text, keyEnd + 1);
+    members.push([key, text.slice(keyEnd + 1, close)]);
+    i = text[close] === ',' ? close + 1 : close;
+  }
+  return members;
+}
+
+// Every question key of one request body, in wire order, by ADR 0111 section 2:
+// the SHA-256 of the adapter, the URL, the model, the state and one question as
+// the body carries them, joined by line feeds.
+export function questionKeys(url, request) {
+  const body = Object.fromEntries(rawMembers(request, 0));
+  const head = ['systemone', url, body.model, body.state].join('\n');
+  return rawMembers(body.questions, 0)
+    .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1)))
+    .map(([, question]) => createHash('sha256').update(`${head}\n${question}`).digest('hex'));
+}
 
 function same(what, actual, expected) {
   if (!isDeepStrictEqual(actual, expected)) {
@@ -70,7 +114,10 @@ async function check(tt, one, origin, folder) {
   }
   const success = one.expect.success;
   const served = `${base}/systemone`;
-  const renamed = new Map(one.exchanges.map(({ request }) => [digest(CANONICAL, request), digest(served, request)]));
+  // A record function's row lists question keys; find, recognize and relate keep digests until slice 4.
+  const keyed = !['find', 'recognize', 'relate'].includes(one.verb);
+  const renamed = new Map(one.exchanges.map(({ request }) => [digest(CANONICAL, request),
+    keyed ? questionKeys(served, request) : [digest(served, request)]]));
   const texts = one.exchanges.map((exchange) => exchange.evidence);
   const want = (at) => success.answers.find((answer) => answer.exchange === at);
   switch (success.kind) {
@@ -81,7 +128,7 @@ async function check(tt, one, origin, folder) {
       same('answer', details.answer, expected.answer);
       same('question_sha256', details.meta.question_sha256, expected.question_sha256);
       same('model', details.meta.model, expected.model);
-      same('requests', details.meta.requests, expected.requests.map((held) => renamed.get(held)));
+      same('requests', details.meta.requests, expected.requests.flatMap((held) => renamed.get(held)));
       for (const name of ['usage', 'requests_sent', 'cached']) same(name, details.meta[name], expected[name]);
       same('url', details.meta.url, served);
       if (one.id === '01-decide-yes-captured') {
@@ -90,7 +137,7 @@ async function check(tt, one, origin, folder) {
         const before = engine.usage().requests_sent;
         const loaded = await engine.details(tt.questionFile(file), texts[0]);
         same('named-file answer', loaded.value.answer, expected.answer);
-        same('named-file digest', loaded.value.meta.requests, expected.requests.map((held) => renamed.get(held)));
+        same('named-file digest', loaded.value.meta.requests, expected.requests.flatMap((held) => renamed.get(held)));
         same('named-file sends', engine.usage().requests_sent - before, 1);
       }
       if (success.counters) {

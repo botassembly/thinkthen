@@ -89,8 +89,8 @@ int main(int argc,char **argv) {
   require([e many:"Is it?" texts:ts lengths:ns count:3 deadline:-1 token:nil answers:a facts:&facts failure:&f]==0,"bulk");
   require(a[0].probability==0.9 && a[1].probability==0.1 && a[2].probability==0.6 && facts.records==3 && facts.requests_sent==1 && facts.cache_answers==0,"bulk order and facts"); tt_call_facts_clear(&facts);tt_failure_clear(&f); puts("OBJC_BULK_PASS");
   require([e many:"Is it?" texts:ts lengths:ns count:3 deadline:-1 token:nil answers:a facts:&facts failure:&f]==0 &&
-          facts.records==3 && facts.requests_sent==0 && facts.cache_answers==1 && a[2].probability==0.6,
-          "identical packed reply is one cache answer"); tt_call_facts_clear(&facts);tt_failure_clear(&f);
+          facts.records==3 && facts.requests_sent==0 && facts.cache_answers==3 && a[2].probability==0.6,
+          "identical bulk answers each question from the cache"); tt_call_facts_clear(&facts);tt_failure_clear(&f);
   require([e many:"Is it?" texts:NULL lengths:NULL count:0 deadline:-1 token:nil answers:NULL facts:&facts failure:&f]==0 &&
           facts.records==0 && facts.requests_sent==0 && facts.cache_answers==0 && !facts.has_model && !facts.has_input_tokens,
           "empty bulk has no model or send"); tt_call_facts_clear(&facts);tt_failure_clear(&f);

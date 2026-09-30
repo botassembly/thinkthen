@@ -5,11 +5,13 @@
 # again as a scrubbed child with a fake key. The child runs each success
 # case on its own case arm. The expected request digests were recorded
 # against the canonical address, so each is recomputed for the address the
-# backend served. It prints one line a case and a count line, and exits
+# backend served. A record function's row lists question keys by ADR 0111,
+# so its digests become the keys of the request each digest named. It prints one line a case and a count line, and exits
 # nonzero after any failure or a count that does not add up.
 #
-# One case does not run here:
+# Two cases do not run here:
 NOT_RUN = {
+  "18-annotate-two-groups" => "its recording holds one request per group, and ADR 0111 section 5 packs a record's groups into one",
   "25-defect-fault" => "injects an internal invariant failure that no outside boundary reaches; src/lib.rs tests the guard"
 }.freeze
 
@@ -21,6 +23,7 @@ require "digest"
 require "json"
 require "pathname"
 require "tmpdir"
+require_relative "keys"
 
 CASES = JSON.parse(File.read(File.expand_path("../../../conformance/cases.json", __dir__)))
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
@@ -97,9 +100,12 @@ def detailed(document, expected, base)
   answer = wanted["answer"]
   %w[probability probabilities level].each { |name| same(name, document["answer"][name], answer[name]) if answer.key?(name) }
   same("confidence", document["answer"].fetch("confidence", "absent"), answer.fetch("confidence", "absent"))
-  %w[model question_sha256 requests usage requests_sent cached].each do |name|
+  %w[model question_sha256 usage requests_sent cached].each do |name|
     same(name, document["meta"].fetch(name, "absent"), wanted.fetch(name, "absent"))
   end
+  # A keyed request stands for the list of its keys, so a row reads the flattened list.
+  requests = wanted.key?("requests") ? wanted["requests"].flat_map { |held| Array(held) } : "absent"
+  same("requests", document["meta"].fetch("requests", "absent"), requests)
   same("url", document["meta"]["url"], "#{base}/systemone")
 end
 
@@ -145,7 +151,13 @@ def check(one)
 
   base = "#{ORIGIN}/case/#{id}/v1"
   exchanges = one["exchanges"]
-  renamed = exchanges.to_h { |exchange| [digest(CANONICAL, exchange["request"]), digest("#{base}/systemone", exchange["request"])] }
+  # find, recognize and relate keep request digests until slice 4.
+  keyed = !%w[find recognize relate].include?(one["verb"])
+  renamed = exchanges.to_h do |exchange|
+    request = exchange["request"]
+    served = "#{base}/systemone"
+    [digest(CANONICAL, request), keyed ? QuestionKeys.of(served, request) : digest(served, request)]
+  end
   success = swap(one["expect"]["success"], renamed)
   texts = exchanges.map { |exchange| exchange["evidence"] }
   engine = engine(base, batch: LEGACY_BATCH_ONE.include?(id) ? 1 : nil)

@@ -1,6 +1,6 @@
 //! Recoverable native details beside the stopping public stream.
 
-use super::splits::digest;
+use super::identity::question_keys;
 use super::*;
 use thinkthen::SendBudget;
 
@@ -67,15 +67,12 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     for (actual, expected) in requests.iter().zip(expected) {
         assert_eq!(actual.body, expected.as_bytes());
     }
-    let digests = expected.map(|body| digest(listener.url(), body.as_bytes()));
-    for (place, half) in [(0, 1), (2, 2), (3, 2)] {
+    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes());
+    for place in [0, 2, 3] {
         let thinkthen::RecoverableDetails::Answered(details) = &result.value()[place] else {
             panic!("answered member")
         };
-        assert_eq!(
-            details.requests(),
-            &[digests[0].clone(), digests[half].clone()]
-        );
+        assert_eq!(details.requests(), std::slice::from_ref(&keys[place]));
     }
 
     let listener = Listener::serving(vec![
@@ -98,12 +95,14 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
         ErrorKind::Backend
     );
     assert!(rows.next().is_none());
+    // A halved request sends its first half, then its second, in one slot,
+    // by ADR 0111 section 6. The failed row stops only later requests.
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((1, 2))
+        Some((1, 3))
     );
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.requests().len(), 3);
 
     let listener = Listener::serving(vec![
         Canned::status(413, "too large"),
@@ -224,7 +223,7 @@ fn native_denied_left_fills_unsent_half_and_keeps_stopping_stream_terminal() {
 }
 
 #[test]
-fn native_denied_right_keeps_answered_left_with_both_request_receipts() {
+fn native_denied_right_keeps_answered_left_with_its_question_keys() {
     let _serial = serial();
     let texts = ["alpha", "beta", "gamma", "delta"].map(str::to_owned);
     let question = question();
@@ -250,12 +249,12 @@ fn native_denied_right_keeps_answered_left_with_both_request_receipts() {
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, SPLIT_ORIGINAL.as_bytes());
     assert_eq!(requests[1].body, SPLIT_LEFT.as_bytes());
-    let digests = [SPLIT_ORIGINAL, SPLIT_LEFT].map(|body| digest(listener.url(), body.as_bytes()));
-    for row in &result.value()[..2] {
+    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes());
+    for (row, key) in result.value()[..2].iter().zip(&keys) {
         let thinkthen::RecoverableDetails::Answered(details) = row else {
             panic!("answered left member")
         };
-        assert_eq!(details.requests(), &digests);
+        assert_eq!(details.requests(), std::slice::from_ref(key));
     }
     assert!(result.value()[2..].iter().all(|row| matches!(
         row,
@@ -274,15 +273,7 @@ fn native_denied_retry_is_usage_without_a_second_send() {
     let listener =
         Listener::answering(|_| Canned::status(503, "busy").asking("retry-after-ms", "0"))
             .expect("listener");
-    let engine = Engine::builder()
-        .base_url(listener.base())
-        .and_then(|builder| builder.api_key("sk-public-batches"))
-        .and_then(|builder| builder.throttle(THROTTLE))
-        .map(EngineBuilder::no_cache)
-        .map(|builder| builder.max_retries(1))
-        .and_then(EngineBuilder::build)
-        .expect("engine");
-    let result = engine
+    let result = retrying(listener.base())
         .details_many_recoverable_with(
             &question(),
             &["alpha".to_owned()],
@@ -304,11 +295,76 @@ fn native_denied_retry_is_usage_without_a_second_send() {
     assert_eq!(listener.requests().len(), 1);
 }
 
+/// An engine with one retry, no cache and the shared throttle.
+fn retrying(base: &str) -> Engine {
+    Engine::builder()
+        .base_url(base)
+        .and_then(|builder| builder.api_key("sk-public-batches"))
+        .and_then(|builder| builder.throttle(THROTTLE))
+        .map(EngineBuilder::no_cache)
+        .map(|builder| builder.max_retries(1))
+        .and_then(EngineBuilder::build)
+        .expect("engine")
+}
+
+/// Ticket 0240: a retry denied by the send budget fails only its own
+/// request's rows. A later request that answered first keeps its answers.
 #[test]
-fn native_recovery_keeps_closed_prefix_before_one_invalid_member() {
+fn native_denied_retry_keeps_a_later_request_answered_first() {
     let _serial = serial();
-    let listener =
-        Listener::serving(vec![Canned::ok(DECIDED), Canned::ok(DECIDED)]).expect("listener");
+    let answered = std::sync::Arc::new((std::sync::Mutex::new(false), std::sync::Condvar::new()));
+    let held = std::sync::Arc::clone(&answered);
+    let listener = Listener::answering(move |body| {
+        let (done, signal) = &*held;
+        let mut done = done.lock().expect("flag");
+        if String::from_utf8_lossy(body).contains("alpha") {
+            let _waited = signal
+                .wait_timeout_while(done, std::time::Duration::from_secs(5), |done| !*done)
+                .expect("wait");
+            return Canned::status(503, "busy").asking("retry-after-ms", "0");
+        }
+        *done = true;
+        signal.notify_all();
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.8}}}"#)
+    })
+    .expect("listener");
+    let budget = SendBudget::new();
+    let texts = ["alpha", "beta", "gamma", "delta"].map(str::to_owned);
+    let result = retrying(listener.base())
+        .details_many_recoverable_with(
+            &question(),
+            &texts,
+            CallOptions::new()
+                .batch(BatchSetting::Records(
+                    std::num::NonZeroUsize::new(2).expect("two"),
+                ))
+                .send_budget(&budget, Some(2)),
+        )
+        .expect("safe denied retry beside a later answer");
+    let answered: Vec<bool> = result
+        .value()
+        .iter()
+        .map(|row| matches!(row, thinkthen::RecoverableDetails::Answered(_)))
+        .collect();
+    assert_eq!(answered, [false, false, true, true]);
+    assert!(result.value()[..2].iter().all(|row| matches!(
+        row,
+        thinkthen::RecoverableDetails::Failed {
+            kind: ErrorKind::Usage,
+            retryable: false,
+            cause: None
+        }
+    )));
+    assert_eq!(listener.requests().len(), 2);
+}
+
+#[test]
+fn native_recovery_keeps_one_invalid_member_out_of_one_request() {
+    let _serial = serial();
+    let listener = Listener::serving(vec![Canned::ok(
+        r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#,
+    )])
+    .expect("listener");
     let engine = engine(listener.base());
     let result = engine
         .details_many_recoverable_with(
@@ -335,7 +391,7 @@ fn native_recovery_keeps_closed_prefix_before_one_invalid_member() {
     ));
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
-        (3, 2)
+        (3, 1)
     );
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.requests().len(), 1);
 }

@@ -69,9 +69,12 @@ fn typed_bulk_verbs_share_one_request_and_keep_input_order() {
 }
 
 #[test]
-fn a_later_invalid_annotation_keeps_the_valid_group_prefix() {
+fn a_later_invalid_annotation_keeps_the_valid_record_prefix() {
     let _serial = serial();
-    let listener = Listener::answering(|_| Canned::ok(DECIDED)).expect("listener");
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#)
+    })
+    .expect("listener");
     let engine = engine(listener.base());
     let set = QuestionSet::from_json(
         r#"{"version":1,"questions":{"left":{"decide":"Left?","on":"/left"},"right":{"decide":"Right?","on":"/right"}}}"#,
@@ -94,9 +97,13 @@ fn a_later_invalid_annotation_keeps_the_valid_group_prefix() {
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((1, 2))
+        Some((1, 1))
     );
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(
+        listener.requests().len(),
+        1,
+        "both groups share one request"
+    );
 }
 
 #[test]

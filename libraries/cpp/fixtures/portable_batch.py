@@ -1,6 +1,5 @@
 """Count exact shared Max bodies from the public C++ bulk call."""
 
-import collections
 import json
 import os
 from pathlib import Path
@@ -9,6 +8,7 @@ import subprocess
 import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[3] / "conformance/children"))
 from children import child_env
+from portable import one_portable_request
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[3]
@@ -21,7 +21,6 @@ if not target.is_absolute():
 BACKEND = Path(os.environ.get("THINKTHEN_BACKEND_BIN", target / "debug/conformance-backend"))
 CORPUS = FIXTURES / "portable-records.json"
 corpus = json.loads(CORPUS.read_text())
-bodies = [(FIXTURES / f"portable-{at}.request.json").read_text().removesuffix("\n") for at in range(1, 4)]
 assert corpus["schema"] == "thinkthen.portable-batch-records/1" and len(corpus["texts"]) == 5
 
 with tempfile.TemporaryDirectory(prefix="thinkthen-cpp-portable-") as scratch:
@@ -59,8 +58,9 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-cpp-portable-") as scratch:
         server.stdin.write("capture\n")
         server.stdin.flush()
         captured = json.loads(server.stdout.readline())
-        assert count == 3 and collections.Counter(captured["bodies"]) == collections.Counter(bodies), (count, captured)
-        print("cpp portable: five typed rows, three exact requests")
+        assert count == 1, (count, captured)
+        one_portable_request(captured["bodies"])
+        print("cpp portable: five typed rows, one request with the fixture questions")
     finally:
         server.stdin.close()
         server.wait(timeout=10)

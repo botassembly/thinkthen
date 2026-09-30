@@ -123,7 +123,7 @@ def inline_profile_and_record_replay_respect_caller_settings():
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         profile = json.dumps({"schema": "thinkthen.backend-profile/1", "name": "small", "max_evidence_bytes": 4})
         got = run([f"SET thinkthen_profile = '{profile}'", ASK], backend.base())
-        expect(said(got[1]), "thinkthen usage: a request passes a profile limit (retryable: no)", "inline profile")
+        expect(said(got[1]), "thinkthen usage: profile small allows at most 4 evidence bytes; this request has 10 (retryable: no)", "inline profile")
         expect(backend.count(), 0, "profile sends nothing")
         got = run([f"SET thinkthen_record = '{folder}'", ASK, "RESET thinkthen_record",
                    f"SET thinkthen_replay = '{folder}'", ASK,

@@ -475,6 +475,7 @@ version = "0.0.1"
 dependencies = [
  "arc-swap",
  "nix",
+ "rusqlite",
  "serde",
  "serde_json",
  "sha2",

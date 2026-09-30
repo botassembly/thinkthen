@@ -13,7 +13,7 @@ license = "MIT"
 publish = false
 
 [dependencies]
-thinkthen = { path = "../../crates/thinkthen", default-features = false }
+thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 
 [dev-dependencies]
 conformance-backend = { path = "../../conformance/backend" }

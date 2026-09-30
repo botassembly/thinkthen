@@ -28,6 +28,7 @@ pub(super) fn dry_run(
         inputs: inputs_cap,
         context: false,
         detailed: false,
+        continues: false,
     });
     let model = pack::model_json(backend.model().as_str())
         .map_err(|_| Failure::Defect("a model could not be written as JSON"))?;

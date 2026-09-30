@@ -82,7 +82,7 @@ pub(crate) fn on_worker<T: Send>(cancel: &Cancel<'_>, send: impl FnOnce() -> T +
             })
         });
         while let Err(RecvTimeoutError::Timeout) = finished.recv_timeout(Cancel::poll()) {
-            cancel.poll_between_sends();
+            let _stop = cancel.stop_between_sends();
         }
         worker
             .join()

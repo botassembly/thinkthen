@@ -1,4 +1,5 @@
-//! One process-scoped send count across SQL engines and retries.
+//! One process-scoped send count across SQL engines and retries. The
+//! public API re-exports [`SendBudget`].
 
 use std::sync::Arc;
 use std::sync::OnceLock;

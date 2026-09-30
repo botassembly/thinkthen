@@ -4,8 +4,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 
+use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+
+use thinkthen::{Details, Probabilities};
 
 use crate::cases::Checked;
 
@@ -62,9 +65,50 @@ pub(crate) fn digest(url: &str, request: &[u8]) -> String {
         .collect()
 }
 
-pub(crate) fn swap(value: &Value, renamed: &BTreeMap<String, String>) -> Value {
+/// Every question key of one request body, in wire order, by ADR 0111
+/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
+/// one question as the body carries them, joined by line feeds.
+pub(crate) fn keys(url: &str, body: &[u8]) -> Checked<Vec<String>> {
+    #[derive(serde::Deserialize)]
+    struct Parts<'a> {
+        #[serde(borrow)]
+        state: &'a RawValue,
+        #[serde(borrow)]
+        model: &'a RawValue,
+        #[serde(borrow)]
+        questions: BTreeMap<String, &'a RawValue>,
+    }
+    let parts: Parts<'_> = serde_json::from_slice(body).map_err(|error| error.to_string())?;
+    let mut questions = Vec::new();
+    for (name, question) in parts.questions {
+        let place: usize = name[1..]
+            .parse()
+            .map_err(|_| format!("no qN name: {name}"))?;
+        questions.push((place, question));
+    }
+    questions.sort_by_key(|(place, _)| *place);
+    Ok(questions
+        .into_iter()
+        .map(|(_, question)| {
+            let joined = [
+                "systemone",
+                url,
+                parts.model.get(),
+                parts.state.get(),
+                question.get(),
+            ]
+            .join("\n");
+            Sha256::digest(joined.as_bytes())
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect()
+        })
+        .collect())
+}
+
+pub(crate) fn swap(value: &Value, renamed: &BTreeMap<String, Value>) -> Value {
     match value {
-        Value::String(held) => json!(renamed.get(held).unwrap_or(held)),
+        Value::String(held) => renamed.get(held).cloned().unwrap_or_else(|| json!(held)),
         Value::Array(items) => items.iter().map(|item| swap(item, renamed)).collect(),
         Value::Object(fields) => fields
             .iter()
@@ -98,5 +142,71 @@ pub(crate) fn same(what: &str, actual: &Value, expected: &Value) -> Checked {
         Ok(())
     } else {
         Err(format!("{what}: got {actual}, expected {expected}"))
+    }
+}
+
+pub(crate) fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
+    let wanted = &expected["details"];
+    let answer = &wanted["answer"];
+    let probabilities = match details.probabilities() {
+        Probabilities::YesNo { yes } => ("probability", json!(yes)),
+        Probabilities::Named(named) => (
+            "probabilities",
+            named
+                .iter()
+                .map(|one| (one.name().to_owned(), json!(one.probability())))
+                .collect(),
+        ),
+    };
+    same(probabilities.0, &probabilities.1, &answer[probabilities.0])?;
+    if let Some(level) = answer.get("level") {
+        same("level", &json!(details.nearest()), level)?;
+    }
+    same("model", &json!(details.model()), &wanted["model"])?;
+    same(
+        "question_sha256",
+        &json!(details.question_sha256()),
+        &wanted["question_sha256"],
+    )?;
+    keyed_requests(details.requests(), &wanted["requests"])?;
+    same(
+        "confidence",
+        &json!(details.confidence()),
+        &answer["confidence"],
+    )?;
+    let usage = details.usage().map(|usage| {
+        json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()})
+    });
+    same("usage", &json!(usage), &wanted["usage"])?;
+    same(
+        "requests_sent",
+        &json!(details.requests_sent()),
+        &wanted["requests_sent"],
+    )?;
+    same("cached", &json!(details.cached()), &wanted["cached"])?;
+    let served = json!(format!("{base}/systemone"));
+    same("url", &json!(details.url()), &served)?;
+    let line: Value =
+        serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
+    let url = line.get("meta").and_then(|meta| meta.get("url"));
+    same("line url", url.unwrap_or(&Value::Null), &served)
+}
+
+/// A row lists its own question keys, in order, out of the keys of the
+/// requests the case recorded. A row of digests matches them exactly.
+fn keyed_requests(printed: &[String], wanted: &Value) -> Checked {
+    let recorded = wanted.as_array().map_or(&[][..], Vec::as_slice);
+    if !recorded.iter().any(Value::is_array) {
+        return same("requests", &json!(printed), wanted);
+    }
+    let mut rest = recorded
+        .iter()
+        .flat_map(|keys| keys.as_array().into_iter().flatten());
+    if !printed.is_empty() && printed.iter().all(|key| rest.any(|held| held == key)) {
+        Ok(())
+    } else {
+        Err(format!(
+            "requests: printed {printed:?}, expected keys out of {wanted}"
+        ))
     }
 }

@@ -12,7 +12,7 @@ license = "MIT"
 [dependencies]
 # `run.sh` points this at the stand-in library of tag surfaces-wave7-final
 # and turns on `standin` for the first run.
-thinkthen = { path = "../../crates/thinkthen", default-features = false }
+thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 
 [features]
 standin = []

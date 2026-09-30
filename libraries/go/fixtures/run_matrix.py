@@ -29,7 +29,9 @@ def checked(command, *, cwd, env, marker=""):
 
 
 def main():
-    assert len(EXPECTED) == len(STATES) == 39
+    # 38 bodies: the repeated first/second bulk call reads the question cache
+    # the first/second/third call wrote, by ADR 0111, so it sends nothing.
+    assert len(EXPECTED) == len(STATES) == 38
     results = []
     for mode in ("shared", "static"):
         for number in (1, 2):
@@ -68,12 +70,12 @@ def main():
                     case_env = env | ({"TT_CHECK_SCALAR_CONTRACT": "1"} if expression == r"^TestHeldScalarContract$" else {})
                     checked([GO, "test", "-race", "-count=1", "-run", expression, "."], cwd=module, env=case_env)
                 (folder / "requests.jsonl").write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in server.requests))
-                assert len(server.arrivals) == len(server.requests) == 39, (label, len(server.arrivals),
+                assert len(server.arrivals) == len(server.requests) == 38, (label, len(server.arrivals),
                     multiset(STATES) - multiset(server.arrivals), multiset(server.arrivals) - multiset(STATES))
                 assert multiset(server.arrivals) == multiset(STATES), label
                 assert multiset(server.requests) == multiset(EXPECTED), (label,
                     multiset(EXPECTED) - multiset(server.requests), multiset(server.requests) - multiset(EXPECTED))
-                assert server.attempts == 39 and server.connections >= 39, label
+                assert server.attempts == 38 and server.connections >= 38, label
                 assert server.bulk_completion == ["packed:first,second,third"], label
                 consumer = folder / "external"
                 consumer.mkdir()
@@ -85,13 +87,13 @@ def main():
                 external = checked([GO, "run", "-p", "2", "."], cwd=consumer,
                                    env=env | {"THINKTHEN_CACHE": str(folder / "external-cache")},
                                    marker="outcome=1 probability=0.9")
-                assert external.returncode == 0 and len(server.arrivals) == 40 and server.arrivals[-1] == "café", label
-                results.append({"consumer": label, "arrivals": 39, "full_body_match": True,
+                assert external.returncode == 0 and len(server.arrivals) == 39 and server.arrivals[-1] == "café", label
+                results.append({"consumer": label, "arrivals": 38, "full_body_match": True,
                                 "external_arrivals": 1, "attempts": server.attempts, "connections": server.connections})
             finally:
                 server.close()
     (OUT / "matrix.json").write_text(json.dumps(results, indent=2) + "\n")
-    # The new constructor gets its own fresh ledger, so the accepted 39-body
+    # The new constructor gets its own fresh ledger, so the accepted 38-body
     # baseline remains a useful regression check for the retained matrix.
     configured = OUT / "consumers/shared-1"
     barrier = configured / "settings-barrier"
@@ -149,7 +151,7 @@ def main():
         assert token_server.arrivals == [] and token_server.attempts == 0, token_server.arrivals
     finally:
         token_server.close()
-    print("GO_INSTALLED_MATRIX_PASS 4 consumers x 39 exact full request bodies plus one external module call each")
+    print("GO_INSTALLED_MATRIX_PASS 4 consumers x 38 exact full request bodies plus one external module call each")
     print("GO_SETTINGS_PASS one configured request; invalid object sent nothing")
     print("GO_WRONG_DETAIL_PLANT_REJECTED")
     print("GO_TOKEN_VARIABLE_PASS the variable refused the call with zero arrivals")

@@ -48,51 +48,78 @@ fn question_count(request: &Recorded) -> usize {
         .len()
 }
 
-fn digest(url: &str, body: &[u8]) -> String {
-    let mut hash = Sha256::new();
-    hash.update(b"systemone\n");
-    hash.update(url.as_bytes());
-    hash.update(b"\n");
-    hash.update(body);
-    hash.finalize()
+/// Every question key of one request body, in wire order, by ADR 0111
+/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
+/// one question as the body carries them, joined by line feeds.
+fn keys(url: &str, body: &[u8]) -> Vec<String> {
+    type Raw = std::collections::BTreeMap<String, Box<serde_json::value::RawValue>>;
+    let parts: Raw = serde_json::from_slice(body).expect("request parts");
+    let part = |name: &str| parts.get(name).expect("a request part").get();
+    let questions: Raw = serde_json::from_str(part("questions")).expect("question map");
+    let mut placed: Vec<(usize, &str)> = questions
         .iter()
-        .map(|byte| format!("{byte:02x}"))
+        .map(|(name, question)| {
+            let place = name.get(1..).and_then(|digits| digits.parse().ok());
+            (place.expect("qN"), question.get())
+        })
+        .collect();
+    placed.sort_by_key(|(place, _)| *place);
+    placed
+        .into_iter()
+        .map(|(_, question)| {
+            let joined = ["systemone", url, part("model"), part("state"), question].join("\n");
+            Sha256::digest(joined.as_bytes())
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect()
+        })
         .collect()
 }
 
+/// The questions of one body, in wire order.
+fn questions(body: &Value) -> Vec<Value> {
+    let count = body
+        .get("questions")
+        .and_then(Value::as_object)
+        .map_or(0, Map::len);
+    (1..=count)
+        .map(|place| {
+            body.pointer(&format!("/questions/q{place}"))
+                .cloned()
+                .expect("a question")
+        })
+        .collect()
+}
+
+/// The content cut is gone, by ADR 0111, so one call sends every record in
+/// one request. Each question keeps its fixture bytes, and each row names the
+/// key of its question.
 fn assert_portable_exchange(listener: &Listener, expected: [&str; 3], observed: &Seen) {
-    let literal: Vec<_> = expected
+    let fixture: Vec<Value> = expected
         .iter()
-        .map(|body| body.strip_suffix('\n').expect("fixture newline").as_bytes())
+        .flat_map(|body| questions(&serde_json::from_str(body).expect("fixture body")))
         .collect();
+    let requests = listener.requests();
+    assert_eq!(requests.len(), 1);
+    let sent = &requests.first().expect("one request").body;
+    let body: Value = serde_json::from_slice(sent).expect("request JSON");
     assert_eq!(
-        listener
-            .requests()
-            .iter()
-            .map(|request| request.body.as_slice())
-            .collect::<Vec<_>>(),
-        literal
+        questions(&body),
+        fixture,
+        "each question keeps the fixture bytes"
     );
-    let [first, second, third] = expected.map(|body| {
-        digest(
-            listener.url(),
-            body.strip_suffix('\n').expect("fixture newline").as_bytes(),
-        )
-    });
     assert_eq!(
         *observed.lock().expect("observations"),
-        [
-            (0, vec![first.clone()]),
-            (1, vec![first]),
-            (2, vec![second.clone()]),
-            (3, vec![second]),
-            (4, vec![third]),
-        ]
+        keys(listener.url(), sent)
+            .into_iter()
+            .enumerate()
+            .map(|(index, key)| (index, vec![key]))
+            .collect::<Vec<_>>()
     );
 }
 
 #[test]
-fn portable_max_cuts_cross_public_series_and_frame_calls() {
+fn portable_questions_ride_one_request_across_series_and_frame_calls() {
     let corpus: Value = serde_json::from_str(include_str!(
         "../../../../specification/fixtures/batching/portable-records.json"
     ))
@@ -169,10 +196,10 @@ fn portable_max_cuts_cross_public_series_and_frame_calls() {
             );
             (answered.facts().records(), answered.facts().requests_sent())
         };
-        assert_eq!(call, (5, 3));
+        assert_eq!(call, (5, 1));
         assert_portable_exchange(&listener, bodies, &observed);
     }
-    assert_eq!(listener.count(), 6);
+    assert_eq!(listener.count(), 2);
 }
 
 fn assert_observed(listener: &Listener, requests: &[Recorded], observed: &Seen) {
@@ -189,14 +216,13 @@ fn assert_observed(listener: &Listener, requests: &[Recorded], observed: &Seen) 
                     == Some(quoted.as_str())
             })
             .expect("quoted request");
-        digest(listener.url(), &request.body)
+        keys(listener.url(), &request.body)
     });
     let observed = observed.lock().expect("observations");
     assert_eq!(observed.len(), 3);
-    for ((index, requests), (wanted, digest)) in observed.iter().zip(actual.into_iter().enumerate())
-    {
+    for ((index, requests), (wanted, keys)) in observed.iter().zip(actual.into_iter().enumerate()) {
         assert_eq!(*index, wanted);
-        assert_eq!(requests.as_slice(), [digest]);
+        assert_eq!(*requests, keys, "a row names its question key");
     }
 }
 

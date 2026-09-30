@@ -21,6 +21,7 @@ TARGET = pathlib.Path(os.environ.get("CARGO_TARGET_DIR") or REPO / "target")
 BINARY = TARGET / "debug" / "conformance-backend"
 sys.path.insert(0, str(REPO / "conformance" / "children"))
 from children import child_env as clean_env  # noqa: E402  the shared helper, ticket 0127
+from keys import question_keys  # noqa: E402,F401  re-exported for the tests
 
 
 def pytest_sessionstart(session):
@@ -93,3 +94,18 @@ def start(code, env):
     return subprocess.Popen([sys.executable, "-c", textwrap.dedent(code)], env=env,
                             stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, text=True, bufsize=1)
+
+
+def one_request(url, bodies, fixtures):
+    """The portable fixture's questions, in order, as one request now that the
+    content cut is gone, and each question's key."""
+    import json
+    first = json.loads(fixtures[0])
+    questions = [question for fixture in fixtures
+                 for _, question in sorted(json.loads(fixture)["questions"].items(),
+                                           key=lambda item: int(item[0][1:]))]
+    assert len(bodies) == 1, len(bodies)
+    sent = json.loads(bodies[0])
+    assert (sent["state"], sent["model"]) == (first["state"], first["model"])
+    assert [sent["questions"][f"q{place}"] for place in range(1, len(sent["questions"]) + 1)] == questions
+    return question_keys(url, bodies[0])

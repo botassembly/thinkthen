@@ -27,8 +27,8 @@ const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-loopback-cases")];
 
 /// The cases the command wire does not run: five injections, three question
 /// forms, and one case holding one request per `annotate` group. ADR 0111
-/// packs the groups into one request, and the public API keeps two until
-/// slice 3.
+/// section 5 packs a record's groups into one request, so that recording no
+/// longer matches any surface.
 const IN_PROCESS: [&str; 9] = [
     "18-annotate-two-groups",
     "20-usage-fault",

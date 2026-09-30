@@ -11,6 +11,8 @@ import { join } from 'node:path';
 import { createRequire } from 'node:module';
 
 import { FAKE_KEY, ask, startBackend } from './backend.mjs';
+import { questionKeys } from './cases.mjs';
+const keysOf = (base, body) => questionKeys(`${base}/systemone`, body);
 const recordingDigest = (base, body) => createHash('sha256').update(`systemone\n${base}/systemone\n${body}`).digest('hex');
 const native = createRequire(import.meta.url)('../loader.js');
 
@@ -98,7 +100,7 @@ test('a named rich question preserves source order and its captured request', as
   assert.equal(value.source, source);
   const body = '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \\"first\\". Which?","criteria":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}}}';
   assert.deepEqual(backend.bodies, [body]);
-  assert.equal(value.request, recordingDigest(backend.base(), body));
+  assert.equal(value.request, keysOf(backend.base(), body)[0]);
 });
 
 test('named question files refuse bounded local failures before any send', async (t) => {
@@ -184,12 +186,14 @@ test('packed and batch-one calls expose exact bodies, ordered details, and final
   assert.equal(Object.keys(JSON.parse(backend.bodies[0]).questions).length, 2, 'the duplicate record shares one packed question');
   for (const body of backend.bodies.slice(1, 4)) assert.equal(Object.keys(JSON.parse(body).questions).length, 1);
   assert.notEqual(backend.bodies[0], backend.bodies[4]);
-  const digest = recordingDigest(backend.base(), backend.bodies[0]);
-  assert.deepEqual(value.packed.details.map((row) => row.requests), [[digest], [digest], [digest]]);
+  // A row lists its question key; the duplicate record shares the first one.
+  const [first, third] = keysOf(backend.base(), backend.bodies[0]);
+  assert.deepEqual(value.packed.details.map((row) => row.requests), [[first], [first], [third]]);
   assert.deepEqual(value.packed.details.map((row) => row.index), [0, 1, 2]);
 });
 
-test('portable Max content cuts reach the public TypeScript bulk call', async (t) => {
+// ADR 0111 removed the content cut, so the five fixture questions ride one request.
+test('portable fixture questions ride one request from the public TypeScript bulk call', async (t) => {
   const backend = await captured(t);
   const fixture = (name) => readFileSync(new URL(`../../../specification/fixtures/batching/${name}`, import.meta.url), 'utf8').replace(/\n$/, '');
   const corpus = JSON.parse(fixture('portable-records.json'));
@@ -198,14 +202,15 @@ test('portable Max content cuts reach the public TypeScript bulk call', async (t
     const engine = new tt.Engine({ cache: false, throttle: 1 });
     return engine.decide_many(${JSON.stringify(corpus.question)}, ${JSON.stringify(corpus.texts)});`);
   assert.equal(error, undefined, JSON.stringify(error));
-  assert.deepEqual(backend.bodies, bodies, 'literal request bytes and ordered content cuts');
+  const questions = (body) => Object.entries(JSON.parse(body).questions)
+    .sort(([a], [b]) => Number(a.slice(1)) - Number(b.slice(1))).map(([, question]) => question);
+  assert.equal(backend.bodies.length, 1);
+  assert.deepEqual(questions(backend.bodies[0]), bodies.flatMap(questions), 'each question keeps the fixture bytes');
   assert.deepEqual(value.value, Array(5).fill(true));
   assert.deepEqual(value.details.map((row) => row.index), [0, 1, 2, 3, 4]);
   assert.equal(value.facts.records, 5);
-  assert.equal(value.facts.requests_sent, 3);
-  const digests = bodies.map((body) => recordingDigest(backend.base(), body));
-  assert.deepEqual(value.details.map((row) => row.requests),
-    [[digests[0]], [digests[0]], [digests[1]], [digests[1]], [digests[2]]]);
+  assert.equal(value.facts.requests_sent, 1);
+  assert.deepEqual(value.details.map((row) => row.requests), keysOf(backend.base(), backend.bodies[0]).map((key) => [key]));
 });
 
 test('runtime-label many calls preserve ordered descriptions and bare versus null score levels', async (t) => {
@@ -238,7 +243,7 @@ test('runtime-label many calls preserve ordered descriptions and bare versus nul
   assert.deepEqual(Object.values(described.questions)[0].criteria, [{}, 'High.']);
   assert.match(backend.bodies[3], /nested/);
   assert.deepEqual(Object.values(meaning.questions)[0].criteria, { false: { nested: ['no', true] } });
-  assert.deepEqual(value.choices.details.map((row) => row.requests), [[recordingDigest(backend.base(), backend.bodies[0])], [recordingDigest(backend.base(), backend.bodies[0])]]);
+  assert.deepEqual(value.choices.details.map((row) => row.requests), keysOf(backend.base(), backend.bodies[0]).map((key) => [key]));
   assert.equal(Object.values(JSON.parse(backend.bodies[7]).questions)[0].type, 'choice');
   assert.ok(value.recognized.details.some((row) => row.requests.includes(recordingDigest(backend.base(), backend.bodies[7]))));
 });
@@ -277,7 +282,8 @@ test('each verb resolves its host shape, on the module and on an engine', async 
   ];
   assert.deepEqual(value.module, expected);
   assert.deepEqual(value.engine, expected);
-  assert.equal(await backend.count(), 27);
+  // The module's two concurrent decides ask one question; ADR 0111 coalesces only within a call, so each sends.
+  assert.equal(await backend.count(), 28);
 });
 
 // ADR 0056: a found name carries text in place of name, and relate reads it as the name.

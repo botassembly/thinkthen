@@ -251,16 +251,12 @@ fn shared_settings_reach_the_c_constructor() {
             );
         }
         if let Some(entries) = case["entries"].as_u64() {
-            let count = std::fs::read_dir(&folder)
-                .expect("folder")
-                .filter(|entry| {
-                    entry.as_ref().is_ok_and(|entry| {
-                        entry.file_name() != ".thinkthen-backend.json"
-                            && entry.path().extension().is_some_and(|ext| ext == "json")
-                    })
-                })
-                .count();
-            assert_eq!(count, entries as usize, "{id}");
+            // A recording keeps one row per question answer, by ADR 0111.
+            let store = rusqlite::Connection::open(folder.join("thinkthen.sqlite")).expect("store");
+            let count: i64 = store
+                .query_row("SELECT count(*) FROM answers", [], |row| row.get(0))
+                .expect("answer count");
+            assert_eq!(Some(count), i64::try_from(entries).ok(), "{id}");
         }
     }
 }

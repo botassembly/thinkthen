@@ -17,7 +17,7 @@ name = "thinkthen_duckdb_retired"
 crate-type = ["rlib"]
 
 [dependencies]
-thinkthen = { path = "../../crates/thinkthen", default-features = false }
+thinkthen = { path = "../../crates/thinkthen", default-features = false, features = ["bundled-sqlite"] }
 
 [profile.release]
 overflow-checks = true

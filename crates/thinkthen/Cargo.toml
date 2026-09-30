@@ -18,10 +18,14 @@ path = "src/main.rs"
 required-features = ["cli"]
 
 [features]
-default = ["cli"]
-cli = ["dep:clap", "dep:csv-core", "dep:rusqlite", "dep:signal-hook"]
+default = ["cli", "bundled-sqlite"]
+cli = ["dep:clap", "dep:csv-core", "dep:signal-hook"]
+# ADR 0111: the question store's SQLite. Every build names one. A build
+# bundles its own, except the SQLite extension, which runs on its host's.
+bundled-sqlite = ["rusqlite/bundled"]
+host-sqlite = []
 # The Rust Polars door (ticket 0130). Off by default.
-polars = ["dep:polars", "dep:polars-core", "polars/lazy"]
+polars = ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"]
 
 [dependencies]
 arc-swap = "=1.7.1"
@@ -29,8 +33,8 @@ clap = { version = "4.6.7", features = ["derive"], optional = true }
 csv-core = { version = "0.1.13", optional = true }
 polars = { version = "0.55.2", default-features = false, optional = true }
 polars-core = { version = "0.55.2", default-features = false, optional = true, features = ["dtype-struct"] }
-# ADR 0111: the question cache. Bundled, so every host runs the same SQLite.
-rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"], optional = true }
+# ADR 0111: the question cache. The bundled-sqlite or host-sqlite feature picks its SQLite.
+rusqlite = { version = "=0.40.2", default-features = false }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
 sha2 = { version = "0.11", default-features = false }

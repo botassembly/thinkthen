@@ -311,6 +311,9 @@ def check_crates() -> None:
         {"default": ["cli", "polars"]},
         {"polars": ["dep:polars", "dep:polars-core", "dep:clap"]},
         {"polars": ["dep:polars"]},
+        {"host-sqlite": ["rusqlite/bundled"]},
+        {"polars": ["dep:polars", "dep:polars-core", "polars/lazy"]},
+        {"default": ["cli"]},
     ):
         if not feature_failures({**manifest, "features": {**manifest.get("features", {}), **plant}}):
             fail("dependencies", f"the planted features {plant} are refused")
@@ -340,13 +343,15 @@ def feature_failures(manifest: dict) -> list[str]:
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "rusqlite", "signal-hook", "polars", "polars-core"}:
+    if optional != {"clap", "csv-core", "signal-hook", "polars", "polars-core"}:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
-        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:rusqlite", "dep:signal-hook"],
-        "polars": ["dep:polars", "dep:polars-core", "polars/lazy"],
+        "default": ["cli", "bundled-sqlite"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
+        "polars": ["dep:polars", "dep:polars-core", "polars/lazy", "bundled-sqlite"],
+        "bundled-sqlite": ["rusqlite/bundled"], "host-sqlite": [],
     }:
-        held.append("the default cli feature selects only command dependencies, and polars selects its two pinned crates with lazy")
+        held.append("the default cli feature selects only command dependencies, polars selects its two pinned crates with lazy and the bundled SQLite, "
+                    "bundled-sqlite bundles rusqlite's SQLite, and host-sqlite adds nothing")
     if manifest.get("dependencies", {}).get("polars", {}).get("default-features") is not False:
         held.append("polars has its default features off")
     if manifest.get("dependencies", {}).get("polars-core") != {
@@ -354,16 +359,17 @@ def feature_failures(manifest: dict) -> list[str]:
         "features": ["dtype-struct"],
     }:
         held.append("polars-core activates only dtype-struct, under the optional Polars feature")
-    # ADR 0111 section 3: the question store's SQLite, bundled so every host
-    # runs the same one, pinned exactly, and only under the command feature.
+    # ADR 0111 section 3: the question store's SQLite, pinned exactly. Every
+    # surface reaches the store, so it sits outside the command feature. The
+    # bundled-sqlite feature bundles it; the SQLite extension runs on its host's.
     rusqlite = manifest.get("dependencies", {}).get("rusqlite", {})
     if not (
         isinstance(rusqlite, dict)
         and str(rusqlite.get("version", "")).startswith("=")
         and {key: value for key, value in rusqlite.items() if key != "version"}
-        == {"default-features": False, "features": ["bundled"], "optional": True}
+        == {"default-features": False}
     ):
-        held.append("rusqlite is pinned exactly, optional, with default features off and only bundled on")
+        held.append("rusqlite is pinned exactly, not optional, with default features off and no feature of its own")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES["thinkthen"]:
         held.append("thinkthen declares the accepted development dependency set")
     return held
@@ -418,6 +424,8 @@ BINDING_PLANTS = (
     ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),
     ("default features", "Cargo.toml", lambda text: text.replace(
         "default-features = false", "default-features = true")),
+    ("host SQLite outside the SQLite extension", "Cargo.toml", lambda text: text.replace(
+        '"bundled-sqlite"', '"host-sqlite"')),
     ("dependency on another binding", "Cargo.toml", lambda text: text.replace(
         "[dependencies]\n", '[dependencies]\nthinkthen-c = { path = "../c" }\n')),
     ("renamed thinkthen with default features", "Cargo.toml", lambda text: text.replace(
@@ -467,11 +475,13 @@ def binding_files(name: str, crate: str) -> dict[str, str]:
     return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny.is_file() else files
 
 
-def lock_tree(lock: dict) -> set[tuple[str, str]]:
-    """The name and version of every package in thinkthen's resolved tree.
+def lock_tree(lock: dict, roots: tuple[str, ...] = ("thinkthen",),
+              skip: frozenset[tuple[str, str]] = frozenset()) -> set[tuple[str, str]]:
+    """The name and version of every package in the resolved tree of `roots`.
 
-    The root lock's tree also holds thinkthen's development dependencies, so it
-    is a superset of the normal tree a binding resolves.
+    The walk does not enter a package in `skip`. The root lock's tree also holds
+    thinkthen's development dependencies, so it is a superset of the normal
+    tree a binding resolves.
     """
     packages = lock.get("package", [])
 
@@ -481,10 +491,10 @@ def lock_tree(lock: dict) -> set[tuple[str, str]]:
                 if package["name"] == name and version[:1] in ([], [package["version"]])]
 
     reached: set[tuple[str, str]] = set()
-    waiting = named("thinkthen")
+    waiting = [found for root in roots for found in named(root)]
     while waiting:
         pair = waiting.pop()
-        if pair not in reached:
+        if pair not in reached and pair not in skip:
             reached.add(pair)
             package = next(package for package in packages if (package["name"], package["version"]) == pair)
             waiting += [found for spec in package.get("dependencies", []) for found in named(spec)]
@@ -550,10 +560,14 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
                      else dependency, specification) for table in tables
                     for kind in ("dependencies", "dev-dependencies", "build-dependencies", "patch")
                     for dependency, specification in table.get(kind, {}).items()]
+    # ADR 0111: the SQLite extension runs the question store on its host's
+    # SQLite, and every other binding bundles its own.
+    sqlite = "host-sqlite" if name == "databases/sqlite" else "bundled-sqlite"
     if [(kind, specification) for kind, dependency, specification in dependencies
             if dependency == "thinkthen"] != [("dependencies", {
-                "path": posixpath.relpath("crates/thinkthen", crate), "default-features": False})]:
-        held.append(f"{name} depends on thinkthen once, by path, with default features off")
+                "path": posixpath.relpath("crates/thinkthen", crate), "default-features": False,
+                "features": [sqlite]})]:
+        held.append(f"{name} depends on thinkthen once, by path, with default features off and only {sqlite} on")
     for _, dependency, specification in dependencies:
         path = specification.get("path") if isinstance(specification, dict) else None
         reached = posixpath.relpath(posixpath.normpath(posixpath.join(REPO.as_posix(), crate, path)),
@@ -568,7 +582,19 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
     if manifest.get("profile", {}).get("release") != ACCEPTED_RELEASE_PROFILE:
         held.append(f"{name} copies the root release profile")
     ours, theirs = lock_tree(lock), lock_tree(tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8")))
-    drift = ours - theirs
+    # A crate the binding pins to the root's exact version, such as the SQLite
+    # extension's rusqlite, resolves once with the binding's features. A
+    # package beneath it whose name the root tree never holds is the binding's
+    # own, and so is whatever only such packages reach. A package the root tree
+    # names keeps the root's version, so a changed libsqlite3-sys is drift.
+    pinned = {(dependency, specification["version"][1:]) for kind, dependency, specification in dependencies
+              if kind == "dependencies" and isinstance(specification, dict)
+              and str(specification.get("version", "")).startswith("=")}
+    shared = {pair for pair in pinned if pair in theirs}
+    named = {name for name, _ in theirs}
+    own = frozenset(pair for pair in lock_tree(lock, tuple(f"{name} {version}" for name, version in sorted(shared)))
+                    if pair[0] not in named)
+    drift = lock_tree(lock, skip=own) - theirs
     if not ours or drift:
         held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
                     f"{sorted(drift) or 'thinkthen is absent'}")
@@ -819,6 +845,28 @@ def check_bindings() -> None:
         planted = {**base, relative: plant(base.get(relative, ""))}
         if planted[relative] == base.get(relative) or not binding_failures(BINDING_PLANT_BASE, planted):
             fail("binding", f"the planted {label} is refused")
+    sqlite = "databases/sqlite"
+    if sqlite in crates or (REPO / sqlite / "Cargo.lock").is_file():
+        files = binding_files(sqlite, crates.get(sqlite, sqlite))
+        bundled = files["Cargo.toml"].replace('"host-sqlite"', '"bundled-sqlite"')
+        if bundled == files["Cargo.toml"] or not binding_failures(sqlite, {**files, "Cargo.toml": bundled}):
+            fail("binding", "the SQLite extension with a bundled SQLite beside its host's is refused")
+        lock = files["Cargo.lock"]
+        drifted = [lock.replace(f'name = "{name}"\nversion = "{version}"', f'name = "{name}"\nversion = "{version}9"', 1)
+                   for name, version in (("libsqlite3-sys", "0.38.2"), ("cc", "1.4.7"))]
+        extension_only = [
+            lock.replace('name = "hashlink"\nversion = "0.12.2"', 'name = "hashlink"\nversion = "0.12.29"', 1),
+            lock.replace(' "hashlink",\n "libsqlite3-sys",', ' "hashlink",\n "libsqlite3-sys",\n "planted-only",', 1)
+            + '\n[[package]]\nname = "planted-only"\nversion = "1.0.0"\n',
+        ]
+        drift = "databases/sqlite/Cargo.lock resolves thinkthen's tree"
+        if (any(text == lock for text in [*drifted, *extension_only])
+                or not all(any(drift in held for held in binding_failures(sqlite, {**files, "Cargo.lock": text}))
+                           for text in drifted)
+                or any(any(drift in held for held in binding_failures(sqlite, {**files, "Cargo.lock": text}))
+                       for text in extension_only)):
+            fail("binding", "a planted libsqlite3-sys or cc version beneath rusqlite is drift; "
+                            "a changed hashlink or a package only the extension adds is not")
 
 
 # Ticket 0130: the Rust Polars door is the `polars` feature of `thinkthen`. Its
@@ -1094,19 +1142,19 @@ def token_path_at(tokens: list[str], place: int, path: tuple[str, ...]) -> bool:
 CORE_REFUSED_ROOTS = {"engine", "cli", "public"}
 
 
-def direct_root_references(tokens: list[str]) -> set[str]:
+def direct_root_references(tokens: list[str], refused: set[str] = CORE_REFUSED_ROOTS) -> set[str]:
     """Find an outer module reached directly from crate or an ancestor."""
     held = set()
     for place, token in enumerate(tokens):
         if token == "crate" and place + 2 < len(tokens) and tokens[place + 1] == "::":
-            if tokens[place + 2] in CORE_REFUSED_ROOTS:
+            if tokens[place + 2] in refused:
                 held.add(tokens[place + 2])
         if token != "super":
             continue
         end = place
         while end + 2 < len(tokens) and tokens[end + 1:end + 3] == ["::", "super"]:
             end += 2
-        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in CORE_REFUSED_ROOTS:
+        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in refused:
             held.add(tokens[end + 2])
     return held
 
@@ -1121,32 +1169,76 @@ def imports_outer_glob(path: tuple[str, ...]) -> bool:
     return len(path) > 1 and path[-1] == "*" and path[0] in {"crate", "super"}
 
 
-def core_policy_failures(text: str) -> list[str]:
-    tokens = rust_tokens(text)
-    held = []
-    for path in CORE_PROHIBITED_PATHS:
-        if any(token_path_at(tokens, place, path) for place in range(len(tokens))):
-            held.append("::".join(path))
-    for module in direct_root_references(tokens):
-        held.append(f"reverse reference to {module}")
-    imports = rust_use_paths(tokens)
-    for path, alias in imports:
-        if aliases_outer_root(path, alias):
-            held.append("alias of the crate root or an ancestor")
-        if imports_outer_glob(path):
-            held.append("glob import from the crate root or an ancestor")
-        if path[:1] == ("crate",) and len(path) > 1 and path[1] in CORE_REFUSED_ROOTS:
+def reverse_failures(tokens: list[str], refused: set[str]) -> list[str]:
+    """Name every reference or import that reaches a refused outer module."""
+    held = [f"reverse reference to {module}" for module in direct_root_references(tokens, refused)]
+    for path, _ in rust_use_paths(tokens):
+        if path[:1] == ("crate",) and len(path) > 1 and path[1] in refused:
             held.append(f"reverse import of {path[1]}")
         if path and set(path) == {"super"}:
             continue
         supers = 0
         while supers < len(path) and path[supers] == "super":
             supers += 1
-        if supers and supers < len(path) and path[supers] in CORE_REFUSED_ROOTS:
+        if supers and supers < len(path) and path[supers] in refused:
             held.append(f"reverse import of {path[supers]}")
+    return held
+
+
+def core_policy_failures(text: str) -> list[str]:
+    tokens = rust_tokens(text)
+    held = []
+    for path in CORE_PROHIBITED_PATHS:
+        if any(token_path_at(tokens, place, path) for place in range(len(tokens))):
+            held.append("::".join(path))
+    held.extend(reverse_failures(tokens, CORE_REFUSED_ROOTS))
+    for path, alias in rust_use_paths(tokens):
+        if aliases_outer_root(path, alias):
+            held.append("alias of the crate root or an ancestor")
+        if imports_outer_glob(path):
+            held.append("glob import from the crate root or an ancestor")
     if any(root == "self" and alias is not None for root, alias in extern_crates(tokens)):
         held.append("alias of the crate root or an ancestor")
     return sorted(set(held))
+
+
+# ADR 0111 section 10: the engine names nothing from the public API, which
+# sits on top of it. The public API re-exports what callers need.
+ENGINE_REFUSED_ROOTS = {"public"}
+
+
+def engine_policy_failures(text: str) -> list[str]:
+    tokens = rust_tokens(text)
+    held = reverse_failures(tokens, ENGINE_REFUSED_ROOTS)
+    # An alias of the crate root or an ancestor can later name public unseen.
+    if any(aliases_outer_root(path, alias) for path, alias in rust_use_paths(tokens)) or any(
+            root == "self" and alias is not None for root, alias in extern_crates(tokens)):
+        held.append("alias of the crate root or an ancestor")
+    return sorted(set(held))
+
+
+def check_engine_policy() -> None:
+    engine = REPO / "crates/thinkthen/src/engine"
+    for source in sorted(engine.rglob("*.rs")):
+        held = engine_policy_failures(source.read_text(encoding="utf-8"))
+        if held:
+            fail("engine", f"{source.relative_to(REPO)} reaches the public API: {held}")
+    plants = (
+        ("use crate::public::SendBudget;", ["reverse import of public", "reverse reference to public"]),
+        ("crate::public::process_budget()", ["reverse reference to public"]),
+        ("use super::super::public::Error;", ["reverse import of public", "reverse reference to public"]),
+        ("use crate::{core, public::Error};", ["reverse import of public"]),
+        ("use crate::public as p;", ["reverse import of public", "reverse reference to public"]),
+        ("use crate as c; c::public::Error::new();", ["alias of the crate root or an ancestor"]),
+        ("use super::super as up;", ["alias of the crate root or an ancestor"]),
+        ("extern crate self as root;", ["alias of the crate root or an ancestor"]),
+        ("// crate::public::Error", []),
+        ('const TEXT: &str = "crate::public::Error";', []),
+        ("use crate::core::Answer; crate::engine::budget::SendBudget::new();", []),
+    )
+    for text, expected in plants:
+        if engine_policy_failures(text) != sorted(expected):
+            fail("engine", f"the planted engine reference {text!r} is refused for its cause")
 
 
 def dependency_roots(dependencies: dict) -> dict[str, str]:
@@ -1966,7 +2058,7 @@ def library_direct(root: pathlib.Path, frozen: str) -> set[str] | str:
     """Name the library's direct normal and build dependencies on every target."""
     result = subprocess.run(
         ["cargo", "tree", frozen, "-p", "thinkthen", "-e", "normal,build", "--target", "all",
-         "--no-default-features", "--depth", "1", "--prefix", "none"],
+         "--no-default-features", "--features", "bundled-sqlite", "--depth", "1", "--prefix", "none"],
         cwd=root, check=False, capture_output=True, text=True,
     )
     if result.returncode != 0:
@@ -2114,6 +2206,7 @@ def main() -> int:
     check_postgresql_binding()
     check_crate_roots()
     check_core_policy()
+    check_engine_policy()
     check_catalog_policy()
     check_measure_policy()
     check_doors()

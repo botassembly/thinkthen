@@ -1,32 +1,41 @@
 #!/usr/bin/env python3
-"""Inspect the installed extension's exact saved loopback requests."""
+"""Inspect the installed extension's saved loopback answers.
 
-import hashlib
+A recording keeps one store row per question (ADR 0111 section 3), so each
+proof compares the stored question keys with the keys of the bodies the
+packing would send. The send counts in check.sh pin the packing itself.
+"""
+
 import json
 import pathlib
+import sqlite3
 import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformance" / "children"))
+from portable import question_keys  # noqa: E402  the ADR 0111 question key
 
 
 QUESTION = "Is this a complaint?"
 MODEL = "jev-1.13.0"
 
 
-def entries(folder: str) -> list[tuple[dict, str]]:
-    found = []
-    for path in pathlib.Path(folder).rglob("*.json"):
-        if path.name == ".thinkthen-backend.json":
-            continue
-        source = path.read_text()
-        start = source.index('"request":') + len('"request":')
-        start += len(source[start:]) - len(source[start:].lstrip())
-        request, length = json.JSONDecoder().raw_decode(source[start:])
-        raw = source[start:start + length]
-        entry = json.loads(source)
-        digest = hashlib.sha256(("systemone\n" + entry["url"] + "\n" + raw).encode()).hexdigest()
-        assert path.stem == digest, (path.name, digest)
-        assert entry["request"] == request
-        found.append((request, raw))
+def entries(folder: str) -> list[tuple[str, str]]:
+    """Each stored answer's URL and hex question key."""
+    store = pathlib.Path(folder) / "thinkthen.sqlite"
+    if not store.is_file():
+        return []
+    with sqlite3.connect(store) as connection:
+        found = connection.execute("SELECT url, lower(hex(key)) FROM answers").fetchall()
+    connection.close()
     return found
+
+
+def keys(saved: list[tuple[str, str]], bodies: list[str]) -> set[str]:
+    """The question keys of these bodies at the URL the store names."""
+    urls = {url for url, _ in saved}
+    assert len(urls) <= 1, urls
+    url = next(iter(urls), "")
+    return {key for body in bodies for key in question_keys(url, body)}
 
 
 def body(records: list[str], shared: str | None = None) -> str:
@@ -41,24 +50,19 @@ def body(records: list[str], shared: str | None = None) -> str:
 def main() -> None:
     mode, folder = sys.argv[1:]
     saved = entries(folder)
-    if mode == "packed":
-        expected = {body(["b", "a"]), body(["c", "d"])}
-        assert len(saved) == 2 and {raw for _, raw in saved} == expected, saved
-    elif mode == "max":
-        expected = {body(["b", "a", "c", "d"])}
-        assert len(saved) == 1 and {raw for _, raw in saved} == expected, saved
-    elif mode == "singleton":
-        expected = {body([record]) for record in ["b", "a", "c", "d"]}
-        assert len(saved) == 4 and {raw for _, raw in saved} == expected, saved
+    stored = {key for _, key in saved}
+    assert len(stored) == len(saved), saved
+    if mode in ("packed", "max", "singleton"):
+        # Every packing asks the same four questions, so it stores the same keys.
+        assert len(saved) == 4 and stored == keys(saved, [body(["b", "a", "c", "d"])]), saved
     elif mode == "one_of_packed":
-        expected = {body(["b", "a"]), body(["c", "d"])}
-        assert len(saved) == 1 and saved[0][1] in expected, saved
+        options = [keys(saved, [body(["b", "a"])]), keys(saved, [body(["c", "d"])])]
+        assert len(saved) == 2 and stored in options, saved
     elif mode == "context":
-        expected = {body(["b", "a"], "shared reference")}
-        assert len(saved) == 1 and {raw for _, raw in saved} == expected, saved
+        assert len(saved) == 2 and stored == keys(saved, [body(["b", "a"], "shared reference")]), saved
     elif mode == "warm":
-        expected = {body(["b", "a"], "first"), body(["c", "d"], "second")}
-        assert len(saved) == 2 and {raw for _, raw in saved} == expected, saved
+        wanted = keys(saved, [body(["b", "a"], "first"), body(["c", "d"], "second")])
+        assert len(saved) == 4 and stored == wanted, saved
     else:
         raise ValueError(f"unknown batching proof: {mode}")
     print(f"pass {mode}")
