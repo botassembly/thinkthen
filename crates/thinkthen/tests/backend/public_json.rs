@@ -158,8 +158,20 @@ fn details(
     let details = details.map_err(|error| error.to_string())?;
     same(
         details.value().to_json() + "\n",
-        &command(case, path, base, text, true)?,
+        &without_attempts(&command(case, path, base, text, true)?),
     )
+}
+
+/// The command's `meta.attempts` is a command display; `Details` has none.
+fn without_attempts(line: &str) -> String {
+    let marker = r#","attempts":["#;
+    let Some(start) = line.find(marker) else {
+        return line.to_owned();
+    };
+    let end = line[start..]
+        .find(']')
+        .map_or(line.len(), |end| start + end + 1);
+    format!("{}{}", &line[..start], &line[end..])
 }
 
 /// The command's standard output for one input.

@@ -42,7 +42,7 @@ if sed '/^[[:space:]]*#/d' build.sh | grep -nE '\.(so|bundle|dylib)([^[:alnum:]]
   fail "a script above names a host library file, edits in place, or calls ss"
 fi
 guards=$(cat src/*.rs | grep -o 'catch_unwind(' | wc -l)
-[ "$guards" -eq 1 ] || fail "src holds $guards catch_unwind sites; the binding has one guard"
+[ "$guards" -eq 0 ] || fail "src holds $guards catch_unwind sites; the binding guards only through thinkthen::contained"
 # R4-2 closed by construction: the wait, the unblock function, the handoff,
 # and the worker never touch Ruby. lib.rs and call.rs hold the worker and
 # the handoff, and they name no Ruby crate.

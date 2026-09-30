@@ -55,7 +55,7 @@ fn a_pick_plans_the_options_as_criteria_and_names_the_key_variable() {
     let output = verb("choose", &TEAMS, &["--plan"]).expect("the compiled binary runs");
 
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        plan_request(&output),
         concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","#,
@@ -75,7 +75,7 @@ fn a_placement_plans_the_levels_as_an_ordered_list() {
     let output = verb("score", &LEVELS, &["--plan"]).expect("the compiled binary runs");
 
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        plan_request(&output),
         concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","#,
@@ -203,7 +203,7 @@ fn the_help_of_each_verb_carries_the_advice_its_page_names() {
         "not_stated",
         "contradicted",
         "supported",
-        "case $rc",
+        "case $team_code",
         "Exit 0 is an option and exit 3 is not sure.",
         "never exits 1",
         "--raw is available for a single text, --lines, and --jsonl.",
@@ -248,4 +248,14 @@ fn a_question_that_is_blank_and_evidence_that_is_blank_are_both_refused() {
     )
     .expect("the compiled binary runs");
     assert_eq!(empty.status.code(), Some(2));
+}
+
+/// The request line of a plan; the records line after it is pinned in `spec/decide.md`.
+fn plan_request(output: &Output) -> String {
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    stdout
+        .split_inclusive('\n')
+        .next()
+        .unwrap_or_default()
+        .to_owned()
 }

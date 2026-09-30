@@ -1,5 +1,5 @@
 #!/bin/sh
-# The full functional checkpoint, separate from routine and stress checks.
+# The full functional checkpoint: `test`, then every surface on all shared cases.
 set -eu
 case ${1:-} in
 --list)
@@ -12,47 +12,17 @@ case ${1:-} in
         exit 1
     }
     echo 'THINKTHEN_CONFORMANCE_IDS is unset; canonical cases: 54'
-    echo 'cargo test --locked --offline --workspace --all-targets (ignored stress excluded)'
-    echo 'external consumer full public tests; surfaces --full-functional (all 54 shared cases)'
+    echo 'sdlc/scripts/test (the whole workspace suite, doctests, consumer, self-tests)'
+    echo 'surfaces --full-functional (all 54 shared cases)'
     exit 0 ;;
 --run) ;;
 *) echo 'usage: sdlc/scripts/test-full-cases --list|--run' >&2; exit 2 ;;
 esac
-if [ "$(uname -s)" = Linux ]; then
-    if [ "$(id -ru)" -eq 0 ]; then
-        echo 'test-full-cases: RLIMIT_NPROC does not bind real UID 0; run --run as a nonroot user' >&2
-        exit 2
-    fi
-    if ! command -v prlimit >/dev/null 2>&1; then
-        echo 'test-full-cases: prlimit is required for the Linux RLIMIT_NPROC case' >&2
-        exit 2
-    fi
-    caps=$(awk '$1 == "CapEff:" { print $2 }' /proc/self/status 2>/dev/null) || {
-        echo 'test-full-cases: cannot read Linux effective capabilities for RLIMIT_NPROC' >&2
-        exit 2
-    }
-    case $caps in
-    ????????????????)
-        case $caps in *[!0123456789abcdefABCDEF]*) caps= ;; esac ;;
-    *) caps= ;;
-    esac
-    if [ -z "$caps" ]; then
-        echo 'test-full-cases: cannot read Linux effective capabilities for RLIMIT_NPROC' >&2
-        exit 2
-    fi
-    cap_low=${caps#????????}
-    if [ "$((0x$cap_low & 0x01200000))" -ne 0 ]; then
-        echo 'test-full-cases: RLIMIT_NPROC does not bind CAP_SYS_ADMIN or CAP_SYS_RESOURCE; run --run without these capabilities' >&2
-        exit 2
-    fi
-fi
 . "$(dirname -- "$0")/heavy-lock"
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+sh "$REPO/sdlc/scripts/test"
 cd -- "$REPO"
 THINKTHEN_TEST_PROFILE=full
 export THINKTHEN_TEST_PROFILE
 unset THINKTHEN_CONFORMANCE_IDS
-cargo test --locked --offline --workspace --all-targets
-cargo test --locked --offline --manifest-path conformance/consumer/Cargo.toml \
-    --target-dir target/consumer
 sh sdlc/scripts/surfaces --full-functional

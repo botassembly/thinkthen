@@ -11,15 +11,15 @@
 //! completion receipt when an exception can carry one.
 
 mod call;
+#[cfg(test)]
 mod diagnostics;
 mod ffi;
 mod result;
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
-use thinkthen::{BatchSetting, CancelToken, Engine, EngineBuilder, ErrorKind, Facts};
+use thinkthen::{BatchSetting, CancelToken, Engine, EngineBuilder, ErrorKind, Facts, contained};
 
 use crate::call::Ask;
 use crate::result::{Completed, Detail};
@@ -84,15 +84,11 @@ const fn class_name(kind: ErrorKind) -> &'static str {
 /// The one panic guard. A panic in the binding's own code becomes the
 /// defect kind. `thinkthen` already stops engine panics at its doors.
 fn guarded<T>(body: impl FnOnce() -> Result<T, Fault>) -> Result<T, Fault> {
-    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
-        Ok(value) => value,
-        Err(payload) => {
-            std::mem::forget(payload);
-            Err(Fault::of(
-                ErrorKind::Defect,
-                "defect: the Ruby binding panicked",
-            ))
-        }
+    contained(body).unwrap_or_else(|| {
+        Err(Fault::of(
+            ErrorKind::Defect,
+            "defect: the Ruby binding panicked",
+        ))
     })
 }
 

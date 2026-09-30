@@ -86,7 +86,9 @@ fn relate_reads_the_names_recognize_found() {
         .expect("binary runs");
         let error = String::from_utf8_lossy(&output.stderr);
         assert!(output.status.success(), "{error}");
-        serde_json::from_slice::<serde_json::Value>(&output.stdout).expect("json")
+        // A plan's second line counts records; the first holds the request.
+        let first = output.stdout.split(|byte| *byte == b'\n').next();
+        serde_json::from_slice::<serde_json::Value>(first.unwrap_or_default()).expect("json")
     };
     let found = thinkthen(&format!("recognize {recognize}"), "text");
     let mut lines: Vec<String> = found["entities"]
@@ -105,7 +107,8 @@ fn relate_reads_the_names_recognize_found() {
         .iter()
         .filter_map(|one| one["name"].as_str())
         .collect();
-    let want = ["Maria Chen", "Northwind Freight", "Chicago", "Ana Lima"];
+    // The state holds only names whose kinds a rule names, so the place stays out.
+    let want = ["Maria Chen", "Northwind Freight", "Ana Lima"];
     assert_eq!(names, want);
     std::fs::remove_dir_all(&folder).expect("cleanup");
 }

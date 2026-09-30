@@ -18,7 +18,7 @@ use rusqlite::vtab::{
 
 use crate::many::{ChooseMany, DecideMany, ScoreMany, Store, TagMany};
 use crate::tables::{self, Recognizer, Relater, Table};
-use crate::{budget, guard, in_sqlite_diagnostics, scalars};
+use crate::{budget, guard, scalars};
 
 /// The host's `sqlite3_api_routines`, extended past the 3.34 bindings of
 /// `libsqlite3-sys` to the `is_interrupted` field SQLite 3.41 added. Every
@@ -163,19 +163,17 @@ pub unsafe extern "C" fn sqlite3_thinkthen_init(
     api: *mut ffi::sqlite3_api_routines,
 ) -> c_int {
     API_TABLE.store(api, Ordering::Release);
-    in_sqlite_diagnostics(|| {
-        let loaded = guard("load", || {
-            // SAFETY: the host's pointers, passed on as `extension_init2` asks.
-            Ok(unsafe { Connection::extension_init2(db, message, api, init) })
-        });
-        match loaded {
-            Ok(code) => code,
-            Err(failure) => {
-                // SAFETY: SQLite owns this message and frees the allocation.
-                unsafe { rusqlite::to_sqlite_error(&rusqlite::Error::from(failure), message) }
-            }
+    let loaded = guard("load", || {
+        // SAFETY: the host's pointers, passed on as `extension_init2` asks.
+        Ok(unsafe { Connection::extension_init2(db, message, api, init) })
+    });
+    match loaded {
+        Ok(code) => code,
+        Err(failure) => {
+            // SAFETY: SQLite owns this message and frees the allocation.
+            unsafe { rusqlite::to_sqlite_error(&rusqlite::Error::from(failure), message) }
         }
-    })
+    }
 }
 
 const RECOGNIZE: Module<'static, Tab<Recognizer>> = Module::eponymous_only_module();

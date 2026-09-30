@@ -26,7 +26,7 @@ const CASES: &str = include_str!("../../../../cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
 const SKIPPED: [&str; 1] = ["25-defect-fault"];
 
-/// The saved filter/rank exchanges contain one request body per record.
+/// The saved many-record exchanges contain one request body per record.
 fn singleton_requests<'a>() -> CallOptions<'a> {
     CallOptions::new().batch(BatchSetting::Records(NonZeroUsize::MIN))
 }
@@ -259,7 +259,9 @@ fn loaded(
             same("indexes", &kept, &success["operation"]["indexes"])
         }
         Some("decide_many") => {
-            let rows: Result<Vec<_>, _> = engine.decide_many(&asked, texts.to_vec()).collect();
+            let rows: Result<Vec<_>, _> = engine
+                .decide_many_with(&asked, texts.to_vec(), singleton_requests())
+                .collect();
             let rows = rows.map_err(said)?;
             let bare = rows.iter().map(|row| json!(decision(*row.value())));
             let expected = success["answers"].as_array().into_iter().flatten();
@@ -375,7 +377,9 @@ fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
 /// With `one`, the case names one record, and every answer reads it.
 fn annotated(engine: &Engine, set: &str, texts: &[&str], success: &Value, one: bool) -> Checked {
     let set = QuestionSet::from_json(set).map_err(said)?;
-    let records: Result<Vec<_>, _> = engine.annotate(&set, texts.to_vec()).collect();
+    let records: Result<Vec<_>, _> = engine
+        .annotate_with(&set, texts.to_vec(), singleton_requests())
+        .collect();
     let records = records.map_err(said)?;
     let mut failed = 0;
     for expected in success["answers"].as_array().into_iter().flatten() {

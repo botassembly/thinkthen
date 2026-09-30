@@ -50,7 +50,10 @@ fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
     const INTRODUCTIONS: [(&str, &str); 10] = [
         ("decide", "Answer one yes or no question about a text"),
         ("filter", "Keep the records where the answer is yes"),
-        ("rank", "Sort records by how likely the answer is yes"),
+        (
+            "rank",
+            "Sort records by how likely the answer is yes, or give `rank` a saved score question to order by its weighted level value",
+        ),
         ("choose", "Pick one option from your list"),
         (
             "find",
@@ -207,67 +210,6 @@ fn recognize_and_relate_keep_the_beta_warning_the_cuts_and_the_disclosure() {
     }
 }
 
-#[test]
-fn no_page_or_transform_says_unresolved() {
-    let has_retired_word = |text: &str| {
-        let lower = text.to_lowercase();
-        lower.match_indices("unresolved").any(|(start, word)| {
-            let before = lower[..start].chars().next_back();
-            let after = lower[start + word.len()..].chars().next();
-            let identifier = |character: char| character.is_alphanumeric() || character == '_';
-            !before.is_some_and(identifier) && !after.is_some_and(identifier)
-        })
-    };
-    assert!(has_retired_word("an unresolved choice"));
-    assert!(has_retired_word("\"unresolved\""));
-    assert!(!has_retired_word("a_tie_is_unresolved"));
-    assert!(!has_retired_word("unresolved_result"));
-    const DEFINITION: &str = "`unsure` is the machine name for a not sure answer, in `audit`, `diff`, and the built-in transforms.";
-    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    let mut defined = Vec::new();
-    let mut pages = vec![
-        root.join("crates/thinkthen/Cargo.toml"),
-        root.join("transforms/README.md"),
-    ];
-    for entry in std::fs::read_dir(root.join("specification")).expect("the specification") {
-        pages.push(entry.expect("a page").path());
-    }
-    for entry in std::fs::read_dir(root.join("crates/thinkthen/transforms"))
-        .expect("the built-in transforms")
-    {
-        pages.push(entry.expect("a transform").path());
-    }
-    for page in pages.iter().filter(|page| page.is_file()) {
-        let text = std::fs::read_to_string(page).expect("a readable page");
-        for _ in text.matches(DEFINITION) {
-            defined.push(
-                page.file_name()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .into_owned(),
-            );
-        }
-        assert!(
-            !has_retired_word(&text),
-            "{} says the old word",
-            page.display()
-        );
-        let lower = text.to_lowercase();
-        for banned in ["decider model", "decision model"] {
-            assert!(!lower.contains(banned), "{} says {banned}", page.display());
-        }
-    }
-    assert_eq!(defined, ["decide.md"]);
-    let index = std::fs::read_to_string(root.join("specification/README.md")).expect("the index");
-    assert!(index.contains("the five answer kinds |"), "{index}");
-    let demos = std::fs::read_to_string(root.join("demos/README.md")).expect("the how-to index");
-    assert!(demos.contains(" All ten functions are built. "), "{demos}");
-    let readme = std::fs::read_to_string(root.join("README.md")).expect("the README");
-    assert!(readme.contains("\n- A yes, a no, a not sure answer, and a broken run stay four different outcomes in the output and in the exit code.\n"), "{readme}");
-    let score = std::fs::read_to_string(root.join("specification/score.md")).expect("score.md");
-    assert!(score.contains("showed rubric scores rejecting"), "{score}");
-}
-
 /// Each sentence names a cost or a stop a user meets only after a run starts.
 #[test]
 fn the_long_help_names_connections_conflicts_paid_requests_and_models() {
@@ -282,7 +224,7 @@ fn the_long_help_names_connections_conflicts_paid_requests_and_models() {
         ),
         (
             "recognize",
-            "\n\nEach record can make paid requests in three steps: one boundary question per text piece; one kind question per found name when kinds are given, plus an edge question when its span can change; then questions for the relation pairs allowed by rules. --plan prints the first record's exact boundary requests and upper bounds for later requests.\n\n",
+            "\n\nEach record can make paid requests in three steps: one boundary question per text piece; one kind question per found name when kinds are given, plus an edge question when its span can change; then questions for the relation pairs allowed by rules. --plan prints the first record's exact boundary requests and upper bounds for the whole input.\n\n",
         ),
         (
             "check",

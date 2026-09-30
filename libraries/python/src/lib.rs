@@ -18,13 +18,11 @@ mod stream;
 mod tally;
 mod worker;
 
-use std::panic::{AssertUnwindSafe, catch_unwind};
-
 use pyo3::exceptions::{PyException, PyKeyboardInterrupt};
 use pyo3::prelude::*;
 use pyo3::sync::PyOnceLock;
 use pyo3::types::{PyDict, PyTuple, PyType};
-use thinkthen::{Error, ErrorKind};
+use thinkthen::{Error, ErrorKind, contained};
 
 pyo3::create_exception!(
     thinkthen._thinkthen,
@@ -149,24 +147,10 @@ pub(crate) fn defect(py: Python<'_>, message: &str) -> PyErr {
     raise(py, ErrorKind::Defect, &format!("defect: {message}"), false)
 }
 
-/// Run a closure and report a panic as `None`: the binding's one
-/// `catch_unwind` site, shared by the module edge and the worker (R2-31).
-pub(crate) fn caught<T>(call: impl FnOnce() -> T) -> Option<T> {
-    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(call)) {
-        Ok(value) => Some(value),
-        Err(payload) => {
-            std::mem::forget(payload);
-            None
-        }
-    })
-}
-
 /// The module edge: a panic in the binding raises `DefectError`, and the
 /// interpreter carries on.
 pub(crate) fn guard<T>(py: Python<'_>, call: impl FnOnce() -> PyResult<T>) -> PyResult<T> {
-    diagnostics::owned(|| {
-        caught(call).unwrap_or_else(|| Err(defect(py, "the Python binding panicked")))
-    })
+    contained(call).unwrap_or_else(|| Err(defect(py, "the Python binding panicked")))
 }
 
 #[pymodule]

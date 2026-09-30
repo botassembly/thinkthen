@@ -15,3 +15,7 @@ Use one small child-process regression with a synthetic payload marker at the ac
 ## Reviewed implementation and remaining proof
 
 Ticket 0227 source and the evidenced Linux package subset landed from corrected candidate `e52c1604` after fresh High code review. The source children prove fixed non-retryable Defect, both synthetic payload forms, later success and unrelated prior-hook delivery. Installed Linux packages separately prove loading and no-fault later use. Python's reviewed correction also covers implicit reference cleanup. See [the build evidence](../records/0227-language-panic-build.md) and [code acceptance](../records/0227-code-review.md). Other target packages and the later 0212 Call conversion integration remain open; this issue is not counted complete from the Linux subset alone.
+
+## Ticket 0306
+
+Ticket 0306 removes this binding's own panic hook. Its guard now calls the shared `thinkthen::contained`, which forgets the payload inside the marked scope. The existing child test passes unchanged. The target-package proofs above remain open.

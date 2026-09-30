@@ -38,26 +38,27 @@ struct DiagnosticDepth(usize);
 
 impl Drop for DiagnosticDepth {
     fn drop(&mut self) {
-        DIAGNOSTIC_DEPTH.with(|depth| depth.set(self.0));
+        let _ = DIAGNOSTIC_DEPTH.try_with(|depth| depth.set(self.0));
     }
 }
 
 /// Mark work owned by the engine on this thread, including worker threads.
+/// A thread past its local-storage teardown runs `work` unmarked.
 pub(crate) fn with_engine_diagnostics<T>(work: impl FnOnce() -> T) -> T {
     install_diagnostic_hook();
-    let prior = DIAGNOSTIC_DEPTH.with(|depth| {
+    let prior = DIAGNOSTIC_DEPTH.try_with(|depth| {
         let prior = depth.get();
         depth.set(prior.saturating_add(1));
         prior
     });
-    let _restore = DiagnosticDepth(prior);
+    let _restore = prior.ok().map(DiagnosticDepth);
     work()
 }
 
 /// Let a host interrupt callback use the previous hook on direct engine calls.
 pub(crate) fn with_host_diagnostics<T>(check: impl FnOnce() -> T) -> T {
-    let prior = DIAGNOSTIC_DEPTH.with(|depth| depth.replace(0));
-    let _restore = DiagnosticDepth(prior);
+    let prior = DIAGNOSTIC_DEPTH.try_with(|depth| depth.replace(0));
+    let _restore = prior.ok().map(DiagnosticDepth);
     check()
 }
 

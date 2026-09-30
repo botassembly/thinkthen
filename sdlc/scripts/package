@@ -25,38 +25,11 @@ test "$targets" = "bin lib" \
     || { printf 'package: thinkthen has targets %s, not one lib and one bin\n' "$targets" >&2; exit 1; }
 # The library-only run. Without `cli` cargo builds no binary but still names
 # its old path, so every test that starts the command carries
-# `#![cfg(feature = "cli")]` and compiles to nothing here. The doctests need
-# the internal cfg, so the next command runs them.
+# `#![cfg(feature = "cli")]` and compiles to nothing here. The next command
+# runs the public doctests.
 cargo test --locked --offline --package thinkthen --no-default-features --all-targets
-RUSTFLAGS='--cfg thinkthen_internal_doctest' \
-RUSTDOCFLAGS='--cfg thinkthen_internal_doctest' \
-    cargo test --locked --offline --package thinkthen --doc --no-default-features
+cargo test --locked --offline --package thinkthen --doc --no-default-features
 
-prove_private() {
-    target=$1
-    shift
-    CARGO_TARGET_DIR="$target" cargo build --locked --offline --package thinkthen --lib "$@"
-    # A toolchain change leaves the old build beside the new one. Take the newest.
-    library=$(ls -t "$target"/debug/deps/libthinkthen-*.rlib | head -n 1)
-    if rustc --edition 2024 -L "dependency=$target/debug/deps" --extern "thinkthen=$library" \
-        -o "$target/private-probe" - 2>"$target/private-probe.stderr" <<'RS'
-fn main() {
-    let _ = thinkthen::__internal_doctest::version_line("0.0.1");
-}
-RS
-    then
-        printf '%s\n' 'package: a normal library build exposes the doctest harness' >&2
-        exit 1
-    fi
-    if ! grep -F 'could not find `__internal_doctest` in `thinkthen`' \
-        "$target/private-probe.stderr" >/dev/null; then
-        printf '%s\n' 'package: the private-surface probe failed for another reason' >&2
-        cat "$target/private-probe.stderr" >&2
-        exit 1
-    fi
-}
-prove_private target/private-proof-default
-prove_private target/private-proof-no-default --no-default-features
 # Ticket 0104: `cargo package` rewrites a stale crate without truncating it, and
 # `tar` then refuses the trailing bytes. Plant a longer one, then remove it.
 mkdir -p target/package

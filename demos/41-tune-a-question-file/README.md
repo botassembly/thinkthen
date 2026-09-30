@@ -64,14 +64,14 @@ jq -n --argjson cut 0.5 -f ../../transforms/score/score.jq "$work/tuned.jsonl" \
   | mustmatch '{"rows":24,"accuracy":1,"false_positive":0,"false_negative":0}'
 ```
 
-`--dry-run` names the home each setting came from, so an odd run is read rather than guessed at. A value typed beside `@FILE` wins.
+`--plan` names the home each setting came from, so an odd run is read rather than guessed at. A value typed beside `@FILE` wins.
 
 ```bash
 set -euo pipefail
 
 head -1 claims.jsonl \
-  | thinkthen decide @receipt.json --jsonl --field /body --threshold 0.8 --dry-run \
-  | jq -c '.from' \
+  | thinkthen decide @receipt.json --jsonl --field /body --threshold 0.8 --plan \
+  | jq -cn 'input.from' \
   | mustmatch '{"question":"file","true":"file","false":"file","threshold":"command line","on":"command line","model":"default"}'
 ```
 

@@ -200,7 +200,7 @@ fn delayed_tag_rows_keep_evidence_and_output_order() {
     let input: String = (1..=6).map(|place| format!("row {place}\n")).collect();
     let output = tag(
         listener.base(),
-        &["--lines", "--jobs", "4"],
+        &["--lines", "--jobs", "4", "--batch", "1"],
         input.as_bytes(),
     )
     .expect("tag runs");
@@ -280,6 +280,8 @@ fn a_closed_tag_output_pipe_stops_quietly() {
             "--lines",
             "--jobs",
             "4",
+            "--batch",
+            "1",
             "--no-cache",
         ])
         .stdin(Stdio::piped())

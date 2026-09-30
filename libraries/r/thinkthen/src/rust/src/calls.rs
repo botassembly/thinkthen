@@ -19,6 +19,7 @@ use account::Account;
 use receipt::Receipt;
 
 pub(crate) mod account;
+#[cfg(test)]
 mod diagnostics;
 pub(crate) mod receipt;
 pub(crate) mod render;

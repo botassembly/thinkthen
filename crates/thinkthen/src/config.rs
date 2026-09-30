@@ -231,8 +231,9 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
     "the configuration file is not valid closed JSON"
 }
 
-/// Whether another user owns or may write this file. A group bit alone stays
-/// quiet, because the usual 002 umask sets it on every file a user saves.
+/// Whether another user owns or may write this file or folder. A group bit
+/// alone stays quiet, because the usual 002 umask sets it on everything a
+/// user saves. The configuration file and a named cache folder share this rule.
 #[cfg(unix)]
 pub(crate) fn writable_by_another(metadata: &fs::Metadata) -> bool {
     use std::os::unix::fs::{MetadataExt as _, PermissionsExt as _};
@@ -352,13 +353,16 @@ mod tests {
 
     #[cfg(unix)]
     #[test]
-    fn a_different_owner_can_change_a_readable_configuration() {
+    fn another_owner_or_other_write_warns_and_group_write_stays_quiet() {
         use super::metadata_writable_by_another;
 
         for (mode, owner, effective, warned) in [
             (0o644, 1001, 1000, true),
             (0o600, 1000, 1000, false),
             (0o664, 1000, 1000, false),
+            (0o775, 1000, 1000, false),
+            (0o707, 1000, 1000, true),
+            (0o700, 1001, 1000, true),
         ] {
             assert_eq!(metadata_writable_by_another(mode, owner, effective), warned);
         }

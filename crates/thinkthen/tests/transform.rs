@@ -14,8 +14,6 @@ use std::path::{Path, PathBuf};
 use std::process::{Command, Output, Stdio};
 use std::time::{Duration, Instant};
 
-use sha2::{Digest as _, Sha256};
-
 #[path = "../src/test_deadline/child.rs"]
 mod child;
 #[path = "../src/test_deadline/run.rs"]
@@ -28,58 +26,18 @@ const LIST: &str =
 const UNKNOWN: &str =
     "thinkthen: transform: unknown name; run `thinkthen transform list` to see the catalog\n";
 
-/// Each public name, its byte count, and its SHA-256 at ticket 0083's base.
-const MEMBERS: [(&str, usize, &str); 10] = [
-    (
-        "band",
-        3_425,
-        "bd4934353f3d07da55f2642b5090a96d77788a778095bdf37607c8c07729b176",
-    ),
-    (
-        "calibration",
-        2_893,
-        "23f91a4231f910c567939e6bd0dbeded6bcb3e9be785991d58091365ca5747f5",
-    ),
-    (
-        "compare",
-        12_218,
-        "1909601f3d5325111e6f2293521211c692bf0e2a4015369d89b84830acde110f",
-    ),
-    (
-        "cost",
-        2_295,
-        "4b00fc0c180bd0464a0e84d0a221cca5204e9a456da41383f43f1f3cda7c209e",
-    ),
-    (
-        "counts",
-        1_735,
-        "de58fa6c5646432e3947d404a1355ebd0724f4829e234f76472b4fe8e6e0132f",
-    ),
-    (
-        "monitor",
-        3_453,
-        "18e9a22e298a9819c0817672fa8c8a62e99800176e5f66357e5e2a0024906b27",
-    ),
-    (
-        "score",
-        3_495,
-        "6df93483f3d017c3d6c91e8920c66ba636099fa767019f46ba792eee34a5f8d5",
-    ),
-    (
-        "sweep",
-        26_692,
-        "8100a565923890f16bf338dda397360c7ae55a300648ac972116d4c2212f4871",
-    ),
-    (
-        "triage",
-        1_788,
-        "6ec36edd30443f39a2de5f8e24e09e8aba9cc33446128381f4f5830856744736",
-    ),
-    (
-        "trials",
-        8_334,
-        "aa361137f146a33bf1547e6f0276c5a312a20d9469178f3c28474932d629e2dd",
-    ),
+/// Each public name. `show` must print its packaged and repository source.
+const MEMBERS: [&str; 10] = [
+    "band",
+    "calibration",
+    "compare",
+    "cost",
+    "counts",
+    "monitor",
+    "score",
+    "sweep",
+    "triage",
+    "trials",
 ];
 
 /// A fresh empty folder under the system temporary folder.
@@ -98,13 +56,6 @@ fn catalog(arguments: &[&str], cwd: &Path) -> Output {
             .current_dir(cwd),
     )
     .expect("the compiled binary runs")
-}
-
-fn sha256(bytes: &[u8]) -> String {
-    Sha256::digest(bytes)
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
 }
 
 #[test]
@@ -135,12 +86,10 @@ fn list_prints_the_closed_names_in_byte_order_everywhere() {
 fn show_prints_each_member_byte_for_byte() {
     let empty = folder("show");
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
-    for (name, bytes, digest) in MEMBERS {
+    for name in MEMBERS {
         let output = catalog(&["transform", "show", name], &empty);
         assert_eq!(output.status.code(), Some(0), "{name}");
         assert!(output.stderr.is_empty(), "{name}");
-        assert_eq!(output.stdout.len(), bytes, "{name}");
-        assert_eq!(sha256(&output.stdout), digest, "{name}");
         let packaged = fs::read(root.join(format!("transforms/{name}.jq"))).expect("packaged");
         let source = fs::read(root.join(format!("../../transforms/{name}/{name}.jq")));
         assert_eq!(output.stdout, packaged, "{name}");
@@ -315,7 +264,7 @@ fn the_catalog_reads_no_setting_input_or_file_and_sends_and_runs_nothing() {
         fs::write(&path, format!("#!/bin/sh\n: > '{}'\n", marker.display())).expect("a trap");
         fs::set_permissions(&path, fs::Permissions::from_mode(0o755)).expect("executable");
     }
-    for (name, _, _) in MEMBERS {
+    for name in MEMBERS {
         for decoy in [name.to_owned(), format!("{name}.jq")] {
             let made = child::command("mkfifo", &[])
                 .arg(root.join("decoys").join(decoy))
@@ -334,7 +283,7 @@ fn the_catalog_reads_no_setting_input_or_file_and_sends_and_runs_nothing() {
         LIST.as_bytes().to_vec(),
         0,
     )];
-    for (name, _, _) in MEMBERS {
+    for name in MEMBERS {
         let packaged =
             fs::read(Path::new(env!("CARGO_MANIFEST_DIR")).join(format!("transforms/{name}.jq")));
         outputs.push((

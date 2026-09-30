@@ -250,7 +250,11 @@ pub(crate) fn wait<T>(
 /// Run the work and send its result. A detached caller closed the channel,
 /// and the result is dropped.
 pub(crate) fn deliver<T>(answer: &Sender<T>, work: impl FnOnce() -> T) {
-    let _ignored = answer.send(work());
+    // A panic sends nothing, so the caller reads `lost`, and its payload
+    // reaches no server log.
+    if let Some(value) = thinkthen::contained(work) {
+        let _ignored = answer.send(value);
+    }
 }
 
 /// A worker that ended without a result.
@@ -387,6 +391,52 @@ mod tests {
         drop(answered);
         let worker = std::thread::spawn(move || deliver(&answer, || 7));
         assert!(worker.join().is_ok());
+    }
+
+    const CHILD: &str = "THINKTHEN_TEST_POSTGRESQL_PANIC_CHILD";
+    const MARKER: &str = "postgresql-worker-payload-marker";
+    const HOST: &str = "postgresql-unrelated-host-marker";
+
+    /// A worker panic reaches no output and reads as lost; the next call
+    /// answers, and an unrelated panic still reaches the host's hook.
+    #[test]
+    fn a_worker_panic_stays_out_of_the_server_log() {
+        if std::env::var_os(CHILD).is_some() {
+            std::panic::set_hook(Box::new(|info| {
+                let text = info.payload().downcast_ref::<&str>().copied();
+                let _ = std::io::Write::write_all(
+                    &mut std::io::stderr(),
+                    format!("{}\n", text.unwrap_or("other panic")).as_bytes(),
+                );
+            }));
+            let (answer, answered) = mpsc::channel::<u8>();
+            let worker = std::thread::spawn(move || {
+                deliver(&answer, || std::panic::panic_any(MARKER));
+            });
+            assert!(worker.join().is_ok());
+            assert_eq!(wait(&answered, TICK, || None), Waited::Lost);
+            let (answer, answered) = mpsc::channel();
+            std::thread::spawn(move || deliver(&answer, || 7));
+            assert_eq!(wait(&answered, TICK, || None), Waited::Done(7));
+            let _ = std::thread::spawn(|| std::panic::panic_any(HOST)).join();
+            return;
+        }
+        let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+            .env_clear()
+            .args([
+                "--exact",
+                "call::tests::a_worker_panic_stays_out_of_the_server_log",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .output()
+            .expect("isolated PostgreSQL proof");
+        assert!(output.status.success());
+        for stream in [&output.stdout, &output.stderr] {
+            assert!(!String::from_utf8_lossy(stream).contains(MARKER));
+        }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(stderr.contains(&format!("{HOST}\n")), "{stderr}");
     }
 
     /// A channel that closes with no result reads as lost, which raises `defect`.

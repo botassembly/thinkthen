@@ -203,6 +203,8 @@ fn tag_keeps_record_order_at_each_supported_job_count() {
                 "--lines",
                 "--jobs",
                 &jobs,
+                "--batch",
+                "1",
                 "--url",
                 listener.base(),
                 "--model",
@@ -212,7 +214,12 @@ fn tag_keeps_record_order_at_each_supported_job_count() {
             b"first\nsecond\nthird\n",
         )
         .expect("tag runs");
-        assert_eq!(output.status.code(), Some(0));
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         assert_eq!(
             String::from_utf8_lossy(&output.stdout),
             concat!(

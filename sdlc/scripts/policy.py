@@ -86,10 +86,7 @@ SEAM_ALLOWED: dict[str, set[str]] = {}
 ACCEPTED_RUST_LINTS = {
     "missing_debug_implementations": "forbid",
     "missing_docs": "warn",
-    "unexpected_cfgs": {
-        "level": "forbid",
-        "check-cfg": ["cfg(thinkthen_internal_doctest)"],
-    },
+    "unexpected_cfgs": "forbid",
     "unreachable_pub": "forbid",
     "unsafe_code": "forbid",
 }
@@ -398,8 +395,7 @@ BINDING_DENY = {
     "databases/postgresql": [("advisories", "ignore", ["RUSTSEC-2021-0127"])],
 }
 # pgrx's generated code needs `unexpected_cfgs` below forbid (ticket 0111).
-BINDING_LINTS = {"databases/postgresql": {"unexpected_cfgs": {
-    "level": "deny", "check-cfg": ["cfg(thinkthen_internal_doctest)"]}}}
+BINDING_LINTS = {"databases/postgresql": {"unexpected_cfgs": "deny"}}
 PLANTED_TEST = '#[test]\nfn planted() {\n    eprintln!("skipped");\n    return;\n}\n'
 BINDING_PLANTS = (
     ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),
@@ -886,9 +882,9 @@ def check_postgresql_binding() -> None:
     hidden = {**scripts, "check.sh": scripts.get("check.sh", "") + '# a comment \\\n"$BIN/pg_ctl" -D "$DATA" restart\n'}
     keyed = files.get("Cargo.toml", "").replace("[package]\n", '[package]\nbuild = "planted.rs"\n', 1)
     warm = files.get("src/warm.rs", "") + '#[cfg_attr(test, allow(unexpected_cfgs, reason = "planted"))]\nfn planted() {}\n'
-    forbid = files.get("Cargo.toml", "").replace('unexpected_cfgs = { level = "deny"', 'unexpected_cfgs = { level = "allow"')
+    forbid = files.get("Cargo.toml", "").replace('unexpected_cfgs = "deny"', 'unexpected_cfgs = "allow"')
     rust = binding_files(BINDING_PLANT_BASE, BINDING_PLANT_BASE)
-    denied = rust["Cargo.toml"].replace('unexpected_cfgs = { level = "forbid"', 'unexpected_cfgs = { level = "deny"')
+    denied = rust["Cargo.toml"].replace('unexpected_cfgs = "forbid"', 'unexpected_cfgs = "deny"')
     if not (all(postgresql_failures(*plant) for plant in [
             ({**files, "build.rs": ""}, scripts, []), ({**files, "Cargo.toml": keyed}, scripts, []),
             (files, restart, []), (files, split, []), (files, hidden, []), (files, scripts, [f"{POSTGRESQL}/.cargo/config"])])
