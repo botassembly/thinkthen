@@ -263,7 +263,6 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::OpenQuestionFile(error) => {
             (5, format!("the question file could not be opened: {error}"))
         }
-        Failure::QuestionFileTooLarge => (5, "the question file is too large".to_owned()),
         Failure::Reading(error) => (2, error.to_string()),
         Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
         Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),
@@ -346,6 +345,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
                 limit.actual
             ),
         ),
+        Failure::QuestionFileTooLarge => (5, "the question file is too large".to_owned()),
         Failure::QuestionSet(error) => (5, error.to_string()),
         Failure::OpenQuestionSet(error) => {
             (5, format!("the question set could not be opened: {error}"))
