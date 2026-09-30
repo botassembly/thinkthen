@@ -51,11 +51,12 @@ def complete_question_files_keep_identity():
 
 
 def complete_question_refusals_and_nulls():
-    """File content is Local and secret-free; typed errors are Usage; no send."""
+    """File content is Local and never repeats a value; typed errors are Usage; no send."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         folder = Path(folder)
         malformed = folder / "malformed.json"
-        malformed.write_text('{"choose":"x","options":["a","b"],"SYNTHETIC_PRIVATE_MARKER_0247":1}')
+        # The shared question-file contract names a refused key; a refused value stays unsaid.
+        malformed.write_text('{"choose":"x","options":["a","b"],"threshold":"SYNTHETIC_PRIVATE_MARKER_0247"}')
         blank = folder / "blank.json"
         blank.write_bytes(b"")
         invalid = folder / "invalid.json"

@@ -299,7 +299,7 @@ void Scalar(DataChunk &args, ExpressionState &state, Vector &result) {
 			    : thinkthen_cpp_validate_portable_scalar(
 			    reinterpret_cast<const uint8_t *>(group.question.text.data()), group.question.text.size(),
 			    group.question.from_file ? 1 : 0,
-			    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size()));
+			    reinterpret_cast<const uint8_t *>(group.settings.data()), group.settings.size(), kind));
 			Checked(checked.value);
 			}
 			groups.push_back(std::move(group));

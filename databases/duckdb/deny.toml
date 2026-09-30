@@ -30,8 +30,7 @@ version = 2
 #   BSD-3-Clause                 subtle
 #   CDLA-Permissive-2.0          webpki-roots
 #
-# The last three arrive with the TLS stack under ureq and with nothing else.
-# There is no HTTPS in Rust without them. A license nothing in the tree offers
+# ISC and CDLA arrive with the TLS stack under ureq. A license nothing in the tree offers
 # fails the rung too, so this list cannot rot into a blanket allowance.
 allow = [
     "Apache-2.0",

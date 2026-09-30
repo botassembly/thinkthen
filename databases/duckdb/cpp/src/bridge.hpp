@@ -82,7 +82,8 @@ ThinkThenReply thinkthen_cpp_portable_listed_group(const uint8_t *question, size
                                                   const uint8_t *settings, size_t settings_len, int32_t kind,
                                                   int64_t query_deadline_ms, ThinkThenSettings session, ThinkThenStop stop);
 ThinkThenReply thinkthen_cpp_validate_portable_scalar(const uint8_t *question, size_t question_len,
-                                                     int32_t from_file, const uint8_t *settings, size_t settings_len);
+                                                     int32_t from_file, const uint8_t *settings, size_t settings_len,
+                                                     int32_t kind);
 ThinkThenReply thinkthen_cpp_portable_scalar_group(const uint8_t *question, size_t question_len,
                                                   int32_t from_file, const ThinkThenText *texts, size_t count,
                                                   const uint8_t *settings, size_t settings_len, int32_t kind,
