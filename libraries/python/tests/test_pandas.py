@@ -17,7 +17,7 @@ import pandas
 import pytest
 
 from conftest import Backend, child_env, run, start
-from test_call import capturing_filter_listener
+from test_call import capturing_filter_listener, quoted_record
 
 
 @pytest.mark.parametrize("shape", ["pandas_series", "pandas_frame", "polars_frame"])
@@ -185,13 +185,13 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
         requests = [json.loads(body) for body in bodies]
         assert [len(request["questions"]) for request in requests] == [
             3, 1, 1, 1, 3, 1, 1, 1, 3, 3, 6, 3]
-        singleton = (b'{"state":"one","model":"jev-latest","questions":'
-                     b'{"q1":{"type":"noul","instructions":"Is it late?"}}}')
+        singleton = (b'{"state":"Each question quotes the text it asks about.","model":"jev-latest",'
+                     b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"}}}')
         assert singleton in bodies[1:4]
         digest = lambda body: hashlib.sha256(
             b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
         def by_state(items):
-            return {json.loads(body)["state"]: digest(body) for body in items}
+            return {quoted_record(json.loads(body)): digest(body) for body in items}
         states = ["one", "two", "three"]
         expected_digests = [
             [[digest(bodies[0])]] * 3,

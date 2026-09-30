@@ -96,7 +96,7 @@ test('a named rich question preserves source order and its captured request', as
     return { source: loaded.__spec, answer: result.value, request: result.details[0].requests[0] };`);
   assert.equal(error, undefined, JSON.stringify(error));
   assert.equal(value.source, source);
-  const body = '{"state":"first","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which?","criteria":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}}}';
+  const body = '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \\"first\\". Which?","criteria":{"2":["nested",{"flag":true}],"1":{"what":"first"},"other":null}}}}';
   assert.deepEqual(backend.bodies, [body]);
   assert.equal(value.request, recordingDigest(backend.base(), body));
 });

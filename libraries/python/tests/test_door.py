@@ -155,12 +155,14 @@ def test_a_frame_keeps_types_and_nested_failures():
     class Listener(http.server.BaseHTTPRequestHandler):
         def do_POST(self):
             asked = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
-            seen.append(asked["state"])
+            def record(one):
+                return json.JSONDecoder().raw_decode(one["instructions"], len("The text is "))[0]
+            seen.append(record(next(iter(asked["questions"].values()))))
             level = {"a": {"0": 0.25, "1": 0.5, "2": 0.25}, "b": {"1": 0.5, "2": 0.5}}
             def reply(one):
                 if one["type"] == "score":
-                    return {"type": "score", "probabilities": level[asked["state"]]}
-                if asked["state"] == "b" and '"bill"' in one["instructions"]:
+                    return {"type": "score", "probabilities": level[record(one)]}
+                if record(one) == "b" and '"bill"' in one["instructions"]:
                     return {"type": "noul"}
                 return {"type": "noul", "noul": 0.1}
             answers = {name: reply(one) for name, one in asked["questions"].items()}

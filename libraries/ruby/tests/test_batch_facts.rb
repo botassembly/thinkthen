@@ -231,7 +231,7 @@ class TestBatchFacts < Minitest::Test
       assert_equal 2, JSON.parse(body).fetch("questions").size
       assert frozen
       assert_equal "POST /generic/v1/systemone HTTP/1.1", choice_line
-      expected_choice = %q({"state":{"records":["first","second"]},"model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"first\". Which team?","criteria":{"billing":{"route":{"desk":"Refunds","channels":["mail","phone"]}},"shipping":"Delivery"}},"q2":{"type":"choice","instructions":"The text is \"second\". Which team?","criteria":{"billing":{"route":{"desk":"Refunds","channels":["mail","phone"]}},"shipping":"Delivery"}}}})
+      expected_choice = %q({"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"first\". Which team?","criteria":{"billing":{"route":{"desk":"Refunds","channels":["mail","phone"]}},"shipping":"Delivery"}},"q2":{"type":"choice","instructions":"The text is \"second\". Which team?","criteria":{"billing":{"route":{"desk":"Refunds","channels":["mail","phone"]}},"shipping":"Delivery"}}}})
       assert_equal expected_choice, choice_body
       chosen, chosen_facts, chosen_details = JSON.parse(out.lines.last)
       assert_equal %w[billing billing], chosen

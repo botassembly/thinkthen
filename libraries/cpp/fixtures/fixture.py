@@ -5,6 +5,30 @@ import pathlib
 import threading
 import time
 
+
+QUOTED_STATE = 'Each question quotes the text it asks about.'
+
+
+def unquoted_single(request):
+    """ADR 0111 quotes each record in its own question, a batch of one
+    included. A request whose questions all quote one record reads here as
+    that record's single request, so behaviors stay keyed on the record."""
+    if request.get('state') != QUOTED_STATE:
+        return request
+    records, questions = set(), {}
+    for name, question in request['questions'].items():
+        text = question.get('instructions')
+        if not isinstance(text, str) or not text.startswith('The text is '):
+            return request
+        record, end = json.JSONDecoder().raw_decode(text, len('The text is '))
+        if not text.startswith('. ', end):
+            return request
+        records.add(json.dumps(record))
+        questions[name] = dict(question, instructions=text[end + 2:])
+    if len(records) != 1:
+        return request
+    return dict(request, state=json.loads(records.pop()), questions=questions)
+
 class Backend(http.server.ThreadingHTTPServer):
     def __init__(self, barrier, plant=''):
         super().__init__(("127.0.0.1", 0), Handler)
@@ -28,7 +52,7 @@ class Backend(http.server.ThreadingHTTPServer):
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
-        state = body['state']
+        state = unquoted_single(body)['state']
         name = state if isinstance(state, str) else json.dumps(state, sort_keys=True)
         # ADR 0055 batches distinct decide rows into one quoted-evidence request.
         if state == 'Each question quotes the text it asks about.':
