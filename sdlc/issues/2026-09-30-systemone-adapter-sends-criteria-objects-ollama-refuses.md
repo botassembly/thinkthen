@@ -1,4 +1,4 @@
-Status: Open. Found 2026-09-30 in experiment 415 (`~/workspace/experiments/415-ollama-nimble-check/RESULTS.md`), the same family as `2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md`. Merge consideration applies.
+Status: Open. Found 2026-09-30 in experiment 415 (`~/workspace/experiments/415-ollama-nimble-check/RESULTS.md`), the same family as `2026-09-29-systemone-adapter-sends-null-criteria-liquid-d1-refuses.md`. Merge consideration applies. Designed 2026-09-30 by ADR 0115; ticket 0339 (ready) builds it after 0304 slice 4. The fix candidate below is replaced: flattening for every backend would drop `not_for` and `examples` that TypeSafe reads, so each backend names its own dialect instead.
 
 # The systemone adapter sends criteria descriptions as JSON objects that Ollama refuses
 
