@@ -123,6 +123,7 @@ pub(crate) fn engine(
             timeout: Duration::from_secs(common.timeout),
             max_retries: common.max_retries,
             retry_wait: environment.retry_wait(),
+            per_minute: environment.per_minute,
             width,
             storage: Storage {
                 record: folders.record,

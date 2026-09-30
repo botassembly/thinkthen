@@ -45,36 +45,36 @@ fn help_opens_with_the_semantic_commands_introduction() {
     }
 }
 
+const INTRODUCTIONS: [(&str, &str); 10] = [
+    ("decide", "Answer one yes or no question about a text"),
+    ("filter", "Keep the records where the answer is yes"),
+    (
+        "rank",
+        "Sort records by how likely the answer is yes, or give `rank` a saved score question to order by its weighted level value",
+    ),
+    ("choose", "Pick one option from your list"),
+    (
+        "find",
+        "Pick the one line or record that best answers a question",
+    ),
+    ("score", "Place a text on a scale you name"),
+    ("tag", "Name every label that fits"),
+    (
+        "annotate",
+        "Answer a saved set of questions about every record",
+    ),
+    (
+        "recognize",
+        "Find every name in a text and assign one of the given kinds",
+    ),
+    (
+        "relate",
+        "Find named relations across one complete entity set",
+    ),
+];
+
 #[test]
 fn each_judgment_help_opens_with_its_operation_and_root_lists_them_in_order() {
-    const INTRODUCTIONS: [(&str, &str); 10] = [
-        ("decide", "Answer one yes or no question about a text"),
-        ("filter", "Keep the records where the answer is yes"),
-        (
-            "rank",
-            "Sort records by how likely the answer is yes, or give `rank` a saved score question to order by its weighted level value",
-        ),
-        ("choose", "Pick one option from your list"),
-        (
-            "find",
-            "Pick the one line or record that best answers a question",
-        ),
-        ("score", "Place a text on a scale you name"),
-        ("tag", "Name every label that fits"),
-        (
-            "annotate",
-            "Answer a saved set of questions about every record",
-        ),
-        (
-            "recognize",
-            "Find every name in a text and assign one of the given kinds",
-        ),
-        (
-            "relate",
-            "Find named relations across one complete entity set",
-        ),
-    ];
-
     let mut failures = Vec::new();
     for (verb, sentence) in INTRODUCTIONS {
         for flag in ["-h", "--help"] {

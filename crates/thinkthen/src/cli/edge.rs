@@ -46,6 +46,7 @@ impl Downstream {
 }
 
 use crate::config::{self, Config};
+use crate::engine::backoff::per_minute;
 use crate::engine::usage::Counters;
 use crate::failure::Failure;
 
@@ -59,13 +60,9 @@ const RETRY_WAIT: Duration = Duration::from_secs(1);
 /// and neither byte is part of the record, so the bound allows both.
 const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 
-/// The environment the command reads, read once.
-///
-/// `THINKTHEN_BASE_URL` names where the System One interface lives. The other
-/// variables shorten the retry wait and acknowledge SIGINT. Only a build with
-/// debug assertions reads them, so a release binary ignores them. The key
-/// itself is captured once after the final address resolves. The same value
-/// governs the address check, status report, and every later request.
+/// The environment the command reads, read once. Only a debug build reads the
+/// `THINKTHEN_TEST_` variables. The key is captured once after the final
+/// address resolves, and that value governs every later check and request.
 #[derive(Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
@@ -83,6 +80,7 @@ pub(crate) struct Environment {
     usage_path: Option<PathBuf>,
     key: KeySnapshot,
     ca_bundle: Option<PathBuf>,
+    pub(crate) per_minute: Option<std::num::NonZeroU32>,
 }
 
 impl std::fmt::Debug for Environment {
@@ -125,6 +123,8 @@ impl Environment {
             usage_path,
             key: KeySnapshot::default(),
             ca_bundle: read("THINKTHEN_CA_BUNDLE").map(PathBuf::from),
+            per_minute: per_minute(read("THINKTHEN_REQUESTS_PER_MINUTE").as_deref())
+                .map_err(Failure::Usage)?,
         })
     }
 

@@ -41,6 +41,7 @@ fn settings(base: &str, width: Option<u64>, usage: Arc<Counters>) -> Settings {
         max_retries: 0,
         retry_wait: Duration::from_millis(10),
         width: width.and_then(|width| Width::new(width).ok()),
+        per_minute: None,
         storage: Storage::default(),
         key: Arc::new(|| Ok(Key::of("sk-test-value"))),
         usage,

@@ -99,3 +99,35 @@ fn seeding_and_building_send_nothing_and_seeding_creates_no_file() {
     assert_eq!(said, "seeded 0 built 0");
     assert_eq!(served.count(), 0);
 }
+
+#[test]
+fn the_rate_variable_paces_an_engine_built_from_the_environment() {
+    let starts = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = std::sync::Arc::clone(&starts);
+    let listener = Listener::answering(move |_| {
+        seen.lock().unwrap().push(std::time::Instant::now());
+        Canned::ok(ANSWERED)
+    })
+    .expect("a loopback listener");
+    let address = ("THINKTHEN_BASE_URL", listener.base());
+    let key = ("THINKTHEN_API_KEY", "sk-paced-env-fixture");
+    let said = in_child(
+        "paced",
+        &[address, key, ("THINKTHEN_REQUESTS_PER_MINUTE", "600")],
+    );
+    assert!(
+        said.lines()
+            .all(|line| line.starts_with("sent 1 cached false")),
+        "{said}"
+    );
+    let starts = starts.lock().unwrap();
+    assert_eq!(starts.len(), 4);
+    // One start each 100 ms. One interval covers a late first delivery.
+    let span = *starts.iter().max().unwrap() - *starts.iter().min().unwrap();
+    assert!(span >= std::time::Duration::from_millis(200), "{span:?}");
+    let said = in_child("refused", &[("THINKTHEN_REQUESTS_PER_MINUTE", "60001")]);
+    assert_eq!(
+        said,
+        "Usage: THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000"
+    );
+}
