@@ -1,8 +1,6 @@
 //! The bounded local-file edge for one public Ruby question value.
 
-use std::io::Read;
-
-use thinkthen::{ErrorKind, LoadedQuestion, Question, Recognize, Relate};
+use thinkthen::{ErrorKind, LoadedQuestion, Question, QuestionFileError, Recognize, Relate};
 
 use crate::Fault;
 
@@ -41,24 +39,14 @@ pub(super) fn read_plan(path: &str, verb: &str) -> Result<String, Fault> {
 }
 
 fn bounded_source(path: &str, role: &str) -> Result<String, Fault> {
-    const LIMIT: u64 = 1_048_576;
-    let unreadable = || {
+    thinkthen::read_question_file(path).map_err(|reason| {
         Fault::of(
             ErrorKind::Local,
-            format!("the {role} file could not be read"),
+            match reason {
+                QuestionFileError::Unreadable(_) => format!("the {role} file could not be read"),
+                QuestionFileError::TooLarge => format!("the {role} file is too large"),
+                QuestionFileError::NotUtf8 => format!("the {role} file is not UTF-8"),
+            },
         )
-    };
-    let file = std::fs::File::open(path).map_err(|_| unreadable())?;
-    let mut bytes = Vec::new();
-    file.take(LIMIT + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|_| unreadable())?;
-    if bytes.len() as u64 > LIMIT {
-        return Err(Fault::of(
-            ErrorKind::Local,
-            format!("the {role} file is too large"),
-        ));
-    }
-    String::from_utf8(bytes)
-        .map_err(|_| Fault::of(ErrorKind::Local, format!("the {role} file is not UTF-8")))
+    })
 }

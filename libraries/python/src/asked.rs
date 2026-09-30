@@ -132,13 +132,12 @@ impl Question {
     /// A question file. A broken rule is local.
     #[staticmethod]
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
-        let text = std::fs::read_to_string(&path).map_err(|_| {
-            crate::raise(
-                py,
-                thinkthen::ErrorKind::Local,
-                "the question file could not be read",
-                false,
-            )
+        let text = thinkthen::read_question_file(&path).map_err(|reason| {
+            let message = match reason {
+                thinkthen::QuestionFileError::TooLarge => "the question file is too large",
+                _ => "the question file could not be read",
+            };
+            crate::raise(py, thinkthen::ErrorKind::Local, message, false)
         })?;
         let made = thinkthen::Question::from_json(&text).map_err(|error| {
             crate::raise(

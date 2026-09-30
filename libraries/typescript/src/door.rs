@@ -7,13 +7,12 @@
 mod diagnostics;
 mod result;
 
-use std::io::Read;
 use std::num::NonZeroUsize;
 
 use serde_json::{Map, Value, json};
 use thinkthen::{
     BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, Facts,
-    LoadedQuestion, Question, Recognize, Relate,
+    LoadedQuestion, Question, QuestionFileError, Recognize, Relate,
 };
 
 /// The most milliseconds a deadline takes: 4,294,967,295 seconds (ADR 0041).
@@ -122,17 +121,13 @@ pub(crate) fn plan_file(path: &str, verb: &str) -> String {
 }
 
 fn bounded_file(path: &str, role: &str) -> Result<String, Failure> {
-    const LIMIT: u64 = 1_048_576;
-    let unreadable = || Failure::local(format!("the {role} file could not be read"));
-    let file = std::fs::File::open(path).map_err(|_| unreadable())?;
-    let mut bytes = Vec::new();
-    file.take(LIMIT + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|_| unreadable())?;
-    if bytes.len() as u64 > LIMIT {
-        return Err(Failure::local(format!("the {role} file is too large")));
-    }
-    String::from_utf8(bytes).map_err(|_| Failure::local(format!("the {role} file is not UTF-8")))
+    thinkthen::read_question_file(path).map_err(|reason| {
+        Failure::local(match reason {
+            QuestionFileError::Unreadable(_) => format!("the {role} file could not be read"),
+            QuestionFileError::TooLarge => format!("the {role} file is too large"),
+            QuestionFileError::NotUtf8 => format!("the {role} file is not UTF-8"),
+        })
+    })
 }
 
 /// The binding's one panic guard: a panic in `body` becomes `defect`, so no

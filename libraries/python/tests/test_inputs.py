@@ -51,6 +51,20 @@ def test_eager_records_are_read_before_the_first_send(backend, tmp_path):
     assert backend.count() == 0
 
 
+def test_a_question_file_over_one_mib_is_refused_before_any_send(backend, tmp_path):
+    """Ticket 0345: ``question(file=)`` reads at most 1 MiB and one byte, so
+    one byte over the cap and ``/dev/zero`` are too large. Nothing is sent."""
+    text = '{"decide":"Is it late?"}'
+    over = tmp_path / "over.json"
+    over.write_text(text + " " * (1_048_577 - len(text)))
+    printed = run(REFUSED + f"""
+    for file in ({str(over)!r}, "/dev/zero"):
+        said(lambda: tt.decide(tt.question(file=file), "one").value)
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == 2 * ["LocalError the question file is too large"]
+    assert backend.count() == 0
+
+
 def test_missing_key_names_a_remedy_for_a_library_call():
     """A keyless library call keeps its Usage kind and names a usable remedy."""
     printed = run(REFUSED + """

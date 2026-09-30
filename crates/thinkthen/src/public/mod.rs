@@ -21,6 +21,7 @@ mod panic;
 mod plan;
 mod pull;
 mod question;
+mod question_file;
 mod recognize;
 mod relate;
 mod results;
@@ -47,6 +48,7 @@ pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,
     QuestionKind, TagQuestion,
 };
+pub use question_file::{QuestionFileError, read_question_file};
 pub use recognize::{
     Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relation, RelationRule,
 };

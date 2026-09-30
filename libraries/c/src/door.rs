@@ -2,10 +2,9 @@
 //! and borrowed, and every answer leaves as a value the FFI edge writes.
 
 use serde_json::Value;
-use std::io::Read;
 use thinkthen::{
     Answer, CallOptions, CancelToken, Engine, Entity, Facts, Judgment, LoadedQuestion,
-    Probabilities, Question, Recognize, Relate,
+    Probabilities, Question, QuestionFileError, Recognize, Relate,
 };
 
 use crate::Judgment as Reply;
@@ -53,18 +52,13 @@ pub(crate) fn question(text: &str) -> Result<LoadedQuestion, Failure> {
 
 /// Validate one named question and retain its source JSON for the C caller.
 pub(crate) fn question_file(path: &str) -> Result<String, Failure> {
-    const LIMIT: u64 = 1_048_576;
-    let file = std::fs::File::open(path)
-        .map_err(|_| Failure::local("the question file could not be read"))?;
-    let mut bytes = Vec::new();
-    file.take(LIMIT + 1)
-        .read_to_end(&mut bytes)
-        .map_err(|_| Failure::local("the question file could not be read"))?;
-    if bytes.len() as u64 > LIMIT {
-        return Err(Failure::local("the question file is too large"));
-    }
-    let source =
-        String::from_utf8(bytes).map_err(|_| Failure::local("the question file is not UTF-8"))?;
+    let source = thinkthen::read_question_file(path).map_err(|reason| {
+        Failure::local(match reason {
+            QuestionFileError::Unreadable(_) => "the question file could not be read",
+            QuestionFileError::TooLarge => "the question file is too large",
+            QuestionFileError::NotUtf8 => "the question file is not UTF-8",
+        })
+    })?;
     Question::from_json(&source)
         .map_err(|_| Failure::local("the question file has invalid question content"))?;
     Ok(source)
