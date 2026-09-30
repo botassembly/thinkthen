@@ -1,6 +1,6 @@
 # 0347: The SQL hosts call the public API instead of copying engine code
 
-Status: ready. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4. Pays items 1, 2, 3, 9 and 10 of Debt 018, `sdlc/issues/2026-09-25-public-library-api-gaps.md`. Starts after tickets 0344 and 0335 slice 2 land, because 0344 edits `databases/postgresql/src/relate.rs` and 0335 slice 2 edits the SQLite and DuckDB check scripts.
+Status: in progress. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4. Pays items 1, 2, 3, 9 and 10 of Debt 018, `sdlc/issues/2026-09-25-public-library-api-gaps.md`. Starts after tickets 0344 and 0335 slice 2 land, because 0344 edits `databases/postgresql/src/relate.rs` and 0335 slice 2 edits the SQLite and DuckDB check scripts.
 
 ## Outcome
 
