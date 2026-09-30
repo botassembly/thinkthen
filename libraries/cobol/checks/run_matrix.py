@@ -9,7 +9,7 @@ import sys
 import time
 import threading
 from collections import Counter
-from backend import Backend
+from backend import Backend, one_record
 
 here = pathlib.Path(__file__).resolve().parent
 repo = here.parents[2]
@@ -159,7 +159,7 @@ try:
             packed_requests = []
             for p in sorted(barrier.glob("request-*.json")):
                 body = json.loads(p.read_text())
-                if body["state"] == packed:
+                if one_record(body)["state"] == packed:
                     packed_requests.append({k: q["instructions"] for k, q in body["questions"].items()})
             if packed_requests != [
                 {"q1": 'The text is "first". Is it?', "q2": 'The text is "second". Is it?', "q3": 'The text is "third". Is it?'},

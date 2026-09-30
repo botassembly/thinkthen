@@ -1,61 +1,61 @@
 [
   {
-    "state": "café",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is this a decision?"
+        "instructions": "The text is \"café\". Is this a decision?"
       }
     }
   },
   {
-    "state": "yes",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"yes\". Is it?"
       }
     }
   },
   {
-    "state": "no",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"no\". Is it?"
       }
     }
   },
   {
-    "state": "unsure",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"unsure\". Is it?"
       }
     }
   },
   {
-    "state": "café",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"café\". Is it?"
       }
     }
   },
   {
-    "state": "a\u0000b",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"a\\u0000b\". Is it?"
       }
     }
   },
@@ -78,42 +78,42 @@
     }
   },
   {
-    "state": "recovery",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"recovery\". Is it?"
       }
     }
   },
   {
-    "state": "hold-deadline",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"hold-deadline\". Is it?"
       }
     }
   },
   {
-    "state": "json-decide",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"json-decide\". Is it?"
       }
     }
   },
   {
-    "state": "choose",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "choice",
-        "instructions": "Which team?",
+        "instructions": "The text is \"choose\". Which team?",
         "criteria": {
           "first": null,
           "second": null
@@ -122,12 +122,12 @@
     }
   },
   {
-    "state": "choose-map",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "choice",
-        "instructions": "Which team?",
+        "instructions": "The text is \"choose-map\". Which team?",
         "criteria": {
           "first": {
             "what": "First team",
@@ -142,26 +142,26 @@
     }
   },
   {
-    "state": "tag",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Which labels?\n\nDetermine whether the label \"first\" applies to this item."
+        "instructions": "The text is \"tag\". Which labels?\n\nDetermine whether the label \"first\" applies to this item."
       },
       "q2": {
         "type": "noul",
-        "instructions": "Which labels?\n\nDetermine whether the label \"second\" applies to this item."
+        "instructions": "The text is \"tag\". Which labels?\n\nDetermine whether the label \"second\" applies to this item."
       }
     }
   },
   {
-    "state": "score",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "score",
-        "instructions": "What level?",
+        "instructions": "The text is \"score\". What level?",
         "criteria": [
           "Low.",
           "High."
@@ -212,12 +212,12 @@
     }
   },
   {
-    "state": "annotate-one",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"annotate-one\". Is it?"
       }
     }
   },
@@ -360,62 +360,62 @@
     }
   },
   {
-    "state": "status-401",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"status-401\". Is it?"
       }
     }
   },
   {
-    "state": "failure-two",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"failure-two\". Is it?"
       }
     }
   },
   {
-    "state": "settings",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"settings\". Is it?"
       }
     }
   },
   {
-    "state": "hold-contract",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"hold-contract\". Is it?"
       }
     }
   },
   {
-    "state": "recovery-contract",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"recovery-contract\". Is it?"
       }
     }
   },
   {
-    "state": "hold-bulk-contract",
+    "state": "Each question quotes the text it asks about.",
     "model": "jev-1.13.0",
     "questions": {
       "q1": {
         "type": "noul",
-        "instructions": "Is it?"
+        "instructions": "The text is \"hold-bulk-contract\". Is it?"
       }
     }
   }
