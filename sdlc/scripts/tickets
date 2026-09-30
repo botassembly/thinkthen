@@ -1,22 +1,12 @@
 #!/usr/bin/env python3
-"""Every ticket from 0120 on names its evidence in five parts.
+"""Each ticket names its evidence; a landed ticket records what its build taught.
 
-Workspace decision `2026-09-24-experiments-reduce-risk.md` asks each product
-ticket to name the evidence it starts from, the behavior it keeps, what it
-deliberately changes, what proves it, and the gaps it defers. A ticket numbered
-0120 or higher carries a `## Evidence` section with one list item per part:
+From ticket 0120, `## Evidence` holds five items with text: `- Starts from:`,
+`- Keeps:`, `- Changes:`, `- Proof:`, `- Defers:`. A label may be bold. From
+ticket 0333, a ticket also has `## Outcome`, and a ticket whose status starts
+with `landed` has `## What the build taught us`. Older tickets are exempt by number.
 
-    - Starts from: ...
-    - Keeps: ...
-    - Changes: ...
-    - Proof: ...
-    - Defers: ...
-
-Each label may be bold, and each needs text after its colon. Tickets below 0120
-are exempt by number. Fenced blocks do not count.
-
-Usage: tickets [ROOT]. ROOT defaults to the repository. With --self-test, it
-runs each rule against a ticket built to break it and pins the whole sentence.
+Usage: tickets [ROOT]. ROOT defaults to the repository. --self-test runs planted cases.
 """
 
 import pathlib
@@ -24,68 +14,56 @@ import re
 import sys
 import tempfile
 
-FIRST = 120
+EVIDENCE_FROM, SHORT_FROM = 120, 333
 PARTS = ("Starts from", "Keeps", "Changes", "Proof", "Defers")
 NAME = re.compile(r"^(\d{4})-.*\.md$")
-FENCE = re.compile(r"^\s*(```|~~~)")
-HEADING = re.compile(r"^(#{1,6})\s+(.*?)\s*$")
 
 
-def prose(text):
-    """The lines outside every fenced block."""
-    out, opener = [], None
-    for line in text.splitlines():
-        hit = FENCE.match(line)
-        if hit and opener is None:
-            opener = hit.group(1)
-            continue
-        if hit and hit.group(1) == opener:
-            opener = None
-            continue
-        if opener is None:
-            out.append(line)
-    return out
+def section(text, title):
+    """The lines under `## title` up to the next `## ` heading, or None."""
+    lines = text.splitlines()
+    if f"## {title}" not in lines:
+        return None
+    body = lines[lines.index(f"## {title}") + 1 :]
+    ends = [i for i, line in enumerate(body) if line.startswith("## ")]
+    return body[: ends[0]] if ends else body
 
 
-def section(lines, title):
-    """The lines under the first `## title` heading, up to the next heading of its level or higher."""
-    body, level = None, 0
-    for line in lines:
-        hit = HEADING.match(line)
-        if body is None:
-            if hit and len(hit.group(1)) == 2 and hit.group(2) == title:
-                body, level = [], 2
-            continue
-        if hit and len(hit.group(1)) <= level:
-            break
-        body.append(line)
-    return body
-
-
-def failures(path):
-    """Every sentence that says how one ticket misses the rule."""
-    body = section(prose(path.read_text(encoding="utf-8")), "Evidence")
-    if body is None:
-        return [f"{path.name}: ticket {FIRST:04d} and later needs a `## Evidence` section"]
+def failures(path, number):
+    text = path.read_text(encoding="utf-8")
     out = []
-    for part in PARTS:
-        item = re.compile(rf"^\s*[-*]\s+{part}:\s*\S")
-        if not any(item.match(line.replace("**", "")) for line in body):
-            out.append(f"{path.name}: the Evidence section lacks a `- {part}:` item with text")
+    body = section(text, "Evidence")
+    if body is None:
+        out.append(f"{path.name}: lacks a `## Evidence` section")
+    else:
+        for part in PARTS:
+            item = re.compile(rf"^\s*[-*]\s+{part}:\s*\S")
+            if not any(item.match(line.replace("**", "")) for line in body):
+                out.append(f"{path.name}: Evidence lacks a `- {part}:` item with text")
+    if number >= SHORT_FROM:
+        if section(text, "Outcome") is None:
+            out.append(f"{path.name}: lacks a `## Outcome` section")
+        if re.search(r"^Status:\s*landed", text, re.M) and section(text, "What the build taught us") is None:
+            out.append(f"{path.name}: landed without `## What the build taught us`")
     return out
 
 
 def check(root):
-    """The failures across every numbered ticket at or above the first."""
     out = []
     for path in sorted((root / "sdlc" / "tickets").glob("*.md")):
         hit = NAME.match(path.name)
-        if hit and int(hit.group(1)) >= FIRST:
-            out += failures(path)
+        if hit and int(hit.group(1)) >= EVIDENCE_FROM:
+            out += failures(path, int(hit.group(1)))
     return out
 
 
-GOOD = """# 0120: A fixture
+GOOD = """# 0333: A fixture
+
+Status: landed
+
+## Outcome
+
+One thing.
 
 ## Evidence
 
@@ -95,51 +73,38 @@ GOOD = """# 0120: A fixture
 - Proof: a test.
 - Defers: nothing.
 
-## Design
+## What the build taught us
+
+- Nothing new.
 """
 
 CASES = [
-    ("0120-good.md", GOOD, []),
-    ("0119-old.md", "# 0119: exempt\n", []),
-    ("0120-none.md", "# 0120\n\n## Design\n", ["0120-none.md: ticket 0120 and later needs a `## Evidence` section"]),
+    ("0333-good.md", GOOD, []),
+    ("0119-old.md", "# 0119\n", []),
+    ("0120-old-form.md", GOOD.replace("## Outcome", "## Aim").split("## What")[0], []),
+    ("0333-none.md", GOOD.replace("## Evidence", "## Notes"), ["0333-none.md: lacks a `## Evidence` section"]),
     (
-        "0121-fenced.md",
-        "# 0121\n\n```\n## Evidence\n```\n",
-        ["0121-fenced.md: ticket 0120 and later needs a `## Evidence` section"],
-    ),
-    (
-        "0122-part.md",
+        "0333-part.md",
         GOOD.replace("- Defers: nothing.\n", ""),
-        ["0122-part.md: the Evidence section lacks a `- Defers:` item with text"],
+        ["0333-part.md: Evidence lacks a `- Defers:` item with text"],
     ),
     (
-        "0123-empty.md",
-        GOOD.replace("- Proof: a test.", "- Proof:"),
-        ["0123-empty.md: the Evidence section lacks a `- Proof:` item with text"],
-    ),
-    (
-        "0125-bold-empty.md",
+        "0333-empty.md",
         GOOD.replace("- **Keeps:** the answer shape.", "- **Keeps:**"),
-        ["0125-bold-empty.md: the Evidence section lacks a `- Keeps:` item with text"],
+        ["0333-empty.md: Evidence lacks a `- Keeps:` item with text"],
     ),
     (
-        "0126-tilde.md",
-        "# 0126\n\n~~~\n" + GOOD + "~~~\n",
-        ["0126-tilde.md: ticket 0120 and later needs a `## Evidence` section"],
+        "0333-elsewhere.md",
+        GOOD.replace("- Proof: a test.\n", "").replace("- Nothing new.", "- Proof: late."),
+        ["0333-elsewhere.md: Evidence lacks a `- Proof:` item with text"],
     ),
-    ("0127-bold-colon-out.md", GOOD.replace("- Proof: a test.", "- **Proof**: a test."), []),
-    ("0128-bold-text.md", GOOD.replace("- Proof: a test.", "- **Proof:** **ticket 0118** pins it."), []),
-    ("0129-italic-text.md", GOOD.replace("- Proof: a test.", "- Proof: *a* test."), []),
+    ("0333-aim.md", GOOD.replace("## Outcome", "## Aim"), ["0333-aim.md: lacks a `## Outcome` section"]),
     (
-        "0130-mixed-fence.md",
-        "# 0130\n\n```\n~~~\n" + GOOD + "```\n",
-        ["0130-mixed-fence.md: ticket 0120 and later needs a `## Evidence` section"],
+        "0333-unlearned.md",
+        GOOD.split("## What")[0],
+        ["0333-unlearned.md: landed without `## What the build taught us`"],
     ),
-    (
-        "0124-elsewhere.md",
-        GOOD.replace("- **Keeps:** the answer shape.\n", "").replace("## Design\n", "## Design\n\n- Keeps: late.\n"),
-        ["0124-elsewhere.md: the Evidence section lacks a `- Keeps:` item with text"],
-    ),
+    ("0333-ready.md", GOOD.replace("Status: landed", "Status: ready").split("## What")[0], []),
 ]
 
 
@@ -166,7 +131,7 @@ def main(argv):
     found = check(root)
     for line in found:
         print(line, file=sys.stderr)
-    print(f"tickets: {len(found)} evidence failures from ticket {FIRST:04d} on")
+    print(f"tickets: {len(found)} failures")
     return 1 if found else 0
 
 

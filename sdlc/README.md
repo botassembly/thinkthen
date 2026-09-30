@@ -22,7 +22,7 @@ The destination this repository serves lives outside it, at `notes/ideal-state/t
 
 ## Ticket preparation and completion
 
-Follow [ticket-preparation.md](planning/ticket-preparation.md) when investigating a related ticket family and when finishing a ticket. Preparation adds code and problem notes without changing agreed outcomes. Before landing, the builder updates the ticket with what the build taught us; the reviewer checks that account against the code and evidence. The coordinator evaluates what preparation helped or missed and improves the next brief. A Quick Fix keeps those lessons in its build record.
+Follow [ticket-preparation.md](planning/ticket-preparation.md) when preparing and finishing a ticket. A Quick Fix keeps its lessons in its build record.
 
 ## Repository map
 

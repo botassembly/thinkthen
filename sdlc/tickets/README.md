@@ -1,11 +1,11 @@
 # tickets/
 
-One file per ticket, numbered from 0001 in this repository. Take the next free number. A ticket authorizes work. It lands through a lane per `sdlc/planning/worktrees.md` on branch `ticket/NNNN-slug`. A ticket that adds or changes a setting updates its row in `specification/settings.md` in the same commit.
+One file per ticket; take the next free number. A ticket authorizes work and lands on `ticket/NNNN-slug` through a lane per `sdlc/planning/worktrees.md`. A ticket that changes a setting updates `specification/settings.md` in the same commit.
 
-A ticket is short:
-
-- `Status:` one word or phrase: `ready`, `in progress`, or `landed`. A candidate between build and landing may say `built, awaiting code review`. The status line holds no running history; put results in the build section or the record.
+- `Status:` `ready`, `in progress`, or `landed`.
 - `## Outcome`: what is true when it lands.
-- `## Evidence`, five bullets labelled exactly `- Starts from:`, `- Keeps:`, `- Changes:`, `- Proof:`, `- Defers:`, each with text. They name the prior evidence, retained behavior, changes, proof, and deferred gaps. `sdlc/scripts/tickets` checks them from ticket 0120 on.
+- `## Evidence`: `- Starts from:`, `- Keeps:`, `- Changes:`, `- Proof:`, `- Defers:`. They name prior evidence, retained behavior, changes, proof, and deferred gaps.
 - Design notes only when the builder needs them.
 - `## What the build taught us`, added before landing.
+
+`sdlc/scripts/tickets` checks these sections.
