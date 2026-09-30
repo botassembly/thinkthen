@@ -2195,6 +2195,37 @@ def check_live_stores() -> None:
         fail("recordings", failure)
 
 
+# `sdlc/issues/README.md` "Debt": a comment that marks unfinished work names its
+# issue. The Flutter tool writes the one exempt file and says not to edit it.
+MARKERS = ("TODO", "FIXME")
+MARKED = re.compile(r"(#|//!?|--|\*>?|<!--)\s*(" + "|".join(MARKERS) + r")\b")
+UNMARKED_ALLOWED = {"libraries/dart/flutter/example/linux/flutter/CMakeLists.txt"}
+
+
+def marker_failures(hits: list[str]) -> list[str]:
+    """Each hit is `path:line:text` from `git grep -n`."""
+    found = []
+    for hit in hits:
+        path, line, text = hit.split(":", 2)
+        if MARKED.search(text) and "sdlc/issues/" not in text and path not in UNMARKED_ALLOWED:
+            found.append(f"{path}:{line} holds a {'/'.join(MARKERS)} comment; name its debt issue under sdlc/issues/ instead")
+    return found
+
+
+def check_markers() -> None:
+    prefixes = ("#", "//", "//!", "--", "/*", " *", "*>", "<!--")
+    if not all(marker_failures([f"src/planted:1:{prefix} {MARKERS[0]}: planted"]) for prefix in prefixes):
+        fail("debt", "a planted comment marker with no issue path is refused after each comment prefix")
+    if marker_failures([f"src/planted.rs:1:// {MARKERS[1]}: sdlc/issues/planted.md"]):
+        fail("debt", "a planted comment marker that names its issue is allowed")
+    listed = subprocess.run(["git", "grep", "-n", "-I", "-E", "|".join(MARKERS), "--", ":!*.md"],
+                            cwd=REPO, capture_output=True, text=True)
+    if listed.returncode > 1:
+        fail("debt", f"git grep for comment markers failed (exit {listed.returncode})")
+    for failure in marker_failures(listed.stdout.splitlines()):
+        fail("debt", failure)
+
+
 def main() -> int:
     check_toolchain()
     check_workspace()
@@ -2217,6 +2248,7 @@ def main() -> int:
     check_dependencies()
     check_recordings()
     check_live_stores()
+    check_markers()
     for failure in FAILURES:
         print(failure, file=sys.stderr)
     if FAILURES:
