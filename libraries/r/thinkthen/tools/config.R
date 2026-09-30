@@ -42,7 +42,7 @@ if (.tarball_shape) {
   .manifest <- readLines("src/rust/Cargo.toml")
   .engine <- grepl("^thinkthen = \\{ path = ", .manifest)
   if (sum(.engine) != 1) stop("src/rust/Cargo.toml must name the thinkthen path dependency once")
-  .manifest[.engine] <- sprintf('thinkthen = { version = "=%s", default-features = false }', .version)
+  .manifest[.engine] <- sprintf('thinkthen = { version = "=%s", default-features = false, features = ["bundled-sqlite"] }', .version)
   writeLines(.manifest, "src/rust/Cargo.toml")
   # The lock gains the registry entry and keeps every other pin.
   if (system2("cargo", c("update", "--package", "thinkthen", "--manifest-path", "src/rust/Cargo.toml")) != 0) {

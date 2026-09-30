@@ -2057,7 +2057,7 @@ def library_direct(root: pathlib.Path, frozen: str) -> set[str] | str:
     """Name the library's direct normal and build dependencies on every target."""
     result = subprocess.run(
         ["cargo", "tree", frozen, "-p", "thinkthen", "-e", "normal,build", "--target", "all",
-         "--no-default-features", "--depth", "1", "--prefix", "none"],
+         "--no-default-features", "--features", "bundled-sqlite", "--depth", "1", "--prefix", "none"],
         cwd=root, check=False, capture_output=True, text=True,
     )
     if result.returncode != 0:

@@ -17,7 +17,7 @@ if [ "$MODE" = tag ]; then
 	mkdir -p "$CHECKOUT/probes/churn-0086"
 	cp -R "$HERE/src" "$HERE/Cargo.toml" "$CHECKOUT/probes/churn-0086/"
 	cp "$CHECKOUT/libraries/rust/Cargo.lock" "$CHECKOUT/probes/churn-0086/"
-	sed -i 's#path = "../../crates/thinkthen", default-features = false#path = "../../libraries/rust"#' \
+	sed -i 's#path = "../../crates/thinkthen", default-features = false, features = \["bundled-sqlite"\]#path = "../../libraries/rust"#' \
 		"$CHECKOUT/probes/churn-0086/Cargo.toml"
 	cd "$CHECKOUT/probes/churn-0086"
 	CARGO_TARGET_DIR=$TARGET cargo build --release --offline --features standin
