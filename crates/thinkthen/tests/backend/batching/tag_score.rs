@@ -256,7 +256,16 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
     )
     .expect("offline plan");
     assert_eq!(plan.status.code(), Some(0), "{}", text(&plan.stderr));
-    let plan: Value = serde_json::from_slice(&plan.stdout).expect("plan");
+    let lines: Vec<_> = plan.stdout.split(|byte| *byte == b'\n').collect();
+    assert_eq!(lines.len(), 3, "plan needs exactly two JSON lines");
+    assert!(lines[2].is_empty(), "plan needs a final newline");
+    let plan: Value = serde_json::from_slice(lines[0]).expect("prepared request");
+    let counts: Value = serde_json::from_slice(lines[1]).expect("whole-input counts");
+    assert_eq!(
+        counts,
+        json!({"records":5,"requests":1,"estimated_bytes":1403,
+            "estimated_input_tokens":{"lower":723,"upper":1274},"upper_bound":false})
+    );
     let full = serde_json::to_vec(&plan["request"]).expect("body size");
     assert_eq!(
         plan["request"]["questions"]
