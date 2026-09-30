@@ -244,7 +244,7 @@ mod tests {
     use crate::core::{Evidence, ModelName, Plan, Question, QuestionText};
 
     fn plan(evidence: &str) -> Plan {
-        Plan::new(
+        Plan::authored(
             Evidence::new(evidence).expect("evidence"),
             ModelName::new("local-1").expect("model"),
             vec![Question::Decide {

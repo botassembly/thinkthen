@@ -1,6 +1,6 @@
 # ADR 0115: An `ollama` built-in backend, and descriptions each backend accepts
 
-- Status: **Proposed**, 2026-09-30. A fresh read-only ticket review accepted it. It moves to accepted when ticket 0339 lands. Ian can overturn each item.
+- Status: **Accepted** by ticket 0339, 2026-09-30. Ian can overturn each item.
 - Date: 2026-09-30
 
 Ian asked on 2026-09-30 for a built-in `ollama` backend. Ollama 0.35 serves System One at `/v1/systemone` on the user's own machine and needs no key. ADR 0114's coordinator default 1 held more built-ins back until a user needs one. That condition is now met. This ADR amends ADR 0114 sections 1, 2, 5 and 6, and ADR 0110's scope. ADR 0111's question key stays as it is.
@@ -65,7 +65,7 @@ The `text` dialect renders each description before the encoder builds the questi
 
 `text` drops an object's other fields when it sends `what` alone. Two places say so.
 
-- A live `thinkthen check` under `ollama` prints one warning on each probe row whose request lost a field: ``warning ROW: backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out``. The warnings count in the last line, and the check still exits 0 when nothing is critical. Experiment 415's refusals put these on `choice`, `score` and `mixed`.
+- A live `thinkthen check` under `ollama` prints one warning on each probe row whose request lost a field: ``warning ROW: backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out``. The warnings count in the last line, and the check still exits 0 when nothing is critical. Experiment 415's refusals put these on `choice`, `score` and `mixed`. Ticket 0339 found that the mixed probe's one object holds only `what`, so it loses no field. The warning therefore fires when `text` turns any nonempty object or list into text, which is exactly what Ollama refuses; the sentence stays as ruled.
 - `--plan`, on `check` or an asking command, prints once on standard error: ``thinkthen: backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out``. It prints only when at least one planned description lost a field. The exit code stays the same.
 
 A live asking run prints nothing more. The workaround is part of the backend the user named.

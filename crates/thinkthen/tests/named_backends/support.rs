@@ -15,9 +15,18 @@ pub(crate) const LIQUIDAI: (&str, &str) = ("LIQUIDAI_API_KEY", "sk-liquidai-mark
 pub(crate) const LIQUID: (&str, &str) = ("LIQUID_API_KEY", "sk-liquid-marker-0334c");
 pub(crate) const PRIMARY: (&str, &str) = ("THINKTHEN_API_KEY", "sk-primary-marker-0334d");
 pub(crate) const CONFIGURED: (&str, &str) = ("LOCAL_D1_KEY", "sk-configured-marker-0334e");
+pub(crate) const OLLAMA: (&str, &str) = ("OLLAMA_API_KEY", "sk-ollama-marker-0339a");
 pub(crate) const EXPLICIT: &str = "sk-explicit-marker-0334f";
 
-pub(crate) const MARKERS: [(&str, &str); 5] = [TYPESAFE, LIQUIDAI, LIQUID, PRIMARY, CONFIGURED];
+pub(crate) const MARKERS: [(&str, &str); 6] =
+    [TYPESAFE, LIQUIDAI, LIQUID, PRIMARY, CONFIGURED, OLLAMA];
+
+/// The count places after the markers: the explicit key, then no key at all.
+pub(crate) const EXPLICIT_PLACE: usize = MARKERS.len();
+pub(crate) const KEYLESS: usize = MARKERS.len() + 1;
+
+/// One count per marker, the explicit key, and no key.
+pub(crate) type Counts = [usize; MARKERS.len() + 2];
 
 /// The two provider bases, spelled here because tests may name them.
 pub(crate) const LIQUID_BASE: &str = "https://api.liquid.ai/decisions/v1";
@@ -48,8 +57,8 @@ pub(crate) fn listener() -> Listener {
 /// How many requests this listener received under each marker since the last
 /// call, in `MARKERS` order, then the explicit marker, then requests with no
 /// key at all. The listener hands each request over once.
-pub(crate) fn by_marker(listener: &Listener) -> [usize; 7] {
-    let mut counts = [0; 7];
+pub(crate) fn by_marker(listener: &Listener) -> Counts {
+    let mut counts = Counts::default();
     for request in listener.requests() {
         let header = request
             .header("authorization")
@@ -58,16 +67,16 @@ pub(crate) fn by_marker(listener: &Listener) -> [usize; 7] {
         let place = MARKERS
             .iter()
             .position(|(_, marker)| header == format!("Bearer {marker}"))
-            .or_else(|| (header == format!("Bearer {EXPLICIT}")).then_some(5))
-            .unwrap_or(6);
+            .or_else(|| (header == format!("Bearer {EXPLICIT}")).then_some(EXPLICIT_PLACE))
+            .unwrap_or(KEYLESS);
         counts[place] += 1;
     }
     counts
 }
 
 /// The counts that mean `n` requests under the marker at `place` and none other.
-pub(crate) fn only(place: usize, n: usize) -> [usize; 7] {
-    let mut counts = [0; 7];
+pub(crate) fn only(place: usize, n: usize) -> Counts {
+    let mut counts = Counts::default();
     counts[place] = n;
     counts
 }

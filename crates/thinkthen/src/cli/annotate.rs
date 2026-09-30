@@ -349,7 +349,7 @@ fn plan_for(
                 )))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    quoted_plan(backend.model().clone(), evidence, None, questions, profile).map_err(|error| {
+    quoted_plan(backend.asked(), evidence, None, questions, profile).map_err(|error| {
         PrepareError::Other(match error {
             BatchError::Profile(limit) => Failure::ProfileLimit(limit),
             _ => Failure::Defect("an annotate group asks nothing"),

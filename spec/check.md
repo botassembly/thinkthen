@@ -21,6 +21,21 @@ sed -n 9p "$HOME/plan.txt" | jq -c '{records,requests,estimated_bytes,estimated_
 sed -n '/^```json$/,/^```$/p' "$(dirname "$fixture")/../../check.md" | sed '1d;$d' | diff - "$fixture"
 ```
 
+Under `--backend ollama` the plan sends each description object as its `what` text, the temporary Ollama workaround, and says so once on standard error. The bodies match the text fixture byte for byte.
+
+```bash
+set -euo pipefail
+export HOME="$(mktemp -d)"
+unset XDG_CONFIG_HOME XDG_CACHE_HOME THINKTHEN_API_KEY THINKTHEN_BASE_URL THINKTHEN_BACKEND OLLAMA_API_KEY
+fixture="$(git rev-parse --show-toplevel)/specification/fixtures/check/requests-text.jsonl"
+thinkthen check --backend ollama --plan > "$HOME/plan.txt" 2> "$HOME/said.txt"
+sed -n 1p "$HOME/plan.txt" | mustmatch "url http://localhost:11434/v1/systemone"
+sed -n 4p "$HOME/plan.txt" | mustmatch "model sent nimble"
+sed -n 's/^request [a-z]* //p' "$HOME/plan.txt" | diff - "$fixture"
+mustmatch "thinkthen: backend \`ollama\` sends each description object as its \`what\` text, a temporary workaround for an Ollama bug, so its other fields are left out" < "$HOME/said.txt"
+wc -l < "$HOME/said.txt" | mustmatch "1"
+```
+
 With no `--url`, no `THINKTHEN_BASE_URL`, and no configuration file, the check refuses the built-in address. It prints nothing on standard output and exits 2.
 
 ```bash

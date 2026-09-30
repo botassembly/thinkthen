@@ -42,8 +42,11 @@ pub(crate) fn run(
         .or_else(|| environment.model().filter(|_| unnamed));
     let backend = environment.settle(&choice, asked)?;
     let roots = environment.roots()?;
-    let probes =
-        check::probes(backend.model()).ok_or(Failure::Defect("a check probe no longer parses"))?;
+    let probes = check::probes(backend.model(), backend.descriptions())
+        .ok_or(Failure::Defect("a check probe no longer parses"))?;
+    if arguments.dry_run {
+        say_dropped_detail(probes.iter().any(|probe| probe.drops_detail))?;
+    }
     let engine = Engine::with_roots(
         Settings {
             backend,
@@ -107,6 +110,21 @@ pub(crate) fn run(
         edge::write_line(&mut writer, &line)?;
     }
     Ok(ExitCode::from(if critical { 4 } else { 0 }))
+}
+
+/// Say once, under `--plan`, that the Ollama workaround turned a description
+/// object into text (ADR 0115 section 4). The workaround is debt; the
+/// adapter's backend table names its issue.
+pub(crate) fn say_dropped_detail(dropped: bool) -> Result<(), Failure> {
+    if dropped {
+        writeln!(
+            std::io::stderr().lock(),
+            "thinkthen: {}",
+            check::DROPPED_DETAIL
+        )
+        .map_err(Failure::Output)?;
+    }
+    Ok(())
 }
 
 /// Send one probe, print its decoded reply, and grade what came back.

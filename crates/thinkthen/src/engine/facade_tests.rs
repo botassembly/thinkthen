@@ -126,7 +126,7 @@ fn relate_limited(
 
 /// Ask a two-question group through the split-request path annotate uses.
 fn annotate(engine: &Engine, cancel: &Cancel) -> Result<usize, Error> {
-    let plan = Plan::new(
+    let plan = Plan::authored(
         evidence("Refund the card."),
         ModelName::new("jev-latest").expect("model"),
         vec![decide("Is this a refund?"), decide("Is this urgent?")],

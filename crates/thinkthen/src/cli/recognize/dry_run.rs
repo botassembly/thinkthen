@@ -6,8 +6,9 @@ use std::process::ExitCode;
 
 use serde::Serialize;
 
+use crate::core::adapters::built_in;
 use crate::core::{
-    Backend, BackendProfile, PlanSummary, Reading, RecognizeSpec, Record, json_line,
+    Backend, BackendProfile, Description, PlanSummary, Reading, RecognizeSpec, Record, json_line,
 };
 use crate::edge;
 use crate::engine::facade;
@@ -169,6 +170,12 @@ fn planned(
     let Some((pieces, requests, name_bound, relation_bound)) = first else {
         return Ok(ExitCode::SUCCESS);
     };
+    crate::cli::check::say_dropped_detail(built_in::drops_any(
+        backend.descriptions(),
+        spec.kinds
+            .iter()
+            .filter_map(|(_, held)| held.as_ref().map(Description::as_json)),
+    ))?;
     let report = DryRun {
         schema: "thinkthen.recognize-plan/2",
         url: backend.url().as_str(),

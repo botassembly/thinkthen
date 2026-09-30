@@ -237,6 +237,7 @@ impl Engine {
         let plan = Plan::new(
             planned.evidence.clone(),
             self.backend.model().clone(),
+            self.backend.descriptions(),
             planned.questions.clone(),
         )
         .map_err(|_| Error::Defect("relation planned no questions"))?;
@@ -399,8 +400,13 @@ fn window_plan(
         .get(window(pieces, stretch.0, stretch.1))
         .and_then(|part| Evidence::new(part).ok())
         .ok_or(Error::Defect("a recognize window is blank"))?;
-    Plan::new(evidence, backend.model().clone(), questions)
-        .map_err(|_| Error::Defect("a recognize request asks nothing"))
+    Plan::new(
+        evidence,
+        backend.model().clone(),
+        backend.descriptions(),
+        questions,
+    )
+    .map_err(|_| Error::Defect("a recognize request asks nothing"))
 }
 
 /// One piece's five tag probabilities, in table order.

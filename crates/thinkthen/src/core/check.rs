@@ -8,7 +8,7 @@ use serde::Serialize;
 use crate::core::adapters::built_in::{self, wire_name, wire_type};
 use crate::core::answer::Answer;
 use crate::core::json::Json;
-use crate::core::plan::Plan;
+use crate::core::plan::{Descriptions, Plan};
 use crate::core::question::Question;
 use crate::core::question_set::QuestionSet;
 use crate::core::render::json_line;
@@ -46,27 +46,45 @@ const PROBES: [(bool, &str); 4] = [
 const NO_USAGE: &str =
     "a reply carries no token counts, so results and usage totals leave them out";
 
-/// One fixed request: the row it reports on and the plan it sends.
+/// What `check` and `--plan` say when the Ollama workaround turned a
+/// description object into text (ADR 0115 section 4). The workaround is debt;
+/// the adapter's backend table names its issue.
+pub(crate) const DROPPED_DETAIL: &str = "backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out";
+
+/// One fixed request: the row it reports on, the plan it sends, and whether
+/// sending it turns a description object into text.
 pub(crate) struct Probe {
     pub(crate) name: &'static str,
     pub(crate) plan: Plan,
+    pub(crate) drops_detail: bool,
 }
 
-/// The four probes for one model. `None` means a fixed probe no longer
-/// parses, and only a defect can cause it.
-pub(crate) fn probes(model: &ModelName) -> Option<Vec<Probe>> {
+/// The four probes for one model and description form. `None` means a fixed
+/// probe no longer parses, and only a defect can cause it.
+pub(crate) fn probes(model: &ModelName, descriptions: Descriptions) -> Option<Vec<Probe>> {
     let object = Evidence::structured(Json::parse(OBJECT).ok()?).ok()?;
     let text = Evidence::new(TEXT).ok()?;
     let probe = |(structured, set): &(bool, &str)| {
         let questions = QuestionSet::parse(set).ok()?.questions().to_vec();
         let questions = questions.into_iter().map(|named| named.question().clone());
         let evidence = if *structured { &object } else { &text };
-        let plan = Plan::new(evidence.clone(), model.clone(), questions.collect()).ok()?;
+        let plan = Plan::new(
+            evidence.clone(),
+            model.clone(),
+            descriptions,
+            questions.collect(),
+        )
+        .ok()?;
         let name = match plan.questions() {
             [one] => wire_type(one),
             _ => "mixed",
         };
-        Some(Probe { name, plan })
+        let drops_detail = built_in::drops_detail(&plan);
+        Some(Probe {
+            name,
+            plan,
+            drops_detail,
+        })
     };
     PROBES.iter().map(probe).collect()
 }
@@ -133,6 +151,7 @@ impl Report {
             findings.extend(graded(question, outcome, place, width));
             place += width;
         }
+        findings.extend(dropped(probe));
         self.set(probe.name, findings);
         let warned = self.row("usage").is_some_and(|held| !held.is_empty());
         let warning = (warned || reply.usage().is_none()).then(|| (false, NO_USAGE.to_owned()));
@@ -142,7 +161,8 @@ impl Report {
     /// A probe failed for a reason its own body may cause. The check goes on.
     pub(crate) fn failed(&mut self, probe: &Probe, sentence: String) {
         self.reached();
-        self.set(probe.name, vec![(true, sentence)]);
+        let findings = std::iter::once((true, sentence)).chain(dropped(probe));
+        self.set(probe.name, findings.collect());
     }
 
     /// A probe met a failure every later probe would meet. The check stops.
@@ -198,6 +218,14 @@ impl Report {
             *row = Some(findings);
         }
     }
+}
+
+/// The warning a probe row carries when the Ollama workaround turned one of its
+/// description objects into text.
+fn dropped(probe: &Probe) -> Option<Finding> {
+    probe
+        .drops_detail
+        .then(|| (false, DROPPED_DETAIL.to_owned()))
 }
 
 const fn level(critical: bool) -> &'static str {

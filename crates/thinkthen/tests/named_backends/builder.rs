@@ -7,7 +7,9 @@ use std::process::Command;
 use conformance_backend::Listener;
 use thinkthen::{Engine, EngineBuilder, Question};
 
-use crate::support::{EXPLICIT, Home, LIQUID_BASE, Proxy, by_marker, listener, only, said};
+use crate::support::{
+    EXPLICIT, EXPLICIT_PLACE, Home, KEYLESS, LIQUID_BASE, Proxy, by_marker, listener, only, said,
+};
 
 const CASE: &str = "THINKTHEN_TEST_NAMED_CASE";
 
@@ -202,7 +204,7 @@ const CASES: [Case; 17] = [
         "",
         "",
         "D",
-        5,
+        EXPLICIT_PLACE,
         "model local-model",
     ),
     // A bare builder knows the built-ins and reads no key.
@@ -213,7 +215,7 @@ const CASES: [Case; 17] = [
         "",
         "",
         "A",
-        5,
+        EXPLICIT_PLACE,
         "model d1:free",
     ),
     (
@@ -223,7 +225,7 @@ const CASES: [Case; 17] = [
         "",
         "",
         "A",
-        6,
+        KEYLESS,
         "model d1:free",
     ),
     (
@@ -234,7 +236,7 @@ const CASES: [Case; 17] = [
         "",
         "-",
         0,
-        "Usage: unknown backend `local-d1`; the built-in backends are `liquid` and `typesafe`, and the configuration file may name more",
+        "Usage: unknown backend `local-d1`; the built-in backends are `liquid`, `ollama` and `typesafe`, and the configuration file may name more",
     ),
     (
         "backend=Local",
@@ -292,7 +294,7 @@ fn every_pair_of_tiers_on_the_builder_sends_the_selected_key_to_the_selected_add
             let wanted = if *name == letter {
                 only(place, 1)
             } else {
-                [0; 7]
+                [0; 8]
             };
             assert_eq!(by_marker(listener), wanted, "{index} {name}");
         }
@@ -335,8 +337,8 @@ fn the_builder_refuses_a_built_in_key_at_the_other_host_unless_the_key_is_explic
     let debug = in_child(&home, "backend=liquid;skip-ask", &proxied);
     assert!(debug[0].starts_with("debug EngineBuilder {"), "{debug:?}");
     assert!(
-        debug[0].contains("keys: 4"),
-        "the primary key and three built-in keys: {debug:?}"
+        debug[0].contains("keys: 5"),
+        "the primary key and four built-in keys: {debug:?}"
     );
     assert_eq!(
         proxy.count(),

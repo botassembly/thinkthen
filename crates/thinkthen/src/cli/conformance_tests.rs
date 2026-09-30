@@ -95,7 +95,10 @@ fn asked(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, String
     let digest = question_sha256(&question, threshold).map_err(|error| error.to_string())?;
     let record = Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?;
     let plan = quoted_plan(
-        resolved.model().clone(),
+        (
+            resolved.model().clone(),
+            crate::core::Descriptions::Authored,
+        ),
         record.clone(),
         None,
         vec![question.clone()],
@@ -151,7 +154,10 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
         );
     }
     let plan = quoted_plan(
-        ModelName::new(DEFAULT_MODEL).map_err(|error| error.to_string())?,
+        (
+            ModelName::new(DEFAULT_MODEL).map_err(|error| error.to_string())?,
+            crate::core::Descriptions::Authored,
+        ),
         evidence.clone(),
         None,
         questions.clone(),

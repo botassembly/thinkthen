@@ -10,11 +10,25 @@ use crate::core::text::{Evidence, ModelName};
 #[error("a plan asks at least one question")]
 pub(crate) struct EmptyPlanError;
 
-/// What one request asks: the questions, over the evidence, of the model.
+/// How a backend's descriptions travel (ADR 0115 section 3).
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub(crate) enum Descriptions {
+    /// Each description exactly as authored. Every backend but `ollama`.
+    #[default]
+    Authored,
+    /// Each description as text: an object's `what`, and no empty or null
+    /// description. A temporary Ollama-only workaround; the adapter's backend
+    /// table names its debt issue.
+    Text,
+}
+
+/// What one request asks: the questions, over the evidence, of the model, with
+/// the descriptions in the form the model's backend reads.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Plan {
     evidence: Evidence,
     model: ModelName,
+    descriptions: Descriptions,
     questions: Vec<Question>,
 }
 
@@ -27,6 +41,7 @@ impl Plan {
     pub(crate) fn new(
         evidence: Evidence,
         model: ModelName,
+        descriptions: Descriptions,
         questions: Vec<Question>,
     ) -> Result<Self, EmptyPlanError> {
         if questions.is_empty() {
@@ -35,8 +50,19 @@ impl Plan {
         Ok(Self {
             evidence,
             model,
+            descriptions,
             questions,
         })
+    }
+
+    /// A plan whose descriptions travel as authored, as every test plan does.
+    #[cfg(test)]
+    pub(crate) fn authored(
+        evidence: Evidence,
+        model: ModelName,
+        questions: Vec<Question>,
+    ) -> Result<Self, EmptyPlanError> {
+        Self::new(evidence, model, Descriptions::Authored, questions)
     }
 
     /// Read the evidence back.
@@ -47,6 +73,11 @@ impl Plan {
     /// Read the model name back.
     pub(crate) const fn model(&self) -> &ModelName {
         &self.model
+    }
+
+    /// How this plan's descriptions travel.
+    pub(crate) const fn descriptions(&self) -> Descriptions {
+        self.descriptions
     }
 
     /// Read the questions back, in the order they were given.
@@ -91,7 +122,8 @@ mod tests {
     #[test]
     fn a_plan_keeps_its_questions_in_the_order_they_were_given() {
         let questions = vec![question("is urgent"), question("asks for a refund")];
-        let plan = Plan::new(evidence(), model(), questions.clone()).expect("a question is asked");
+        let plan =
+            Plan::authored(evidence(), model(), questions.clone()).expect("a question is asked");
         assert_eq!(plan.evidence(), &evidence());
         assert_eq!(plan.model(), &model());
         assert_eq!(plan.questions(), questions.as_slice());
@@ -100,7 +132,7 @@ mod tests {
     #[test]
     fn a_plan_that_asks_nothing_is_refused() {
         assert_eq!(
-            Plan::new(evidence(), model(), Vec::new()),
+            Plan::authored(evidence(), model(), Vec::new()),
             Err(EmptyPlanError)
         );
     }

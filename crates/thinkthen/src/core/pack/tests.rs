@@ -22,7 +22,10 @@ fn decide(text: &str) -> Question {
 
 fn quoted(record: &str, question: Question) -> Plan {
     quoted_plan(
-        ModelName::new("jev-1.13.0").expect("a model"),
+        (
+            ModelName::new("jev-1.13.0").expect("a model"),
+            crate::core::Descriptions::Authored,
+        ),
         Evidence::new(record).expect("not blank"),
         None,
         vec![question],

@@ -5,11 +5,15 @@ use super::{BatchError, QUOTED, quoted_plan, quoted_plan_of};
 use crate::core::adapters::built_in;
 use crate::core::backend_profile::{BackendProfile, LimitKind};
 use crate::core::json::Json;
+use crate::core::plan::Descriptions;
 use crate::core::question::Question;
 use crate::core::text::{Evidence, ModelName, QuestionText};
 
-fn model() -> ModelName {
-    ModelName::new("jev-latest").expect("model")
+fn model() -> (ModelName, Descriptions) {
+    (
+        ModelName::new("jev-latest").expect("model"),
+        Descriptions::Authored,
+    )
 }
 
 fn decide(text: &str) -> Question {

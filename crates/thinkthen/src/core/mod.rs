@@ -74,7 +74,7 @@ pub(crate) use crate::core::json::Json;
 #[cfg(feature = "cli")]
 pub(crate) use crate::core::json::JsonError;
 pub(crate) use crate::core::order::ranking;
-pub(crate) use crate::core::plan::Plan;
+pub(crate) use crate::core::plan::{Descriptions, Plan};
 pub(crate) use crate::core::plan_document::PlanDocument;
 pub(crate) use crate::core::plan_summary::PlanSummary;
 pub(crate) use crate::core::pointer::{Pointer, PointerError};

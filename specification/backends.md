@@ -44,14 +44,19 @@ With no backend named, the key is read from `THINKTHEN_API_KEY`. A named backend
 
 ## Named backends
 
-Settled by ADR 0114. Ian can overturn each default it records.
+Settled by ADR 0114 and ADR 0115. Ian can overturn each default they record.
 
-Two backends are built in:
+Three backends are built in:
 
-| Name | Base | Key variables, first nonblank wins | Model |
-| --- | --- | --- | --- |
-| `typesafe` | `https://api.typesafe.ai/v1` | `TYPESAFE_API_KEY` | `jev-1.13.0` |
-| `liquid` | `https://api.liquid.ai/decisions/v1` | `LIQUIDAI_API_KEY`, then `LIQUID_API_KEY` | `d1:free` |
+| Name | Base | Key variables, first nonblank wins | Model | Descriptions |
+| --- | --- | --- | --- | --- |
+| `liquid` | `https://api.liquid.ai/decisions/v1` | `LIQUIDAI_API_KEY`, then `LIQUID_API_KEY` | `d1:free` | as authored |
+| `ollama` | `http://localhost:11434/v1` | `OLLAMA_API_KEY` | `nimble` | as text (workaround) |
+| `typesafe` | `https://api.typesafe.ai/v1` | `TYPESAFE_API_KEY` | `jev-1.13.0` | as authored |
+
+At its default base, `ollama` needs no key: with `OLLAMA_API_KEY` unset or blank, the loopback rule sends no `Authorization` header. At any other base it reads `OLLAMA_API_KEY` like every named backend, and a missing key exits 4.
+
+`ollama` alone sends descriptions as text. This is a temporary workaround for an Ollama bug: Ollama 0.35 answers status 400 to an object description ([ollama/ollama#18718](https://github.com/ollama/ollama/issues/18718)). It is tracked as debt in [the Ollama issue](../sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md) and goes when Ollama accepts object descriptions. Under it, a string travels as written. An object with a nonblank string `what` travels as that text alone, so its other fields are left out. Any other object or list travels as its compact JSON text. An empty object or null travels as no description: a `decide` side or `tag` label drops its `criteria` member, a `choose` option keeps its key with `null`, and a `score` level travels as its name. A `tag` question whose descriptions all become text takes the sentence form. `typesafe`, `liquid`, configured entries, and the unnamed path send every description exactly as authored. `--backend ollama --url BASE` keeps the text form at any address. The configuration file names no description form.
 
 The configuration file may name more backends under `backends`, each with exactly `url`, `key_env`, and `model`, and may name the default under `backend`; [recording.md](recording.md) lists the file's fields. An entry may not reuse a built-in name. `key_env` matches `[A-Z_][A-Z0-9_]*`, and the file never holds a key. A file another user can write may not hold `backends`, because an entry could name any variable; that refusal exits 5. A backend name uses 1 to 32 lowercase ASCII letters, digits, and hyphens.
 
@@ -59,14 +64,14 @@ The configuration file may name more backends under `backends`, each with exactl
 
 - A backend and no address: the backend's base, key variables, and model apply.
 - An address and no backend: the unnamed path applies exactly as before, with `THINKTHEN_API_KEY`.
-- Both: the backend's key variables and model apply at that tier's address. `--backend liquid --url http://127.0.0.1:8080/v1` sends the Liquid key to the loopback server.
+- Both: the backend's key variables, model, and description form apply at that tier's address. `--backend liquid --url http://127.0.0.1:8080/v1` sends the Liquid key to the loopback server.
 - A lower tier's address never replaces a higher tier's backend, and a higher tier's address outranks a lower tier's backend. `THINKTHEN_BASE_URL` in the shell outranks `backend` in the configuration file.
 
 On the named path the model is `--model`, then the question file's `model`, then the engine's `model`, then the backend's model. The configuration's top-level `model` and `jev-1.13.0` apply only on the unnamed path.
 
-When the selected backend reads a variable a built-in lists, and the final posting URL's host equals another built-in's host, the call is refused with exit 2 before any key is read, any cache or recording opens, or any connection is made. The host comparison is exact after lower-casing, decoding ASCII percent escapes, and dropping trailing dots, and it ignores port and path; a subdomain does not match. The whole standard error line reads, for example, `thinkthen: backend `typesafe` reads `TYPESAFE_API_KEY`, the key of backend `typesafe`, which never goes to the address of backend `liquid``. An unknown host passes, because the user named it. An explicit `EngineBuilder::api_key` reads no variable and skips this rule.
+When the selected backend reads a variable a built-in lists, and the final posting URL's host equals another built-in's host, the call is refused with exit 2 before any key is read, any cache or recording opens, or any connection is made. The host comparison is exact after lower-casing, decoding ASCII percent escapes, and dropping trailing dots, and it ignores port and path; a subdomain does not match. The whole standard error line reads, for example, `thinkthen: backend `typesafe` reads `TYPESAFE_API_KEY`, the key of backend `typesafe`, which never goes to the address of backend `liquid``. An unknown host passes, because the user named it. A built-in whose base host is loopback, such as `ollama`, is no other built-in's host, so `--backend liquid --url http://localhost:8080/v1` passes (ADR 0115). `OLLAMA_API_KEY` is still refused at the `typesafe` and `liquid` hosts. An explicit `EngineBuilder::api_key` reads no variable and skips this rule.
 
-An invalid name exits 2 with `a backend name uses 1 to 32 lowercase letters, digits, and hyphens`. An unknown valid name exits 2 with `unknown backend `NAME`; the built-in backends are `liquid` and `typesafe`, and the configuration file may name more`. `Engine::builder()` knows only the built-ins and captures no key, so its caller supplies one with `api_key`; a missing key fails the first live call as on the unnamed path. The cache key never holds a key or a backend name, so two backends at one posting URL and model share answers, and backends at different URLs never mix.
+An invalid name exits 2 with `a backend name uses 1 to 32 lowercase letters, digits, and hyphens`. An unknown valid name exits 2 with `unknown backend `NAME`; the built-in backends are `liquid`, `ollama` and `typesafe`, and the configuration file may name more`. `Engine::builder()` knows only the built-ins and captures no key, so its caller supplies one with `api_key`; a missing key fails the first live call as on the unnamed path. The cache key never holds a key or a backend name, so two backends at one posting URL and model share answers, and backends at different URLs never mix. It hashes each question as sent, so an `ollama` question whose descriptions became text reuses no answer to the authored question, and a question whose descriptions are all strings is the same question under either form.
 
 ## The address
 

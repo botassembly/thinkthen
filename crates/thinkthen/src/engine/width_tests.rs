@@ -398,7 +398,7 @@ fn a_gate_closed_while_the_send_slot_is_full_is_rechecked_before_sending() {
 }
 
 fn plan() -> Plan {
-    Plan::new(
+    Plan::authored(
         Evidence::new("evidence").expect("evidence"),
         ModelName::new("jev-latest").expect("model"),
         vec![Question::Decide {

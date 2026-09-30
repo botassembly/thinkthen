@@ -7,6 +7,7 @@ use sha2::{Digest as _, Sha256};
 use thiserror::Error;
 
 use crate::core::digest::hex;
+use crate::core::plan::Descriptions;
 use crate::core::{
     Answer, Evidence, Labels, Meta, ModelName, Plan, Question, QuestionText, Record,
 };
@@ -74,9 +75,12 @@ impl Find {
             text: text.clone(),
             options: Labels::options(options).map_err(|_| FindError::Count)?,
         };
+        // A find question carries no description, so both description forms
+        // write the same bytes (ADR 0115 section 3).
         let plan = Plan::new(
             Evidence::new(&aggregate).map_err(|_| FindError::Render)?,
             model,
+            Descriptions::Authored,
             vec![question],
         )
         .map_err(|_| FindError::Render)?;

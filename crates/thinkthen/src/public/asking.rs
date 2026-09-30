@@ -23,7 +23,7 @@ pub(crate) struct Text {
 /// What one question needs of each text beside the text.
 pub(crate) struct Decisions {
     question: core::Question,
-    model: ModelName,
+    asked: (ModelName, core::Descriptions),
     url: core::Url,
     context: Option<core::Evidence>,
     profile: Option<core::BackendProfile>,
@@ -37,7 +37,7 @@ impl Decisions {
     ) -> Self {
         Self {
             question: question.core.clone(),
-            model: engine.backend().model().clone(),
+            asked: engine.backend().asked(),
             url: engine.backend().url().clone(),
             context,
             profile: engine.profile().cloned(),
@@ -78,7 +78,7 @@ impl Asker for Decisions {
     fn asks(&self, text: &Text) -> Result<Vec<Ask>, Miss> {
         let record = evidence(&text.text).map_err(Miss::Refused)?;
         let plan = quoted_plan_of(
-            self.model.clone(),
+            self.asked.clone(),
             record,
             &Json::String(text.text.clone()),
             self.context.as_ref(),

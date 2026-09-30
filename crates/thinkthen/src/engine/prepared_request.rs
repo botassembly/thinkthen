@@ -98,8 +98,13 @@ fn candidate(
         .take(count)
         .cloned()
         .collect();
-    let chunk = Plan::new(plan.evidence().clone(), plan.model().clone(), questions)
-        .map_err(|_| Error::Defect("a request chunk asks nothing"))?;
+    let chunk = Plan::new(
+        plan.evidence().clone(),
+        plan.model().clone(),
+        plan.descriptions(),
+        questions,
+    )
+    .map_err(|_| Error::Defect("a request chunk asks nothing"))?;
     let body = checked_body(&chunk, profile)?;
     Ok((chunk, body))
 }

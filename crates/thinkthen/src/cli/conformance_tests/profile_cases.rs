@@ -63,7 +63,7 @@ fn shared_profile_cases_cross_the_facade_preparation() {
             asked(case, profile_case.exchange, exchange).expect("production question grammar");
         let profile = BackendProfile::parse(profile_case.profile.get()).expect("profile parser");
         let result = quoted_plan(
-            asked.plan.model().clone(),
+            (asked.plan.model().clone(), asked.plan.descriptions()),
             asked.record,
             None,
             asked.questions,

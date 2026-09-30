@@ -135,7 +135,7 @@ fn no_record_label_request_or_answer_debug_line_shows_the_evidence() {
     ];
     let (listener, backend, engine) = loopback_engine(&answers);
     let evidence = crate::core::Evidence::new(EVIDENCE).expect("evidence");
-    let plan = crate::core::Plan::new(
+    let plan = crate::core::Plan::authored(
         evidence.clone(),
         backend.model().clone(),
         questions.to_vec(),

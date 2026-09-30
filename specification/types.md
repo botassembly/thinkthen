@@ -7,7 +7,7 @@ Status: **Settled** by ADR 0082. This page maps the existing question and result
 | Concept | Type and rule |
 | --- | --- |
 | Question text | A string, structured object, or list in the question-file grammar. |
-| Description | A string or structured `{what, not_for, examples}` object. Descriptions travel into the prompt; dropping one changes the question. |
+| Description | A string or structured `{what, not_for, examples}` object. Descriptions travel into the prompt; dropping one changes the question. Every backend receives them as authored, except the `ollama` built-in, which sends an object's `what` text alone as a temporary workaround for an Ollama bug ([backends.md](backends.md#named-backends)). |
 | `true`, `false` | A description of each `decide` outcome. |
 | `options`, `labels`, `kinds` | An ordered label set with optional descriptions. A bare list gives labels without descriptions; a map gives each label's description. |
 | `levels` | Ordered bands, lowest first, with optional descriptions. The result is numeric. |
