@@ -1,6 +1,6 @@
 # The question-file reader has four capped copies and three uncapped ones
 
-Status: open. Filed by the Quick Fix that capped the command's question file. Owner: ticket 0345, batch B3 of `../planning/issue-priorities-2026-09-30.md`.
+Status: Closed by ticket 0345, landed as `Land 0345: every surface reads a question file through one capped public reader`. Resolution: `thinkthen::read_question_file` reads at most 1 MiB and one byte and names why it gave no text. The command, the four Rust loaders, and the C, Python, TypeScript, Ruby and R libraries call it and keep their own sentences. The SQL extensions keep their own 1 MiB readers.
 
 Kind: debt
 
@@ -9,6 +9,8 @@ Pay when: before 0.1, since the uncapped Rust and Python loaders can exhaust mem
 Debt: 011
 
 Severity: high
+
+Paid: 2026-09-30
 
 Keeping it lets one copy's cap or sentence drift from the others, and lets a Rust or Python caller read `/dev/zero` until memory runs out.
 

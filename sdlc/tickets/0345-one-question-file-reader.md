@@ -1,6 +1,6 @@
 # 0345: One capped question-file reader serves every surface
 
-Status: in progress. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3. Pays Debt 011, `sdlc/issues/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md`. Starts after ticket 0344 lands, because 0344 edits `libraries/python/src/asked.rs`.
+Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3. Pays Debt 011, `sdlc/issues/closed/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md`. Starts after ticket 0344 lands, because 0344 edits `libraries/python/src/asked.rs`.
 
 ## Outcome
 
@@ -15,6 +15,12 @@ The `thinkthen` crate holds the one question-file reader. It reads at most 1 MiB
 - Defers: the SQLite, DuckDB and PostgreSQL extensions' own 1 MiB caps and sentences, which `closed/2026-09-30-command-question-file-has-no-size-cap.md` left as they are.
 
 ## What the build taught us
+
+- The ticket named three uncapped loaders. The build and its review found five more reads of the same kind: `QuestionSet::load`, `Recognize::load`, R's `tt_question(file=)`, and the command's `annotate` look at `--input` for a swapped set, which read `/dev/zero` forever beside a broken set. A search for every whole-file read beats a list made from the debt issue.
+- A path handed from R to Rust loses R's `~` expansion. R's `file()` expands the home folder, so the R call passes `path.expand(file)`.
+- The public reason carries the `io::Error` because the command prints it in its per-verb unopened sentence. The libraries ignore it.
+- R's `ffi.rs` now sits at the 500-line cap, so its next export needs a split first.
+- Checks: `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, lint in a clean checkout (inventory 548 items), and the C, TypeScript, Ruby, Python and R surface checks passed. Code review took three rounds: R's cap, the annotate read and the spec's scope; then R's home folder, the annotate sentence and the role words; then accept.
 
 ## Public API delta
 

@@ -1,6 +1,6 @@
 # The command reads a question file of any size
 
-Status: Closed by a Quick Fix, "Land quick fix: cap the command's question file at 1 MiB". The libraries keep their own copies; `sdlc/issues/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` records that debt. The command reads a question file or question set through one capped reader, `crates/thinkthen/src/cli/question_text.rs`, and `tests/question_file/size.rs` pins the boundary, the sentence, exit 5 and zero loopback requests on all nine verbs. Reported by the Beatles Bench team on 2026-09-30. Verified by reading main `7230f1215`.
+Status: Closed by a Quick Fix, "Land quick fix: cap the command's question file at 1 MiB". The libraries keep their own copies; `sdlc/issues/closed/2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` records that debt. The command reads a question file or question set through one capped reader, `crates/thinkthen/src/cli/question_text.rs`, and `tests/question_file/size.rs` pins the boundary, the sentence, exit 5 and zero loopback requests on all nine verbs. Reported by the Beatles Bench team on 2026-09-30. Verified by reading main `7230f1215`.
 
 ## The problem
 
