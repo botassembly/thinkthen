@@ -3,7 +3,7 @@
 - R5-21: the SIGINT handler and its bridge write lock nothing, allocate
   nothing, and call nothing in `thinkthen`.
 - ADR 0081: no raw C API entry, dependency, or shipped path remains.
-- R2-31: the C++ bridge contains both panic catches in its marked scope.
+- R2-31: the C++ bridge catches panics only through thinkthen::contained.
 - R4-19, R5-34: every `cargo` call in check.sh passes `--locked` and
   `--offline`.
 - R1-33: every vendored script is named by check.sh or a tool.
@@ -68,11 +68,10 @@ def retired_entry() -> None:
 
 
 def guards() -> None:
-    guarded = ROOT / "bridge" / "src" / "ffi" / "panic.rs"
-    sites = [(path, path.read_text().count("catch_unwind("))
-             for path in (ROOT / "bridge" / "src").rglob("*.rs")]
-    if sum(count for _, count in sites) != 2 or dict(sites).get(guarded) != 2:
-        fail("R2-31: the bridge's two panic catches stay together in ffi/panic.rs")
+    sites = sum(path.read_text().count("catch_unwind(")
+                for path in (ROOT / "bridge" / "src").rglob("*.rs"))
+    if sites != 0:
+        fail("R2-31: the bridge catches panics only through thinkthen::contained")
 
 
 def cargo_flags() -> None:

@@ -99,9 +99,9 @@ awk '!/^[[:space:]]*(#|echo )/ && /(^|[[:space:](])(carg[o]|maturi[n]) [a-z]/ &&
 	&& !(/--locked/ && /--offline/) { print FILENAME ": " $0; bad = 1 } END { exit bad }' \
 	check.sh build-wheel.sh
 
-echo "== one catch_unwind site (R2-31)"
+echo "== panics are caught only through thinkthen::contained (R2-31)"
 sites=$(grep -o 'catch_unwind(' src/*.rs | wc -l)
-[ "$sites" -eq 1 ] || { echo "found $sites catch_unwind sites in src, expected 1" >&2; exit 1; }
+[ "$sites" -eq 0 ] || { echo "found $sites catch_unwind sites in src, expected none" >&2; exit 1; }
 
 echo "== format, lints, and the Rust unit tests with libpython linked"
 cargo fmt --check

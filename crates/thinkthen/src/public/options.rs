@@ -450,8 +450,8 @@ impl<'a> Stop<'a> {
 
 /// Run one engine call and turn any panic below the door into a defect.
 pub(crate) fn guarded<T>(call: impl FnOnce() -> Result<T, Error>) -> Result<T, Error> {
-    catch_unwind(AssertUnwindSafe(|| workers::with_engine_diagnostics(call)))
-        .unwrap_or_else(|_| Err(Error::defect("the engine panicked below the public door")))
+    super::contained(call)
+        .unwrap_or_else(|| Err(Error::defect("the engine panicked below the public door")))
 }
 
 impl fmt::Debug for Stop<'_> {

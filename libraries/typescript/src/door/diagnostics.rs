@@ -1,114 +1,71 @@
-//! Suppress this addon's caught Rust payload while preserving host diagnostics.
+//! A caught panic in the Node addon stays out of every output.
 
-use std::cell::Cell;
-use std::sync::Once;
+use std::io::Write as _;
 
-thread_local! {
-    static DEPTH: Cell<usize> = const { Cell::new(0) };
-}
+use super::guarded;
 
-static HOOK: Once = Once::new();
+const CHILD: &str = "THINKTHEN_TEST_NODE_PANIC_CHILD";
+const STRING: &str = "node-owned-string-payload-marker";
+const DROP: &str = "node-owned-drop-payload-marker";
 
-fn install() {
-    HOOK.call_once(|| {
-        let previous = std::panic::take_hook();
-        std::panic::set_hook(Box::new(move |info| {
-            if !DEPTH.try_with(|depth| depth.get() != 0).unwrap_or(false) {
-                previous(info);
-            }
-        }));
-    });
-}
+struct Exploding;
 
-struct Restore(usize);
-
-impl Drop for Restore {
+impl Drop for Exploding {
     fn drop(&mut self) {
-        let _ = DEPTH.try_with(|depth| depth.set(self.0));
+        panic!("{DROP}");
     }
 }
 
-/// Mark only this addon's Rust work on the current thread.
-pub(super) fn owned<T>(body: impl FnOnce() -> T) -> T {
-    install();
-    let prior = DEPTH.with(|depth| {
-        let prior = depth.get();
-        depth.set(prior.saturating_add(1));
-        prior
-    });
-    let _restore = Restore(prior);
-    body()
+#[test]
+fn a_caught_panic_stays_out_of_node_diagnostics() {
+    if std::env::var_os(CHILD).is_some() {
+        child();
+    } else {
+        let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
+            .env_clear()
+            .args([
+                "--exact",
+                "door::diagnostics::a_caught_panic_stays_out_of_node_diagnostics",
+                "--nocapture",
+            ])
+            .env(CHILD, "1")
+            .output()
+            .expect("isolated Node proof");
+        assert!(output.status.success());
+        for stream in [&output.stdout, &output.stderr] {
+            let text = String::from_utf8_lossy(stream);
+            assert!(!text.contains(STRING), "{text}");
+            assert!(!text.contains(DROP), "{text}");
+        }
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            "host-thread-marker\n"
+        );
+    }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::io::Write as _;
-
-    use super::super::guarded;
-
-    const CHILD: &str = "THINKTHEN_TEST_NODE_PANIC_CHILD";
-    const STRING: &str = "node-owned-string-payload-marker";
-    const DROP: &str = "node-owned-drop-payload-marker";
-
-    struct Exploding;
-
-    impl Drop for Exploding {
-        fn drop(&mut self) {
-            panic!("{DROP}");
-        }
+fn child() {
+    std::panic::set_hook(Box::new(|info| {
+        let text = info
+            .payload()
+            .downcast_ref::<&str>()
+            .copied()
+            .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
+            .unwrap_or(if info.payload().is::<Exploding>() {
+                DROP
+            } else {
+                "other panic"
+            });
+        let _ = std::io::stderr().write_all(format!("{text}\n").as_bytes());
+    }));
+    let string = guarded(|| panic!("{STRING}"));
+    let dropped = guarded(|| std::panic::panic_any(Exploding));
+    for envelope in [string, dropped] {
+        assert_eq!(
+            envelope,
+            r#"{"err":{"kind":"defect","message":"defect: the Node binding panicked","retryable":false}}"#
+        );
     }
-
-    #[test]
-    fn a_caught_panic_stays_out_of_node_diagnostics() {
-        if std::env::var_os(CHILD).is_some() {
-            child();
-        } else {
-            let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
-                .env_clear()
-                .args([
-                    "--exact",
-                    "door::diagnostics::tests::a_caught_panic_stays_out_of_node_diagnostics",
-                    "--nocapture",
-                ])
-                .env(CHILD, "1")
-                .output()
-                .expect("isolated Node proof");
-            assert!(output.status.success());
-            for stream in [&output.stdout, &output.stderr] {
-                let text = String::from_utf8_lossy(stream);
-                assert!(!text.contains(STRING), "{text}");
-                assert!(!text.contains(DROP), "{text}");
-            }
-            assert_eq!(
-                String::from_utf8_lossy(&output.stderr),
-                "host-thread-marker\n"
-            );
-        }
-    }
-
-    fn child() {
-        std::panic::set_hook(Box::new(|info| {
-            let text = info
-                .payload()
-                .downcast_ref::<&str>()
-                .copied()
-                .or_else(|| info.payload().downcast_ref::<String>().map(String::as_str))
-                .unwrap_or(if info.payload().is::<Exploding>() {
-                    DROP
-                } else {
-                    "other panic"
-                });
-            let _ = std::io::stderr().write_all(format!("{text}\n").as_bytes());
-        }));
-        let string = guarded(|| panic!("{STRING}"));
-        let dropped = guarded(|| std::panic::panic_any(Exploding));
-        for envelope in [string, dropped] {
-            assert_eq!(
-                envelope,
-                r#"{"err":{"kind":"defect","message":"defect: the Node binding panicked","retryable":false}}"#
-            );
-        }
-        assert_eq!(guarded(|| Ok("7".to_owned())), r#"{"ok":7}"#);
-        let _ = std::thread::spawn(|| panic!("host-thread-marker")).join();
-    }
+    assert_eq!(guarded(|| Ok("7".to_owned())), r#"{"ok":7}"#);
+    let _ = std::thread::spawn(|| panic!("host-thread-marker")).join();
 }
