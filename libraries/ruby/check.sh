@@ -7,7 +7,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "check ruby: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "check ruby: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
@@ -77,9 +77,11 @@ stamp=$(head -n 3 "$prefix/thinkthen-toolchain.stamp")
 # deny on the lock, then a planted file:// git source meets the sources rule
 # (R3-28). This is the Ruby lint block: lint reaches this surface only
 # through surfaces --registry, and the pinned-Ruby guard lives below (R5-35).
+scratch_dir plant
+# The replay smoke skips the deny plant (ticket 0335).
+if [ "$profile" != smoke ]; then
 cargo deny --version >/dev/null 2>&1 || not_run "no cargo-deny; install it once, with the network"
 cargo deny --offline --manifest-path Cargo.toml check --config "$repo/deny.toml" advisories bans licenses sources
-scratch_dir plant
 mkdir -p "$plant/dep/src" "$plant/copy/src"
 printf '[package]\nname = "planted"\nversion = "0.0.1"\nedition = "2024"\nlicense = "MIT"\n' >"$plant/dep/Cargo.toml"
 : >"$plant/dep/src/lib.rs"
@@ -95,6 +97,7 @@ CARGO_HOME="$plant/home" cargo deny --offline --manifest-path "$plant/copy/Cargo
 code=$?
 set -e
 [ "$code" -eq 8 ] && grep -q source-not-allowed "$plant/deny" || fail "deny passed a git source (exit $code)"
+fi
 
 # Only the pinned prefix runs, never a ruby found on PATH.
 if [ -n "${RUBY:-}" ] && [ "$RUBY" != "$prefix/bin/ruby" ]; then
@@ -130,6 +133,20 @@ PATH=$prefix/bin:$PATH
 LIBCLANG_PATH=$clang
 THINKTHEN_TEST_BACKEND=$backend
 export RUBY PATH LIBCLANG_PATH THINKTHEN_TEST_BACKEND
+
+if [ "$profile" = smoke ]; then
+  # The replay smoke (ticket 0335): the gem in a fresh gem folder, required from outside the checkout.
+  ./build.sh
+  "$prefix/bin/gem" install --local --silent --no-document --install-dir "$plant/gems" thinkthen-*.gem
+  cd "$plant"
+  unset RUBYLIB
+  GEM_PATH="$plant/gems" THINKTHEN_API_KEY=sk-smoke-loopback "$RUBY" -e 'require "thinkthen"
+    ours = $LOADED_FEATURES.grep(%r{/lib/thinkthen(\.rb|/)})
+    abort "thinkthen loaded #{ours}" unless ours.any? && ours.all? { |path| path.start_with?(ARGV[0]) }
+    value = ThinkThen.decide(ENV.fetch("THINKTHEN_SMOKE_QUESTION"), ENV.fetch("THINKTHEN_SMOKE_TEXT")).value
+    puts "smoke: #{value.nil? ? "null" : value}"' "$plant/gems/gems/"
+  exit
+fi
 
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   # The installed-file mode (ticket 0128): the gem in a fresh gem folder, and the shared cases

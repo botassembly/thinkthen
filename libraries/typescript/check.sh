@@ -6,7 +6,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 unset THINKTHEN_API_KEY
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case $profile in routine|full|stress) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
+case $profile in routine|full|stress|smoke) ;; *) echo "typescript: unknown THINKTHEN_TEST_PROFILE: $profile" >&2; exit 2 ;; esac
 [ "$profile" = routine ] || unset THINKTHEN_CONFORMANCE_IDS
 repo=$(cd ../.. && pwd)
 . "$repo/sdlc/scripts/scratch.sh"
@@ -42,6 +42,28 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     (cd "$project" && sh "$LIMIT" 300 node --test --test-timeout=30000 tests/conformance.test.mjs tests/examples.test.mjs)
     echo 'typescript: pass, installed'
     exit 0
+fi
+
+if [ "$profile" = smoke ]; then
+    # The replay smoke (ticket 0335): the package laid out in a fresh project's node_modules,
+    # required by its name from that project.
+    [ -x "$node_home/bin/node" ] || { echo 'typescript: not run; place Node with libraries/typescript/setup-toolchain.sh'; exit 77; }
+    PATH="$node_home/bin:$PATH"
+    cargo build --quiet --locked --offline
+    case $(uname -s) in Darwin) library=libthinkthen_typescript.dylib ;; *) library=libthinkthen_typescript.so ;; esac
+    scratch_dir project
+    mkdir -p "$project/node_modules/thinkthen"
+    cp package.json index.js index.mjs index.d.ts loader.js LICENSE "$project/node_modules/thinkthen/"
+    cp -- "${CARGO_TARGET_DIR:-target}/debug/$library" \
+        "$project/node_modules/thinkthen/thinkthen-$(node -p 'process.platform + "-" + process.arch').node"
+    cd "$project"
+    THINKTHEN_API_KEY=sk-smoke-loopback node -e '
+        const tt = require("thinkthen");
+        if (!require.resolve("thinkthen").startsWith(process.argv[1])) throw new Error("thinkthen loaded from outside the project");
+        tt.decide(process.env.THINKTHEN_SMOKE_QUESTION, process.env.THINKTHEN_SMOKE_TEXT)
+            .then((call) => console.log(`smoke: ${call.value}`));
+    ' "$project/node_modules/"
+    exit
 fi
 
 step 'rust: format, lint, and unit tests with no Node'

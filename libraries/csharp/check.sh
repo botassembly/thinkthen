@@ -15,6 +15,20 @@ dotnet=${THINKTHEN_DOTNET:-$(command -v dotnet || true)}
 [ -x "$dotnet" ] || exit 77
 command -v python3 >/dev/null 2>&1 || exit 77
 python3 "$here/tests/toolchains.py"
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    # The replay smoke (ticket 0335): the packed package, restored into a fresh app, over the installed C door.
+    . "$root/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    native_install "$root" "$smoke/native"
+    mkdir "$smoke/feed" "$smoke/app" "$smoke/home"
+    export DOTNET_CLI_HOME="$smoke/home" NUGET_PACKAGES="$smoke/home/nuget" DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE=1 DOTNET_NOLOGO=1
+    "$dotnet" pack "$here/ThinkThen.csproj" -c Release -o "$smoke/feed" -v quiet >&2
+    cp "$here/tests/Smoke.csproj" "$here/tests/source/Smoke.cs" "$smoke/app/"
+    "$dotnet" build "$smoke/app/Smoke.csproj" -c Release -o "$smoke/app/out" -p:RestoreSources="$smoke/feed" -v quiet >&2
+    LD_LIBRARY_PATH="$smoke/native/lib" "$smoke/app/out/Smoke"
+    exit
+fi
 [ "${THINKTHEN_PORTABLE_BATCH:-}" != 1 ] || [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
     echo 'C# portable batch needs an installed artifact' >&2; exit 2;
 }

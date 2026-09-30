@@ -4,7 +4,7 @@ set -eu
 cd -- "$(dirname -- "$0")"
 repo=$(cd ../.. && pwd)
 profile=${THINKTHEN_TEST_PROFILE:-routine}
-case "$profile" in routine|full) ;; stress) echo 'php: not run: no stress gate'; exit 77 ;; *) echo "php: unknown profile $profile" >&2; exit 2 ;; esac
+case "$profile" in routine|full|smoke) ;; stress) echo 'php: not run: no stress gate'; exit 77 ;; *) echo "php: unknown profile $profile" >&2; exit 2 ;; esac
 if [ "$(uname -s)" != Linux ] || [ "$(uname -m)" != x86_64 ]; then
     echo 'php: not run: this package gate is proven on Linux x86_64'; exit 77
 fi
@@ -24,6 +24,16 @@ done
 for tool in cargo cc nm readelf; do
     command -v "$tool" >/dev/null 2>&1 || { echo "php: not run: no $tool" >&2; exit 77; }
 done
+if [ "$profile" = smoke ]; then
+    # The replay smoke (ticket 0335): the package source over the installed C door.
+    . "$repo/sdlc/scripts/scratch.sh"
+    usage_home
+    . "$repo/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    native_install "$repo" "$smoke"
+    TT_LIBRARY="$smoke/lib/libthinkthen.so.0" "$php_bin" -n -d extension=ffi -d ffi.enable=1 fixtures/smoke.php
+    exit
+fi
 export THINKTHEN_PHP_BIN="$php_bin" THINKTHEN_PYTHON_BIN="$python_bin"
 export THINKTHEN_BWRAP_BIN="$bwrap_bin" THINKTHEN_FLOCK_BIN="$flock_bin" THINKTHEN_GIT_BIN="$git_bin"
 unset THINKTHEN_API_KEY

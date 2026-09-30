@@ -80,6 +80,11 @@ About 400 of the 430 library unit tests: question parsing (`core::question_file`
 
 A slice deletes a row only when its mutation run is recorded. A mutation the kept test misses keeps the old test.
 
+Slice 2 deleted three rows and kept three. Ticket 0335 records each mutation run.
+
+- Deleted: `public_bulk_keeps_portable_question_bytes_and_keys_in_one_request`, `named_group_failed_left_half_does_not_send_right` and `retry_visibility_counts_live_attempts_and_no_replay_attempt`.
+- Kept: `saved_annotate_batch_tiers`, because the library's set tier has its own code and only this test caught a mutation of it. `portable_questions_ride_one_request_across_series_and_frame_calls`, because only it caught a frame call that sent one record a request. `each_json_method_prints_the_commands_bytes_on_the_shared_cases`, because the consumer compares typed values, not bytes, so its precondition does not hold.
+
 These stay after review, because a merge would drop a retained regression:
 
 - `backend` `refusals::no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything`. It checks each of 40 refusals on every verb for its own exit code, its own sentence, empty standard output and zero connections. The sweep's route holds one code and one sentence. Two recorded mutation runs rely on it.

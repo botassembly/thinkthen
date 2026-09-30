@@ -16,6 +16,23 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     export THINKTHEN_HEAVY_LOCK_HELD
     exec flock -w 180 -E 75 -o "$lock" /bin/sh "$0" "$@"
 fi
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+    # The replay smoke (ticket 0335): the package source over the installed C door's module.
+    . "$root/sdlc/scripts/scratch.sh"
+    usage_home
+    . "$root/sdlc/scripts/installed.sh"
+    scratch_dir smoke
+    native_install "$root" "$smoke/native"
+    mkdir -p "$smoke/CThinkThen/include" "$smoke/main"
+    cp "$here/Sources/CThinkThen/module.modulemap" "$smoke/CThinkThen/"
+    cp "$smoke/native/include/thinkthen.h" "$smoke/CThinkThen/include/"
+    cp "$here/Tests/fixtures/smoke.swift" "$smoke/main/main.swift"
+    HOME="$smoke" SWIFTPM_MODULECACHE_OVERRIDE="$smoke/module-cache" "$swiftc" -j 2 -module-cache-path "$smoke/module-cache" \
+        -I "$smoke/CThinkThen" "$here/Sources/ThinkThen/ThinkThen.swift" "$smoke/main/main.swift" -L "$smoke/native/lib" \
+        -lthinkthen -Xlinker -rpath -Xlinker "$smoke/native/lib" -o "$smoke/smoke"
+    "$smoke/smoke"
+    exit
+fi
 mkdir -p "$here/target/native/lib" "$here/target/scratch/matrix-main" "$here/target/home" "$here/target/cache" "$here/target/logs"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.swift.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"

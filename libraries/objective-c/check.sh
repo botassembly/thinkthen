@@ -3,7 +3,7 @@ set -eu
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 REPO=$(CDPATH= cd -- "$ROOT/../.." && pwd)
 case "$(uname -s):$(uname -m)" in Linux:x86_64) ;; *) echo 'GNU Objective-C gate unavailable on this host' >&2; exit 77 ;; esac
-case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full) ;; stress) exit 77 ;; *) exit 2 ;; esac
+case "${THINKTHEN_TEST_PROFILE:-routine}" in routine|full|smoke) ;; stress) exit 77 ;; *) exit 2 ;; esac
 for tool in gcc cargo flock nm python3 cmp; do
   command -v "$tool" >/dev/null 2>&1 || { echo "GNU Objective-C gate missing $tool" >&2; exit 77; }
 done
@@ -20,6 +20,16 @@ fi
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 . "$REPO/sdlc/scripts/scratch.sh"
 usage_home
+if [ "${THINKTHEN_TEST_PROFILE:-}" = smoke ]; then
+  # The replay smoke (ticket 0335): the source package over the installed C door.
+  . "$REPO/sdlc/scripts/installed.sh"
+  scratch_dir smoke
+  native_install "$REPO" "$smoke/native"
+  gcc -std=gnu11 -x objective-c -I"$smoke/native/include" -I"$ROOT/Sources" "$ROOT/Sources/ThinkThen.m" "$ROOT/Sources/TTJSON.c" \
+    "$ROOT/Examples/smoke.m" -L"$smoke/native/lib" -lthinkthen -Wl,-rpath,"$smoke/native/lib" -lobjc -pthread -lm -o "$smoke/smoke"
+  "$smoke/smoke"
+  exit
+fi
 if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
   . "$REPO/sdlc/scripts/scratch.sh"
   . "$REPO/sdlc/scripts/installed.sh"

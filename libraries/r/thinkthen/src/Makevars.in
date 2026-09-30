@@ -1,4 +1,4 @@
-TARGET_DIR = ./rust/target
+TARGET_DIR = @TARGET_DIR@
 LIBDIR = $(TARGET_DIR)/@LIBDIR@
 STATLIB = $(LIBDIR)/libthinkthen_r.a
 PKG_LIBS = -L$(LIBDIR) -lthinkthen_r @EXCLUDE_LIBS@
