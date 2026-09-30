@@ -4,6 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::PathBuf;
 
+use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
 
@@ -62,9 +63,48 @@ pub(crate) fn digest(url: &str, request: &[u8]) -> String {
         .collect()
 }
 
-pub(crate) fn swap(value: &Value, renamed: &BTreeMap<String, String>) -> Value {
+/// Every question key of one request body, in wire order, by ADR 0111
+/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
+/// one question as the body carries them, joined by line feeds.
+pub(crate) fn keys(url: &str, body: &[u8]) -> Checked<Vec<String>> {
+    #[derive(serde::Deserialize)]
+    struct Parts<'a> {
+        #[serde(borrow)]
+        state: &'a RawValue,
+        #[serde(borrow)]
+        model: &'a RawValue,
+        #[serde(borrow)]
+        questions: BTreeMap<String, &'a RawValue>,
+    }
+    let parts: Parts<'_> = serde_json::from_slice(body).map_err(|error| error.to_string())?;
+    let mut questions = Vec::new();
+    for (name, question) in parts.questions {
+        let place: usize = name[1..].parse().map_err(|_| format!("no qN name: {name}"))?;
+        questions.push((place, question));
+    }
+    questions.sort_by_key(|(place, _)| *place);
+    Ok(questions
+        .into_iter()
+        .map(|(_, question)| {
+            let joined = [
+                "systemone",
+                url,
+                parts.model.get(),
+                parts.state.get(),
+                question.get(),
+            ]
+            .join("\n");
+            Sha256::digest(joined.as_bytes())
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect()
+        })
+        .collect())
+}
+
+pub(crate) fn swap(value: &Value, renamed: &BTreeMap<String, Value>) -> Value {
     match value {
-        Value::String(held) => json!(renamed.get(held).unwrap_or(held)),
+        Value::String(held) => renamed.get(held).cloned().unwrap_or_else(|| json!(held)),
         Value::Array(items) => items.iter().map(|item| swap(item, renamed)).collect(),
         Value::Object(fields) => fields
             .iter()

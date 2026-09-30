@@ -12,6 +12,7 @@ thinkthen = { path = "../../../crates/thinkthen", default-features = false }
 
 [dev-dependencies]
 conformance-backend = { path = "../../backend" }
+rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
 sha2 = { version = "0.11", default-features = false }

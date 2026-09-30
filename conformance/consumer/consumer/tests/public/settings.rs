@@ -78,18 +78,16 @@ fn builder_validates_new_settings_at_the_public_edge() {
 }
 
 #[test]
-fn an_old_recording_replays_read_only_without_a_key() {
+fn a_recording_replays_read_only_without_a_key() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../../demos/27-test-with-no-network/recording");
     let copied = std::env::temp_dir().join(format!("thinkthen-0148-legacy-{}", std::process::id()));
     std::fs::create_dir(&copied).expect("fresh copy folder");
-    let entry = std::fs::read_dir(&source)
-        .expect("source")
-        .next()
-        .expect("entry")
-        .expect("entry");
-    let saved = std::fs::read(entry.path()).expect("saved bytes");
-    std::fs::write(copied.join(entry.file_name()), &saved).expect("copy entry");
+    // The question store replays `thinkthen.jsonl`, by ADR 0111; the demo's
+    // old digest entry replays only after `thinkthen cache convert`.
+    let name = "thinkthen.jsonl";
+    let saved = std::fs::read(source.join(name)).expect("saved bytes");
+    std::fs::write(copied.join(name), &saved).expect("copy entry");
     let output = Command::new(std::env::current_exe().expect("test binary"))
         .args(["--exact", "--ignored", "settings::old_recording_child"])
         .env_clear()
@@ -104,10 +102,17 @@ fn an_old_recording_replays_read_only_without_a_key() {
     );
     assert!(!copied.join(".thinkthen-backend.json").exists());
     assert_eq!(
-        std::fs::read(copied.join(entry.file_name())).expect("unchanged"),
+        std::fs::read(copied.join(name)).expect("unchanged"),
         saved
     );
-    assert_eq!(std::fs::read_dir(&copied).expect("one entry").count(), 1);
+    // The replay wrote nothing. The cache writer imported the fixture into
+    // its live store, by ADR 0111 section 3, and left the fixture as it was.
+    let mut names: Vec<_> = std::fs::read_dir(&copied)
+        .expect("folder")
+        .map(|entry| entry.expect("entry").file_name())
+        .collect();
+    names.sort();
+    assert_eq!(names, ["thinkthen.jsonl", "thinkthen.sqlite"]);
     std::fs::remove_dir_all(copied).expect("clean copied folder");
 }
 
@@ -147,7 +152,7 @@ fn old_recording_child() {
         (error.kind(), error.to_string().as_str()),
         (
             ErrorKind::Local,
-            "the replay folder holds no reply for this request"
+            "the replay folder holds no answer for this question"
         )
     );
     let writer = Engine::builder()
@@ -155,14 +160,14 @@ fn old_recording_child() {
         .expect("cache path")
         .build()
         .expect("writer");
-    let error = writer.decide(&question, report).expect_err("legacy writer");
+    // A question key names its URL, so the old folder binding does not
+    // apply, by ADR 0111: the cache serves the recorded answer and sends nothing.
+    let served = writer.decide(&question, report).expect("cached answer");
     assert_eq!(
-        (error.kind(), error.to_string().as_str()),
-        (
-            ErrorKind::Local,
-            "the recording folder predates backend binding; replay it read-only or choose a new folder"
-        )
+        (served.facts().requests_sent(), served.facts().cache_answers()),
+        (0, 1)
     );
+    assert_eq!(served.into_value(), Answer::Yes);
 }
 
 #[test]
@@ -406,16 +411,12 @@ fn every_shared_setting_reaches_the_public_engine() {
             );
         }
         if let Some(entries) = case["entries"].as_u64() {
-            let count = std::fs::read_dir(&folder)
-                .expect("folder")
-                .filter(|entry| {
-                    entry.as_ref().is_ok_and(|entry| {
-                        entry.file_name() != ".thinkthen-backend.json"
-                            && entry.path().extension().is_some_and(|ext| ext == "json")
-                    })
-                })
-                .count();
-            assert_eq!(count, entries as usize, "{id}");
+            // A recording keeps one row per question answer, by ADR 0111.
+            let store = rusqlite::Connection::open(folder.join("thinkthen.sqlite")).expect("store");
+            let count: i64 = store
+                .query_row("SELECT count(*) FROM answers", [], |row| row.get(0))
+                .expect("answer count");
+            assert_eq!(Some(count), i64::try_from(entries).ok(), "{id}");
         }
         std::fs::remove_dir_all(folder).expect("clean folder");
     }

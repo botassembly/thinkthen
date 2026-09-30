@@ -297,10 +297,11 @@ fn a_child_replays_the_parents_warm_cache_without_sending() {
     assert_eq!(backend.count(), 1, "only the parent sent");
 }
 
-/// Ticket 0096 F6: a digest lock held when the child forked is released when
-/// the parent's request ends, not when the child exits.
+/// Ticket 0096 F6: a parent's concurrent question never waits for a forked
+/// child. ADR 0111 dropped the digest lock and coalesces only within one call,
+/// so the second call sends its own request.
 #[test]
-fn a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives() {
+fn a_parents_concurrent_question_never_waits_for_a_forked_child() {
     let _one = ONE_AT_A_TIME
         .lock()
         .unwrap_or_else(std::sync::PoisonError::into_inner);
@@ -310,7 +311,7 @@ fn a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives() {
         .expect("a loopback engine");
     thread::scope(|scope| {
         let owner = scope.spawn(|| answer(held.decide(&decide(), "one note")));
-        assert_eq!(backend.wait(1), 1, "the owner holds the digest lock");
+        assert_eq!(backend.wait(1), 1, "the owner's request is held");
         let waiter = scope.spawn(|| {
             let result = answer(held.decide(&decide(), "one note"));
             (result, Instant::now())
@@ -338,7 +339,7 @@ fn a_parents_released_digest_lock_frees_its_waiter_while_the_child_lives() {
             .expect("the child thread")
             .expect("the child slept and left");
     });
-    assert_eq!(backend.count(), 1, "the waiter replayed the owner's answer");
+    assert_eq!(backend.count(), 2, "separate calls do not coalesce");
 }
 
 #[test]
