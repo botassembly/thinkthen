@@ -132,6 +132,16 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 3. **Partial publishes.** A publish job fails without change when its registry already holds this version. After a partial failure, Ian re-runs only the failed jobs from the same run. Nobody dispatches a second release run for a tag whose draft exists, and the `draft` job enforces it.
 4. **The first rehearsal, Phase 3b.** After Phase 3a lands, Ian dispatches `rehearse` on main. Every job passes on all four targets, and the smoke reports zero "not run". This run is the macOS proof of record for both chips. It closes error-index row R5-37 with the record `sdlc/records/0128-rehearsal-1.md`.
 
+    **First rehearsal attempt, 2026-09-30.** Ian authorized test runs on 2026-09-30, after ticket 0351's M5 proof landed at `e4136b764`. The coordinator's agent dispatched `gh workflow run release.yml --ref main -f mode=rehearse`. The run is [36778953361](https://github.com/botassembly/thinkthen/actions/runs/36778953361) at main `8bb32e59a`. The workflow's `resolve` refuses any ref but `refs/heads/main` in rehearse mode, so the checkpoint commit `145630045` could not be used. The agent watched the run with a guard that would cancel it when `draft` started, because the dispatch allowed no GitHub release, draft or not. The guard never fired.
+
+    | Job | Result |
+    | --- | --- |
+    | `resolve` | Failure after about 10 seconds. Cause: our code. |
+    | `build`, `wheels`, `gems`, `npm-pack`, `crate`, `smoke`, `draft` | Skipped, since `resolve` failed |
+    | `crates`, `pypi`, `npm`, `rubygems`, `tap`, `publish` | Skipped, as rehearse mode requires |
+
+    `release-workflow resolve` lets `sdlc/scripts/versions` print its success line into `$GITHUB_OUTPUT`, and GitHub refuses the line `versions: 59 places read 0.0.1`. The bug is filed as `sdlc/issues/2026-09-30-release-resolve-writes-the-version-line-into-its-outputs.md`. No runner built or smoked anything, so this run proves no target. It does not close R5-37. It does not check Debt 026, the macOS DuckDB extension's SQLite names, because the macOS jobs never ran. The run published nothing, created no release or tag, and created no environment. No secret or account was needed to reach `resolve`. Environment `release` does not exist yet. GitHub refuses tag rulesets on this private repository without GitHub Pro, so Ian's setup item 3 needs a plan upgrade or a public repository. Rehearse mode references neither. Phase 3b stays open. After the fix lands, the next dispatch repeats this step.
+
 ## Phase 4: Ian's release run
 
 The agent writes this checklist into `sdlc/records/0128-release-0-1.md` and follows it beside Ian. Every step marked Ian is his. The run happens in one cycle, and nobody edits `release.yml` inside it. A change to `release.yml` restarts the checklist at step 2.
