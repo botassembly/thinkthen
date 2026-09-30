@@ -73,7 +73,7 @@ fn the_command_and_a_seeded_engine_add_to_one_total() {
         .stderr(std::process::Stdio::piped())
         .spawn()
         .expect("the command starts");
-    let command = wait::finish(child, "thinkthen decide").expect("the command runs");
+    let command = crate::wait::finish(child, "thinkthen decide").expect("the command runs");
     assert!(
         command.status.success(),
         "{}",
