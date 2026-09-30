@@ -572,6 +572,21 @@ func TestConstructorFailureCopy(t *testing.T) {
 	}
 }
 
+// Ticket 0311: run with THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL=10 against
+// a fresh counted backend. The default constructor reads the variable, and
+// the call is refused before any request leaves.
+func TestTokenVariable(t *testing.T) {
+	if os.Getenv("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL") != "10" {
+		t.Skip("separate token-variable fixture")
+	}
+	_, err := engine(t).Decide(context.Background(), "Is it?", "token-variable")
+	failure := requireError(t, err, 1, false)
+	want := "max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"
+	if failure.Message != want {
+		t.Fatalf("want %q, got %q", want, failure.Message)
+	}
+}
+
 func TestSettingsConstructor(t *testing.T) {
 	address := os.Getenv("THINKTHEN_BASE_URL")
 	if address == "" {

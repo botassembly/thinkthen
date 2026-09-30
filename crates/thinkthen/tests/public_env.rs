@@ -268,6 +268,13 @@ fn run(case: &str, argument: &str) -> Vec<String> {
         }
         "overrides" => overrides(argument),
         "refused" => vec![shown(EngineBuilder::from_env())],
+        "uncapped" => {
+            let seeded = seed().max_estimated_input_tokens_total(None);
+            vec![ask(&seeded
+                .no_cache()
+                .build()
+                .expect("the uncapped engine"))]
+        }
         "batch-env" => {
             let engine = seed().no_cache().build().expect("environment batch");
             let question = Question::decide("Refund?").unwrap().cut();

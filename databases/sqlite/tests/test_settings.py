@@ -158,6 +158,18 @@ say(config=run(db, "SELECT thinkthen_configure(?)", ('{"throttle":8}',)),
     expect(any(path.suffix == ".json" for path in pathlib.Path(env["THINKTHEN_CACHE"]).rglob("*.json")), True, "seeded cache")
 
 
+def test_environment_token_cap_refuses_before_any_send() -> None:
+    """Regression: from_env stops reading THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL."""
+    backend = Backend()
+    held = child("""
+db = connect()
+db.execute("SELECT thinkthen_configure(?)", ('{"cache":false}',))
+say(refused=run(db, "SELECT thinkthen_decide('Is it late?', 'the train left at noon')"))
+""", environment(backend, THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL="10"))
+    expect(held["refused"], "thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request (retryable: no)", "token cap")
+    expect(backend.close(), 0, "the refused call sends nothing")
+
+
 def test_throttle_holds_eight_before_the_ninth() -> None:
     """Stress selector only: an owned packed call holds eight live requests."""
     backend = Backend()

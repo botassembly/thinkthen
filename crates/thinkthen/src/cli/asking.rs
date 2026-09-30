@@ -139,7 +139,9 @@ pub(crate) fn engine(
     )?
     .with_process_budget(
         common.max_requests_total,
-        common.max_estimated_input_tokens_total,
+        common
+            .max_estimated_input_tokens_total
+            .or(environment.estimated_total),
     ))
 }
 

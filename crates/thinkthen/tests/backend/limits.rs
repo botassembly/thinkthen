@@ -127,3 +127,41 @@ fn the_tail_of_a_record_past_the_bound_is_never_framed_as_a_record() {
         format!("{REFUSED}thinkthen: stopped at record 1; 0 records finished\n")
     );
 }
+
+/// The token-cap variable reaches the command, a flag outranks it, and a
+/// malformed value refuses before any send. The listener counts arrivals.
+#[test]
+fn the_estimated_input_variable_refuses_before_any_send_and_the_flag_outranks_it() {
+    let listener = serving(1).expect("a loopback listener");
+    let run = |value: &str, flags: &[&str]| {
+        spawn(
+            &[
+                &["decide", "Is it?", "--no-cache", "--url", listener.base()],
+                flags,
+            ]
+            .concat(),
+            &[
+                ("THINKTHEN_API_KEY", "sk-test-value"),
+                ("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", value),
+            ],
+            b"evidence",
+        )
+        .expect("the compiled binary runs")
+    };
+    let capped = run("10", &[]);
+    assert_eq!(
+        String::from_utf8_lossy(&capped.stderr),
+        "thinkthen usage: max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request\n"
+    );
+    assert_eq!(capped.status.code(), Some(2));
+    let malformed = run("1.5", &[]);
+    assert_eq!(
+        String::from_utf8_lossy(&malformed.stderr),
+        "thinkthen: THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL takes a whole number of 0 or more\n"
+    );
+    assert_eq!(malformed.status.code(), Some(2));
+    assert!(listener.requests().is_empty());
+    let flagged = run("10", &["--max-estimated-input-tokens-total", "100000"]);
+    assert_eq!(flagged.status.code(), Some(0), "{flagged:?}");
+    assert_eq!(listener.requests().len(), 1);
+}

@@ -9,6 +9,7 @@ use std::time::{Duration, Instant};
 pub(crate) mod call_facts;
 mod send_budget;
 pub(crate) use call_facts::CallFacts;
+pub(crate) use send_budget::estimated_total;
 
 const CANCEL_POLL: Duration = Duration::from_millis(50);
 

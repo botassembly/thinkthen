@@ -11,7 +11,8 @@ impl EngineBuilder {
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
     /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
     /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`,
-    /// `THINKTHEN_REQUESTS_PER_MINUTE`, the XDG cache home, and the
+    /// `THINKTHEN_REQUESTS_PER_MINUTE`,
+    /// `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the XDG cache home, and the
     /// XDG configuration file. The setters and `build` read no environment.
     ///
     /// # Errors
@@ -53,6 +54,9 @@ impl EngineBuilder {
             variable("THINKTHEN_REQUESTS_PER_MINUTE")?.as_deref(),
         )
         .map_err(Error::usage)?;
+        builder.max_estimated_input_tokens_total =
+            crate::engine::estimated_total(variable("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL")?)
+                .map_err(Error::usage)?;
         if let Some(model) = config.model() {
             builder = builder.model(model)?;
         }
