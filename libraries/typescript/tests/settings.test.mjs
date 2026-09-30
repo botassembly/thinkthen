@@ -3,6 +3,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 
 import { ask, child, sleep, startBackend, storedAnswers } from './backend.mjs';
@@ -110,4 +111,43 @@ test('the first explicit throttle holds for the process and the default engine',
     'throttle 4 is already active for this process; use throttle 4 or drop the throttle argument',
     { value: [true, true, true, true, true] },
   ]);
+});
+
+// Ticket 0291's P1 through the public plan, with no key: the exact plan object
+// of the shared corpus. A batch of 0 refuses as usage with code 1, and neither
+// reaches the backend.
+test('plan previews P1 with no key and sends nothing', async (t) => {
+  const backend = await startBackend(t);
+  const corpus = JSON.parse(readFileSync(fileURLToPath(new URL('../../../specification/fixtures/types/corpus.json', import.meta.url)), 'utf8'));
+  const p1 = corpus.cases.find((one) => one.name === 'plan-p1');
+  const { question, input, settings } = p1.plan_input;
+  assert.deepEqual(settings, {});
+  const { value } = await ask(backend, `
+    const out = [tt.plan(${JSON.stringify(question)}, ${JSON.stringify(input)})];
+    try { tt.plan(${JSON.stringify(question)}, ${JSON.stringify(input)}, { batch: 0 }); } catch (error) { out.push([error.kind, error.code]); }
+    try { tt.plan('Refund?', ['one'], { deadlineMs: 0 }); } catch (error) { out.push([error.kind, error.message]); }
+    return out;`, { env: { THINKTHEN_API_KEY: undefined } });
+  assert.deepEqual(value, [p1.response, ['usage', 1], ['usage', 'options.deadlineMs is not a plan key']]);
+  assert.equal(await backend.count(), 0);
+});
+
+// A zero process cap refuses the first live send as usage, a spent deadline
+// stops recognize and relate, and the helpers read codes and failures.
+test('the zero cap and spent budgets send nothing; the helpers read codes and failures', async (t) => {
+  const backend = await startBackend(t);
+  const { value } = await ask(backend, `
+    const out = [];
+    try { await new tt.Engine({ maxRequestsTotal: 0, cache: false }).decide('Refund?', 'capped'); }
+    catch (error) { out.push([error.kind, error.code, error.message.includes('process send budget')]); }
+    for (const call of [() => tt.recognize('Ada Lovelace', { deadlineMs: 0 }),
+      () => tt.relate([['First', 'alert'], ['Second', 'alert']], { relations: ['caused_by=alert:alert'], deadlineMs: 0 })]) {
+      try { await call(); } catch (error) { out.push([error.kind, error.code]); }
+    }
+    const failure = { failed: { kind: 'backend', cause: 'missing_answer', surprise: 1 } };
+    out.push(tt.failed(failure), [null, true, 'billing', 1.2, ['billing'], {}, { ...failure, other: 1 }].map(tt.failed));
+    out.push([true, false, null].map(tt.outcome), [tt.YES, tt.NO, tt.UNSURE]);
+    return out;`);
+  assert.deepEqual(value, [['usage', 1, true], ['deadline', 3], ['deadline', 3],
+    { kind: 'backend', cause: 'missing_answer', surprise: 1 }, [null, null, null, null, null, null, null], [1, 0, 2], [1, 0, 2]]);
+  assert.equal(await backend.count(), 0);
 });

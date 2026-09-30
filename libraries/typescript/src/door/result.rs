@@ -289,7 +289,7 @@ fn word(answer: Answer) -> String {
     .to_owned()
 }
 
-fn records(payload: &str) -> Result<Vec<String>, Failure> {
+pub(super) fn records(payload: &str) -> Result<Vec<String>, Failure> {
     serde_json::from_str(payload).map_err(|_| Failure::usage("records is an array of strings"))
 }
 

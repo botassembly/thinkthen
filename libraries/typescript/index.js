@@ -6,17 +6,40 @@
 
 const native = require('./loader.js');
 
-const KINDS = ['usage', 'backend', 'local', 'cancelled', 'deadline', 'defect'];
+/** Each kind's code in the C door, 1 through 6. */
+const CODES = { usage: 1, backend: 2, deadline: 3, local: 4, cancelled: 5, defect: 6 };
 
-/** The one error class. `kind` is one of six words, and `retryable` says
- * whether the same call may pass later. A failure never reads as a value. */
+/** The one error class. `kind` is one of six words, `code` its C number, and
+ * `retryable` says whether the same call may pass later. A failure never
+ * reads as a value. */
 class ThinkThenError extends Error {
   constructor(kind, message, retryable = false, options = undefined) {
     super(message, options);
     this.name = 'ThinkThenError';
-    this.kind = KINDS.includes(kind) ? kind : 'defect';
+    this.kind = Object.hasOwn(CODES, kind) ? kind : 'defect';
+    this.code = CODES[this.kind];
     this.retryable = retryable === true;
   }
+}
+
+/** A decide answer's code in the C door. */
+const YES = 1;
+const NO = 0;
+const UNSURE = 2;
+
+/** YES, NO, or UNSURE for a decide answer: true, false, or null. */
+function outcome(answer) {
+  if (answer === true) return YES;
+  if (answer === false) return NO;
+  if (answer === null) return UNSURE;
+  throw usageError('an outcome reads true, false, or null');
+}
+
+/** The failure of one annotate answer, `{ kind, cause }`, or null for any
+ * value. null is unresolved, never a failure. */
+function failed(member) {
+  if (!isObject(member) || Object.keys(member).length !== 1 || !isObject(member.failed)) return null;
+  return member.failed;
 }
 
 const usageError = (message) => new ThinkThenError('usage', message);
@@ -146,8 +169,8 @@ function splitLast(verb, last) {
   if (Reflect.ownKeys(last).some((key) => typeof key === 'symbol')) throw usageError(`${verb} takes string option keys`);
   for (const [key, value] of Object.entries(last)) {
     if (CALL_KEYS.has(key)) {
-      const allowed = key === 'batch' ? ['decide_many', 'choose_many', 'score_many', 'tag_many', 'filter', 'rank', 'annotate'].includes(verb)
-        : key === 'context' ? ['decide_many', 'choose_many', 'score_many', 'tag_many', 'filter', 'rank'].includes(verb) : true;
+      const allowed = key === 'batch' ? ['decide_many', 'choose_many', 'score_many', 'tag_many', 'filter', 'rank', 'annotate', 'plan'].includes(verb)
+        : key === 'context' ? ['decide_many', 'choose_many', 'score_many', 'tag_many', 'filter', 'rank', 'plan'].includes(verb) : verb !== 'plan';
       if (!allowed) throw usageError(`options.${key} is not a ${verb} key`);
       call[key] = value;
     }
@@ -405,6 +428,13 @@ const verbs = {
     const { inputs, call } = splitLast('relate', last);
     return invoke(engine, 'relate', relateSpec(inputs), jsonText(entities.map(entityPair), 'the entities'), call);
   },
+  // A preview, so it answers at once: the result schema's plan object. It
+  // reads no key and no cache and sends nothing.
+  plan(engine, asked, records, last) {
+    const { inputs, call } = splitLast('plan', last);
+    const { batch, context } = callOptions(call);
+    return freezeJson(opened(native.plan(engine, specFrom('plan', asked, inputs), checkRecords(records), batch, context)));
+  },
 };
 
 /** This process's totals: requests sent, cache answers, and tokens. */
@@ -445,7 +475,7 @@ class Engine {
   }
 }
 
-const exported = { ThinkThenError, Engine, question, questionFile, usage };
+const exported = { ThinkThenError, Engine, question, questionFile, usage, failed, outcome, YES, NO, UNSURE };
 for (const [name, verb] of Object.entries(verbs)) exported[name] = (...args) => verb(null, ...args);
 
 module.exports = exported;

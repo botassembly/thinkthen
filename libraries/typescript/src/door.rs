@@ -13,7 +13,7 @@ use std::num::NonZeroUsize;
 use serde_json::{Map, Value, json};
 use thinkthen::{
     BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, Facts,
-    Question, Recognize, Relate,
+    LoadedQuestion, Question, Recognize, Relate,
 };
 
 /// The most milliseconds a deadline takes: 4,294,967,295 seconds (ADR 0041).
@@ -213,15 +213,7 @@ pub(crate) fn answer(engine: Option<&Engine>, call: &Call, token: &CancelToken) 
         if let Some(millis) = deadline {
             options = options.deadline_millis(millis)?;
         }
-        if let Some(batch) = &call.batch {
-            let value: Value = serde_json::from_str(batch)
-                .map_err(|_| Failure::usage("options.batch is max or a positive whole number"))?;
-            options = options.batch(batch_of(&value)?);
-        }
-        if let Some(context) = &call.context {
-            options = options.context(context);
-        }
-        result::run(engine, call, options)
+        result::run(engine, call, controls(options, &call.batch, &call.context)?)
     });
     let details = observed.snapshot();
     match answered {
@@ -232,6 +224,47 @@ pub(crate) fn answer(engine: Option<&Engine>, call: &Call, token: &CancelToken) 
         ),
         Err(failure) => failure.envelope_with(&details),
     }
+}
+
+/// The call's batch and context, as the verbs and `plan` take them.
+fn controls<'a>(
+    mut options: CallOptions<'a>,
+    batch: &Option<String>,
+    context: &'a Option<String>,
+) -> Result<CallOptions<'a>, Failure> {
+    if let Some(batch) = batch {
+        let value: Value = serde_json::from_str(batch)
+            .map_err(|_| Failure::usage("options.batch is max or a positive whole number"))?;
+        options = options.batch(batch_of(&value)?);
+    }
+    if let Some(context) = context {
+        options = options.context(context);
+    }
+    Ok(options)
+}
+
+/// The result schema's `plan` object for one question and its records, as an
+/// envelope. It reads no key and no cache and sends nothing.
+pub(crate) fn plan(
+    engine: Option<&Engine>,
+    spec: &str,
+    records: &str,
+    batch: &Option<String>,
+    context: &Option<String>,
+) -> String {
+    guarded(|| {
+        let engine = match engine {
+            Some(engine) => engine,
+            None => thinkthen::default_engine()?,
+        };
+        let options = controls(CallOptions::new(), batch, context)?;
+        let texts = result::records(records)?;
+        let estimate = match Question::from_json(spec)? {
+            LoadedQuestion::Question(asked) => engine.plan_with(&asked, texts, options)?,
+            LoadedQuestion::Banded(asked) => engine.plan_with(&asked, texts, options)?,
+        };
+        Ok(json!(estimate).to_string())
+    })
 }
 
 fn batch_of(value: &Value) -> Result<BatchSetting, Failure> {
@@ -288,6 +321,7 @@ fn setting(builder: EngineBuilder, key: &str, value: &Value) -> Result<EngineBui
         ("cache", Value::String(folder)) => builder.cache_at(folder)?,
         ("cache", _) => return Err(Failure::usage("options.cache is false or a folder path")),
         ("timeoutSeconds", _) => builder.timeout(std::time::Duration::from_secs(whole()?))?,
+        ("maxRequestsTotal", _) => builder.max_requests_total(Some(whole()?)),
         ("maxRetries", _) => builder.max_retries(
             u32::try_from(whole()?)
                 .map_err(|_| Failure::usage("options.maxRetries is a whole number"))?,

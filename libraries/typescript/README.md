@@ -14,13 +14,13 @@ const complaints = (await tt.filter("Is this a complaint?", reviews, { batch: 2,
 const rows = (await tt.annotate("form.json", tickets, { signal, batch: 2 })).value;
 ```
 
-`null` means unsure. The verbs are `decide`, `decide_many`, `choose`, `choose_many`, `score`, `score_many`, `tag`, `tag_many`, `filter`, `rank`, `find`, `annotate`, `details`, `recognize`, and `relate`. `usage()` returns the counters. Each verb is also a method of `new tt.Engine(options)`.
+`null` means unsure. The verbs are `decide`, `decide_many`, `choose`, `choose_many`, `score`, `score_many`, `tag`, `tag_many`, `filter`, `rank`, `find`, `annotate`, `details`, `recognize`, and `relate`. `usage()` returns the counters, and `plan()` previews a call. Each verb is also a method of `new tt.Engine(options)`.
 
 `tt.questionFile(path)` synchronously reads one named UTF-8 question file of at most 1 MiB and returns a frozen question value for the same verbs as `tt.question(spec)`. Its validated source JSON preserves described-label order. An unreadable or invalid named file throws a non-retryable `ThinkThenError` of kind `local` before any request. `tt.question(spec)` and ordinary strings, including strings beginning with `@`, keep their existing typed and literal meanings. `rank` and `find` still accept only plain decide text.
 
 ## Settings
 
-The module-level verbs use the engine the environment describes: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest. `new tt.Engine({ baseUrl, model, throttle, maxRequests, maxRequestBytes, cache, timeoutSeconds, maxRetries, profile, record, replay, batch })` starts from the same environment, and each given key overrides one setting. `cache: false` keeps no cache. A refused setting throws `ThinkThenError` of kind `usage`. An engine counts its own usage.
+The module-level verbs use the engine the environment describes: `THINKTHEN_BASE_URL`, `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, and the rest. `new tt.Engine({ baseUrl, model, throttle, maxRequests, maxRequestsTotal, maxRequestBytes, cache, timeoutSeconds, maxRetries, profile, record, replay, batch })` starts from the same environment, and each given key overrides one setting. `cache: false` keeps no cache. A refused setting throws `ThinkThenError` of kind `usage`. An engine counts its own usage. `maxRequestsTotal` caps the live sends every engine of the process makes together; `0` refuses the first with `usage`.
 
 A question spec's `profile` names saved calibration. The engine's separate `profile` option selects a runtime limits file. A mismatch appears as optional `details.meta.profile_warning`; the type declarations cover both names.
 
@@ -34,13 +34,17 @@ Each call runs on its own worker thread, off the JavaScript thread and off Node'
 
 The last object of each verb takes `signal` and `deadlineMs`. Eligible many-record calls also take `batch: "max"` or a positive integer. `decide_many`, `choose_many`, `score_many`, `tag_many`, `filter`, and `rank` take nonblank literal `context` text; `annotate` takes `batch` without `context`. Bare-text `choose_many`, `score_many`, and `tag_many` put their ordered `options`, `levels`, or `labels` in that same object. A score list sends bare levels, while a score map entry of `null` sends an explicit no-description level. An `AbortSignal` cancels a call at once: the promise rejects with `cancelled`, no new request starts, and a request already sent finishes. `deadlineMs` bounds the whole call in milliseconds, and `0` is spent. No deadline is spelled null, left out, or -1.
 
-A failure rejects with one `ThinkThenError` class. Its `kind` is `usage`, `backend`, `local`, `cancelled`, `deadline`, or `defect`, and `retryable` says whether the same call may pass later.
+A failure rejects with one `ThinkThenError` class. Its `kind` is `usage`, `backend`, `local`, `cancelled`, `deadline`, or `defect`, `code` is the C door's number for that kind from 1 (`usage`) to 6 (`defect`), and `retryable` says whether the same call may pass later. `tt.YES`, `tt.NO`, and `tt.UNSURE` are the C outcome codes 1, 0, and 2, and `tt.outcome(answer)` maps `true`, `false`, and `null` to them.
 
 `recognize` returns each name as `text`, `start`, `end`, `length`, `kind`, and `strength`. `start`, `end`, and `length` count UTF-16 units, so `text.slice(start, end)` is the name. With no kinds, every name has the kind `ENTITY`.
 
 ## Run facts
 
 Each asking method returns a `Call<T>` with its former answer in `.value`, final `.facts`, and ordered immutable `.details` for completed questions. A started failure retains final facts and details on `ThinkThenError`; a pre-account refusal has neither. An early signal rejection offers `.completion.wait()` for the same worker's final `{ok}` or `{err}` report. Waiting keeps Node alive; an unobserved receipt lets a child exit while a held reply finishes. `details(question, text).value` returns the command's `--details` line for one text, typed as `Details`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. Facts include elapsed seconds but do not report cost or priced tokens.
+
+Facts, details, and annotate rows are the engine's JSON, so a member this package does not name still reads. In an annotate row, `null` is unresolved and `{ failed: { kind, cause } }` is a failed question. `tt.failed(answer)` returns that failure object, or `null` for any value.
+
+`plan(question, records, { batch, context })` previews a `decide`, `choose`, `score`, or `tag` call without asking it and returns at once. Its value is the result schema's `plan` object: `records`, `requests`, `estimated_bytes`, `estimated_input_tokens` with `lower` and `upper`, `upper_bound`, and `first_body_utf8`. It reads no key and no cache and sends nothing, so it takes no `signal` or `deadlineMs`.
 
 `usage()` returns this engine's running totals of requests sent, retries, cache answers and tokens.
 
