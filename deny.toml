@@ -27,11 +27,11 @@ version = 2
 #   MIT, Apache-2.0, Unlicense   the ordinary Rust licenses
 #   Unicode-3.0                  unicode-ident
 #   ISC                          ring, rustls-webpki, untrusted
-#   BSD-3-Clause                 subtle
+#   BSD-3-Clause                 subtle, zstd-safe, zstd-sys
 #   CDLA-Permissive-2.0          webpki-roots
 #
-# The last three arrive with the TLS stack under ureq and with nothing else.
-# There is no HTTPS in Rust without them. A license nothing in the tree offers
+# ISC and CDLA arrive with the TLS stack under ureq; BSD also comes from the
+# pinned Polars lazy/streaming graph. A license nothing in the tree offers
 # fails the rung too, so this list cannot rot into a blanket allowance.
 allow = [
     "Apache-2.0",

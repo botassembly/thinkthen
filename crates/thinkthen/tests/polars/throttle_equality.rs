@@ -3,23 +3,27 @@
 //!
 //! The throttle is process-wide (0077), so this file holds one test and runs
 //! in its own process. Each run gets its own backend, cache folder, and
-//! engine at throttle 8. Each backend is the one the caller's `base_url`
+//! engine at throttle 2. Each backend is the one the caller's `base_url`
 //! names, so a door that built its own engine would count nothing here.
 
 #![allow(clippy::expect_used, reason = "a failed fixture stops the proof")]
 
 mod common;
 
+use std::sync::{Arc, Barrier};
 use std::thread;
-use std::time::Duration;
 
 use conformance_backend::Backend;
 use thinkthen::PolarsEngine;
 use thinkthen::polars::prelude::{NamedFrom, Series};
-use thinkthen::{Answer, CallOptions, Engine, Question};
+use thinkthen::{Answer, BatchSetting, CallOptions, Engine, Question};
 
-const THROTTLE: u8 = 8;
-const TEXTS: usize = 20;
+const THROTTLE: u8 = 2;
+const TEXTS: usize = 3;
+
+fn singleton() -> CallOptions<'static> {
+    CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+}
 
 /// One way to decide the texts on an engine.
 type Call<'a> = dyn Fn(&Engine) -> Vec<Option<bool>> + 'a;
@@ -28,22 +32,40 @@ fn engine(base: &str) -> Engine {
     common::builder(base)
         .throttle(THROTTLE)
         .and_then(thinkthen::EngineBuilder::build)
-        .expect("an engine at throttle 8")
+        .expect("an engine at throttle 2")
 }
 
-/// Run the call on another thread against a held backend, and return what
-/// the backend holds in flight at once.
-fn held_in_flight(call: impl FnOnce(&Engine) + Send) -> (usize, usize) {
+/// Start three distinct singleton calls together and count held arrivals.
+fn held_in_flight(call: impl Fn(&Engine, usize) + Sync) -> (usize, usize) {
     let backend = Backend::start().expect("a backend");
     let engine = engine(&format!("{}/arm/held/v1", backend.origin()));
     thread::scope(|scope| {
-        let running = scope.spawn(|| call(&engine));
+        let ready = Arc::new(Barrier::new(TEXTS + 1));
+        let running: Vec<_> = (0..TEXTS)
+            .map(|index| {
+                let ready = Arc::clone(&ready);
+                let engine = &engine;
+                let call = &call;
+                scope.spawn(move || {
+                    ready.wait();
+                    call(engine, index);
+                })
+            })
+            .collect();
+        ready.wait();
         let reached = backend.wait(usize::from(THROTTLE));
-        thread::sleep(Duration::from_millis(300));
-        let still = backend.count();
+        let held = backend.count();
         backend.release();
-        running.join().expect("the held call");
-        (reached, still)
+        for worker in running {
+            worker.join().expect("the held call");
+        }
+        assert_eq!(reached, usize::from(THROTTLE), "the held throttle");
+        assert_eq!(
+            held,
+            usize::from(THROTTLE),
+            "no third arrival before release"
+        );
+        (held, backend.count())
     })
 }
 
@@ -58,16 +80,16 @@ fn a_series_runs_at_the_throttle_as_a_slice_does() {
 
     equal_answers(&question, &series, &refs, TEXTS);
 
-    // Exactly the throttle in flight, and still the throttle 300 ms later.
-    // The held arm counts sends, so a busy machine cannot fail it.
-    let slice = held_in_flight(|engine| {
+    // Exactly two held requests, then the third arrives only after release.
+    let slice = held_in_flight(|engine, index| {
         let _answered: Vec<_> = engine
-            .decide_many_with(&question, refs.iter().copied(), CallOptions::new())
+            .decide_many_with(&question, [refs[index]], singleton())
             .collect();
     });
-    assert_eq!(slice, (8, 8), "the slice in flight on the held arm");
-    let decide = held_in_flight(|engine| {
-        let _answered = engine.decide_series(&question, &series, CallOptions::new());
+    assert_eq!(slice, (2, TEXTS), "the slice in flight on the held arm");
+    let decide = held_in_flight(|engine, index| {
+        let one = Series::new("body".into(), &[refs[index]]);
+        let _answered = engine.decide_series(&question, &one, singleton());
     });
     assert_eq!(decide, slice, "decide_series in flight on the held arm");
     let score = Question::score("How urgent is this?")
@@ -75,10 +97,11 @@ fn a_series_runs_at_the_throttle_as_a_slice_does() {
         .and_then(|builder| builder.level("high", None))
         .and_then(thinkthen::ScoreBuilder::build)
         .expect("a score question");
-    let scored = held_in_flight(|engine| {
-        let _answered = engine.score_series(&score, &series, CallOptions::new());
+    let scored = held_in_flight(|engine, index| {
+        let one = Series::new("body".into(), &[refs[index]]);
+        let _answered = engine.score_series(&score, &one, singleton());
     });
-    assert_eq!(scored, (8, 8), "score_series in flight on the held arm");
+    assert_eq!(scored, (2, TEXTS), "score_series in flight on the held arm");
 }
 
 #[test]
@@ -102,7 +125,7 @@ fn equal_answers(question: &Question, series: &Series, refs: &[&str], count: usi
     };
     let (from_series, series_count) = answered(&|engine| {
         let answered = engine
-            .decide_series(question, series, CallOptions::new())
+            .decide_series(question, series, singleton())
             .expect("the series call");
         answered
             .value()
@@ -113,7 +136,7 @@ fn equal_answers(question: &Question, series: &Series, refs: &[&str], count: usi
     });
     let (from_slice, slice_count) = answered(&|engine| {
         engine
-            .decide_many_with(question, refs.iter().copied(), CallOptions::new())
+            .decide_many_with(question, refs.iter().copied(), singleton())
             .map(|row| {
                 row.map(|row| (*row.value() != Answer::Unsure).then(|| *row.value() == Answer::Yes))
             })

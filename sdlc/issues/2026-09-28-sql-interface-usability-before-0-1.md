@@ -560,3 +560,8 @@ Review of DuckDB0286 at2463436c2 found ordinary ThinkThen usage errors without A
 ## Functional Python stage completed
 
 Tickets0292/0293/0294 are jointly landed after final High ACCEPT `86ae7dce3fb98163d6fdbed7acff0affd74880e6`. The [build record](../records/0292-python-judges-build.md) maps immutable judges, caller-fed native streams and the core Tally to their selected source/installed proof and corrections. Python frame namespaces/accessors0295/0296, the remaining door rollout and shared examples remain separate; this stage does not close the umbrella issue.
+
+
+## Rust Polars expression stage completed
+
+Ticket0298 is landed after final High ACCEPT `365a7c92a4957ff7d2766c90ae00d67273710210`. Four lazy expressions reuse the eager engine with owned controls, per-morsel deadlines and shared Tally. Its [build record](../records/0298-rust-polars-lazy-expressions-build.md) pins selected source-consumer proof and its limits. Python accessors0295/0296, the remaining door rollout and shared examples keep this umbrella open.
