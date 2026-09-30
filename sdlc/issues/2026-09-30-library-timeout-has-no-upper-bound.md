@@ -8,7 +8,7 @@ The command refuses a `--timeout` above 86,400 seconds, because "the HTTP client
 
 ## Fix
 
-Add a case that builds an engine with the largest `Duration` and makes one loopback call. If it panics, cap the library and JSON settings at 86,400 seconds with the command's sentence, on every surface that takes a timeout: the Rust builder, the engine JSON settings behind the C door, and the SQLite, R and Ruby settings paths (for example `databases/sqlite/src/settings.rs`). If it does not, keep the test as the proof.
+Add a case that builds an engine with the largest `Duration` and makes one loopback call. If it panics, cap the library and JSON settings at 86,400 seconds with the command's sentence, in the Rust setter `timeout` in `crates/thinkthen/src/public/settings.rs`. Every surface that takes a timeout reaches that setter: the Rust builder, the engine JSON settings behind the C door, Python, TypeScript, Ruby, R, SQLite, DuckDB and PostgreSQL. One cap there covers them all. If it does not, keep the test as the proof.
 
 ## Done when
 
