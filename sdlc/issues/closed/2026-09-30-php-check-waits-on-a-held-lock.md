@@ -1,6 +1,6 @@
 # The PHP check waits on a lock its caller holds
 
-Status: fixed on branch `ticket/0314-s4-remaining-ports` by `03e9a767a` (ticket 0314 slice 4e); the lander closes it. Each of the three `flock` calls now runs through a `locked` helper that skips the lock when `THINKTHEN_HEAVY_LOCK_HELD` names it, and the PHP check passes under `surface-one.sh`. Found while building ticket 0314 slice 4d on the same branch. Owner: ticket 0314 slice 4e, which rebuilds the PHP port.
+Status: closed by `db665d165` in ticket 0314 slice 4e. Each of the three `flock` calls now runs through a `locked` helper that skips the lock when `THINKTHEN_HEAVY_LOCK_HELD` names it, and the PHP check passes under `surface-one.sh`. Found while building ticket 0314 slice 4d.
 
 Kind: debt
 
