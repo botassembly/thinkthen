@@ -36,6 +36,8 @@ Trace side-effect order through the final operation before calling a counter or 
 
 **Old tests.** Before replacing a negative test, cite the contract clause it pins and label it keep or replace. A review finding does not amend an accepted contract; reconcile the two first.
 
+**Unchanged files.** When a refusal promises unchanged files, validate the whole proposed state before the first write.
+
 ## Before landing
 
 The builder adds `## What the build taught us` to the ticket: a few factual bullets on corrected assumptions, surprises, proof changes, and remaining gaps with their owner. Say so briefly when nothing new arose. Do not rewrite history to flatter an early assumption. A Quick Fix keeps this section in its build record.

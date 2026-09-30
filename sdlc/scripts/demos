@@ -36,6 +36,23 @@ prose() {
 	awk '/^```/ { fenced = !fenced; next } !fenced' "$1"
 }
 
+# A page this index lists as green must say so, or the runner would skip it
+# as red and prove nothing.
+if [ -f README.md ]; then
+	prose README.md | awk -F '|' '
+		NF >= 5 && $2 ~ /^ *[0-9][0-9] *$/ {
+			state = $(NF - 1); sub(/^ +/, "", state)
+			if (state !~ /^green/) next
+			if (match($3, /\]\([^)]*\)/)) print substr($3, RSTART + 2, RLENGTH - 3)
+		}' | while IFS= read -r target; do
+		page=${target%/}/README.md
+		if ! prose "$page" 2>/dev/null | grep -q '^Status: green$'; then
+			printf 'demos: README.md lists %s as green, and %s does not say Status: green\n' "$target" "$page" >&2
+			exit 1
+		fi
+	done || exit 1
+fi
+
 green=0
 red=0
 for page in */README.md; do

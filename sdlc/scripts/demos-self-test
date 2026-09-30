@@ -113,6 +113,14 @@ expect replay-spaced 1 'demos: page/README.md writes --replay "my recording/", a
 } | fixture replay-missing
 expect replay-missing 1 'demos: page/README.md is green, and it names no folder gone/'
 
+# A page the index lists as green and that says red would be skipped unseen.
+{
+	printf '# How to be skipped\n\nStatus: red\n\n'
+	block "$ok"
+} | fixture listed-red
+printf '| # | How to | Verbs | Status |\n| --- | --- | --- | --- |\n| 01 | [Be skipped](page/) | `decide` | green |\n' >"$REPO/$ROOT/listed-red/README.md"
+expect listed-red 1 'demos: README.md lists page/ as green, and page/README.md does not say Status: green'
+
 # Item 9: under set +e a command fails unseen before the pinned one.
 {
 	head_of_a_page 'hide a failure under set +e'

@@ -10,7 +10,7 @@ The published documentation has three kinds of page. How-tos are the green demos
 
 The title starts with "How to" and names a task. One paragraph says when to use it, and a block that asserts something follows inside the first twenty lines. Then: the input files, the steps with commands and real outputs, "What can go wrong" with the exit codes and the traps, and related how-tos.
 
-ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting blocks and every `bash` block asserts, one command unless the title names the contrast, at most four steps, no design argument on a green page, and at most four closing links. `sdlc/scripts/demos` measures every one of them and names the page, the rule, and the number when a page breaks one. `sdlc/scripts/demos-self-test` proves each check against a page that breaks it.
+ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting blocks and every `bash` block asserts, one command unless the title names the contrast, at most four steps, no design argument on a green page, and at most four closing links. Amended 2026-09-30 by ticket 0312 under Ian's ruling 8: these limits are writing guidance. `sdlc/scripts/demos` checks that a green page and each of its `bash` blocks assert, and that every page this index lists as green says `Status: green`.
 
 ## Start here
 
