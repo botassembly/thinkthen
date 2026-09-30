@@ -1,6 +1,6 @@
 # ThinkThen for Zig
 
-This Zig 0.15.2 source module wraps the ThinkThen C library. The package gate proves Ubuntu 24.04 x86_64 glibc with a separately installed native shared or static C library. Static-C linkage does not make the executable fully static. Other targets and Zig versions remain unproved.
+This Zig 0.15.2 source module wraps the ThinkThen C library. The package gate proves Ubuntu 24.04 x86_64 glibc with a separately installed native shared or static C library. Static-C linkage does not make the executable fully static. Static mode builds the consumer with LLVM and LLD, because Zig 0.15.2's own linker drops the 16-byte alignment of Rust's constants, and the flags go away once Zig fixes it (`sdlc/issues/2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md`). Other targets and Zig versions remain unproved.
 
 Build the matching native library from the same checkout, then supply an absolute native root to Zig:
 
