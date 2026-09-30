@@ -133,9 +133,13 @@ typedef struct thinkthen_answer {
 thinkthen_engine *thinkthen_engine_new(void);
 
 /* Build from the environment plus one UTF-8 JSON object. NULL or {} uses the
- * environment alone. Keys: base_url, model, throttle, max_requests, cache,
- * record, replay, timeout (whole seconds), max_retries, profile. cache takes
- * false or a folder; max_requests alone may be null. Unknown or repeated
+ * environment alone. Keys: base_url, model, throttle, max_requests,
+ * max_requests_total, max_estimated_input_tokens_total, max_request_bytes,
+ * batch, cache, record, replay, timeout (whole seconds), max_retries,
+ * profile. The estimated total charges each final encoded live request body
+ * at ceil(bytes * 908 / 1000); it is not a provider token or billing cap.
+ * cache takes false or a folder; max_requests and the two process totals may
+ * be null. Unknown or repeated
  * keys and wrong types fail with THINKTHEN_EUSAGE in the calling thread's
  * null-engine error slot. Building sends nothing. */
 thinkthen_engine *thinkthen_engine_new_with(const char *settings_json);
