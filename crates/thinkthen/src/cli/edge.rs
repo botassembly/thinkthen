@@ -407,11 +407,13 @@ mod tests {
     fn raw_environment_debug_withholds_the_address() {
         let environment = Environment {
             base_url: Some("http://localhost/environment-marker-0210".to_owned()),
+            backend: Some("sk-backend-marker-0334".to_owned()),
             ..Environment::default()
         };
         let shown = format!("{environment:?}");
         assert!(shown.contains("base_url: Some(\"<withheld>\")"));
         assert!(!shown.contains("environment-marker-0210"));
+        assert!(!shown.contains("sk-backend-marker-0334"));
     }
 
     /// A writer that fails every write with the kind the case names.
