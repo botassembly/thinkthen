@@ -19,6 +19,10 @@ fn answers(rows: &[(u8, &str, i64)]) -> Vec<Weighed> {
         .collect()
 }
 
+/// A row: its name, the answers, the options, the file size and the keys
+/// chosen in order.
+type Row<'a> = (&'a str, &'a [(u8, &'a str, i64)], Prune, u64, &'a [u8]);
+
 fn prune(max_size: u64, older_than: Option<u64>, other_than: Option<&str>) -> Prune {
     Prune {
         max_size,
@@ -35,7 +39,7 @@ fn age_is_strict_models_form_a_union_and_the_target_keeps_an_exact_fit() {
         (2, "jev-1.14.0", 990),
         (3, "jev-1.13.0", 800),
     ];
-    let rows: [(&str, &[(u8, &str, i64)], Prune, u64, &[u8]); 5] = [
+    let rows: [Row; 5] = [
         // Exactly 100 seconds old stays; one second older leaves.
         (
             "strict age",
