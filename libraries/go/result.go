@@ -1,40 +1,57 @@
 package thinkthen
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 )
 
-// Result owns the value and final facts of one successful typed call.
+// Result owns the value and final facts of one successful typed call. Facts
+// is the engine's facts object as JSON; the result schema describes it.
 type Result[T any] struct {
 	Value T
-	Facts Facts
+	Facts json.RawMessage
 }
 
-type Facts struct {
-	Records      uint64  `json:"records"`
-	RequestsSent uint64  `json:"requests_sent"`
-	CacheAnswers uint64  `json:"cache_answers"`
-	Seconds      float64 `json:"seconds"`
-	InputTokens  *uint64 `json:"input_tokens,omitempty"`
-	OutputTokens *uint64 `json:"output_tokens,omitempty"`
-	Model        *string `json:"model,omitempty"`
+// FieldState says how one annotate answer member reads.
+type FieldState int
+
+const (
+	Unresolved FieldState = iota // JSON null: not sure
+	Answered                     // any other value
+	Failed                       // the one-member object {"failed": {...}}
+)
+
+// Field is one annotate answer member. Value is set when Answered; Kind and
+// Cause are set when Failed.
+type Field struct {
+	State FieldState
+	Value json.RawMessage
+	Kind  string
+	Cause string
 }
 
-func decodeFacts(data string) (Facts, error) {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal([]byte(data), &fields); err != nil || fields == nil {
-		return Facts{}, fmt.Errorf("invalid native facts object: %v", err)
+// ReadField reads one member of an annotate row's value or answers. No
+// answered value is an object, so an object that is not a failure is an error.
+func ReadField(member json.RawMessage) (Field, error) {
+	text := bytes.TrimSpace(member)
+	if string(text) == "null" {
+		return Field{State: Unresolved}, nil
 	}
-	for _, key := range []string{"records", "requests_sent", "cache_answers", "seconds"} {
-		value, ok := fields[key]
-		if !ok || string(value) == "null" {
-			return Facts{}, fmt.Errorf("native facts missing %s", key)
-		}
+	if !json.Valid(text) {
+		return Field{}, fmt.Errorf("annotate member is not JSON: %q", text)
 	}
-	var facts Facts
-	if err := json.Unmarshal([]byte(data), &facts); err != nil {
-		return Facts{}, fmt.Errorf("invalid native facts: %w", err)
+	if text[0] != '{' {
+		return Field{State: Answered, Value: json.RawMessage(text)}, nil
 	}
-	return facts, nil
+	var marker struct {
+		Failed *struct {
+			Kind  string `json:"kind"`
+			Cause string `json:"cause"`
+		} `json:"failed"`
+	}
+	if json.Unmarshal(text, &marker) != nil || marker.Failed == nil {
+		return Field{}, fmt.Errorf("annotate member is an object but not a failure: %s", text)
+	}
+	return Field{State: Failed, Kind: marker.Failed.Kind, Cause: marker.Failed.Cause}, nil
 }

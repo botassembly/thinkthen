@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 
@@ -18,8 +19,13 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	if answer.Facts.Records != 1 || answer.Facts.RequestsSent != 1 {
-		log.Fatalf("unexpected call facts: %+v", answer.Facts)
+	// Facts are JSON; read the members you need and ignore the rest.
+	var facts struct {
+		Records      int `json:"records"`
+		RequestsSent int `json:"requests_sent"`
+	}
+	if err := json.Unmarshal(answer.Facts, &facts); err != nil || facts.Records != 1 || facts.RequestsSent != 1 {
+		log.Fatalf("unexpected call facts: %s", answer.Facts)
 	}
 	fmt.Printf("outcome=%d probability=%.1f\n", answer.Value.Outcome, answer.Value.Probability)
 }

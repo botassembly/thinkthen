@@ -4,23 +4,22 @@
 #include <string>
 using tt::Json;
 int main() {
-    const auto goodFacts=Json::parse(R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":0.25,"model":"fixture"})");
-    const auto parsedFacts=tt::decodeFacts(goodFacts);
-    if (parsedFacts.records!=1 || parsedFacts.requestsSent!=1 || parsedFacts.cacheAnswers!=0 ||
-        parsedFacts.seconds!=0.25 || parsedFacts.inputTokens || parsedFacts.outputTokens ||
-        parsedFacts.model!=std::optional<std::string>("fixture")) return 20;
-    for (const auto& bad : {
-        R"({"requests_sent":1,"cache_answers":0,"seconds":0})",
-        R"({"records":null,"requests_sent":1,"cache_answers":0,"seconds":0})",
-        R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":0,"input_tokens":null})",
-        R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":0,"model":null})",
-        R"({"records":-1,"requests_sent":1,"cache_answers":0,"seconds":0})",
-        R"({"records":1.5,"requests_sent":1,"cache_answers":0,"seconds":0})",
-        R"({"records":1,"requests_sent":1,"cache_answers":0,"seconds":-0.1})"}) {
-        try { (void)tt::decodeFacts(Json::parse(bad)); return 21; }
-        catch (const std::exception&) {}
+    // ADR 0112 section 4: null is unresolved, {"failed": ...} is a failure with
+    // its kind and cause, a failure's unknown member reads, and any other value
+    // is an answer.
+    if (!std::holds_alternative<tt::Unresolved>(tt::annotatedField(Json()))) return 20;
+    for (const auto& text : {"true", "\"billing\"", "[\"billing\",\"urgent\"]", "1.2"}) {
+        const auto field = tt::annotatedField(Json::parse(text));
+        if (!std::holds_alternative<Json>(field) || std::get<Json>(field) != Json::parse(text)) return 21;
     }
-    std::cout << "CALL_FACTS_STRICT_DECODER_PASS" << '\n';
+    const auto failed = tt::annotatedField(Json::parse(R"({"failed":{"kind":"backend","cause":"missing_probability","later":1}})"));
+    if (!std::holds_alternative<tt::FailedField>(failed) || std::get<tt::FailedField>(failed).kind != tt::ErrorKind::backend ||
+        std::get<tt::FailedField>(failed).cause != "missing_probability") return 22;
+    for (const auto& text : {R"({"failed":null})", R"({"team":"billing"})"}) {
+        try { (void)tt::annotatedField(Json::parse(text)); return 23; }
+        catch (const std::invalid_argument&) {}
+    }
+    std::cout << "ANNOTATED_FIELD_PASS null value failure" << '\n';
     for (const auto& text : {"\"\\uD800\"", "\"\\uDC00\"", "\"\\uD800\\u0061\"",
                              "\"\\q\"", "\"\\uXYZ1\"", "[1,]", "{\"a\":1,\"a\":2}", "01", "1e9999"}) {
         try { (void)Json::parse(text); std::cerr << "JSON_NEGATIVE_ACCEPTED " << text << '\n'; return 1; }
@@ -34,21 +33,5 @@ int main() {
     auto labels=Json::parse(R"({"options":{"zebra":"first","alpha":"second"}})");
     if (labels.dump().find("zebra")>labels.dump().find("alpha")) return 5;
     if (labels!=Json::parse(R"({"options":{"alpha":"second","zebra":"first"}})")) return 6;
-    if (Json::parse("9007199254740992").get<size_t>() != static_cast<size_t>(9007199254740992ULL)) return 7;
-    std::cout << "JSON_EXACT_INTEGER_BOUNDARY_PASS 9007199254740992" << '\n';
-    try { (void)Json::parse("9007199254740993"); return 8; }
-    catch (const std::invalid_argument& e) {
-        if (std::string(e.what()) != "JSON integer outside exact double range") return 9;
-        std::cout << "JSON_INTEGER_PRECISION_REJECT_PASS 9007199254740993" << '\n';
-    }
-    try { (void)Json::parse("18446744073709551616").get<size_t>(); return 10; }
-    catch (const std::invalid_argument&) { std::cout << "JSON_SIZE_OVERFLOW_PASS" << '\n'; }
-    try {
-        (void)tt::entity(Json::parse(R"({"text":"x","start":9007199254740993,"end":9007199254740993,"length":0,"kind":"alert","strength":0.9})"));
-        return 11;
-    } catch (const std::invalid_argument& e) {
-        if (std::string(e.what()) != "JSON integer outside exact double range") return 12;
-        std::cout << "JSON_ENTITY_OFFSET_PRECISION_REJECT_PASS 9007199254740993" << '\n';
-    }
     std::cout << "JSON_PARSER_PASS surrogate_pairs round_trip" << '\n';
 }

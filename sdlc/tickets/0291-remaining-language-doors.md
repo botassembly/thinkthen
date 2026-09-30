@@ -40,10 +40,14 @@ First C bridge: pass corpus P1 through the new export, assert owned `thinkthen.p
 
 Branch `ticket/0314-s4-remaining-ports`. `thinkthen_plan_json` and `libraries/BINDING-AUTHOR.md` landed; ticket 0314's slice 4a section holds the evidence. The P1 proof uses the corrected figures: 182 bytes and the 93 to 166 band, with zero listener accepts and no key.
 
+## Go and C++ build (0314 slice 4b)
+
+Branch `ticket/0314-s4-remaining-ports`. Go gains `Engine.Plan`, and C++ gains `tt::plan`, both over `thinkthen_plan_json`. C++ `call`, `recognize` and `relate` now take a deadline and cancel token through their `_opts` twins; Go's context deadline already reached every `_opts` call. Both constructors already passed `max_requests_total` through unchanged, and a zero cap refuses before sending. Neither port offers a probability option on score or tag, so the refusal is vacuous for both. Ticket 0314's slice 4b section holds the evidence.
+
 ## What the build taught us
 
 - The C door already had most of this ticket's per-call surface. `deadline_ms` rides every `_opts` export, and `max_requests_total` is an engine key of `thinkthen_engine_new_with`. So the C bridge adds only the plan export. The port families still add deadlines where a wrapper hard-codes `THINKTHEN_NO_DEADLINE`, and pass the cap through their constructor settings.
 - The plan input drops the draft's `members`. `Engine::plan` takes judgment questions only, so no member list has a meaning there, and a plan input naming `members` is a usage refusal. Keyed objects are dropped too: the SQL hosts drop the keys before planning, and the C door's record arrays carry none.
 - A question object takes only call controls (`batch`, `context`, `deadline_ms`) from the settings. Merging question fields into a caller's object would reorder its keys and change the request body. A settings field the question repeats gets the core parser's "settings repeats" refusal first.
 - The C door's `call.rs` reads its envelope into a map that keeps the last repeated member. The plan reader uses a closed serde struct instead, so a repeated member is a usage refusal as the draft asked.
-
+- Slice 4b: a port that takes the question as one string needs a rule for text versus a question object. Go follows the C door's own rule for `thinkthen_decide`: text that starts with `{` is a question object. C++ takes the question as its `Json` value, so no rule is needed.

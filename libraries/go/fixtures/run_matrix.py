@@ -65,7 +65,7 @@ def main():
                         f"Libs: {NATIVE / 'lib/libthinkthen.a'} -lgcc_s -lutil -lrt -lpthread -lm -ldl -lc\n")
                     env["PKG_CONFIG_PATH"] = str(pc)
                     env["CGO_LDFLAGS_ALLOW"] = r"^" + str(NATIVE / "lib/libthinkthen.a").replace(".", r"\.") + r"$"
-                first = r"^(TestMatrix|TestHeldContext|TestCancellationGoroutinesSettle|TestConstructorFailureCopy|TestFailuresAndRecovery)$"
+                first = r"^(TestMatrix|TestHeldContext|TestCancellationGoroutinesSettle|TestConstructorFailureCopy|TestFailuresAndRecovery|TestReadField)$"
                 for expression in (first, r"^TestConcurrent$", r"^TestHeldScalarContract$"):
                     case_env = env | ({"TT_CHECK_SCALAR_CONTRACT": "1"} if expression == r"^TestHeldScalarContract$" else {})
                     checked([GO, "test", "-race", "-count=1", "-run", expression, "."], cwd=module, env=case_env)
@@ -151,10 +151,27 @@ def main():
         assert token_server.arrivals == [] and token_server.attempts == 0, token_server.arrivals
     finally:
         token_server.close()
+    # Ticket 0291: the plan runs with no key; the plan, its refusal, a zero
+    # budget on every sending method and an active cap of zero send nothing.
+    for test, keyed in (("TestPlan", False), ("TestLimits", True)):
+        limit_barrier = configured / f"{test}-barrier"
+        limit_barrier.mkdir(exist_ok=True)
+        limit_server = Backend(limit_barrier)
+        try:
+            limit_env = env | {"THINKTHEN_BASE_URL": f"http://127.0.0.1:{limit_server.server_port}/generic/v1",
+                               "THINKTHEN_CACHE": str(configured / f"{test}-cache"), "TT_BARRIER_DIR": str(limit_barrier)}
+            if not keyed:
+                del limit_env["THINKTHEN_API_KEY"]
+            checked([GO, "test", "-race", "-count=1", "-run", f"^{test}$", "-v", "."],
+                    cwd=configured / "module", env=limit_env, marker=f"--- PASS: {test}")
+            assert limit_server.arrivals == [] and limit_server.attempts == 0, (test, limit_server.arrivals)
+        finally:
+            limit_server.close()
     print("GO_INSTALLED_MATRIX_PASS 4 consumers x 38 exact full request bodies plus one external module call each")
     print("GO_SETTINGS_PASS one configured request; invalid object sent nothing")
     print("GO_WRONG_DETAIL_PLANT_REJECTED")
     print("GO_TOKEN_VARIABLE_PASS the variable refused the call with zero arrivals")
+    print("GO_PLAN_LIMITS_PASS plan with no key, plan refusal, zero budgets and zero cap sent nothing")
 
 
 if __name__ == "__main__":

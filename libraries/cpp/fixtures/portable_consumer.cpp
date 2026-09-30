@@ -16,7 +16,7 @@ int main() {
     if (texts.size() != 5) throw std::runtime_error("shared corpus has another text count");
     auto engine = tt::create(std::getenv("TT_PORTABLE_SETTINGS"));
     auto rows = tt::many(engine, corpus.at("question").get<std::string>(), texts);
-    if (rows.value.size() != texts.size() || rows.facts.records != texts.size() || rows.facts.requestsSent != 1)
+    if (rows.value.size() != texts.size() || rows.facts.at("records") != 5 || rows.facts.at("requests_sent") != 1)
         throw std::runtime_error("bulk row count or facts changed");
     for (size_t at = 0; at < rows.value.size(); ++at) {
         if (rows.value[at].outcome != tt::Outcome::yes || rows.value[at].probability != 0.9)

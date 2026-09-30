@@ -1,11 +1,9 @@
 #pragma once
-// Local JSON value and strict decoder. MIT, with this package.
+// Local JSON value, parser and writer for host values. MIT, with this package.
 #include <cmath>
-#include <cstdint>
 #include <cstdlib>
 #include <iomanip>
 #include <istream>
-#include <limits>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -117,18 +115,6 @@ private:
                 if (pos>=input.size() || input[pos]<'0' || input[pos]>'9') invalid();
                 do {++pos;} while (pos<input.size() && input[pos]>='0' && input[pos]<='9'); }
             auto part=input.substr(start,pos-start);
-            // Integer lexemes beyond 2^53 can round to a different integer in double.
-            // Reject them before conversion rather than exposing a wrong typed offset.
-            if (part.find_first_of(".eE") == std::string::npos) {
-                constexpr std::uint64_t exact_limit = UINT64_C(9007199254740992);
-                std::uint64_t magnitude = 0;
-                for (size_t i = part[0] == '-' ? 1 : 0; i < part.size(); ++i) {
-                    unsigned digit = static_cast<unsigned>(part[i] - '0');
-                    if (magnitude > (exact_limit - digit) / 10)
-                        throw std::invalid_argument("JSON integer outside exact double range");
-                    magnitude = magnitude * 10 + digit;
-                }
-            }
             char* end=nullptr;
             double d=std::strtod(part.c_str(), &end);
             if (end!=part.c_str()+part.size() || !std::isfinite(d)) invalid();
@@ -204,12 +190,6 @@ public:
         if constexpr (std::is_same_v<T, std::string>) return std::get<std::string>(value_);
         else if constexpr (std::is_same_v<T, bool>) return std::get<bool>(value_);
         else if constexpr (std::is_same_v<T, double>) return std::get<double>(value_);
-        else if constexpr (std::is_same_v<T, size_t>) {
-            double d=std::get<double>(value_);
-            if (d<0 || d>=std::ldexp(1.0, std::numeric_limits<size_t>::digits) || std::floor(d)!=d)
-                throw std::invalid_argument("invalid JSON size");
-            return static_cast<size_t>(d);
-        }
     }
     std::string dump() const {
         if (is_null()) return "null";
@@ -229,6 +209,5 @@ public:
         return true;
     }
     friend bool operator!=(const Json& a,const Json& b) {return !(a==b);}
-    friend bool operator>(const Json& a,const Json& b) {return std::get<double>(a.value_)>std::get<double>(b.value_);}
 };
 } // namespace tt
