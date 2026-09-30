@@ -356,7 +356,8 @@ impl EngineBuilder {
     ///
     /// Returns [`Error::Usage`] when the default cache is selected and no
     /// folder is available, when a different throttle is already active, or
-    /// when a [`EngineBuilder::shared_host`] folder is not private.
+    /// when a [`EngineBuilder::shared_host`] folder is not private. Returns
+    /// [`Error::Local`] when a shared host cannot create or read its folder.
     pub fn build(self) -> Result<super::Engine, Error> {
         let batch = match (self.batch, self.env_batch.as_deref()) {
             (Some(setting), _) => Some(setting),

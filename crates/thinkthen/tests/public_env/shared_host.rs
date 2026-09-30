@@ -101,3 +101,34 @@ fn an_ordinary_engine_keeps_an_open_named_folder() {
         .and_then(EngineBuilder::build);
     assert!(built.is_ok(), "only a shared host refuses the folder");
 }
+
+#[cfg(unix)]
+#[test]
+fn a_shared_host_creates_a_missing_named_folder_private_at_build() {
+    use std::os::unix::fs::PermissionsExt as _;
+    // Each row: the case, the mode the test gives the folder first (none
+    // leaves it missing), and whether the build succeeds. The build keeps
+    // a given mode and creates a missing folder with mode 0700.
+    let rows: [(&str, Option<u32>, bool); 2] = [
+        ("a missing folder is created private", None, true),
+        ("an other-writable folder is refused", Some(0o777), false),
+    ];
+    for (name, given, builds) in rows {
+        let folder = folder("shared-host-build").join("answers");
+        if let Some(mode) = given {
+            with_mode(&folder, mode);
+        }
+        let built = Engine::builder()
+            .api_key("sk-test")
+            .and_then(|builder| builder.cache_at(&folder))
+            .map(EngineBuilder::shared_host)
+            .and_then(EngineBuilder::build);
+        assert_eq!(built.is_ok(), builds, "{name}");
+        let mode = fs::metadata(&folder)
+            .expect("a folder")
+            .permissions()
+            .mode()
+            & 0o777;
+        assert_eq!(mode, given.unwrap_or(0o700), "{name}");
+    }
+}
