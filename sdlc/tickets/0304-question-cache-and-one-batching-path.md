@@ -217,3 +217,10 @@ What the second review found:
 - The DuckDB check caught a real regression. A retry denied by the send budget ended the whole native vector, so a later request that had already answered lost its rows. Ticket 0240 keeps those rows. `details_many_recoverable_with` now fails only the denied request's rows; every later request is denied before it sends. `native_denied_retry_keeps_a_later_request_answered_first` failed before the fix.
 - PostgreSQL's two replay-miss tests now expect the store's sentence, "the replay folder holds no answer for this question". Its annotate conformance calls annotate once per record, because ADR 0111 section 5 never stores a failed answer, so a second call resent the failed question.
 - `policy.py` refused an engine reference to `public` but not an alias of the crate root, such as `use crate as c; c::public::Error`. It now refuses any alias of the crate root or an ancestor in `engine`, as it does in `core`, with three planted forms.
+
+### Slice 3c
+
+- The rows the door collected cost more than the columns it built. An annotate record carries its member names, labels and JSON text, so `annotate_frame` over 100,000 rows held 77 MB of rows for about 15 MB of output. The decide rows were small, so streaming saved little there.
+- The question key names the backend address. A replay under another base URL than the recording finds nothing, so a measurement must replay against the recorded address.
+- Polars pushes a slice below an elementwise `map`, so a sliced lazy frame asks only the rows it keeps. The streaming engine, which the feature no longer compiles, is the only way to bound the frame's own memory.
+- Replay speed is the engine's: about 50 microseconds per answered question under load, the same with or without Polars.
