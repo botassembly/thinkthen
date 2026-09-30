@@ -88,3 +88,12 @@ Line counts: the core grows 72 and PostgreSQL 48. The seven bindings shrink by 3
 - A surface guard needs no marked scope around its own fallback. Only the body needs marking.
 - The core grows by 72 lines and PostgreSQL by 48, after review added the guard's limits and a host-hook check to the PostgreSQL test. The new public API is `thinkthen::contained` and `thinkthen::uncontained`, in `public/panic.rs`. Their docs state the limits: a host that replaces the hook later displaces it, a thread past local-storage teardown runs unmarked, and a first call from a thread already panicking aborts.
 - Package gates on main have rotted: the Python `probe` feature did not compile, TypeScript clippy fails, and C sources on main are not `cargo fmt` clean. Issue `2026-09-29-nine-package-gates-fail-from-clean-checkouts.md` owns the last two.
+
+## Public API delta
+
+### Added public declarations
+
+```text
+fn contained<T>(impl FnOnce() -> T) -> Option<T>
+fn uncontained<T>(impl FnOnce() -> T) -> T
+```
