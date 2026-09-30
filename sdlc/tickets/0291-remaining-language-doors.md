@@ -34,7 +34,7 @@ First C bridge: pass corpus P1 through the new export, assert owned `thinkthen.p
 - Keeps: Existing successful values, the C door's facts exports, NULL/not-sure, cache identity, six error kinds, offline replay and privacy except the accepted changes.
 - Changes: Additive C plan bridge and binding-author guide, then public plan/settings/deadline/cap methods on all fourteen doors in bounded families.
 - Proof: First C P1 plan/failure/free/export/installed-member oracle, then one public valid/invalid/no-send P1 conversion plus cap and refusal per door.
-- Defers: Unrelated package/release qualification, provider work, marketing site, token cap and per-record cache; named prerequisites remain.
+- Defers: a `planInput` definition in `specification/question-file.schema.json`; the header, the C README and DESIGN describe `thinkthen.plan-input/1` until a port family needs the schema. Unrelated package/release qualification, provider work, marketing site, token cap and per-record cache; named prerequisites remain.
 
 ## C bridge build (0314 slice 4a)
 
