@@ -29,7 +29,7 @@ fn sent(listener: &Listener) -> Vec<String> {
             let body = serde_json::from_slice::<serde_json::Value>(&request.body).ok();
             body.as_ref()
                 .filter(|body| body["state"] == "Each question quotes the text it asks about.")
-                .and_then(|body| body["questions"]["q1"]["instructions"].as_str())
+                .and_then(|body| body.pointer("/questions/q1/instructions")?.as_str())
                 .and_then(|asked| asked.strip_prefix("The text is "))
                 .and_then(|asked| {
                     let mut quoted = serde_json::Deserializer::from_str(asked).into_iter();

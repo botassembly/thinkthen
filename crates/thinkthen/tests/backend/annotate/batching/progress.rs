@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use super::set;
 use crate::harness::{Canned, Gathering, Listener, spawn};

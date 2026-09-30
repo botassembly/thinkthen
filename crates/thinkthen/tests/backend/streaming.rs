@@ -74,10 +74,10 @@ fn quoted(listener: &Listener) -> Vec<String> {
         .filter_map(|request| {
             let body: serde_json::Value = serde_json::from_slice(&request.body).ok()?;
             assert_eq!(
-                body["state"],
-                "Each question quotes the text it asks about."
+                body.get("state").and_then(serde_json::Value::as_str),
+                Some("Each question quotes the text it asks about.")
             );
-            let asked = body["questions"]["q1"]["instructions"].as_str()?;
+            let asked = body.pointer("/questions/q1/instructions")?.as_str()?;
             Some(
                 asked
                     .strip_prefix(lead)?
