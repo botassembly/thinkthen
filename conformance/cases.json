@@ -7613,8 +7613,8 @@
           "relations": [
             {
               "name": "works_with",
-              "source": "person",
-              "target": "organization",
+              "source": "organization",
+              "target": "person",
               "either": true
             }
           ]
@@ -7890,7 +7890,7 @@
               },
               "details": {
                 "model": "jev-1.13.0",
-                "question_sha256": "ab310b40bd2a81c5ad1d2fd5494f2f06ee8ebe28f42eb0f7b6a52f29a4991fc9",
+                "question_sha256": "8dfde576a1c9b254e9f0ba54e85f6847e4588643e31c0ffe0d68123fe5eab21c",
                 "requests": [
                   "8e35af988d1752d942c2d74de7395a0650852a39cfbc7e7836003ba6af4eb9a1",
                   "76e4ea65c9564f173f1b691354d541be516d119e3aea62e545747fbf9e37e76d",
