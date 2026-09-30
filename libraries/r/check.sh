@@ -36,7 +36,7 @@ export R_LIBS=$libs
 mkdir -p rlib
 R_LIBS=$libs Rscript -e 'v <- function(p) tryCatch(packageVersion(p), error = function(e) "0")
   if (v("jsonlite") < "2.0.0") quit(status = 1)
-  for (p in c("dplyr", "tidyr", "igraph")) if (identical(v(p), "0")) quit(status = 1)' ||
+  for (p in c("dplyr", "dbplyr", "purrr", "tidyr", "igraph")) if (identical(v(p), "0")) quit(status = 1)' ||
   not_run "jsonlite 2.0.0 or a tested Suggests package is missing; run libraries/r/tools/setup.sh on a networked machine"
 cargo fetch --locked --offline --manifest-path "$rust/Cargo.toml" >/dev/null 2>&1 ||
   not_run "the cargo cache misses a crate; run cargo fetch --locked --manifest-path libraries/r/thinkthen/src/rust/Cargo.toml on a networked machine"

@@ -15,6 +15,7 @@
 pub mod ffi;
 
 mod calls;
+mod plan;
 mod relate;
 
 use std::sync::{Mutex, MutexGuard, PoisonError};
