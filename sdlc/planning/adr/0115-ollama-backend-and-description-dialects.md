@@ -65,7 +65,7 @@ The `text` dialect renders each description before the encoder builds the questi
 
 `text` drops an object's other fields when it sends `what` alone. Two places say so.
 
-- A live `thinkthen check` under `ollama` prints one warning on each probe row whose request lost a field: ``warning ROW: backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out``. The warnings count in the last line, and the check still exits 0 when nothing is critical. Experiment 415's refusals put these on `choice`, `score` and `mixed`.
+- A live `thinkthen check` under `ollama` prints one warning on each probe row whose request lost a field: ``warning ROW: backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out``. The warnings count in the last line, and the check still exits 0 when nothing is critical. Experiment 415's refusals put these on `choice`, `score` and `mixed`. Ticket 0339 found that the mixed probe's one object holds only `what`, so it loses no field. The warning therefore fires when `text` turns any nonempty object or list into text, which is exactly what Ollama refuses; the sentence stays as ruled.
 - `--plan`, on `check` or an asking command, prints once on standard error: ``thinkthen: backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out``. It prints only when at least one planned description lost a field. The exit code stays the same.
 
 A live asking run prints nothing more. The workaround is part of the backend the user named.
