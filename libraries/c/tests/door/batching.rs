@@ -6,35 +6,21 @@ use conformance_backend::{Canned, Listener};
 #[test]
 fn direct_c_json_attempts_opt_in_keeps_default_envelope_and_frees_results() {
     let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
-    let listener = Listener::answering(move |_| {
-        Canned::ok(reply)
-            .asking("x-envoy-upstream-service-time", "7")
-            .asking("x-typesafe-request-id", "req-c-one")
-    })
-    .expect("loopback");
+    let listener = Listener::answering(move |_| Canned::ok(reply)
+        .asking("x-envoy-upstream-service-time", "7")
+        .asking("x-typesafe-request-id", "req-c-one")).expect("loopback");
     let base = listener.base();
     let settings = json!({"base_url":base,"cache":false}).to_string();
     let default = json!({"decide":"Is it relevant?","evidence":"alpha"}).to_string();
     let opted = json!({"decide":"Is it relevant?","evidence":"beta","attempts":true}).to_string();
     let empty = json!({"filter":"Is it relevant?","records":[],"attempts":true}).to_string();
-    let invalid =
-        json!({"decide":"Is it relevant?","evidence":"beta","attempts":false}).to_string();
-    let invalid_null =
-        json!({"decide":"Is it relevant?","evidence":"beta","attempts":null}).to_string();
-    let invalid_text =
-        json!({"decide":"Is it relevant?","evidence":"beta","attempts":"true"}).to_string();
+    let invalid = json!({"decide":"Is it relevant?","evidence":"beta","attempts":false}).to_string();
+    let invalid_null = json!({"decide":"Is it relevant?","evidence":"beta","attempts":null}).to_string();
+    let invalid_text = json!({"decide":"Is it relevant?","evidence":"beta","attempts":"true"}).to_string();
     let invalid_usage = json!({"usage":true,"attempts":true}).to_string();
     let mut script = Script::default();
     script.ask("settings", &[base, &settings]);
-    for request in [
-        &default,
-        &opted,
-        &empty,
-        &invalid,
-        &invalid_null,
-        &invalid_text,
-        &invalid_usage,
-    ] {
+    for request in [&default, &opted, &empty, &invalid, &invalid_null, &invalid_text, &invalid_usage] {
         script.ask("call", &[base, request]);
     }
     let driver = compile(&crate_dir().join("tests/c/driver.c"));
@@ -68,43 +54,16 @@ fn direct_c_attempt_member_is_available_on_each_of_ten_json_verbs() {
     let base = listener.base();
     let settings = json!({"base_url":base,"cache":false}).to_string();
     let cases = [
-        (
-            "decide",
-            json!({"decide":"Q?","records":[],"attempts":true}),
-        ),
-        (
-            "choose",
-            json!({"choose":"Q?","options":["a","b"],"records":[],"attempts":true}),
-        ),
-        (
-            "score",
-            json!({"score":"Q?","levels":["low","high"],"records":[],"attempts":true}),
-        ),
-        (
-            "tag",
-            json!({"tag":"Q?","labels":["a","b"],"records":[],"attempts":true}),
-        ),
-        (
-            "filter",
-            json!({"filter":"Q?","records":[],"attempts":true}),
-        ),
+        ("decide", json!({"decide":"Q?","records":[],"attempts":true})),
+        ("choose", json!({"choose":"Q?","options":["a","b"],"records":[],"attempts":true})),
+        ("score", json!({"score":"Q?","levels":["low","high"],"records":[],"attempts":true})),
+        ("tag", json!({"tag":"Q?","labels":["a","b"],"records":[],"attempts":true})),
+        ("filter", json!({"filter":"Q?","records":[],"attempts":true})),
         ("rank", json!({"rank":"Q?","records":[],"attempts":true})),
-        (
-            "find",
-            json!({"find":"Which?","units":["a","b"],"attempts":true}),
-        ),
-        (
-            "annotate",
-            json!({"annotate":{"version":1,"questions":{"one":{"decide":"Q?"}}},"records":[],"attempts":true}),
-        ),
-        (
-            "recognize",
-            json!({"version":1,"recognize":{"kinds":{"person":null}},"evidence":"","attempts":true}),
-        ),
-        (
-            "relate",
-            json!({"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]},"records":[],"attempts":true}),
-        ),
+        ("find", json!({"find":"Which?","units":["a","b"],"attempts":true})),
+        ("annotate", json!({"annotate":{"version":1,"questions":{"one":{"decide":"Q?"}}},"records":[],"attempts":true})),
+        ("recognize", json!({"version":1,"recognize":{"kinds":{"person":null}},"evidence":"","attempts":true})),
+        ("relate", json!({"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]},"records":[],"attempts":true})),
     ];
     let mut script = Script::default();
     script.ask("settings", &[base, &settings]);
@@ -131,8 +90,7 @@ fn direct_c_staged_recognize_and_relate_keep_live_attempts() {
     let base = format!("{}/generic/v1", backend.origin());
     let settings = json!({"base_url":base,"cache":false}).to_string();
     let recognize = json!({"version":1,"recognize":{"kinds":{"person":null}},
-        "evidence":"Maria Chen arrived.","attempts":true})
-    .to_string();
+        "evidence":"Maria Chen arrived.","attempts":true}).to_string();
     let relate = json!({"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]},
         "records":[{"name":"Maria Chen","kind":"person"},{"name":"arrived.","kind":"person"}],"attempts":true}).to_string();
     let mut script = Script::default();
@@ -149,10 +107,7 @@ fn direct_c_staged_recognize_and_relate_keep_live_attempts() {
         let value: Value = serde_json::from_str(&reply.1).expect("success JSON");
         let attempts = value["attempts"].as_array().expect("opted live attempts");
         assert!(!attempts.is_empty(), "{verb} sent a real request");
-        assert!(
-            attempts.iter().all(|attempt| attempt["status"] == 200),
-            "{verb}"
-        );
+        assert!(attempts.iter().all(|attempt| attempt["status"] == 200), "{verb}");
     }
 }
 
