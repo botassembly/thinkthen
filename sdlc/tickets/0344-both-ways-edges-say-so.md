@@ -1,6 +1,6 @@
 # 0344: A both-ways relation edge says so
 
-Status: in progress. Lane claude-2. Branch `ticket/0342-s2-both-ways-edges`: the coordinator named it as 0342's slice 2 before 0342's record showed the shape needed its own ticket, so this ticket keeps that branch. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Carries the both-ways edge shape that ticket 0342 deferred to "its own relate ticket after 0314 slice 4", issue priorities rank 9, and the second half of `sdlc/issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`. Amends ADR 0057 item 6. The shape is a coordinator default Ian can overturn.
+Status: landed. Lane claude-2. Branch `ticket/0342-s2-both-ways-edges`: the coordinator named it as 0342's slice 2 before 0342's record showed the shape needed its own ticket, so this ticket keeps that branch. Plan: `sdlc/planning/cleanup-2026-09-30.md`. Carries the both-ways edge shape that ticket 0342 deferred to "its own relate ticket after 0314 slice 4", issue priorities rank 9, and the second half of `sdlc/issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`. Amends ADR 0057 item 6. The shape is a coordinator default Ian can overturn.
 
 ## Outcome
 
@@ -39,3 +39,11 @@ fn Relation::either(&self) -> bool
 ```
 
 ## What the build taught us
+
+- A flag written only when true reached every JSON-reading binding with no code. The type corpus's old case 51 check compared only the edge count and a directed first edge, and the schema admitted unknown members, so neither proved the flag arrived. The exact `response` in the corpus and the schema's `const: true` now do.
+- A new shared case reaches more than the conformance runners. Case 53 also needed the Polars runner's skip list, the conformance backend's body capture opt-in, which the SQLite runner reads, the full-case checkpoint's count, and five pages that named 54 cases. The routine surface sweep, the Polars check and a clean-checkout lint each found one of these.
+- Flipping case 53's rule to organization before person changed its question digest and left every request the same. So the recognize case now proves the ends follow found order against the rule's order.
+- Two new public methods need a `### Added public declarations` block, or the inventory rung of `lint` refuses them. Only a lint run in a clean checkout caught it.
+- A mid-sweep edit to `conformance/cases.json` gives a false failure: the loopback backend reads the cases at start. Rerun the surfaces that read an edited case.
+- Checks: `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, `lint` in a clean checkout, and `surfaces`. Every landed surface passed, including the C door tests, Polars and the release smoke. Dart did not run, since this host has no Dart toolchain.
+- Reviews: the ticket review found five issues, all fixed before the build. The first code review found four, a re-review found four more, and a third found three; each set was fixed. The last reviewers returned ACCEPT.
