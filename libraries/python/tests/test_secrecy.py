@@ -70,7 +70,7 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
         shown = [repr(late), repr(token), repr(tt.Engine()), repr(tt.Entity("Ada", "person"))]
         verbs = [
             lambda engine: engine.decide(late, "one").value,
-            lambda engine: engine.decide_many(late, ["one", "two"]).value,
+            lambda engine: engine.decide(late, ["one", "two"]).value,
             lambda engine: engine.filter(late, ["one", "two"]).value,
             lambda engine: engine.rank("Which is late?", ["one", "two"]).value,
             lambda engine: engine.find("Which is late?", ["one", "two"]).value,
@@ -79,7 +79,7 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
             lambda engine: engine.relate([("Ada", "person"), ("Bob", "person")],
                                          relations={{"knows": ("person", "person")}}).value,
             lambda engine: engine.decide(late, pd.Series(["one"])).value,
-            lambda engine: engine.decide_many(late, pd.Series(["one", "two"])).value,
+            lambda engine: engine.decide(late, pd.Series(["one", "two"])).value,
             lambda engine: engine.choose(team, pd.Series(["one"])).value,
             lambda engine: engine.score(urgent, pd.Series(["one"])).value,
             lambda engine: engine.tag(kinds, pd.Series(["one"])).value,

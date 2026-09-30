@@ -8,20 +8,23 @@ use pyo3::prelude::*;
 use pyo3::types::{PyBool, PyDict};
 use thinkthen::{Annotated, Answer, Batch, Error, FailureCause, Judgment};
 
-use crate::asked::{Asked, Edge, Question, QuestionSet, Recognize, Recognized, Relate};
+use crate::asked::{Edge, Question, QuestionSet, Recognize, Recognized, Relate};
 use crate::frame::ask_column;
 use crate::input::{controls, entities, is_column, text, texts};
 use crate::result::{self, Completed};
-use crate::worker::{Token, run_observed};
+use crate::tally::PyTally;
+use crate::worker::{Token, run_observed, run_tallied};
 use crate::{guard, raised, usage};
 
 mod operations;
+mod plan;
 mod settings;
+pub(crate) use plan::named as plan_named;
 
-use operations::{Many, labels, many, order};
+use operations::{Many, labels, many, of_kind, only, order};
 
-pub(crate) use settings::batch;
-use settings::{Settings, checked_throttle, context, folder_path, setting, total};
+use settings::{Settings, checked_throttle, folder_path, setting, total};
+pub(crate) use settings::{batch, context};
 
 const MAX_REQUESTS: &str = "a request limit is a whole number of 1 or more";
 const MAX_REQUESTS_TOTAL: &str = "max_requests_total is a whole number of 0 or more";
@@ -84,26 +87,6 @@ pub(crate) fn annotated(py: Python<'_>, value: Annotated) -> PyResult<Py<PyAny>>
             }
         },
     )
-}
-
-/// Refuse a question whose kind is not `kind`, naming the verb.
-fn of_kind(py: Python<'_>, asked: &Asked, verb: &str, kind: &str) -> PyResult<()> {
-    if asked.kind() == kind {
-        return Ok(());
-    }
-    Err(usage(
-        py,
-        &format!("{verb} does not take a {} question", asked.kind()),
-    ))
-}
-
-/// The question a verb takes: its own kind, under one cut.
-fn only(py: Python<'_>, asked: &Asked, verb: &str, kind: &str) -> PyResult<thinkthen::Question> {
-    of_kind(py, asked, verb, kind)?;
-    match asked {
-        Asked::Plain(question) => Ok(question.clone()),
-        Asked::Banded(_) => Err(usage(py, "this call takes one cut, not a band")),
-    }
 }
 
 #[expect(
@@ -204,7 +187,7 @@ impl Engine {
     /// `decide`, `choose`, `score`, `tag`, or `details` over one text. Each
     /// reads the one `details` call, so a question with runtime labels adds
     /// no send (decision 8). `details` gives the document as JSON text.
-    #[pyo3(signature = (verb, question, evidence, deadline, token, batch=None, context=None))]
+    #[pyo3(signature = (verb, question, evidence, deadline, token, batch=None, context=None, tally=None))]
     #[expect(
         clippy::too_many_arguments,
         reason = "PyO3 accepts column controls beside scalar arguments"
@@ -218,6 +201,7 @@ impl Engine {
         token: Held<'_, '_>,
         batch: Arg<'_, '_>,
         context: Arg<'_, '_>,
+        tally: Option<&Bound<'_, PyTally>>,
     ) -> PyResult<Py<PyAny>> {
         let py = question.py();
         guard(py, || {
@@ -229,14 +213,23 @@ impl Engine {
                 let batch = self::batch(batch)?;
                 let context = self::context(context)?;
                 return ask_column(
-                    &engine, verb, &asked, evidence, batch, context, deadline, token,
+                    &engine,
+                    verb,
+                    &asked,
+                    evidence,
+                    batch,
+                    context,
+                    deadline,
+                    token,
+                    tally.map(|one| one.get().0.clone()),
                 );
             }
             if batch.is_some() || context.is_some() {
                 return Err(usage(py, "one text does not take batch or shared context"));
             }
             let (evidence, controls) = (text(evidence)?, controls(py, deadline, token)?);
-            let found = run_observed(py, controls, move |options| {
+            let tallied = tally.map(|one| one.get().0.clone());
+            let found = run_tallied(py, controls, tallied, move |options| {
                 let found = engine.details_with(asked.detail(), &evidence, options)?;
                 Ok::<_, Error>(Completed::new(found.value().clone(), found.facts()))
             })?;
@@ -245,6 +238,7 @@ impl Engine {
     }
 
     /// `decide_many` or `filter` over every record.
+    #[pyo3(signature = (verb, question, records, batch, context, deadline, token, tally=None))]
     #[expect(
         clippy::too_many_arguments,
         reason = "PyO3 mirrors the public controls on a many call"
@@ -258,6 +252,7 @@ impl Engine {
         context: Arg<'_, '_>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
+        tally: Option<&Bound<'_, PyTally>>,
     ) -> PyResult<Py<PyAny>> {
         let py = question.py();
         guard(py, || {
@@ -275,12 +270,21 @@ impl Engine {
                 let batch = self::batch(batch)?;
                 let context = self::context(context)?;
                 return ask_column(
-                    &engine, "decide", &asked, records, batch, context, deadline, token,
+                    &engine,
+                    "decide",
+                    &asked,
+                    records,
+                    batch,
+                    context,
+                    deadline,
+                    token,
+                    tally.map(|one| one.get().0.clone()),
                 );
             }
             let (batch, context) = (self::batch(batch)?, self::context(context)?);
             let (records, controls) = (texts(records)?, controls(py, deadline, token)?);
-            let done = run_observed(py, controls, move |options| {
+            let tallied = tally.map(|one| one.get().0.clone());
+            let done = run_tallied(py, controls, tallied, move |options| {
                 let options = batch.map_or(options, |batch| options.batch(batch));
                 let options = context
                     .as_deref()
@@ -305,6 +309,7 @@ impl Engine {
     }
 
     /// Runtime-label choose, score and tag over the shared details planner.
+    #[pyo3(signature = (verb, question, records, batch, context, deadline, token, tally=None))]
     #[expect(
         clippy::too_many_arguments,
         reason = "PyO3 mirrors the public controls on a many call"
@@ -318,6 +323,7 @@ impl Engine {
         context: Arg<'_, '_>,
         deadline: Arg<'_, '_>,
         token: Held<'_, '_>,
+        tally: Option<&Bound<'_, PyTally>>,
     ) -> PyResult<Py<PyAny>> {
         let py = question.py();
         guard(py, || {
@@ -325,7 +331,8 @@ impl Engine {
             of_kind(py, &asked, verb, verb)?;
             let (batch, context) = (self::batch(batch)?, self::context(context)?);
             let (records, controls) = (texts(records)?, controls(py, deadline, token)?);
-            let done = run_observed(py, controls, move |options| {
+            let tallied = tally.map(|one| one.get().0.clone());
+            let done = run_tallied(py, controls, tallied, move |options| {
                 let options = batch.map_or(options, |batch| options.batch(batch));
                 let options = context
                     .as_deref()
@@ -467,5 +474,46 @@ impl Engine {
         totals.set_item("input_tokens", counts.input_tokens())?;
         totals.set_item("output_tokens", counts.output_tokens())?;
         Ok(totals)
+    }
+
+    /// The public core planner over a complete, validated input.
+    fn plan<'py>(
+        &self,
+        py: Python<'py>,
+        question: &Bound<'_, Question>,
+        records: &Bound<'_, PyAny>,
+        batch: Arg<'_, '_>,
+        context: Arg<'_, '_>,
+    ) -> PyResult<Bound<'py, PyDict>> {
+        if is_column(records)? {
+            crate::frame::plan_column(self, py, question, records, batch, context)
+        } else {
+            plan::estimate(self, py, question, records, batch, context)
+        }
+    }
+
+    /// Prepare one caller-fed native core Batch for a Python iterator.
+    #[pyo3(signature = (verb, question, source, batch, context, deadline, token, tally=None))]
+    #[expect(
+        clippy::too_many_arguments,
+        reason = "one stream carries its public controls"
+    )]
+    fn _stream(
+        &self,
+        py: Python<'_>,
+        verb: &str,
+        question: &Bound<'_, Question>,
+        source: Py<PyAny>,
+        batch: Arg<'_, '_>,
+        context: Arg<'_, '_>,
+        deadline: Arg<'_, '_>,
+        token: Held<'_, '_>,
+        tally: Option<&Bound<'_, PyTally>>,
+    ) -> PyResult<Py<crate::stream::PyStream>> {
+        guard(py, || {
+            crate::stream::prepare(
+                py, self, verb, question, source, batch, context, deadline, token, tally,
+            )
+        })
     }
 }

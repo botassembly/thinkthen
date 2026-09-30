@@ -3,7 +3,35 @@
 use super::collected;
 use crate::asked::Asked;
 use crate::result::Completed;
+use crate::usage;
+use pyo3::prelude::*;
 use thinkthen::{Answer, CallOptions, Error, Evidence, Judgment};
+
+/// Refuse a question whose kind differs from the selected public verb.
+pub(super) fn of_kind(py: Python<'_>, asked: &Asked, verb: &str, kind: &str) -> PyResult<()> {
+    if asked.kind() == kind {
+        Ok(())
+    } else {
+        Err(usage(
+            py,
+            &format!("{verb} does not take a {} question", asked.kind()),
+        ))
+    }
+}
+
+/// The one-cut question an ordering or filter call requires.
+pub(super) fn only(
+    py: Python<'_>,
+    asked: &Asked,
+    verb: &str,
+    kind: &str,
+) -> PyResult<thinkthen::Question> {
+    of_kind(py, asked, verb, kind)?;
+    match asked {
+        Asked::Plain(question) => Ok(question.clone()),
+        Asked::Banded(_) => Err(usage(py, "this call takes one cut, not a band")),
+    }
+}
 
 /// One record and its place in the caller's list.
 #[derive(Debug)]

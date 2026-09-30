@@ -175,8 +175,8 @@ def succeeded(port, case):
         return same("indexes", [texts.index(text) for text in kept],
                     success["operation"]["indexes"])
     if kind == "decide_many":
-        answers = engine.decide_many(question, texts, batch=1).value
-        same("column", engine.decide_many(question, pl.Series(texts), batch=1).value.to_list(), answers)
+        answers = engine.decide(question, texts, batch=1).value
+        same("column", engine.decide(question, pl.Series(texts), batch=1).value.to_list(), answers)
         return same("bare", answers, [answer["bare"] for answer in success["answers"]])
     return single(engine, question, texts[0], success, base)
 

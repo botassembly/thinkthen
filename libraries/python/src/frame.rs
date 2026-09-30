@@ -20,14 +20,16 @@ use crate::asked::{Asked, Recognize};
 use crate::engine::{Arg, Engine, Held, annotated, answer, batch, collected};
 use crate::input::{Pandas, controls, listed_nullable, polars_frame, top};
 use crate::result::{self, Completed, OwnedFacts};
-use crate::worker::{Controls, run_observed};
+use crate::worker::{Controls, run_tallied};
 use crate::{guard, raised, usage};
 
 mod names;
 mod nullable;
+mod plan;
 mod recognition;
 mod stop;
 use names::names;
+pub(crate) use plan::plan_column;
 use recognition::{due, each_named};
 use stop::{AccountedFailure, Stop};
 
@@ -38,7 +40,22 @@ where
     T: Send + 'static,
     F: FnOnce(H, CallOptions<'_>) -> Result<Completed<T>, Stop> + Send + 'static,
 {
-    run_observed(py, controls, move |options| {
+    on_worker_tallied(py, controls, None, held, job)
+}
+
+fn on_worker_tallied<H, T, F>(
+    py: Python<'_>,
+    controls: Controls,
+    tally: Option<thinkthen::Tally>,
+    held: H,
+    job: F,
+) -> PyResult<Completed<T>>
+where
+    H: Send + 'static,
+    T: Send + 'static,
+    F: FnOnce(H, CallOptions<'_>) -> Result<Completed<T>, Stop> + Send + 'static,
+{
+    run_tallied(py, controls, tally, move |options| {
         let began = Instant::now();
         job(held, options).map_err(|stop| match stop {
             Stop::Said(message, None) => {
@@ -75,6 +92,7 @@ impl Source {
 fn over_texts<T, F>(
     py: Python<'_>,
     controls: Controls,
+    tally: Option<thinkthen::Tally>,
     source: Source,
     job: F,
 ) -> PyResult<Completed<T>>
@@ -84,17 +102,23 @@ where
         + Send
         + 'static,
 {
-    on_worker(py, controls, source, move |source, options| match &source {
-        Source::Door(held) => {
-            let memory = Readable::snapshot()?;
-            nullable::present(&arrow::series(held, &memory)?, options, job)
-        }
-        Source::List(all) => nullable::present(
-            &all.iter().map(|one| one.as_deref()).collect::<Vec<_>>(),
-            options,
-            job,
-        ),
-    })
+    on_worker_tallied(
+        py,
+        controls,
+        tally,
+        source,
+        move |source, options| match &source {
+            Source::Door(held) => {
+                let memory = Readable::snapshot()?;
+                nullable::present(&arrow::series(held, &memory)?, options, job)
+            }
+            Source::List(all) => nullable::present(
+                &all.iter().map(|one| one.as_deref()).collect::<Vec<_>>(),
+                options,
+                job,
+            ),
+        },
+    )
 }
 
 /// What a column call gives back.
@@ -121,6 +145,7 @@ pub(crate) fn ask_column(
     context: Option<String>,
     deadline: Arg<'_, '_>,
     token: Held<'_, '_>,
+    tally: Option<thinkthen::Tally>,
 ) -> PyResult<Py<PyAny>> {
     let py = value.py();
     if verb == "details" {
@@ -142,7 +167,7 @@ pub(crate) fn ask_column(
     let polars = top(value)? == "polars";
     let (engine, asked) = (engine.clone(), asked.clone());
     let (source, pandas) = Source::read(value)?;
-    let done = over_texts(py, controls, source, move |texts, rows, options| {
+    let done = over_texts(py, controls, tally, source, move |texts, rows, options| {
         let options = batch.map_or(options, |batch| options.batch(batch));
         let options = context
             .as_deref()
@@ -373,7 +398,7 @@ pub(crate) fn _annotate_column<'py>(
             Stop::Accounted(account) => raised(py, &account.error),
         })?;
         let source = Source::read(series)?.0;
-        let columns = over_texts(py, controls, source, move |texts, rows, options| {
+        let columns = over_texts(py, controls, None, source, move |texts, rows, options| {
             let options = batch.map_or(options, |batch| options.batch(batch));
             answered(&engine, &set, texts, rows, options)
         })?;
@@ -442,7 +467,7 @@ pub(crate) fn _recognize_column(
         let due = due(&controls);
         let (engine, ask) = (engine.get().0.clone(), ask.get().0.clone());
         let source = Source::read(series)?.0;
-        let found = over_texts(py, controls, source, move |texts, rows, options| {
+        let found = over_texts(py, controls, None, source, move |texts, rows, options| {
             nullable::aligned(rows, each_named(&engine, &ask, texts, options, due)?)
         })?;
         let fields = |one: &RecognizedEntity| -> PyResult<Py<PyDict>> {

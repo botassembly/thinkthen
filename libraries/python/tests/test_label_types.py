@@ -67,7 +67,7 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         assert hold(engine.choose("Who?", "Alice", options=Literal["person", "company"])) == "person"
         assert hold(engine.choose("Who?", "Alice", options=described)) == "person"
         assert hold(engine.choose("Who?", "Alice", options=Described)) == "person"
-        assert hold(engine.choose_many("Who?", ["Alice"], options=Kind, batch=1)) == ["person"]
+        assert hold(engine.choose("Who?", ["Alice"], options=Kind, batch=1)) == ["person"]
         assert hold(engine.choose("Who?", "Alice", options={"person": None,
                                                               "company": ["a company"]})) == "person"
         hold(engine.recognize("Alice", kinds=plain)).entities

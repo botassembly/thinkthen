@@ -73,7 +73,7 @@ impl From<LoadedQuestion> for Asked {
 /// One built question. Make one with `tt.question`.
 #[pyclass(frozen, name = "Question", module = "thinkthen._thinkthen")]
 #[derive(Debug)]
-pub(crate) struct Question(pub(crate) Asked);
+pub(crate) struct Question(pub(crate) Asked, pub(crate) Option<String>);
 
 type Prepared = (
     Option<Question>,
@@ -108,6 +108,7 @@ impl Question {
                 .map_err(|error| usage(py, &error.to_string()))?;
             Some(Self(
                 loaded(py, thinkthen::Question::from_json(&json))?.into(),
+                Some(json),
             ))
         } else {
             None
@@ -124,13 +125,30 @@ impl Question {
     /// Question-file JSON the caller's arguments made. A broken rule is usage.
     #[staticmethod]
     fn _from_json(py: Python<'_>, text: &str) -> PyResult<Self> {
-        loaded(py, thinkthen::Question::from_json(text)).map(|made| Self(made.into()))
+        loaded(py, thinkthen::Question::from_json(text))
+            .map(|made| Self(made.into(), Some(text.to_owned())))
     }
 
     /// A question file. A broken rule is local.
     #[staticmethod]
     fn _load(py: Python<'_>, path: PathBuf) -> PyResult<Self> {
-        loaded(py, thinkthen::Question::load(path)).map(|made| Self(made.into()))
+        let text = std::fs::read_to_string(&path).map_err(|_| {
+            crate::raise(
+                py,
+                thinkthen::ErrorKind::Local,
+                "the question file could not be read",
+                false,
+            )
+        })?;
+        let made = thinkthen::Question::from_json(&text).map_err(|error| {
+            crate::raise(
+                py,
+                thinkthen::ErrorKind::Local,
+                error.detail().message(),
+                false,
+            )
+        })?;
+        Ok(Self(made.into(), Some(text)))
     }
 
     /// The question `rank` or `find` asks, from its text.
@@ -141,7 +159,7 @@ impl Question {
         } else {
             thinkthen::Question::rank(text)
         };
-        made.map(|question| Self(Asked::Plain(question)))
+        made.map(|question| Self(Asked::Plain(question), None))
             .map_err(|error| raised(py, &error))
     }
 
@@ -151,7 +169,7 @@ impl Question {
             Asked::Plain(question) => question
                 .clone()
                 .offering_none()
-                .map(|question| Self(Asked::Plain(question)))
+                .map(|question| Self(Asked::Plain(question), None))
                 .map_err(|error| raised(py, &error)),
             Asked::Banded(_) => Err(usage(py, "only a find question offers none")),
         }
@@ -161,6 +179,13 @@ impl Question {
     #[getter]
     fn kind(&self) -> &'static str {
         self.0.kind()
+    }
+
+    /// The validated source form a judge can pickle without a key or file.
+    fn _json(&self, py: Python<'_>) -> PyResult<&str> {
+        self.1
+            .as_deref()
+            .ok_or_else(|| usage(py, "this question has no judge source form"))
     }
 
     fn __eq__(&self, other: &Bound<'_, PyAny>) -> bool {

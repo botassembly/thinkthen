@@ -112,6 +112,7 @@ pub(crate) struct Completed<T> {
 
 #[derive(Clone, Debug)]
 pub(crate) struct OwnedFacts {
+    pub(crate) core: Option<Facts>,
     pub(crate) records: u64,
     pub(crate) requests_sent: u64,
     pub(crate) cache_answers: u64,
@@ -125,6 +126,7 @@ pub(crate) struct OwnedFacts {
 impl From<&Facts> for OwnedFacts {
     fn from(facts: &Facts) -> Self {
         Self {
+            core: Some(facts.clone()),
             records: facts.records(),
             requests_sent: facts.requests_sent(),
             cache_answers: facts.cache_answers(),
@@ -140,6 +142,7 @@ impl From<&Facts> for OwnedFacts {
 impl OwnedFacts {
     pub(crate) fn empty() -> Self {
         Self {
+            core: None,
             records: 0,
             requests_sent: 0,
             cache_answers: 0,
@@ -152,6 +155,7 @@ impl OwnedFacts {
     }
 
     pub(crate) fn combine(&mut self, next: &Facts) {
+        self.core = None;
         let prior_sends = self.requests_sent;
         self.records += next.records();
         self.requests_sent += next.requests_sent();
@@ -210,7 +214,7 @@ pub(crate) struct PyCall {
 }
 
 #[pyclass(frozen, name = "Facts", module = "thinkthen._thinkthen")]
-pub(crate) struct PyFacts(OwnedFacts);
+pub(crate) struct PyFacts(pub(crate) OwnedFacts);
 
 #[pymethods]
 impl PyFacts {
@@ -246,6 +250,11 @@ impl PyFacts {
 
 #[pymethods]
 impl PyCall {
+    fn __bool__(&self) -> PyResult<bool> {
+        Err(pyo3::exceptions::PyTypeError::new_err(
+            "a ThinkThen Call is not truthy; use tt.filter(q)(xs) to batch the records",
+        ))
+    }
     #[getter]
     fn value(&self, py: Python<'_>) -> Py<PyAny> {
         self.value.clone_ref(py)

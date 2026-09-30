@@ -80,7 +80,7 @@ def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend,
         engine = tt.Engine(cache=False)
         rows = ["one", "two", "three"]
         for setting in ({}, {"batch": 1}):
-            call = engine.decide_many("Is it late?", rows, **setting)
+            call = engine.decide("Is it late?", rows, **setting)
             print(call.value, call.probability, call.facts.requests_sent)
         """, env)
         assert printed.splitlines() == [
@@ -278,7 +278,7 @@ def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path,
             rows = {corpus['texts']!r}
             if {shape!r} == 'polars_series':
                 rows = pl.Series('body', rows)
-            call = tt.Engine(cache=False, throttle=1).decide_many({corpus['question']!r}, rows)
+            call = tt.Engine(cache=False, throttle=1).decide({corpus['question']!r}, rows)
             value = call.value.to_list() if hasattr(call.value, 'to_list') else call.value
             print(json.dumps([value, [call.facts.records, call.facts.requests_sent],
                               [[row['index'], list(row['request_digests'])] for row in call.details]]))
@@ -342,8 +342,8 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
     engine = tt.Engine(cache=False)
     decide = tt.question(decide="Is it late?")
     rows = ["one", "two", "three"]
-    packed = engine.decide_many(decide, rows)
-    separate = engine.decide_many(decide, rows, batch=1)
+    packed = engine.decide(decide, rows)
+    separate = engine.decide(decide, rows, batch=1)
     assert packed.value == separate.value == [True, True, True]
     assert (packed.facts.records, packed.facts.requests_sent) == (3, 1)
     assert (separate.facts.records, separate.facts.requests_sent) == (3, 3)
@@ -356,17 +356,17 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         pass
     else:
         raise AssertionError("an observation was mutable")
-    choice = engine.choose_many("Which team?", rows, options=["billing", "shipping"])
-    score = tt.score_many("How urgent?", rows, levels=["Routine.", "Soon.", "Now."])
-    tags = engine.tag_many("Which kinds?", rows, labels=["bill", "ship"])
+    choice = engine.choose("Which team?", rows, options=["billing", "shipping"])
+    score = tt.score("How urgent?", rows, levels=["Routine.", "Soon.", "Now."])
+    tags = engine.tag("Which kinds?", rows, labels=["bill", "ship"])
     assert choice.value == ["billing"] * 3
     assert score.value == [0.15] * 3
     assert tags.value == [["bill", "ship"]] * 3
     assert all(item.facts.records == 3 and len(item.details) == 3
                for item in (choice, score, tags))
     before = engine.usage()["requests_sent"]
-    for call in (lambda: engine.decide_many(decide, rows, batch=0),
-                 lambda: engine.decide_many(decide, rows, context="  "),
+    for call in (lambda: engine.decide(decide, rows, batch=0),
+                 lambda: engine.decide(decide, rows, context="  "),
                  lambda: engine.annotate({"version": 1, "questions": {"late": {"decide": "Late?"}}},
                                          rows, context="reference")):
         try:
@@ -376,7 +376,7 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         else:
             raise AssertionError("unsupported control was accepted")
     assert engine.usage()["requests_sent"] == before
-    shared = engine.decide_many(decide, rows, batch=1, context="reference")
+    shared = engine.decide(decide, rows, batch=1, context="reference")
     assert shared.value == packed.value
     assert shared.details[0]["request_digests"] != separate.details[0]["request_digests"]
     print("calls", packed.facts.requests_sent, separate.facts.requests_sent,
@@ -428,7 +428,7 @@ def test_returned_failure_keeps_its_final_account(backend, tmp_path):
     printed = run("""
     import thinkthen as tt
     try:
-        tt.Engine(cache=False).decide_many(tt.question(decide="Q?"), ["a", "b"], batch=1)
+        tt.Engine(cache=False).decide(tt.question(decide="Q?"), ["a", "b"], batch=1)
     except tt.BackendError as error:
         assert (error.facts.records, error.facts.requests_sent) == (0, 1)
         assert error.details == ()

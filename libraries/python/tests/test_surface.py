@@ -111,7 +111,7 @@ def test_the_module_functions_equal_an_explicit_engine(backend, tmp_path):
         form = {{"version": 1, "questions": {{"late": {{"decide": "Late?"}}, "day": {{"choose": "Day?", "options": ["Mon", "Tue"]}}}}}}
         calls = [
             lambda on: on.decide(late, "a note").value,
-            lambda on: on.decide_many(late, texts).value,
+            lambda on: on.decide(late, texts).value,
             lambda on: on.choose("Which day?", "a note", options=["Mon", "Tue"]).value,
             lambda on: on.score(level, "a note").value,
             lambda on: on.tag(labels, "a note").value,

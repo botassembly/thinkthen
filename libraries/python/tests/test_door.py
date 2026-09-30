@@ -45,10 +45,10 @@ def test_a_column_answers_as_its_list_does(backend, tmp_path):
         column = getattr(engine, verb)(asked, series).value
         print(verb, type(column).__name__, column.to_list() == listed,
               getattr(engine, verb)(asked, pa.chunked_array([texts[:1], texts[1:]])).value == listed)
-    many = engine.decide_many(late, series, batch=1).value
-    print("decide_many", many.to_list() == engine.decide_many(late, texts, batch=1).value)
+    many = engine.decide(late, series, batch=1).value
+    print("decide_many", many.to_list() == engine.decide(late, texts, batch=1).value)
     before = engine.usage()["requests_sent"]
-    engine.decide_many(late, pa.chunked_array([texts[:1], texts[1:]]), batch=1).value
+    engine.decide(late, pa.chunked_array([texts[:1], texts[1:]]), batch=1).value
     print("sent", engine.usage()["requests_sent"] - before)
     """, child_env(backend, tmp_path))
     # The backend answers every text alike. The send count shows every
@@ -227,7 +227,7 @@ def test_importing_the_package_leaves_polars_and_pandas_out(backend, tmp_path):
     sys.modules["pandas"] = None
     import polars as pl, thinkthen as tt
     late = tt.question(decide="Is it late?")
-    print(tt.decide_many(late, ["a", "b"]).value, tt.decide_many(late, pl.Series(["a"])).value.to_list())
+    print(tt.decide(late, ["a", "b"]).value, tt.decide(late, pl.Series(["a"])).value.to_list())
     """, child_env(backend, tmp_path))
     assert printed.strip() == "[True, True] [True]"
 

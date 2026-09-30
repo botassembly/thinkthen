@@ -33,7 +33,7 @@ try:
         entities = {[(one['name'], one['kind']) for one in case.get('entities', [])]!r}
         result = {{'edges': len(engine.relate(entities, relations={{'linked': ('item', 'item')}}).value)}}
     elif {step.get('verb') == 'decide_many'}:
-        rows = list(engine.decide_many(tt.question(decide={CASES['question']!r}),
+        rows = list(engine.decide(tt.question(decide={CASES['question']!r}),
                                        {step.get('records', [])!r}{', ' + cap_batch if cap_batch else ''}).value)
         result = {{'error': None, 'rows': rows}}
     elif {'model' in step}:
