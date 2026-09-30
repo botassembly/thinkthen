@@ -253,7 +253,7 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
     );
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("relate-menu");
     let recognize = folder.join("recognize.json");
-    fs::write(&recognize, r#"{"version":1,"recognize":{"kinds":["person","organization"],"relations":[{"name":"works_for","source":"person","target":"organization","single":true}]}}"#).expect("recognize file");
+    fs::write(&recognize, r#"{"version":1,"recognize":{"kinds":{"person":"A person.","organization":"An organization."},"relations":[{"name":"works_for","source":"person","target":"organization","single":true}]}}"#).expect("recognize file");
     let refused = spawn(
         &[
             "recognize",
@@ -266,11 +266,11 @@ fn single_with_either_a_single_recognize_rule_and_an_option_limit_send_nothing()
         b"Ada works for Acme.",
     )
     .expect("recognize");
+    assert_eq!(refused.status.code(), Some(5));
     assert_eq!(
-        refused.status.code(),
-        Some(5),
-        "{}",
-        String::from_utf8_lossy(&refused.stderr)
+        String::from_utf8_lossy(&refused.stderr),
+        "thinkthen: a recognize relation has a distinct name, source, target, optional reads, and optional either
+"
     );
     let profile = folder.join("two-options.json");
     fs::write(

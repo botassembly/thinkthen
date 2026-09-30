@@ -449,9 +449,9 @@
         "relate": {
           "relations": [
             {
-              "name": "located_in",
-              "source": "city",
-              "target": "country",
+              "name": "works_for",
+              "source": "person",
+              "target": "organization",
               "single": true
             }
           ]

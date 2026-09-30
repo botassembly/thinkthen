@@ -403,7 +403,7 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
             if count == 40 {
                 stopped_at == 4
             } else {
-                (4..=9).contains(&stopped_at)
+                (4..=8).contains(&stopped_at)
             },
             "{count} entities stopped at {stopped_at}"
         );
