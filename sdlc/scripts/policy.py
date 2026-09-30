@@ -1176,16 +1176,6 @@ def check_core_policy() -> None:
         fail("core", "the package retains every accepted core dependency")
     policy_plants = (
         "std::fs::read(path)",
-        "crate::engine::request",
-        "crate::r#engine::request",
-        "use crate::engine as e;",
-        "use crate::{engine as e};",
-        "use crate::{core::Answer, engine::{self as e}};",
-        "use crate::{\n    cli::{self as command},\n};",
-        "use super::super::engine as e;",
-        "super::super::cli::entry();",
-        "crate::cli::entry",
-        "use crate::{cli as command};",
         "use crate::{self as root};",
         "use crate as root;",
         "use {crate as root};",
@@ -1196,12 +1186,9 @@ def check_core_policy() -> None:
         "use {super::super::{self as root}};",
         "use super as parent;",
         "extern crate self as root;",
-        "use crate::*; engine::request();",
         "use super::*; engine::request();",
         "use {crate::*}; engine::request();",
         "use crate::{*}; engine::request();",
-        "use {crate::{*}}; engine::request();",
-        "use super::super::*; cli::entry();",
         "use {super::{*}}; engine::request();",
         "use crate::{core::*, *}; engine::request();",
         "use /* root */ crate /* separator */ :: {\n    *\n}; engine::request();",
@@ -1210,35 +1197,33 @@ def check_core_policy() -> None:
     )
     if any(not core_policy_failures(plant) for plant in policy_plants):
         fail("core", "the planted API and reverse-reference violations are refused")
-    reference = "reverse reference to public"
-    imported = "reverse import of public"
     glob = "glob import from the crate root or an ancestor"
-    public_plants = (
-        ("crate::public::AttemptObservation", [reference]),
-        ("crate::r#public::SendBudget", [reference]),
-        ("use crate::public as p;", [imported, reference]),
-        ("use crate::{public as p};", [imported]),
-        ("use crate::{core::Answer, public::{self as p}};", [imported]),
-        ("use crate::{\n    public::{AttemptObservation},\n};", [imported]),
-        ("use super::super::public as p;", [imported, reference]),
-        ("super::super::public::SendBudget::new();", [reference]),
-        ("use crate::*; public::SendBudget::new();", [glob]),
-        ("use super::super::*; public::SendBudget::new();", [glob]),
-        ("use {crate::{*}}; public::SendBudget::new();", [glob]),
-        ("use crate::{core::Answer, public_value as value};", []),
-        ("// crate::public::SendBudget", []),
-        ('const EXAMPLE: &str = "use crate::public as hidden;";', []),
+    root_plants = (
+        ("crate::ROOT::Item", ["reference"]),
+        ("crate::r#ROOT::Item", ["reference"]),
+        ("use crate::ROOT as p;", ["import", "reference"]),
+        ("use crate::{ROOT as p};", ["import"]),
+        ("use crate::{core::Answer, ROOT::{self as p}};", ["import"]),
+        ("use crate::{\n    ROOT::{Item},\n};", ["import"]),
+        ("use super::super::ROOT as p;", ["import", "reference"]),
+        ("super::super::ROOT::Item::new();", ["reference"]),
+        ("use crate::*; ROOT::Item::new();", ["glob"]),
+        ("use super::super::*; ROOT::Item::new();", ["glob"]),
+        ("use {crate::{*}}; ROOT::Item::new();", ["glob"]),
+        ("use crate::{core::Answer, ROOT_value as value};", []),
+        ("// crate::ROOT::Item", []),
+        ('const EXAMPLE: &str = "use crate::ROOT as hidden;";', []),
     )
-    if any(core_policy_failures(text) != expected for text, expected in public_plants):
-        fail("core", "the planted reverse references to public are refused for that cause")
+    for root in ("engine", "cli", "public"):
+        causes = {"reference": f"reverse reference to {root}", "import": f"reverse import of {root}", "glob": glob}
+        for text, expected in root_plants:
+            if core_policy_failures(text.replace("ROOT", root)) != [causes[name] for name in expected]:
+                fail("core", f"the planted reverse references to {root} are refused for that cause")
     policy_controls = (
-        "// use crate::engine as hidden;",
         "/* use crate::cli; /* crate::engine */ */ use crate::core::Answer;",
-        'const EXAMPLE: &str = "use crate::engine as hidden;";',
         'const EXAMPLE: &str = r###"super::super::cli::entry"###;',
         "const MARKER: char = 'e'; use super::Answer;",
         "fn borrow<'a, 'b>(left: &'a str, right: &'b str) {}",
-        "use crate::{core::Answer, engine_value as value};",
         "use self::*;",
         "use self::{*};",
         "use serde::*;",

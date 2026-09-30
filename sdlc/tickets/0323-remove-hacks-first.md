@@ -1,6 +1,6 @@
 # 0323: Remove the hacks clear of running work
 
-Status: built, awaiting code review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 4 and ruling 8.
+Status: landed 2026-09-30. A fresh read-only code review accepted it. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 4 and ruling 8.
 
 ## Outcome
 
@@ -49,3 +49,10 @@ Class a: fix here. Class b: inside the ADR 0111 rewrite; the named slice removes
 | Static | `cli/interrupt.rs:330`, `cli/file_size.rs:23`, `engine/workers.rs:12-19`, `cli/audit/write.rs:160`, SQLite and DuckDB signal and API tables, PostgreSQL settings, `libraries/c/src/failures.rs:163`, test-only thread-locals | keep | Signals, panic hooks, host tables and per-thread C errors are process-wide by nature; a counter names temporary files |
 | Static | `libraries/python/src/worker.rs:33`, `lib.rs:67`, `arrow/gate.rs:26,27,71`; `libraries/r/.../lib.rs:163`, `calls/worker.rs:185` | c | 0314 slice 3 |
 | Folder rule | `engine/usage.rs:386` exact 0700 | keep | Guards the folder thinkthen creates for its own totals |
+
+## What the build taught us
+
+- The four types moved into core with no change to the public names, the schema or the member inventory. Re-exports kept every path.
+- The self-check now builds one set of plant shapes and runs it for `engine`, `cli` and `public`. Each plant must fail for its exact cause. This replaced a separate `public` table and sixteen `engine` and `cli` plants and controls that it covers.
+- The loop names the three roots itself. A loop over `CORE_REFUSED_ROOTS` would pass silently if a root were dropped from the set. Removing `public` from the set now fails the self-check; that was checked once by hand.
+- The remaining upward imports from `engine` to `public` sit in the send budget, the process budget and the facade. ADR 0111 slice 3 removes them and then owns the `engine` rule.

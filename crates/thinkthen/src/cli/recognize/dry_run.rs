@@ -70,7 +70,6 @@ struct From {
     question: &'static str,
 }
 
-/// The recognition spec, whether it came from a file, and the text limit.
 #[derive(Debug)]
 pub(super) struct Question<'a> {
     pub(super) spec: &'a RecognizeSpec,
