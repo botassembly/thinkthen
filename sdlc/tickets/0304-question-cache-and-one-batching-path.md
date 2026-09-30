@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: slice 2 landed; slice 3 ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: slice 3a in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -86,6 +86,38 @@ Cache clearing and expiry.
   - Slice 3: rusqlite moves out of the `cli` feature.
   - Slice 5: the store's folder-is-a-file check repeats `Recorder::of_private`'s; one goes.
   - Cache clearing and expiry.
+
+### Slice 3 split
+
+Slice 3 lands in four parts, one at a time. 3b, 3c and 3d touch disjoint files once 3a lands, so they can build in parallel lanes.
+
+- **3a. The public Rust API on `ask_all`.** Detailed below.
+- **3b. The C door and the SQL hosts.** They already call the public `*_with` methods, so 3a moves their batching. 3b removes the SQL host statics that 0323 named (`ACTIVE_THROTTLE`, `SEND_BUDGET`, the engine maps, SQLite's `STORED`, `ENGINE` and budget registry), proves an SQL row with a missing pointer fails alone while its neighbours answer, and runs every SQL and C conformance case on the question store.
+- **3c. Polars eager and lazy.** Polars calls the public batch methods, so 3a moves its batching. 3c proves a lazy frame collected twice sends nothing the second time and removes any frame-only batching left.
+- **3d. One owner for the send limits.** It waits for Ian's ruling on the process-wide throttle, below.
+
+The process-wide throttle is an Ian ruling. ADR 0017's amendment from ticket 0077 says one process has one throttle, and a second engine with another throttle is refused. `PROCESS_WIDTH`, `WIDTH_CHILD` and the 1 ms `REBUILD_POLL` exist to keep that ruling safe across a fork. `PROCESS_GATES` (the 429 gate and the pacer) and `process_budget` (the request total) follow the same per-process rule. Cleanup step 4 lists process-wide statics as hacks. The two conflict, so 3a keeps them and 3d waits. Options for Ian:
+
+1. Keep one process throttle, pacer, gate and request total. The statics stay as honest process state, as signals do. 3d only replaces the 1 ms poll with the 50 ms stop check. Cost: small. Recommended, because every engine in a process sends against one account's rate limit.
+2. Give each engine its own throttle, pacer, gate and request total, and drop the "already active for this process" refusal. Every static and the fork rebuild for them go. Cost: the settings, records and backends pages, and the Python, TypeScript, PostgreSQL and DuckDB tests that pin the refusal. Two engines in one process could then send twice the rate.
+
+### Slice 3a evidence
+
+- Starts from: slice 2 (`1fbbe08e0`) and its Defers; ADR 0111 section 4 (the public Rust API row and the host demand bridge) and section 10; ticket 0323's inventory of engine imports of `public`; `sdlc/issues/2026-09-30-public-batch-holds-one-send-under-a-throttle.md`.
+- Keeps: every public name and signature; lazy `Batch` pulls, input order, the stop at the first failed record, `facts()`; `BatchSetting::Records(1)` returning each row before the next pull, as `specification/records.md` and `libraries/rust/README.md` promise; recoverable native rows and the spent rows after a send-budget denial; the wire bytes of slice 1; key secrecy and no key read on replay.
+- Changes:
+  - `filter`, `decide_many`, `choose_many`, `score_many`, `tag_many`, `rank`, `details_many`, `annotate` and `details_many_recoverable_with` run on `Engine::ask_all`. `ask_all` runs on a background thread. The calling thread is the host: it pulls a record on each ask and returns on each row.
+  - Public rows lose `meta.batch` and list question keys in `meta.requests`, as the command's rows did in slice 2. A cached rerun answers from the store.
+  - `public/batch/planned*`, `public/batch/annotation.rs`, the planning in `public/native_batch.rs`, `engine/facade/native_batch.rs`, `engine/facade/annotate/batch.rs`, `engine/facade/split.rs` and `engine/annotate_batching.rs` go, unless slice 4's functions still need a piece.
+  - The pipeline and the store build without the `cli` feature, so rusqlite leaves it.
+  - `SendBudget` and its reservations move from `public` into `engine`, with `public` re-exporting them. `engine` then names nothing from `public`, and `policy.py` refuses an engine reference to `public` as it refuses a core one.
+- Proof, offline and counted on the loopback backend:
+  - Through the public Rust API, 100 records and then 120 that include them send one request holding exactly records 101 to 120, and the second run reports 100 cache answers.
+  - The throttle issue's test passes. Its batch-1 form contradicts the interactive promise above, so the test runs at batch 2 and fills throttle 2, and the interactive test keeps batch 1 at one send.
+  - A stop during a pulled batch sends nothing new and joins every worker; rows keep input order with slow and fast replies mixed.
+  - `policy.py` refuses a planted engine reference to `public`.
+  - `sdlc/scripts/test`, `spec`, workspace clippy, `policy.py`, `tickets` and `lint` pass, with any binding whose build breaks fixed at its call site.
+- Defers: 3b, 3c and 3d above; `default_engine`, which holds an engine rather than a limit and which the Python, TypeScript, Ruby and R module functions call, to the binding pass of ticket 0314; slice 4's `find`, `recognize` and `relate`; slice 5's old store.
 
 ## What the build taught us
 
