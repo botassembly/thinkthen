@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"FANS SAW PAUL MCCARTNEY IN HAMBURG.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: FANS SAW PAUL MCCARTNEY IN [[HAMBURG]].","criteria":{"HAMBURG":"FANS SAW PAUL MCCARTNEY IN [[HAMBURG]].","HAMBURG.":"FANS SAW PAUL MCCARTNEY IN [[HAMBURG.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"HAMBURG","confidence":0.98,"probabilities":{"HAMBURG.":0.01,"HAMBURG":0.99}}},"usage":{"input_tokens":433,"output_tokens":39}}
-}

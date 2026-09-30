@@ -298,9 +298,9 @@ pub(crate) struct CacheArguments {
 
 #[derive(Debug, Subcommand)]
 pub(crate) enum CacheCommand {
-    /// Remove selected entries, then the oldest entries until the folder fits the size target.
+    /// Remove selected answers, then the oldest answers until thinkthen.sqlite fits the size target.
     Prune(PruneArguments),
-    /// Report valid entries absent from a complete caller-supplied digest list.
+    /// Report stored question keys absent from a complete caller-supplied key list.
     Unused(UnusedArguments),
     /// Merge a folder's old entries, live file and fixture into thinkthen.jsonl.
     Convert(ConvertArguments),
@@ -319,8 +319,8 @@ pub(crate) struct ConvertArguments {
 pub(crate) struct UnusedArguments {
     /// The existing cache or recording folder to inspect.
     pub(crate) directory: PathBuf,
-    /// A UTF-8 file with one lowercase request digest per line.
-    #[arg(long, value_name = "DIGESTS")]
+    /// A UTF-8 file with one lowercase question key per line.
+    #[arg(long, value_name = "KEYS")]
     pub(crate) used: PathBuf,
 }
 
@@ -328,17 +328,17 @@ pub(crate) struct UnusedArguments {
 pub(crate) struct PruneArguments {
     /// The cache or recording folder to maintain.
     pub(crate) directory: PathBuf,
-    /// Show selected names and allocated bytes without changing the folder.
+    /// Show selected question keys and allocated bytes without changing the folder.
     #[arg(long)]
     pub(crate) dry_run: bool,
     /// Trim to this many allocated bytes. Without it, the configuration's
     /// cache_bytes applies, or 100000000.
     #[arg(long, value_name = "BYTES")]
     pub(crate) max_size: Option<String>,
-    /// Remove entries strictly older than a duration such as 30d or 12h.
+    /// Remove answers strictly older than a duration such as 30d or 12h.
     #[arg(long, value_name = "Nd|Nh|Nm|Ns")]
     pub(crate) older_than: Option<String>,
-    /// Remove entries whose reply names another model. Give the version that
+    /// Remove answers whose reply names another model. Give the version that
     /// answered, as a result's meta.model shows it, not the alias passed to
     /// --model. A name no reply in the folder carries is refused, and nothing
     /// is removed.

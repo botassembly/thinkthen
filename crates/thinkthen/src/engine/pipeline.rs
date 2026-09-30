@@ -14,7 +14,6 @@ use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError, PackLimits, Packer, QuestionKey};
 use crate::engine::error::Error;
 use crate::engine::facade::Engine;
-pub(crate) use crate::engine::schedule::Input;
 use crate::engine::store::{Mode, Store};
 use crate::engine::{Cancel, workers};
 
@@ -24,6 +23,13 @@ mod send;
 
 /// The inputs one request answers when no `--batch N` is set.
 pub(crate) const MOST_INPUTS: usize = 4096;
+
+/// One input event from the host: an input, a failure to read one, or the end.
+pub(crate) enum Input<T, E> {
+    Item(T),
+    Failed(E),
+    End,
+}
 
 /// What one function asks of each input and how it reads the answers.
 pub(crate) trait Asker: Sync {

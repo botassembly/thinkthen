@@ -11,7 +11,7 @@ use crate::cli::edge;
 use crate::cli::edge::Environment;
 use crate::failure::Failure;
 
-const BAD_DIGEST: &str = "--used takes one lowercase 64-character request digest per nonblank line";
+const BAD_DIGEST: &str = "--used takes one lowercase 64-character question key per nonblank line";
 
 pub(crate) fn unused(
     arguments: &UnusedArguments,
@@ -39,13 +39,13 @@ pub(crate) fn unused(
         }
         used.insert(line.to_owned());
     }
-    let names = crate::engine::cache_prune::unused(&arguments.directory, &used)?;
+    let keys = crate::engine::store::unused(&arguments.directory, &used)?;
     edge::write_line(
         &mut writer,
-        &format!("unused from supplied digests: {}", names.len()),
+        &format!("unused from supplied keys: {}", keys.len()),
     )?;
-    for name in names {
-        edge::write_line(&mut writer, &format!("unused {name}"))?;
+    for key in keys {
+        edge::write_line(&mut writer, &format!("unused {key}"))?;
     }
     Ok(ExitCode::SUCCESS)
 }
@@ -94,75 +94,38 @@ pub(crate) fn prune(
             "--answered-by-other-than takes a nonblank model",
         ));
     }
-    let options = crate::engine::cache_prune::Prune {
+    let options = crate::engine::store::Prune {
         max_size,
         older_than,
         answered_by_other_than: arguments.answered_by_other_than.clone(),
     };
+    let now = crate::engine::store::now();
     if arguments.dry_run {
-        let preview = crate::engine::cache_prune::preview(&arguments.directory, &options)?;
+        let preview = crate::engine::store::preview(&arguments.directory, &options, now)?;
         edge::write_line(
             &mut writer,
             &format!(
-                "selected {} entries and {} bytes; {} entries and {} bytes unselected",
-                preview.selected_entries,
-                preview.selected_bytes,
-                preview.unselected_entries,
-                preview.unselected_bytes
+                "selected {} answers and {} bytes; {} answers and {} bytes unselected",
+                preview.keys.len(),
+                preview.bytes,
+                preview.kept,
+                preview.kept_bytes
             ),
         )?;
-        for name in preview.selected_names {
-            edge::write_line(&mut writer, &format!("selected {name}"))?;
+        for key in &preview.keys {
+            edge::write_line(&mut writer, &format!("selected {}", crate::core::hex(key)))?;
         }
-        if preview.temporary_entries > 0 {
-            edge::write_line(
-                &mut writer,
-                &format!(
-                    "selected {} temporary files and {} bytes",
-                    preview.temporary_entries, preview.temporary_bytes
-                ),
-            )?;
-            for name in preview.temporary_names {
-                edge::write_line(&mut writer, &format!("selected temporary {name}"))?;
-            }
-        }
-        diagnostics(preview.bad_names)?;
         return Ok(ExitCode::SUCCESS);
     }
-    let result = crate::engine::cache_prune::run(&arguments.directory, &options)?;
+    let result = crate::engine::store::prune(&arguments.directory, &options, now)?;
     edge::write_line(
         &mut writer,
         &format!(
-            "removed {} entries and {} bytes; {} entries and {} bytes remain",
-            result.removed_entries,
-            result.removed_bytes,
-            result.remaining_entries,
-            result.remaining_bytes
+            "removed {} answers and {} bytes; {} answers and {} bytes remain",
+            result.removed, result.removed_bytes, result.remaining, result.remaining_bytes
         ),
     )?;
-    if result.temporary_entries > 0 {
-        edge::write_line(
-            &mut writer,
-            &format!(
-                "removed {} temporary files and {} bytes",
-                result.temporary_entries, result.temporary_bytes
-            ),
-        )?;
-    }
-    diagnostics(result.bad_names)?;
     Ok(ExitCode::SUCCESS)
-}
-
-fn diagnostics(bad_names: Vec<String>) -> Result<(), Failure> {
-    let stderr = std::io::stderr();
-    let mut diagnostic = stderr.lock();
-    for name in bad_names {
-        edge::write_line(
-            &mut diagnostic,
-            &format!("thinkthen: cache prune: left `{name}` in place; it is not a valid entry"),
-        )?;
-    }
-    Ok(())
 }
 
 fn positive(value: Option<&str>, option: &'static str) -> Result<Option<u64>, Failure> {

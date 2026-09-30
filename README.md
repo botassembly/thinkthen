@@ -108,7 +108,7 @@ The cache is on by default.
 - An entry holds the complete request and response, the judged evidence included. Filesystem access and backups can copy that evidence. No key enters an entry.
 - Whoever can write the cache or recording folder controls the answers read from it, so keep that folder private to people whose answers you trust. A platform-default cache is created for its owner alone, and an existing Unix folder must already have mode `0700`. An explicitly named `--cache` folder keeps its user-owned mode.
 - The first write binds a folder to the resolved backend address. Reusing it with another address fails before any request and tells you to restore the old settings or choose another folder.
-- Cache and recording entries use the exact encoded request bytes. With one-document text, `hello\n` and `hello\r\n` have different line endings and miss each other's entries; literal text `{"a":1}` and `{"a":1.0}` also differ. Record framing may strip line terminators or re-encode parsed JSON first. [Recording and replay](specification/recording.md) gives the identity rule and transfer guidance.
+- Cache and recording answers use the exact encoded question bytes. With one-document text, `hello\n` and `hello\r\n` have different line endings and miss each other's answers; literal text `{"a":1}` and `{"a":1.0}` also differ. Record framing may strip line terminators or re-encode parsed JSON first. [Recording and replay](specification/recording.md) gives the identity rule and transfer guidance.
 - `--no-cache` runs a job that neither reads nor writes cached answers. `cache prune` is the only thing that removes entries.
 
 ## Usage counts

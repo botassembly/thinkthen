@@ -491,28 +491,3 @@ fn validate_staged(case: &Case, success: &Success) -> Result<(), String> {
 fn shared_cases_match_the_production_core() {
     validate(CASES).expect("the shared cases match the core");
 }
-
-impl conformance_support::Provenance {
-    fn validate(&self, exchange: &Exchange) -> Result<(), String> {
-        match self {
-            Self::SyntheticContract => Ok(()),
-            Self::Captured { path } => {
-                let committed = path.starts_with("demos/") || path.starts_with("specification/");
-                if !committed || path.contains("..") || !path.contains("/recording") {
-                    return Err(format!("unknown captured recording `{path}`"));
-                }
-                let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../../");
-                let text = std::fs::read_to_string(format!("{root}{path}"))
-                    .map_err(|_| format!("unknown captured recording `{path}`"))?;
-                let recorded: conformance_support::Recording =
-                    serde_json::from_str(&text).map_err(|error| error.to_string())?;
-                if !same_json(recorded.request.get(), &exchange.request)?
-                    || !same_json(recorded.response.get(), exchange.response.get())?
-                {
-                    return Err("captured exchange differs from its recording".to_owned());
-                }
-                Ok(())
-            }
-        }
-    }
-}

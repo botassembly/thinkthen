@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Planned upgrade of the booking service, Saturday night.\\n\\nThe upgrade replaces the storage layer and moves the search index onto the new\\ncluster. Bookings will not be taken while the window is open. Saved searches\\nare kept. The desk will post an update when the service is back.\\n\". The notice says the upgrade window runs longer than the plan it announced before."}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.1}},"usage":{"input_tokens":342,"output_tokens":21}},
-  "quoted": true
-}

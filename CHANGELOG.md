@@ -68,6 +68,8 @@ Every surface refuses an API key holding any control character, not only a line 
 
 `audit` and `diff` treat results whose lines name no `meta.batch.setting` as an unknown setting. `audit --write` then leaves a question file's `batch` member alone and reports nothing about it, and neither command warns about mixed settings because of such a run. Rows from the command's record functions carry no setting (ticket 0304).
 
+`thinkthen cache prune` trims `thinkthen.sqlite`: it removes the selected and then the oldest answers, drops the states no answer uses, and gives the freed pages back, so the file shrinks. `cache unused` names unused question keys from a fixture or the live store. `thinkthen status` counts the store's answers and bytes and the old entries beside it (ticket 0304 slice 5).
+
 ### Breaking changes
 
 This is the first release. These changes break earlier builds from main:
@@ -76,3 +78,5 @@ This is the first release. These changes break earlier builds from main:
 - `meta.batch` and `meta.batches` are gone from the rows of the command's record functions (ticket 0304).
 - `meta.batch` is gone from the Rust library's batch rows, and `meta.requests` names question keys (ticket 0304).
 - `thinkthen cache convert DIR` deletes `thinkthen.sqlite` after it merges the file's answers into `thinkthen.jsonl` (ticket 0304).
+- `cache prune` and `cache unused` read only `thinkthen.sqlite` and `thinkthen.jsonl`, and speak of answers and question keys: `--used` takes question keys, and the reports print `unused from supplied keys: N` and `removed N answers and B bytes`. Old digest-named entries are left alone until `cache convert` runs (ticket 0304 slice 5).
+- `status --json` drops `cache.binding`, `cache.bad_entries`, `cache.temporary_entries` and `cache.temporary_bytes`, and adds `cache.old_entries`; `cache.entries` and `cache.bytes` count `thinkthen.sqlite`. The human lines follow. The two usage paths stay where they were (ticket 0304 slice 5).

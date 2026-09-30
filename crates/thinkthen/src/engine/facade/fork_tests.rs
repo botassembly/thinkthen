@@ -20,11 +20,12 @@ use conformance_backend::Backend as Loopback;
 
 use super::{Engine, Key, Settings, Storage};
 use crate::cli::schedule::width_tests::{child, in_child_at};
+use crate::core::adapters::built_in;
 use crate::core::{Backend, Evidence, Plan, Question, QuestionText};
-use crate::engine::cache_lock;
 use crate::engine::error::Error;
+use crate::engine::http::Exchange;
 use crate::engine::usage::{self, Counters};
-use crate::engine::{Cancel, Width, limits, request};
+use crate::engine::{Cancel, Width, limits};
 
 /// A process ID this test process does not have.
 fn parent_pid() -> u32 {
@@ -73,18 +74,26 @@ fn ask_as_parent(engine: &Engine, parent: &super::State) -> Result<(), Error> {
     let evidence = Evidence::new("parent").expect("evidence");
     let plan =
         Plan::authored(evidence, engine.backend.model().clone(), vec![decide()]).expect("plan");
-    let cancel = Cancel::default();
+    let body = built_in::encode(&plan).map_err(|_| Error::Defect("unwritable plan"))?;
+    let key = (engine.key)()?;
     let transport = engine.transport(parent);
-    request::ask_profile(
-        &engine.backend,
-        &plan,
-        None,
-        &parent.recorder,
-        &cancel,
-        transport,
-        || (engine.key)(),
-    )
-    .map(|_| ())
+    let exchange = Exchange {
+        url: engine.backend.url().as_str(),
+        body: &body,
+        key: &key,
+        max_retries: transport.max_retries,
+        retry_wait: transport.retry_wait,
+    };
+    transport
+        .client
+        .post_marked_with_retry(
+            &exchange,
+            &Cancel::default(),
+            transport.usage,
+            |_| (),
+            || (),
+        )
+        .map(|_| ())
 }
 
 #[test]
@@ -100,35 +109,24 @@ fn busy_parent_child() {
     }
     let home = env::temp_dir().join(format!("thinkthen-fork-{}", std::process::id()));
     let _absent = fs::remove_dir_all(&home);
-    let (folder, usage_path) = (home.join("record"), home.join("usage"));
+    let usage_path = home.join("usage");
     let loopback = Loopback::start().expect("loopback");
     let base = format!("{}/arm/held/v1", loopback.origin());
     let counters = Arc::new(Counters::new(Some(usage_path.clone())));
     let engine = Engine::built_by(
-        Settings {
-            storage: Storage {
-                record: Some(folder.clone()),
-                ..Storage::default()
-            },
-            ..settings(&base, Some(1), Arc::clone(&counters))
-        },
+        settings(&base, Some(1), Arc::clone(&counters)),
         parent_pid(),
     )
     .expect("the parent's engine");
     let parent = parent_state(&engine);
     counters.request_sent();
 
-    // A parent thread holds the one permit of width 1 and a live recording
-    // permit in a held send when the child starts.
+    // A parent thread holds the one permit of width 1 in a held send when
+    // the child starts.
     let ((parent_done, parent_answer), (child_done, child_answer)) = (channel(), channel());
     thread::scope(|scope| {
         scope.spawn(|| parent_done.send(ask_as_parent(&engine, &parent)));
         assert_eq!(loopback.wait(1), 1, "the parent's send is held");
-        let directory = fs::File::open(&folder).expect("the recording folder");
-        assert!(
-            matches!(directory.try_lock(), Err(fs::TryLockError::WouldBlock)),
-            "a held request keeps its shared folder lock until it is saved"
-        );
         scope.spawn(|| {
             let child = Evidence::new("child").expect("evidence");
             let judged = engine.judge(&decide(), None, child, &Cancel::default());
@@ -166,14 +164,6 @@ fn busy_parent_child() {
     assert_eq!(
         durable.total.requests_sent, 3,
         "each request is counted once"
-    );
-    let (owned, exclusive) = channel();
-    let locked = folder.clone();
-    thread::spawn(move || owned.send(cache_lock::exclusive_folder(&locked).is_ok()));
-    assert_eq!(
-        exclusive.recv_timeout(BOUND),
-        Ok(true),
-        "no leaked parent state keeps the recording folder locked"
     );
     let _removed = fs::remove_dir_all(home);
 }

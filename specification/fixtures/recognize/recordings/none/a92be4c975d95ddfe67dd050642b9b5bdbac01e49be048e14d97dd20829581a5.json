@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Octopus's Garden was Ringo Starr's song.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: Octopus's Garden was [[Ringo Starr]]'s song.","criteria":{"Ringo Starr":"Octopus's Garden was [[Ringo Starr]]'s song.","Ringo Starr'":"Octopus's Garden was [[Ringo Starr']]s song."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Ringo Starr","confidence":0.99,"probabilities":{"Ringo Starr":1.0,"Ringo Starr'":0.0}}},"usage":{"input_tokens":429,"output_tokens":39}}
-}

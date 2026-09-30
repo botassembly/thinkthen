@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Oslo","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: [[Oslo]]","criteria":{"person":null,"none of these":"They are not a proper name, or no listed kind covers what they name."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"none of these","confidence":0.97,"probabilities":{"person":0.02,"none of these":0.98}}},"usage":{"input_tokens":374,"output_tokens":36}}
-}

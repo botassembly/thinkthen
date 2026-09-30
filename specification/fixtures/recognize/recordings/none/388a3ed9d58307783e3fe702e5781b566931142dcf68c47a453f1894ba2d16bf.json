@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"In Liverpool John Lennon met Paul McCartney.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: In Liverpool John Lennon met [[Paul McCartney]].","criteria":{"Paul McCartney":"In Liverpool John Lennon met [[Paul McCartney]].","Paul McCartney.":"In Liverpool John Lennon met [[Paul McCartney.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Paul McCartney","confidence":1.0,"probabilities":{"Paul McCartney.":0.0,"Paul McCartney":1.0}}},"usage":{"input_tokens":419,"output_tokens":42}}
-}

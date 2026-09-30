@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"J.R.R. Tolkien wrote The Hobbit.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: [[J.R.R]]. Tolkien wrote The Hobbit.","criteria":{"J.R.R":"[[J.R.R]]. Tolkien wrote The Hobbit.","J.R.R.":"[[J.R.R.]] Tolkien wrote The Hobbit."}},"q2":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: .R. Tolkien wrote The [[Hobbit]].","criteria":{"Hobbit":"....R. Tolkien wrote The [[Hobbit]].","Hobbit.":"....R. Tolkien wrote The [[Hobbit.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"J.R.R.","confidence":0.88,"probabilities":{"J.R.R.":0.94,"J.R.R":0.06}},"q2":{"type":"choice","choice":"Hobbit","confidence":0.86,"probabilities":{"Hobbit.":0.07,"Hobbit":0.93}}},"usage":{"input_tokens":565,"output_tokens":76}}
-}

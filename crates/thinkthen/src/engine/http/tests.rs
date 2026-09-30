@@ -474,11 +474,12 @@ fn a_connection_idle_for_a_second_is_not_reused_and_nothing_is_sent_twice() {
     let cancel = crate::engine::Cancel::default();
 
     let first = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
+    first.expect("first answer");
+    assert_eq!(counts.snapshot().requests_sent, 1);
     thread::sleep(Duration::from_millis(1200));
     let second = client.post_observed_with_retry(&exchange, &cancel, &counts, |_| ());
+    second.expect("second answer");
 
-    assert_eq!(first.expect("first answer").requests_sent, 1);
-    assert_eq!(second.expect("second answer").requests_sent, 1);
     let seen = tally.each_ref().map(|count| count.load(Ordering::SeqCst));
     assert_eq!(seen, [2, 2, 0], "connections, requests read, dropped");
     assert_eq!(counts.snapshot().requests_sent, 2);

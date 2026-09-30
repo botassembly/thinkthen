@@ -40,7 +40,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
             "version": env!("CARGO_PKG_VERSION"),
             "configuration": {"path": home.join(".config/thinkthen/config.json"), "present": false},
             "backend": {"name": null, "url": "https://api.typesafe.ai/v1/systemone", "url_source": "built_in", "model": "jev-1.13.0", "model_source": "built_in", "key_variable": "THINKTHEN_API_KEY", "api_key_set": false},
-            "cache": {"enabled": true, "enabled_source": "built_in", "path": home.join(".cache/thinkthen"), "path_source": "platform", "binding": "missing", "entries": 0, "bytes": 0, "bad_entries": 0, "temporary_entries": 0, "temporary_bytes": 0, "prune_target_bytes": 100000000, "prune_target_source": "built_in"},
+            "cache": {"enabled": true, "enabled_source": "built_in", "path": home.join(".cache/thinkthen"), "path_source": "platform", "entries": 0, "bytes": 0, "old_entries": 0, "prune_target_bytes": 100000000, "prune_target_source": "built_in"},
             "usage": {"path": home.join(".cache/thinkthen-usage"), "month": month, "this_month": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}, "total": {"requests_sent":0, "retries":0, "input_tokens":0, "output_tokens":0, "cache_answers":0}}
         })
     );
@@ -50,7 +50,7 @@ fn absent_state_has_one_exact_closed_json_shape_and_changes_nothing() {
     let human = run::output(command(&home).arg("status")).expect("human status");
     assert!(human.status.success());
     let expected = format!(
-        "version {}\nconfiguration_path {}\nconfiguration_present false\nbackend none\nurl https://api.typesafe.ai/v1/systemone\nurl_source built_in\nmodel jev-1.13.0\nmodel_source built_in\nkey_variable THINKTHEN_API_KEY\napi_key_set false\ncache_enabled true\ncache_enabled_source built_in\ncache_path {}\ncache_path_source platform\ncache_binding missing\ncache_entries 0\ncache_bytes 0\ncache_bad_entries 0\ncache_temporary_entries 0\ncache_temporary_bytes 0\ncache_prune_target_bytes 100000000\ncache_prune_target_source built_in\nusage_path {}\nusage_month {}\nmonth_requests_sent 0\nmonth_retries 0\nmonth_input_tokens 0\nmonth_output_tokens 0\nmonth_cache_answers 0\ntotal_requests_sent 0\ntotal_retries 0\ntotal_input_tokens 0\ntotal_output_tokens 0\ntotal_cache_answers 0\n",
+        "version {}\nconfiguration_path {}\nconfiguration_present false\nbackend none\nurl https://api.typesafe.ai/v1/systemone\nurl_source built_in\nmodel jev-1.13.0\nmodel_source built_in\nkey_variable THINKTHEN_API_KEY\napi_key_set false\ncache_enabled true\ncache_enabled_source built_in\ncache_path {}\ncache_path_source platform\ncache_entries 0\ncache_bytes 0\ncache_old_entries 0\ncache_prune_target_bytes 100000000\ncache_prune_target_source built_in\nusage_path {}\nusage_month {}\nmonth_requests_sent 0\nmonth_retries 0\nmonth_input_tokens 0\nmonth_output_tokens 0\nmonth_cache_answers 0\ntotal_requests_sent 0\ntotal_retries 0\ntotal_input_tokens 0\ntotal_output_tokens 0\ntotal_cache_answers 0\n",
         env!("CARGO_PKG_VERSION"),
         home.join(".config/thinkthen/config.json").display(),
         home.join(".cache/thinkthen").display(),
@@ -75,29 +75,26 @@ fn status_without_an_absolute_home_uses_the_exact_unavailable_shape() {
     let value: serde_json::Value = serde_json::from_slice(&output.stdout).expect("status JSON");
     assert_eq!(value["configuration"]["path"], serde_json::Value::Null);
     assert_eq!(value["cache"]["path"], serde_json::Value::Null);
-    assert_eq!(value["cache"]["binding"], "unavailable");
     assert_eq!(value["cache"]["entries"], serde_json::Value::Null);
-    assert_eq!(value["cache"]["bad_entries"], serde_json::Value::Null);
-    assert_eq!(value["cache"]["temporary_entries"], serde_json::Value::Null);
-    assert_eq!(value["cache"]["temporary_bytes"], serde_json::Value::Null);
+    assert_eq!(value["cache"]["bytes"], serde_json::Value::Null);
+    assert_eq!(value["cache"]["old_entries"], serde_json::Value::Null);
     assert_eq!(value["usage"]["path"], serde_json::Value::Null);
     assert_eq!(value["usage"]["this_month"], serde_json::Value::Null);
     assert_eq!(value["usage"]["total"], serde_json::Value::Null);
     let human = run::output(command(std::path::Path::new("relative")).arg("status"))
         .expect("human status runs");
     assert!(human.status.success());
-    assert!(String::from_utf8_lossy(&human.stdout).contains("cache_bad_entries unavailable\n"));
-    assert!(
-        String::from_utf8_lossy(&human.stdout).contains("cache_temporary_entries unavailable\n")
-    );
+    let human = String::from_utf8_lossy(&human.stdout);
+    assert!(human.contains("cache_entries unavailable\n"), "{human}");
+    assert!(human.contains("cache_old_entries unavailable\n"), "{human}");
 }
 
 #[cfg(unix)]
-fn private_binding_cache(label: &str) -> std::io::Result<(std::path::PathBuf, std::path::PathBuf)> {
+fn private_cache(label: &str) -> std::io::Result<(std::path::PathBuf, std::path::PathBuf)> {
     use std::os::unix::fs::PermissionsExt as _;
 
     let home = std::env::temp_dir().join(format!(
-        "thinkthen-status-binding-{}-{label}",
+        "thinkthen-status-store-{}-{label}",
         std::process::id()
     ));
     let _absent = fs::remove_dir_all(&home);
@@ -108,69 +105,101 @@ fn private_binding_cache(label: &str) -> std::io::Result<(std::path::PathBuf, st
 }
 
 #[cfg(unix)]
-#[test]
-fn cache_binding_distinguishes_unbound_from_legacy_without_writes() {
-    let (home, cache) = private_binding_cache("unbound-legacy").expect("private cache");
-    let inspect = || {
-        let output =
-            run::output(command(&home).args(["status", "--json"])).expect("read-only status");
-        (output.status.code(), output.stdout, output.stderr)
-    };
-    let (code, stdout, stderr) = inspect();
-    assert_eq!(code, Some(0));
-    assert!(stderr.is_empty());
-    let value: serde_json::Value = serde_json::from_slice(&stdout).expect("status JSON");
-    assert_eq!(value["cache"]["binding"], "unbound");
-    assert_eq!(value["cache"]["entries"], 0);
-    assert_eq!(
-        fs::read_dir(&cache).expect("unchanged empty cache").count(),
-        0
-    );
-
-    let legacy = cache.join(format!("{}.json", "a".repeat(64)));
-    let old = b"not a valid entry";
-    fs::write(&legacy, old).expect("legacy entry");
-    let (code, stdout, stderr) = inspect();
-    assert_eq!(code, Some(0));
-    assert!(stderr.is_empty());
-    let value: serde_json::Value = serde_json::from_slice(&stdout).expect("status JSON");
-    assert_eq!(value["cache"]["binding"], "legacy");
-    assert_eq!(value["cache"]["bad_entries"], 1);
-    assert_eq!(fs::read(&legacy).expect("unchanged legacy entry"), old);
+#[allow(
+    clippy::expect_used,
+    reason = "a failed fixture step should stop the boundary test"
+)]
+fn inspect(home: &std::path::Path) -> (Option<i32>, serde_json::Value, Vec<u8>) {
+    let output = run::output(command(home).args(["status", "--json"])).expect("read-only status");
+    let value = serde_json::from_slice(&output.stdout).unwrap_or(serde_json::Value::Null);
+    (output.status.code(), value, output.stderr)
 }
 
+/// `status` counts the answers in `thinkthen.sqlite`, its bytes, and the old
+/// digest-named entries beside it, and writes nothing. The two usage paths
+/// scripts read stay where status v2 put them.
 #[cfg(unix)]
 #[test]
-fn invalid_marker_refuses_and_disabled_cache_skips_its_binding() {
-    let (home, cache) = private_binding_cache("invalid-disabled").expect("private cache");
-    let inspect = || {
-        let output =
-            run::output(command(&home).args(["status", "--json"])).expect("read-only status");
-        (output.status.code(), output.stdout, output.stderr)
-    };
+fn status_counts_the_live_store_and_old_entries_without_writes() {
+    use conformance_backend::{Canned, Listener};
+
+    let (home, cache) = private_cache("counts").expect("private cache");
+    let (code, value, stderr) = inspect(&home);
+    assert_eq!(code, Some(0));
+    assert!(stderr.is_empty());
+    assert_eq!(value["cache"]["entries"], 0);
+    assert_eq!(value["cache"]["old_entries"], 0);
+    assert_eq!(fs::read_dir(&cache).expect("empty cache").count(), 0);
+
+    let old = cache.join(format!("{}.json", "a".repeat(64)));
+    fs::write(&old, b"an old entry").expect("old entry");
+    let listener = Listener::serving(vec![Canned::ok(concat!(
+        r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"#,
+        r#""usage":{"input_tokens":312,"output_tokens":48}}"#,
+    ))])
+    .expect("listener");
+    let input = home.join("record.txt");
+    fs::write(&input, b"Refund me please.").expect("record");
+    let asked = run::output(
+        command(&home)
+            .args(["decide", "asks for a refund", "--input"])
+            .arg(&input)
+            .env("THINKTHEN_BASE_URL", listener.base())
+            .env("THINKTHEN_API_KEY", "test-key"),
+    )
+    .expect("cached run");
+    assert_eq!(asked.status.code(), Some(0), "{asked:?}");
+    let store = fs::read(cache.join("thinkthen.sqlite")).expect("live store");
+    let (code, value, stderr) = inspect(&home);
+    assert_eq!(code, Some(0));
+    assert!(stderr.is_empty());
+    assert_eq!(value["schema"], "thinkthen.status/2");
+    assert_eq!(value["cache"]["entries"], 1);
+    assert_eq!(value["cache"]["bytes"], store.len());
+    assert_eq!(value["cache"]["old_entries"], 1);
+    assert_eq!(value["usage"]["total"]["requests_sent"], 1);
+    assert_eq!(value["usage"]["total"]["input_tokens"], 312);
+    assert_eq!(
+        fs::read(cache.join("thinkthen.sqlite")).expect("store"),
+        store
+    );
+    assert_eq!(
+        fs::read(&old).expect("unchanged old entry"),
+        b"an old entry"
+    );
+
+    fs::write(cache.join("thinkthen.sqlite"), b"private damaged store").expect("damaged");
+    let (code, value, stderr) = inspect(&home);
+    assert_eq!(code, Some(5));
+    assert_eq!(value, serde_json::Value::Null);
+    assert_eq!(stderr, b"thinkthen: status could not read the local cache or usage state; check its permissions and contents\n");
+}
+
+/// The folder marker is retired by ADR 0111, so status ignores one a
+/// former version left, and a disabled cache still reports its folder.
+#[cfg(unix)]
+#[test]
+fn a_retired_marker_is_ignored_and_a_disabled_cache_reports_off() {
+    let (home, cache) = private_cache("marker-disabled").expect("private cache");
     let marker = cache.join(".thinkthen-backend.json");
     let invalid = b"private invalid marker";
     fs::write(&marker, invalid).expect("invalid marker");
-    let (code, stdout, stderr) = inspect();
-    assert_eq!(code, Some(5));
-    assert!(stdout.is_empty());
-    assert_eq!(stderr, b"thinkthen: status could not read the local cache or usage state; check its permissions and contents\n");
-    assert_eq!(fs::read(&marker).expect("unchanged marker"), invalid);
-
     let config = home.join(".config/thinkthen/config.json");
     fs::create_dir_all(config.parent().expect("config parent")).expect("config folder");
-    fs::write(&config, br#"{"schema":"thinkthen.config/1","cache":false}"#)
-        .expect("disabled cache setting");
-    let (code, stdout, stderr) = inspect();
-    assert_eq!(code, Some(0));
-    assert!(stderr.is_empty());
-    let value: serde_json::Value = serde_json::from_slice(&stdout).expect("status JSON");
-    assert_eq!(value["cache"]["enabled"], false);
-    assert_eq!(value["cache"]["binding"], "disabled");
-    assert_eq!(
-        fs::read(&marker).expect("unchanged disabled marker"),
-        invalid
-    );
+    for disabled in [false, true] {
+        if disabled {
+            fs::write(&config, br#"{"schema":"thinkthen.config/1","cache":false}"#)
+                .expect("disabled cache setting");
+        }
+        let (code, value, stderr) = inspect(&home);
+        assert_eq!(code, Some(0));
+        assert!(stderr.is_empty());
+        assert_eq!(value["cache"]["enabled"], !disabled);
+        assert_eq!(value["cache"]["entries"], 0);
+        assert_eq!(value["cache"]["old_entries"], 0);
+        assert!(!value.to_string().contains("private"));
+        assert_eq!(fs::read(&marker).expect("unchanged marker"), invalid);
+    }
 }
 
 #[test]
@@ -214,7 +243,6 @@ fn environment_and_configuration_provenance_are_independent_and_hide_the_key() {
     assert_eq!(value["backend"]["model_source"], "configuration");
     assert_eq!(value["backend"]["api_key_set"], true);
     assert_eq!(value["cache"]["enabled"], true);
-    assert_eq!(value["cache"]["binding"], "missing");
     assert_eq!(value["cache"]["enabled_source"], "environment");
     assert_eq!(
         value["cache"]["path"],
@@ -296,7 +324,7 @@ fn a_malformed_recognized_usage_month_fails_without_partial_output_or_repair() {
 
 #[cfg(unix)]
 #[test]
-fn an_unsafe_cache_entry_is_counted_without_leaking_local_bytes() {
+fn old_entries_are_counted_by_name_without_leaking_local_bytes() {
     use std::os::unix::fs::{PermissionsExt as _, symlink};
 
     let home = std::env::temp_dir().join(format!("thinkthen-status-cache-{}", std::process::id()));
@@ -310,15 +338,6 @@ fn an_unsafe_cache_entry_is_counted_without_leaking_local_bytes() {
     symlink(&target, &entry).expect("entry symlink");
     let temporary = cache.join(format!(".123.0.{}.json", "b".repeat(64)));
     fs::write(&temporary, b"private-temporary-marker").expect("temporary file");
-    let unsafe_temporary = cache.join(format!(".123.1.{}.json", "c".repeat(64)));
-    symlink(&target, &unsafe_temporary).expect("temporary symlink");
-    let allocated = {
-        use std::os::unix::fs::MetadataExt as _;
-        fs::metadata(&temporary)
-            .expect("temporary metadata")
-            .blocks()
-            * 512
-    };
 
     let output = run::output(command(&home).args(["status", "--json"])).expect("status");
     assert_eq!(output.status.code(), Some(0));
@@ -326,9 +345,7 @@ fn an_unsafe_cache_entry_is_counted_without_leaking_local_bytes() {
     let text = String::from_utf8(output.stdout).expect("status text");
     let status: serde_json::Value = serde_json::from_str(&text).expect("status JSON");
     assert_eq!(status["cache"]["entries"], 0);
-    assert_eq!(status["cache"]["bad_entries"], 1);
-    assert_eq!(status["cache"]["temporary_entries"], 1);
-    assert_eq!(status["cache"]["temporary_bytes"], allocated);
+    assert_eq!(status["cache"]["old_entries"], 1);
     assert!(!text.contains("private-cache-marker"));
     assert!(!text.contains("private-temporary-marker"));
     assert_eq!(

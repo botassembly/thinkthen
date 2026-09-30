@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"{\\\"context\\\":\\\"The customer pays return postage unless the item arrived damaged. A prepaid label is issued for damaged goods.\\\",\\\"output\\\":\\\"Return postage is always free.\\\"}\". Is every claim in the answer stated in the source text?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03}},"usage":{"input_tokens":310,"output_tokens":21}},
-  "quoted": true
-}

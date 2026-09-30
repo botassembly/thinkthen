@@ -39,7 +39,6 @@ mod question_set;
 mod recognize;
 mod recognize_file;
 pub(crate) mod recording;
-pub(crate) mod recording_identity;
 mod records;
 mod relate_file;
 pub(crate) mod relation;

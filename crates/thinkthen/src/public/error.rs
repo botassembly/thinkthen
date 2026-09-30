@@ -263,7 +263,6 @@ fn message(error: &EngineError) -> String {
         EngineError::TokenLimit => "the backend answered with status 400",
         EngineError::ReplyTooLarge(limit) => return reply_too_large(*limit),
         EngineError::Reply(decode) => return format!("the reply was refused: {decode}"),
-        EngineError::ReplayMiss(_) => "the replay folder holds no reply for this request",
         EngineError::QuestionMiss(_) => "the replay folder holds no answer for this question",
         EngineError::StoreAmbiguous => {
             "the replay folder holds both thinkthen.jsonl and thinkthen.sqlite; run thinkthen cache convert on it"
@@ -274,17 +273,8 @@ fn message(error: &EngineError) -> String {
         EngineError::Entry(..) | EngineError::CacheEntry => {
             "the cache or recording folder holds a malformed entry"
         }
-        EngineError::RecordingConflict(_) => {
-            "the recording folder already holds another reply for this request"
-        }
         EngineError::RecordingStorage => "the recording folder could not be written",
         EngineError::RecordingPathIsFile => "the recording folder names a file",
-        EngineError::RecordingBackendMismatch(..) => {
-            "the recording folder belongs to another backend address; restore its backend settings or choose another folder"
-        }
-        EngineError::RecordingFolderLegacy => {
-            "the recording folder predates backend binding; replay it read-only or choose a new folder"
-        }
         EngineError::DefaultCachePrivate => {
             "the default cache folder is not private; set its permissions to 0700 or use no_cache"
         }

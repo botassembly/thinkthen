@@ -21,7 +21,7 @@ Two of the five hunks break the rule. The other three add an import, add an impo
 
 ## Input
 
-`hunks.jsonl` holds five made-up changed hunks, one JSON record each, with `file` and `hunk`. `clean.jsonl` holds the three that pass. `convention.json` is the house rule as a question file, and `recording/` holds the five live exchanges the page replays, made by `record.sh` through `sdlc/scripts/live`. `--replay` answers from those files, so every command here reads no key and costs nothing.
+`hunks.jsonl` holds five made-up changed hunks, one JSON record each, with `file` and `hunk`. `clean.jsonl` holds the three that pass. `convention.json` is the house rule as a question file, and `recording/thinkthen.jsonl` holds the answers of the five live exchanges the page replays, made by `record.sh` through `sdlc/scripts/live`. `--replay` answers from those files, so every command here reads no key and costs nothing.
 
 The made-up house rule: money is held as a whole number of pence in an integer, never in a floating-point number.
 

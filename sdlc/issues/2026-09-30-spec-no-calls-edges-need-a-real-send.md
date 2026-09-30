@@ -6,7 +6,7 @@ Status: open. Reported by the Beatles Bench team on 2026-09-30 from the private 
 
 The release QA suite tried to check each edge the specification marks as needing no calls. About a third of them can be seen only after a real send: the refusal or behavior appears on a reply, not before the request. In other places the specification describes behavior the build has since changed.
 
-The recording page lag is one such case. It now sits in `2026-09-30-old-batching-files-still-have-live-callers.md`, which 0304 slice 5 pays.
+The recording page lag is one such case. It sat in `closed/2026-09-30-old-batching-files-still-have-live-callers.md`, which 0304 slice 5 paid.
 
 ## What should happen
 

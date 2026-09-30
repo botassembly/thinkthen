@@ -84,17 +84,6 @@ impl Plan {
     pub(crate) fn questions(&self) -> &[Question] {
         &self.questions
     }
-
-    /// Count the questions after the adapter expands each tag label.
-    pub(crate) fn wire_question_count(&self) -> usize {
-        self.questions
-            .iter()
-            .map(|question| match question {
-                Question::Tag { labels, .. } => labels.count(),
-                _ => 1,
-            })
-            .sum()
-    }
 }
 
 #[cfg(test)]

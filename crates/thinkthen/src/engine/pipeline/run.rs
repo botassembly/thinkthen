@@ -12,7 +12,7 @@ use crate::core::ModelName;
 use crate::core::pack::{self, Ask, Entry, Packer, QuestionKey};
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::schedule::Input;
+use crate::engine::pipeline::Input;
 use crate::engine::store::{Found, JSONL, Row, Store};
 use crate::engine::usage::Counters;
 

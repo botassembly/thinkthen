@@ -21,7 +21,7 @@ thinkthen score 'How hard is this request to answer?' \
 
 `requests/` holds four short customer messages: a copy of a receipt, a reset link that never arrives, a seat moving to another address, and a quarter of invoices to be reissued under a new name. The question comes first and the levels follow it, lowest first. The number runs from 0 at the lowest level to the number of levels minus one at the highest, and it can land between two of them. The blocks below hold the levels in `levels`, which sends the same bytes.
 
-`recording/` holds the four exchanges this page replays, so every command runs with no network and no key. `record.sh` made them through `sdlc/scripts/live`, and the numbers are the ones the model really returned.
+`recording/thinkthen.jsonl` holds the answers of the four exchanges this page replays, so every command runs with no network and no key. `record.sh` made them through `sdlc/scripts/live`, and the numbers are the ones the model really returned.
 
 ## Step 1: send the hard ones to the specialist
 

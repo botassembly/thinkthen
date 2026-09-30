@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Theresa May resigned in May, and Brian May played guitar.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: Theresa May resigned in [[May]], and Brian May played guitar","criteria":{"May":"Theresa May resigned in [[May]], and Brian May played guitar...","May,":"Theresa May resigned in [[May,]] and Brian May played guitar."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"May","confidence":0.97,"probabilities":{"May,":0.01,"May":0.99}}},"usage":{"input_tokens":423,"output_tokens":33}}
-}

@@ -42,12 +42,12 @@ struct Cache {
     enabled_source: &'static str,
     path: Option<String>,
     path_source: &'static str,
-    binding: crate::engine::cache_prune::binding::Binding,
+    /// Answers in the folder's `thinkthen.sqlite`.
     entries: Option<u64>,
+    /// The store file's allocated bytes.
     bytes: Option<u64>,
-    bad_entries: Option<u64>,
-    temporary_entries: Option<u64>,
-    temporary_bytes: Option<u64>,
+    /// Old digest-named entries the store ignores until `cache convert`.
+    old_entries: Option<u64>,
     #[serde(rename = "prune_target_bytes")]
     target_bytes: u64,
     #[serde(rename = "prune_target_source")]
@@ -119,7 +119,7 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
         "built_in"
     };
     let resolved_backend = environment.settle(&choice, None)?;
-    let cache = cache_status(environment, &resolved_backend)?;
+    let cache = cache_status(environment)?;
     let month = crate::engine::usage::month_now();
     let usage = environment
         .usage_path()
@@ -155,22 +155,11 @@ fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Fa
     })
 }
 
-fn cache_status(
-    environment: &Environment,
-    backend: &crate::core::Backend,
-) -> Result<Cache, Failure> {
-    use crate::engine::cache_prune::binding::Binding;
-
+fn cache_status(environment: &Environment) -> Result<Cache, Failure> {
     let enabled = environment.named_cache() || environment.default_cache_enabled();
     let counts = environment
         .cache()
-        .map(|path| {
-            crate::engine::cache_prune::inspect(
-                path,
-                environment.cache_is_platform_default(),
-                enabled.then_some(backend),
-            )
-        })
+        .map(|path| crate::engine::store::counts(path, environment.cache_is_platform_default()))
         .transpose()
         .map_err(|_| Failure::StatusState)?;
     Ok(Cache {
@@ -188,19 +177,9 @@ fn cache_status(
         } else {
             "platform"
         },
-        binding: counts.as_ref().map_or(
-            if enabled {
-                Binding::Unavailable
-            } else {
-                Binding::Disabled
-            },
-            |counts| counts.binding,
-        ),
-        entries: counts.as_ref().map(|counts| counts.entries),
+        entries: counts.as_ref().map(|counts| counts.answers),
         bytes: counts.as_ref().map(|counts| counts.bytes),
-        bad_entries: counts.as_ref().map(|counts| counts.bad_entries),
-        temporary_entries: counts.as_ref().map(|counts| counts.temporary_entries),
-        temporary_bytes: counts.as_ref().map(|counts| counts.temporary_bytes),
+        old_entries: counts.as_ref().map(|counts| counts.old_entries),
         target_bytes: environment.cache_bytes(),
         target_source: if environment.config().has_cache_bytes() {
             "configuration"
@@ -268,23 +247,9 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
         &mut writer,
         &format!("cache_path_source {}", status.cache.path_source),
     )?;
-    edge::write_line(
-        &mut writer,
-        &format!("cache_binding {}", status.cache.binding.name()),
-    )?;
     optional_line(&mut writer, "cache_entries", status.cache.entries)?;
     optional_line(&mut writer, "cache_bytes", status.cache.bytes)?;
-    optional_line(&mut writer, "cache_bad_entries", status.cache.bad_entries)?;
-    optional_line(
-        &mut writer,
-        "cache_temporary_entries",
-        status.cache.temporary_entries,
-    )?;
-    optional_line(
-        &mut writer,
-        "cache_temporary_bytes",
-        status.cache.temporary_bytes,
-    )?;
+    optional_line(&mut writer, "cache_old_entries", status.cache.old_entries)?;
     edge::write_line(
         &mut writer,
         &format!("cache_prune_target_bytes {}", status.cache.target_bytes),

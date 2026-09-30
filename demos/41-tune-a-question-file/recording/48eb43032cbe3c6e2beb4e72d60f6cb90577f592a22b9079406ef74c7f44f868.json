@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"A few of us chipped in for cakes from the staff canteen to celebrate a colleague's birthday, and my share came to twelve pounds.\". This expense claim needs a receipt attached before it can be paid.","criteria":{"true":"The claim is for more than 25 pounds, or it is for anything bought from an outside supplier whatever the amount.","false":"The claim is mileage at the fixed rate per mile, a per-day subsistence allowance at the fixed rate, or anything under 25 pounds that is not from an outside supplier."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.1}},"usage":{"input_tokens":387,"output_tokens":21}},
-  "quoted": true
-}

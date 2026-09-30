@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"Rubber Soul was recorded at Abbey Road Studios.","entities":[{"id":"i1","name":"Rubber Soul","kind":"album"},{"id":"i2","name":"Abbey Road Studios","kind":"place"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 recorded at i2?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.93}},"usage":{"input_tokens":362,"output_tokens":21}}
-}

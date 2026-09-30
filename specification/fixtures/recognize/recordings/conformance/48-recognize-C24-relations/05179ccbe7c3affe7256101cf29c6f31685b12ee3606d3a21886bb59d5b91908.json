@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"Marcus Bell and Dana Whitfield both work for Kestrel Labs.","entities":[{"id":"i1","name":"Marcus Bell","kind":"person"},{"id":"i2","name":"Dana Whitfield","kind":"person"},{"id":"i3","name":"Kestrel Labs","kind":"organization"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 works for i3?"},"q2":{"type":"noul","instructions":"Does the text itself state that i2 works for i3?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98},"q2":{"type":"noul","noul":0.98}},"usage":{"input_tokens":418,"output_tokens":38}}
-}

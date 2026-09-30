@@ -45,7 +45,7 @@ A band is refused wherever it came from. A band typed on the command line is a u
 
 A line or JSONL record that `filter` keeps is written back as it arrived: nothing is re-encoded, odd spacing and a trailing space survive, and the line ending is written as a line feed. A CSV or TSV row is written as a compact JSON object in header order. A run that stops at a failed record has already printed a prefix of its output.
 
-The request, the result object, and the recording entry are those of `decide`, so a recording made by `decide` over the same records replays here.
+The request, the result object, and the stored answers are those of `decide`, so a recording made by `decide` over the same records replays here.
 
 ## Exit codes
 

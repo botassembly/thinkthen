@@ -357,8 +357,6 @@ impl Width {
 
 pub(crate) mod backoff;
 pub(crate) mod budget;
-pub(crate) mod cache_lock;
-pub(crate) mod cache_prune;
 #[cfg(test)]
 mod deadline_tests;
 pub(crate) mod error;
@@ -371,12 +369,8 @@ mod host_signal_tests;
 pub(crate) mod http;
 pub(crate) mod limits;
 pub(crate) mod pipeline;
-pub(crate) mod prepared_request;
 pub(crate) mod process;
-pub(crate) mod recorder;
-pub(crate) mod request;
 pub(crate) mod roots;
-pub(crate) mod schedule;
 pub(crate) mod store;
 pub(crate) mod usage;
 #[cfg(test)]

@@ -79,35 +79,33 @@ fn answers(folder: &Path) -> Try<Vec<Value>> {
         .collect())
 }
 
-fn copy_demo(demo: &str, to: &Path) -> Try<()> {
-    let from = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../demos")
-        .join(demo)
-        .join("recording");
-    for item in fs::read_dir(from)? {
-        let item = item?;
-        if item.file_name() != "thinkthen.jsonl" {
-            fs::copy(item.path(), to.join(item.file_name()))?;
-        }
-    }
-    Ok(())
+/// Two quoted old entries that share one state, as a folder recorded
+/// before ADR 0111 holds them.
+fn old_folder(folder: &Path) -> Try<()> {
+    old_entry(folder, 'a', &single(), true)?;
+    old_entry(
+        folder,
+        'b',
+        &single().replace("Does this convey urgency?", "Is it resolved?"),
+        true,
+    )
 }
 
 #[test]
-fn converting_a_committed_folder_twice_writes_identical_bytes_and_keeps_every_old_file() {
+fn converting_old_entries_twice_writes_identical_bytes_and_keeps_every_old_file() {
     let folder = scratch("twice").expect("a folder");
-    copy_demo("14-grade-a-batch", &folder).expect("a copy");
-    let old = fs::read_dir(&folder).expect("a folder").count();
+    old_folder(&folder).expect("old entries");
     assert_eq!(
         convert(&folder, &[]).expect("a run"),
         (
             Some(0),
-            "thinkthen: cache convert: wrote 60 answers to thinkthen.jsonl, 60 from old entries; skipped 0 entries\n"
+            "thinkthen: cache convert: wrote 2 answers to thinkthen.jsonl, 2 from old entries; skipped 0 entries\n"
                 .to_owned()
         )
     );
     let written = fs::read(folder.join("thinkthen.jsonl")).expect("a fixture");
     let answers = answers(&folder).expect("answers");
+    assert_eq!(answers.len(), 2);
     assert!(
         answers
             .iter()
@@ -118,10 +116,7 @@ fn converting_a_committed_folder_twice_writes_identical_bytes_and_keeps_every_ol
         fs::read(folder.join("thinkthen.jsonl")).expect("a fixture"),
         written
     );
-    assert_eq!(fs::read_dir(&folder).expect("a folder").count(), old + 1);
-    let committed = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../demos/14-grade-a-batch/recording/thinkthen.jsonl");
-    assert_eq!(fs::read(committed).expect("the committed fixture"), written);
+    assert_eq!(fs::read_dir(&folder).expect("a folder").count(), 3);
 }
 
 /// One old form and each answer it writes, as key, state and origin. An
@@ -279,7 +274,7 @@ fn live(
 #[test]
 fn a_fixture_a_live_file_and_old_entries_merge_newest_first_and_a_tie_keeps_the_fixture() {
     let folder = scratch("merge").expect("a folder");
-    copy_demo("01-refund-gate", &folder).expect("a copy");
+    old_folder(&folder).expect("old entries");
     assert_eq!(convert(&folder, &[]).expect("a run").0, Some(0));
     let mut lines = lines(&folder).expect("a fixture");
     let state = lines[0]["state"].as_str().expect("a state").to_owned();
@@ -343,7 +338,7 @@ fn a_fixture_a_live_file_and_old_entries_merge_newest_first_and_a_tie_keeps_the_
 #[test]
 fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
     let folder = scratch("locked").expect("a folder");
-    copy_demo("01-refund-gate", &folder).expect("a copy");
+    old_folder(&folder).expect("old entries");
     assert_eq!(convert(&folder, &[]).expect("a run").0, Some(0));
     let lines = lines(&folder).expect("a fixture");
     let state = lines[0]["state"].as_str().expect("a state").to_owned();

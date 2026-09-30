@@ -1,25 +1,18 @@
-//! Whole-call deadline proofs for transport and prepared requests. The
-//! scheduler proofs live in `schedule`.
+//! Whole-call deadline proofs for the transport. The pipeline's proofs live
+//! in `pipeline/tests.rs`, and the ordered runner's in `cli/schedule/ordered`.
 
 use std::cell::Cell;
 use std::fs;
 use std::io::{ErrorKind, Read as _, Write as _};
 use std::net::TcpListener;
-use std::path::PathBuf;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::thread::{self, JoinHandle};
 use std::time::{Duration, Instant};
 
-use crate::core::{Backend, Evidence, ModelName, Plan, Question, QuestionText};
 use crate::engine::error::{Budget, Error, Kind, TransportKind};
 use crate::engine::http::{Client, Exchange, HttpAnswer, Key};
-use crate::engine::prepared_request::{Answered, PreparedRequest};
-use crate::engine::recorder::{PreparedRecording, Recorder};
 use crate::engine::usage::Counters;
-use crate::engine::{Cancel, Deadline, cache_lock};
-
-mod schedule;
+use crate::engine::{Cancel, Deadline};
 
 const SECOND: Duration = Duration::from_secs(1);
 
@@ -36,14 +29,6 @@ fn deadline_of(result: Result<HttpAnswer, Error>) -> Duration {
         Err(Error::Deadline(Budget(budget))) => budget,
         Err(error) => panic!("expected the deadline, got {error:?}"),
         Ok(_) => panic!("expected the deadline, got an answer"),
-    }
-}
-
-fn named(stop: Error) -> &'static str {
-    match stop {
-        Error::Deadline(_) => "deadline",
-        Error::Cancelled => "cancelled",
-        _ => "other",
     }
 }
 
@@ -344,10 +329,8 @@ fn a_retry_wait_inside_the_budget_still_retries() {
     let (server, _) = serve(vec![Reply::Busy(10), Reply::Answer]);
     let attempts = Cell::new(0);
 
-    let answer =
-        post(&server.url, SECOND * 5, &within(SECOND * 10), &attempts).expect("the retry answers");
+    post(&server.url, SECOND * 5, &within(SECOND * 10), &attempts).expect("the retry answers");
 
-    assert_eq!(answer.requests_sent, 2);
     assert_eq!(attempts.get(), 2);
     assert_eq!(server.finish(), (2, false));
 }
@@ -367,120 +350,4 @@ fn a_retry_started_inside_the_budget_ends_its_send_as_the_deadline() {
     assert_eq!(deadline_of(result), Duration::from_millis(500));
     assert_eq!(attempts.get(), 2);
     assert_eq!(server.finish(), (2, false));
-}
-
-fn request() -> (Backend, Plan, PreparedRequest) {
-    let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "jev-latest")
-        .expect("backend");
-    let plan = Plan::authored(
-        Evidence::new("evidence").expect("evidence"),
-        ModelName::new("jev-latest").expect("model"),
-        vec![Question::Decide {
-            text: QuestionText::new("Is this relevant?").expect("question"),
-            yes: None,
-            no: None,
-        }],
-    )
-    .expect("plan");
-    let prepared = PreparedRequest::new(&backend, &plan).expect("request");
-    (backend, plan, prepared)
-}
-
-/// Ask one prepared request, counting key lookups and sends.
-fn ask(recorder: &Recorder, cancel: &Cancel, counts: &[AtomicUsize; 2]) -> Result<Answered, Error> {
-    let (backend, plan, prepared) = request();
-    super::request::ask_prepared(
-        &backend,
-        &plan,
-        prepared,
-        recorder,
-        cancel,
-        &Counters::default(),
-        || {
-            counts[0].fetch_add(1, Ordering::SeqCst);
-            Ok(Key::of("unused"))
-        },
-        |_, _| {
-            counts[1].fetch_add(1, Ordering::SeqCst);
-            Err(Error::Defect("send unexpectedly reached"))
-        },
-    )
-}
-
-#[test]
-fn a_spent_deadline_stops_a_prepared_request_before_its_key() {
-    let recorder = Recorder::of(None, None).expect("no folders");
-    let counts = [AtomicUsize::new(0), AtomicUsize::new(0)];
-    let cancelled = spent();
-    cancelled.fire();
-
-    let result = ask(&recorder, &spent(), &counts);
-    let first = ask(&recorder, &cancelled, &counts);
-
-    assert!(matches!(
-        result,
-        Err(Error::Deadline(Budget(Duration::ZERO)))
-    ));
-    assert!(matches!(first, Err(Error::Cancelled)));
-    assert_eq!(counts.map(|count| count.into_inner()), [0, 0]);
-}
-
-fn folder(label: &str) -> PathBuf {
-    let path =
-        std::env::temp_dir().join(format!("thinkthen-deadline-{label}-{}", std::process::id()));
-    let _absent = fs::remove_dir_all(&path);
-    path
-}
-
-/// Wait behind a held lock until the deadline passes, and prove the waiter
-/// blocked without a send. `lookups` counts key reads before the lock.
-fn waits_out_the_deadline(recorder: &Recorder, lookups: usize) {
-    let (blocked_send, blocked) = channel();
-    let cancel =
-        Cancel::observed(blocked_send).with_deadline(Deadline::after(Duration::from_millis(300)));
-    let counts = [AtomicUsize::new(0), AtomicUsize::new(0)];
-
-    let result = ask(recorder, &cancel, &counts);
-
-    assert!(blocked.try_recv().is_ok(), "the waiter met the held lock");
-    assert!(matches!(result, Err(Error::Deadline(_))));
-    assert_eq!(counts.map(|count| count.into_inner()), [lookups, 0]);
-}
-
-/// `specification/recording.md` lets a live request inspect the key before an
-/// unbound empty folder's lock, so a missing key creates no folder. Such a
-/// folder holds nothing to replay.
-#[test]
-fn a_held_folder_ends_as_the_deadline_without_the_owner() {
-    let path = folder("folder");
-    fs::create_dir_all(&path).expect("recording folder");
-    let owner = cache_lock::exclusive_folder(&path).expect("exclusive owner");
-
-    waits_out_the_deadline(&Recorder::of(Some(&path), None).expect("recorder"), 1);
-
-    drop(owner);
-    fs::remove_dir_all(path).expect("fixture removed");
-}
-
-#[test]
-fn a_held_digest_ends_as_the_deadline_without_the_owner() {
-    let path = folder("digest");
-    let recorder = Recorder::of(Some(&path), None).expect("recorder");
-    let (backend, _, prepared) = request();
-    let PreparedRecording::Live(owner) = recorder
-        .prepare_cancelled(
-            &prepared.recorded(&backend),
-            &prepared.digest,
-            &Cancel::default(),
-        )
-        .expect("owner prepared")
-    else {
-        unreachable!("empty recording cannot replay");
-    };
-
-    waits_out_the_deadline(&recorder, 0);
-
-    owner.cancel().expect("owner cleanup");
-    assert!(path.join(".locks").join(prepared.digest.as_str()).exists());
-    fs::remove_dir_all(path).expect("fixture removed");
 }

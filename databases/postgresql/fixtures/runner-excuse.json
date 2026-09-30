@@ -10,7 +10,7 @@
     {
      "provenance": {
       "kind": "captured",
-      "path": "demos/01-refund-gate/recording/9f84b17aaf3d4cced930b7c18340bf0388ca4f451b55d2d83feb207843bca6ab.json"
+      "path": "demos/01-refund-gate/recording"
      },
      "evidence": "From: sam.okafor@example.net\nSubject: order 4417\n\nThe blender arrived with a cracked jug. I do not want a replacement.\nPlease put the money back on my card.\n\nOrder 4417, bought on the 3rd.\n",
      "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"From: sam.okafor@example.net\\\\nSubject: order 4417\\\\n\\\\nThe blender arrived with a cracked jug. I do not want a replacement.\\\\nPlease put the money back on my card.\\\\n\\\\nOrder 4417, bought on the 3rd.\\\\n\\\". Does the customer ask for money back?\"}}}",

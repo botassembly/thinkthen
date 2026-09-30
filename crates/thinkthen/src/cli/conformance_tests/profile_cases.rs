@@ -73,7 +73,11 @@ fn shared_profile_cases_cross_the_facade_preparation() {
             BatchError::Profile(limit) => Error::ProfileLimit(limit),
             _ => Error::Defect("a shared case could not be quoted"),
         })
-        .and_then(|plan| facade::split(&backend, Some(&profile), &plan));
+        .and_then(|plan| {
+            let mut asks = facade::Asks::default();
+            asks.add(&backend, &plan)?;
+            asks.requests(&backend, Some(&profile), facade::Bound::WHOLE)
+        });
         match profile_case.expect {
             Expectation::Pass(word) => {
                 assert_eq!(word, "pass", "{}", profile_case.id);

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"Ringo Starr sang 'Boys' on stage.","entities":[{"id":"i1","name":"Ringo Starr","kind":"person"},{"id":"i2","name":"'","kind":"song"},{"id":"i3","name":"Boys","kind":"song"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 sang i2?"},"q2":{"type":"noul","instructions":"Does the text itself state that i1 sang i3?"},"q3":{"type":"noul","instructions":"Does the text itself state that i1 wrote i2?"},"q4":{"type":"noul","instructions":"Does the text itself state that i1 wrote i3?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.2},"q2":{"type":"noul","noul":0.95},"q3":{"type":"noul","noul":0.02},"q4":{"type":"noul","noul":0.02}},"usage":{"input_tokens":444,"output_tokens":72}}
-}

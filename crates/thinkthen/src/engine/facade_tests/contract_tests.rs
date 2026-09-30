@@ -3,11 +3,11 @@
 
 use conformance_backend::{Backend as Loopback, Canned, Listener};
 
-use super::{Scratch, TEST_KEY, ask, decide, engine, evidence, reader, settings};
+use super::{Scratch, TEST_KEY, ask, decide, engine, evidence, settings};
 use crate::core::QuestionSet;
 use crate::engine::Cancel;
 use crate::engine::error::Error;
-use crate::engine::facade::{Completed, Engine, RunOutcome, Settings, Storage};
+use crate::engine::facade::{Engine, Settings, Storage};
 
 const CASES: &str = include_str!("../../../../../conformance/cases.json");
 
@@ -41,22 +41,15 @@ fn bulk_and_one_question_annotate_answers_match_the_shared_cases() {
         })
         .collect::<Vec<&'static str>>();
     let question = decide(many["question"]["decide"].as_str().expect("question"));
-    let mut rows = Vec::new();
-    let outcome = bulk_engine.records(
-        crate::engine::schedule::RecordFlow::Streaming,
-        &cancel,
-        reader(texts),
-        &|text: &&str| {
+    let rows = texts
+        .iter()
+        .map(|text| {
             bulk_engine
                 .judge(&question, None, evidence(text), &cancel)
-                .map(|judged| Completed::one(judged.answer.yes(), false))
-        },
-        |row| {
-            rows.push(row);
-            Ok(true)
-        },
-    );
-    assert!(matches!(outcome, Ok(RunOutcome::Complete)), "{outcome:?}");
+                .map(|judged| judged.answer.yes())
+        })
+        .collect::<Result<Vec<_>, _>>()
+        .expect("every row");
     let details = many["expect"]["success"]["answers"]
         .as_array()
         .expect("answers")
@@ -160,37 +153,33 @@ fn no_key_reaches_a_result_an_error_a_recording_or_a_count() {
     }
 }
 
-/// A folder recorded for another backend refuses every call on a long-lived
-/// engine, not only its first, and none of them sends.
+/// Answers from two addresses never mix in one folder, because the address
+/// is part of every question key (ADR 0111 section 3). A folder asked at
+/// another address misses and sends, and the first address still answers
+/// from the folder.
 #[test]
-fn a_folder_of_another_backend_refuses_each_call() {
-    let listener = Listener::serving(vec![Canned::ok(
-        r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
-    )])
+fn a_folder_asked_at_another_address_misses_and_keeps_both_answers() {
+    let listener = Listener::answering(|_| {
+        Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#)
+    })
     .expect("listener");
     let folder = Scratch::new("other-backend");
-    let recording = |base: &str| Settings {
+    let caching = |base: &str| Settings {
         storage: Storage {
             record: Some(folder.0.clone()),
+            replay: Some(folder.0.clone()),
             ..Storage::default()
         },
         ..settings(base)
     };
     let cancel = Cancel::default();
-    let first = Engine::new(recording(listener.base())).expect("engine");
-    ask(&first, "Refund me.", &cancel).expect("the folder's own backend");
-    let other = Engine::new(recording(&format!("{}/other", listener.base()))).expect("engine");
+    let first = Engine::new(caching(listener.base())).expect("engine");
+    let other = Engine::new(caching(&format!("{}/other", listener.base()))).expect("engine");
 
-    for call in ["first", "second"] {
-        let refused = ask(&other, call, &cancel);
-        assert!(
-            matches!(refused, Err(Error::RecordingBackendMismatch(..))),
-            "{call}: {refused:?}"
-        );
-    }
-    assert_eq!(
-        listener.requests().len(),
-        1,
-        "only the folder's own backend sent"
-    );
+    ask(&first, "Refund me.", &cancel).expect("the first address");
+    ask(&other, "Refund me.", &cancel).expect("another address misses and sends");
+    ask(&other, "Refund me.", &cancel).expect("its own answer is stored");
+    ask(&first, "Refund me.", &cancel).expect("the first answer stays");
+
+    assert_eq!(listener.count(), 2, "each address sent once");
 }

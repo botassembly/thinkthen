@@ -8,16 +8,11 @@ use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, channel};
 use std::sync::{Arc, Barrier};
 use std::thread;
 use std::time::Duration;
-use std::{fs, io};
 
 use conformance_backend::{Canned, Listener};
 
-use crate::core::{Backend, Evidence, ModelName, Plan, Question, QuestionText};
 use crate::engine::error::{Budget, Error, Kind};
 use crate::engine::http::{Client, Exchange, HttpAnswer, Key};
-use crate::engine::recorder::Recorder;
-use crate::engine::request::{Transport, ask_profile};
-use crate::engine::usage::Counters;
 use crate::engine::{Cancel, Deadline, Permit, Width, WidthActive, Widths};
 
 const SECOND: Duration = Duration::from_secs(1);
@@ -362,8 +357,7 @@ fn a_retry_gives_its_permit_back_for_the_wait_and_takes_a_new_one() {
         posting.join().expect("poster")
     });
 
-    let answer = result.expect("the retry answered");
-    assert_eq!(answer.requests_sent, 2);
+    result.expect("the retry answered");
     assert_eq!(attempts.load(Ordering::SeqCst), 2);
     assert_eq!(during_attempts.load(Ordering::SeqCst), 1);
     assert_eq!(widths.active(), 0);
@@ -395,67 +389,4 @@ fn a_gate_closed_while_the_send_slot_is_full_is_rechecked_before_sending() {
     assert_eq!(attempts.load(Ordering::SeqCst), 0);
     assert!(!reached(&listener));
     assert_eq!(widths.active(), 0);
-}
-
-fn plan() -> Plan {
-    Plan::authored(
-        Evidence::new("evidence").expect("evidence"),
-        ModelName::new("jev-latest").expect("model"),
-        vec![Question::Decide {
-            text: QuestionText::new("Is this relevant?").expect("question"),
-            yes: None,
-            no: None,
-        }],
-    )
-    .expect("plan")
-}
-
-fn ask(
-    url: &str,
-    recorder: &Recorder,
-    widths: &'static Widths,
-    cancel: &Cancel,
-) -> Result<bool, Error> {
-    let backend = Backend::resolve(Some(url), None, "jev-latest").expect("backend");
-    let client =
-        Client::new(SECOND * 2, false, &crate::engine::limits::process().widths).gated(widths);
-    let usage = Counters::default();
-    let transport = Transport {
-        client: &client,
-        max_retries: 0,
-        retry_wait: Duration::from_millis(10),
-        usage: &usage,
-        send_budget: None,
-    };
-    ask_profile::<Error>(&backend, &plan(), None, recorder, cancel, transport, || {
-        Ok(Key::of("sk-test-value"))
-    })
-    .map(|answered| answered.replayed)
-}
-
-#[test]
-fn a_replayed_answer_takes_no_permit() -> io::Result<()> {
-    let folder =
-        std::env::temp_dir().join(format!("thinkthen-width-replay-{}", std::process::id()));
-    let _absent = fs::remove_dir_all(&folder);
-    let (listener, _served) = serving(vec![Canned::ok(
-        r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#,
-    )]);
-    let url = listener.url().to_owned();
-    let open = widths();
-    let recording = Recorder::of(Some(&folder), None).expect("recorder");
-    assert!(matches!(
-        ask(&url, &recording, open, &Cancel::default()),
-        Ok(false)
-    ));
-    assert_eq!(listener.connections(), 1);
-    drop(listener);
-
-    let full = widths();
-    assert_eq!(full.select(Some(width(1))), Ok(width(1)));
-    let _held = held(full, 1);
-    let replay = Recorder::of(None, Some(&folder)).expect("replay");
-    let within = Cancel::default().with_deadline(Deadline::after(Duration::from_millis(300)));
-    assert!(matches!(ask(&url, &replay, full, &within), Ok(true)));
-    fs::remove_dir_all(folder)
 }

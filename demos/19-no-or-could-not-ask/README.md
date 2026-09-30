@@ -26,7 +26,7 @@ hold: it changes something"
 
 `proposed/` holds three short notes, each naming a command somebody wants run and the reason given. `list.txt` greps the source tree, `fetch.txt` runs `git fetch`, and `wipe.txt` deletes the build directory. Nothing here runs any of them.
 
-`recording/` holds the three exchanges this page replays, so every command runs with no network and no key. `record.sh` made them through `sdlc/scripts/live`. The judge answered 0.89 for the grep, 0.22 for the fetch, and 0.01 for the wipe, so the band `0.1:0.8` gives one of each answer. `git fetch` writes inside `.git` and touches no working file, which is the kind of question a person settles.
+`recording/thinkthen.jsonl` holds the answers of the three exchanges this page replays, so every command runs with no network and no key. `record.sh` made them through `sdlc/scripts/live`. The judge answered 0.89 for the grep, 0.22 for the fetch, and 0.01 for the wipe, so the band `0.1:0.8` gives one of each answer. `git fetch` writes inside `.git` and touches no working file, which is the kind of question a person settles.
 
 ## Step 1: see a judge that could not answer
 

@@ -172,10 +172,6 @@ pub(crate) enum Failure {
     TopIsZero,
     QuietOverKept(&'static str),
     RawOverKept(&'static str),
-    ReplayMiss {
-        name: String,
-        context: Option<ReplayContext>,
-    },
     /// Strict replay found no answer under this question key.
     QuestionMiss {
         key: String,
@@ -184,17 +180,13 @@ pub(crate) enum Failure {
     StoreAmbiguous,
     StoreHotJournal,
     Entry(String, String),
-    RecordingConflict(String),
     RecordingStorage,
     RecordingPathIsFile,
-    /// This run's endpoint URL, and whether the folder is the default cache.
-    RecordingBackendMismatch(String, bool),
-    RecordingFolderLegacy,
     DefaultCacheUnavailable,
     DefaultCachePrivate,
     Configuration(&'static str),
     CacheEntry,
-    /// The caller's digest list could not be read; its path is withheld.
+    /// The caller's key list could not be read; its path is withheld.
     UsedManifestUnreadable,
     /// `cache convert` named no existing folder; its path is withheld.
     ConvertFolder,
@@ -277,16 +269,12 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::EstimatedInput(reason) => (2, reason.to_string()),
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
-        Failure::ReplayMiss { .. }
-        | Failure::QuestionMiss { .. }
+        Failure::QuestionMiss { .. }
         | Failure::StoreAmbiguous
         | Failure::StoreHotJournal
         | Failure::Entry(_, _)
-        | Failure::RecordingConflict(_)
         | Failure::RecordingStorage
-        | Failure::RecordingPathIsFile
-        | Failure::RecordingBackendMismatch(..)
-        | Failure::RecordingFolderLegacy => (
+        | Failure::RecordingPathIsFile => (
             70,
             "defect: a recording failure was not reported".to_owned(),
         ),
@@ -383,7 +371,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         ),
         Failure::Configuration(message) => (5, (*message).to_owned()),
         Failure::CacheEntry => (5, "the cache contains a malformed final entry".to_owned()),
-        Failure::UsedManifestUnreadable => (5, "the --used digest file could not be read".to_owned()),
+        Failure::UsedManifestUnreadable => (5, "the --used key file could not be read".to_owned()),
         Failure::ConvertFolder => (5, "cache convert takes an existing folder, and the one named is missing or not a folder".to_owned()),
         Failure::StatusState => (
             5,

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"At Abbey Road Studios George Martin recorded Revolver.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"In the text below, a name was found at the words wrapped in [[ ]]. Each option wraps a slightly different stretch of the text. Pick the option that wraps exactly the whole name. A punctuation mark that is part of the name's own spelling belongs inside it. A mark that belongs to the sentence around the name stays outside.\n\nText: Abbey Road Studios George Martin recorded [[Revolver]].","criteria":{"Revolver":"...Abbey Road Studios George Martin recorded [[Revolver]].","Revolver.":"...Abbey Road Studios George Martin recorded [[Revolver.]]"}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"Revolver","confidence":0.98,"probabilities":{"Revolver":0.99,"Revolver.":0.01}}},"usage":{"input_tokens":422,"output_tokens":39}}
-}

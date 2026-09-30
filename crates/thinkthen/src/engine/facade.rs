@@ -8,31 +8,26 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::mpsc::Receiver;
 use std::time::Duration;
 
+use crate::core::adapters::built_in;
+use crate::core::recording::{Digest, Exchange as Recorded};
 use crate::core::{
     Answer, AnswerOutcome, Backend, BackendProfile, Find, FindAnswer, ModelName, Outcome, Plan,
-    Value,
+    Reply, Value,
 };
 #[cfg(test)]
 use crate::core::{BatchError, Evidence, Question, Threshold, quoted_plan};
 use crate::engine::error::Error;
-use crate::engine::http::Client;
-use crate::engine::prepared_request::PreparedRequests;
+use crate::engine::http::{Client, Exchange};
 use crate::engine::process::Guarded;
-use crate::engine::recorder::Recorder;
-use crate::engine::request::{self, Transport};
-use crate::engine::schedule;
 use crate::engine::usage::{Counters, Counts};
 use crate::engine::{Cancel, Width};
 
 pub(crate) use crate::engine::http::{Key, Roots};
-pub(crate) use crate::engine::prepared_request::{Answered, PreparedChunk as Chunk};
 pub(crate) use crate::engine::roots::Error as RootsError;
-pub(crate) use crate::engine::schedule::{
-    Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
-};
+/// The scoped workers the command's ordered `recognize` runner answers on.
+pub(crate) use crate::engine::workers::scoped as scoped_workers;
 pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
 pub(crate) use each::{Asks, Bound, Request};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
@@ -97,25 +92,42 @@ pub(crate) struct Engine {
     storage: Storage,
     roots: Option<Roots>,
     usage_path: Option<PathBuf>,
-    recording: bool,
     /// The request and estimated input limits this engine selects against
     /// the process totals, which its state holds.
     send_budget: Option<(Option<u64>, Option<u64>)>,
     state: Arc<Guarded<State>>,
 }
 
-/// The retained pool and its width gate, the recorder and cache coordinator,
-/// the process counters, and the width this process's calls follow.
+/// The retained pool and its width gate, the process counters, and the
+/// width this process's calls follow.
 #[derive(Debug)]
 pub(super) struct State {
     pub(super) client: Client,
-    recorder: Recorder,
     pub(super) usage: Arc<Counters>,
     pub(super) width: usize,
     /// The process request and estimated input totals.
     total: crate::engine::budget::SendBudget,
     /// The replay folder's fixture, read once for this process.
     pub(super) replayed: Option<Arc<crate::engine::store::Replayed>>,
+}
+
+/// The transport settings one call's sends share.
+pub(crate) struct Transport<'a> {
+    pub(crate) client: &'a Client,
+    pub(crate) max_retries: u32,
+    pub(crate) retry_wait: Duration,
+    pub(crate) usage: &'a Counters,
+    pub(crate) send_budget: Option<crate::engine::send_budget::ProcessBudget>,
+}
+
+/// One answered request: its decoded reply, whether the store answered it,
+/// its identity, and its HTTP attempts.
+#[derive(Clone)]
+pub(crate) struct Answered {
+    pub(crate) reply: Reply,
+    pub(crate) replayed: bool,
+    pub(crate) request: Digest,
+    pub(crate) requests_sent: u64,
 }
 
 /// One typed judgment and the metadata its result carries.
@@ -164,7 +176,7 @@ impl Engine {
     }
 
     fn built_with_roots(settings: Settings, pid: u32, roots: Option<Roots>) -> Result<Self, Error> {
-        let mut engine = Self {
+        let engine = Self {
             usage_path: settings.usage.path().map(PathBuf::from),
             backend: settings.backend,
             profile: settings.profile,
@@ -176,31 +188,36 @@ impl Engine {
             per_minute: settings.per_minute,
             storage: settings.storage,
             roots,
-            recording: false,
             send_budget: None,
             state: Arc::new(Guarded::empty()),
         };
+        let folders = [&engine.storage.record, &engine.storage.replay];
+        if let [Some(recorded), Some(replayed)] = folders
+            && recorded != replayed
+        {
+            return Err(Error::Defect(
+                "record and replay folders differ below the command edge",
+            ));
+        }
+        if folders
+            .into_iter()
+            .flatten()
+            .any(|folder| std::fs::metadata(folder).is_ok_and(|metadata| metadata.is_file()))
+        {
+            return Err(Error::RecordingPathIsFile);
+        }
         let (usage, cancel) = (settings.usage, Cancel::default());
-        let state =
-            engine
-                .state
-                .current(pid, crate::engine::limits::rebuild_wait(&cancel), || {
-                    engine.fresh(pid, usage, &cancel)
-                })?;
-        engine.recording = state.recorder.reported();
+        engine
+            .state
+            .current(pid, crate::engine::limits::rebuild_wait(&cancel), || {
+                engine.fresh(pid, usage, &cancel)
+            })?;
         Ok(engine)
     }
 
     /// State built from the immutable settings alone, as process `pid`.
     fn fresh(&self, pid: u32, usage: Arc<Counters>, cancel: &Cancel) -> Result<State, Error> {
         let storage = &self.storage;
-        let recorder = Recorder::of_private(
-            storage.record.as_deref(),
-            storage.replay.as_deref(),
-            storage.private_default,
-            storage.cache_answers,
-        )?
-        .with_refresh(storage.refresh_cache);
         let limits = crate::engine::limits::of(pid, cancel)?;
         let widths = &limits.widths;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
@@ -217,7 +234,6 @@ impl Engine {
             client: client.paced(crate::engine::backoff::interval(
                 self.per_minute.or(self.backend.per_minute()),
             )),
-            recorder,
             usage,
             width,
             total: limits.total.clone(),
@@ -238,7 +254,7 @@ impl Engine {
     }
 
     /// The same engine asking another model. It shares this engine's state:
-    /// the pool, the recorder, the counters, and the width.
+    /// the pool, the counters, and the width.
     pub(crate) fn with_model(&self, model: ModelName) -> Result<Self, Error> {
         let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
             .map_err(|_| Error::Defect("a resolved address was refused again"))?
@@ -277,9 +293,15 @@ impl Engine {
         &self.storage
     }
 
+    /// The width this process's calls follow.
+    pub(crate) fn width(&self, cancel: &Cancel) -> Result<usize, Error> {
+        Ok(self.state(cancel)?.width)
+    }
+
     /// Whether a folder the caller named, rather than the private default, is in use.
     pub(crate) const fn recording(&self) -> bool {
-        self.recording
+        (self.storage.record.is_some() || self.storage.replay.is_some())
+            && !self.storage.private_default
     }
 
     /// The process counters, cumulative since the process began, or since
@@ -290,11 +312,6 @@ impl Engine {
     )]
     pub(crate) fn usage(&self) -> Result<Counts, Error> {
         Ok(self.state(&Cancel::default())?.usage.snapshot())
-    }
-
-    /// Prepare every request one plan needs, split under the backend limits.
-    pub(crate) fn split(&self, plan: &Plan) -> Result<Vec<Chunk>, Error> {
-        split(&self.backend, self.profile.as_ref(), plan)
     }
 
     /// Ask one question of one evidence and read the answer under the rule.
@@ -318,7 +335,14 @@ impl Engine {
             BatchError::Profile(limit) => Error::ProfileLimit(limit),
             _ => Error::Defect("a plan of one question could not be quoted"),
         })?;
-        let answered = self.ask(&plan, cancel)?;
+        let mut asks = Asks::default();
+        asks.add(&self.backend, &plan)?;
+        let mut answered = None;
+        self.ask_each(&asks, Bound::WHOLE, cancel, |_, one| {
+            answered = Some(one);
+            Ok(())
+        })?;
+        let answered = answered.ok_or(Error::Defect("a question had no answer"))?;
         let answer = only_answer(&answered)?;
         let (value, outcome) = answer.read(threshold);
         Ok(Judgment {
@@ -348,82 +372,46 @@ impl Engine {
         })
     }
 
-    /// Send chunks prepared earlier and hand each reply on in chunk order.
-    /// Only `check` and tests send this way; slice 5 of ticket 0304 moves
-    /// them onto the question pipeline.
-    ///
-    /// Up to the engine's width go out at once. The first failure in chunk
-    /// order returns, as a send one at a time would return it.
-    pub(crate) fn ask_chunks<E: From<Error>>(
-        &self,
-        chunks: Vec<Chunk>,
-        cancel: &Cancel,
-        mut each: impl FnMut(Answered) -> Result<(), E>,
-    ) -> Result<(), E> {
+    /// Send one plan as one request with no store, as `check` does, which
+    /// reads and writes no cache (`specification/check.md`). The send runs
+    /// on an engine worker, so a host signal never lands in its socket read.
+    pub(crate) fn send_plan(&self, plan: &Plan, cancel: &Cancel) -> Result<Reply, Error> {
+        let body = built_in::encode(plan)
+            .map_err(|_| Error::Defect("a request could not be written as JSON"))?;
         let state = self.state(cancel)?;
-        let send = |chunk: Chunk| {
-            request::ask_sent::<Error>(
-                &self.backend,
-                &chunk.plan,
-                chunk.request,
-                &state.recorder,
-                cancel,
-                self.transport(&state),
-                || self.key(),
-            )
-        };
-        let jobs = state.width.min(chunks.len());
-        if jobs < 2 {
-            for chunk in chunks {
-                each(send(chunk)?)?;
-            }
-            return Ok(());
+        let transport = self.transport(&state);
+        let digest = Recorded::new(self.backend.url(), &body).digest();
+        let cancel = cancel
+            .with_process_budget(transport.send_budget.clone())
+            .with_attempt_digest(digest.as_str());
+        if let Some(stop) = cancel.stop() {
+            return Err(stop);
         }
-        crate::engine::workers::ordered(jobs, chunks, cancel, &send, each)
-    }
-
-    /// Answer framed inputs over this engine's width and emit them in input order.
-    ///
-    /// The host starts the reader, so a reader blocked on its own input
-    /// never holds the call open. Every engine worker has joined on return.
-    pub(crate) fn records<T, R, E>(
-        &self,
-        flow: RecordFlow,
-        cancel: &Cancel,
-        start_reader: impl FnOnce(Receiver<()>, InputPort<T, R, E>),
-        answer: &(impl Fn(&T) -> Result<Completed<R, E>, E> + Sync),
-        emit: impl FnMut(R) -> Result<bool, E>,
-    ) -> Result<RunOutcome<E>, E>
-    where
-        T: Send + 'static,
-        R: Send,
-        E: From<Error> + Send,
-    {
-        let width = self.state(cancel)?.width;
-        schedule::run_cancelled(
-            width,
-            flow,
-            cancel,
-            start_reader,
-            answer,
-            emit,
-            |message| E::from(Error::Defect(message)),
-            E::from,
-        )
-    }
-
-    #[cfg(test)]
-    fn ask(&self, plan: &Plan, cancel: &Cancel) -> Result<Answered, Error> {
-        let state = self.state(cancel)?;
-        request::ask_profile(
-            &self.backend,
-            plan,
-            self.profile.as_ref(),
-            &state.recorder,
-            cancel,
-            self.transport(&state),
-            || self.key(),
-        )
+        cancel.key_lookup();
+        let key = self.key()?;
+        let exchange = Exchange {
+            url: self.backend.url().as_str(),
+            body: &body,
+            key: &key,
+            max_retries: transport.max_retries,
+            retry_wait: transport.retry_wait,
+        };
+        let answered = crate::engine::workers::on_worker(&cancel, || {
+            transport.client.post_marked_with_retry(
+                &exchange,
+                &cancel,
+                transport.usage,
+                |_| (),
+                || (),
+            )
+        })?;
+        let decoded = built_in::decode_observed(plan, &answered.body);
+        transport.usage.live_reply(decoded.usage);
+        cancel.live_reply(decoded.usage);
+        let reply = decoded.reply.map_err(Error::from)?;
+        transport.usage.answered_by(reply.model());
+        cancel.answered_by(reply.model().as_str());
+        Ok(reply)
     }
 
     pub(super) fn transport<'a>(&self, state: &'a State) -> Transport<'a> {
@@ -441,17 +429,6 @@ impl Engine {
             }),
         }
     }
-}
-
-/// Prepare every request one plan needs, split under the backend limits.
-///
-/// A plan shows its requests before any engine exists, so this needs none.
-pub(crate) fn split(
-    backend: &Backend,
-    profile: Option<&BackendProfile>,
-    plan: &Plan,
-) -> Result<Vec<Chunk>, Error> {
-    Ok(PreparedRequests::with_profile(backend, plan, profile, None)?.into_chunks())
 }
 
 /// The one answer a one-question reply carries.

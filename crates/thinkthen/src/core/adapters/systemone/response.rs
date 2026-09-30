@@ -8,7 +8,6 @@ use serde::de::{Deserializer, Error, MapAccess, Visitor};
 
 use crate::core::adapters::systemone::{DecodeError, wire_name, wire_place};
 use crate::core::answer::{Answer, Distribution, DistributionError};
-use crate::core::plan::Plan;
 use crate::core::probability::Probability;
 use crate::core::question::{Labels, Question};
 use crate::core::reply::{AnswerOutcome, BackendFailure, BackendFailureCause, Reply};
@@ -107,6 +106,10 @@ struct ResponseUsage {
     output_tokens: u64,
 }
 
+mod observed;
+
+pub(crate) use observed::{Decoded, decode_answers, decode_observed};
+
 /// Read the response body as one answer per question the plan asked.
 ///
 /// # Errors
@@ -116,11 +119,8 @@ struct ResponseUsage {
 /// asked, or when every planned question fails. A missing answer, a wrong
 /// shape, a missing probability, a probability outside zero to one, or an
 /// incomplete distribution fails only that question.
-mod observed;
-
-pub(crate) use observed::{Decoded, decode_answers, decode_observed};
-
-pub(crate) fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
+#[cfg(test)]
+pub(crate) fn decode(plan: &crate::core::plan::Plan, body: &[u8]) -> Result<Reply, DecodeError> {
     decode_observed(plan, body).reply
 }
 

@@ -4,7 +4,6 @@ use serde::{Serialize, Serializer};
 use thiserror::Error;
 
 use crate::core::json::{Json, JsonError};
-use crate::core::plan::Plan;
 
 /// A public backend name used for limits and threshold calibration.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -111,42 +110,6 @@ impl BackendProfile {
             text.len(),
         )
     }
-
-    /// Check the exact production values behind one encoded request: the
-    /// evidence in its compact text form, and the body as encoded.
-    pub(crate) fn check(
-        &self,
-        plan: &Plan,
-        evidence: &str,
-        body: &[u8],
-    ) -> Result<(), ProfileLimit> {
-        self.check_record(evidence)?;
-        check_limit(
-            &self.name,
-            LimitKind::Options,
-            self.max_options,
-            plan.questions()
-                .iter()
-                .filter_map(|question| match question {
-                    crate::core::Question::Choose { options, .. } => Some(options.count()),
-                    _ => None,
-                })
-                .max()
-                .unwrap_or(0),
-        )?;
-        check_limit(
-            &self.name,
-            LimitKind::RequestBytes,
-            self.max_request_bytes,
-            body.len(),
-        )?;
-        check_limit(
-            &self.name,
-            LimitKind::Questions,
-            self.max_questions,
-            plan.wire_question_count(),
-        )
-    }
 }
 
 fn limit(value: &Json, key: &'static str) -> Result<Option<usize>, ProfileError> {
@@ -241,20 +204,6 @@ pub(crate) struct ProfileLimit {
 mod tests {
     use super::{BackendProfile, LimitKind, ProfileError};
     use crate::core::json::JsonError;
-    use crate::core::{Evidence, ModelName, Plan, Question, QuestionText};
-
-    fn plan(evidence: &str) -> Plan {
-        Plan::authored(
-            Evidence::new(evidence).expect("evidence"),
-            ModelName::new("local-1").expect("model"),
-            vec![Question::Decide {
-                text: QuestionText::new("Is this relevant?").expect("question"),
-                yes: None,
-                no: None,
-            }],
-        )
-        .expect("plan")
-    }
 
     #[test]
     fn the_closed_profile_shape_accepts_independent_positive_limits() {
@@ -263,11 +212,8 @@ mod tests {
         )
         .expect("profile");
         assert_eq!(parsed.name().as_str(), "local_1");
-        let body = vec![b'x'; 200];
-        assert_eq!(parsed.check(&plan("four"), "four", &body), Ok(()));
-        let too_long = parsed
-            .check(&plan("five!"), "five!", &body)
-            .expect_err("one byte over");
+        assert_eq!(parsed.check_record("four"), Ok(()));
+        let too_long = parsed.check_record("five!").expect_err("one byte over");
         assert_eq!(too_long.kind, LimitKind::EvidenceBytes);
         assert_eq!((too_long.limit, too_long.actual), (4, 5));
     }

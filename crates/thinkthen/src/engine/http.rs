@@ -309,10 +309,7 @@ impl Client {
             }
             let attempt = match sent {
                 Ok(answer) => {
-                    return Ok(HttpAnswer {
-                        body: answer.body,
-                        requests_sent: u64::from(retries) + 1,
-                    });
+                    return Ok(HttpAnswer { body: answer.body });
                 }
                 Err(attempt) => attempt,
             };
@@ -338,7 +335,6 @@ impl Client {
 /// One successful HTTP reply and every attempt that produced it.
 pub(crate) struct HttpAnswer {
     pub(crate) body: Vec<u8>,
-    pub(crate) requests_sent: u64,
 }
 
 /// What one exchange needs, gathered at the edge before anything opens.

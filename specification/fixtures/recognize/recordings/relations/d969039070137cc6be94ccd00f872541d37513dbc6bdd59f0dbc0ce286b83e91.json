@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"evidence":"Here Comes the Sun appears on Abbey Road.","entities":[{"id":"i1","name":"Here Comes the Sun","kind":"song"},{"id":"i2","name":"Abbey Road","kind":"album"}]},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the text itself state that i1 appears on i2?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.98}},"usage":{"input_tokens":361,"output_tokens":21}}
-}
