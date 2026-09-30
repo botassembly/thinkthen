@@ -34,8 +34,12 @@ class TestSettingsCases < Minitest::Test
         status, errors = child.finish
         assert status.success?, errors
         if entry.key?("entries")
-          files = Dir.glob("*.json", base: File.join(root, "home", "recording"))
-          assert_equal entry.fetch("entries"), files.size, entry.fetch("id")
+          # A recording keeps its answers in one question store by ADR 0111.
+          # Ruby reads no SQLite without an extra gem, so this checks the
+          # store and that no old per-request entry remains.
+          recording = File.join(root, "home", "recording")
+          assert File.file?(File.join(recording, "thinkthen.sqlite")), entry.fetch("id")
+          assert_empty Dir.glob("*.json", base: recording).grep(/\A\h{64}\.json\z/), entry.fetch("id")
         end
       end
     end
