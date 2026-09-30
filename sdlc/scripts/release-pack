@@ -129,6 +129,11 @@ part_command() {
 part_c() {
 	profile=debug
 	[ -n "$reuse" ] || { profile=release; (cd libraries/c && cargo build --locked --quiet --release --lib); }
+	# With --reuse, later checks such as COBOL's build the C library without the C check's remaps,
+	# and their copy holds the builder's home. The C check's own build is still fresh, so this
+	# compiles nothing and puts its remapped copy back in the build folder.
+	[ -z "$reuse" ] || (cd libraries/c && RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" \
+		CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build" cargo build --locked --quiet --offline --lib)
 	from=$(built libraries/c)/$profile
 	folder=$(fresh c)
 	mkdir -p "$folder/include" "$folder/lib/pkgconfig"
