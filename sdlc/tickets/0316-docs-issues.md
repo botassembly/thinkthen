@@ -1,6 +1,6 @@
 # 0316: Close the documentation issues
 
-Status: built, awaiting code review. Lane claude-4. Branch `ticket/0316-docs-issues`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8.
+Status: landed. Lane claude-4. Branch `ticket/0316-docs-issues`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8.
 
 ## Outcome
 
@@ -16,4 +16,6 @@ The repo's docs match the landed code for the five open documentation issues. Ea
 
 ## What the build taught us
 
-The settings issue was one symptom of a wider drift. ADR 0105 replaced positional SQL slots and SQLite's twelve setters, and `sdlc/scripts/settings` passed anyway because it checks only that an engine word appears in source. Read each SQL column against the database README after a call-shape change.
+The settings issue was one symptom of a wider drift. ADR 0105 replaced positional SQL slots and SQLite's twelve setters, and `sdlc/scripts/settings` passed anyway because it checks only that an engine word appears in source. Read each SQL column against the database README after a call-shape change. Code review caught two cells the builder still got wrong: SQLite's cache off is `false`, and DuckDB and PostgreSQL also take `batch` in the settings JSON. Check each spelling in the parser, not only the README.
+
+The "Killed" line in `lint` comes from the `time-limit` self-test in `surfaces --registry`, which kills a planted child that ignores TERM. It is expected and does not mean the machine ran out of memory.
