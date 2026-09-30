@@ -150,13 +150,13 @@ None.
 
 ## Closes
 
-Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`.
+Finding 4 of `sdlc/issues/closed/2026-09-26-batching-design-review-before-0146.md`.
 
 `sdlc/issues/2026-09-26-recording-page-says-a-failure-is-never-recorded.md`. The line 59 rewrite says which failures are never recorded and that a partial reply is. The line 84 sentences say how a user retries a failed question. The build moves the issue to `closed/`.
 
 ## Evidence
 
-- Starts from: ADR 0053 item 6. Finding 4 of `sdlc/issues/2026-09-26-batching-design-review-before-0146.md`, reproduced in local experiment 273 with `annotate` and a hand-built cache entry. The code at `origin/main` `c490f082`: `engine/request.rs::ask_prepared`, `core/adapters/systemone/response.rs`, `core/reply.rs` and `engine/recorder.rs`. `specification/records.md`'s "first complete response" and `recording.md` line 84.
+- Starts from: ADR 0053 item 6. Finding 4 of `sdlc/issues/closed/2026-09-26-batching-design-review-before-0146.md`, reproduced in local experiment 273 with `annotate` and a hand-built cache entry. The code at `origin/main` `c490f082`: `engine/request.rs::ask_prepared`, `core/adapters/systemone/response.rs`, `core/reply.rs` and `engine/recorder.rs`. `specification/records.md`'s "first complete response" and `recording.md` line 84.
 - Keeps: Every complete reply cached as today. `--record` alone and `--replay` alone as today, partial replies included. A first run's output, standard error and exit code, and those of every run under `--record` alone or `--replay` alone. A cached entry that fails to decode as a whole, which stops the run and stays in the folder. A cached rerun of a partial reply changes by design: it asks again, so `meta.cached`, `meta.requests_sent`, `meta.usage` and the usage totals show a sent request.
 - Changes: A cache, typed or default, no longer installs a reply that failed a question, and reads an existing entry that holds one as a miss. Page sentences in `records.md` and `recording.md`.
 - Proof: Two outside-in tests with eight plants, the existing cache-locking test for concurrent runs, and the `install`, `lint`, `test`, `spec` and `surfaces` rungs.

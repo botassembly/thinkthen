@@ -96,7 +96,7 @@ Each cell holds yes, no, partial, or n/a for not applicable. A bracketed tag nam
 **Settings**
 
 - **S1.** C builds its engine with `Engine::from_env` (`libraries/c/src/ffi.rs:160-166`), and no variable sets the throttle (`DESIGN.md:13`). `max_requests` is unreachable too.
-- **S2.** Nothing batches yet. The command waits on B4. Each surface waits on its ticket from B12a to B12f or B13a to B13e (`sdlc/issues/2026-09-26-batching-design.md:371`, `:380-390`).
+- **S2.** Nothing batches yet. The command waits on B4. Each surface waits on its ticket from B12a to B12f or B13a to B13e (`sdlc/issues/closed/2026-09-26-batching-design.md:371`, `:380-390`).
 - **S3.** C selects the cache folder only through `THINKTHEN_CACHE` (`include/thinkthen.h:115-122`). It turns the cache off only through the configuration file (`crates/thinkthen/src/public/settings.rs:90-95`).
 - **S4.** DuckDB and PostgreSQL can name a folder but cannot turn the cache off.
   - DuckDB: `databases/duckdb/src/engines.rs:60-71`

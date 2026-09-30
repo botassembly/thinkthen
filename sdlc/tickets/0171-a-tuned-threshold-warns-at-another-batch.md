@@ -20,7 +20,7 @@ thinkthen: warning: threshold tuned at batch 1 is running at batch max
 
 Each `--details` row carries `meta.batch_warning`. `audit` and `diff` warn when the results they read ran at different batch settings. `audit --write` records a batched setting the bar was tuned at, so the file says what it was tuned for. A bar tuned one record a request writes no `batch`, and the file then warns at the batched default.
 
-This is batching row B16 of `sdlc/issues/2026-09-26-batching-design.md`, proof test 13. ADR 0048 item 8 gives the rule. ADR 0053 item 3 makes a file with a `threshold` and no `batch` count as tuned at batch 1. It is Batch D item 5 of `sdlc/planning/work-plan-2026-09-27.md`.
+This is batching row B16 of `sdlc/issues/closed/2026-09-26-batching-design.md`, proof test 13. ADR 0048 item 8 gives the rule. ADR 0053 item 3 makes a file with a `threshold` and no `batch` count as tuned at batch 1. It is Batch D item 5 of `sdlc/planning/work-plan-2026-09-27.md`.
 
 Ian's rulings set the frame. Ian can overturn each.
 

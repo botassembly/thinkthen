@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 230
-opens: sdlc/issues/2026-09-26-batching-design.md sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md libraries/c/include/thinkthen.h libraries/c/src/call.rs libraries/c/src/failures.rs specification/result.schema.json
+opens: sdlc/issues/closed/2026-09-26-batching-design.md sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md libraries/c/include/thinkthen.h libraries/c/src/call.rs libraries/c/src/failures.rs specification/result.schema.json
 ---
 
 # 0230: Batch the C JSON door and return call facts
@@ -10,7 +10,7 @@ Status: product implementation complete after fresh High code/API review accepte
 
 ## Outcome and retained contract
 
-B12b in [the batching issue](../issues/2026-09-26-batching-design.md) gives the C JSON door the Rust library's default maximal batching, explicit batch size, context and per-call facts. Reuse Rust's planner, limits, one eligible 413 split, ordered stop, cache/replay identity, exact one-record bytes, question descriptions and declared option order. Keep the ABI as JSON strings. Do not add C result structs or description arrays. The typed C entry points, the `thinkthen_answer` layout, six error codes, process `{"usage":true}` response and ordinary `NULL` failure signal stay as they are. The C door's `decide`/`choose` null is a successful value; a malformed or missing answer is a failure. Tag `[]` is a valid answer; annotate's failed member retains its explicit marker.
+B12b in [the batching issue](../issues/closed/2026-09-26-batching-design.md) gives the C JSON door the Rust library's default maximal batching, explicit batch size, context and per-call facts. Reuse Rust's planner, limits, one eligible 413 split, ordered stop, cache/replay identity, exact one-record bytes, question descriptions and declared option order. Keep the ABI as JSON strings. Do not add C result structs or description arrays. The typed C entry points, the `thinkthen_answer` layout, six error codes, process `{"usage":true}` response and ordinary `NULL` failure signal stay as they are. The C door's `decide`/`choose` null is a successful value; a malformed or missing answer is a failure. Tag `[]` is a valid answer; annotate's failed member retains its explicit marker.
 
 ADR 0089 §Proposed decision 4 is inherited: `Error::facts()` holds a frozen report on **started eager failures**, including a zero-send cancellation, and is absent before a call starts. For lazy batches, the terminal error and `Batch::facts()` hold the same report after workers join. B12b must expose these facts rather than discard them while converting to C. This includes failed sends and joined replies; `thinkthen_usage()` process totals cannot stand in for one call's facts. The [preflight](../records/0230-c-batching-preflight.md) maps the current door and the [design handoff](../records/0230-design-review.md) names the public choice.
 
