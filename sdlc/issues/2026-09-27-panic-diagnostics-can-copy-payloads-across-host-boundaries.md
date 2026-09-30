@@ -25,3 +25,7 @@ Closure requires a small child-process proof per affected host using a synthetic
 Ticket 0306 replaces the per-surface hooks with one public guard, `thinkthen::contained`. The engine door, C, SQLite and the DuckDB bridge call it. The engine door had dropped a caught payload outside its marked scope, so a payload whose destructor panicked printed and escaped; 0306 fixes that. 0306 also guards the PostgreSQL worker, whose panics reached the server log.
 
 One gap remains open beyond the package proofs. A panic on the PostgreSQL backend thread becomes an `XX000` error carrying its payload, and `databases/postgresql/check.sh` pins `the panic probe fired`. pgrx raises its own errors by panicking, so a catch there must pass pgrx payloads through. That needs its own design.
+
+## Ticket 0310
+
+Ticket 0310 closes the PostgreSQL backend-thread gap. Every SQL function body runs under `call::guarded`. pgrx's own error payloads pass through. Any other panic reaches the client and the server log only as `thinkthen defect: the extension panicked (retryable: no)`. `databases/postgresql/check.sh` `a_panic_is_an_error` pins that sentence and the marker's absence. The macOS and ARM64 package proofs above keep this issue open.
