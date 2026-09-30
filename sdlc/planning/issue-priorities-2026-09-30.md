@@ -19,6 +19,8 @@ Each batch is one lane's work in one area of files, so batches running at once d
 
 Order follows the brief: 0.1 blockers first (B1 to B5), then debt that slows builders (B6: every Dart consumer change is made twice until the Flutter copy goes). B4 and B5 are also blockers, but they wait on lane claude-1. Four lanes run at most: now lanes 1 and 2 plus B1; after 0344, B1, B2 and B3 beside lane 1; after 0335 slice 2, B4, B5 and B6 as lanes free.
 
+The system grading of 2026-09-30 (`grading-2026-09-30/README.md`) grades twenty areas and lists the 20 items left before 0.1, with owner, size and lane.
+
 Work outside the lanes:
 
 - **R1, the relate decision run.** One capped paid Beatles Bench run through `sdlc/scripts/live` (ruling 13) on the 0342 menu, after 0344 lands so the bench pins one commit. Conditions and bar: `sdlc/issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run". Blocks 0.1.
@@ -28,7 +30,7 @@ Work outside the lanes:
 
 ## Every open issue
 
-29 open. The second release rehearsal's Quick Fix refreshed this table against main `a7ee565ab`. The status line, the running lanes, the batches, and the remaining tickets are older. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
+35 open. The second release rehearsal's Quick Fix refreshed this table against main `a7ee565ab`, and the system grading added its rows against main `f367545a0`. The status line, the running lanes, the batches, and the remaining tickets are older. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
@@ -62,6 +64,13 @@ Work outside the lanes:
 | `2026-09-30-no-routine-gate-runs-the-library-only-tests.md` (Debt 028) | no | waits | a second library-only failure at a rehearsal, or before 0.1 |
 | `2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` (Debt 029) | no | waits | a binding's surface check fails once under load, or before 0.1 |
 | `2026-09-30-piped-batching-tests-race-the-50-ms-input-pause.md` (Debt 030) | no | waits | a piped batching test fails once under load, or the input pause gains a test setting |
+| `2026-09-30-contract-sentences-that-drift-from-the-code.md` | yes | waits | a free lane: one Quick Fix for six sentences, from the system grading |
+| `2026-09-30-cache-prune-older-than-panics-on-a-multi-byte-unit.md` | yes | waits | a free lane: a Quick Fix, from the system grading |
+| `2026-09-30-library-timeout-has-no-upper-bound.md` | if a huge timeout panics | waits | a free lane: one test decides, from the system grading |
+| `2026-09-30-find-returns-no-probability-in-c-interface-languages.md` | yes | waits | a free lane; release QA; `specification/find.md` promises the probability |
+| `2026-09-30-deep-json-record-refused-as-not-valid-json.md` | yes | waits | a free lane; release QA |
+| `2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` | no | waits | a free lane; two spec lines the site shows |
+| `2026-09-30-site-fixtures-converted-and-plan-examples-moved.md` (note) | no | waits | the queue owner records parts 1 and 2 of the site replay issue as done |
 | `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | waits | every blocker above; Ian's rehearsal dispatch and registry accounts |
 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | waits | the release QA suite's edge list |
 | `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (Debt 014) | no | waits | upstream, ollama/ollama#18718 |
