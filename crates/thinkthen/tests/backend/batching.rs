@@ -316,11 +316,14 @@ fn a_pause_sends_the_open_batch() {
             .write_all(lines(1..=3).as_bytes())
             .expect("three records are written");
         writer.flush().expect("the records reach the pipe");
+        // The count moves before the body is recorded, so wait on the
+        // recorded request itself (ticket 0352).
         let deadline = Instant::now() + Duration::from_secs(30);
-        while listener.count() == 0 && Instant::now() < deadline {
+        let mut sent = listener.requests();
+        while sent.is_empty() && Instant::now() < deadline {
             thread::sleep(Duration::from_millis(10));
+            sent = listener.requests();
         }
-        let sent = listener.requests();
         drop(writer);
         let output = finish(child, name).expect("the command ends");
         assert_eq!(sent.len(), 1, "{name}: a request while the pipe stays open");
