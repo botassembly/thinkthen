@@ -1,6 +1,8 @@
 # Panic diagnostics can copy payloads across host boundaries
 
-Filed 2026-09-27. Status: open. The bounded gap review checked main `0fb8d55f` and the DuckDB prerequisite proof `981c686d`. This issue serves the requirement that diagnostics never echo credentials or evidence. It records payload copying and a demonstrated proof-hook print; it does not claim that a real credential or user's evidence has reached a production panic.
+Status: open. Ticket 0306 landed one shared panic guard for every surface. The PostgreSQL backend thread and the macOS and ARM64 package proofs remain.
+
+Filed 2026-09-27. The bounded gap review checked main `0fb8d55f` and the DuckDB prerequisite proof `981c686d`. This issue serves the requirement that diagnostics never echo credentials or evidence. It records payload copying and a demonstrated proof-hook print; it does not claim that a real credential or user's evidence has reached a production panic.
 
 The source correction lands through ticket 0226 at reviewed candidate `d0709b69`. The fixed C, SQLite and retained DuckDB guards passed focused child proofs and fresh High code review. Changed Linux x86-64 C and SQLite packages also have loader and exact installed-host evidence. macOS C/SQLite and retained DuckDB Linux ARM64/macOS package proof remain open, so this issue remains open. The table preserves the original findings; `sdlc/records/0226-build.md` and `0226-code-review.md` give the current disposition.
 

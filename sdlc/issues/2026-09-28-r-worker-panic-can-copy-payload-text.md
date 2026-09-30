@@ -1,6 +1,8 @@
 # R worker panic diagnostics can copy payload text
 
-Filed 2026-09-28. Status: open. Confirmed by source inspection on main `cd395d3f` during the bounded 0226 native-guard preparation. This records a diagnostic path that can copy a panic payload. It does not claim that a real credential or user evidence has appeared in a production panic.
+Status: open. Ticket 0306 moved the R worker onto the shared panic guard. The target-package proofs remain.
+
+Filed 2026-09-28. Confirmed by source inspection on main `cd395d3f` during the bounded 0226 native-guard preparation. This records a diagnostic path that can copy a panic payload. It does not claim that a real credential or user evidence has appeared in a production panic.
 
 ## Evidence and retained behavior
 

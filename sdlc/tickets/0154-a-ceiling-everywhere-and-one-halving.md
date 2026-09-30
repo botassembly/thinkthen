@@ -169,7 +169,7 @@ Overlap with 0146's files: `core/batch.rs`, `cli/args.rs`, `cli/edge.rs`, `cli/a
 
 Overlap with other tickets:
 
-- Ticket 0147 opens ADR 0040, `backends.md`, `records.md`, `result.md` and `settings.md`, and its ADR 0050 names one recognize piece "at an address with no ceiling and no profile". After 0154 that case no longer exists. 0154 edits ADR 0040 only after 0147 lands, and leaves `backends.md` line 17 to 0147. 0147 also opens `recognize.md` and `relate.md`. 0154 edits all six pages only after 0147 lands.
+- Ticket 0147 opens ADR 0040, `backends.md`, `records.md`, `result.md` and `settings.md`, and its planned ADR 0050 names one recognize piece "at an address with no ceiling and no profile". After 0154 that case no longer exists. 0154 edits ADR 0040 only after 0147 lands, and leaves `backends.md` line 17 to 0147. 0147 also opens `recognize.md` and `relate.md`. 0154 edits all six pages only after 0147 lands. That ADR was never written; ticket 0147 wrote ADR 0056 instead.
 - Ticket 0148 opens `settings.md`. 0154 adds a new row and touches the profile row after 0148 lands.
 - Ticket 0153 opens `cli/args.rs`. Both build after 0146. Whichever builds second merges the other's `args.rs` lines.
 - Ticket 0155, retries and backoff, opens `cli/args.rs`, `crates/thinkthen/tests`, `tests/backend/main.rs`, `backends.md`, `settings.md` and ADR 0048 item 10. The two tickets touch different lines of each. 0155 lands before 0154, and 0154 merges it.

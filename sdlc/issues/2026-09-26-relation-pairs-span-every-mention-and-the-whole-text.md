@@ -1,6 +1,6 @@
 # Relation pairs span every mention and the whole text
 
-Status: Open. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Owner: ticket R5 for mention merging, and the recognize window work of ADR 0050 item 7 for the sentence limit. It absorbs severity 3 title 9 of report 10 in `2026-09-26-architect-review-severity-3-findings.md` and adds a measurement to item 5 of `2026-09-25-recognize-and-relate-scale-and-shape.md`. Does not block 0.1.
+Status: Open. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Owner: ticket R5 for mention merging, and the recognize window work for the sentence limit. That work was item 7 of a planned ADR 0050, which was never written; ticket 0147 wrote ADR 0056 instead, and ADR 0056 keeps the whole text as relation evidence. It absorbs severity 3 title 9 of report 10 in `2026-09-26-architect-review-severity-3-findings.md` and adds a measurement to item 5 of `2026-09-25-recognize-and-relate-scale-and-shape.md`. Does not block 0.1.
 
 ## What happens today
 

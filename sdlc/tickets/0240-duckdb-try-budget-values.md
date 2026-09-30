@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 240
-opens: sdlc/issues/2026-09-28-duckdb-try-details-raises-on-a-spent-request-total.md
+opens: sdlc/issues/closed/2026-09-28-duckdb-try-details-raises-on-a-spent-request-total.md
 ---
 
 # 0240: Keep DuckDB try-details answers when its request total is spent

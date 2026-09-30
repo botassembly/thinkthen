@@ -205,9 +205,9 @@
       "classification": "mixed-runtime",
       "current_status": "mixed: documentation checked; runtime, platform, or external terms criteria remain open",
       "action": "keep original issue open; hand unresolved criterion to its existing owner",
-      "source_evidence": "sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-26-folder-writers-decide-the-answers.md",
       "original_status": "open. Ticket 0163 source `0292cba2` completes the documentation half in recording.md and SECURITY.md. Writable-folder warning and entry-integrity work remain open; no code protection is claimed by that sentence.",
-      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md",
+      "resolution_evidence": "README.md; specification/types.md; specification/recording.md; libraries/*/README.md; databases/*/README.md; sdlc/issues/closed/2026-09-26-folder-writers-decide-the-answers.md",
       "resolution": "open_mixed_runtime"
     },
     {

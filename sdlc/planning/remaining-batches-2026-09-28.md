@@ -1,5 +1,7 @@
 # Remaining work in ten batches
 
+Historical. [cleanup-2026-09-30.md](cleanup-2026-09-30.md) sets the current order of work.
+
 This scheduling snapshot reads the 75 to-do rows on main `243cf2b3` on 2026-09-28. It groups work; it neither closes issues nor changes accepted outcomes. The [work plan](work-plan-2026-09-27.md#every-item) remains the status authority. Several rows alias a ticket or share implementation while retaining different criteria. Counts below are rows, not independent builds.
 
 | Batch | Rows | Preparation and routing |

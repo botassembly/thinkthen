@@ -1,5 +1,7 @@
 # One line, one owner
 
+Historical. [cleanup-2026-09-30.md](cleanup-2026-09-30.md) sets the current order of work.
+
 Written 2026-09-24 by Claude, which now owns the whole ThinkThen queue at Ian's direction: main line, surfaces, QA, and launch. Every ticket is reviewed by a fresh Claude session; no other vendor reviews this queue. The ticket flow is the workspace `AGENTS.md` flow. This page supersedes the order in `build-queue-2026-09-21.md` where they differ. Ian can overturn any placement here.
 
 ## Why
