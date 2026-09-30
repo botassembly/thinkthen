@@ -1,23 +1,95 @@
 #!/bin/sh
-# release-smoke DIR (ticket 0128): install each release file in DIR into a fresh prefix and
-# run its surface's check against that file alone. `release-pack` writes DIR. The rule is
-# the release rule of verdict.sh: 0 passes, and "not run" (77) or any other code fails.
-# A surface check reads THINKTHEN_ARTIFACT, installs the file, and loads it from there.
-# The command's check runs the unpacked binary by path and then the README's "First run"
-# block with no key: every line but its one curl line, whose download DIR supplies.
+# release-smoke [--source-packages | --command] DIR (ticket 0128, 0319): install each release file
+# in DIR into a fresh prefix and run its surface's check against that file alone. `release-pack`
+# writes DIR. The rule is the release rule of verdict.sh: 0 passes, and "not run" (77) or any
+# other code fails. A surface check reads THINKTHEN_ARTIFACT, installs the file, and loads it.
+# The command's check runs the unpacked binary by path and then the README's no-key block, the
+# first fenced block holding `--replay recording`, with no key. The block's one sample line, the
+# `cd` into demo 27 or a `curl` download, becomes unpacking DIR's sample and entering its folder.
+# Every proxy variable names the loopback backend, so any https:// request, the default backend
+# included, lands in its count. THINKTHEN_README names another README for the test.
+# --command requires exactly this host's command archive and the sample, each with its .sha256.
 set -eu
 . "$(dirname -- "$0")/verdict.sh"
 . "$(dirname -- "$0")/scratch.sh"
 . "$(dirname -- "$0")/installed.sh"
-source_packages=
-if [ "${1:-}" = --source-packages ]; then source_packages=1; shift; fi
-[ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke [--source-packages] DIR' >&2; exit 2; }
+source_packages= command_only=
+case ${1:-} in --source-packages) source_packages=1; shift ;; --command) command_only=1; shift ;; esac
+[ $# -eq 1 ] && [ -d "$1" ] || { echo 'usage: release-smoke [--source-packages | --command] DIR' >&2; exit 2; }
 DIR=$(CDPATH='' cd -- "$1" && pwd)
 REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
 cd -- "$REPO"
 unset THINKTHEN_API_KEY
 V=$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -n 1)
 sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
+README=${THINKTHEN_README:-$REPO/README.md}
+
+# Every library file, unpacked, holds neither the builder's home nor the PostgreSQL test probe. The
+# checks' own scans read their builds, and this one reads the files a user installs.
+scan() {
+	into=$(mktemp -d "$backend/scan.XXXXXX") || return 1
+	case $1 in
+	*.whl) python3 -m zipfile -e "$1" "$into" ;;
+	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
+	*) tar -xzf "$1" -C "$into" ;;
+	esac
+	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | sed "s|^$into/||" | tr '\n' ' ')
+	[ -z "$found" ] || { echo "release-smoke: FAIL ${1##*/} (the builder's home or the test probe is in $found)"; return 1; }
+}
+
+# The command: its version line by path, then the no-key block with it first on PATH.
+command_check() {
+	prefix=$(mktemp -d "$backend/command.XXXXXX") || return 1
+	tar -xzf "$1" -C "$prefix"
+	[ "$("$prefix/thinkthen" --version)" = "thinkthen $V" ] ||
+		{ echo "release-smoke: $1 reports $("$prefix/thinkthen" --version)" >&2; return 1; }
+	[ -f "$DIR/thinkthen-first-run.tar.gz" ] || { echo 'release-smoke: DIR holds no thinkthen-first-run.tar.gz' >&2; return 1; }
+	awk '/^```/ { if (inside) { if (hit) { printf "%s", block; exit } inside = 0; next } inside = 1; block = ""; hit = 0; next }
+		inside { block = block $0 "\n"; if (index($0, "--replay recording")) hit = 1 }' "$README" >"$backend/block"
+	samples=$(grep -c -e '^cd demos/27-test-with-no-network$' -e '^curl ' "$backend/block" || true)
+	[ "$samples" = 1 ] || { echo "release-smoke: the README's no-key block holds $samples sample lines, not one" >&2; return 1; }
+	sed -e "s|^cd demos/27-test-with-no-network\$|tar -xzf '$DIR/thinkthen-first-run.tar.gz' \&\& cd thinkthen-first-run|" \
+		-e "s|^curl .*|tar -xzf '$DIR/thinkthen-first-run.tar.gz' \&\& cd thinkthen-first-run|" "$backend/block" >"$prefix/block.sh"
+	mkdir "$prefix/home"
+	proxy=http://127.0.0.1:$port
+	before=$(backend_count)
+	answer=$(cd -- "$prefix/home" && env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL -u NO_PROXY -u no_proxy \
+		HTTPS_PROXY="$proxy" https_proxy="$proxy" ALL_PROXY="$proxy" all_proxy="$proxy" HOME="$prefix/home" \
+		XDG_CACHE_HOME="$prefix/home/.cache" PATH="$prefix:$PATH" sh -eu ../block.sh)
+	[ "$answer" = true ] || { echo "release-smoke: the no-key block printed '$answer', not true" >&2; return 1; }
+	sent=$(($(backend_count) - before))
+	[ "$sent" = 0 ] || { echo "release-smoke: the no-key block sent $sent requests to the loopback backend" >&2; return 1; }
+	echo "release-smoke: the no-key block printed true and sent 0 requests"
+}
+
+# The command-line release alone: its exact files, their checksums, the scan, the block, and install.sh.
+if [ -n "$command_only" ]; then
+	case $(uname -s):$(uname -m) in
+	Linux:x86_64) target=x86_64-unknown-linux-musl ;; Linux:aarch64) target=aarch64-unknown-linux-musl ;;
+	Darwin:arm64) target=aarch64-apple-darwin ;; Darwin:x86_64) target=x86_64-apple-darwin ;;
+	*) echo 'release-smoke: no command release for this host' >&2; exit 77 ;;
+	esac
+	archive=thinkthen-$V-$target.tar.gz
+	wanted=" $archive $archive.sha256 thinkthen-first-run.tar.gz thinkthen-first-run.tar.gz.sha256 "
+	for file in "$DIR"/* "$DIR"/.[!.]* "$DIR"/..?*; do
+		[ -e "$file" ] || [ -L "$file" ] || continue
+		case $wanted in *" ${file##*/} "*) [ -f "$file" ] && [ ! -L "$file" ] && continue ;; esac
+		echo "release-smoke: extra or linked ${file##*/}" >&2; exit 1
+	done
+	for name in $wanted; do
+		[ -f "$DIR/$name" ] || { echo "release-smoke: missing $name" >&2; exit 1; }
+	done
+	for name in "$archive" thinkthen-first-run.tar.gz; do
+		(cd -- "$DIR" && sha256 -c "$name.sha256" >/dev/null 2>&1) ||
+			{ echo "release-smoke: FAIL $name (its .sha256 is missing or does not match)" >&2; exit 1; }
+	done
+	backend_start
+	scan "$DIR/$archive" >&2 || exit 1
+	command_check "$DIR/$archive" || exit 1
+	sh "$REPO/sdlc/scripts/release-workflow" installer-smoke "$DIR" 3>&-
+	echo "release-smoke: pass $archive and thinkthen-first-run.tar.gz"
+	exit 0
+fi
 
 # The opt-in Linux bundle must name every installed family before a backend starts.
 # Ordinary release smoke keeps its original nine-family requirement below.
@@ -102,39 +174,6 @@ fi
 
 # The conformance loopback backend, as the surfaces rung starts it.
 backend_start
-
-# Every library file, unpacked, holds neither the builder's home nor the PostgreSQL test probe. The
-# checks' own scans read their builds, and this one reads the files a user installs.
-scan() {
-	into=$(mktemp -d "$backend/scan.XXXXXX") || return 1
-	case $1 in
-	*.whl) python3 -m zipfile -e "$1" "$into" ;;
-	*.gem) tar -xOf "$1" data.tar.gz | tar -xzf - -C "$into" ;;
-	*) tar -xzf "$1" -C "$into" ;;
-	esac
-	found=$(grep -rlaF -e "$HOME" -e thinkthen_panic_probe "$into" | sed "s|^$into/||" | tr '\n' ' ')
-	[ -z "$found" ] || { echo "release-smoke: FAIL ${1##*/} (the builder's home or the test probe is in $found)"; return 1; }
-}
-
-# The command: its version line by path, then the first-run block with it first on PATH.
-command_check() {
-	prefix=$(mktemp -d "$backend/command.XXXXXX") || return 1
-	tar -xzf "$1" -C "$prefix"
-	[ "$("$prefix/thinkthen" --version)" = "thinkthen $V" ] ||
-		{ echo "release-smoke: $1 reports $("$prefix/thinkthen" --version)" >&2; return 1; }
-	[ -f "$DIR/thinkthen-first-run.tar.gz" ] || { echo 'release-smoke: DIR holds no thinkthen-first-run.tar.gz' >&2; return 1; }
-	awk '/^## First run$/ { held = 1; next } /^## / { held = 0 } held && /^```/ { if (inside) exit; inside = 1; next } inside' \
-		README.md >"$backend/block"
-	[ "$(grep -c '^curl ' "$backend/block")" = 1 ] ||
-		{ echo "release-smoke: README.md's First run block holds no one curl line" >&2; return 1; }
-	sed "s|^curl .*|cp '$DIR/thinkthen-first-run.tar.gz' .|" "$backend/block" >"$prefix/block.sh"
-	mkdir "$prefix/home"
-	before=$(backend_count)
-	answer=$(cd -- "$prefix/home" && env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL HOME="$prefix/home" \
-		XDG_CACHE_HOME="$prefix/home/.cache" PATH="$prefix:$PATH" sh -eu ../block.sh)
-	[ "$answer" = true ] || { echo "release-smoke: the first-run block printed '$answer', not true" >&2; return 1; }
-	[ "$(backend_count)" = "$before" ] || { echo 'release-smoke: the first-run block reached the loopback backend' >&2; return 1; }
-}
 
 failed=0 seen=
 for file in "$DIR"/*; do

@@ -1,0 +1,80 @@
+#!/bin/sh
+# Ticket 0319: `release-smoke --command` against planted folders, each built around a fake
+# `thinkthen` script. The good folder passes. Each other folder or README carries one fault and
+# fails with its own exit code and message. The loopback backend and install server are real.
+set -eu
+case $(uname -s):$(uname -m) in
+Linux:x86_64) target=x86_64-unknown-linux-musl ;; Linux:aarch64) target=aarch64-unknown-linux-musl ;;
+Darwin:arm64) target=aarch64-apple-darwin ;; Darwin:x86_64) target=x86_64-apple-darwin ;;
+*) echo 'release-smoke command: skipped on a host with no command release'; exit 0 ;;
+esac
+repo=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+. "$repo/sdlc/scripts/scratch.sh"
+scratch_dir work
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$repo/crates/thinkthen/Cargo.toml" | head -n 1)
+archive=thinkthen-$version-$target.tar.gz
+sha256() { if command -v shasum >/dev/null; then shasum -a 256 "$@"; else sha256sum "$@"; fi; }
+
+# plant NAME ANSWER [EXTRA]: a folder NAME whose fake prints ANSWER for a replay. EXTRA is one
+# more shell line the fake runs first, which may reach the network or hold the builder's home.
+plant() {
+	mkdir -p "$work/$1/bin" "$work/$1/sample/thinkthen-first-run/recording" "$work/$1/dir"
+	cat >"$work/$1/bin/thinkthen" <<-EOF
+		#!/bin/sh
+		[ "\$1" != --version ] || { echo 'thinkthen $version'; exit 0; }
+		${3:-:}
+		case " \$* " in *' --replay recording '*) [ -d recording ] && [ -f report.txt ] && echo $2 ;; *) exit 4 ;; esac
+	EOF
+	chmod +x "$work/$1/bin/thinkthen"
+	: >"$work/$1/sample/thinkthen-first-run/report.txt"
+	tar -czf "$work/$1/dir/$archive" -C "$work/$1/bin" thinkthen
+	tar -czf "$work/$1/dir/thinkthen-first-run.tar.gz" -C "$work/$1/sample" thinkthen-first-run
+	(cd -- "$work/$1/dir" && sha256 "$archive" >"$archive.sha256" &&
+		sha256 thinkthen-first-run.tar.gz >thinkthen-first-run.tar.gz.sha256)
+}
+
+# readme NAME LINE...: a README whose no-key block holds LINE..., after a block without a replay.
+readme() {
+	name=$1
+	shift
+	{ printf '# Planted\n\n```sh\ncd demos/27-test-with-no-network\n```\n\n```sh\n'
+		printf '%s\n' "$@"
+		printf '```\n'; } >"$work/$name.md"
+}
+replay="thinkthen decide 'Question?' --replay recording < report.txt"
+readme good 'cd demos/27-test-with-no-network' "$replay"
+readme after-release 'curl -fsSLO https://example.invalid/thinkthen-first-run.tar.gz' "$replay"
+readme no-sample "$replay"
+readme two-samples 'cd demos/27-test-with-no-network' 'curl -fsSLO https://example.invalid/x' "$replay"
+
+# expect CODE MESSAGE FOLDER README: run the smoke and pin its exit code and one output line.
+expect() {
+	set +e
+	THINKTHEN_README="$work/$4.md" sh "$repo/sdlc/scripts/release-smoke" --command "$work/$3/dir" >"$work/out" 2>&1
+	code=$?
+	set -e
+	[ "$code" -eq "$1" ] || { cat "$work/out" >&2; echo "release-smoke command: $3/$4 wanted exit $1, got $code" >&2; exit 1; }
+	grep -Fqx -- "$2" "$work/out" || { cat "$work/out" >&2; echo "release-smoke command: $3/$4 lacks: $2" >&2; exit 1; }
+}
+
+plant good true
+expect 0 "release-smoke: pass $archive and thinkthen-first-run.tar.gz" good good
+expect 0 "release-smoke: pass $archive and thinkthen-first-run.tar.gz" good after-release
+plant missing true
+mv "$work/missing/dir/thinkthen-first-run.tar.gz" "$work/missing/"
+expect 1 'release-smoke: missing thinkthen-first-run.tar.gz' missing good
+plant extra true
+: >"$work/extra/dir/thinkthen-c-$version-$target.tar.gz"
+expect 1 "release-smoke: extra or linked thinkthen-c-$version-$target.tar.gz" extra good
+plant checksum true
+printf 'x' >>"$work/checksum/dir/$archive"
+expect 1 "release-smoke: FAIL $archive (its .sha256 is missing or does not match)" checksum good
+expect 1 "release-smoke: the README's no-key block holds 0 sample lines, not one" good no-sample
+expect 1 "release-smoke: the README's no-key block holds 2 sample lines, not one" good two-samples
+plant false false
+expect 1 "release-smoke: the no-key block printed 'false', not true" false good
+plant home true "# $HOME"
+expect 1 "release-smoke: FAIL $archive (the builder's home or the test probe is in thinkthen )" home good
+plant sends true 'curl -s -o /dev/null --max-time 5 https://example.invalid/ || :'
+expect 1 'release-smoke: the no-key block sent 1 requests to the loopback backend' sends good
+echo 'release-smoke command: good, after-release, missing, extra, checksum, sample-line, answer, home and backend cases pinned'
