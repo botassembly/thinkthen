@@ -1,6 +1,6 @@
 # ADR 0112: Rust owns the result schema
 
-- Status: **Proposed**, awaiting a fresh design review. Ian can overturn each item.
+- Status: **Accepted** by the coordinator, 2026-09-30, after a fresh design review. Ian can overturn each item.
 - Date: 2026-09-30
 
 This ADR builds Ian's ruling 7 of 2026-09-29 in `sdlc/planning/cleanup-2026-09-30.md`: Rust owns every type, surfaces read results as JSON described by one schema generated from Rust, and ports add only named outcome and error codes and a null that cannot be mistaken for a failure. Ruling 8 limits the rest. It amends ADR 0082 and carries deferred ticket 0291, so the fourteen C-door bindings change once. Ticket 0314 builds it.
@@ -51,9 +51,13 @@ Questions enter results as the `question` member. That member's type is part of 
 
 ### 2. `schemars` derives the schema in a unit test
 
-`schemars` 1.x becomes a **dev-dependency** of `crates/thinkthen`. Each type in section 1 carries `#[cfg_attr(test, derive(schemars::JsonSchema))]`. A type with a hand `Serialize` impl gets a hand `JsonSchema` impl under `#[cfg(test)]`, beside its `Serialize` impl, so the two sit on one screen. Attributes keep today's definition names, such as `detailed`, `decide`, `failed`, `facts` and `callSuccess`, so the corpus and the port checks keep working unchanged. Probability ranges and closed objects come from `schemars` attributes.
+`schemars`, pinned `=1.2.2`, becomes a **dev-dependency** of `crates/thinkthen`, with its `raw_value` feature when `DoorReply.value` is a `RawValue`. Its `preserve_order` feature is never enabled. Each type in section 1 carries `#[cfg_attr(test, derive(schemars::JsonSchema))]`, which works because the drift test is the crate's own unit test.
 
-One unit test, `crates/thinkthen/src/schema_tests.rs`, builds the Draft 2020-12 schema and compares it byte for byte with the committed file. On a difference it fails and prints the command that rewrites the file: the same test with `THINKTHEN_WRITE_SCHEMA=1`. It lives outside `core`, which reads no environment.
+About fifteen types on the result path write themselves with a hand `Serialize` impl: `Labels`, `QuestionText`, `Description`, `Meaning`, `Threshold`, `Distribution`, `TagProbabilities`, `Odds`, `NamedValues`, `NamedAnswers`, `FindAnswer`, `FindQuestionOwned`, `ProfileName`, `AnnotatedRecord`, `Json` and `Pointer`. Each field of those types uses `#[schemars(with = …)]` naming the plain form it prints, such as `String`, `Vec<String>` or a map of `String` to `f64`. A full hand `JsonSchema` impl is the last resort, under `#[cfg(test)]` beside its `Serialize` impl. The corpus is the backstop for these forms. Probability ranges and closed objects get `schemars` attributes only where a corpus case tests them.
+
+The per-verb bare definitions, `decide`, `choose`, `tag`, `score`, `filter`, `rank` and `find`, have no single Rust type: `Value` is untagged, and `filter` and `rank` print records through `json!`. The drift test adds each verb's definition by name from the Rust type that serializes it, such as `subschema_for::<Option<bool>>()` as `decide`, `Option<String>` as `choose` and `Vec<String>` as `tag`. No schema-only newtype is added. Attributes keep today's other definition names, such as `detailed`, `failed`, `facts` and `callSuccess`, so the corpus and the port checks keep working unchanged.
+
+One unit test, `crates/thinkthen/src/schema_tests.rs`, builds the Draft 2020-12 schema and compares it byte for byte with the committed file. On a difference it fails and prints the command that rewrites the file: the same test with `THINKTHEN_WRITE_SCHEMA=1`. With that variable set, the test rewrites the file and still fails with `schema rewritten; rerun`, so a green run always compares. It lives outside `core`, which reads no environment.
 
 Why this and not the alternatives:
 
@@ -61,7 +65,7 @@ Why this and not the alternatives:
 - **A hand generator in a test** would be a third hand copy of the shape in Rust. It could drift from the `Serialize` impls exactly as the JSON file drifts today.
 - **A build script or a feature** runs on every build or needs its own gate. A unit test runs under the plain `cargo test --workspace` every landing already runs.
 
-The residual risk is the hand `JsonSchema` impls. They are few, and the corpus in `specification/fixtures/types/` still validates real door output against the generated file, so a wrong hand impl fails there.
+The residual risk is the `with` forms and any hand impls. They are few, and the corpus in `specification/fixtures/types/` still validates real door output against the generated file, so a wrong hand impl fails there.
 
 ### 3. Where the schema lives and how it is versioned
 
@@ -76,11 +80,11 @@ A port reads the JSON the engine gives it into the host's ordinary JSON value: a
 
 1. **Named outcomes.** `YES`, `NO`, `UNSURE` with the C header's values 1, 0, 2, in the host's enum or constant idiom. A port maps JSON `true`, `false`, `null` to them.
 2. **Named error kinds.** `usage`, `backend`, `deadline`, `local`, `cancelled`, `defect`, with the C codes 1 to 6, in the host's enum, exception class or constant idiom. The retryable flag and message ride along.
-3. **Null versus failure.** One helper per port reads an annotate member as unresolved, a value, or a failure with its `kind` and `cause`. A static language returns a three-case type. A dynamic language returns the JSON value and offers `failed(member)`, which returns the failure object or nothing. No port turns a failure into null.
+3. **Null versus failure.** One helper per port reads an annotate answer as unresolved, a value, or a failure with its `kind` and `cause`. A static language returns a three-case type. A dynamic language returns the JSON value and offers `failed(member)`, which returns the failure object or nothing. No port turns a failure into null. The helper applies only to the answer names of a row's `value` and `answers`. The record members of an annotated row stay open in the schema and are never read as failures.
 
 Everything else stays host JSON. A reader ignores members it does not know.
 
-Deleted in the port pass, subject to each family's exact inventory:
+All packages are 0.0.1 and unreleased, so removing typed classes needs no deprecation. Deleted in the port pass, subject to each family's exact inventory:
 
 - Ada: the JSON validator and closed facts set in `thinkthen.adb`; `Run_Facts`, `JSON_Result`, `Entity`, `Relation_Edge`. `Outcome`, `Error_Kind` and the annotate field state stay.
 - C++: `CallFacts`, `Entity`, `Recognized`, `RelatedEntity`, `Edge`; the strict decoder shrinks to what reading host values needs. `ErrorKind` and `FailedField` stay.
@@ -121,10 +125,10 @@ Per ruling 7, these wait:
 
 Each slice lands green: `cargo test --workspace`, `policy.py`, fresh code review.
 
-1. **Generated schema.** Add the dev-dependency, the derives and hand impls, `Facts` serialization, `CallError`, `DoorReply` and the drift test. Regenerate `result.schema.json`; move `doorRequest` to the question-file schema and point `types/check.py` at it. No output byte changes. Proof: the drift test passes, fails on a one-byte edit of the committed file, and fails when a field is added to `Meta` without regenerating; `sh specification/fixtures/types/self-test` passes with every corpus verdict unchanged, or a changed verdict is an extra-member case the commit names under the compatibility rule; `sh specification/fixtures/question-file/self-test` passes with `doorRequest`; `cargo tree -e normal` for `crates/thinkthen`, `libraries/c` and `libraries/python` shows no `schemars`.
-2. **The C door serializes typed replies.** `call.rs` and `failures.rs` use `DoorReply`, `Facts` and `CallError`. Proof: the C door's existing tests pass with byte-identical replies and error facts; the types self-test passes against the real door; every port's `public_types.py` or `type_cases.py` passes unchanged.
-3. **Port families, with 0291.** One family at a time, in section 5's order, after ADR 0111 slice 3. Proof per port: its corpus check passes against the generated schema; one shared annotate case with a `null` member and a `failed` member returns unresolved and failure distinctly through the public binding; one usage failure surfaces as the named `usage` kind with code 1; one row carrying an unknown extra member reads without error; 0291's P1 plan, deadline, cap and refusal proof passes; the family's deleted files and line count are in the build record.
-4. **Native bindings.** R and Ruby read serialized JSON; Python's `Facts` becomes a mapping. Proof: each binding's conformance run passes; R case 41 still reports positions `11..20`; the same null, failure, error-kind and extra-member cases pass.
+1. **Generated schema.** Add the dev-dependency, the derives, the `with` forms, the per-verb definitions, `Facts` serialization, `CallError`, `DoorReply` and the drift test. Regenerate `result.schema.json`; move `doorRequest` to the question-file schema and point `types/check.py` at it. No output byte changes. Proof: the drift test passes, fails on a one-byte edit of the committed file, and fails when a field is added to `Meta` without regenerating; `sh specification/fixtures/types/self-test` passes with every corpus verdict unchanged, or a changed verdict is an extra-member case the commit names under the compatibility rule; `sh specification/fixtures/question-file/self-test` passes with `doorRequest`; `cargo tree -e normal` for `crates/thinkthen`, `libraries/c` and `libraries/python` shows no `schemars`.
+2. **The C door serializes typed replies.** First add one golden assertion of today's exact reply and error-facts bytes with every optional facts key present, and land it green on the hand-built code. Then `call.rs` and `failures.rs` use `DoorReply`, `Facts` and `CallError`. Proof: the golden assertion passes unchanged after the switch; the C door's existing tests pass; the types self-test passes against the real door; every port's `public_types.py` or `type_cases.py` passes unchanged.
+3. **Native bindings, right after slice 2.** R and Ruby read serialized JSON; Python's `Facts` becomes a mapping. Proof: each binding's conformance run passes; R case 41 still reports positions `11..20`; slice 4's null, failure, error-kind and extra-member cases pass.
+4. **Port families, with 0291.** One family at a time, in section 5's order, after ADR 0111 slice 3. Proof per port: its corpus check passes against the generated schema; one shared annotate case with a `null` member and a `failed` member returns unresolved and failure distinctly through the public binding; one usage failure surfaces as the named `usage` kind with code 1; one row carrying an unknown extra member reads without error; 0291's P1 plan, deadline, cap and refusal proof passes; the family's deleted files and line count are in the build record.
 
 ## What this amends
 
@@ -139,7 +143,7 @@ Ian's ruling built here: Rust owns every type, one generated schema, thin ports 
 
 The design author's calls:
 
-1. `schemars` as a dev-dependency, derived in a unit test, with hand impls beside hand `Serialize` impls.
+1. `schemars` as a dev-dependency, derived in a unit test, with `with` forms or hand impls for hand `Serialize` types and per-verb definitions named in the test.
 2. The question-file schema, now including `doorRequest`, stays hand-kept under its parser parity corpus.
 3. Strict port readers become tolerant, per the existing compatibility rule.
 4. Typed result classes in Ada, C++, Dart and the facts structs elsewhere are removed from public APIs.
