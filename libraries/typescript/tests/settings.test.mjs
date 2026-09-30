@@ -70,6 +70,16 @@ test('a refused setting throws usage from the constructor and sends nothing', as
   assert.equal(await backend.count(), 0);
 });
 
+// The token cap reaches TypeScript through from_env; a regression if from_env stops reading the variable.
+test('the token cap variable refuses a call before any request', async (t) => {
+  const backend = await startBackend(t);
+  const { error } = await ask(backend, `await new tt.Engine({ cache: false }).decide('Refund?', 'text');`,
+    { env: { THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL: '10' } });
+  assert.deepEqual([error?.name, error?.kind, error?.message], ['ThinkThenError', 'usage',
+    "max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"]);
+  assert.equal(await backend.count(), 0);
+});
+
 test('an explicit engine batch outranks an invalid environment batch', async (t) => {
   const backend = await startBackend(t);
   const { value, error } = await ask(backend, `

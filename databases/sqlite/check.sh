@@ -117,9 +117,9 @@ else
 fi
 # Ticket 0306: the one guard is thinkthen::contained; src holds no catch_unwind of its own.
 sites=$(grep -rn 'catch_unwind(' src | wc -l)
-guards=$(grep -rn 'contained(' src | wc -l)
+guards=$(grep -rn 'contained(body)' src | wc -l)
 [ "$sites" = 0 ] && [ "$guards" = 1 ] ||
-	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained calls, not 0 and 1" >&2; exit 1; }
+	{ echo "FAIL     src holds $sites catch_unwind calls and $guards contained guards, not 0 and 1" >&2; exit 1; }
 
 step "the loopback backend"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend

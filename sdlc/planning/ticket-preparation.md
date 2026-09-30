@@ -1,154 +1,49 @@
 # Prepare tickets and learn from their builds
 
-Ian requested this process on 2026-09-27 to reduce repeated discovery and rework. Preparation investigates the code and adds useful notes. It does not implement the feature, change an accepted outcome, or close a product gap. Ian can overturn this process.
-
-## Search scope and handoff
-
-The retained preparer may read and search the entire remaining queue, accepted branches, records and current source to find related work. A deep pass stays near three to five related tickets. Correct factual notes only under the coordinator's file claims; keep runtime and other owners' branches read-only. The coordinator chooses the build scope, closure, consolidation and lane ownership. Send genuinely undelegated material decisions to the coordinator for Ian. Routine choices within approved outcomes need no new Ian question.
-
-Answer the questions that change a build: what outcome remains on current main, what behavior callers already inherit, which prerequisite is real, which files and helpers overlap, what smallest proof distinguishes the claim, and which recent failure could recur. Trace a native or binding call through its actual builder, options and shared defaults before declaring a feature absent. Classify overlap as an exact duplicate, an issue or plan alias, shared implementation with distinct acceptance, or separate work. If consolidation is recommended, name the surviving ticket and every unresolved criterion it must retain. Move those criteria after the coordinator approves consolidation. Remove superseded blockers while retaining historical evidence; an approved API is not shipped code.
-
-The handoff names one to three concrete next batches, their owners, exact files, smallest proof and remaining decisions. Distinguish a build-ready scope, a design the coordinator can start now, an explicit user hold, an external dependency and a conditional later feature. An absent accepted ticket is a design task, not a blocker. Read current closures and original criteria before carrying an old preparation claim forward. Judge preparation by the builds or justified dispositions it enables, not the number of notes. Run a minimal offline proof only when it resolves a named uncertainty. Preparation does not start a broad rebuild, stress or provider campaign.
+Preparation reads the code and adds notes that save the builder rediscovery. It does not implement the feature or change an accepted outcome. Ian can overturn this process. Case histories live in git and in `sdlc/records/`.
 
 ## Before the build
 
-The coordinator assigns the next ready ticket or a related family, such as the database tickets. Keep the implementation builder working where file claims permit. Reuse a preparation agent for related investigations; reviewers remain independent of authors. Claim the note and ticket files on main before editing.
+Read `origin/main` at a named commit for current behavior. Read the accepted branch for pending decisions. A local `main` can lag; verify the reference before calling a sentence stale or a behavior missing. Cite revision and path.
 
-Read `origin/main` at its named commit for current executable behavior, the active accepted branch for pending decisions, and prior experiment and build records. A shared local branch named `main` can lag worktree pushes; verify the reference before comparing sources. Cite the source revision and path. Compare these sources before calling a sentence stale or a behavior missing. Refresh only affected facts after another branch lands.
+Stay near three to five related tickets. The coordinator chooses scope, consolidation, and lanes. Routine choices within approved outcomes need no Ian question. A claimed file may take a small related correction without a new ticket.
 
-A file claim prevents collisions; it does not require a separate ticket for a small related correction in an already claimed file. Fix a stale assertion exposed by the focused check when the settled contract and current behavior agree, then record the correction. Ask the coordinator to expand a claim or resolve a changed outcome. Reuse an accepted method for its next bounded slice rather than repeating design review.
+Add short notes to the ticket that answer the questions that change a build:
 
-Add concise investigation notes to the ticket. A shared record may hold facts common to a family, with a link from each ticket. Include only information that helps the builder:
+- What outcome remains on current main, and what callers already inherit.
+- Which prerequisite is real. Verify a landed prerequisite by commit ancestry.
+- Exact files, shared helpers, lane conflicts, and every constructor of a changed shared value.
+- The smallest proof that distinguishes the claim, and the commands that run it.
+- Open questions. Mark a proposal as a proposal until review accepts it.
 
-- What the code does, where it does it, and how the reported problem arises.
-- The agreed outcome, retained behavior, prerequisites, exact files and live lane conflicts.
-- Inventory every completion adapter, copied argument conversion and private parent export that the change mutates. A call path alone can omit files needed at the final handoff.
-- Measure existing nonblank lines against each enforced file ceiling before treating a ticket's estimated growth as headroom. If a file is close, plan reuse or one coherent private extraction and review the actual growth.
-- Reusable code, experiments, fixtures and test helpers. Name fixture hashing, copied examples, serialized fields or host contracts that can surprise the build.
-- Keep one intended failure per fixture. Preserve valid digest names and inputs when testing a schema or file-open error, so an earlier failure cannot mask the target boundary.
-- When two inputs are individually supported, check their intersection before calling a public-output or secrecy finding non-issue. Register 106's exact configured-key collision is owned by ticket 0210; it does not justify unrelated test combinations.
-- Verify each claimed landed prerequisite by commit ancestry or explicit equivalent source comparison. A copied adapter file does not establish that its source and tests both transferred.
-- Check each host's accepted value ranges and NULL rules before reusing a proof across ports; a value valid in one host may be refused in another.
-- For port settings, inspect every current constructor and overload before copying an accepted ticket's sentence. A later landed adapter may already support a value that older prose called absent.
-- The smallest relevant validation commands and what each proves. Keep setup, compile, execution and lock wait separate when measured. No load campaign belongs in preparation.
-- For paid jobs, distinguish a reservation charged before execution from a runtime limit. Trace the wrapper's enforcement point and count every token kind it reserves; a missing usage report must not become a guessed count.
-- Unresolved questions and missing evidence. Distinguish a proposed solution from an accepted decision; seek design review before changing the contract.
+Trace side-effect order through the final operation before calling a counter or guard exact. A hook named for a send can run before a final deadline check.
 
-Review the notes against source and ask the builder whether they are actionable. Correct inaccurate or speculative claims before handoff. Keep accepted unbuilt tickets on their existing branches; do not land them early merely to add notes.
+## Rules that caught repeated defects
 
-When changing test subprocesses, check every process level with the dedicated `children` guard. `policy.py` does not replace it. A clean grandchild environment does not isolate its parent helper. A subprocess timeout must kill and reap the owned child and close its descriptors; a timeout exception alone leaves work running.
+**Secrecy.** The key never reaches a log, record, `Debug` line, or error. When two supported inputs meet, check their intersection before calling a secrecy finding a non-issue. A panic payload or host error may copy text across a boundary; test the output, not the intent.
+
+**Spend.** A paid call runs only through `sdlc/scripts/live` under a token cap and Ian's authorization. Before spending, persist the started arm, raw output, and usage before parsing. A failed arm stays evidence. Count both token kinds. A missing usage report stays missing; never guess a count. A reservation is not a provider cap.
+
+**Subprocesses.** Check every process level with the `children` guard; `policy.py` does not replace it. A timeout must kill and reap the owned child and close its descriptors. Trace every join and destructor after a wait: a `Drop` can block on the same writer.
+
+**File caps.** Measure each touched file against its 500-line ceiling before planning growth. Near the cap, plan reuse or one coherent extraction. Verify the root ratchet and each named binding total.
+
+**Host value ranges.** Check each host's accepted values and NULL rules before copying a proof across ports. SQLite refuses a zero request total but accepts a zero time budget. Name the exact setting.
+
+**Proof strength.** Assert the row count before testing each row. Separate an absent field from a present malformed one. One intended failure per fixture. Prove "sends nothing" by counting loopback requests. Prove precedence with conflicting values through the real builder. When a new regression could pass on old code, run it once against the bad source.
+
+**Gates.** Run focused checks freely. A full `test`, `spec`, or `surfaces` run needs a checkpoint the coordinator named. An interrupted run is not a pass. Keep the candidate stable while a reviewer checks it. A clean textual merge does not prove compatibility; compile the configurations the merge touches.
+
+**Old tests.** Before replacing a negative test, cite the contract clause it pins and label it keep or replace. A review finding does not amend an accepted contract; reconcile the two first.
+
+**Unchanged files.** When a refusal promises unchanged files, validate the whole proposed state before the first write.
 
 ## Before landing
 
-The builder updates the ticket under `## What the build taught us`. Use a few factual bullets, with build-record links for details:
+The builder adds `## What the build taught us` to the ticket: a few factual bullets on corrected assumptions, surprises, proof changes, and remaining gaps with their owner. Say so briefly when nothing new arose. Do not rewrite history to flatter an early assumption. A Quick Fix keeps this section in its build record.
 
-- Assumptions corrected and unexpected code, fixture, test or host behavior.
-- Preparation that helped and details it missed.
-- Proof or implementation adjustments and why they were necessary.
-- Remaining gaps, the next owner or ticket, and advice for the next related build.
-
-Do not rewrite history to make an initial assumption look correct. Distinguish confirmed causes from hypotheses. Record substantive learnings; when none arose, say so briefly. A Quick Fix puts this section in its build record because it has no ticket.
-
-The fresh code reviewer checks these lessons against the diff and evidence. The coordinator checks the section before marking the ticket complete and landing it. Routine test and documentation checks stay proportional to the change; adding lessons does not require a repeated full suite.
-
-After adding lessons, read the ticket's Status, Closes, Deferred gaps, Evidence and Routing together, and check that numbered lists still sit under the right heading. A completed item must not remain described as deferred in a second section.
-
-For prose and fixture sweeps, inspect executable-page word limits and derived byte or hash assertions. Keep the strongest exact boundary check when a duplicate scalar assertion goes stale, then run the affected documentation segment. A routine text replacement can exceed a page limit without changing code.
-
-When a review changes a shared behavioral promise, inventory and read every applicable copy together before returning a correction. A keyword hit list missed two output and ordering promises in the batching design issue during 0172. Check reviewer advice against each host's own validation order before copying it across ports: the first J7 NULL guidance needed another round because PostgreSQL validates the question before the evidence.
+The fresh code reviewer checks the lessons against the diff. The coordinator reads Status, Evidence, and Defers together before landing, so a finished item is not also listed as deferred.
 
 ## Improve the next preparation
 
-After the preparation pass, evaluate its accuracy and usefulness. After each ticket finishes, compare the notes with the builder's lessons and fresh review. Record what reduced discovery, what was missed, and what caused rework in the ticket or shared preparation record. Give the same retained agent a narrow follow-up for a demonstrated miss. Do not claim a speed gain from note count or count prepared tickets as completed issues.
-
-The first database pass caught useful SQL budget and warm-settings dependencies. It also incorrectly flagged an old main sentence about `LIMIT` as an unresolved DuckDB design defect; the active accepted branch had already corrected it. The coordinator verified the branch and the preparer withdrew the finding. This is why the source comparison above is required. Independent review also caught a shared zero-total proof that SQLite cannot run because it refuses zero. The corrected notes use a spent positive SQL total there and keep a direct typed-budget proof separate. Future briefs must check each host's input domain before copying a test across ports. The first build-usefulness evaluation is still pending.
-
-The 0170 preparation review caught another overstatement: a hook named `attempt_sent` ran before a final deadline check, so it could count a request that never reached transport. Trace the order of waits, final stop checks, counter marks and transport calls before claiming a counter is exact. A proposed move must preserve both no-send-on-expired-deadline and visibility of requests while their responses are held; a single zero-connection test proves only the first half.
-
-Use the [incident log](../records/2026-09-27-ticket-friction-since-1300.md) when briefing the next agent. Add each new substantive review rejection, misunderstanding or build surprise with its evidence and known or unknown cause. Send the retained preparation agent to check the named upcoming tickets for the same failure pattern, claim those note files, and record what it corrected or left unresolved. Keep the pass limited to the affected family.
-
-The first batching pass found complete argument paths and the mixed replay/live counter constraint. Review caught its mistaken assertion that an attempt hook necessarily counts a started transport: current code still checks the deadline after that hook. Check side-effect order through the final operation, not just method names. Pin accepted branch evidence to a commit so later branch cleanup cannot remove the reference. The corrected notes name the existing 0149 owner and a narrow prerequisite for 0170; they do not invent another issue or count the gap as fixed.
-
-The 0171 build found two gaps in an otherwise useful handoff: a shared `Run` value had a library initializer outside the CLI files, and the existing JSON splice helper could not remove a stale member while preserving other bytes. For the next ticket, search all constructors of each changed shared value and list the exact edit operations a file mutation needs before treating the source inventory as complete. Preparation value is checked against the later build and review; these catches alone do not establish a speed gain.
-
-The 0207 SQLite build found that a shared JSON round trip sorted `recognize` kinds and changed strict captured request bytes. The correction landed on main `30d340d1`. Before reusing a JSON adapter, trace order-sensitive fields through parse and serialization and compare the final request body and digest where order matters. This is a bounded preparation check, not a claim that all JSON member order is significant.
-
-The 0171 builder started a full `surfaces` run for its own CLI warning change. It rebuilt the unchanged R package and held the shared heavy lock while DuckDB waited. The builder stopped the run; its exit 130 is not a passing gate, even though completed library segments passed. Require an explicitly named related-ticket checkpoint in the coordinator brief before a full `test`, `spec`, or `surfaces` run. Use focused commands freely for the ticket's changed behavior, and retain completed broad segments only as partial evidence.
-
-Fresh review of 0171 caught two proof holes: the shared saved-setting reader dropped a present invalid `meta.batch.setting` as if it were absent, and a per-row assertion did not first establish how many rows existed. For future metadata readers, separate absent legacy fields from present malformed fields before applying a default. In outside-in row tests, assert the expected count before testing every row's contents. The 0171 correction has a numbered audit refusal and unchanged-file proof; its follow-up review is pending.
-
-For retained CLI workers, launch each resume from its explicit assigned worktree with the intended approval and sandbox settings. Verify cwd and branch before editing. After a scripted completion edit, assert that the target matched and read the resulting status; a no-op replacement can otherwise leave a landed ticket marked pending.
-
-The later SQL and batching reviews add four bounded checks. For an aggregate, name the lifetime of each deadline and budget across internal flushes. Trace state accessors before proposing a missing guard; 0149's initial fork finding was withdrawn after the existing process reset was found. For a grammar addition, inspect the parser, closed schema, shared parity cases and tests that assert the old refusal together. For a public result carrier, map every accepted field through each operation shape, including partial failures and multi-question rows. The examples and revisions are in the incident log.
-
-Keep the checked-out candidate stable from review handoff through the reviewer's checks, or give the reviewer an isolated snapshot at the exact commit. Reusing the author's worktree for another branch can make a valid check run against the wrong source; an immutable remote build may continue independently.
-
-At integration, a clean textual merge does not prove feature compatibility. Compare the changed exports and exhaustive consumers, then compile only the configurations implicated by that merge. The 0167/0172 `LimitKind` correction needed the CLI and library-only configurations, not another full port campaign. Preserve unchanged paid recordings and prior valid checks. Check prepared audit keys against the exact extracted rows before spending provider calls, and compare feature graphs before enabling optional umbrella dependencies.
-
-
-Before replacing an old negative test, label it keep or replace and cite the accepted contract clause. The B9/B10 inventory incorrectly proposed removing a nested batch refusal that ADR 0048 requires. Trace a guard's actual value constructor and wire expansion instead of inferring its domain from an error sentence. Check accepted soft limits versus hard refusals before calling an oversized singleton a defect. For delegated inventory work, verify the raw tool count and substantive claims; a successful report and its own budget statement are insufficient. The [verified batching inventory](../records/2026-09-27-b9-b10-contract-inventory.md) records the corrections and next brief.
-
-For a paid helper, prepare interrupted and invalid-result behavior before spending. Persist the started arm, raw output, facts and usage records before parsing or scoring. A failed arm remains evidence and must not silently restart under another name. Compare final facts with process usage using both token kinds. When a refused attempt reports no usage, keep its attempt count and call the totals reported tokens; a reservation and a between-arm check are not hard provider caps. Reuse existing evidence writers where they fit instead of rediscovering this at code review.
-
-
-For SQL batching proofs, distinguish ordered results from concurrent request arrival. A one-send budget test may accept one of independently pinned packed bodies when transport order is unspecified; keep the attempt count, error and absence of partial results exact. Before adding a gate preflight, inventory both privilege rules and the actual external executable prerequisites. Refuse an unsupported environment before compilation when that is the accepted boundary.
-
-
-When a host gains maximal batching, search its existing tests for asserted request counts and classify them before implementation. Keep independent deadline, throttle or per-row compatibility proofs at explicit batch 1 when appropriate; test packing with separate exact body and attempt expectations. When a scheduler has streaming and held-output modes, trace each mode’s window and retained completed rows before stating a memory or dispatch bound.
-
-
-For cross-library work, list each changed surface’s source counters with its build prerequisites. Verify the root total and every affected named native/source total; the root ratchet excludes binding workspaces. Separate inherited metadata drift from the current ticket’s growth and preserve passing functional evidence while correcting it.
-
-
-For a timeout, trace every join and destructor after the apparent wait. The 0225 preparation confirmed that timing out Counters::finish alone leaves Drop joining the same blocked writer. Bound the lock acquisition that causes the wait, and distinguish that promise from arbitrary filesystem I/O. Keep advisory usage totals separate from the paid ledger. For an automatic split, decide whether the caller may continue after the left half before sending the right half; 0222 must preserve the stopping Rust path as well as native recoverable rows.
-
-
-Name the exact setting when checking accepted values: SQLite’s connection time budget accepts zero, while its process request total refuses zero. Do not copy a domain restriction between them. When a proof compares an emitted request with a corpus, name the actual capture route and derive observations from the bytes the listener received; hashing the expected body alone is no observation of the adapter.
-
-
-For layered builder configuration, trace when each candidate value is validated and which one is finally selected. An invalid environment value must not preclude an accepted explicit override. Prove precedence with conflicting values through the environment-aware builder; a bare builder or identical values cannot distinguish the paths. The 0211 review supplied that counterexample. Retain 0212’s existing selected-tier validation rule through the later consumer migration.
-
-
-For native panic handling, trace the hook before the catch, detached worker entry, opaque payload destruction and actual artifact linkage. A caught payload may panic from Drop; name the disposal policy and its cost. A process-global Rust hook is not evidence that hook state outlives its DSO. Verify the changed package and exact load outcome before prescribing a new lifetime policy or claiming other platforms.
-
-Before declaring a proof complete, match each promised property to its actual assertion before and after the triggering operation. A read-only success, an absent directory, and a miss in an existing directory establish different guarantees. Extend the closest existing boundary test when its setup already covers the case.
-
-
-Keep the approval work proportional too. A small internal cleanup within an already accepted method needs its exact claim, preservation evidence and fresh code review. Use another design review when it changes the outcome, shared fixture contract or material safety assumption; do not repeat design approval just because another helper is selected. The one-helper 0119 slice retained useful evidence, but its additional planning and review records must not become the default cost of every small cleanup.
-
-
-For interpreter boundaries, inventory host callbacks separately on the caller, worker and cleanup paths. A guarded wait can dispatch a signal handler, and dropping a moved source can invoke a foreign release callback before the catch returns. One caller-side hook observation and an existing release-order test do not prove worker-side hook delegation. Select one representative observation at each distinct ownership boundary. For admission-order changes, compare the settled contract with the reported side effect before calling current behavior accidental; preserve the full issue criterion when a ticket fixes only one case.
-
-
-For Python host scopes, include ownership and release of returned iterator, item and exception references. Their final reference release can invoke user cleanup after the explicit method call ends. For isolated package validation, carry the pinned host and compiler into installation and execution as well as the build wrapper; system Node or Rust outside the repository may differ from the required toolchain.
-
-
-For a new command, identify the executable user workflow before proposing its syntax. An outside-in test proves behavior but does not replace the repository's requirement that a demo needs the command. For fixture maintenance, distinguish result retention from request use: filtered rows and bare output cannot supply a complete access manifest. Name the exact complete route being proved and keep broader harness integration open.
-
-
-For a foreign-language batch, inspect the Rust method's type bounds. A method with the right verb name may require compile-time labels and cannot accept a host's runtime label set. Map every accepted input combination, including records with detailed output, to a real route. Trace serialized fields through their constructor even when no observer is installed. A carrier named `Details` does not by itself promise the record metadata or context required by that host's contract. Preserve each host's stopping and recoverable-error policy when sharing the route.
-
-
-For a shared batch coordinator, choose one proof whose evidence groups close at different profile limits; equal close points cannot expose a missing oldest-row frontier. For each new call option, classify every public entry point as consuming or rejecting it before handing the setting to wrappers. Trace callback termination after a caught panic, including the next event on the same eager path. When a public error gains private state, run the relevant consumer lint as well as compilation; unchanged caller source can still expose a newly oversized error.
-
-
-Map changed consumers to Cargo `required-features` before naming compilation complete: no-default tests omit Polars targets even when their source changed. For a scheduling regression, ensure the input crosses the failing boundary before end-of-input flushes pending work. A controlled request witness must distinguish scheduler admission from concurrent socket arrival. When a new regression case could also pass the old behavior, use one focused counterfactual against the known bad source, then restore the correction; this is not a broad mutation campaign. Pin the expected error kind and sentence so another refusal cannot satisfy the test accidentally.
-
-
-For typed host inputs, distinguish an absent description from an explicit null through the selected native grammar. A mixed bare/described score set can change request identity when normalized to a map. Validate each accepted optional field form rather than stripping nullability from every type. Check encoding and type before host operations that can throw an unclassified exception. Match a structured-description proof to actual nested data, not just a test name.
-
-For held-request functional tests, verify whether batch one selects an interactive one-request path before promising simultaneous admission. Keep exact compatibility fixtures at batch one and use a small explicit larger batch where the retained stop or ownership boundary requires several held sends. For row-error adapters, trace typed denial metadata and the accepted host contract together. A spent send budget still prevents extra attempts, but an explicit try function can return a safe failure value while ordinary scalar calls fail the statement.
-
-For persistent migrations, compute and validate the whole proposed state before the first mutation when refusal promises unchanged files. Include aggregate overflow and other cross-file constraints. When an external acceptance summary conflicts with source and existing evidence, request or inspect the observed bytes and reproduce only that disputed boundary in an isolated fixture. Keep the original report and record the verified correction; do not repeat the complete matrix by default.
-
-
-For a host operation that invokes several core calls, define one final host account across successful calls and a terminal failure. Preserve absent usage rather than summing guessed zero values; measure the outer elapsed interval, and map observations back through input filtering. A no-work success and a refusal before accounting are different states. For an interrupt receipt, specify ownership and settlement before validation, during worker execution, after completion and after caller collection. Inspect the host encoder's explicit-null behavior independently of its missing-value behavior. R 0237's corrected design records these examples.
-
-Before reporting a missing claim, read the exact current main commit and the complete lane rules. A stale local view is not a new dependency. Shared measured ratchets follow their existing derived-metadata rule; product files still require an actual lane claim.
-
-
-Before copying an error-policy lesson to another adapter, read its accepted ADR and explicit try/value contract. A send budget can enforce zero additional attempts while an explicit try function returns a safe failure value. Ordinary scalar, aggregate and try forms need not expose the same error shape. A review finding or new test does not silently amend an accepted contract; reconcile the two before changing old expectations. The coordinator's corrected 0219 brief records this failure.
-
-For file locks, trace path and inode ownership through waiters, success, failure and maintenance. Unlinking a locked path can create two independently locked inodes; proving two callers serialize is insufficient if a waiting old opener and a new opener can overlap. Use one controlled boundary sequence for the credible race, not a churn campaign.
-
-A public-binding corpus helper must build the backend executable that it starts. A warm lane can conceal that missing dependency. Verify startup once with the required executable absent and keep the build output path aligned with the launched path. Reuse that shared proof across its callers.
+After each ticket, compare the notes with the build lessons and the review. When a miss recurs, add one rule above and delete one that has stopped earning its place. Do not count notes or prepared tickets as progress.

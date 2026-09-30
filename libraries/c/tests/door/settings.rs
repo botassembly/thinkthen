@@ -373,6 +373,41 @@ fn the_c_constructor_estimated_zero_refuses_before_the_listener() {
     assert_eq!(backend.count(), 0, "no request reached the listener");
 }
 
+/// Ticket 0311: the default constructor reads the variable, and the JSON
+/// key's `null` outranks it.
+#[test]
+fn the_c_constructor_reads_the_token_variable_and_json_null_outranks_it() {
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let question = r#"{"decide":"asks for a refund"}"#;
+    let mut script = Script::default();
+    script.ask("env", &["THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL", "10"]);
+    script.ask("decide", &[&base, question, "Refund me."]);
+    script.ask(
+        "settings",
+        &[
+            &base,
+            r#"{"cache":false,"max_estimated_input_tokens_total":null}"#,
+        ],
+    );
+    script.ask("decide", &[&base, question, "Refund me."]);
+    let output = run(&driver, &base, &script.0);
+    let said = replies(&output.stdout).expect("replies");
+    assert_eq!(said[0].0, 1, "the variable's refusal has the Usage code");
+    assert_eq!(
+        said[0].1,
+        "max_estimated_input_tokens_total=10 (encoded-body-bytes-908-v1) would be exceeded before this call's first request"
+    );
+    assert_eq!(said[1].0, 0, "the constructor accepted a null limit");
+    assert_eq!(said[2].0, 0, "the null key admitted the call: {:?}", said[2]);
+    assert_eq!(
+        backend.count(),
+        1,
+        "only the admitted call reached the listener"
+    );
+}
+
 #[test]
 fn the_c_constructor_keeps_its_boundary_rules() {
     let backend = Backend::start().expect("backend");

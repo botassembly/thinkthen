@@ -112,7 +112,7 @@ python3 sdlc/scripts/workflows
 python3 sdlc/scripts/installer-test
 # Ticket 0267: absent and unexpected source-package files refuse before the backend.
 sh sdlc/scripts/release-smoke-source-packages-test
-python3 sdlc/scripts/pages-self-test
+python3 sdlc/scripts/pages --self-test
 python3 sdlc/scripts/pages
 node sdlc/scripts/named-answers.mjs --self-test
 node sdlc/scripts/named-answers.mjs
