@@ -1,6 +1,6 @@
 # The how-to list has two hand-kept copies
 
-Status: closed 2026-09-30 by a records Quick Fix. `demos/README.md` holds the one list of how-tos. `sdlc/planning/documentation-plan.md` dropped its copy and points there. Deferred earlier by ticket 0312.
+Status: closed 2026-09-30 by a records Quick Fix. `demos/README.md` holds the one list of how-tos. `sdlc/planning/documentation-plan.md` dropped its copy and points there. Its slice column went with it, reversing record 0021's choice to keep it; Git history holds the column. ADR 0011 item 5 carries the amendment. Deferred earlier by ticket 0312.
 
 Kind: debt
 

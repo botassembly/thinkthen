@@ -19,7 +19,7 @@ After 0074, finish private width/deadline/fork/signal controls, settle and build
 5. The steering agent rebases, runs all four rungs, checks for attribution lines, merges, and pushes.
 6. The slice's demos turn green by replaying a recording. No gate touches a network. A green demo takes the how-to form of ADR 0011, because the demo, the how-to, and the test are one file.
 
-A slice is done when its how-tos in `documentation-plan.md` are green, the four rungs pass on main, and this page says so.
+A slice is done when its how-tos in `demos/README.md` are green, the four rungs pass on main, and this page says so.
 
 ## Slices
 

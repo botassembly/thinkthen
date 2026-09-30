@@ -11,7 +11,7 @@ No request leaves the machine, and no real key is read. The sends go to a loopba
 1. `sdlc/scripts/test-stress` sources neither `scratch.sh` nor `usage_home`, so it keeps the caller's `XDG_CACHE_HOME` and `HOME`. `sdlc/scripts/test` and `surfaces` both take `usage_guard`; `test-stress` does not.
 2. It exports `THINKTHEN_API_KEY=sk-polars-loopback` and `THINKTHEN_BASE_URL=http://127.0.0.1:9/v1`, then runs the `polars_throttle` target in-process with `cargo test`.
 3. That target builds every engine through `crates/thinkthen/tests/polars/common/mod.rs::builder`, which calls `EngineBuilder::from_env()`. Under ADR 0113 section 2, `from_env` seeds the counters with `config::usage_path()`, the real `thinkthen-usage` folder. `cache_at` and the `base_url` override move neither the totals nor the count.
-4. Each engine then adds its loopback sends, and the tokens the loopback replies report, to the real month file.
+4. Each engine then adds its loopback sends to the real month file, with any tokens the loopback replies report. The delay and held arms this test uses may report none; the count rests on sends.
 
 Per run, from the test source:
 
