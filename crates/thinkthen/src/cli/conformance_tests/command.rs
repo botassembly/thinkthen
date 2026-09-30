@@ -112,7 +112,43 @@ pub(super) fn replay(case: &Case) -> (Scratch, PathBuf) {
         let text = entry.written().expect("entry text");
         fs::write(replay.join(recorded.digest().file_name()), text).expect("replay entry");
     }
+    // The question store's fixture beside the old entries, as slice 2 of
+    // ticket 0304 converted every committed folder.
+    crate::engine::store::convert(&replay, false).expect("converted replay");
     (scratch, replay)
+}
+
+/// Every question key of one request body, in wire order, by ADR 0111
+/// section 2.
+pub(super) fn question_keys(url: &Url, body: &str) -> Vec<String> {
+    #[derive(Deserialize)]
+    struct Parts<'a> {
+        #[serde(borrow)]
+        state: &'a serde_json::value::RawValue,
+        #[serde(borrow)]
+        model: &'a serde_json::value::RawValue,
+        #[serde(borrow)]
+        questions: BTreeMap<String, &'a serde_json::value::RawValue>,
+    }
+    let parts: Parts<'_> = serde_json::from_str(body).expect("a request body");
+    let mut questions: Vec<_> = parts
+        .questions
+        .into_iter()
+        .map(|(name, question)| (name[1..].parse::<usize>().expect("a qN name"), question))
+        .collect();
+    questions.sort_by_key(|(place, _)| *place);
+    questions
+        .into_iter()
+        .map(|(_, question)| {
+            crate::core::pack::QuestionKey::of(
+                url,
+                parts.model.get(),
+                parts.state.get(),
+                question.get(),
+            )
+            .hex()
+        })
+        .collect()
 }
 
 pub(super) fn staged(case: &Case, success: &Success) {
@@ -158,7 +194,13 @@ pub(super) fn staged(case: &Case, success: &Success) {
         case.id
     );
     assert_eq!(printed.meta.model, held.details.model, "{}", case.id);
-    assert_eq!(printed.meta.requests, held.details.requests, "{}", case.id);
+    let url = Url::new("https://api.typesafe.ai/v1/systemone").expect("canonical URL");
+    let keys: Vec<String> = case
+        .exchanges
+        .iter()
+        .flat_map(|exchange| question_keys(&url, &exchange.request))
+        .collect();
+    assert_eq!(printed.meta.requests, keys, "{}", case.id);
 }
 
 /// Names a form child's job: a case id, or `probe` for a valid question.

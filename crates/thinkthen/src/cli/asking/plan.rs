@@ -52,6 +52,8 @@ pub(super) fn packed(
         limits: Limits::new(configuration.profile.as_ref()),
     };
     let packing = Packing {
+        questions: None,
+        sized: true,
         inputs,
         context: planner.context.is_some(),
         detailed: false,

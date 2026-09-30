@@ -401,7 +401,7 @@ impl Engine {
         };
         stop.run_call(1, |cancel| {
             let mut taken = None;
-            let host = pull::eager(vec![input], |row| {
+            let host = crate::engine::pipeline::eager(vec![input], |row| {
                 taken = Some(row);
                 Flow::Stop
             });

@@ -282,6 +282,8 @@ pub(super) fn run(
         downstream: downstream.clone(),
     };
     let packing = Packing {
+        questions: None,
+        sized: true,
         inputs,
         context: asker.planner.context.is_some(),
         detailed: judging.view.details,

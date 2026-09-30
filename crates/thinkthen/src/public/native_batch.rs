@@ -182,7 +182,7 @@ impl Engine {
         stop.run_call(count, |cancel| {
             let mut results = Vec::with_capacity(count);
             let mut ended = None;
-            let host = pull::eager(inputs, |row| match take(&native, row) {
+            let host = crate::engine::pipeline::eager(inputs, |row| match take(&native, row) {
                 Taken::Row(row) => {
                     results.push(*row);
                     Flow::Continue

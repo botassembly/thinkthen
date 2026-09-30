@@ -14,7 +14,7 @@ use crate::public::recognize::{RelationRule, add_rule, cut, model};
 use crate::public::results::Written;
 
 mod observation;
-use crate::public::results::observe_chunk;
+use crate::public::results::observe_question;
 use observation::observe_row;
 
 /// The most entities one `relate` call takes.
@@ -287,16 +287,21 @@ impl Engine {
         stop.run_call(1, |cancel| {
             let mut positions = [0; 4];
             let execution = engine
-                .relate_observed(prepared, &admitted, threshold, cancel, |plan, answered| {
-                    observe_chunk(
-                        &stop,
-                        engine.backend(),
-                        plan,
-                        answered,
-                        std::iter::repeat_n("relation", plan.questions().len()),
-                        &mut positions,
-                    )
-                })
+                .relate_observed(
+                    prepared,
+                    &admitted,
+                    threshold,
+                    cancel,
+                    |question, answered| {
+                        observe_question(
+                            &stop,
+                            engine.backend(),
+                            ("relation", question),
+                            answered,
+                            &mut positions,
+                        )
+                    },
+                )
                 .map_err(Error::from)?;
             if execution.failed > 0 {
                 return Err(Error::of(

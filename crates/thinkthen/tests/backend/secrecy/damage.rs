@@ -10,7 +10,7 @@ use crate::harness::spawn;
 /// Turn a priming run's store into its fixture and damage that. A damaged
 /// fixture is not JSON; a hostile one keeps each answer's key and state and
 /// fills every other text field with hostile text, so its key no longer matches.
-pub(super) fn damage_fixture(dir: &Path, damage: &str) -> io::Result<()> {
+pub(crate) fn damage_fixture(dir: &Path, damage: &str) -> io::Result<()> {
     let converted = spawn(&["cache", "convert", &dir.to_string_lossy()], &[], b"")?;
     assert_eq!(
         converted.status.code(),

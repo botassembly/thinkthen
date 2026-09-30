@@ -73,6 +73,8 @@ fn feed(count: usize, asked: &Receiver<()>, port: &Port<usize, ()>, asks: &Atomi
 }
 
 const ONE_EACH: Packing = Packing {
+    questions: None,
+    sized: true,
     inputs: Some(1),
     context: false,
     detailed: false,

@@ -97,6 +97,11 @@ pub(crate) enum Flow {
 pub(crate) struct Packing {
     /// `--batch N`, or `None` for the 4,096-input cap.
     pub(crate) inputs: Option<usize>,
+    /// A further cap on questions per request, as relate's 400.
+    pub(crate) questions: Option<usize>,
+    /// Whether a request closes at the backend's request size. The first two
+    /// `recognize` steps keep each window whole and obey only a profile.
+    pub(crate) sized: bool,
     /// Whether the state is a context.
     pub(crate) context: bool,
     /// Whether rows show each request's attempts.
@@ -143,6 +148,37 @@ pub(crate) fn reader<I, E, F>(
         let (asks, asked) = channel();
         start_reader(asked, port);
         Reader { asks, emit }
+    }
+}
+
+/// A host whose inputs are all in hand: each ask sends the next at once,
+/// and each row goes to `take` on the coordinator's thread.
+pub(crate) struct Eager<A: Asker, F> {
+    port: Port<A::Input, A::Error>,
+    inputs: std::vec::IntoIter<A::Input>,
+    take: F,
+}
+
+impl<A: Asker, F: FnMut(Result<A::Row, Failed<A::Error>>) -> Flow> Host<A> for Eager<A, F> {
+    fn ask(&mut self) -> bool {
+        let input = self.inputs.next().map_or(Input::End, Input::Item);
+        self.port.send(input).is_ok()
+    }
+
+    fn row(&mut self, _place: usize, row: Result<A::Row, Failed<A::Error>>) -> Flow {
+        (self.take)(row)
+    }
+}
+
+/// Start an eager host over `inputs`.
+pub(crate) fn eager<A: Asker, F: FnMut(Result<A::Row, Failed<A::Error>>) -> Flow>(
+    inputs: Vec<A::Input>,
+    take: F,
+) -> impl FnOnce(Port<A::Input, A::Error>) -> Eager<A, F> {
+    move |port| Eager {
+        port,
+        inputs: inputs.into_iter(),
+        take,
     }
 }
 
@@ -201,6 +237,7 @@ impl Engine {
                 let bounds = run::Bounds {
                     window,
                     jobs: state.width,
+                    continues: packing.continues,
                 };
                 let packer = Packer::new(limits, model);
                 run::Run::new(asker, call, store, packer, bounds, counts)
@@ -213,10 +250,14 @@ impl Engine {
     /// The limits a request of this call closes at.
     pub(crate) fn pack_limits(&self, packing: Packing) -> PackLimits {
         PackLimits {
-            ceiling: self.backend().ceiling(),
+            ceiling: if packing.sized {
+                self.backend().ceiling()
+            } else {
+                usize::MAX
+            },
             profile: self.profile().cloned(),
             inputs: packing.inputs.unwrap_or(MOST_INPUTS).max(1),
-            questions: None,
+            questions: packing.questions,
             context: packing.context,
         }
     }

@@ -100,8 +100,8 @@ pub(crate) use crate::core::relate_file::{
     EntitySetError, RelateConfigError, RelateFields, RelateQuestion, RelateSpec,
 };
 pub(crate) use crate::core::relation::{
-    Lead, Pair, PairPlan, RelationEdge, RelationEntity, RelationEntityView, RelationRule,
-    pair_edges, plan_pairs, reaches_cut,
+    Lead, Pair, RelationEdge, RelationEntity, RelationEntityView, RelationRule, pair_edges,
+    plan_pairs, reaches_cut,
 };
 pub(crate) use crate::core::render::{RenderError, json_line};
 pub(crate) use crate::core::reply::{

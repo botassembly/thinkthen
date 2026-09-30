@@ -14,7 +14,8 @@ use crate::harness::{Canned, Listener, spawn};
 
 mod damage;
 mod routes;
-use damage::{damage_entries, damage_fixture};
+use damage::damage_entries;
+pub(crate) use damage::damage_fixture;
 use routes::good;
 pub(crate) use routes::{PATHS, Route};
 
@@ -483,36 +484,20 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             "{name}"
         );
         let files = written(&dir);
-        // `recognize` and `relate` keep the request-level store until ADR 0111
-        // slice 4: a marker, one entry and its digest lock.
-        if matches!(name, "recognize" | "relate") {
-            let marker = dir.join(".thinkthen-backend.json");
-            assert!(files.contains(&marker), "{name}: backend marker");
-            let entries: Vec<_> = files
-                .iter()
-                .filter(|path| {
-                    path.parent() == Some(dir.as_path()) && path.as_path() != marker.as_path()
-                })
-                .collect();
-            assert_eq!(entries.len(), 1, "{name}: one recorded entry");
-            let digest = entries[0].file_stem().expect("entry digest");
-            assert!(
-                files.contains(&dir.join(".locks").join(digest)),
-                "{name}: digest lock"
-            );
-            assert_eq!(files.len(), 3, "{name}: marker, entry, and digest lock");
-        } else {
-            assert_eq!(
-                files,
-                [dir.join("thinkthen.sqlite")],
-                "{name}: the store alone"
-            );
-            assert_eq!(
-                crate::support::stored(&dir).expect("the store").len(),
-                1,
-                "{name}"
-            );
-        }
+        assert_eq!(
+            files,
+            [dir.join("thinkthen.sqlite")],
+            "{name}: the store alone"
+        );
+        let asked: usize = requests
+            .iter()
+            .map(|request| crate::support::keys(&format!("{base}/systemone"), &request.body).len())
+            .sum();
+        assert_eq!(
+            crate::support::stored(&dir).expect("the store").len(),
+            asked,
+            "{name}: one stored answer per question"
+        );
         nothing_leaked(name, &output, &into);
     }
 }

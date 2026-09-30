@@ -84,7 +84,7 @@ pub(crate) fn scripted(answers: &'static [&'static str]) -> Listener {
 }
 
 #[test]
-fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
+fn dry_run_reports_the_exact_request_a_real_run_sends() {
     let listener = Listener::answering(answered).expect("listener");
     let input = br#"[{"name":"Ada","kind":"person"},{"name":"Paris","kind":"place"},{"name":"Acme","kind":"organization"}]"#;
     let output = run(
@@ -111,7 +111,15 @@ fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
         String::from_utf8_lossy(&sent.stderr)
     );
     let sent: Value = serde_json::from_slice(&sent.stdout).expect("details");
-    let digest = sent["meta"]["requests"][0].as_str().expect("sent digest");
+    let received = listener.requests();
+    let [request] = received.as_slice() else {
+        panic!("{} requests", received.len());
+    };
+    let url = format!("{}/systemone", listener.base());
+    assert_eq!(
+        sent["meta"]["requests"],
+        Value::from(crate::support::keys(&url, &request.body))
+    );
     let plan = plan_json(&output);
     assert_eq!(plan["schema"], "thinkthen.relate-plan/1");
     assert_eq!(plan["entity_count"], 3);
@@ -125,9 +133,13 @@ fn dry_run_reports_the_exact_plan_and_the_digest_a_real_run_sends() {
             "logical_questions":1, "request_count":1
         }])
     );
-    assert_eq!(plan["requests"][0]["digest"], digest);
+    assert_eq!(
+        plan["requests"][0]["digest"],
+        crate::support::digest(&url, &request.body)
+    );
     let body = r#"{"state":{"entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is it true that i1 works for i2?"}}}"#;
     assert_eq!(plan["requests"][0]["body_utf8"], body);
+    assert_eq!(request.body, body.as_bytes());
     assert_eq!(plan["requests"][0]["bytes"], body.len());
 }
 

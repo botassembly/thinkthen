@@ -34,10 +34,12 @@ pub(crate) use crate::engine::schedule::{
     Completed, Input, InputPort, Outcome as RunOutcome, RecordFlow,
 };
 pub(crate) use annotate::{Annotation, GroupAnswer, QuestionAnswer, assemble};
+pub(crate) use each::{Asks, Bound, Request};
 pub(crate) use recognize::{MAX_TEXT_BYTES, Probabilities, Recognized, step_one};
 pub(crate) use relate::{Execution, Logical, PreparedRelations, relations};
 
 mod annotate;
+mod each;
 mod finish;
 #[cfg(test)]
 #[cfg(feature = "cli")]
@@ -318,7 +320,15 @@ impl Engine {
 
     /// Ask one aggregate question over a bounded set and select one unit.
     pub(crate) fn find(&self, find: &Find, cancel: &Cancel) -> Result<Found, Error> {
-        let answered = self.ask(find.plan(), cancel)?;
+        let mut asks = Asks::default();
+        asks.add(&self.backend, find.plan())?;
+        asks.requests(&self.backend, self.profile.as_ref(), Bound::WHOLE)?;
+        let mut answered = None;
+        self.ask_each(&asks, Bound::WHOLE, cancel, |_, one| {
+            answered = Some(one);
+            Ok(())
+        })?;
+        let answered = answered.ok_or(Error::Defect("a find question had no answer"))?;
         let selection = find
             .select(&only_answer(&answered)?)
             .map_err(|_| Error::Defect("a find choice could not be mapped"))?;
@@ -329,6 +339,8 @@ impl Engine {
     }
 
     /// Send chunks prepared earlier and hand each reply on in chunk order.
+    /// Only `check` and tests send this way; slice 5 of ticket 0304 moves
+    /// them onto the question pipeline.
     ///
     /// Up to the engine's width go out at once. The first failure in chunk
     /// order returns, as a send one at a time would return it.
@@ -338,20 +350,9 @@ impl Engine {
         cancel: &Cancel,
         mut each: impl FnMut(Answered) -> Result<(), E>,
     ) -> Result<(), E> {
-        self.ask_chunks_with_plan(chunks, cancel, |_, answered| each(answered))
-    }
-
-    /// Retain each already prepared plan beside its ordered reply for a
-    /// caller that must name the actual logical questions it answered.
-    pub(crate) fn ask_chunks_with_plan<E: From<Error>>(
-        &self,
-        chunks: Vec<Chunk>,
-        cancel: &Cancel,
-        mut each: impl FnMut(&Plan, Answered) -> Result<(), E>,
-    ) -> Result<(), E> {
         let state = self.state(cancel)?;
         let send = |chunk: Chunk| {
-            let answered = request::ask_sent(
+            request::ask_sent::<Error>(
                 &self.backend,
                 &chunk.plan,
                 chunk.request,
@@ -359,20 +360,16 @@ impl Engine {
                 cancel,
                 self.transport(&state),
                 || self.key(),
-            )?;
-            Ok::<_, Error>((chunk.plan, answered))
+            )
         };
         let jobs = state.width.min(chunks.len());
         if jobs < 2 {
             for chunk in chunks {
-                let (plan, answered) = send(chunk)?;
-                each(&plan, answered)?;
+                each(send(chunk)?)?;
             }
             return Ok(());
         }
-        crate::engine::workers::ordered(jobs, chunks, cancel, &send, |(plan, answered)| {
-            each(&plan, answered)
-        })
+        crate::engine::workers::ordered(jobs, chunks, cancel, &send, each)
     }
 
     /// Answer framed inputs over this engine's width and emit them in input order.
@@ -405,6 +402,7 @@ impl Engine {
         )
     }
 
+    #[cfg(test)]
     fn ask(&self, plan: &Plan, cancel: &Cancel) -> Result<Answered, Error> {
         let state = self.state(cancel)?;
         request::ask_profile(

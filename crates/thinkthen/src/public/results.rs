@@ -13,7 +13,7 @@ pub(crate) use member::Member;
 mod observation;
 #[cfg(test)]
 pub(crate) use observation::QuestionJson;
-pub(crate) use observation::{ObservedQuestion, observe_chunk};
+pub(crate) use observation::{ObservedQuestion, observe_question};
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
 
 use serde::Serialize;

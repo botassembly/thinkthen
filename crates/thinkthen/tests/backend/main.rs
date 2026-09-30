@@ -28,10 +28,8 @@ mod batching;
 mod blank_lines;
 mod cache_configuration;
 mod cache_identity;
-mod cache_locking;
 mod cache_partial;
 #[cfg(target_os = "linux")]
-mod cache_prune_locking;
 #[cfg(unix)]
 mod cache_trust;
 #[allow(
@@ -70,6 +68,7 @@ mod pointer_echo;
 mod profile;
 mod public_json;
 mod question_cache;
+mod question_cache_steps;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,
