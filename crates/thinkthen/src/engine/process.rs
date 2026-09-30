@@ -89,6 +89,17 @@ impl<T> Guarded<T> {
     }
 }
 
+impl<T> Drop for Guarded<T> {
+    /// A forked child that drops an engine it never rebuilt leaks the
+    /// inherited state, so it never joins a thread or takes a lock that only
+    /// its parent had.
+    fn drop(&mut self) {
+        if *self.owner.get_mut() != std::process::id() {
+            std::mem::forget(self.slot.swap(None));
+        }
+    }
+}
+
 /// Clears this process's rebuild marker when its builder returns or unwinds.
 struct Idle<'a>(&'a AtomicU32, u32);
 
