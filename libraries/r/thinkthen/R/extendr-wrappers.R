@@ -17,6 +17,9 @@ NULL
 #' Check a question file and name its kind.
 tt_question_check <- function(body) .Call(wrap__tt_question_check, body)
 
+#' Read a question file under the crate's one 1 MiB cap.
+tt_question_file <- function(path) .Call(wrap__tt_question_file, path)
+
 #' Validate keyword settings with the shared core grammar before a send.
 tt_settings_check <- function(body, kind) .Call(wrap__tt_settings_check, body, kind)
 

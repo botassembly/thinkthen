@@ -461,8 +461,7 @@ impl Question {
     ///
     /// Returns [`Error::Local`] when the file cannot be read or breaks a rule.
     pub fn load(path: impl AsRef<Path>) -> Result<LoadedQuestion, Error> {
-        let text = std::fs::read_to_string(path)
-            .map_err(|_| Error::local("the question file could not be read"))?;
+        let text = super::question_file::load_text(path.as_ref(), "question file")?;
         Self::from_json(&text).map_err(|error| Error::local(error.detail().message()))
     }
 

@@ -10,6 +10,8 @@ The command handles SIGTERM like Ctrl-C, reports a signal as the cause when a se
 
 The command reads at most 1 MiB of a question file or question set, as the libraries do. A larger file, such as `/dev/zero`, exits 5 with `the question file is too large` before any request.
 
+The Rust loaders `Question::load`, `QuestionSet::load`, `Relate::load` and `Recognize::load`, Python's `question(file=)` and R's `tt_question(file=)` now read at most 1 MiB too. A larger file is a local error, such as `the question file is too large` or `the relate file is too large`, and nothing is sent. The command and every library read question files through one public reader, `read_question_file`; the SQL extensions keep their own 1 MiB readers (ticket 0345).
+
 The SQL extensions add `thinkthen_try_details` so a recoverable bad row yields a safe typed JSON failure and later good rows continue. SQLite adds a connection-scoped ThinkThen time budget. DuckDB retires idle engine plans while retaining cumulative usage and its 16-plan cap. PostgreSQL refuses a changed explicit throttle. DuckDB's whole-query budget follows in ticket 0201.
 
 Nothing is paced by default. The configuration file may set `requests_per_minute` on any backend in `backends`, a built-in included, and `THINKTHEN_REQUESTS_PER_MINUTE` outranks it (tickets 0308 and 0343). The limit holds within one process: separate processes each get the full rate, until [a proxy service](sdlc/issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md) or [a batch command](sdlc/issues/2026-09-30-batch-command-runs-many-questions-in-one-process.md) gives a limit across processes.

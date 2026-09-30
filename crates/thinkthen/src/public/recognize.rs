@@ -163,8 +163,7 @@ impl Recognize {
     ///
     /// Returns [`Error::Local`] when the file cannot be read or breaks a rule.
     pub fn load(path: impl AsRef<Path>) -> Result<Self, Error> {
-        let text = std::fs::read_to_string(path)
-            .map_err(|_| Error::local("the recognize file could not be read"))?;
+        let text = super::question_file::load_text(path.as_ref(), "recognize file")?;
         Self::from_json(&text).map_err(|error| Error::local(error.detail().message()))
     }
 }

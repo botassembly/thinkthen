@@ -304,8 +304,7 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
         Encoding(file) == "bytes" || !validUTF8(file)) {
       .tt_usage("a question file is one path")
     }
-    json <- tryCatch(suppressWarnings(readChar(file, file.info(file)$size, useBytes = TRUE)),
-                     error = function(e) .tt_local("the question file could not be read"))
+    json <- .tt_call(tt_question_file(path.expand(file)))
     kind <- tryCatch(.tt_call(tt_question_check(json)),
                      thinkthen_error = function(e) .tt_local(conditionMessage(e)))
     body <- tryCatch(jsonlite::fromJSON(json, simplifyVector = FALSE),
