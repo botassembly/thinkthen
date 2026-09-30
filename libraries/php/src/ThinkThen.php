@@ -4,6 +4,10 @@ declare(strict_types=1);
 /** PHP 8.3 FFI proof. An instance owns its engine; close after all calls and tokens finish. */
 final class ThinkThen
 {
+    /** A decide outcome's C values. */
+    public const YES = 1;
+    public const NO = 0;
+    public const UNSURE = 2;
     private FFI $ffi;
     private FFI\CData $engine;
     private bool $closed = true;
@@ -26,6 +30,7 @@ int thinkthen_decide_many_with_facts_opts(const thinkthen_engine *, const char *
 /* PHP converts a direct char* return to a PHP string, losing the pointer needed for native free. */
 void *thinkthen_call_opts(const thinkthen_engine *, const char *, int64_t, thinkthen_cancel_token *);
 int thinkthen_recognize_with_facts_opts(const thinkthen_engine *, const char *, const char *, size_t, int64_t, thinkthen_cancel_token *, char **, size_t *, char **, size_t *);
+int thinkthen_plan_json(const thinkthen_engine *, const char *, char **, size_t *);
 int thinkthen_relate_with_facts_opts(const thinkthen_engine *, const char *, const char *const *, const size_t *, size_t, int64_t, thinkthen_cancel_token *, char **, size_t *, char **, size_t *);
 void thinkthen_free_string(char *);
 C;
@@ -72,10 +77,7 @@ C;
     {
         if (str_contains($value, "\0")) throw new InvalidArgumentException('interior NUL in C string');
         if (!preg_match('//u', $value)) throw new InvalidArgumentException('invalid UTF-8 in C string');
-        $bytes = $this->ffi->new('char[' . (strlen($value) + 1) . ']');
-        FFI::memset($bytes, 0, strlen($value) + 1);
-        FFI::memcpy($bytes, $value, strlen($value));
-        return $bytes;
+        return $this->evidence($value);
     }
     private function evidence(string $value): FFI\CData
     {
@@ -87,25 +89,36 @@ C;
     public function token(): FFI\CData { $this->live(); return $this->ffi->thinkthen_cancel_token_new(); }
     public function fire(FFI\CData $token): void { $this->live(); $this->ffi->thinkthen_cancel($token); }
     public function freeToken(FFI\CData $token): void { $this->ffi->thinkthen_cancel_token_free($token); }
+    /** Facts are host JSON: every member the engine writes, known or not. */
     private function facts(FFI\CData $pointer, FFI\CData $length): array
     {
         if (FFI::isNull($pointer)) throw new UnexpectedValueException('native facts pointer is null');
-        $facts = json_decode(FFI::string($pointer, $length->cdata), true, 512, JSON_THROW_ON_ERROR);
-        if (!is_array($facts) || array_is_list($facts)) throw new UnexpectedValueException('native facts must be an object');
-        foreach (['records', 'requests_sent', 'cache_answers'] as $key) {
-            if (!array_key_exists($key, $facts) || !is_int($facts[$key]) || $facts[$key] < 0)
-                throw new UnexpectedValueException('invalid native facts ' . $key);
-        }
-        if (!array_key_exists('seconds', $facts) || !(is_int($facts['seconds']) || is_float($facts['seconds']))
-            || !is_finite((float)$facts['seconds']) || $facts['seconds'] < 0)
-            throw new UnexpectedValueException('invalid native facts seconds');
-        foreach (['input_tokens', 'output_tokens'] as $key) {
-            if (array_key_exists($key, $facts) && (!is_int($facts[$key]) || $facts[$key] < 0))
-                throw new UnexpectedValueException('invalid native facts ' . $key);
-        }
-        if (array_key_exists('model', $facts) && !is_string($facts['model']))
-            throw new UnexpectedValueException('invalid native facts model');
-        return $facts;
+        return json_decode(FFI::string($pointer, $length->cdata), true, 512, JSON_THROW_ON_ERROR);
+    }
+    /** The failure object of one annotate answer, or null for any value; JSON null is unresolved, never a failure. */
+    public static function failed(mixed $member): ?array
+    {
+        return is_array($member) && count($member) === 1 && is_array($member['failed'] ?? null) ? $member['failed'] : null;
+    }
+    /**
+     * Preview a decide, choose, score or tag call through thinkthen_plan_json: no key, no cache, no send.
+     * A question starting with `{` is a question object, spliced as written; any other is question text.
+     * Returns the result schema's plan object.
+     */
+    public function plan(string $verb, string $question, array $texts, ?string $settingsJson = null): array
+    {
+        $this->live();
+        $flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR;
+        $asked = str_starts_with($question, '{') ? $question : json_encode($question, $flags);
+        $input = '{"verb":' . json_encode($verb, $flags) . ',"question":' . $asked
+            . ',"input":' . json_encode(array_values($texts), $flags)
+            . ($settingsJson === null ? '' : ',"settings":' . $settingsJson) . '}';
+        $out = $this->ffi->new('char *'); $length = $this->ffi->new('size_t');
+        try {
+            $code = $this->ffi->thinkthen_plan_json($this->engine, $this->checked($input), FFI::addr($out), FFI::addr($length));
+            if ($code) $this->fail($code);
+            return json_decode(FFI::string($out, $length->cdata), true, 512, JSON_THROW_ON_ERROR);
+        } finally { $this->ffi->thinkthen_free_string($out); }
     }
     public function decide(string $question, string $text, int $deadlineMs = -1, ?FFI\CData $token = null): array
     {
