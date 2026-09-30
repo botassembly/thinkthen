@@ -3,7 +3,7 @@
 - Status: Accepted 2026-09-26 by the coordinator after a fresh architect review of the batching design. Ian can overturn each item
 - Date: 2026-09-26
 
-This ADR amends ADR 0048 items 2, 8 and 12. It also adds a cache rule beside the sentence in `specification/records.md` that says each digest keeps "the first complete response". ADR 0048 says that changing one of its items takes a new ADR. This is that ADR. `sdlc/issues/2026-09-26-batching-design-review-before-0146.md` lists the findings. Section 14 of `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` holds the live measurements.
+This ADR amends ADR 0048 items 2, 8 and 12. It also adds a cache rule beside the sentence in `specification/records.md` that says each digest keeps "the first complete response". ADR 0048 says that changing one of its items takes a new ADR. This is that ADR. `sdlc/issues/closed/2026-09-26-batching-design-review-before-0146.md` lists the findings. Section 14 of `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` holds the live measurements.
 
 ## Context
 

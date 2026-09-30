@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 The pure core turns a stream of records into batches. Each batch is one request: its plan, its exact body, its digest, the records it holds, and why it closed. A batch of one record without a context is today's request, byte for byte. Nothing calls the planner outside its tests yet. Ticket B4 puts it on the command.
 
-This is ticket B3 in `sdlc/issues/2026-09-26-batching-design.md`. Its row reads: "The engine plans batches. Fill to the limit, content cuts, size, profile limits, ceiling, quote prefix, evidence object, duplicates, batch of one, digests. No surface change. Proof: tests 1, 2 and 3. Depends on B0. Covered by B0." ADR 0048 is B0. Its ticket table gives items 1 and 2 to B3 for the plan and to B4 for the command. Ian's ruling 9 in the design orders B3 after B0, C1, B1, B2 and J1, and before S1 and B4.
+This is ticket B3 in `sdlc/issues/closed/2026-09-26-batching-design.md`. Its row reads: "The engine plans batches. Fill to the limit, content cuts, size, profile limits, ceiling, quote prefix, evidence object, duplicates, batch of one, digests. No surface change. Proof: tests 1, 2 and 3. Depends on B0. Covered by B0." ADR 0048 is B0. Its ticket table gives items 1 and 2 to B3 for the plan and to B4 for the command. Ian's ruling 9 in the design orders B3 after B0, C1, B1, B2 and J1, and before S1 and B4.
 
 B3 builds alongside 0141 (B1) and 0143 (J1), because no file collides. It lands only after both have landed. The coordinator ruled this within ruling 9, and Ian can overturn it.
 
@@ -222,11 +222,11 @@ Contract 2; state and timing 0; reach 1; proof 1; cost of error 2; total 6. Fina
 
 ## Closes
 
-No issue. `sdlc/issues/2026-09-26-batching-design.md` stays open until its last ticket lands.
+No issue. `sdlc/issues/closed/2026-09-26-batching-design.md` stays open until its last ticket lands.
 
 ## Evidence
 
-- Starts from: The B3 row and sections 1, 2, 5 to 7, the edge cases and acceptance tests 1 to 3 of `sdlc/issues/2026-09-26-batching-design.md`. ADR 0048 items 1 and 2 and its ticket table. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` section 9, which simulated content cuts over the 306 titles and found none at 4,096, and section 5, the wire probe's silent answer to plain-list evidence. The code at `origin/main` `a14d959e`: `core/adapters/systemone/request.rs`, `core/backend_profile.rs`, `core/backend.rs`, `core/recording.rs`, `core/records.rs` and `engine/prepared_request.rs`. A search over `line N` strings found 11 content cuts below 40,000, so a 25-line fixture with named cuts is easy to build.
+- Starts from: The B3 row and sections 1, 2, 5 to 7, the edge cases and acceptance tests 1 to 3 of `sdlc/issues/closed/2026-09-26-batching-design.md`. ADR 0048 items 1 and 2 and its ticket table. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` section 9, which simulated content cuts over the 306 titles and found none at 4,096, and section 5, the wire probe's silent answer to plain-list evidence. The code at `origin/main` `a14d959e`: `core/adapters/systemone/request.rs`, `core/backend_profile.rs`, `core/backend.rs`, `core/recording.rs`, `core/records.rs` and `engine/prepared_request.rs`. A search over `line N` strings found 11 content cuts below 40,000, so a 25-line fixture with named cuts is easy to build.
 - Keeps: Every request today's code sends. The request fixtures, recordings and cache entries. The 96,000-byte ceiling's value and rule for relations. The profile's refusals and their messages. Every surface, page and marker.
 - Changes: A pure `Batcher` in `core/batch.rs` plans batches from records by the close rules and batch shape of ADR 0048 items 1 and 2, with exact sizes, profile limits, the ceiling, the quote prefix, the evidence object, duplicates, the batch of one and digests. `Backend::relation_ceiling` becomes `Backend::ceiling`. `Reading::batch_record` gives each record its JSON value. Five batch fixtures and a grouping fixture join `specification/fixtures/`.
 - Proof: Design tests 1, 2 and 3 as the three table tests under "Proof", each with its plants.

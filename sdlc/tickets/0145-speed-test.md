@@ -14,7 +14,7 @@ Review route: a fresh read-only Claude session reviews this design and the final
 
 A builder who lands a batching ticket sees at once whether each function still sends one request per record. Ian sees, on a named build, how long `filter` over the 306 songs takes, and what every function and every Beatles Bench job costs in requests, time and tokens.
 
-This is ticket S1 in `sdlc/issues/2026-09-26-batching-design.md`. Its row reads: "The speed test. Described below. Its gate part passes with its list of functions still to batch; its live part reports on a named build. Depends on B1, B2, J1, B3. Needs no ADR." The design's "S1: the speed test" section describes it. Ian's ruling 4 of 2026-09-26 sets the target: `filter` over the 306 songs finishes in under half a second at the default throttle of 4, on a named build, measured live. Ruling 5 asks for this test. Ruling 9 orders S1 after B3 and before B4. ADR 0048 item 12 gives the target to S1.
+This is ticket S1 in `sdlc/issues/closed/2026-09-26-batching-design.md`. Its row reads: "The speed test. Described below. Its gate part passes with its list of functions still to batch; its live part reports on a named build. Depends on B1, B2, J1, B3. Needs no ADR." The design's "S1: the speed test" section describes it. Ian's ruling 4 of 2026-09-26 sets the target: `filter` over the 306 songs finishes in under half a second at the default throttle of 4, on a named build, measured live. Ruling 5 asks for this test. Ruling 9 orders S1 after B3 and before B4. ADR 0048 item 12 gives the target to S1.
 
 The ticket has two parts.
 
@@ -259,11 +259,11 @@ Contract 1; state and timing 1; reach 1; proof 1; cost of error 1; total 5. Fina
 
 ## Closes
 
-No issue. `sdlc/issues/2026-09-26-batching-design.md` stays open until its last ticket lands.
+No issue. `sdlc/issues/closed/2026-09-26-batching-design.md` stays open until its last ticket lands.
 
 ## Evidence
 
-- Starts from: The S1 row and section, and rulings 4, 5 and 9, of `sdlc/issues/2026-09-26-batching-design.md`. ADR 0048 items 2, 7 and 12. ADR 0049, which makes the usage totals trustworthy once the command exits. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` sections 6, 7 and 9: experiment 268's round trips and its unmeasured context sizes above 2,585 tokens, experiment 271's 0.30 to 0.39 s for one request of 306 titles, and the 55,490-byte body with no content cut. Ticket 0142's deferred gap 1. Ticket 0143's relate under `--jobs` and ticket 0144's planner, content-cut rule and ceiling, read from their branches. Beatles Bench at `7d246844`: its runners send one command per case, its case files share one argument set each, and its 1,501 questions form 140 groups. The code at `origin/main` `7850db3f`.
+- Starts from: The S1 row and section, and rulings 4, 5 and 9, of `sdlc/issues/closed/2026-09-26-batching-design.md`. ADR 0048 items 2, 7 and 12. ADR 0049, which makes the usage totals trustworthy once the command exits. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` sections 6, 7 and 9: experiment 268's round trips and its unmeasured context sizes above 2,585 tokens, experiment 271's 0.30 to 0.39 s for one request of 306 titles, and the 55,490-byte body with no content cut. Ticket 0142's deferred gap 1. Ticket 0143's relate under `--jobs` and ticket 0144's planner, content-cut rule and ceiling, read from their branches. Beatles Bench at `7d246844`: its runners send one command per case, its case files share one argument set each, and its 1,501 questions form 140 groups. The code at `origin/main` `7850db3f`.
 - Keeps: Every product source file, page, setting and surface. Every existing test. The live door and its ledger, untouched. Beatles Bench, read only.
 - Changes: A new `probes/speed/` folder with the function table, the gate workloads, the runner and the live job. A new Rust test that runs the gate against the loopback backend. One row in `probes/README.md`. One new issue for the connection count. One line in the batching design's S1 section naming B4 as owner of the target run after B4.
 - Proof: The four-row test under "Proof" with plants (a) to (e). The `plan` output checked with the key unset. The record of "S1 live run 1", which names the build. That run follows landing on a main commit and is B4's precondition.

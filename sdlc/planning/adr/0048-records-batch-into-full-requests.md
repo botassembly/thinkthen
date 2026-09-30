@@ -5,7 +5,7 @@
 - Status: Accepted 2026-09-26 on Ian's batching rulings of that day, through ticket 0139. The batching tickets named below build it. Ian can overturn each item
 - Date: 2026-09-26
 
-This ADR records the rulings in `sdlc/issues/2026-09-26-batching-design.md`. That issue holds the argument. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` holds the measurements, and "evidence section N" below means its section N. It amends ADRs 0007, 0008, 0010, 0032 and 0040, and supersedes ADR 0009's one-request-per-record point. Changing an item below takes a new ADR.
+This ADR records the rulings in `sdlc/issues/closed/2026-09-26-batching-design.md`. That issue holds the argument. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` holds the measurements, and "evidence section N" below means its section N. It amends ADRs 0007, 0008, 0010, 0032 and 0040, and supersedes ADR 0009's one-request-per-record point. Changing an item below takes a new ADR.
 
 ## Context
 

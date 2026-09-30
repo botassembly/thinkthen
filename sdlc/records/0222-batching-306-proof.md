@@ -1,6 +1,6 @@
 # B13c: one request for 306 ordered rows
 
-Status: one bounded, local installed-artifact witness passed on 2026-09-28. This record supplies the specific 306-row, `SET threads = 1`, one-request observation required by `sdlc/issues/2026-09-26-batching-design.md` line 399. It does not by itself close ticket 0222's separate native Intel target remainder or ticket 0128's release-runner gate.
+Status: one bounded, local installed-artifact witness passed on 2026-09-28. This record supplies the specific 306-row, `SET threads = 1`, one-request observation required by `sdlc/issues/closed/2026-09-26-batching-design.md` line 399. It does not by itself close ticket 0222's separate native Intel target remainder or ticket 0128's release-runner gate.
 
 ## Inputs and method
 
