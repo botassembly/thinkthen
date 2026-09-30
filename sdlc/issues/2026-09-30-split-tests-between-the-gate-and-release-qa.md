@@ -1,6 +1,6 @@
 # Split tests between the fast gate and the release QA suite
 
-Status: open. A proposal from the release QA suite's owner, 2026-09-30. It authorizes no work. The queue owner decides what to take.
+Status: open. A proposal from the release QA suite's owner, 2026-09-30. It authorizes no work. The queue owner decides what to take. Ticket `sdlc/tickets/0335-gate-and-release-test-split.md` takes it in three slices and answers the three asks below. The issue stays open until the slices land.
 
 ## The change
 
