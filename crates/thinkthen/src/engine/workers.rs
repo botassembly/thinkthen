@@ -243,7 +243,7 @@ fn worker<W, R>(queue: &Mutex<Receiver<W>>, results: &Sender<R>, work: &(impl Fn
     }
 }
 
-/// Block asynchronous host signals on this engine worker for its lifetime.
+/// Block asynchronous host signals on this engine thread for its lifetime.
 ///
 /// A host signal that lands in a timed socket read ends the read with `EINTR`
 /// even under `SA_RESTART`, and the transport would fail the call. Signals a
@@ -251,7 +251,7 @@ fn worker<W, R>(queue: &Mutex<Receiver<W>>, results: &Sender<R>, work: &(impl Fn
 /// governs them: `SIGXFSZ` from a file-size limit, `SIGPIPE`, and the faults.
 /// The calling thread keeps the host's mask.
 #[cfg(unix)]
-fn mask_host_signals() {
+pub(crate) fn mask_host_signals() {
     use nix::sys::signal::{SigSet, Signal};
 
     let mut mask = SigSet::all();
@@ -272,4 +272,4 @@ fn mask_host_signals() {
 }
 
 #[cfg(not(unix))]
-const fn mask_host_signals() {}
+pub(crate) const fn mask_host_signals() {}

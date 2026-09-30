@@ -78,6 +78,17 @@ impl<T> Guarded<T> {
     }
 }
 
+impl<T> Guarded<T> {
+    /// The state when process `pid` built it, read with atomics alone. It
+    /// builds nothing and takes no lock, so a forked child that never built
+    /// its own state gets `None` and touches nothing inherited.
+    pub(crate) fn owned(&self, pid: u32) -> Option<Arc<T>> {
+        (self.owner.load(Ordering::Acquire) == pid)
+            .then(|| self.slot.load_full())
+            .flatten()
+    }
+}
+
 /// Clears this process's rebuild marker when its builder returns or unwinds.
 struct Idle<'a>(&'a AtomicU32, u32);
 

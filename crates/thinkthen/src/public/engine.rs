@@ -162,6 +162,14 @@ impl Engine {
             .and_then(|prices| prices.estimate(input_tokens, output_tokens))
     }
 
+    /// Write this process's pending usage totals before the process exits,
+    /// for a host that never drops its engine. Dropping the last clone does
+    /// the same. Only the wait for the usage lock is bounded, by one second.
+    /// A forked child that never called the engine writes nothing.
+    pub fn finish_usage(&self) {
+        self.inner.finish_usage();
+    }
+
     /// This process's totals, which start at zero in a forked child.
     #[must_use]
     pub fn usage(&self) -> Counters {

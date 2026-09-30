@@ -40,12 +40,14 @@ enum Profile {
     Inline(BackendProfile),
 }
 
-/// The default cache folder, resolved once when a builder is seeded.
+/// The default cache folder and the usage folder, resolved once when a
+/// builder is seeded from the environment.
 #[derive(Clone, Debug)]
 struct Seeded {
     folder: Option<PathBuf>,
     platform: bool,
     enabled: bool,
+    usage: Option<PathBuf>,
 }
 
 /// A key held for the engine. `Debug` never shows it.
@@ -410,7 +412,9 @@ impl EngineBuilder {
                     .map(|Secret(value)| Key::new(value.as_ref().to_owned()))
                     .ok_or(EngineError::NoKey(KEY_VAR))
             }),
-            usage: Arc::new(Counters::new(None)),
+            usage: Arc::new(Counters::new(
+                self.seeded.as_ref().and_then(|seeded| seeded.usage.clone()),
+            )),
         };
         super::Engine::from_settings(
             settings,

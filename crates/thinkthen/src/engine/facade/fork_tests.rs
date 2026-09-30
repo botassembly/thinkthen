@@ -230,3 +230,51 @@ fn child_width_child() {
         "a conflicting width is refused"
     );
 }
+
+#[test]
+fn a_child_finishing_usage_leaves_its_parents_counters_alone() {
+    in_child_at("engine::facade::fork_tests::finish_usage_child");
+}
+
+#[test]
+#[ignore = "runs alone in a child process"]
+fn finish_usage_child() {
+    if !child() {
+        return;
+    }
+    let home = env::temp_dir().join(format!("thinkthen-fork-finish-{}", std::process::id()));
+    let _absent = fs::remove_dir_all(&home);
+    let usage_path = home.join("usage");
+    let counters = Arc::new(Counters::new(Some(usage_path.clone())));
+    let settings = || settings("http://127.0.0.1:1/v1", None, Arc::clone(&counters));
+    let engine = Engine::built_by(settings(), parent_pid()).expect("the parent's engine");
+    counters.request_sent();
+    assert!(!counters.finish(), "the parent writes its request");
+
+    // A parent thread holds the queue lock when the child's exit hook runs.
+    let held = counters.hold_queue();
+    let (finished, returned) = channel();
+    thread::spawn(move || {
+        engine.finish_usage();
+        finished.send(())
+    });
+    assert_eq!(
+        returned.recv_timeout(BOUND),
+        Ok(()),
+        "the child returns without waiting on its parent's lock"
+    );
+    drop(held);
+    let durable = || usage::read(&usage_path, &usage::month_now()).expect("usage totals");
+    assert_eq!(durable().total.requests_sent, 1, "the child wrote nothing");
+
+    // The process that built its own state flushes its own pending request.
+    let own = Engine::built_by(settings(), std::process::id()).expect("this process's engine");
+    counters.request_sent();
+    own.finish_usage();
+    assert_eq!(
+        durable().total.requests_sent,
+        2,
+        "each request is counted once"
+    );
+    let _removed = fs::remove_dir_all(home);
+}
