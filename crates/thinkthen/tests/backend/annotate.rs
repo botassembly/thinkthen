@@ -376,7 +376,7 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
 fn the_first_group_failure_wins_when_the_second_finishes_first() {
     let listener = Listener::answering(|body| {
         let body = String::from_utf8_lossy(body);
-        if body.contains(r#""state":"slow""#) {
+        if body.contains(r#""instructions":"The text is \"slow\". "#) {
             Canned::status(422, "{}").after(40)
         } else {
             Canned::status(401, "{}")

@@ -63,16 +63,27 @@ fn planned(arguments: &[&str], input: &str) -> io::Result<Output> {
     spawn(&[&asked[..], arguments].concat(), &[], input.as_bytes())
 }
 
-/// The `state` each request carried, in the order the listener read them.
-fn states(listener: &Listener) -> Vec<String> {
+/// The record each request quoted in its question, as compact JSON, in the
+/// order the listener read them. Every request sends the fixed state.
+fn quoted(listener: &Listener) -> Vec<String> {
+    let lead = "The text is ";
+    let tail = format!(". {QUESTION}");
     listener
         .requests()
         .iter()
         .filter_map(|request| {
-            let body = String::from_utf8_lossy(&request.body).into_owned();
-            let (_, rest) = body.split_once(r#"{"state":"#)?;
-            let (state, _) = rest.split_once(r#","model""#)?;
-            Some(state.to_owned())
+            let body: serde_json::Value = serde_json::from_slice(&request.body).ok()?;
+            assert_eq!(
+                body.get("state").and_then(serde_json::Value::as_str),
+                Some("Each question quotes the text it asks about.")
+            );
+            let asked = body.pointer("/questions/q1/instructions")?.as_str()?;
+            Some(
+                asked
+                    .strip_prefix(lead)?
+                    .strip_suffix(tail.as_str())?
+                    .to_owned(),
+            )
         })
         .collect()
 }
@@ -118,7 +129,7 @@ fn one_pointer_sends_the_value_and_several_send_an_object_keyed_by_the_last_part
 
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
-        states(&listener),
+        quoted(&listener),
         [r#"{"body":"The payout failed again.","id":"R-1"}"#]
     );
 }
@@ -290,7 +301,7 @@ fn a_last_record_with_no_line_feed_after_it_is_judged() {
         printed(&output),
         value_row(r#""first line""#, "true") + &value_row(r#""second line""#, "true")
     );
-    let mut sent = states(&listener);
+    let mut sent = quoted(&listener);
     sent.sort();
     assert_eq!(sent, [r#""first line""#, r#""second line""#]);
 }
@@ -365,7 +376,7 @@ fn a_record_row_carries_the_whole_record_under_input() {
         "{row}"
     );
     // Only the pointed value left the machine.
-    assert_eq!(states(&listener), [r#""The payout failed again.""#]);
+    assert_eq!(quoted(&listener), [r#""The payout failed again.""#]);
 }
 
 #[test]
@@ -393,10 +404,11 @@ fn the_record_mode_plan_shows_the_first_record_and_names_the_framing() {
         concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","input":{"framing":"jsonl","field":["/body"]},"#,
-            r#""request":{"state":"The payout failed again.","model":"jev-1.13.0","#,
-            r#""questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}}"#,
+            r#""request":{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","#,
+            r#""questions":{"q1":{"type":"noul","#,
+            r#""instructions":"The text is \"The payout failed again.\". Does this report a payment failure?"}}}}"#,
             "\n",
-            r#"{"records":3,"requests":3,"estimated_bytes":445,"estimated_input_tokens":{"lower":229,"upper":405},"upper_bound":false}"#,
+            r#"{"records":3,"requests":3,"estimated_bytes":631,"estimated_input_tokens":{"lower":325,"upper":573},"upper_bound":false}"#,
             "\n",
         )
     );
@@ -461,7 +473,7 @@ fn a_pointer_without_jsonl_reads_the_whole_input_as_one_json_value() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
-    assert_eq!(states(&listener), [r#""The payout failed again.""#]);
+    assert_eq!(quoted(&listener), [r#""The payout failed again.""#]);
 }
 
 #[test]

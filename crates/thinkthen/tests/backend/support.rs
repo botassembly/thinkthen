@@ -11,6 +11,8 @@ use crate::harness::spawn;
 pub(crate) const DEFAULT_BASE: &str = "https://api.typesafe.ai/v1";
 pub(crate) const DEFAULT_MODEL: &str = "jev-1.13.0";
 pub(crate) const ENDPOINT_PATH: &str = "systemone";
+/// The state of every quoted request without a context, by ADR 0111.
+pub(crate) const QUOTED: &str = "Each question quotes the text it asks about.";
 pub(crate) const MAX_RECORD_BYTES: usize = 16 * 1024 * 1024;
 
 #[derive(Serialize)]
@@ -45,14 +47,18 @@ struct Recording<'a> {
     clippy::expect_used,
     reason = "an infallible test fixture encoder should stop the test if its schema changes"
 )]
+/// The request `decide` sends for one text, in ADR 0111's quoted form: the
+/// fixed sentence as the state, and the text quoted as a JSON string at the
+/// head of the question.
 pub(crate) fn encoded_decide(evidence: &str, model: &str, question: &str) -> Vec<u8> {
+    let quoted = serde_json::to_string(evidence).expect("a text is JSON");
     serde_json::to_vec(&Request {
-        state: evidence,
+        state: QUOTED,
         model,
         questions: Questions {
             q1: Decide {
                 kind: "noul",
-                instructions: question,
+                instructions: &format!("The text is {quoted}. {question}"),
             },
         },
     })

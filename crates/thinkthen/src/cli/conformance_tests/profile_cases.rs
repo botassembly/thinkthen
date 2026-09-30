@@ -1,5 +1,7 @@
 use super::{asked, conformance_support::Document};
-use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, ProfileName, ProfileWarning};
+use crate::core::{
+    Backend, BackendProfile, BatchError, DEFAULT_MODEL, ProfileName, ProfileWarning, quoted_plan,
+};
 use crate::engine::error::Error;
 use crate::engine::facade;
 use serde::Deserialize;
@@ -57,11 +59,21 @@ fn shared_profile_cases_cross_the_facade_preparation() {
             .find(|case| case.id == profile_case.source_case)
             .expect("source case");
         let exchange = case.exchanges.get(profile_case.exchange).expect("exchange");
-        let plan = asked(case, profile_case.exchange, exchange)
-            .expect("production question grammar")
-            .plan;
+        let asked =
+            asked(case, profile_case.exchange, exchange).expect("production question grammar");
         let profile = BackendProfile::parse(profile_case.profile.get()).expect("profile parser");
-        let result = facade::split(&backend, Some(&profile), &plan);
+        let result = quoted_plan(
+            asked.plan.model().clone(),
+            asked.record,
+            None,
+            asked.questions,
+            Some(&profile),
+        )
+        .map_err(|error| match error {
+            BatchError::Profile(limit) => Error::ProfileLimit(limit),
+            _ => Error::Defect("a shared case could not be quoted"),
+        })
+        .and_then(|plan| facade::split(&backend, Some(&profile), &plan));
         match profile_case.expect {
             Expectation::Pass(word) => {
                 assert_eq!(word, "pass", "{}", profile_case.id);

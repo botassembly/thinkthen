@@ -59,9 +59,9 @@ fn a_pick_plans_the_options_as_criteria_and_names_the_key_variable() {
         concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","#,
-            r#""request":{"state":"The renewal charge bounced last night.","#,
+            r#""request":{"state":"Each question quotes the text it asks about.","#,
             r#""model":"jev-1.13.0","questions":{"q1":{"type":"choice","#,
-            r#""instructions":"Which team owns this request?","#,
+            r#""instructions":"The text is \"The renewal charge bounced last night.\". Which team owns this request?","#,
             r#""criteria":{"billing":null,"shipping":null,"account":null,"other":null}}}}}"#,
             "\n",
         )
@@ -79,9 +79,9 @@ fn a_placement_plans_the_levels_as_an_ordered_list() {
         concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"jev-1.13.0","#,
             r#""key_env":"THINKTHEN_API_KEY","#,
-            r#""request":{"state":"The renewal charge bounced last night.","#,
+            r#""request":{"state":"Each question quotes the text it asks about.","#,
             r#""model":"jev-1.13.0","questions":{"q1":{"type":"score","#,
-            r#""instructions":"Which team owns this request?","#,
+            r#""instructions":"The text is \"The renewal charge bounced last night.\". Which team owns this request?","#,
             r#""criteria":["none","workaround","blocked"]}}}}"#,
             "\n",
         )

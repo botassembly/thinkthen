@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is {\"context\":\"Returns are accepted within 30 days of delivery. Items must be unused and in the original packaging.\",\"output\":\"You have 30 days from the day it was delivered.\"}. Is every claim in the answer stated in the source text?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.81}},"usage":{"input_tokens":318,"output_tokens":21}},
+  "quoted": true
+}

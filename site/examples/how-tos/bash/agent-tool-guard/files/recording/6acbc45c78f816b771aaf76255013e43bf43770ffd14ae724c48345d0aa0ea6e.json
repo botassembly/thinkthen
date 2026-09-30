@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Proposed command:\\n\\n    git fetch --all --prune\\n\\nReason given: the assistant was asked to find out whether this branch is behind\\nthe one everybody else is working on.\\n\". Does this command only read, and leave every file and every setting on the machine unchanged?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.22}},"usage":{"input_tokens":322,"output_tokens":21}},
+  "quoted": true
+}

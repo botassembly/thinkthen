@@ -19,6 +19,13 @@ import pytest
 from conftest import child_env, run, start
 
 
+def quoted_record(request):
+    """The one record a request quotes at the head of its first question."""
+    text = next(iter(request["questions"].values()))["instructions"]
+    assert text.startswith("The text is "), text
+    return json.JSONDecoder().raw_decode(text, len("The text is "))[0]
+
+
 def test_keywords_and_probability_share_the_answer(backend, tmp_path):
     """The public call holds probability from its own reply, including a column.
     A second probability request or a missing column row changes the exact count."""
@@ -86,8 +93,9 @@ def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend,
               b'"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"},'
               b'"q2":{"type":"noul","instructions":"The text is \\"two\\". Is it late?"},'
               b'"q3":{"type":"noul","instructions":"The text is \\"three\\". Is it late?"}}}')
-    single = [b'{"state":"' + word + b'","model":"jev-1.13.0",'
-              b'"questions":{"q1":{"type":"noul","instructions":"Is it late?"}}}'
+    single = [b'{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0",'
+              b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"' + word
+              + b'\\". Is it late?"}}}'
               for word in (b"one", b"two", b"three")]
     with capturing_filter_listener() as (url, bodies):
         env = child_env(backend, tmp_path)
@@ -223,7 +231,7 @@ def test_null_column_rows_keep_positions_without_requests(backend, tmp_path):
             "[None, None] [None, None] [0] 1",
         ]
         requests = [json.loads(body) for body in bodies]
-        assert [(one["state"], next(iter(one["questions"].values()))["type"])
+        assert [(quoted_record(one), next(iter(one["questions"].values()))["type"])
                 for one in requests] == [("one", "noul"), ("two", "noul"),
                                          ("one", "choice"), ("two", "choice"),
                                          ("one", "noul"), ("two", "noul"),
@@ -550,10 +558,10 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         assert [packed["facts"], separate["facts"]] == [[3, 1, 6, 3], [3, 3, 18, 9]]
         assert packed["url"] == url, (packed["url"], url)
         assert len(bodies) == 4
-        one = (b'{"state":"one","model":"jev-latest","questions":{"q1":{"type":"noul",'
-               b'"instructions":"Is it late?"}}}')
-        two = (b'{"state":"two","model":"jev-latest","questions":{"q1":{"type":"noul",'
-               b'"instructions":"Is it late?"}}}')
+        one = (b'{"state":"Each question quotes the text it asks about.","model":"jev-latest",'
+               b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"}}}')
+        two = (b'{"state":"Each question quotes the text it asks about.","model":"jev-latest",'
+               b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"two\\". Is it late?"}}}')
         assert bodies[1:] == [one, two, one]
         digest = lambda body: hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
         assert [row[:3] for row in packed["details"]] == [

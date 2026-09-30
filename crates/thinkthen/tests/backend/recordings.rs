@@ -292,8 +292,8 @@ fn an_entry_that_records_another_exchange_is_refused_by_name() {
     let folder = folder("damaged");
     let (listener, name, written) = recorded(&folder).expect("one recorded entry");
     let edited = written.replace(
-        r#""state":"Refund me please.""#,
-        r#""state":"Something else.""#,
+        r#"The text is \"Refund me please.\"."#,
+        r#"The text is \"Something else.\"."#,
     );
     assert_ne!(edited, written, "the entry holds the request it recorded");
     fs::write(folder.join(&name), edited).expect("the entry is writable");

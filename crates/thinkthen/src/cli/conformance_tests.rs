@@ -11,8 +11,8 @@ use crate::core::adapters::systemone;
 use crate::core::recording::Exchange as Recorded;
 use crate::core::{
     AnswerOutcome, BatchRecord, Cutting, DEFAULT_MODEL, Evidence, Find, Json, ModelName, Plan,
-    QuestionFile, QuestionSet, QuestionText, Threshold, Typed, Url, Value, Verb, question_sha256,
-    ranking, resolve,
+    Question, QuestionFile, QuestionSet, QuestionText, Threshold, Typed, Url, Value, Verb,
+    question_sha256, quoted_plan, ranking, resolve,
 };
 use conformance_support::{Case, Document, Exchange, ExpectedAnswer, QuestionForm, Success};
 use serde::Deserialize;
@@ -44,6 +44,10 @@ type CheckedAnswers = (Vec<(Value, f64)>, String, usize);
 
 struct Asked {
     plan: Plan,
+    /// The record the plan quotes.
+    record: Evidence,
+    /// The questions as asked, before the record is quoted into them.
+    questions: Vec<Question>,
     names: Vec<String>,
     thresholds: Vec<Option<Threshold>>,
     digests: Vec<String>,
@@ -89,14 +93,19 @@ fn asked(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, String
         .ok_or_else(|| format!("{} resolved no question", case.id))?;
     let threshold = resolved.threshold();
     let digest = question_sha256(&question, threshold).map_err(|error| error.to_string())?;
-    let plan = Plan::new(
-        Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?,
+    let record = Evidence::new(&exchange.evidence).map_err(|error| error.to_string())?;
+    let plan = quoted_plan(
         resolved.model().clone(),
-        vec![question],
+        record.clone(),
+        None,
+        vec![question.clone()],
+        None,
     )
     .map_err(|error| error.to_string())?;
     Ok(Asked {
         plan,
+        record,
+        questions: vec![question],
         names: vec!["q1".to_owned()],
         thresholds: vec![threshold],
         digests: vec![digest],
@@ -141,14 +150,18 @@ fn annotate(case: &Case, place: usize, exchange: &Exchange) -> Result<Asked, Str
                 .map_err(|error| error.to_string())?,
         );
     }
-    let plan = Plan::new(
-        evidence,
+    let plan = quoted_plan(
         ModelName::new(DEFAULT_MODEL).map_err(|error| error.to_string())?,
-        questions,
+        evidence.clone(),
+        None,
+        questions.clone(),
+        None,
     )
     .map_err(|error| error.to_string())?;
     Ok(Asked {
         plan,
+        record: evidence,
+        questions,
         names,
         thresholds,
         digests,
@@ -187,6 +200,8 @@ fn find_asked(case: &Case) -> Result<Asked, String> {
     let find = finding(case)?;
     Ok(Asked {
         plan: find.plan().clone(),
+        record: find.plan().evidence().clone(),
+        questions: find.plan().questions().to_vec(),
         names: vec!["q1".to_owned()],
         thresholds: vec![None],
         digests: vec![find.question_sha256().map_err(|error| error.to_string())?],

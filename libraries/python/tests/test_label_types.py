@@ -122,9 +122,10 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         assert requests[3]["questions"]["q1"]["criteria"] == {
             "person": {"what": "a person"}, "company": ["a company"]}
         assert b'"what":"a person"' in b"".join(groups[11])
-        assert requests[0]["state"] == "Alice"
-        expected = (b'{"state":"Alice","model":"jev-1.13.0","questions":'
-                    b'{"q1":{"type":"score","instructions":"Urgency?",'
+        assert requests[0]["state"] == "Each question quotes the text it asks about."
+        expected = (b'{"state":"Each question quotes the text it asks about.",'
+                    b'"model":"jev-1.13.0","questions":'
+                    b'{"q1":{"type":"score","instructions":"The text is \\"Alice\\". Urgency?",'
                     b'"criteria":["low","very high"]}}}')
         assert groups[15] == groups[16] == [expected]
         digest = hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + expected).hexdigest()

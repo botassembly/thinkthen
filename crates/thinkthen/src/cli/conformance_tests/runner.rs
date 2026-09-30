@@ -57,7 +57,7 @@ fn facade_answer(
         }
         _ => Ok(engine
             .judge(
-                &request.plan.questions()[0],
+                &request.questions[0],
                 request.thresholds[0],
                 Evidence::new(evidence).expect("evidence"),
                 &cancel,

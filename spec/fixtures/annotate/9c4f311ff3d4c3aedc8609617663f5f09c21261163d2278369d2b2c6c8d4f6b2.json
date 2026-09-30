@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"Please add a dark theme.\". Is this still open?","criteria":{"true":"The report names a failure that is still happening.","false":"Anything else."}}}},
+  "response": {"model":"local-1","answers":{"q1":{"type":"noul","noul":0.03}},"usage":{"input_tokens":40,"output_tokens":6}},
+  "quoted": true
+}

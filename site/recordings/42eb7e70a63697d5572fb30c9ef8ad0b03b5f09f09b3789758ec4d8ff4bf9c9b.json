@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Postgres 18 ships a faster vacuum","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Would an engineer read this first?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.59}},"usage":{"input_tokens":282,"output_tokens":21}}
-}

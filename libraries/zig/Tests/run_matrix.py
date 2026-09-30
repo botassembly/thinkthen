@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import sys
 
-from backend import Backend
+from backend import Backend, one_record
 from process_group import run
 
 PACKAGE = Path(__file__).resolve().parent.parent
@@ -36,11 +36,11 @@ with tempfile.TemporaryDirectory(prefix="zig-matrix-", dir=ROOT) as folder:
             assert len(backend.arrivals) == expected, (name, len(backend.arrivals), expected)
         if len(sys.argv)==2 and sys.argv[1]=='facts':
             case("facts", [str(BIN / "concurrent"), "--facts"], 4, "ZIG_FACTS_LIFETIME_PASS")
-            assert Counter(row['state'] for row in backend.arrivals)==Counter(['hold-facts-one','hold-facts-no-usage','status-401','recovery-scalar']),backend.arrivals
+            assert Counter(one_record(row)['state'] for row in backend.arrivals)==Counter(['hold-facts-one','hold-facts-no-usage','status-401','recovery-scalar']),backend.arrivals
             print("Zig facts: two held arrivals, failure and recovery exact=4 PASS")
         elif len(sys.argv)==2 and sys.argv[1]=='facts-allocation':
             case("facts-allocation", [str(BIN / "allocation"), "--facts-allocation"], 4, "facts allocation index 7:")
-            assert Counter(row['state'] for row in backend.arrivals)==Counter({f'alloc-facts-{i}':1 for i in range(4,8)}),backend.arrivals
+            assert Counter(one_record(row)['state'] for row in backend.arrivals)==Counter({f'alloc-facts-{i}':1 for i in range(4,8)}),backend.arrivals
             print("Zig post-native facts allocation faults exact=4 PASS")
         else:
             case("example", [str(PACKAGE / "zig-out/bin/thinkthen-example")], 1, "yes 0.90")

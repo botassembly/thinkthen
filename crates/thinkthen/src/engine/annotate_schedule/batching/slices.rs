@@ -27,6 +27,7 @@ impl GroupPlanner {
                     value: evidence.as_json(),
                     evidence,
                 };
+                // The layout's questions go to a group batcher, which quotes them.
                 let plan = Plan::new(
                     selected.evidence.clone(),
                     engine.backend().model().clone(),

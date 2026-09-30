@@ -28,11 +28,11 @@ fn a_record_over_the_profile_alone_is_refused_on_its_own_push() {
     };
     let cases = [
         (
-            r#""max_evidence_bytes":10"#,
+            r#""max_request_bytes":150"#,
             decide("Q"),
             vec![urgent()],
             vec![],
-            (LimitKind::EvidenceBytes, 10, 46),
+            (LimitKind::RequestBytes, 150, 195),
             true,
         ),
         (
@@ -44,11 +44,11 @@ fn a_record_over_the_profile_alone_is_refused_on_its_own_push() {
             false,
         ),
         (
-            r#""max_evidence_bytes":10"#,
+            r#""max_request_bytes":150"#,
             decide("Q"),
             vec![text("a"), urgent()],
             vec![(1, Closed::Limit)],
-            (LimitKind::EvidenceBytes, 10, 46),
+            (LimitKind::RequestBytes, 150, 195),
             true,
         ),
     ];

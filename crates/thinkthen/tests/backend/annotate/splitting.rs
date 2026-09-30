@@ -13,10 +13,10 @@ use crate::harness::{Canned, Listener, spawn};
 use crate::support::{digest, plant_backend_identity, plant_recording};
 
 const FIRST_TWO: &str = concat!(
-    r#"{"state":"evidence","model":"local-1","questions":{"q1":{"type":"noul","instructions":"first?"},"#,
-    r#""q2":{"type":"noul","instructions":"second?"}}}"#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"evidence\". first?"},"#,
+    r#""q2":{"type":"noul","instructions":"The text is \"evidence\". second?"}}}"#,
 );
-const THIRD: &str = r#"{"state":"evidence","model":"local-1","questions":{"q1":{"type":"noul","instructions":"third?"}}}"#;
+const THIRD: &str = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"evidence\". third?"}}}"#;
 const FIRST_TWO_REPLY: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,
     r#""q2":{"type":"noul","noul":0.1}},"#,
@@ -79,8 +79,8 @@ fn run(
 fn exact_limits_keep_the_historical_body_and_one_unit_over_splits_longest_prefix() {
     let questions = three_questions("exact-and-split");
     let complete = concat!(
-        r#"{"state":"evidence","model":"local-1","questions":{"q1":{"type":"noul","instructions":"first?"},"#,
-        r#""q2":{"type":"noul","instructions":"second?"},"q3":{"type":"noul","instructions":"third?"}}}"#,
+        r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"evidence\". first?"},"#,
+        r#""q2":{"type":"noul","instructions":"The text is \"evidence\". second?"},"q3":{"type":"noul","instructions":"The text is \"evidence\". third?"}}}"#,
     );
     let complete_reply = concat!(
         r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"#,
@@ -409,7 +409,10 @@ fn the_plan_shows_each_request() {
         serde_json::from_str(line.lines().next().expect("plan line")).expect("one JSON plan");
     let sent = plan["request"]["questions"].as_object().expect("questions");
     let last = sent["q100"]["instructions"].as_str();
-    assert_eq!((sent.len(), last), (100, Some("Question 100?")));
+    assert_eq!(
+        (sent.len(), last),
+        (100, Some(r#"The text is "evidence". Question 100?"#))
+    );
 
     // Row 10: two `on` groups and no profile print the first group's request.
     let two = set(
@@ -421,9 +424,10 @@ fn the_plan_shows_each_request() {
         (concat!(
             r#"{"url":"https://api.typesafe.ai/v1/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","#,
             r#""on":{"concise":["/summary"],"refund":["/body"]},"request_count":2,"group_requests":[1,1],"#,
-            r#""request":{"state":"Short note.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is this concise?"}}}}"#,
+            r#""request":{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+            r#""questions":{"q1":{"type":"noul","instructions":"The text is \"Short note.\". Is this concise?"}}}}"#,
             "\n",
-            r#"{"records":1,"requests":2,"estimated_bytes":230,"estimated_input_tokens":{"lower":118,"upper":209},"upper_bound":false}"#,
+            r#"{"records":1,"requests":2,"estimated_bytes":354,"estimated_input_tokens":{"lower":182,"upper":322},"upper_bound":false}"#,
             "\n",
         )
         .to_owned(), Some(0))

@@ -120,9 +120,9 @@ fn a_list_in_each_record_becomes_that_record_s_own_options() {
         "{}",
         sent[1]
     );
-    // Only the pointed value is the evidence, and --options never changes it.
+    // Only the pointed value is quoted, and --options never changes it.
     assert!(
-        sent[0].contains(r#""state":"The parcel arrived on Friday, three days late.""#),
+        sent[0].contains(r#""instructions":"The text is \"The parcel arrived on Friday, three days late.\". Which"#),
         "{}",
         sent[0]
     );

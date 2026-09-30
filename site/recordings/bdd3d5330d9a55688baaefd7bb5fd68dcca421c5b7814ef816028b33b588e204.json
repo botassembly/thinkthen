@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"The zipper broke the first time I used it.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is this about the item itself?","criteria":{"true":"Its build, size, color, or parts.","false":"Delivery, price, or service."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.92}},"usage":{"input_tokens":316,"output_tokens":21}}
-}

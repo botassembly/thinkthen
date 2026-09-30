@@ -1,6 +1,6 @@
 """Repeat stage-one complete Swift matrix with stage-two installed native bits."""
 import collections,datetime,json,os,pathlib,signal,subprocess,sys,time
-from backend import Backend
+from backend import Backend, one_record
 from process_group import run
 R=pathlib.Path(__file__).resolve().parents[2]
 L=R/'target/logs'/('run-'+datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ'))
@@ -16,7 +16,7 @@ try:
         assert result.exit==0 and b'SWIFT_FACTS_LIFETIME_PASS' in result.stdout,(result.exit,(result.stdout+result.stderr)[-1500:])
         assert collections.Counter(server.arrivals)==collections.Counter(['hold-facts-one','hold-facts-no-usage','status-401','recovery-scalar']) and server.attempts==server.connections==4,server.arrivals
         bodies=[json.loads(line) for line in (L/'barrier/requests.jsonl').read_text().splitlines()]
-        assert collections.Counter(row['state'] for row in bodies)==collections.Counter(server.arrivals) and all(row['questions']['q1']['type']=='noul' for row in bodies),bodies
+        assert collections.Counter(one_record(row)['state'] for row in bodies)==collections.Counter(server.arrivals) and all(row['questions']['q1']['type']=='noul' for row in bodies),bodies
         status='PASS'
         print('SWIFT_FACTS_EXACT_4_PASS',flush=True)
         sys.exit(0)
@@ -41,7 +41,7 @@ try:
     expected_requests=json.loads((R/'Tests/fixtures/expected_requests.json').read_text())
     normalize=lambda rows: sorted((json.dumps(row,sort_keys=True,ensure_ascii=False,separators=(',',':')) for row in rows))
     assert normalize(requests)==normalize(expected_requests), 'complete normalized Swift request bodies differ'
-    layouts=collections.Counter(tuple(packed_rows(request).values()) for request in requests if request['state']==packed_state)
+    layouts=collections.Counter(tuple(packed_rows(request).values()) for request in requests if one_record(request)['state']==packed_state)
     wanted_layouts=collections.Counter({
       ('first','second','third'):1, ('first','second'):1,
       ('filter-one','filter-two'):1, ('rank-one','rank-two'):1,

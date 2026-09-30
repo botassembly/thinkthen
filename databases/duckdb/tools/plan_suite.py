@@ -6,18 +6,18 @@ import sys
 
 from harness import Backend, case, expect, main, rows, run, said
 
-BODY = '{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}'
+BODY = '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"Refund me please.\\". asks for a refund"}}}'
 P1 = "thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}', '{}')"
 
 
 @case
 def p1_native_struct_is_keyless_and_sends_nothing():
-    expect(len(BODY.encode()), 120, "independent P1 byte count")
+    expect(len(BODY.encode()), 182, "independent P1 byte count")
     with Backend() as backend:
         got = run([f"SELECT {P1}", f"SELECT typeof({P1})"], backend.base(), keyless=True)
         expect(rows(got[0]), [[{
-            "records": 1, "requests": 1, "estimated_bytes": 120,
-            "estimated_input_tokens": {"lower": 61, "upper": 109},
+            "records": 1, "requests": 1, "estimated_bytes": 182,
+            "estimated_input_tokens": {"lower": 93, "upper": 166},
             "upper_bound": False, "first_body": BODY,
         }]], "P1 native value and independent request literal")
         expect("STRUCT" in rows(got[1])[0][0], True, "native SQL type")

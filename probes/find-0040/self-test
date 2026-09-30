@@ -215,7 +215,8 @@ for bad in (None, "yes"):
         raise AssertionError("an invalid cached field reached the reader")
 PY
 
-# The real binary builds the exact aggregate state and ordered choice list.
+# The real binary quotes the exact aggregate text beside the fixed state,
+# by ADR 0111, and builds the ordered choice list.
 python3 fixture.py state b255-a1 >"$scratch/state"
 question=$(python3 fixture.py question b255-a1)
 set -- $(python3 fixture.py options b255-a1)
@@ -227,12 +228,14 @@ set -- $(python3 fixture.py options b254-b1 none)
 "$repo/target/debug/thinkthen" choose "$question" "$@" --plan \
 	<"$scratch/none-state" >"$scratch/none-plan"
 jq -e -s --rawfile state "$scratch/state" \
-    '.[0] | .request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
+    '.[0] | .request.state == "Each question quotes the text it asks about."
+	 and (.request.questions.q1.instructions | startswith("The text is " + ($state | tojson) + ". ")) and (.request.questions.q1.criteria | keys_unsorted | length) == 255
 	 and (.request.questions.q1.criteria | keys_unsorted | first) == "u001"
 	 and (.request.questions.q1.criteria | keys_unsorted | last) == "u255"' \
 	"$scratch/plain-plan" >/dev/null
 jq -e -s --rawfile state "$scratch/none-state" \
-    '.[0] | .request.state == $state and (.request.questions.q1.criteria | keys_unsorted | length) == 255
+    '.[0] | .request.state == "Each question quotes the text it asks about."
+	 and (.request.questions.q1.instructions | startswith("The text is " + ($state | tojson) + ". ")) and (.request.questions.q1.criteria | keys_unsorted | length) == 255
 	 and (.request.questions.q1.criteria | keys_unsorted | first) == "u001"
 	 and (.request.questions.q1.criteria | keys_unsorted | last) == "none"' \
 	"$scratch/none-plan" >/dev/null

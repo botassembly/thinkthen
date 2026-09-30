@@ -56,7 +56,7 @@ fn old_bare_identity(engine: &Engine, listener: &Listener) {
     let request = listener.requests().pop().expect("captured request");
     assert_eq!(
         String::from_utf8(request.body).expect("UTF-8 body"),
-        r#"{"state":"An invoice dispute.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which team?","criteria":{"billing":null,"outage":null}}}}"#
+        r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"An invoice dispute.\". Which team?","criteria":{"billing":null,"outage":null}}}}"#
     );
     assert_eq!(
         details.value().question_sha256(),

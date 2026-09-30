@@ -5,7 +5,8 @@ use std::process::ExitCode;
 
 use super::{Asks, JudgingInput, asked_of};
 use crate::core::{
-    Backend, BackendProfile, Plan, PlanDocument, PlanSummary, Reading, Record, Sources, json_line,
+    Backend, BackendProfile, BatchError, Plan, PlanDocument, PlanSummary, Reading, Record, Sources,
+    json_line, quoted_plan,
 };
 use crate::edge;
 use crate::engine::facade;
@@ -74,12 +75,17 @@ pub(super) fn plan_record(
     let mut first = None;
     for record in records {
         let sending = asked_of(reading, record?, planning.asks)?;
-        let plan = Plan::new(
-            sending.evidence,
+        let plan = quoted_plan(
             backend.model().clone(),
+            sending.evidence,
+            None,
             vec![sending.question],
+            profile,
         )
-        .map_err(|_| Failure::Defect("a plan of one question asks nothing"))?;
+        .map_err(|error| match error {
+            BatchError::Profile(limit) => Failure::ProfileLimit(limit),
+            _ => Failure::Defect("a plan of one question could not be quoted"),
+        })?;
         summary
             .record()
             .map_err(|_| Failure::Defect("a plan is too large"))?;
@@ -136,7 +142,7 @@ pub(super) fn print_plan(
         let mut stderr = io::stderr().lock();
         writeln!(
             stderr,
-            "thinkthen: plan: request.state is the evidence; request.questions holds what you asked about it."
+            "thinkthen: plan: each question in request.questions quotes the evidence it asks about."
         )
         .and_then(|()| stderr.flush())
         .map_err(Failure::Output)?;

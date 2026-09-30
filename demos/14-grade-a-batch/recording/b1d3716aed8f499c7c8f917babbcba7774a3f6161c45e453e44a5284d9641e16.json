@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"{\"input\":\"Is the packaging recyclable?\",\"gold\":\"Yes, cardboard and paper tape.\",\"output\":\"Yes, and the boxes are made from 90 percent recycled fibre.\"}","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the answer say the same thing as the reference answer to the question?"},"q2":{"type":"noul","instructions":"Does the answer include every fact needed to answer the question as fully as the reference answer?"},"q3":{"type":"choice","instructions":"Which description best fits the answer's main failure?","criteria":{"none":null,"wrong_fact":null,"unsupported":null,"incomplete":null}},"q4":{"type":"score","instructions":"How much does the answer's main failure change what the reader should do?","criteria":["No change.","A small correction is needed.","The answer could cause the wrong action."]}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.53},"q2":{"type":"noul","noul":0.59},"q3":{"type":"choice","choice":"unsupported","confidence":0.5,"probabilities":{"incomplete":0.02,"wrong_fact":0.01,"none":0.35,"unsupported":0.62}},"q4":{"type":"score","score":0.11,"confidence":0.83,"legend":{"0":"No change.","1":"A small correction is needed.","2":"The answer could cause the wrong action."},"probabilities":{"0":0.9,"1":0.08,"2":0.02}}},"usage":{"input_tokens":452,"output_tokens":98}}
-}

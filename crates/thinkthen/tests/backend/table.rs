@@ -41,7 +41,10 @@ fn csv_dry_run_parses_the_first_data_row_as_an_object() {
         stdout.contains(r#""input":{"framing":"csv","field":["/body"]}"#),
         "{stdout}"
     );
-    assert!(stdout.contains(r#""state":"The payout failed again.""#));
+    assert!(
+        stdout.contains(r#""instructions":"The text is \"The payout failed again.\". Does"#),
+        "{stdout}"
+    );
 }
 
 #[test]

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Our enterprise account was billed twice. Call me today.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which plan is the sender on?","criteria":{"free":null,"team":null,"enterprise":null}},"q2":{"type":"choice","instructions":"What is this about?","criteria":{"billing":null,"access":null,"export":null}},"q3":{"type":"noul","instructions":"Does the sender ask for a call?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"enterprise","confidence":1.0,"probabilities":{"free":0.0,"enterprise":1.0,"team":0.0}},"q2":{"type":"choice","choice":"billing","confidence":1.0,"probabilities":{"access":0.0,"export":0.0,"billing":1.0}},"q3":{"type":"noul","noul":0.99}},"usage":{"input_tokens":355,"output_tokens":93}}
-}

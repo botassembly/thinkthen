@@ -27,8 +27,9 @@ with tempfile.TemporaryDirectory(prefix="swift-settings-", dir=logs) as folder:
         assert configured.arrivals == ["swift-settings"] and environment.arrivals == ["swift-env", "swift-empty"]
         bodies = [json.loads(line) for name in ("configured", "environment")
                   for line in (place / name / "requests.jsonl").read_text().splitlines()]
-        assert bodies == [{"state": state, "model": "jev-1.13.0", "questions": {"q1": {"type": "noul", "instructions": "Is it?"}}}
-                          for state in ("swift-settings", "swift-env", "swift-empty")], bodies
+        assert bodies == [{"state": "Each question quotes the text it asks about.", "model": "jev-1.13.0",
+                           "questions": {"q1": {"type": "noul", "instructions": f'The text is "{record}". Is it?'}}}
+                          for record in ("swift-settings", "swift-env", "swift-empty")], bodies
         print("Swift settings: configured URL 1, environment URL 2, invalid settings zero PASS")
     finally:
         configured.close(); environment.close()

@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: design accepted; slice 1 ready. Lane claude-2. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: slice 1 landed; slice 2 ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -52,3 +52,21 @@ Cache clearing and expiry.
 - Changes: the cache key, the store, and one batching path, per ADR 0111.
 - Proof: named per slice in ADR 0111.
 - Defers: cache clearing and expiry.
+
+## What the build taught us
+
+### Slice 1
+
+- `max_evidence_bytes` bounds each quoted record's evidence bytes, as before. It now also counts the shared state, which is the 44-byte fixed sentence or the context. A value below 44 therefore refuses every quoted request. The batcher and the single-record plan each check the record.
+- A question written as JSON cannot carry a quote. That record still goes as the state with its question unquoted, and a context with such a question still refuses, as ADR 0111 section 1 says.
+- A structured tag description puts its questions in an array. The quote goes at the head of array element 0. The ADR does not cover this, and `specification/tag.md` now says it.
+- Two paths quote a JSON record differently. An annotate root group quotes the record's compact text as a JSON string. The batcher quotes the object itself. Slice 2 must pick one form for its question key.
+- The annotate slice path hands its questions to a group batcher, which quotes them. Quoting them earlier quoted them twice. The conformance runner hit the same trap through the facade. One quoting point per path avoids it.
+- `recognize`, `find` and `relate` keep their own states. The requote script skipped them by their state shape.
+- The requote script needed three rules. It parses a string state that looks like JSON as the object the batcher would quote. It treats an instruction as quoted only when a JSON value and ". " follow "The text is ", because some questions start with those words. It merges recordings that collide once the string and structured forms of one record meet, as in demo 06.
+- 468 recordings were requoted and each carries `"quoted": true`. Recordings under `site/examples` and `site/recordings` were requoted mechanically. Marketing owns the prose under `site/`; these fixtures changed only by the script.
+- The two `portable-frame` batching fixtures became copies of `portable-1` and `portable-2`, so they were removed.
+- The `--plan` hint now says each question quotes the evidence it asks about.
+- Every surface fake that counted per-record arrivals had to read a one-record quoted request as that record. The fakes still log and compare the true body.
+- The full test rung reaches two readers of the state that the shared cases miss: the consumer's annotate parts test and the find-0040 probe self-test. Both now read the quoted form.
+- Surface checks not run for slice 1: Dart and the sqlite3 tool are absent, and the Python pandas 2 pin is not in uv's offline cache. The main Python suite passes.

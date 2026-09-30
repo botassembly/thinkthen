@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
-from backend import Backend
+from backend import Backend, one_record
 
 HERE = Path(__file__).resolve().parent
 with tempfile.TemporaryDirectory(prefix="thinkthen-ada-typed-") as name:
@@ -30,7 +30,11 @@ with tempfile.TemporaryDirectory(prefix="thinkthen-ada-typed-") as name:
         golden = json.loads((HERE / "expected-requests.json").read_text())
         assert collections.Counter(key(b) for b in bodies if b["state"] in ("John Smith", relation)) == collections.Counter(
             key(b) for b in golden if b["state"] in ("John Smith", relation)), "typed structured request bytes"
-        packed = [b["questions"] for b in bodies if b["state"] == shared]
+        packed = [b["questions"] for b in bodies if one_record(b)["state"] == shared]
+        singles = [b["questions"] for b in bodies if one_record(b)["state"] != shared and b["state"] == shared]
+        assert collections.Counter(map(key, singles)) == collections.Counter(
+            key({"q1": {"instructions": f'The text is "{row}". Is it?', "type": "noul"}})
+            for row in ("hold-scalar", "hold-deadline", "recovery-package", "status-401", "after-error")), singles
         assert packed == [
             {f"q{i}": {"instructions": f'The text is "{row}". Is it?', "type": "noul"} for i,row in enumerate(("first","second","third"),1)},
             {f"q{i}": {"instructions": f'The text is "{row}". Is it?', "type": "noul"} for i,row in enumerate(("hold-bulk-1","hold-bulk-2"),1)}

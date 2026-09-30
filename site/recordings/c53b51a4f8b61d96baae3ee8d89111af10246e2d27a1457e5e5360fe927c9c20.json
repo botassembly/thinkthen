@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"I was billed twice in September.\". What kind of message is this?","criteria":{"billing":null,"bug":null,"question":null}},"q2":{"type":"score","instructions":"The text is \"I was billed twice in September.\". How urgent is this?","criteria":["Routine.","Soon.","Immediate."]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.98,"probabilities":{"billing":0.99,"question":0.0,"bug":0.01}},"q2":{"type":"score","score":0.77,"confidence":0.59,"legend":{"0":"Routine.","1":"Soon.","2":"Immediate."},"probabilities":{"0":0.25,"1":0.73,"2":0.02}}},"usage":{"input_tokens":341,"output_tokens":54}},
+  "quoted": true
+}

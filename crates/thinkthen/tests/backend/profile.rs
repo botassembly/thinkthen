@@ -40,39 +40,49 @@ fn profile(name: &str, limits: &str) -> PathBuf {
 
 #[test]
 fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
-    let exact_evidence = profile("edge-evidence", r#""max_evidence_bytes":4"#);
-    let passed = spawn(
-        &[
-            "decide",
-            "Is this relevant?",
-            "--plan",
-            "--profile",
-            &exact_evidence.to_string_lossy(),
-        ],
-        &[],
-        b"four",
-    )
-    .expect("command");
-    assert_eq!(passed.status.code(), Some(0));
-
-    let failed = spawn(
-        &[
-            "decide",
-            "Is this relevant?",
-            "--plan",
-            "--profile",
-            &exact_evidence.to_string_lossy(),
-        ],
-        &[],
-        b"five!",
-    )
-    .expect("command");
-    assert_eq!(failed.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&failed.stderr),
-        "thinkthen: profile edge-evidence allows at most 4 evidence bytes; this request has 5\n"
-    );
-    assert!(failed.stdout.is_empty());
+    // A profile's evidence limit bounds each record and the request's state.
+    // Under ADR 0111 a record travels quoted in its question, and the state
+    // of a run with no context is the fixed 44-byte sentence.
+    let exact_evidence = profile("edge-evidence", r#""max_evidence_bytes":44"#);
+    let small_evidence = profile("edge-evidence", r#""max_evidence_bytes":43"#);
+    let at_edge = "Please refund order 4417; the jug is broken.";
+    let one_past = "Please refund order 44170; the jug is broken.";
+    for (limit, record, refusal) in [
+        (&exact_evidence, at_edge, None),
+        (
+            &exact_evidence,
+            one_past,
+            Some("44 evidence bytes; this request has 45"),
+        ),
+        (
+            &small_evidence,
+            "four",
+            Some("43 evidence bytes; this request has 44"),
+        ),
+    ] {
+        let output = spawn(
+            &[
+                "decide",
+                "Is this relevant?",
+                "--plan",
+                "--profile",
+                &limit.to_string_lossy(),
+            ],
+            &[],
+            record.as_bytes(),
+        )
+        .expect("command");
+        let Some(refusal) = refusal else {
+            assert_eq!(output.status.code(), Some(0), "{record}");
+            continue;
+        };
+        assert_eq!(output.status.code(), Some(2), "{record}");
+        assert_eq!(
+            String::from_utf8_lossy(&output.stderr),
+            format!("thinkthen: profile edge-evidence allows at most {refusal}\n")
+        );
+        assert!(output.stdout.is_empty());
+    }
 
     let body = encoded_decide("four", crate::support::DEFAULT_MODEL, "Is this relevant?");
     let exact_request = profile(

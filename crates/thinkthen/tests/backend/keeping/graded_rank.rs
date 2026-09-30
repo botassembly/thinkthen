@@ -11,10 +11,10 @@ use crate::harness::{Canned, Listener, spawn_one as spawn};
 const INPUT: &str = "delta\nbeta  \nalpha\ngamma\n";
 const FILE: &str = r#"{"score":"How relevant?","levels":{"low":"Unrelated.","middle":"Some relevance.","high":"Perfect match."}}"#;
 const BODIES: [&str; 4] = [
-    r#"{"state":"delta","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
-    r#"{"state":"beta  ","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
-    r#"{"state":"alpha","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
-    r#"{"state":"gamma","model":"local-1","questions":{"q1":{"type":"score","instructions":"How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"score","instructions":"The text is \"delta\". How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"score","instructions":"The text is \"beta  \". How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"score","instructions":"The text is \"alpha\". How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"score","instructions":"The text is \"gamma\". How relevant?","criteria":["Unrelated.","Some relevance.","Perfect match."]}}}"#,
 ];
 const QUESTION_SHA256: &str = "d20f78e3abbb54d4e8b083e27797cccfd25e673723eb952206f5d69035e221d6";
 

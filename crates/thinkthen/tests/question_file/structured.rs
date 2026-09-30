@@ -53,9 +53,8 @@ fn one_structured_tag_description_expands_every_label_into_an_array() {
         r#"{"tag":"Which topics?","labels":{"billing":{"what":"Money"},"urgent":"Urgent."}}"#,
     );
     let plan = printed(&["tag", &written, "--plan"]);
-    let billing =
-        r#""instructions":["Which topics?",{"label":"billing","description":{"what":"Money"}}]"#;
-    let urgent = r#""instructions":["Which topics?",{"label":"urgent","description":"Urgent."}]"#;
+    let billing = r#""instructions":["The text is \"Refund me please.\". Which topics?",{"label":"billing","description":{"what":"Money"}}]"#;
+    let urgent = r#""instructions":["The text is \"Refund me please.\". Which topics?",{"label":"urgent","description":"Urgent."}]"#;
     assert!(plan.contains(billing), "{plan}");
     assert!(plan.contains(urgent), "{plan}");
 }

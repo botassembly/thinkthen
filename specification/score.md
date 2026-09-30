@@ -20,7 +20,7 @@ On one document, a JSON number. The score runs from 0 at the lowest level to the
 
 To put the highest values first, save the same question and levels in a `score` question file and run `rank @FILE` over the records. At equal framing, field selection, context, batch setting, model, and backend, both commands send the same score requests and use the same weighted values. `score` keeps input order; `rank` sorts those values, keeps input order at an exact tie, and can print only the first `--top N` rows. [rank.md](rank.md) gives that command's output and details.
 
-Record mode fills each request with records up to `--batch N|max` and the request-size limit. `--batch 1` without a context sends each record's former request bytes. A top-level question-file `batch` follows a typed `--batch` and `THINKTHEN_BATCH`; the default is `max`. `--context FILE` supplies shared evidence, and `--max-request-bytes N` sets the soft byte cut. A typed batch or context on one document is refused. [records.md](records.md) gives the limits and ordered-row rules. `score` has no tuned threshold or batch warning.
+Record mode fills each request with records up to `--batch N|max` and the request-size limit. `--batch 1` sends one record a request, in the same quoted form. A top-level question-file `batch` follows a typed `--batch` and `THINKTHEN_BATCH`; the default is `max`. `--context FILE` supplies shared evidence, and `--max-request-bytes N` sets the soft byte cut. A typed batch or context on one document is refused. [records.md](records.md) gives the limits and ordered-row rules. `score` has no tuned threshold or batch warning.
 
 ## The number
 

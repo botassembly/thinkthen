@@ -3,12 +3,12 @@
   "cases": [
     {"id":"evidence-at","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":189},"expect":"pass"},
     {"id":"evidence-over","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":188},"expect":{"kind":"evidence bytes","limit":188,"actual":189}},
-    {"id":"request-at","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":319},"expect":"pass"},
-    {"id":"request-over","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":318},"expect":{"kind":"request bytes","limit":318,"actual":319}},
+    {"id":"request-at","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":388},"expect":"pass"},
+    {"id":"request-over","source_case":"01-decide-yes-captured","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":387},"expect":{"kind":"request bytes","limit":387,"actual":388}},
     {"id":"tag-at","source_case":"09-tag-two","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_questions":3},"expect":"pass"},
     {"id":"tag-over","source_case":"09-tag-two","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_questions":2},"expect":{"kind":"questions","limit":2,"actual":3}},
-    {"id":"annotate-all-groups","source_case":"18-annotate-two-groups","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":16},"expect":"pass"},
-    {"id":"annotate-later-group-over","source_case":"18-annotate-two-groups","exchange":1,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":16},"expect":{"kind":"evidence bytes","limit":16,"actual":17}}
+    {"id":"annotate-all-groups","source_case":"18-annotate-two-groups","exchange":0,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":175},"expect":"pass"},
+    {"id":"annotate-later-group-over","source_case":"18-annotate-two-groups","exchange":1,"profile":{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":175},"expect":{"kind":"request bytes","limit":175,"actual":192}}
   ],
   "mismatches": [
     {"id":"equal","tuned_for":"jev","running":"jev","warning":false},

@@ -1,16 +1,16 @@
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"yes"}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"no"}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"unsure"}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"yes\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"no\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"unsure\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
 {"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"batch-one\". Is it?","type":"noul"},"q2":{"instructions":"The text is \"batch-two\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"json-decide"}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"annotate-one"}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"json-decide\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"annotate-one\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
 {"model":"jev-1.13.0","questions":{"q1":{"criteria":{"BEGIN":"first token of a name of two or more tokens","END":"last token of a name of two or more tokens","INSIDE":"a middle token of a name","OUT":"not part of a name","SINGLE":"a one-token name"},"instructions":"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: [[John]] Smith","type":"choice"},"q2":{"criteria":{"BEGIN":"first token of a name of two or more tokens","END":"last token of a name of two or more tokens","INSIDE":"a middle token of a name","OUT":"not part of a name","SINGLE":"a one-token name"},"instructions":"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\n\nSnippet: John [[Smith]]","type":"choice"}},"state":"John Smith"}
 {"model":"jev-1.13.0","questions":{"q1":{"criteria":{"none of these":"They are not a proper name, or no listed kind covers what they name.","person":"A person name."},"instructions":"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\n\nText: [[John Smith]]","type":"choice"}},"state":"John Smith"}
 {"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it true that i1 caused by i2?","type":"noul"},"q2":{"instructions":"Is it true that i2 caused by i1?","type":"noul"}},"state":{"entities":[{"id":"i1","kind":"alert","name":"First"},{"id":"i2","kind":"alert","name":"Second"}]}}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"backend-failure"}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"configured"}
-{"model":"jev-1.13.0","questions":{"q1":{"criteria":{"billing":{"examples":["refund"],"not_for":"Shipping.","what":"Charges and refunds."},"other":"Everything else."},"instructions":"Which?","type":"choice"}},"state":"described"}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"hold-scalar"}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"recovery-scalar"}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"backend-failure\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"configured\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
+{"model":"jev-1.13.0","questions":{"q1":{"criteria":{"billing":{"examples":["refund"],"not_for":"Shipping.","what":"Charges and refunds."},"other":"Everything else."},"instructions":"The text is \"described\". Which?","type":"choice"}},"state":"Each question quotes the text it asks about."}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"hold-scalar\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"recovery-scalar\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
 {"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"hold-bulk-first\". Is it?","type":"noul"},"q2":{"instructions":"The text is \"hold-bulk-second\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}
-{"model":"jev-1.13.0","questions":{"q1":{"instructions":"Is it?","type":"noul"}},"state":"hold-deadline"}
+{"model":"jev-1.13.0","questions":{"q1":{"instructions":"The text is \"hold-deadline\". Is it?","type":"noul"}},"state":"Each question quotes the text it asks about."}

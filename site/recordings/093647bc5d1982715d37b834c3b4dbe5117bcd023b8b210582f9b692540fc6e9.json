@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Please refund the extra fee on my invoice.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which team owns this?","criteria":{"billing":"Invoices, fees, and refunds.","shipping":"Parcels and delivery.","account":"Logins and passwords."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":1.0,"probabilities":{"shipping":0.0,"billing":1.0,"account":0.0}}},"usage":{"input_tokens":343,"output_tokens":39}}
-}

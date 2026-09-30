@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Reports take a full minute to load.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"What is wrong here?\n\nDetermine whether the label \"price\" applies to this item."},"q2":{"type":"noul","instructions":"What is wrong here?\n\nDetermine whether the label \"speed\" applies to this item."},"q3":{"type":"noul","instructions":"What is wrong here?\n\nDetermine whether the label \"bugs\" applies to this item."}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.13},"q2":{"type":"noul","noul":0.87},"q3":{"type":"noul","noul":0.42}},"usage":{"input_tokens":348,"output_tokens":55}}
-}

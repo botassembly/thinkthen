@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"The checkout page froze while it was taking my payment. I have no order number and no email, and I cannot tell whether the money left my account.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the customer report that a payment or a payout did not go through?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.72}},"usage":{"input_tokens":312,"output_tokens":21}}
-}

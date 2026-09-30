@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"The text is \"Subject: reset link never arrives\\n\\nI have asked for a password reset four times today and no mail has come. I\\nchecked the junk folder. The address on the account is the one I am writing\\nfrom.\\n\". How hard is this request to answer?","criteria":["A canned reply answers it.","One person can answer it after a look at the account.","It needs a specialist and more than one system."]}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":1.04,"confidence":0.7,"legend":{"0":"A canned reply answers it.","1":"One person can answer it after a look at the account.","2":"It needs a specialist and more than one system."},"probabilities":{"0":0.08,"1":0.8,"2":0.12}}},"usage":{"input_tokens":367,"output_tokens":18}},
+  "quoted": true
+}

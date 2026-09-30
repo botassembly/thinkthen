@@ -5,17 +5,15 @@ use std::num::NonZeroUsize;
 
 use super::{Batch, BatchError, BatchRecord, Batcher, Closed, Setting};
 use crate::core::Pointer;
-use crate::core::adapters::systemone::tests::{TEAMS, disruption_plan, team_plan, urgency_plan};
+use crate::core::adapters::systemone::tests::{TEAMS, team_plan};
 use crate::core::backend::Backend;
 use crate::core::backend_profile::{BackendProfile, LimitKind};
-use crate::core::find::Find;
 use crate::core::json::Json;
-use crate::core::plan::Plan;
 use crate::core::question::{Labels, Question};
 use crate::core::recording::Exchange;
 use crate::core::records::{Framing, Reading, Record};
 use crate::core::render::json_line;
-use crate::core::text::{Evidence, Meaning, ModelName, QuestionText};
+use crate::core::text::{Evidence, Meaning, QuestionText};
 
 mod ceiling;
 mod portable;
@@ -115,47 +113,33 @@ fn shape(batches: &[Batch]) -> Vec<(usize, Closed)> {
         .collect()
 }
 
+/// The quoted request of one urgent record, written out by hand.
+const URGENT_QUOTED: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is \"Help! My payouts have been failing for 3 days.\". Does this convey urgency?"}}}"#;
+
+/// A batch of one takes the quoted form every batch takes, by ADR 0111
+/// section 1, and a question written as JSON keeps its record as the state.
 #[test]
-fn a_batch_of_one_is_todays_request() {
-    let find_evidence = [
-        Evidence::new("alpha \"quote\"\\path").expect("e"),
-        Evidence::new("beta").expect("e"),
-    ];
-    let find = Find::new(
-        QuestionText::new("Which unit answers?").expect("question"),
-        &find_evidence,
-        ModelName::new("local-1").expect("model"),
-        false,
-    )
-    .expect("find");
-    let cases: [(Plan, &str); 4] = [
-        (urgency_plan(), fixture!("decide-urgent")),
-        (team_plan(), fixture!("choose-team")),
-        (disruption_plan(), fixture!("score-disruption")),
-        (find.plan().clone(), fixture!("find-two")),
-    ];
-    for (plan, fixture) in cases {
-        let expected = compact(fixture);
-        let backend = backend(LOOPBACK, plan.model().as_str());
-        let digest = Exchange::new(backend.url(), &expected).digest();
-        for setting in [records(1), Setting::Max] {
-            let record = BatchRecord {
-                evidence: plan.evidence().clone(),
-                value: plan.evidence().as_json(),
-            };
-            let question = plan.questions().first().expect("question").clone();
-            let found = batches(backend.clone(), None, question, setting, vec![record]);
-            let [batch] = found.as_slice() else {
-                panic!("one batch, not {}", found.len())
-            };
-            assert_eq!(
-                String::from_utf8_lossy(&batch.body),
-                String::from_utf8_lossy(&expected)
-            );
-            assert_eq!(batch.digest, digest);
-            assert_eq!(batch.questions, [0]);
-        }
+fn a_batch_of_one_takes_the_quoted_form() {
+    let urgent = || text("Help! My payouts have been failing for 3 days.");
+    let digest = Exchange::new(loopback().url(), URGENT_QUOTED.as_bytes()).digest();
+    for setting in [records(1), Setting::Max] {
+        let question = decide("Does this convey urgency?");
+        let found = batches(loopback(), None, question, setting, vec![urgent()]);
+        let [batch] = found.as_slice() else {
+            panic!("one batch, not {}", found.len())
+        };
+        assert_eq!(String::from_utf8_lossy(&batch.body), URGENT_QUOTED);
+        assert_eq!(batch.digest, digest);
+        assert_eq!(batch.questions, [0]);
     }
+    let found = batches(loopback(), None, structured(), Setting::Max, vec![urgent()]);
+    let [batch] = found.as_slice() else {
+        panic!("one batch, not {}", found.len())
+    };
+    assert_eq!(
+        String::from_utf8_lossy(&batch.body),
+        r#"{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":{"ask":"urgent?"}}}}"#
+    );
 }
 
 #[test]
@@ -337,13 +321,13 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
     let body = compact(fixture!("batch-three")).len();
     let state = super::QUOTED.len();
     let urgent = || text("Help! My payouts have been failing for 3 days.");
-    let today = compact(fixture!("decide-urgent")).len();
+    let alone = URGENT_QUOTED.len();
     let twelve = || {
         ('a'..='l')
             .map(|letter| text(&letter.to_string()))
             .collect()
     };
-    let cases: [LimitCase; 7] = [
+    let cases: [LimitCase; 6] = [
         (
             loopback(),
             profile(&format!(r#""max_request_bytes":{body}"#)),
@@ -367,14 +351,7 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
         ),
         (
             loopback(),
-            profile(&format!(r#""max_evidence_bytes":{}"#, state - 1)),
-            decide(SONG),
-            three(),
-            vec![(1, Limit), (1, Limit), (1, End)],
-        ),
-        (
-            loopback(),
-            profile(&format!(r#""max_request_bytes":{today}"#)),
+            profile(&format!(r#""max_request_bytes":{alone}"#)),
             decide("Does this convey urgency?"),
             vec![urgent(), urgent(), urgent()],
             vec![(3, End)],
@@ -395,6 +372,43 @@ fn limits_close_batches_by_exact_bytes_and_the_ceiling() {
         ),
     ];
     check(cases);
+    let below = Batcher::new(
+        loopback(),
+        profile(&format!(r#""max_evidence_bytes":{}"#, state - 1)),
+        decide(SONG),
+        Setting::Max,
+        None,
+    )
+    .expect("batcher");
+    assert!(
+        matches!(run(below, three()), Err(BatchError::Profile(limit)) if limit.kind == LimitKind::EvidenceBytes),
+        "an evidence limit below the fixed sentence refuses every request"
+    );
+}
+
+#[test]
+fn the_evidence_limit_bounds_each_quoted_record() {
+    let state = super::QUOTED.len();
+    let bounded = |bytes: usize| {
+        let batcher = Batcher::new(
+            loopback(),
+            profile(&format!(r#""max_evidence_bytes":{state}"#)),
+            decide(SONG),
+            Setting::Max,
+            None,
+        )
+        .expect("batcher");
+        run(batcher, sized(bytes))
+    };
+    assert!(
+        bounded(state).is_ok(),
+        "a record at the evidence limit passes"
+    );
+    assert!(
+        matches!(bounded(state + 1), Err(BatchError::Profile(limit))
+            if limit.kind == LimitKind::EvidenceBytes && limit.actual == state + 1),
+        "the evidence limit bounds each quoted record as well as the state"
+    );
 }
 
 /// Plan each case at `Max` and compare its batches' sizes and reasons.

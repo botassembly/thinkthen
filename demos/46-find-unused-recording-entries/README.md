@@ -11,7 +11,7 @@ set -euo pipefail
 
 thinkthen cache unused ../01-refund-gate/recording --used used.txt \
   | mustmatch 'unused from supplied digests: 1
-unused ab14a1fa02d3c85fe7f97051b043e6276a0cce429370a783b040e1b45305f971.json'
+unused 86523943957338bf3e7ba2d08659a4ccbd246edc081b0d856779a703696f1786.json'
 ```
 
 ## Input

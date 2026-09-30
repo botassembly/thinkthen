@@ -9,6 +9,30 @@ import socket
 PACKED_EVIDENCE = 'Each question quotes the text it asks about.'
 
 
+QUOTED_STATE = 'Each question quotes the text it asks about.'
+
+
+def unquoted_single(request):
+    """ADR 0111 quotes each record in its own question, a batch of one
+    included. A request whose questions all quote one record reads here as
+    that record's single request, so behaviors stay keyed on the record."""
+    if request.get('state') != QUOTED_STATE:
+        return request
+    records, questions = set(), {}
+    for name, question in request['questions'].items():
+        text = question.get('instructions')
+        if not isinstance(text, str) or not text.startswith('The text is '):
+            return request
+        record, end = json.JSONDecoder().raw_decode(text, len('The text is '))
+        if not text.startswith('. ', end):
+            return request
+        records.add(json.dumps(record))
+        questions[name] = dict(question, instructions=text[end + 2:])
+    if len(records) != 1:
+        return request
+    return dict(request, state=json.loads(records.pop()), questions=questions)
+
+
 def decode_packed_decide(request):
     """ADR 0055 item 1 and specification/records.md: decode exact quoted per-row questions."""
     if request['state'] != PACKED_EVIDENCE:
@@ -58,7 +82,8 @@ class Backend(http.server.ThreadingHTTPServer):
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"]))
-        request = json.loads(body)
+        wire = json.loads(body)
+        request = unquoted_single(wire)
         state = request["state"]
         state_key = state if isinstance(state, str) else ""
         try:
@@ -69,7 +94,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         packed_rows = list(packed.values()) if packed is not None else []
         with self.server.lock:
             self.server.arrivals.append(state)
-            self.server.requests.append(request)
+            self.server.requests.append(wire)
             self.server.attempts += 1
             bulk_first = state_key in ('first', 'second', 'third') and self.server.bulk_seen[state_key] == 0
             if state_key in self.server.bulk_seen:

@@ -7,6 +7,30 @@ import time
 import socket
 import re
 
+
+QUOTED_STATE = 'Each question quotes the text it asks about.'
+
+
+def unquoted_single(request):
+    """ADR 0111 quotes each record in its own question, a batch of one
+    included. A request whose questions all quote one record reads here as
+    that record's single request, so behaviors stay keyed on the record."""
+    if request.get('state') != QUOTED_STATE:
+        return request
+    records, questions = set(), {}
+    for name, question in request['questions'].items():
+        text = question.get('instructions')
+        if not isinstance(text, str) or not text.startswith('The text is '):
+            return request
+        record, end = json.JSONDecoder().raw_decode(text, len('The text is '))
+        if not text.startswith('. ', end):
+            return request
+        records.add(json.dumps(record))
+        questions[name] = dict(question, instructions=text[end + 2:])
+    if len(records) != 1:
+        return request
+    return dict(request, state=json.loads(records.pop()), questions=questions)
+
 # specification/records.md "Order and requests" and ADR 0048 item 1:
 # a packed decide batch quotes one JSON record in each distinct wire question.
 PACKED_STATE = 'Each question quotes the text it asks about.'
@@ -45,7 +69,8 @@ class Backend(http.server.ThreadingHTTPServer):
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"]))
-        request = json.loads(body)
+        wire = json.loads(body)
+        request = unquoted_single(wire)
         state = request["state"]
         state_key = state if isinstance(state, str) else ""
         packed = state_key == PACKED_STATE

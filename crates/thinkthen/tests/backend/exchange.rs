@@ -189,7 +189,11 @@ fn a_dry_run_prints_the_plan_and_opens_no_connection() {
     assert!(listener.requests().is_empty(), "a plan opens no connection");
     let printed = String::from_utf8_lossy(&output.stdout);
     assert!(
-        printed.contains(r#""request":{"state":"Refund me.""#),
+        printed.contains(concat!(
+            r#""request":{"state":"Each question quotes the text it asks about.","#,
+            r#""model":"local-1","questions":{"q1":{"type":"noul","#,
+            r#""instructions":"The text is \"Refund me.\". asks for a refund"}}}"#
+        )),
         "{printed}"
     );
     assert_eq!(output.status.code(), Some(0));

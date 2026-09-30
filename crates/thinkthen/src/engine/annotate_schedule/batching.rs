@@ -5,7 +5,7 @@ use std::sync::Mutex;
 
 use crate::core::batch::BatchError;
 use crate::core::{
-    Batch, BatchRecord, GroupBatcher, PartError, Plan, Question, QuestionSet, Setting,
+    Batch, BatchRecord, GroupBatcher, PartError, Question, QuestionSet, Setting, quoted_plan,
 };
 use crate::engine::error::Error;
 use crate::engine::facade::{Engine, PreparedGroup};
@@ -129,12 +129,17 @@ impl GroupPlanner {
                     evidence,
                 };
                 let prepared = if engine.profile().is_some() {
-                    let plan = Plan::new(
-                        selected.evidence.clone(),
+                    let plan = quoted_plan(
                         engine.backend().model().clone(),
+                        selected.evidence.clone(),
+                        None,
                         group.questions.clone(),
+                        engine.profile(),
                     )
-                    .map_err(|_| GroupPlanError::Defect("an annotate group asks nothing"))?;
+                    .map_err(|error| match error {
+                        BatchError::Profile(_) => GroupPlanError::Batch(error),
+                        _ => GroupPlanError::Defect("an annotate group asks nothing"),
+                    })?;
                     let prepared = engine
                         .prepare_group(&plan, group.places.clone())
                         .map_err(GroupPlanError::Engine)?;

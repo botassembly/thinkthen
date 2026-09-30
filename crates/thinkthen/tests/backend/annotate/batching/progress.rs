@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use serde_json::{Value, json};
+use serde_json::Value;
 
 use super::set;
 use crate::harness::{Canned, Gathering, Listener, spawn};
@@ -57,16 +57,28 @@ fn the_member_cap_closes_a_later_group_while_the_first_reply_is_held() {
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 3);
-    let mut states: Vec<Value> = requests
+    let mut quotes: Vec<String> = requests
         .iter()
         .map(|request| {
-            serde_json::from_slice::<Value>(&request.body).expect("request JSON")["state"].clone()
+            let body = serde_json::from_slice::<Value>(&request.body).expect("request JSON");
+            assert_eq!(
+                body["state"],
+                "Each question quotes the text it asks about."
+            );
+            let asked = body["questions"]["q1"]["instructions"]
+                .as_str()
+                .unwrap_or_default();
+            asked.split(". ").next().unwrap_or_default().to_owned()
         })
         .collect();
-    states.sort_by_key(Value::to_string);
+    quotes.sort();
     assert_eq!(
-        states,
-        vec![json!("cut-12835"), json!("same-narrow"), json!("same-wide")]
+        quotes,
+        [
+            r#"The text is "cut-12835""#,
+            r#"The text is "same-narrow""#,
+            r#"The text is "same-wide""#
+        ]
     );
     let rows: Vec<Value> = output
         .stdout

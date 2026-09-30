@@ -82,7 +82,7 @@ fn a_pick_sends_the_options_as_criteria_in_the_order_they_were_typed() {
     assert!(
         body.contains(concat!(
             r#""questions":{"q1":{"type":"choice","#,
-            r#""instructions":"Which team owns this request?","#,
+            r#""instructions":"The text is \"The renewal charge bounced last night.\". Which team owns this request?","#,
             r#""criteria":{"billing":null,"shipping":null,"account":null,"other":null}}}"#,
         )),
         "{body}"
@@ -101,7 +101,7 @@ fn a_placement_sends_the_levels_as_an_ordered_list_and_prints_a_number() {
     assert!(
         body.contains(concat!(
             r#""questions":{"q1":{"type":"score","#,
-            r#""instructions":"Which team owns this request?","#,
+            r#""instructions":"The text is \"The renewal charge bounced last night.\". Which team owns this request?","#,
             r#""criteria":["None.","Work continues with a workaround.","Work is blocked."]}}"#,
         )),
         "{body}"

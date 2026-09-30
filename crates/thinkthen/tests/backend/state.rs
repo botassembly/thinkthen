@@ -1,10 +1,10 @@
-//! The `state` value a request carries, decided by what a pointer selects.
+//! The value a request quotes, decided by what a pointer selects.
 //!
-//! A string, a number, `true`, `false`, and `null` travel as the text they
-//! always were, so the bytes and the recording names of a text run are the
-//! bytes and names they always had. A pointer that names an object or a list
-//! sends that JSON value, and two or more pointers send one object keyed by
-//! each pointer's last part.
+//! By ADR 0111 section 1, every request sends the fixed sentence as its
+//! state and quotes the selected value's compact JSON at the head of each
+//! question. A string quotes as a JSON string, a number, `true`, `false`, and
+//! `null` as their JSON spelling, and an object or a list as that JSON value.
+//! Two or more pointers quote one object keyed by each pointer's last part.
 
 #![allow(
     clippy::expect_used,
@@ -28,6 +28,9 @@ const RECORD: &str = concat!(
     r#"{"id":"T-91","body":"Payouts failed.","count":3,"ok":false,"#,
     r#""none":null,"meta":{"a":1},"items":[1,"x"],"empty":{},"bare":[]}"#,
 );
+
+/// The state every request sends without a context.
+const FIXED: &str = r#""state":"Each question quotes the text it asks about.""#;
 
 /// Run `decide` against one base over the bytes on standard input.
 fn decide(base: &str, arguments: &[&str], input: &str) -> std::process::Output {
@@ -61,11 +64,11 @@ fn answering() -> Listener {
 
 #[test]
 fn a_pointer_to_an_object_or_a_list_sends_the_json_value_it_named() {
-    for (field, state) in [
-        ("/meta", r#""state":{"a":1}"#),
-        ("/items", r#""state":[1,"x"]"#),
-        ("/empty", r#""state":{}"#),
-        ("/bare", r#""state":[]"#),
+    for (field, quote) in [
+        ("/meta", r#""instructions":"The text is {\"a\":1}. Does"#),
+        ("/items", r#""instructions":"The text is [1,\"x\"]. Does"#),
+        ("/empty", r#""instructions":"The text is {}. Does"#),
+        ("/bare", r#""instructions":"The text is []. Does"#),
     ] {
         let listener = answering();
         let output = decide(
@@ -74,10 +77,10 @@ fn a_pointer_to_an_object_or_a_list_sends_the_json_value_it_named() {
             &format!("{RECORD}\n"),
         );
         assert_eq!(output.status.code(), Some(0), "{field}");
+        let body = sent(&listener);
         assert!(
-            sent(&listener).contains(state),
-            "{field}: {}",
-            sent(&listener)
+            body.contains(FIXED) && body.contains(quote),
+            "{field}: {body}"
         );
     }
 }
@@ -95,18 +98,24 @@ fn several_pointers_send_one_object_in_the_order_the_pointers_were_given() {
     assert_eq!(output.status.code(), Some(0));
     let body = sent(&listener);
     assert!(
-        body.contains(r#""state":{"body":"Payouts failed.","id":"T-91","meta":{"a":1}}"#),
+        body.contains(concat!(
+            r#""instructions":"The text is {\"body\":\"Payouts failed.\",\"id\":\"T-91\","#,
+            r#"\"meta\":{\"a\":1}}. Does"#
+        )),
         "{body}"
     );
 }
 
 #[test]
-fn a_string_or_a_scalar_stays_the_string_state_it_always_sent() {
-    for (field, state) in [
-        ("/body", r#""state":"Payouts failed.""#),
-        ("/count", r#""state":"3""#),
-        ("/ok", r#""state":"false""#),
-        ("/none", r#""state":"null""#),
+fn a_string_quotes_as_a_string_and_a_scalar_as_its_json_spelling() {
+    for (field, quote) in [
+        (
+            "/body",
+            r#""instructions":"The text is \"Payouts failed.\". Does"#,
+        ),
+        ("/count", r#""instructions":"The text is 3. Does"#),
+        ("/ok", r#""instructions":"The text is false. Does"#),
+        ("/none", r#""instructions":"The text is null. Does"#),
     ] {
         let listener = answering();
         let output = decide(
@@ -115,13 +124,20 @@ fn a_string_or_a_scalar_stays_the_string_state_it_always_sent() {
             &format!("{RECORD}\n"),
         );
         assert_eq!(output.status.code(), Some(0), "{field}");
+        let body = sent(&listener);
         assert!(
-            sent(&listener).contains(state),
-            "{field}: {}",
-            sent(&listener)
+            body.contains(FIXED) && body.contains(quote),
+            "{field}: {body}"
         );
     }
 }
+
+/// `RECORD` quoted as a JSON value inside an instruction string.
+const QUOTED_RECORD: &str = concat!(
+    r#""instructions":"The text is {\"id\":\"T-91\",\"body\":\"Payouts failed.\",\"count\":3,"#,
+    r#"\"ok\":false,\"none\":null,\"meta\":{\"a\":1},\"items\":[1,\"x\"],\"empty\":{},"#,
+    r#"\"bare\":[]}. Does"#,
+);
 
 #[test]
 fn the_root_pointer_selects_the_whole_record_as_the_value_it_is() {
@@ -132,41 +148,37 @@ fn the_root_pointer_selects_the_whole_record_as_the_value_it_is() {
         &format!("{RECORD}\n"),
     );
     assert_eq!(output.status.code(), Some(0));
-    assert!(sent(&listener).contains(&format!("\"state\":{RECORD}")));
+    let body = sent(&listener);
+    assert!(
+        body.contains(FIXED) && body.contains(QUOTED_RECORD),
+        "{body}"
+    );
 }
 
 #[test]
-fn no_pointer_keeps_the_whole_record_as_text_whatever_the_framing() {
+fn no_pointer_quotes_the_whole_record_as_the_value_it_is() {
+    let table = concat!(
+        r#""instructions":"The text is {\"id\":\"T-91\",\"body\":\"Payouts failed.\"}. "#,
+        "Does"
+    );
     let cases: [(&[&str], &str, &str); 4] = [
-        (
-            &["--jsonl"],
-            &format!("{RECORD}\n"),
-            r#""state":"{\"id\":\"T-91\",\"body\":\"Payouts failed.\""#,
-        ),
-        (
-            &["--csv"],
-            "id,body\nT-91,Payouts failed.\n",
-            r#""state":"{\"id\":\"T-91\",\"body\":\"Payouts failed.\"}""#,
-        ),
-        (
-            &["--tsv"],
-            "id\tbody\nT-91\tPayouts failed.\n",
-            r#""state":"{\"id\":\"T-91\",\"body\":\"Payouts failed.\"}""#,
-        ),
+        (&["--jsonl"], &format!("{RECORD}\n"), QUOTED_RECORD),
+        (&["--csv"], "id,body\nT-91,Payouts failed.\n", table),
+        (&["--tsv"], "id\tbody\nT-91\tPayouts failed.\n", table),
         (
             &["--lines"],
             "Payouts failed.\n",
-            r#""state":"Payouts failed.""#,
+            r#""instructions":"The text is \"Payouts failed.\". Does"#,
         ),
     ];
-    for (framing, input, state) in cases {
+    for (framing, input, quote) in cases {
         let listener = answering();
         let output = decide(listener.base(), framing, input);
         assert_eq!(output.status.code(), Some(0), "{framing:?}");
+        let body = sent(&listener);
         assert!(
-            sent(&listener).contains(state),
-            "{framing:?}: {}",
-            sent(&listener)
+            body.contains(FIXED) && body.contains(quote),
+            "{framing:?}: {body}"
         );
     }
 }
@@ -187,7 +199,10 @@ fn several_table_columns_send_one_object_in_the_order_the_pointers_named() {
         assert_eq!(output.status.code(), Some(0), "{framing}");
         let body = sent(&listener);
         assert!(
-            body.contains(r#""state":{"body":"Payouts failed.","id":"T-91"}"#),
+            body.contains(concat!(
+                r#""instructions":"The text is {\"body\":\"Payouts failed.\",\"id\":\"T-91\"}. "#,
+                "Does"
+            )),
             "{framing}: {body}"
         );
     }
@@ -215,9 +230,10 @@ fn a_blank_selected_string_is_refused_before_any_request() {
 }
 
 #[test]
-fn an_evidence_limit_counts_the_compact_bytes_of_a_structured_state() {
-    let state = r#"{"a":1}"#;
-    let input = format!("{{\"meta\":{state}}}\n");
+fn an_evidence_limit_counts_the_fixed_state_and_not_the_quoted_record() {
+    // The record rides in the question, so the state is the fixed sentence.
+    let state = "Each question quotes the text it asks about.";
+    let input = "{\"meta\":{\"a\":1}}\n";
     let profile_dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("state-limits");
     let _created = fs::create_dir_all(&profile_dir);
     let profile = |name: &str, bytes: usize| {
@@ -245,7 +261,7 @@ fn an_evidence_limit_counts_the_compact_bytes_of_a_structured_state() {
                 "--profile",
                 &limited.to_string_lossy(),
             ],
-            &input,
+            input,
         );
         assert_eq!(output.status.code(), Some(code), "{name}");
         if code == 0 {
@@ -270,8 +286,9 @@ fn an_evidence_limit_counts_the_compact_bytes_of_a_structured_state() {
 fn a_request_limit_counts_the_complete_body_with_a_structured_state() {
     // The exact body the run sends, so the profile lands on and one under it.
     let body = concat!(
-        r#"{"state":{"a":1},"model":"local-1","questions":{"q1":{"type":"noul","#,
-        r#""instructions":"Does this report a payment failure?"}}}"#,
+        r#"{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+        r#""questions":{"q1":{"type":"noul","#,
+        r#""instructions":"The text is {\"a\":1}. Does this report a payment failure?"}}}"#,
     );
     let profile_dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("state-request-limits");
     let _created = fs::create_dir_all(&profile_dir);
@@ -320,14 +337,14 @@ fn a_request_limit_counts_the_complete_body_with_a_structured_state() {
 }
 
 #[test]
-fn a_structured_state_names_a_new_request_and_a_text_state_keeps_its_own() {
+fn an_unquoted_entry_answers_no_run_and_the_quoted_entry_answers_its_own() {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("state-recording");
     let url = "http://127.0.0.1:9/v1/systemone";
-    // The bytes a version before this change sent for two named fields: the
-    // selection was written as one string. A run today sends the object, so
-    // the old entry cannot answer it.
+    // The bytes a version before ADR 0111 sent for one named text field: the
+    // record was the state. A run today quotes it, so the old entry cannot
+    // answer it.
     let old = concat!(
-        r#"{"state":"{\"body\":\"Payouts failed.\",\"id\":\"T-91\"}","model":"local-1","#,
+        r#"{"state":"Payouts failed.","model":"local-1","#,
         r#""questions":{"q1":{"type":"noul","instructions":"Does this report a payment failure?"}}}"#,
     );
     plant_recording(&folder, url, old.as_bytes(), ANSWERED).expect("a recorded exchange");
@@ -337,8 +354,6 @@ fn a_structured_state_names_a_new_request_and_a_text_state_keeps_its_own() {
             "--jsonl",
             "--field",
             "/body",
-            "--field",
-            "/id",
             "--replay",
             &folder.to_string_lossy(),
         ],
@@ -351,20 +366,14 @@ fn a_structured_state_names_a_new_request_and_a_text_state_keeps_its_own() {
         "{said}"
     );
 
-    // The same recording answers the text run it always answered.
+    // The entry in the quoted form answers the same run.
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("state-recording-text");
-    plant_recording(
-        &folder,
-        url,
-        crate::support::encoded_decide(
-            "Payouts failed.",
-            "local-1",
-            "Does this report a payment failure?",
-        )
-        .as_slice(),
-        ANSWERED,
-    )
-    .expect("a recorded exchange");
+    let quoted = concat!(
+        r#"{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+        r#""questions":{"q1":{"type":"noul","#,
+        r#""instructions":"The text is \"Payouts failed.\". Does this report a payment failure?"}}}"#,
+    );
+    plant_recording(&folder, url, quoted.as_bytes(), ANSWERED).expect("a recorded exchange");
     let output = decide(
         "http://127.0.0.1:9/v1",
         &[

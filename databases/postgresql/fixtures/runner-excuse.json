@@ -10,10 +10,10 @@
     {
      "provenance": {
       "kind": "captured",
-      "path": "demos/01-refund-gate/recording/d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e.json"
+      "path": "demos/01-refund-gate/recording/9f84b17aaf3d4cced930b7c18340bf0388ca4f451b55d2d83feb207843bca6ab.json"
      },
      "evidence": "From: sam.okafor@example.net\nSubject: order 4417\n\nThe blender arrived with a cracked jug. I do not want a replacement.\nPlease put the money back on my card.\n\nOrder 4417, bought on the 3rd.\n",
-     "request": "{\"state\":\"From: sam.okafor@example.net\\nSubject: order 4417\\n\\nThe blender arrived with a cracked jug. I do not want a replacement.\\nPlease put the money back on my card.\\n\\nOrder 4417, bought on the 3rd.\\n\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the customer ask for money back?\"}}}",
+     "request": "{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"From: sam.okafor@example.net\\\\nSubject: order 4417\\\\n\\\\nThe blender arrived with a cracked jug. I do not want a replacement.\\\\nPlease put the money back on my card.\\\\n\\\\nOrder 4417, bought on the 3rd.\\\\n\\\". Does the customer ask for money back?\"}}}",
      "response": {
       "model": "jev-1.13.0",
       "answers": {
@@ -45,7 +45,7 @@
         "model": "jev-1.13.0",
         "question_sha256": "ef16533e8bf1fb5e4d35e95dc520b50729bbe78fe5d522eec2860c59c5b55c55",
         "requests": [
-         "d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e"
+         "9f84b17aaf3d4cced930b7c18340bf0388ca4f451b55d2d83feb207843bca6ab"
         ]
        }
       }

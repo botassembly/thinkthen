@@ -97,7 +97,7 @@ fn a_quoted_backslashed_label_reaches_the_instruction_as_text() {
     assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8_lossy(&listener.requests()[0].body),
-        r#"{"state":"evidence","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"say \\\"yes\\\"\\\\now\" applies to this item."}}}"#
+        r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"evidence\". Which topics?\n\nDetermine whether the label \"say \\\"yes\\\"\\\\now\" applies to this item."}}}"#
     );
 }
 
@@ -174,10 +174,10 @@ fn dry_run_prints_the_complete_expansion_without_a_key_or_connection() {
         String::from_utf8_lossy(&output.stdout),
         format!(
             concat!(
-                r#"{{"url":"{}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","request":{{"state":"evidence","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{{"true":"Charges."}}}},"#,
-                r#""q2":{{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{{"true":"Prompt."}}}}}}}}}}"#,
+                r#"{{"url":"{}/systemone","model":"local-1","key_env":"THINKTHEN_API_KEY","request":{{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{{"q1":{{"type":"noul","instructions":"The text is \"evidence\". Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{{"true":"Charges."}}}},"#,
+                r#""q2":{{"type":"noul","instructions":"The text is \"evidence\". Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{{"true":"Prompt."}}}}}}}}}}"#,
                 "\n",
-                r#"{{"records":1,"requests":1,"estimated_bytes":346,"estimated_input_tokens":{{"lower":178,"upper":315}},"upper_bound":false}}"#,
+                r#"{{"records":1,"requests":1,"estimated_bytes":434,"estimated_input_tokens":{{"lower":223,"upper":395}},"upper_bound":false}}"#,
                 "\n",
             ),
             listener.base()

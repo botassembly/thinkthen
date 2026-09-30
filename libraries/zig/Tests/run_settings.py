@@ -24,9 +24,8 @@ with tempfile.TemporaryDirectory(prefix="zig-settings-", dir=logs) as folder:
                       f"http://127.0.0.1:{configured.server_port}/generic/v1", str(place / "settings-cache")],
                      cwd=package, env=env, timeout=45)
         assert result.exit == 0 and b"ZIG_SETTINGS_PASS" in result.stderr, (result.exit, result.stderr[-900:])
-        assert [row["state"] for row in configured.arrivals] == ["zig-settings"]
-        assert [row["state"] for row in environment.arrivals] == ["zig-env", "zig-empty"]
-        expected = lambda state: {"state": state, "model": "jev-1.13.0", "questions": {"q1": {"type": "noul", "instructions": "Is it?"}}}
+        expected = lambda record: {"state": "Each question quotes the text it asks about.", "model": "jev-1.13.0",
+                                   "questions": {"q1": {"type": "noul", "instructions": f'The text is "{record}". Is it?'}}}
         assert configured.arrivals + environment.arrivals == [expected(state) for state in ("zig-settings", "zig-env", "zig-empty")]
         print("Zig settings: configured URL 1, environment URL 2, invalid settings zero PASS")
     finally:

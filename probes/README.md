@@ -30,7 +30,7 @@ A job records through the one door for a paid call.
 sdlc/scripts/live --max-tokens 1000000 probes/01-find-vs-rank/job.sh
 ```
 
-A job replays from its own recording with no network and no key. `probes/replay-check.sh` does that and compares every row against the committed one. It sets `meta.cached` and its older spelling `meta.replayed` aside and drops `meta.tool`, `meta.question_sha256`, `meta.requests_sent`, and `meta.requests` from both sides. Those fields arrived after the historical probe rows were written, and a fresh replayed row must carry `cached:true`. Every other byte must match. The `spec` rung runs the check over every numbered replayable probe, so it cannot rot again.
+A job replays from its own recording with no network and no key. `probes/replay-check.sh` does that and compares every row against the committed one. It sets `meta.cached` and its older spelling `meta.replayed` aside and drops `meta.tool`, `meta.question_sha256`, `meta.requests_sent`, and `meta.requests` from both sides. Those fields arrived after the historical probe rows were written, and a fresh replayed row must carry `cached:true`. Every other byte must match. The probes recorded the wire forms they measured. ADR 0111 moved every record function to the quoted form, so a probe's recording no longer matches what the tool sends, and the `spec` rung no longer runs this check. The rows and recordings stay as history.
 
 ```sh
 sh probes/replay-check.sh probes/01-find-vs-rank

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Help!","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is the title of a song by the Beatles. It is one of the Beatles' biggest hits."}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.93}},"usage":{"input_tokens":290,"output_tokens":21}}
-}

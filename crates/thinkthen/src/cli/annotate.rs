@@ -7,8 +7,8 @@ use std::process::ExitCode;
 
 use crate::core::adapters::built_in;
 use crate::core::{
-    Backend, Framing, ModelName, PartError, Plan, Pointer, QuestionSet, QuestionSetError, Reading,
-    ReadingError, Record, RecordError, Setting,
+    Backend, BackendProfile, BatchError, Framing, ModelName, PartError, Plan, Pointer, QuestionSet,
+    QuestionSetError, Reading, ReadingError, Record, RecordError, Setting, quoted_plan,
 };
 
 use crate::args::{AnnotateArguments, Common};
@@ -419,7 +419,14 @@ impl<'a> Judging<'a> {
         record: &Record,
         places: Vec<usize>,
     ) -> Result<PreparedGroup, PrepareError> {
-        let plan = plan_for(&self.set, &places, self.engine.backend(), base, record)?;
+        let plan = plan_for(
+            &self.set,
+            &places,
+            self.engine.backend(),
+            self.engine.profile(),
+            base,
+            record,
+        )?;
         self.engine
             .prepare_group(&plan, places)
             .map_err(|error| PrepareError::Other(error.into()))
@@ -443,6 +450,7 @@ fn plan_for(
     set: &QuestionSet,
     group: &[usize],
     backend: &Backend,
+    profile: Option<&BackendProfile>,
     base: &Reading,
     record: &Record,
 ) -> Result<Plan, PrepareError> {
@@ -472,6 +480,10 @@ fn plan_for(
                 )))
         })
         .collect::<Result<Vec<_>, _>>()?;
-    Plan::new(evidence, backend.model().clone(), questions)
-        .map_err(|_| PrepareError::Other(Failure::Defect("an annotate group asks nothing")))
+    quoted_plan(backend.model().clone(), evidence, None, questions, profile).map_err(|error| {
+        PrepareError::Other(match error {
+            BatchError::Profile(limit) => Failure::ProfileLimit(limit),
+            _ => Failure::Defect("an annotate group asks nothing"),
+        })
+    })
 }

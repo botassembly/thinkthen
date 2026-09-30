@@ -19,7 +19,7 @@ const LINES: &str =
     "thinkthen: question `unresolved` reads `on`, and a --lines record is text with no members\n";
 
 /// One edge row: the set, the framing arguments, the input, and what the run
-/// prints, exits with, and sends as each request's `state`.
+/// prints, exits with, and quotes in each request's question, by ADR 0111.
 struct Row {
     set: &'static str,
     framing: &'static [&'static str],
@@ -135,7 +135,18 @@ fn on_reads_the_selected_value() {
             .iter()
             .map(|request| {
                 let body: serde_json::Value = serde_json::from_slice(&request.body).expect("JSON");
-                body["state"].to_string()
+                assert_eq!(
+                    body["state"],
+                    "Each question quotes the text it asks about."
+                );
+                let asked = body["questions"]["q1"]["instructions"]
+                    .as_str()
+                    .expect("text");
+                let quoted = asked.strip_prefix("The text is ").expect("quote");
+                quoted
+                    .strip_suffix(". Still open?")
+                    .expect("question")
+                    .to_owned()
             })
             .collect::<Vec<_>>();
         let out = |bytes: &[u8]| String::from_utf8_lossy(bytes).into_owned();

@@ -66,8 +66,8 @@ fn described_labels_make_one_exact_request_and_one_complete_result() {
     assert_eq!(
         String::from_utf8_lossy(&requests[0].body),
         concat!(
-            r#"{"state":"The invoice failed.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{"true":"The item concerns a charge."}},"#,
-            r#""q2":{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{"true":"The item needs prompt attention."}}}}"#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"The invoice failed.\". Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{"true":"The item concerns a charge."}},"#,
+            r#""q2":{"type":"noul","instructions":"The text is \"The invoice failed.\". Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{"true":"The item needs prompt attention."}}}}"#,
         )
     );
 }
@@ -266,8 +266,8 @@ fn a_described_tag_file_sends_the_same_bytes_as_typed_labels() {
     assert_eq!(
         String::from_utf8_lossy(&requests[0].body),
         concat!(
-            r#"{"state":"The invoice failed.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{"true":"The item concerns a charge."}},"#,
-            r#""q2":{"type":"noul","instructions":"Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{"true":"The item needs prompt attention."}}}}"#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"The invoice failed.\". Which topics?\n\nDetermine whether the label \"billing\" applies to this item.","criteria":{"true":"The item concerns a charge."}},"#,
+            r#""q2":{"type":"noul","instructions":"The text is \"The invoice failed.\". Which topics?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{"true":"The item needs prompt attention."}}}}"#,
         )
     );
 }
@@ -312,11 +312,11 @@ fn one_structured_description_expands_every_label_and_sends_exact_bytes() {
     assert_eq!(
         String::from_utf8_lossy(&requests[0].body),
         concat!(
-            r#"{"state":"The invoice failed.","model":"local-1","questions":{"q1":{"type":"noul","#,
-            r#""instructions":["Which topics?",{"label":"billing","description":{"what":"Money and invoices."}}],"#,
+            r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","#,
+            r#""instructions":["The text is \"The invoice failed.\". Which topics?",{"label":"billing","description":{"what":"Money and invoices."}}],"#,
             r#""criteria":{"true":{"what":"Money and invoices."}}},"#,
             r#""q2":{"type":"noul","#,
-            r#""instructions":["Which topics?",{"label":"urgent","description":"The item needs prompt attention."}],"#,
+            r#""instructions":["The text is \"The invoice failed.\". Which topics?",{"label":"urgent","description":"The item needs prompt attention."}],"#,
             r#""criteria":{"true":"The item needs prompt attention."}}}}"#,
         )
     );

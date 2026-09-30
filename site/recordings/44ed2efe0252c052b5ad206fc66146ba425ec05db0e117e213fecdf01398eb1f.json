@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":{"title":"Act Naturally","album":"Help!"},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Did a Beatle write this song?","criteria":{"true":"John, Paul, George, or Ringo wrote it.","false":"Someone else wrote it. It is a cover."}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.12}},"usage":{"input_tokens":330,"output_tokens":21}}
-}

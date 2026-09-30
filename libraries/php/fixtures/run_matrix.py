@@ -9,7 +9,7 @@ import subprocess
 import sys
 import threading
 import time
-from backend import Backend
+from backend import Backend, unquoted_single
 
 ROOT = Path(__file__).resolve().parent.parent
 REPO = ROOT.parent.parent
@@ -117,7 +117,8 @@ finally:
     assert sum(accepted_bodies.values()) == 40, 'accepted full-body fixture is incomplete'
     packed=[]
     for request in bodies:
-        if request['state']=='Each question quotes the text it asks about.':
+        # A request quoting one record is that record's own request, not a packed batch.
+        if request['state']=='Each question quotes the text it asks about.' and unquoted_single(request) is request:
             import re
             rows=[]
             for question in request['questions'].values():

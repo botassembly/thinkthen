@@ -52,10 +52,10 @@ fn two_selected_groups_pack_two_rows_and_align_request_metadata() {
         .iter()
         .map(|request| serde_json::from_slice(&request.body).expect("request JSON"))
         .collect();
-    assert!(bodies.contains(&json!({"state":{"records":["one","two"]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Left?"},"q2":{"type":"noul","instructions":"The text is \"two\". Left?"}}})));
-    assert!(bodies.contains(&json!({"state":{"records":["alpha","beta"]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Right?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Right?"}}})));
-    let left = r#"{"state":{"records":["one","two"]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Left?"},"q2":{"type":"noul","instructions":"The text is \"two\". Left?"}}}"#;
-    let right = r#"{"state":{"records":["alpha","beta"]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Right?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Right?"}}}"#;
+    assert!(bodies.contains(&json!({"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Left?"},"q2":{"type":"noul","instructions":"The text is \"two\". Left?"}}})));
+    assert!(bodies.contains(&json!({"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Right?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Right?"}}})));
+    let left = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Left?"},"q2":{"type":"noul","instructions":"The text is \"two\". Left?"}}}"#;
+    let right = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Right?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Right?"}}}"#;
     assert!(
         requests
             .iter()

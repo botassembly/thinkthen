@@ -14,8 +14,8 @@ for (name in names(entrypoints)) {
   check(paste(name, "keeps unsure and yes probability in one send"),
         arrivals == 1L && identical(answer$value, NA) && identical(answer$probability, 0.9))
 }
-expected <- paste0('{"state":"x","model":"jev-1.13.0","questions":{',
-                   '"q1":{"type":"noul","instructions":"Q?"}}}')
+expected <- paste0('{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{',
+                   '"q1":{"type":"noul","instructions":"The text is \\"x\\". Q?"}}}')
 check("all three entrypoints send the same literal request body",
       identical(capture(), rep(list(expected), 3L)))
 

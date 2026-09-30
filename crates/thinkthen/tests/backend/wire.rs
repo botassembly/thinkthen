@@ -50,33 +50,36 @@ const PLACED: &str = concat!(
 
 /// The body a `decide` carrying both meanings sends.
 const DECIDED_BODY: &str = concat!(
-    r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"noul","#,
-    r#""instructions":"asks for a refund","#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","#,
+    r#""instructions":"The text is \"Refund me please.\". asks for a refund","#,
     r#""criteria":{"true":"Money back.","false":"Anything else."}}}}"#,
 );
 
 /// The body a `choose` over three options sends.
 const PICKED_BODY: &str = concat!(
-    r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"choice","#,
-    r#""instructions":"what kind","#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"choice","#,
+    r#""instructions":"The text is \"Refund me please.\". what kind","#,
     r#""criteria":{"defect":null,"process":null,"other":null}}}}"#,
 );
 
 /// The body a `score` over three levels sends.
 const PLACED_BODY: &str = concat!(
-    r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"score","#,
-    r#""instructions":"how urgent","criteria":["low","medium","high"]}}}"#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"score","#,
+    r#""instructions":"The text is \"Refund me please.\". how urgent","criteria":["low","medium","high"]}}}"#,
 );
 
 /// The body the hostile evidence sends, escape for escape.
 ///
-/// The quote, the line feed, and the tab travel as two characters each and the
-/// control byte as six. The accented letter and the dash travel as the bytes
-/// they are, with no escape at all, which is the half of the rule a writer is
-/// most likely to change.
+/// The text is quoted as a JSON string inside the question, and the question
+/// is a JSON string in the body, so each escape is escaped once more: the
+/// quote travels as `\\\"`, the line feed and the tab as `\\n` and `\\t`, and
+/// the control byte as `\\u0001`. The accented letter and the dash travel as
+/// the bytes they are, with no escape at all, which is the half of the rule a
+/// writer is most likely to change.
 const HOSTILE_BODY: &str = concat!(
-    r#"{"state":"He said \"no\".\nCafé — 3 days.\t\u0001","model":"local-1","#,
-    r#""questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}"#,
+    r#"{"state":"Each question quotes the text it asks about.","model":"local-1","#,
+    r#""questions":{"q1":{"type":"noul","instructions":"#,
+    r#""The text is \"He said \\\"no\\\".\\nCafé — 3 days.\\t\\u0001\". asks for a refund"}}}"#,
 );
 
 #[test]

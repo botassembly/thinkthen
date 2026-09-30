@@ -144,11 +144,11 @@ fn the_request_size_refuses_bad_values_only_where_it_acts() {
 
 #[test]
 fn a_plan_counts_a_closed_batch_and_the_later_singleton_without_sending() {
-    // These are the two wire bodies for the input below. The final one uses
-    // the established singleton form; it does not quote a one-member batch.
+    // These are the two wire bodies for the input below. The final one-member
+    // batch takes the same quoted form, by ADR 0111 section 1.
     const FIRST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". asks for a refund"},"q2":{"type":"noul","instructions":"The text is \"beta\". asks for a refund"}}}"#;
-    const SECOND: &str = r#"{"state":"gamma","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}"#;
-    assert_eq!((FIRST.len(), SECOND.len()), (248, 108));
+    const SECOND: &str = r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"gamma\". asks for a refund"}}}"#;
+    assert_eq!((FIRST.len(), SECOND.len()), (248, 170));
     let listener = Listener::answering(answering).expect("loopback listener");
     let output = spawn(
         &[
@@ -174,7 +174,7 @@ fn a_plan_counts_a_closed_batch_and_the_later_singleton_without_sending() {
     assert_eq!(
         lines.next(),
         Some(
-            r#"{"records":3,"requests":2,"estimated_bytes":356,"estimated_input_tokens":{"lower":183,"upper":324},"upper_bound":false}"#
+            r#"{"records":3,"requests":2,"estimated_bytes":418,"estimated_input_tokens":{"lower":215,"upper":380},"upper_bound":false}"#
         )
     );
     assert_eq!(lines.next(), None);

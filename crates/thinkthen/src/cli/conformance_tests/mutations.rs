@@ -25,11 +25,11 @@ fn focused_mutations_are_refused() {
             1,
         ),
         CASES.replacen(
-            "d5c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e",
-            "05c0ecd838ff31e91ba78c1b7584b7aac6c777d6c34fc3cc68ba8a0145ca1e6e",
+            "9f84b17aaf3d4cced930b7c18340bf0388ca4f451b55d2d83feb207843bca6ab",
+            "0f84b17aaf3d4cced930b7c18340bf0388ca4f451b55d2d83feb207843bca6ab",
             1,
         ),
-        CASES.replacen("{\\\"state\\\":\\\"From:", "{\\\"state\\\":\\\"XFrom:", 1),
+        CASES.replacen(r#"The text is \\\"From:"#, r#"The text is \\\"XFrom:"#, 1),
         CASES.replacen(
             "\"id\": \"02-decide-no\"",
             "\"id\": \"01-decide-yes-captured\"",

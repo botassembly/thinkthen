@@ -20,7 +20,7 @@ import subprocess
 import tty
 
 binary = os.environ['THINKTHEN_BIN']
-hint = b'thinkthen: plan: request.state is the evidence; request.questions holds what you asked about it.\n'
+hint = b'thinkthen: plan: each question in request.questions quotes the evidence it asks about.\n'
 environment = {'HOME': os.environ['THINKTHEN_TEST_HOME']}
 args = [binary, 'decide', 'asks for a refund', '--plan', '--url', 'http://127.0.0.1:1/v1']
 
@@ -70,8 +70,8 @@ def plan(line):
     document = json.loads(first)
     summary = json.loads(counts)
     assert summary['records'] == 1 and summary['requests'] == 1, summary
-    assert document['request']['state'] == 'Refund me please.', document
-    assert document['request']['questions']['q1']['instructions'] == 'asks for a refund', document
+    assert document['request']['state'] == 'Each question quotes the text it asks about.', document
+    assert document['request']['questions']['q1']['instructions'] == 'The text is "Refund me please.". asks for a refund', document
     assert document['key_env'] == 'THINKTHEN_API_KEY', document
 
 # A combined terminal transcript establishes the visible ordering.
