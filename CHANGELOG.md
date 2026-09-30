@@ -8,6 +8,8 @@ The first release. The command, the Rust, C, Python, TypeScript, Ruby, and R lib
 
 The command handles SIGTERM like Ctrl-C, reports a signal as the cause when a sent request later fails, and gives the finished count without naming a record that may not exist.
 
+The command reads at most 1 MiB of a question file or question set, as the libraries do. A larger file, such as `/dev/zero`, exits 5 with `the question file is too large` before any request.
+
 The SQL extensions add `thinkthen_try_details` so a recoverable bad row yields a safe typed JSON failure and later good rows continue. SQLite adds a connection-scoped ThinkThen time budget. DuckDB retires idle engine plans while retaining cumulative usage and its 16-plan cap. PostgreSQL refuses a changed explicit throttle. DuckDB's whole-query budget follows in ticket 0201.
 
 Every surface paces its HTTP attempts to 1,000 a minute for each `https://` address, under the vendor's published 1,200. `THINKTHEN_REQUESTS_PER_MINUTE` sets another rate. The pacer counts within one process (ticket 0308).

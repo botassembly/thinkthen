@@ -12,6 +12,7 @@ use crate::core::{
 
 use crate::args::{AnnotateArguments, Common};
 use crate::asking::{self, Folders};
+use crate::cli::question_text;
 use crate::edge::{self, Environment};
 use crate::engine::facade::Engine;
 use crate::failure::Failure;
@@ -54,8 +55,10 @@ pub(crate) fn run(
         .questions
         .to_str()
         .and_then(|typed| typed.strip_prefix('@'));
-    let text = fs::read_to_string(path.map_or(arguments.questions.as_path(), Path::new))
-        .map_err(Failure::OpenQuestionSet)?;
+    let text = question_text::read(
+        path.map_or(arguments.questions.as_path(), Path::new),
+        Failure::OpenQuestionSet,
+    )?;
     let set = match QuestionSet::parse(&text) {
         Ok(set) => set,
         Err(_) if input_looks_like_set(arguments) => {

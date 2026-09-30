@@ -55,6 +55,8 @@ pub(crate) enum Failure {
     Question(QuestionFileError),
     /// The file the question was to be read from could not be opened.
     OpenQuestionFile(io::Error),
+    /// The question file or question set holds more than 1 MiB.
+    QuestionFileTooLarge,
     /// The question set was refused.
     QuestionSet(QuestionSetError),
     /// The question-set file could not be opened.
@@ -343,6 +345,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
                 limit.actual
             ),
         ),
+        Failure::QuestionFileTooLarge => (5, "the question file is too large".to_owned()),
         Failure::QuestionSet(error) => (5, error.to_string()),
         Failure::OpenQuestionSet(error) => {
             (5, format!("the question set could not be opened: {error}"))

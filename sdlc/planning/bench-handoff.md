@@ -42,7 +42,7 @@ The bench adds a JSON summary per function pinned to tags (bench ticket 0022), a
 
 Filed on 2026-09-30:
 
-- `../issues/2026-09-30-command-question-file-has-no-size-cap.md`
+- `../issues/closed/2026-09-30-command-question-file-has-no-size-cap.md`
 - `../issues/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`
 - `../issues/2026-09-30-spec-no-calls-edges-need-a-real-send.md`
 

@@ -1,8 +1,9 @@
-use std::fs;
+use std::path::Path;
 
 use serde::Serialize;
 
 use crate::args::RelateArguments;
+use crate::cli::question_text;
 use crate::core::{Framing, RelateConfigError, RelateSpec, Source};
 use crate::edge;
 use crate::failure::Failure;
@@ -88,7 +89,7 @@ pub(super) fn settle(arguments: &RelateArguments) -> Result<Settled, Failure> {
 
 /// Read the question file and name which values it supplied.
 fn from_file(path: &str) -> Result<(RelateSpec, Option<From>), Failure> {
-    let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
+    let text = question_text::read(Path::new(path), Failure::OpenQuestionFile)?;
     let spec = RelateSpec::parse(&text).map_err(|error| config_error(true, error))?;
     let presence = spec.presence();
     let from = From {
