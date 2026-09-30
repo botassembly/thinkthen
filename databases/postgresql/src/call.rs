@@ -395,11 +395,20 @@ mod tests {
 
     const CHILD: &str = "THINKTHEN_TEST_POSTGRESQL_PANIC_CHILD";
     const MARKER: &str = "postgresql-worker-payload-marker";
+    const HOST: &str = "postgresql-unrelated-host-marker";
 
-    /// A worker panic reaches no output and reads as lost; the next call answers.
+    /// A worker panic reaches no output and reads as lost; the next call
+    /// answers, and an unrelated panic still reaches the host's hook.
     #[test]
     fn a_worker_panic_stays_out_of_the_server_log() {
         if std::env::var_os(CHILD).is_some() {
+            std::panic::set_hook(Box::new(|info| {
+                let text = info.payload().downcast_ref::<&str>().copied();
+                let _ = std::io::Write::write_all(
+                    &mut std::io::stderr(),
+                    format!("{}\n", text.unwrap_or("other panic")).as_bytes(),
+                );
+            }));
             let (answer, answered) = mpsc::channel::<u8>();
             let worker = std::thread::spawn(move || {
                 deliver(&answer, || std::panic::panic_any(MARKER));
@@ -409,6 +418,7 @@ mod tests {
             let (answer, answered) = mpsc::channel();
             std::thread::spawn(move || deliver(&answer, || 7));
             assert_eq!(wait(&answered, TICK, || None), Waited::Done(7));
+            let _ = std::thread::spawn(|| std::panic::panic_any(HOST)).join();
             return;
         }
         let output = std::process::Command::new(std::env::current_exe().expect("test binary"))
@@ -425,6 +435,8 @@ mod tests {
         for stream in [&output.stdout, &output.stderr] {
             assert!(!String::from_utf8_lossy(stream).contains(MARKER));
         }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        assert!(stderr.contains(&format!("{HOST}\n")), "{stderr}");
     }
 
     /// A channel that closes with no result reads as lost, which raises `defect`.

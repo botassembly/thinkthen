@@ -57,8 +57,8 @@ pub(crate) fn with_engine_diagnostics<T>(work: impl FnOnce() -> T) -> T {
 
 /// Let a host interrupt callback use the previous hook on direct engine calls.
 pub(crate) fn with_host_diagnostics<T>(check: impl FnOnce() -> T) -> T {
-    let prior = DIAGNOSTIC_DEPTH.with(|depth| depth.replace(0));
-    let _restore = DiagnosticDepth(prior);
+    let prior = DIAGNOSTIC_DEPTH.try_with(|depth| depth.replace(0));
+    let _restore = prior.ok().map(DiagnosticDepth);
     check()
 }
 

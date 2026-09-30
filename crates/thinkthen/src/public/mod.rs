@@ -16,6 +16,7 @@ mod error;
 mod frame;
 mod native_batch;
 mod options;
+mod panic;
 mod plan;
 mod question;
 mod recognize;
@@ -37,9 +38,9 @@ pub use native_batch::RecoverableDetails;
 pub(crate) use options::budget::process_budget;
 pub use options::{
     BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
-    contained, uncontained,
 };
 pub(crate) use options::{EstimatedReservation, SendReservation};
+pub use panic::{contained, uncontained};
 pub use plan::PlanEstimate;
 pub use question::{
     BandedQuestion, ChooseQuestion, Description, DescriptionBuilder, LoadedQuestion, Question,

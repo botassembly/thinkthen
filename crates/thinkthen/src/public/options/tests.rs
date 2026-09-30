@@ -113,18 +113,18 @@ fn diagnostic_boundary_child() {
     assert!(joined.load(Ordering::Acquire));
 
     assert_eq!(
-        super::contained(|| panic_any("binding key evidence secret")),
+        crate::contained(|| panic_any("binding key evidence secret")),
         None::<()>
     );
-    assert_eq!(super::contained(|| panic_any(Exploding)), None::<()>);
-    let hosted = super::contained(|| {
-        catch_unwind(|| super::uncontained(|| panic_any("host callback marker"))).is_err()
+    assert_eq!(crate::contained(|| panic_any(Exploding)), None::<()>);
+    let hosted = crate::contained(|| {
+        catch_unwind(|| crate::uncontained(|| panic_any("host callback marker"))).is_err()
     });
     assert_eq!(hosted, Some(true));
 
     let _unrelated = std::thread::spawn(|| panic_any("unrelated host marker")).join();
     assert_eq!(guarded(|| Ok(7)).ok(), Some(7));
-    assert_eq!(super::contained(|| 7), Some(7));
+    assert_eq!(crate::contained(|| 7), Some(7));
 }
 
 #[test]
