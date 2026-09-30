@@ -671,3 +671,13 @@ The earlier constructor-inventory correction did not cover every account-opening
 After0300 landed, the command-help Quick Fix cleared the existing annotate vocabulary failure. The selected demo runner then exposed a second failure in the changed demo28 page:129 lines/940 words against120/900. The page at pre0300 main1e493eee8 was120 lines/868 words, so0300 introduced the overage. Its six executable checks pass directly; that does not prove the page budget. The coordinator expanded the existing Quick Fix claim to trim this page without changing the accepted price semantics or weakening the scanner. The selected page's full pass is still owed.
 
 Preparation should inspect the cheap structural checks for a changed artifact even when an earlier unrelated gate failure prevents the runner reaching it. Carry the original failure and the new one separately. Do not call every downstream limit pre-existing or close the broader gate from direct functional snippets. This repeats the existing preparation rule to inspect executable-page word and line limits before landing; it needs application at the actual changed page.
+
+## Nullable output did not prove missing-input behavior
+
+The0287 reviewer reproduced Usage for pandas mixed text/NA decide and choose against installed candidate d01aa5ec0. ADR0105 T5 requires null-in/null-out; the valid text must still be judged with aligned null value/probability for missing input. Earlier focused checks proved nullable probabilities for unresolved valid answers but missed input absence. The retained author owns the correction. Refreshed preparation names the distinct input/output/failure cases for0292/0293/0295/0296 and requires an observed request-body/count witness. This closes a preparation gap without launching another whole-package campaign.
+
+The help/page follow-up is now independently accepted at5f93aaf5: the selected runner passed six assertions and one green page. Its final119line/759word page preserves all executable proof blocks, so the earlier page-budget wait is resolved.
+
+## A uniform keyword still needs every accepted representation
+
+The0288 High reviewer found R's direct-call and constructed-question threshold helper refuses `"0.3:0.7"`, while the equivalent saved question reaches the core parser successfully. The accepted threshold contract permits that string band. Numeric-only tests and a shared-parser call did not establish that every documented input form reaches the parser. The original author fixes the host conversion; the0297 preparation now names representation parity across immediate calls, judge closures and partial application. Keep a compact boundary table, not another full corpus campaign.
