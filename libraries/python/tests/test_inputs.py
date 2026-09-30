@@ -72,27 +72,26 @@ def test_the_deadline_sentence_is_pinned_in_the_docstring_and_readme():
 
 
 def test_deadlines_follow_the_millisecond_boundary(backend, tmp_path):
-    """Integral milliseconds and the old name have distinct refusals. Zero
-    spends no send; -1, None and omission remove the bound."""
+    """Integral milliseconds, explicit null and the old name have distinct
+    refusals. Zero spends no send; -1 and omission remove the bound."""
     printed = run(REFUSED + """
     import numpy
-    for value in (True, False, "1", 1.5, numpy.bool_(True), float("inf"), float("nan"),
+    for value in (True, False, "1", 1.5, None, numpy.bool_(True), float("inf"), float("nan"),
                   -2, 4294967295001, 0):
         said(lambda: tt.decide(late, "a note", deadline_ms=value).value)
     said(lambda: tt.decide(late, "a note", deadline=0).value)
     print(tt.decide(late, "no deadline", deadline_ms=-1).value,
-          tt.decide(late, "no bound", deadline_ms=None).value,
           tt.decide(late, "omitted").value)
     """, child_env(backend, tmp_path))
     whole = "UsageError `deadline_ms` is a whole number of milliseconds"
     most = "milliseconds is not -1, 0, or a positive budget of at most 4294967295 seconds"
-    assert printed.splitlines() == 7 * [whole] + [
+    assert printed.splitlines() == 8 * [whole] + [
         f"UsageError a deadline of -2 {most}", f"UsageError a deadline of 4294967295001 {most}",
         "DeadlineError the deadline of 0 s passed before the call answered",
         "UsageError use deadline_ms= instead of deadline=",
-        "True True True",
+        "True True",
     ]
-    assert backend.count() == 3
+    assert backend.count() == 2
 
 
 def test_shared_keywords_refuse_unknown_wrong_and_repeated_fields_before_send(backend, tmp_path):

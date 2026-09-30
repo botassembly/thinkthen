@@ -27,12 +27,13 @@ class Judge:
         return (_restore, (self._verb, self._asked._json(), self._batch,
                            self._context, self._probability, settings))
 
-    def __call__(self, value, *, deadline_ms=None, token=None, **keywords):
-        from . import UsageError, _column, _paired, _pandas, _engine
+    def __call__(self, value, *, deadline_ms=-1, token=None, **keywords):
+        from . import UsageError, _column, _deadline, _paired, _pandas, _engine
 
         if keywords:
             key = sorted(keywords)[0]
             raise UsageError(f"the settings key `{key}` belongs when the judge is built")
+        deadline_ms = _deadline(deadline_ms)
         engine = self._engine if self._engine is not None else _engine()
         native = engine._engine
         verb = self._verb
