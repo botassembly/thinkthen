@@ -8,4 +8,7 @@ LOCK=${THINKTHEN_HEAVY_LOCK:-${XDG_RUNTIME_DIR:-/tmp}/thinkthen-heavy.lock}
 if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$LOCK" ]; then
 	exec flock -o "$LOCK" env THINKTHEN_HEAVY_LOCK_HELD="$LOCK" /bin/sh "$0"
 fi
-exec python3 "$HERE/check.py"
+# ADR 0113: the C door's engines write a scratch usage folder, never the real one.
+. "$HERE/../../../sdlc/scripts/scratch.sh"
+usage_home
+python3 "$HERE/check.py"
