@@ -36,3 +36,7 @@ One experiment would confirm the cause without a paid call. Note the real month 
 ### The exit 4: still unknown
 
 No log or response body survives, so the source cannot be read now. Exit 4 is a backend failure after thinkthen's retries. The next live bench run should pass `--details` and keep stderr, so a repeat names its status or transport error. Any paid repeat needs Ian's authorization and goes through `sdlc/scripts/live` under a token cap.
+
+### One cause that fits the exit 4
+
+Ticket 0341 found one mechanism that gives exactly this symptom: a single exit 4 that passes on rerun, with no service error. A backend closes an idle keep-alive connection just as the next request goes out on it. The request fails as a close before a reply and is not sent again, by the 0089 rule. Under ureq's old 15 second idle age, a backend with a keep-alive wait from 2 to 15 seconds could hit it after any pause of that length, such as a retry wait or pacing. 0341 cut the idle age to one second, which closes that range. Nothing here shows the bench hit it, since no stderr survives. The next live run should still keep stderr under `--details`. A repeat that prints `the backend closed the connection before a reply` would fit this cause.

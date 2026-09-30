@@ -93,6 +93,7 @@ const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
 ///
 /// It keeps an idle connection for each request the widest throttle allows, so
 /// a run pays for one handshake per job rather than one per record (ticket 0142).
+/// It reuses no connection idle for a second or more. Common keep-alive waits run longer (0341).
 pub(crate) struct Client {
     agent: Agent,
     timeout: Duration,
@@ -153,7 +154,8 @@ impl Client {
             .http_status_as_error(false)
             .max_redirects(0)
             .max_idle_connections(Width::MOST.get())
-            .max_idle_connections_per_host(Width::MOST.get());
+            .max_idle_connections_per_host(Width::MOST.get())
+            .max_idle_age(Duration::from_secs(1));
         if let Some(roots) = roots {
             config = config.tls_config(
                 ureq::tls::TlsConfig::builder()
