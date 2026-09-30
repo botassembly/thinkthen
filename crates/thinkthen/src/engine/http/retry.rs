@@ -1,5 +1,6 @@
 //! Existing bounded HTTP retry waits.
 
+use std::hash::{BuildHasher as _, RandomState};
 use std::time::Duration;
 
 pub(super) const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
@@ -25,10 +26,25 @@ pub(super) fn honored(millis: Option<&str>, seconds: Option<&str>) -> Option<Dur
 }
 
 /// The server's valid delay is a floor; cap only an unheaded local wait.
+///
+/// The unheaded wait is spread between half and all of its capped doubling by
+/// `draw`, so parallel workers do not resend together.
 pub(super) fn bounded_wait(
     asked: Option<Duration>,
     exponential: Duration,
     timeout: Duration,
+    draw: u64,
 ) -> Duration {
-    asked.unwrap_or_else(|| exponential.min(timeout).min(MAX_RETRY_WAIT))
+    asked.unwrap_or_else(|| {
+        let full = exponential.min(timeout).min(MAX_RETRY_WAIT);
+        let half = full / 2;
+        let span = (full - half).as_nanos();
+        let share = span * u128::from(draw) / u128::from(u64::MAX);
+        half + Duration::from_nanos(u64::try_from(share).unwrap_or(u64::MAX))
+    })
+}
+
+/// One random draw from the hasher keys the standard library seeds per thread.
+pub(super) fn draw() -> u64 {
+    RandomState::new().hash_one(())
 }
