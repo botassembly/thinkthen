@@ -7,9 +7,10 @@ pub(super) fn run_usage(case: &str, argument: &str) -> Vec<String> {
     let engine = match case {
         "usage-seeded" => EngineBuilder::from_env().and_then(|seed| seed.no_cache().build()),
         "usage-cached" => EngineBuilder::from_env().and_then(EngineBuilder::build),
-        _ => Engine::builder()
+        "usage-builder" => Engine::builder()
             .base_url(argument)
             .and_then(|builder| builder.no_cache().build()),
+        _ => panic!("no child case {case}"),
     }
     .expect("the engine");
     let question = Question::decide("asks for a refund")

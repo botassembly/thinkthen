@@ -40,13 +40,18 @@ def portable_decide_zero_budget():
         expect(backend.count(), 0, "spent query budget sends nothing")
 
 
+def usage_folder(env: dict[str, str]) -> Path:
+    """The child's usage folder on either platform."""
+    return (Path(env["HOME"]) / "Library/Caches" if sys.platform == "darwin" else Path(env["XDG_CACHE_HOME"])) / "thinkthen-usage"
+
+
 @case
 def the_exit_flushes_a_call_while_the_usage_lock_is_held():
     """ADR 0113: the process's exit hook writes its sends while another
     writer holds the usage lock for 300 ms."""
     with Backend() as backend, tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
         env = child_env(backend.base(), Path(folder))
-        usage = (Path(env["HOME"]) / "Library/Caches" if sys.platform == "darwin" else Path(env["XDG_CACHE_HOME"])) / "thinkthen-usage"
+        usage = usage_folder(env)
         usage.mkdir(mode=0o700)
         lock = os.open(usage / ".lock", os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
         fcntl.flock(lock, fcntl.LOCK_EX)
@@ -67,7 +72,7 @@ def a_cached_rerun_sends_nothing_and_adds_a_cache_answer():
     nothing, and its exit adds one cache answer to the month file."""
     with Backend() as backend, tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
         env = child_env(backend.base(), Path(folder))
-        usage = (Path(env["HOME"]) / "Library/Caches" if sys.platform == "darwin" else Path(env["XDG_CACHE_HOME"])) / "thinkthen-usage"
+        usage = usage_folder(env)
         for _ in range(2):
             done = subprocess.run([sys.executable, "-c", CHILD, str(EXTENSION), json.dumps([ASK])],
                                   env=env, capture_output=True, text=True, timeout=60, check=False)
