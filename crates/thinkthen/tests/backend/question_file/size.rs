@@ -95,6 +95,15 @@ fn a_broken_question_set_beside_an_endless_input_fails_without_reading_it_all() 
         b"",
     )
     .expect("the compiled binary runs");
-    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(
+        (
+            output.status.code(),
+            String::from_utf8_lossy(&output.stderr)
+        ),
+        (
+            Some(5),
+            "thinkthen: `questions` holds at least one named question\n".into()
+        )
+    );
     assert!(output.stdout.is_empty());
 }
