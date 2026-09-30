@@ -32,6 +32,12 @@ On the command, `decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annota
 
 Every surface refuses an API key holding any control character, not only a line break, and says `the API key contains a control character` (ticket 0321).
 
+`audit` and `diff` treat results whose lines name no `meta.batch.setting` as an unknown setting. `audit --write` then leaves a question file's `batch` member alone and reports nothing about it, and neither command warns about mixed settings because of such a run. Rows from the command's record functions carry no setting (ticket 0304).
+
 ### Breaking changes
 
-None. This is the first release.
+This is the first release. These changes break earlier builds from main:
+
+- `--record` no longer stops at a conflicting entry. It replaces the answer stored under the same question key (ticket 0304).
+- `meta.batch` and `meta.batches` are gone from the rows of the command's record functions (ticket 0304).
+- `thinkthen cache convert DIR` deletes `thinkthen.sqlite` after it merges the file's answers into `thinkthen.jsonl` (ticket 0304).

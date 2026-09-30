@@ -2045,6 +2045,45 @@ def check_recordings() -> None:
             continue
         for failure in recording_failures(held):
             fail("recordings", f"{relative}: {failure}")
+    fixture_plants = (
+        '{"key":"k","headers":{}}\n',
+        '{"key":"k","answer":"{\\"authorization\\":\\"x\\"}"}\n',
+        '{"sha256":"s","state":"Bearer x"}\n',
+    )
+    for plant in fixture_plants:
+        if not fixture_failures(plant):
+            fail("recordings", f"the planted fixture line {plant.strip()!r} is refused")
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True)
+    for relative in listed.stdout.decode().split("\0"):
+        if posixpath.basename(relative) != "thinkthen.jsonl":
+            continue
+        try:
+            text = (REPO / relative).read_text(encoding="utf-8")
+        except OSError as error:
+            fail("recordings", f"cannot read {relative}: {error}")
+            continue
+        for failure in fixture_failures(text):
+            fail("recordings", f"{relative}: {failure}")
+
+
+def fixture_failures(text: str) -> list[str]:
+    """ADR 0111 section 3: each `thinkthen.jsonl` line and each JSON text in
+    its string members holds no header or credential either."""
+    found: list[str] = []
+    for number, line in enumerate(text.splitlines(), 1):
+        try:
+            held = json.loads(line)
+        except ValueError:
+            found.append(f"line {number} is not JSON")
+            continue
+        found += [f"line {number}: {failure}" for failure in recording_failures(held)]
+        for key, value in held.items() if isinstance(held, dict) else ():
+            try:
+                inner = json.loads(value) if isinstance(value, str) else None
+            except ValueError:
+                continue
+            found += [f"line {number}: {failure}" for failure in recording_failures(inner, f"/{key}")]
+    return found
 
 
 def live_store_failures(paths: list[str]) -> list[str]:

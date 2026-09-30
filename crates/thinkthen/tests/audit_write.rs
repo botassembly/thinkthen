@@ -66,8 +66,21 @@ fn audit_reads_and_writes_the_batch_setting() {
         )
     );
 
+    // Rows that name no setting leave the tuned batch alone and say nothing of it.
     let rows = payment_rows(&scratch.0, "decide.json");
-    let alone = scratch.write("alone.jsonl", &at_batch(&rows, None));
+    let tuned = scratch.read("decide.json");
+    let unknown = scratch.write("unknown.jsonl", &at_batch(&rows, None));
+    let (code, _, stderr) = audit(&[&unknown, &key(), "--write", &file], b"");
+    assert_eq!(
+        (code, stderr.as_str()),
+        (
+            0,
+            "thinkthen: audit: kept the bar for the question; the steady bar beat it on 0 of 1 held parts\n"
+        )
+    );
+    assert_eq!(scratch.read("decide.json"), tuned);
+
+    let alone = scratch.write("alone.jsonl", &at_batch(&rows, Some(serde_json::json!(1))));
     let (code, _, stderr) = audit(&[&alone, &key(), "--write", &file], b"");
     assert_eq!(code, 0, "{stderr}");
     assert!(stderr.ends_with("thinkthen: audit: removed batch max for the question; the results ran one record a request\n"), "{stderr}");

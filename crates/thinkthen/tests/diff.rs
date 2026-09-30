@@ -10,27 +10,45 @@ mod wait;
 use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, ported};
 
 #[test]
-fn diff_warns_at_different_batch_settings() {
-    let first = fixture("small/decide.jsonl");
-    let second = first.replace(
-        "\"failed_questions\":0}",
-        "\"failed_questions\":0,\"batch\":{\"setting\":\"max\"}}",
-    );
-    assert_ne!(first, second, "the fixture must add nested batch settings");
-    let place = std::path::Path::new(env!("CARGO_TARGET_TMPDIR"))
-        .join(format!("diff-batch-settings-{}.jsonl", std::process::id()));
-    std::fs::write(&place, &second).expect("second run");
-    let path = place.to_str().expect("path");
+fn diff_warns_at_different_batch_settings_and_not_at_an_unknown_one() {
+    let unknown = fixture("small/decide.jsonl");
+    let at = |setting: &str| {
+        let run = unknown.replace(
+            "\"failed_questions\":0}",
+            &format!("\"failed_questions\":0,\"batch\":{{\"setting\":{setting}}}}}"),
+        );
+        assert_ne!(run, unknown, "the fixture must add nested batch settings");
+        let place = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!(
+            "diff-batch-{}-{}.jsonl",
+            setting.trim_matches('"'),
+            std::process::id()
+        ));
+        std::fs::write(&place, run).expect("run");
+        place
+    };
+    let (one, max) = (at("1"), at("\"max\""));
+    let (one, max) = (one.to_str().expect("path"), max.to_str().expect("path"));
     let (baseline_code, baseline_stdout, baseline_stderr) =
         diff(&["small/decide.jsonl", "small/decide.jsonl"], b"");
-    let (code, stdout, stderr) = diff(&["small/decide.jsonl", path], b"");
     assert_eq!((baseline_code, baseline_stderr.as_str()), (0, ""));
-    assert_eq!((code, stdout), (0, baseline_stdout));
-    assert_eq!(
-        stderr,
-        "thinkthen: diff: warning: the runs used different batch settings (1 and max); batching moves answers, so some changes may come from it\n"
-    );
-    let _removed = std::fs::remove_file(place);
+    // Row: the two runs, and the warning. Rows that name no setting add none.
+    for (a, b, warned) in [
+        (
+            one,
+            max,
+            "thinkthen: diff: warning: the runs used different batch settings (1 and max); batching moves answers, so some changes may come from it\n",
+        ),
+        ("small/decide.jsonl", max, ""),
+    ] {
+        let (code, stdout, stderr) = diff(&[a, b], b"");
+        assert_eq!(
+            (code, &stdout, stderr.as_str()),
+            (0, &baseline_stdout, warned)
+        );
+    }
+    for place in [one, max] {
+        let _removed = std::fs::remove_file(place);
+    }
 }
 
 fn diff(arguments: &[&str], input: &[u8]) -> (i32, String, String) {

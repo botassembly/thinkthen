@@ -258,7 +258,10 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
         Err(Error::RecordingStorage)
     ));
     let waited = started.elapsed();
-    assert!(waited < Duration::from_secs(1), "the limit ends the wait: {waited:?}");
+    assert!(
+        waited < Duration::from_secs(1),
+        "the limit ends the wait: {waited:?}"
+    );
     let cancel = Cancel::default();
     cancel.fire();
     let started = Instant::now();
@@ -267,7 +270,10 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
         Err(Error::Cancelled)
     ));
     let waited = started.elapsed();
-    assert!(waited < Duration::from_secs(1), "the stop ends the wait: {waited:?}");
+    assert!(
+        waited < Duration::from_secs(1),
+        "the stop ends the wait: {waited:?}"
+    );
     holder.execute_batch("ROLLBACK").expect("unlock");
 }
 

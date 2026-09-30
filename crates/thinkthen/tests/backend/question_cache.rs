@@ -16,14 +16,19 @@ use crate::harness::{Canned, Listener, spawn, start};
 
 /// `decide QUESTION --lines --facts` over `input` with a cache folder.
 fn decide(listener: &Listener, cache: &str, input: &str) -> Output {
+    decide_with(listener, "--cache", cache, input)
+}
+
+/// `decide QUESTION --lines --facts` over `input`, `option` naming the folder.
+fn decide_with(listener: &Listener, option: &str, folder: &str, input: &str) -> Output {
     spawn(
         &[
             "decide",
             QUESTION,
             "--lines",
             "--facts",
-            "--cache",
-            cache,
+            option,
+            folder,
             "--url",
             listener.base(),
             "--model",
@@ -223,4 +228,63 @@ fn two_processes_write_one_store_at_once() {
     assert_eq!(again.status.code(), Some(0));
     assert_eq!(facts(&again)["cache_answers"], 40);
     assert_eq!(listener.questions(), 40, "the third run sends nothing");
+}
+
+/// A stored answer that no longer decodes is a miss under a cache, which
+/// asks again, and a named failure under `--replay`, which sends nothing.
+#[test]
+fn a_stored_answer_that_no_longer_decodes_resends_under_a_cache_and_fails_a_replay() {
+    let listener = Listener::answering(answering).expect("a loopback listener");
+    let cache = folder("undecodable");
+    assert_eq!(
+        decide(&listener, &cache, &lines(1..=1)).status.code(),
+        Some(0)
+    );
+    let _first = listener.requests();
+    let converted = spawn(&["cache", "convert", &cache], &[], b"").expect("convert runs");
+    assert_eq!(converted.status.code(), Some(0));
+    let fixture = std::path::Path::new(&cache).join("thinkthen.jsonl");
+    let text = std::fs::read_to_string(&fixture).expect("the fixture");
+    let mut key = String::new();
+    let changed: String = text
+        .lines()
+        .map(|line| {
+            let mut entry: Value = serde_json::from_str(line).expect("a fixture line");
+            if entry.get("answer").is_some() {
+                key = entry["key"].as_str().expect("a key").to_owned();
+                entry["answer"] = json!("{\"type\":\"noul\",\"noul\":\"high\"}");
+            }
+            format!("{entry}\n")
+        })
+        .collect();
+    std::fs::write(&fixture, changed).expect("the changed fixture");
+
+    let replayed = decide_with(&listener, "--replay", &cache, &lines(1..=1));
+    assert_eq!(replayed.status.code(), Some(5));
+    assert!(replayed.stdout.is_empty());
+    assert_eq!(
+        String::from_utf8_lossy(&replayed.stderr)
+            .lines()
+            .take(2)
+            .collect::<Vec<_>>(),
+        [
+            format!(
+                "thinkthen: the entry `thinkthen.jsonl` was refused: holds an answer to question `{key}` that no longer decodes"
+            )
+            .as_str(),
+            "thinkthen: stopped at record 1; 0 records finished, 0 records from a recording",
+        ]
+    );
+    assert_eq!(facts(&replayed)["requests_sent"], 0);
+    assert!(listener.requests().is_empty(), "a replay sends nothing");
+
+    let cached = decide(&listener, &cache, &lines(1..=1));
+    assert_eq!(
+        cached.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&cached.stderr)
+    );
+    assert_eq!(asked(&listener), [vec![1]], "the miss is asked again");
+    assert_eq!(facts(&cached)["cache_answers"], 0);
 }
