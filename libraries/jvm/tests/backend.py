@@ -7,6 +7,32 @@ import time
 import socket
 import re
 
+
+QUOTED_STATE = 'Each question quotes the text it asks about.'
+
+
+def one_record(request):
+    """A quoted request of one record, read in the older single form: that record as the state.
+
+    Every request quotes its records under ADR 0111. A request whose questions all quote one
+    record keeps the checks below keyed on that record; a request of several records stays packed.
+    """
+    if request.get('state') != QUOTED_STATE:
+        return request
+    records, questions = set(), {}
+    for name, question in request['questions'].items():
+        text = question.get('instructions')
+        if not isinstance(text, str) or not text.startswith('The text is '):
+            return request
+        record, end = json.JSONDecoder().raw_decode(text, len('The text is '))
+        if not text.startswith('. ', end):
+            return request
+        records.add(json.dumps(record))
+        questions[name] = dict(question, instructions=text[end + 2:])
+    if len(records) != 1:
+        return request
+    return dict(request, state=json.loads(records.pop()), questions=questions)
+
 class Backend(http.server.ThreadingHTTPServer):
     def __init__(self, barrier):
         super().__init__(("127.0.0.1", 0), Handler)
@@ -36,7 +62,8 @@ class Backend(http.server.ThreadingHTTPServer):
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers["Content-Length"]))
-        request = json.loads(body)
+        wire = json.loads(body)
+        request = one_record(wire)
         if request.get('state') in ('Each question quotes the text it asks about.', 'tail') or isinstance(request.get('state'), dict) or b'bulk-middle-bad' in body or str(request.get('state', '')).startswith('release-'):
             with self.server.lock:
                 index = self.server.attempts
