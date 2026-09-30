@@ -172,7 +172,8 @@ fn tls_responder(leaf: &Path, leaf_key: &Path) -> (TlsResponder, u16) {
         .expect("responder input")
         .write_all(reply.as_bytes())
         .expect("fixed reply");
-    for _ in 0..100 {
+    // Wait up to five seconds: a loaded host starts the responder slowly.
+    for _ in 0..500 {
         if let Ok(probe) = TcpListener::bind(&address) {
             drop(probe);
             thread::sleep(Duration::from_millis(10));
@@ -216,7 +217,7 @@ fn a_forked_child_keeps_parsed_tls_roots_after_the_file_changes() {
     std::fs::write(&cert, b"this is no longer a certificate").expect("change source file");
     in_child(|| answer(engine.decide(&decide(), "after fork")) == Some(Answer::Yes))
         .expect("forked child used the retained roots");
-    for _ in 0..100 {
+    for _ in 0..500 {
         if server.0.try_wait().expect("responder state").is_some() {
             break;
         }
