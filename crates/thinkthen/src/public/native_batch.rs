@@ -4,7 +4,7 @@ use crate::core::{self, AnswerOutcome};
 use crate::engine::error::Kind as EngineKind;
 use crate::engine::pipeline::{Failed, Flow};
 use crate::public::annotated::{FailureCause, cause};
-use crate::public::asking::{Decided, Decisions, Miss, Text};
+use crate::public::asking::{Decided, Decisions, Miss, Text, packed};
 use crate::public::engine::{DetailQuestion, Engine, evidence, only};
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
@@ -94,24 +94,25 @@ impl Native<'_> {
 /// One native row, or the stop that ends the vector: a fatal error, or a
 /// spent budget that leaves every later row spent.
 enum Taken {
-    Row(RecoverableDetails),
+    Row(Box<RecoverableDetails>),
     Spent,
     Fatal(Error),
 }
 
 fn take(native: &Native<'_>, row: Row<Decisions>) -> Taken {
+    let one = |row| Taken::Row(Box::new(row));
     match row {
-        Ok(decided) => native.answered(&decided).map_or_else(Taken::Fatal, Taken::Row),
+        Ok(decided) => native.answered(&decided).map_or_else(Taken::Fatal, one),
         Err(Failed::Asker(Miss::Failed(decided))) => match decided.outcome {
-            AnswerOutcome::Failed(failure) => Taken::Row(RecoverableDetails::Failed {
+            AnswerOutcome::Failed(failure) => one(RecoverableDetails::Failed {
                 kind: ErrorKind::Backend,
                 retryable: false,
                 cause: Some(cause(core::FailedValue::new(failure).cause())),
             }),
             AnswerOutcome::Answered(_) => Taken::Fatal(Error::defect("an answered row failed")),
         },
-        Err(Failed::Asker(Miss::Refused(error))) => Taken::Row(failed(&error)),
-        Err(Failed::Pack { .. }) => Taken::Row(spent()),
+        Err(Failed::Asker(Miss::Refused(error))) => one(failed(&error)),
+        Err(Failed::Pack { error, .. }) => one(failed(&packed(error))),
         Err(Failed::Engine { error, .. }) if error.spent() => Taken::Spent,
         Err(Failed::Engine { error, .. })
             if !matches!(
@@ -119,7 +120,7 @@ fn take(native: &Native<'_>, row: Row<Decisions>) -> Taken {
                 EngineKind::Cancelled | EngineKind::Deadline | EngineKind::Defect
             ) =>
         {
-            Taken::Row(failed(&Error::from(error)))
+            one(failed(&Error::from(error)))
         }
         Err(Failed::Engine { error, .. } | Failed::Stopped(error)) => {
             Taken::Fatal(Error::from(error))
@@ -182,7 +183,7 @@ impl Engine {
             let mut ended = None;
             let host = pull::eager(inputs, |row| match take(&native, row) {
                 Taken::Row(row) => {
-                    results.push(row);
+                    results.push(*row);
                     Flow::Continue
                 }
                 Taken::Spent => {

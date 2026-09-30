@@ -66,7 +66,8 @@ impl QuestionAnswer {
         let usage = own.iter().try_fold(Usage::new(0, 0), |total, answered| {
             total.checked_plus(answered.usage?)
         });
-        let model = ModelName::reported(model).map_err(|_| Error::Defect("a reply named no model"))?;
+        let model =
+            ModelName::reported(model).map_err(|_| Error::Defect("a reply named no model"))?;
         Ok(Self {
             place,
             reply: Reply::new(model, outcomes, usage),

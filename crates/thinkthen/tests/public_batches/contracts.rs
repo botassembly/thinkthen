@@ -99,7 +99,11 @@ fn a_later_invalid_annotation_keeps_the_valid_record_prefix() {
             .map(|facts| (facts.records(), facts.requests_sent())),
         Some((1, 1))
     );
-    assert_eq!(listener.requests().len(), 1, "both groups share one request");
+    assert_eq!(
+        listener.requests().len(),
+        1,
+        "both groups share one request"
+    );
 }
 
 #[test]

@@ -7,7 +7,7 @@ use super::{Cancel, error};
 /// One caller's immutable limits against the retained process counters.
 #[derive(Clone, Debug)]
 pub(crate) struct ProcessBudget {
-    pub(crate) budget: crate::public::SendBudget,
+    pub(crate) budget: crate::engine::budget::SendBudget,
     pub(crate) requests: Option<u64>,
     pub(crate) estimated: Option<u64>,
 }
@@ -15,9 +15,9 @@ pub(crate) struct ProcessBudget {
 /// Reservations for one attempted send. Both counters are committed only
 /// after the usage mark; dropping either uncommitted reservation refunds it.
 pub(crate) struct SendReservations(
-    Option<crate::public::SendReservation>,
-    Option<crate::public::SendReservation>,
-    Option<crate::public::EstimatedReservation>,
+    Option<crate::engine::budget::SendReservation>,
+    Option<crate::engine::budget::SendReservation>,
+    Option<crate::engine::budget::EstimatedReservation>,
 );
 
 impl SendReservations {
@@ -48,7 +48,7 @@ pub(crate) fn estimated_total(text: Option<String>) -> Result<Option<u64>, &'sta
 impl Cancel<'_> {
     pub(crate) fn with_send_budget(
         &self,
-        send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+        send_budget: Option<(crate::engine::budget::SendBudget, Option<u64>)>,
     ) -> Self {
         Self {
             send_budget,
@@ -77,7 +77,7 @@ impl Cancel<'_> {
         last_status: Option<u16>,
         body_bytes: usize,
     ) -> Result<Option<SendReservations>, error::Error> {
-        let reserve = |selected: &Option<(crate::public::SendBudget, Option<u64>)>| {
+        let reserve = |selected: &Option<(crate::engine::budget::SendBudget, Option<u64>)>| {
             selected
                 .as_ref()
                 .map(|(budget, limit)| budget.reserve(*limit, last_status))
@@ -138,7 +138,7 @@ impl Cancel<'_> {
 #[cfg(test)]
 #[test]
 fn unstarted_estimate_and_request_refund_together() {
-    let budget = crate::public::SendBudget::new();
+    let budget = crate::engine::budget::SendBudget::new();
     let cancel = super::Cancel::default().with_process_budget(Some(ProcessBudget {
         budget: budget.clone(),
         requests: Some(2),

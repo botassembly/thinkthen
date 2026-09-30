@@ -8,6 +8,7 @@
 use std::sync::Arc;
 use std::sync::mpsc::{Receiver, Sender, channel};
 
+use crate::core::AttemptObservation;
 use crate::core::Usage;
 use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask, PackError, PackLimits, Packer, QuestionKey};
@@ -15,7 +16,6 @@ use crate::engine::error::Error;
 use crate::engine::facade::Engine;
 pub(crate) use crate::engine::schedule::Input;
 use crate::engine::store::{Mode, Store};
-use crate::core::AttemptObservation;
 use crate::engine::{Cancel, workers};
 
 mod run;

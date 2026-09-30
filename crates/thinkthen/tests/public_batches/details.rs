@@ -66,7 +66,10 @@ fn dynamic_details_keep_original_input_and_one_request() {
             json["input"]["body"],
             if position == 0 { "alpha" } else { "beta" }
         );
-        assert!(json["meta"].get("batch").is_none(), "ADR 0111 drops meta.batch");
+        assert!(
+            json["meta"].get("batch").is_none(),
+            "ADR 0111 drops meta.batch"
+        );
         let scalar: serde_json::Value =
             serde_json::from_str(&row.value().to_scalar_json()).expect("scalar detail JSON");
         assert!(

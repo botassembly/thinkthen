@@ -43,7 +43,7 @@ pub(crate) struct Cancel<'a> {
     check: Option<Check<'a>>,
     sends: Arc<AtomicUsize>,
     sent_any: Arc<AtomicBool>,
-    send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
+    send_budget: Option<(crate::engine::budget::SendBudget, Option<u64>)>,
     process_budget: Option<crate::engine::send_budget::ProcessBudget>,
     facts: Option<CallFacts>,
     attempts: Arc<AtomicU64>,
@@ -244,20 +244,13 @@ impl<'a> Cancel<'a> {
         Sending(&self.sends)
     }
 
-    /// The stop this checkpoint observes. The host check runs only while no
-    /// worker is in a blocking send.
+    /// The stop this checkpoint observes, from the calling thread. The host
+    /// check runs only while no worker is in a blocking send.
     pub(crate) fn stop_between_sends(&self) -> Option<error::Error> {
         if self.sends.load(Ordering::Acquire) == 0 {
             self.stop()
         } else {
             self.remaining_without_check().err()
-        }
-    }
-
-    /// Poll from the calling thread while a worker carries this call's attempt.
-    pub(crate) fn poll_between_sends(&self) {
-        if self.sends.load(Ordering::Acquire) == 0 {
-            let _stop = self.stop();
         }
     }
 
@@ -545,6 +538,7 @@ pub(crate) fn client_width(process: &'static Widths) -> &'static Widths {
 }
 
 pub(crate) mod backoff;
+pub(crate) mod budget;
 pub(crate) mod cache_lock;
 pub(crate) mod cache_prune;
 #[cfg(test)]

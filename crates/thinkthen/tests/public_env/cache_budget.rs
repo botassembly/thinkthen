@@ -90,7 +90,11 @@ fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {
         let expected = format!("Usage|Some(BeforeFirstSend)|{present}|0\n1|0|1");
         assert_eq!(lines, expected, "{name}");
         assert_eq!(first.count(), 0, "{name}: refused request sent nothing");
-        assert_eq!(second.count(), sent + 1, "{name}: each fresh cache sends once");
+        assert_eq!(
+            second.count(),
+            sent + 1,
+            "{name}: each fresh cache sends once"
+        );
         assert!(cache.join("thinkthen.sqlite").is_file(), "{name}");
     }
 }
@@ -125,8 +129,11 @@ fn zero_budget_refuses_beside_another_address_old_entries_and_a_bad_marker() {
     fs::write(old.join(format!("{}.json", "a".repeat(64))), b"old entry").expect("old entry");
     let marked = folder("zero-budget-bad-marker");
     fs::create_dir_all(&marked).expect("marked folder");
-    fs::write(marked.join(".thinkthen-backend.json"), b"secret invalid marker")
-        .expect("bad marker");
+    fs::write(
+        marked.join(".thinkthen-backend.json"),
+        b"secret invalid marker",
+    )
+    .expect("bad marker");
     for (name, path) in [("other", &other), ("old", &old), ("marked", &marked)] {
         let denied = engine(second.base(), path, "first\nsecond")
             .decide_with(

@@ -41,13 +41,9 @@ pub(crate) struct Member {
 impl Member {
     /// One pipeline answer's receipt: its judgment and question keys.
     pub(crate) fn new(judged: facade::Judgment, requests: Vec<String>) -> Self {
-        Self {
-            judged,
-            requests,
-        }
+        Self { judged, requests }
     }
 }
-
 
 impl Details {
     /// The same detailed result as a scalar SQL value, without a record input.

@@ -2,8 +2,8 @@
 //! and the library's `Details::to_json` both write it here, so their bytes agree.
 
 use crate::core::{
-    Backend, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning, Question,
-    Record, RenderError, RequestMeta, Threshold, Value, json_line, question_sha256_with_profile,
+    Backend, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning, Question, Record,
+    RenderError, RequestMeta, Threshold, Value, json_line, question_sha256_with_profile,
 };
 use crate::engine::facade::Judgment;
 

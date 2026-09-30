@@ -54,7 +54,14 @@ fn a_record_is_quoted_in_its_question_and_a_json_question_keeps_it_as_the_state(
         r#"{"state":"Help! My payouts have been failing for 3 days.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":{"ask":"urgent?"}}}}"#
     );
     assert_eq!(
-        quoted_plan(model(), evidence("x"), Some(&context), vec![structured()], None).err(),
+        quoted_plan(
+            model(),
+            evidence("x"),
+            Some(&context),
+            vec![structured()],
+            None
+        )
+        .err(),
         Some(BatchError::StructuredQuestionWithContext)
     );
 }

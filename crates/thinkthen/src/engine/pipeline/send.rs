@@ -5,6 +5,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, PoisonError};
 
+use crate::core::AttemptObservation;
 use crate::core::adapters::built_in;
 use crate::core::pack::{self, Ask, Split, State};
 use crate::core::recording::Exchange as Recorded;
@@ -13,7 +14,6 @@ use crate::engine::facade::{Engine, Key};
 use crate::engine::http::Exchange;
 use crate::engine::request::Transport;
 use crate::engine::store;
-use crate::core::AttemptObservation;
 use crate::engine::{AttemptSink, Cancel};
 
 /// One closed request: its questions with the label of the input each was

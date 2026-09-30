@@ -1095,19 +1095,19 @@ def token_path_at(tokens: list[str], place: int, path: tuple[str, ...]) -> bool:
 CORE_REFUSED_ROOTS = {"engine", "cli", "public"}
 
 
-def direct_root_references(tokens: list[str]) -> set[str]:
+def direct_root_references(tokens: list[str], refused: set[str] = CORE_REFUSED_ROOTS) -> set[str]:
     """Find an outer module reached directly from crate or an ancestor."""
     held = set()
     for place, token in enumerate(tokens):
         if token == "crate" and place + 2 < len(tokens) and tokens[place + 1] == "::":
-            if tokens[place + 2] in CORE_REFUSED_ROOTS:
+            if tokens[place + 2] in refused:
                 held.add(tokens[place + 2])
         if token != "super":
             continue
         end = place
         while end + 2 < len(tokens) and tokens[end + 1:end + 3] == ["::", "super"]:
             end += 2
-        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in CORE_REFUSED_ROOTS:
+        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in refused:
             held.add(tokens[end + 2])
     return held
 
@@ -1122,32 +1122,66 @@ def imports_outer_glob(path: tuple[str, ...]) -> bool:
     return len(path) > 1 and path[-1] == "*" and path[0] in {"crate", "super"}
 
 
-def core_policy_failures(text: str) -> list[str]:
-    tokens = rust_tokens(text)
-    held = []
-    for path in CORE_PROHIBITED_PATHS:
-        if any(token_path_at(tokens, place, path) for place in range(len(tokens))):
-            held.append("::".join(path))
-    for module in direct_root_references(tokens):
-        held.append(f"reverse reference to {module}")
-    imports = rust_use_paths(tokens)
-    for path, alias in imports:
-        if aliases_outer_root(path, alias):
-            held.append("alias of the crate root or an ancestor")
-        if imports_outer_glob(path):
-            held.append("glob import from the crate root or an ancestor")
-        if path[:1] == ("crate",) and len(path) > 1 and path[1] in CORE_REFUSED_ROOTS:
+def reverse_failures(tokens: list[str], refused: set[str]) -> list[str]:
+    """Name every reference or import that reaches a refused outer module."""
+    held = [f"reverse reference to {module}" for module in direct_root_references(tokens, refused)]
+    for path, _ in rust_use_paths(tokens):
+        if path[:1] == ("crate",) and len(path) > 1 and path[1] in refused:
             held.append(f"reverse import of {path[1]}")
         if path and set(path) == {"super"}:
             continue
         supers = 0
         while supers < len(path) and path[supers] == "super":
             supers += 1
-        if supers and supers < len(path) and path[supers] in CORE_REFUSED_ROOTS:
+        if supers and supers < len(path) and path[supers] in refused:
             held.append(f"reverse import of {path[supers]}")
+    return held
+
+
+def core_policy_failures(text: str) -> list[str]:
+    tokens = rust_tokens(text)
+    held = []
+    for path in CORE_PROHIBITED_PATHS:
+        if any(token_path_at(tokens, place, path) for place in range(len(tokens))):
+            held.append("::".join(path))
+    held.extend(reverse_failures(tokens, CORE_REFUSED_ROOTS))
+    for path, alias in rust_use_paths(tokens):
+        if aliases_outer_root(path, alias):
+            held.append("alias of the crate root or an ancestor")
+        if imports_outer_glob(path):
+            held.append("glob import from the crate root or an ancestor")
     if any(root == "self" and alias is not None for root, alias in extern_crates(tokens)):
         held.append("alias of the crate root or an ancestor")
     return sorted(set(held))
+
+
+# ADR 0111 section 10: the engine names nothing from the public API, which
+# sits on top of it. The public API re-exports what callers need.
+ENGINE_REFUSED_ROOTS = {"public"}
+
+
+def engine_policy_failures(text: str) -> list[str]:
+    return sorted(set(reverse_failures(rust_tokens(text), ENGINE_REFUSED_ROOTS)))
+
+
+def check_engine_policy() -> None:
+    engine = REPO / "crates/thinkthen/src/engine"
+    for source in sorted(engine.rglob("*.rs")):
+        held = engine_policy_failures(source.read_text(encoding="utf-8"))
+        if held:
+            fail("engine", f"{source.relative_to(REPO)} reaches the public API: {held}")
+    plants = (
+        ("use crate::public::SendBudget;", ["reverse import of public", "reverse reference to public"]),
+        ("crate::public::process_budget()", ["reverse reference to public"]),
+        ("use super::super::public::Error;", ["reverse import of public", "reverse reference to public"]),
+        ("use crate::{core, public::Error};", ["reverse import of public"]),
+        ("// crate::public::Error", []),
+        ('const TEXT: &str = "crate::public::Error";', []),
+        ("use crate::core::Answer; crate::engine::budget::SendBudget::new();", []),
+    )
+    for text, expected in plants:
+        if engine_policy_failures(text) != sorted(expected):
+            fail("engine", f"the planted engine reference {text!r} is refused for its cause")
 
 
 def dependency_roots(dependencies: dict) -> dict[str, str]:
@@ -2115,6 +2149,7 @@ def main() -> int:
     check_postgresql_binding()
     check_crate_roots()
     check_core_policy()
+    check_engine_policy()
     check_catalog_policy()
     check_measure_policy()
     check_doors()

@@ -23,6 +23,7 @@ use super::batch::{Batch, Source};
 const TICK: Duration = Duration::from_millis(50);
 
 pub(crate) type Row<A> = Result<<A as Asker>::Row, Failed<<A as Asker>::Error>>;
+type PortOf<A> = Port<<A as Asker>::Input, <A as Asker>::Error>;
 
 enum Event<A: Asker> {
     Port(Port<A::Input, A::Error>),
@@ -324,7 +325,7 @@ impl<A: Asker, F: FnMut(Row<A>) -> Flow> Host<A> for Eager<A, F> {
 pub(crate) fn eager<A: Asker, F: FnMut(Row<A>) -> Flow>(
     inputs: Vec<A::Input>,
     take: F,
-) -> impl FnOnce(Port<A::Input, A::Error>) -> Eager<A, F> {
+) -> impl FnOnce(PortOf<A>) -> Eager<A, F> {
     move |port| Eager {
         port,
         inputs: inputs.into_iter(),

@@ -132,7 +132,7 @@ impl Engine {
         estimated_limit: Option<u64>,
     ) -> Self {
         self.send_budget = Some(crate::engine::send_budget::ProcessBudget {
-            budget: crate::public::process_budget(),
+            budget: crate::engine::budget::process_budget(),
             requests: limit,
             estimated: estimated_limit,
         });

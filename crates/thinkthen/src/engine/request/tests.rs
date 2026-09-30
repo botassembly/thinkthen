@@ -7,13 +7,13 @@ use std::thread;
 use std::time::Duration;
 
 use crate::core::{Backend, Evidence, ModelName, Plan, Question, QuestionText};
+use crate::engine::budget::SendBudget;
 use crate::engine::cache_lock;
 use crate::engine::error::Error;
 use crate::engine::http::Key;
 use crate::engine::prepared_request::{Answered, PreparedRequest};
 use crate::engine::recorder::Recorder;
 use crate::engine::usage::Counters;
-use crate::public::SendBudget;
 
 fn request() -> (Backend, Plan, PreparedRequest) {
     let backend = Backend::resolve(Some("http://127.0.0.1:1/v1/systemone"), None, "jev-latest")

@@ -1,7 +1,5 @@
 //! The engine calls over many records: the lazy batches, `rank`, and `find`.
 
-use std::sync::Arc;
-
 mod observation;
 use observation::observe_find;
 mod annotate_observation;
@@ -10,15 +8,14 @@ pub(crate) use annotate_observation::{observe_annotated, observe_annotated_quest
 mod annotation;
 
 use crate::core::{self, Find, Value, ranking};
-use crate::public::annotated::AnnotatedRecord;
 use crate::engine::pipeline::Failed;
 use crate::public::asking::{self, Decisions, Miss};
 use crate::public::batch::Batch;
-use crate::public::pull;
 use crate::public::choice::Choice;
 use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evidence, only};
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
+use crate::public::pull;
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
 use crate::public::results::{
     self, Answer, Call, Found, ObservedQuestion, ObservedRow, QuestionDetail, Ranked,
@@ -403,68 +400,6 @@ impl Engine {
         .try_map(|found| Found::new(units, none, &found))
     }
 
-    /// Each record with every value of the set, lazily, in input order. A
-    /// member with an `on` pointer reads that part of the record's JSON text,
-    /// and a record missing a part is refused before its first request. A
-    /// question the backend failed reads [`Annotated::Failed`](crate::Annotated::Failed).
-    pub fn annotate<'a, I>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-    ) -> Batch<'a, AnnotatedRecord<I::Item>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        self.annotate_with(questions, records, CallOptions::new())
-    }
-
-    /// [`Engine::annotate`] under these controls.
-    pub fn annotate_with<'a, I>(
-        &'a self,
-        questions: &'a QuestionSet,
-        records: I,
-        options: CallOptions<'a>,
-    ) -> Batch<'a, AnnotatedRecord<I::Item>>
-    where
-        I: IntoIterator + 'a,
-        I::Item: Evidence,
-    {
-        Batch::of((|| {
-            options.without_context("annotate")?;
-            let setting = selected_set_batch(questions, &options, self.batch)?;
-            let stop = Stop::begin(options)?.with_prices(self.prices);
-            let (engine, set) = (Arc::clone(&self.inner), questions.0.clone());
-            let asker = annotation::Annotating::new(&engine, set.clone());
-            let call = pull::Call {
-                packing: pull::packing(setting, false, false),
-                engine: Arc::clone(&engine),
-                stop,
-                most: self.most,
-            };
-            Ok(pull::start(
-                call,
-                asker,
-                records.into_iter(),
-                Box::new(move |stop, index, item, row| {
-                    let annotation = row.map_err(annotation::failure)?;
-                    let all_failed = annotation
-                        .values
-                        .iter()
-                        .all(|(_, value)| matches!(value, core::AnnotatedValue::Failed(_)));
-                    let value = annotation::rendered(&set, &engine, annotation, stop.observing())?;
-                    if all_failed {
-                        observe_annotated_questions(&value, index, stop)?;
-                        return Err(asking::backend_failed());
-                    }
-                    observe_annotated(&value, index, stop)?;
-                    let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
-                    Ok(Some(AnnotatedRecord::new(item, value.values, value.json)))
-                }),
-            ))
-        })())
-    }
-
     /// Hold a finite input whole, and refuse it over the request limit.
     pub(super) fn within_limit<I: IntoIterator>(
         &self,
@@ -510,7 +445,10 @@ impl Engine {
             Box::new(move |stop, index, item, row| {
                 let judged = judged(stop, &question, &backend, index, row)?;
                 let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
-                pair(item, (judged.value, judged.answer.yes().unwrap_or_default()))
+                pair(
+                    item,
+                    (judged.value, judged.answer.yes().unwrap_or_default()),
+                )
             }),
         ))
     }

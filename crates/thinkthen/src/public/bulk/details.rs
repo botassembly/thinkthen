@@ -1,14 +1,14 @@
-//! Runtime-question record details over the shared stopping batch planner.
+//! Runtime-question record details on the question pipeline.
 
 use serde::Serialize;
 
 use crate::core;
 use crate::public::asking::Decisions;
 use crate::public::batch::Batch;
-use crate::public::error::Error;
-use crate::public::pull;
 use crate::public::engine::{DetailQuestion, Engine, Evidence, evidence, only};
+use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop};
+use crate::public::pull;
 use crate::public::question::Kind;
 use crate::public::results::{Details, Row};
 
@@ -75,17 +75,15 @@ impl Engine {
                 asker,
                 records.into_iter(),
                 Box::new(move |stop, index, item, row| {
-                    let item = item.ok_or_else(|| Error::defect("a row arrived with no record"));
-                    let decided = match row {
-                        Ok(decided) => decided,
-                        failed => {
-                            super::judged(stop, question, &backend, index, failed)?;
-                            return Err(Error::defect("a failed row returned a value"));
-                        }
-                    };
-                    let member = decided.member(question)?;
-                    super::judged(stop, question, &backend, index, Ok(decided))?;
-                    let item = item?;
+                    let member = row
+                        .as_ref()
+                        .ok()
+                        .map(|decided| decided.member(question))
+                        .transpose()?;
+                    super::judged(stop, question, &backend, index, row)?;
+                    let member =
+                        member.ok_or_else(|| Error::defect("a failed row returned a value"))?;
+                    let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
                     let details = Details::of_member(
                         member,
                         &item,
