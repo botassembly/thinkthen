@@ -34,3 +34,11 @@ Named in the ADR. At least: a batch of 100 records followed by a run of 120 that
 ## Deferred gaps
 
 Cache clearing and expiry.
+
+## Evidence
+
+- Starts from: ADR 0048, ADR 0055, and the 2026-09-29 mapping of System One calls.
+- Keeps: output order, exit codes, null versus failure, key secrecy, no key on replay.
+- Changes: the cache key, the store, and one batching path, per ADR 0111.
+- Proof: named per slice in ADR 0111.
+- Defers: cache clearing and expiry.

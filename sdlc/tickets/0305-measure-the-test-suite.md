@@ -1,6 +1,6 @@
 # 0305: Measure the test suite
 
-Status: measured. Lane claude-3. Read only. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5.
+Status: landed.
 
 ## Outcome
 
@@ -9,3 +9,11 @@ A record, `sdlc/records/0305-test-suite-measurement.md`, that lists per test bin
 ## Proof
 
 Commands and timings in the record.
+
+## Evidence
+
+- Starts from: the 2026-09-29 review's 30 failing tests and 84 s full run.
+- Keeps: every test and gate; this ticket only measures.
+- Changes: adds the measurement record.
+- Proof: `sdlc/records/0305-test-suite-measurement.md`.
+- Defers: the cuts, to later cleanup tickets.

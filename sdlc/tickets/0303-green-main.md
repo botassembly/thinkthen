@@ -27,3 +27,11 @@ The full suite passes twice, under umask 022 and 002. `policy.py` passes.
 ## Deferred gaps
 
 Package gates of the surfaces belong to later tickets.
+
+## Evidence
+
+- Starts from: 30 failures under umask 022 and 39 under 002 at `cac92d2c6`; record 0305.
+- Keeps: public output the specification already requires.
+- Changes: stale tests, the folder-permission rule, the routine test script.
+- Proof: full suite green under both umasks; `policy.py`.
+- Defers: surface package gates.
