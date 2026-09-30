@@ -1,6 +1,6 @@
 # 0346: The C door writes relate and annotate rows from the crate's types, and each door test builds in its own folder
 
-Status: in progress. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3, after ticket 0345 in the same lane. Pays Debt 012, `sdlc/issues/2026-09-30-c-door-relate-rows-have-no-owner.md`, and Debt 025, `sdlc/issues/2026-09-30-c-door-tests-race-under-nextest.md`.
+Status: landed. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B3, after ticket 0345 in the same lane. Pays Debt 012, `sdlc/issues/closed/2026-09-30-c-door-relate-rows-have-no-owner.md`, and Debt 025, `sdlc/issues/closed/2026-09-30-c-door-tests-race-under-nextest.md`.
 
 ## Outcome
 
@@ -15,3 +15,9 @@ The C door's `relate` and `annotate` results serialize the crate's result types 
 - Defers: moving `libraries/c/check.sh` itself to nextest, which is the check owner's choice.
 
 ## What the build taught us
+
+- The ticket's premise was half right. Main's record arrays in `call/records.rs` still joined text too, so the build took them.
+- A public `Serialize` that re-emits stored JSON as a `serde_json` raw value works only with `serde_json`; any other serializer gets serde_json's private marker struct. Review turned the first cut back: the door wraps each line the crate wrote in a raw value, and the public API gains nothing.
+- A per-process folder fixes the race but copies about 90 MB of archive per test process. A sweep keeps it to one run. Asking `kill -0` whether an owner lives fails open under load, so each process holds a `flock` on `door/<pid>.lock` for its life and the sweep deletes a folder only while holding that lock. Under Rust 2024 a temporary in an `if` condition drops before the block, so the sweep binds the lock file first.
+- Proof: `cargo nextest run --test door` failed 3 of 3 runs on main (`d280cd697`) and passed 20 runs in a row on the final code, plus 40 more on the two earlier designs. `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, lint in a clean checkout, and the C, Go, C++ and Zig surface checks passed.
+- Review took four rounds: the public Serialize trap, the sweep's failed-spawn race and the disk claim; then the ticket's stale Keeps sentence, the lock files' bound and a repeated error sentence; then the sweep's growing lock-file walk; then accept. The review also found `cases.rs` over the file cap from before, filed as `2026-09-30-c-door-cases-test-over-the-file-cap.md`.
