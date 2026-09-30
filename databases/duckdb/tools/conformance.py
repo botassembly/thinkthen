@@ -15,6 +15,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sqlite3
 import sys
 import tempfile
 from pathlib import Path
@@ -362,7 +363,7 @@ def main() -> int:
             continue
         try:
             wrong = check(case)
-        except (LookupError, AssertionError, TypeError, KeyError, ValueError) as error:
+        except (LookupError, AssertionError, TypeError, KeyError, ValueError, sqlite3.Error) as error:
             wrong = f"refused: {error}"
         if wrong:
             failed += 1
