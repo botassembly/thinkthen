@@ -36,7 +36,7 @@ The bench adds a JSON summary per function pinned to tags (bench ticket 0022), a
 
 ## The relate decision run
 
-`../issues/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run", records the bench's three conditions: the none-of-these rate beside precision when the right album is missing, an audit-tuned cut beside 0.5, and Liquid d1 beside the default backend. thinkthen ran it on main `8bb32e59a` on 2026-09-30 with the bench's own harness and scorer. The menu passed the bar on the default backend; the issue's "Result, 2026-09-30" holds the figures, and ticket 0353 makes the menu the recommended form. The Liquid d1 cell was not run.
+`../issues/closed/2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, "The decision run", records the bench's three conditions: the none-of-these rate beside precision when the right album is missing, an audit-tuned cut beside 0.5, and Liquid d1 beside the default backend. thinkthen ran it on main `8bb32e59a` on 2026-09-30 with the bench's own harness and scorer. The menu passed the bar on the default backend; the issue's "Result, 2026-09-30" holds the figures, and ticket 0353 makes the menu the recommended form. The Liquid d1 cell was not run.
 
 ## Issues from this feedback
 
