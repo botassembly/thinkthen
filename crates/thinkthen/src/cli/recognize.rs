@@ -8,8 +8,8 @@ use serde::Serialize;
 use crate::args::{Common, RecognizeArguments};
 use crate::asking::{self, Folders};
 use crate::core::{
-    Backend, Meta, ModelName, Outcome, Reading, RecognizeSpec, Record, RecordValue, RequestMeta,
-    json_line, recognize_sha256,
+    Meta, ModelName, Outcome, Reading, RecognizeSpec, Record, RecordValue, RequestMeta, json_line,
+    recognize_sha256,
 };
 use crate::edge::{self, Environment};
 use crate::engine::facade::{Engine, MAX_TEXT_BYTES, Probabilities, Recognized};
@@ -72,19 +72,14 @@ pub(crate) fn run(
     let reading = Reading::new(arguments.common.framing(), pointers)?;
     schedule::jobs_of(arguments.common.jobs, reading.streams())?;
     let source = edge::source(arguments.common.input.as_deref(), input)?;
-    let configured = spec
-        .model
-        .as_ref()
-        .map(ModelName::as_str)
-        .or_else(|| environment.model());
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
-    let backend = Backend::resolve(
-        arguments.common.url.as_deref(),
-        environment.base_url(),
-        configured.unwrap_or(crate::core::DEFAULT_MODEL),
-    )?
-    .with_request_size(request_size);
-    environment.check_key(&backend)?;
+    let backend = environment
+        .resolve(
+            arguments.common.backend.as_deref(),
+            arguments.common.url.as_deref(),
+            spec.model.as_ref().map(ModelName::as_str),
+        )?
+        .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
     let mismatch = profile::Mismatch::new(spec.profile.as_ref(), selected_profile.as_ref());
@@ -107,6 +102,7 @@ pub(crate) fn run(
                     .first()
                     .is_some_and(|kind| kind.starts_with('@')),
                 limit: max_text_bytes,
+                key_env: environment.key_variable(),
             },
             &mut writer,
         );

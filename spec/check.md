@@ -33,5 +33,5 @@ code=$?
 set -e
 test "$code" -eq 2
 test -z "$(thinkthen check 2>/dev/null)"
-thinkthen check 2>&1 >/dev/null | mustmatch "thinkthen: check needs an address you name: give --url, set THINKTHEN_BASE_URL, or set url in the configuration file"
+thinkthen check 2>&1 >/dev/null | mustmatch "thinkthen: check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file"
 ```

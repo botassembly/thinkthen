@@ -11,13 +11,13 @@ use std::time::Duration;
 use crate::cli::args::CheckArguments;
 use crate::cli::edge::{self, Environment};
 use crate::core::check::{self, Probe, Report};
-use crate::core::{Backend, DEFAULT_MODEL, NAME, PlanSummary, json_line};
+use crate::core::{NAME, PlanSummary, json_line};
 use crate::engine::error::Error;
 use crate::engine::facade::{Chunk, Engine, Settings, Storage};
 use crate::failure::{self, Failure};
 
 /// The check sends only to an address the user named, never the built-in one.
-const NO_ADDRESS: &str = "check needs an address you name: give --url, set THINKTHEN_BASE_URL, or set url in the configuration file";
+const NO_ADDRESS: &str = "check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file";
 
 /// The retry count every command defaults to. The check takes no option for it.
 const MAX_RETRIES: u32 = 2;
@@ -30,11 +30,17 @@ pub(crate) fn run(
     if arguments.retired_dry_run {
         return Err(Failure::Usage("--dry-run was renamed --plan"));
     }
-    let url = arguments.url.as_deref().or_else(|| environment.base_url());
-    let url = url.ok_or(Failure::Usage(NO_ADDRESS))?;
-    let asked = arguments.model.as_deref().or_else(|| environment.model());
-    let backend = Backend::resolve(Some(url), None, asked.unwrap_or(DEFAULT_MODEL))?;
-    environment.check_key(&backend)?;
+    let choice = environment.choose(arguments.backend.as_deref(), arguments.url.as_deref())?;
+    if choice.tier.is_none() {
+        return Err(Failure::Usage(NO_ADDRESS));
+    }
+    // The configuration's model applies only on the unnamed path.
+    let unnamed = choice.named.is_none();
+    let asked = arguments
+        .model
+        .as_deref()
+        .or_else(|| environment.model().filter(|_| unnamed));
+    let backend = environment.settle(&choice, asked)?;
     let roots = environment.roots()?;
     let probes =
         check::probes(backend.model()).ok_or(Failure::Defect("a check probe no longer parses"))?;

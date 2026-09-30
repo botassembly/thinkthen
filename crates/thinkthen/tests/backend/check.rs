@@ -232,7 +232,7 @@ fn the_check_sends_only_to_the_address_the_user_named() {
     let output = check(&[], &[]);
     assert_eq!(
         text(&output.stderr),
-        "thinkthen: check needs an address you name: give --url, set THINKTHEN_BASE_URL, or set url in the configuration file\n"
+        "thinkthen: check needs an address you name: give --url or --backend, set THINKTHEN_BASE_URL or THINKTHEN_BACKEND, or set url or backend in the configuration file\n"
     );
     assert_eq!(text(&output.stdout), "");
     assert_eq!(output.status.code(), Some(2));

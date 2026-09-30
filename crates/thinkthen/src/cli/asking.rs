@@ -188,11 +188,7 @@ pub(crate) fn run(
     common.check_plan_name()?;
     let threshold = settled.threshold();
     let view = view.checked()?;
-    let configured_model = settled
-        .sources()
-        .model_is_default()
-        .then(|| environment.model())
-        .flatten();
+    let asked = (!settled.sources().model_is_default()).then(|| settled.model().as_str());
     let per_document = matches!(
         asks,
         Asks::Fixed(Question::Choose { .. } | Question::Tag { .. } | Question::Score { .. })
@@ -203,13 +199,13 @@ pub(crate) fn run(
         .filter(|_| !per_document || common.framing() != Framing::Document)
         .map(|tiers| environment.request_size(tiers.request_size))
         .transpose()?;
-    let backend = Backend::resolve(
-        common.url.as_deref(),
-        environment.base_url(),
-        configured_model.unwrap_or_else(|| settled.model().as_str()),
-    )?
-    .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
-    environment.check_key(&backend)?;
+    let backend = environment
+        .resolve(common.backend.as_deref(), common.url.as_deref(), asked)?
+        .with_request_size(request_size.unwrap_or(Backend::DEFAULT_REQUEST_SIZE));
+    // The configuration's model applies only on the unnamed path.
+    let configured_model = (asked.is_none() && environment.named().is_none())
+        .then(|| environment.model())
+        .flatten();
     let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);

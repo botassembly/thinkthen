@@ -1,0 +1,260 @@
+//! Named backends: each pairs a base with its own key variables and a model.
+//!
+//! ADR 0114 states the rules. The command, the configuration file, and the
+//! Rust builder hand typed values here in tier order, and this module decides
+//! which backend and address apply and which key variables are read. It reads
+//! no environment.
+
+use std::fmt;
+
+use crate::core::adapters::built_in::backends::BUILT_INS;
+use crate::core::backend::{Backend, BackendError, KEY_VAR};
+
+/// One named backend: a built-in or a configuration entry.
+#[derive(Clone, Eq, PartialEq)]
+pub(crate) struct Named {
+    name: String,
+    base: String,
+    keys: Vec<String>,
+    model: String,
+}
+
+impl fmt::Debug for Named {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("Named")
+            .field("name", &self.name)
+            .field("base", &"<withheld>")
+            .field("keys", &self.keys)
+            .field("model", &self.model)
+            .finish()
+    }
+}
+
+impl Named {
+    /// A configuration entry, whose fields the configuration reader checked.
+    pub(crate) fn new(name: &str, base: &str, key: &str, model: &str) -> Self {
+        Self {
+            name: name.to_owned(),
+            base: base.to_owned(),
+            keys: vec![key.to_owned()],
+            model: model.to_owned(),
+        }
+    }
+
+    /// The built-in backend of this name, if one exists.
+    pub(crate) fn built_in(name: &str) -> Option<Self> {
+        BUILT_INS
+            .iter()
+            .find(|built_in| built_in.name == name)
+            .map(|built_in| Self {
+                name: built_in.name.to_owned(),
+                base: built_in.base.to_owned(),
+                keys: built_in.keys.iter().map(|&key| key.to_owned()).collect(),
+                model: built_in.model.to_owned(),
+            })
+    }
+
+    pub(crate) fn name(&self) -> &str {
+        &self.name
+    }
+
+    /// The key variables, in the order they are read.
+    pub(crate) fn keys(&self) -> &[String] {
+        &self.keys
+    }
+}
+
+/// Whether a name uses 1 to 32 lowercase ASCII letters, digits, and hyphens.
+pub(crate) fn valid_name(name: &str) -> bool {
+    (1..=32).contains(&name.len())
+        && name
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
+}
+
+/// Whether a name belongs to a built-in backend.
+pub(crate) fn is_built_in(name: &str) -> bool {
+    BUILT_INS.iter().any(|built_in| built_in.name == name)
+}
+
+/// Every key variable a built-in backend reads.
+pub(crate) fn built_in_keys() -> impl Iterator<Item = &'static str> {
+    BUILT_INS
+        .iter()
+        .flat_map(|built_in| built_in.keys.iter().copied())
+}
+
+/// The built-in names as the unknown-name sentence lists them.
+pub(crate) fn built_in_list() -> String {
+    let names: Vec<String> = BUILT_INS
+        .iter()
+        .map(|built_in| format!("`{}`", built_in.name))
+        .collect();
+    match names.split_last() {
+        Some((last, [])) => last.clone(),
+        Some((last, rest)) => format!("{} and {last}", rest.join(", ")),
+        None => String::new(),
+    }
+}
+
+/// Find a backend by name among the configured entries and the built-ins.
+///
+/// # Errors
+///
+/// Returns [`BackendError::InvalidName`] or [`BackendError::Unknown`].
+pub(crate) fn find(name: &str, configured: &[Named]) -> Result<Named, BackendError> {
+    if !valid_name(name) {
+        return Err(BackendError::InvalidName);
+    }
+    configured
+        .iter()
+        .find(|entry| entry.name == name)
+        .cloned()
+        .or_else(|| Named::built_in(name))
+        .ok_or_else(|| BackendError::Unknown(name.to_owned()))
+}
+
+/// One tier's backend name and address, either of which may be absent.
+pub(crate) type Tier<'a> = (Option<&'a str>, Option<&'a str>);
+
+/// What the deciding tier chose: a named backend, an address, both, or neither.
+#[derive(Clone, Debug)]
+pub(crate) struct Choice<'a> {
+    pub(crate) named: Option<Named>,
+    pub(crate) url: Option<&'a str>,
+    /// The index of the tier that decided, or `None` when no tier named anything.
+    pub(crate) tier: Option<usize>,
+}
+
+/// Walk the tiers from the top; the first tier that names a backend or an
+/// address decides, and every lower tier is ignored.
+///
+/// # Errors
+///
+/// Returns [`BackendError`] when the deciding tier names an invalid or unknown backend.
+pub(crate) fn choose<'a>(
+    tiers: &[Tier<'a>],
+    configured: &[Named],
+) -> Result<Choice<'a>, BackendError> {
+    for (index, &(name, url)) in tiers.iter().enumerate() {
+        if name.is_none() && url.is_none() {
+            continue;
+        }
+        let named = name.map(|name| find(name, configured)).transpose()?;
+        return Ok(Choice {
+            named,
+            url,
+            tier: Some(index),
+        });
+    }
+    Ok(Choice {
+        named: None,
+        url: None,
+        tier: None,
+    })
+}
+
+impl Choice<'_> {
+    /// Resolve the address and the model. A named backend supplies its base
+    /// when its tier named no address, and its model when nothing was asked.
+    /// The unnamed path takes `unnamed_model` as today.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError`] for an address or model the backend rule refuses.
+    pub(crate) fn backend(
+        &self,
+        asked: Option<&str>,
+        unnamed_model: &str,
+    ) -> Result<Backend, BackendError> {
+        match &self.named {
+            None => Backend::resolve(self.url, None, asked.unwrap_or(unnamed_model)),
+            Some(named) => Backend::resolve(
+                Some(self.url.unwrap_or(&named.base)),
+                None,
+                asked.unwrap_or(&named.model),
+            ),
+        }
+    }
+
+    /// The key variables this choice reads, in order.
+    pub(crate) fn keys(&self) -> Vec<&str> {
+        self.named.as_ref().map_or_else(
+            || vec![KEY_VAR],
+            |named| named.keys.iter().map(String::as_str).collect(),
+        )
+    }
+
+    /// The first key variable, which the missing-key sentence names.
+    pub(crate) fn key_variable(&self) -> &str {
+        self.named
+            .as_ref()
+            .and_then(|named| named.keys.first())
+            .map_or(KEY_VAR, String::as_str)
+    }
+
+    /// Refuse a built-in's key variable at another built-in's host (ADR 0114 section 5).
+    ///
+    /// # Errors
+    ///
+    /// Returns [`BackendError::KeyElsewhere`], which names no address and no key.
+    pub(crate) fn guard(&self, backend: &Backend) -> Result<(), BackendError> {
+        let (Some(named), Some(host)) = (&self.named, backend.host().map(comparable)) else {
+            return Ok(());
+        };
+        for variable in &named.keys {
+            let Some(owner) = BUILT_INS
+                .iter()
+                .find(|built_in| built_in.keys.contains(&variable.as_str()))
+            else {
+                continue;
+            };
+            let other = BUILT_INS.iter().find(|built_in| {
+                built_in.name != owner.name
+                    && Backend::resolve(Some(built_in.base), None, built_in.model)
+                        .ok()
+                        .is_some_and(|base| base.host().map(comparable).as_ref() == Some(&host))
+            });
+            if let Some(other) = other {
+                return Err(BackendError::KeyElsewhere {
+                    name: named.name.clone(),
+                    variable: variable.clone(),
+                    owner: owner.name,
+                    other: other.name,
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+/// A host as DNS reads it: ASCII percent escapes decoded, lower case, and
+/// trailing dots dropped, so `api.liquid.ai.` and `api%2Eliquid.ai` compare
+/// equal to `api.liquid.ai`.
+fn comparable(host: &str) -> String {
+    let bytes = host.as_bytes();
+    let mut decoded = Vec::with_capacity(bytes.len());
+    let mut index = 0;
+    while let Some(&byte) = bytes.get(index) {
+        let escaped = (byte == b'%')
+            .then(|| bytes.get(index + 1..index + 3))
+            .flatten()
+            .and_then(|pair| std::str::from_utf8(pair).ok())
+            .and_then(|pair| u8::from_str_radix(pair, 16).ok());
+        if let Some(value) = escaped {
+            decoded.push(value);
+            index += 3;
+        } else {
+            decoded.push(byte);
+            index += 1;
+        }
+    }
+    String::from_utf8_lossy(&decoded)
+        .to_ascii_lowercase()
+        .trim_end_matches('.')
+        .to_owned()
+}
+
+#[cfg(test)]
+mod tests;

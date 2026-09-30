@@ -87,6 +87,7 @@ pub(super) fn dry_run(
         .collect();
     let document = PlanDocument::of_body(backend, first.body)
         .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
+        .key_env(judging.environment.key_variable())
         .questions_on(on)
         .requests(count, group_requests);
     let document = if reading.streams() {

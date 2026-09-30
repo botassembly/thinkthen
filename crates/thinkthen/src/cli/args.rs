@@ -118,6 +118,9 @@ pub(crate) struct Common {
     /// The base the request is posted under, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
     pub(crate) url: Option<String>,
+    /// The named backend: a base with its own key variable and model. It outranks THINKTHEN_BACKEND.
+    #[arg(long, value_name = "NAME")]
+    pub(crate) backend: Option<String>,
 
     /// Read enforceable backend limits and a calibration name from FILE.
     ///

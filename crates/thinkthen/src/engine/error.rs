@@ -77,7 +77,7 @@ pub(crate) enum Error {
     Cancelled,
     Deadline(Budget),
     /// The key variable holds nothing, so no key can be sent.
-    NoKey(&'static str),
+    NoKey(String),
     /// A later explicit width differs from the one this process selected.
     WidthActive(crate::engine::WidthActive),
     /// Replies for one logical result named different model versions.

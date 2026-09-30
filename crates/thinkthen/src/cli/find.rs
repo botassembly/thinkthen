@@ -16,10 +16,6 @@ use crate::failure::{Failure, ReplayContext};
 use crate::profile;
 
 /// Read one bounded set, ask once, and print its selected original unit.
-#[expect(
-    clippy::too_many_lines,
-    reason = "the bounded find set resolves one question and one result with a separate preview helper"
-)]
 pub(crate) fn run(
     arguments: &FindArguments,
     environment: &Environment,
@@ -43,16 +39,11 @@ pub(crate) fn run(
     let reading = Reading::new(framing, fields)?;
     let question = QuestionText::new(&arguments.question)
         .map_err(|_| Failure::Usage("`find` takes a question that is text, not white space"))?;
-    let backend = Backend::resolve(
+    let backend = environment.resolve(
+        common.backend.as_deref(),
         common.url.as_deref(),
-        environment.base_url(),
-        common
-            .model
-            .as_deref()
-            .or_else(|| environment.model())
-            .unwrap_or(crate::core::DEFAULT_MODEL),
+        common.model.as_deref(),
     )?;
-    environment.check_key(&backend)?;
     let profile = profile::read(common)?;
     let folders = Folders::of(common, environment)?;
     if common.dry_run && folders.named() {
@@ -96,7 +87,7 @@ pub(crate) fn run(
     if common.dry_run {
         return planned(
             &find,
-            &backend,
+            (&backend, environment.key_variable()),
             profile.as_ref(),
             &reading,
             units.len(),
@@ -119,9 +110,10 @@ pub(crate) fn run(
     })
 }
 
+/// Print the plan. `target` is the backend and its first key variable.
 fn planned(
     find: &Find,
-    backend: &Backend,
+    (backend, key_env): (&Backend, &str),
     profile: Option<&crate::core::BackendProfile>,
     reading: &Reading,
     records: usize,
@@ -138,7 +130,8 @@ fn planned(
             .map_err(|_| Failure::Defect("a plan is too large"))?;
     }
     let document = PlanDocument::of(backend, find.plan())
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
+        .key_env(key_env);
     if summary.first_body() != Some(document.request_body()) {
         return Err(Failure::Defect(
             "the disclosed request changed after preparation",

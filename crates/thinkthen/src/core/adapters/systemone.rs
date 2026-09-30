@@ -8,6 +8,7 @@
 //! model a request carries when nothing else names one, and the path the
 //! endpoint sits under. Nothing outside this module names any of the four.
 
+pub(crate) mod backends;
 mod recorded;
 mod request;
 mod response;
