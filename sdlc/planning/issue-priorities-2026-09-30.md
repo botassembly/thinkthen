@@ -19,7 +19,7 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 | 6 | `2026-09-25-public-library-api-gaps.md` (debt) | yes, items 1, 2, 3, 9, 10 | item 10 a Quick Fix now; one SQL host ticket for 1, 2, 3, 9; 6 and 7 after 0.1 | 0304 slice 4 for items 1, 2, 3, 9 | medium |
 | 7 | `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | marketing | nothing | small |
 | 8 | `2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` (debt) | yes | a Quick Fix | 0304 slice 4 (`public/relate.rs`) | small |
-| 9 | `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | one relate ticket: the default and the both-ways edge shape | 0304 slice 4 | medium |
+| 9 | `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | ticket 0342: the single-answer menu and the precision statement; then a relate ticket for the both-ways edge shape | 0304 slice 4; the shape waits for 0314 slice 4 | medium |
 | 10 | `2026-09-30-audit-and-diff-lost-the-batch-setting.md` (debt) | yes | 0304 slice 5, or a Quick Fix | 0304 slice 4 | small |
 | 11 | `2026-09-30-old-batching-files-still-have-live-callers.md` (debt) | yes | 0304 slices 4 and 5 | 0304 slice 4 | large |
 | 12 | `2026-09-30-site-replay-folders-have-no-fixture.md` (debt) | yes, before the site goes public | 0304 slice 5; marketing for items 2 to 4 | 0304 slice 5 | medium |
@@ -98,7 +98,7 @@ Rank 17 follows ticket 0340's landing, so the Severity and number fields go onto
 
 Taken 2026-09-30 under the workspace rule to record reviewed choices and proceed. Ian can overturn each one.
 
-1. Both-ways relate edges get an unordered `pair` shape before 0.1, in the relate ticket after 0304 slice 4, because a breaking change after 0.1 costs every consumer (rank 9).
+1. Both-ways relate edges get an unordered `pair` shape before 0.1, in a relate ticket after 0314 slice 4 (ticket 0342 split it out, because the shape reaches the binding files that slice rewrites), because a breaking change after 0.1 costs every consumer (rank 9).
 2. Ian's `rehearse` dispatch waits for 0304 slice 3 and the PostgreSQL macOS ticket 0336; both have landed.
 3. Relation pairs keep the whole text for 0.1, with the distance limit as an opt-in, because natural text with a relation three sentences apart was never measured (rank 27).
 4. Homebrew stays a Mac option; the curl script covers Linux (rank 15, item 3).
