@@ -1,67 +1,22 @@
 # Documentation plan
 
-Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. Later tickets added focused pages, including page 45 for `relate`, page 46 for cache inventory and page 47 for a two-call question. This page holds the list. Each line names the number, the task, the slice or ticket that turns it green, and its state. A demo number is a folder under `demos/`. New numbers are reserved here and get a folder when their slice starts.
+Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that one file is the demo, the how-to, and the test. ADR 0016 cut the list from 40 pages to 27 and put limits on each. ADR 0018 cut it again to 20, keeping the limits. Later tickets added focused pages, including page 45 for `relate`, page 46 for cache inventory and page 47 for a two-call question. `demos/README.md` holds the one list of how-tos, with each page's number, task, link and state. This page keeps the form, the capability map, the numbers that left and the rules. The slice or ticket that turned each page green is in Git history and in that page's ticket. A demo number is a folder under `demos/`. A new number is reserved on `demos/README.md` as coming and gets a folder when its slice starts.
 
 The published documentation has three kinds of page. How-tos are the green demos. Reference is `specification/`, with its executable examples in `spec/`. The README is the one tutorial and the one explanation. Nothing is written twice.
 
-`sdlc/scripts/pages` checks that every relative link here and in `demos/` resolves. Keep this list and `demos/README.md` in step by hand.
+`sdlc/scripts/pages` checks that every relative link here and in `demos/` resolves.
 
 ## The form and the standard
 
 The title starts with "How to" and names a task. One paragraph says when to use it, and a block that asserts something follows inside the first twenty lines. Then: the input files, the steps with commands and real outputs, "What can go wrong" with the exit codes and the traps, and related how-tos.
 
-ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting blocks and every `bash` block asserts, one command unless the title names the contrast, at most four steps, no design argument on a green page, and at most four closing links. Amended 2026-09-30 by ticket 0312 under Ian's ruling 8: these limits are writing guidance. `sdlc/scripts/demos` checks that a green page and each of its `bash` blocks assert, and that every page this index lists as green says `Status: green`.
-
-## Start here
-
-| # | How to | Slice | State |
-| --- | --- | --- | --- |
-| 01 | Gate a script step on a yes/no answer | 4 | green |
-| 19 | Gate a risky command and fail closed | Ticket 0010, rewritten by 0018 | green |
-| 27 | Test a script with no network | Ticket 0010 | green |
-| 46 | Find unused recording entries | Ticket 0229 | green |
-| 18 | Point the tool at another server and compare two deciders | 13 | coming, slice 13 |
-| 44 | Find names in a text without a network | Ticket 0080 | green |
-| 45 | Map relationships in a complete entity set | Ticket 0088 | green |
-
-## Gates and branches
-
-| # | How to | Slice | State |
-| --- | --- | --- | --- |
-| 02 | Branch on a label with `choose` and `case` | 5 | green |
-| 40 | Say what yes and no mean | 7b | green |
-| 17 | Route a request by how hard it is | 5, rewritten by 0018 | green |
-| 21 | Choose the next action from a list that changes at every step | 7, rewritten by 0018 | green |
-| 41 | Tune a question file and use the same file in the gate | 7b | green |
-| 47 | Split a chained question into two calls | Quick Fix 2026-09-28 | green |
-
-## Many records
-
-| # | How to | Slice | State |
-| --- | --- | --- | --- |
-| 03 | Keep only the records that match a meaning | 8 | green |
-| 43 | Lint a change by meaning and fail the build | 8 | green |
-| 06 | Put the best matches first | 8 | green |
-| 12 | Resume a long run that stopped | 7 | green |
-| 15 | Find the line that answers a question | 11 | green |
-
-## Many questions at once
-
-| # | How to | Slice | State |
-| --- | --- | --- | --- |
-| 39 | Screen one message for several hazards | Ticket 0036: `tag` | green |
-| 16 | Build a triage pipeline that drafts, blocks, or asks a person | 9 | green |
+ADR 0016 adds the limits: at most 120 lines and 900 words, at most six asserting blocks and every `bash` block asserts, one command unless the title names the contrast, at most four steps, no design argument on a green page, and at most four closing links. Amended 2026-09-30 by ticket 0312 under Ian's ruling 8: these limits are writing guidance. `sdlc/scripts/demos` checks that a green page and each of its `bash` blocks assert, and that every page `demos/README.md` lists as green says `Status: green`.
 
 ## Evals
 
-Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. ADR 0016 cut this section from fifteen pages to eight, and ADR 0018 cut it to four, because the rest taught half an idea each or repeated a neighbour. Each how-to below is also a transform folder under `transforms/` where it has `jq` in it, as ADR 0012 proposes.
+Ian ruled on 2026-09-19 that evals are a first-class section of the how-tos. An eval is a reproducible workflow over the same commands as everything else. The tool obtains the judgments and keeps the evidence. Ordinary code does the policies, the metrics, the comparisons, and the presentation. ADR 0016 cut this section from fifteen pages to eight, and ADR 0018 cut it to four, because the rest taught half an idea each or repeated a neighbour. Each eval how-to is also a transform folder under `transforms/` where it has `jq` in it, as ADR 0012 proposes.
 
-| # | How to | Slice | State |
-| --- | --- | --- | --- |
-| 14 | Grade an assistant's answers with a rubric | 9 | green |
-| 13 | Pick a threshold from labeled cases | 10a, ticket 0008 | green |
-| 25 | Check the judge against human labels | 10a, ticket 0008 | green |
-| 28 | Know what a run cost | 10a, ticket 0008 | green |
+The four eval how-tos are 14, 13, 25 and 28, listed under "Evals" in `demos/README.md`.
 
 ### Ian's six capabilities, and the how-tos that teach each
 
@@ -101,5 +56,5 @@ No number is reused. The pages once planned for transcript compaction and for ro
 ## Rules for the list
 
 - A how-to enters when a user task needs it. A feature with no how-to here has no place in version one.
-- A ticket that turns a demo green writes it in the form, holds it to the standard, and updates its line here.
-- Every state on this page, in `demos/README.md`, and in the folders under `demos/` says the same thing, and `sdlc/scripts/pages` fails the `lint` rung when one of them drifts.
+- A ticket that turns a demo green writes it in the form, holds it to the standard, and updates its line in `demos/README.md`.
+- Each state in `demos/README.md` matches its folder's status line. `sdlc/scripts/demos` refuses a page listed as green whose status line differs.
