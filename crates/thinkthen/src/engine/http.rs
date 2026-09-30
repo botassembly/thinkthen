@@ -20,7 +20,7 @@ use crate::engine::{Permit, Width, Widths, backoff};
 mod observation;
 mod retry;
 use observation::{ResponseInfo, observed_result};
-use retry::{MAX_RETRY_WAIT, bounded_wait, honored};
+use retry::{MAX_RETRY_WAIT, bounded_wait, draw, honored};
 
 /// The key one request carries. Diagnostics and `Debug` never expose it.
 pub(crate) struct Key(String);
@@ -299,7 +299,7 @@ impl Client {
                 permit.release_closing(
                     gates,
                     exchange.url,
-                    bounded_wait(attempt.asked, wait, self.timeout),
+                    bounded_wait(attempt.asked, wait, self.timeout, draw()),
                     attempt.asked.is_some(),
                 );
             } else {

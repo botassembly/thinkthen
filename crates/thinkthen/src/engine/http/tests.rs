@@ -1,6 +1,8 @@
 //! Focused HTTP parsing and transport checks.
 
-use super::{Client, Exchange, Key, bounded_wait, honored, io_transport, is_retried, transport};
+use super::{
+    Client, Exchange, Key, bounded_wait, draw, honored, io_transport, is_retried, transport,
+};
 use crate::engine::error::{Error, TransportKind};
 use crate::engine::usage::Counters;
 use std::cell::Cell;
@@ -46,24 +48,46 @@ fn the_milliseconds_header_is_read_first_and_the_seconds_header_follows_it() {
 }
 
 #[test]
-fn only_an_unheaded_retry_wait_stops_at_the_attempt_timeout() {
-    let timeout = Duration::from_secs(2);
-    assert_eq!(
-        bounded_wait(
-            Some(Duration::from_secs(30)),
-            Duration::from_secs(1),
-            timeout
-        ),
-        Duration::from_secs(30)
+fn only_an_unheaded_retry_wait_is_capped_and_spread_by_the_draw() {
+    let (s, ms) = (Duration::from_secs, Duration::from_millis);
+    let timeout = s(2);
+    let cases = [
+        (Some(s(30)), s(1), 0, s(30)),
+        (Some(ms(250)), s(4), u64::MAX, ms(250)),
+        (None, s(4), u64::MAX, timeout),
+        (None, s(4), 0, s(1)),
+        (None, s(1), u64::MAX / 2, ms(750)),
+        (None, s(1), 0, ms(500)),
+        (None, s(120), u64::MAX, timeout),
+    ];
+    for (asked, exponential, draw, wait) in cases {
+        let got = bounded_wait(asked, exponential, timeout, draw);
+        assert!(
+            got.abs_diff(wait) <= Duration::from_nanos(1),
+            "{asked:?} {exponential:?} {draw}: {got:?}"
+        );
+    }
+}
+
+#[test]
+fn parallel_workers_draw_different_unheaded_waits_within_bounds() {
+    let (full, timeout) = (Duration::from_secs(1), Duration::from_secs(30));
+    let waits: Vec<Duration> = thread::scope(|scope| {
+        let workers: Vec<_> = (0..4)
+            .map(|_| scope.spawn(|| bounded_wait(None, full, timeout, draw())))
+            .collect();
+        workers
+            .into_iter()
+            .map(|worker| worker.join().unwrap())
+            .collect()
+    });
+    assert!(
+        waits.iter().all(|wait| (full / 2..=full).contains(wait)),
+        "{waits:?}"
     );
-    assert_eq!(bounded_wait(None, Duration::from_secs(4), timeout), timeout);
-    assert_eq!(
-        bounded_wait(
-            Some(Duration::from_millis(250)),
-            Duration::from_secs(4),
-            timeout
-        ),
-        Duration::from_millis(250)
+    assert!(
+        waits.windows(2).any(|pair| pair[0] != pair[1]),
+        "lockstep: {waits:?}"
     );
 }
 
