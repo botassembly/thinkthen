@@ -51,15 +51,15 @@ Run the script for real, with `THINKTHEN_API_KEY` set, and add `--record` and a 
 sh triage.sh report.txt --record recording/
 ```
 
-The file name is the digest of the wire shape, the address, and the request bytes, so the same command finds it again. An entry holds the request body and the response body, and never a header, so no key can reach it.
+The file name is the digest of the wire shape, the address, and the request bytes, so the same command finds it again. An entry holds the request body and the response body, and never a header, so no key can reach it. `quoted` marks an entry rewritten into the quoted request form of ADR 0111.
 
 ```bash
 set -euo pipefail
 
 jq -r 'input_filename, (keys_unsorted | join(","))' \
-  recording/4492d4e8f2d047146e41dfe2eeb5ba6c5ab91140bd6be76eca6e66051f4d48e7.json \
-  | mustmatch "recording/4492d4e8f2d047146e41dfe2eeb5ba6c5ab91140bd6be76eca6e66051f4d48e7.json
-schema,adapter,url,request,response"
+  recording/0ed34b6bd25833f67c85dc4c6754fe95de803ad7271f79f8a7edda94965487f8.json \
+  | mustmatch "recording/0ed34b6bd25833f67c85dc4c6754fe95de803ad7271f79f8a7edda94965487f8.json
+schema,adapter,url,request,response,quoted"
 ```
 
 `record.sh` in this folder is the script that made the recording. It runs through `sdlc/scripts/live`, the one door for a paid call.
@@ -97,7 +97,7 @@ said=$(env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --quiet --replay recording/ < vague.txt 2>&1 >/dev/null) && rc=0 || rc=$?
 printf 'rc=%s %s\n' "$rc" "$said" \
-  | mustmatch 'rc=5 thinkthen: the decide request for one document: the replay folder holds no entry named `dea1ce71382c9fcdd7d5264af9c50a829560117db81a6df8cded39c164fb25ae.json`; the entry name covers the backend interface, address, and request'
+  | mustmatch 'rc=5 thinkthen: the decide request for one document: the replay folder holds no entry named `3ba7fb93dc55f768a2be2c800b5890469427077daa29acfa4cf002e9e2051955.json`; the entry name covers the backend interface, address, and request'
 ```
 
 Record the missing case and the test passes again. A recording is grown one case at a time.
