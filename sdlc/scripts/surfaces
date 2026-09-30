@@ -231,6 +231,7 @@ registry sdlc/surfaces.txt
 if [ -n "$publish_tag" ]; then
 	[ -z "$(git status --porcelain)" ] || { echo 'surfaces: --publish needs a clean committed tree' >&2; exit 1; }
 	publish_commit=$(git rev-parse HEAD)
+	sh sdlc/scripts/publish-builds --check "$publish_tag" "$publish_root"
 fi
 . "$(dirname -- "$0")/scratch.sh"
 # ADR 0113: a check that bypasses its own scratch usage folder writes this decoy and fails the rung.
@@ -270,6 +271,7 @@ code=0
 verdict "$mode" "release smoke" "$code"
 if [ -n "$publish_tag" ]; then
 	[ "$code" -eq 0 ] || { echo 'surfaces: FAIL publish (the release smoke did not pass)'; exit 1; }
-	[ "$(git rev-parse HEAD)" = "$publish_commit" ] || { echo 'surfaces: FAIL publish (HEAD moved during the run)'; exit 1; }
+	[ "$(git rev-parse HEAD)" = "$publish_commit" ] && [ -z "$(git status --porcelain)" ] ||
+		{ echo 'surfaces: FAIL publish (the checkout changed during the run)'; exit 1; }
 	sh sdlc/scripts/publish-builds "$publish_tag" "$publish_root" "$publish_commit" "$packed"
 fi
