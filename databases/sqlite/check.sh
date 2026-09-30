@@ -115,8 +115,8 @@ else
 	symbols=$(nm -D --defined-only -- "$library" | awk '{ print $NF }')
 	[ "$symbols" = sqlite3_thinkthen_init ] || { echo "FAIL     the library exports: $symbols" >&2; exit 1; }
 fi
-guards=$(grep -rn 'catch_unwind(' src | wc -l)
-[ "$guards" = 1 ] || { echo "FAIL     src holds $guards catch_unwind calls, not 1" >&2; exit 1; }
+guards=$(grep -rn 'contained(' src | wc -l)
+[ "$guards" = 1 ] || { echo "FAIL     src holds $guards contained guards, not 1" >&2; exit 1; }
 
 step "the loopback backend"
 cargo build --locked --offline --quiet --manifest-path ../../Cargo.toml --package conformance-backend

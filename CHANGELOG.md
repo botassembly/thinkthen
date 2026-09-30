@@ -12,6 +12,8 @@ The SQL extensions add `thinkthen_try_details` so a recoverable bad row yields a
 
 Every surface paces its HTTP attempts to 1,000 a minute for each `https://` address, under the vendor's published 1,200. `THINKTHEN_REQUESTS_PER_MINUTE` sets another rate. The pacer counts within one process (ticket 0308).
 
+Every surface reads `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the estimated input admission total from ticket 0299. A request whose estimate would pass it is refused before it is sent. The command flag, the Rust setter, and the C key outrank the variable (ticket 0311).
+
 The default model is the pinned version `jev-1.13.0`, not the alias `jev-latest`, so a vendor's move of its alias moves no default answer (ticket 0159).
 
 Python and Ruby calls now raise cancellation when the caller's token fires before a held reply reaches the call, including when both happen in one wait tick (ticket 0168).

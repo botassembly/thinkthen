@@ -1,6 +1,6 @@
 # 0311: The token cap on every surface
 
-Status: building. Lane claude-4. Branch `ticket/0311-token-cap-everywhere`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/2026-09-29-token-cap-contract-before-release.md`.
+Status: built, awaiting code review. Lane claude-4. Branch `ticket/0311-token-cap-everywhere`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/2026-09-29-token-cap-contract-before-release.md`.
 
 ## Outcome
 
@@ -32,3 +32,29 @@ Every surface enforces the estimated input admission total from ticket 0299 with
 ## Deferred: spend in `status`
 
 The status issue (`sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, option 1) asks library and SQL engines to persist counts to the command's usage store. That widens what the library writes, so the issue asks for an ADR first. ADR 0111 slices 2 and 3 rework the cache and usage accounting. Writing library counts now would build on code that slice will replace. It stays open for a ticket after those slices.
+
+## Build result
+
+- Source: `engine/send_budget.rs` holds one parser, `estimated_total`. `public/settings/environment.rs` and `cli/edge.rs` call it. `cli/asking.rs` lets the flag outrank the variable. No port or SQL extension source changed.
+- `cli/edge.rs` stays at 499 nonblank lines by merging two `use` lines and passing the read value straight to the parser.
+- Tests, one case per surface, each pinning the refusal and zero listener arrivals:
+  - Command, `tests/backend/limits.rs`: refusal, the malformed sentence, and the flag outranking the variable with one arrival.
+  - Rust `from_env`, `tests/public_env/batch.rs`: four refused calls and the malformed sentence.
+  - C, `libraries/c/tests/door/settings.rs`: code 1 refusal; a JSON `null` then admits exactly one arrival.
+  - Go over C, `thinkthen_test.go` run from `fixtures/run_matrix.py` against a fresh counted backend.
+  - Python, `tests/test_call.py`: a scalar and a Polars column call, `UsageError`.
+  - R `tests/facts.R`, Ruby `tests/test_engine_settings.rb`, TypeScript `tests/settings.test.mjs`: each port's usage error with the core sentence.
+  - SQLite `tests/test_settings.py`, DuckDB `tools/settings_suite.py`, PostgreSQL `check.sh` step `token_variable_refuses_before_sending`: a statement error with the core sentence.
+- Red: the command and Python cases failed with the variable read removed.
+- Not run per wrapper: the other ports over C (PHP, Swift, Zig, C++, C#, JVM, Objective-C, Ada, COBOL, Dart). They pass JSON to the C constructor, which starts from `from_env`. Ticket 0299 rules out repeating the case in every wrapper.
+- Pages: the settings row names the variable on every surface; `backends.md` and the changelog gain a sentence; the token-cap issue records the rollout and stays open for package qualification.
+- Growth: root Rust 105,252 to 105,327 (about 15 source lines, the rest tests). Host ratchets raised to measured totals: C 4,089, Python 4,568, R 2,353, Ruby 2,324, TypeScript 1,183, Go 1,242 and 596, SQLite 2,081, DuckDB 3,904. I checked `backoff::per_minute` for reuse; its range and sentence differ, so the parsers stay separate.
+- Checks: `cargo nextest run -p thinkthen` 1,246 passed; clippy clean on changed files; `policy.py`; `sdlc/scripts/settings` and its self-test; `sdlc/scripts/tickets`; SQLite `check.sh` in full; each other surface through its harness steps.
+- Quick fix on the way: SQLite `check.sh` counted `catch_unwind(` calls, which ticket 0306 moved into the shared `contained` guard, so its gate stopped before any test. It now counts `contained(`.
+
+## What the build taught us
+
+- The 0308 lesson held: one read in `from_env` put the cap on eleven surfaces with no port code. Each port's existing error mapping carried the core Usage sentence unchanged.
+- A variable is the thin form for an engine-wide setting. A per-port setter would have meant eleven constructors, eleven schemas, and eleven reviews for the same effect.
+- The PostgreSQL variable lives in the server process environment. A DBA sets it for the whole server, and each backend still counts alone.
+- Surface gates can go stale when a shared refactor lands. SQLite's source-shape check broke after ticket 0306 and hid every later SQLite test from its gate.
