@@ -46,7 +46,7 @@ Filed on 2026-09-30:
 - `../issues/2026-09-30-live-batching-flake-and-unexplained-usage-calls.md`
 - `../issues/2026-09-30-spec-no-calls-edges-need-a-real-send.md`
 
-Merged into open issues: the Liquid d1 first-`check` timeout went into `../issues/2026-09-29-docs-page-for-the-liquid-d1-backend.md` and row 19 of `../issues/2026-09-20-new-user-stumble-register.md`. A longer default timeout on the `liquid` built-in waits for ticket 0334's deferred per-backend limits.
+Merged into open issues: the Liquid d1 first-`check` timeout went into `../issues/2026-09-29-docs-page-naming-supported-providers.md`, section 2 and row 19 of `../issues/2026-09-20-new-user-stumble-register.md`. A longer default timeout on the `liquid` built-in waits for ticket 0334's deferred per-backend limits.
 
 Already on main, not filed again: the Objective-C header collision (closed by ticket 0337), PostgreSQL on macOS (closed by ticket 0336), the recording page's retired backend marker (open), and relate precision (open).
 

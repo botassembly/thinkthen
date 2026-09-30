@@ -1,10 +1,10 @@
 # Eleven C-door language packages need a release
 
-Status: open. Merged on 2026-09-30 from eleven "consumer proof needs a supported package" issues, now in `closed/`. Owner: ticket 0128 phases 3b and 4, with the workflow tickets 0268 to 0273, whose static code passed review and whose runner runs remain open. Ian's ruling 10 of 2026-09-30 holds any public release until 0.1, and 0.1 waits for every surface.
+Status: Closed on 2026-09-30. Merged into `../2026-09-25-release-and-install-for-0-1.md`, "Language packages", which ticket 0128 owns.
 
 ## What exists
 
-Ticket 0249 landed each package's source under `libraries/<lang>/` with its own `check.sh`, and the [integration closure](../records/0249-integration-closure.md) accepted all eleven. Tickets 0261 to 0266 built local release packages for each. Each package passes its product check on Ubuntu 24.04.3 x86_64 against the current C header. Each typed route returns owned facts (tickets 0277, 0279, 0280, 0282). Nothing is published.
+Ticket 0249 landed each package's source under `libraries/<lang>/` with its own `check.sh`, and the [integration closure](../../records/0249-integration-closure.md) accepted all eleven. Tickets 0261 to 0266 built local release packages for each. Each package passes its product check on Ubuntu 24.04.3 x86_64 against the current C header. Each typed route returns owned facts (tickets 0277, 0279, 0280, 0282). Nothing is published.
 
 ## What every package still needs
 

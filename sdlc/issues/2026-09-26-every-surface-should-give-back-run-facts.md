@@ -2,7 +2,7 @@
 
 Status: open for five parts: full detail on every verb, backend time and request IDs past ticket 0302, caller-priced cost on the remaining hosts (ticket 0300), SQL per-call facts, and the docs. Item 5, the `meta.usage` name, is settled. Shortened 2026-09-30. It absorbs the closed `closed/2026-09-23-record-the-backends-own-time-for-each-call.md`.
 
-Priority: rank 9 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: tickets 0300 and 0302 for items 2 and 3, ticket 0314 slice 4 for item 1, marketing for item 6.
+Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: tickets 0300 and 0302 for items 2 and 3, ticket 0314 slice 4 for item 1, marketing for item 6.
 
 Ian ruled on 2026-09-26 that library results carry `facts` on every call, with no setting and no second call. `--facts` controls only what the command line prints. Ian can overturn this ruling.
 

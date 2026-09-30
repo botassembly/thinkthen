@@ -1,6 +1,6 @@
 # The question-file reader has four capped copies and three uncapped ones
 
-Status: open. Filed by the Quick Fix that capped the command's question file. Owner: none.
+Status: open. Filed by the Quick Fix that capped the command's question file. Owner: a Quick Fix after 0304 slice 4 lands, since slice 4 edits `public/relate.rs`.
 
 Kind: debt
 

@@ -1,6 +1,6 @@
 # The recording page still describes the retired backend marker
 
-Status: open. Found by the release QA suite on 2026-09-30 against main `c22512868`. The text still stands at main `1cad2821a`.
+Status: Closed on 2026-09-30. Merged into `../2026-09-30-old-batching-files-still-have-live-callers.md`, since 0304 slice 5 rewrites the recording page and `status`.
 
 ## The problem
 

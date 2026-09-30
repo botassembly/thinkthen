@@ -1,16 +1,10 @@
-# recognize and relate: scale and shape
+# recognize and relate: scale
 
-Status: open for items 3 to 6, all later features. Shortened 2026-09-30. Ticket 0123 fixed items 1 and 2. The recognition-guidance Quick Fix fulfilled items 7 and 8. Git history holds their text. Ian can overturn any fix below.
+Status: open for items 4 to 6, all later features. Item 3, the both-ways edge shape, moved on 2026-09-30 to `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md`, because one relate ticket after 0304 slice 4 settles both. Shortened 2026-09-30. Ticket 0123 fixed items 1 and 2. The recognition-guidance Quick Fix fulfilled items 7 and 8. Git history holds their text. Ian can overturn any fix below.
 
-Priority: rank 14 of 25 in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0304 slice 4; Ian decides item 3.
+Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future ticket after 0304 slice 4.
 
 The relation planner and the request splitter serve both commands. Each open item is about how that path grows with the input or how its output reads.
-
-## 3. A both-ways edge prints a direction it does not have
-
-An `--either` edge still prints `source` and `target`, normalized to input order (`specification/relate.md`). A reader cannot tell a both-ways pair from a one-way edge without the rule. Ian, reviewing the relate examples on 2026-09-22: "relate source and target should be more obvious too."
-
-The fix: give `--either` edges an unordered shape, for example `{"relation":"duplicates","pair":[{…},{…}],"probability":…}`, on the command and every surface in one change. Keep the one-way shape.
 
 ## 4. relate takes one set, and a grown set re-asks every question
 

@@ -1,6 +1,6 @@
 # The Polars door cannot test lazy streaming
 
-Status: open. Deferred by ticket 0304 slice 3c after ticket 0307 dropped `polars/streaming` from the `polars` feature. Owner: none.
+Status: open. Deferred by ticket 0304 slice 3c after ticket 0307 dropped `polars/streaming` from the `polars` feature. Owner: none until a user asks.
 
 Kind: debt
 

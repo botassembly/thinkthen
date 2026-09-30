@@ -1,6 +1,6 @@
 # The SQL hosts' question store proofs are partial
 
-Status: open. Deferred by ticket 0304 slice 3b. Owner: none. Slice 3e closed the PostgreSQL missing-part row with `databases/postgresql/check.sh` `an_annotate_row_missing_its_part_fails_alone`.
+Status: Closed on 2026-09-30. Merged into `../2026-09-30-old-batching-files-still-have-live-callers.md`, last section, which ticket 0304 slice 5 pays.
 
 Kind: debt
 

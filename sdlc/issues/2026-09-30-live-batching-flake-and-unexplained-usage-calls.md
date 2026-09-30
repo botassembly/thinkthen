@@ -1,6 +1,6 @@
 # One live batching request failed once, and about 1,000 calls on the usage counter are unexplained
 
-Status: open. Reported by the Beatles Bench team on 2026-09-30 from live runs. Owner: none. For investigation; no paid call was run for this issue.
+Status: open. Reported by the Beatles Bench team on 2026-09-30 from live runs. Owner: the queue owner, from logs; no paid call was run for this issue.
 
 ## What was seen
 
