@@ -1,6 +1,6 @@
 # 0293 — Lazy native Python stream (F2)
 
-Status: Draft preparation. Accepted ADR 0107 settles the outcome; implementation and issue closure remain open.
+Status: Implementation candidate from High-accepted preparation `8bf14799`; fresh High code review and issue closure remain open.
 
 ## Outcome
 
@@ -8,9 +8,9 @@ Expose core Batch through a bounded channel. The source advances only inside __n
 
 F1 and F2 share one reviewed green public API landing because a judge applied to an iterator must already return Stream; Stream.value belongs here.
 
-## Prerequisites and proposed files
+## Implemented paths and dependencies
 
-Prerequisite: F1 joint green landing; reuse core Batch from 0212. Proposed file families: `libraries/python/src/{lib.rs,input.rs,worker.rs,result.rs} plus one private stream module; Python package API/stubs and focused stream tests`. Refresh exact nested helpers, package member inventories, nonblank source headroom and current Lanes claims before implementation. No source file is claimed by this preparation draft.
+F1 and F2 are one public candidate. `libraries/python/src/stream.rs` uses the existing core Batch and a zero-slot caller handoff; `src/worker/stream_receipt.rs` carries detached completion. `thinkthen/stream.py`, the stub, selected tests and measured ratchets are in the Python claim.
 
 ## Smallest meaningful proof
 
@@ -26,4 +26,4 @@ SQLite cursor calling-thread proof, bounded take, exact distinct-record bytes, c
 
 ## What the build taught us
 
-Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.
+The saved stream spike supplied the bounded Batch protocol. A caller-thread SQLite cursor, four-row selective take, exact eager/stream bodies, held single-reader refusal, fork, token, interrupt receipt and dropped worker each have a selected outside-in case. Core Batch schedules and accounts; no Python scheduler or per-item eager loop was added. Clippy required splitting stream worker/reader paths and boxing a larger frame failure account after shared Facts grew. See [the build](../records/0293-python-stream-build.md) for source/installed limits.

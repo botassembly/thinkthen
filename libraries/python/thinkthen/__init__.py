@@ -51,10 +51,11 @@ from ._thinkthen import (
     Tally,
 )
 from .judge import Judge, make as _make_judge
+from .stream import Stream
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
-    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Facts", "Judge", "Tally", "LocalError", "Question", "Recognized",
+    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Facts", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
     "annotate", "choose", "decide", "details", "filter",
     "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",

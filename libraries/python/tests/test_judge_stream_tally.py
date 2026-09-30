@@ -28,7 +28,7 @@ def test_shape_rule_plan_and_removed_names(backend, tmp_path):
     except tt.UsageError as error:
         print(error.kind, "record 0" in str(error))
     stream = question(iter(["one"]))
-    print(type(stream).__name__, stream.facts, list(stream), stream.facts.records)
+    print(isinstance(stream, tt.Stream), stream.facts, list(stream), stream.facts.records)
     try:
         question({"one"})
     except tt.UsageError as error:
@@ -45,7 +45,7 @@ def test_shape_rule_plan_and_removed_names(backend, tmp_path):
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         "Judge 2 1 True True", *["Call"] * 5, "usage True",
-        "Stream None [True] 1", "usage False", "True",
+        "True None [True] 1", "usage False", "True",
         *[f"thinkthen: {name} was removed; apply the judge to a list: tt.decide(q)(rows)"
           for name in ("decide_many", "choose_many", "score_many", "tag_many") for _ in range(2)],
     ]

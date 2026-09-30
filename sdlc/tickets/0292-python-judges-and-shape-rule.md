@@ -1,14 +1,14 @@
 # 0292 — Python judges and shape rule (F1)
 
-Status: Draft preparation. Accepted ADR 0107 settles the outcome; implementation and issue closure remain open.
+Status: Implementation candidate from High-accepted preparation `8bf14799`; fresh High code review and issue closure remain open.
 
 ## Outcome
 
 Build immutable Judge from omitted input on module verbs and Engine methods. Bind question settings at construction and deadline_ms/token at application. A judge pickles without a key into spawn; a judge bound to a tally refuses pickling. Call.__bool__ refuses filter(judge,xs). Lists, tuples, range, numpy arrays, dict views and pandas Index are eager; only a true iterator (`iter(x) is x`) is lazy; set and frozenset refuse because order cannot align with answers. Remove four *_many module and Engine methods with exact messages, and add tt.plan(judge,column_or_list). Implement the Stream return and Stream.value refusal in F2 under one joint public landing, never a temporary public return.
 
-## Prerequisites and proposed files
+## Implemented paths and dependencies
 
-Prerequisite: T5; joint green landing with F2. Proposed file families: `libraries/python/src/{lib.rs,asked.rs,input.rs,result.rs,engine.rs}; libraries/python/thinkthen/{__init__.py,__init__.pyi}; selected Python tests/ratchets`. Refresh exact nested helpers, package member inventories, nonblank source headroom and current Lanes claims before implementation. No source file is claimed by this preparation draft.
+F1/F2 land together. The implementation uses `libraries/python/thinkthen/{__init__.py,judge.py,stream.py,__init__.pyi}`, native `src/{asked,engine,input,result,stream,worker}.rs` and their cohesive nested helpers, selected tests, README and measured Python ratchets. The shared core remains unchanged.
 
 ## Smallest meaningful proof
 
@@ -24,4 +24,4 @@ Curry/partial, shape table, bool refusal, spawn pickle, packed pipe row and exac
 
 ## What the build taught us
 
-Pending implementation: record corrected assumptions, preparation misses, proof adjustments and remaining limits before landing.
+The accepted preparation `8bf14799` correctly joined Judge and Stream. The prior Series-only pandas Index refusal is intentionally superseded: an Index is an eager ordered input. The omitted-input sentinel differs from explicit `None`; a partial creates the same Judge as a direct call. Plan and execution read one validated native question, so later mutation of the original options list leaves both body and send unchanged. Source and installed proof, plus package/release limits, are recorded in [the build](../records/0292-python-judges-build.md).
