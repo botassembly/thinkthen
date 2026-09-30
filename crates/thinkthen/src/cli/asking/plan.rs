@@ -18,14 +18,16 @@ use crate::profile::Mismatch;
 use crate::schedule::Output;
 
 /// What a plan shows beyond the request: where the question came from.
-pub(super) struct Planning {
+pub(super) struct Planning<'a> {
     pub(super) sources: Option<Sources>,
+    pub(super) key_env: &'a str,
 }
 
 impl JudgingInput<'_> {
-    pub(super) const fn planning(&self) -> Planning {
+    pub(super) fn planning(&self) -> Planning<'_> {
         Planning {
             sources: self.sources,
+            key_env: self.environment.key_variable(),
         }
     }
 }
@@ -143,14 +145,15 @@ pub(super) fn print_plan(
     backend: &Backend,
     mismatch: &Mismatch,
     reading: &Reading,
-    planning: &Planning,
+    planning: &Planning<'_>,
     body: Vec<u8>,
     summary: &PlanSummary,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
     mismatch.print_once()?;
     let document = PlanDocument::of_body(backend, body)
-        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?;
+        .map_err(|_| Failure::Defect("a request could not be written as JSON"))?
+        .key_env(planning.key_env);
     if summary.first_body() != Some(document.request_body()) {
         return Err(Failure::Defect(
             "the disclosed request changed after preparation",

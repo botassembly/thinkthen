@@ -5,7 +5,6 @@ use std::io::{Read, Write};
 use std::path::Path;
 use std::process::ExitCode;
 
-use crate::core::adapters::built_in;
 use crate::core::{
     Backend, BackendProfile, BatchError, Framing, PartError, Plan, Pointer, QuestionSet,
     QuestionSetError, Reading, ReadingError, Record, RecordError, Setting, quoted_plan,
@@ -67,18 +66,11 @@ pub(crate) fn run(
         Err(error) => return Err(error.into()),
     };
     crate::schedule::width(arguments.common.jobs)?;
-    let model = arguments
-        .common
-        .model
-        .as_deref()
-        .or_else(|| environment.model())
-        .unwrap_or(built_in::DEFAULT_MODEL);
-    let backend = Backend::resolve(
+    let backend = environment.resolve(
+        arguments.common.backend.as_deref(),
         arguments.common.url.as_deref(),
-        environment.base_url(),
-        model,
+        arguments.common.model.as_deref(),
     )?;
-    environment.check_key(&backend)?;
     let folders = Folders::of(&arguments.common, environment)?;
     if arguments.common.dry_run && folders.named() {
         return Err(Failure::DryRunWithRecording);

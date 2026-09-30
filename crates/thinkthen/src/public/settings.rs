@@ -1,5 +1,6 @@
 //! The engine builder, and the environment read it captures once.
 
+mod backend;
 mod budgets;
 mod environment;
 mod prices;
@@ -11,9 +12,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use crate::config;
-use crate::core::{
-    Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, KEY_VAR, ModelName, Prices,
-};
+use crate::core::{Backend, BackendProfile, DEFAULT_MODEL, KEY_IN_ADDRESS, ModelName, Prices};
 use crate::engine::Width;
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::{Key, Settings, Storage};
@@ -66,6 +65,8 @@ impl fmt::Debug for Secret {
 /// registers no throttle until `build`.
 pub struct EngineBuilder {
     base_url: Option<String>,
+    backend: Option<String>,
+    captured: backend::Captured,
     key: Option<Secret>,
     model: Option<ModelName>,
     width: Option<Width>,
@@ -93,6 +94,8 @@ impl fmt::Debug for EngineBuilder {
         formatter
             .debug_struct("EngineBuilder")
             .field("base_url", &self.base_url.as_ref().map(|_| "<withheld>"))
+            .field("backend", &self.backend)
+            .field("captured", &self.captured)
             .field("key", &self.key)
             .field("model", &self.model)
             .field("width", &self.width)
@@ -133,6 +136,8 @@ impl EngineBuilder {
     pub(crate) fn new() -> Self {
         Self {
             base_url: None,
+            backend: None,
+            captured: backend::Captured::default(),
             key: None,
             model: None,
             width: None,
@@ -368,11 +373,13 @@ impl EngineBuilder {
             })?),
             (None, None) => None,
         };
-        let model = self.model.as_ref().map_or(DEFAULT_MODEL, ModelName::as_str);
-        let backend = Backend::resolve(self.base_url.as_deref(), None, model)
-            .map_err(Error::refused)?
-            .with_request_size(self.max_request_bytes);
-        if backend.address_contains_key(self.key.as_ref().map(|Secret(value)| value.as_ref())) {
+        let backend::Selected {
+            backend,
+            key,
+            variable,
+        } = self.selected()?;
+        let backend = backend.with_request_size(self.max_request_bytes);
+        if backend.address_contains_key(key.as_ref().map(|Secret(value)| value.as_ref())) {
             return Err(Error::usage(KEY_IN_ADDRESS));
         }
         let roots = self
@@ -397,7 +404,6 @@ impl EngineBuilder {
                 Profile::Inline(profile) => Ok(profile.clone()),
             })
             .transpose()?;
-        let key = self.key.clone();
         let settings = Settings {
             backend,
             profile: profile.clone(),
@@ -410,7 +416,7 @@ impl EngineBuilder {
             key: Arc::new(move || {
                 key.as_ref()
                     .map(|Secret(value)| Key::new(value.as_ref().to_owned()))
-                    .ok_or(EngineError::NoKey(KEY_VAR))
+                    .ok_or_else(|| EngineError::NoKey(variable.clone()))
             }),
             usage: Arc::new(Counters::new(
                 self.seeded.as_ref().and_then(|seeded| seeded.usage.clone()),

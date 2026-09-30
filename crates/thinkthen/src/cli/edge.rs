@@ -10,6 +10,7 @@ use std::time::Duration;
 
 use crate::core::{Backend, Reading};
 
+mod backend;
 mod key;
 mod roots;
 use key::KeySnapshot;
@@ -65,6 +66,7 @@ const BOUND: u64 = crate::core::MAX_RECORD_BYTES as u64 + 2;
 #[derive(Default)]
 pub(crate) struct Environment {
     base_url: Option<String>,
+    backend: Option<String>,
     batch: Option<String>,
     max_request_bytes: Option<String>,
     named_cache: bool,
@@ -88,6 +90,7 @@ impl std::fmt::Debug for Environment {
         formatter
             .debug_struct("Environment")
             .field("base_url", &self.base_url.as_ref().map(|_| "<withheld>"))
+            .field("backend", &self.backend.as_ref().map(|_| "<withheld>"))
             .field("config", &self.config)
             .field("key", &self.key)
             .finish_non_exhaustive()
@@ -105,6 +108,7 @@ impl Environment {
         usage.set_prices(config.prices());
         Ok(Self {
             base_url: read("THINKTHEN_BASE_URL"),
+            backend: read("THINKTHEN_BACKEND"),
             batch: read("THINKTHEN_BATCH"),
             max_request_bytes: env::var("THINKTHEN_MAX_REQUEST_BYTES").ok(),
             cache: named_cache
@@ -157,9 +161,6 @@ impl Environment {
     pub(crate) fn config_path(&self) -> Option<&Path> {
         self.config_path.as_deref()
     }
-    pub(crate) const fn base_url_is_environment(&self) -> bool {
-        self.base_url.is_some()
-    }
     pub(crate) const fn named_cache(&self) -> bool {
         self.named_cache
     }
@@ -173,21 +174,6 @@ impl Environment {
     pub(crate) fn counters(&self) -> std::sync::Arc<Counters> {
         std::sync::Arc::clone(&self.usage)
     }
-    /// Validate the final address against the one key this command will use.
-    pub(crate) fn check_key(&self, backend: &Backend) -> Result<(), Failure> {
-        self.key.check(backend)
-    }
-
-    /// Report the checked snapshot, without rereading the process environment.
-    pub(crate) fn api_key_set(&self) -> bool {
-        self.key.is_set()
-    }
-
-    /// The already checked snapshot that every request from this command uses.
-    pub(crate) fn key_reader(&self) -> key::Reader {
-        self.key.reader()
-    }
-
     /// `THINKTHEN_BATCH`, read by record-batching judging commands.
     pub(crate) fn batch(&self) -> Option<&str> {
         self.batch.as_deref()
@@ -221,11 +207,6 @@ impl Environment {
             .map_err(Failure::Output)?;
         }
         Ok(())
-    }
-
-    /// The base the request is posted under, or `None` when the variable is empty.
-    pub(crate) fn base_url(&self) -> Option<&str> {
-        self.base_url.as_deref().or_else(|| self.config.url())
     }
 
     /// How long the first retry waits before the wait doubles.

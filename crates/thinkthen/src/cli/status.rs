@@ -7,7 +7,6 @@ use serde::Serialize;
 
 use crate::cli::args::StatusArguments;
 use crate::cli::edge::{self, Environment};
-use crate::core::DEFAULT_MODEL;
 use crate::failure::Failure;
 
 #[derive(Serialize)]
@@ -28,10 +27,12 @@ struct Configuration {
 
 #[derive(Serialize)]
 struct Backend {
+    name: Option<String>,
     url: String,
     url_source: &'static str,
     model: String,
     model_source: &'static str,
+    key_variable: String,
     api_key_set: bool,
 }
 
@@ -87,7 +88,7 @@ pub(crate) fn run(
     environment: &Environment,
     mut writer: impl Write,
 ) -> Result<ExitCode, Failure> {
-    let status = gather(environment)?;
+    let status = gather(environment, arguments.backend.as_deref())?;
     if arguments.json {
         edge::write_line(
             &mut writer,
@@ -100,26 +101,24 @@ pub(crate) fn run(
     Ok(ExitCode::SUCCESS)
 }
 
-fn gather(environment: &Environment) -> Result<Status, Failure> {
+fn gather(environment: &Environment, backend: Option<&str>) -> Result<Status, Failure> {
     let config = environment.config();
-    let url_source = if environment.base_url_is_environment() {
-        "environment"
-    } else if config.has_url() {
+    let choice = environment.choose(backend, None)?;
+    // A tier that named a backend and no address took the backend's base.
+    let url_source = match (choice.tier, choice.url.is_some()) {
+        (None, _) => "built_in",
+        (Some(1), true) => "environment",
+        (Some(2), true) => "configuration",
+        (Some(_), _) => "backend",
+    };
+    let model_source = if choice.named.is_some() {
+        "backend"
+    } else if config.has_model() {
         "configuration"
     } else {
         "built_in"
     };
-    let model_source = if config.has_model() {
-        "configuration"
-    } else {
-        "built_in"
-    };
-    let resolved_backend = crate::core::Backend::resolve(
-        None,
-        environment.base_url(),
-        environment.model().unwrap_or(DEFAULT_MODEL),
-    )?;
-    environment.check_key(&resolved_backend)?;
+    let resolved_backend = environment.settle(&choice, None)?;
     let cache = cache_status(environment, &resolved_backend)?;
     let month = crate::engine::usage::month_now();
     let usage = environment
@@ -131,17 +130,19 @@ fn gather(environment: &Environment) -> Result<Status, Failure> {
             category: error.category(),
         })?;
     Ok(Status {
-        schema: "thinkthen.status/1",
+        schema: "thinkthen.status/2",
         version: env!("CARGO_PKG_VERSION"),
         configuration: Configuration {
             path: environment.config_path().map(display),
             present: config.present(),
         },
         backend: Backend {
+            name: environment.named().map(str::to_owned),
             url: resolved_backend.url().as_str().to_owned(),
             url_source,
-            model: environment.model().unwrap_or(DEFAULT_MODEL).to_owned(),
+            model: resolved_backend.model().as_str().to_owned(),
             model_source,
+            key_variable: environment.key_variable().to_owned(),
             api_key_set: environment.api_key_set(),
         },
         cache,
@@ -226,6 +227,13 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
         &mut writer,
         &format!("configuration_present {}", status.configuration.present),
     )?;
+    edge::write_line(
+        &mut writer,
+        &format!(
+            "backend {}",
+            status.backend.name.as_deref().unwrap_or("none")
+        ),
+    )?;
     edge::write_line(&mut writer, &format!("url {}", status.backend.url))?;
     edge::write_line(
         &mut writer,
@@ -235,6 +243,10 @@ fn write_human(status: &Status, mut writer: impl Write) -> Result<(), Failure> {
     edge::write_line(
         &mut writer,
         &format!("model_source {}", status.backend.model_source),
+    )?;
+    edge::write_line(
+        &mut writer,
+        &format!("key_variable {}", status.backend.key_variable),
     )?;
     edge::write_line(
         &mut writer,

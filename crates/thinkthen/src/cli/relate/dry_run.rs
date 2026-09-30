@@ -15,7 +15,7 @@ struct Report<'a> {
     schema: &'static str,
     url: &'a str,
     model: &'a str,
-    key_env: &'static str,
+    key_env: &'a str,
     backend_profile: Option<&'a str>,
     framing: Framing,
     fields: Option<&'a RelateFields>,
@@ -56,6 +56,7 @@ pub(super) struct Context<'a> {
     pub(super) spec: &'a RelateSpec,
     pub(super) from: Option<From>,
     pub(super) entity_count: usize,
+    pub(super) key_env: &'a str,
 }
 
 pub(super) fn write(
@@ -105,7 +106,7 @@ pub(super) fn write(
         schema: "thinkthen.relate-plan/1",
         url: context.backend.url().as_str(),
         model: context.backend.model().as_str(),
-        key_env: crate::core::KEY_VAR,
+        key_env: context.key_env,
         backend_profile: context.profile.map(|profile| profile.name().as_str()),
         framing: context.framing,
         fields: (context.framing != Framing::Lines).then_some(context.spec.fields()),

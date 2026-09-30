@@ -5,6 +5,8 @@ use thiserror::Error;
 use crate::core::adapters::built_in;
 use crate::core::text::{BlankTextError, ModelName, Url};
 
+pub(crate) mod named;
+
 /// The one environment variable that holds the key.
 ///
 /// The key goes to the address the user named, because naming the address is
@@ -60,6 +62,20 @@ pub(crate) enum BackendError {
          so it reaches localhost, 127.0.0.1, and [::1] alone"
     )]
     KeyInClear,
+    #[error("a backend name uses 1 to 32 lowercase letters, digits, and hyphens")]
+    InvalidName,
+    #[error("unknown backend `{0}`; the built-in backends are {list}, and the configuration file may name more", list = named::built_in_list())]
+    Unknown(String),
+    /// A built-in's key variable at another built-in's host (ADR 0114 section 5).
+    #[error(
+        "backend `{name}` reads `{variable}`, the key of backend `{owner}`, which never goes to the address of backend `{other}`"
+    )]
+    KeyElsewhere {
+        name: String,
+        variable: String,
+        owner: &'static str,
+        other: &'static str,
+    },
 }
 
 /// The three host spellings `http://` may carry.
@@ -117,9 +133,15 @@ impl Backend {
     /// hosts the clear-text rule proves are this machine.
     #[must_use]
     pub(crate) fn is_loopback(&self) -> bool {
+        self.host()
+            .is_some_and(|host| LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)))
+    }
+
+    /// The host of the posting URL, lower case and without its port.
+    #[must_use]
+    pub(crate) fn host(&self) -> Option<&str> {
         after_scheme(self.url.as_str())
             .and_then(|(_, rest)| host_of(rest.split('/').next().unwrap_or(rest)).ok())
-            .is_some_and(|host| LOOPBACK.iter().any(|kind| host.eq_ignore_ascii_case(kind)))
     }
 
     /// Read the URL the request is posted to.

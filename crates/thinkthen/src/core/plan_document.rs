@@ -19,7 +19,7 @@ use crate::core::text::{ModelName, Url, Withheld};
 pub(crate) struct PlanDocument<'a> {
     url: &'a Url,
     model: &'a ModelName,
-    key_env: &'static str,
+    key_env: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     input: Option<ReadingPlan<'a>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -96,6 +96,13 @@ impl<'a> PlanDocument<'a> {
             group_requests: None,
             request: RawValue::NULL.to_owned(),
         }
+    }
+
+    /// Name the selected backend's first key variable in place of `THINKTHEN_API_KEY`.
+    #[must_use]
+    pub(crate) const fn key_env(mut self, key_env: &'a str) -> Self {
+        self.key_env = key_env;
+        self
     }
 
     /// Name the framing and the pointers, as a record-mode plan does.

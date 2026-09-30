@@ -2,14 +2,18 @@
 
 use std::path::PathBuf;
 
+use std::collections::BTreeMap;
+
+use super::backend::Captured;
 use super::{EngineBuilder, Secret, Seeded, variable};
 use crate::config::{self, Config};
-use crate::core::KEY_VAR;
+use crate::core::{Backend, DEFAULT_MODEL, KEY_VAR, ModelName, named};
 use crate::public::error::Error;
 
 impl EngineBuilder {
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
-    /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
+    /// `THINKTHEN_BACKEND`, `THINKTHEN_API_KEY`, each key variable a built-in
+    /// backend or a configuration entry names, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
     /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`,
     /// `THINKTHEN_REQUESTS_PER_MINUTE`,
     /// `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the XDG cache home, and the
@@ -40,16 +44,20 @@ impl EngineBuilder {
             enabled: config.cache_enabled(),
             usage: config::usage_path(),
         });
-        if let Some(base) =
-            variable("THINKTHEN_BASE_URL")?.or_else(|| config.url().map(str::to_owned))
-        {
-            builder = builder
-                .base_url(&base)
+        let base_url = variable("THINKTHEN_BASE_URL")?;
+        if let Some(base) = &base_url {
+            Backend::resolve(Some(base), None, DEFAULT_MODEL)
                 .map_err(|error| Error::usage(format!("THINKTHEN_BASE_URL: {error}")))?;
         }
-        if let Some(key) = variable(KEY_VAR)? {
-            builder.key = Some(Secret(key.into()));
-        }
+        builder.captured = Captured {
+            base_url,
+            backend: variable("THINKTHEN_BACKEND")?,
+            config_url: config.url().map(str::to_owned),
+            config_backend: config.backend().map(str::to_owned),
+            config_model: None,
+            configured: config.named().to_vec(),
+            keys: keys(&config)?,
+        };
         // A later explicit setter outranks this path, including an invalid one.
         // Validate only the path selected when the engine is built.
         builder.ca_bundle = variable("THINKTHEN_CA_BUNDLE")?.map(PathBuf::from);
@@ -62,7 +70,7 @@ impl EngineBuilder {
             crate::engine::estimated_total(variable("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL")?)
                 .map_err(Error::usage)?;
         if let Some(model) = config.model() {
-            builder = builder.model(model)?;
+            builder.captured.config_model = Some(ModelName::new(model).map_err(Error::refused)?);
         }
         if let Some(size) = variable("THINKTHEN_MAX_REQUEST_BYTES")? {
             let value = size
@@ -76,4 +84,35 @@ impl EngineBuilder {
         }
         Ok(builder)
     }
+}
+
+/// Capture `THINKTHEN_API_KEY` and each nonblank variable a built-in or a
+/// configuration entry names. `THINKTHEN_API_KEY` keeps today's UTF-8 refusal;
+/// another variable that is not UTF-8 is refused only when a build selects it.
+fn keys(config: &Config) -> Result<BTreeMap<String, Option<Secret>>, Error> {
+    let mut keys = BTreeMap::new();
+    if let Some(key) = variable(KEY_VAR)? {
+        keys.insert(KEY_VAR.to_owned(), Some(Secret(key.into())));
+    }
+    let named = named::built_in_keys().map(str::to_owned).chain(
+        config
+            .named()
+            .iter()
+            .flat_map(|entry| entry.keys().to_vec()),
+    );
+    for name in named {
+        if keys.contains_key(&name) {
+            continue;
+        }
+        match variable(&name) {
+            Ok(Some(key)) => {
+                keys.insert(name, Some(Secret(key.into())));
+            }
+            Ok(None) => {}
+            Err(_) => {
+                keys.insert(name, None);
+            }
+        }
+    }
+    Ok(keys)
 }

@@ -440,6 +440,9 @@ pub(crate) struct StatusArguments {
     /// Print one closed JSON object instead of name-value lines.
     #[arg(long)]
     pub(crate) json: bool,
+    /// The named backend: a base with its own key variable and model. It outranks THINKTHEN_BACKEND.
+    #[arg(long, value_name = "NAME")]
+    pub(crate) backend: Option<String>,
 }
 
 #[derive(Args)]
@@ -447,6 +450,9 @@ pub(crate) struct CheckArguments {
     /// The base the requests are posted under, which outranks THINKTHEN_BASE_URL.
     #[arg(long, value_name = "URL")]
     pub(crate) url: Option<String>,
+    /// The named backend: a base with its own key variable and model. It outranks THINKTHEN_BACKEND.
+    #[arg(long, value_name = "NAME")]
+    pub(crate) backend: Option<String>,
     /// The model named in each request, resolved as every command resolves it.
     #[arg(long, value_name = "NAME")]
     pub(crate) model: Option<String>,
@@ -467,6 +473,7 @@ impl std::fmt::Debug for CheckArguments {
         formatter
             .debug_struct("CheckArguments")
             .field("url", &self.url.as_ref().map(|_| "<withheld>"))
+            .field("backend", &self.backend.as_ref().map(|_| "<withheld>"))
             .field("model", &self.model)
             .field("timeout", &self.timeout)
             .field("dry_run", &self.dry_run)

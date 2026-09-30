@@ -134,7 +134,7 @@ fn no_key_reaches_a_result_an_error_a_recording_or_a_count() {
         .expect("judged");
     let failed = ask(&engine, "broken", &cancel).expect_err("closed");
     let refused = Engine::new(Settings {
-        key: std::sync::Arc::new(|| Err(Error::NoKey("THINKTHEN_API_KEY"))),
+        key: std::sync::Arc::new(|| Err(Error::NoKey("THINKTHEN_API_KEY".to_owned()))),
         // Loopback takes a request with no key, so this engine names an
         // address the rules cannot prove is this machine.
         ..settings("https://127.0.0.2:9/v1")

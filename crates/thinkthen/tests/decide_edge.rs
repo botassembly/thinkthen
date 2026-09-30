@@ -94,11 +94,10 @@ fn the_plan_holds_four_fields_and_names_the_key_variable_without_reading_it() {
 }
 
 #[test]
-fn the_five_backend_environment_variables_are_gone_and_change_no_plan() {
+fn the_four_removed_backend_environment_variables_change_no_plan() {
     let output = run(
         &["decide", "asks for a refund", "--plan"],
         &[
-            ("THINKTHEN_BACKEND", "nowhere"),
             ("THINKTHEN_URL", CLOSED),
             ("THINKTHEN_ADAPTER", "systemone"),
             ("THINKTHEN_MODEL", "from-the-environment"),

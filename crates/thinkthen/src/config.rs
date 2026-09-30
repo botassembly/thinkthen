@@ -5,7 +5,9 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::core::{Backend, DEFAULT_MODEL, Prices};
+use crate::core::{Backend, DEFAULT_MODEL, Named, Prices};
+
+mod backends;
 
 /// Why the configuration file was refused. The message names the file and a
 /// field, never a value.
@@ -38,6 +40,7 @@ const fn refused_price(message: &'static str) -> ConfigError {
 
 pub(crate) const DEFAULT_CACHE_BYTES: u64 = 100_000_000;
 
+const UNKNOWN: &str = "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`";
 const SCHEMA: &str = "configuration field `schema` must be `thinkthen.config/1`";
 const CACHE_BYTES: &str =
     "configuration field `cache_bytes` must be a whole number greater than zero";
@@ -56,8 +59,12 @@ pub(crate) struct Config {
     cache_bytes: Option<u64>,
     usd_per_million_input: Option<String>,
     usd_per_million_output: Option<String>,
+    backend: Option<String>,
+    backends: Option<serde_json::Map<String, serde_json::Value>>,
     #[serde(skip)]
     prices: Option<Prices>,
+    #[serde(skip)]
+    named: Vec<Named>,
 }
 
 impl std::fmt::Debug for Config {
@@ -71,6 +78,8 @@ impl std::fmt::Debug for Config {
             .field("model", &self.model)
             .field("cache", &self.cache)
             .field("cache_bytes", &self.cache_bytes)
+            .field("backend", &self.backend)
+            .field("backends", &self.named)
             .finish()
     }
 }
@@ -110,6 +119,7 @@ impl Config {
         parsed.present = true;
         parsed.validate()?;
         parsed.prices = price_pair(bytes, &parsed)?;
+        parsed.named = backends::read(parsed.backend.as_deref(), parsed.backends.as_ref())?;
         Ok(parsed)
     }
 
@@ -140,6 +150,14 @@ impl Config {
     pub(crate) fn url(&self) -> Option<&str> {
         self.url.as_deref()
     }
+    /// The backend the file names, which `backends::read` checked.
+    pub(crate) fn backend(&self) -> Option<&str> {
+        self.backend.as_deref()
+    }
+    /// The backends the file names beside the built-ins.
+    pub(crate) fn named(&self) -> &[Named] {
+        &self.named
+    }
     pub(crate) const fn present(&self) -> bool {
         self.present
     }
@@ -147,9 +165,6 @@ impl Config {
     /// and the evidence go.
     pub(crate) const fn shared(&self) -> bool {
         self.shared
-    }
-    pub(crate) const fn has_url(&self) -> bool {
-        self.url.is_some()
     }
     pub(crate) const fn has_model(&self) -> bool {
         self.model.is_some()
@@ -215,16 +230,18 @@ fn shape_fault(bytes: &[u8]) -> &'static str {
             | ("url" | "model", Value::String(_) | Value::Null)
             | ("cache", Value::Bool(_) | Value::Null) => continue,
             ("cache_bytes", value) if value.is_null() || value.is_u64() => continue,
-            ("usd_per_million_input" | "usd_per_million_output", Value::String(_)) => continue,
+            ("usd_per_million_input" | "usd_per_million_output", Value::String(_))
+            | ("backend", Value::String(_) | Value::Null)
+            | ("backends", Value::Object(_) | Value::Null) => continue,
             ("schema", _) => SCHEMA,
             ("url", _) => "configuration field `url` must be a string",
             ("model", _) => "configuration field `model` must be a string",
             ("cache", _) => "configuration field `cache` must be true or false",
             ("cache_bytes", _) => CACHE_BYTES,
             ("usd_per_million_input" | "usd_per_million_output", _) => PRICE_VALUE,
-            _ => {
-                "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, and `cache_bytes`"
-            }
+            ("backend", _) => "configuration field `backend` must be a string",
+            ("backends", _) => "configuration field `backends` must be an object",
+            _ => UNKNOWN,
         };
         return fault;
     }
@@ -386,7 +403,7 @@ mod tests {
             (r#"{"schema":1}"#, schema),
             (
                 r#"{"schema":"thinkthen.config/1","extra":true}"#,
-                "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, and `cache_bytes`",
+                "the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`",
             ),
             (
                 r#"{"schema":"thinkthen.config/1","cache":"/folder"}"#,

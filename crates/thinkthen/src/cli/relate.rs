@@ -3,7 +3,7 @@ use std::process::ExitCode;
 
 use crate::args::RelateArguments;
 use crate::asking::{self, Folders};
-use crate::core::{Backend, ModelName};
+use crate::core::ModelName;
 use crate::edge::Environment;
 use crate::engine::facade;
 use crate::failure::{Failure, ReplayContext};
@@ -24,15 +24,13 @@ pub(crate) fn run(
     let settled = config::settle(arguments)?;
     let configured = settled.spec.model.as_ref().map(ModelName::as_str);
     let request_size = environment.request_size(arguments.max_request_bytes.as_deref())?;
-    let backend = Backend::resolve(
-        arguments.common.url.as_deref(),
-        environment.base_url(),
-        configured
-            .or_else(|| environment.model())
-            .unwrap_or(crate::core::DEFAULT_MODEL),
-    )?
-    .with_request_size(request_size);
-    environment.check_key(&backend)?;
+    let backend = environment
+        .resolve(
+            arguments.common.backend.as_deref(),
+            arguments.common.url.as_deref(),
+            configured,
+        )?
+        .with_request_size(request_size);
     environment.warn_request_size(&backend)?;
     let selected_profile = profile::read(&arguments.common)?;
     let source = crate::edge::source(arguments.common.input.as_deref(), input)?;
@@ -58,6 +56,7 @@ pub(crate) fn run(
             spec: &settled.spec,
             from: settled.from,
             entity_count: entities.len(),
+            key_env: environment.key_variable(),
         };
         dry_run::write(&mut writer, context, &prepared)?;
         return Ok(ExitCode::SUCCESS);

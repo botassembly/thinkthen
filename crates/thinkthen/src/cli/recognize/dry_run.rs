@@ -7,7 +7,7 @@ use std::process::ExitCode;
 use serde::Serialize;
 
 use crate::core::{
-    Backend, BackendProfile, KEY_VAR, PlanSummary, Reading, RecognizeSpec, Record, json_line,
+    Backend, BackendProfile, PlanSummary, Reading, RecognizeSpec, Record, json_line,
 };
 use crate::edge;
 use crate::engine::facade;
@@ -19,7 +19,7 @@ struct DryRun<'a> {
     schema: &'static str,
     url: &'a str,
     model: &'a str,
-    key_env: &'static str,
+    key_env: &'a str,
     #[serde(skip_serializing_if = "Option::is_none")]
     from: Option<From>,
     pieces: usize,
@@ -75,6 +75,8 @@ pub(super) struct Question<'a> {
     pub(super) spec: &'a RecognizeSpec,
     pub(super) from_file: bool,
     pub(super) limit: usize,
+    /// The first key variable of the selected backend.
+    pub(super) key_env: &'a str,
 }
 
 #[expect(
@@ -118,6 +120,7 @@ fn planned(
         spec,
         from_file,
         limit,
+        key_env,
     } = question;
     let mut summary = PlanSummary::new(true);
     let mut first = None;
@@ -170,7 +173,7 @@ fn planned(
         schema: "thinkthen.recognize-plan/2",
         url: backend.url().as_str(),
         model: backend.model().as_str(),
-        key_env: KEY_VAR,
+        key_env,
         from: from_file.then_some(From { question: "file" }),
         pieces,
         request_count: requests.len(),
