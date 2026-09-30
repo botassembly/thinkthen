@@ -90,6 +90,7 @@ pub(crate) struct RelationEdge<E> {
     /// The edge holds both ways; its ends are in input order (ticket 0344).
     /// Written only when true, so a directed edge keeps its bytes.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
+    #[cfg_attr(test, schemars(extend("const" = true)))]
     pub(crate) either: bool,
 }
 

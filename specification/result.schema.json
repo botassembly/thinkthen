@@ -771,6 +771,7 @@
     "entityEdge": {
       "properties": {
         "either": {
+          "const": true,
           "type": "boolean"
         },
         "probability": {
@@ -1808,6 +1809,7 @@
     "relatedEntityEdge": {
       "properties": {
         "either": {
+          "const": true,
           "type": "boolean"
         },
         "probability": {
