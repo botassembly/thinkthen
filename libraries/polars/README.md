@@ -12,7 +12,7 @@ The feature turns on Polars' lazy API and not its streaming engine. The streamin
 
 A call reads the text column in place and writes each answer into its output column as the answer arrives. It holds no list of every row. Beyond the input and the output, a call holds only the records waiting in the engine's pipeline. On 100,000 rows answered from a replay folder, `annotate_frame` with two questions peaked at 47 MB of resident memory, down from 109 MB when the door collected every row first; `decide_series` peaked at 37 MB, with 32 MB of that the process and the frame before the call.
 
-With a cache or recording folder, a lazy frame collected again sends nothing, and a slice of a frame asks only the rows it keeps that the store does not hold.
+With a cache or recording folder, a lazy frame collected again sends nothing, and a frame sliced before the expression asks only the kept rows that the store does not hold.
 
 Build that engine with `max_request_bytes`, `max_requests_total`, `timeout`, `max_retries`, `profile`, `record`, or strict `replay` before passing it to Polars.
 
