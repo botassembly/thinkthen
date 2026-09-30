@@ -6,6 +6,21 @@ import pathlib
 import time
 import socket
 
+
+def one_record(request):
+    """ADR 0111 quotes every record. Read a request quoting one record with that record as its state."""
+    if request.get('state') != 'Each question quotes the text it asks about.':
+        return request
+    records, questions = set(), {}
+    for name, question in request['questions'].items():
+        text = str(question.get('instructions'))
+        record, end = json.JSONDecoder().raw_decode(text, 12) if text.startswith('The text is ') else (None, 0)
+        if not end or not text.startswith('. ', end):
+            return request
+        records.add(json.dumps(record))
+        questions[name] = dict(question, instructions=text[end + 2:])
+    return dict(request, state=json.loads(records.pop()), questions=questions) if len(records) == 1 else request
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         body = self.rfile.read(int(self.headers['Content-Length']))
@@ -14,7 +29,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if self.path != '/generic/v1/systemone' or self.headers.get('Authorization') != 'Bearer tt-canary-273':
             self.send_error(403)
             return
-        request = json.loads(body)
+        wire = json.loads(body)
+        request = one_record(wire)
         state = request['state']
         state_key = state if isinstance(state, str) else ''
         # specification/records.md, "Order and requests" and ADR 0055 item 1:
