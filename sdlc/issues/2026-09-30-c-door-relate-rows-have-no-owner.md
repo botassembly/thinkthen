@@ -1,8 +1,6 @@
 # The C door's relate rows still join JSON text, and no ticket owns them
 
-Status: open. Filed by ticket 0304 slice 4 at landing. Owner: none.
-
-Ticket: 0346, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+Status: open. Filed by ticket 0304 slice 4 at landing. Owner: ticket 0346, batch B3 of `../planning/issue-priorities-2026-09-30.md`.
 
 Kind: debt
 

@@ -1,8 +1,6 @@
 # `audit` and `diff` lost the batch setting
 
-Status: open. Deferred by ticket 0304 slice 2 (ticket, line 84). Owner: ticket 0304 slice 5, which rewrites the run facts; otherwise its own Quick Fix after 0304 slice 4.
-
-Ticket: 0349, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+Status: open. Deferred by ticket 0304 slice 2 (ticket, line 84). Owner: ticket 0349, batch B2 of `../planning/issue-priorities-2026-09-30.md`.
 
 Kind: debt
 

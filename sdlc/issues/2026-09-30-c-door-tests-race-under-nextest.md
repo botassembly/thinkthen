@@ -1,8 +1,6 @@
 # The C door tests race when each runs in its own process
 
-Status: open. Found in the 0322 slice 2 code review. Owner: none yet.
-
-Ticket: 0346, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+Status: open. Found in the 0322 slice 2 code review. Owner: ticket 0346, batch B3 of `../planning/issue-priorities-2026-09-30.md`.
 
 Kind: debt
 

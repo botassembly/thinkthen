@@ -1,6 +1,4 @@
-Status: Open for macOS. Filed 2026-09-30 by ticket 0304 slice 3a. Ticket 0304 slice 3b fixed Linux. Owner: a new ticket with one M5 proof, before ticket 0128's rehearsal.
-
-Ticket: 0351, ready since 2026-09-30; batch order in `../planning/issue-priorities-2026-09-30.md`.
+Status: Open for macOS. Filed 2026-09-30 by ticket 0304 slice 3a. Ticket 0304 slice 3b fixed Linux. Owner: ticket 0351, batch B5 of `../planning/issue-priorities-2026-09-30.md`.
 
 Kind: debt
 
