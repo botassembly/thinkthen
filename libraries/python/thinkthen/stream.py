@@ -36,6 +36,9 @@ class Stream:
             except StopIteration:
                 self._closed = True
                 raise
+            except BaseException:
+                self._closed = True
+                raise
             value, probability = result if isinstance(result, tuple) else (result, None)
             return (value, probability) if self._probability else value
         finally:

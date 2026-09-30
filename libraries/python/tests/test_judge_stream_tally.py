@@ -52,6 +52,21 @@ def test_shape_rule_plan_and_removed_names(backend, tmp_path):
     assert backend.count() == 7  # five eager shapes, one stream, one scalar bool witness.
 
 
+def test_banded_filter_eager_and_stream_refuse_before_send(backend, tmp_path):
+    """A band cannot drive filter's one-cut rule on either shape. The old
+    iterator route answered and sent once after the eager route refused."""
+    printed = run("""
+    import thinkthen as tt
+    band = tt.question(decide="Is it late?", threshold=(0.3, 0.7))
+    judge = tt.Engine(cache=False).filter(band)
+    for rows in (["one"], iter(["one"])):
+        try: list(judge(rows))
+        except tt.UsageError as error: print(error.kind, error.retryable, str(error))
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == 2 * ["usage False this call takes one cut, not a band"]
+    assert backend.count() == 0
+
+
 def test_cursor_stream_reads_on_caller_thread_and_closes(backend, tmp_path):
     """The real core batch asks a caller-thread sqlite3 cursor only in next()."""
     printed = run("""
@@ -113,8 +128,12 @@ def test_judge_pickle_spawn_and_no_key_plan(backend, tmp_path):
           tt.plan(judge, pd.Index(["one", "two"]))["records"])
     try: tt.plan(judge, iter(["one"]))
     except tt.UsageError as error: print(error.kind)
+    for unordered in ({"one", "two"}, frozenset({"one", "two"})):
+        try: tt.plan(judge, unordered)
+        except tt.UsageError as error: print(error.kind, str(error))
     """, no_key)
-    assert printed.splitlines() == ["2 1 True", "1 1 2", "usage"]
+    assert printed.splitlines() == ["2 1 True", "1 1 2", "usage"] + 2 * [
+        "usage an unordered set cannot align records with answers"]
     assert backend.count() == 1
 
 
@@ -184,11 +203,13 @@ def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
 
 def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
     """The caller sees Cancelled promptly; the held reply later completes
-    one row before Stop converts the outcome to cancellation."""
+    one row before Stop converts the outcome to cancellation. A later read
+    cannot expose the queued result, while the receipt and Tally stay true."""
     child = start("""
     import signal, sys, thinkthen as tt
     signal.signal(signal.SIGINT, signal.default_int_handler)
-    stream = tt.Engine(cache=False, batch=1).decide("Is it late?")(
+    tally = tt.Tally()
+    stream = tt.Engine(cache=False, batch=1).decide("Is it late?", tally=tally)(
         iter(["one", "two"]))
     try: next(stream)
     except tt.Cancelled as error:
@@ -196,6 +217,9 @@ def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
         sys.stdin.readline()
         done = error.completion.result(timeout=5)
         print(done.outcome, done.facts.records, done.facts.requests_sent, flush=True)
+        try: print("later", next(stream), flush=True)
+        except StopIteration:
+            print("terminal", tally.facts.records, tally.facts.requests_sent, flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
     os.kill(child.pid, signal.SIGINT)
@@ -205,6 +229,7 @@ def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
     child.stdin.write("released\n")
     child.stdin.flush()
     assert child.stdout.readline().strip() == "failed 1 1"
+    assert child.stdout.readline().strip() == "terminal 1 1"
     assert child.wait(timeout=10) == 0, child.stderr.read()
     assert backend.count() == 1
 

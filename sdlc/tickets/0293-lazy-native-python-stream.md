@@ -1,6 +1,6 @@
 # 0293 — Lazy native Python stream (F2)
 
-Status: Implementation candidate from High-accepted preparation `8bf14799`; fresh High code review and issue closure remain open.
+Status: Corrected implementation candidate from High-accepted preparation `8bf14799`; same High code re-review and issue closure remain open.
 
 ## Outcome
 
@@ -14,7 +14,7 @@ F1 and F2 are one public candidate. `libraries/python/src/stream.rs` uses the ex
 
 ## Smallest meaningful proof
 
-SQLite cursor calling-thread proof, bounded take, exact distinct-record bytes, close/failure facts and cancellation children. Count exact accepted loopback request bodies and pin exit codes and refusal sentences where applicable; record source and installed-host receipts separately. Run only the affected functional cases, measured ratchets, focused format/policy/pages/tickets/diff. [Shared proof routes](../records/2026-09-29-sql-frame-redesign-proofs.md) name optional stress and later package qualification.
+SQLite cursor calling-thread proof, selective finite take, exact distinct-record bytes, close/failure facts and cancellation children. Test the next read after an interrupt, paired eager/iterator one-cut refusal and actual zero sends. The finite take shows its tail remains unread after close; it does not measure the numeric throttle-plus-one ceiling inherited from core Batch. Count exact accepted loopback request bodies and pin exit codes and refusal sentences where applicable; record source and installed-host receipts separately. Run only the affected functional cases, measured ratchets, focused format/policy/pages/tickets/diff. [Shared proof routes](../records/2026-09-29-sql-frame-redesign-proofs.md) name optional stress and later package qualification.
 
 ## Evidence
 
@@ -26,4 +26,4 @@ SQLite cursor calling-thread proof, bounded take, exact distinct-record bytes, c
 
 ## What the build taught us
 
-The saved stream spike supplied the bounded Batch protocol. A caller-thread SQLite cursor, four-row selective take, exact eager/stream bodies, held single-reader refusal, fork, token, interrupt receipt and dropped worker each have a selected outside-in case. Core Batch schedules and accounts; no Python scheduler or per-item eager loop was added. Clippy required splitting stream worker/reader paths and boxing a larger frame failure account after shared Facts grew. See [the build](../records/0293-python-stream-build.md) for source/installed limits.
+The saved stream spike supplied the bounded Batch protocol. A caller-thread SQLite cursor, four-row selective take, exact eager/stream bodies, held single-reader refusal, fork, token, interrupt receipt and dropped worker each have a selected outside-in case. High review found that a later read could expose a queued answer after SIGINT; the corrected stream ends value reads while its receipt and Tally retain admitted work. The lazy filter now uses the eager route's one-cut validator and refuses a band before any send. Core Batch schedules and accounts; no Python scheduler or per-item eager loop was added. Clippy required splitting stream worker/reader paths and boxing a larger frame failure account after shared Facts grew. See [the build](../records/0293-python-stream-build.md) for source/installed limits.

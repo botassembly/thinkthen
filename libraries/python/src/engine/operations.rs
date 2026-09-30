@@ -20,7 +20,7 @@ pub(super) fn of_kind(py: Python<'_>, asked: &Asked, verb: &str, kind: &str) -> 
 }
 
 /// The one-cut question an ordering or filter call requires.
-pub(super) fn only(
+pub(crate) fn only(
     py: Python<'_>,
     asked: &Asked,
     verb: &str,

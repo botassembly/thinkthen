@@ -16,7 +16,7 @@ use thinkthen::{
 
 use crate::asked::{Asked, Question};
 use crate::engine::context;
-use crate::engine::{Arg, Engine, Held, answer, batch};
+use crate::engine::{Arg, Engine, Held, answer, batch, only};
 use crate::input::{controls, text};
 use crate::result::python_facts;
 use crate::tally::PyTally;
@@ -367,6 +367,7 @@ impl PyStream {
         };
         self.stop.cancel();
         self.input.take();
+        self.done = true;
         if error.is_instance_of::<PyKeyboardInterrupt>(py) {
             let stopped = raise(
                 py,
@@ -428,6 +429,10 @@ pub(crate) fn prepare(
 ) -> PyResult<Py<PyStream>> {
     let (batch, context) = (batch(batch_value)?, context(context_value)?);
     let controls = controls(py, deadline, token)?;
+    let asked = question.get().0.clone();
+    if verb == "filter" {
+        only(py, &asked, verb, "decide")?;
+    }
     let (incoming, source_rx) = sync_channel(0);
     let (events_tx, events_rx) = channel();
     let stop = CancelToken::new();
@@ -436,7 +441,6 @@ pub(crate) fn prepare(
     let work_stop = stop.clone();
     let work_sender = events_tx.clone();
     let engine = engine.0.clone();
-    let asked = question.get().0.clone();
     let verb = verb.to_owned();
     let tally = tally.map(|one| one.get().0.clone());
     let worker = thread::Builder::new()

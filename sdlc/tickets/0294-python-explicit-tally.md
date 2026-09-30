@@ -1,6 +1,6 @@
 # 0294 — Python explicit tally (F3)
 
-Status: Implementation candidate from High-accepted preparation `8bf14799`; fresh High code review and issue closure remain open.
+Status: Corrected joint implementation candidate from High-accepted preparation `8bf14799`; same High code re-review and issue closure remain open.
 
 ## Outcome
 
@@ -24,4 +24,4 @@ Two calls at a held listener before release, then a small completion/cache/missi
 
 ## What the build taught us
 
-A two-arrival held listener proves actual overlap before release. A separate small table proves two completed sends, one identical cached replay counted as one cache answer, then a no-usage reply leaving token totals absent. The stream first-failed-row case retains records 0 and requests 1 in the same core Tally. No mutable last-call slot or copied accounting algorithm was added. See [the build](../records/0294-python-tally-build.md) for the proof and remaining limits.
+A two-arrival held listener proves actual overlap before release. A separate small table proves two completed sends, one identical cached replay counted as one cache answer, then a no-usage reply leaving token totals absent. The stream first-failed-row case retains records 0 and requests 1 in the same core Tally. The corrected SIGINT case proves that a terminal stream yields no later value while the completion receipt and Tally both retain one admitted record and request. No mutable last-call slot, sixteen-thread campaign or copied accounting algorithm was added. See [the build](../records/0294-python-tally-build.md) for the proof and remaining limits.

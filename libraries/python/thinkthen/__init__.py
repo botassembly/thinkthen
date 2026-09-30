@@ -426,6 +426,8 @@ class Engine:
             raise UsageError("plan takes a ThinkThen Judge")
         if judge._engine is not None and judge._engine is not self:
             raise UsageError("the judge belongs to another engine")
+        if isinstance(records, (set, frozenset)):
+            raise UsageError("an unordered set cannot align records with answers")
         kind = _pandas(records)
         if kind == "Series":
             records = _marked(records, kind)

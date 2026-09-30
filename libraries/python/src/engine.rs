@@ -19,9 +19,10 @@ use crate::{guard, raised, usage};
 mod operations;
 mod plan;
 mod settings;
+pub(crate) use operations::only;
 pub(crate) use plan::named as plan_named;
 
-use operations::{Many, labels, many, of_kind, only, order};
+use operations::{Many, labels, many, of_kind, order};
 
 use settings::{Settings, checked_throttle, folder_path, setting, total};
 pub(crate) use settings::{batch, context};

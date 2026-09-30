@@ -1,6 +1,6 @@
 # 0292 — Python judges and shape rule (F1)
 
-Status: Implementation candidate from High-accepted preparation `8bf14799`; fresh High code review and issue closure remain open.
+Status: Corrected implementation candidate from High-accepted preparation `8bf14799`; same High code re-review and issue closure remain open.
 
 ## Outcome
 
@@ -24,4 +24,4 @@ Curry/partial, shape table, bool refusal, spawn pickle, packed pipe row and exac
 
 ## What the build taught us
 
-The accepted preparation `8bf14799` correctly joined Judge and Stream. The prior Series-only pandas Index refusal is intentionally superseded: an Index is an eager ordered input. The omitted-input sentinel differs from explicit `None`; a partial creates the same Judge as a direct call. Plan and execution read one validated native question, so later mutation of the original options list leaves both body and send unchanged. Source and installed proof, plus package/release limits, are recorded in [the build](../records/0292-python-judges-build.md).
+The accepted preparation `8bf14799` correctly joined Judge and Stream. The prior Series-only pandas Index refusal is intentionally superseded: an Index is an eager ordered input. The omitted-input sentinel differs from explicit `None`; a partial creates the same Judge as a direct call. Plan and execution read one validated native question, so later mutation of the original options list leaves both body and send unchanged. High review found that plan accepted an unordered set even though Judge application refused it; the corrected plan rejects both set forms before a send. Source and installed proof, plus package/release limits, are recorded in [the build](../records/0292-python-judges-build.md).
