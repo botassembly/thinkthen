@@ -32,6 +32,8 @@ The C#, JVM and Dart libraries gain a public `plan` over `thinkthen_plan_json` a
 
 The Swift, Objective-C and COBOL libraries gain a public `plan` over `thinkthen_plan_json` and read facts, recognize and relate results as JSON text. Swift drops `CallFacts`; Objective-C drops `TTCallFacts`, `tt_call_facts_clear`, `parsedAnswer` and TTJSON's envelope and answer shape checks; COBOL drops its seven-key facts check and `TT-VALIDATE-RESULT` and gains `TT-JSON-MEMBER` to read named members. Each reads an annotate member as unresolved, a value or a failure. Swift and Objective-C `recognize` and `relate`, and COBOL `TT-DECIDE` and `TT-CALL`, take a deadline (tickets 0291 and 0314).
 
+The Ada and Zig libraries gain a public `plan` over `thinkthen_plan_json`. Ada reads facts, recognize and relate results as JSON text and drops `Run_Facts`, `JSON_Result`, `Entity`, `Relation_Edge`, `Entities`, `Edges`, `Call_Facts` and `Call_Value`, gaining `Member` and `Element` to read named members. Zig reads facts as `std.json` values and drops `CallFacts`; its `Outcome` carries the C values 1, 0 and 2, and `readField` reads an annotate member as unresolved, a value or a failure (tickets 0291 and 0314).
+
 The default model is the pinned version `jev-1.13.0`, not the alias `jev-latest`, so a vendor's move of its alias moves no default answer (ticket 0159).
 
 Python and Ruby calls now raise cancellation when the caller's token fires before a held reply reaches the call, including when both happen in one wait tick (ticket 0168).

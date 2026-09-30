@@ -50,7 +50,7 @@ Branch `ticket/0314-s4-remaining-ports`. C# gains `Engine.Plan`, the JVM gains `
 
 ## Swift, Objective-C and COBOL build (0314 slice 4d)
 
-Branch `ticket/0314-s4-remaining-ports`. Swift gains `Engine.plan`, Objective-C gains `plan:question:texts:lengths:count:settings:failure:` and COBOL gains `TT-PLAN`, each over `thinkthen_plan_json`. Swift and Objective-C `recognize` and `relate` now take a deadline and token; COBOL `TT-DECIDE` and `TT-CALL` take `tt-deadline-ms`, and `TT-CALL` moves to `thinkthen_call_opts`. All three constructors already passed `max_requests_total` through unchanged, and a zero cap refuses before sending. None offers a probability option on score or tag, so the refusal is vacuous for all three. Ada and Zig follow on the same branch. Ticket 0314's slice 4d section holds the evidence.
+Branch `ticket/0314-s4-remaining-ports`. Swift gains `Engine.plan`, Objective-C gains `plan:question:texts:lengths:count:settings:failure:` and COBOL gains `TT-PLAN`, each over `thinkthen_plan_json`. Swift and Objective-C `recognize` and `relate` now take a deadline and token; COBOL `TT-DECIDE` and `TT-CALL` take `tt-deadline-ms`, and `TT-CALL` moves to `thinkthen_call_opts`. All three constructors already passed `max_requests_total` through unchanged, and a zero cap refuses before sending. None offers a probability option on score or tag, so the refusal is vacuous for all three. Ada then gained `Plan` and Zig `Engine.plan` over `thinkthen_plan_json` on the same branch. Every Ada and Zig sending call already took a deadline through its `_opts` twin, both constructors already passed `max_requests_total` through unchanged, and neither offers a probability option on score or tag. Ticket 0314's slice 4d section holds the evidence.
 
 ## What the build taught us
 
@@ -60,3 +60,4 @@ Branch `ticket/0314-s4-remaining-ports`. Swift gains `Engine.plan`, Objective-C 
 - The C door's `call.rs` reads its envelope into a map that keeps the last repeated member. The plan reader uses a closed serde struct instead, so a repeated member is a usage refusal as the draft asked.
 - Slice 4b: a port that takes the question as one string needs a rule for text versus a question object. Go follows the C door's own rule for `thinkthen_decide`: text that starts with `{` is a question object. C++ takes the question as its `Json` value, so no rule is needed.
 - Slice 4d: a port whose host has no JSON value still needs one way to reach a member. COBOL gains `TT-JSON-MEMBER`, the smallest tolerant accessor; every other result stays JSON text.
+- Slice 4d: Ada is the second such host. It gains `Member` and `Element` and keeps its JSON syntax checker, because the plan splices a caller's question object and settings into the request.
