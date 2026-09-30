@@ -22,6 +22,7 @@ fn replaying(backend: &Backend, replay: PathBuf) -> Engine {
         max_retries: 0,
         retry_wait: Duration::ZERO,
         width: None,
+        per_minute: None,
         storage: Storage {
             replay: Some(replay),
             ..Storage::default()
