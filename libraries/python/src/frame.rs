@@ -61,7 +61,7 @@ where
             Stop::Said(message, None) => {
                 let mut facts = OwnedFacts::empty();
                 facts.seconds = began.elapsed().as_secs_f64();
-                Stop::Said(message, Some(facts))
+                Stop::Said(message, Some(Box::new(facts)))
             }
             other => other,
         })

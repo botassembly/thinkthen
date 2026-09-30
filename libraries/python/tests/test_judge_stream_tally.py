@@ -136,6 +136,26 @@ def test_stream_first_failed_row_freezes_partial_facts_and_tally(backend, tmp_pa
     assert backend.count() == 1
 
 
+def test_tally_waits_for_two_started_held_calls(backend, tmp_path):
+    """Two native calls have both reached the held listener before release;
+    the shared core Tally closes each once after its reply completes."""
+    child = start("""
+    import concurrent.futures, thinkthen as tt
+    tally = tt.Tally()
+    judge = tt.Engine(cache=False, throttle=2).decide("Is it late?", tally=tally)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        values = list(pool.map(judge, ["one", "two"]))
+    print([one.value for one in values], tally.facts.records,
+          tally.facts.requests_sent, tally.facts.cache_answers, flush=True)
+    """, child_env(backend, tmp_path, "arm/held"))
+    assert backend.wait(2) == 2
+    assert backend.count() == 2
+    backend.release()
+    assert child.stdout.readline().strip() == "[True, True] 2 2 0"
+    assert child.wait(timeout=10) == 0, child.stderr.read()
+    assert backend.count() == 2
+
+
 def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
     """A fired token sends nothing; a child cannot read its parent's stream."""
     printed = run("""

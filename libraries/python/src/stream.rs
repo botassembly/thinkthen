@@ -66,7 +66,7 @@ fn probability(details: &thinkthen::Details) -> Option<f64> {
     }
 }
 
-fn run(
+struct Run {
     engine: thinkthen::Engine,
     asked: Asked,
     verb: String,
@@ -78,7 +78,91 @@ fn run(
     sender: Sender<Event>,
     tally: Option<thinkthen::Tally>,
     receipt: Arc<ReceiptState>,
-) {
+}
+
+struct Emitter<'a> {
+    stop: &'a CancelToken,
+    sender: &'a Sender<Event>,
+}
+
+fn decisions(
+    engine: &thinkthen::Engine,
+    asked: &Asked,
+    filter: bool,
+    input: Input,
+    options: CallOptions<'_>,
+    emitter: Emitter<'_>,
+) -> (Option<Facts>, Option<Failure>) {
+    let mut stream = engine.decide_many_with(asked.decision(), input, options);
+    let mut failure = None;
+    for row in stream.by_ref() {
+        let row = match row {
+            Ok(row) => row,
+            Err(error) => {
+                failure = Some(error.failure());
+                let _ = emitter.sender.send(Event::Failed(error));
+                break;
+            }
+        };
+        let sent = if filter {
+            (*row.value() == Answer::Yes).then(|| Event::Row(StreamRow::Text(row.input().clone())))
+        } else {
+            Some(Event::Row(StreamRow::Answer(
+                Judgment::Decision(*row.value()),
+                Some(row.probability()),
+            )))
+        };
+        if sent.is_some_and(|event| emitter.sender.send(event).is_err()) {
+            emitter.stop.cancel();
+            break;
+        }
+    }
+    (stream.facts().cloned(), failure)
+}
+
+fn details(
+    engine: &thinkthen::Engine,
+    asked: &Asked,
+    input: Input,
+    options: CallOptions<'_>,
+    stop: &CancelToken,
+    sender: &Sender<Event>,
+) -> (Option<Facts>, Option<Failure>) {
+    let mut stream = engine.details_many_with(asked.detail(), input, options);
+    let mut failure = None;
+    for row in stream.by_ref() {
+        let row = match row {
+            Ok(row) => row,
+            Err(error) => {
+                failure = Some(error.failure());
+                let _ = sender.send(Event::Failed(error));
+                break;
+            }
+        };
+        let value = row.value();
+        let event = Event::Row(StreamRow::Answer(value.value().clone(), probability(value)));
+        if sender.send(event).is_err() {
+            stop.cancel();
+            break;
+        }
+    }
+    (stream.facts().cloned(), failure)
+}
+
+fn run(job: Run) {
+    let Run {
+        engine,
+        asked,
+        verb,
+        batch,
+        context,
+        controls,
+        stop,
+        input,
+        sender,
+        tally,
+        receipt,
+    } = job;
     let started = tally.as_ref().map(thinkthen::Tally::start);
     let caller = controls.token;
     let check = || caller.as_ref().is_some_and(CancelToken::is_cancelled);
@@ -101,69 +185,26 @@ fn run(
             return;
         }
     };
-    let mut failure: Option<Failure> = None;
-    let facts = if verb == "decide" || verb == "filter" {
-        let mut stream = engine.decide_many_with(asked.decision(), input, options);
-        for row in stream.by_ref() {
-            match row {
-                Ok(row) => {
-                    let value = *row.value();
-                    let sent = if verb == "filter" {
-                        if value == Answer::Yes {
-                            sender.send(Event::Row(StreamRow::Text(row.input().clone())))
-                        } else {
-                            Ok(())
-                        }
-                    } else {
-                        sender.send(Event::Row(StreamRow::Answer(
-                            Judgment::Decision(value),
-                            Some(row.probability()),
-                        )))
-                    };
-                    if sent.is_err() {
-                        stop.cancel();
-                        break;
-                    }
-                }
-                Err(error) => {
-                    failure = Some(error.failure());
-                    let _ = sender.send(Event::Failed(error));
-                    break;
-                }
-            }
-        }
-        stream.facts().cloned()
+    let (facts, mut failure) = if verb == "decide" || verb == "filter" {
+        decisions(
+            &engine,
+            &asked,
+            verb == "filter",
+            input,
+            options,
+            Emitter {
+                stop: &stop,
+                sender: &sender,
+            },
+        )
     } else {
-        let mut stream = engine.details_many_with(asked.detail(), input, options);
-        for row in stream.by_ref() {
-            match row {
-                Ok(row) => {
-                    let value = row.value();
-                    if sender
-                        .send(Event::Row(StreamRow::Answer(
-                            value.value().clone(),
-                            probability(value),
-                        )))
-                        .is_err()
-                    {
-                        stop.cancel();
-                        break;
-                    }
-                }
-                Err(error) => {
-                    failure = Some(error.failure());
-                    let _ = sender.send(Event::Failed(error));
-                    break;
-                }
-            }
-        }
-        stream.facts().cloned()
+        details(&engine, &asked, input, options, &stop, &sender)
     };
-    if let (Some(started), Some(facts)) = (started, facts.as_ref()) {
-        if let Err(error) = started.finish(facts) {
-            failure = Some(error.failure());
-            let _ = sender.send(Event::Failed(error));
-        }
+    if let (Some(started), Some(facts)) = (started, facts.as_ref())
+        && let Err(error) = started.finish(facts)
+    {
+        failure = Some(error.failure());
+        let _ = sender.send(Event::Failed(error));
     }
     finish_stream_receipt(&receipt, facts.as_ref(), failure, false);
     let _ = sender.send(Event::End(facts));
@@ -201,93 +242,7 @@ impl PyStream {
     }
 
     fn __next__(&mut self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
-        guard(py, || {
-            if self.done {
-                return Ok(None);
-            }
-            loop {
-                let event = py.detach(|| {
-                    self.events
-                        .lock()
-                        .unwrap_or_else(std::sync::PoisonError::into_inner)
-                        .recv_timeout(TICK)
-                });
-                match event {
-                    Ok(Event::Need) => {
-                        let item = self.source.bind(py).call_method0("__next__");
-                        let next = match item {
-                            Ok(item) => match text(&item) {
-                                Ok(text) => Some(text),
-                                Err(error) => {
-                                    self.stop.cancel();
-                                    self.input.take();
-                                    self.finish(py);
-                                    return Err(error);
-                                }
-                            },
-                            Err(error) if error.is_instance_of::<PyStopIteration>(py) => None,
-                            Err(error) => {
-                                self.stop.cancel();
-                                self.input.take();
-                                self.finish(py);
-                                return Err(error);
-                            }
-                        };
-                        if let Some(input) = &self.input {
-                            let _ = py.detach(|| input.send(next));
-                        }
-                    }
-                    Ok(Event::Row(StreamRow::Text(text))) => {
-                        return Ok(Some(text.into_pyobject(py)?.into_any().unbind()));
-                    }
-                    Ok(Event::Row(StreamRow::Answer(value, probability))) => {
-                        let value = match value {
-                            Judgment::Decision(answered) => answer(py, answered),
-                            Judgment::Choice(value) => value.into_pyobject(py)?.unbind(),
-                            Judgment::Score(value) => value.into_pyobject(py)?.into_any().unbind(),
-                            Judgment::Tags(value) => value.into_pyobject(py)?.unbind(),
-                        };
-                        let pair = (value, probability).into_pyobject(py)?.unbind();
-                        return Ok(Some(pair.into_any()));
-                    }
-                    Ok(Event::Failed(error)) => {
-                        self.stop.cancel();
-                        self.input.take();
-                        self.finish(py);
-                        return Err(raised(py, &error));
-                    }
-                    Ok(Event::End(facts)) => {
-                        self.facts = facts;
-                        self.done = true;
-                        self.join(py);
-                        return Ok(None);
-                    }
-                    Ok(Event::Panicked) | Err(RecvTimeoutError::Disconnected) => {
-                        self.stop.cancel();
-                        self.input.take();
-                        self.finish(py);
-                        return Err(defect(py, "the stream worker ended without an answer"));
-                    }
-                    Err(RecvTimeoutError::Timeout) => {
-                        if let Err(error) = py.check_signals() {
-                            self.stop.cancel();
-                            self.input.take();
-                            if error.is_instance_of::<PyKeyboardInterrupt>(py) {
-                                let stopped = raise(
-                                    py,
-                                    thinkthen::ErrorKind::Cancelled,
-                                    "the stream was interrupted; no new request starts, and sent requests end on their own",
-                                    false,
-                                );
-                                attach_receipt(py, &stopped, Some(&self.receipt));
-                                return Err(stopped);
-                            }
-                            return Err(error);
-                        }
-                    }
-                }
-            }
-        })
+        guard(py, || self.read(py))
     }
 
     fn close(&mut self, py: Python<'_>) {
@@ -305,7 +260,126 @@ impl PyStream {
     }
 }
 
+enum Step {
+    Continue,
+    Item(Py<PyAny>),
+    End,
+}
+
 impl PyStream {
+    fn read(&mut self, py: Python<'_>) -> PyResult<Option<Py<PyAny>>> {
+        if self.done {
+            return Ok(None);
+        }
+        loop {
+            let event = py.detach(|| {
+                self.events
+                    .lock()
+                    .unwrap_or_else(std::sync::PoisonError::into_inner)
+                    .recv_timeout(TICK)
+            });
+            match self.advance(py, event)? {
+                Step::Continue => {}
+                Step::Item(value) => return Ok(Some(value)),
+                Step::End => return Ok(None),
+            }
+        }
+    }
+
+    fn feed(&mut self, py: Python<'_>) -> PyResult<()> {
+        let item = self.source.bind(py).call_method0("__next__");
+        let next = match item {
+            Ok(item) => match text(&item) {
+                Ok(text) => Some(text),
+                Err(error) => {
+                    self.stop.cancel();
+                    self.input.take();
+                    self.finish(py);
+                    return Err(error);
+                }
+            },
+            Err(error) if error.is_instance_of::<PyStopIteration>(py) => None,
+            Err(error) => {
+                self.stop.cancel();
+                self.input.take();
+                self.finish(py);
+                return Err(error);
+            }
+        };
+        if let Some(input) = &self.input {
+            let _ = py.detach(|| input.send(next));
+        }
+        Ok(())
+    }
+
+    fn advance(
+        &mut self,
+        py: Python<'_>,
+        event: Result<Event, RecvTimeoutError>,
+    ) -> PyResult<Step> {
+        match event {
+            Ok(Event::Need) => {
+                self.feed(py)?;
+                Ok(Step::Continue)
+            }
+            Ok(Event::Row(StreamRow::Text(text))) => {
+                Ok(Step::Item(text.into_pyobject(py)?.into_any().unbind()))
+            }
+            Ok(Event::Row(StreamRow::Answer(value, probability))) => {
+                let value = match value {
+                    Judgment::Decision(answered) => answer(py, answered),
+                    Judgment::Choice(value) => value.into_pyobject(py)?.unbind(),
+                    Judgment::Score(value) => value.into_pyobject(py)?.into_any().unbind(),
+                    Judgment::Tags(value) => value.into_pyobject(py)?.unbind(),
+                };
+                Ok(Step::Item(
+                    (value, probability).into_pyobject(py)?.unbind().into_any(),
+                ))
+            }
+            Ok(Event::Failed(error)) => {
+                self.stop.cancel();
+                self.input.take();
+                self.finish(py);
+                Err(raised(py, &error))
+            }
+            Ok(Event::End(facts)) => {
+                self.facts = facts;
+                self.done = true;
+                self.join(py);
+                Ok(Step::End)
+            }
+            Ok(Event::Panicked) | Err(RecvTimeoutError::Disconnected) => {
+                self.stop.cancel();
+                self.input.take();
+                self.finish(py);
+                Err(defect(py, "the stream worker ended without an answer"))
+            }
+            Err(RecvTimeoutError::Timeout) => {
+                self.interrupt(py)?;
+                Ok(Step::Continue)
+            }
+        }
+    }
+
+    fn interrupt(&mut self, py: Python<'_>) -> PyResult<()> {
+        let Err(error) = py.check_signals() else {
+            return Ok(());
+        };
+        self.stop.cancel();
+        self.input.take();
+        if error.is_instance_of::<PyKeyboardInterrupt>(py) {
+            let stopped = raise(
+                py,
+                thinkthen::ErrorKind::Cancelled,
+                "the stream was interrupted; no new request starts, and sent requests end on their own",
+                false,
+            );
+            attach_receipt(py, &stopped, Some(&self.receipt));
+            return Err(stopped);
+        }
+        Err(error)
+    }
+
     fn join(&mut self, py: Python<'_>) {
         if let Some(worker) = self.worker.take() {
             let _ = py.detach(|| worker.join());
@@ -336,6 +410,10 @@ impl PyStream {
     }
 }
 
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the native stream constructor forwards the same validated controls as the PyO3 entry point"
+)]
 pub(crate) fn prepare(
     py: Python<'_>,
     engine: &Engine,
@@ -369,19 +447,19 @@ pub(crate) fn prepare(
                 receiver: source_rx,
             };
             if caught(|| {
-                run(
+                run(Run {
                     engine,
                     asked,
                     verb,
                     batch,
                     context,
                     controls,
-                    work_stop,
-                    source,
-                    work_sender.clone(),
+                    stop: work_stop,
+                    input: source,
+                    sender: work_sender.clone(),
                     tally,
-                    Arc::clone(&work_receipt),
-                )
+                    receipt: Arc::clone(&work_receipt),
+                })
             })
             .is_none()
             {

@@ -12,7 +12,7 @@ use crate::{raised, usage};
 pub(super) enum Stop {
     Engine(Error),
     Accounted(Box<AccountedFailure>),
-    Said(String, Option<OwnedFacts>),
+    Said(String, Option<Box<OwnedFacts>>),
 }
 
 #[derive(Debug)]
@@ -24,12 +24,12 @@ pub(super) struct AccountedFailure {
 
 impl Stop {
     pub(super) fn after(sentence: impl Into<String>, facts: OwnedFacts) -> Self {
-        Self::Said(sentence.into(), Some(facts))
+        Self::Said(sentence.into(), Some(Box::new(facts)))
     }
 
     pub(super) fn with_facts(self, facts: OwnedFacts) -> Self {
         match self {
-            Self::Said(sentence, _) => Self::Said(sentence, Some(facts)),
+            Self::Said(sentence, _) => Self::Said(sentence, Some(Box::new(facts))),
             other => other,
         }
     }
@@ -40,7 +40,7 @@ impl WorkerError for Stop {
         match self {
             Self::Engine(error) => error.facts().map(OwnedFacts::from),
             Self::Accounted(account) => Some(account.facts.clone()),
-            Self::Said(_, facts) => facts.clone(),
+            Self::Said(_, facts) => facts.as_deref().cloned(),
         }
     }
 
