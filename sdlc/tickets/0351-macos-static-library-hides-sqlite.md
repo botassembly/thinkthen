@@ -15,3 +15,13 @@ On macOS, `libraries/c/localize.sh` writes a `libthinkthen.a` that defines only 
 - Defers: the full macOS surface run, which the release rehearsal does.
 
 ## What the build taught us
+
+- The M5 proof ran on macOS 26.4, arm64, Apple ld-1267 and Apple nm (LLVM 21), with zerobrew's Rust 1.95 (LLVM 22.1.3), in a scratch copy removed afterwards.
+- Stripping the bitcode worked; no matching LLVM linker was needed. Apple's linker runs the partial link with `-exported_symbols_list`, which turns every other global local. The object still carries `__LLVM,__bitcode` and `__LLVM,__cmdline` from Rust's standard library, and Apple's `nm` reads it as LLVM 22 bitcode it cannot parse. `rust-objcopy --remove-section` drops both. Every Rust toolchain ships `rust-objcopy` in its sysroot, zerobrew's and the official rustup 1.95 alike, so the release runners need nothing new. Apple's `bitcode_strip -r` fails on this Xcode, because it calls the new linker with an option it lacks.
+- Apple's `nm` refuses even Cargo's unchanged archive for one standard library member, and still lists the other members' names. The gate therefore reads names without requiring `nm` to exit 0, so Cargo's archive fails on its 304 `sqlite3_` names.
+- The door harness needed two changes to run its gate on macOS: the `.dylib` file name and the leading underscore. The M5 ran that one test by name; the other door tests still use `readelf` and the Linux linker.
+- On the M5, a C program linked its own SQLite 3.50.0 beside the new archive and ran. Cargo's unchanged archive gave 274 duplicate symbols.
+- R on macOS needs only `_R_init_thinkthen` exported. The installed package reached native code with 21 registered routines. Without the flag, `check.sh` refused 285 `sqlite3_` names.
+- The M5's zerobrew R names `libR.dylib` by a path that does not exist, so the package's `document` step cannot run there. The M5 proof skipped that step in its scratch copy only; the tarball shape skips it the same way. The full R check also stops there as not run, because `dbplyr` and `igraph` are missing.
+- DuckDB's extension passes `--exclude-libs,ALL` on Linux only, so its macOS build may export `sqlite3_` names as well. This ticket did not check it; the release rehearsal's macOS DuckDB job should.
+- The DuckDB gap is filed as Debt 026, `sdlc/issues/2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md`.
