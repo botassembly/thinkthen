@@ -163,7 +163,7 @@ The engine part only. The SQL hosts' own limit copies wait for 3b and land as a 
   - An engine reads the process total from its state, which a forked child rebuilds from the child's limits. Before, `with_process_budget` saved the total when the engine was built, so the review found that a child could count an inherited engine and its own engine against two totals.
   - `SendBudget` counts through the same `Guarded` cell instead of its own spin-loop reset after a fork. A refund goes to the counts it reserved from. The prep note's open question is settled: the request total already reset in a forked child and still does.
   - `policy.py` holds the one door on `PROCESS_LIMITS` in `engine/limits.rs`, with its plants and control renamed.
-  - The crate ratchet rises by 55 lines to 105,684: the owner struct, the rebuild-wait test and the real-fork total proof outweigh the removed statics, accessors and spin reset. `engine/mod.rs` falls from 565 to 338 nonblank lines.
+  - The crate ratchet rises by 57 lines to 105,801 over main at slice 3c: the owner struct, the rebuild-wait test and the real-fork total proof outweigh the removed statics, accessors and spin reset. `engine/mod.rs` falls from 565 to 338 nonblank lines.
 - Proof:
   - `engine/limits.rs` `a_stop_ends_a_rebuild_wait`: a fired stop ends a rebuild wait with `Cancelled`, and a live wait lasts one stop check.
   - `engine/budget.rs` `a_forked_child_counts_from_zero` replaces `inherited_budget_and_reset_marker_do_not_block_a_child`. A parent marker left behind is the `process/tests.rs` row "a child replaces the parent's rebuild".
