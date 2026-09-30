@@ -10,15 +10,15 @@ import { setting } from '../../lib/settings-table.mjs';
 const model = setting('Model').default;
 const address = setting('Address').default;
 
-const dryRun = run('install/backends', '1-dry-run');
+const plan = run('install/backends', '1-plan');
 ---
 <Base title="Backends" description="Where every question goes by default, how the key stays safe, and how to point ThinkThen at another backend.">
   <h1>Backends</h1>
   <p class="lede">A backend is an address and a model. By default, ThinkThen sends every question to Jev, a System One model from TypeSafe.</p>
 
   <h2>See the plan first</h2>
-  <p><code>--dry-run</code> prints what a command would send, and stops. It reads no key and sends nothing.</p>
-  <Terminal run={dryRun} caption="The plan names the address, the model, and the variable a key would come from. It holds no key." />
+  <p><code>--plan</code> prints what a command would send, and stops. It needs no key and sends nothing.</p>
+  <Terminal run={plan} caption="The plan names the address, the model, and the variable a key would come from. It holds no key." />
   <p>The plan holds the evidence. Treat a plan with the same care as the request itself.</p>
 
   <h2>The default</h2>

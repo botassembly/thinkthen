@@ -6,5 +6,6 @@ kinds=(person song album place)
 
 printf '%s' "$sentence" |
 thinkthen recognize "${kinds[@]}" \
-  --dry-run |
+  --plan |
+head -1 |
 jq '{pieces, request_count}'

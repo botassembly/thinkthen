@@ -86,7 +86,7 @@ const recordings = path.join(tmp, 'recordings');
 fs.cpSync(path.join(site, 'recordings'), recordings, { recursive: true });
 
 // The command every example calls. A function call that names no replay
-// folder of its own answers from the site's recordings. A dry run sends
+// folder of its own answers from the site's recordings. A plan sends
 // nothing and takes no replay folder. audit, diff, and check send nothing.
 const wrapper = path.join(tmp, 'bin');
 fs.mkdirSync(wrapper);
@@ -96,7 +96,7 @@ case $1 in
   *) exec "${bin}" "$@" ;;
 esac
 for a in "$@"; do
-  case $a in --replay|--dry-run) exec "${bin}" "$@" ;; esac
+  case $a in --replay|--plan) exec "${bin}" "$@" ;; esac
 done
 exec "${bin}" "$@" --replay "${recordings}"
 `, { mode: 0o755 });

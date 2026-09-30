@@ -253,7 +253,7 @@ const ARTICLES = {
       "First it finds the names. It splits the text into pieces and asks one question about each piece. Does the piece begin a name, sit inside one, end one, stand alone as a name, or sit outside every name? Then it labels each name with one of your kinds. Last it relates the names. Each rule names a relation, a subject kind, and an object kind. `recognize` asks one yes or no question for each pair a rule allows.",
     ],
     see: {
-      '1-find': "A dry run shows the find step's plan: 28 pieces in one request.",
+      '1-find': "A plan shows the find step's request: 28 pieces in one request.",
       '2-label': "The label step gives each name one of the four kinds.",
       '3-relate': "The relate step keeps the edges at 0.5 or more.",
     },
@@ -431,7 +431,7 @@ const ARTICLES = {
     goal: "A coding agent could ask Jev ten small questions. Each answer comes back with a probability.",
     idea: [
       "These are ideas for Jev inside a coding agent. Most come from [a post by Diogo Almeida](https://x.com/completeskeptic/status/2101894250401271876). Diogo works at TypeSafe, the maker of Jev. Each cell names one decision and quotes the question Jev would answer.",
-      "Permission: \"Should this command run?\" If Jev is unsure, the agent would ask a person. Tool choice: \"Which tool fits this step?\" The agent would load only the top few. Context: \"Does this chunk matter now?\" The agent would hide it, summarize it, or show it whole.",
+      "Permission: \"Should this command run?\" If Jev is not sure, the agent would ask a person. Tool choice: \"Which tool fits this step?\" The agent would load only the top few. Context: \"Does this chunk matter now?\" The agent would hide it, summarize it, or show it whole.",
       "Model choice: \"Is this step easy?\" An easy step would go to a smaller model. Parallel work: \"Can these tasks run at once?\" The agent would split them. Instructions: \"Is this front-end work?\" The agent would load the style guide.",
       "Data safety: \"Could this touch secrets?\" The task would run on an approved model. Done check: \"Is the task finished?\" The agent would stop or keep going. Review: \"Does this change do what was asked?\" The agent would approve it or send it back.",
       "Evaluation: \"Which prompt wins?\" An LLM judge writes a grade in free text. A Jev judgment comes back as a probability, and you can check it against cases a person labeled. ThinkThen added the done check and the prompt comparison.",
@@ -478,7 +478,7 @@ const ARTICLES = {
     goal: "Any server with Jev's interface can answer, and a bar must be tuned again on the new model.",
     idea: [
       "Any server with the same interface as Jev can answer. Name it with `--url`.",
-      "`thinkthen check` sends four fixed requests to check that a server works. With `--dry-run`, it prints its plan and sends nothing.",
+      "`thinkthen check` sends four fixed requests to check that a server works. With `--plan`, it prints its plan and sends nothing.",
     ],
     see: {
       '1-check': "The check names the address and the model it would ask.",
