@@ -19,6 +19,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import harness
 from harness import ROOT, Backend, expect, rows, run, said
 from portable import question_keys
 from signal_suite import CANCELLED, held_cancel
@@ -296,6 +297,7 @@ def check(case: dict) -> str | None:
         arm = f"case/{case['id']}" + ("/capture" if case["verb"] == "find" else "")
         base = backend.base(arm)
         success = case["expect"]["success"]
+        harness.STORED.clear()
         kind = success["kind"]
         if kind == "find":
             got, wanted = find(case, base, backend), FIND_RESULTS[case["id"]]
@@ -316,12 +318,24 @@ def check(case: dict) -> str | None:
         elif kind == "single":
             pairs = zip(single(case, base), single_wanted(case, base), strict=True)
             why = next((f"{name}: wanted {one[name]!r}, got {other[name]!r}" for other, one in pairs for name in one if one[name] != other[name]), None)
-            if why or "counters" not in success:
+            if why:
                 return why
-            got, wanted = counters(case, base), success["counters"]  # last, on a cache folder of their own
+            got, wanted = None, None
+            if "counters" in success:
+                got, wanted = counters(case, base), success["counters"]  # last, on a cache folder of their own
         else:
             raise LookupError(f"no runner for the kind {kind!r}")
-        return None if got == wanted else f"wanted {wanted!r}, got {got!r}"
+        if got != wanted:
+            return f"wanted {wanted!r}, got {got!r}"
+        return kept(case, base, success)
+
+
+def kept(case: dict, base: str, success: dict) -> str | None:
+    """ADR 0111: the case's first child ran on the question store, one row per good answer."""
+    keys = {key for one in case.get("exchanges", []) for key in question_keys(base + "/systemone", one["request"])}
+    wanted = len(keys) - success.get("failed_questions", 0)
+    got = harness.STORED[0] if harness.STORED else 0
+    return None if got == wanted else f"stored answers: wanted {wanted}, got {got}"
 
 
 def main() -> int:

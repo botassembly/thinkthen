@@ -7,14 +7,17 @@ server on that arm with a new backend and cache folder, then runs
 `runner.py SOCKET ID`. That prints one line: `pass ID`, `fail ID: why`, or
 `not run ID: reason`. The runner has no skip list and never excuses a
 wrong answer by a note. `--cases FILE` reads another file, for the
-runner's self-test. The backend's port comes from BPORT, and a scratch
-folder from SCRATCH.
+runner's self-test. The backend's port comes from BPORT, a scratch
+folder from SCRATCH, and the server's cache folder from STORE. A passing
+case must leave one answer row per good question in STORE's
+`thinkthen.sqlite` (ticket 0348).
 """
 
 import hashlib
 import json
 import os
 import pathlib
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -340,6 +343,22 @@ def run(case):
     return handler(case, success)
 
 
+def stored(case, success):
+    """ADR 0111: the case ran on the question store, one row per good answer."""
+    keys = {key for exchange in case.get("exchanges", []) for key in question_keys(url(case), exchange["request"])}
+    if not os.environ.get("STORE"):
+        raise Failed("stored answers: no STORE folder to count")
+    store = pathlib.Path(os.environ["STORE"]) / "thinkthen.sqlite"
+    held = 0
+    if store.is_file():
+        connection = sqlite3.connect(f"file:{store}?mode=ro", uri=True)
+        try:
+            held = connection.execute("SELECT count(*) FROM answers").fetchone()[0]
+        finally:
+            connection.close()
+    same("stored answers", held, len(keys) - success.get("failed_questions", 0))
+
+
 def main():
     args = sys.argv[1:]
     path = CASES
@@ -386,7 +405,9 @@ def main():
         return 0
     try:
         run(case)
-    except (Failed, subprocess.TimeoutExpired, KeyError, ValueError) as error:
+        if "success" in case["expect"]:
+            stored(case, case["expect"]["success"])
+    except (Failed, subprocess.TimeoutExpired, KeyError, ValueError, sqlite3.Error) as error:
         print(f"fail {wanted}: {error}")
         return 0
     print(f"pass {wanted}")

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -27,6 +28,23 @@ from children import child_env as clean_env  # noqa: E402  the shared helper, ti
 EXTENSION = Path(os.environ.get("THINKTHEN_DUCKDB_EXTENSION", ROOT / "build" / "thinkthen.duckdb_extension"))
 BACKEND = os.environ.get("THINKTHEN_BACKEND_BIN", "")
 FAKE_KEY = "sk-loopback-duckdb-suite"
+
+
+# The answer rows each child left in its named cache folder, in run order
+# (ticket 0348). A case runner clears it and reads the rows its children left.
+STORED: list[int] = []
+
+
+def stored(folder: str) -> int:
+    """The answer rows in a cache folder's `thinkthen.sqlite`."""
+    store = Path(folder) / "thinkthen.sqlite"
+    if not folder or not store.is_file():
+        return 0
+    connection = sqlite3.connect(f"file:{store}?mode=ro", uri=True)
+    try:
+        return connection.execute("SELECT count(*) FROM answers").fetchone()[0]
+    finally:
+        connection.close()
 
 
 class Backend:
@@ -170,6 +188,8 @@ def run(
             timeout=timeout,
             check=False,
         )
+        # Counted before the folder goes, so a runner can prove the store answered.
+        STORED.append(stored(env.get("THINKTHEN_CACHE", "")))
     results = [json.loads(line) for line in done.stdout.splitlines() if line.startswith("{")]
     if len(results) != len(statements):
         raise AssertionError(f"the child answered {len(results)} of {len(statements)}: {done.stderr[-800:]}")

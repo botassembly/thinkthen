@@ -1275,7 +1275,7 @@ conformance() {
 		if [ "$arm" != - ]; then
 			fresh "$arm" ${setting:+"${setting//@SCRATCH@/$SCRATCH}"}
 		fi
-		line=$(BPORT=${BPORT:-} SCRATCH=$SCRATCH python3 tests/runner.py "$SOCK" "$id")
+		line=$(BPORT=${BPORT:-} SCRATCH=$SCRATCH STORE=${CACHEDIR:-} python3 tests/runner.py "$SOCK" "$id")
 		if [ "$line" = "pass $id" ] && { [ "$id" = 18-find-second ] || [ "$id" = 19-find-none ]; }; then
 			bcapture >"$RUN/$id.capture.json"
 			line=$(BPORT=$BPORT python3 tests/runner.py capture "$id" "$RUN/$id.capture.json")
