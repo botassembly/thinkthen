@@ -15,6 +15,10 @@
 compile_error!(
     "enable thinkthen's bundled-sqlite feature, or host-sqlite in a SQLite extension that initializes rusqlite's loadable API"
 );
+#[cfg(all(feature = "bundled-sqlite", feature = "host-sqlite"))]
+compile_error!(
+    "enable only one of thinkthen's bundled-sqlite and host-sqlite features, because the question store runs on one SQLite"
+);
 
 mod core;
 

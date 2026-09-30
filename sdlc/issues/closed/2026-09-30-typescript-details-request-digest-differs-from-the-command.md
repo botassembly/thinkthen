@@ -1,6 +1,6 @@
 # The TypeScript details request digest differs from the command's
 
-Status: open, owned by ticket 0304 slice 3a. Found by the TypeScript binding check during ticket 0335 slice 1, on a branch from main `dfa7324c7`. That slice changed no library or TypeScript source, so main carries the same failure.
+Status: Closed by ticket 0304 slice 3a, which moves the TypeScript library onto the command's request identity; `shapes.test.mjs` passes. Owned by ticket 0304 slice 3a. Found by the TypeScript binding check during ticket 0335 slice 1, on a branch from main `dfa7324c7`. That slice changed no library or TypeScript source, so main carries the same failure.
 
 ## The problem
 
