@@ -74,6 +74,19 @@ A `backends` entry gains one optional field, `descriptions`, whose value is `aut
 
 ADR 0111 keys one question on the adapter name, the posting URL, the model, the state and that question's bytes as sent. The dialect renders before those bytes are written, so the key covers it. Two dialects that write different bytes for one question get different keys, and neither reuses the other's answer. Two that write the same bytes, such as a question with only string descriptions, share one answer, because the backend was asked the same question. The recording digest hashes the URL and the whole body, so it follows the same rule. The replay decoder reads options from `criteria` keys and levels from the array length. Both are unchanged under `text`. The store, fixtures, recordings and usage totals hold no dialect name.
 
+## What this amends
+
+| Source | Change |
+| --- | --- |
+| ADR 0114 sections 1 and 6 | A third built-in, `ollama`, and a descriptions column. The unknown-name sentence lists three names |
+| ADR 0114 section 2 | A `backends` entry may name `descriptions` |
+| ADR 0114 section 5 | A loopback built-in base is not another built-in's host |
+| ADR 0114 coordinator default 1 | Met: a user needs `ollama` |
+| ADR 0110 | Its null `noul` omission is part of the `authored` dialect; `text` also omits empty and null descriptions per question shape |
+| `specification/types.md` | Descriptions travel as the backend's dialect says; `ollama` sends the `what` text |
+| `specification/backends.md`, `check.md`, `settings.md`, `recording.md` | The built-in row, the note line, `OLLAMA_API_KEY`, the entry field |
+| README, CHANGELOG | The `ollama` backend |
+
 ## Rejected
 
 - One flattened form for every backend. It drops `not_for` and `examples` that TypeSafe reads, and it changes every cache key and fixture for TypeSafe users.
@@ -82,6 +95,7 @@ ADR 0111 keys one question on the adapter name, the posting URL, the model, the 
 
 ## Deferred gaps
 
+- Nobody has checked whether Ollama accepts an object `state`, which the check's mixed probe and a pointer selection send. The loopback mimic assumes it does.
 - Nobody has checked whether Ollama accepts structured question text (an object or a list as `instructions`). A ticket adds a rendering when a user meets a refusal.
 - Ollama's hosted service may later serve decision models. Its host is not added to the key guard until it does.
 - An Ollama tag such as `nimble` can change when the user pulls it again. Cached answers keyed on `nimble` then outlive the old weights until the user passes `--refresh-cache` or `--no-cache`. ADR 0111 forces a refresh only for `jev-latest`.
