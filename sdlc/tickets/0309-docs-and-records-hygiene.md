@@ -28,7 +28,7 @@ The front pages say what the tool does. The issue folder holds open issues only,
 - `libraries/swift/check.sh` and `libraries/objective-c/check.sh` pass with the links, including the installed-consumer checks.
 - `release-pack x86_64-unknown-linux-gnu OUT c swift objective-c` packs both wrappers with a regular `thinkthen.h` equal to the C header.
 - `release-archive-self-test.py` passes after the linked-source fix. It failed before that fix with `swift source differs from archived commit`.
-- `sdlc/scripts/lint` stops on main's known `cargo deny` advisories (ticket 0307). With that one step skipped, it reaches clippy, which fails on main in `crates/thinkthen/tests/version.rs:49` and `tests/backend/recording_durability.rs:96`. This ticket touches no Rust. `inventory` reports 0306's `contained` and `uncontained` as outside the frozen contract, also on main.
+- After merging main `e62c82254`, `sdlc/scripts/lint` passes every step through `cargo doc`, including the managed-pair self-test. Its last step, `inventory`, fails on main: 0306's `contained` and `uncontained` are not in the frozen contract. This ticket touches no Rust.
 - Three pre-existing broken links in `sdlc/issues/` are fixed. Broken links in tickets 0162 and 0163 stay; they are history.
 
 ## What the build taught us
