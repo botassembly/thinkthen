@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 271
-opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md
+opens: sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md
 ---
 
 # 0271: Prepare Ada, GNU Objective-C and COBOL for the Linux x86 release workflow

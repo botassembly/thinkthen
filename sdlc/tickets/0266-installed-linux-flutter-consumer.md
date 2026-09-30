@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 266
-opens: sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md sdlc/records/0249-dart-build.md
+opens: sdlc/issues/closed/2026-09-28-dart-consumer-proof-needs-a-supported-package.md sdlc/records/0249-dart-build.md
 ---
 
 # 0266: Prove the private Linux Flutter app from matched release files
@@ -40,7 +40,7 @@ The builder uses Rust 1.95.0, Dart 3.13.4, Flutter 3.47.5 and the installed Linu
 
 ## Evidence
 
-- Starts from: The [original Dart consumer issue](../issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md), accepted [0249 Linux Flutter app](../records/0249-dart-build.md), [0260 Dart forwarding](../records/0260-dart-swift-zig-host-proof.md), accepted 0264 Dart-only local design `b6869e87`, and 0263's local C/source pairing at main `1ab1f04f`.
+- Starts from: The [original Dart consumer issue](../issues/closed/2026-09-28-dart-consumer-proof-needs-a-supported-package.md), accepted [0249 Linux Flutter app](../records/0249-dart-build.md), [0260 Dart forwarding](../records/0260-dart-swift-zig-host-proof.md), accepted 0264 Dart-only local design `b6869e87`, and 0263's local C/source pairing at main `1ab1f04f`.
 - Keeps: Private sibling-path Flutter manifests, real Linux app and exact one-call fixture, separate native C path, source checks, existing C/Dart archive identities and default release routing.
 - Changes: Adds one private Flutter wrapper/app source archive bound to the exact Dart and C files and one isolated Linux app built from all three unpacked archives.
 - Proof: Exact archive inventory and seven-line fixed-data pairing; offline package resolution to unpacked paths; one real Flutter-engine send with accepted complete decoded body; focused missing, wrong-Dart, wrong-C, missing-app and extra-family preflight refusals.

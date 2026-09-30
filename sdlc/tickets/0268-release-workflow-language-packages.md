@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 268
-opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-cpp-consumer-proof-needs-a-supported-package.md
+opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-28-cpp-consumer-proof-needs-a-supported-package.md
 ---
 
 # 0268: Start the reviewed language archives in the manual release workflow

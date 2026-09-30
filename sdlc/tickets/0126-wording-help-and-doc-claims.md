@@ -18,7 +18,7 @@ It settles these items:
 
 - `sdlc/issues/2026-09-25-command-wording-and-help-fixes-before-0-1.md`, items 2, 5, 6, 7, and 9, and the `recognize` half of item 8.
 - `sdlc/issues/2026-09-25-docs-how-tos-and-spec-claims-owed.md`, section "Spec or doc claims that are wrong", items 1, 2, and 3.
-- `sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, the docs half. That is option 3 of the issue, the one its recommendation takes now.
+- `sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, the docs half. That is option 3 of the issue, the one its recommendation takes now.
 
 The authority is backlog `sdlc/planning/issue-backlog-2026-09-25.md`, rows A7 and A8 and the docs half of A5, and the 0.1 queue in `sdlc/planning/one-line-plan-2026-09-25.md`. Ian ruled on item 6 on 2026-09-25: `check` shows the model the user asked for, the model each reply names, the provider, the URL, and all its outputs, and it prints "unspecified" when no model name is given. Ian ruled on item 2 on 2026-09-24: the ten functions and `help` come first, and the admin commands come last.
 

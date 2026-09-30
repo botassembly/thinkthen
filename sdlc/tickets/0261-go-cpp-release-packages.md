@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 261
-opens: sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-cpp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-add-a-c-plus-plus-binding.md sdlc/records/0249-release-preparation.md
+opens: sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-28-cpp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-add-a-c-plus-plus-binding.md sdlc/records/0249-release-preparation.md
 ---
 
 # 0261: Pack Go and C++ source with one matching C archive

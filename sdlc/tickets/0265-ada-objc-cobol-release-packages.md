@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 265
-opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md
+opens: sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md
 ---
 
 # 0265: Pack Ada, GNU Objective-C and COBOL source with one matching C archive

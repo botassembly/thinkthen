@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 262
-opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
+opens: sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
 ---
 
 # 0262: Pack C# and JVM binaries with one matching C archive

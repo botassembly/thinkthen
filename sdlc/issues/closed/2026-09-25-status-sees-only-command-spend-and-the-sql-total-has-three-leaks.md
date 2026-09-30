@@ -1,12 +1,12 @@
 # status sees only command spend, and the SQL request total has three leaks
 
-Status: Open. Option 3, the docs half, landed in ticket 0126 on 2026-09-25. Option 1, durable non-command usage visible in `status`, remains open. The warm/concurrent cap observations below describe the filing state and have since been fixed.
+Status: closed 2026-09-30. Fixed by ticket 0322 slice 1 (`c893b2e15`) under ADR 0113: every library and SQL extension adds to the usage totals that `status` reads. The cache-answer proof stays with 0322 slice 2. A PostgreSQL pool still has one request total per connection, the documented scope ADR 0113 keeps.
 
 Found 2026-09-25 while drafting the talk's cost slide. Ian asked for these gaps to be filed. Each fact below names its source.
 
 ## What happened at filing, with current corrections
 
-1. **`status` never sees library, SQL, or data-frame spend.** The command's usage store is the only writer of `thinkthen-usage` ([recording.md](../../specification/recording.md), "Usage lives at"). The public engine builds its counters with `Counters::new(None)` (`crates/thinkthen/src/public/settings.rs:246`), so they live in memory and die with the process. Every SQL extension and the Rust Polars surface go through that engine. A user who spends through DuckDB or a data frame sees nothing in `thinkthen status`.
+1. **`status` never sees library, SQL, or data-frame spend.** The command's usage store is the only writer of `thinkthen-usage` ([recording.md](../../../specification/recording.md), "Usage lives at"). The public engine builds its counters with `Counters::new(None)` (`crates/thinkthen/src/public/settings.rs:246`), so they live in memory and die with the process. Every SQL extension and the Rust Polars surface go through that engine. A user who spends through DuckDB or a data frame sees nothing in `thinkthen status`.
 2. **DuckDB warm was outside `thinkthen_max_requests_total` at filing.** The old aggregate could not read session settings (ticket 0110 item 17). Current C++ settings pass the total into the bridge warm path, which attaches the shared send budget before actual attempts. This leak is fixed; the original observation stays as history.
 3. **PostgreSQL counts the total per backend process.** Each connection is its own backend (`sdlc/records/0111-build-postgresql-surface.md`, "The request total"). A pool of 20 connections can spend up to 20 times a per-backend total. This remains the documented scope, not an account-wide cap.
 4. **Concurrent calls could pass the total at filing.** The old read-once calculation could overshoot (ticket 0110 item 17). Current `SendBudget` reserves actual attempts atomically, including retries, across the relevant process/backend paths; this overshoot is fixed within that scope.

@@ -1,6 +1,6 @@
 # Annotate options from a file or a record
 
-Status: Open. Checked 2026-09-25: `specification/annotate.md` still keeps options inline.
+Status: Open. Checked 2026-09-30: `specification/annotate.md` still keeps options inline, and no ticket owns this.
 
 Ian asked on 2026-09-23 how annotate picks an album when the album list lives in the user's data. Today it cannot, short of generating the question set.
 

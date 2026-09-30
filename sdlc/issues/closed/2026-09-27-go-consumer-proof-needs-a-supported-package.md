@@ -1,6 +1,6 @@
 # A Go consumer works through C, but no supported package exists
 
-Status: ticket 0249 landed the `libraries/go/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-go-cpp-build.md) cover the Go module and isolated shared/static-C consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archive, module tags, direct installation and other-host proof. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## Gap
 
@@ -20,11 +20,11 @@ The parent independently verified all input blobs at both pins, all manifest has
 
 This section records the pre-fix failure. Ticket 0166 repaired it; the post-fix verification below records the passing strict proof.
 
-At the sealed stage-two pin, a scalar C call could return success after its token fired during an accepted held request. All four stage-two consumers reproduced it through Go, as do Zig and direct ctypes in experiment 273. [The closed cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) records the repair. The stage-two Go wrapper reported exactly what C returned; the sealed stage-two gate recorded `FINDING` and exited 1; no Go workaround was available at that pin.
+At the sealed stage-two pin, a scalar C call could return success after its token fired during an accepted held request. All four stage-two consumers reproduced it through Go, as do Zig and direct ctypes in experiment 273. [The closed cancellation issue](2026-09-26-cancelled-c-scalar-call-can-return-success.md) records the repair. The stage-two Go wrapper reported exactly what C returned; the sealed stage-two gate recorded `FINDING` and exited 1; no Go workaround was available at that pin.
 
 ## Handoff and remaining work
 
-The historical experiment copy instruction is complete and superseded by `libraries/go/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, module tags, direct installation and other-host proof.
+The historical experiment copy instruction is complete and superseded by `libraries/go/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, module tags, direct installation and other-host proof.
 
 ## Limits
 

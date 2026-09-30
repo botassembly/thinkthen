@@ -1,6 +1,6 @@
 # Record the backend's own time for each call
 
-Status: Open. Checked 2026-09-25: no backend time is recorded anywhere in `crates/` or `specification/`.
+Status: closed 2026-09-30. Merged into `../2026-09-26-every-surface-should-give-back-run-facts.md`, section "Backend time and request IDs". Ticket 0302 landed the first part.
 
 Found in Beatles Bench, 2026-09-23. A benchmark needs to split each call's time into the model's work, the network, and our command. Today a run keeps none of it. The bench times the whole `thinkthen` process from outside, and those times were taken on a heavily loaded machine.
 
@@ -36,4 +36,4 @@ The Beatles Bench paper compares Jev's median of 0.30 s with GLM's 8.4 s. A read
 
 ## Scoped0302 implementation landed
 
-Ticket0302 passed fresh High code review at `c8818e667ffd8d9171803a18969f0a7ec82ba912`. Rust has the opt-in caller-thread attempt callback; decide, choose, filter, rank, score and tag expose attempt rows under CLI details; all ten directCJSON verbs accept the explicit opt-in. Default facts/output and recordings remain unchanged. See [the build record](../records/0302-attempt-timing-build.md) for bounded independent loopback proof and source artifacts. This issue remains open for the four separate CLI writers, failed-run presentation, durable sidecar/status, `command_ms` and typed host adoption. No full package or release qualification follows from this source stage.
+Ticket0302 passed fresh High code review at `c8818e667ffd8d9171803a18969f0a7ec82ba912`. Rust has the opt-in caller-thread attempt callback; decide, choose, filter, rank, score and tag expose attempt rows under CLI details; all ten directCJSON verbs accept the explicit opt-in. Default facts/output and recordings remain unchanged. See [the build record](../../records/0302-attempt-timing-build.md) for bounded independent loopback proof and source artifacts. This issue remains open for the four separate CLI writers, failed-run presentation, durable sidecar/status, `command_ms` and typed host adoption. No full package or release qualification follows from this source stage.

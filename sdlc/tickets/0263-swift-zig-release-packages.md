@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 263
-opens: sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
+opens: sdlc/issues/closed/2026-09-27-swift-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-26-zig-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
 ---
 
 # 0263: Pack Swift and Zig source with one matching C archive

@@ -6,7 +6,7 @@ A new page either joins the `demos/` list under ADR 0018 or becomes a site how-t
 
 ## Pages owed
 
-11. **A first cut before a job over 255 candidates.** `find` and `relate` take at most 255 units. Show `grep`, a query or an index narrowing a long list, then `find` or `relate` on the survivors.
+11. **A first cut before a job over 255 candidates.** `find` and `relate` take at most 255 units. Show `grep`, a query or an index narrowing a long list, then `find` or `relate` on the survivors. This closes stumble-register row 9.
 12. **Grep a folder by meaning and print `file:line`.** Use `jq -Rc '{file: input_filename, n: input_line_number, text: .}'`, then `filter --jsonl --field /text`, then print `file:line: text`.
 13. **Diagnose a failed agent trace.** `find --none` picks the failing step and `choose` names the kind of error.
 14. **Ask a question about the answers.** `annotate` fills a form per ticket, `jq` groups the answers, and a second `decide` asks whether a group is one outage.
@@ -14,6 +14,7 @@ A new page either joins the `demos/` list under ADR 0018 or becomes a site how-t
 16. **Map a week of incident reports.** `filter`, `recognize`, `relate` and `score` over about twenty made-up reports with a known answer, ending in SQL, green under `--replay`.
 17. **An `examples/` folder with River Run as the first Python example.** Ian asked for it on 2026-09-23. Port the card game from workspace experiment 250, run it under replay with no key, and report its request counts. This needs its own ticket.
 18. **One measured backend profile.** `profiles/README.md` still carries no claimed limit. Experiment 219 bracketed tokens, not bytes. Ship one profile with a measured byte ceiling and its record, and add one conformance case at a backend's own edge.
+19. **Split one file into piles by a `choose` label.** Ian asked for it on 2026-09-20. The capability works: replaying how-to 21's recording, `choose ... --details` piped through `jq -r '[.value, (.input|tostring)] | @tsv'` and `awk -F'\t' '{print $2 > ($1".out.jsonl")}'` wrote one file per label. No how-to shows it. Moved here from the stumble register on 2026-09-30.
 
 ## Handed to marketing
 

@@ -12,7 +12,7 @@ Status: Open. Filed 2026-09-30 by ticket 0309 for marketing, which owns `site/` 
 
 The reference page lists every exit code `channels.md` defines, names 8 as the only reserved code, and states the local-server key rule.
 
-## Two links now point at closed issues
+## Site links that point at moved issues
 
 Commit `cbe466b26` moved closed issues to `sdlc/issues/closed/`. Two site links still use the old path:
 
@@ -20,3 +20,5 @@ Commit `cbe466b26` moved closed issues to `sdlc/issues/closed/`. Two site links 
 - `site/src/articles/code-that-understands.md` line 65 links to architect review 12.
 
 Add `closed/` to both paths.
+
+The issue triage of 2026-09-30 moved `2026-09-26-the-beatles-bench-section-keeps-its-own-copy.md` to `closed/`. `site/src/data/beatles.mjs` line 20 names its old path in a comment. Add `closed/` there too.

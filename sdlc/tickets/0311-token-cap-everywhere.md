@@ -31,7 +31,7 @@ Every surface enforces the estimated input admission total from ticket 0299 with
 
 ## Deferred: spend in `status`
 
-The status issue (`sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, option 1) asks library and SQL engines to persist counts to the command's usage store. That widens what the library writes, so the issue asks for an ADR first. ADR 0111 slices 2 and 3 rework the cache and usage accounting. Writing library counts now would build on code that slice will replace. It stays open for a ticket after those slices.
+The status issue (`sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`, option 1) asks library and SQL engines to persist counts to the command's usage store. That widens what the library writes, so the issue asks for an ADR first. ADR 0111 slices 2 and 3 rework the cache and usage accounting. Writing library counts now would build on code that slice will replace. It stays open for a ticket after those slices.
 
 ## Build result
 

@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 264
-opens: sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
+opens: sdlc/issues/closed/2026-09-27-php-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-28-dart-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
 ---
 
 # 0264: Pack PHP and Dart source with one matching C archive

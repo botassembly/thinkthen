@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 269
-opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md
+opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/closed/2026-09-27-swift-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-26-zig-consumer-proof-needs-a-supported-package.md
 ---
 
 # 0269: Gate Swift and Zig source files in the Linux x86 release workflow
