@@ -20,6 +20,15 @@ const DUPLICATE_MESSAGE: &str =
 /// The message a number that is not finite is refused with.
 const NOT_FINITE: &str = "a JSON number is finite, so `NaN` and `Infinity` are refused";
 
+/// The message a value nested past 127 levels of arrays and objects is
+/// refused with.
+///
+/// `serde_json` refuses the 128th open bracket, which keeps a hostile or
+/// mistaken record from overflowing the stack. The limit is fixed; no option
+/// raises it. `Json::parse` names the refusal so it never reads as bad syntax.
+const TOO_DEEP: &str =
+    "the JSON nests more than 127 levels of arrays and objects, the most this tool reads";
+
 /// Why an input is not JSON this tool will read.
 ///
 /// Display and debug text reveal no input byte, because input may hold private evidence.
@@ -34,6 +43,9 @@ pub(crate) enum JsonError {
     /// A number arrived that no finite JSON number can hold.
     #[error("{NOT_FINITE}")]
     NotFinite,
+    /// The value nests past 127 levels of arrays and objects.
+    #[error("{TOO_DEEP}")]
+    TooDeep,
     /// The bytes are not JSON at all.
     #[error("the record is not valid JSON")]
     Syntax {
@@ -49,6 +61,7 @@ impl fmt::Debug for JsonError {
         match self {
             Self::DuplicateName { .. } => formatter.write_str("DuplicateName(<path withheld>)"),
             Self::NotFinite => formatter.write_str("NotFinite"),
+            Self::TooDeep => formatter.write_str("TooDeep"),
             Self::Syntax { line, column } => formatter
                 .debug_struct("Syntax")
                 .field("line", line)
@@ -84,7 +97,8 @@ impl Json {
     /// # Errors
     ///
     /// Returns [`JsonError`] when the text is not JSON, when one object holds
-    /// two members under one name, or when a number is not finite.
+    /// two members under one name, when a number is not finite, or when the
+    /// value nests past 127 levels.
     pub(crate) fn parse(text: &str) -> Result<Self, JsonError> {
         let error = match serde_json::from_str::<Self>(text) {
             Ok(value) => return Ok(value),
@@ -96,6 +110,9 @@ impl Json {
         }
         if message.starts_with(NOT_FINITE) || message.contains("number out of range") {
             return Err(JsonError::NotFinite);
+        }
+        if message.starts_with("recursion limit exceeded") {
+            return Err(JsonError::TooDeep);
         }
         Err(JsonError::Syntax {
             line: error.line(),
@@ -321,6 +338,35 @@ mod tests {
                 "{case}"
             );
         }
+    }
+
+    /// 127 levels parse and 128 are refused by name. A million levels are
+    /// refused the same way, which proves the parser stays bounded.
+    #[test]
+    fn a_value_nests_at_most_the_depth_limit() {
+        const MAX_DEPTH: usize = 127;
+        let nested = |depth: usize, open: &str, inner: &str, close: &str| {
+            [open.repeat(depth), inner.to_owned(), close.repeat(depth)].concat()
+        };
+        let mixed = |depth: usize| {
+            let opens: String = (0..depth).map(|at| if at % 2 == 0 { "[" } else { "{\"a\":" }).collect();
+            let closes: String = (0..depth).rev().map(|at| if at % 2 == 0 { "]" } else { "}" }).collect();
+            format!("{opens}1{closes}")
+        };
+        for depth in [1, MAX_DEPTH] {
+            assert!(Json::parse(&nested(depth, "[", "1", "]")).is_ok(), "{depth}");
+            assert!(Json::parse(&nested(depth, "{\"a\":", "1", "}")).is_ok(), "{depth}");
+            assert!(Json::parse(&mixed(depth)).is_ok(), "{depth}");
+        }
+        for depth in [MAX_DEPTH + 1, 1_000_000] {
+            assert_eq!(Json::parse(&nested(depth, "[", "1", "]")), Err(JsonError::TooDeep));
+            assert_eq!(Json::parse(&nested(depth, "{\"a\":", "1", "}")), Err(JsonError::TooDeep));
+            assert_eq!(Json::parse(&mixed(depth)), Err(JsonError::TooDeep));
+        }
+        assert_eq!(
+            JsonError::TooDeep.to_string(),
+            "the JSON nests more than 127 levels of arrays and objects, the most this tool reads"
+        );
     }
 
     #[test]

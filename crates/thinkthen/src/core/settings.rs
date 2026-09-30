@@ -318,7 +318,7 @@ pub(crate) fn engine_settings(text: &str) -> Result<(), String> {
     let parsed = Json::parse(text).map_err(|error| match error {
         JsonError::Syntax { .. } => "settings JSON is one object".to_owned(),
         JsonError::DuplicateName { .. } => "settings JSON repeats a member name".to_owned(),
-        JsonError::NotFinite => error.to_string(),
+        JsonError::NotFinite | JsonError::TooDeep => error.to_string(),
     })?;
     let Json::Object(fields) = parsed else {
         return Err("settings JSON is one object".into());
