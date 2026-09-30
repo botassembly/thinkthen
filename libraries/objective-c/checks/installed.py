@@ -23,7 +23,8 @@ for name in ("alpha", "bravo"):
         native.mkdir()
         shutil.copy2(NATIVE, native / "libthinkthen.so.0")
         (native / "libthinkthen.so").symlink_to("libthinkthen.so.0")
-        subprocess.run(["gcc", "-std=gnu11", "-x", "objective-c", f"-I{package / 'Sources'}",
+        shutil.copy2(ROOT.parents[1] / "libraries/c/include/thinkthen.h", native)
+        subprocess.run(["gcc", "-std=gnu11", "-x", "objective-c", f"-I{native}", f"-I{package / 'Sources'}",
                         str(package / "Sources/ThinkThen.m"), str(package / "Sources/TTJSON.c"),
                         str(package / "Examples/consumer.m"), f"-L{native}", "-lthinkthen",
                         "-lobjc", "-pthread", "-lm", "-o", str(work / "consumer")],

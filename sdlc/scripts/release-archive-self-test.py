@@ -102,6 +102,8 @@ def main():
                            "/bin/cp \"$@\" || exit\n"
                            "for arg do if [ \"$arg\" = \"$THINKTHEN_PLANT_SOURCE\" ]; then\n"
                            "  printf 'changed copy\\n' >>\"$last/${arg##*/}\"\n"
+                           "fi; if [ \"$arg\" = \"$THINKTHEN_PLANT_TWIN\" ]; then\n"
+                           "  : >\"$last/$(printf %s \"${arg##*/}\" | tr A-Z a-z)\"\n"
                            "fi; done\n")
         fake_cp.chmod(0o755)
         for family, relative in (("ada", "src/thinkthen.ads"),
@@ -114,6 +116,13 @@ def main():
                    f"{family} source differs from archived commit: {relative}")
             if list(output.glob(f"thinkthen-{family}-*")):
                 raise AssertionError(f"changed {family} copied member created wrapper output")
+        # The old Objective-C package held ThinkThen.h beside thinkthen.h.
+        output = base / "objective-c-twin"
+        expect(run("sh", str(source / "sdlc/scripts/release-pack"), host, str(output), *parts, cwd=source,
+                   env=env | {"THINKTHEN_PLANT_TWIN": "libraries/objective-c/Sources/ThinkThen.h"}),
+               "objective-c holds names that differ only in case: ./sources/thinkthen.h")
+        if list(output.glob("thinkthen-objective-c-*")):
+            raise AssertionError("case-only twin created wrapper output")
         fake_cp.unlink()
         missing_pair = base / "missing-pair"
         shutil.copytree(base / "paired", missing_pair)

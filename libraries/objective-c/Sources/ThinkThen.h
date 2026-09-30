@@ -1,7 +1,7 @@
 #include <objc/Object.h>
 #include <pthread.h>
 #include <stdint.h>
-#include "thinkthen.h"
+#include <thinkthen.h>
 #include "TTJSON.h"
 
 typedef enum { TTOutcomeNo=0, TTOutcomeYes=1, TTOutcomeNotSure=2 } TTOutcome;
