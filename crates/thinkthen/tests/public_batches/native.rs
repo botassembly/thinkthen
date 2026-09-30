@@ -1,6 +1,6 @@
 //! Recoverable native details beside the stopping public stream.
 
-use super::splits::digest;
+use super::identity::question_keys;
 use super::*;
 use thinkthen::SendBudget;
 
@@ -67,15 +67,12 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
     for (actual, expected) in requests.iter().zip(expected) {
         assert_eq!(actual.body, expected.as_bytes());
     }
-    let digests = expected.map(|body| digest(listener.url(), body.as_bytes()));
-    for (place, half) in [(0, 1), (2, 2), (3, 2)] {
+    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes());
+    for place in [0, 2, 3] {
         let thinkthen::RecoverableDetails::Answered(details) = &result.value()[place] else {
             panic!("answered member")
         };
-        assert_eq!(
-            details.requests(),
-            &[digests[0].clone(), digests[half].clone()]
-        );
+        assert_eq!(details.requests(), std::slice::from_ref(&keys[place]));
     }
 
     let listener = Listener::serving(vec![
@@ -98,12 +95,14 @@ fn native_recovery_continues_after_one_failed_left_member_but_stopping_rows_do_n
         ErrorKind::Backend
     );
     assert!(rows.next().is_none());
+    // A halved request sends its first half, then its second, in one slot,
+    // by ADR 0111 section 6. The failed row stops only later requests.
     assert_eq!(
         rows.facts()
             .map(|facts| (facts.records(), facts.requests_sent())),
-        Some((1, 2))
+        Some((1, 3))
     );
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.requests().len(), 3);
 
     let listener = Listener::serving(vec![
         Canned::status(413, "too large"),
@@ -224,7 +223,7 @@ fn native_denied_left_fills_unsent_half_and_keeps_stopping_stream_terminal() {
 }
 
 #[test]
-fn native_denied_right_keeps_answered_left_with_both_request_receipts() {
+fn native_denied_right_keeps_answered_left_with_its_question_keys() {
     let _serial = serial();
     let texts = ["alpha", "beta", "gamma", "delta"].map(str::to_owned);
     let question = question();
@@ -250,12 +249,12 @@ fn native_denied_right_keeps_answered_left_with_both_request_receipts() {
     assert_eq!(requests.len(), 2);
     assert_eq!(requests[0].body, SPLIT_ORIGINAL.as_bytes());
     assert_eq!(requests[1].body, SPLIT_LEFT.as_bytes());
-    let digests = [SPLIT_ORIGINAL, SPLIT_LEFT].map(|body| digest(listener.url(), body.as_bytes()));
-    for row in &result.value()[..2] {
+    let keys = question_keys(listener.url(), SPLIT_ORIGINAL.as_bytes());
+    for (row, key) in result.value()[..2].iter().zip(&keys) {
         let thinkthen::RecoverableDetails::Answered(details) = row else {
             panic!("answered left member")
         };
-        assert_eq!(details.requests(), &digests);
+        assert_eq!(details.requests(), std::slice::from_ref(key));
     }
     assert!(result.value()[2..].iter().all(|row| matches!(
         row,
@@ -305,10 +304,12 @@ fn native_denied_retry_is_usage_without_a_second_send() {
 }
 
 #[test]
-fn native_recovery_keeps_closed_prefix_before_one_invalid_member() {
+fn native_recovery_keeps_one_invalid_member_out_of_one_request() {
     let _serial = serial();
-    let listener =
-        Listener::serving(vec![Canned::ok(DECIDED), Canned::ok(DECIDED)]).expect("listener");
+    let listener = Listener::serving(vec![Canned::ok(
+        r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#,
+    )])
+    .expect("listener");
     let engine = engine(listener.base());
     let result = engine
         .details_many_recoverable_with(
@@ -335,7 +336,7 @@ fn native_recovery_keeps_closed_prefix_before_one_invalid_member() {
     ));
     assert_eq!(
         (result.facts().records(), result.facts().requests_sent()),
-        (3, 2)
+        (3, 1)
     );
-    assert_eq!(listener.requests().len(), 2);
+    assert_eq!(listener.requests().len(), 1);
 }

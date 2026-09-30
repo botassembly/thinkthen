@@ -15,7 +15,7 @@ impl thinkthen::Evidence for Original<'_> {
 }
 
 #[test]
-fn dynamic_details_keep_original_input_and_one_batch_receipt() {
+fn dynamic_details_keep_original_input_and_one_request() {
     let _serial = serial();
     let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","choice":"first","probabilities":{"first":0.9,"second":0.1}},"q2":{"type":"choice","choice":"second","probabilities":{"first":0.2,"second":0.8}}},"usage":{"input_tokens":5,"output_tokens":3}}"#;
     let listener = Listener::answering(move |_| Canned::ok(reply)).expect("listener");
@@ -66,16 +66,14 @@ fn dynamic_details_keep_original_input_and_one_batch_receipt() {
             json["input"]["body"],
             if position == 0 { "alpha" } else { "beta" }
         );
-        assert_eq!(json["meta"]["batch"]["records"], 2);
-        assert_eq!(json["meta"]["batch"]["position"], position + 1);
+        assert!(json["meta"].get("batch").is_none(), "ADR 0111 drops meta.batch");
         let scalar: serde_json::Value =
             serde_json::from_str(&row.value().to_scalar_json()).expect("scalar detail JSON");
         assert!(
             scalar.get("input").is_none(),
             "scalar detail has no record input"
         );
-        assert_eq!(scalar["meta"]["batch"]["records"], 2);
-        assert_eq!(scalar["meta"]["batch"]["position"], position + 1);
+        assert!(scalar["meta"].get("batch").is_none());
         assert_eq!(
             json["meta"]["requests_sent"],
             if position == 0 { 1 } else { 0 }
@@ -96,7 +94,7 @@ fn dynamic_details_keep_original_input_and_one_batch_receipt() {
 }
 
 #[test]
-fn split_record_details_name_the_refused_parent_and_the_answering_half() {
+fn split_record_details_keep_one_question_key_each() {
     let _serial = serial();
     let listener = Listener::serving(vec![
         Canned::status(413, "too large"),
@@ -122,14 +120,12 @@ fn split_record_details_name_the_refused_parent_and_the_answering_half() {
     for (position, row) in rows.iter().enumerate() {
         let json: serde_json::Value =
             serde_json::from_str(&row.value().to_json()).expect("detail JSON");
-        assert_eq!(json["meta"]["batch"]["split"], true);
-        assert_eq!(json["meta"]["batch"]["closed"], "size");
-        assert_eq!(json["meta"]["batch"]["records"], 1);
+        assert!(json["meta"].get("batch").is_none());
         assert_eq!(
             json["meta"]["requests_sent"],
             if position == 0 { 2 } else { 1 }
         );
-        assert_eq!(json["meta"]["requests"].as_array().map(Vec::len), Some(2));
-        assert_eq!(row.value().requests().len(), 2);
+        assert_eq!(json["meta"]["requests"].as_array().map(Vec::len), Some(1));
+        assert_eq!(row.value().requests().len(), 1);
     }
 }

@@ -3,15 +3,43 @@
 use super::*;
 use sha2::{Digest as _, Sha256};
 
-pub(super) fn request_digest(url: &str, body: &[u8]) -> String {
-    let mut hash = Sha256::new();
-    hash.update(b"systemone\n");
-    hash.update(url.as_bytes());
-    hash.update(b"\n");
-    hash.update(body);
-    hash.finalize()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
+/// Every question key of one request body, in wire order, by ADR 0111
+/// section 2: the SHA-256 of the adapter, the URL, the model, the state and
+/// one question as the body carries them, joined by line feeds.
+pub(super) fn question_keys(url: &str, body: &[u8]) -> Vec<String> {
+    use serde_json::value::RawValue;
+    #[derive(serde::Deserialize)]
+    struct Parts<'a> {
+        #[serde(borrow)]
+        state: &'a RawValue,
+        #[serde(borrow)]
+        model: &'a RawValue,
+        #[serde(borrow)]
+        questions: std::collections::BTreeMap<String, &'a RawValue>,
+    }
+    let parts: Parts<'_> = serde_json::from_slice(body).expect("a request body");
+    let mut questions: Vec<_> = parts
+        .questions
+        .into_iter()
+        .map(|(name, question)| (name[1..].parse::<usize>().expect("a qN name"), question))
+        .collect();
+    questions.sort_by_key(|(place, _)| *place);
+    questions
+        .into_iter()
+        .map(|(_, question)| {
+            let joined = [
+                "systemone",
+                url,
+                parts.model.get(),
+                parts.state.get(),
+                question.get(),
+            ]
+            .join("\n");
+            Sha256::digest(joined.as_bytes())
+                .iter()
+                .map(|byte| format!("{byte:02x}"))
+                .collect()
+        })
         .collect()
 }
 
@@ -53,13 +81,13 @@ fn assert_retry_receipts(listener: &Listener, details: &Mutex<Vec<RetryReceipt>>
         [
             (
                 0,
-                vec![request_digest(listener.url(), &alpha.body)],
+                question_keys(listener.url(), &alpha.body),
                 Some((3, 1)),
                 listener.url().to_owned()
             ),
             (
                 1,
-                vec![request_digest(listener.url(), &beta.body)],
+                question_keys(listener.url(), &beta.body),
                 Some((5, 2)),
                 listener.url().to_owned()
             ),
@@ -68,7 +96,7 @@ fn assert_retry_receipts(listener: &Listener, details: &Mutex<Vec<RetryReceipt>>
 }
 
 #[test]
-fn duplicate_records_use_the_shared_literal_request_and_digest() {
+fn duplicate_records_share_one_question_key_in_one_literal_request() {
     let _serial = serial();
     let listener = Listener::answering(|_| {
         Canned::ok(r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.9}}}"#)
@@ -123,13 +151,15 @@ fn duplicate_records_use_the_shared_literal_request_and_digest() {
     let expected =
         include_str!("../../../../specification/fixtures/systemone/batch-duplicate.request.json");
     assert_eq!(requests[0].body, expected.trim_end().as_bytes());
-    let digest = request_digest(listener.url(), &requests[0].body);
+    let [come_together, because] =
+        <[String; 2]>::try_from(question_keys(listener.url(), &requests[0].body))
+            .expect("two distinct questions");
     assert_eq!(
         *seen.lock().expect("observations"),
         [
-            (0, vec![digest.clone()], 1),
-            (1, vec![digest.clone()], 0),
-            (2, vec![digest], 0)
+            (0, vec![come_together.clone()], 1),
+            (1, vec![because], 0),
+            (2, vec![come_together], 0)
         ]
     );
 }
@@ -258,11 +288,11 @@ fn batch_one_replays_a_recorded_entry_and_changed_context_misses_without_sending
         )
         .next()
         .expect("strict replay miss")
-        .expect_err("changed context missed the recorded request");
+        .expect_err("changed context missed the recorded question");
     assert_eq!(missed.kind(), ErrorKind::Local);
     assert_eq!(
         missed.to_string(),
-        "the replay folder holds no reply for this request"
+        "the replay folder holds no answer for this question"
     );
     assert_eq!(listener.count(), 1, "strict replay opened no new send");
     std::fs::remove_dir_all(folder).expect("remove recording");

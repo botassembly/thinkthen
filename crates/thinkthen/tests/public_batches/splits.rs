@@ -388,7 +388,7 @@ fn a_later_profile_group_refuses_before_any_request() {
 }
 
 #[test]
-fn a_refused_parent_and_both_halves_keep_exact_request_shares() {
+fn a_refused_request_and_both_halves_keep_exact_send_shares() {
     let _serial = serial();
     let listener = Listener::serving(vec![
         Canned::status(413, "too large"),
@@ -431,17 +431,11 @@ fn a_refused_parent_and_both_halves_keep_exact_request_shares() {
         })
         .collect::<Vec<_>>();
     assert_eq!(sizes, [2, 1, 1]);
-    let digests = requests
-        .iter()
-        .map(|request| digest(listener.url(), &request.body))
-        .collect::<Vec<_>>();
+    let keys = super::identity::question_keys(listener.url(), &requests[0].body);
     let seen = seen.lock().expect("observations");
     assert_eq!(
         seen.as_slice(),
-        [
-            (0, vec![digests[0].clone(), digests[1].clone()], 2),
-            (1, vec![digests[0].clone(), digests[2].clone()], 1),
-        ]
+        [(0, vec![keys[0].clone()], 2), (1, vec![keys[1].clone()], 1)]
     );
 }
 
