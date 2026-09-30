@@ -1,8 +1,12 @@
 # The Zig check skips its facts lifetime and allocation modes
 
-Status: open. Found while building ticket 0314 slice 4d on branch `ticket/0314-s4-remaining-ports`. Owner: none yet.
+Status: Closed by the quick fix landed as `Land quick fix: the Zig check runs its facts modes and the Flutter host test drops its Dart copy`. Found while building ticket 0314 slice 4d on branch `ticket/0314-s4-remaining-ports`. Resolution: `libraries/zig/check.sh` now runs `run_matrix.py facts` and `run_matrix.py facts-allocation` after the full matrix, so every Zig check runs both modes. The Zig check passed on the branch with both modes: facts exact=4 and post-native facts allocation faults exact=4. The Zig package holds no `test` blocks, so these two matrix modes are the facts lifetime proof.
 
 Kind: debt
+
+Severity: low
+
+Paid: 2026-09-30
 
 Pay when: the next change to how the Zig binding owns facts or results.
 

@@ -7,12 +7,12 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[3] / "conformanc
 from children import child_env
 
 root = pathlib.Path(__file__).resolve().parent
+# Dart consumer bravo's plant check covers the strict behaviors, including swapped bulk answers.
 cases = {
-    'wrong-probability': ("Bad state: scalar yes Outcome.no/0.1", 1, {'hold-bulk-first': 0}),
-    'swapped-bulk': ('Bad state: bulk ordered answers .9 then .1', 1, {'hold-bulk-first': 0}),
-    'extra-bulk': ('FLUTTER_STRICT_PASS', 0, {'hold-bulk-first': 2}),
+    'wrong-probability': ('Expected: Outcome:<Outcome.yes>', 1, 1),
+    'extra-post': ('FLUTTER_FACADE_PASS', 0, 2),
 }
-for plant, (marker, expected_exit, expected_bulk) in cases.items():
+for plant, (marker, expected_exit, expected_arrivals) in cases.items():
     before = set((root / 'logs').glob(f'gate-*-{plant}'))
     result = subprocess.run([sys.executable, str(root / 'run.py'), plant], cwd=root,
                             env=child_env(keep=('TT_FLUTTER', 'TT_NATIVE_LIBRARY', 'PUB_CACHE')),
@@ -25,6 +25,6 @@ for plant, (marker, expected_exit, expected_bulk) in cases.items():
     text = (directory / 'consumer.log').read_text()
     if result.returncode != 1 or outcome['status'] != 'FAIL' or outcome['receipt']['exit'] != expected_exit or marker not in text:
         raise SystemExit(f'PLANTED_NEGATIVE_WRONG_REASON {plant}: {result.stdout} {text[-500:]}')
-    if plant == 'extra-bulk' and outcome['bulk'] != expected_bulk:
-        raise SystemExit(f'PLANTED_NEGATIVE_EXTRA_POST_MISSING {outcome["bulk"]}')
+    if outcome['counts'] != {'flutter-facade': expected_arrivals}:
+        raise SystemExit(f'PLANTED_NEGATIVE_WRONG_ARRIVALS {plant}: {outcome["counts"]}')
     print(f'PLANTED_NEGATIVE_PASS {plant} {directory.name} flutter_exit={expected_exit} gate_exit={result.returncode}')
