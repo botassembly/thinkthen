@@ -18,7 +18,7 @@ The `crate` job runs `sh sdlc/scripts/package`. Its library-only step runs `carg
 - `public_env::usage_totals::a_cached_rerun_sends_nothing_and_adds_a_cache_answer`
 - `public_env::usage_totals::the_command_and_a_seeded_engine_add_to_one_total`
 
-The script's comment says every test that starts the command carries `#![cfg(feature = "cli")]`. These tests never carried it. Commits `0e1309f11` and `657201a06` added their command starts on 2026-09-28, before ticket 0338 merged the pages into `crates/thinkthen/tests/library/main.rs`. Local runs pass because an earlier build left `target/debug/thinkthen` in place. The runner had a fresh target folder.
+The script's comment says every test that starts the command carries `#![cfg(feature = "cli")]`. These five tests never carried it. Local runs pass because an earlier build left `target/debug/thinkthen` in place. The runner had a fresh target folder.
 
 ## A fix
 

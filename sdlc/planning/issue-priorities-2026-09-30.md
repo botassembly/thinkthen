@@ -28,7 +28,7 @@ Work outside the lanes:
 
 ## Every open issue
 
-29 open. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
+29 open. The second release rehearsal's Quick Fix refreshed this table against main `a7ee565ab`; the status line, the running lanes, the batches, and the remaining tickets above and below it are older. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
