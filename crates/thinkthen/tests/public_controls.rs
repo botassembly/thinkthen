@@ -33,6 +33,10 @@ mod fired;
 #[path = "public_controls/stopped.rs"]
 mod stopped;
 
+/// Guards the process state the engine still holds: `PROCESS_LIMITS` in
+/// `engine/limits.rs`, one throttle, 429 gate, pacer and request total per
+/// process (ticket 0077; 0304 slice 3d). It matters under `cargo test` and in
+/// `package`, where the rows share a process; nextest runs each row in its own.
 static SERIAL: Mutex<()> = Mutex::new(());
 
 fn serial() -> MutexGuard<'static, ()> {

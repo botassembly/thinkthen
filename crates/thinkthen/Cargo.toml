@@ -59,28 +59,8 @@ nix = { version = "0.29", default-features = false, features = ["pthread", "sign
 nix = { version = "0.29", default-features = false, features = ["poll", "signal", "user"] }
 
 # The Polars door's tests run only with the feature, in the Rust Polars lane
-# (`libraries/polars/check.sh`). Each file is its own process.
+# (`libraries/polars/check.sh`), as one binary (ticket 0338).
 [[test]]
-name = "polars_door"
-path = "tests/polars/door.rs"
-required-features = ["polars"]
-
-[[test]]
-name = "polars_cases"
-path = "tests/polars/cases.rs"
-required-features = ["polars"]
-
-[[test]]
-name = "polars_deadline"
-path = "tests/polars/deadline.rs"
-required-features = ["polars"]
-
-[[test]]
-name = "polars_throttle"
-path = "tests/polars/throttle_equality.rs"
-required-features = ["polars"]
-
-[[test]]
-name = "polars_lazy"
-path = "tests/polars/lazy.rs"
+name = "polars"
+path = "tests/polars/main.rs"
 required-features = ["polars"]

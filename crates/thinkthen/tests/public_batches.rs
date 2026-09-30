@@ -61,6 +61,11 @@ const THROTTLE: u8 = 2;
 
 thinkthen::choices! { enum BulkLabel { First => "first", Second => "second" } }
 
+/// Guards the process state the engine still holds: `PROCESS_LIMITS` in
+/// `engine/limits.rs`, one throttle, 429 gate, pacer and request total per
+/// process (ticket 0077; 0304 slice 3d). Thread and memory counts read the
+/// whole process too. It matters under `cargo test` and in `package`, where
+/// the rows share a process; nextest runs each row in its own.
 static SERIAL: Mutex<()> = Mutex::new(());
 
 fn serial() -> MutexGuard<'static, ()> {

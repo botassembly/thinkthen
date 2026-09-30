@@ -17,6 +17,15 @@ rust-version = "1.95.0"
 overflow-checks = true
 panic = "unwind"
 
+# Ticket 0338: an unoptimized serde_json and sha2 spent 29 of 30 s planning a
+# 255-line relation in a test build; optimized, the plan takes 1 s. Only these
+# two dependencies change, so a change to thinkthen rebuilds no faster or slower.
+[profile.dev.package.serde_json]
+opt-level = 2
+
+[profile.dev.package.sha2]
+opt-level = 2
+
 [workspace.lints.rust]
 missing_debug_implementations = "forbid"
 missing_docs = "warn"

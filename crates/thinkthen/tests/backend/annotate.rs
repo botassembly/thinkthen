@@ -17,8 +17,13 @@ fn set(name: &str, text: &str) -> PathBuf {
     let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("annotate");
     let _created = fs::create_dir_all(&folder);
     let path = folder.join(format!("{name}.json"));
-    // Each nextest process rewrites shared names; rename so no reader sees a half-written file.
-    let staged = folder.join(format!("{name}.json.{}", std::process::id()));
+    // Each nextest process and each cargo test thread rewrites shared names;
+    // rename so no reader sees a half-written file.
+    let staged = folder.join(format!(
+        "{name}.json.{}-{:?}",
+        std::process::id(),
+        std::thread::current().id()
+    ));
     let _written = fs::write(&staged, text);
     let _renamed = fs::rename(&staged, &path);
     path
