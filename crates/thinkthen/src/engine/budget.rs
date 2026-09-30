@@ -45,6 +45,11 @@ impl SendBudget {
         count
     }
 
+    /// The sends this process's count holds now, reservations included.
+    pub(crate) fn sent(&self) -> u64 {
+        self.count(std::process::id()).sent.load(Ordering::Acquire)
+    }
+
     /// Reserve the version-one estimate of one final encoded request body.
     pub(crate) fn reserve_estimated(
         &self,

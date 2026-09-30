@@ -60,10 +60,12 @@ PASSED=0 FAILED=0
 # Each step runs in a subshell under errexit, so its first failing line fails
 # it. STEPS, when set, names the steps to run, for the planted-bug runs.
 check() {
+	# Load and wall-clock limits run only under the stress profile.
+	case $1 in twenty_thousand_keyed_rows|single_cancel_within_200_ms) stress_only=yes ;; *) stress_only=no ;; esac
 	if [ "$profile" = stress ]; then
-		[ "$1" = twenty_thousand_keyed_rows ] || return 0
+		[ "$stress_only" = yes ] || return 0
 	else
-		[ "$1" != twenty_thousand_keyed_rows ] || return 0
+		[ "$stress_only" = no ] || return 0
 	fi
 	case " ${STEPS:-$1} " in *" $1 "*) ;; *) return 0 ;; esac
 	set +e
@@ -377,6 +379,19 @@ annotate_settings_do_not_accept_question_fields() {
 	same "$(bcount)" 1
 }
 check annotate_settings_do_not_accept_question_fields
+# ADR 0111 slice 3: a record missing its `on` part fails alone, and its
+# neighbours' answers stay in the question store for a rerun.
+an_annotate_row_missing_its_part_fails_alone() {
+	fresh generic
+	parted='{"version":1,"questions":{"refund":{"decide":"Is it a refund?","on":"/body"}}}'
+	rows="(1, '{\"body\":\"one\"}'), (2, '{\"body\":\"two\"}')"
+	out=$(q -c "SELECT thinkthen_annotate('$parted', x)::text FROM (VALUES $rows, (3, '{\"note\":\"three\"}')) t(i, x) ORDER BY i")
+	has "$out" 'thinkthen usage: the record holds nothing at `/body` (retryable: no)'
+	same "$(bcount)" 2
+	same "$(q -c "SELECT thinkthen_annotate('$parted', x)::text FROM (VALUES $rows) t(i, x) ORDER BY i")" "$(printf '{"refund": true}\n{"refund": true}')"
+	same "$(bcount)" 2
+}
+check an_annotate_row_missing_its_part_fails_alone
 recognize_and_relate_as_drawn() {
 	fresh generic
 	out=$(q -c "SELECT t.id, n.text, n.kind FROM inbox t, LATERAL thinkthen_recognize(t.body, ARRAY['person','organization']) n ORDER BY t.id, n.start" \
@@ -530,6 +545,9 @@ held() {
 	q -c '\set VERBOSITY verbose' -c "$1" >"$RUN/held.out" &
 	HELD=$!
 }
+# The routine check proves order: the cancel ends the statement while the
+# held arm still keeps its only reply, since the release comes after the
+# wait. The 200 ms limit runs only under the stress profile.
 single_cancel() {
 	fresh arm/held
 	held "SELECT thinkthen_decide('$Q', 'held')"
@@ -537,13 +555,19 @@ single_cancel() {
 	start=$(now_ms)
 	q -c "SELECT pg_cancel_backend($(victim))" >/dev/null
 	wait "$HELD" || true
-	within $(($(now_ms) - start)) 200
+	elapsed=$(($(now_ms) - start))
 	has "$(cat "$RUN/held.out")" "canceling statement due to user request"
 	brelease
 	sleep 0.2
 	same "$(bcount)" 1
+	echo "$elapsed" >"$RUN/single-cancel.ms"
 }
 check single_cancel
+single_cancel_within_200_ms() {
+	single_cancel
+	within "$(cat "$RUN/single-cancel.ms")" 200
+}
+check single_cancel_within_200_ms
 find_cancel() {
 	fresh arm/held
 	held "SELECT thinkthen_find('Which?', ARRAY['one','two'])"

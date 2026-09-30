@@ -56,10 +56,26 @@ impl Cancel<'_> {
         }
     }
 
+    pub(crate) fn with_call_total(&self, call_total: Option<u64>) -> Self {
+        Self {
+            call_total,
+            ..self.clone()
+        }
+    }
+
     pub(crate) fn with_process_budget(&self, process_budget: Option<ProcessBudget>) -> Self {
         Self {
             process_budget,
             ..self.clone()
+        }
+    }
+
+    /// The tighter of the engine's and the call's limits on the process
+    /// request total.
+    fn process_limit(&self, selected: &ProcessBudget) -> Option<u64> {
+        match (selected.requests, self.call_total) {
+            (Some(engine), Some(call)) => Some(engine.min(call)),
+            (engine, call) => engine.or(call),
         }
     }
 
@@ -69,7 +85,7 @@ impl Cancel<'_> {
             || self
                 .process_budget
                 .as_ref()
-                .is_some_and(|selected| selected.requests == Some(0))
+                .is_some_and(|selected| self.process_limit(selected) == Some(0))
     }
 
     pub(crate) fn reserve_send(
@@ -101,7 +117,7 @@ impl Cancel<'_> {
             &self
                 .process_budget
                 .as_ref()
-                .map(|selected| (selected.budget.clone(), selected.requests)),
+                .map(|selected| (selected.budget.clone(), self.process_limit(selected))),
         )?;
         let explicit = reserve(&self.send_budget)?;
         let estimated = self

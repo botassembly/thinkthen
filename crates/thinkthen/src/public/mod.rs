@@ -39,6 +39,7 @@ pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use native_batch::RecoverableDetails;
 pub use options::{
     BatchSetting, CallOptions, CancelToken, EstimatedInputDenial, SendBudget, SendBudgetDenial,
+    process_requests_sent,
 };
 pub use panic::{contained, uncontained};
 pub use plan::PlanEstimate;
