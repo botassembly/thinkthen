@@ -1,6 +1,6 @@
 //! Exact default rows beside the requests each record made.
 
-use super::{ONE_AT_A_TIME, RECORDS, decide, printed, serving, states};
+use super::{ONE_AT_A_TIME, RECORDS, decide, printed, quoted, serving};
 
 #[test]
 fn each_framing_prints_each_record_beside_its_value_in_input_order() {
@@ -25,7 +25,7 @@ fn each_framing_prints_each_record_beside_its_value_in_input_order() {
         )
     );
     assert_eq!(
-        states(&listener),
+        quoted(&listener),
         [
             r#""The payout failed again.""#,
             r#""Thanks for the quick fix.""#,
@@ -51,5 +51,5 @@ fn each_framing_prints_each_record_beside_its_value_in_input_order() {
             "\n",
         )
     );
-    assert_eq!(states(&listener), [r#""first line""#, r#""second line""#]);
+    assert_eq!(quoted(&listener), [r#""first line""#, r#""second line""#]);
 }
