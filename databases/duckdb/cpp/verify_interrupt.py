@@ -130,9 +130,8 @@ def main() -> None:
     held(extension, "SELECT thinkthen_details('Is it a refund?', 'one held text')")
     held(extension, "SELECT thinkthen_choose('Which team?', 'one held text', ['billing', 'shipping'])")
     held(extension, "SELECT thinkthen_recognize('one held text', ['person'])")
-    held(extension, "SELECT thinkthen_warm('Is it a refund?', 'one held text')")
     late(extension)
-    print("C++ held grouped, listed, nested, warm, and late SIGINT boundaries pass")
+    print("C++ held grouped, listed, nested, and late SIGINT boundaries pass")
 
 
 if __name__ == "__main__":

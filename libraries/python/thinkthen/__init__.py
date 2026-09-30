@@ -164,7 +164,14 @@ def _due_keyword(deadline_ms, legacy):
         raise UsageError("use deadline_ms= instead of deadline=")
     if legacy:
         raise UsageError(f"the settings key `{sorted(legacy)[0]}` does not exist")
-    return None if deadline_ms is _MISSING else deadline_ms
+    return _deadline(deadline_ms)
+
+
+def _deadline(deadline_ms):
+    """ADR 0041: omission and -1 mean no deadline; an explicit None is refused before a send."""
+    if deadline_ms is None:
+        raise UsageError("`deadline_ms` is a whole number of milliseconds")
+    return -1 if deadline_ms is _MISSING else deadline_ms
 
 
 def _rebuilt(value, answer):
@@ -417,8 +424,7 @@ class Engine:
         judge = _make_judge(verb, question, self, fields)
         if value is _MISSING:
             return judge
-        return judge(value, deadline_ms=None if deadline_ms is _MISSING else deadline_ms,
-                     token=token)
+        return judge(value, deadline_ms=_deadline(deadline_ms), token=token)
 
     def plan(self, judge, records):
         """Preview a judge on a complete input without a key or send."""
@@ -630,8 +636,7 @@ def _module_judged(verb, question, value, token, keywords):
     judge = _make_judge(verb, question, None, fields)
     if value is _MISSING:
         return judge
-    return judge(value, deadline_ms=None if deadline_ms is _MISSING else deadline_ms,
-                 token=token)
+    return judge(value, deadline_ms=_deadline(deadline_ms), token=token)
 
 
 def plan(judge, records):

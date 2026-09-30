@@ -51,11 +51,14 @@ def complete_question_files_keep_identity():
 
 
 def complete_question_refusals_and_nulls():
-    """File content is Local and secret-free; typed errors are Usage; no send."""
+    """File content is Local and never repeats a value; typed errors are Usage; no send."""
     with Backend() as backend, tempfile.TemporaryDirectory() as folder:
         folder = Path(folder)
         malformed = folder / "malformed.json"
-        malformed.write_text('{"choose":"x","options":["a","b"],"SYNTHETIC_PRIVATE_MARKER_0247":1}')
+        # The shared question-file contract names a refused key; a refused value stays unsaid.
+        malformed.write_text('{"choose":"x","options":["a","b"],"threshold":"SYNTHETIC_PRIVATE_MARKER_0247"}')
+        unknown = folder / "unknown.json"
+        unknown.write_text('{"choose":"x","options":["a","b"],"line\\nbreak\\u0007":1}')
         blank = folder / "blank.json"
         blank.write_bytes(b"")
         invalid = folder / "invalid.json"
@@ -66,6 +69,7 @@ def complete_question_refusals_and_nulls():
         good.write_text('{"choose":"x","options":["a","b"]}')
         cases = [
             (f"SELECT thinkthen_choose('@{malformed}', 'x')", "thinkthen local:"),
+            (f"SELECT thinkthen_choose('@{unknown}', 'x')", "thinkthen local:"),
             (f"SELECT thinkthen_choose('@{blank}', 'x')", "thinkthen local:"),
             (f"SELECT thinkthen_choose('@{invalid}', 'x')", "thinkthen local:"),
             (f"SELECT thinkthen_choose('@{large}', 'x')", "thinkthen local:"),
@@ -81,6 +85,8 @@ def complete_question_refusals_and_nulls():
         for item, (_, kind) in zip(got, cases):
             assert said(item).startswith(kind), said(item)
             assert "SYNTHETIC_PRIVATE_MARKER_0247" not in said(item), said(item)
+        expect(said(got[1]), "thinkthen local: a question file takes no key `line\\nbreak\\u0007` (retryable: no)",
+               "an unknown key named with JSON escapes on one line")
         expect([rows(item)[0][0] for item in got[len(cases):len(cases) + 2]], [None, None], "typed NULL results")
         assert said(got[-1]).startswith("thinkthen local:"), said(got[-1])
         expect(backend.count(), 0, "invalid chunk, nulls and denied caller file send nothing")

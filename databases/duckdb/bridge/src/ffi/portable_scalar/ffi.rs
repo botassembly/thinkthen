@@ -8,12 +8,24 @@ use thinkthen::Settings;
 
 use super::{BridgeSettings, BridgeStop, BridgeText, Reply, answered, reply_boundary, text};
 
-fn prepare(argument: &str, from_file: bool, settings: &str) -> Result<(String, Settings), String> {
-    let (written, _, call) = super::portable_many::parse(argument, from_file, settings, 0)?;
+/// Probability reads a decision; details reads any asking question (kind 2).
+fn prepare(
+    argument: &str,
+    from_file: bool,
+    settings: &str,
+    kind: i32,
+) -> Result<(String, Settings), String> {
+    let asked = if kind == 2 {
+        super::portable_aux::asking_kind(argument, from_file, "details")
+            .map_err(|error| error.text)?
+    } else {
+        0
+    };
+    let (written, _, call) = super::portable_many::parse(argument, from_file, settings, asked)?;
     Ok((written, call))
 }
 
-/// Check one probability/details question and settings before any chunk member sends.
+/// Check one probability (kind 1) or details (kind 2) question and settings before any chunk member sends.
 ///
 /// # Safety
 /// All input byte ranges remain live during this call.
@@ -24,11 +36,12 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_validate_portable_scalar(
     from_file: i32,
     settings: *const u8,
     settings_len: usize,
+    kind: i32,
 ) -> Reply {
     reply_boundary(|| {
         let question = text(question, question_len)?;
         let settings = text(settings, settings_len)?;
-        prepare(question, from_file != 0, settings).map(|_| Vec::new())
+        prepare(question, from_file != 0, settings, kind).map(|_| Vec::new())
     })
 }
 
@@ -57,7 +70,7 @@ pub(crate) unsafe extern "C" fn thinkthen_cpp_portable_scalar_group(
             }
             let question = text(question, question_len)?;
             let settings = text(settings, settings_len)?;
-            let (written, call) = prepare(question, from_file != 0, settings)?;
+            let (written, call) = prepare(question, from_file != 0, settings, kind)?;
             let batch = super::portable::batch_word(&call);
             let mut session = session;
             if let Some(word) = &batch {
