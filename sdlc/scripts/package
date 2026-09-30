@@ -37,10 +37,12 @@ cargo test --locked --offline --package thinkthen --doc --no-default-features --
 
 # Ticket 0104: `cargo package` rewrites a stale crate without truncating it, and
 # `tar` then refuses the trailing bytes. Plant a longer one, then remove it.
-mkdir -p target/package
+# Cargo packs into the target folder the caller names.
+packaged=${CARGO_TARGET_DIR:-target}/package
+mkdir -p "$packaged"
 head -c 4194304 /dev/urandom \
-    >"target/package/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
-rm -f -- target/package/thinkthen-*.crate
+    >"$packaged/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
+rm -f -- "$packaged"/thinkthen-*.crate
 # The conformance backend is a test-only member and never ships (ticket 0092).
 cargo package --locked --offline --allow-dirty --package thinkthen
 # The package holds the crate's source, tests, transforms, license, and README,
@@ -53,7 +55,7 @@ test -z "$unexpected" \
 # Ticket 0083: the source package carries the ten transforms byte for byte, and
 # a binary built from the unpacked package alone prints them from an empty
 # folder after the unpacked source is gone.
-crate="target/package/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
+crate="$packaged/thinkthen-$(sed -n 's/^version = "\([^"]*\)"$/\1/p' crates/thinkthen/Cargo.toml | head -1).crate"
 python3 sdlc/scripts/catalog.py --crate "$crate"
 scratch_dir isolated && scratch_dir source && scratch_dir built
 mkdir "$isolated/empty" "$isolated/out"

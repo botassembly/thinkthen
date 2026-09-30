@@ -243,6 +243,8 @@ host-setup)
 		case $uv_read in 'uv 0.9.17' | 'uv 0.9.17 '*) ;; *) fail "uv version differs from pin: $uv_bin printed '$uv_read'" ;; esac
 		PATH=${uv_bin%/*}:$PATH
 		export PATH
+		# Later steps, such as the installed Python check, run uv too.
+		[ -z "${GITHUB_PATH:-}" ] || printf '%s\n' "${uv_bin%/*}" >>"$GITHUB_PATH"
 	fi
 	if [ "$(uname -s)" = Darwin ]; then
 		. databases/postgresql/runtime-darwin.env

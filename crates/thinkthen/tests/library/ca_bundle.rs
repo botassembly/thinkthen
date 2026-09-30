@@ -9,13 +9,17 @@
 use std::fs;
 use std::io::{Read, Write};
 use std::net::TcpListener;
-use std::path::{Path, PathBuf};
-use std::process::{Child, Command, Output, Stdio};
+#[cfg(feature = "cli")]
+use std::path::Path;
+use std::path::PathBuf;
+use std::process::{Child, Command, Stdio};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::thread;
 use std::time::Duration;
 
-use thinkthen::{Engine, EngineBuilder, ErrorKind, Question};
+#[cfg(feature = "cli")]
+use thinkthen::{Engine, ErrorKind};
+use thinkthen::{EngineBuilder, Question};
 
 use crate::child;
 
@@ -193,7 +197,7 @@ impl Drop for Server {
 }
 
 #[cfg(feature = "cli")]
-fn command(url: &str, ca: Option<&Path>, home: &Path, key: Option<&str>) -> Output {
+fn command(url: &str, ca: Option<&Path>, home: &Path, key: Option<&str>) -> std::process::Output {
     let mut child = Command::new(env!("CARGO_BIN_EXE_thinkthen"));
     child
         .args([

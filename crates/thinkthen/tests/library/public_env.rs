@@ -22,6 +22,7 @@ mod shared_host;
 mod usage_totals;
 
 use crate::run;
+#[cfg(feature = "cli")]
 use crate::wait;
 
 use std::fs;

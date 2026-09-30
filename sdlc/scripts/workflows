@@ -328,11 +328,8 @@ def fetch_gaps(setup_text):
             for lock in locks if lock not in UNFETCHED_LOCKS and f"{lock[:-4]}toml" not in fetched]
 
 
-def check(folder, lint_text=None, setup_text=None):
+def check(folder, lint_text=None):
     out = []
-    if setup_text is None:
-        setup_text = (REPO / "sdlc/scripts/release-workflow").read_text(encoding="utf-8")
-    out += fetch_gaps(setup_text)
     for path in sorted(folder.glob("*.y*ml")):
         text = path.read_text(encoding="utf-8")
         doc = yaml.safe_load(text) or {}
@@ -406,10 +403,15 @@ esac
         env.update(PATH=f"{bin_dir}:/usr/bin:/bin", HOME=str(root), RUSTUP_HOME=str(root / "rustup"),
                    TMPDIR=str(root), FAKE_TARGET=target, FAKE_LOG=str(log), FAKE_ROOT=str(root),
                    FAKE_UV_READY=str(root / "uv-ready"), FAKE_PY313_READY=str(root / "py313-ready"),
-                   FAKE_UV_LINE=uv_line, RELEASE_SMOKE="1" if smoke else "0")
+                   FAKE_UV_LINE=uv_line, GITHUB_PATH=str(root / "github-path"),
+                   RELEASE_SMOKE="1" if smoke else "0")
         result = subprocess.run(["/bin/sh", str(REPO / "sdlc/scripts/release-workflow"), "host-setup", target],
                                 env=env, capture_output=True, text=True, timeout=20, check=False)
-        return result, log.read_text().splitlines() if log.exists() else []
+        calls = log.read_text().splitlines() if log.exists() else []
+        handoff = root / "github-path"
+        if handoff.exists():
+            calls.append(f"path {handoff.read_text().strip().replace(str(root), '$ROOT')}")
+        return result, calls
 
 
 # A release workflow that keeps every rule. Each self-test case breaks one.
@@ -651,7 +653,7 @@ def self_test():
     setup = (REPO / "sdlc/scripts/release-workflow").read_text(encoding="utf-8")
     wanted = ["release-workflow: host-setup must fetch databases/duckdb/bridge/Cargo.toml "
               "or list databases/duckdb/bridge/Cargo.lock as unread"]
-    got = check(REPO / ".github/workflows", setup_text=setup.replace("databases/duckdb/bridge/Cargo.toml ", ""))
+    got = fetch_gaps(setup.replace("databases/duckdb/bridge/Cargo.toml ", ""))
     if got != wanted:
         bad += 1
         print(f"workflows self-test fetch-list: expected {wanted}, got {got}", file=sys.stderr)
@@ -668,12 +670,12 @@ def self_test():
         result, calls = host_setup_calls(target, smoke)
         if "apple" in target:
             wanted = ["py313-ready", "uv-install", "uv-check", "libraries/ruby/setup-ruby.sh ",
-                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch"]
+                      "databases/sqlite/setup.sh ", "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
         else:
             wanted = ["libraries/ruby/setup-ruby.sh "]
         if smoke and "apple" not in target:
             wanted = ["py313-ready", "uv-install", "uv-check", *wanted,
-                      "databases/duckdb/tools/setup.sh --fetch"]
+                      "databases/duckdb/tools/setup.sh --fetch", "path $ROOT/pinned"]
         if result.returncode != 0 or calls != wanted:
             bad += 1
             print(f"workflows self-test host-setup {target} smoke={smoke}: exit {result.returncode}, "
@@ -710,6 +712,7 @@ def main(argv):
     if argv == ["--self-test"]:
         return self_test()
     out = check(REPO / ".github/workflows")
+    out += fetch_gaps((REPO / "sdlc/scripts/release-workflow").read_text(encoding="utf-8"))
     if not out:
         managed = subprocess.run([sys.executable, str(REPO / "sdlc/scripts/release-managed-pair-self-test.py")],
                                  capture_output=True, text=True)
