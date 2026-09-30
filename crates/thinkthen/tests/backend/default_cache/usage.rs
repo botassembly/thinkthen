@@ -60,7 +60,14 @@ fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
         Some(4)
     );
     let replay = root.join("explicit-replay");
-    plant(&replay, ANSWERED).expect("recording");
+    plant_fixture(
+        &replay,
+        &url(),
+        &body(),
+        &[r#"{"type":"noul","noul":0.92}"#],
+        None,
+    )
+    .expect("fixture");
     let replay_environment = [("XDG_CACHE_HOME", root.to_str().expect("cache root"))];
     assert_eq!(
         run(
@@ -88,21 +95,40 @@ fn retries_terminal_failures_and_explicit_replay_have_the_ruled_counts() {
 fn two_processes_update_one_month_without_losing_a_cache_answer() {
     let root = folder("two-process-usage");
     let cache = root.join("answers");
-    plant(&cache, ANSWERED).expect("recording");
     let cache_name = cache.to_string_lossy().into_owned();
     let root_name = root.to_string_lossy().into_owned();
+    // The fill counts its usage under another root, so this month holds
+    // only the two cache runs.
+    let fill_root = folder("two-process-usage-fill");
+    let listener = Listener::serving(vec![Canned::ok(ANSWERED)]).expect("listener");
+    let base = listener.base().to_owned();
+    let filled = run(
+        &["decide", "asks for a refund", "--record", &cache_name],
+        &[
+            ("THINKTHEN_BASE_URL", &base),
+            ("THINKTHEN_API_KEY", "secret-key"),
+            ("XDG_CACHE_HOME", fill_root.to_str().expect("fill root")),
+        ],
+    )
+    .expect("fill");
+    assert_eq!(filled.status.code(), Some(0));
+    assert_eq!(listener.requests().len(), 1);
+    let environment = [
+        ("XDG_CACHE_HOME", root_name.as_str()),
+        ("THINKTHEN_BASE_URL", &base),
+    ];
     thread::scope(|scope| {
         let first = scope.spawn(|| {
             run(
                 &["decide", "asks for a refund", "--cache", &cache_name],
-                &[("XDG_CACHE_HOME", &root_name)],
+                &environment,
             )
             .expect("first")
         });
         let second = scope.spawn(|| {
             run(
                 &["decide", "asks for a refund", "--cache", &cache_name],
-                &[("XDG_CACHE_HOME", &root_name)],
+                &environment,
             )
             .expect("second")
         });
@@ -112,6 +138,7 @@ fn two_processes_update_one_month_without_losing_a_cache_answer() {
     let status = run(&["status", "--json"], &[("XDG_CACHE_HOME", &root_name)]).expect("status");
     assert_eq!(usage(&status, "cache_answers"), Some(2));
     assert_eq!(usage(&status, "requests_sent"), Some(0));
+    assert_eq!(listener.requests().len(), 0);
 }
 
 #[test]

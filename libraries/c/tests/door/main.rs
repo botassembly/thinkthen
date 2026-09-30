@@ -198,6 +198,13 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
         .arg(&library)
         .output()
         .expect("nm");
+    // ADR 0111: a bundled SQLite stays private, so no `sqlite3_` name leaks.
+    let leaked = text(&exported.stdout)
+        .lines()
+        .filter_map(|line| line.split_whitespace().nth(2))
+        .filter(|name| name.starts_with("sqlite3_"))
+        .count();
+    assert_eq!(leaked, 0, "the door exports sqlite3_ symbols");
     let mut symbols: Vec<String> = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))

@@ -69,6 +69,7 @@ mod parallel;
 mod pointer_echo;
 mod profile;
 mod public_json;
+mod question_cache;
 #[allow(
     clippy::expect_used,
     clippy::indexing_slicing,

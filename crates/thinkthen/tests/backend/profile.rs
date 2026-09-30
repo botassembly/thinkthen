@@ -9,7 +9,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::{digest, encoded_decide, plant_recording};
+use crate::support::encoded_decide;
 
 const ANSWER: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92}},"#,
@@ -21,6 +21,7 @@ const NO_ANSWER: &str = concat!(
 );
 
 mod secrecy;
+mod structured;
 mod warnings;
 
 fn file(name: &str, text: &str) -> PathBuf {
@@ -127,138 +128,6 @@ fn evidence_and_exact_request_bytes_pass_at_the_edge_and_fail_one_past_it() {
             body.len()
         )
     );
-}
-
-const STRUCTURED_TAG_BODY: &str = concat!(
-    r#"{"state":"Refund me please.","model":"local-1","questions":{"q1":{"type":"noul","#,
-    r#""instructions":[["Which topics?"],{"label":"billing"}]},"#,
-    r#""q2":{"type":"noul","instructions":[["Which topics?"],{"label":"urgent"}]}}}"#,
-);
-const STRUCTURED_TAG_ANSWERS: &str = concat!(
-    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.92},"#,
-    r#""q2":{"type":"noul","noul":0.08}},"#,
-    r#""usage":{"input_tokens":3,"output_tokens":1}}"#,
-);
-
-fn structured_tag(prefix: &str) -> (String, PathBuf, PathBuf) {
-    let question = file(
-        &format!("{prefix}structured-tag"),
-        r#"{"tag":["Which topics?"],"labels":["billing","urgent"]}"#,
-    );
-    let limited =
-        |name: &str, bytes: usize| profile(name, &format!(r#""max_request_bytes":{bytes}"#));
-    let [edge, under] = ["edge", "under"].map(|end| format!("{prefix}{end}-structured"));
-    let exact = limited(&edge, STRUCTURED_TAG_BODY.len());
-    let under = limited(&under, STRUCTURED_TAG_BODY.len() - 1);
-    (format!("@{}", question.to_string_lossy()), exact, under)
-}
-
-#[test]
-fn a_structured_dry_run_counts_its_complete_body_at_the_edge() {
-    let (question, exact, under) = structured_tag("plan-");
-    let base = ["tag", question.as_str(), "--model", "local-1"];
-    let plan = |profile: &Path| {
-        spawn(
-            &[
-                &base[..],
-                &["--plan", "--profile", &profile.to_string_lossy()],
-            ]
-            .concat(),
-            &[],
-            b"Refund me please.",
-        )
-        .expect("command")
-    };
-
-    let planned = plan(&exact);
-    assert_eq!(
-        planned.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&planned.stderr)
-    );
-    assert_eq!(plan(&under).status.code(), Some(2));
-}
-
-#[test]
-fn a_structured_request_counts_its_complete_body_at_the_edge() {
-    let (question, exact, under) = structured_tag("");
-    let base = ["tag", question.as_str(), "--model", "local-1"];
-    let send = |profile: &Path, listener: &Listener| {
-        spawn(
-            &[
-                &base[..],
-                &[
-                    "--profile",
-                    &profile.to_string_lossy(),
-                    "--url",
-                    listener.base(),
-                ],
-            ]
-            .concat(),
-            &[("THINKTHEN_API_KEY", "secret-key")],
-            b"Refund me please.",
-        )
-        .expect("command")
-    };
-
-    let listener = Listener::answering(|_| Canned::ok(STRUCTURED_TAG_ANSWERS)).expect("listener");
-    let sent = send(&exact, &listener);
-    assert_eq!(
-        sent.status.code(),
-        Some(0),
-        "{}",
-        String::from_utf8_lossy(&sent.stderr)
-    );
-    let requests = listener.requests();
-    assert_eq!(requests.len(), 1);
-    assert_eq!(
-        String::from_utf8_lossy(&requests[0].body),
-        STRUCTURED_TAG_BODY
-    );
-
-    let refused_listener =
-        Listener::answering(|_| Canned::ok(STRUCTURED_TAG_ANSWERS)).expect("listener");
-    let refused = send(&under, &refused_listener);
-    assert_eq!(refused.status.code(), Some(2));
-    assert_eq!(
-        String::from_utf8_lossy(&refused.stderr),
-        format!(
-            "thinkthen: profile under-structured allows at most {} request bytes; this request has {}\n",
-            STRUCTURED_TAG_BODY.len() - 1,
-            STRUCTURED_TAG_BODY.len()
-        )
-    );
-    assert!(refused_listener.requests().is_empty());
-}
-
-#[test]
-fn expanded_tags_count_as_wire_questions_and_over_limit_sends_nothing() {
-    let one = profile("one-question", r#""max_questions":1"#);
-    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
-    let output = spawn(
-        &[
-            "tag",
-            "Which topics?",
-            "billing",
-            "urgent",
-            "--profile",
-            &one.to_string_lossy(),
-            "--url",
-            listener.base(),
-        ],
-        &[("THINKTHEN_API_KEY", "secret-key")],
-        b"private evidence",
-    )
-    .expect("command");
-    assert_eq!(output.status.code(), Some(2));
-    assert_eq!(listener.connections(), 0);
-    assert_eq!(
-        String::from_utf8_lossy(&output.stderr),
-        "thinkthen: profile one-question allows at most 1 questions; this request has 2\n"
-    );
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("private"));
-    assert!(!String::from_utf8_lossy(&output.stderr).contains("secret-key"));
 }
 
 #[test]
@@ -427,26 +296,45 @@ fn replay_warns_once_without_a_key_and_keeps_request_identity() {
     );
     let running = profile("replay-new", r#""max_request_bytes":1000"#);
     let recordings = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("profile-replay");
-    let body = encoded_decide("four", "local-1", "Is this relevant?");
-    let url = "https://api.typesafe.ai/v1/systemone";
-    plant_recording(&recordings, url, &body, ANSWER).expect("recording");
-    let output = spawn(
-        &[
-            "decide",
-            &format!("@{}", question.to_string_lossy()),
-            "--details",
-            "--profile",
-            &running.to_string_lossy(),
-            "--replay",
-            &recordings.to_string_lossy(),
-            "--model",
-            "local-1",
-        ],
-        &[],
-        b"four",
-    )
-    .expect("command");
-    assert_eq!(output.status.code(), Some(0));
+    let _removed = fs::remove_dir_all(&recordings);
+    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
+    let run = |store: &str, environment: &[(&str, &str)]| {
+        spawn(
+            &[
+                "decide",
+                &format!("@{}", question.to_string_lossy()),
+                "--details",
+                "--profile",
+                &running.to_string_lossy(),
+                store,
+                &recordings.to_string_lossy(),
+                "--url",
+                listener.base(),
+                "--model",
+                "local-1",
+            ],
+            environment,
+            b"four",
+        )
+        .expect("command")
+    };
+    let recorded = run("--record", &[("THINKTHEN_API_KEY", "secret-key")]);
+    assert_eq!(
+        recorded.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&recorded.stderr)
+    );
+    let sent = listener.requests();
+    assert_eq!(sent.len(), 1);
+    let output = run("--replay", &[]);
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(listener.count(), 1, "a replay sends nothing");
     assert_eq!(
         String::from_utf8_lossy(&output.stderr)
             .matches("warning: threshold tuned for")
@@ -455,29 +343,43 @@ fn replay_warns_once_without_a_key_and_keeps_request_identity() {
     );
     let row: serde_json::Value = serde_json::from_slice(&output.stdout).expect("result");
     assert_eq!(row["meta"]["cached"], true);
-    assert_eq!(row["meta"]["requests"][0], digest(url, &body));
+    assert_eq!(
+        row["meta"]["requests"],
+        serde_json::json!(crate::support::keys(listener.url(), &sent[0].body))
+    );
 }
 
 #[test]
 fn over_limit_precedes_replay_and_cache_answers() {
     let tiny = profile("stored-tiny", r#""max_evidence_bytes":1"#);
-    let body = encoded_decide("four", "local-1", "Is this relevant?");
-    let url = "https://api.typesafe.ai/v1/systemone";
+    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
+    let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("profile-stored");
+    let _removed = fs::remove_dir_all(&folder);
+    let fixed = [
+        "decide",
+        "Is this relevant?",
+        "--url",
+        listener.base(),
+        "--model",
+        "local-1",
+    ];
+    let folder_name = folder.to_string_lossy();
+    let stored = spawn(
+        &[&fixed[..], &["--record", &folder_name]].concat(),
+        &[("THINKTHEN_API_KEY", "secret-key")],
+        b"four",
+    )
+    .expect("command");
+    assert_eq!(
+        stored.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&stored.stderr)
+    );
     for option in ["--replay", "--cache"] {
-        let folder = PathBuf::from(env!("CARGO_TARGET_TMPDIR"))
-            .join(format!("profile-stored-{}", &option[2..]));
-        plant_recording(&folder, url, &body, ANSWER).expect("stored answer");
+        let profile = tiny.to_string_lossy();
         let output = spawn(
-            &[
-                "decide",
-                "Is this relevant?",
-                option,
-                &folder.to_string_lossy(),
-                "--profile",
-                &tiny.to_string_lossy(),
-                "--model",
-                "local-1",
-            ],
+            &[&fixed[..], &[option, &folder_name, "--profile", &profile]].concat(),
             &[],
             b"four",
         )

@@ -29,41 +29,52 @@ pub(crate) struct ChunkAnswer {
     parent_sent: u64,
     batch: Option<AnnotateBatchMeta>,
     parent_batch: Option<AnnotateBatchMeta>,
+    /// The question keys, when the question pipeline answered this chunk.
+    keys: Option<Vec<String>>,
 }
 
 /// Every chunk of one question group, and the one model they reported.
 pub(crate) struct GroupAnswer {
     answered: Vec<ChunkAnswer>,
-    pub(crate) model: Option<ModelName>,
 }
 
 impl GroupAnswer {
-    pub(crate) fn usable(&self) -> bool {
-        self.answered.iter().any(|chunk| {
-            chunk
-                .reply
-                .outcomes()
-                .iter()
-                .any(|outcome| matches!(outcome, AnswerOutcome::Answered(_)))
-        })
+    /// One group's questions as the question pipeline answered them: each
+    /// set place with its outcome, its keys, its attempts share, and whether
+    /// the store answered all of it.
+    pub(crate) fn of_questions(questions: Vec<QuestionAnswer>) -> Self {
+        let answered = questions
+            .into_iter()
+            .map(|question| ChunkAnswer {
+                places: vec![question.place],
+                digest: question.keys.first().cloned().unwrap_or_default(),
+                reply: question.reply,
+                requests_sent: question.requests_sent,
+                replayed: question.cached,
+                parent_request: None,
+                parent_sent: 0,
+                batch: None,
+                parent_batch: None,
+                keys: Some(question.keys),
+            })
+            .collect();
+        Self { answered }
     }
+}
+
+/// One set question's answer from the question pipeline.
+pub(crate) struct QuestionAnswer {
+    pub(crate) place: usize,
+    pub(crate) reply: Reply,
+    pub(crate) keys: Vec<String>,
+    pub(crate) requests_sent: u64,
+    pub(crate) cached: bool,
 }
 
 /// One group's chunks, prepared once, and the question places each chunk asks.
 pub(crate) struct PreparedGroup {
     places: Vec<Vec<usize>>,
     pub(crate) chunks: Vec<Chunk>,
-}
-
-impl PreparedGroup {
-    /// The exact singleton profile slices, with their original named places.
-    pub(crate) fn slices(&self) -> Vec<(Vec<usize>, Vec<crate::core::Question>)> {
-        self.places
-            .iter()
-            .zip(&self.chunks)
-            .map(|(places, chunk)| (places.clone(), chunk.plan.questions().to_vec()))
-            .collect()
-    }
 }
 
 /// One record's named values and details, in set order, with the metadata.
@@ -289,10 +300,11 @@ impl Engine {
                 parent_sent: 0,
                 batch: None,
                 parent_batch: None,
+                keys: None,
             });
             Ok::<(), Error>(())
         })?;
-        Ok(GroupAnswer { answered, model })
+        Ok(GroupAnswer { answered })
     }
 
     /// Keep the original single-record seam for its focused engine tests.
@@ -308,15 +320,10 @@ impl Engine {
             .into_iter()
             .map(|places| self.prepare_group(&plan(&places)?, places))
             .collect::<Result<Vec<_>, _>>()?;
-        let mut answered = Vec::new();
-        let mut model = None;
-        for group in prepared {
-            let group = self.answer_group(group, cancel)?;
-            if let Some(reported) = &group.model {
-                check_model(&mut model, reported, self.backend().model())?;
-            }
-            answered.push(group);
-        }
+        let answered = prepared
+            .into_iter()
+            .map(|group| self.answer_group(group, cancel))
+            .collect::<Result<Vec<_>, _>>()?;
         assemble(set, answered, self.backend().model())
     }
 }
@@ -343,15 +350,24 @@ pub(crate) fn assemble(
         replayed: true,
         failed_questions: 0,
     };
+    let mut stored_model = None;
     for chunk in answered.into_iter().flat_map(|group| group.answered) {
-        check_model(&mut annotation.model, chunk.reply.model(), requested)?;
+        // A stored answer's model takes no part in the check, by ADR 0111.
+        if chunk.keys.is_some() && chunk.replayed {
+            stored_model.get_or_insert_with(|| chunk.reply.model().clone());
+        } else {
+            check_model(&mut annotation.model, chunk.reply.model(), requested)?;
+        }
         if let Some(parent) = &chunk.parent_request {
             annotation.requests.push(parent.clone());
             if let Some(meta) = &chunk.parent_batch {
                 annotation.batches.push(meta.clone());
             }
         }
-        annotation.requests.push(chunk.digest.clone());
+        match &chunk.keys {
+            Some(keys) => annotation.requests.extend(keys.iter().cloned()),
+            None => annotation.requests.push(chunk.digest.clone()),
+        }
         if let Some(meta) = &chunk.batch {
             annotation.batches.push(meta.clone());
         }
@@ -370,6 +386,7 @@ pub(crate) fn assemble(
         annotation.failed_questions +=
             take_answers(set, &chunk, &mut values, &mut details, &mut receipts)?;
     }
+    annotation.model = annotation.model.or(stored_model);
     annotation.values = pair(set, values, "a question has no value")?;
     annotation.details = pair(set, details, "a question has no detailed answer")?;
     annotation.receipts = receipts

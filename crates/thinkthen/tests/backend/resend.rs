@@ -12,7 +12,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Duration, Instant};
 
 use crate::harness::{Canned, Listener, spawn_one as spawn};
-use crate::support::digest;
+use crate::support::{keys, stored};
 
 /// The key every case sends, which no output may carry.
 const KEY: &str = "sk-resend-secret";
@@ -251,11 +251,17 @@ fn a_record_run_sends_each_request_at_most_once_and_caches_no_failure() {
         .filter(|body| String::from_utf8_lossy(body).contains("record 2"))
         .collect();
     assert_eq!(failed.len(), 1, "the failed record's sends");
+    let stored: Vec<_> = stored(&cache)
+        .expect("the store")
+        .into_iter()
+        .map(|answer| answer["key"].as_str().expect("a key").to_owned())
+        .collect();
     for body in &bodies {
         assert_eq!(bodies.iter().filter(|seen| *seen == body).count(), 1);
-        let entry = cache.join(format!("{}.json", digest(listener.url(), body)));
         let failure = String::from_utf8_lossy(body).contains("record 2");
-        assert_eq!(entry.exists(), !failure, "{}", entry.display());
+        for key in keys(listener.url(), body) {
+            assert_eq!(stored.contains(&key), !failure, "{key}");
+        }
     }
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(

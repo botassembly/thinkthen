@@ -216,23 +216,40 @@ fn replay_answers_every_batch() {
     assert_eq!(text(&replayed.stderr), text(&recorded.stderr));
     assert_eq!(text(&replayed.stdout), rows(1..=25));
 
-    let missed = decide(base, &["--batch", "5", "--replay", &recording], &[], &input);
-    assert_eq!(missed.status.code(), Some(5));
-    assert_eq!(text(&missed.stdout), "");
-    // The entry name holds the loopback's port, so the line is pinned around it.
-    let stopped = text(&missed.stderr);
-    let (head, tail) = stopped.split_once(".json`").expect("an entry name");
+    // Each question is stored alone, so another batch setting replays too.
+    let rebatched = decide(base, &["--batch", "5", "--replay", &recording], &[], &input);
+    assert_eq!(text(&rebatched.stdout), rows(1..=25));
     assert_eq!(
-        (head.split_once(" named `").map(|(head, _)| head), tail),
+        listener.count(),
+        3,
+        "a replay at another batch setting sends nothing"
+    );
+
+    let missed = decide(
+        base,
+        &["--batch", "10", "--replay", &recording],
+        &[],
+        &lines(1..=26),
+    );
+    assert_eq!(missed.status.code(), Some(5));
+    assert_eq!(text(&missed.stdout), rows(1..=25));
+    // The key holds the loopback's port, so the line is pinned around it.
+    let stopped = text(&missed.stderr);
+    let (head, tail) = stopped.split_once("question `").expect("a key");
+    assert_eq!(
         (
-            Some(concat!(
-                "thinkthen: stopped at record 1; the request for records 1 to 5 failed: ",
-                "the decide request: the replay folder holds no entry"
-            )),
-            concat!(
-                "; the entry name covers the backend interface, address, and request; ",
-                "0 records finished, 0 records from a recording\n"
-            )
+            head,
+            tail.split_once('`').map(|(key, tail)| (key.len(), tail))
+        ),
+        (
+            "thinkthen: the decide request: the replay folder holds no answer for ",
+            Some((
+                64,
+                concat!(
+                    "; the key is the SHA-256 of the adapter, address, model, shared state and question as sent\n",
+                    "thinkthen: stopped at record 26; 25 records finished, 25 records from a recording\n"
+                )
+            ))
         )
     );
     assert_eq!(listener.count(), 3);
@@ -311,58 +328,25 @@ fn a_pause_sends_the_open_batch() {
     }
 }
 
-/// A cap row: its name, its extra arguments, its lines, and the rows that carry a request.
-type Cap<'a> = (&'a str, &'a [&'a str], &'a [String], &'a [usize]);
-
+/// Equal questions in one call are asked once, by ADR 0111 section 2: ten
+/// thousand lines of five values send one request of five questions, and
+/// every row reads its question's answer.
 #[test]
-fn repeats_close_a_batch_at_the_member_cap() {
-    let repeats: Vec<String> = (0..10_000)
+fn equal_records_ask_their_question_once() {
+    let repeats: String = (0..10_000)
         .map(|at| format!("line {}\n", at % 5 + 1))
         .collect();
-    let mut cut = repeats.clone();
-    cut[999] = "line 10633\n".to_owned();
-    let cases: [Cap<'_>; 3] = [
-        ("default", &[], &repeats, &[1, 4_097, 8_193]),
-        (
-            "--batch 5000",
-            &["--batch", "5000"],
-            &repeats,
-            &[1, 4_097, 8_193],
-        ),
-        ("a content cut", &[], &cut, &[1, 1_001, 5_097, 9_193]),
-    ];
-    for (name, extra, input, sending) in cases {
-        let listener = Listener::answering(answering).expect("a loopback listener");
-        let arguments = [&["--details", "--no-cache"][..], extra].concat();
-        let output = decide(listener.base(), &arguments, &[], &input.concat());
-        assert_eq!(
-            output.status.code(),
-            Some(0),
-            "{name}: {}",
-            text(&output.stderr)
-        );
-        let printed = details(&output);
-        assert_eq!(printed.len(), 10_000, "{name}");
-        let sent: Vec<usize> = printed
-            .iter()
-            .enumerate()
-            .filter(|(_, row)| row["meta"]["requests_sent"] != 0)
-            .map(|(at, row)| {
-                assert_eq!(row["meta"]["requests_sent"], 1, "{name}: row {}", at + 1);
-                at + 1
-            })
-            .collect();
-        assert_eq!(sent, sending, "{name}: the rows that carry a request");
-        let bodies = listener.requests();
-        assert_eq!(bodies.len(), sending.len(), "{name}");
-        if name == "default" {
-            for body in &bodies[..2] {
-                assert!(text(&body.body).contains(QUOTED));
-                assert_eq!(places(&body.body).len(), 5);
-            }
-            assert_eq!(bodies[0].body.len(), bodies[1].body.len());
-        }
-    }
+    let listener = Listener::answering(answering).expect("a loopback listener");
+    let output = decide(listener.base(), &["--no-cache"], &[], &repeats);
+    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
+    let bodies = listener.requests();
+    assert_eq!(bodies.len(), 1);
+    assert!(text(&bodies[0].body).contains(QUOTED));
+    let mut asked: Vec<usize> = places(&bodies[0].body).iter().map(|&(_, at)| at).collect();
+    asked.sort_unstable();
+    assert_eq!(asked, [1, 2, 3, 4, 5]);
+    let expected: String = (0..10_000).map(|at| row(at % 5 + 1)).collect();
+    assert_eq!(text(&output.stdout), expected);
 }
 
 /// Thirty lines at `--jobs 1` and no retry, in batches of `batch`: what printed,
@@ -451,14 +435,7 @@ fn each_row_carries_its_share() {
         assert_eq!(sent.len(), 1);
         assert_eq!(text(&sent[0].body), expected.trim_end_matches('\n'));
         let printed = details(&output);
-        for (index, row) in printed.iter().enumerate() {
-            let mut expected = json!({"setting":3,"records":3,"position":index + 1,
-                "closed":"size","requests_sent":1});
-            if usage.is_some() {
-                expected["usage"] = json!({"input_tokens":100,"output_tokens":10});
-            }
-            assert_eq!(row["meta"]["batch"], expected);
-        }
+        assert!(printed.iter().all(|row| row["meta"].get("batch").is_none()));
         let shares: Vec<(Value, Value)> = printed
             .iter()
             .map(|row| {
@@ -468,11 +445,14 @@ fn each_row_carries_its_share() {
                 )
             })
             .collect();
+        // The request asks two questions, so each takes half, the remainder
+        // to the earliest. The copy reads the first question's answer and
+        // usage share, and counts no send.
         let wanted = match usage {
             Some(_) => vec![
-                (json!({"input_tokens": 34, "output_tokens": 4}), json!(1)),
-                (json!({"input_tokens": 33, "output_tokens": 3}), json!(0)),
-                (json!({"input_tokens": 33, "output_tokens": 3}), json!(0)),
+                (json!({"input_tokens": 50, "output_tokens": 5}), json!(1)),
+                (json!({"input_tokens": 50, "output_tokens": 5}), json!(0)),
+                (json!({"input_tokens": 50, "output_tokens": 5}), json!(0)),
             ],
             None => vec![
                 (Value::Null, json!(1)),
@@ -482,17 +462,4 @@ fn each_row_carries_its_share() {
         };
         assert_eq!(shares, wanted, "usage {usage:?}");
     }
-    let one = Listener::answering(answering).expect("one-record batches");
-    let output = decide(
-        one.base(),
-        &["--batch", "1", "--details", "--no-cache"],
-        &[],
-        input,
-    );
-    assert_eq!(output.status.code(), Some(0));
-    assert!(
-        details(&output)
-            .iter()
-            .all(|row| row["meta"].get("batch").is_none())
-    );
 }

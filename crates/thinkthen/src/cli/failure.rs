@@ -174,6 +174,13 @@ pub(crate) enum Failure {
         name: String,
         context: Option<ReplayContext>,
     },
+    /// Strict replay found no answer under this question key.
+    QuestionMiss {
+        key: String,
+        context: Option<ReplayContext>,
+    },
+    StoreAmbiguous,
+    StoreHotJournal,
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
@@ -187,6 +194,8 @@ pub(crate) enum Failure {
     CacheEntry,
     /// The caller's digest list could not be read; its path is withheld.
     UsedManifestUnreadable,
+    /// `cache convert` named no existing folder; its path is withheld.
+    ConvertFolder,
     StatusState,
     StatusUsage {
         name: String,
@@ -267,6 +276,9 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::Status(status) => (4, status::said(*status)),
         Failure::Reply(error) => (4, format!("the reply was refused: {error}")),
         Failure::ReplayMiss { .. }
+        | Failure::QuestionMiss { .. }
+        | Failure::StoreAmbiguous
+        | Failure::StoreHotJournal
         | Failure::Entry(_, _)
         | Failure::RecordingConflict(_)
         | Failure::RecordingStorage
@@ -369,6 +381,7 @@ fn special_failure(failure: &Failure) -> Option<(u8, String)> {
         Failure::Configuration(message) => (5, (*message).to_owned()),
         Failure::CacheEntry => (5, "the cache contains a malformed final entry".to_owned()),
         Failure::UsedManifestUnreadable => (5, "the --used digest file could not be read".to_owned()),
+        Failure::ConvertFolder => (5, "cache convert takes an existing folder, and the one named is missing or not a folder".to_owned()),
         Failure::StatusState => (
             5,
             "status could not read the local cache or usage state; check its permissions and contents"

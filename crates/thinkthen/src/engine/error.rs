@@ -33,7 +33,7 @@ pub(crate) enum Kind {
 }
 
 /// One exact engine failure. The command maps it to its existing diagnostics.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[allow(
     dead_code,
     reason = "deterministic conformance injections exercise kinds absent from the current command"
@@ -55,6 +55,12 @@ pub(crate) enum Error {
     ReplyTooLarge(u64),
     Reply(DecodeError),
     ReplayMiss(String),
+    /// Strict replay found no stored answer under this question key.
+    QuestionMiss(String),
+    /// A replay folder holds both the fixture and the live store.
+    StoreAmbiguous,
+    /// A read-only replay met a write that did not finish.
+    StoreHotJournal,
     Entry(String, String),
     RecordingConflict(String),
     RecordingStorage,
@@ -149,6 +155,9 @@ impl Error {
             | Self::UsageOverflow
             | Self::RecognizeLogical => Kind::Backend,
             Self::ReplayMiss(_)
+            | Self::QuestionMiss(_)
+            | Self::StoreAmbiguous
+            | Self::StoreHotJournal
             | Self::Entry(_, _)
             | Self::RecordingConflict(_)
             | Self::RecordingStorage

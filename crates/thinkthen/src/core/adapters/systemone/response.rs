@@ -118,20 +118,36 @@ struct ResponseUsage {
 /// incomplete distribution fails only that question.
 mod observed;
 
-pub(crate) use observed::decode_observed;
+pub(crate) use observed::{Decoded, decode_answers, decode_observed};
 
 pub(crate) fn decode(plan: &Plan, body: &[u8]) -> Result<Reply, DecodeError> {
     decode_observed(plan, body).reply
 }
 
+/// Read a body as the answers to these logical questions, in order.
+pub(crate) fn decode_questions(questions: &[Question], body: &[u8]) -> Decoded {
+    observed::decode_questions(questions, body)
+}
+
 fn decode_response(
-    plan: &Plan,
+    questions: &[Question],
     response: Response,
     usage: Option<Usage>,
 ) -> Result<Reply, DecodeError> {
-    let model = ModelName::reported(response.model).map_err(|_| DecodeError::NoModel)?;
-    let wire_count = plan
-        .questions()
+    let (model, each) = decode_each(questions, &response)?;
+    let answers = each.into_iter().map(outcome).collect();
+    Ok(Reply::new(model, answers, usage))
+}
+
+/// A reply's model and each question's answer or the error that failed it.
+pub(crate) type EachAnswer = (ModelName, Vec<Result<Answer, DecodeError>>);
+
+/// Each question's answer or the error that failed it, in order. A reply that
+/// names no model, names a place never asked, or fails every question is
+/// refused whole.
+fn decode_each(questions: &[Question], response: &Response) -> Result<EachAnswer, DecodeError> {
+    let model = ModelName::reported(response.model.clone()).map_err(|_| DecodeError::NoModel)?;
+    let wire_count = questions
         .iter()
         .map(|question| match question {
             Question::Tag { labels, .. } => labels.count(),
@@ -145,57 +161,53 @@ fn decode_response(
     {
         return Err(DecodeError::UnexpectedAnswer);
     }
-    let mut answers = Vec::with_capacity(plan.questions().len());
-    let mut first_error = None;
+    let mut answers = Vec::with_capacity(questions.len());
     let mut wire_place = 0;
-    for question in plan.questions() {
+    for question in questions {
         if let Question::Tag { labels, .. } = question {
-            let decoded = read_tag(&response.answers, labels, &mut wire_place);
-            remember(&decoded, &mut first_error);
-            answers.push(outcome(decoded));
+            answers.push(read_tag(&response.answers, labels, &mut wire_place));
             continue;
         }
-        let decoded = response
-            .answers
-            .get(&wire_name(wire_place))
-            .ok_or(DecodeError::MissingAnswer(wire_place))
-            .and_then(|answered| read(question, answered, wire_place));
-        remember(&decoded, &mut first_error);
-        answers.push(outcome(decoded));
+        answers.push(
+            response
+                .answers
+                .get(&wire_name(wire_place))
+                .ok_or(DecodeError::MissingAnswer(wire_place))
+                .and_then(|answered| read(question, answered, wire_place)),
+        );
         wire_place += 1;
     }
-    if answers
-        .iter()
-        .all(|answer| matches!(answer, AnswerOutcome::Failed(_)))
+    if let Some(Err(first)) = answers.first()
+        && answers.iter().all(Result::is_err)
     {
-        return Err(first_error.unwrap_or(DecodeError::UnexpectedAnswer));
+        return Err(first.clone());
     }
-    Ok(Reply::new(model, answers, usage))
-}
-
-fn remember(result: &Result<Answer, DecodeError>, first: &mut Option<DecodeError>) {
-    if first.is_none() {
-        *first = result.as_ref().err().cloned();
+    if answers.is_empty() {
+        return Err(DecodeError::UnexpectedAnswer);
     }
+    Ok((model, answers))
 }
 
 fn outcome(result: Result<Answer, DecodeError>) -> AnswerOutcome {
     match result {
         Ok(answer) => AnswerOutcome::Answered(answer),
-        Err(error) => AnswerOutcome::Failed(BackendFailure::new(cause(&error))),
+        Err(error) => AnswerOutcome::Failed(BackendFailure::new(error.cause())),
     }
 }
 
-const fn cause(error: &DecodeError) -> BackendFailureCause {
-    match error {
-        DecodeError::MissingAnswer(_) => BackendFailureCause::MissingAnswer,
-        DecodeError::WrongKind(_) => BackendFailureCause::WrongKind,
-        DecodeError::MissingProbability(_) => BackendFailureCause::MissingProbability,
-        DecodeError::ProbabilityOutOfRange(_) => BackendFailureCause::InvalidProbability,
-        DecodeError::DistributionTotal { .. } => BackendFailureCause::InvalidDistribution,
-        DecodeError::UnexpectedProbability(_) => BackendFailureCause::UnexpectedProbability,
-        DecodeError::Malformed(..) | DecodeError::NoModel | DecodeError::UnexpectedAnswer => {
-            BackendFailureCause::WrongKind
+impl DecodeError {
+    /// The cause a failed answer shows for this error.
+    pub(crate) const fn cause(&self) -> BackendFailureCause {
+        match self {
+            DecodeError::MissingAnswer(_) => BackendFailureCause::MissingAnswer,
+            DecodeError::WrongKind(_) => BackendFailureCause::WrongKind,
+            DecodeError::MissingProbability(_) => BackendFailureCause::MissingProbability,
+            DecodeError::ProbabilityOutOfRange(_) => BackendFailureCause::InvalidProbability,
+            DecodeError::DistributionTotal { .. } => BackendFailureCause::InvalidDistribution,
+            DecodeError::UnexpectedProbability(_) => BackendFailureCause::UnexpectedProbability,
+            DecodeError::Malformed(..) | DecodeError::NoModel | DecodeError::UnexpectedAnswer => {
+                BackendFailureCause::WrongKind
+            }
         }
     }
 }

@@ -1,8 +1,11 @@
 //! The portable corpus through a compiled command and its actual listener.
+//! The content cut is gone from the command, by ADR 0111, so every record
+//! rides one request. Each record's question keeps the fixture's bytes, so
+//! its key is the fixture question's key.
 
 use super::{KEY, details, text};
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::digest;
+use crate::support::keys;
 
 const CORPUS: &str =
     include_str!("../../../../../specification/fixtures/batching/portable-records.json");
@@ -22,8 +25,21 @@ fn answering(body: &[u8]) -> Canned {
     Canned::ok(&serde_json::json!({"model":"jev-1.13.0","answers":answers}).to_string())
 }
 
+/// The keys of every question the fixture bodies hold, in order.
+fn fixture_keys(url: &str, bodies: &[&str]) -> Vec<String> {
+    bodies
+        .iter()
+        .flat_map(|body| {
+            keys(
+                url,
+                body.strip_suffix('\n').expect("fixture newline").as_bytes(),
+            )
+        })
+        .collect()
+}
+
 #[test]
-fn complete_cli_lines_keep_literal_cuts_bodies_and_request_identities() {
+fn complete_cli_lines_keep_literal_question_bytes_and_keys() {
     let corpus: serde_json::Value = serde_json::from_str(CORPUS).expect("literal corpus");
     for (framing, input) in [
         ("--lines", "alpha\ncafé-5544\nomega\nline 2907\ntail\n"),
@@ -64,35 +80,19 @@ fn complete_cli_lines_keep_literal_cuts_bodies_and_request_identities() {
         let rows = details(&output);
         assert_eq!(rows.len(), 5, "{framing}");
         let sent = listener.requests();
-        assert_eq!(sent.len(), 3, "{framing}");
-        let groups = [0, 0, 1, 1, 2];
-        let mut digests = Vec::new();
-        for (at, (request, literal)) in sent.iter().zip(BODIES).enumerate() {
-            let body = literal
-                .strip_suffix('\n')
-                .expect("fixture newline")
-                .as_bytes();
-            assert_eq!(request.body, body, "{framing} request {at}");
-            digests.push(digest(listener.url(), body));
-        }
+        assert_eq!(sent.len(), 1, "{framing}");
+        let expected = fixture_keys(listener.url(), &BODIES);
+        assert_eq!(keys(listener.url(), &sent[0].body), expected, "{framing}");
         for (at, row) in rows.iter().enumerate() {
             assert_eq!(row["input"], corpus["texts"][at]);
-            assert_eq!(row["meta"]["requests"][0], digests[groups[at]]);
-            if at < 4 {
-                assert_eq!(row["meta"]["batch"]["closed"], "content");
-                assert_eq!(row["meta"]["batch"]["records"], 2);
-            } else {
-                assert!(
-                    row["meta"].get("batch").is_none(),
-                    "singleton keeps old shape"
-                );
-            }
+            assert_eq!(row["meta"]["requests"], serde_json::json!([expected[at]]));
+            assert!(row["meta"].get("batch").is_none());
         }
     }
 }
 
 #[test]
-fn structured_cli_values_keep_order_and_numeric_cut_distinctions() {
+fn structured_cli_values_keep_order_and_question_bytes() {
     let oracle: serde_json::Value = serde_json::from_str(include_str!(
         "../../../../../specification/fixtures/batching/portable-structured.json"
     ))
@@ -134,26 +134,14 @@ fn structured_cli_values_keep_order_and_numeric_cut_distinctions() {
     let rows = details(&output);
     assert_eq!(rows.len(), 3);
     let sent = listener.requests();
-    assert_eq!(sent.len(), 2);
-    for (at, (request, literal)) in sent.iter().zip(bodies).enumerate() {
-        let body = literal
-            .strip_suffix('\n')
-            .expect("fixture newline")
-            .as_bytes();
-        assert_eq!(request.body, body, "structured request {at}");
-    }
-    assert_eq!(rows[0]["meta"]["batch"]["closed"], "content");
-    assert_eq!(rows[1]["meta"]["batch"]["closed"], "content");
-    assert!(rows[2]["meta"].get("batch").is_none());
+    assert_eq!(sent.len(), 1);
+    let expected = fixture_keys(listener.url(), &bodies);
+    assert_eq!(keys(listener.url(), &sent[0].body), expected);
     for (at, row) in rows.iter().enumerate() {
-        let expected: serde_json::Value =
+        let input: serde_json::Value =
             serde_json::from_str(oracle["compact"][at].as_str().expect("compact value"))
                 .expect("expected input");
-        assert_eq!(row["input"], expected);
-        let body = bodies[usize::from(at == 2)]
-            .strip_suffix('\n')
-            .expect("fixture newline")
-            .as_bytes();
-        assert_eq!(row["meta"]["requests"][0], digest(listener.url(), body));
+        assert_eq!(row["input"], input);
+        assert_eq!(row["meta"]["requests"], serde_json::json!([expected[at]]));
     }
 }

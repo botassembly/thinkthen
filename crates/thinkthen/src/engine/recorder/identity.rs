@@ -17,7 +17,7 @@ const CREATE_ATTEMPTS: u64 = 16;
 static WRITES: AtomicU64 = AtomicU64::new(0);
 
 #[cfg(unix)]
-pub(super) fn require_private(folder: &Path) -> Result<(), Error> {
+pub(crate) fn require_private(folder: &Path) -> Result<(), Error> {
     use std::os::unix::fs::PermissionsExt as _;
     let mode = fs::metadata(folder).map_err(storage)?.permissions().mode() & 0o777;
     if mode == 0o700 {
@@ -28,7 +28,7 @@ pub(super) fn require_private(folder: &Path) -> Result<(), Error> {
 }
 
 #[cfg(not(unix))]
-pub(super) fn require_private(_folder: &Path) -> Result<(), Error> {
+pub(crate) fn require_private(_folder: &Path) -> Result<(), Error> {
     Ok(())
 }
 

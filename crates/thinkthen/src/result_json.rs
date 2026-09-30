@@ -48,23 +48,33 @@ pub(crate) fn decision(
     Ok((json, digest))
 }
 
+/// One command row, naming its question keys and its requests' attempts.
 #[expect(
     clippy::too_many_arguments,
-    reason = "the optional batch belongs to the same result document"
+    reason = "the keys and attempts belong to the same result document"
 )]
-pub(crate) fn decision_with_batch(
+pub(crate) fn decision_row(
     run: Run<'_>,
     judged: &Judgment,
     question: Question,
     threshold: Option<Threshold>,
     shown: Value,
     input: Option<Record>,
-    batch: Option<BatchMeta>,
+    requests: Vec<String>,
     attempts: Vec<crate::public::AttemptObservation>,
 ) -> Result<String, RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
     decision_with_digest(
-        run, judged, question, threshold, shown, input, batch, None, &digest, attempts,
+        run,
+        judged,
+        question,
+        threshold,
+        shown,
+        input,
+        None,
+        Some(requests),
+        &digest,
+        attempts,
     )
 }
 

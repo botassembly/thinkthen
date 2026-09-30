@@ -65,6 +65,27 @@ impl<'a> PlanDocument<'a> {
     /// Returns [`EncodeError`] when the request cannot be written as JSON.
     pub(crate) fn of(backend: &'a Backend, plan: &Plan) -> Result<Self, EncodeError> {
         Ok(Self {
+            request: built_in::encode_raw(plan)?,
+            ..Self::of_nothing(backend)
+        })
+    }
+
+    /// Show this exact request body, as the packer closed it.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EncodeError`] when the body is not JSON text.
+    pub(crate) fn of_body(backend: &'a Backend, body: Vec<u8>) -> Result<Self, EncodeError> {
+        let text = String::from_utf8(body).map_err(|error| EncodeError::of(&error))?;
+        let request = RawValue::from_string(text).map_err(|error| EncodeError::of(&error))?;
+        Ok(Self {
+            request,
+            ..Self::of_nothing(backend)
+        })
+    }
+
+    fn of_nothing(backend: &'a Backend) -> Self {
+        Self {
             url: backend.url(),
             model: backend.model(),
             key_env: KEY_VAR,
@@ -73,8 +94,8 @@ impl<'a> PlanDocument<'a> {
             on: None,
             request_count: None,
             group_requests: None,
-            request: built_in::encode_raw(plan)?,
-        })
+            request: RawValue::NULL.to_owned(),
+        }
     }
 
     /// Name the framing and the pointers, as a record-mode plan does.
@@ -124,10 +145,11 @@ impl<'a> PlanDocument<'a> {
         self
     }
 
-    /// Count the requests each `on` group makes, in group order, and their sum.
+    /// The plan's request count, and the requests each `on` group joins, in
+    /// group order. Groups may share a request, so the counts need not sum.
     #[must_use]
-    pub(crate) fn requests(mut self, groups: Vec<usize>) -> Self {
-        self.request_count = Some(groups.iter().sum());
+    pub(crate) fn requests(mut self, count: usize, groups: Vec<usize>) -> Self {
+        self.request_count = Some(count);
         self.group_requests = Some(groups);
         self
     }

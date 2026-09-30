@@ -5,7 +5,7 @@ use std::os::unix::fs::PermissionsExt as _;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::{encoded_decide, plant_backend_identity, plant_recording};
+use crate::support::{encoded_decide, plant_recording};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -26,8 +26,29 @@ fn plant(folder: &Path, base: &str) -> Option<PathBuf> {
     let url = format!("{base}/systemone");
     let request = encoded_decide(EVIDENCE, MODEL, QUESTION);
     let name = plant_recording(folder, &url, &request, ANSWER)?;
-    plant_backend_identity(folder, &url)?;
     Some(folder.join(name))
+}
+
+/// Fill a store in `folder` with the one answer the test asks, through a
+/// recording run, and give the store's path.
+fn filled(folder: &Path, listener: &Listener) -> Option<PathBuf> {
+    let output = spawn(
+        &[
+            "decide",
+            QUESTION,
+            "--url",
+            listener.base(),
+            "--model",
+            MODEL,
+            "--record",
+            folder.to_str()?,
+        ],
+        &[("THINKTHEN_API_KEY", "sk-test-value")],
+        EVIDENCE.as_bytes(),
+    )
+    .ok()?;
+    let _sent = listener.requests();
+    (output.status.code() == Some(0)).then(|| folder.join("thinkthen.sqlite"))
 }
 
 #[test]
@@ -42,8 +63,8 @@ fn named_folder_mode_warns_once_before_keyless_cache_and_replay_hits() {
         ("quiet-other-cache", 0o707, "cache", true, true),
     ] {
         let cache = folder(&format!("named-trust-{label}"));
-        let entry = plant(&cache, listener.base()).expect("bound entry");
-        let before = fs::read(&entry).expect("entry before replay");
+        let entry = filled(&cache, &listener).expect("a filled store");
+        let before = fs::read(&entry).expect("store before replay");
         fs::set_permissions(&cache, fs::Permissions::from_mode(mode)).expect("folder mode");
         let named = cache.to_str().expect("folder path");
         let mut arguments = vec![

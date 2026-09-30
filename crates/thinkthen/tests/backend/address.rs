@@ -5,8 +5,8 @@ use std::net::{TcpListener, ToSocketAddrs};
 use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
-use crate::recordings::{folder, only_entry};
-use crate::support::{digest, encoded_decide};
+use crate::recordings::folder;
+use crate::support::{encoded_decide, keys, stored};
 
 /// The response the listener gives to the one question the command asks.
 const ANSWERED: &str = concat!(
@@ -303,13 +303,12 @@ fn dns_host_case_spellings_share_one_recording_identity() {
     assert!(recorded.contains(r#""cached":false"#), "{recorded}");
     assert_eq!(listener.requests().len(), 1, "record sends one request");
 
-    let (name, written) = only_entry(&folder).expect("one canonical entry");
-    assert!(
-        written.contains(&format!(r#""url": "{canonical}""#)),
-        "{written}"
-    );
+    let written = stored(&folder).expect("one canonical answer");
     let request = encoded_decide("Refund me please.", "local-1", "asks for a refund");
-    assert_eq!(name, format!("{}.json", digest(&canonical, &request)));
+    let [key] = keys(&canonical, &request).try_into().expect("one question");
+    assert_eq!(written.len(), 1, "{written:?}");
+    assert_eq!(written[0]["url"], canonical.as_str());
+    assert_eq!(written[0]["key"], key.as_str());
 
     let replayed = decide(
         &[
@@ -333,7 +332,7 @@ fn dns_host_case_spellings_share_one_recording_identity() {
     );
     assert!(replayed.contains(r#""cached":true"#), "{replayed}");
     assert!(listener.requests().is_empty(), "replay asks nothing");
-    assert_eq!(only_entry(&folder).expect("one canonical entry").0, name);
+    assert_eq!(stored(&folder).expect("one canonical answer"), written);
 }
 
 /// A base given as white space is blank, and the message says so.

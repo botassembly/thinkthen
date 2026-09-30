@@ -1,4 +1,5 @@
-//! A recording folder stays bound to the backend that first wrote it.
+//! A cache folder holds answers from any address, because the address is in
+//! every question key, by ADR 0111 section 3. No folder binds to one backend.
 
 use std::fs;
 use std::io;
@@ -6,24 +7,13 @@ use std::path::{Path, PathBuf};
 use std::thread;
 
 use crate::harness::{Canned, Listener, spawn_one as spawn};
-use crate::support::{encoded_decide, plant_recording};
+use crate::support::{encoded_decide, plant_recording, stored};
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
 const ANSWER: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"#,
     r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
-);
-/// The refusal a folder the user named prints for this run's endpoint.
-fn mismatch(url: &str) -> String {
-    format!(
-        "thinkthen: the recording folder is bound to a backend address other than `{url}`; \
-         restore its backend settings or choose another folder\n"
-    )
-}
-const LEGACY: &str = concat!(
-    "thinkthen: the recording folder predates backend binding; ",
-    "replay it read-only or choose a new folder\n",
 );
 type FolderFiles = Vec<(std::ffi::OsString, Vec<u8>)>;
 
@@ -110,36 +100,16 @@ fn explicit_refresh_replaces_a_complete_cache_answer_and_replay_stays_offline() 
     };
     let first = ask(&[]);
     assert_eq!(first.status.code(), Some(0));
-    let before = files(&cache).expect("old files");
+    let before = stored(&cache).expect("the first answer");
     let refreshed = ask(&["--refresh-cache"]);
     assert_eq!(refreshed.status.code(), Some(1));
-    let after = files(&cache).expect("new files");
-    assert_eq!(before.len(), 2, "marker and one entry");
-    assert_eq!(after.len(), 2, "same marker and one entry");
-    fn selected(items: &FolderFiles, marker: bool) -> &(std::ffi::OsString, Vec<u8>) {
-        items
-            .iter()
-            .find(|(name, _)| (name == ".thinkthen-backend.json") == marker)
-            .expect("marker or digest entry")
-    }
+    let after = stored(&cache).expect("the refreshed answer");
+    assert_eq!((before.len(), after.len()), (1, 1), "one answer each time");
+    assert_eq!(before[0]["key"], after[0]["key"], "the same question key");
+    assert_eq!(before[0]["answer"], r#"{"type":"noul","noul":0.9}"#);
     assert_eq!(
-        selected(&before, true),
-        selected(&after, true),
-        "marker stays unchanged"
-    );
-    assert_eq!(
-        selected(&before, false).0,
-        selected(&after, false).0,
-        "same digest name"
-    );
-    assert_ne!(
-        selected(&before, false).1,
-        selected(&after, false).1,
+        after[0]["answer"], r#"{"type":"noul","noul":0.1}"#,
         "answer replaced"
-    );
-    assert!(
-        String::from_utf8_lossy(&refreshed.stderr)
-            .contains("sends each planned cache request live")
     );
     let replay = spawn(
         &[
@@ -161,7 +131,7 @@ fn explicit_refresh_replaces_a_complete_cache_answer_and_replay_stays_offline() 
 }
 
 #[test]
-fn a_missing_key_leaves_an_unbound_folder_for_the_next_address() {
+fn a_missing_key_writes_nothing_and_the_next_address_fills_the_folder() {
     const NO_KEY: &str = "thinkthen: the environment variable `THINKTHEN_API_KEY` is unset or blank, so no key is sent\n";
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
     for (row, named, present) in [
@@ -222,13 +192,13 @@ fn a_missing_key_leaves_an_unbound_folder_for_the_next_address() {
         )
         .expect("second-address run");
         assert_eq!(answered.status.code(), Some(0), "{row}");
-        assert!(cache.join(".thinkthen-backend.json").is_file(), "{row}");
+        assert!(cache.join("thinkthen.sqlite").is_file(), "{row}");
     }
     assert_eq!(second.requests().len(), 3);
 }
 
 #[test]
-fn a_control_character_key_leaves_an_unbound_folder_for_the_next_address() {
+fn a_control_character_key_writes_nothing_and_a_hit_reads_no_key() {
     const REFUSAL: &str = "thinkthen: the API key contains a control character\n";
     let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
@@ -238,9 +208,9 @@ fn a_control_character_key_leaves_an_unbound_folder_for_the_next_address() {
         ("default-esc", false, false, "first\u{1b}second"),
         ("named-del", true, true, "first\u{7f}second"),
     ] {
-        let home = folder(&format!("line-break-{row}-home"));
+        let home = folder(&format!("control-character-{row}-home"));
         let cache = if named {
-            folder(&format!("line-break-{row}-cache"))
+            folder(&format!("control-character-{row}-cache"))
         } else {
             default_cache(&home)
         };
@@ -281,7 +251,7 @@ fn a_control_character_key_leaves_an_unbound_folder_for_the_next_address() {
         )
         .expect("second-address run");
         assert_eq!(answered.status.code(), Some(0), "{row}");
-        assert!(cache.join(".thinkthen-backend.json").is_file(), "{row}");
+        assert!(cache.join("thinkthen.sqlite").is_file(), "{row}");
         let hit = spawn(
             &arguments,
             &[("HOME", home_text), ("THINKTHEN_API_KEY", key)],
@@ -314,27 +284,18 @@ fn a_dangling_cache_path_is_storage_failure_before_key_lookup() {
 }
 
 #[test]
-fn a_mismatch_names_the_folder_and_the_address() {
+fn a_cache_pointed_at_a_new_address_resends_and_keeps_both_answers() {
     let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
-    let default_sentence = format!(
-        "thinkthen: the default cache is bound to a backend address other than `{}`; \
-         stop every process using the cache, move the entire cache folder shown by thinkthen status aside to preserve it, then retry; or set THINKTHEN_CACHE to a new folder\n",
-        second.url()
-    );
-    let named_sentence = mismatch(second.url());
-    // Row: the option that names the folder, whether THINKTHEN_CACHE names it,
-    // and the sentence. `--replay` is filled through `--cache`, since a
-    // replay alone writes nothing.
-    for (row, option, environment_names, expected) in [
-        ("default", None, false, &default_sentence),
-        ("environment", None, true, &named_sentence),
-        ("cache", Some("--cache"), false, &named_sentence),
-        ("record", Some("--record"), false, &named_sentence),
-        ("replay", Some("--replay"), false, &named_sentence),
+    // Row: the option that names the folder, and whether THINKTHEN_CACHE names it.
+    for (row, option, environment_names) in [
+        ("default", None, false),
+        ("environment", None, true),
+        ("cache", Some("--cache"), false),
+        ("record", Some("--record"), false),
     ] {
-        let home = folder(&format!("mismatch-{row}-home"));
-        let named = folder(&format!("mismatch-{row}-folder"));
+        let home = folder(&format!("new-address-{row}-home"));
+        let named = folder(&format!("new-address-{row}-folder"));
         let chosen = if option.is_some() || environment_names {
             named.clone()
         } else {
@@ -342,56 +303,43 @@ fn a_mismatch_names_the_folder_and_the_address() {
         };
         let named_text = named.to_str().expect("folder");
         let home_text = home.to_str().expect("home");
-        let run = |base: &str, option: Option<&str>, extra: &[&str], key: bool| {
+        let run = |base: &str| {
             let mut arguments = vec!["decide", QUESTION, "--url", base, "--model", "local-1"];
             if let Some(option) = option {
                 arguments.extend([option, named_text]);
             }
-            arguments.extend_from_slice(extra);
-            let mut environment = vec![("HOME", home_text)];
+            let mut environment = vec![("HOME", home_text), ("THINKTHEN_API_KEY", "sk-test-value")];
             if environment_names {
                 environment.push(("THINKTHEN_CACHE", named_text));
             }
-            if key {
-                environment.push(("THINKTHEN_API_KEY", "sk-test-value"));
-            }
             spawn(&arguments, &environment, EVIDENCE.as_bytes()).expect("run")
         };
-        let fill = if option == Some("--replay") {
-            Some("--cache")
-        } else {
-            option
-        };
+        let sent = second.requests().len();
+        assert_eq!(run(first.base()).status.code(), Some(0), "{row}");
+        let answered = run(second.base());
+        assert_eq!(answered.status.code(), Some(0), "{row}");
+        assert!(answered.stderr.is_empty(), "{row}");
         assert_eq!(
-            run(first.base(), fill, &[], true).status.code(),
-            Some(0),
-            "{row}"
+            second.requests().len(),
+            sent + 1,
+            "{row}: the new address was asked"
         );
-        let before = files(&chosen).expect("folder files");
-
-        let refused = run(second.base(), option, &[], false);
-        assert_eq!(refused.status.code(), Some(5), "{row}");
-        assert!(refused.stdout.is_empty(), "{row}");
-        assert_eq!(
-            String::from_utf8_lossy(&refused.stderr),
-            expected.as_str(),
-            "{row}"
-        );
-        assert!(second.requests().is_empty(), "{row}");
-        assert_eq!(files(&chosen).expect("folder files"), before, "{row}");
-
-        if row == "default" {
-            let stepped = run(second.base(), None, &["--no-cache"], true);
-            assert_eq!(stepped.status.code(), Some(0));
-            assert_eq!(second.requests().len(), 1);
-            assert_eq!(files(&chosen).expect("folder files"), before);
-        }
+        let urls: Vec<_> = stored(&chosen)
+            .expect("the store")
+            .iter()
+            .map(|answer| answer["url"].as_str().unwrap_or_default().to_owned())
+            .collect();
+        let mut expected = vec![first.url().to_owned(), second.url().to_owned()];
+        let mut urls = urls;
+        urls.sort();
+        expected.sort();
+        assert_eq!(urls, expected, "{row}");
     }
 }
 
 #[test]
-fn concurrent_first_users_at_different_addresses_choose_one_backend() {
-    let cache = folder("cache-backend-first-use-race");
+fn two_processes_write_one_store_at_once_and_both_succeed() {
+    let cache = folder("cache-two-writers");
     let first = Listener::answering(|_| Canned::ok(ANSWER).after(30)).expect("first listener");
     let second = Listener::answering(|_| Canned::ok(ANSWER).after(30)).expect("second listener");
     let first_base = first.base().to_owned();
@@ -410,108 +358,90 @@ fn concurrent_first_users_at_different_addresses_choose_one_backend() {
         )
     });
 
-    let mut codes = [first_output.status.code(), second_output.status.code()];
-    codes.sort();
-    assert_eq!(codes, [Some(0), Some(5)]);
-    assert_eq!(first.requests().len() + second.requests().len(), 1);
-    assert_eq!(
-        [
-            (first_output.stderr, first.url()),
-            (second_output.stderr, second.url()),
-        ]
-        .iter()
-        .filter(|(bytes, url)| bytes.as_slice() == mismatch(url).as_bytes())
-        .count(),
-        1
-    );
-    let marker = fs::read(cache.join(".thinkthen-backend.json")).expect("complete marker");
-    assert!(serde_json::from_slice::<serde_json::Value>(&marker).is_ok());
+    for output in [&first_output, &second_output] {
+        assert_eq!(
+            output.status.code(),
+            Some(0),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+    }
+    assert_eq!((first.requests().len(), second.requests().len()), (1, 1));
+    assert_eq!(stored(&cache).expect("the store").len(), 2);
 }
 
 #[test]
-fn normalized_address_spellings_and_models_share_one_folder() {
+fn normalized_address_spellings_share_one_key_and_models_do_not() {
     let cache = folder("cache-backend-normalized-and-models");
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
     let first_base = listener.base().replacen("http://", "HTTP://", 1);
-    let first = decide_model(
-        &format!("{first_base}/"),
-        &cache,
-        "--record",
-        true,
-        "local-1",
-    )
-    .expect("first runs");
-    assert_eq!(first.status.code(), Some(0));
-    let second =
-        decide_model(listener.base(), &cache, "--record", true, "local-2").expect("second runs");
-    assert_eq!(second.status.code(), Some(0));
-    assert_eq!(listener.requests().len(), 2);
-    assert_eq!(
-        files(&cache)
-            .expect("cache files")
-            .iter()
-            .filter(|(name, _)| !name.to_string_lossy().starts_with('.'))
-            .count(),
-        2
-    );
+    for (base, model) in [
+        (format!("{first_base}/"), "local-1"),
+        (listener.base().to_owned(), "local-1"),
+        (listener.base().to_owned(), "local-2"),
+    ] {
+        let output = decide_model(&base, &cache, "--record", true, model).expect("run");
+        assert_eq!(output.status.code(), Some(0));
+    }
+    assert_eq!(listener.requests().len(), 3);
+    let answers = stored(&cache).expect("the store");
+    assert_eq!(answers.len(), 2, "the two spellings replace one answer");
+    assert!(answers.iter().all(|answer| answer["url"] == listener.url()));
 }
 
 #[test]
-fn an_old_exact_replay_stays_read_only_and_a_miss_explains_the_digest() {
+fn an_old_entry_is_ignored_until_convert_and_a_replay_writes_nothing() {
     let recording = folder("legacy-replay");
     let base = "http://127.0.0.1:1/v1";
     let url = format!("{base}/systemone");
     let request = encoded_decide(EVIDENCE, "local-1", QUESTION);
     let name = plant_recording(&recording, &url, &request, ANSWER).expect("legacy entry");
-    let before = fs::read(recording.join(&name)).expect("entry");
+    let before = files(&recording).expect("old folder");
 
-    let replayed = decide(base, &recording, "--replay", false).expect("replay runs");
-    assert_eq!(replayed.status.code(), Some(0));
-    assert_eq!(fs::read(recording.join(&name)).expect("entry"), before);
-    assert!(!recording.join(".thinkthen-backend.json").exists());
-
-    let missed = decide("http://127.0.0.1:2/v1", &recording, "--replay", false).expect("miss runs");
+    let missed = decide(base, &recording, "--replay", false).expect("miss runs");
     assert_eq!(missed.status.code(), Some(5));
     let message = String::from_utf8_lossy(&missed.stderr);
     assert!(message.starts_with(
-        "thinkthen: the decide request for one document: the replay folder holds no entry named `"
+        "thinkthen: the decide request for one document: the replay folder holds no answer for question `"
     ));
-    assert!(
-        message.ends_with("`; the entry name covers the backend interface, address, and request\n")
-    );
-    assert!(!recording.join(".thinkthen-backend.json").exists());
-}
+    assert_eq!(files(&recording).expect("old folder"), before);
 
-#[test]
-fn a_write_capable_old_folder_refuses_before_send() {
-    let recording = folder("legacy-write-refusal");
-    let old_base = "http://127.0.0.1:1/v1";
-    let request = encoded_decide(EVIDENCE, "local-1", QUESTION);
-    plant_recording(
-        &recording,
-        &format!("{old_base}/systemone"),
-        &request,
-        ANSWER,
+    let converted = spawn(
+        &["cache", "convert", &recording.to_string_lossy()],
+        &[],
+        b"",
     )
-    .expect("legacy entry");
-    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
-
-    let refused = decide(listener.base(), &recording, "--cache", false).expect("refusal runs");
-    assert_eq!(refused.status.code(), Some(5));
-    assert_eq!(String::from_utf8_lossy(&refused.stderr), LEGACY);
-    assert!(listener.requests().is_empty());
-    assert!(!recording.join(".thinkthen-backend.json").exists());
+    .expect("convert runs");
+    assert_eq!(converted.status.code(), Some(0));
+    let replayed = decide(base, &recording, "--replay", false).expect("replay runs");
+    assert_eq!(replayed.status.code(), Some(0));
+    assert!(recording.join(&name).is_file(), "the old entry stays");
 }
 
 #[test]
-fn malformed_identity_is_a_secret_safe_storage_failure() {
-    let cache = folder("malformed-cache-identity");
+fn a_cache_over_an_old_folder_resends_and_keeps_its_old_entry() {
+    let recording = folder("legacy-write");
+    let request = encoded_decide(EVIDENCE, "local-1", QUESTION);
+    let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
+    let name = plant_recording(&recording, listener.url(), &request, ANSWER).expect("legacy entry");
+    let old = fs::read(recording.join(&name)).expect("old entry");
+
+    let answered = decide(listener.base(), &recording, "--cache", true).expect("cache runs");
+    assert_eq!(answered.status.code(), Some(0));
+    assert_eq!(listener.requests().len(), 1, "an old cache is not read");
+    assert_eq!(stored(&recording).expect("the store").len(), 1);
+    assert_eq!(fs::read(recording.join(&name)).expect("old entry"), old);
+}
+
+#[test]
+fn a_store_that_is_no_database_is_a_secret_safe_storage_failure() {
+    let cache = folder("malformed-cache-store");
     fs::create_dir_all(&cache).expect("cache folder");
     fs::write(
-        cache.join(".thinkthen-backend.json"),
-        b"private evidence that is not json",
+        cache.join("thinkthen.sqlite"),
+        b"private evidence that is not a database, padded well past one header of bytes",
     )
-    .expect("marker");
+    .expect("store");
     let listener = Listener::answering(|_| Canned::ok(ANSWER)).expect("listener");
 
     let refused = decide(listener.base(), &cache, "--cache", false).expect("refusal runs");
@@ -521,7 +451,6 @@ fn malformed_identity_is_a_secret_safe_storage_failure() {
         "thinkthen: the recording folder could not be read or written; check its permissions and free space\n"
     );
     assert!(listener.requests().is_empty());
-    assert!(!String::from_utf8_lossy(&refused.stderr).contains("private evidence"));
 }
 
 mod default;

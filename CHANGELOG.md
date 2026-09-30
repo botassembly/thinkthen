@@ -26,10 +26,18 @@ Python and Ruby calls now raise cancellation when the caller's token fires befor
 
 `decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annotate` send one quoted form on every surface. The state is the fixed sentence `Each question quotes the text it asks about.` or the context, and each question quotes its own record, a batch of one included. The record-list state and the unquoted single-record request are gone, so request bodies and recording digests change and an old cache entry is never found again. A profile's evidence limit still bounds each record, and it now also counts the fixed sentence or the context, so a limit below 44 bytes refuses every such request (ticket 0304, ADR 0111).
 
+On the command, `decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annotate` keep one answer for each question in `thinkthen.sqlite`, so a longer run over the same records sends only the new records' questions. A partial reply keeps its good answers, and a rerun asks only the failed question. `meta.requests` and each annotate answer's `request` now name question keys, and `meta.batch` and `meta.batches` are gone from these rows. `--facts` counts `cache_answers` as questions. An old cache of digest entries is ignored by these commands until you run `thinkthen cache convert DIR`, which writes `thinkthen.jsonl`. It marks each answer read from an old entry with origin `converted`, or `quoted` for an entry already in the quoted form or one `--quote` rewrote (ticket 0304, ADR 0111).
+
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
 
 Every surface refuses an API key holding any control character, not only a line break, and says `the API key contains a control character` (ticket 0321).
 
+`audit` and `diff` treat results whose lines name no `meta.batch.setting` as an unknown setting. `audit --write` then leaves a question file's `batch` member alone and reports nothing about it, and neither command warns about mixed settings because of such a run. Rows from the command's record functions carry no setting (ticket 0304).
+
 ### Breaking changes
 
-None. This is the first release.
+This is the first release. These changes break earlier builds from main:
+
+- `--record` no longer stops at a conflicting entry. It replaces the answer stored under the same question key (ticket 0304).
+- `meta.batch` and `meta.batches` are gone from the rows of the command's record functions (ticket 0304).
+- `thinkthen cache convert DIR` deletes `thinkthen.sqlite` after it merges the file's answers into `thinkthen.jsonl` (ticket 0304).

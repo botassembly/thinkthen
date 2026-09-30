@@ -16,14 +16,21 @@ use serde_json::Value;
 use serde_json::value::RawValue;
 
 use crate::harness::spawn_one as spawn;
-use crate::support::digest;
+use crate::support::{digest, keys};
+
+mod selection;
+use selection::selected_ids;
 
 const CASES: &str = include_str!("../../../../conformance/cases.json");
 const CANONICAL: &str = "https://api.typesafe.ai/v1/systemone";
 const KEY: [(&str, &str); 1] = [("THINKTHEN_API_KEY", "sk-loopback-cases")];
 
-/// The cases no wire can carry: five injections and three question forms.
-const IN_PROCESS: [&str; 8] = [
+/// The cases the command wire does not run: five injections, three question
+/// forms, and one case holding one request per `annotate` group. ADR 0111
+/// packs the groups into one request, and the public API keeps two until
+/// slice 3.
+const IN_PROCESS: [&str; 9] = [
+    "18-annotate-two-groups",
     "20-usage-fault",
     "22-local-fault",
     "23-cancelled-fault",
@@ -68,7 +75,7 @@ fn every_wire_case_passes_through_the_command_on_the_conformance_backend() {
             not_run += 1;
             writeln!(
                 std::io::stderr().lock(),
-                "{id}: not run by the command wire (in-process injection or question form)"
+                "{id}: not run by the command wire (in-process, question form or repacked)"
             )
             .expect("write skipped case to stderr");
             continue;
@@ -91,46 +98,6 @@ fn every_wire_case_passes_through_the_command_on_the_conformance_backend() {
     assert!(failures.is_empty(), "{failures:#?}");
 }
 
-/// Read one optional absolute ID list, and refuse duplicate or unknown IDs.
-fn selected_ids(cases: &[Value]) -> Result<Option<BTreeSet<String>>, String> {
-    let mut available = BTreeSet::new();
-    for case in cases {
-        let id = case["id"].as_str().ok_or("a shared case has no ID")?;
-        if !available.insert(id) {
-            return Err(format!("duplicate shared case `{id}`"));
-        }
-    }
-    let Some(path) = std::env::var_os("THINKTHEN_CONFORMANCE_IDS") else {
-        return Ok(None);
-    };
-    let path = PathBuf::from(path);
-    if !path.is_absolute() {
-        return Err("THINKTHEN_CONFORMANCE_IDS takes an absolute path".to_owned());
-    }
-    let text = fs::read_to_string(&path).map_err(|error| format!("{}: {error}", path.display()))?;
-    let mut selected = BTreeSet::new();
-    for id in text
-        .lines()
-        .map(str::trim)
-        .filter(|id| !id.is_empty() && !id.starts_with('#'))
-    {
-        if !selected.insert(id.to_owned()) {
-            return Err(format!("duplicate selected case `{id}`"));
-        }
-    }
-    if selected.is_empty() {
-        return Err("the selected case list is empty".to_owned());
-    }
-    for id in &selected {
-        if !available.contains(id.as_str()) {
-            return Err(format!(
-                "selected case `{id}` is absent from the shared corpus"
-            ));
-        }
-    }
-    Ok(Some(selected))
-}
-
 /// Run one case and compare every row with its expected answers.
 fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     let id = text(&case["id"]);
@@ -142,10 +109,18 @@ fn check(backend: &Backend, case: &Value, verbatim: &Verbatim) -> Checked {
     }
     let base = format!("{}/case/{id}/v1", backend.origin());
     let served = format!("{base}/systemone");
+    // A record function's row lists question keys by ADR 0111; `find`,
+    // `recognize` and `relate` keep request digests until slice 4.
+    let keyed = !matches!(text(&case["verb"]), "find" | "recognize" | "relate");
     let mut renamed = BTreeMap::new();
     for exchange in list(&case["exchanges"]) {
         let request = text(&exchange["request"]).as_bytes();
-        renamed.insert(digest(CANONICAL, request), digest(&served, request));
+        let now = if keyed {
+            Value::from(keys(&served, request))
+        } else {
+            Value::from(digest(&served, request))
+        };
+        renamed.insert(digest(CANONICAL, request), now);
     }
     let success = &case["expect"]["success"];
     let answers = recomputed(&success["answers"], &renamed);
@@ -364,7 +339,8 @@ fn whole(rows: &[Value], answers: &[Value]) -> Checked {
 
 /// One annotated row per record, each answer under its name.
 fn annotated(rows: &[Value], answers: &[Value], success: &Value) -> Checked {
-    let groups = list(&answers.first().ok_or("no answer")?["details"]["requests"]).len() as u64;
+    let first = list(&success["answers"]).first().ok_or("no answer")?;
+    let groups = list(&first["details"]["requests"]).len() as u64;
     let mut failed = 0;
     for want in answers {
         let record = want["exchange"].as_u64().ok_or("no exchange")? / groups.max(1);
@@ -413,14 +389,24 @@ fn found(rows: &[Value], answers: &[Value], case: &Value) -> Checked {
     meta(row, want)
 }
 
-/// The model and the recomputed request digests a row carries.
+/// The model and the recomputed request names a row carries. A record
+/// function's row lists its own question keys, in order, out of the keys of
+/// the requests the case recorded.
 fn meta(row: &Value, want: &Value) -> Checked {
     same("model", &row["meta"]["model"], &want["details"]["model"])?;
-    same(
-        "requests",
-        &row["meta"]["requests"],
-        &want["details"]["requests"],
-    )
+    let wanted = &want["details"]["requests"];
+    if !list(wanted).iter().any(Value::is_array) {
+        return same("requests", &row["meta"]["requests"], wanted);
+    }
+    let printed = list(&row["meta"]["requests"]);
+    let mut rest = list(wanted).iter().flat_map(list);
+    if !printed.is_empty() && printed.iter().all(|key| rest.any(|held| held == key)) {
+        Ok(())
+    } else {
+        Err(format!(
+            "requests: printed {printed:?}, expected keys out of {wanted}"
+        ))
+    }
 }
 
 /// A counters case repeats its call through one cache folder and counts both sides.
@@ -462,10 +448,10 @@ fn counted(
 }
 
 /// Expected answers with each canonical request digest swapped for the served one.
-fn recomputed(answers: &Value, renamed: &BTreeMap<String, String>) -> Vec<Value> {
-    fn swap(value: &Value, renamed: &BTreeMap<String, String>) -> Value {
+fn recomputed(answers: &Value, renamed: &BTreeMap<String, Value>) -> Vec<Value> {
+    fn swap(value: &Value, renamed: &BTreeMap<String, Value>) -> Value {
         match value {
-            Value::String(held) => Value::from(renamed.get(held).unwrap_or(held).as_str()),
+            Value::String(held) => renamed.get(held).cloned().unwrap_or_else(|| value.clone()),
             Value::Array(items) => items.iter().map(|item| swap(item, renamed)).collect(),
             Value::Object(fields) => fields
                 .iter()

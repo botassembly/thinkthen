@@ -1,10 +1,13 @@
-//! Immutable recording entries under repeated and concurrent writes.
+//! Repeated recording writes. The record functions store one answer per
+//! question and `--record` replaces it, by ADR 0111 section 3. `find` keeps
+//! the immutable request entries and their conflicts until slice 4.
 
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::harness::{Canned, Listener, spawn_one as spawn};
+use crate::support::stored;
 
 const QUESTION: &str = "asks for a refund";
 const EVIDENCE: &str = "Refund me please.";
@@ -16,19 +19,19 @@ const TRUE: &str = concat!(
     r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"#,
     r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
 );
-const PADDED_TRUE: &str = concat!(
+const PADDED_FIRST: &str = concat!(
     " \n",
-    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"#,
-    r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
+    r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u001","#,
+    r#""probabilities":{"u001":0.9,"u002":0.1}}}}"#,
     "\t ",
 );
-const PADDED_FALSE: &str = concat!(
+const PADDED_SECOND: &str = concat!(
     " \n",
-    r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1}},"#,
-    r#""usage":{"input_tokens":10,"output_tokens":2}}"#,
+    r#"{"model":"local-1","answers":{"q1":{"type":"choice","choice":"u002","#,
+    r#""probabilities":{"u001":0.1,"u002":0.9}}}}"#,
     "\t ",
 );
-const CONFLICT: &str = "differently from the saved response";
+const UNITS: &str = "Refund me please.\nThanks for the fix.\n";
 
 fn folder(name: &str) -> PathBuf {
     let path = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
@@ -42,8 +45,22 @@ fn decide(
     arguments: &[&str],
     input: &str,
 ) -> io::Result<std::process::Output> {
+    asked("decide", base, folder, arguments, input)
+}
+
+fn find(base: &str, folder: &Path) -> io::Result<std::process::Output> {
+    asked("find", base, folder, &[], UNITS)
+}
+
+fn asked(
+    verb: &str,
+    base: &str,
+    folder: &Path,
+    arguments: &[&str],
+    input: &str,
+) -> io::Result<std::process::Output> {
     let common = [
-        "decide",
+        verb,
         QUESTION,
         "--url",
         base,
@@ -88,7 +105,7 @@ fn temporary_names(folder: &Path) -> io::Result<Vec<String>> {
 }
 
 #[test]
-fn divergent_duplicate_records_stop_before_the_second_answer_prints() {
+fn equal_records_in_one_record_run_ask_their_question_once() {
     let folder = folder("recording-divergent-duplicate");
     let listener =
         Listener::serving(vec![Canned::ok(FALSE), Canned::ok(TRUE)]).expect("a loopback listener");
@@ -100,35 +117,29 @@ fn divergent_duplicate_records_stop_before_the_second_answer_prints() {
     )
     .expect("the binary runs");
 
-    assert_eq!(output.status.code(), Some(5));
+    assert_eq!(output.status.code(), Some(0));
     assert_eq!(
         String::from_utf8_lossy(&output.stdout),
-        concat!(r#"{"input":"Refund me please.","value":false}"#, "\n",)
+        concat!(
+            r#"{"input":"Refund me please.","value":false}"#,
+            "\n",
+            r#"{"input":"Refund me please.","value":false}"#,
+            "\n",
+        )
     );
-    let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains(CONFLICT), "{message}");
-    for hidden in [FALSE, TRUE, "0.1", "0.9"] {
-        assert!(!message.contains(hidden), "{message}");
-    }
-    assert!(
-        fs::read_to_string(entry(&folder).expect("one entry"))
-            .expect("the entry is text")
-            .contains(r#""noul":0.1"#)
-    );
-    assert!(
-        temporary_names(&folder)
-            .expect("the folder is readable")
-            .is_empty()
-    );
+    assert_eq!(listener.requests().len(), 1, "equal keys are asked once");
+    let answers = stored(&folder).expect("the store");
+    assert_eq!(answers.len(), 1);
+    assert_eq!(answers[0]["answer"], r#"{"type":"noul","noul":0.1}"#);
 }
 
 #[test]
 fn recording_the_same_whitespace_padded_response_again_is_idempotent() {
     let folder = folder("recording-idempotent");
-    let listener = Listener::serving(vec![Canned::ok(PADDED_TRUE), Canned::ok(PADDED_TRUE)])
+    let listener = Listener::serving(vec![Canned::ok(PADDED_FIRST), Canned::ok(PADDED_FIRST)])
         .expect("a loopback listener");
     assert_eq!(
-        decide(listener.base(), &folder, &[], EVIDENCE)
+        find(listener.base(), &folder)
             .expect("the binary runs")
             .status
             .code(),
@@ -141,7 +152,7 @@ fn recording_the_same_whitespace_padded_response_again_is_idempotent() {
     let before = fs::read(&path).expect("the entry is readable");
 
     assert_eq!(
-        decide(listener.base(), &folder, &[], EVIDENCE)
+        find(listener.base(), &folder)
             .expect("the binary runs")
             .status
             .code(),
@@ -159,10 +170,10 @@ fn recording_the_same_whitespace_padded_response_again_is_idempotent() {
 #[test]
 fn whitespace_padded_responses_with_different_values_conflict() {
     let folder = folder("recording-padded-conflict");
-    let listener = Listener::serving(vec![Canned::ok(PADDED_TRUE), Canned::ok(PADDED_FALSE)])
+    let listener = Listener::serving(vec![Canned::ok(PADDED_FIRST), Canned::ok(PADDED_SECOND)])
         .expect("a loopback listener");
     assert_eq!(
-        decide(listener.base(), &folder, &[], EVIDENCE)
+        find(listener.base(), &folder)
             .expect("the binary runs")
             .status
             .code(),
@@ -171,8 +182,9 @@ fn whitespace_padded_responses_with_different_values_conflict() {
     let path = entry(&folder).expect("one entry");
     let before = fs::read(&path).expect("the first entry is readable");
 
-    let output = decide(listener.base(), &folder, &[], EVIDENCE).expect("the binary runs");
+    let output = find(listener.base(), &folder).expect("the binary runs");
     assert_eq!(output.status.code(), Some(5));
+    assert!(output.stdout.is_empty());
     let name = path.file_name().expect("a file name").to_string_lossy();
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
@@ -190,30 +202,20 @@ fn whitespace_padded_responses_with_different_values_conflict() {
 }
 
 #[test]
-fn a_damaged_entry_is_replaced_after_one_successful_answer() {
-    let folder = folder("recording-damaged-winner");
+fn recording_again_replaces_the_stored_answer() {
+    let folder = folder("recording-replaces");
     let listener =
         Listener::serving(vec![Canned::ok(TRUE), Canned::ok(FALSE)]).expect("a loopback listener");
-    assert_eq!(
-        decide(listener.base(), &folder, &[], EVIDENCE)
-            .expect("the binary runs")
-            .status
-            .code(),
-        Some(0)
-    );
-    let path = entry(&folder).expect("one entry");
-    let damaged = b"not an entry at all";
-    fs::write(&path, damaged).expect("the entry is writable");
-
-    let output = decide(listener.base(), &folder, &[], EVIDENCE).expect("the binary runs");
-    assert_eq!(output.status.code(), Some(1));
-    assert!(output.stderr.is_empty());
-    let repaired = fs::read(path).expect("the entry is readable");
-    assert_ne!(repaired, damaged);
-    assert!(String::from_utf8_lossy(&repaired).contains(r#""noul":0.1"#));
-    assert!(
-        temporary_names(&folder)
-            .expect("the folder is readable")
-            .is_empty()
-    );
+    for (expected, answer) in [
+        (0, r#"{"type":"noul","noul":0.9}"#),
+        (1, r#"{"type":"noul","noul":0.1}"#),
+    ] {
+        let output = decide(listener.base(), &folder, &[], EVIDENCE).expect("the binary runs");
+        assert_eq!(output.status.code(), Some(expected));
+        assert!(output.stderr.is_empty());
+        let answers = stored(&folder).expect("the store");
+        assert_eq!(answers.len(), 1);
+        assert_eq!(answers[0]["answer"], answer);
+    }
+    assert_eq!(listener.requests().len(), 2, "--record asks every question");
 }

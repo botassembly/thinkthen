@@ -1,19 +1,19 @@
 //! A loopback listener that serves scripted responses and records what it was sent.
-use std::io::{self, BufRead, BufReader, Read, Write};
+use std::io::{self, Write};
 use std::net::{TcpListener, TcpStream};
 use std::sync::atomic::Ordering;
 use std::sync::mpsc::{Receiver, Sender, channel};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use crate::arms::drift;
 use crate::lifetime::{Counts, Gate, Lifetime, Rendezvous};
 
+mod wire;
+use wire::{consume, peek_request, questions};
+
 /// The path the engine appends to every base.
 const ENDPOINT_PATH: &str = "systemone";
-
-/// How long a peek may see no new bytes before the request is read instead.
-const STALL: Duration = Duration::from_secs(2);
 
 /// How long a scripted connection may send nothing before it is dropped. A
 /// client the scheduler pauses under load stays well inside it.
@@ -274,6 +274,11 @@ impl Listener {
         self.counts.requests.load(Ordering::SeqCst)
     }
 
+    /// How many wire questions the requests it read held in all.
+    pub fn questions(&self) -> usize {
+        self.counts.questions.load(Ordering::SeqCst)
+    }
+
     /// The most requests the listener held at once.
     pub fn peak(&self) -> usize {
         self.counts.peak.load(Ordering::SeqCst)
@@ -391,6 +396,9 @@ fn serve_kept(
         let canned = reply(&request);
         lifetime.watch(canned.release.as_ref());
         counts.requests.fetch_add(1, Ordering::SeqCst);
+        counts
+            .questions
+            .fetch_add(questions(&request.body), Ordering::SeqCst);
         if sender.is_some_and(|sender| sender.send(request).is_err()) {
             return;
         }
@@ -413,71 +421,6 @@ fn serve_kept(
         }
         counts.in_flight.fetch_sub(1, Ordering::SeqCst);
     }
-}
-
-/// Peek until one whole request sits in the socket buffer, then parse it.
-///
-/// The bytes stay unread, so a reset can drop them. The count says how many
-/// bytes the request took, for [`consume`] to read past. A request too long to
-/// peek whole, or one whose bytes stopped arriving for [`STALL`], is read at
-/// once instead. That read ends at a closed client's end of file, and the
-/// count of 0 turns a later reset into the drift status.
-fn peek_request(stream: &TcpStream) -> Option<(Recorded, usize)> {
-    let mut buffer = vec![0; 32 * 1024];
-    let mut last = (0, Instant::now());
-    loop {
-        let seen = stream.peek(&mut buffer).ok()?;
-        if seen == 0 {
-            return None;
-        }
-        let mut rest = buffer.get(..seen)?;
-        if let Some(request) = read_request(&mut rest) {
-            return Some((request, seen - rest.len()));
-        }
-        if seen != last.0 {
-            last = (seen, Instant::now());
-        }
-        if seen == buffer.len() || last.1.elapsed() >= STALL {
-            return read_request(&mut BufReader::new(stream)).map(|request| (request, 0));
-        }
-        std::thread::sleep(Duration::from_millis(1));
-    }
-}
-
-/// Read past the bytes one peeked request took.
-fn consume(mut stream: &TcpStream, used: usize) -> Option<()> {
-    stream.read_exact(&mut vec![0; used]).ok()
-}
-
-/// Read one request line, its headers, and the body its content length names.
-fn read_request(reader: &mut impl BufRead) -> Option<Recorded> {
-    let mut line = String::new();
-    reader.read_line(&mut line).ok()?;
-    let mut headers = Vec::new();
-    let mut length = 0;
-    loop {
-        let mut header = String::new();
-        reader.read_line(&mut header).ok()?;
-        // A line cut off by the end of what arrived so far is no line yet.
-        if !header.ends_with('\n') {
-            return None;
-        }
-        let header = header.trim_end().to_owned();
-        if header.is_empty() {
-            break;
-        }
-        if let Some(value) = header.to_lowercase().strip_prefix("content-length: ") {
-            length = value.trim().parse().ok()?;
-        }
-        headers.push(header);
-    }
-    let mut body = vec![0; length];
-    reader.read_exact(&mut body).ok()?;
-    Some(Recorded {
-        line: line.trim_end().to_owned(),
-        headers,
-        body,
-    })
 }
 
 /// Write one canned response and close the connection.

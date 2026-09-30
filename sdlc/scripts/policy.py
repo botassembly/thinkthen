@@ -47,8 +47,8 @@ LICENSE_EXCEPTIONS = {
 }
 ACCEPTED_DEPENDENCIES = {
     "thinkthen": {
-        "arc-swap", "clap", "csv-core", "polars", "polars-core", "serde", "serde_json", "sha2", "signal-hook",
-        "thiserror", "ureq",
+        "arc-swap", "clap", "csv-core", "polars", "polars-core", "rusqlite", "serde", "serde_json", "sha2",
+        "signal-hook", "thiserror", "ureq",
     },
     "conformance-backend": {"serde", "serde_json"},
 }
@@ -320,6 +320,10 @@ def check_crates() -> None:
             plant = {**dependencies, name: {**dependencies.get(name, {}), **changed}}
             if not feature_failures({**manifest, "dependencies": plant}):
                 fail("dependencies", f"a planted {name} that is not optional, or keeps its defaults, is refused")
+    for changed in ({"version": "0.40.2"}, {"default-features": True}, {"features": ["bundled", "blob"]}):
+        plant = {**dependencies, "rusqlite": {**dependencies.get("rusqlite", {}), **changed}}
+        if not feature_failures({**manifest, "dependencies": plant}):
+            fail("dependencies", f"a planted rusqlite with {changed} is refused")
     plant = {**dependencies, "polars-core": {**dependencies["polars-core"], "features": []}}
     if not feature_failures({**manifest, "dependencies": plant}):
         fail("dependencies", "a planted polars-core without dtype-struct is refused")
@@ -336,10 +340,10 @@ def feature_failures(manifest: dict) -> list[str]:
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "signal-hook", "polars", "polars-core"}:
+    if optional != {"clap", "csv-core", "rusqlite", "signal-hook", "polars", "polars-core"}:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
-        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
+        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:rusqlite", "dep:signal-hook"],
         "polars": ["dep:polars", "dep:polars-core", "polars/lazy"],
     }:
         held.append("the default cli feature selects only command dependencies, and polars selects its two pinned crates with lazy")
@@ -350,6 +354,16 @@ def feature_failures(manifest: dict) -> list[str]:
         "features": ["dtype-struct"],
     }:
         held.append("polars-core activates only dtype-struct, under the optional Polars feature")
+    # ADR 0111 section 3: the question store's SQLite, bundled so every host
+    # runs the same one, pinned exactly, and only under the command feature.
+    rusqlite = manifest.get("dependencies", {}).get("rusqlite", {})
+    if not (
+        isinstance(rusqlite, dict)
+        and str(rusqlite.get("version", "")).startswith("=")
+        and {key: value for key, value in rusqlite.items() if key != "version"}
+        == {"default-features": False, "features": ["bundled"], "optional": True}
+    ):
+        held.append("rusqlite is pinned exactly, optional, with default features off and only bundled on")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES["thinkthen"]:
         held.append("thinkthen declares the accepted development dependency set")
     return held
@@ -2031,6 +2045,62 @@ def check_recordings() -> None:
             continue
         for failure in recording_failures(held):
             fail("recordings", f"{relative}: {failure}")
+    fixture_plants = (
+        '{"key":"k","headers":{}}\n',
+        '{"key":"k","answer":"{\\"authorization\\":\\"x\\"}"}\n',
+        '{"sha256":"s","state":"Bearer x"}\n',
+    )
+    for plant in fixture_plants:
+        if not fixture_failures(plant):
+            fail("recordings", f"the planted fixture line {plant.strip()!r} is refused")
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True)
+    for relative in listed.stdout.decode().split("\0"):
+        if posixpath.basename(relative) != "thinkthen.jsonl":
+            continue
+        try:
+            text = (REPO / relative).read_text(encoding="utf-8")
+        except OSError as error:
+            fail("recordings", f"cannot read {relative}: {error}")
+            continue
+        for failure in fixture_failures(text):
+            fail("recordings", f"{relative}: {failure}")
+
+
+def fixture_failures(text: str) -> list[str]:
+    """ADR 0111 section 3: each `thinkthen.jsonl` line and each JSON text in
+    its string members holds no header or credential either."""
+    found: list[str] = []
+    for number, line in enumerate(text.splitlines(), 1):
+        try:
+            held = json.loads(line)
+        except ValueError:
+            found.append(f"line {number} is not JSON")
+            continue
+        found += [f"line {number}: {failure}" for failure in recording_failures(held)]
+        for key, value in held.items() if isinstance(held, dict) else ():
+            try:
+                inner = json.loads(value) if isinstance(value, str) else None
+            except ValueError:
+                continue
+            found += [f"line {number}: {failure}" for failure in recording_failures(inner, f"/{key}")]
+    return found
+
+
+def live_store_failures(paths: list[str]) -> list[str]:
+    """ADR 0111 section 3: a live store is never committed."""
+    return [
+        f"{path} is a live question store; commit the fixture `thinkthen cache convert DIR` writes instead"
+        for path in paths
+        if posixpath.basename(path) == "thinkthen.sqlite"
+    ]
+
+
+def check_live_stores() -> None:
+    if not live_store_failures(["demos/01/recording/thinkthen.sqlite"]):
+        fail("recordings", "a planted committed thinkthen.sqlite is refused")
+    listed = subprocess.run(["git", "ls-files", "-z"], cwd=REPO, capture_output=True, check=True)
+    for failure in live_store_failures(listed.stdout.decode().split("\0")):
+        fail("recordings", failure)
 
 
 def main() -> int:
@@ -2053,6 +2123,7 @@ def main() -> int:
     check_license_grammar()
     check_dependencies()
     check_recordings()
+    check_live_stores()
     for failure in FAILURES:
         print(failure, file=sys.stderr)
     if FAILURES:

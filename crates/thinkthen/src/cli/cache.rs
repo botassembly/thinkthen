@@ -6,7 +6,7 @@ use std::io::{self, Write};
 use std::process::ExitCode;
 use std::time::Duration;
 
-use crate::cli::args::{PruneArguments, UnusedArguments};
+use crate::cli::args::{ConvertArguments, PruneArguments, UnusedArguments};
 use crate::cli::edge;
 use crate::cli::edge::Environment;
 use crate::failure::Failure;
@@ -47,6 +47,33 @@ pub(crate) fn unused(
     for name in names {
         edge::write_line(&mut writer, &format!("unused {name}"))?;
     }
+    Ok(ExitCode::SUCCESS)
+}
+
+/// Merge a folder into its fixture, and say on standard error what was
+/// written and each old entry that was skipped.
+pub(crate) fn convert(arguments: &ConvertArguments) -> Result<ExitCode, Failure> {
+    if !fs::metadata(&arguments.directory).is_ok_and(|metadata| metadata.is_dir()) {
+        return Err(Failure::ConvertFolder);
+    }
+    let summary = crate::engine::store::convert(&arguments.directory, arguments.quote)?;
+    let stderr = std::io::stderr();
+    let mut diagnostic = stderr.lock();
+    for (name, why) in &summary.skipped {
+        edge::write_line(
+            &mut diagnostic,
+            &format!("thinkthen: cache convert: skipped `{name}`; {why}"),
+        )?;
+    }
+    edge::write_line(
+        &mut diagnostic,
+        &format!(
+            "thinkthen: cache convert: wrote {} answers to thinkthen.jsonl, {} from old entries; skipped {} entries",
+            summary.answers,
+            summary.converted,
+            summary.skipped.len()
+        ),
+    )?;
     Ok(ExitCode::SUCCESS)
 }
 

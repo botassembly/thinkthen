@@ -100,10 +100,14 @@ pub(super) fn quote(line: &str, base: &[Question]) -> Result<Option<Vec<Question
         let Some(asked) = text(question).as_json().as_str().map(str::to_owned) else {
             return Ok(None);
         };
-        *text(question) =
-            QuestionText::new(format!("The text is {line}. {asked}")).map_err(|_| defect())?;
+        *text(question) = QuestionText::new(quoted(line, &asked)).map_err(|_| defect())?;
     }
     Ok(Some(questions))
+}
+
+/// One question's text with `line`, a record's compact JSON, quoted at its head.
+pub(crate) fn quoted(line: &str, asked: &str) -> String {
+    format!("The text is {line}. {asked}")
 }
 
 /// Check a quoted record's text against the profile's evidence limit. The
@@ -128,7 +132,21 @@ pub(crate) fn quoted_plan(
     base: Vec<Question>,
     profile: Option<&BackendProfile>,
 ) -> Result<Plan, BatchError> {
-    let line = json_line(&record.as_json()).map_err(|_| defect())?;
+    let value = record.as_json();
+    quoted_plan_of(model, record, &value, context, base, profile)
+}
+
+/// The same plan with `value` quoted, which for a stream's record is the
+/// JSON value a batch has always quoted: a whole JSON record as itself.
+pub(crate) fn quoted_plan_of(
+    model: ModelName,
+    record: Evidence,
+    value: &crate::core::Json,
+    context: Option<&Evidence>,
+    base: Vec<Question>,
+    profile: Option<&BackendProfile>,
+) -> Result<Plan, BatchError> {
+    let line = json_line(value).map_err(|_| defect())?;
     let (evidence, questions) = match quote(&line, &base)? {
         Some(quoted) => {
             bounded(profile, &record)?;

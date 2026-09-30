@@ -60,19 +60,11 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
                 text(&output.stderr)
             );
             assert!(output.stderr.is_empty(), "{status}");
-            assert_eq!(sent(&listener), [5, 3, 2], "{status}");
+            let bodies = listener.requests();
+            let sizes: Vec<_> = bodies.iter().map(|body| places(&body.body).len()).collect();
+            assert_eq!(sizes, [5, 3, 2], "{status}");
             let printed = details(&output);
             assert_eq!(printed.len(), 5, "{status}");
-            let expected = [(3, 1, 2), (3, 2, 2), (3, 3, 2), (2, 1, 1), (2, 2, 1)];
-            for (row, (records, position, requests_sent)) in printed.iter().zip(expected) {
-                assert_eq!(
-                    row["meta"]["batch"],
-                    json!({"setting":5,"records":records,"position":position,"closed":"size",
-                        "usage":{"input_tokens":88,"output_tokens":12},
-                        "requests_sent":requests_sent,"split":true}),
-                    "{status}"
-                );
-            }
             for (place, row) in printed.iter().enumerate() {
                 let ordinals: Vec<_> = row["meta"]["attempts"]
                     .as_array()
@@ -97,12 +89,16 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
                 [Some(1), Some(1), Some(0), Some(1), Some(0)],
                 "{status}"
             );
-            assert!(
-                printed[..3]
-                    .iter()
-                    .all(|row| row["meta"]["requests"][0]["digest"]
-                        == printed[0]["meta"]["requests"][0]["digest"])
-            );
+            let keys: Vec<_> = printed
+                .iter()
+                .map(|row| row["meta"]["requests"].clone())
+                .collect();
+            let expected: Vec<_> = bodies[1..]
+                .iter()
+                .flat_map(|body| crate::support::keys(listener.url(), &body.body))
+                .map(|key| json!([key]))
+                .collect();
+            assert_eq!(keys, expected, "{status}: each row names its question key");
         } else {
             assert_eq!(output.status.code(), Some(4), "{status}");
             assert_eq!(sent(&listener), [5], "{status}");
@@ -229,8 +225,10 @@ fn a_split_recording_replays_byte_for_byte() {
     assert_eq!(listener.count(), 3, "replay sends no request");
 }
 
+/// Stored answers leave only the misses to send, so the refused request
+/// holds records 4 and 5 alone, and its refused first half stops the run.
 #[test]
-fn a_cached_first_half_counts_only_its_replayed_records() {
+fn stored_answers_leave_only_the_misses_to_halve() {
     let listener = Listener::answering(|request| {
         let places = places(request);
         if places.len() == 5 || places.first().is_some_and(|&(_, at)| at == 4) {
@@ -270,7 +268,7 @@ fn a_cached_first_half_counts_only_its_replayed_records() {
         "{}",
         text(&mixed.stderr)
     );
-    assert_eq!(sent(&listener), [3, 5, 2]);
+    assert_eq!(sent(&listener), [3, 2, 1]);
 
     let replay = decide(
         listener.base(),

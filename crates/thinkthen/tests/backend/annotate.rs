@@ -24,6 +24,14 @@ fn set(name: &str, text: &str) -> PathBuf {
     path
 }
 
+/// A profile that sends each question in its own request.
+fn one_question() -> PathBuf {
+    set(
+        "one-question-profile",
+        r#"{"schema":"thinkthen.backend-profile/1","name":"one-question","max_questions":1}"#,
+    )
+}
+
 fn questions() -> PathBuf {
     static QUESTIONS: OnceLock<PathBuf> = OnceLock::new();
     QUESTIONS
@@ -361,6 +369,9 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
             listener.base(),
             "--model",
             "jev-latest",
+            // One question a request, so two replies answer one record.
+            "--profile",
+            &one_question().to_string_lossy(),
         ],
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         br#"{"left":"yes","right":"yes"}"#,
@@ -402,6 +413,8 @@ fn the_first_group_failure_wins_when_the_second_finishes_first() {
             "4",
             "--max-retries",
             "0",
+            "--profile",
+            &one_question().to_string_lossy(),
         ],
         &[("THINKTHEN_API_KEY", "sk-test-value")],
         br#"{"first":"slow","second":"fast"}"#,
@@ -448,12 +461,19 @@ fn hostile_model_names_never_reach_the_diagnostic() {
                 listener.base(),
                 "--model",
                 &requested,
+                "--profile",
+                &one_question().to_string_lossy(),
             ],
             &[("THINKTHEN_API_KEY", "key-marker")],
             br#"{"left":"evidence-marker","right":"plain"}"#,
         )
         .expect("the command runs");
-        assert_eq!(output.status.code(), Some(4), "case {place}");
+        assert_eq!(
+            output.status.code(),
+            Some(4),
+            "case {place}: {}",
+            String::from_utf8_lossy(&output.stderr)
+        );
         assert_eq!(
             String::from_utf8_lossy(&output.stderr),
             "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge\nthinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n",

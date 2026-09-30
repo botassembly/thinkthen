@@ -26,6 +26,7 @@ mod find;
 mod json;
 pub(crate) mod measure;
 mod order;
+pub(crate) mod pack;
 mod plan;
 mod plan_document;
 mod plan_summary;
@@ -59,12 +60,12 @@ pub(crate) use crate::core::backend_profile::{
     BackendProfile, ProfileError, ProfileLimit, ProfileName,
 };
 pub(crate) use crate::core::batch::{Batch, BatchError, BatchRecord, Batcher, Setting};
-pub(crate) use crate::core::batch::{GroupBatcher, group_halves, quoted_plan};
+pub(crate) use crate::core::batch::{GroupBatcher, group_halves, quoted_plan, quoted_plan_of};
 pub use crate::core::budget::{EstimatedInputDenial, SendBudgetDenial};
-pub(crate) use crate::core::digest::bytes_sha256;
 #[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
+pub(crate) use crate::core::digest::{bytes_sha256, hex};
 pub(crate) use crate::core::find::Find;
 #[cfg(test)]
 pub(crate) use crate::core::find::FindResult;
@@ -118,7 +119,6 @@ pub(crate) use crate::core::text::{
 pub(crate) use crate::core::threshold::{Outcome, Threshold, ThresholdError};
 
 pub(crate) use crate::core::find::FindAnswer;
-#[cfg(test)]
 pub(crate) use crate::core::text::Url;
 
 /// The name the tool answers to on the command line and in its own output.

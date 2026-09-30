@@ -120,15 +120,18 @@ fn a_held_first_answer_bounds_top_dispatch_until_release() -> io::Result<()> {
             RECORDS,
         )
     });
-    for _ in 0..2 {
+    // The unemitted window holds (jobs + 1) x --batch inputs, which is three.
+    for _ in 0..3 {
         assert!(matches!(
             events_recv.recv_timeout(Duration::from_secs(2)),
             Ok(Observed::Request)
         ));
     }
-    answered_recv
-        .recv_timeout(Duration::from_secs(2))
-        .expect("second answer completed");
+    for _ in 0..2 {
+        answered_recv
+            .recv_timeout(Duration::from_secs(2))
+            .expect("second and third answers completed");
+    }
     let next = events_recv.recv_timeout(Duration::from_millis(200));
     assert!(matches!(next, Err(mpsc::RecvTimeoutError::Timeout)));
     release.wait();

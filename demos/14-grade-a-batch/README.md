@@ -38,8 +38,8 @@ for run in a b; do
   env -u THINKTHEN_API_KEY thinkthen annotate checks.json --jsonl --batch 1 --details \
     --replay recording --input cases.jsonl > "$work/run-$run.jsonl"
 done
-jq -s -c '{rows:length, definition:([.[].meta.questions_sha256]|unique|length), request_groups:([.[0].answers[].request]|unique|length)}' "$work/run-a.jsonl" \
-  | mustmatch '{"rows":6,"definition":1,"request_groups":2}'
+jq -s -c '{rows:length, definition:([.[].meta.questions_sha256]|unique|length), questions:([.[0].answers[].request]|unique|length)}' "$work/run-a.jsonl" \
+  | mustmatch '{"rows":6,"definition":1,"questions":5}'
 jq -n --slurpfile before "$work/run-a.jsonl" \
   -f ../../transforms/compare/compare.jq "$work/run-b.jsonl" \
   | jq -c '.questions.correct | {compared,same,changed_values}' \

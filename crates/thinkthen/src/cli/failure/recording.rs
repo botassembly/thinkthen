@@ -1,7 +1,7 @@
 //! Fixed local recording diagnostics.
 
 use super::Failure;
-use crate::core::{Question, RecordError};
+use crate::core::RecordError;
 
 /// Closed, command-owned labels for a request that strict replay could not find.
 #[derive(Clone, Copy, Debug)]
@@ -13,7 +13,7 @@ pub(crate) enum ReplayContext {
     Tag,
     Score,
     Document(&'static str),
-    AnnotateGroup { ordinal: usize, members: usize },
+    Annotate,
     FindSet(usize),
     Recognize,
     Relate,
@@ -29,9 +29,7 @@ impl ReplayContext {
             Self::Tag => "the tag request".to_owned(),
             Self::Score => "the score request".to_owned(),
             Self::Document(verb) => format!("the {verb} request for one document"),
-            Self::AnnotateGroup { ordinal, members } => {
-                format!("annotate group {ordinal} with {members} members")
-            }
+            Self::Annotate => "the annotate request".to_owned(),
             Self::FindSet(units) => format!("the complete find set of {units} units"),
             Self::Recognize => "the recognize request".to_owned(),
             Self::Relate => "the relate request".to_owned(),
@@ -47,23 +45,9 @@ impl Failure {
         self
     }
 
-    /// One non-streamed judgment knows it sent exactly one document.
-    pub(crate) fn with_replay_document(self, question: &Question, streams: bool) -> Self {
-        if streams {
-            return self;
-        }
-        let verb = match question {
-            Question::Decide { .. } => "decide",
-            Question::Choose { .. } => "choose",
-            Question::Tag { .. } => "tag",
-            Question::Score { .. } => "score",
-        };
-        self.with_replay_context(ReplayContext::Document(verb))
-    }
-
     fn attach_replay_context(&mut self, source: ReplayContext) {
         match self {
-            Self::ReplayMiss { context, .. } => {
+            Self::ReplayMiss { context, .. } | Self::QuestionMiss { context, .. } => {
                 context.get_or_insert(source);
             }
             Self::Stopped { cause, .. } | Self::BatchFailed { cause, .. } => {
@@ -91,6 +75,26 @@ pub(super) fn message(failure: &Failure) -> Option<(u8, String)> {
                  the entry name covers the backend interface, address, and request",
                 context.map(|source| format!("{}: ", source.description())).unwrap_or_default()
             ),
+        ),
+        Failure::QuestionMiss { key, context } => (
+            5,
+            format!(
+                "{}the replay folder holds no answer for question `{key}`; \
+                 the key is the SHA-256 of the adapter, address, model, shared state and question as sent",
+                context.map(|source| format!("{}: ", source.description())).unwrap_or_default()
+            ),
+        ),
+        Failure::StoreAmbiguous => (
+            5,
+            "the replay folder holds both thinkthen.jsonl and thinkthen.sqlite; \
+             run `thinkthen cache convert DIR` to merge them into thinkthen.jsonl"
+                .to_owned(),
+        ),
+        Failure::StoreHotJournal => (
+            5,
+            "the replay folder's thinkthen.sqlite holds a write that did not finish; \
+             open the folder once with write access, as `--cache DIR` does, then replay it"
+                .to_owned(),
         ),
         Failure::Entry(name, why) => (5, format!("the entry `{name}` was refused: {why}")),
         Failure::RecordingConflict(name) => (

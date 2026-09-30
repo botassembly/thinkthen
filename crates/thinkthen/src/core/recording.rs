@@ -12,6 +12,9 @@ use crate::core::digest::hex;
 use crate::core::recording_identity::BackendIdentity;
 use crate::core::text::{Url, Withheld};
 
+mod convert;
+pub(crate) use convert::{Converting, convert};
+
 /// The schema string a version one recording entry carries.
 const SCHEMA: &str = "thinkthen.recording/1";
 
@@ -55,6 +58,12 @@ pub(crate) enum EntryError {
 pub(crate) struct Digest(String);
 
 impl Digest {
+    /// A digest spelled as 64 lowercase hex figures, such as a question key.
+    #[must_use]
+    pub(crate) const fn named(hex: String) -> Self {
+        Self(hex)
+    }
+
     /// The name of the file one exchange is recorded in.
     #[must_use]
     pub(crate) fn file_name(&self) -> String {
@@ -130,6 +139,9 @@ pub(crate) struct Entry {
     url: String,
     request: Box<RawValue>,
     response: Box<RawValue>,
+    /// Slice 1 of ADR 0111 rewrote this exchange into the quoted form.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    quoted: bool,
 }
 
 impl fmt::Debug for Entry {
@@ -155,6 +167,7 @@ impl Entry {
             url: exchange.url.as_str().to_owned(),
             request: json(exchange.request)?,
             response: json(response)?,
+            quoted: false,
         })
     }
 

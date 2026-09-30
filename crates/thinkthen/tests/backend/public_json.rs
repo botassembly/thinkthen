@@ -156,16 +156,20 @@ fn details(
         LoadedQuestion::Banded(question) => engine.details(question, text),
     };
     let details = details.map_err(|error| error.to_string())?;
+    // `meta.requests` lists question keys on the command and request digests
+    // in the library until ADR 0111 slice 3 moves the public API.
+    let command = without("attempts", &command(case, path, base, text, true)?);
     same(
-        details.value().to_json() + "\n",
-        &without_attempts(&command(case, path, base, text, true)?),
+        without("requests", &(details.value().to_json() + "\n")),
+        &without("requests", &command),
     )
 }
 
-/// The command's `meta.attempts` is a command display; `Details` has none.
-fn without_attempts(line: &str) -> String {
-    let marker = r#","attempts":["#;
-    let Some(start) = line.find(marker) else {
+/// One `meta` list left out of a line. The command's `meta.attempts` is a
+/// command display; `Details` has none.
+fn without(field: &str, line: &str) -> String {
+    let marker = format!(r#","{field}":["#);
+    let Some(start) = line.find(&marker) else {
         return line.to_owned();
     };
     let end = line[start..]

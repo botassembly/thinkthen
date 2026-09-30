@@ -1,5 +1,10 @@
 //! One sweep checks output and files across commands, paths, framings, and views.
 
+#![allow(
+    clippy::indexing_slicing,
+    reason = "a failed fixture setup or a missing field should stop the boundary test"
+)]
+
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
@@ -7,7 +12,9 @@ use std::process::Output;
 
 use crate::harness::{Canned, Listener, spawn};
 
+mod damage;
 mod routes;
+use damage::{damage_entries, damage_fixture};
 use routes::good;
 pub(crate) use routes::{PATHS, Route};
 
@@ -169,6 +176,43 @@ pub(crate) fn nothing_leaked(named: &str, output: &Output, folder: &Path) {
     }
 }
 
+/// The command line one sweep case runs.
+fn arguments(
+    route: &Route,
+    (name, operands): (&str, &[&str]),
+    view: &[&str],
+    framing: Option<&str>,
+    base: &str,
+    dir: &Path,
+) -> Vec<String> {
+    let named = |argument: &&str| match *argument {
+        "{dir}" => dir.to_string_lossy().into_owned(),
+        "{closed}" => CLOSED.to_owned(),
+        other => other.to_owned(),
+    };
+    let adds: Vec<String> = route.adds.iter().map(named).collect();
+    let mut asked = vec![name.to_owned()];
+    if asks_question(name) {
+        asked.push(QUESTION.to_owned());
+    }
+    asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
+    // A route that names its own address keeps it, and every other route posts
+    // to the listener this case opened.
+    if !route.adds.contains(&"--url") {
+        asked.extend(["--url".to_owned(), base.to_owned()]);
+    }
+    asked.extend(["--model".to_owned(), "local-1".to_owned()]);
+    if let Some(framing) = framing {
+        asked.push(framing.to_owned());
+        if framing == "--jsonl" {
+            asked.extend(["--field".to_owned(), "/body".to_owned()]);
+        }
+    }
+    asked.extend(view.iter().map(|option| (*option).to_owned()));
+    asked.extend(adds);
+    asked
+}
+
 fn sweep(
     route: &Route,
     verb: (&str, &[&str], &str),
@@ -185,31 +229,14 @@ fn sweep(
     let dir = into.join("recording");
     let listener = Listener::serving(route.answers.script(answer))?;
     let evidence = evidence(name, framing);
-    let named = |argument: &&str| match *argument {
-        "{dir}" => dir.to_string_lossy().into_owned(),
-        "{closed}" => CLOSED.to_owned(),
-        other => other.to_owned(),
-    };
-    let adds: Vec<String> = route.adds.iter().map(named).collect();
-    let mut asked = vec![name.to_owned()];
-    if asks_question(name) {
-        asked.push(QUESTION.to_owned());
-    }
-    asked.extend(operands.iter().map(|operand| (*operand).to_owned()));
-    // A route that names its own address keeps it, and every other route posts
-    // to the listener this case opened.
-    if !route.adds.contains(&"--url") {
-        asked.extend(["--url".to_owned(), listener.base().to_owned()]);
-    }
-    asked.extend(["--model".to_owned(), "local-1".to_owned()]);
-    if let Some(framing) = framing {
-        asked.push(framing.to_owned());
-        if framing == "--jsonl" {
-            asked.extend(["--field".to_owned(), "/body".to_owned()]);
-        }
-    }
-    asked.extend(view.iter().map(|option| (*option).to_owned()));
-    asked.extend(adds);
+    let asked = arguments(
+        route,
+        (name, operands),
+        view,
+        framing,
+        listener.base(),
+        &dir,
+    );
 
     if route.primed {
         let priming: Vec<&str> = asked
@@ -226,9 +253,17 @@ fn sweep(
         let first = spawn(&priming, &environment(true), &evidence)?;
         assert_eq!(first.status.code(), Some(0), "{case}: the priming run");
     }
-    if let Some(damage) = route.damage {
-        damage_entries(&case, &dir, damage)?;
-    }
+    let says = match route.damage {
+        Some(damage) if dir.join("thinkthen.sqlite").exists() => {
+            damage_fixture(&dir, damage)?;
+            route.fixture_says
+        }
+        Some(damage) => {
+            damage_entries(&case, &dir, damage)?;
+            route.says
+        }
+        None => route.says,
+    };
 
     let arguments: Vec<&str> = asked.iter().map(String::as_str).collect();
     // The platform default cache lands inside this case's folder, so the reader
@@ -250,7 +285,7 @@ fn sweep(
         route.requests,
         "{case} {view:?}: the requests the listener saw"
     );
-    if let Some(says) = route.says {
+    if let Some(says) = says {
         let said = String::from_utf8_lossy(&output.stderr);
         assert!(said.contains(says), "{case} {view:?}: {said}");
     }
@@ -279,20 +314,6 @@ fn seen(listener: &Listener) -> String {
         saw += &format!(" {} ({} body bytes)", request.line, request.body.len());
     }
     saw
-}
-
-/// Overwrite every entry a priming run recorded with the damaged bytes.
-fn damage_entries(case: &str, dir: &Path, damage: &str) -> io::Result<()> {
-    let entries = written(dir);
-    assert!(!entries.is_empty(), "{case}: an entry to damage");
-    for entry in entries.into_iter().filter(|entry| {
-        entry
-            .file_name()
-            .is_some_and(|name| !name.to_string_lossy().starts_with('.'))
-    }) {
-        fs::write(&entry, damage)?;
-    }
-    Ok(())
 }
 
 /// The four ways one route is driven: both views, one document and records.
@@ -462,21 +483,36 @@ fn the_key_reaches_the_authorization_header_and_nothing_else() {
             "{name}"
         );
         let files = written(&dir);
-        let marker = dir.join(".thinkthen-backend.json");
-        assert!(files.contains(&marker), "{name}: backend marker");
-        let entries: Vec<_> = files
-            .iter()
-            .filter(|path| {
-                path.parent() == Some(dir.as_path()) && path.as_path() != marker.as_path()
-            })
-            .collect();
-        assert_eq!(entries.len(), 1, "{name}: one recorded entry");
-        assert_eq!(entries[0].extension(), Some(std::ffi::OsStr::new("json")));
-        let digest = entries[0].file_stem().expect("entry digest");
-        let lock = dir.join(".locks").join(digest);
-        assert!(files.contains(&lock), "{name}: retained digest lock");
-        assert_eq!(fs::metadata(lock).expect("digest lock").len(), 0);
-        assert_eq!(files.len(), 3, "{name}: marker, entry, and digest lock");
+        // `recognize` and `relate` keep the request-level store until ADR 0111
+        // slice 4: a marker, one entry and its digest lock.
+        if matches!(name, "recognize" | "relate") {
+            let marker = dir.join(".thinkthen-backend.json");
+            assert!(files.contains(&marker), "{name}: backend marker");
+            let entries: Vec<_> = files
+                .iter()
+                .filter(|path| {
+                    path.parent() == Some(dir.as_path()) && path.as_path() != marker.as_path()
+                })
+                .collect();
+            assert_eq!(entries.len(), 1, "{name}: one recorded entry");
+            let digest = entries[0].file_stem().expect("entry digest");
+            assert!(
+                files.contains(&dir.join(".locks").join(digest)),
+                "{name}: digest lock"
+            );
+            assert_eq!(files.len(), 3, "{name}: marker, entry, and digest lock");
+        } else {
+            assert_eq!(
+                files,
+                [dir.join("thinkthen.sqlite")],
+                "{name}: the store alone"
+            );
+            assert_eq!(
+                crate::support::stored(&dir).expect("the store").len(),
+                1,
+                "{name}"
+            );
+        }
         nothing_leaked(name, &output, &into);
     }
 }

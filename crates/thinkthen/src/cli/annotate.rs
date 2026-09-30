@@ -7,7 +7,7 @@ use std::process::ExitCode;
 
 use crate::core::adapters::built_in;
 use crate::core::{
-    Backend, BackendProfile, BatchError, Framing, ModelName, PartError, Plan, Pointer, QuestionSet,
+    Backend, BackendProfile, BatchError, Framing, PartError, Plan, Pointer, QuestionSet,
     QuestionSetError, Reading, ReadingError, Record, RecordError, Setting, quoted_plan,
 };
 
@@ -17,16 +17,16 @@ use crate::edge::{self, Environment};
 use crate::engine::facade::Engine;
 use crate::failure::Failure;
 use crate::profile::{self, Mismatch};
-use crate::schedule::{Judged, Output};
+use crate::schedule::{Judged, Output, Placed};
 use crate::table::{Kind as TableKind, Rows as TableRows};
 
 mod aggregation;
-mod batching;
+mod asker;
 pub(crate) mod error_row;
 mod plan;
 
-pub(crate) use crate::engine::facade::{GroupAnswer, PreparedGroup, check_model};
-use plan::{dry_run, dry_run_record};
+pub(crate) use crate::engine::facade::GroupAnswer;
+use asker::Framed;
 
 pub(crate) enum PrepareError {
     MissingOn(String),
@@ -42,10 +42,6 @@ impl PrepareError {
     }
 }
 
-#[expect(
-    clippy::too_many_lines,
-    reason = "the command edge keeps validation and mode selection in their observable order"
-)]
 pub(crate) fn run(
     arguments: &AnnotateArguments,
     environment: &Environment,
@@ -104,128 +100,38 @@ pub(crate) fn run(
         return Err(Failure::Reading(ReadingError::LinesPart(name.to_owned())));
     }
     let source = edge::source(arguments.common.input.as_deref(), input)?;
-    if let Some(kind) = table_kind(&arguments.common) {
-        let rows = TableRows::new(source, kind)?;
-        if arguments.common.dry_run {
-            let engine = asking::engine(
-                &arguments.common,
-                environment,
-                folders,
-                backend.clone(),
-                profile.clone(),
-                arguments.common.jobs,
-            )?;
-            return dry_run_record(
-                &set,
-                &backend,
-                &reading,
-                &engine,
-                setting.unwrap_or(Setting::Records(std::num::NonZeroUsize::MIN)),
-                &mismatch,
-                rows,
-                arguments.common.details,
-                &mut writer,
-            );
-        }
-        let judging = Judging::new(
-            arguments,
-            environment,
-            asking::engine(
-                &arguments.common,
-                environment,
-                folders,
-                backend,
-                profile,
-                arguments.common.jobs,
-            )?,
-            set,
-            mismatch,
-        );
-        let inputs = rows.enumerate().map(|(place, row)| {
-            row.map(|record| crate::annotate_schedule::Input::Record(place + 1, record))
-                .map_err(|error| crate::schedule::Placed::at(error, place + 1))
-        });
-        let mut output = Output::streaming(&mut writer, environment.usage());
-        return if setting
-            .is_some_and(|setting| setting != Setting::Records(std::num::NonZeroUsize::MIN))
-        {
-            batching::run(
-                &judging,
-                &reading,
-                inputs,
-                setting.unwrap_or(Setting::Max),
-                environment.cancel(),
-                &mut output,
-            )
-        } else {
-            crate::annotate_schedule::run(
-                &judging,
-                &reading,
-                inputs,
-                environment.cancel(),
-                &mut output,
-            )
-        };
-    }
-    let chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
-    if arguments.common.dry_run {
-        let engine = asking::engine(
-            &arguments.common,
-            environment,
-            folders,
-            backend.clone(),
-            profile.clone(),
-            arguments.common.jobs,
-        )?;
-        return dry_run(
-            &set,
-            &backend,
-            &reading,
-            &engine,
-            setting.unwrap_or(Setting::Records(std::num::NonZeroUsize::MIN)),
-            &mismatch,
-            chunks.map(|(_, row)| row),
-            arguments.common.details,
-            &mut writer,
-        );
-    }
-    let judging = Judging::new(
-        arguments,
-        environment,
-        asking::engine(
-            &arguments.common,
-            environment,
-            folders,
-            backend,
-            profile,
-            arguments.common.jobs,
-        )?,
-        set,
-        mismatch,
-    );
-    let inputs = chunks.map(|(at, row)| {
-        row.map(|bytes| crate::annotate_schedule::Input::Bytes(at, bytes))
-            .map_err(|error| crate::schedule::Placed::at(error, at))
+    let inputs_cap = setting.and_then(|setting| match setting {
+        Setting::Records(most) => Some(most.get()),
+        Setting::Max => None,
     });
-    let mut output = Output::streaming(&mut writer, environment.usage());
-    if setting.is_some_and(|setting| setting != Setting::Records(std::num::NonZeroUsize::MIN)) {
-        batching::run(
-            &judging,
-            &reading,
-            inputs,
-            setting.unwrap_or(Setting::Max),
-            environment.cancel(),
-            &mut output,
-        )
-    } else {
-        crate::annotate_schedule::run(
-            &judging,
-            &reading,
-            inputs,
-            environment.cancel(),
-            &mut output,
-        )
+    let engine = asking::engine(
+        &arguments.common,
+        environment,
+        folders,
+        backend,
+        profile,
+        arguments.common.jobs,
+    )?;
+    let judging = Judging::new(arguments, environment, engine, set, mismatch);
+    let inputs: Box<dyn Iterator<Item = Result<Framed, Placed>> + Send> =
+        if let Some(kind) = table_kind(&arguments.common) {
+            let rows = TableRows::new(source, kind)?;
+            Box::new(rows.enumerate().map(|(place, row)| {
+                row.map(|record| Framed::Record(place + 1, record))
+                    .map_err(|error| Placed::at(error, place + 1))
+            }))
+        } else {
+            let chunks = edge::numbered(edge::Chunks::new(source, reading.streams()), &reading);
+            Box::new(chunks.map(|(at, row)| {
+                row.map(|bytes| Framed::Bytes(at, bytes))
+                    .map_err(|error| Placed::at(error, at))
+            }))
+        };
+    if arguments.common.dry_run {
+        return plan::dry_run(&judging, &reading, inputs, inputs_cap, &mut writer);
     }
+    let mut output = Output::streaming(&mut writer, environment.usage());
+    asker::run(&judging, &reading, inputs, inputs_cap, &mut output)
 }
 
 fn refuse_views(arguments: &AnnotateArguments) -> Result<(), Failure> {
@@ -376,21 +282,16 @@ impl<'a> Judging<'a> {
         self.environment.cancel()
     }
 
-    pub(crate) fn record(
-        &self,
-        base: &Reading,
-        input: crate::annotate_schedule::Input,
-    ) -> Result<Record, Failure> {
-        let record = match input {
-            crate::annotate_schedule::Input::Bytes(_, bytes) => base
-                .annotation_record(&bytes)
-                .map_err(|error| Failure::record(error, base.streams()))?,
-            crate::annotate_schedule::Input::Record(_, record) => record,
-        };
-        if !self.common.details {
-            collisions(&self.set, &record)?;
-        }
-        Ok(record)
+    pub(crate) const fn mismatch(&self) -> &Mismatch {
+        &self.mismatch
+    }
+
+    pub(crate) const fn details(&self) -> bool {
+        self.common.details
+    }
+
+    pub(crate) const fn streams(&self) -> bool {
+        self.streams
     }
 
     pub(crate) fn groups(&self) -> Vec<Vec<usize>> {
@@ -401,39 +302,12 @@ impl<'a> Judging<'a> {
         self.continue_missing
     }
 
-    pub(crate) const fn requested_model(&self) -> &ModelName {
-        self.engine.backend().model()
-    }
-
     pub(crate) fn finish(
         &self,
         record: Record,
         answered: Vec<GroupAnswer>,
     ) -> Result<Judged, Failure> {
         aggregation::finish(self, record, answered)
-    }
-
-    pub(crate) fn prepare_group(
-        &self,
-        base: &Reading,
-        record: &Record,
-        places: Vec<usize>,
-    ) -> Result<PreparedGroup, PrepareError> {
-        let plan = plan_for(
-            &self.set,
-            &places,
-            self.engine.backend(),
-            self.engine.profile(),
-            base,
-            record,
-        )?;
-        self.engine
-            .prepare_group(&plan, places)
-            .map_err(|error| PrepareError::Other(error.into()))
-    }
-
-    pub(crate) fn answer_group(&self, group: PreparedGroup) -> Result<GroupAnswer, Failure> {
-        Ok(self.engine.answer_group(group, self.environment.cancel())?)
     }
 }
 

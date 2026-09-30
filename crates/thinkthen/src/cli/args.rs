@@ -15,7 +15,8 @@ mod relate;
 pub(crate) use annotate::AnnotateArguments;
 pub(crate) use batching::Batching;
 pub(crate) use command::{
-    CacheCommand, CheckArguments, Command, PruneArguments, StatusArguments, UnusedArguments,
+    CacheCommand, CheckArguments, Command, ConvertArguments, PruneArguments, StatusArguments,
+    UnusedArguments,
 };
 pub(crate) use find::FindArguments;
 pub(crate) use relate::RelateArguments;

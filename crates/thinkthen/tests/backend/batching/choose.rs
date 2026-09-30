@@ -230,7 +230,6 @@ fn context_changes_choose_request_identity_and_names_exact_file_bytes() {
         rows[0]["meta"]["context_sha256"],
         "6a927e8e39950cbd7f94d077964a6cab628cecce248f5f5bdb25567007ff1ac3"
     );
-    assert_eq!(rows[0]["meta"]["batch"]["setting"], 1);
     assert_eq!(
         one[0]["meta"]["question_sha256"],
         rows[0]["meta"]["question_sha256"]
@@ -308,7 +307,7 @@ fn a_refused_choose_batch_keeps_each_halfs_original_options() {
     assert_eq!(rows.len(), 4);
     for (at, row) in rows.iter().enumerate() {
         assert_eq!(row["value"], format!("a{}", at + 1));
-        assert_eq!(row["meta"]["batch"]["split"], true);
+        assert_eq!(row["meta"]["attempts"][0]["status"], 413);
     }
 }
 

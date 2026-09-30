@@ -6,15 +6,16 @@ Verbs: `decide`
 
 Use this when a nightly job judges a queue and one record ends the run. `queue.jsonl` holds four support messages, and a stray exporter left the third one's text under `note` instead of `body`. `--cache DIR` points `--record` and `--replay` at one folder, so the rerun pays for the records that never finished.
 
-`recording/` holds the four exchanges this page replays. `record.sh` made them once through `sdlc/scripts/live`, and every number here is what the model answered on 2026-09-19.
+`recording/` holds the four exchanges this page replays. `record.sh` made them once through `sdlc/scripts/live`, and every number here is what the model answered on 2026-09-19. A cache writes `thinkthen.sqlite` in its folder, and the repository commits only the `thinkthen.jsonl` fixture. So each block copies the fixture into a scratch folder and caches there.
 
 ## Step 1: the run stops where the record is
 
 ```bash
 set -eu
+cache=$(mktemp -d) && trap 'rm -rf -- "$cache"' EXIT && cp recording/thinkthen.jsonl "$cache/"
 
 thinkthen decide 'Does the message report a payment failure?' --batch 1 \
-  --jsonl --field /body --input queue.jsonl --cache recording/ 2>/dev/null \
+  --jsonl --field /body --input queue.jsonl --cache "$cache" 2>/dev/null \
   | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
 {"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}'
 ```
@@ -24,9 +25,10 @@ Each completed row keeps its parsed input beside the answer, so a resumed file s
 
 ```bash
 set -eu
+cache=$(mktemp -d) && trap 'rm -rf -- "$cache"' EXIT && cp recording/thinkthen.jsonl "$cache/"
 
 thinkthen decide 'Does the message report a payment failure?' --batch 1 \
-  --jsonl --field /body --input queue.jsonl --cache recording/ 2>&1 >/dev/null \
+  --jsonl --field /body --input queue.jsonl --cache "$cache" 2>&1 >/dev/null \
   | mustmatch "thinkthen: the record holds nothing at \`/body\`
 thinkthen: stopped at record 3; 2 records finished, 2 records from a recording"
 ```
@@ -37,9 +39,10 @@ A stopped run prints a prefix that looks exactly like a finished file. The exit 
 
 ```bash
 set -eu
+cache=$(mktemp -d) && trap 'rm -rf -- "$cache"' EXIT && cp recording/thinkthen.jsonl "$cache/"
 
 thinkthen decide 'Does the message report a payment failure?' --batch 1 \
-  --jsonl --field /body --input queue.jsonl --cache recording/ \
+  --jsonl --field /body --input queue.jsonl --cache "$cache" \
   >/dev/null 2>&1 && rc=0 || rc=$?
 
 case $rc in
@@ -54,14 +57,15 @@ Exit 2 covers a mistyped flag and a refused record alike. The message on standar
 
 ## Step 3: repair the record and run again
 
-The repaired file goes through the same folder. `meta.cached` is the ledger of what each row cost.
+The repaired file goes through a copy of the same fixture. `meta.cached` is the ledger of what each row cost.
 
 ```bash
 set -eu
+cache=$(mktemp -d) && trap 'rm -rf -- "$cache"' EXIT && cp recording/thinkthen.jsonl "$cache/"
 
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
   | thinkthen decide 'Does the message report a payment failure?' --batch 1 \
-      --jsonl --field /body --details --cache recording/ \
+      --jsonl --field /body --details --cache "$cache" \
   | jq -c '{id: .input.id, value, cached: .meta.cached}' \
   | mustmatch '{"id":"Q-01","value":true,"cached":true}
 {"id":"Q-02","value":false,"cached":true}
@@ -77,10 +81,11 @@ Every row reads `true` here, because the committed recording holds all four exch
 
 ```bash
 set -eu
+cache=$(mktemp -d) && trap 'rm -rf -- "$cache"' EXIT && cp recording/thinkthen.jsonl "$cache/"
 
 jq -c 'if has("note") then {id, body: .note} else . end' queue.jsonl \
   | thinkthen decide 'Does the message report a payment failure?' --batch 1 \
-      --jsonl --field /body --cache recording/ --jobs 8 \
+      --jsonl --field /body --cache "$cache" --jobs 8 \
   | mustmatch '{"input":{"id":"Q-01","body":"The card on file expired last week and the retry failed."},"value":true}
 {"input":{"id":"Q-02","body":"Nothing wrong, just saying hello and thanks for the release notes."},"value":false}
 {"input":{"id":"Q-03","body":"Payout to our bank bounced twice on Tuesday with no reason given."},"value":true}

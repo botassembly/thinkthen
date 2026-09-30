@@ -27,8 +27,8 @@ impl From<Setting> for BatchSetting {
 }
 
 impl BatchSetting {
-    /// The settings named by result metadata; absent metadata means batch one
-    /// only when no line names a batched setting.
+    /// The settings named by result metadata. A line without `meta.batch`
+    /// adds none, so an empty set means the setting is unknown.
     pub(crate) fn in_results(lines: &[(usize, Json)]) -> Result<BTreeSet<Self>, usize> {
         let mut settings = BTreeSet::new();
         for (line, row) in lines {
@@ -40,9 +40,6 @@ impl BatchSetting {
                 .and_then(Setting::of_json)
                 .ok_or(*line)?;
             settings.insert(setting.into());
-        }
-        if settings.is_empty() {
-            settings.insert(Self::Records(1));
         }
         Ok(settings)
     }

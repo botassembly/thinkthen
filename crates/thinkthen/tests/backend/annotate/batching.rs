@@ -1,24 +1,50 @@
-//! The compiled annotate command packs each selected group independently.
+//! The compiled annotate command packs every group of every record together.
+
+#![allow(
+    clippy::expect_used,
+    clippy::indexing_slicing,
+    reason = "a failed fixture setup or a missing field should stop the boundary test"
+)]
 
 use serde_json::{Value, json};
 
 use super::set;
 use crate::harness::{Canned, Listener, spawn};
-use crate::support::digest;
+use crate::support::keys;
 
 mod progress;
 mod splits;
 mod tiers;
 
+/// A reply that answers every question of the request yes.
+fn all_yes(body: &[u8]) -> Canned {
+    let request: Value = serde_json::from_slice(body).expect("request JSON");
+    let count = request["questions"]
+        .as_object()
+        .map_or(0, serde_json::Map::len);
+    let answers = (1..=count)
+        .map(|at| (format!("q{at}"), json!({"type":"noul","noul":0.9})))
+        .collect::<serde_json::Map<_, _>>();
+    Canned::ok(&json!({"model":"local-1","answers":answers}).to_string())
+}
+
+fn rows(stdout: &[u8]) -> Vec<Value> {
+    stdout
+        .split(|byte| *byte == b'\n')
+        .filter(|line| !line.is_empty())
+        .map(|line| serde_json::from_slice(line).expect("row JSON"))
+        .collect()
+}
+
 #[test]
-fn two_selected_groups_pack_two_rows_and_align_request_metadata() {
+fn two_selected_groups_pack_two_rows_into_one_request_and_name_question_keys() {
     let file = set(
         "batch-two-groups",
         r#"{"version":1,"questions":{"left_answer":{"decide":"Left?","on":"/left"},"right_answer":{"decide":"Right?","on":"/right"}}}"#,
     );
     let listener = Listener::answering(|_| {
         Canned::ok(
-            r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1}},"usage":{"input_tokens":5,"output_tokens":3}}"#,
+            r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9},"q2":{"type":"noul","noul":0.1},"q3":{"type":"noul","noul":0.9},"q4":{"type":"noul","noul":0.1}},"usage":{"input_tokens":8,"output_tokens":4}}"#,
         )
     })
     .expect("listener");
@@ -47,57 +73,35 @@ fn two_selected_groups_pack_two_rows_and_align_request_metadata() {
         String::from_utf8_lossy(&output.stderr)
     );
     let requests = listener.requests();
-    assert_eq!(requests.len(), 2);
-    let bodies: Vec<Value> = requests
-        .iter()
-        .map(|request| serde_json::from_slice(&request.body).expect("request JSON"))
-        .collect();
-    assert!(bodies.contains(&json!({"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Left?"},"q2":{"type":"noul","instructions":"The text is \"two\". Left?"}}})));
-    assert!(bodies.contains(&json!({"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Right?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Right?"}}})));
-    let left = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"one\". Left?"},"q2":{"type":"noul","instructions":"The text is \"two\". Left?"}}}"#;
-    let right = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". Right?"},"q2":{"type":"noul","instructions":"The text is \"beta\". Right?"}}}"#;
-    assert!(
-        requests
-            .iter()
-            .any(|request| request.body == left.as_bytes())
+    assert_eq!(requests.len(), 1);
+    let body = concat!(
+        r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"#,
+        r#""q1":{"type":"noul","instructions":"The text is \"one\". Left?"},"#,
+        r#""q2":{"type":"noul","instructions":"The text is \"alpha\". Right?"},"#,
+        r#""q3":{"type":"noul","instructions":"The text is \"two\". Left?"},"#,
+        r#""q4":{"type":"noul","instructions":"The text is \"beta\". Right?"}}}"#,
     );
-    assert!(
-        requests
-            .iter()
-            .any(|request| request.body == right.as_bytes())
-    );
-    let rows: Vec<Value> = output
-        .stdout
-        .split(|byte| *byte == b'\n')
-        .filter(|line| !line.is_empty())
-        .map(|line| serde_json::from_slice(line).expect("row JSON"))
-        .collect();
+    assert_eq!(String::from_utf8_lossy(&requests[0].body), body);
+    let asked = keys(listener.url(), body.as_bytes());
+    let rows = rows(&output.stdout);
     assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0]["answers"]["left_answer"]["value"], true);
-    assert_eq!(rows[1]["answers"]["right_answer"]["value"], false);
     for (position, row) in rows.iter().enumerate() {
-        assert_eq!(row["meta"]["requests"].as_array().map(Vec::len), Some(2));
-        assert_eq!(row["meta"]["batches"].as_array().map(Vec::len), Some(2));
-        assert_eq!(row["meta"]["batches"][0]["group"], 1);
-        assert_eq!(row["meta"]["batches"][1]["group"], 2);
-        assert_eq!(row["meta"]["batches"][0]["position"], position + 1);
-        assert_eq!(row["meta"]["batches"][0]["records"], 2);
-        assert_eq!(
-            row["meta"]["batches"][0]["request"],
-            row["meta"]["requests"][0]
-        );
+        assert_eq!(row["answers"]["left_answer"]["value"], true);
+        assert_eq!(row["answers"]["right_answer"]["value"], false);
         assert_eq!(
             row["meta"]["requests"],
-            json!([
-                digest(listener.url(), left.as_bytes()),
-                digest(listener.url(), right.as_bytes())
-            ])
+            json!(asked[position * 2..position * 2 + 2])
         );
+        assert_eq!(
+            row["meta"]["usage"],
+            json!({"input_tokens":4,"output_tokens":2})
+        );
+        assert!(row["meta"].get("batches").is_none(), "{row}");
     }
 }
 
 #[test]
-fn a_profile_splits_one_group_while_another_group_batches() {
+fn a_profile_splits_packed_records_at_its_question_count() {
     let file = set(
         "batch-profile-groups",
         r#"{"version":1,"questions":{"first":{"decide":"First?","on":"/left"},"second":{"decide":"Second?","on":"/left"},"middle":{"decide":"Middle?","on":"/left"},"third":{"decide":"Third?","on":"/right"}}}"#,
@@ -106,17 +110,7 @@ fn a_profile_splits_one_group_while_another_group_batches() {
         "batch-profile-two-questions",
         r#"{"schema":"thinkthen.backend-profile/1","name":"two-questions","max_questions":2}"#,
     );
-    let listener = Listener::answering(|body| {
-        let request: Value = serde_json::from_slice(body).expect("request JSON");
-        let count = request["questions"]
-            .as_object()
-            .map_or(0, serde_json::Map::len);
-        let answers = (1..=count)
-            .map(|at| (format!("q{at}"), json!({"type":"noul","noul":0.9})))
-            .collect::<serde_json::Map<_, _>>();
-        Canned::ok(&json!({"model":"local-1","answers":answers}).to_string())
-    })
-    .expect("listener");
+    let listener = Listener::answering(all_yes).expect("listener");
     let output = spawn(
         &[
             "annotate",
@@ -153,23 +147,27 @@ fn a_profile_splits_one_group_while_another_group_batches() {
             "{body}"
         );
     }
-    let rows: Vec<Value> = output
-        .stdout
-        .split(|byte| *byte == b'\n')
-        .filter(|line| !line.is_empty())
-        .map(|line| serde_json::from_slice(line).expect("row JSON"))
+    let mut asked: Vec<Value> = requests
+        .iter()
+        .flat_map(|request| keys(listener.url(), &request.body))
+        .map(Value::from)
         .collect();
+    let rows = rows(&output.stdout);
     assert_eq!(rows.len(), 2);
+    let mut named = Vec::new();
     for row in &rows {
-        assert_eq!(row["meta"]["batches"].as_array().map(Vec::len), Some(3));
-        assert_eq!(row["meta"]["batches"][0]["group"], 1);
-        assert_eq!(row["meta"]["batches"][1]["group"], 1);
-        assert_eq!(row["meta"]["batches"][2]["group"], 2);
+        let requests = row["meta"]["requests"].as_array().expect("request keys");
+        assert_eq!(requests.len(), 4);
+        named.extend(requests.iter().cloned());
+        assert!(row["meta"].get("batches").is_none(), "{row}");
         assert_eq!(row["value"]["first"], true);
         assert_eq!(row["value"]["second"], true);
         assert_eq!(row["value"]["middle"], true);
         assert_eq!(row["value"]["third"], true);
     }
+    asked.sort_by_key(ToString::to_string);
+    named.sort_by_key(ToString::to_string);
+    assert_eq!(asked, named);
 }
 
 #[test]
@@ -275,7 +273,7 @@ fn partial_questions_keep_good_siblings_and_exit_six() {
 }
 
 #[test]
-fn unequal_group_close_points_keep_the_oldest_row_ahead() {
+fn a_question_cap_keeps_records_whole_and_rows_in_order() {
     let file = set(
         "batch-unequal-close",
         r#"{"version":1,"questions":{"a":{"decide":"A?","on":"/wide"},"b":{"decide":"B?","on":"/wide"},"c":{"decide":"C?","on":"/wide"},"d":{"decide":"D?","on":"/wide"},"single":{"decide":"Single?","on":"/narrow"}}}"#,
@@ -285,17 +283,7 @@ fn unequal_group_close_points_keep_the_oldest_row_ahead() {
         r#"{"schema":"thinkthen.backend-profile/1","name":"eight","max_questions":8}"#,
     );
     for jobs in [1, 3] {
-        let listener = Listener::answering(|body| {
-            let request: Value = serde_json::from_slice(body).expect("request JSON");
-            let count = request["questions"]
-                .as_object()
-                .map_or(0, serde_json::Map::len);
-            let answers = (1..=count)
-                .map(|at| (format!("q{at}"), json!({"type":"noul","noul":0.9})))
-                .collect::<serde_json::Map<_, _>>();
-            Canned::ok(&json!({"model":"local-1","answers":answers}).to_string())
-        })
-        .expect("listener");
+        let listener = Listener::answering(all_yes).expect("listener");
         let input = (1..=5)
             .map(|at| format!("{{\"wide\":\"wide {at}\",\"narrow\":\"narrow {at}\"}}\n"))
             .collect::<String>();
@@ -327,20 +315,16 @@ fn unequal_group_close_points_keep_the_oldest_row_ahead() {
             "{}",
             String::from_utf8_lossy(&output.stderr)
         );
-        let rows: Vec<Value> = output
-            .stdout
-            .split(|byte| *byte == b'\n')
-            .filter(|line| !line.is_empty())
-            .map(|line| serde_json::from_slice(line).expect("row JSON"))
-            .collect();
+        let rows = rows(&output.stdout);
         assert_eq!(rows.len(), 5);
         for (at, row) in rows.iter().enumerate() {
             assert_eq!(row["input"]["wide"], format!("wide {}", at + 1));
             assert_eq!(row["value"]["single"], true);
-            assert_eq!(row["meta"]["batches"].as_array().map(Vec::len), Some(2));
+            assert_eq!(row["meta"]["requests"].as_array().map(Vec::len), Some(5));
         }
+        // Two records would pass eight questions, so each record goes whole.
         let requests = listener.requests();
-        assert_eq!(requests.len(), 4);
+        assert_eq!(requests.len(), 5);
         let counts: Vec<usize> = requests
             .iter()
             .map(|request| {
@@ -350,13 +334,7 @@ fn unequal_group_close_points_keep_the_oldest_row_ahead() {
                     .map_or(0, serde_json::Map::len)
             })
             .collect();
-        if jobs == 1 {
-            assert_eq!(counts, [8, 5, 8, 4]);
-        } else {
-            let mut sorted = counts;
-            sorted.sort();
-            assert_eq!(sorted, [4, 5, 8, 8]);
-        }
+        assert_eq!(counts, [5; 5]);
     }
 }
 

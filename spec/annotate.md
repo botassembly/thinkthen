@@ -1,6 +1,6 @@
 # Annotate a record with a question set
 
-The examples on `specification/annotate.md` run here against hand-built `local-1` entries, with no key and no network. The set's `open` question reads `on` at `/body`, and the other two read the whole record. One record makes two requests, one for each `on` group.
+The examples on `specification/annotate.md` run here against hand-built `local-1` entries, with no key and no network. The set's `open` question reads `on` at `/body`, and the other two read the whole record. One record makes one request that holds both `on` groups' questions, by ADR 0111.
 
 ```bash
 set -euo pipefail
@@ -35,9 +35,9 @@ thinkthen annotate triage.json --jsonl --batch 1 "${offline[@]}" --replay "$root
   | jq -c 'select(.kind == "bug")' \
   | mustmatch '{"id":"T-91","body":"Payouts have failed for 3 days.","open":true,"kind":"bug","impact":1.6}'
 
-# The plan prints the first request a live run sends and counts every request.
+# The plan prints the first request a live run sends and counts every request. Both groups ride in that one request.
 thinkthen annotate triage.json --plan "${offline[@]}" < issue.json \
   | sed -n '1p' \
   | jq -c '{on, request_count, group_requests, state: .request.state}' \
-  | mustmatch '{"on":{"open":["/body"],"kind":[""],"impact":[""]},"request_count":2,"group_requests":[1,1],"state":"Each question quotes the text it asks about."}'
+  | mustmatch '{"on":{"open":["/body"],"kind":[""],"impact":[""]},"request_count":1,"group_requests":[1,1],"state":"Each question quotes the text it asks about."}'
 ```

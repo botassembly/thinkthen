@@ -7,8 +7,8 @@ use std::thread;
 use std::time::Duration;
 
 use super::{named, spent, within};
+use crate::engine::schedule;
 use crate::engine::schedule::{Completed, Input, Outcome};
-use crate::engine::{annotate_schedule, schedule};
 
 type Port<T> = schedule::InputPort<T, T, &'static str>;
 
@@ -75,39 +75,6 @@ fn a_spent_deadline_over_empty_bulk_input_stops_before_reading() {
         );
     }
     assert_eq!(asks.load(Ordering::SeqCst), 0);
-    for streams in [true, false] {
-        let outcome = annotate_schedule::run(
-            2,
-            streams,
-            &spent(),
-            |_asked, _events: annotate_schedule::InputPort<(), (), &'static str>| {},
-            |()| -> Result<annotate_schedule::Prepared<(), (), ()>, &'static str> {
-                unreachable!("no input")
-            },
-            &|()| -> Result<(), &'static str> { unreachable!("no work") },
-            |_: &mut (), ()| Ok(()),
-            |(), ()| -> Result<Completed<(), &'static str>, &'static str> {
-                unreachable!("no row")
-            },
-            |()| Ok(true),
-            |_| "defect",
-            named,
-        )
-        .expect("metadata");
-        let expected = if streams {
-            matches!(
-                outcome,
-                annotate_schedule::Outcome::Stopped {
-                    finished: 0,
-                    cause: "deadline",
-                    ..
-                }
-            )
-        } else {
-            matches!(outcome, annotate_schedule::Outcome::Failed("deadline"))
-        };
-        assert!(expected, "streams {streams}");
-    }
 }
 
 #[test]
@@ -238,72 +205,6 @@ fn a_result_queued_before_the_deadline_check_keeps_its_place_and_the_order() {
         Outcome::Stopped {
             finished: 1,
             cause: "backend",
-            ..
-        }
-    ));
-}
-
-#[test]
-fn a_deadline_clears_undispatched_annotation_groups() {
-    let budget = Duration::from_millis(300);
-    let held = Barrier::new(2);
-    let starts = AtomicUsize::new(0);
-    let asks = Arc::new(AtomicUsize::new(0));
-    let reader_asks = Arc::clone(&asks);
-    let outcome = thread::scope(|scope| {
-        scope.spawn(|| {
-            held.wait();
-            thread::sleep(budget + Duration::from_millis(200));
-            held.wait();
-        });
-        annotate_schedule::run(
-            1,
-            true,
-            &within(budget),
-            move |asked, events| {
-                thread::spawn(move || {
-                    feed(
-                        &asked,
-                        &reader_asks,
-                        || Input::Item(()),
-                        |input| events.send(input),
-                    );
-                });
-            },
-            |()| {
-                Ok::<_, &'static str>(annotate_schedule::Prepared {
-                    seed: (),
-                    accumulator: Vec::<usize>::new(),
-                    work: vec![0, 1],
-                })
-            },
-            &|group: usize| {
-                starts.fetch_add(1, Ordering::SeqCst);
-                held.wait();
-                held.wait();
-                Ok::<_, &'static str>(group)
-            },
-            |answers, answer| {
-                answers.push(answer);
-                Ok(())
-            },
-            |(), _| -> Result<Completed<(), &'static str>, &'static str> {
-                unreachable!("the stopped row never finishes")
-            },
-            |()| Ok(true),
-            |_| "defect",
-            named,
-        )
-    })
-    .expect("metadata");
-
-    assert_eq!(starts.load(Ordering::SeqCst), 1);
-    assert_eq!(asks.load(Ordering::SeqCst), 1);
-    assert!(matches!(
-        outcome,
-        annotate_schedule::Outcome::Stopped {
-            finished: 0,
-            cause: "deadline",
             ..
         }
     ));

@@ -5,7 +5,7 @@ use std::io;
 use std::path::Path;
 
 use crate::harness::{Listener, spawn};
-use crate::support::{ENDPOINT_PATH, digest, encoded_decide};
+use crate::support::{ENDPOINT_PATH, encoded_decide, keys};
 
 use super::{EVIDENCE, folder, judge, recorded};
 
@@ -36,7 +36,7 @@ fn missing_entries_name_only_proved_sources_and_keep_replay_local() {
         assert!(output.stdout.is_empty(), "{name}");
         let stderr = String::from_utf8_lossy(&output.stderr);
         assert!(stderr.contains(source), "{name}: {stderr}");
-        assert!(stderr.contains(".json`"), "{name}: {stderr}");
+        assert!(stderr.contains(miss(name)), "{name}: {stderr}");
         if name == "streaming row" {
             assert!(
                 stderr.contains("stopped at record 1; 0 records finished"),
@@ -58,12 +58,14 @@ fn missing_entries_name_only_proved_sources_and_keep_replay_local() {
         assert!(!folder.exists(), "{name} created the replay folder");
         if name == "shared batch and facts" {
             let lines: Vec<_> = stderr.lines().collect();
-            assert_eq!(lines.len(), 2, "{stderr}");
+            // A miss is found at lookup, before any request holds record 1,
+            // so it names the record alone.
+            assert_eq!(lines.len(), 3, "{stderr}");
             assert!(
-                lines[0].starts_with("thinkthen: stopped at record 1; "),
+                lines[1].starts_with("thinkthen: stopped at record 1; "),
                 "{stderr}"
             );
-            let facts: serde_json::Value = serde_json::from_str(lines[1]).expect("final facts");
+            let facts: serde_json::Value = serde_json::from_str(lines[2]).expect("final facts");
             assert_eq!(facts["stopped"]["cause"], "local");
         }
     }
@@ -73,31 +75,42 @@ fn missing_entries_name_only_proved_sources_and_keep_replay_local() {
     );
 }
 
+/// The sentence end a miss prints: a question key under ADR 0111 for the
+/// record functions, and an entry name for the commands still on the old store.
+fn miss(name: &str) -> &'static str {
+    match name {
+        "complete find set" | "recognize command fallback" | "relate command fallback" => ".json`",
+        _ => {
+            "; the key is the SHA-256 of the adapter, address, model, shared state and question as sent"
+        }
+    }
+}
+
 fn cases<'a>(base: &'a str, folder: &'a str, set: &'a str) -> [Case<'a>; 7] {
     [
         (
             "one document",
             vec!["decide", "private-question", "--url", base, "--replay", folder],
             b"private-evidence",
-            "the decide request for one document: the replay folder holds no entry",
+            "the decide request for one document: the replay folder holds no answer",
         ),
         (
             "streaming row",
             vec!["filter", "private-question", "--lines", "--url", base, "--replay", folder],
             b"private-evidence\n",
-            "the filter request: the replay folder holds no entry",
+            "the filter request: the replay folder holds no answer",
         ),
         (
             "shared batch and facts",
             vec!["decide", "private-question", "--lines", "--batch", "2", "--facts", "--url", base, "--replay", folder],
             b"private-evidence\nsecond private-evidence\n",
-            "request for records 1 to 2 failed: the decide request: the replay folder holds no entry",
+            "the decide request: the replay folder holds no answer",
         ),
         (
             "annotate group",
             vec!["annotate", set, "--url", base, "--replay", folder],
             br#"{"body":"private-evidence"}"#,
-            "annotate group 1 with 2 members: the replay folder holds no entry",
+            "the annotate request: the replay folder holds no answer",
         ),
         (
             "complete find set",
@@ -121,9 +134,9 @@ fn cases<'a>(base: &'a str, folder: &'a str, set: &'a str) -> [Case<'a>; 7] {
 }
 
 #[test]
-fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
+fn a_replay_miss_is_a_local_failure_that_names_the_question_key() {
     let folder = folder("missed");
-    let (listener, name, _) = recorded(&folder).expect("one recorded entry");
+    let (listener, _) = recorded(&folder).expect("one recorded answer");
     assert_eq!(
         listener.requests().len(),
         1,
@@ -158,8 +171,8 @@ fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
     };
     let before = snapshot().expect("folder before miss");
 
-    // Another question makes other request bytes, so the digest names a file
-    // this folder does not hold.
+    // Another question makes another question key, which this folder does
+    // not hold.
     let question = "asks for something else";
     let output = judge(
         question,
@@ -172,16 +185,20 @@ fn a_replay_miss_is_a_local_failure_that_names_the_entry() {
     assert_eq!(output.status.code(), Some(5));
     assert!(output.stdout.is_empty());
     let message = String::from_utf8_lossy(&output.stderr);
-    assert!(message.contains("no entry named"), "{message}");
-    let expected = format!(
-        "{}.json",
-        digest(
-            &format!("{}/{ENDPOINT_PATH}", listener.base()),
-            &encoded_decide(EVIDENCE, "local-1", question)
+    let [expected] = keys(
+        &format!("{}/{ENDPOINT_PATH}", listener.base()),
+        &encoded_decide(EVIDENCE, "local-1", question),
+    )
+    .try_into()
+    .expect("one question");
+    assert_eq!(
+        message,
+        format!(
+            "thinkthen: the decide request for one document: the replay folder holds no answer \
+             for question `{expected}`; the key is the SHA-256 of the adapter, address, model, \
+             shared state and question as sent\n"
         )
     );
-    assert!(message.contains(&expected), "{message}");
-    assert!(!message.contains(&name), "{message}");
     for secret in [
         question,
         EVIDENCE,
