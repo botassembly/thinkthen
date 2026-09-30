@@ -1,6 +1,6 @@
 # 0352: No wall-clock timing in routine tests
 
-Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1. The ticket branch holds the full ticket.
+Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
 
 ## Outcome
 
@@ -8,8 +8,74 @@ No routine rung (`test`, `spec`, the surface checks) depends on how fast the mac
 
 ## Evidence
 
-- Starts from: ticket 0340 and the closed load-flake issues.
-- Keeps: every cancellation, deadline and pacing regression.
-- Changes: written on the ticket branch after the inventory.
-- Proof: `sdlc/scripts/test` under a deliberate load of 24 busy processes, before and after.
-- Defers: the C door tests, which ticket 0346 owns.
+- Starts from: ticket 0340, which fixed the first load flakes, and the closed issues it and later tickets settled. These are `2026-09-24-parallel-lock-test-fails-under-load.md`, `2026-09-24-the-global-queue-concurrency-check-fails-under-load.md`, `2026-09-24-the-model-mismatch-cancel-check-fails-under-load.md`, `2026-09-30-duckdb-split-denials-case-failed-once-under-load.md`, `2026-09-30-ordered-output-test-races-the-next-request-under-load.md`, `2026-09-30-process-cap-test-races-two-records.md` and `2026-09-30-relate-host-interrupt-test-fails-under-load.md`. Ticket 0342 narrowed the relate interrupt race and did not remove it. Ticket 0351 recorded one timing test that failed once under load. Python and DuckDB surface checks passed only on a rerun. A loaded baseline on main failed 1 of 5 runs of `sdlc/scripts/test`, in the batching ceiling test.
+- Keeps: every cancellation, deadline, pacing and ordering regression. Each moved millisecond promise keeps a stress twin under `test-stress --run`.
+- Changes: the rules and the list below.
+- Proof: `sdlc/scripts/test` under 24 busy processes, before and after, in the table below. The Python, DuckDB and SQLite surface checks pass after.
+- Defers: the other binding checks, filed as Debt 027. The C door tests, which ticket 0346 owns. The engine's 50 ms input pause, which a stalled reader thread can still reach.
+
+## Rules
+
+- A routine test proves order with an event: a channel, a barrier, a counted request, a held reply, or a file the child writes.
+- A promise in milliseconds, such as "cancelled within 100 ms", runs only under `THINKTHEN_TEST_PROFILE=stress`. The routine run proves the same stop by order: the cancel arrives while the reply is still held.
+- A wait for something that must happen gets a guard of 30 to 60 s. A passing run never waits it out.
+- An upper bound stays only as a hang guard of at least 10 s, and only where the behavior it rules out takes 30 s or more.
+- A lower bound stays. So does a wait for something that must not happen. Load can only make either pass more easily.
+- A deadline of 300 ms or more that covers only loopback work stays.
+
+## Changes
+
+Conformance backend:
+
+- The `wait` line waits up to 30 s instead of 5 s (`WAIT_BOUND` in `conformance/backend/src/arms.rs`). The README, the Python `conftest.py` and the Ruby helper say so.
+- `binary.rs` splits its bound in two. Promptness checks use 10 s, and waits for a line use 40 s. `eight_delayed_replies_wait_in_parallel` becomes a stress case. The 30 s wait case is renamed and moves to stress. `listener.rs` waits up to 20 s.
+
+Rust engine unit tests:
+
+- The store test sets a flag just before COMMIT and checks it, instead of timing 250 ms.
+- Hang guards rise to 30 s in the process, fork, facade, width, host-signal, ordered-schedule and interrupt tests. Client timeouts in tests whose subject is not the timeout rise to 30 s.
+- Two HTTP retry tests wait 30 s between tries. The deadline test uses a 1 s deadline instead of 200 ms.
+- The accounting deadline test keeps a 10 s hang guard. Its accept check proves that no attempt went out.
+
+Rust command tests (`tests/backend`):
+
+- The batching ceiling test reads its 120 KB input from a file, through a new harness call `spawn_file`. A pipe filled past its buffer let the writer stall, and the 50 ms input pause then closed a batch early.
+- A new harness helper `Tally` counts written replies, so one reply can wait until another is written. The annotate failure-order test and the batching failed-request test use it.
+- The annotate closed-pipe test holds records 2 and 3 at a rendezvous until the test has closed the output pipe.
+- The parallel tests gather the first requests before answering. The peak test now asserts the full bound. The resume test holds the first run's four replies until all four are in.
+- The annotate stop test gathers records 1 and 2 before record 1 fails. The equal-records test gives the second record a full second to join the first one's request.
+- `cache_convert` measures its lock wait from the lock itself.
+- The exchange and resend tests hold replies for 60 s or ask for 30 s waits, so a 10 s or 30 s hang guard separates the two outcomes.
+- Other positive waits rise from 2 to 5 s to 30 s: interrupt, rank-top, scheduling, closed pipe, usage lock, default-cache usage and parallel.
+
+Rust library tests:
+
+- The relate host-interrupt test runs at throttle 1 in a fresh copy of the test binary. The check fires at exactly four sends, and nothing more is sent. At throttle 4, overlapping replies could leave no moment with no send out, so the check could miss every chance.
+- The profile-split test holds the alpha reply until beta's is written. The order test holds each slow reply until the fast one beside it is written.
+- Waits in the cap, estimated, batch attempt, interactive and native tests rise to 30 s. The retry-after tests ask for 30 s and allow 10 s.
+
+Consumer:
+
+- The fork probe's child waits for a file that the parent writes after the waiter returns, instead of sleeping 8 s. The waiter's bound becomes a 30 s hang guard.
+
+Python, DuckDB and SQLite surfaces:
+
+- A stop test's 100 ms bound applies only under the stress profile. The routine run checks that the cancel arrived while the reply was held.
+- The Python release test drives the held arm from the parent. The column-timing test splits into a deadline half and a held-token half.
+- DuckDB's `harness.py` adds `timed` cases, which run in both profiles and time only under stress. The signal cases repeat SIGINT until the answer arrives. The queued-relate case waits for a stdin line instead of sleeping.
+- SQLite's conformance and interrupt tests wait on held requests. `check.sh` runs the usage and try-budget files under stress too.
+- Waits rise to 30 or 60 s across these tests.
+
+Shell self-tests:
+
+- The triage demo, `sdlc/live-test`, `sdlc/scripts/smoke` and `sdlc/scripts/installed.sh` wait up to 30 s for a file or a port.
+
+## Proof
+
+Each row runs `sdlc/scripts/test` while 24 busy loops run. Each run started below a one-minute load of 8.
+
+| Code | Runs | Failed | Load during runs | Failures |
+| --- | --- | --- | --- | --- |
+| main, earlier baseline | 5 | 1 | 32 to 47 | batching ceiling |
+| main's test files | pending | pending | pending | pending |
+| this branch | pending | pending | pending | pending |
