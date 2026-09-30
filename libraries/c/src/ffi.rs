@@ -10,6 +10,7 @@
 
 use std::ffi::{CStr, CString, c_char};
 
+mod plan;
 #[path = "ffi/typed_facts/ffi.rs"]
 mod typed_facts;
 

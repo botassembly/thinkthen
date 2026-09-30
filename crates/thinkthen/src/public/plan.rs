@@ -4,6 +4,8 @@
 use std::collections::HashSet;
 use std::fmt;
 
+use serde::Serialize;
+
 use crate::core::PlanSummary;
 use crate::core::pack::{self, Entry, Packer};
 use crate::engine::pipeline::{self, Asker as _};
@@ -19,15 +21,25 @@ use super::question::Kind;
 
 /// Prepared request counts before cache answers, refusal splits or retries.
 /// The token band is an estimate of the prepared body bytes, not a bill.
-#[derive(Clone, Eq, PartialEq)]
+/// It serializes as the `plan` definition of the result schema.
+#[derive(Clone, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "plan"))]
 pub struct PlanEstimate {
     records: usize,
     requests: usize,
     estimated_bytes: usize,
-    lower_tokens: usize,
-    upper_tokens: usize,
+    estimated_input_tokens: TokenBand,
     upper_bound: bool,
-    first_body: Option<Vec<u8>>,
+    #[serde(rename = "first_body_utf8")]
+    first_body: Option<String>,
+}
+
+/// The low and high input-token estimates of a plan.
+#[derive(Clone, Copy, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "tokenBand"))]
+struct TokenBand {
+    lower: usize,
+    upper: usize,
 }
 
 impl fmt::Debug for PlanEstimate {
@@ -39,7 +51,7 @@ impl fmt::Debug for PlanEstimate {
             .field("estimated_bytes", &self.estimated_bytes)
             .field(
                 "estimated_input_tokens",
-                &(self.lower_tokens, self.upper_tokens),
+                &self.estimated_input_tokens(),
             )
             .field("upper_bound", &self.upper_bound)
             .finish_non_exhaustive()
@@ -65,7 +77,10 @@ impl PlanEstimate {
     /// Measured low and high estimates of input tokens.
     #[must_use]
     pub const fn estimated_input_tokens(&self) -> (usize, usize) {
-        (self.lower_tokens, self.upper_tokens)
+        (
+            self.estimated_input_tokens.lower,
+            self.estimated_input_tokens.upper,
+        )
     }
     /// Whether later staged requests could only be bounded before replies.
     #[must_use]
@@ -75,7 +90,7 @@ impl PlanEstimate {
     /// The first complete prepared request body, if the input was nonempty.
     #[must_use]
     pub fn first_body(&self) -> Option<&[u8]> {
-        self.first_body.as_deref()
+        self.first_body.as_deref().map(str::as_bytes)
     }
 }
 
@@ -175,14 +190,21 @@ impl Engine {
             summary.request(&request.body).map_err(|_| too_large())?;
         }
         let counts = summary.counts().map_err(|_| too_large())?;
+        let first_body = summary
+            .first_body()
+            .map(|body| String::from_utf8(body.to_vec()))
+            .transpose()
+            .map_err(|_| Error::defect("a planned body was not UTF-8"))?;
         Ok(PlanEstimate {
             records: counts.records,
             requests: counts.requests,
             estimated_bytes: counts.estimated_bytes,
-            lower_tokens: counts.estimated_input_tokens.lower,
-            upper_tokens: counts.estimated_input_tokens.upper,
+            estimated_input_tokens: TokenBand {
+                lower: counts.estimated_input_tokens.lower,
+                upper: counts.estimated_input_tokens.upper,
+            },
             upper_bound: counts.upper_bound,
-            first_body: summary.first_body().map(<[u8]>::to_vec),
+            first_body,
         })
     }
 }

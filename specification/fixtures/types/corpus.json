@@ -475,6 +475,8 @@
     {"name":"c-annotate-context-refused","definition":"doorRequest","request":{"annotate":{"version":1,"questions":{"ready":{"decide":"Ready?"}}},"records":["alpha"],"call":{"context":"Shared facts."}},"request_valid":false,"expected_error":"usage"},
     {"name":"call-error","definition":"callError","response":{"kind":"deadline","retryable":false,"message":"the budget ran out"}},
     {"name":"record-missing-pointer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"}}},
-    {"name":"record-error-cannot-be-an-answer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"},"value":null},"response_valid":false}
+    {"name":"record-error-cannot-be-an-answer","definition":"recordError","response":{"schema":"thinkthen.record-error/1","at":2,"failure":{"kind":"usage","cause":"missing_pointer","pointer":"/body"},"value":null},"response_valid":false},
+    {"name":"plan-p1","definition":"plan","plan_input":{"verb":"decide","question":"asks for a refund","input":["Refund me please."],"settings":{}},"response":{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":{"lower":93,"upper":166},"upper_bound":false,"first_body_utf8":"{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Refund me please.\\\". asks for a refund\"}}}"}},
+    {"name":"plan-tokens-are-a-band","definition":"plan","response":{"records":1,"requests":1,"estimated_bytes":182,"estimated_input_tokens":[93,166],"upper_bound":false,"first_body_utf8":null},"response_valid":false}
   ]
 }

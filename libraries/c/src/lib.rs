@@ -19,6 +19,7 @@ pub mod ffi;
 mod call;
 mod door;
 mod failures;
+mod plan;
 mod settings;
 
 use failures::Held;

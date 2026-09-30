@@ -1206,6 +1206,46 @@
       ],
       "type": "object"
     },
+    "plan": {
+      "properties": {
+        "estimated_bytes": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "estimated_input_tokens": {
+          "$ref": "#/$defs/tokenBand"
+        },
+        "first_body_utf8": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "records": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "upper_bound": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "records",
+        "requests",
+        "estimated_bytes",
+        "estimated_input_tokens",
+        "upper_bound",
+        "first_body_utf8"
+      ],
+      "type": "object"
+    },
     "profileWarning": {
       "properties": {
         "running": {
@@ -1821,6 +1861,25 @@
         "number",
         "string"
       ]
+    },
+    "tokenBand": {
+      "properties": {
+        "lower": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "upper": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "lower",
+        "upper"
+      ],
+      "type": "object"
     },
     "tokenUsage": {
       "properties": {

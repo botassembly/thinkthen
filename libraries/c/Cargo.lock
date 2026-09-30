@@ -395,6 +395,7 @@ version = "0.0.1"
 dependencies = [
  "conformance-backend",
  "rusqlite",
+ "serde",
  "serde_json",
  "sha2",
  "thinkthen",

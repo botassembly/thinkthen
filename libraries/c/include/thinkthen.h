@@ -29,8 +29,8 @@
  * once, and each caller sees the answers it would get alone.
  *
  * The lifetime rules: an engine lives until `thinkthen_engine_free`; a
- * string from `thinkthen_call`, `thinkthen_question_file`, `thinkthen_recognize`,
- * `thinkthen_relate`, or a typed `*_with_facts` form lives until
+ * string from `thinkthen_call`, `thinkthen_question_file`, `thinkthen_plan_json`,
+ * `thinkthen_recognize`, `thinkthen_relate`, or a typed `*_with_facts` form lives until
  * `thinkthen_free_string`; a cancel token
  * lives until `thinkthen_cancel_token_free`, and no call may carry a token
  * the host has freed; the message from `thinkthen_error_message` belongs
@@ -219,6 +219,26 @@ void thinkthen_cancel_token_free(thinkthen_cancel_token *token);
  * the path or file content. */
 int thinkthen_question_file(const thinkthen_engine *engine, const char *path,
                             char **out, size_t *out_len);
+
+/* Preview a judgment call without sending it. `plan_json` is one closed
+ * `thinkthen.plan-input/1` object: `verb` (`decide`, `choose`, `score`, or
+ * `tag`), `question` (the bare question text, or one question object in the
+ * question-file grammar asking that verb), `input` (one text or an array of
+ * texts), and optional `settings` (the portable `thinkthen.settings/1`
+ * object). Bare question text takes its question fields, such as `options`
+ * or `threshold`, from the settings; a question object takes only `batch`,
+ * `context`, and `deadline_ms` from them. Success writes the result schema's
+ * `plan` object as owned NUL-terminated JSON text with its byte length:
+ * `records`, `requests` (planned requests before cache answers, refusal
+ * splits, and retries), `estimated_bytes`, `estimated_input_tokens` as
+ * `{"lower", "upper"}`, `upper_bound`, and `first_body_utf8` (the first
+ * request body, or null for no input). Free it once with
+ * `thinkthen_free_string`. The preview reads no key and no cache and sends
+ * nothing. An unknown or repeated member, a wrong verb or input shape, bad
+ * settings, a settings field the question repeats, or a null pointer is
+ * THINKTHEN_EUSAGE, and both outputs keep what they held. */
+int thinkthen_plan_json(const thinkthen_engine *engine, const char *plan_json,
+                        char **out, size_t *out_len);
 
 /* Ask one yes-or-no question of one text: exactly `thinkthen_decide_opts`
  * with THINKTHEN_NO_DEADLINE and a null token. `question_json` is one

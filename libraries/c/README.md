@@ -16,6 +16,8 @@ A release renames the built files `libthinkthen.so` and `libthinkthen.a`, with t
 
 `thinkthen_question_file(engine, path, &json, &length)` reads one named UTF-8 question file of at most 1 MiB and returns its validated source JSON. Pass that owned string to `thinkthen_decide_with_facts` or use it to construct a JSON-door request, then free it once with `thinkthen_free_string`. A bad file returns non-retryable `THINKTHEN_ELOCAL` without changing either output or sending a request. The existing bare question and inline JSON arguments remain literal and report typed grammar errors as `THINKTHEN_EUSAGE`.
 
+`thinkthen_plan_json(engine, plan_json, &json, &length)` previews a judgment call and sends nothing. Pass `{"verb":"decide","question":"asks for a refund","input":["Refund me please."],"settings":{}}`: bare question text takes its fields, such as `options`, from `settings`, and a question object takes only `batch`, `context` and `deadline_ms` from it. The owned JSON holds `records`, `requests`, `estimated_bytes`, `estimated_input_tokens` as `{"lower","upper"}`, `upper_bound` and `first_body_utf8`, the result schema's `plan` definition. It needs no key. Free it once with `thinkthen_free_string`.
+
 The answer cache is on by default. Each entry holds the complete request and reply, the judged text included, in plain text, with no expiry. Whoever can write the selected cache or recording folder controls the answers read from it; keep that folder private to people whose answers you trust. `cache prune` is the only thing that removes entries. Turn it off with `thinkthen_engine_new_with("{\"cache\":false}")`. Set `THINKTHEN_CACHE` before `thinkthen_engine_new` runs to move its folder.
 
 ## Run facts
