@@ -50,7 +50,7 @@ class Judge:
             raise UsageError("an unordered set cannot align records with answers")
         kind = _pandas(value)
         if kind == "DataFrame":
-            raise UsageError('a data frame is not a column; pass df["name"]')
+            raise UsageError('a data frame is not a column; pass df["name"], or annotate with on=')
         if kind == "Series" or (kind is None and
                                 (hasattr(value, "__arrow_c_stream__") or
                                  hasattr(value, "__arrow_c_array__"))):
