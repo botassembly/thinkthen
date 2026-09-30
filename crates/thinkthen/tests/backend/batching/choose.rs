@@ -62,6 +62,10 @@ fn equal_selected_records_share_only_an_equal_complete_question() {
     );
     let rows = details(&output);
     assert_eq!(rows.len(), 3);
+    assert!(
+        rows.iter()
+            .all(|row| row["meta"]["attempts"][0]["ordinal"] == 1)
+    );
     assert_eq!(rows[0]["value"], "billing");
     assert_eq!(rows[1]["value"], "shipping");
     assert_eq!(rows[2]["value"], "billing");

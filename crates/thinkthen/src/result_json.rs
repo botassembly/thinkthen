@@ -34,7 +34,16 @@ pub(crate) fn decision(
 ) -> Result<(String, String), RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
     let json = decision_with_digest(
-        run, judged, question, threshold, shown, input, None, None, &digest,
+        run,
+        judged,
+        question,
+        threshold,
+        shown,
+        input,
+        None,
+        None,
+        &digest,
+        Vec::new(),
     )?;
     Ok((json, digest))
 }
@@ -51,10 +60,11 @@ pub(crate) fn decision_with_batch(
     shown: Value,
     input: Option<Record>,
     batch: Option<BatchMeta>,
+    attempts: Vec<crate::public::AttemptObservation>,
 ) -> Result<String, RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
     decision_with_digest(
-        run, judged, question, threshold, shown, input, batch, None, &digest,
+        run, judged, question, threshold, shown, input, batch, None, &digest, attempts,
     )
 }
 
@@ -84,6 +94,7 @@ pub(crate) fn decision_with_batch_requests(
         batch,
         Some(requests),
         &digest,
+        Vec::new(),
     )
 }
 
@@ -101,6 +112,7 @@ fn decision_with_digest(
     batch: Option<BatchMeta>,
     requests: Option<Vec<String>>,
     digest: &str,
+    attempts: Vec<crate::public::AttemptObservation>,
 ) -> Result<String, RenderError> {
     let answered = &judged.answered;
     let meta = Meta::new(
@@ -118,7 +130,8 @@ fn decision_with_digest(
         .with_batch(batch)
         .with_batch_warning(run.batch_warning)
         .with_context_sha256(run.context_sha256),
-    );
+    )
+    .with_attempts(attempts);
     let row = DecisionResult::new(shown, question, judged.answer.clone(), threshold, meta);
     json_line(&match input {
         Some(record) => row.with_input(record),

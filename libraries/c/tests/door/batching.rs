@@ -4,6 +4,114 @@ use super::*;
 use conformance_backend::{Canned, Listener};
 
 #[test]
+fn direct_c_json_attempts_opt_in_keeps_default_envelope_and_frees_results() {
+    let reply = r#"{"model":"jev-latest","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
+    let listener = Listener::answering(move |_| Canned::ok(reply)
+        .asking("x-envoy-upstream-service-time", "7")
+        .asking("x-typesafe-request-id", "req-c-one")).expect("loopback");
+    let base = listener.base();
+    let settings = json!({"base_url":base,"cache":false}).to_string();
+    let default = json!({"decide":"Is it relevant?","evidence":"alpha"}).to_string();
+    let opted = json!({"decide":"Is it relevant?","evidence":"beta","attempts":true}).to_string();
+    let empty = json!({"filter":"Is it relevant?","records":[],"attempts":true}).to_string();
+    let invalid = json!({"decide":"Is it relevant?","evidence":"beta","attempts":false}).to_string();
+    let invalid_null = json!({"decide":"Is it relevant?","evidence":"beta","attempts":null}).to_string();
+    let invalid_text = json!({"decide":"Is it relevant?","evidence":"beta","attempts":"true"}).to_string();
+    let invalid_usage = json!({"usage":true,"attempts":true}).to_string();
+    let mut script = Script::default();
+    script.ask("settings", &[base, &settings]);
+    for request in [&default, &opted, &empty, &invalid, &invalid_null, &invalid_text, &invalid_usage] {
+        script.ask("call", &[base, request]);
+    }
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let output = run(&driver, "", &script.0);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let got = replies(&output.stdout).expect("framed replies");
+    assert_eq!(got.len(), 8);
+    let ordinary: Value = serde_json::from_str(&got[1].1).expect("default success");
+    assert_eq!(ordinary.as_object().expect("object").len(), 2);
+    let detailed: Value = serde_json::from_str(&got[2].1).expect("opted success");
+    assert_eq!(detailed.as_object().expect("object").len(), 3);
+    assert_eq!(detailed["attempts"][0]["ordinal"], 1);
+    assert_eq!(detailed["attempts"][0]["outcome"], "ok");
+    assert_eq!(detailed["attempts"][0]["status"], 200);
+    assert_eq!(detailed["attempts"][0]["server_ms"], 7);
+    assert_eq!(detailed["attempts"][0]["request_id"], "req-c-one");
+    let empty: Value = serde_json::from_str(&got[3].1).expect("empty success");
+    assert_eq!(empty["attempts"], json!([]));
+    assert_eq!(got[4].0, 1, "false is not the opt-in");
+    assert_eq!(got[5].0, 1, "null is not the opt-in");
+    assert_eq!(got[6].0, 1, "a string is not the opt-in");
+    assert_eq!(got[7].0, 1, "usage takes no attempt control");
+    assert_eq!(listener.count(), 2, "invalid and empty calls send nothing");
+}
+
+#[test]
+fn direct_c_attempt_member_is_available_on_each_of_ten_json_verbs() {
+    let listener = Listener::answering(|_| Canned::ok(
+        r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","choice":"u001","probabilities":{"u001":0.9,"u002":0.1}}}}"#,
+    )).expect("loopback");
+    let base = listener.base();
+    let settings = json!({"base_url":base,"cache":false}).to_string();
+    let cases = [
+        ("decide", json!({"decide":"Q?","records":[],"attempts":true})),
+        ("choose", json!({"choose":"Q?","options":["a","b"],"records":[],"attempts":true})),
+        ("score", json!({"score":"Q?","levels":["low","high"],"records":[],"attempts":true})),
+        ("tag", json!({"tag":"Q?","labels":["a","b"],"records":[],"attempts":true})),
+        ("filter", json!({"filter":"Q?","records":[],"attempts":true})),
+        ("rank", json!({"rank":"Q?","records":[],"attempts":true})),
+        ("find", json!({"find":"Which?","units":["a","b"],"attempts":true})),
+        ("annotate", json!({"annotate":{"version":1,"questions":{"one":{"decide":"Q?"}}},"records":[],"attempts":true})),
+        ("recognize", json!({"version":1,"recognize":{"kinds":{"person":null}},"evidence":"","attempts":true})),
+        ("relate", json!({"version":1,"relate":{"relations":[{"name":"linked","source":"person","target":"person"}]},"records":[],"attempts":true})),
+    ];
+    let mut script = Script::default();
+    script.ask("settings", &[base, &settings]);
+    for (_, request) in &cases {
+        script.ask("call", &[base, &request.to_string()]);
+    }
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let output = run(&driver, "", &script.0);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let got = replies(&output.stdout).expect("framed replies");
+    assert_eq!(got.len(), cases.len() + 1);
+    for ((verb, _), reply) in cases.iter().zip(&got[1..]) {
+        assert_eq!(reply.0, 0, "{verb}: {}", reply.1);
+        let success: Value = serde_json::from_str(&reply.1).expect("success JSON");
+        assert_eq!(success.as_object().expect("object").len(), 3, "{verb}");
+        assert!(success["attempts"].is_array(), "{verb}");
+    }
+    assert_eq!(listener.count(), 1, "only find has a nonempty request");
+}
+
+#[test]
+fn direct_c_staged_recognize_and_relate_keep_live_attempts() {
+    let backend = Backend::start().expect("saved conformance backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let settings = json!({"base_url":base,"cache":false}).to_string();
+    let recognize = json!({"version":1,"recognize":{"kinds":{"person":null}},
+        "evidence":"Maria Chen arrived.","attempts":true}).to_string();
+    let relate = json!({"version":1,"relate":{"relations":[{"name":"knows","source":"person","target":"person"}]},
+        "records":[{"name":"Maria Chen","kind":"person"},{"name":"arrived.","kind":"person"}],"attempts":true}).to_string();
+    let mut script = Script::default();
+    script.ask("settings", &[&base, &settings]);
+    script.ask("call", &[&base, &recognize]);
+    script.ask("call", &[&base, &relate]);
+    let driver = compile(&crate_dir().join("tests/c/driver.c"));
+    let output = run(&driver, "", &script.0);
+    assert!(output.status.success(), "{}", text(&output.stderr));
+    let got = replies(&output.stdout).expect("framed replies");
+    assert_eq!(got.len(), 3);
+    for (verb, reply) in ["recognize", "relate"].into_iter().zip(&got[1..]) {
+        assert_eq!(reply.0, 0, "{verb}: {}", reply.1);
+        let value: Value = serde_json::from_str(&reply.1).expect("success JSON");
+        let attempts = value["attempts"].as_array().expect("opted live attempts");
+        assert!(!attempts.is_empty(), "{verb} sent a real request");
+        assert!(attempts.iter().all(|attempt| attempt["status"] == 200), "{verb}");
+    }
+}
+
+#[test]
 fn dynamic_records_wrap_facts_and_stop_without_partial_json() {
     let success = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","choice":"first","probabilities":{"first":0.9,"second":0.1}},"q2":{"type":"choice","choice":"second","probabilities":{"first":0.2,"second":0.8}}},"usage":{"input_tokens":5,"output_tokens":3}}"#;
     let failed = r#"{"model":"jev-latest","answers":{"q1":{"type":"choice","choice":"first","probabilities":{"first":0.9,"second":0.1}}},"usage":{"input_tokens":5,"output_tokens":3}}"#;

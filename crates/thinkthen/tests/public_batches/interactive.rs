@@ -133,6 +133,10 @@ fn batch_one_failure_ends_without_pulling_another_caller_record() {
         .build()
         .expect("engine");
     let pulls = AtomicUsize::new(0);
+    let observed = AtomicUsize::new(0);
+    let observe = |_| {
+        observed.fetch_add(1, Ordering::SeqCst);
+    };
     let local = std::rc::Rc::new(());
     let records = std::iter::from_fn(|| {
         let _ = std::rc::Rc::strong_count(&local);
@@ -145,7 +149,9 @@ fn batch_one_failure_ends_without_pulling_another_caller_record() {
     let mut batch = engine.decide_many_with(
         &asked,
         records,
-        CallOptions::new().batch(BatchSetting::Records(std::num::NonZeroUsize::MIN)),
+        CallOptions::new()
+            .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
+            .observe_attempt(&observe),
     );
     let error = batch
         .next()
@@ -162,6 +168,11 @@ fn batch_one_failure_ends_without_pulling_another_caller_record() {
     assert!(batch.next().is_none());
     assert_eq!(pulls.load(Ordering::SeqCst), 1);
     assert_eq!(listener.count(), 1);
+    assert_eq!(
+        observed.load(Ordering::SeqCst),
+        1,
+        "one failed send, no future input attempts"
+    );
     for facts in [error.facts(), batch.facts()] {
         assert_eq!(
             facts.map(|facts| (facts.records(), facts.requests_sent())),

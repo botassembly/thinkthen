@@ -27,6 +27,10 @@ A retried status resends the whole batch as one request. When a backend refuses 
 
 `annotate` checks all group selections and each singleton profile chunk before admitting a record to a batch. Each compatible group slice then checks its exact packed body and expanded wire-question count before sending. A later refused record cannot cause its own group to send. Dry runs perform the same checks before printing a plan. Profiles apply equally to live calls, replay, cache, and recording. The profile estimates no tokens. A backend whose published limit is only tokens needs a tokenizer or a verified byte ceiling before its file can enforce the limit. `--url`, `THINKTHEN_BASE_URL`, the configuration file's `url`, and `--model` still select the backend. A profile contains none of them.
 
+## Live attempt observations
+
+Opt-in live attempt observations inspect only `x-envoy-upstream-service-time` and `x-typesafe-request-id` from a System One response, on success or status failure. Exactly one value of each name is required; a duplicate or malformed value is omitted without failing the answer. Server time is unsigned ASCII decimal milliseconds. A request ID is 1–128 ASCII letters, digits, periods, underscores or hyphens, then omitted if it contains the configured nonempty key or occurs verbatim in the posting URL or request body. No other response header becomes result metadata. A transport failure has no response headers. The local `wall_ms` includes transport and bounded body read, excludes waits and parsing, and does not measure model-only time.
+
 ## The key
 
 Settled by ADR 0010.

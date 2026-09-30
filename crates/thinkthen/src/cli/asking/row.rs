@@ -16,13 +16,14 @@ impl Judging<'_> {
         arrived: Option<&[u8]>,
     ) -> Result<Judged, Failure> {
         let sending = asked_of(reading, record, &self.asks)?;
+        let observed = super::Observed::new(self.environment.cancel(), self.view.details);
         let judged = self
             .engine
             .judge(
                 &sending.question,
                 self.threshold,
                 sending.evidence,
-                self.environment.cancel(),
+                &observed.cancel,
             )
             .map_err(|error| {
                 Failure::from(error).with_replay_document(&sending.question, self.streams)
@@ -35,6 +36,7 @@ impl Judging<'_> {
             RowContext {
                 arrived,
                 batch: None,
+                attempts: observed.events(),
             },
         )
     }
@@ -83,6 +85,7 @@ impl Judging<'_> {
                     shown,
                     input,
                     context.batch,
+                    context.attempts,
                 )?)
             } else if self.keeping == Keeping::Passing && outcome != Outcome::Yes {
                 None

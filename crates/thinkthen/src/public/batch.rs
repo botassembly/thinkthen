@@ -143,6 +143,7 @@ pub(super) fn join_scheduler<W, V>(
     };
     stop.fire();
     while !scheduler.is_finished() {
+        stop.drain_attempts();
         match events.recv_timeout(TICK) {
             Ok(Event::Port(next)) => *port = Some(next),
             Ok(Event::Ask) => {
@@ -154,7 +155,10 @@ pub(super) fn join_scheduler<W, V>(
             Err(RecvTimeoutError::Disconnected) => break,
         }
     }
-    scheduler
+    let joined = scheduler
         .join()
-        .map_err(|_| Error::defect("the record scheduler panicked"))
+        .map_err(|_| Error::defect("the record scheduler panicked"));
+    stop.drain_attempts();
+    stop.resume_panic_after_join();
+    joined
 }
