@@ -297,13 +297,10 @@ fn run(case: &str, argument: &str) -> Vec<String> {
 }
 
 fn batch(case: &str) -> Vec<String> {
+    let from_env = || EngineBuilder::from_env().expect("a seed");
     match case {
         "batch-env" => {
-            let engine = EngineBuilder::from_env()
-                .expect("a seed")
-                .no_cache()
-                .build()
-                .expect("environment batch");
+            let engine = from_env().no_cache().build().expect("environment batch");
             let question = Question::decide("Refund?").unwrap().cut();
             let rows = engine
                 .decide_many(&question, ["alpha", "beta"])
@@ -312,14 +309,8 @@ fn batch(case: &str) -> Vec<String> {
             vec![format!("rows {}", rows.len())]
         }
         "batch-override" => {
-            let refused = shown(
-                EngineBuilder::from_env()
-                    .expect("a seed")
-                    .no_cache()
-                    .build(),
-            );
-            let engine = EngineBuilder::from_env()
-                .expect("a seed")
+            let refused = shown(from_env().no_cache().build());
+            let engine = from_env()
                 .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
                 .no_cache()
                 .build()
@@ -332,8 +323,7 @@ fn batch(case: &str) -> Vec<String> {
             vec![refused, format!("rows {}", rows.len())]
         }
         "batch-conflict" => {
-            let engine = EngineBuilder::from_env()
-                .expect("a seed")
+            let engine = from_env()
                 .batch(BatchSetting::Records(std::num::NonZeroUsize::MIN))
                 .no_cache()
                 .build()
