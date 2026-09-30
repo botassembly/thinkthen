@@ -20,6 +20,8 @@ Python and Ruby calls now raise cancellation when the caller's token fires befor
 
 `relate` asks one yes/no question per allowed pair and keeps every edge at the cut. All rules share one entity state and requests of at most 400 questions; this changes relate request bodies and recording digests. Its version-one plan keeps one entry per rule with the requests carrying that rule's questions. Wildcard edges now print in question order (ticket 0167).
 
+`decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annotate` send one quoted form on every surface. The state is the fixed sentence `Each question quotes the text it asks about.` or the context, and each question quotes its own record, a batch of one included. The record-list state and the unquoted single-record request are gone, so request bodies and recording digests change and an old cache entry is never found again. A profile's evidence limit now counts the fixed sentence or the context (ticket 0304, ADR 0111).
+
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
 
 ### Breaking changes
