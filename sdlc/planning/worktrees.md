@@ -20,6 +20,16 @@ Every ticket used to get its own worktree. Each worktree built its own Rust and 
 10. No worktree or lane is removed while `git status --porcelain` shows anything, or while its branch has commits that are neither pushed nor merged into main. `--force` is used only after both checks pass, to clear ignored build output.
 11. A script deletes only a path it created with `mktemp` in the same run. A cleanup checks each path against the folders it made and refuses anything else. A new or changed cleanup gets a plant that passes the lane path, and the guard must refuse it before the cleanup's first real run. See `sdlc/records/2026-09-26-lane-1-deleted-by-a-cleanup-trap.md`.
 
+
+## Landing commits and tags
+
+Ian approved this convention on 2026-09-30. Tools read these lines from Git, so the records need not repeat them.
+
+1. A landing merge's subject reads `Land NNNN: outcome` or `Land NNNN slice X: outcome`. Its body ends with trailers: `Ticket: NNNN`, `Slice: X` when the ticket lands in slices, and `Review: accept`. A Quick Fix uses `Ticket: quick-fix`. Trailers never name an agent.
+2. The coordinator tags a main commit `checkpoint/surfaces/YYYY-MM-DD-N` only after every surface check passed on that exact commit. The annotated message lists each check and its result.
+3. A release candidate gets `rc/VERSION-rc.N` before the release suite runs. A phase start gets `phase/NAME`.
+4. Landings get no tags; the trailers cover them. The coordinator batches its plan records into one commit per round of landings.
+
 ## Trial
 
 The first two tickets built in lanes record in their build record the ladder time on a warm lane and the lane's disk size. The last cold ladder in a new worktree is the comparison. If a warm lane is not clearly faster, the repository returns to one worktree per ticket, removed at landing.
