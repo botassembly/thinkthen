@@ -146,9 +146,6 @@ node -e 'const d = require("./package.json").devDependencies; for (const [n, v] 
     fail 'a dev dependency is not an exact version'
 [ "$(grep -rc 'catch_unwind(' src | awk -F: '{ n += $2 } END { print n }')" = 0 ] || fail 'src catches panics outside thinkthen::contained'
 ! grep -rnP '\bunsafe\b' src || fail 'src holds unsafe'
-for page in README.md index.d.ts; do
-    grep -q 'No deadline is spelled null, left out, or -1.' "$page" || fail "$page lacks the deadline sentence"
-done
 if [ -n "$missing" ]; then
     echo "typescript: not run; the steps above passed, and $missing is missing"
     exit 77

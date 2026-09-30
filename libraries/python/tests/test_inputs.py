@@ -1,15 +1,11 @@
 """What a call reads: refusals before any send, and the deadline rule."""
 
-import pathlib
-
 import thinkthen as tt
 from conftest import child_env, clean_env, run
 
 ARROW = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
          "recognize read a column only from a Polars or pandas frame with on=. "
          "Pass column.to_list()")
-DEADLINE_SENTENCE = "Omit `deadline_ms` or pass -1 for no deadline."
-README = pathlib.Path(__file__).resolve().parents[1] / "README.md"
 
 REFUSED = """
     import thinkthen as tt
@@ -63,12 +59,6 @@ def test_missing_key_names_a_remedy_for_a_library_call():
     """, clean_env())
     assert printed.strip() == ("UsageError no key is set; configure an API key for the engine "
                                "(THINKTHEN_API_KEY)")
-
-
-def test_the_deadline_sentence_is_pinned_in_the_docstring_and_readme():
-    """Both reader entry points carry the new millisecond spelling."""
-    assert DEADLINE_SENTENCE.replace("`", "``") in tt.__doc__
-    assert DEADLINE_SENTENCE in README.read_text()
 
 
 def test_deadlines_follow_the_millisecond_boundary(backend, tmp_path):

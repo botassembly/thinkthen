@@ -18,32 +18,28 @@ fn relate_reads_the_names_recognize_found() {
     std::fs::create_dir_all(&folder).expect("folder");
     let message = std::fs::read_to_string(demo.join("message.txt")).expect("message");
     std::fs::write(folder.join("text"), message.replace('\n', "")).expect("text");
-    let readme = std::fs::read_to_string(demo.join("README.md")).expect("readme");
-    let kinds: Vec<&str> = readme
-        .lines()
-        .find(|line| line.contains(" recognize "))
-        .expect("the command")
-        .split(" --kind ")
-        .skip(1)
-        .collect();
-    let mut recognize = format!(
-        "--replay {} --kind {}",
-        demo.join("recording").display(),
-        kinds.join(" --kind ")
-    );
-    recognize.truncate(recognize.find(" | jq").expect("the pipe"));
-    let thinkthen = |command: &str, input: &str| {
+    // The kinds match demo 44's recording byte for byte, so the replay answers.
+    let recording = demo.join("recording");
+    let recognize = [
+        "recognize",
+        "--replay",
+        recording.to_str().expect("path"),
+        "--kind",
+        "PER=Part of a person's name.",
+        "--kind",
+        "ORG=Part of the name of an organization: a company, band, team, agency, government body, or media outlet.",
+        "--kind",
+        "LOC=Part of the name of a place: a country, region, city, or geographic feature.",
+        "--kind",
+        "MISC=Part of another named entity: a nationality, an event, a product, or the name of a creative work.",
+    ];
+    let thinkthen = |arguments: &[&str], input: &str| {
         let output = run::output(
-            Command::new("sh")
+            Command::new(env!("CARGO_BIN_EXE_thinkthen"))
                 .env_clear()
-                .arg("-c")
-                .arg(format!(
-                    "\"$0\" {command} --url https://api.typesafe.ai/v1 --input \"$1\""
-                ))
-                .args([
-                    env!("CARGO_BIN_EXE_thinkthen"),
-                    folder.join(input).to_str().expect("path"),
-                ]),
+                .args(arguments)
+                .args(["--url", "https://api.typesafe.ai/v1", "--input"])
+                .arg(folder.join(input)),
         )
         .expect("binary runs");
         let error = String::from_utf8_lossy(&output.stderr);
@@ -52,7 +48,7 @@ fn relate_reads_the_names_recognize_found() {
         let first = output.stdout.split(|byte| *byte == b'\n').next();
         serde_json::from_slice::<serde_json::Value>(first.unwrap_or_default()).expect("json")
     };
-    let found = thinkthen(&format!("recognize {recognize}"), "text");
+    let found = thinkthen(&recognize, "text");
     let mut lines: Vec<String> = found["entities"]
         .as_array()
         .expect("entities")
@@ -61,7 +57,7 @@ fn relate_reads_the_names_recognize_found() {
         .collect();
     lines.push(r#"{"name":"Ana Lima","text":"not this","kind":"PER"}"#.to_owned());
     std::fs::write(folder.join("entities"), lines.join("\n")).expect("entities");
-    let plan = thinkthen("relate works_for=PER:ORG --plan --jsonl", "entities");
+    let plan = thinkthen(&["relate", "works_for=PER:ORG", "--plan", "--jsonl"], "entities");
     let body = plan["requests"][0]["body_utf8"].as_str().expect("body");
     let state: serde_json::Value = serde_json::from_str(body).expect("json");
     let names = state["state"]["entities"].as_array().expect("entities");

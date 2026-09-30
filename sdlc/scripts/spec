@@ -42,6 +42,10 @@ mustmatch test specification/fixtures/recognize/README.md
 # Ticket 0167: the public pair recording keeps the exact audited edge rows.
 mustmatch test specification/fixtures/relate/README.md
 
+# Ticket 0335: the harnesses of two finished paid probes, moved here from test.
+sh probes/probability-total-0038/self-test
+sh probes/find-0040/self-test
+
 # The runner is proved against pages that break each of its rules before it
 # judges the real ones.
 sh -- "$REPO/sdlc/scripts/demos-self-test"
