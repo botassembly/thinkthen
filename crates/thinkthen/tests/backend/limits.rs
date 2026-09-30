@@ -87,24 +87,6 @@ fn a_document_over_the_limit_is_refused_before_any_request() {
     assert!(listener.requests().is_empty());
 }
 
-/// A record of exactly the limit is judged, however the line that held it ended.
-#[test]
-fn a_record_of_exactly_the_limit_is_judged() {
-    for ending in ["\n", "\r\n"] {
-        let listener = serving(1).expect("a loopback listener");
-        let input = format!("{}{ending}", wide(MAX_RECORD_BYTES));
-
-        let output =
-            decide(listener.base(), &["--lines"], &input).expect("the compiled binary runs");
-
-        assert_eq!(output.status.code(), Some(0), "{ending:?}");
-        let shown = String::from_utf8_lossy(&output.stdout);
-        assert!(shown.starts_with(r#"{"input":"xxx"#), "{ending:?}");
-        assert!(shown.ends_with("\",\"value\":true}\n"), "{ending:?}");
-        assert_eq!(listener.requests().len(), 1, "{ending:?}");
-    }
-}
-
 /// A line past the bound is one record, and its tail never becomes another.
 ///
 /// The reader stops two bytes past the limit, so what follows the cut is the

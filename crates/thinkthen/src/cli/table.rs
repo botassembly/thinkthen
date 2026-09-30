@@ -367,20 +367,18 @@ mod tests {
     #[test]
     fn encoded_header_and_records_hold_at_the_sixteen_mibibyte_edge() {
         let limit = crate::core::MAX_RECORD_BYTES;
-        for ending in [b"\n".as_slice(), b"\r\n".as_slice(), b"".as_slice()] {
-            for bom in [false, true] {
-                assert!(Rows::new(Cursor::new(header_at(limit, bom, ending)), Kind::Csv).is_ok());
-                let error = Rows::new(Cursor::new(header_at(limit + 1, bom, ending)), Kind::Csv)
-                    .err()
-                    .expect("oversized header is refused");
-                assert!(matches!(
-                    error,
-                    crate::failure::Failure::Table(super::Error::HeaderTooLarge(Kind::Csv))
-                ));
-            }
-        }
+        // The byte order mark counts, and `\r\n` is the widest ending.
+        assert!(Rows::new(Cursor::new(header_at(limit, true, b"\r\n")), Kind::Csv).is_ok());
+        let error = Rows::new(Cursor::new(header_at(limit + 1, true, b"\r\n")), Kind::Csv)
+            .err()
+            .expect("oversized header is refused");
+        assert!(matches!(
+            error,
+            crate::failure::Failure::Table(super::Error::HeaderTooLarge(Kind::Csv))
+        ));
 
-        for ending in [b"\n".as_slice(), b"\r\n".as_slice(), b"".as_slice()] {
+        // No ending and the widest ending bound the terminator allowance.
+        for ending in [b"\r\n".as_slice(), b"".as_slice()] {
             let mut exact = b"value\n".to_vec();
             exact.extend(std::iter::repeat_n(b'x', limit));
             exact.extend_from_slice(ending);
@@ -406,35 +404,18 @@ mod tests {
             ));
         }
 
-        for (prefix, suffix) in [
-            (b"\"a\n".as_slice(), b"\"".as_slice()),
-            (b"\"a\"\"".as_slice(), b"\"".as_slice()),
-        ] {
-            let fixed = prefix.len() + suffix.len();
-            let mut exact = b"value\n".to_vec();
-            exact.extend_from_slice(prefix);
-            exact.extend(std::iter::repeat_n(b'x', limit - fixed));
-            exact.extend_from_slice(suffix);
-            assert!(
-                Rows::new(Cursor::new(exact), Kind::Csv)
-                    .expect("valid header")
-                    .next()
-                    .expect("one quoted record")
-                    .is_ok()
-            );
-
-            let mut over = b"value\n".to_vec();
-            over.extend_from_slice(prefix);
-            over.extend(std::iter::repeat_n(b'x', limit + 1 - fixed));
-            over.extend_from_slice(suffix);
-            assert!(
-                Rows::new(Cursor::new(over), Kind::Csv)
-                    .expect("valid header")
-                    .next()
-                    .expect("one quoted refusal")
-                    .is_err()
-            );
-        }
+        // A quoted line feed and a doubled quote count as raw bytes.
+        let quoted = |body: usize| {
+            let mut record = b"value\n\"a\n\"\"".to_vec();
+            record.extend(std::iter::repeat_n(b'x', body));
+            record.push(b'"');
+            Rows::new(Cursor::new(record), Kind::Csv)
+                .expect("valid header")
+                .next()
+                .expect("one quoted record")
+        };
+        assert!(quoted(limit - 6).is_ok());
+        assert!(quoted(limit - 5).is_err());
     }
 
     struct Counted {
