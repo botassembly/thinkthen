@@ -107,6 +107,11 @@ function uncited(text) {
     .replace(/\s+The batching design's section \d+ puts them there\./g, '');
 }
 
+// A surface cell drops a clause, split at a semicolon, that cites a ticket.
+// Such a clause is a migration note, such as "remain for source callers until
+// ticket 0291".
+const spelling = (cell) => cell.split(/;\s+/).filter((c) => !CITES_TICKET.test(c)).join('; ');
+
 // What a setting does, with its bracketed and final citations taken out. A
 // ticket cited anywhere else stays, so the check fails loudly on it.
 const meaning = (does) => does.replace(CITE_BRACKET, '').replace(CITE_TAIL, '');
@@ -126,7 +131,11 @@ const NO_EFFECT = /\bno effect\b|^not on this surface\b/;
 // The settings the site leaves out. The docs leave out the Details flag for now
 // (Ian, 2026-09-28). The annotate record failure policy works only with
 // the Details flag, so it stays out with it.
-export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy']);
+// Portable call settings is a JSON schema the SQL and frame surfaces read,
+// not a setting a reader changes. Its cells cite tickets and say "later".
+// ThinkThen issue 2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md
+// asks for that row to change; show it again once it does.
+export const LEFT_OUT = new Set(['Details', 'Annotate record failure policy', 'Portable call settings (`thinkthen.settings/1`)']);
 
 export function parseSettings(text) {
   const parts = sections(text);
@@ -151,7 +160,7 @@ export function parseSettings(text) {
       does: meaning(does),
       default: { value: dflt, note: '', source },
       allowed,
-      on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : surfaces[j]])),
+      on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : spelling(surfaces[j])])),
     };
   });
   const ids = new Set();
