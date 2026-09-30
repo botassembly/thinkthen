@@ -22,7 +22,7 @@ npm run build
 4. `scripts/smoke.mjs` runs every example against the command built from this commit and compares what it printed with the saved output.
 5. `astro build` writes `dist/`. It fails when a script has no caption or no saved output. The Settings page reads `../specification/settings.md`, and the build fails when that table's columns change.
 6. `scripts/emit-md.mjs` writes a Markdown twin of every page and `dist/llms.txt`.
-7. `pagefind --site dist` builds the search index from each page's `main`. The Markdown twins, the redirects, the 404 page and the search page stay out.
+7. `pagefind --site dist` builds the search index from each page's `main`, without button labels such as "Copy". The Markdown twins, the redirects, the 404 page and the search page stay out.
 8. `scripts/write-sitemap.mjs` writes `dist/sitemap.xml` with every page except the redirects, the 404 page and the search page.
 9. `scripts/check-settings.mjs` fails the build when the Settings page and `../specification/settings.md` disagree. It also fails when a source file types a number after "default is", "defaults to" or "default of", and when a built page states a default the table does not hold.
 10. `scripts/check-links.mjs` fails the build on a broken internal link, or a link to an anchor the page does not hold.

@@ -374,7 +374,8 @@ form.search button {
 form.search button:hover, form.search button:focus-visible { color: var(--ink); border-color: var(--think); }
 header.top form.search button { padding: 0; }
 @media (max-width: 40rem) {
-  header.top form.search input { width: 7.5rem; }
+  header.top form.search input { width: 6.5rem; }
+  header.top form.search button { display: none; }
 }
 main form.search { margin: 0 0 1.2rem; flex-wrap: wrap; }
 main form.search input { width: 16rem; }
