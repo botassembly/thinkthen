@@ -22,7 +22,9 @@ test('details equals the command --details document for the same question and te
       encoding: 'utf8',
     });
     assert.equal(command.status, 0, command.stderr);
-    assert.deepEqual(value.value, JSON.parse(command.stdout));
+    const document = JSON.parse(command.stdout);
+    delete document.meta.attempts; // Only the command and the C door report attempts (ticket 0302).
+    assert.deepEqual(value.value, document);
   }
 });
 
