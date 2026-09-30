@@ -98,8 +98,8 @@
       ],
       "relation": "linked=item:item",
       "steps": [
-        {"settings": {}, "verb": "relate", "edges": 306, "count": 1},
-        {"settings": {"max_request_bytes": 20000}, "verb": "relate", "edges": 306, "count": 3}
+        {"settings": {"cache": false}, "verb": "relate", "edges": 306, "count": 1},
+        {"settings": {"cache": false, "max_request_bytes": 20000}, "verb": "relate", "edges": 306, "count": 3}
       ]
     }
   ]

@@ -232,6 +232,38 @@ const fn CallOptions::max_requests_total(self, Option<u64>) -> CallOptions<'a>
 fn process_requests_sent() -> u64
 ```
 
+### Slice 4 evidence
+
+- Starts from: slice 3d (`f2278c900`); ADR 0111 sections 5 and 6 and build step 4; Ian's ruling 4, which caches these functions' backend questions by context, question and model; `sdlc/planning/after-slice-3-prep.md` section 1, which served as this slice's ticket review; the relate precision issue, whose default keeps relate's answers unchanged here.
+- Keeps: every function's wire form, so recognize and relate print the same bytes under replay; the 255-entity refusal and the recognize text-size refusal; relate's partial failure count and exit 6 on a live run; one request per `find` state and per recognize step 1 and 2 window, split only by a profile; the 400-question cap for relate and recognize step 3, or a profile's smaller limit; no key read on replay; a sent single request that finishes after a stop and prints its answer; a stop seen while several relate requests are out, which ends the call as `Cancelled` once they finish.
+- Changes:
+  - `engine/facade/each.rs` asks planned questions one input each on `ask_all`: `find`, the three recognize steps and relate. Each question is keyed, stored and coalesced as the record functions' are. The pure packer gives dry runs and pre-checks the same requests the pipeline sends with nothing cached.
+  - `Packing` gains a question cap and whether requests close at the backend ceiling. `find` and recognize steps 1 and 2 ignore the ceiling, as their old path did.
+  - A whole request that fails in a call that does not continue now stops the pipeline sending, as one job did. The relate `at_once` send count caught this.
+  - Details list question keys in `meta.requests` and each answer's `request`. Dry runs keep request digests, now from the pure packer.
+  - `pair_chunks`, `relation_ceiling`, `ask_chunks_with_plan`, the `PREPARATIONS` counter and `PairPlan`'s re-exports go. `ask_profile` and `PreparedRequest::with_profile` serve tests only.
+  - Relate's partial replay on `spec/relate.md` now exits 5 and names the failed question's key, because ADR 0111 section 6 never stores a failed answer. Exit 6 with the good answer kept is proven on loopback.
+  - The shared settings case `request-bytes-splits-relations` turns the cache off in both steps. Its second step asked the same pairs, which the question cache now answers without a send.
+  - The ratchet falls by 515 lines to 105,286.
+- Proof, counted on the loopback backend in `tests/backend/question_cache_steps.rs`:
+  - Relate over 420 pairs sends a request of 400 questions and one of 20, stores 420 answers, and a rerun sends zero requests and prints the same bytes.
+  - Adding a rule to a cached relate run sends only that rule's 3 questions, and the output equals an uncached run.
+  - A relate reply with one wrong-kind answer exits 6 and stores the good answer. The rerun sends one request holding one question.
+  - A cached recognize rerun sends zero requests across all three steps. Adding a line sends exactly the questions that line asks alone, and the output equals an uncached run.
+  - `find.rs` `cache_records_once_and_then_replays_without_a_key_or_second_request` keeps `find`'s zero-send rerun.
+  - The shared conformance cases, including `18-find-second`, `19-find-none`, 41 to 50, `51-same-kind-alerts` and `52-cross-kind-staff`, replay converted fixtures through `cache convert` and compare every question key.
+- Deleted tests, with their replacements. Each drove only the old recorder through `find`:
+  - `cache_locking.rs`, `cache_locking/retained.rs` and `cache_prune_locking.rs`: the busy limit and a stop during a wait (`engine/store/tests.rs` `a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it`), a lookup that waits through a commit (`a_lookup_waits_through_another_writer_and_then_answers`), a read-only replay that writes nothing (`a_new_store_is_private_and_a_read_only_replay_writes_nothing`), a hot journal (`a_read_only_replay_that_meets_an_unfinished_write_is_refused`), and two children writing one store (`question_cache.rs` `two_processes_write_one_store_at_once`). Lock setup failing before a key is the secrecy route "a recording folder that cannot be made".
+  - The two padded-response tests in `recording_conflicts.rs`: ADR 0111 removed recording conflicts, and `recording_again_replaces_the_stored_answer` holds the new rule.
+  - `default_cache.rs` `prune_waits_for_a_live_partial_and_preserves_its_installed_entry`: prune reads only old files until slice 5.
+  - `engine/facade/recognize/tests.rs` `recognition_sends_the_pair_chunks_it_prepared_once`: the pure packer now plans requests, and the dry-run tests compare its request to the sent one.
+- Checks: `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, `lint` in a clean checkout, the C door tests and Polars, and the surface checks for Python, TypeScript, Ruby, R, C#, Go, SQLite, DuckDB and PostgreSQL.
+- Defers:
+  - The command's many-line recognize still runs lines through `schedule::over_records`. Slice 5 moves that runner with the other `Engine::records` callers, per the prep's option (b).
+  - `ask_chunks`, `facade::split` and `prepared_request.rs` stay for `check`, the conformance runner and tests until slice 5.
+  - The C door's typed relate rows, which 0314 slice 2 deferred, are not taken here.
+  - The site's recognize and relate replay folders stay unconverted, per `sdlc/issues/2026-09-30-site-replay-folders-have-no-fixture.md`.
+
 ## What the build taught us
 
 ### Slice 1
@@ -340,3 +372,11 @@ What the review fixes found:
 - Running the fork probe from its own folder left `conformance/consumer/target`, and `policy.py` then counted generated bindings against the 500-line cap. The test rung builds it under `target/consumer`.
 - The review's first runs shared the machine with each other. PostgreSQL's `find_proxy_cases` failed once on a refused proxy connection, and DuckDB's `sixteen_held_plans_refuse_without_eviction` failed once and then passed 20 of 20 alone. Neither touches the request total. Both passed in full when run alone.
 - After rebasing onto 0314 slice 4a, one PostgreSQL run at load 22 failed `batch_cancel` and `a_small_batch_answers_at_once` on their wall-clock limits, and the next run passed all 88 steps. `sdlc/issues/2026-09-30-postgresql-check-keeps-wall-clock-limits-under-load.md` owns the other timing limits.
+
+### Slice 4
+
+- A key names the backend address, so a partial-reply rerun must ask the same loopback listener. A new listener asks every question again.
+- Recognize steps 1 and 2 never obeyed the backend request ceiling. Packing them under it split a 600,000-byte text into 60 requests instead of 2, so `Packing` now says whether a request closes at the ceiling.
+- The old chunked sender returned `Cancelled` after a stop only when it ran several requests on workers. One sent request finished and printed. `ask_each` keeps both, because the command's interrupt test and the public relate interrupt test pin each side.
+- The old pipeline kept sending after a whole request failed. One job stopped at once. A call that does not continue now stops sending too. The rule covers the record functions' calls as well, and no test pinned their old count.
+- Relate requests arrive in any order at width 2, so a count proof sorts them.
