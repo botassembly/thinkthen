@@ -1,6 +1,6 @@
 # `cache prune --older-than` panics on a multi-byte unit
 
-Status: open. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/02-question-cache.md`, item 1), checked against main `d3fd19419`. Owner: queue owner.
+Status: open. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/02-question-cache.md`, item 1), checked against main `f367545a0`. Owner: queue owner.
 Kind: bug
 Pay when: before 0.1.
 

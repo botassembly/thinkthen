@@ -1,6 +1,6 @@
 # The library's timeout has no upper bound
 
-Status: open. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/11-settings.md`, item 3), checked against main `d3fd19419`. Owner: queue owner.
+Status: open. Filed 2026-09-30 from the system grading (`sdlc/planning/grading-2026-09-30/11-settings.md`, item 3), checked against main `f367545a0`. Owner: queue owner.
 Kind: bug
 Pay when: before 0.1, if a huge timeout panics. Otherwise close it with the pinning test.
 

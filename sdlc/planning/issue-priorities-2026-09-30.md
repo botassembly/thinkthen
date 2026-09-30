@@ -19,7 +19,7 @@ Each batch is one lane's work in one area of files, so batches running at once d
 
 Order follows the brief: 0.1 blockers first (B1 to B5), then debt that slows builders (B6: every Dart consumer change is made twice until the Flutter copy goes). B4 and B5 are also blockers, but they wait on lane claude-1. Four lanes run at most: now lanes 1 and 2 plus B1; after 0344, B1, B2 and B3 beside lane 1; after 0335 slice 2, B4, B5 and B6 as lanes free.
 
-The system grading of 2026-09-30 (`grading-2026-09-30/README.md`) grades twenty areas and lists the 19 items left before 0.1, with owner, size and lane.
+The system grading of 2026-09-30 (`grading-2026-09-30/README.md`) grades twenty areas and lists the 20 items left before 0.1, with owner, size and lane.
 
 Work outside the lanes:
 

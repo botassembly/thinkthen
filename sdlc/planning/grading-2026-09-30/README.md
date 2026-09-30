@@ -1,6 +1,6 @@
 # System grading of 2026-09-30, and the work left before 0.1
 
-Twenty reviewers each graded one difficulty area of ThinkThen at commit `58014776c`. Each report uses one template and one rubric, so the reports compare side by side. This page consolidates them. It was written in workspace experiment 2040. Every blocking item and every claim a report marked unconfirmed was checked again against main at `d3fd19419` (2026-09-30, evening). Items main has fixed since the graded commit are marked with the fixing commit.
+Twenty reviewers each graded one difficulty area of ThinkThen at commit `58014776c`. Each report uses one template and one rubric, so the reports compare side by side. This page consolidates them. It was written in workspace experiment 2040. Every blocking item and every claim a report marked unconfirmed was checked again against main at `f367545a0` (2026-09-30, evening). Items main has fixed since the graded commit are marked with the fixing commit.
 
 The area reports sit beside this page as `01-batching.md` to `20-record-replay.md`. They keep the text the reviewers wrote at the graded commit. Their line numbers refer to `58014776c`.
 
@@ -43,11 +43,11 @@ Totals. Complexity: one area at 5, fourteen at 4, five at 3. Quality: 14 B, 5 C,
 
 ## The overall picture
 
-ThinkThen is hard almost everywhere. Seventeen of twenty areas touch every surface, and most carry over 25 rules. The code mostly does what its contract says: fourteen areas match on every primary path. No A appears, for three shared reasons. Most areas were rewritten or changed after landing in the last seven days, which caps reliability at B. Routine tests still hold wall-clock limits, which drops four areas (2, 3, 4 and 12) to C, and ticket 0352 is removing them. The same rule is written in several places: a row's usage sum, the batch setting, the 255-entity cap, the framing dispatch, each surface's case matching, and five export checkers. The worst drift is contract text left behind by the ADR 0111 rewrite. It sits in `records.md`, `result.md`, `audit.md`, `relate.md` and `backends.md`, and it would mislead a user about requests, retries or cost. Packaging earned the only D because no rehearsal has finished a build. Its four known bugs landed at `f080fd50c`. The third rehearsal (run 36791693601) never started a job, because GitHub refused the account's billing. Several files sit at or near the 500-line cap, so the next rule added to them will fail a gate: `engine/http.rs` (496), `tests/library/public_env.rs` (499), and `libraries/c/tests/door/cases.rs` (768, where no check reaches it).
+ThinkThen is hard almost everywhere. Seventeen of twenty areas touch every surface, and most carry over 25 rules. The code mostly does what its contract says: fourteen areas match on every primary path. No A appears, for three shared reasons. Most areas were rewritten or changed after landing in the last seven days, which caps reliability at B. Routine tests still hold wall-clock limits, which drops four areas (2, 3, 4 and 12) to C. Ticket 0352 replaced most of them with event waits after the graded commit (`9e33cd639`). The same rule is written in several places: a row's usage sum, the batch setting, the 255-entity cap, the framing dispatch, each surface's case matching, and five export checkers. The worst drift is contract text left behind by the ADR 0111 rewrite. It sits in `records.md`, `result.md`, `audit.md`, `relate.md` and `backends.md`, and it would mislead a user about requests, retries or cost. Packaging earned the only D because no rehearsal has finished a build. Its four known bugs landed at `f080fd50c`. The third rehearsal (run 36791693601) never started a job, because GitHub refused the account's billing. Several files sit at or near the 500-line cap, so the next rule added to them will fail a gate: `engine/http.rs` (496), `tests/library/public_env.rs` (499), and `libraries/c/tests/door/cases.rs` (768, where no check reaches it).
 
 ## The top ten cleanup items
 
-Ranked by value against size, across the whole repo. Blocking items come first, then items that remove a whole class of failure cheaply. Ticket 0352 (wall-clock waits in routine tests, areas 2, 3, 4, 12, 20) would rank high, but lane claude-1 is already on it, so it is left out.
+Ranked by value against size, across the whole repo. Blocking items come first, then items that remove a whole class of failure cheaply. Ticket 0352 (wall-clock waits in routine tests, areas 2, 4, 12, 20) would rank high, but it landed at `9e33cd639`, so it is left out.
 
 | Rank | Item | Areas | Size | Blocks 0.1 |
 | ---: | --- | --- | :---: | :---: |
@@ -69,6 +69,7 @@ Ranked by value against size, across the whole repo. Blocking items come first, 
 - Area 9 item 3, SQL hosts copying engine code: 0347 (`efc6a6a99`). It did not block 0.1.
 - Area 20 item 1, the site's fifteen replay folders, and the five `--dry-run` examples: marketing converted them in its site ticket (`ebe9bb7a2`). The site smoke passes 97 of 97. Parts 3 and 4 of the site issue remain.
 - The reference page, in part: the same site ticket added exit 7, reserved only 8, and named `thinkthen.status/2` (`ebe9bb7a2`). Exits 130 and 143, the local and named-backend key rules, and three moved links remain.
+- The wall-clock waits in routine tests (area 2 item 3, area 4 item 2, area 12 item 1, area 20 item 8): ticket 0352 landed at `9e33cd639`. Area 3's rate-spacing tests (`tests/backend/backoff.rs`, `named_backends/rate.rs`) were not changed, so area 3 item 1 stays open. The ticket filed Debt 029 (binding tests) and Debt 030 (the piped batching pause) for what remains.
 - The relate decision run (R1) and docs page 11 were done before the graded commit.
 
 Two queue-owner issues from marketing's site ticket are open and do not block 0.1. `sdlc/issues/2026-09-30-settings-table-row-and-recording-page-a-site-reader-hits.md` asks to rewrite two draft-form lines the site shows, in `settings.md:67` and `recording.md:30`. `sdlc/issues/2026-09-30-site-fixtures-converted-and-plan-examples-moved.md` is a note recording parts 1 and 2 of the site issue as done.
@@ -84,7 +85,7 @@ The reviewers' starting briefs mislabeled four paths. `cli/file_size.rs` install
 
 ## The pre-0.1 list
 
-This merges the reports' blocking items, the open issues that `sdlc/planning/issue-priorities-2026-09-30.md` marks as blocking 0.1, the release rehearsal work still open in ticket 0128 phase 3b, and the two release-QA bugs, with duplicates joined. Items 7 and 8 are here because their debt issues say pay before 0.1, although the priorities table marks them not blocking. "Lane" says whether a lane is on the item now.
+This merges the reports' blocking items, the open issues that `sdlc/planning/issue-priorities-2026-09-30.md` marks as blocking 0.1, the release rehearsal work still open in ticket 0128 phase 3b, and the two release-QA bugs, with duplicates joined. Items 7, 8 and 20 are here because their debt issues say pay before 0.1, although the priorities table marks them not blocking. "Lane" says whether a lane is on the item now.
 
 | No. | Item | Source | Owner | Size | Lane |
 | ---: | --- | --- | --- | :---: | --- |
@@ -107,5 +108,6 @@ This merges the reports' blocking items, the open issues that `sdlc/planning/iss
 | 17 | Set up the registry accounts and trusted publishing (NuGet, Packagist, Maven Central, pub.dev, R-universe, crates.io, PyPI, npm, RubyGems), the `release` environment, and tag rulesets, which need GitHub Pro or a public repository | release issue items 2 and 5; ticket 0128 | Ian | M | no |
 | 18 | Phase 4, the release run: 0.1.0 everywhere, the README install commit (closes stumble row 18), publishing, the tap, the history reset, and the public install checks | ticket 0128 phase 4; release issue item 2 | Ian | L | no |
 | 19 | Fix the GitHub account billing, which stopped the third rehearsal before any job started | ticket 0128 phase 3b, third attempt | Ian | S | no |
+| 20 | Replace the timed stops and short waits left in the binding tests (Debt 029) | ticket 0352; `sdlc/issues/2026-09-30-binding-tests-still-time-stops-and-wait-on-short-bounds.md` | queue owner | M | no |
 
-Counts: 19 items. By owner: queue owner 11, marketing 5, Ian 3. By size: S 7, M 10, L 2. A lane is on 1 of them now (item 6). Item 3 blocks only if the run shows a panic, and item 10 only if the rehearsal shows a name.
+Counts: 20 items. By owner: queue owner 12, marketing 5, Ian 3. By size: S 7, M 11, L 2. A lane is on 1 of them now (item 6). Item 3 blocks only if the run shows a panic, and item 10 only if the rehearsal shows a name.
