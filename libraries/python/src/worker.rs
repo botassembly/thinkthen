@@ -69,11 +69,11 @@ impl Token {
     }
 }
 
-/// The caller's controls for one call: its token and its deadline in seconds.
+/// The caller's controls for one call: its token and its deadline in milliseconds.
 #[derive(Debug, Default)]
 pub(crate) struct Controls {
     pub(crate) token: Option<CancelToken>,
-    pub(crate) deadline: Option<f64>,
+    pub(crate) deadline: Option<i64>,
 }
 
 /// What a worker sends back: its result, or `None` when it panicked.
@@ -375,7 +375,7 @@ fn work<T, E: From<Error>>(
     let check = move || caller.as_ref().is_some_and(CancelToken::is_cancelled);
     let options = CallOptions::new().cancel(stop).interrupt(&check);
     let options = match controls.deadline {
-        Some(seconds) => options.deadline_seconds(seconds)?,
+        Some(millis) => options.deadline_millis(millis)?,
         None => options,
     };
     job(options)

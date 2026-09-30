@@ -8,6 +8,8 @@ cross the whole door from Python.
 
 import pathlib
 
+import pytest
+
 from conftest import child_env, run
 
 TESTS = str(pathlib.Path(__file__).resolve().parent)
@@ -54,6 +56,29 @@ def test_extents_past_readable_memory_are_refused(backend, tmp_path):
     assert backend.count() == 2
 
 
+def test_nullable_utf8_offsets_still_refuse_reversal_before_a_send(backend, tmp_path):
+    """A null slot may hide payload bytes, but its Utf8/LargeUtf8 offsets
+    remain ordered. The old nullable reader accepted this 101 bitmap and
+    sent the two valid rows after offsets 3 -> 1 reversed across the null."""
+    printed = run(SETUP + """
+    validity, bits = address(bytes([0b101]))
+    data, values = address(b"abcd")
+    for form, width in (("u", 4), ("U", 8)):
+        raw = b"".join(n.to_bytes(width, "little", signed=True) for n in (0, 3, 1, 4))
+        held, offsets = address(raw)
+        said(lambda: engine.decide(late, Column(form, [bits, offsets, values], 3,
+                                               null_count=1)).value)
+    print(engine.usage()["requests_sent"])
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == [
+        "UsageError the column's offsets are reversed or negative",
+        "UsageError the column's offsets are reversed or negative",
+        "0",
+    ]
+    assert backend.count() == 0
+
+
+@pytest.mark.stress
 def test_refused_inputs_release_their_batches(backend, tmp_path):
     """R2-17: 200 refused 8 MB number columns in a row each release their
     stream, so peak resident memory grows under 8 MiB. Regression: a
@@ -87,9 +112,9 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     spec = {"version": 1, "questions": {"team": {"choose": "Which team?", "options": ["a", "b"]}}}
     form = tt._thinkthen._QuestionSet._from_json(json.dumps(spec))
     rows = [f"note {n}" for n in range(50)]
-    frame = pl.DataFrame({"body": rows})
-    wanted = [one["team"] for one in engine.annotate(spec, rows).value]
-    out = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None)
+    frame = pl.DataFrame({"body": pl.Series(rows[:24] + [None] + rows[25:], dtype=pl.String)})
+    wanted = ["a"] * 24 + [None] + ["a"] * 25
+    out = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None, None).value
     stream, schema, [batch] = pull(out.__arrow_c_stream__())
     child = batch.children[1].contents
     moved, moved_schema = type(child)(), type(schema.children[1].contents)()
@@ -103,11 +128,11 @@ def test_what_the_door_hands_out_releases_and_keeps_moved_children(backend, tmp_
     print(bool(batch.release), bool(schema.release), bool(stream.release))
     reread = pa.Array._import_from_c(ctypes.addressof(moved), ctypes.addressof(moved_schema))
     print(reread.to_pylist() == wanted)
-    column = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None)
+    column = tt._thinkthen._annotate_frame(engine._engine, form, frame, "body", None, None, None).value
     table = pa.table(column)
     print(table.column("team").to_pylist() == wanted)
     del table
-    answers = engine.choose("Which team?", pl.Series(rows), options=["a", "b"]).value
+    answers = engine.choose("Which team?", frame["body"], options=["a", "b"]).value
     print(answers.to_list() == wanted)
     """, child_env(backend, tmp_path, MALLOC_PERTURB_="165"))
     assert printed.splitlines() == ["False False False", "True", "True", "True"]

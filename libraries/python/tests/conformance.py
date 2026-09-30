@@ -25,7 +25,7 @@ import thinkthen as tt
 
 CASES = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "cases.json"
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
-PARTS = {"true": "true_", "false": "false_"}
+PARTS = {}
 
 
 def not_run(case):
@@ -193,7 +193,7 @@ def refused(port, case):
         "backend": lambda: tt.Engine(base_url=f"http://127.0.0.1:{port}/arm/refuse/v1",
                                      cache=False).decide(asked(case), text).value,
         "cancelled": lambda: tt.Engine(base_url=generic).decide(asked(case), text, token=token).value,
-        "deadline": lambda: tt.Engine(base_url=generic).decide(asked(case), text, deadline=0).value,
+        "deadline": lambda: tt.Engine(base_url=generic).decide(asked(case), text, deadline_ms=0).value,
     }
     if case["verb"] == "rank":
         calls["usage"] = lambda: tt.rank(text, ["one", "two"]).value

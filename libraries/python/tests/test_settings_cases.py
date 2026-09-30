@@ -18,6 +18,9 @@ def test_shared_engine_setting(case, backend, tmp_path):
     if "profile" in case:
         profile.write_text(json.dumps(case["profile"]))
     for step in case["steps"]:
+        # The corpus's two-send cap witness runs each record separately.
+        # Default packing has its own exact-body proof in test_call.py.
+        cap_batch = "batch=1" if case["id"] == "max-requests-refuses-past-the-limit" else ""
         settings = {name: (str(folder) if value == "$FOLDER" else
                            str(profile) if value == "$PROFILE" else value)
                     for name, value in step["settings"].items()}
@@ -31,7 +34,7 @@ try:
         result = {{'edges': len(engine.relate(entities, relations={{'linked': ('item', 'item')}}).value)}}
     elif {step.get('verb') == 'decide_many'}:
         rows = list(engine.decide_many(tt.question(decide={CASES['question']!r}),
-                                       {step.get('records', [])!r}).value)
+                                       {step.get('records', [])!r}{', ' + cap_batch if cap_batch else ''}).value)
         result = {{'error': None, 'rows': rows}}
     elif {'model' in step}:
         details = engine.details(tt.question(decide={CASES['question']!r}), {step.get('text', '')!r}).value

@@ -3,10 +3,10 @@
 use std::num::NonZeroUsize;
 
 use pyo3::prelude::*;
-use pyo3::types::{PyBool, PyString};
+use pyo3::types::{PyBool, PyInt, PyString};
 use thinkthen::{BatchSetting, EngineBuilder};
 
-use super::Arg;
+use super::{Arg, MAX_REQUESTS_TOTAL};
 use crate::diagnostics::{host, host_error};
 use crate::input::whole;
 use crate::{raised, usage};
@@ -48,6 +48,20 @@ pub(super) fn checked_throttle(value: Arg<'_, '_>) -> PyResult<Option<u8>> {
         (Some(value), Some(read)) if !(1..=32).contains(&read) => Err(usage(value.py(), THROTTLE)),
         (_, read) => Ok(read),
     }
+}
+
+/// The shared process cap uses the full unsigned range, including zero.
+pub(super) fn total(value: Arg<'_, '_>) -> PyResult<Option<u64>> {
+    value
+        .map(|value| {
+            if value.is_instance_of::<PyBool>() || !value.is_instance_of::<PyInt>() {
+                return Err(usage(value.py(), MAX_REQUESTS_TOTAL));
+            }
+            host_error(host(|| value.extract()), || {
+                usage(value.py(), MAX_REQUESTS_TOTAL)
+            })
+        })
+        .transpose()
 }
 
 pub(crate) fn batch(value: Arg<'_, '_>) -> PyResult<Option<BatchSetting>> {
@@ -101,6 +115,7 @@ pub(super) struct Settings<'a> {
     pub(super) throttle: Option<u8>,
     pub(super) batch: Option<BatchSetting>,
     pub(super) most: Option<usize>,
+    pub(super) most_total: Option<u64>,
     pub(super) max_request_bytes: Option<usize>,
     pub(super) timeout: Option<u64>,
     pub(super) retries: Option<u32>,
@@ -121,6 +136,9 @@ impl Settings<'_> {
         }
         if self.most.is_some() {
             builder = builder.max_requests(self.most).map_err(refused)?;
+        }
+        if self.most_total.is_some() {
+            builder = builder.max_requests_total(self.most_total);
         }
         if let Some(size) = self.max_request_bytes {
             builder = builder.max_request_bytes(size).map_err(refused)?;

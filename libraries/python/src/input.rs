@@ -18,9 +18,8 @@ use crate::{raised, usage};
 /// The refusal for a column where a verb reads a list.
 pub(crate) const ARROW: &str = "filter, rank, find, and relate read a list of str, not a column, and annotate and recognize read a column only from a Polars or pandas frame with on=. Pass column.to_list()";
 
-/// The refusal for a deadline that is not a number (R5-8).
-pub(crate) const DEADLINE: &str =
-    "deadline is seconds from now, a number; no deadline is spelled None or -1";
+/// The refusal for a nonintegral numeric deadline.
+pub(crate) const DEADLINE: &str = "`deadline_ms` is a whole number of milliseconds";
 
 /// The top-level module of a value's type, or `pandas` when any class in its
 /// method resolution order is pandas', so a subclass counts.
@@ -153,6 +152,31 @@ pub(crate) fn listed(records: &Bound<'_, PyAny>) -> PyResult<Vec<String>> {
     Ok(read)
 }
 
+/// The pandas list fallback has already normalized its missing cells to
+/// Python `None`; only its present rows need be text.
+pub(crate) fn listed_nullable(records: &Bound<'_, PyAny>) -> PyResult<Vec<Option<String>>> {
+    let py = records.py();
+    let mut items = host_owned(host_error(host(|| records.try_iter()), || {
+        usage(
+            py,
+            "the records are a list, tuple, or other iterable of str",
+        )
+    })?);
+    let mut read = Vec::new();
+    for (index, item) in std::iter::from_fn(|| host(|| items.next())).enumerate() {
+        let item = host_owned(item?);
+        if item.is_none() {
+            read.push(None);
+        } else {
+            let what = format!("record {index}");
+            read.push(Some(
+                string(&item, &what)?.ok_or_else(|| usage(py, &format!("{what} is not a str")))?,
+            ));
+        }
+    }
+    Ok(read)
+}
+
 /// The entities `relate` reads: `(name, kind)` pairs, dictionaries with
 /// `name` and `kind`, or `Entity` values (decision 10).
 pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Entity>> {
@@ -196,9 +220,7 @@ pub(crate) fn entities(values: &Bound<'_, PyAny>) -> PyResult<Vec<thinkthen::Ent
     Ok(read)
 }
 
-/// The caller's token and deadline. A deadline is checked here, before any
-/// work starts: a bool or a non-number is refused, and the public rule
-/// (ADR 0041) judges the number.
+/// The caller's token and millisecond deadline, checked before any send.
 pub(crate) fn controls(
     py: Python<'_>,
     deadline: Option<&Bound<'_, PyAny>>,
@@ -212,11 +234,11 @@ pub(crate) fn controls(
             if value.is_instance_of::<PyBool>() || matches!(name.to_str()?, "bool" | "bool_") {
                 return Err(usage(py, DEADLINE));
             }
-            let seconds: f64 = host_error(host(|| value.extract()), || usage(py, DEADLINE))?;
+            let millis: i64 = host_error(host(|| value.extract()), || usage(py, DEADLINE))?;
             CallOptions::new()
-                .deadline_seconds(seconds)
+                .deadline_millis(millis)
                 .map_err(|error| raised(py, &error))?;
-            Some(seconds)
+            Some(millis)
         }
     };
     Ok(Controls {

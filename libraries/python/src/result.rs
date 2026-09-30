@@ -204,6 +204,7 @@ impl<T> Completed<T> {
 #[pyclass(frozen, name = "Call", module = "thinkthen._thinkthen")]
 pub(crate) struct PyCall {
     value: Py<PyAny>,
+    probability: Py<PyAny>,
     facts: Py<PyAny>,
     details: Py<PyAny>,
 }
@@ -250,6 +251,10 @@ impl PyCall {
         self.value.clone_ref(py)
     }
     #[getter]
+    fn probability(&self, py: Python<'_>) -> Py<PyAny> {
+        self.probability.clone_ref(py)
+    }
+    #[getter]
     fn facts(&self, py: Python<'_>) -> Py<PyAny> {
         self.facts.clone_ref(py)
     }
@@ -263,6 +268,19 @@ impl PyCall {
             py,
             PyCall {
                 value,
+                probability: self.probability.clone_ref(py),
+                facts: self.facts.clone_ref(py),
+                details: self.details.clone_ref(py),
+            },
+        )
+    }
+
+    fn _with_probability(&self, py: Python<'_>, probability: Py<PyAny>) -> PyResult<Py<PyCall>> {
+        Py::new(
+            py,
+            PyCall {
+                value: self.value.clone_ref(py),
+                probability,
                 facts: self.facts.clone_ref(py),
                 details: self.details.clone_ref(py),
             },
@@ -326,6 +344,7 @@ pub(crate) fn call(py: Python<'_>, done: Completed<Py<PyAny>>) -> PyResult<Py<Py
         py,
         PyCall {
             value: done.value,
+            probability: py.None(),
             facts: python_owned_facts(py, &done.facts)?,
             details: python_details(py, &done.details)?,
         },
