@@ -313,7 +313,9 @@ fn eight_held_requests_are_counted_while_every_reply_is_held() -> Tested {
     let mut backend = start()?;
     let answers: Vec<_> = (0..8).map(|_| posting(backend.3, HELD)).collect();
     assert_eq!(ask(&mut backend, "wait 8")?, "wait 8");
-    still_held(&answers[7]);
+    if let Some(last) = answers.last() {
+        still_held(last);
+    }
     send(&mut backend, "release")?;
     for answer in &answers {
         answered(answer)?;
