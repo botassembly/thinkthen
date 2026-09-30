@@ -205,7 +205,7 @@ impl Engine {
         stop.run_call(texts.len(), |cancel| {
             let mut rows = Vec::with_capacity(texts.len());
             let mut ended = None;
-            let host = pull::eager(inputs, |row: pull::Row<Annotating>| {
+            let host = crate::engine::pipeline::eager(inputs, |row: pull::Row<Annotating>| {
                 let row = each(set, &engine, &stop, rows.len(), row);
                 keep(&mut rows, &mut ended, row)
             });
