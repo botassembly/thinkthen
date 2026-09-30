@@ -252,16 +252,22 @@ fn a_wait_past_the_busy_limit_is_a_storage_failure_and_a_stop_ends_it() {
     let mut writer = Store::open(folder.path(), Mode::Cache, false).expect("open");
     let holder = rusqlite::Connection::open(folder.path().join(SQLITE)).expect("open");
     holder.execute_batch("BEGIN EXCLUSIVE").expect("lock");
+    let started = Instant::now();
     assert!(matches!(
         store.lookup(&[key("a")], &Cancel::default()),
         Err(Error::RecordingStorage)
     ));
+    let waited = started.elapsed();
+    assert!(waited < Duration::from_secs(1), "the limit ends the wait: {waited:?}");
     let cancel = Cancel::default();
     cancel.fire();
+    let started = Instant::now();
     assert!(matches!(
         writer.write(&[row(&state, "b", "{}")], &cancel),
         Err(Error::Cancelled)
     ));
+    let waited = started.elapsed();
+    assert!(waited < Duration::from_secs(1), "the stop ends the wait: {waited:?}");
     holder.execute_batch("ROLLBACK").expect("unlock");
 }
 

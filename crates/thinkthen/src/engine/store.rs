@@ -198,25 +198,39 @@ impl Store {
             self.connect(cancel)?;
         }
         let connection = self.connection.as_ref().ok_or(Error::RecordingStorage)?;
+        self.transaction(cancel, connection, || {
+            self.waiting(cancel, || insert(connection, rows))
+        })
+    }
+
+    /// Run `body` inside one write transaction, rolling back on failure.
+    fn transaction(
+        &self,
+        cancel: &Cancel,
+        connection: &Connection,
+        body: impl FnOnce() -> Result<(), Error>,
+    ) -> Result<(), Error> {
         self.waiting(cancel, || connection.execute_batch("BEGIN IMMEDIATE"))?;
-        let written = insert(connection, rows)
-            .and_then(|()| self.waiting(cancel, || connection.execute_batch("COMMIT")));
-        if written.is_err() && !connection.is_autocommit() {
+        let done =
+            body().and_then(|()| self.waiting(cancel, || connection.execute_batch("COMMIT")));
+        if done.is_err() && !connection.is_autocommit() {
             let _rolled_back = connection.execute_batch("ROLLBACK");
         }
-        written
+        done
     }
 
     /// Open the file for writing, creating the folder, the file and the
-    /// schema as needed, and importing a fixture into a new file.
+    /// schema as needed. A fixture beside a file without the schema is
+    /// imported in the schema's transaction, so the version commits with it.
     fn connect(&mut self, cancel: &Cancel) -> Result<(), Error> {
         let sqlite = self.folder.join(SQLITE);
         if self.private && self.folder.exists() {
             crate::engine::recorder::require_private(&self.folder)?;
         }
         make_folder(&self.folder)?;
-        let created = create_private(&sqlite)?;
+        create_private(&sqlite)?;
         let connection = Connection::open(&sqlite).map_err(storage)?;
+        connection.busy_timeout(Duration::ZERO).map_err(storage)?;
         self.waiting(cancel, || {
             connection.execute_batch(
                 "PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL; PRAGMA secure_delete = ON;",
@@ -226,16 +240,24 @@ impl Store {
             connection.query_row("PRAGMA user_version", [], |row| row.get(0))
         })?;
         if version == 0 {
-            self.waiting(cancel, || create_schema(&connection))?;
+            let jsonl = self.folder.join(JSONL);
+            let fixture = if exists(&jsonl)? {
+                Some(fixture::read(&jsonl)?)
+            } else {
+                None
+            };
+            self.waiting(cancel, || {
+                connection.execute_batch("PRAGMA auto_vacuum = INCREMENTAL")
+            })?;
+            self.transaction(cancel, &connection, || {
+                self.waiting(cancel, || connection.execute_batch(SCHEMA))?;
+                fixture
+                    .as_ref()
+                    .map_or(Ok(()), |entries| entries.insert_all(&connection))
+            })?;
         } else if version != 1 {
             return Err(Error::RecordingStorage);
         }
-        let jsonl = self.folder.join(JSONL);
-        let connection = if created && exists(&jsonl)? {
-            fixture::load_into(connection, &jsonl)?
-        } else {
-            connection
-        };
         self.connection = Some(connection);
         Ok(())
     }
@@ -245,41 +267,42 @@ impl Store {
     fn waiting<T>(
         &self,
         cancel: &Cancel,
-        mut run: impl FnMut() -> rusqlite::Result<T>,
+        run: impl FnMut() -> rusqlite::Result<T>,
     ) -> Result<T, Error> {
-        let started = Instant::now();
-        let mut wait = Duration::from_millis(2);
-        loop {
-            let error = match run() {
-                Ok(value) => return Ok(value),
-                Err(error) => error,
-            };
-            if hot_journal(&error) {
-                return Err(Error::StoreHotJournal);
-            }
-            if !busy(&error) {
-                return Err(storage(error));
-            }
-            let left = self.busy_limit.saturating_sub(started.elapsed());
-            if left.is_zero() {
-                return Err(Error::RecordingStorage);
-            }
-            if let Some(stop) = cancel.wait(wait.min(left)) {
-                return Err(stop);
-            }
-            wait = (wait * 2).min(Duration::from_millis(100));
-        }
+        waiting(self.busy_limit, cancel, run)
     }
 }
 
-/// Create the schema in a new file, rolling back a half-made one.
-fn create_schema(connection: &Connection) -> rusqlite::Result<()> {
-    connection.execute_batch("PRAGMA auto_vacuum = INCREMENTAL")?;
-    let created = connection.execute_batch(&format!("BEGIN IMMEDIATE; {SCHEMA} COMMIT;"));
-    if created.is_err() && !connection.is_autocommit() {
-        let _rolled_back = connection.execute_batch("ROLLBACK");
+/// Run one statement, waiting while another connection holds the file,
+/// checking the stop between waits, for at most `limit`. Every connection
+/// turns SQLite's own busy wait off, so this is the only one.
+pub(crate) fn waiting<T>(
+    limit: Duration,
+    cancel: &Cancel,
+    mut run: impl FnMut() -> rusqlite::Result<T>,
+) -> Result<T, Error> {
+    let started = Instant::now();
+    let mut wait = Duration::from_millis(2);
+    loop {
+        let error = match run() {
+            Ok(value) => return Ok(value),
+            Err(error) => error,
+        };
+        if hot_journal(&error) {
+            return Err(Error::StoreHotJournal);
+        }
+        if !busy(&error) {
+            return Err(storage(error));
+        }
+        let left = limit.saturating_sub(started.elapsed());
+        if left.is_zero() {
+            return Err(Error::RecordingStorage);
+        }
+        if let Some(stop) = cancel.wait(wait.min(left)) {
+            return Err(stop);
+        }
+        wait = (wait * 2).min(Duration::from_millis(100));
     }
-    created
 }
 
 /// One stored answer beside its key's bytes.
@@ -326,13 +349,10 @@ pub(crate) fn now() -> i64 {
         })
 }
 
-fn insert(connection: &Connection, rows: &[Row<'_>]) -> Result<(), Error> {
-    let mut add_state = connection
-        .prepare("INSERT OR IGNORE INTO states (sha256, state) VALUES (?1, ?2)")
-        .map_err(storage)?;
-    let mut state = connection
-        .prepare("SELECT id FROM states WHERE sha256 = ?1")
-        .map_err(storage)?;
+fn insert(connection: &Connection, rows: &[Row<'_>]) -> rusqlite::Result<()> {
+    let mut add_state =
+        connection.prepare("INSERT OR IGNORE INTO states (sha256, state) VALUES (?1, ?2)")?;
+    let mut state = connection.prepare("SELECT id FROM states WHERE sha256 = ?1")?;
     let mut answer = connection
         .prepare(
             "INSERT INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin)
@@ -341,32 +361,25 @@ fn insert(connection: &Connection, rows: &[Row<'_>]) -> Result<(), Error> {
                question = excluded.question, answer = excluded.answer, answered_by = excluded.answered_by,
                input_tokens = excluded.input_tokens, output_tokens = excluded.output_tokens,
                taken_at = excluded.taken_at, origin = excluded.origin",
-        )
-        .map_err(storage)?;
+        )?;
     for row in rows {
-        add_state
-            .execute((row.state.sha256().as_slice(), row.state.json()))
-            .map_err(storage)?;
-        let id: i64 = state
-            .query_row([row.state.sha256().as_slice()], |found| found.get(0))
-            .map_err(storage)?;
+        add_state.execute((row.state.sha256().as_slice(), row.state.json()))?;
+        let id: i64 = state.query_row([row.state.sha256().as_slice()], |found| found.get(0))?;
         let tokens = row.usage.map(Usage::token_counts);
         let signed = |value: u64| i64::try_from(value).ok();
-        answer
-            .execute(rusqlite::params![
-                row.key.bytes().as_slice(),
-                row.url,
-                row.model,
-                id,
-                row.question,
-                row.answer,
-                row.answered_by,
-                tokens.and_then(|(input, _)| signed(input)),
-                tokens.and_then(|(_, output)| signed(output)),
-                row.taken_at,
-                row.origin,
-            ])
-            .map_err(storage)?;
+        answer.execute(rusqlite::params![
+            row.key.bytes().as_slice(),
+            row.url,
+            row.model,
+            id,
+            row.question,
+            row.answer,
+            row.answered_by,
+            tokens.and_then(|(input, _)| signed(input)),
+            tokens.and_then(|(_, output)| signed(output)),
+            row.taken_at,
+            row.origin,
+        ])?;
     }
     Ok(())
 }
@@ -378,11 +391,13 @@ fn memory() -> Result<Connection, Error> {
 }
 
 fn read_only(path: &Path) -> Result<Connection, Error> {
-    Connection::open_with_flags(
+    let connection = Connection::open_with_flags(
         path,
         OpenFlags::SQLITE_OPEN_READ_ONLY | OpenFlags::SQLITE_OPEN_NO_MUTEX,
     )
-    .map_err(storage)
+    .map_err(storage)?;
+    connection.busy_timeout(Duration::ZERO).map_err(storage)?;
+    Ok(connection)
 }
 
 fn exists(path: &Path) -> Result<bool, Error> {

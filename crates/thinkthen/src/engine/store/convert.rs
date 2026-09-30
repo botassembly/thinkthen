@@ -6,15 +6,22 @@
 //! a tie keeps the entry read first, so the fixture keeps its own. Every
 //! converted answer takes `taken_at` 0, so the same folder always writes the
 //! same bytes. The live file is removed once its entries are in the fixture,
-//! because a replay refuses a folder holding both. Old files stay.
+//! because a replay refuses a folder holding both. The live file's write lock
+//! is held from its read to its removal, so no answer written meanwhile is
+//! lost. Old files stay.
 
 use std::fs;
 use std::io::{self, Write as _};
 use std::path::Path;
 
-use super::{Answer, Entries, JSONL, SQLITE, exists, read_only};
+use std::time::Duration;
+
+use rusqlite::Connection;
+
+use super::{Answer, Entries, JSONL, SQLITE, exists, fixture, storage, waiting};
 use crate::core::bytes_sha256;
 use crate::core::recording::{Converting, convert as entry};
+use crate::engine::Cancel;
 use crate::engine::error::Error;
 
 /// What one conversion did.
@@ -39,22 +46,37 @@ pub(crate) struct Summary {
 pub(crate) fn convert(folder: &Path, quote: bool) -> Result<Summary, Error> {
     let (jsonl, sqlite) = (folder.join(JSONL), folder.join(SQLITE));
     let mut held = if exists(&jsonl)? {
-        Entries::parse(&fs::read_to_string(&jsonl).map_err(|_| Error::RecordingStorage)?)?
+        fixture::read(&jsonl)?
     } else {
         Entries::default()
     };
-    let has_sqlite = exists(&sqlite)?;
-    if has_sqlite {
-        held.merge(Entries::read(&read_only(&sqlite)?)?);
+    let live = if exists(&sqlite)? {
+        Some(locked(&sqlite)?)
+    } else {
+        None
+    };
+    if let Some(connection) = &live {
+        held.merge(Entries::read(connection)?);
     }
     let mut summary = Summary::default();
     held.merge(old_entries(folder, quote, &mut summary)?);
     summary.answers = held.answers.len();
     replace(folder, &jsonl, held.written()?.as_bytes())?;
-    if has_sqlite {
+    if live.is_some() {
         fs::remove_file(&sqlite).map_err(|_| Error::RecordingStorage)?;
     }
     Ok(summary)
+}
+
+/// Open the live file and take its write lock, waiting up to 30 seconds
+/// for another writer. The lock ends when the connection drops.
+fn locked(sqlite: &Path) -> Result<Connection, Error> {
+    let connection = Connection::open(sqlite).map_err(storage)?;
+    connection.busy_timeout(Duration::ZERO).map_err(storage)?;
+    waiting(Duration::from_secs(30), &Cancel::default(), || {
+        connection.execute_batch("BEGIN IMMEDIATE")
+    })?;
+    Ok(connection)
 }
 
 /// Every good answer of the folder's old entries, the first file in name
@@ -126,10 +148,22 @@ fn replace(folder: &Path, path: &Path, text: &[u8]) -> Result<(), Error> {
             .open(&temporary)?;
         file.write_all(text)?;
         file.sync_all()?;
-        fs::rename(&temporary, path)
+        fs::rename(&temporary, path)?;
+        sync_folder(folder)
     })();
     if written.is_err() {
         let _removed = fs::remove_file(&temporary);
     }
     written.map_err(|_| Error::RecordingStorage)
+}
+
+/// Make a rename in `folder` durable.
+#[cfg(unix)]
+fn sync_folder(folder: &Path) -> io::Result<()> {
+    fs::File::open(folder)?.sync_all()
+}
+
+#[cfg(not(unix))]
+fn sync_folder(_folder: &Path) -> io::Result<()> {
+    Ok(())
 }

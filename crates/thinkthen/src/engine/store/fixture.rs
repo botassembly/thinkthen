@@ -192,7 +192,9 @@ impl Entries {
         inserted
     }
 
-    fn insert_all(&self, connection: &Connection) -> Result<(), Error> {
+    /// Insert every entry inside the caller's transaction. An answer already
+    /// held under a key stays, because a store's own writes are newer.
+    pub(super) fn insert_all(&self, connection: &Connection) -> Result<(), Error> {
         let mut ids = BTreeMap::new();
         for (sha256, state) in &self.states {
             let digest = bytes_of(sha256).ok_or(Error::RecordingStorage)?;
@@ -219,7 +221,7 @@ impl Entries {
                 .ok_or(Error::RecordingStorage)?;
             connection
                 .execute(
-                    "INSERT OR REPLACE INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin)
+                    "INSERT OR IGNORE INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin)
                      VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
                     rusqlite::params![
                         key.as_slice(),
@@ -241,10 +243,14 @@ impl Entries {
     }
 }
 
+/// Read a fixture file.
+pub(super) fn read(path: &Path) -> Result<Entries, Error> {
+    Entries::parse(&fs::read_to_string(path).map_err(|_| Error::RecordingStorage)?)
+}
+
 /// Load a fixture file into a database that holds the schema.
 pub(super) fn load_into(connection: Connection, path: &Path) -> Result<Connection, Error> {
-    let text = fs::read_to_string(path).map_err(|_| Error::RecordingStorage)?;
-    Entries::parse(&text)?.insert(&connection)?;
+    read(path)?.insert(&connection)?;
     Ok(connection)
 }
 
