@@ -1,6 +1,6 @@
 # The PostgreSQL `single_cancel` check has a wall-clock limit that fails under load
 
-Status: open. Found by ticket 0336's first Linux check. Owner: none. Neither 0338 nor 0335 slice 2 touches this check.
+Status: closed on 2026-09-30 by ticket 0304 slice 3e. `single_cancel` proves order: the cancel ends the statement while the held arm still keeps its reply. The 200 ms limit moved to `single_cancel_within_200_ms`, which runs only under the stress profile. Found by ticket 0336's first Linux check.
 
 Kind: debt
 
