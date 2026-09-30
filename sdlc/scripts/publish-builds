@@ -27,7 +27,7 @@ sha256() { if command -v sha256sum >/dev/null; then sha256sum "$@"; else shasum 
 surface_of() {
 	case $1 in
 	thinkthen-first-run.tar.gz) printf 'demos/27-test-with-no-network\tdemo 27 input and recording, tarred\n' ;;
-	thinkthen-c-*.tar.gz) printf 'libraries/c\theader and debug libraries from the C check, tarred\n' ;;
+	thinkthen-c-*.tar.gz) printf 'libraries/c\theader and debug libraries rebuilt by release-pack with path remaps, tarred\n' ;;
 	thinkthen-sqlite-*.tar.gz) printf 'databases/sqlite\trelease extension from the SQLite check, tarred\n' ;;
 	thinkthen-duckdb-*.tar.gz) printf 'databases/duckdb\textension from the DuckDB check, footer verified, tarred\n' ;;
 	thinkthen-postgresql16-*.tar.gz) printf 'databases/postgresql\tpackage.sh --reuse from the PostgreSQL check, tarred\n' ;;

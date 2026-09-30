@@ -41,7 +41,7 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
 		$(pkg-config --libs thinkthen) -Wl,-rpath,"$libdir" -o "$cache/slide"
 fi
 [ -n "${THINKTHEN_ARTIFACT:-}" ] || {
-	# The remaps keep the builder's home out of the library release-pack --reuse packs (ticket 0128).
+	# The remaps keep the builder's home out of this build. release-pack --reuse rebuilds the library it packs (ticket 0128).
 	export RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build"
 	cargo fmt --check
 	cargo clippy --locked --offline --all-targets -- -D warnings
