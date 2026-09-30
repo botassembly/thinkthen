@@ -13,6 +13,8 @@ mod member;
 pub(crate) use member::{Member, ParentReceipt};
 mod observation;
 pub(crate) use observation::{ObservedQuestion, observe_chunk};
+#[cfg(test)]
+pub(crate) use observation::QuestionJson;
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
 
 use serde::Serialize;
@@ -106,7 +108,7 @@ pub enum Probabilities {
 }
 
 /// The token counts the backend reported for one result.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 pub struct Usage {
     input_tokens: u64,
     output_tokens: u64,

@@ -55,6 +55,8 @@ pub use results::{
     Facts, Found, Judgment, NamedProbability, ObservedRow, Probabilities, QuestionDetail, Ranked,
     RecordObservation, Row, Tally, TallyStart, Usage,
 };
+#[cfg(test)]
+pub(crate) use results::QuestionJson;
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
 

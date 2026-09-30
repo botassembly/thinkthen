@@ -1,6 +1,6 @@
 # 0314: Rust owns the result schema
 
-Status: slice 2 landed; slice 3 ready; slice 4 waits on 0304 slice 3
+Status: slice 3 building; slice 4 waits on 0304 slice 3
 
 Lane claude-1. Branch `ticket/0314-rust-result-schema`. Design: [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md). Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 7 and 8. Builds with [0291](0291-remaining-language-doors.md), so the fourteen C-door bindings change once.
 
@@ -46,6 +46,16 @@ Branch `ticket/0314-s2-door-typed-replies`.
 - Changes: the door serializes `DoorReply`, `Facts`, and `Counters` with serde, and writes bare values, `filter`, `rank`, and `find` straight from their typed values. The hand envelope, facts builder, usage `format!`, and the `serde_json::Value` writer are deleted.
 - Proof: `libraries/c/tests/door/golden.rs` landed first, green on the hand-built code (`4ac8e07cd`), and passes unchanged after the switch. It pins one driver run: every verb, a detailed row, a null answer, a record array, attempts, usage, a per-record annotate failure, and a failed call with its message and error facts, with every optional facts key present. The C door's tests and `types/self-test` against the real door pass.
 - Defers: the door has no JSON call error, so `CallError` stays a test type in `schema_tests.rs`, kept for the `callError` definition, until a surface prints one. `annotate`, record arrays, and `relate` still join the JSON text the public types give; turning those into typed rows waits for 0304's single batching path.
+
+## Slice 3 build
+
+Branch `ticket/0314-s3-native-bindings`.
+
+- Starts from: main `cf314e045`. R builds every result, facts, detail, and receipt list field by field with extendr in `calls.rs`, `calls/render.rs`, and `relate.rs`, and sums facts in its own `Counts`. Ruby builds facts, details, completions, and usage hash key by key with magnus in `src/ffi/result.rs` and copies each detail into its own `Detail`. Python keeps a `Facts` class with seven getters and builds each detail with `json!`. Each binding spells the six failure causes itself.
+- Keeps: every verb's value, the null-versus-failure marker in annotate cells, error kinds and their retry signal, R's one-based offsets and original positions, Ruby's symbol keys, Python's read-only mappings, and the batching code, which ADR 0111 slice 2 owns.
+- Changes: the crate writes a question event as JSON through `RecordObservation::to_json`, from one serde type named `questionObservation` in the generated schema. R, Ruby, and Python read facts, details, and counters as JSON in the host's own reader: `jsonlite`, the `json` library, and `json.loads`. Python's `Facts` class goes; facts are a read-only mapping.
+- Proof: each binding's own check and conformance run; R case 41 reports positions `11..20`; the annotate null and failure cells, an error kind, and an unknown facts member (`estimated_cost_usd`) read through each binding.
+- Defers: TypeScript builds the same detail JSON by hand; it moves to `to_json` in slice 4.
 
 ## What the build taught us
 
