@@ -11,15 +11,17 @@ use std::fmt;
 use std::num::NonZeroUsize;
 use std::panic::{AssertUnwindSafe, catch_unwind, resume_unwind};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::mpsc::{Receiver, sync_channel};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
 use crate::core::Prices;
-use crate::engine::{CallFacts, Cancel, Deadline, workers};
+use crate::engine::{AttemptSink, CallFacts, Cancel, Deadline, workers};
 use crate::public::error::Error;
-use crate::public::results::{Call, Facts, RecordObservation};
+use crate::public::results::{AttemptObservation, Call, Facts, RecordObservation};
 
 type Observer<'a> = &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync);
+type AttemptObserver<'a> = &'a (dyn Fn(AttemptObservation) + Send + Sync);
 
 /// How many records one model request may contain.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -106,6 +108,7 @@ pub struct CallOptions<'a> {
     batch: Option<BatchSetting>,
     context: Option<&'a str>,
     observer: Option<Observer<'a>>,
+    attempt_observer: Option<AttemptObserver<'a>>,
 }
 
 impl fmt::Debug for CallOptions<'_> {
@@ -119,6 +122,7 @@ impl fmt::Debug for CallOptions<'_> {
             .field("batch", &self.batch)
             .field("context", &self.context.is_some())
             .field("observer", &self.observer.is_some())
+            .field("attempt_observer", &self.attempt_observer.is_some())
             .finish()
     }
 }
@@ -135,6 +139,7 @@ impl<'a> CallOptions<'a> {
             batch: None,
             context: None,
             observer: None,
+            attempt_observer: None,
         }
     }
 
@@ -175,6 +180,17 @@ impl<'a> CallOptions<'a> {
         observer: &'a (dyn for<'r> Fn(RecordObservation<'r>) + Send + Sync),
     ) -> Self {
         self.observer = Some(observer);
+        self
+    }
+
+    /// Observe each live HTTP attempt on this calling thread with owned data.
+    /// Cache and replay produce no current attempt observation.
+    #[must_use]
+    pub const fn observe_attempt(
+        mut self,
+        observer: &'a (dyn Fn(AttemptObservation) + Send + Sync),
+    ) -> Self {
+        self.attempt_observer = Some(observer);
         self
     }
 
@@ -301,6 +317,8 @@ pub(crate) struct Stop<'a> {
     token: Option<&'a CancelToken>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     observer: Option<Observer<'a>>,
+    attempt_observer: Option<AttemptObserver<'a>>,
+    attempts: Option<Mutex<Receiver<AttemptObservation>>>,
     panic: Mutex<Option<Box<dyn Any + Send>>>,
 }
 
@@ -308,21 +326,35 @@ impl<'a> Stop<'a> {
     /// Fix the deadline and refuse a call whose token already fired.
     pub(crate) fn begin(options: CallOptions<'a>) -> Result<Self, Error> {
         let facts = CallFacts::new();
+        let (sender, attempts) = if options.attempt_observer.is_some() {
+            let (sender, receiver) = sync_channel(32);
+            (Some(sender), Some(Mutex::new(receiver)))
+        } else {
+            (None, None)
+        };
+        let mut base = Cancel::default()
+            .with_deadline(options.deadline()?)
+            .with_token(options.cancel.map(CancelToken::flag))
+            .with_send_budget(
+                options
+                    .send_budget
+                    .map(|(budget, limit)| (budget.clone(), limit)),
+            )
+            .with_facts(facts.clone());
+        if let Some(sender) = sender {
+            base = base.with_attempt_sink(AttemptSink::new(move |event| {
+                let _sent = sender.send(event);
+            }));
+        }
         let stop = Self {
-            base: Cancel::default()
-                .with_deadline(options.deadline()?)
-                .with_token(options.cancel.map(CancelToken::flag))
-                .with_send_budget(
-                    options
-                        .send_budget
-                        .map(|(budget, limit)| (budget.clone(), limit)),
-                )
-                .with_facts(facts.clone()),
+            base,
             facts,
             prices: None,
             token: options.cancel,
             check: options.check,
             observer: options.observer,
+            attempt_observer: options.attempt_observer,
+            attempts,
             panic: Mutex::new(None),
         };
         if stop.token.is_some_and(CancelToken::is_cancelled) {
@@ -350,6 +382,7 @@ impl<'a> Stop<'a> {
     /// Read the caller's token, then the caller's check. A check that panics
     /// reads as `true`, and its payload waits in [`Stop::finish`].
     pub(crate) fn interrupted(&self) -> bool {
+        self.drain_attempts();
         if self.token.is_some_and(CancelToken::is_cancelled) {
             return true;
         }
@@ -398,6 +431,7 @@ impl<'a> Stop<'a> {
     /// Resume a check's panic, once every worker of the call has joined, then
     /// return the call's result, or cancellation when the token has fired.
     pub(crate) fn finish<T>(&self, result: Result<T, Error>) -> Result<T, Error> {
+        self.drain_attempts();
         self.facts.finish();
         let held = self.panic.lock().ok().and_then(|mut held| held.take());
         if let Some(payload) = held {

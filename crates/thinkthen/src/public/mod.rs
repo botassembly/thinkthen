@@ -49,9 +49,9 @@ pub use recognize::{
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::{
-    Answer, Call, Candidate, Counters, Details, Facts, Found, Judgment, NamedProbability,
-    ObservedRow, Probabilities, QuestionDetail, Ranked, RecordObservation, Row, Tally, TallyStart,
-    Usage,
+    Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, Facts, Found,
+    Judgment, NamedProbability, ObservedRow, Probabilities, QuestionDetail, Ranked,
+    RecordObservation, Row, Tally, TallyStart, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;

@@ -17,6 +17,11 @@ use crate::engine::roots::{self, Error as RootsError};
 use crate::engine::usage::Counters;
 use crate::engine::{Permit, Width, Widths, backoff};
 
+mod observation;
+mod retry;
+use observation::{ResponseInfo, observed_result};
+use retry::{MAX_RETRY_WAIT, bounded_wait, honored};
+
 /// The key one request carries. Diagnostics and `Debug` never expose it.
 pub(crate) struct Key(String);
 
@@ -83,10 +88,6 @@ const MAX_RESPONSE_BYTES: u64 = 1024 * 1024;
 
 /// Reply bytes per request byte. The worst honest reply runs about 5 reply bytes per request byte (ticket 0132).
 const REPLY_BYTES_PER_REQUEST_BYTE: u64 = 8;
-
-/// The longest unheaded exponential wait before an attempt is allowed through.
-const MAX_RETRY_WAIT: Duration = Duration::from_secs(60);
-const MIN_HEADER_WAIT: Duration = Duration::from_secs(1);
 
 /// One connection pool, built once and shared by every worker.
 ///
@@ -267,10 +268,19 @@ impl Client {
                 reservation.commit();
             }
             cancel.sent();
+            let ordinal = cancel.attempt_started();
             marked();
             let sending = cancel.sending();
+            let started = Instant::now();
             let sent = send(&self.agent, exchange, limit);
+            let wall_ms = u64::try_from(started.elapsed().as_nanos().div_ceil(1_000_000).max(1))
+                .unwrap_or(u64::MAX);
             drop(sending);
+            if let (Some(ordinal), Some(digest)) = (ordinal, cancel.attempt_digest()) {
+                let (info, outcome) = observed_result(&sent);
+                cancel
+                    .attempt_completed(info.clone().observation(ordinal, digest, wall_ms, outcome));
+            }
             if let Err(attempt) = &sent
                 && is_retried(&attempt.failure)
             {
@@ -284,9 +294,9 @@ impl Client {
                 drop(permit);
             }
             let attempt = match sent {
-                Ok(body) => {
+                Ok(answer) => {
                     return Ok(HttpAnswer {
-                        body,
+                        body: answer.body,
                         requests_sent: u64::from(retries) + 1,
                     });
                 }
@@ -350,6 +360,7 @@ impl fmt::Debug for Exchange<'_> {
 struct Attempt {
     failure: Error,
     asked: Option<Duration>,
+    info: ResponseInfo,
 }
 
 impl From<Error> for Attempt {
@@ -358,36 +369,18 @@ impl From<Error> for Attempt {
         Self {
             failure,
             asked: None,
+            info: ResponseInfo::default(),
         }
     }
 }
 
-/// The wait the two retry headers ask for, with zero given a one-second floor.
-///
-/// The backend sends `retry-after-ms` in whole milliseconds beside the standard
-/// `retry-after` in whole seconds, and the finer one is read first.
-/// `specification/backends.md` takes those two forms alone. The HTTP-date form
-/// of `retry-after` needs a clock and a date reader, and neither belongs here.
-fn honored(millis: Option<&str>, seconds: Option<&str>) -> Option<Duration> {
-    let asked = |header: Option<&str>| header?.trim().parse::<u64>().ok();
-    let wait = match asked(millis) {
-        Some(number) => Duration::from_millis(number),
-        None => Duration::from_secs(asked(seconds)?),
-    };
-    Some(if wait.is_zero() {
-        MIN_HEADER_WAIT
-    } else {
-        wait
-    })
-}
-
-/// The server's valid delay is a floor; cap only an unheaded local wait.
-fn bounded_wait(asked: Option<Duration>, exponential: Duration, timeout: Duration) -> Duration {
-    asked.unwrap_or_else(|| exponential.min(timeout).min(MAX_RETRY_WAIT))
-}
-
 /// Post the request once, blocking for at most `limit`.
-fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u8>, Attempt> {
+struct Sent {
+    body: Vec<u8>,
+    info: ResponseInfo,
+}
+
+fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Sent, Box<Attempt>> {
     let request = agent
         .post(exchange.url)
         .config()
@@ -399,12 +392,20 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         key => request.header("authorization", &format!("Bearer {key}")),
     };
     let mut response = request.send(exchange.body).map_err(|error| {
-        Attempt::from(Error::Transport(transport(
+        Box::new(Attempt::from(Error::Transport(transport(
             &error,
             exchange.url.starts_with("https://"),
-        )))
+        ))))
     })?;
     let status = response.status().as_u16();
+    let header =
+        |name: &str| unique(response.headers(), name).and_then(|value| value.to_str().ok());
+    let info = ResponseInfo::of(
+        status,
+        header("x-envoy-upstream-service-time"),
+        header(crate::core::adapters::built_in::ATTEMPT_REQUEST_ID_HEADER),
+        exchange,
+    );
     if !(200..300).contains(&status) {
         let header = |name: &str| {
             response
@@ -424,20 +425,44 @@ fn send(agent: &Agent, exchange: &Exchange<'_>, limit: Duration) -> Result<Vec<u
         } else {
             Error::Status(status)
         };
-        return Err(Attempt { failure, asked });
+        return Err(Box::new(Attempt {
+            failure,
+            asked,
+            info,
+        }));
     }
     let sent = u64::try_from(exchange.body.len()).unwrap_or(u64::MAX);
     let most = MAX_RESPONSE_BYTES.saturating_add(REPLY_BYTES_PER_REQUEST_BYTE.saturating_mul(sent));
     // `ureq` refuses a body of exactly its limit, so it gets one byte more.
-    response
+    let body = response
         .body_mut()
         .with_config()
         .limit(most.saturating_add(1))
         .read_to_vec()
-        .map_err(|error| match error {
-            ureq::Error::BodyExceedsLimit(_) => Attempt::from(Error::ReplyTooLarge(most)),
-            error => Attempt::from(Error::Transport(transport(&error, false))),
-        })
+        .map_err(|error| {
+            Box::new(Attempt {
+                failure: match error {
+                    ureq::Error::BodyExceedsLimit(_) => Error::ReplyTooLarge(most),
+                    error => Error::Transport(transport(&error, false)),
+                },
+                asked: None,
+                info: ResponseInfo {
+                    status: info.status,
+                    server_ms: info.server_ms,
+                    request_id: info.request_id.clone(),
+                },
+            })
+        })?;
+    Ok(Sent { body, info })
+}
+
+fn unique<'a>(
+    headers: &'a ureq::http::HeaderMap,
+    name: &str,
+) -> Option<&'a ureq::http::HeaderValue> {
+    let mut values = headers.get_all(name).iter();
+    let first = values.next()?;
+    values.next().is_none().then_some(first)
 }
 
 /// Whether a 400 reply's body names `max_tokens_exceeded` as its

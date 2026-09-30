@@ -13,10 +13,12 @@ use crate::core::text::{ModelName, Url};
 use crate::core::threshold::Threshold;
 
 mod batch_warning;
+mod meta;
 mod profile_warning;
 mod record_value;
 
 pub(crate) use batch_warning::{BatchSetting, BatchWarning};
+pub(crate) use meta::Meta;
 pub(crate) use profile_warning::ProfileWarning;
 pub(crate) use record_value::RecordValue;
 
@@ -425,71 +427,6 @@ impl Serialize for NamedAnswers {
             map.serialize_entry(name, answer)?;
         }
         map.end()
-    }
-}
-
-/// Who answered, how, at what cost, from a backend or from a recording.
-#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
-pub(crate) struct Meta {
-    tool: String,
-    question_sha256: String,
-    url: Url,
-    model: ModelName,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    usage: Option<Usage>,
-    requests_sent: u64,
-    cached: bool,
-    requests: Vec<String>,
-    failed_questions: usize,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    profile_warning: Option<ProfileWarning>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    batch: Option<BatchMeta>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    batch_warning: Option<BatchWarning>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    context_sha256: Option<String>,
-}
-
-impl Meta {
-    /// Name the tool, who answered, at what cost, and whether a recording did.
-    ///
-    /// The result keeps the binary, resolved question, backend, cost, send
-    /// count, replay state, and ordered logical request identities.
-    #[must_use]
-    pub(crate) fn new(
-        version: &str,
-        question_sha256: String,
-        url: Url,
-        model: ModelName,
-        usage: Option<Usage>,
-        request_meta: RequestMeta,
-    ) -> Self {
-        let RequestMeta {
-            replayed,
-            requests_sent,
-            requests,
-            failed_questions,
-            profile_warning,
-            batch,
-            batch_warning,
-            context_sha256,
-        } = request_meta;
-        Self {
-            tool: crate::core::version_line(version),
-            question_sha256,
-            url,
-            model,
-            usage,
-            requests_sent,
-            cached: replayed,
-            requests,
-            failed_questions,
-            profile_warning,
-            batch,
-            batch_warning,
-            context_sha256,
-        }
     }
 }
 

@@ -121,7 +121,21 @@
     },
     "callSuccess": {
       "type": "object", "required": ["value", "facts"], "additionalProperties": false,
-      "properties": {"value": {}, "facts": {"$ref": "#/$defs/facts"}}
+      "properties": {"value": {}, "facts": {"$ref": "#/$defs/facts"},
+        "attempts": {"type": "array", "items": {"$ref": "#/$defs/attempt"}}}
+    },
+    "attempt": {
+      "type": "object", "required": ["ordinal", "request_sha256", "wall_ms", "outcome"],
+      "additionalProperties": false,
+      "properties": {
+        "ordinal": {"type": "integer", "minimum": 1},
+        "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "wall_ms": {"type": "integer", "minimum": 1},
+        "outcome": {"enum": ["ok", "status", "transport"]},
+        "status": {"type": "integer", "minimum": 100, "maximum": 599},
+        "server_ms": {"type": "integer", "minimum": 0},
+        "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"}
+      }
     },
     "callRecordDetails": {
       "allOf": [{"$ref": "#/$defs/details"}], "required": ["input"],
@@ -177,6 +191,7 @@
         "questions_sha256": {"type": "string"}, "url": {"type": "string"},
         "model": {"type": "string"}, "requests_sent": {"type": "integer", "minimum": 0},
         "cached": {"type": "boolean"}, "requests": {"type": "array", "items": {"type": "string"}},
+        "attempts": {"type": "array", "items": {"$ref": "#/$defs/attempt"}},
         "failed_questions": {"type": "integer", "minimum": 0},
         "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
           "properties": {"input_tokens": {"type": "integer", "minimum": 0}, "output_tokens": {"type": "integer", "minimum": 0}}}
