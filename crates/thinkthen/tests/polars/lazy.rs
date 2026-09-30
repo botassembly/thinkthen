@@ -153,11 +153,11 @@ fn lazy_matches_eager_values_bodies_and_shared_tally() {
                 .collect::<Vec<_>>();
             actual.sort();
             let mut expected = [
-                r#"{"state":"Refund me","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this ask for a refund?"}}}"#.as_bytes().to_vec(),
-                r#"{"state":"Please refund this","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this ask for a refund?"}}}"#.as_bytes().to_vec(),
+                r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Refund me\". Does this ask for a refund?"}}}"#.as_bytes().to_vec(),
+                r#"{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Please refund this\". Does this ask for a refund?"}}}"#.as_bytes().to_vec(),
             ];
             expected.sort();
-            assert_eq!(actual, expected, "batch one gives exact singleton bodies");
+            assert_eq!(actual, expected, "batch one gives exact quoted singleton bodies");
         } else {
             assert_eq!(requests.len(), 1);
             assert_eq!(

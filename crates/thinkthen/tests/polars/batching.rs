@@ -126,12 +126,8 @@ fn portable_max_cuts_cross_public_series_and_frame_calls() {
         include_str!("../../../../specification/fixtures/batching/portable-2.request.json"),
         include_str!("../../../../specification/fixtures/batching/portable-3.request.json"),
     ];
-    let frame_bodies = [
-        include_str!("../../../../specification/fixtures/batching/portable-frame-1.request.json"),
-        include_str!("../../../../specification/fixtures/batching/portable-frame-2.request.json"),
-        bodies[2],
-    ];
-    for (through_frame, expected) in [(false, bodies), (true, frame_bodies)] {
+    // A series and a frame quote each record the same way, so both send the same bodies.
+    for through_frame in [false, true] {
         let observed = Mutex::new(Vec::new());
         let observe = |event: RecordObservation<'_>| {
             if let RecordObservation::Question { index, detail, .. } = event {
@@ -174,23 +170,24 @@ fn portable_max_cuts_cross_public_series_and_frame_calls() {
             (answered.facts().records(), answered.facts().requests_sent())
         };
         assert_eq!(call, (5, 3));
-        assert_portable_exchange(&listener, expected, &observed);
+        assert_portable_exchange(&listener, bodies, &observed);
     }
     assert_eq!(listener.count(), 6);
 }
 
 fn assert_observed(listener: &Listener, requests: &[Recorded], observed: &Seen) {
-    let actual = ["Come Together", "Because", "Help"].map(|state| {
+    let actual = ["Come Together", "Because", "Help"].map(|record| {
+        let quoted =
+            format!("The text is \"{record}\". The text is the title of a song by the Beatles.");
         let request = requests
             .iter()
             .find(|request| {
-                serde_json::from_slice::<Value>(&request.body)
-                    .expect("request JSON")
-                    .get("state")
-                    .and_then(Value::as_str)
-                    == Some(state)
+                serde_json::from_slice::<Value>(&request.body).expect("request JSON")["questions"]
+                    ["q1"]["instructions"]
+                    .as_str()
+                    == Some(quoted.as_str())
             })
-            .expect("state request");
+            .expect("quoted request");
         digest(listener.url(), &request.body)
     });
     let observed = observed.lock().expect("observations");
@@ -247,7 +244,7 @@ fn polars_columns_keep_final_call_facts() {
     let each = listener.requests();
     assert_eq!(each.len(), 3);
     assert!(each.iter().all(|request| question_count(request) == 1));
-    let expected = r#"{"state":"Come Together","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is the title of a song by the Beatles."}}}"#;
+    let expected = r#"{"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is \"Come Together\". The text is the title of a song by the Beatles."}}}"#;
     assert!(
         each.iter()
             .any(|request| request.body == expected.as_bytes()),

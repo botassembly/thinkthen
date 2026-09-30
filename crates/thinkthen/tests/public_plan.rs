@@ -33,7 +33,7 @@ fn public_plan_reads_every_record_and_discloses_the_same_two_prepared_bodies_wit
         (plan.records(), plan.requests(), plan.estimated_bytes()),
         (3, 2, 418)
     );
-    assert_eq!(plan.estimated_input_tokens(), (215, 381));
+    assert_eq!(plan.estimated_input_tokens(), (215, 380));
     assert!(!plan.upper_bound());
     assert_eq!(plan.first_body(), Some(FIRST.as_bytes()));
     assert_eq!(listener.count(), 0);
