@@ -1,6 +1,6 @@
 # 0348: Each SQL host proves its question store answers
 
-Status: in progress. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4, after ticket 0347 in the same lane. Pays Debt 010, `sdlc/issues/closed/2026-09-30-sql-host-store-proofs-are-partial.md`.
+Status: landed 2026-09-30. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B4, after ticket 0347 in the same lane. Pays Debt 010, `sdlc/issues/closed/2026-09-30-sql-host-store-proofs-are-partial.md`.
 
 ## Outcome
 
@@ -23,4 +23,5 @@ The DuckDB and PostgreSQL shared case runners count answer rows in `thinkthen.sq
 - Review found two gaps, both fixed: the ready line above, and a store read error in the DuckDB conformance runner now fails one case instead of stopping the run.
 - `databases/postgresql/check.sh` printed a fixed case total of 54 after the case file grew to 55. It now reads `case_count` from `conformance/cases.json`.
 - Under load, `sdlc/scripts/test` failed once on `batching::a_pause_sends_the_open_batch`, a Rust timing test this ticket does not touch. It passed on the rerun at a lower load.
+- `lint` in a clean checkout first failed on main's own two site issue files, which named a private project in their status lines. This branch rewords both. Then `lint` passed (inventory 559 items).
 - Checks: `sdlc/scripts/test` (1,280 passed), `spec` (24 demos green), workspace clippy with `-D warnings`, `policy.py`, `tickets`, the C door tests (31 passed), and the SQLite (53 of 55 cases, 2 not run), DuckDB (53 of 55) and PostgreSQL (89 steps, 52 of 55 cases, 3 not run) checks passed.
