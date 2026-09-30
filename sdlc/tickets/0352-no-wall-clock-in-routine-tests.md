@@ -37,6 +37,11 @@ A few tests still need in-process work to finish inside a margin. No outside eve
 - The batching failed-request test: line 1's answer comes 1 s after line 2's failure is written, while the run reads that failure.
 - SQLite's two-row budget test: a 700 ms budget that must outlast one held-arm round and the second send.
 
+Two waits can fire early without failing a test. They only weaken what the test proves on a stalled machine.
+
+- The backend wait-line test sleeps 200 ms so the `wait 1` line usually arrives before the request. If the request arrives first, the line answers at once and the test still passes.
+- The command-test harness gives up waiting for arrivals or written replies after 25 s (`FAILSAFE`), under the 30 s request timeout. The cache test's pairing wait gives up after 25 s too. A test that gives up fails on its counts, order or peak, and does not hang.
+
 ## Changes
 
 Conformance backend:

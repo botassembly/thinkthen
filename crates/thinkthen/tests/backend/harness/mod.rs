@@ -145,7 +145,7 @@ pub(crate) struct Gathering {
     wanted: usize,
 }
 
-const FAILSAFE: Duration = Duration::from_secs(10);
+const FAILSAFE: Duration = Duration::from_secs(25);
 
 impl Gathering {
     pub(crate) fn new(wanted: usize) -> Self {

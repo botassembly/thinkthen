@@ -82,7 +82,9 @@ def released_after_cancel(backend, tmp_path, calls):
         sent, printed = 0, []
         for _ in range(2):
             for _ in range(calls):
-                sent = backend.wait(sent + 1)
+                expected = sent + 1
+                sent = backend.wait(expected)
+                assert sent == expected, (sent, expected)
                 child.stdin.write("stop\n")
                 child.stdin.flush()
                 assert child.stdout.readline() == "ended\n", child.stderr.read()
@@ -121,8 +123,6 @@ def released_after_timed_cancel(backend, tmp_path, calls):
                           env=child_env(backend, tmp_path, "arm/delay/30", CALLS=str(calls)))
     assert done.returncode == 0, done.stderr
     assert done.stdout.splitlines() == ["ctypes 0 0 True", "raw 0 0 True"]
-
-
 
 
 def test_one_cancelled_call_releases_each_producer(backend, tmp_path):

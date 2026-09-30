@@ -113,10 +113,12 @@ fn rows_keep_input_order_when_replies_finish_out_of_order() {
         })
     };
     // Each pair in flight also meets before either answers, so the fast
-    // reply cannot finish before the slow request arrives.
-    let pair = std::sync::Barrier::new(2);
+    // reply cannot finish before the slow request arrives. A request with no
+    // partner gives up after 25 s, under the 30 s request timeout, and the
+    // test then fails on its order and peak checks.
+    let pair = Pair::default();
     let listener = Listener::answering(move |body| {
-        pair.wait();
+        pair.meet();
         let slow = quoted(body).iter().any(|record| number(record) % 4 == 1);
         let reply = every(body, |record| if odd(record) { 0.9 } else { 0.1 });
         if slow {
@@ -147,4 +149,28 @@ fn rows_keep_input_order_when_replies_finish_out_of_order() {
     assert_eq!(rows, expected);
     assert_eq!(listener.count(), 4);
     assert_eq!(listener.peak(), usize::from(THROTTLE));
+}
+
+/// Two requests meet here before either answers, one pair at a time.
+#[derive(Default)]
+struct Pair {
+    state: Mutex<(usize, usize)>,
+    met: std::sync::Condvar,
+}
+
+impl Pair {
+    fn meet(&self) {
+        let mut state = self.state.lock().unwrap_or_else(PoisonError::into_inner);
+        let round = state.1;
+        state.0 += 1;
+        if state.0 == 2 {
+            *state = (0, round + 1);
+            self.met.notify_all();
+            return;
+        }
+        let _state = self
+            .met
+            .wait_timeout_while(state, Duration::from_secs(25), |state| state.1 == round)
+            .unwrap_or_else(PoisonError::into_inner);
+    }
 }
