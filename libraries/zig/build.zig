@@ -68,6 +68,10 @@ pub fn linkNative(b: *std.Build, exe: *std.Build.Step.Compile, module: *std.Buil
             exe.addRPath(.{ .cwd_relative = libdir });
         },
         .static => {
+            // Zig 0.15's own ELF linker packs Rust's 16-byte constants at 8-byte
+            // addresses; an aligned SSE load then faults. LLD keeps alignment.
+            exe.use_llvm = true;
+            exe.use_lld = true;
             exe.addObjectFile(.{ .cwd_relative = lib });
             for ([_][]const u8{ "gcc_s", "util", "rt", "pthread", "m", "dl" }) |name| exe.linkSystemLibrary(name);
         },
