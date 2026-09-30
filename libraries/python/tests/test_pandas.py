@@ -24,8 +24,8 @@ from test_call import capturing_filter_listener, quoted_record
 def test_portable_max_content_cuts_in_public_column_and_frame_shapes(backend, tmp_path, shape):
     fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"
     corpus = json.loads((fixture / "portable-records.json").read_text())
-    prefix = "portable" if shape == "pandas_series" else "portable-frame"
-    expected = [(fixture / f"{prefix if index < 3 else 'portable'}-{index}.request.json")
+    # A column and a one-question frame annotation send the same quoted bodies.
+    expected = [(fixture / f"portable-{index}.request.json")
                 .read_bytes().removesuffix(b"\n") for index in (1, 2, 3)]
     with capturing_filter_listener() as (url, bodies):
         env = child_env(backend, tmp_path)

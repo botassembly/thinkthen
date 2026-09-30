@@ -64,7 +64,7 @@ try:
   assert b'INSTALLED_JSON_ENVELOPE_PASS' in result.stdout and b'INSTALLED_CSHARP_CONSUMER_PASS' in result.stdout,result.stdout
   assert collections.Counter(server.arrivals)==collections.Counter(['consumer-csharp','consumer-json']) and server.attempts==server.connections==2,counted
   parsed=[json.loads(line) for line in bodies]
-  expected=[{'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':'Is it?'}},'state':state} for state in ('consumer-csharp','consumer-json')]
+  expected=[{'model':'jev-1.13.0','questions':{'q1':{'type':'noul','instructions':f'The text is "{record}". Is it?'}},'state':'Each question quotes the text it asks about.'} for record in ('consumer-csharp','consumer-json')]
   assert collections.Counter(json.dumps(body,sort_keys=True) for body in parsed)==collections.Counter(json.dumps(body,sort_keys=True) for body in expected),(parsed,expected)
   print('C# observed bodies:',json.dumps(parsed,sort_keys=True),flush=True)
   print('isolated installed consumer',mode,'PASS 2 exact arrivals',flush=True)
