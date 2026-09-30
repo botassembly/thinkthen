@@ -1,3 +1,6 @@
 target/
 .env
 **/.locks/
+# Swift and Objective-C checks copy the one C header here at build time.
+libraries/swift/Sources/CThinkThen/include/thinkthen.h
+libraries/objective-c/Sources/thinkthen.h

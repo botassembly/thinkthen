@@ -202,7 +202,7 @@ swift)
 		cp libraries/swift/LICENSE libraries/swift/README.md libraries/swift/Package.swift "$folder/"
 		cp libraries/swift/Examples/main.swift "$folder/Examples/"
 		cp libraries/swift/Sources/CThinkThen/module.modulemap "$folder/Sources/CThinkThen/"
-		cp libraries/swift/Sources/CThinkThen/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
+		cp libraries/c/include/thinkthen.h "$folder/Sources/CThinkThen/include/"
 		cp libraries/swift/Sources/ThinkThen/ThinkThen.swift "$folder/Sources/ThinkThen/"
 		cp libraries/swift/Tests/TypeCase/main.swift "$folder/Tests/TypeCase/"
 		;;
@@ -266,8 +266,8 @@ objective-c)
 		cp libraries/objective-c/LICENSE libraries/objective-c/README.md \
 			libraries/objective-c/source-package.json "$folder/"
 		cp libraries/objective-c/Sources/ThinkThen.h libraries/objective-c/Sources/ThinkThen.m \
-			libraries/objective-c/Sources/thinkthen.h libraries/objective-c/Sources/TTJSON.h \
-			libraries/objective-c/Sources/TTJSON.c "$folder/Sources/"
+			libraries/objective-c/Sources/TTJSON.h libraries/objective-c/Sources/TTJSON.c "$folder/Sources/"
+		cp libraries/c/include/thinkthen.h "$folder/Sources/"
 		cp libraries/objective-c/Examples/consumer.m "$folder/Examples/"
 		;;
 cobol)
@@ -287,8 +287,8 @@ cobol)
 		find "$folder" -type f | while IFS= read -r copied; do
 			relative=${copied#"$folder"/}
 			member=libraries/$1/$relative
-			# A linked source, such as the shared C header, is compared with the file it names.
-			[ ! -L "$member" ] || member=$(python3 -c 'import os, sys; print(os.path.normpath(os.path.join(os.path.dirname(sys.argv[1]), os.readlink(sys.argv[1]))))' "$member")
+			# The wrapper's C header is copied from the one C header.
+			case $relative in Sources/thinkthen.h | Sources/CThinkThen/include/thinkthen.h) member=libraries/c/include/thinkthen.h ;; esac
 			tar -xOf "$THINKTHEN_ARCHIVED_SOURCE_TAR" "$member" | cmp -s - "$copied" || {
 				echo "release-pack: $1 source differs from archived commit: $relative" >&2; exit 1;
 			}

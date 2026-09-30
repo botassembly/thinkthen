@@ -51,6 +51,7 @@ export CARGO_TARGET_DIR="$REPO/libraries/c/target"
 NATIVE="$CARGO_TARGET_DIR/debug/libthinkthen_c.so"
 TARGET="$ROOT/checks/target"
 mkdir -p "$TARGET"
+cp "$REPO/libraries/c/include/thinkthen.h" "$ROOT/Sources/thinkthen.h"
 python3 "$ROOT/checks/privacy.py"
 for config in "$ROOT"/ratchet.*.json; do node "$REPO/sdlc/scripts/ratchet.mjs" "$config"; done
 cargo build --locked --offline --manifest-path "$REPO/libraries/c/Cargo.toml" --lib -j2

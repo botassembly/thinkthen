@@ -4,10 +4,9 @@ Status: open. Found by the wave 4 macOS dry run on 2026-09-29 at `2c5ac772b`. St
 
 ## The problem
 
-`libraries/objective-c/Sources/` holds `ThinkThen.h` and `thinkthen.h`. `thinkthen.h` is a link to `../../c/include/thinkthen.h`. macOS's default filesystem ignores case, so the two names are one file there.
+The Objective-C package puts `ThinkThen.h` and `thinkthen.h` side by side in `Sources/`. macOS's default filesystem ignores case, so the two names are one file there. An unpacked Objective-C package on a default Mac volume loses one of the two headers.
 
-- A plain checkout of this repository on a default Mac volume is dirty at once. `git status` shows `ThinkThen.h` modified, because the C header won on disk.
-- An unpacked Objective-C package on the same volume loses one of the two headers.
+Ticket 0332 fixed the checkout half. The repository no longer tracks `libraries/objective-c/Sources/thinkthen.h`, so a plain checkout on a Mac is clean. The Objective-C check copies the C header in only on Linux x86-64. `release-pack` still copies the C header into the package's `Sources/` beside `ThinkThen.h`.
 
 The package targets macOS, so its main users meet this first.
 
