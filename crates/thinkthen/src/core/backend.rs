@@ -1,5 +1,7 @@
 //! The backend a request goes to: one address and one model.
 
+use std::num::NonZeroU32;
+
 use thiserror::Error;
 
 use crate::core::adapters::built_in;
@@ -18,13 +20,18 @@ pub(crate) const KEY_VAR: &str = "THINKTHEN_API_KEY";
 pub(crate) const KEY_IN_ADDRESS: &str =
     "the backend address contains the API key; keep the key out of the address";
 
-/// Where one request goes, which model it names, and how its descriptions travel.
+/// The highest requests-a-minute rate the variable or the configuration file takes.
+pub(crate) const MAX_PER_MINUTE: u32 = 60_000;
+
+/// Where one request goes, which model it names, how its descriptions travel,
+/// and the rate its named backend's configuration entry sets.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub(crate) struct Backend {
     url: Url,
     model: ModelName,
     descriptions: Descriptions,
     request_size: usize,
+    per_minute: Option<NonZeroU32>,
 }
 
 /// The default maximum request size at every address, in bytes.
@@ -98,6 +105,7 @@ impl Backend {
             model,
             descriptions: Descriptions::Authored,
             request_size: DEFAULT_REQUEST_SIZE,
+            per_minute: None,
         }
     }
 
@@ -124,6 +132,7 @@ impl Backend {
             model: ModelName::new(model)?,
             descriptions: Descriptions::Authored,
             request_size: DEFAULT_REQUEST_SIZE,
+            per_minute: None,
         })
     }
 
@@ -132,6 +141,18 @@ impl Backend {
     pub(crate) const fn with_descriptions(mut self, descriptions: Descriptions) -> Self {
         self.descriptions = descriptions;
         self
+    }
+
+    /// Pace at the rate the selected backend's configuration entry sets.
+    /// `THINKTHEN_REQUESTS_PER_MINUTE` outranks it where the engine is built.
+    pub(crate) const fn with_per_minute(mut self, rate: Option<NonZeroU32>) -> Self {
+        self.per_minute = rate;
+        self
+    }
+
+    /// The configuration file's rate for this backend, if it set one.
+    pub(crate) const fn per_minute(&self) -> Option<NonZeroU32> {
+        self.per_minute
     }
 
     /// Carry the command's resolved request size into both planners.

@@ -3,7 +3,8 @@
 
 The table under `## Settings` has fixed columns. Every long flag in any command's help, every `THINKTHEN_` name
 product code reads, and every question-file key needs a row, and a row naming none of them fails. It reads the
-`thinkthen` on PATH, so the `spec` rung runs it after its build. Usage: settings [PAGE]. --self-test plants each
+`thinkthen` on PATH, so the `spec` rung runs it after its build. Every configuration file field the reader accepts needs a
+row too (ticket 0343). Usage: settings [PAGE]. --self-test plants each
 fault into a copy of the real page, runs the whole check, and pins every sentence.
 """
 
@@ -19,10 +20,14 @@ REPO = pathlib.Path(__file__).resolve().parents[2]
 PAGE = REPO / "specification" / "settings.md"
 SCHEMA = REPO / "specification" / "question-file.schema.json"
 RECOGNIZE = REPO / "crates/thinkthen/src/core/recognize_file.rs"  # its two key lists: the file, then `recognize`
+# The configuration reader's field lists: the file's top level, then a `backends` entry.
+CONFIG_SOURCES = ((REPO / "crates/thinkthen/src/config.rs", "UNKNOWN"),
+                  (REPO / "crates/thinkthen/src/config/backends.rs", "EXTRA"))
 COLUMNS = ["Setting", "What it does", "Default", "Allowed values", "Source", "Command flag", "Environment variable",
            "Configuration file", "Question-file key", "Rust", "Python", "TypeScript", "Ruby", "R", "C", "DuckDB",
            "PostgreSQL", "SQLite"]
 FLAG, ENV, KEY = COLUMNS.index("Command flag"), COLUMNS.index("Environment variable"), COLUMNS.index("Question-file key")
+CONFIG = COLUMNS.index("Configuration file")
 # The named lists: help flags that are not settings, names only tests read (by prefix), and keys
 # that hold the question itself or the file's format.
 NOT_SETTINGS = {"--help", "--version"}
@@ -137,6 +142,15 @@ def schema_keys():
     return (keys | set(top) | {f"recognize.{k}" for k in section}) - NOT_KEYS
 
 
+def config_fields():
+    """Every field the configuration reader accepts, read from its unknown-field sentences."""
+    fields = set()
+    for path, name in CONFIG_SOURCES:
+        sentence = re.search(rf'const {name}: &str =\s*"([^"]*)"', path.read_text(encoding="utf-8"))
+        fields |= set(TICKED.findall(sentence.group(1)))
+    return fields - {"schema"}
+
+
 def both_ways(page, have, want, missing, stale):
     out = [f"{page}: {name} {missing}" for name in sorted(want - have)]
     return out + [f"{page}: {name} {stale}" for name in sorted(have - want)]
@@ -165,7 +179,7 @@ def engine_cells(page, rows):
     return out
 
 
-def check(path, flags, names, keys):
+def check(path, flags, names, keys, fields=None):
     """Every sentence that says how the page misses the rules."""
     page = path.name
     found = table(prose(path.read_text(encoding="utf-8")))
@@ -196,6 +210,8 @@ def check(path, flags, names, keys):
                      "is in a row and read by no product code")
     out += both_ways(page, ticked(rows, KEY, KEY_NAME), keys, "is a question-file key and has no row",
                      "is in a row and is no question-file key")
+    out += both_ways(page, ticked(rows, CONFIG, KEY_NAME), config_fields() if fields is None else fields,
+                     "is a configuration file field and has no row", "is in a row and is no configuration file field")
     out += engine_cells(page, rows)
     return out, len(rows)
 
@@ -244,6 +260,8 @@ def cases(text):
         ("a missing variable", edit(text, ENV, "`THINKTHEN_CACHE`", ""),
          [page + "THINKTHEN_CACHE is read by product code and has no row"]),
         ("a missing key", edit(text, KEY, "`on`", ""), [page + "on is a question-file key and has no row"]),
+        ("a missing configuration field", edit(text, CONFIG, "`requests_per_minute` in a", "in a"),
+         [page + "requests_per_minute is a configuration file field and has no row"]),
         ("a fenced decoy table", text.replace("## Settings\n", decoy, 1), []),
         ("a repeated row", text[:after] + first + text[after:], [page + 'the setting "Annotate record failure policy" has two rows']),
         ("a missing engine cell", edit(text, COLUMNS.index("Python"), "`Engine(timeout=)`", "not on this surface"),

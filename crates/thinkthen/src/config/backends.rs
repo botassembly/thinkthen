@@ -1,22 +1,29 @@
 //! The configuration file's `backend` and `backends` fields (ADR 0114 section 2).
 //!
-//! Each entry names a base, the name of the variable that holds its key, and a
-//! model. The file never holds a key, and no refusal repeats a value.
+//! Each added entry names a base, the name of the variable that holds its key,
+//! and a model. Any entry, a built-in's included, may set `requests_per_minute`
+//! (ticket 0343). The file never holds a key, and no refusal repeats a value.
+
+use std::num::NonZeroU32;
 
 use serde_json::{Map, Value};
 
 use super::{ConfigError, refused};
-use crate::core::{Backend, DEFAULT_MODEL, ModelName, Named, named};
+use crate::core::{Backend, DEFAULT_MODEL, MAX_PER_MINUTE, ModelName, Named, named};
 
-const REUSE: &str = "configuration backend names a built-in backend; choose another name";
+const BUILT_IN: &str =
+    "a configuration entry for a built-in backend holds `requests_per_minute` and nothing else";
 const NAME: &str = "configuration field `backends` holds a name that is not 1 to 32 lowercase letters, digits, and hyphens";
-const EXTRA: &str = "configuration backend entries hold only `url`, `key_env`, and `model`";
+const EXTRA: &str =
+    "configuration backend entries hold only `url`, `key_env`, `model`, and `requests_per_minute`";
 const MISSING: &str = "configuration backend entries need `url`, `key_env`, and `model`";
 const STRINGS: &str =
     "configuration backend entries are objects whose `url`, `key_env`, and `model` are strings";
 const URL: &str = "configuration backend field `url` must be a safe backend base";
 const KEY_ENV: &str = "configuration backend field `key_env` names an environment variable: a capital letter or underscore, then capital letters, digits, and underscores";
 const MODEL: &str = "configuration backend field `model` must be a model name, not blank";
+const RATE: &str =
+    "configuration backend field `requests_per_minute` must be a whole number from 1 to 60000";
 const BACKEND: &str =
     "configuration field `backend` must name a built-in backend or an entry of `backends`";
 
@@ -38,8 +45,16 @@ pub(super) fn read(
 }
 
 fn entry(name: &str, value: &Value) -> Result<Named, ConfigError> {
-    if named::is_built_in(name) {
-        return Err(refused(REUSE));
+    if let Some(built_in) = Named::built_in(name) {
+        // Only the rate: a built-in keeps its base, key variables, and model.
+        return match value {
+            Value::Object(fields) if fields.len() == 1 => fields
+                .get("requests_per_minute")
+                .ok_or_else(|| refused(BUILT_IN))
+                .and_then(rate)
+                .map(|rate| built_in.with_per_minute(Some(rate))),
+            _ => Err(refused(BUILT_IN)),
+        };
     }
     if !named::valid_name(name) {
         return Err(refused(NAME));
@@ -47,10 +62,12 @@ fn entry(name: &str, value: &Value) -> Result<Named, ConfigError> {
     let Value::Object(fields) = value else {
         return Err(refused(STRINGS));
     };
-    if fields
-        .keys()
-        .any(|field| !matches!(field.as_str(), "url" | "key_env" | "model"))
-    {
+    if fields.keys().any(|field| {
+        !matches!(
+            field.as_str(),
+            "url" | "key_env" | "model" | "requests_per_minute"
+        )
+    }) {
         return Err(refused(EXTRA));
     }
     let text = |field: &str| match fields.get(field) {
@@ -68,7 +85,18 @@ fn entry(name: &str, value: &Value) -> Result<Named, ConfigError> {
     if ModelName::new(model).is_err() {
         return Err(refused(MODEL));
     }
-    Ok(Named::new(name, url, key_env, model))
+    let per_minute = fields.get("requests_per_minute").map(rate).transpose()?;
+    Ok(Named::new(name, url, key_env, model).with_per_minute(per_minute))
+}
+
+/// A JSON whole number from 1 to 60,000, the variable's range.
+fn rate(value: &Value) -> Result<NonZeroU32, ConfigError> {
+    value
+        .as_u64()
+        .filter(|rate| (1..=u64::from(MAX_PER_MINUTE)).contains(rate))
+        .and_then(|rate| u32::try_from(rate).ok())
+        .and_then(NonZeroU32::new)
+        .ok_or_else(|| refused(RATE))
 }
 
 /// Whether the text matches `[A-Z_][A-Z0-9_]*`, which refuses most pasted keys.
@@ -92,6 +120,7 @@ mod tests {
         };
         let good =
             r#"{"url":"http://127.0.0.1:8080/v1","key_env":"LOCAL_D1_KEY","model":"d1:free"}"#;
+        let built_in = "a configuration entry for a built-in backend holds `requests_per_minute` and nothing else";
         let parsed = Config::parse(entry(good).as_bytes()).expect("a valid entry");
         assert_eq!(parsed.named().len(), 1);
         assert!(
@@ -101,7 +130,23 @@ mod tests {
         for (text, sentence) in [
             (
                 r#"{"schema":"thinkthen.config/1","backends":{"liquid":{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}}}"#.to_owned(),
-                "configuration backend names a built-in backend; choose another name",
+                built_in,
+            ),
+            (
+                format!(r#"{{"schema":"thinkthen.config/1","backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#),
+                built_in,
+            ),
+            (
+                r#"{"schema":"thinkthen.config/1","backends":{"typesafe":{}}}"#.to_owned(),
+                built_in,
+            ),
+            (
+                format!(r#"{{"schema":"thinkthen.config/1","backends":{{"typesafe":{{"url":"{marker}"}}}}}}"#),
+                built_in,
+            ),
+            (
+                r#"{"schema":"thinkthen.config/1","backends":{"liquid":600}}"#.to_owned(),
+                built_in,
             ),
             (
                 format!(r#"{{"schema":"thinkthen.config/1","backends":{{"{marker}":{good}}}}}"#),
@@ -117,7 +162,7 @@ mod tests {
             ),
             (
                 entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","key":"{marker}"}}"#)),
-                "configuration backend entries hold only `url`, `key_env`, and `model`",
+                "configuration backend entries hold only `url`, `key_env`, `model`, and `requests_per_minute`",
             ),
             (
                 entry(r#"{"url":"http://127.0.0.1/v1","key_env":7,"model":"m"}"#),
@@ -157,6 +202,64 @@ mod tests {
                 r#"{{"schema":"thinkthen.config/1","backend":"{backend}","backends":{{"local-d1":{good}}}}}"#
             );
             assert!(Config::parse(text.as_bytes()).is_ok(), "{backend}");
+        }
+    }
+
+    #[test]
+    fn a_rate_is_a_whole_number_from_1_to_60000_on_any_entry_and_never_echoed() {
+        let rate = "configuration backend field `requests_per_minute` must be a whole number from 1 to 60000";
+        let added = |value: &str| {
+            format!(
+                r#"{{"schema":"thinkthen.config/1","backends":{{"local-d1":{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","requests_per_minute":{value}}}}}}}"#
+            )
+        };
+        let built_in = |value: &str| {
+            format!(
+                r#"{{"schema":"thinkthen.config/1","backends":{{"liquid":{{"requests_per_minute":{value}}}}}}}"#
+            )
+        };
+        for value in [
+            "0",
+            "60001",
+            "-5",
+            "1.5",
+            "6e1",
+            r#""600""#,
+            "null",
+            "true",
+            "[600]",
+            "4294967297",
+            "\"Sk_rate_marker_0343\"",
+        ] {
+            for text in [added(value), built_in(value)] {
+                let refused = Config::parse(text.as_bytes()).expect_err(&text);
+                assert_eq!(refused.message, rate, "{text}");
+                assert!(!refused.message.contains("marker"), "{text}");
+            }
+        }
+        for (value, expected) in [("1", 1), ("600", 600), ("60000", 60_000)] {
+            for text in [added(value), built_in(value)] {
+                let parsed = Config::parse(text.as_bytes()).expect(&text);
+                let [entry] = parsed.named() else {
+                    panic!("one entry: {text}");
+                };
+                let chosen =
+                    crate::core::named::choose(&[(Some(entry.name()), None)], parsed.named())
+                        .expect("a choice")
+                        .backend(None, "unused")
+                        .expect("a backend");
+                assert_eq!(chosen.per_minute().map(u32::from), Some(expected), "{text}");
+                if let Some(plain) = crate::core::Named::built_in(entry.name()) {
+                    // The rate is the only change: base, key variables, and model stay built in.
+                    assert_eq!(entry.keys(), plain.keys());
+                    let plain = crate::core::named::choose(&[(Some(entry.name()), None)], &[])
+                        .expect("a choice")
+                        .backend(None, "unused")
+                        .expect("a backend");
+                    assert_eq!(plain.per_minute(), None, "a built-in carries no rate");
+                    assert_eq!(chosen.with_per_minute(None), plain);
+                }
+            }
         }
     }
 

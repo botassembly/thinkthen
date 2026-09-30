@@ -6,6 +6,7 @@
 //! no environment.
 
 use std::fmt;
+use std::num::NonZeroU32;
 
 use crate::core::adapters::built_in::backends::BUILT_INS;
 use crate::core::backend::{Backend, BackendError, KEY_VAR};
@@ -19,6 +20,8 @@ pub(crate) struct Named {
     keys: Vec<String>,
     model: String,
     descriptions: Descriptions,
+    /// The configuration file's rate for this backend; a built-in has none of its own.
+    per_minute: Option<NonZeroU32>,
 }
 
 impl fmt::Debug for Named {
@@ -30,6 +33,7 @@ impl fmt::Debug for Named {
             .field("keys", &self.keys)
             .field("model", &self.model)
             .field("descriptions", &self.descriptions)
+            .field("per_minute", &self.per_minute)
             .finish()
     }
 }
@@ -45,7 +49,15 @@ impl Named {
             keys: vec![key.to_owned()],
             model: model.to_owned(),
             descriptions: Descriptions::Authored,
+            per_minute: None,
         }
+    }
+
+    /// Pace this backend at the rate its configuration entry sets.
+    #[must_use]
+    pub(crate) const fn with_per_minute(mut self, rate: Option<NonZeroU32>) -> Self {
+        self.per_minute = rate;
+        self
     }
 
     /// The built-in backend of this name, if one exists.
@@ -59,6 +71,7 @@ impl Named {
                 keys: built_in.keys.iter().map(|&key| key.to_owned()).collect(),
                 model: built_in.model.to_owned(),
                 descriptions: built_in.descriptions,
+                per_minute: None,
             })
     }
 
@@ -78,11 +91,6 @@ pub(crate) fn valid_name(name: &str) -> bool {
         && name
             .bytes()
             .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-')
-}
-
-/// Whether a name belongs to a built-in backend.
-pub(crate) fn is_built_in(name: &str) -> bool {
-    BUILT_INS.iter().any(|built_in| built_in.name == name)
 }
 
 /// Every key variable a built-in backend reads.
@@ -182,7 +190,11 @@ impl Choice<'_> {
                 None,
                 asked.unwrap_or(&named.model),
             )
-            .map(|backend| backend.with_descriptions(named.descriptions)),
+            .map(|backend| {
+                backend
+                    .with_descriptions(named.descriptions)
+                    .with_per_minute(named.per_minute)
+            }),
         }
     }
 

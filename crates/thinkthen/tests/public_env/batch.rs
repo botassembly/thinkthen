@@ -133,6 +133,44 @@ fn the_rate_variable_paces_an_engine_built_from_the_environment() {
 }
 
 #[test]
+fn a_rate_in_the_configuration_file_paces_the_backend_it_names() {
+    let starts = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+    let seen = std::sync::Arc::clone(&starts);
+    let listener = Listener::answering(move |_| {
+        seen.lock().unwrap().push(std::time::Instant::now());
+        Canned::ok(ANSWERED)
+    })
+    .expect("a loopback listener");
+    let config = folder("paced-config");
+    fs::create_dir_all(config.join("thinkthen")).unwrap();
+    fs::write(
+        config.join("thinkthen/config.json"),
+        format!(
+            r#"{{"schema":"thinkthen.config/1","backend":"local","backends":{{"local":{{"url":"{}","key_env":"LOCAL_KEY","model":"local-1","requests_per_minute":600}}}}}}"#,
+            listener.base()
+        ),
+    )
+    .unwrap();
+    let said = in_child(
+        "paced",
+        &[
+            ("XDG_CONFIG_HOME", config.to_str().unwrap()),
+            ("LOCAL_KEY", "sk-paced-config-fixture"),
+        ],
+    );
+    assert!(
+        said.lines()
+            .all(|line| line.starts_with("sent 1 cached false")),
+        "{said}"
+    );
+    let starts = starts.lock().unwrap();
+    assert_eq!(starts.len(), 4);
+    // One start each 100 ms from the file alone. One interval covers a late first delivery.
+    let span = *starts.iter().max().unwrap() - *starts.iter().min().unwrap();
+    assert!(span >= std::time::Duration::from_millis(200), "{span:?}");
+}
+
+#[test]
 fn the_estimated_input_variable_caps_an_engine_built_from_the_environment() {
     let listener = listener();
     let address = ("THINKTHEN_BASE_URL", listener.base());

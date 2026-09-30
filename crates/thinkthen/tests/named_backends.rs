@@ -22,6 +22,8 @@ mod command;
 mod ollama;
 #[path = "named_backends/precedence.rs"]
 mod precedence;
+#[path = "named_backends/rate.rs"]
+mod rate;
 #[path = "named_backends/support.rs"]
 mod support;
 

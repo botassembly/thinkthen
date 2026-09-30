@@ -58,7 +58,20 @@ At its default base, `ollama` needs no key: with `OLLAMA_API_KEY` unset or blank
 
 `ollama` alone sends descriptions as text. This is a temporary workaround for an Ollama bug: Ollama 0.35 answers status 400 to an object description ([ollama/ollama#18718](https://github.com/ollama/ollama/issues/18718)). It is tracked as debt in [the Ollama issue](../sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md) and goes when Ollama accepts object descriptions. Under it, a string travels as written. An object with a nonblank string `what` travels as that text alone, so its other fields are left out. Any other object or list travels as its compact JSON text. An empty object or null travels as no description: a `decide` side or `tag` label drops its `criteria` member, a `choose` option keeps its key with `null`, and a `score` level travels as its name. A `tag` question whose descriptions all become text takes the sentence form. `typesafe`, `liquid`, configured entries, and the unnamed path send every description exactly as authored. `--backend ollama --url BASE` keeps the text form at any address. The configuration file names no description form.
 
-The configuration file may name more backends under `backends`, each with exactly `url`, `key_env`, and `model`, and may name the default under `backend`; [recording.md](recording.md) lists the file's fields. An entry may not reuse a built-in name. `key_env` matches `[A-Z_][A-Z0-9_]*`, and the file never holds a key. A file another user can write may not hold `backends`, because an entry could name any variable; that refusal exits 5. A backend name uses 1 to 32 lowercase ASCII letters, digits, and hyphens.
+The configuration file may name more backends under `backends`, each with `url`, `key_env`, and `model`, and may name the default under `backend`; [recording.md](recording.md) lists the file's fields. An added entry may not reuse a built-in name. `key_env` matches `[A-Z_][A-Z0-9_]*`, and the file never holds a key. A file another user can write may not hold `backends`, because an entry could name any variable; that refusal exits 5. A backend name uses 1 to 32 lowercase ASCII letters, digits, and hyphens.
+
+Any entry may set `requests_per_minute`, a whole number from 1 to 60,000, and the selected backend's rate paces its posting address (ruling 14, ticket 0343). A built-in's name may appear under `backends` holding only `requests_per_minute`; that paces the built-in and keeps its base, key variables, and model. No backend has a rate of its own, so nothing is paced unless the file or `THINKTHEN_REQUESTS_PER_MINUTE` sets a rate. The variable outranks the file. The unnamed path reads only the variable. The limit holds within one process: separate processes each get the full rate, so N processes can send N times it. [The proxy service](../sdlc/issues/2026-09-30-proxy-service-for-shared-limits-and-traces.md) and [the batch command](../sdlc/issues/2026-09-30-batch-command-runs-many-questions-in-one-process.md) are the future answers for a limit across processes. A refused rate exits 5 with `configuration backend field `requests_per_minute` must be a whole number from 1 to 60000`; a built-in's entry holding anything else exits 5 with `a configuration entry for a built-in backend holds `requests_per_minute` and nothing else`. Neither repeats a value.
+
+```json
+{
+  "schema": "thinkthen.config/1",
+  "backend": "liquid",
+  "backends": {
+    "liquid": {"requests_per_minute": 1000},
+    "local-d1": {"url": "http://127.0.0.1:8080/v1", "key_env": "LOCAL_D1_KEY", "model": "d1:free", "requests_per_minute": 120}
+  }
+}
+```
 
 `--backend NAME`, `EngineBuilder::backend`, `THINKTHEN_BACKEND`, and the configuration's `backend` name a backend. The tiers run typed (`--backend`, `--url`), then the engine setting (`EngineBuilder::backend`, `EngineBuilder::base_url`), then the environment (`THINKTHEN_BACKEND`, `THINKTHEN_BASE_URL`), then the configuration file (`backend`, `url`). The first tier that names a backend or an address decides, and lower tiers are ignored:
 

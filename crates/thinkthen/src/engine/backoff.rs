@@ -6,6 +6,7 @@ use std::num::NonZeroU32;
 use std::sync::{Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::{Duration, Instant};
 
+use crate::core::MAX_PER_MINUTE;
 use crate::engine::Cancel;
 use crate::engine::error::Error;
 
@@ -17,26 +18,24 @@ pub(crate) struct Gates {
     slots: Mutex<HashMap<String, Instant>>,
 }
 
-/// Requests a minute when `THINKTHEN_REQUESTS_PER_MINUTE` is unset and the address is `https://`.
-/// The vendor publishes 1,200 (`specification/records.md`).
-pub(crate) const DEFAULT_PER_MINUTE: NonZeroU32 = NonZeroU32::new(1_000).unwrap();
-
 /// Read `THINKTHEN_REQUESTS_PER_MINUTE`: a whole number from 1 to 60,000.
 pub(crate) fn per_minute(text: Option<&str>) -> Result<Option<NonZeroU32>, &'static str> {
     text.map(|text| {
         text.parse::<u32>()
             .ok()
-            .filter(|rate| (1..=60_000).contains(rate) && text.bytes().all(|b| b.is_ascii_digit()))
+            .filter(|rate| {
+                (1..=MAX_PER_MINUTE).contains(rate) && text.bytes().all(|b| b.is_ascii_digit())
+            })
             .and_then(NonZeroU32::new)
             .ok_or("THINKTHEN_REQUESTS_PER_MINUTE takes a whole number from 1 to 60000")
     })
     .transpose()
 }
 
-/// The spacing between starts: the set rate, else the default for a remote address.
-pub(crate) fn interval(set: Option<NonZeroU32>, secure: bool) -> Option<Duration> {
-    set.or(secure.then_some(DEFAULT_PER_MINUTE))
-        .map(|rate| Duration::from_secs(60) / rate.get())
+/// The spacing between starts at this rate. No rate, no spacing: no address
+/// has a default (ruling 14, ticket 0343).
+pub(crate) fn interval(rate: Option<NonZeroU32>) -> Option<Duration> {
+    rate.map(|rate| Duration::from_secs(60) / rate.get())
 }
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
@@ -265,10 +264,9 @@ fn the_rate_variable_takes_whole_numbers_from_1_to_60000() {
     for text in ["0", "60001", "+5", " 5", "1.5", ""] {
         assert!(per_minute(Some(text)).is_err(), "{text:?} was accepted");
     }
-    assert_eq!(interval(None, true), Some(Duration::from_millis(60)));
-    assert_eq!(interval(None, false), None);
+    assert_eq!(interval(None), None, "no address has a default rate");
     assert_eq!(
-        interval(NonZeroU32::new(600), false),
+        interval(NonZeroU32::new(600)),
         Some(Duration::from_millis(100))
     );
 }

@@ -12,7 +12,7 @@ The command reads at most 1 MiB of a question file or question set, as the libra
 
 The SQL extensions add `thinkthen_try_details` so a recoverable bad row yields a safe typed JSON failure and later good rows continue. SQLite adds a connection-scoped ThinkThen time budget. DuckDB retires idle engine plans while retaining cumulative usage and its 16-plan cap. PostgreSQL refuses a changed explicit throttle. DuckDB's whole-query budget follows in ticket 0201.
 
-Every surface paces its HTTP attempts to 1,000 a minute for each `https://` address, under the vendor's published 1,200. `THINKTHEN_REQUESTS_PER_MINUTE` sets another rate. The pacer counts within one process (ticket 0308).
+Nothing is paced by default. The configuration file may set `requests_per_minute` on any backend in `backends`, a built-in included, and `THINKTHEN_REQUESTS_PER_MINUTE` outranks it (tickets 0308 and 0343). The limit holds within one process: separate processes each get the full rate, until a proxy service or a batch command gives a limit across processes.
 
 Every surface reads `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL`, the estimated input admission total from ticket 0299. A request whose estimate would pass it is refused before it is sent. The command flag, the Rust setter, and the C key outrank the variable (ticket 0311).
 

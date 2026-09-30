@@ -54,7 +54,9 @@ mod threshold;
 pub(crate) use crate::core::adapters::built_in::DEFAULT_MODEL;
 pub(crate) use crate::core::answer::{Answer, Value};
 pub(crate) use crate::core::backend::named::{self, Named};
-pub(crate) use crate::core::backend::{Backend, BackendError, KEY_IN_ADDRESS, KEY_VAR};
+pub(crate) use crate::core::backend::{
+    Backend, BackendError, KEY_IN_ADDRESS, KEY_VAR, MAX_PER_MINUTE,
+};
 #[cfg(any(test, feature = "cli"))]
 pub(crate) use crate::core::backend_profile::LimitKind;
 pub(crate) use crate::core::backend_profile::{

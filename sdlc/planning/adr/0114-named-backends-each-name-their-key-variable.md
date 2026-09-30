@@ -1,6 +1,6 @@
 # ADR 0114: Named backends each name their key variable
 
-- Status: **Accepted** by ticket 0334, 2026-09-30. Ian can overturn each item. ADR 0115 amends sections 1, 2, 5 and 6 and meets coordinator default 1 with an `ollama` built-in.
+- Status: **Accepted** by ticket 0334, 2026-09-30. Ian can overturn each item. ADR 0115 amends sections 1, 2, 5 and 6 and meets coordinator default 1 with an `ollama` built-in. Ticket 0343 amends section 2: any entry may set `requests_per_minute`, and a built-in's name may appear under `backends` holding only that field.
 - Date: 2026-09-30
 
 Ian asked for several providers with separate API keys in one environment. A user may hold a TypeSafe key and a Liquid key at once. A shell script, a program, and the cache must all use both without mixing the keys. `THINKTHEN_API_KEY` and `THINKTHEN_BASE_URL` stay the primary story. This ADR partly reverses ADR 0010's configuration section and amends ADR 0033 and `specification/backends.md`. Ticket 0334 builds it after ADR 0111 slice 3.
