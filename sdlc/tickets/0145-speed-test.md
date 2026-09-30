@@ -243,7 +243,7 @@ Contract 1; state and timing 1; reach 1; proof 1; cost of error 1; total 5. Fina
 4. Beatles Bench jobs run only in the live part. The repository holds no offline copy of them.
 5. A new verb is not forced into the table. Nothing lists the command's verbs without copying them.
 6. Wall time is the process's time, one handshake included. The service's own time per request waits for `2026-09-23-record-the-backends-own-time-for-each-call.md`.
-7. Ticket 0142's deferred gap 1 asks S1's live part to count secure connections at `--jobs 16`. S1 does not measure it. S1 measures that run's time only. The new issue `sdlc/issues/2026-09-26-count-secure-connections-at-sixteen-jobs.md` asks for the count through a local CONNECT proxy.
+7. Ticket 0142's deferred gap 1 asks S1's live part to count secure connections at `--jobs 16`. S1 does not measure it. S1 measures that run's time only. The new issue `sdlc/issues/closed/2026-09-26-count-secure-connections-at-sixteen-jobs.md` asks for the count through a local CONNECT proxy.
 8. List entries carry no ticket number until each batching ticket is numbered.
 9. The bench's `questions/functions/*.jsonl`, the function suite that `functions.py` runs by default, is not measured. Its cases overlap the `functions/` folders. A later run can add it.
 
