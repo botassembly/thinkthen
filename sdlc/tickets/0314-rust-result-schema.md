@@ -1,6 +1,6 @@
 # 0314: Rust owns the result schema
 
-Status: slice 3 building; slice 4 waits on 0304 slice 3
+Status: slice 3 built, awaiting code review; slice 4 waits on 0304 slice 3
 
 Lane claude-1. Branch `ticket/0314-rust-result-schema`. Design: [ADR 0112](../planning/adr/0112-rust-owns-the-result-schema.md). Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 7 and 8. Builds with [0291](0291-remaining-language-doors.md), so the fourteen C-door bindings change once.
 
@@ -28,10 +28,12 @@ Branch `ticket/0314-s1-generated-schema`. `crates/thinkthen/src/schema_tests.rs`
 
 ```text
 fn DoorReply::new(String, Facts, Option<Vec<AttemptObservation>>) -> Result<DoorReply, Error>
+fn RecordObservation::to_json(&self) -> Option<String>
 impl Serialize for Counters
 impl Serialize for DoorReply
 impl Serialize for ErrorKind
 impl Serialize for Facts
+impl Serialize for Usage
 struct DoorReply
 ```
 
@@ -54,8 +56,10 @@ Branch `ticket/0314-s3-native-bindings`.
 - Starts from: main `cf314e045`. R builds every result, facts, detail, and receipt list field by field with extendr in `calls.rs`, `calls/render.rs`, and `relate.rs`, and sums facts in its own `Counts`. Ruby builds facts, details, completions, and usage hash key by key with magnus in `src/ffi/result.rs` and copies each detail into its own `Detail`. Python keeps a `Facts` class with seven getters and builds each detail with `json!`. Each binding spells the six failure causes itself.
 - Keeps: every verb's value, the null-versus-failure marker in annotate cells, error kinds and their retry signal, R's one-based offsets and original positions, Ruby's symbol keys, Python's read-only mappings, and the batching code, which ADR 0111 slice 2 owns.
 - Changes: the crate writes a question event as JSON through `RecordObservation::to_json`, from one serde type named `questionObservation` in the generated schema. R, Ruby, and Python read facts, details, and counters as JSON in the host's own reader: `jsonlite`, the `json` library, and `json.loads`. Python's `Facts` class goes; facts are a read-only mapping.
-- Proof: each binding's own check and conformance run; R case 41 reports positions `11..20`; the annotate null and failure cells, an error kind, and an unknown facts member (`estimated_cost_usd`) read through each binding.
-- Defers: TypeScript builds the same detail JSON by hand; it moves to `to_json` in slice 4.
+- Proof: `libraries/r/check.sh` passes; conformance pass 50, not run 4 (the fault-injection cases, as before), and case 41 passes, which pins positions `11..20`. `libraries/ruby/check.sh` passes with pinned Ruby 3.4.11; conformance pass 53, not run 1. The Python check's main lane passes 109 tests and conformance pass 53, not run 1; its pandas 2 lane is not run, because uv's offline cache lacks that pin set. The annotate null and failure cells and the error-kind cases pass through all three. Facts are host maps, so an unknown member such as `estimated_cost_usd` reads without error. `sdlc/scripts/test` passes 1,271 tests.
+- Public changes, allowed because 0.0.1 is unreleased: `RecordObservation::to_json` and `Serialize` for `Usage` are new in the crate, listed with slice 1's added declarations. Python drops `thinkthen.Facts`; `facts` is a read-only mapping, so absent tokens and model are missing keys. Python details lose the `request_digests` alias and use the Ruby detail shape: the yes probability is a number, and named probabilities are `[name, probability]` pairs. R counts arrive as integers, R facts come from the crate's `Tally`, and a detail's `requests` is a list. Ruby values keep their shape; hash keys come in a new order.
+- Line counts against main: R 331 added, 689 deleted; Ruby 120 added, 301 deleted; Python 138 added, 256 deleted. The crate gains 97 lines and its ceiling rises to 106190. Binding ceilings: R Rust 2236 to 1855, Ruby Rust 1434 to 1254, Python Rust 7383 to 7285, Python package 4580 to 4578. R's own code rises 2353 to 2379 and Ruby's 2324 to 2325, because the host now shapes frames and values from the JSON.
+- Defers: TypeScript builds the same detail JSON by hand; it moves to `to_json` in slice 4. The Python pandas 2 lane waits for a networked machine.
 
 ## What the build taught us
 
