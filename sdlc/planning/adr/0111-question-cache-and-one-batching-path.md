@@ -1,6 +1,6 @@
 # ADR 0111: One question cache and one batching path
 
-- Status: Proposed 2026-09-29 for ticket 0304. Revised the same day after the first fresh review's findings. A fresh reviewer returns ACCEPT or findings before any build. Ian can overturn each item.
+- Status: **Accepted** by the coordinator, 2026-09-30, after two fresh design reviews. Ian can overturn each item.
 - Date: 2026-09-29
 
 This ADR builds Ian's rulings 2 to 6 and 8 of 2026-09-29 in `sdlc/planning/cleanup-2026-09-30.md`. It replaces ADR 0048 item 5 and amends the ADRs listed at the end. Ruling 7, one result schema generated from Rust, is its own ticket.
@@ -36,11 +36,11 @@ The key is the SHA-256 of these bytes, joined by one line feed (0x0A) each:
 
 1. The adapter name, `systemone`.
 2. The resolved posting URL, as today's digest uses it.
-3. The model string exactly as the body's `model` member carries it, without JSON quotes.
+3. The model as the body carries it: its compact JSON string, quotes included.
 4. The state as encoded in the body: the compact JSON value after `"state":`.
 5. One wire question as encoded in the body: the compact JSON object after `"qN":`, such as `{"type":"noul","instructions":"The text is \"Ringo\". Is this a drummer?"}`.
 
-No part can hold a raw line feed. The URL and model are checked for control characters today, and compact JSON escapes line feeds. So the join is unambiguous. The key prints as 64 lowercase hex characters.
+No part can hold a raw line feed. The URL is checked for control characters today, and compact JSON escapes line feeds. So the join is unambiguous. The key prints as 64 lowercase hex characters.
 
 The encoder writes each state and each question once. It builds the body by joining those same bytes: `{"state":S,"model":M,"questions":{"q1":Q1,…}}`. The key therefore hashes exactly the bytes sent, and the byte count of a request is a sum.
 
@@ -79,7 +79,7 @@ A state is stored once, so a relate text asked 400 times costs one copy. The sto
 
 A question's token share is its request's reported usage split evenly over the request's questions, with any remainder to the earliest. A cached row reports the stored share with `cached: true`, as a replayed row reports its recorded usage today. Process usage totals still count only live replies.
 
-**Fixtures.** `thinkthen.jsonl` holds one JSON object per line: first every state as `{"sha256":…,"state":…}`, sorted by digest, then every answer with the `answers` columns, sorted by key, with `state` naming the state digest. The bytes are a function of the entries, so reviews and merges read as text. `--replay DIR` loads `thinkthen.jsonl` into an in-memory SQLite database when the file exists, and otherwise opens `thinkthen.sqlite` read-only. `thinkthen cache convert DIR` writes `thinkthen.jsonl` from old `DIGEST.json` files or from `thinkthen.sqlite`. It sets every `taken_at` it cannot know to 0, so the same input always writes the same bytes.
+**Fixtures.** `thinkthen.jsonl` holds one JSON object per line: first every state as `{"sha256":…,"state":…}`, sorted by digest, then every answer with the `answers` columns, sorted by key, with `state` naming the state digest. The bytes are a function of the entries, so reviews and merges read as text. `--replay DIR` loads `thinkthen.jsonl` into an in-memory SQLite database when the file exists, and otherwise opens `thinkthen.sqlite` read-only. `thinkthen cache convert DIR` writes `thinkthen.jsonl` from the union of what `DIR` holds: an existing `thinkthen.jsonl`, a `thinkthen.sqlite` and old `DIGEST.json` files. When two sources hold one key, the newer `taken_at` wins, and a tie keeps the fixture's entry. It sets every `taken_at` it cannot know to 0, so the same input always writes the same bytes. A folder holding both `thinkthen.jsonl` and `thinkthen.sqlite` is ambiguous, and `--replay` exits 5 and says to run `cache convert`. `policy.py` refuses a committed `thinkthen.sqlite`. So a new live recording goes to a scratch folder with `--record`, and `cache convert` merges it into the fixture.
 
 **Dependency.** `rusqlite` with default features off and `bundled` on. Bundled SQLite gives every host the same SQLite with no system library skew, including wheels, the C door and the SQL extensions. It costs one C compile of SQLite and about 1 MB of binary. Pure Rust stores such as `redb` and `sled` lock their file to one process, so parallel shells and PostgreSQL backends could not share a cache. The SQLite extension will hold two SQLite copies in one process. That is safe because they never open the same file. The library must export no `sqlite3_` symbol, and slice 2 checks that.
 
@@ -87,7 +87,7 @@ A question's token share is its request's reported usage split evenly over the r
 
 - Every write opens with `BEGIN IMMEDIATE`, so a writer takes its lock before it reads.
 - A lookup finishes or resets its statement before any send, so no read lock outlives a lookup.
-- A busy writer waits at most 30 seconds, checking the call's cancel token between waits. A longer wait is a storage failure with the fixed exit-5 sentence.
+- Every connection installs one busy handler, for lookups and writes alike. It waits at most 30 seconds in all, checking the call's cancel token between waits. A longer wait is a storage failure with the fixed exit-5 sentence.
 - A read-only replay that meets a leftover hot journal cannot roll it back. It exits 5 and says to open the folder once with write access.
 - Network filesystems are unsupported, because SQLite's locks are not reliable there. The page says so.
 
@@ -120,9 +120,8 @@ impl Engine {
     pub(crate) fn ask_all<A: Asker, E>(
         &self,
         asker: &A,
-        inputs: Receiver<Result<A::Input, E>>,
+        host: Host<A::Input, A::Row, E>,
         cancel: &Cancel,
-        emit: impl FnMut(Item<A::Row>) -> Result<Flow, E>,
     ) -> Result<Outcome<E>, E>;
 }
 
@@ -136,26 +135,26 @@ pub(crate) trait Asker: Sync {
 }
 ```
 
-`Ask` holds a shared `State` (bytes and SHA-256), one encoded `WireQuestion` with what its decoder needs, and its `QuestionKey`. `Item` is one input's row or `ItemError`, with its place, usage and `cached` flag. `Flow` is `Continue` or `Stop`. The caller's `emit` chooses: the command stops at the first failure, while `annotate --on-error continue` and the SQL hosts continue.
+`Ask` holds a shared `State` (bytes and SHA-256), one encoded `WireQuestion` with what its decoder needs, and its `QuestionKey`. `Item` is one input's row or `ItemError`, with its place, usage and `cached` flag. `Flow` is `Continue` or `Stop`. The host chooses: the command stops at the first failure, while `annotate --on-error continue` and the SQL hosts continue.
 
 Stages, on one coordinator thread with `jobs` send workers from `engine/workers.rs`:
 
-1. **Question stream.** The coordinator takes the next input from the channel and calls `asks`. A host reader thread feeds the channel through a rendezvous `sync_channel(0)`, so the reader reads only when asked.
+1. **Question stream.** `Host` is the demand bridge of today's scheduler. The coordinator sends the host events on one channel: `Ask` when it wants one more input, and `Row(Item)` for each finished row in order. The host answers `Ask` with one input, a failure or the end, on a second channel, and answers each `Row` with a `Flow`. The host pulls a record only after an `Ask`, so it never reads ahead. The same thread that feeds records also receives rows, so a host whose iterator is not `Send` works. The coordinator calls `asks` on each input.
 2. **Lookup.** For each ask, the call's in-flight map answers first, then the store in one `SELECT … WHERE key IN (…)` per input. The lookup reads no key and opens no connection.
 3. **Pack misses.** A pure core `Packer` adds each missing ask to the open request. The open request closes when the next input would pass the request-byte ceiling or a profile limit (`max_request_bytes`, `max_questions`, `max_evidence_bytes`), when it holds `--batch N` inputs or 4,096 inputs, when the next miss has another state, when input pauses 50 ms, when the window is full, or at end of input. `relate` and `recognize` step 3 also cap a request at 400 questions, from ADR 0057 item 4, which keeps a request well under the backend's 65,536 input tokens. One input whose asks pass a limit alone splits across requests with its state repeated. A lone question that passes a limit fails before any send, as today.
 4. **Send.** A free worker takes the next closed request. It reads the key only now, for the first request of the call. It passes the pacer and the send budget, then the existing transport with its retries and per-address gate.
 5. **Split.** The worker decodes the reply into one outcome per ask, plus the request's usage and attempts.
 6. **Store.** The coordinator owns the call's one SQLite connection. It writes every good answer of the reply in one transaction.
-7. **Reorder and emit.** An input is done when all its asks are resolved. The coordinator calls `row` and emits done inputs in input order.
+7. **Reorder and emit.** An input is done when all its asks are resolved. The coordinator calls `row` and sends done inputs to the host as `Row` events in input order.
 
-Memory stays bounded. The coordinator reads no new input while it holds W unemitted inputs, where W = (`jobs` + 1) × the inputs-per-request cap, which is 4,096 or `--batch N`. When the window fills, the open request closes, so the head of the window can finish. That is ADR 0053 item 2's bound. `rank` without `--top` still holds every score until the end, as today, because a ranking needs them all.
+Memory stays bounded. The coordinator sends no `Ask` while it holds W unemitted inputs, where W = (`jobs` + 1) × the inputs-per-request cap, which is 4,096 or `--batch N`. When the window fills, the open request closes, so the head of the window can finish. That is ADR 0053 item 2's bound. `rank` without `--top` still holds every score until the end, as today, because a ranking needs them all.
 
 Surfaces:
 
-- **Command.** The reader thread frames records into the channel. `emit` prints, or keeps the top rows for `rank`.
-- **Public Rust API.** `public/batch.rs` keeps its lazy `Batch` iterator. It runs `ask_all` on a background thread, feeds the caller's records from the calling thread, and returns rows through a bounded channel.
+- **Command.** One host thread frames a record on each `Ask` and prints each `Row`, or keeps the top rows for `rank`.
+- **Public Rust API.** `public/batch.rs` keeps its lazy `Batch` iterator. `ask_all` runs on a background thread. The calling thread is the host: `next()` pulls a caller record on each `Ask` and returns on each `Row`.
 - **Polars, eager and lazy.** Each column or morsel is one `ask_all` call. A morsel evaluated twice finds its answers in the store.
-- **C door and SQL hosts.** They keep calling the public `*_with` methods, which call `ask_all`. A recoverable per-row failure is an `ItemError` that `emit` continues past.
+- **C door and SQL hosts.** They keep calling the public `*_with` methods, which call `ask_all`. A recoverable per-row failure is an `ItemError` the host continues past.
 - **`--plan` and dry runs.** They run the pure `Packer` with no lookup and show the upper bound, as today.
 
 The packer, key, encoder, decoder and assembly stay in `core`. The channel, clock, threads and SQLite stay in `engine`.
@@ -212,7 +211,7 @@ In the repository:
 - Slice 1 rewrites committed record-function recordings into the quoted form at the request level. Slice 2 converts every committed folder to `thinkthen.jsonl`. The demo pages keep their exact outputs, token counts included, because each question keeps its recorded answer and share.
 - Old files stay until slice 5, so a function not yet moved still reads them.
 - Strict replay stays at the question level. `--replay` reads only and sends nothing, and a test proves "sends nothing" by counting loopback requests.
-- The `spec` gate stops running `probes/replay-check.sh`. The probes are history of the forms they measured. Their rows and old files stay unchanged. `probes/find-0040/recording` is converted, because `find_edge.rs` replays it.
+- Slice 1 stops the `spec` gate running `probes/replay-check.sh`, because the probes replay the old wire form. The probes are history of the forms they measured. Their rows and old files stay unchanged. `probes/find-0040/recording` is converted, because `find_edge.rs` replays it.
 - The check that ties a captured conformance case to its recording reads the question entries.
 
 ### 10. What the path deletes and what survives
@@ -230,14 +229,14 @@ Deleted, about 8,900 lines today:
 
 New code is `core/pack.rs` (packer and key), `engine/store.rs`, `engine/pipeline.rs` and the converter.
 
-Survives: `engine/http.rs`, `engine/backoff.rs`, `engine/send_budget.rs`, `engine/usage*`, `engine/workers.rs` with its panic diagnostics, the System One adapter, the question, answer, threshold and result types, command framing and output (`cli/schedule.rs`), the function code of `judge`, `find`, `recognize` and `relate` as `Asker`s, `public/batch.rs` and `public/frame*`. `cache prune` and `cache unused` keep their selectors as short SQL over `taken_at`, `answered_by` and the key list, followed by `PRAGMA incremental_vacuum`. Clearing and expiry wait for their own ticket.
+Survives: `engine/http.rs`, `engine/backoff.rs`, `engine/send_budget.rs`, `engine/usage*`, `engine/workers.rs` with its panic diagnostics, the System One adapter, the question, answer, threshold and result types, command framing and output (`cli/schedule.rs`), the function code of `judge`, `find`, `recognize` and `relate` as `Asker`s, `public/batch.rs` and `public/frame*`. `cache prune` and `cache unused` keep their selectors as short SQL over `taken_at`, `answered_by` and the key list, followed by deleting states no answer uses and `PRAGMA incremental_vacuum`. Clearing and expiry wait for their own ticket.
 
 ## Build order
 
 Each slice lands green: `cargo test --workspace`, `policy.py`, fresh code review.
 
-1. **The quoted wire form on every surface.** The encoder takes section 1's form and writes per-question bytes and the joined body. Today's batcher, request-level cache and schedulers stay, so only wire bytes change. The slice rewrites the shared `conformance/` cases. A one-off script rewrites each committed request-level recording into the quoted form by the rule `cache convert --quote` uses, renames it under its new digest, keeps its response, and adds `"quoted": true` to its envelope. Proof: every conformance runner passes on the rewritten cases, including the Polars, facade contract and `tests/backend/public_json.rs` tests; every demo replays with unchanged output, including `demos/28-what-a-run-cost`'s token counts.
-2. **Key, store, fixtures and pipeline for the record functions on the command.** The slice adds the key, the store, the JSON Lines reader and `cache convert`, and converts every committed folder to `thinkthen.jsonl`. `decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annotate` use `ask_all`. No wire bytes change. Proof: a key vector is pinned from bytes hashed outside the program; converting the same folder twice writes identical bytes; demos replay with unchanged output. On the loopback backend, which gains a count of questions received: a batch of 100 records, then a run of 120 that includes them, sends one request holding exactly the 20 new questions, and the second run reports 100 cache answers; a partial reply stores its good answers and the rerun sends only the failed question; a 413 on a request of two or more asks makes exactly three attempts and stores both halves; adding one label to a `tag` run sends only that label's questions; a slow pipe closes a request at the pause; the unemitted window never passes W; the store edge table covers hit, miss, replace, a read-only open that writes nothing, a hot journal under read-only replay, a 30-second busy limit, and an answer that no longer decodes; two child processes write one store at once and both succeed; `nm` shows no exported `sqlite3_` symbol in the C door or the SQLite extension.
+1. **The quoted wire form on every surface.** The encoder takes section 1's form and writes per-question bytes and the joined body. Today's batcher, request-level cache and schedulers stay, so only wire bytes change. The slice rewrites the shared `conformance/` cases. A one-off script rewrites each committed request-level recording into the quoted form by the rule `cache convert --quote` uses, renames it under its new digest, keeps its response, and adds `"quoted": true` to its envelope. The `spec` gate stops running `probes/replay-check.sh`. Proof: `sdlc/scripts/spec` passes with the probes out of it; every conformance runner passes on the rewritten cases, including the Polars, facade contract and `tests/backend/public_json.rs` tests; every demo replays with unchanged output, including `demos/28-what-a-run-cost`'s token counts.
+2. **Key, store, fixtures and pipeline for the record functions on the command.** The slice adds the key, the store, the JSON Lines reader and `cache convert`, and converts every committed folder to `thinkthen.jsonl`. `decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annotate` use `ask_all`. No wire bytes change. Proof: a key vector is pinned from bytes hashed outside the program; converting the same folder twice writes identical bytes; converting a folder that holds a fixture, a scratch `thinkthen.sqlite` and old files keeps the newer answer of a shared key and the fixture's on a tie; `--replay` of a folder holding both files exits 5; demos replay with unchanged output, including any demo that pins a batched `annotate` row's token counts under the new remainder rule; a lookup during another process's commit waits and then answers. On the loopback backend, which gains a count of questions received: a batch of 100 records, then a run of 120 that includes them, sends one request holding exactly the 20 new questions, and the second run reports 100 cache answers; a partial reply stores its good answers and the rerun sends only the failed question; a 413 on a request of two or more asks makes exactly three attempts and stores both halves; adding one label to a `tag` run sends only that label's questions; a slow pipe closes a request at the pause; the unemitted window never passes W; the store edge table covers hit, miss, replace, a read-only open that writes nothing, a hot journal under read-only replay, a 30-second busy limit, and an answer that no longer decodes; two child processes write one store at once and both succeed; `nm` shows no exported `sqlite3_` symbol in the C door or the SQLite extension.
 3. **Public Rust API, Polars, the C door and the SQL hosts on `ask_all`.** Proof: every surface passes the conformance cases; a Polars lazy frame collected twice sends nothing the second time; an SQL row with a missing pointer still fails alone while its neighbours answer.
 4. **`find`, `recognize` and `relate` on `ask_all`.** The relation splitter and `ask_chunks` go. Proof: conformance cases 41 to 50 give identical results from the converted fixtures; a relate run of 401 questions sends two requests, and the same run again sends none.
 5. **Remove the old store.** Delete the recorder, locks, marker, request-level prune, both old schedulers and every old `DIGEST.json` outside probe history. Rewrite `specification/recording.md` and the size and splitting sections of `specification/backends.md`. Proof: the `cache prune` and `status` edge tables pass on the store, and prune shrinks the file; the full suite passes.

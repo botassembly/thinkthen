@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: design proposed in ADR 0111, awaiting fresh review. Lane claude-2. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: design accepted; slice 1 ready. Lane claude-2. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -27,7 +27,7 @@ A fresh reviewer returns ACCEPT or findings before any build.
 
 ADR 0111 names each slice's proof. Each lands green with `cargo test --workspace`, `policy.py` and a fresh code review.
 
-1. The quoted wire form on every surface. The shared `conformance/` cases and committed recordings are rewritten at the request level. No storage or scheduler change.
+1. The quoted wire form on every surface. The shared `conformance/` cases and committed recordings are rewritten at the request level. The `spec` gate stops replaying probes. No storage or scheduler change.
 2. Question key, SQLite store, sorted JSON Lines fixtures, `cache convert`, and the pipeline for the seven record functions on the command. Proof includes 100 records, then 120, sending only the 20 new questions on the loopback backend.
 3. Public Rust API, Polars eager and lazy, the C door and the SQL hosts on `ask_all`.
 4. `find`, `recognize` and `relate` on `ask_all`. Their fixtures convert without loss.
