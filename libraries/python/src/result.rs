@@ -4,92 +4,21 @@ use std::sync::{Arc, Mutex};
 
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
-use serde_json::{Value, json};
-use thinkthen::{ErrorKind, Facts, Judgment, Probabilities, RecordObservation};
-
-use crate::engine::cause;
+use serde::Serialize;
+use serde_json::Value;
+use thinkthen::{ErrorKind, Facts, RecordObservation};
 
 #[derive(Default, Clone)]
 pub(crate) struct Observations(Arc<Mutex<Vec<Value>>>);
 
-fn put(row: &mut Value, name: &str, value: Value) {
-    if let Some(fields) = row.as_object_mut() {
-        fields.insert(name.to_owned(), value);
-    }
-}
-
 impl Observations {
     pub(crate) fn push(&self, event: RecordObservation<'_>) {
-        let RecordObservation::Question {
-            index,
-            member,
-            stage,
-            position,
-            detail,
-        } = event
+        let Some(row) = event
+            .to_json()
+            .and_then(|json| serde_json::from_str(&json).ok())
         else {
             return;
         };
-        let mut row = json!({
-            "index": index,
-            "question_sha256": detail.question_sha256(),
-            "requests": detail.requests(),
-            "request_digests": detail.requests(),
-            "requests_sent": detail.requests_sent(),
-            "cached": detail.cached(),
-            "failed_questions": detail.failed_questions(),
-            "url": detail.url(),
-        });
-        if let Some(member) = member {
-            put(&mut row, "member", json!(member));
-        }
-        if let Some(stage) = stage {
-            put(&mut row, "stage", json!(stage));
-        }
-        put(&mut row, "position", json!(position));
-        if let Some(answer) = detail.value() {
-            put(
-                &mut row,
-                "answer",
-                match answer {
-                    Judgment::Decision(value) => json!(match value {
-                        thinkthen::Answer::Yes => Some(true),
-                        thinkthen::Answer::No => Some(false),
-                        thinkthen::Answer::Unsure => None,
-                    }),
-                    Judgment::Choice(value) => json!(value),
-                    Judgment::Score(value) => json!(value),
-                    Judgment::Tags(value) => json!(value),
-                },
-            );
-        }
-        if let Some(failure) = detail.failure() {
-            put(
-                &mut row,
-                "failed",
-                json!({"kind": "backend", "cause": cause(failure)}),
-            );
-        }
-        if let Some(probabilities) = detail.probabilities() {
-            put(&mut row, "probabilities", match probabilities {
-                Probabilities::YesNo { yes } => json!({"yes": yes}),
-                Probabilities::Named(values) => json!(values.iter().map(|value|
-                    json!({"name": value.name(), "probability": value.probability()})).collect::<Vec<_>>()),
-            });
-        }
-        if let Some(confidence) = detail.confidence() {
-            put(&mut row, "confidence", json!(confidence));
-        }
-        if let Some(usage) = detail.usage() {
-            put(
-                &mut row,
-                "usage",
-                json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()}),
-            );
-        }
-        if !detail.model().is_empty() {
-            put(&mut row, "model", json!(detail.model()));
-        }
         self.0
             .lock()
             .unwrap_or_else(std::sync::PoisonError::into_inner)
@@ -110,16 +39,23 @@ pub(crate) struct Completed<T> {
     pub(crate) details: Vec<Value>,
 }
 
-#[derive(Clone, Debug)]
+/// One call's facts, or several calls' summed facts, which the core's
+/// `Facts` cannot hold. A single call's facts serialize as the core wrote them.
+#[derive(Clone, Debug, Serialize)]
 pub(crate) struct OwnedFacts {
+    #[serde(skip)]
     pub(crate) core: Option<Facts>,
+    pub(crate) cache_answers: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) input_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) output_tokens: Option<u64>,
     pub(crate) records: u64,
     pub(crate) requests_sent: u64,
-    pub(crate) cache_answers: u64,
-    pub(crate) input_tokens: Option<u64>,
-    pub(crate) output_tokens: Option<u64>,
     pub(crate) seconds: f64,
-    pub(crate) model: Option<String>,
+    #[serde(skip)]
     model_conflict: bool,
 }
 
@@ -213,41 +149,6 @@ pub(crate) struct PyCall {
     details: Py<PyAny>,
 }
 
-#[pyclass(frozen, name = "Facts", module = "thinkthen._thinkthen")]
-pub(crate) struct PyFacts(pub(crate) OwnedFacts);
-
-#[pymethods]
-impl PyFacts {
-    #[getter]
-    fn records(&self) -> u64 {
-        self.0.records
-    }
-    #[getter]
-    fn requests_sent(&self) -> u64 {
-        self.0.requests_sent
-    }
-    #[getter]
-    fn cache_answers(&self) -> u64 {
-        self.0.cache_answers
-    }
-    #[getter]
-    fn input_tokens(&self) -> Option<u64> {
-        self.0.input_tokens
-    }
-    #[getter]
-    fn output_tokens(&self) -> Option<u64> {
-        self.0.output_tokens
-    }
-    #[getter]
-    fn seconds(&self) -> f64 {
-        self.0.seconds
-    }
-    #[getter]
-    fn model(&self) -> Option<&str> {
-        self.0.model.as_deref()
-    }
-}
-
 #[pymethods]
 impl PyCall {
     fn __bool__(&self) -> PyResult<bool> {
@@ -332,8 +233,21 @@ pub(crate) fn python_facts(py: Python<'_>, facts: &Facts) -> PyResult<Py<PyAny>>
     python_owned_facts(py, &OwnedFacts::from(facts))
 }
 
+/// Facts as the same read-only mapping every other result is.
 pub(crate) fn python_owned_facts(py: Python<'_>, facts: &OwnedFacts) -> PyResult<Py<PyAny>> {
-    Ok(Py::new(py, PyFacts(facts.clone()))?.into_any())
+    let json = match &facts.core {
+        Some(core) => serde_json::to_value(core),
+        None => serde_json::to_value(facts),
+    }
+    .map_err(|_| {
+        crate::raise(
+            py,
+            ErrorKind::Defect,
+            "the facts could not be written",
+            false,
+        )
+    })?;
+    frozen(py, &json)
 }
 
 pub(crate) fn python_details(py: Python<'_>, details: &[Value]) -> PyResult<Py<PyAny>> {

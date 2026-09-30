@@ -36,7 +36,6 @@ from ._thinkthen import (
     Call,
     Completion,
     CompletionReceipt,
-    Facts,
     DeadlineError,
     DefectError,
     Edge,
@@ -55,7 +54,7 @@ from .stream import Stream
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
-    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Facts", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
+    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
     "annotate", "choose", "decide", "details", "filter",
     "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
@@ -205,11 +204,10 @@ def _paired(call, verb, multiple=False):
             seen.add(index)
             reported = detail["probabilities"]
             if verb == "decide":
-                probability = reported["yes"]
+                probability = reported
             else:
                 selected = detail["answer"]
-                probability = next((item["probability"] for item in reported
-                                    if item["name"] == selected), None)
+                probability = next((chance for name, chance in reported if name == selected), None)
             if multiple:
                 probabilities[index] = probability
             else:

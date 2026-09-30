@@ -50,13 +50,13 @@ pub use recognize::{
     Kind, Recognize, RecognizeBuilder, Recognized, RecognizedEntity, Relation, RelationRule,
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
+#[cfg(test)]
+pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, DoorReply,
     Facts, Found, Judgment, NamedProbability, ObservedRow, Probabilities, QuestionDetail, Ranked,
     RecordObservation, Row, Tally, TallyStart, Usage,
 };
-#[cfg(test)]
-pub(crate) use results::QuestionJson;
 pub use set::{QuestionSet, QuestionSetBuilder};
 pub use settings::EngineBuilder;
 

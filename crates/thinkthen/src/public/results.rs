@@ -12,9 +12,9 @@ pub use tally::{Tally, TallyStart};
 mod member;
 pub(crate) use member::{Member, ParentReceipt};
 mod observation;
-pub(crate) use observation::{ObservedQuestion, observe_chunk};
 #[cfg(test)]
 pub(crate) use observation::QuestionJson;
+pub(crate) use observation::{ObservedQuestion, observe_chunk};
 pub use observation::{ObservedRow, QuestionDetail, RecordObservation};
 
 use serde::Serialize;

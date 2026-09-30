@@ -47,8 +47,8 @@ def test_portable_max_content_cuts_in_public_column_and_frame_shapes(backend, tm
                 call = engine.annotate(form, source, on='body')
                 values = call.value['answer'].to_list()
                 order = call.value.index.to_list() if shape == 'pandas_frame' else list(range(5))
-            print(json.dumps([values, order, [call.facts.records, call.facts.requests_sent],
-                              [[row['index'], list(row['request_digests'])] for row in call.details]]))
+            print(json.dumps([values, order, [call.facts["records"], call.facts["requests_sent"]],
+                              [[row['index'], list(row['requests'])] for row in call.details]]))
         """, env)
         values, order, facts, details = json.loads(printed)
         assert bodies == expected
@@ -120,9 +120,9 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
         for setting in (None, 1):
             call = engine.decide(question, rows, **({} if setting is None else {"batch": setting}))
             print("series", call.value.index.tolist(), call.value.name, call.value.dtype.name,
-                  call.value.tolist(), call.facts.records, call.facts.requests_sent,
+                  call.value.tolist(), call.facts["records"], call.facts["requests_sent"],
                   [detail["index"] for detail in call.details])
-            observed.append([list(detail["request_digests"]) for detail in call.details])
+            observed.append([list(detail["requests"]) for detail in call.details])
         frame = rows.to_frame().assign(number=[4, 6, 8])
         saved = {"version": 1, "batch": 1,
                  "questions": {"late": {"decide": "Is it late?"}}}
@@ -133,26 +133,26 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
             value = call.value
             print("frame", label, value.index.tolist(), list(value.columns), value["number"].tolist(),
                   value["late"].dtype.name, value["late"].tolist(),
-                  value["failed"].isna().all(), call.facts.records,
-                  call.facts.requests_sent, [detail["index"] for detail in call.details])
-            observed.append([list(detail["request_digests"]) for detail in call.details])
+                  value["failed"].isna().all(), call.facts["records"],
+                  call.facts["requests_sent"], [detail["index"] for detail in call.details])
+            observed.append([list(detail["requests"]) for detail in call.details])
         engine_max = tt.Engine(model="jev-latest", batch="max", cache=False)
         overridden = engine_max.annotate(saved, frame, on="body")
-        print("engine", overridden.facts.records, overridden.facts.requests_sent)
-        observed.append([list(detail["request_digests"]) for detail in overridden.details])
+        print("engine", overridden.facts["records"], overridden.facts["requests_sent"])
+        observed.append([list(detail["requests"]) for detail in overridden.details])
         partial = {"version": 1, "questions": {
             "late": {"decide": "Is it late?"}, "partial": {"decide": "Partial?"}}}
         mixed = engine.annotate(partial, frame, on="body")
         print("partial", mixed.value["partial"].dtype.name,
               [None if pd.isna(cell) else bool(cell) for cell in mixed.value["partial"]],
-              mixed.value["failed"].tolist(), mixed.facts.records, mixed.facts.requests_sent)
+              mixed.value["failed"].tolist(), mixed.facts["records"], mixed.facts["requests_sent"])
         print("partial details", [(detail["index"], detail["member"], detail.get("answer"),
                                    dict(detail["failed"]) if "failed" in detail else None,
                                    detail["requests_sent"]) for detail in mixed.details])
-        observed.append([list(detail["request_digests"]) for detail in mixed.details])
+        observed.append([list(detail["requests"]) for detail in mixed.details])
         context = engine.decide(question, rows, context="review this claim")
-        print("context", context.facts.records, context.facts.requests_sent)
-        observed.append([list(detail["request_digests"]) for detail in context.details])
+        print("context", context.facts["records"], context.facts["requests_sent"])
+        observed.append([list(detail["requests"]) for detail in context.details])
         before = engine.usage()["requests_sent"]
         try:
             engine.annotate(saved, frame, on="body", context="forbidden")

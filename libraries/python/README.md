@@ -7,7 +7,7 @@ import thinkthen as tt
 
 call = tt.decide("Does the customer ask for a refund?", text)
 call.value  # True, False, or None
-call.facts.requests_sent  # attempts for this call
+call.facts["requests_sent"]  # attempts for this call
 refund = tt.question(decide="Does the customer ask for a refund?", threshold=(0.2, 0.8))
 tt.decide(refund, "I was charged twice. Can you fix this?").value
 complaints = tt.filter("Is this a complaint?", reviews).value
@@ -73,7 +73,7 @@ Every call runs on its own worker thread. Ctrl-C or the caller's token stops the
 
 ## Run facts
 
-Every successful verb returns `Call[T]`. `Call.value` is the former answer, including a Series or frame. `Call.probability` carries the yes probability for decide and the chosen option's probability for choose from the same answer; an unresolved choose has `None`, and score and tag have `None`. `Call.facts` has this call's `records`, `requests_sent`, `cache_answers`, optional tokens and model, and elapsed seconds. `Call.details` is an ordered tuple of immutable question observations with answer or failure, probabilities, request digests and per-question shares. Started ordinary failures carry final `error.facts` and `error.details`; refusals before the worker starts have neither. A caught worker panic has no account. These are Rust call observations, not differences in process counters.
+Every successful verb returns `Call[T]`. `Call.value` is the former answer, including a Series or frame. `Call.probability` carries the yes probability for decide and the chosen option's probability for choose from the same answer; an unresolved choose has `None`, and score and tag have `None`. `Call.facts` is a read-only mapping of this call's `records`, `requests_sent`, `cache_answers`, optional tokens and model, and elapsed seconds. `Call.details` is an ordered tuple of immutable question observations with answer or failure, probabilities, request digests and per-question shares. Started ordinary failures carry final `error.facts` and `error.details`; refusals before the worker starts have neither. A caught worker panic has no account. These are Rust call observations, not differences in process counters.
 
 `details(question, text).value` is the command's `--details` line for one text as a `dict`, schema `thinkthen.result/1`. The backend's reply supplies `meta.model`, `meta.usage` with its input and output tokens, and every probability, with `answer.confidence` when the backend sends one. The engine counts `meta.requests_sent` and sets `meta.cached` when a cache or recording answered. `meta.requests` holds the recording digest of each request, and `meta.url` names the address that answered. A field the backend did not report is absent. No call reports cost.
 

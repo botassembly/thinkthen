@@ -28,7 +28,7 @@ def test_shape_rule_plan_and_removed_names(backend, tmp_path):
     except tt.UsageError as error:
         print(error.kind, "record 0" in str(error))
     stream = question(iter(["one"]))
-    print(isinstance(stream, tt.Stream), stream.facts, list(stream), stream.facts.records)
+    print(isinstance(stream, tt.Stream), stream.facts, list(stream), stream.facts["records"])
     try:
         question({"one"})
     except tt.UsageError as error:
@@ -86,7 +86,7 @@ def test_cursor_stream_reads_on_caller_thread_and_closes(backend, tmp_path):
     print(len(pulled), stream.facts)
     with stream:
         print(list(itertools.islice(stream, 3)))
-    print(len(pulled), stream.facts.records, stream.facts.requests_sent)
+    print(len(pulled), stream.facts["records"], stream.facts["requests_sent"])
     db.close()
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == ["0 None", "[True, True, True]", "3 3 3"]
@@ -147,9 +147,9 @@ def test_stream_first_failed_row_freezes_partial_facts_and_tally(backend, tmp_pa
         iter(["one", "two"]))
     try: next(stream)
     except tt.BackendError as error:
-        print(error.kind, error.retryable, error.facts.records, error.facts.requests_sent)
-    print(stream.facts.records, stream.facts.requests_sent,
-          tally.facts.records, tally.facts.requests_sent)
+        print(error.kind, error.retryable, error.facts["records"], error.facts["requests_sent"])
+    print(stream.facts["records"], stream.facts["requests_sent"],
+          tally.facts["records"], tally.facts["requests_sent"])
     """, child_env(backend, tmp_path, "arm/malformed/missing_answer"))
     assert printed.splitlines() == ["backend False 0 1", "0 1 0 1"]
     assert backend.count() == 1
@@ -164,8 +164,8 @@ def test_tally_waits_for_two_started_held_calls(backend, tmp_path):
     judge = tt.Engine(cache=False, throttle=2).decide("Is it late?", tally=tally)
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         values = list(pool.map(judge, ["one", "two"]))
-    print([one.value for one in values], tally.facts.records,
-          tally.facts.requests_sent, tally.facts.cache_answers, flush=True)
+    print([one.value for one in values], tally.facts["records"],
+          tally.facts["requests_sent"], tally.facts["cache_answers"], flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(2) == 2
     assert backend.count() == 2
@@ -184,7 +184,7 @@ def test_stream_token_before_first_pull_and_fork_guard(backend, tmp_path):
     token = tt.CancelToken(); token.cancel()
     stopped = judge(iter(["one"]), token=token)
     try: next(stopped)
-    except tt.Cancelled as error: print(error.kind, stopped.facts.requests_sent)
+    except tt.Cancelled as error: print(error.kind, stopped.facts["requests_sent"])
     stream = judge(iter(["one", "two"]))
     print(next(stream))
     pipe_in, pipe_out = os.pipe()
@@ -216,10 +216,10 @@ def test_stream_interrupt_retains_later_completion_receipt(backend, tmp_path):
         print(error.kind, hasattr(error, "completion"), flush=True)
         sys.stdin.readline()
         done = error.completion.result(timeout=5)
-        print(done.outcome, done.facts.records, done.facts.requests_sent, flush=True)
+        print(done.outcome, done.facts["records"], done.facts["requests_sent"], flush=True)
         try: print("later", next(stream), flush=True)
         except StopIteration:
-            print("terminal", tally.facts.records, tally.facts.requests_sent, flush=True)
+            print("terminal", tally.facts["records"], tally.facts["requests_sent"], flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
     os.kill(child.pid, signal.SIGINT)
@@ -250,7 +250,7 @@ def test_stream_second_reader_refuses_while_first_waits(backend, tmp_path):
     sys.stdin.readline()
     first.join(timeout=5)
     stream.close()
-    print("finished", stream.facts.records, stream.facts.requests_sent, flush=True)
+    print("finished", stream.facts["records"], stream.facts["requests_sent"], flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
     child.stdin.write("probe\n")
