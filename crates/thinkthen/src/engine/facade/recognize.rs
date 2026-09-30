@@ -168,7 +168,6 @@ impl Engine {
                 )?;
             }
         }
-        asks.requests(&self.backend, self.profile.as_ref(), Bound::WHOLE)?;
         let answers = self.execute(
             &asks,
             Bound::WHOLE,
@@ -263,7 +262,6 @@ impl Engine {
         )
         .map_err(|_| Error::Defect("relation planned no questions"))?;
         asks.add(&self.backend, &plan)?;
-        asks.requests(&self.backend, self.profile.as_ref(), bound)?;
         let (meta, details, observe) = held;
         let stages = vec!["relation"; asks.len()];
         let answers = self.execute(&asks, bound, &stages, meta, cancel, observe)?;

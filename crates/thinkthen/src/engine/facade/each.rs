@@ -196,7 +196,8 @@ impl Asker for Each<'_> {
 
 impl Engine {
     /// Ask every question, packing requests within `bound`, and hand each
-    /// one-answer reply on in question order. The first failure in question
+    /// one-answer reply on in question order. A question that cannot go
+    /// alone refuses the call before any send. The first failure in question
     /// order stops the call and returns.
     pub(crate) fn ask_each(
         &self,
@@ -208,6 +209,7 @@ impl Engine {
         if asks.is_empty() {
             return Ok(());
         }
+        let planned = asks.requests(&self.backend, self.profile(), bound)?.len();
         let packing = Packing {
             inputs: None,
             questions: bound.questions,
@@ -235,9 +237,12 @@ impl Engine {
         self.ask_all(&Each(asks), packing, host, cancel)?;
         match failure {
             Some(error) => Err(error),
-            // A stop observed while the last requests finished still stops
-            // the call, as the chunked sender it replaced did.
-            None if matches!(cancel.remaining_without_check(), Err(Error::Cancelled)) => {
+            // A stop seen while several requests were out still stops the
+            // call once they finish, as the chunked sender it replaced did.
+            // One sent request finishes and returns its answer.
+            None if planned > 1
+                && matches!(cancel.remaining_without_check(), Err(Error::Cancelled)) =>
+            {
                 Err(Error::Cancelled)
             }
             None if place == asks.len() => Ok(()),

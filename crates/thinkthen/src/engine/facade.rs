@@ -322,7 +322,6 @@ impl Engine {
     pub(crate) fn find(&self, find: &Find, cancel: &Cancel) -> Result<Found, Error> {
         let mut asks = Asks::default();
         asks.add(&self.backend, find.plan())?;
-        asks.requests(&self.backend, self.profile.as_ref(), Bound::WHOLE)?;
         let mut answered = None;
         self.ask_each(&asks, Bound::WHOLE, cancel, |_, one| {
             answered = Some(one);
