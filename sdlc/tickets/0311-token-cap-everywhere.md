@@ -1,6 +1,6 @@
 # 0311: The token cap on every surface
 
-Status: built, awaiting code review. Lane claude-4. Branch `ticket/0311-token-cap-everywhere`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/2026-09-29-token-cap-contract-before-release.md`.
+Status: landed. Lane claude-4. Branch `ticket/0311-token-cap-everywhere`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issue: `sdlc/issues/2026-09-29-token-cap-contract-before-release.md`.
 
 ## Outcome
 
@@ -51,6 +51,10 @@ The status issue (`sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the
 - Growth: root Rust 105,252 to 105,327 (about 15 source lines, the rest tests). Host ratchets raised to measured totals: C 4,089, Python 4,568, R 2,353, Ruby 2,324, TypeScript 1,183, Go 1,242 and 596, SQLite 2,081, DuckDB 3,904. I checked `backoff::per_minute` for reuse; its range and sentence differ, so the parsers stay separate.
 - Checks: `cargo nextest run -p thinkthen` 1,246 passed; clippy clean on changed files; `policy.py`; `sdlc/scripts/settings` and its self-test; `sdlc/scripts/tickets`; SQLite `check.sh` in full; each other surface through its harness steps.
 - Quick fix on the way: SQLite `check.sh` counted `catch_unwind(` calls, which ticket 0306 moved into the shared `contained` guard, so its gate stopped before any test. It now counts `contained(`.
+
+## Code review
+
+ACCEPT with four fixes, all made before landing: the SQLite gate matches the guard call `contained(body)`; the settings row says the command flag cannot clear a limit the variable sets; the Rust case pins `max_estimated_input_tokens_total(None)` outranking the variable with one arrival; the issue says why the variable replaces 0299's per-host SQL spellings. After merging main, `sdlc/scripts/test` passed (1,269 tests), with `policy.py`, the ticket checker, and SQLite `check.sh`.
 
 ## What the build taught us
 
