@@ -64,7 +64,9 @@ def stopped_fast(result: dict) -> None:
     """The call ended cancelled, within 100 ms under the stress profile."""
     expect(result["error"], CANCELLED, "the error")
     expect(result["after"] is not None, True, "the interrupt ran")
-    expect(not STRESS or result["after"] < 0.1, True, f"returned {result['after']} s after the interrupt")
+    # The routine 10 s bound is a hang guard: a stop that waited for the reply
+    # would wait out the 30 s release. Only stress claims 100 ms.
+    expect(result["after"] < (0.1 if STRESS else 10), True, f"returned {result['after']} s after the interrupt")
 
 
 def settled(backend: Backend, sends: int) -> None:
@@ -151,7 +153,7 @@ def test_the_cli_prints_the_cancelled_sentence_on_sigint() -> None:
     release.cancel()
     cli.kill()
     expect(CANCELLED in line, True, f"the CLI printed {line!r}")
-    expect(not STRESS or after < 0.1, True, f"the CLI printed {after} s after the signal")
+    expect(after < (0.1 if STRESS else 10), True, f"the CLI printed {after} s after the signal")
 
 
 def test_a_fast_keyed_call_stops_soon_after_the_interrupt() -> None:

@@ -125,7 +125,7 @@ say(error=error, took=time.monotonic()-started)
     finally:
         release.cancel()
     expect(held["error"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "deadline remains fatal")
-    expect(not STRESS or held["took"] < 0.4, True, "prompt return")
+    expect(held["took"] < (0.4 if STRESS else 10), True, "prompt return")
     expect(backend.close(), 1, "sent attempt remains counted")
 
 
@@ -144,7 +144,7 @@ say(result=result, took=time.monotonic()-started)
         expect(backend.wait(2), 2, "second row sent under the same budget")
         result = held.result()
         expect(result["result"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "second held row expires")
-        expect(not STRESS or result["took"] < 1.2, True, "original budget bounds both rows")
+        expect(result["took"] < (1.2 if STRESS else 10), True, "original budget bounds both rows")
     finally:
         backend.release()
     expect(backend.close(), 2, "both attempts remain counted")

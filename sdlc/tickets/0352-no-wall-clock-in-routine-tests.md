@@ -34,6 +34,7 @@ A few tests still need in-process work to finish inside a margin. No outside eve
 - The HTTP retry deadline test: a 1 s deadline that must outlast one loopback send.
 - The width test's 400 ms wait for a permit that is already free.
 - The annotate equal-records test: the reply waits 1 s while the engine reads a line already in its pipe.
+- SQLite's two-row budget test: a 700 ms budget that must outlast one held-arm round and the second send.
 
 ## Changes
 
@@ -75,8 +76,8 @@ Python, DuckDB and SQLite surfaces:
 
 - A stop test's 100 ms bound applies only under the stress profile. The routine run checks that the cancel arrived while the reply was held.
 - The Python release test drives the held arm from the parent. Its old timer form, where a cancel can land before the send, stays as a stress case. The column-timing test splits into a deadline half and a held-token half. The token fires once the held arm counts the first send. While that reply was held, the arm saw no second send.
-- DuckDB's `harness.py` adds `timed` cases, which run in both profiles and time only under stress. The signal cases repeat SIGINT until the answer arrives. The queued-relate case waits for a stdin line instead of sleeping.
-- SQLite's conformance and interrupt tests wait on held requests. `check.sh` runs the usage and try-budget files under stress too.
+- DuckDB's `harness.py` adds `timed` cases, which run in both profiles and time only under stress. The bridge case repeats SIGINT until the answer arrives. The between-queries case asks the child how many queries it has seen instead of sleeping 20 ms. The queued-relate case waits for a stdin line instead of sleeping.
+- SQLite's conformance and interrupt tests wait on held requests. Where a timer releases the held reply after 30 s, the routine run keeps a 10 s hang guard on the stop, so a stop that waited for the reply still fails. `check.sh` runs the usage and try-budget files under stress too.
 - Waits rise to 30 or 60 s across these tests.
 
 Shell self-tests:
