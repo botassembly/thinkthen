@@ -237,7 +237,7 @@ module ThinkThen
     def choose(question, evidence, options: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "choose", question, :options, options)
       crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
-               batch: batch, context: context).map { |triple| triple[1] }
+               batch: batch, context: context).map { |json| JSON.parse(json)["value"] }
     end
 
     def score(question, evidence, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
@@ -250,19 +250,19 @@ module ThinkThen
     def score_with_level(question, evidence, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "score", question, :levels, levels)
       crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
-               batch: batch, context: context).map { |_, position, nearest| [position, nearest] }
+               batch: batch, context: context).map { |json| JSON.parse(json).then { |doc| [doc["value"], doc.dig("answer", "level")] } }
     end
 
     def tag(question, evidence, labels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "tag", question, :labels, labels)
       crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
-               batch: batch, context: context).map { |triple| triple[1] }
+               batch: batch, context: context).map { |json| JSON.parse(json)["value"] }
     end
 
     # The command's --details document for one text.
     def details(question, evidence, cancel: nil, deadline: nil, batch: nil, context: nil)
       crossing("details", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline,
-               batch: batch, context: context).map { |json,| JSON.parse(json) }
+               batch: batch, context: context).map { |json| JSON.parse(json) }
     end
 
     def choose_many(question, records, options: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
@@ -368,6 +368,7 @@ module ThinkThen
       question = ThinkThen.__send__(:keyed, verb, question, key, members)
       crossing("many", question, ThinkThen.__send__(:texts, records.to_a), cancel, deadline,
                batch: batch, context: context, batch_ok: true, context_ok: true)
+        .map { |rows| rows.map { |json| JSON.parse(json)["value"] } }
     end
 
     def crossing(verb, subject, input, cancel, deadline, batch: nil, context: nil, batch_ok: false, context_ok: false)

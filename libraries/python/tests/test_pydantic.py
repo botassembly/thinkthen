@@ -43,7 +43,7 @@ def test_optional_authoring_and_strict_row_validation(backend, tmp_path):
         engine = tt.Engine(cache=False)
         taken = []
         def hold(call):
-            taken.append([list(call.details[0]["request_digests"]), call.facts.requests_sent])
+            taken.append([list(call.details[0]["requests"]), call.facts["requests_sent"]])
             return call.value
         assert hold(engine.choose("Which?", "Alice", options=Labels)) == "first"
         assert hold(engine.choose("Which?", "Alice", options={
@@ -58,7 +58,7 @@ def test_optional_authoring_and_strict_row_validation(backend, tmp_path):
         assert hold(engine.choose("Which?", "Alice", options={
             "first": "same meaning", "second": "same meaning"})) == "first"
         batch = engine.annotate(Questions, ["Alice"], batch=1)
-        taken.append([list(batch.details[0]["request_digests"]), batch.facts.requests_sent])
+        taken.append([list(batch.details[0]["requests"]), batch.facts["requests_sent"]])
         row = row_model(Questions)
         assert row.model_validate(batch.value[0]).kind == "first"
         assert row.model_validate({"open": None, "kind": None, "score": 0.5,

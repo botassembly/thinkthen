@@ -5,7 +5,7 @@ from typing import Any, Annotated, Generic, Iterable, Iterator, Literal, Mapping
 
 __all__ = [
     "BackendError", "Cancelled", "CancelToken", "DeadlineError", "DefectError",
-    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Facts", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
+    "Call", "Completion", "CompletionReceipt", "Edge", "Engine", "Entity", "Judge", "Stream", "Tally", "LocalError", "Question", "Recognized",
     "RecognizedEntity", "Relation", "ThinkThenError", "UsageError",
     "annotate", "choose", "decide", "details", "filter",
     "find", "plan", "question", "rank", "recognize", "relate", "score", "tag",
@@ -40,21 +40,7 @@ AnnotatedValue = Union[bool, str, float, list[str], None, Failed]
 AnnotatedRow = dict[str, AnnotatedValue]
 T = TypeVar("T")
 
-class Facts:
-    @property
-    def records(self) -> int: ...
-    @property
-    def requests_sent(self) -> int: ...
-    @property
-    def cache_answers(self) -> int: ...
-    @property
-    def input_tokens(self) -> Optional[int]: ...
-    @property
-    def output_tokens(self) -> Optional[int]: ...
-    @property
-    def seconds(self) -> float: ...
-    @property
-    def model(self) -> Optional[str]: ...
+Facts = Mapping[str, Any]
 
 class Call(Generic[T]):
     @property

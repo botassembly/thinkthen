@@ -28,7 +28,10 @@ use crate::call::Ask;
 mod question_file;
 mod result;
 use crate::{Controls, Crossing, Fault, Handoff, Settings, Taken, class_name, guarded, start};
-use result::{attach_completion, details_array, facts_hash, output, protected_completion};
+use result::{
+    PANICKED, attach_completion, details_value, facts_value, output, protected_completion,
+    ruby_json,
+};
 
 #[magnus::wrap(class = "ThinkThen::Cancel", free_immediately, size)]
 #[derive(Debug, Default)]
@@ -82,7 +85,7 @@ impl CompletionValue {
         !matches!(self.0.take(), Taken::Waiting)
     }
 
-    fn result(ruby: &Ruby, rb_self: &Self, timeout: Option<f64>) -> Result<Option<RHash>, Error> {
+    fn result(ruby: &Ruby, rb_self: &Self, timeout: Option<f64>) -> Result<Option<Value>, Error> {
         let timeout = match timeout {
             Some(value) if !value.is_finite() || value < 0.0 => {
                 return Err(raise(
@@ -97,13 +100,7 @@ impl CompletionValue {
         loop {
             match rb_self.0.take() {
                 Taken::Ready(terminal) => return protected_completion(ruby, &terminal).map(Some),
-                Taken::Closed => {
-                    let held = ruby.hash_new();
-                    held.aset(ruby.to_symbol("outcome"), "panicked")?;
-                    held.aset(ruby.to_symbol("facts"), ruby.qnil())?;
-                    held.aset(ruby.to_symbol("details"), ruby.qnil())?;
-                    return Ok(Some(held));
-                }
+                Taken::Closed => return ruby_json(ruby, &PANICKED).map(Some),
                 Taken::Waiting => {}
             }
             if timeout.is_some_and(|value| started.elapsed().as_secs_f64() >= value) {
@@ -164,7 +161,7 @@ fn raise(ruby: &Ruby, fault: Fault) -> Error {
                 fault
                     .facts
                     .as_ref()
-                    .map(|facts| facts_hash(ruby, facts))
+                    .map(|facts| facts_value(ruby, facts))
                     .transpose()?,
             ),
         )?;
@@ -173,7 +170,7 @@ fn raise(ruby: &Ruby, fault: Fault) -> Error {
             (
                 "@details",
                 if fault.facts.is_some() {
-                    Some(details_array(ruby, &fault.details)?)
+                    Some(details_value(ruby, &fault.details)?)
                 } else {
                     None
                 },
@@ -384,9 +381,9 @@ impl EngineValue {
         match answer {
             Ok(terminal) => protected(ruby, || match &*terminal {
                 Ok(done) => Ok(ruby.into_value((
-                    output(ruby, &done.value)?,
-                    facts_hash(ruby, &done.facts)?,
-                    details_array(ruby, &done.details)?,
+                    output(ruby, &done.value),
+                    facts_value(ruby, &done.facts)?,
+                    details_value(ruby, &done.details)?,
                 ))),
                 Err(fault) => Err(raise(ruby, fault.clone())),
             }),
@@ -398,15 +395,8 @@ impl EngineValue {
         }
     }
 
-    fn usage(ruby: &Ruby, rb_self: &Self) -> Result<RHash, Error> {
-        let counts = rb_self.engine.usage();
-        let hash = ruby.hash_new();
-        hash.aset(ruby.to_symbol("requests_sent"), counts.requests_sent())?;
-        hash.aset(ruby.to_symbol("retries"), counts.retries())?;
-        hash.aset(ruby.to_symbol("cache_answers"), counts.cache_answers())?;
-        hash.aset(ruby.to_symbol("input_tokens"), counts.input_tokens())?;
-        hash.aset(ruby.to_symbol("output_tokens"), counts.output_tokens())?;
-        Ok(hash)
+    fn usage(ruby: &Ruby, rb_self: &Self) -> Result<Value, Error> {
+        ruby_json(ruby, &rb_self.engine.usage())
     }
 }
 

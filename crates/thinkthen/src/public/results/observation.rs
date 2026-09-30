@@ -2,16 +2,18 @@
 
 use std::fmt;
 
+use serde::Serialize;
+
 use crate::core::{self, AnswerOutcome, Backend, ModelName, ProfileName, Threshold};
 use crate::engine::error::Error as EngineError;
 use crate::engine::facade::Answered;
-use crate::public::annotated::{FailureCause, NamedAnnotation};
+use crate::public::annotated::{FailureCause, NamedAnnotation, cause};
 use crate::public::error::Error;
 use crate::public::options::Stop;
 use crate::public::recognize::Recognized;
 use crate::public::relate::Edge;
 
-use super::{Details, Judgment, NamedProbability, Probabilities, Usage, judgment, usage};
+use super::{Answer, Details, Judgment, NamedProbability, Probabilities, Usage, judgment, usage};
 
 /// One completed question or input row, delivered on the caller's thread.
 /// The borrowed fields exist only during the callback.
@@ -57,6 +59,105 @@ impl fmt::Debug for RecordObservation<'_> {
                 .field("index", index)
                 .finish_non_exhaustive(),
         }
+    }
+}
+
+/// A question event serializes as one object: its `index`, its `member` or
+/// `stage` when set, its `position`, and its detail. A row event has no JSON
+/// form; serializing one fails, so callers skip row events.
+impl Serialize for RecordObservation<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let Self::Question {
+            index,
+            member,
+            stage,
+            position,
+            detail,
+        } = self
+        else {
+            return Err(serde::ser::Error::custom("a row event has no JSON form"));
+        };
+        let held = detail.0;
+        QuestionJson {
+            index: *index,
+            member: *member,
+            stage: *stage,
+            position: *position,
+            question_sha256: &held.question_sha256,
+            model: &held.model,
+            url: &held.url,
+            requests: &held.requests,
+            requests_sent: held.requests_sent,
+            cached: held.cached,
+            failed_questions: held.failed_questions,
+            answer: held.value.as_ref().map(bare),
+            failed: held.failure,
+            probabilities: held.probabilities.as_ref().map(|shown| match shown {
+                Probabilities::YesNo { yes } => ProbabilitiesJson::Yes(*yes),
+                Probabilities::Named(rows) => ProbabilitiesJson::Named(
+                    rows.iter()
+                        .map(|row| (row.name.as_str(), row.probability))
+                        .collect(),
+                ),
+            }),
+            confidence: held.confidence,
+            usage: held.usage,
+        }
+        .serialize(serializer)
+    }
+}
+
+/// One question event as JSON, as [`RecordObservation`] serializes it.
+#[derive(Serialize)]
+#[cfg_attr(
+    test,
+    derive(schemars::JsonSchema),
+    schemars(rename = "questionObservation")
+)]
+pub(crate) struct QuestionJson<'a> {
+    index: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    member: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    stage: Option<&'static str>,
+    position: usize,
+    question_sha256: &'a str,
+    model: &'a str,
+    url: &'a str,
+    requests: &'a [String],
+    requests_sent: u64,
+    cached: bool,
+    failed_questions: usize,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    answer: Option<core::Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    failed: Option<core::BackendFailure>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    probabilities: Option<ProbabilitiesJson<'a>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    confidence: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[cfg_attr(test, schemars(with = "Option<core::Usage>"))]
+    usage: Option<Usage>,
+}
+
+/// The yes probability, or each name and its probability in declared order.
+#[derive(Serialize)]
+#[serde(untagged)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
+enum ProbabilitiesJson<'a> {
+    Yes(f64),
+    Named(Vec<(&'a str, f64)>),
+}
+
+fn bare(value: &Judgment) -> core::Value {
+    match value {
+        Judgment::Decision(Answer::Yes) => core::Value::YesNo(Some(true)),
+        Judgment::Decision(Answer::No) => core::Value::YesNo(Some(false)),
+        Judgment::Decision(Answer::Unsure) => core::Value::YesNo(None),
+        Judgment::Choice(pick) => core::Value::Choice(pick.clone()),
+        Judgment::Score(position) => core::Value::Score(*position),
+        Judgment::Tags(labels) => core::Value::Tag(labels.clone()),
     }
 }
 
@@ -119,7 +220,10 @@ impl<'a> QuestionDetail<'a> {
     /// The typed backend failure, absent for an answered question.
     #[must_use]
     pub const fn failure(&self) -> Option<FailureCause> {
-        self.0.failure
+        match self.0.failure {
+            Some(failed) => Some(cause(core::FailedValue::new(failed).cause())),
+            None => None,
+        }
     }
     /// Declared-order probabilities, absent for a failed question.
     #[must_use]
@@ -172,7 +276,7 @@ impl<'a> QuestionDetail<'a> {
 pub(crate) struct ObservedQuestion {
     pub(crate) question_sha256: String,
     pub(crate) value: Option<Judgment>,
-    pub(crate) failure: Option<FailureCause>,
+    pub(crate) failure: Option<core::BackendFailure>,
     pub(crate) probabilities: Option<Probabilities>,
     pub(crate) confidence: Option<f64>,
     pub(crate) model: String,
@@ -258,14 +362,7 @@ impl ObservedQuestion {
                     answer.confidence().map(|one| one.as_f64()),
                 )
             }
-            AnswerOutcome::Failed(failed) => (
-                None,
-                Some(crate::public::annotated::cause(
-                    core::FailedValue::new(*failed).cause(),
-                )),
-                None,
-                None,
-            ),
+            AnswerOutcome::Failed(failed) => (None, Some(*failed), None, None),
         };
         Ok(Self {
             question_sha256,

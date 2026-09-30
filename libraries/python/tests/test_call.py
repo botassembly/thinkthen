@@ -106,7 +106,7 @@ def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend,
         rows = ["one", "two", "three"]
         for setting in ({}, {"batch": 1}):
             call = engine.decide("Is it late?", rows, **setting)
-            print(call.value, call.probability, call.facts.requests_sent)
+            print(call.value, call.probability, call.facts["requests_sent"])
         """, env)
         assert printed.splitlines() == [
             "[False, True, True] [0.1, 0.9, 0.9] 1",
@@ -132,7 +132,7 @@ def test_partial_judge_plan_and_execution_share_immutable_question(backend, tmp_
         plan = tt.plan(judge, ["one", "two"])
         call = judge(["one", "two"])
         print(plan["records"], plan["requests"],
-              call.value, call.facts.requests_sent)
+              call.value, call.facts["requests_sent"])
         print(plan["first_body"].decode())
         try: tt.plan(lambda rows: rows, ["one"])
         except tt.UsageError as error: print(error.kind)
@@ -160,11 +160,11 @@ def test_unresolved_choice_omits_probability_but_banded_decide_keeps_yes_probabi
     column = tt.Engine(cache=False).choose(
         "Which team?", pd.Series(["one", "two"], index=[7, 5], name="body"),
         options=["billing", "shipping"], threshold=1.0)
-    print(band.value, band.probability, band.facts.requests_sent,
-          choice.value, choice.probability, choice.facts.requests_sent,
+    print(band.value, band.probability, band.facts["requests_sent"],
+          choice.value, choice.probability, choice.facts["requests_sent"],
           column.value.isna().tolist(), column.probability.isna().tolist(),
           column.probability.index.tolist(), column.probability.dtype.name,
-          column.facts.requests_sent)
+          column.facts["requests_sent"])
     """, child_env(backend, tmp_path))
     assert printed.strip() == ("None 0.2 1 None None 1 [True, True] [True, True] "
                                "[7, 5] Float64 1")
@@ -205,21 +205,21 @@ def test_null_column_rows_keep_positions_without_requests(backend, tmp_path):
                                   options=["billing", "shipping"], threshold=1.0)
         print(decided.value.tolist(), decided.probability.tolist(),
               decided.value.index.tolist(), [row["index"] for row in decided.details],
-              decided.facts.records, decided.facts.requests_sent)
+              decided.facts["records"], decided.facts["requests_sent"])
         print(chosen.value.to_list(), chosen.probability.to_list(),
               [row["index"] for row in chosen.details],
-              chosen.facts.records, chosen.facts.requests_sent)
+              chosen.facts["records"], chosen.facts["requests_sent"])
         print(empty.value.tolist(), empty.probability.tolist(),
-              empty.value.index.tolist(), empty.facts.records, empty.facts.requests_sent)
+              empty.value.index.tolist(), empty.facts["records"], empty.facts["requests_sent"])
         print(fallback.value.tolist(), fallback.probability.tolist(),
-              fallback.value.index.tolist(), fallback.facts.requests_sent)
+              fallback.value.index.tolist(), fallback.facts["requests_sent"])
         print(empty_polars.value.to_list(), empty_polars.probability.to_list(),
-              empty_polars.facts.records, empty_polars.facts.requests_sent,
-              empty_object.value.isna().tolist(), empty_object.facts.requests_sent)
+              empty_polars.facts["records"], empty_polars.facts["requests_sent"],
+              empty_object.value.isna().tolist(), empty_object.facts["requests_sent"])
         print(shifted.value.to_list(), shifted.probability.to_list(),
-              [row["index"] for row in shifted.details], shifted.facts.requests_sent)
+              [row["index"] for row in shifted.details], shifted.facts["requests_sent"])
         print(uncertain.value.to_list(), uncertain.probability.to_list(),
-              [row["index"] for row in uncertain.details], uncertain.facts.requests_sent)
+              [row["index"] for row in uncertain.details], uncertain.facts["requests_sent"])
         """, env)
         assert printed.splitlines() == [
             "[False, <NA>, True] [0.1, <NA>, 0.9] [9, 5, 7] [0, 2] 2 2",
@@ -259,12 +259,12 @@ def test_null_frame_rows_keep_columns_and_skip_recognition(backend, tmp_path):
     print("polars", asked.value.select(polars.columns).equals(polars),
           asked.value["late"].to_list(), asked.value["team"].to_list(),
           asked.value["failed"].to_list(),
-          sorted({row["index"] for row in asked.details}), asked.facts.records,
-          sorted(set(found.value["row"].to_list())), found.facts.records)
+          sorted({row["index"] for row in asked.details}), asked.facts["records"],
+          sorted(set(found.value["row"].to_list())), found.facts["records"])
     print("blank", blank_asked.value["late"].to_list(),
-          blank_asked.value["failed"].to_list(), blank_asked.facts.records,
-          blank_asked.facts.requests_sent, blank_found.value.height,
-          blank_found.facts.records, blank_found.facts.requests_sent)
+          blank_asked.value["failed"].to_list(), blank_asked.facts["records"],
+          blank_asked.facts["requests_sent"], blank_found.value.height,
+          blank_found.facts["records"], blank_found.facts["requests_sent"])
     index = [9, 5, 7]
     pandas = pd.DataFrame({"body": pd.Series(texts, index=index, dtype="string"),
                            "keep": [9, 5, 7]}, index=index)
@@ -274,9 +274,9 @@ def test_null_frame_rows_keep_columns_and_skip_recognition(backend, tmp_path):
           asked.value["late"].astype(object).where(asked.value["late"].notna(), None).tolist(),
           asked.value["team"].astype(object).where(asked.value["team"].notna(), None).tolist(),
           asked.value["failed"].tolist(), asked.value.index.tolist(),
-          sorted({row["index"] for row in asked.details}), asked.facts.records,
-          [row is None for row in found.value["names"]], found.facts.records)
-    print("sends", sum(call.facts.requests_sent for call in (asked, found)))
+          sorted({row["index"] for row in asked.details}), asked.facts["records"],
+          [row is None for row in found.value["names"]], found.facts["records"])
+    print("sends", sum(call.facts["requests_sent"] for call in (asked, found)))
     """, child_env(backend, tmp_path))
     assert printed.splitlines()[:2] == [
         "polars True [True, None, True] ['billing', None, 'billing'] "
@@ -302,13 +302,13 @@ def test_null_score_and_tag_columns_keep_their_existing_shapes(backend, tmp_path
     object_tags = engine.tag("Which kinds?", pd.Series(["one", float("nan"), "two"],
                                                          dtype=object, index=[9, 5, 7]),
                              labels=["bill", "ship"])
-    print(score.value.to_list(), score.probability, score.facts.records,
-          score.facts.requests_sent, [row["index"] for row in score.details])
-    print(tags.value.to_list(), tags.probability, tags.facts.records,
-          tags.facts.requests_sent, [row["index"] for row in tags.details])
+    print(score.value.to_list(), score.probability, score.facts["records"],
+          score.facts["requests_sent"], [row["index"] for row in score.details])
+    print(tags.value.to_list(), tags.probability, tags.facts["records"],
+          tags.facts["requests_sent"], [row["index"] for row in tags.details])
     print(object_tags.value.tolist(), object_tags.value.index.tolist(),
-          object_tags.probability, object_tags.facts.records,
-          object_tags.facts.requests_sent, [row["index"] for row in object_tags.details])
+          object_tags.probability, object_tags.facts["records"],
+          object_tags.facts["requests_sent"], [row["index"] for row in object_tags.details])
     """, child_env(backend, tmp_path))
     assert printed.splitlines() == [
         "[0.15, None, 0.15] None 2 1 [0, 2]",
@@ -334,8 +334,8 @@ def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path,
                 rows = pl.Series('body', rows)
             call = tt.Engine(cache=False, throttle=1).decide({corpus['question']!r}, rows)
             value = call.value.to_list() if hasattr(call.value, 'to_list') else call.value
-            print(json.dumps([value, [call.facts.records, call.facts.requests_sent],
-                              [[row['index'], list(row['request_digests'])] for row in call.details]]))
+            print(json.dumps([value, [call.facts["records"], call.facts["requests_sent"]],
+                              [[row['index'], list(row['requests'])] for row in call.details]]))
         """, env)
         values, facts, details = json.loads(printed)
         assert bodies == expected
@@ -409,8 +409,8 @@ def test_judge_eager_and_stream_share_exact_distinct_record_bodies(backend, tmp_
         rows = ["one", "two", "three"]
         eager = engine.decide("Is it late?", rows)
         lazy = engine.decide("Is it late?", probability=True)(iter(rows))
-        print(eager.value, eager.probability, eager.facts.requests_sent)
-        print(list(lazy), lazy.facts.records, lazy.facts.requests_sent)
+        print(eager.value, eager.probability, eager.facts["requests_sent"])
+        print(list(lazy), lazy.facts["records"], lazy.facts["requests_sent"])
         """, env)
         assert printed.splitlines() == [
             "[False, True, True] [0.1, 0.9, 0.9] 1",
@@ -439,16 +439,16 @@ def test_explicit_tally_counts_completed_calls_cache_and_missing_usage(backend, 
             return judge(text).value
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
             done = list(pool.map(ask, ["one", "two"]))
-        print(done, tally.facts.records, tally.facts.requests_sent,
-              tally.facts.cache_answers, tally.facts.input_tokens is not None,
-              tally.facts.seconds >= 0)
-        print(judge("one").value, tally.facts.records, tally.facts.requests_sent,
-              tally.facts.cache_answers)
+        print(done, tally.facts["records"], tally.facts["requests_sent"],
+              tally.facts["cache_answers"], tally.facts.get("input_tokens") is not None,
+              tally.facts["seconds"] >= 0)
+        print(judge("one").value, tally.facts["records"], tally.facts["requests_sent"],
+              tally.facts["cache_answers"])
         no_usage = tt.Engine(base_url=os.environ["OTHER_URL"], cache=False).decide(
             "Is it late?", tally=tally)
-        print(no_usage("three").value, tally.facts.records, tally.facts.requests_sent,
-              tally.facts.cache_answers, tally.facts.input_tokens,
-              tally.facts.output_tokens, tally.facts.model)
+        print(no_usage("three").value, tally.facts["records"], tally.facts["requests_sent"],
+              tally.facts["cache_answers"], tally.facts.get("input_tokens"),
+              tally.facts.get("output_tokens"), tally.facts.get("model"))
         """, env)
         assert printed.splitlines() == [
             "[False, True] 2 2 0 True True",
@@ -476,7 +476,7 @@ def test_filter_stream_selective_take_stops_before_remaining_input(backend, tmp_
         stream = tt.filter("Is it late?", batch=1)(source())
         with stream:
             print(list(itertools.islice(stream, 3)))
-        print(read, stream.facts.records, stream.facts.requests_sent)
+        print(read, stream.facts["records"], stream.facts["requests_sent"])
         """, env)
         assert printed.splitlines() == [
             "['two', 'three', 'four']",
@@ -495,11 +495,11 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
     packed = engine.decide(decide, rows)
     separate = engine.decide(decide, rows, batch=1)
     assert packed.value == separate.value == [True, True, True]
-    assert (packed.facts.records, packed.facts.requests_sent) == (3, 1)
-    assert (separate.facts.records, separate.facts.requests_sent) == (3, 3)
+    assert (packed.facts["records"], packed.facts["requests_sent"]) == (3, 1)
+    assert (separate.facts["records"], separate.facts["requests_sent"]) == (3, 3)
     assert [entry["index"] for entry in packed.details] == [0, 1, 2]
     assert sum(entry["requests_sent"] for entry in packed.details) == 1
-    assert packed.details[0]["request_digests"]
+    assert packed.details[0]["requests"]
     try:
         packed.details[0]["index"] = 9
     except TypeError:
@@ -512,7 +512,7 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
     assert choice.value == ["billing"] * 3
     assert score.value == [0.15] * 3
     assert tags.value == [["bill", "ship"]] * 3
-    assert all(item.facts.records == 3 and len(item.details) == 3
+    assert all(item.facts["records"] == 3 and len(item.details) == 3
                for item in (choice, score, tags))
     before = engine.usage()["requests_sent"]
     for call in (lambda: engine.decide(decide, rows, batch=0),
@@ -528,9 +528,9 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
     assert engine.usage()["requests_sent"] == before
     shared = engine.decide(decide, rows, batch=1, context="reference")
     assert shared.value == packed.value
-    assert shared.details[0]["request_digests"] != separate.details[0]["request_digests"]
-    print("calls", packed.facts.requests_sent, separate.facts.requests_sent,
-          choice.facts.requests_sent, score.facts.requests_sent, tags.facts.requests_sent)
+    assert shared.details[0]["requests"] != separate.details[0]["requests"]
+    print("calls", packed.facts["requests_sent"], separate.facts["requests_sent"],
+          choice.facts["requests_sent"], score.facts["requests_sent"], tags.facts["requests_sent"])
     """, child_env(backend, tmp_path))
     assert printed.strip() == "calls 1 3 1 1 1"
     assert backend.count() == 10
@@ -547,10 +547,10 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         for call in calls:
             print(json.dumps({"value": call.value,
                               "url": call.details[0]["url"],
-                              "facts": [call.facts.records, call.facts.requests_sent,
-                                        call.facts.input_tokens, call.facts.output_tokens],
+                              "facts": [call.facts["records"], call.facts["requests_sent"],
+                                        call.facts.get("input_tokens"), call.facts.get("output_tokens")],
                               "details": [[row["index"], row["answer"],
-                                           list(row["request_digests"]),
+                                           list(row["requests"]),
                                            dict(row["usage"])] for row in call.details]}))
         """, env)
         packed, separate = map(json.loads, printed.splitlines())
@@ -580,9 +580,9 @@ def test_returned_failure_keeps_its_final_account(backend, tmp_path):
     try:
         tt.Engine(cache=False).decide(tt.question(decide="Q?"), ["a", "b"], batch=1)
     except tt.BackendError as error:
-        assert (error.facts.records, error.facts.requests_sent) == (0, 1)
+        assert (error.facts["records"], error.facts["requests_sent"]) == (0, 1)
         assert error.details == ()
-        print("failed", error.kind, error.facts.requests_sent)
+        print("failed", error.kind, error.facts["requests_sent"])
     else:
         raise AssertionError("the malformed reply passed")
     """, child_env(backend, tmp_path, "arm/malformed/missing_answer"))
@@ -601,19 +601,21 @@ def test_columns_and_frames_rebuild_inside_call_value(backend, tmp_path):
     assert column.value.to_list() == [True, True]
     assert column.value.index.to_list() == [4, 8]
     assert column.value.name == "body"
-    assert (column.facts.records, len(column.details)) == (2, 2)
+    assert (column.facts["records"], len(column.details)) == (2, 2)
     form = {"version": 1, "questions": {"late": {"decide": "Late?"}}}
     frame = engine.annotate(form, pl.DataFrame({"body": ["one", "two"]}), on="body")
     assert frame.value.columns == ["body", "late", "failed"]
     assert frame.value["failed"].is_null().all()
-    assert (frame.facts.records, len(frame.details)) == (2, 2)
+    assert (frame.facts["records"], len(frame.details)) == (2, 2)
     named = engine.recognize(pl.DataFrame({"body": ["one", "two"]}),
                              kinds=["PERSON"], on="body")
     assert named.value.columns == ["row", "text", "start", "end", "length",
                                    "kind", "strength"]
-    assert named.facts.records == 2
+    assert named.facts["records"] == 2
     assert [entry["index"] for entry in named.details] == [0, 0, 1, 1]
-    print("frames", column.facts.records, frame.facts.records, named.facts.records)
+    single = engine.recognize("one", kinds=["PERSON"])
+    assert sorted(named.facts) == sorted(single.facts), (dict(named.facts), dict(single.facts))
+    print("frames", column.facts["records"], frame.facts["records"], named.facts["records"])
     """, child_env(backend, tmp_path))
     assert printed.strip() == "frames 2 2 2"
 
@@ -641,11 +643,11 @@ def test_held_stop_has_a_retryable_final_receipt(backend, tmp_path):
         sys.stdin.readline()
         final = receipt.result(timeout=3)
         assert final.outcome == "failed"
-        assert (final.facts.records, final.facts.requests_sent) == (0, 1)
+        assert (final.facts["records"], final.facts["requests_sent"]) == (0, 1)
         assert receipt.done and final.details is not None
         assert (final.kind, final.message, final.retryable) == (
             "cancelled", "the call was cancelled", False)
-        print("final", final.facts.requests_sent, flush=True)
+        print("final", final.facts["requests_sent"], flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
     child.stdin.write("stop\n")
@@ -672,7 +674,7 @@ def test_system_exit_retains_type_code_and_completion(backend, tmp_path):
         print("exit", error.code, receipt.done, flush=True)
         sys.stdin.readline()
         final = receipt.result(timeout=3)
-        print("final", final.outcome, final.facts.requests_sent, flush=True)
+        print("final", final.outcome, final.facts["requests_sent"], flush=True)
     """, child_env(backend, tmp_path, "arm/held"))
     assert backend.wait(1) == 1
     os.kill(child.pid, signal.SIGINT)
@@ -698,8 +700,8 @@ def test_host_reconstruction_error_keeps_frozen_call(backend, tmp_path):
         tt.Engine(cache=False).decide(tt.question(decide="Q?"), source)
     except tt.LocalError as error:
         assert isinstance(error.__cause__, RuntimeError)
-        assert (error.facts.records, len(error.details)) == (2, 2)
-        print("local", error.facts.records, str(error.__cause__))
+        assert (error.facts["records"], len(error.details)) == (2, 2)
+        print("local", error.facts["records"], str(error.__cause__))
     else:
         raise AssertionError("the host rebuilt")
     """, child_env(backend, tmp_path))

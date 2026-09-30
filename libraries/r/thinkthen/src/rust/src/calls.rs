@@ -8,10 +8,12 @@
 //! detached worker then sends nothing new and finishes what it sent.
 
 use extendr_api::prelude::*;
+use serde::Serialize;
+use serde_json::value::RawValue;
 use std::sync::Arc;
 use thinkthen::{
-    Annotated, Answer, BatchSetting, CallOptions, DecisionQuestion, Engine, Evidence, FailureCause,
-    Judgment, LoadedQuestion, Probabilities, Question, QuestionSet,
+    Answer, BatchSetting, CallOptions, DecisionQuestion, Engine, Evidence, LoadedQuestion,
+    Question, QuestionSet,
 };
 
 use crate::{carry, defect, engine, usage};
@@ -28,6 +30,11 @@ mod worker;
 #[cfg(test)]
 pub(crate) use worker::on_worker;
 pub(crate) use worker::{Crossed, Pending, call_owned};
+
+/// One JSON text the crate wrote, carried as it is.
+pub(crate) fn raw(text: String) -> Crossed<Box<RawValue>> {
+    RawValue::from_string(text).map_err(|_| defect("the engine wrote a value that is not JSON"))
+}
 
 /// One text and its one-based place in the caller's vector.
 #[derive(Debug)]
@@ -54,17 +61,21 @@ pub(crate) fn question(json: &str) -> Crossed<LoadedQuestion> {
     Question::from_json(json).map_err(|error| carry(&error))
 }
 
-/// 1 yes, 0 no, and -1 unsure, which the R half reads as `NA`.
-const fn code(answer: Answer) -> i32 {
-    match answer {
-        Answer::Yes => 1,
-        Answer::No => 0,
-        Answer::Unsure => -1,
+/// `decide`'s answer: `true`, `false`, or `null` for unsure.
+const fn answer(value: Answer) -> Option<bool> {
+    match value {
+        Answer::Yes => Some(true),
+        Answer::No => Some(false),
+        Answer::Unsure => None,
     }
 }
 
-/// Each record's answer code and yes probability.
-type Judged = (Vec<i32>, Vec<f64>);
+/// Each record's answer and yes probability, in input order.
+#[derive(Default, Serialize)]
+struct Decided {
+    answer: Vec<Option<bool>>,
+    probability: Vec<f64>,
+}
 
 fn judged<Q: DecisionQuestion>(
     engine: &Engine,
@@ -72,18 +83,28 @@ fn judged<Q: DecisionQuestion>(
     texts: &[String],
     options: CallOptions<'_>,
     account: &Account,
-) -> Crossed<Judged> {
-    let mut answers = (Vec::new(), Vec::new());
+) -> Crossed<Decided> {
+    let mut answers = Decided::default();
     let mut batch = engine.decide_many_with(question, texts.iter().map(String::as_str), options);
     let rows = account::collect(&mut batch, account)?;
     if texts.is_empty() {
         account.no_work();
     }
     for row in rows {
-        answers.0.push(code(*row.value()));
-        answers.1.push(row.probability());
+        answers.answer.push(answer(*row.value()));
+        answers.probability.push(row.probability());
     }
     Ok(answers)
+}
+
+/// Apply a call's batch and context controls.
+fn controlled<'a>(
+    options: CallOptions<'a>,
+    batch: Option<BatchSetting>,
+    context: Option<&'a str>,
+) -> CallOptions<'a> {
+    let options = batch.map_or(options, |value| options.batch(value));
+    context.map_or(options, |value| options.context(value))
 }
 
 /// `decide` over a column, in input order.
@@ -108,19 +129,14 @@ pub(crate) fn decide(
         receipt,
         Some(positions),
         move |engine, options, account| {
-            let options = batch.map_or(options, |value| options.batch(value));
-            let options = context
-                .as_deref()
-                .map_or(options, |value| options.context(value));
+            let options = controlled(options, batch, context.as_deref());
             match &asked {
                 LoadedQuestion::Question(held) => judged(engine, held, &texts, options, account),
                 LoadedQuestion::Banded(held) => judged(engine, held, &texts, options, account),
             }
         },
     )?;
-    Ok(render::envelope(completed, |(codes, probabilities)| {
-        list!(answer = codes, probability = probabilities).into()
-    }))
+    render::envelope(completed)
 }
 
 /// `filter` over records: the one-based places whose evidence held.
@@ -147,10 +163,7 @@ pub(crate) fn filter(
         None,
         move |engine, options, account| {
             let empty = texts.is_empty();
-            let options = batch.map_or(options, |value| options.batch(value));
-            let options = context
-                .as_deref()
-                .map_or(options, |value| options.context(value));
+            let options = controlled(options, batch, context.as_deref());
             let mut rows = engine.filter_with(&asked, placed(texts), options);
             let found = account::collect(&mut rows, account)?;
             if empty {
@@ -159,7 +172,14 @@ pub(crate) fn filter(
             Ok(found.into_iter().map(|held| held.place).collect::<Vec<_>>())
         },
     )?;
-    Ok(render::envelope(completed, |places| places.into()))
+    render::envelope(completed)
+}
+
+/// `rank`'s places in rank order, with their probabilities.
+#[derive(Default, Serialize)]
+struct RankedPlaces {
+    place: Vec<i32>,
+    probability: Vec<f64>,
 }
 
 /// `rank` over records: places in rank order with their probabilities.
@@ -183,25 +203,24 @@ pub(crate) fn rank(
         receipt,
         None,
         move |engine, options, account| {
-            let options = batch.map_or(options, |value| options.batch(value));
-            let options = context
-                .as_deref()
-                .map_or(options, |value| options.context(value));
-            let ranked = match engine.rank_with(&asked, placed(texts), options) {
-                Ok(value) => value,
-                Err(error) => {
-                    return Err(account.failed(&error)?);
-                }
-            };
-            account.add(ranked.facts())?;
-            Ok(ranked.into_value())
+            let options = controlled(options, batch, context.as_deref());
+            let ranked = account.run(|| engine.rank_with(&asked, placed(texts), options))?;
+            let mut places = RankedPlaces::default();
+            for row in &ranked {
+                places.place.push(row.input().place);
+                places.probability.push(row.probability());
+            }
+            Ok(places)
         },
     )?;
-    Ok(render::envelope(completed, |ranked| {
-        let places: Vec<i32> = ranked.iter().map(|row| row.input().place).collect();
-        let probabilities: Vec<f64> = ranked.iter().map(thinkthen::Ranked::probability).collect();
-        list!(place = places, probability = probabilities).into()
-    }))
+    render::envelope(completed)
+}
+
+/// `find`'s selected place and its probability, both `null` for none.
+#[derive(Serialize)]
+struct FoundPlace {
+    place: Option<i32>,
+    probability: Option<f64>,
 }
 
 /// `find` over units: the selected place and its probability, or `NULL`s.
@@ -228,68 +247,30 @@ pub(crate) fn find(
         receipt,
         None,
         move |engine, options, account| {
-            let found = match engine.find_with(&asked, placed(texts), options) {
-                Ok(value) => value,
-                Err(error) => {
-                    return Err(account.failed(&error)?);
-                }
-            };
-            account.add(found.facts())?;
-            Ok(found.into_value())
+            let found = account.run(|| engine.find_with(&asked, placed(texts), options))?;
+            let selected = found.candidates().iter().find(|held| {
+                held.input()
+                    .zip(found.selected())
+                    .is_some_and(|(one, two)| one.place == two.place)
+            });
+            Ok(FoundPlace {
+                place: selected.and_then(|held| held.input().map(|one| one.place)),
+                probability: selected.map(thinkthen::Candidate::probability),
+            })
         },
     )?;
-    Ok(render::envelope(completed, |found| {
-        let selected = found.candidates().iter().find(|held| {
-            held.input()
-                .zip(found.selected())
-                .is_some_and(|(one, two)| one.place == two.place)
-        });
-        match selected {
-            Some(held) => list!(
-                place = held.input().map_or(0, |one| one.place),
-                probability = held.probability()
-            ),
-            None => list!(
-                place = Nullable::<i32>::Null,
-                probability = Nullable::<f64>::Null
-            ),
-        }
-        .into()
-    }))
+    render::envelope(completed)
 }
 
-/// A failure cause as the shared cases spell it.
-const fn cause_word(cause: FailureCause) -> &'static str {
-    match cause {
-        FailureCause::MissingAnswer => "missing_answer",
-        FailureCause::WrongKind => "wrong_kind",
-        FailureCause::MissingProbability => "missing_probability",
-        FailureCause::InvalidProbability => "invalid_probability",
-        FailureCause::InvalidDistribution => "invalid_distribution",
-        FailureCause::UnexpectedProbability => "unexpected_probability",
-    }
+/// A set's member names and kinds, and each record's bare `annotate` object.
+#[derive(Serialize)]
+struct AnnotatedRows {
+    names: Vec<String>,
+    kinds: Vec<String>,
+    rows: Vec<Box<RawValue>>,
 }
 
-/// One value as R's own: a decision code, a choice or `NULL`, a position,
-/// labels, or the ruled `list(failed = list(kind, cause))` marker.
-fn cell(value: &Annotated) -> Robj {
-    match value {
-        Annotated::Decision(answer) => code(*answer).into(),
-        Annotated::Choice(pick) => Nullable::from(pick.clone()).into(),
-        Annotated::Score(position) => (*position).into(),
-        Annotated::Tags(labels) => labels.clone().into(),
-        Annotated::Failed(failed) => list!(
-            failed = list!(
-                kind = failed.kind().name(),
-                cause = cause_word(failed.cause())
-            )
-        )
-        .into(),
-    }
-}
-
-/// `annotate` over a column from a question set: the members' names and
-/// kinds, and one list of cells a member.
+/// `annotate` over a column from a question set.
 #[expect(
     clippy::too_many_arguments,
     reason = "the binding passes public call controls explicitly"
@@ -303,11 +284,11 @@ pub(crate) fn annotate(
     pending: Pending<'_>,
     receipt: Option<Arc<Receipt>>,
 ) -> Crossed<List> {
-    let members: Vec<(String, String)> = set
+    let (names, kinds): (Vec<String>, Vec<String>) = set
         .members()
         .map(|(name, kind)| (name.to_owned(), format!("{kind:?}").to_lowercase()))
-        .collect();
-    if let Some((name, _)) = members.iter().find(|(name, _)| taken.contains(name)) {
+        .unzip();
+    if let Some(name) = names.iter().find(|name| taken.contains(name)) {
         return Err(usage(&format!(
             "annotate cannot add a question named '{name}': the input already has a column by that name; rename one"
         )));
@@ -324,41 +305,19 @@ pub(crate) fn annotate(
             if texts.is_empty() {
                 account.no_work();
             }
-            Ok(found
-                .into_iter()
-                .map(|held| {
-                    held.values()
-                        .iter()
-                        .map(|one| one.value().clone())
-                        .collect::<Vec<_>>()
-                })
-                .collect::<Vec<_>>())
+            let rows = found
+                .iter()
+                .map(|held| raw(held.value_json()))
+                .collect::<Crossed<Vec<_>>>()?;
+            Ok(AnnotatedRows { names, kinds, rows })
         },
     )?;
-    let completed = completed.map(|rows| {
-        let columns = (0..members.len())
-            .map(|at| {
-                let cells = rows.iter().map(|row| {
-                    row.get(at)
-                        .map(cell)
-                        .ok_or_else(|| defect("an annotate record lacked a member"))
-                });
-                cells.collect::<Crossed<Vec<Robj>>>().map(List::from_values)
-            })
-            .collect::<Crossed<Vec<List>>>()?;
-        let names: Vec<&str> = members.iter().map(|(name, _)| name.as_str()).collect();
-        let kinds: Vec<&str> = members.iter().map(|(_, kind)| kind.as_str()).collect();
-        Ok(list!(
-            names = names,
-            kinds = kinds,
-            columns = List::from_values(columns)
-        ))
-    });
-    Ok(render::envelope(completed, Into::into))
+    render::envelope(completed)
 }
 
-/// `choose`, `score`, or `tag` over a column as one `annotate` of a one-question set (0095).
-/// The engine refuses a broken one-question reply whole, so a failed cell is a defect.
+/// `choose`, `score`, or `tag` over a column: each record's `--details`
+/// document, from which the R half reads the value and the chosen label's
+/// probability.
 #[expect(
     clippy::too_many_arguments,
     reason = "the binding passes public call controls explicitly"
@@ -382,10 +341,7 @@ pub(crate) fn column(
         receipt,
         Some(positions),
         move |engine, options, account| {
-            let options = batch.map_or(options, |value| options.batch(value));
-            let options = context
-                .as_deref()
-                .map_or(options, |value| options.context(value));
+            let options = controlled(options, batch, context.as_deref());
             let mut rows =
                 engine.details_many_with(&asked, texts.iter().map(String::as_str), options);
             let found = account::collect(&mut rows, account)?;
@@ -393,45 +349,12 @@ pub(crate) fn column(
                 account.no_work();
             }
             found
-                .into_iter()
-                .map(|row| {
-                    let detail = row.value();
-                    let probability = match (detail.value(), detail.probabilities()) {
-                        (Judgment::Choice(Some(selected)), Probabilities::Named(options)) => Some(
-                            options
-                                .iter()
-                                .find(|one| one.name() == selected)
-                                .ok_or_else(|| defect("the chosen label has no probability"))?
-                                .probability(),
-                        ),
-                        (Judgment::Choice(None), Probabilities::Named(_)) => None,
-                        (Judgment::Score(_), _) | (Judgment::Tags(_), _) => None,
-                        _ => return Err(defect("a column detail held another probability shape")),
-                    };
-                    Ok((detail.value().clone(), probability))
-                })
+                .iter()
+                .map(|row| raw(row.value().to_json()))
                 .collect::<Crossed<Vec<_>>>()
         },
     )?;
-    Ok(render::envelope(
-        completed,
-        |judged: Vec<(Judgment, Option<f64>)>| {
-            let probability = Doubles::from_values(
-                judged
-                    .iter()
-                    .map(|(_, one)| one.map_or_else(Rfloat::na, Rfloat::from)),
-            );
-            let value = List::from_values(judged.iter().map(|(value, _)| -> Robj {
-                match value {
-                    Judgment::Decision(answer) => code(*answer).into(),
-                    Judgment::Choice(pick) => Nullable::from(pick.clone()).into(),
-                    Judgment::Score(position) => (*position).into(),
-                    Judgment::Tags(labels) => labels.clone().into(),
-                }
-            }));
-            list!(value = value, probability = probability).into()
-        },
-    ))
+    render::envelope(completed)
 }
 
 /// The audit view of one judgment: the command's `--details` document.
@@ -449,33 +372,18 @@ pub(crate) fn details(
         receipt,
         None,
         move |engine, options, account| {
-            let held = match &asked {
+            let held = account.run(|| match &asked {
                 LoadedQuestion::Question(held) => engine.details_with(held, &text, options),
                 LoadedQuestion::Banded(held) => engine.details_with(held, &text, options),
-            };
-            let held = match held {
-                Ok(value) => value,
-                Err(error) => {
-                    return Err(account.failed(&error)?);
-                }
-            };
-            account.add(held.facts())?;
-            Ok(held.value().to_json())
+            })?;
+            raw(held.to_json())
         },
     )?;
-    Ok(render::envelope(completed, Into::into))
+    render::envelope(completed)
 }
 
-/// The counters of the engine in use, as doubles.
-pub(crate) fn counters() -> Crossed<List> {
-    let counted = engine()?.usage();
-    // R has no 64-bit integer, and counts stay far below 2^53.
-    let as_double = |value: u64| value as f64;
-    Ok(list!(
-        requests_sent = as_double(counted.requests_sent()),
-        retries = as_double(counted.retries()),
-        cache_answers = as_double(counted.cache_answers()),
-        input_tokens = as_double(counted.input_tokens()),
-        output_tokens = as_double(counted.output_tokens())
-    ))
+/// The counters of the engine in use, as JSON.
+pub(crate) fn counters() -> Crossed<String> {
+    serde_json::to_string(&engine()?.usage())
+        .map_err(|_| defect("the counters could not be written as JSON"))
 }

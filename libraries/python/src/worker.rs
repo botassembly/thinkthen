@@ -16,13 +16,14 @@ use crate::diagnostics::{host, host_error};
 use pyo3::exceptions::{PyKeyboardInterrupt, PyTimeoutError};
 use pyo3::prelude::*;
 use pyo3::types::PyBool;
-use thinkthen::{CallOptions, CancelToken, Error, ErrorKind, RecordObservation, contained};
+use thinkthen::{
+    CallOptions, CancelToken, Error, ErrorKind, Facts, RecordObservation, Tally, contained,
+};
 
 mod stream_receipt;
 pub(crate) use stream_receipt::{finish_stream_receipt, stream_receipt};
 
-use crate::result::{Completed, Observations, python_details};
-use crate::result::{OwnedFacts, python_owned_facts};
+use crate::result::{Completed, Observations, python_details, python_facts};
 use crate::{defect, raise, raised};
 use serde_json::Value;
 
@@ -83,17 +84,22 @@ pub(crate) struct Controls {
 type Outcome<T, E = Error> = Option<Result<T, E>>;
 
 pub(crate) trait WorkerError: From<Error> + Send + 'static {
-    fn facts(&self) -> Option<OwnedFacts>;
+    fn facts(&self) -> Option<Facts>;
     fn raised(&self, py: Python<'_>) -> PyErr;
     fn failure(&self) -> Failure;
     fn details(&self) -> Option<Vec<Value>> {
         None
     }
+    /// Give facts to a refusal that stopped before any engine call. They
+    /// span the job and add nothing to the caller's tally.
+    fn unaccounted(self, _facts: Facts) -> Self {
+        self
+    }
 }
 
 impl WorkerError for Error {
-    fn facts(&self) -> Option<OwnedFacts> {
-        Error::facts(self).map(OwnedFacts::from)
+    fn facts(&self) -> Option<Facts> {
+        Error::facts(self).cloned()
     }
     fn raised(&self, py: Python<'_>) -> PyErr {
         raised(py, self)
@@ -117,7 +123,7 @@ pub(crate) struct Failure {
 #[derive(Clone)]
 struct Terminal {
     outcome: &'static str,
-    facts: Option<OwnedFacts>,
+    facts: Option<Facts>,
     details: Option<Vec<Value>>,
     failure: Option<Failure>,
 }
@@ -205,7 +211,7 @@ impl Receipt {
                         facts: finished
                             .facts
                             .as_ref()
-                            .map(|facts| python_owned_facts(py, facts))
+                            .map(|facts| python_facts(py, facts))
                             .transpose()?,
                         details: finished
                             .details
@@ -314,7 +320,7 @@ where
 pub(crate) fn run_tallied<T, E, F>(
     py: Python<'_>,
     controls: Controls,
-    tally: Option<thinkthen::Tally>,
+    tally: Option<Tally>,
     job: F,
 ) -> PyResult<Completed<T>>
 where
@@ -331,67 +337,102 @@ where
         py,
         controls,
         move |options| {
-            let started = tally.as_ref().map(thinkthen::Tally::start);
+            let started = tally.as_ref().map(Tally::start);
+            // An empty tally times a call whose error carries no facts.
+            let span = Tally::new();
+            let spanned = span.start();
             let observer = |event: RecordObservation<'_>| on_worker.push(event);
             let result = job(options.observe(&observer));
             if let Some(started) = started {
                 let facts = match &result {
-                    Ok(done) => done.facts.core.clone(),
-                    Err(error) => error.facts().and_then(|facts| facts.core),
+                    Ok(done) => Some(done.facts.clone()),
+                    Err(error) => error.facts(),
                 };
                 if let Some(facts) = facts.as_ref() {
                     started.finish(facts).map_err(E::from)?;
                 }
             }
-            result
+            result.map_err(|error| match spanned.finish(&span.facts()) {
+                Ok(()) => error.unaccounted(span.facts()),
+                Err(defect) => E::from(defect),
+            })
         },
         move |outcome| {
-            let details = final_observations.snapshot();
-            let terminal = match outcome {
-                Some(Ok(done)) => Terminal {
-                    outcome: "succeeded",
-                    facts: Some(done.facts.clone()),
-                    details: Some(if done.details.is_empty() {
-                        details
-                    } else {
-                        done.details.clone()
-                    }),
-                    failure: None,
-                },
-                Some(Err(error)) => Terminal {
-                    outcome: "failed",
-                    facts: error.facts(),
-                    details: error.facts().map(|_| error.details().unwrap_or(details)),
-                    failure: Some(error.failure()),
-                },
-                None => Terminal {
-                    outcome: "panicked",
-                    facts: None,
-                    details: None,
-                    failure: None,
-                },
-            };
-            final_state.finish(terminal);
+            final_state.finish(terminal(outcome, final_observations.snapshot()));
         },
         Some(state),
     );
     match finished {
-        Ok(mut done) => {
-            if done.details.is_empty() {
-                done.details = observations.snapshot();
+        Ok(mut done) => match observations.snapshot() {
+            Ok(observed) => {
+                if done.details.is_empty() {
+                    done.details = observed;
+                }
+                Ok(done)
             }
-            Ok(done)
-        }
+            Err(message) => {
+                let error = defect(py, message);
+                error
+                    .value(py)
+                    .setattr("facts", python_facts(py, &done.facts)?)?;
+                Err(error)
+            }
+        },
         Err(error) => {
             let value = error.value(py);
             if value.getattr("facts").is_ok()
                 && value.getattr("details").is_err()
-                && let Ok(details) = python_details(py, &observations.snapshot())
+                && let Ok(observed) = observations.snapshot()
+                && let Ok(details) = python_details(py, &observed)
             {
                 let _set = value.setattr("details", details);
             }
             Err(error)
         }
+    }
+}
+
+/// A call's settled receipt. A question event that could not be written
+/// fails a call that otherwise succeeded.
+fn terminal<T, E: WorkerError>(
+    outcome: &Outcome<Completed<T>, E>,
+    observed: Result<Vec<Value>, &'static str>,
+) -> Terminal {
+    match outcome {
+        Some(Ok(done)) if observed.is_err() => Terminal {
+            outcome: "failed",
+            facts: Some(done.facts.clone()),
+            details: None,
+            failure: Some(Failure {
+                kind: ErrorKind::Defect.name(),
+                message: crate::result::UNWRITTEN.to_owned(),
+                retryable: false,
+            }),
+        },
+        Some(Ok(done)) => Terminal {
+            outcome: "succeeded",
+            facts: Some(done.facts.clone()),
+            details: if done.details.is_empty() {
+                observed.ok()
+            } else {
+                Some(done.details.clone())
+            },
+            failure: None,
+        },
+        Some(Err(error)) => Terminal {
+            outcome: "failed",
+            facts: error.facts(),
+            details: error
+                .facts()
+                .and_then(|_| error.details().or_else(|| observed.ok())),
+            failure: Some(error.failure()),
+        },
+        None => Terminal {
+            outcome: "panicked",
+            facts: None,
+            details: None,
+            failure: None,
+        },
     }
 }
 

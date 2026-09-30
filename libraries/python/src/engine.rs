@@ -102,24 +102,6 @@ pub(crate) fn collected<T>(mut batch: Batch<'_, T>) -> Result<Completed<Vec<T>>,
     ))
 }
 
-/// One record's values, owned so they leave the worker.
-fn named(record: thinkthen::AnnotatedRecord<String>) -> Vec<(String, Annotated)> {
-    record
-        .values()
-        .iter()
-        .map(|one| (one.name().to_owned(), one.value().clone()))
-        .collect()
-}
-
-/// One record's dictionary, in the set's order.
-fn row(py: Python<'_>, values: Vec<(String, Annotated)>) -> PyResult<Py<PyAny>> {
-    let row = PyDict::new(py);
-    for (name, value) in values {
-        row.set_item(name, annotated(py, value)?)?;
-    }
-    Ok(row.into_any().unbind())
-}
-
 /// The engine behind `tt.Engine` and the module functions.
 #[pyclass(frozen, name = "_Engine", module = "thinkthen._thinkthen")]
 #[derive(Debug)]
@@ -409,11 +391,12 @@ impl Engine {
             let rows = run_observed(py, controls, move |options| {
                 let options = batch.map_or(options, |batch| options.batch(batch));
                 collected(engine.annotate_with(&set, records, options))
-                    .map(|done| done.map(|rows| rows.into_iter().map(named).collect()))
+                    .map(|done| done.map(|rows| rows.iter().map(|row| row.value_json()).collect()))
             })?;
-            result::converted(py, rows, |rows: Vec<Vec<(String, Annotated)>>| {
-                rows.into_iter()
-                    .map(|values| row(py, values))
+            result::converted(py, rows, |rows: Vec<String>| {
+                let json = py.import("json")?;
+                rows.iter()
+                    .map(|row| json.call_method1("loads", (row,)).map(Bound::unbind))
                     .collect::<PyResult<Vec<_>>>()?
                     .into_pyobject(py)
                     .map(|value| value.unbind())

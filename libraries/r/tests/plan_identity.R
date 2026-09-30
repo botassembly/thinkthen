@@ -14,7 +14,7 @@ check("the bound batch-one plan has independently known bytes and token band wit
       identical(plan$estimated_input_tokens, list(lower = 159, upper = 281)) &&
       identical(plan$first_body, alpha))
 check("both actual batch-one bodies and the listener count match that plan",
-      actual_sends == 2L && identical(answer$facts$requests_sent, 2) &&
+      actual_sends == 2L && identical(answer$facts$requests_sent, 2L) &&
       identical(answer$value, c(TRUE, TRUE)))
 
 context <- tt_decide("Q?", context = "Shared reference")
@@ -26,5 +26,5 @@ check("a bound context also plans its own actual body and sends once",
       identical(context_plan$requests, 1) &&
       identical(bodies, list(alpha, beta, context_plan$first_body)) &&
       grepl("Shared reference", bodies[[3L]], fixed = TRUE) &&
-      identical(context_answer$facts$requests_sent, 1))
+      identical(context_answer$facts$requests_sent, 1L))
 finish("plan identity", 3L)

@@ -1,7 +1,7 @@
 //! Whole-frame recognition through one Rust call per text.
 
 use super::{AccountedFailure, Stop};
-use crate::result::{Completed, Observations, OwnedFacts};
+use crate::result::{Completed, Observations};
 use crate::worker::Controls;
 use std::time::{Duration, Instant};
 use thinkthen::{CallOptions, RecognizedEntity};
@@ -13,14 +13,6 @@ pub(super) fn due(controls: &Controls) -> Option<Instant> {
         .filter(|millis| *millis >= 0)
         .map(|millis| Duration::from_millis(millis as u64))
         .and_then(|budget| Instant::now().checked_add(budget))
-}
-
-fn merge(facts: &mut Option<OwnedFacts>, next: &thinkthen::Facts) {
-    if let Some(all) = facts {
-        all.combine(next);
-    } else {
-        *facts = Some(next.into());
-    }
 }
 
 fn indexed(mut detail: serde_json::Value, index: usize) -> serde_json::Value {
@@ -40,54 +32,43 @@ pub(super) fn each_named(
     due: Option<Instant>,
 ) -> Result<Completed<Vec<Vec<RecognizedEntity>>>, Stop> {
     let options = due.map_or(options, |at| options.deadline_at(at));
-    let started = Instant::now();
-    let mut facts: Option<OwnedFacts> = None;
+    let tally = thinkthen::Tally::new();
+    let mut counted = false;
     let mut details = Vec::new();
     let mut rows = Vec::with_capacity(texts.len());
     for (index, text) in texts.iter().enumerate() {
         let observed = Observations::default();
         let collector = observed.clone();
         let observer = |event: thinkthen::RecordObservation<'_>| collector.push(event);
-        match engine.recognize_with(ask, text, options.observe(&observer)) {
-            Ok(found) => {
-                merge(&mut facts, found.facts());
-                rows.push(found.value().entities().to_vec());
-            }
-            Err(error) => {
-                if let Some(next) = error.facts() {
-                    merge(&mut facts, next);
-                }
-                details.extend(
-                    observed
-                        .snapshot()
-                        .into_iter()
-                        .map(|detail| indexed(detail, index)),
-                );
-                return Err(match facts {
-                    Some(mut facts) => {
-                        facts.seconds = started.elapsed().as_secs_f64();
-                        Stop::Accounted(Box::new(AccountedFailure {
-                            error,
-                            facts,
-                            details,
-                        }))
-                    }
-                    None => Stop::Engine(error),
-                });
-            }
+        let started = tally.start();
+        let result = engine.recognize_with(ask, text, options.observe(&observer));
+        let facts = match &result {
+            Ok(found) => Some(found.facts()),
+            Err(error) => error.facts(),
+        };
+        if let Some(facts) = facts {
+            started.finish(facts)?;
+            counted = true;
         }
-        details.extend(
-            observed
-                .snapshot()
-                .into_iter()
-                .map(|detail| indexed(detail, index)),
-        );
+        let Ok(seen) = observed.snapshot() else {
+            return Err(Stop::Unwritten(Box::new(tally.facts())));
+        };
+        details.extend(seen.into_iter().map(|detail| indexed(detail, index)));
+        match result {
+            Ok(found) => rows.push(found.value().entities().to_vec()),
+            Err(error) if counted => {
+                return Err(Stop::Accounted(Box::new(AccountedFailure {
+                    error,
+                    facts: tally.facts(),
+                    details,
+                })));
+            }
+            Err(error) => return Err(Stop::Engine(error)),
+        }
     }
-    let mut facts = facts.unwrap_or_else(OwnedFacts::empty);
-    facts.seconds = started.elapsed().as_secs_f64();
     Ok(Completed {
         value: rows,
-        facts,
+        facts: tally.facts(),
         details,
     })
 }

@@ -22,7 +22,7 @@ use std::time::Duration;
 use thinkthen::{BatchSetting, CancelToken, Engine, EngineBuilder, ErrorKind, Facts, contained};
 
 use crate::call::Ask;
-use crate::result::{Completed, Detail};
+use crate::result::Completed;
 
 /// How long one wait holds before the Ruby thread reads its interrupts.
 const SLICE: Duration = Duration::from_millis(50);
@@ -34,7 +34,7 @@ struct Fault {
     message: String,
     retryable: bool,
     facts: Option<Box<Facts>>,
-    details: Vec<Detail>,
+    details: Vec<String>,
 }
 
 impl Fault {

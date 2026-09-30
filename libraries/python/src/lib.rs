@@ -165,7 +165,6 @@ fn _thinkthen(module: &Bound<'_, PyModule>) -> PyResult<()> {
     }
     module.add_class::<engine::Engine>()?;
     module.add_class::<result::PyCall>()?;
-    module.add_class::<result::PyFacts>()?;
     module.add_class::<tally::PyTally>()?;
     module.add_class::<stream::PyStream>()?;
     module.add_class::<worker::Token>()?;

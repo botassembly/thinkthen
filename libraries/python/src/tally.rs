@@ -3,7 +3,7 @@
 use pyo3::prelude::*;
 use thinkthen::Tally;
 
-use crate::result::PyFacts;
+use crate::result::python_facts;
 
 #[pyclass(frozen, name = "Tally", module = "thinkthen._thinkthen")]
 #[derive(Debug, Default)]
@@ -17,7 +17,7 @@ impl PyTally {
     }
 
     #[getter]
-    fn facts(&self, py: Python<'_>) -> PyResult<Py<PyFacts>> {
-        Py::new(py, PyFacts((&self.0.facts()).into()))
+    fn facts(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        python_facts(py, &self.0.facts())
     }
 }

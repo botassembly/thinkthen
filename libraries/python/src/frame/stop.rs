@@ -2,9 +2,9 @@
 
 use pyo3::prelude::*;
 use serde_json::Value;
-use thinkthen::Error;
+use thinkthen::{Error, ErrorKind, Facts};
 
-use crate::result::{self, OwnedFacts};
+use crate::result;
 use crate::worker::{Failure, WorkerError};
 use crate::{raised, usage};
 
@@ -12,22 +12,24 @@ use crate::{raised, usage};
 pub(super) enum Stop {
     Engine(Error),
     Accounted(Box<AccountedFailure>),
-    Said(String, Option<Box<OwnedFacts>>),
+    Said(String, Option<Box<Facts>>),
+    /// A question event the binding could not write, after the call's facts.
+    Unwritten(Box<Facts>),
 }
 
 #[derive(Debug)]
 pub(super) struct AccountedFailure {
     pub(super) error: Error,
-    pub(super) facts: OwnedFacts,
+    pub(super) facts: Facts,
     pub(super) details: Vec<Value>,
 }
 
 impl Stop {
-    pub(super) fn after(sentence: impl Into<String>, facts: OwnedFacts) -> Self {
+    pub(super) fn after(sentence: impl Into<String>, facts: Facts) -> Self {
         Self::Said(sentence.into(), Some(Box::new(facts)))
     }
 
-    pub(super) fn with_facts(self, facts: OwnedFacts) -> Self {
+    pub(super) fn with_facts(self, facts: Facts) -> Self {
         match self {
             Self::Said(sentence, _) => Self::Said(sentence, Some(Box::new(facts))),
             other => other,
@@ -36,11 +38,19 @@ impl Stop {
 }
 
 impl WorkerError for Stop {
-    fn facts(&self) -> Option<OwnedFacts> {
+    fn facts(&self) -> Option<Facts> {
         match self {
-            Self::Engine(error) => error.facts().map(OwnedFacts::from),
+            Self::Engine(error) => error.facts().cloned(),
             Self::Accounted(account) => Some(account.facts.clone()),
             Self::Said(_, facts) => facts.as_deref().cloned(),
+            Self::Unwritten(facts) => Some(facts.as_ref().clone()),
+        }
+    }
+
+    fn unaccounted(self, facts: Facts) -> Self {
+        match self {
+            Self::Said(sentence, None) => Self::Said(sentence, Some(Box::new(facts))),
+            other => other,
         }
     }
 
@@ -49,7 +59,7 @@ impl WorkerError for Stop {
             Self::Engine(error) => raised(py, error),
             Self::Accounted(account) => {
                 let raised = raised(py, &account.error);
-                if let Ok(value) = result::python_owned_facts(py, &account.facts) {
+                if let Ok(value) = result::python_facts(py, &account.facts) {
                     let _set = raised.value(py).setattr("facts", value);
                 }
                 if let Ok(value) = result::python_details(py, &account.details) {
@@ -60,8 +70,15 @@ impl WorkerError for Stop {
             Self::Said(sentence, facts) => {
                 let error = usage(py, sentence);
                 if let Some(facts) = facts
-                    && let Ok(value) = result::python_owned_facts(py, facts)
+                    && let Ok(value) = result::python_facts(py, facts)
                 {
+                    let _set = error.value(py).setattr("facts", value);
+                }
+                error
+            }
+            Self::Unwritten(facts) => {
+                let error = crate::defect(py, result::UNWRITTEN);
+                if let Ok(value) = result::python_facts(py, facts) {
                     let _set = error.value(py).setattr("facts", value);
                 }
                 error
@@ -81,6 +98,11 @@ impl WorkerError for Stop {
             Self::Said(message, _) => Failure {
                 kind: "usage",
                 message: message.clone(),
+                retryable: false,
+            },
+            Self::Unwritten(_) => Failure {
+                kind: ErrorKind::Defect.name(),
+                message: result::UNWRITTEN.to_owned(),
                 retryable: false,
             },
         }

@@ -19,11 +19,17 @@ struct State {
     missing_usage: bool,
     model: Option<String>,
     mixed_models: bool,
+    cost_micro_usd: u64,
+    missing_cost: bool,
 }
 
 /// One caller-owned sum of completed call facts. Clones share its state.
 /// Its seconds span the first call start through the last call finish, even
-/// when calls overlap; they are not the sum of call durations.
+/// when calls overlap; they are not the sum of call durations. Its estimated
+/// cost adds each call's rounded six-decimal estimate. That sum can differ
+/// from one rounding of the whole work by up to n/2 micro-dollars for n
+/// calls. The cost is absent when any call lacked one and when no call was
+/// recorded. Its model ignores calls that got no reply, as the command does.
 #[derive(Clone, Default)]
 pub struct Tally(Arc<Mutex<State>>);
 
@@ -91,7 +97,10 @@ impl Tally {
             output_tokens: (!state.missing_usage)
                 .then_some(state.output_tokens)
                 .flatten(),
-            estimated_cost_usd: None,
+            estimated_cost_usd: (state.first.is_some() && !state.missing_cost).then(|| {
+                let micro = state.cost_micro_usd;
+                format!("{}.{:06}", micro / 1_000_000, micro % 1_000_000)
+            }),
             seconds: match (state.first, state.last) {
                 (Some(first), Some(last)) => last.duration_since(first).as_secs_f64(),
                 _ => 0.0,
@@ -150,6 +159,18 @@ impl TallyStart<'_> {
         state.input_tokens = input;
         state.output_tokens = output;
         state.missing_usage |= facts.input_tokens.is_none() || facts.output_tokens.is_none();
+        match facts
+            .estimated_cost_usd
+            .as_deref()
+            .and_then(micro_usd)
+            .and_then(|cost| state.cost_micro_usd.checked_add(cost))
+        {
+            Some(total) => state.cost_micro_usd = total,
+            None => state.missing_cost = true,
+        }
+        if facts.requests_sent == 0 && facts.cache_answers == 0 {
+            return Ok(());
+        }
         match (&state.model, &facts.model) {
             (None, Some(model)) if !state.mixed_models => state.model = Some(model.clone()),
             (Some(previous), Some(model)) if previous != model => state.mixed_models = true,
@@ -157,5 +178,53 @@ impl TallyStart<'_> {
             _ => {}
         }
         Ok(())
+    }
+}
+
+/// A call's estimate, which the crate writes with six decimal places.
+fn micro_usd(cost: &str) -> Option<u64> {
+    let (whole, fraction) = cost.split_once('.')?;
+    if fraction.len() != 6 {
+        return None;
+    }
+    whole
+        .parse::<u64>()
+        .ok()?
+        .checked_mul(1_000_000)?
+        .checked_add(fraction.parse().ok()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Facts, Tally};
+
+    fn facts(requests_sent: u64, cache_answers: u64, model: Option<&str>) -> Facts {
+        Facts {
+            cache_answers,
+            estimated_cost_usd: None,
+            input_tokens: None,
+            model: model.map(str::to_owned),
+            output_tokens: None,
+            records: 1,
+            requests_sent,
+            seconds: 0.0,
+        }
+    }
+
+    #[test]
+    fn a_call_without_a_reply_leaves_the_model_alone() {
+        let cases = [
+            (vec![facts(1, 0, Some("m")), facts(0, 0, None)], Some("m")),
+            (vec![facts(0, 0, None), facts(0, 1, Some("m"))], Some("m")),
+            (vec![facts(1, 0, Some("m")), facts(1, 0, None)], None),
+            (vec![facts(1, 0, Some("m")), facts(0, 1, Some("n"))], None),
+        ];
+        for (calls, model) in cases {
+            let tally = Tally::new();
+            for call in &calls {
+                assert!(tally.start().finish(call).is_ok());
+            }
+            assert_eq!(tally.facts().model(), model);
+        }
     }
 }

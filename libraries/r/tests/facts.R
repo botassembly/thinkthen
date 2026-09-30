@@ -18,8 +18,8 @@ check("packed digest comes from independent body and served URL",
 check("one packed send has full call facts and original R indexes",
       inherits(packed, "thinkthen_call") && identical(packed$value, c(TRUE, NA, TRUE)) &&
       identical(packed$probability, c(0.9, NA_real_, 0.9)) &&
-      identical(packed$facts$records, 2) && identical(packed$facts$requests_sent, 1) &&
-      identical(packed$facts$input_tokens, 1) && identical(packed$facts$output_tokens, 1) &&
+      identical(packed$facts$records, 2L) && identical(packed$facts$requests_sent, 1L) &&
+      identical(packed$facts$input_tokens, 1L) && identical(packed$facts$output_tokens, 1L) &&
       identical(vapply(packed$details, `[[`, 0, "index"), c(0, 2)) &&
       identical(vapply(packed$details, `[[`, 0, "requests_sent"), c(1, 0)))
 check("a completed receipt uses the same original R indexes as the returned call",
@@ -40,7 +40,7 @@ structured_body <- paste0('{"state":"gamma","model":"jev-1.13.0","questions":{',
   '"hints":["one",{"a":null,"b":1}]}}}}')
 check("production parser and wire retain full structured meaning",
       identical(one$value, TRUE) && length(bodies) == 2L && identical(bodies[[2L]], structured_body) &&
-      identical(one$details[[1L]]$requests, digest(url, structured_body)))
+      identical(one$details[[1L]]$requests, list(digest(url, structured_body))))
 labelled <- tt_question(choose = list(ask = "Which?", hints = I("x")),
                         options = list(blue = NULL, red = list(meaning = I("a"))))
 check("named label meanings keep null and single-element arrays",
@@ -59,7 +59,7 @@ check("true and false keywords reach the one sent question",
 plain <- tt_decide("Context?", c("delta", "epsilon"), batch = 1L)
 shared <- tt_decide("Context?", c("delta", "epsilon"), batch = 1L, context = "Shared reference")
 check("per-call batch one and literal context reach the same question through different requests",
-      identical(plain$facts$requests_sent, 2) && identical(shared$facts$requests_sent, 2) &&
+      identical(plain$facts$requests_sent, 2L) && identical(shared$facts$requests_sent, 2L) &&
       identical(vapply(plain$details, `[[`, "", "question_sha256"),
                 vapply(shared$details, `[[`, "", "question_sha256")) &&
       !identical(vapply(plain$details, function(one) one$requests[[1L]], ""),
@@ -68,8 +68,8 @@ check("per-call batch one and literal context reach the same question through di
 none <- tt_decide("Q?", c(NA_character_, NA_character_))
 check("all missing input has a measured host no-work account",
       identical(none$value, c(NA, NA)) && identical(none$probability, c(NA_real_, NA_real_)) &&
-      identical(none$facts$records, 0) &&
-      identical(none$facts$requests_sent, 0) && is.null(none$facts$model) &&
+      identical(none$facts$records, 0L) &&
+      identical(none$facts$requests_sent, 0L) && is.null(none$facts$model) &&
       is.null(none$facts$input_tokens) && length(none$details) == 0L)
 
 early <- tt_completion()
@@ -85,8 +85,8 @@ check("claimed handle refuses reuse before sending", identical(kind_of(
   tt_decide("Q?", "x", completion = early)), "usage"))
 late <- tryCatch(tt_decide("Q?", "x", deadline_ms = 0), thinkthen_error = function(e) e)
 check("accounted zero-send deadline keeps final facts on its condition",
-      inherits(late, "thinkthen_deadline") && identical(late$facts$records, 0) &&
-      identical(late$facts$requests_sent, 0) && is.null(late$facts$model) &&
+      inherits(late, "thinkthen_deadline") && identical(late$facts$records, 0L) &&
+      identical(late$facts$requests_sent, 0L) && is.null(late$facts$model) &&
       length(late$details) == 0L)
 bad_bytes <- "caf\xe9"
 Encoding(bad_bytes) <- "bytes"
@@ -123,7 +123,7 @@ limited_sends <- sent_by(limited <- child(c(
   'receipt <- tt_completion()',
   'error <- tryCatch(tt_decide("Q?", c(NA_character_, "first", "second"), completion = receipt), thinkthen_error = function(e) e)',
   'final <- tt_completion_read(receipt)',
-  'cat(inherits(error, "thinkthen_usage"), identical(error$facts$requests_sent, 1),',
+  'cat(inherits(error, "thinkthen_usage"), identical(error$facts$requests_sent, 1L),',
   '    identical(vapply(error$details, `[[`, 0, "index"), 1), identical(final$kind, "usage"),',
   '    identical(vapply(final$details, `[[`, 0, "index"), 1), "\\n")'
 )))
@@ -154,7 +154,7 @@ total_sends <- sent_by(total <- child(c(
   'receipt <- tt_completion()',
   'blocked <- tryCatch(tt_decide("Q?", "second", completion = receipt), thinkthen_error = function(e) e)',
   'cat(identical(first$value, TRUE), inherits(blocked, "thinkthen_usage"),',
-  '    identical(blocked$facts$requests_sent, 0),',
+  '    identical(blocked$facts$requests_sent, 0L),',
   '    identical(tt_completion_read(receipt)$kind, "usage"), "\\n")'
 )))
 check("process cap counts a prior call and refuses the next before a send",

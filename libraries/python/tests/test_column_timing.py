@@ -108,7 +108,7 @@ def test_a_column_holds_the_throttle_in_flight(tmp_path):
         rows = pl.Series(group) if {shape!r} == "series" else group
         call = engine.decide(late, rows)
         values = call.value.to_list() if hasattr(call.value, "to_list") else call.value
-        answers.append((values, call.facts.requests_sent))
+        answers.append((values, call.facts["requests_sent"]))
     held = [threading.Thread(target=ask, args=(group,)) for group in groups]
     for thread in held:
         thread.start()

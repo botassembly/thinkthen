@@ -17,7 +17,7 @@ use crate::core::{
     RelationEntity, Value as Bare,
 };
 use crate::engine::facade::Recognized;
-use crate::public::{Counters, DoorReply, ErrorKind};
+use crate::public::{Counters, DoorReply, ErrorKind, QuestionJson};
 
 /// One failed call as a JSON reader would see it: its kind, the retry signal,
 /// and a message safe to log. No surface prints it yet, so it lives only in
@@ -131,6 +131,7 @@ fn generated() -> String {
         generator.subschema_for::<Counters>(),
         generator.subschema_for::<DoorReply>(),
         generator.subschema_for::<CallError>(),
+        generator.subschema_for::<QuestionJson<'_>>(),
     ];
     let mut definitions: Map<String, Value> = generator.take_definitions(true);
     let decision = definitions

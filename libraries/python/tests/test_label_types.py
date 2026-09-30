@@ -58,7 +58,7 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         engine = tt.Engine(cache=False)
         digests = []
         def hold(call):
-            digests.append([list(call.details[0]["request_digests"]), call.facts.requests_sent])
+            digests.append([list(call.details[0]["requests"]), call.facts["requests_sent"]])
             return call.value
         plain = ["person", "company"]
         described = {"person": {"what": "a person"}, "company": ["a company"]}

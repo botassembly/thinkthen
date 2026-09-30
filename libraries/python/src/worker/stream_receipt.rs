@@ -3,7 +3,6 @@
 use std::sync::Arc;
 
 use super::{Failure, ReceiptState, Terminal};
-use crate::result::OwnedFacts;
 
 pub(crate) fn stream_receipt() -> Arc<ReceiptState> {
     Arc::new(ReceiptState::default())
@@ -23,7 +22,7 @@ pub(crate) fn finish_stream_receipt(
         } else {
             "succeeded"
         },
-        facts: facts.map(OwnedFacts::from),
+        facts: facts.cloned(),
         details: None,
         failure,
     });
