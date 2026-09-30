@@ -11,8 +11,8 @@ require_relative "../../../conformance/children/children"
 
 class TestPublicNames < Minitest::Test
   CONSTANTS = %i[BackendError Call Cancel CancelledError Completion DeadlineError DefectError Edge Engine Entity Error Found
-                 LocalError Question QuestionSet Ranked Recognized RecognizedEntity Relation UsageError VERSION].freeze
-  VERBS = %i[annotate choose choose_many decide decide_many decide_many_with_probabilities details filter find rank
+                 LocalError NO Question QuestionSet Ranked Recognized RecognizedEntity Relation UNSURE UsageError VERSION YES].freeze
+  VERBS = %i[annotate choose choose_many decide decide_many decide_many_with_probabilities details filter find plan rank
              recognize relate score score_many score_with_level tag tag_many usage with_tick].freeze
 
   def test_the_loaded_module_shows_only_the_pinned_names
@@ -34,7 +34,7 @@ class TestPublicNames < Minitest::Test
     names = JSON.parse(out, symbolize_names: true).transform_values { |list| list.map(&:to_sym) }
     assert_equal({
                    constants: CONSTANTS,
-                   module: (VERBS + %i[question set]).sort,
+                   module: (VERBS + %i[failed outcome question set]).sort,
                    engine: (VERBS + %i[inspect]).sort,
                    engine_class: [],
                    cancel: %i[cancel cancelled?],

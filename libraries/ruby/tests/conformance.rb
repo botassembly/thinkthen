@@ -139,8 +139,11 @@ def annotated(engine, set, texts, success, one)
   failed = 0
   success["answers"].each do |expected|
     value = records[one ? 0 : expected["exchange"]].fetch(expected["name"].to_sym)
-    failed += 1 if value.is_a?(Hash) && value.key?("failed")
-    same("bare #{expected['name']}", value, expected["bare"])
+    # ThinkThen.failed reads the failure marker; nil stays unresolved.
+    failure = T.failed(value)
+    failed += 1 if failure
+    same("bare #{expected['name']}", failure ? { "failed" => failure } : value, expected["bare"])
+    same("unresolved #{expected['name']}", value.nil?, expected["bare"].nil?)
   end
   same("failed", failed, success.fetch("failed_questions", 0))
 end
@@ -229,7 +232,7 @@ def refused(one, kind)
       token = T::Cancel.new
       token.cancel
       counted.decide(text, "Is this urgent?", cancel: token)
-    when "24-deadline-fault" then counted.decide(text, "Is this urgent?", deadline: 0)
+    when "24-deadline-fault" then counted.decide(text, "Is this urgent?", deadline_ms: 0)
     when "29-usage-json-text" then T.question(decide: text, threshold: one["question"]["threshold"])
     when "30-local-question-file"
       Dir.mktmpdir do |folder|

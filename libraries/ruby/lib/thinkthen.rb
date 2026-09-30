@@ -23,6 +23,9 @@ module ThinkThen
   # The one base class. `kind` is the kind's word and `retryable` the
   # engine's retry signal.
   class Error < StandardError
+    # Each kind's code in the C door, 1 through 6.
+    CODES = { "usage" => 1, "backend" => 2, "deadline" => 3, "local" => 4, "cancelled" => 5, "defect" => 6 }.freeze
+
     attr_reader :kind, :retryable, :facts, :details, :completion
 
     def initialize(message = nil, kind = nil, retryable = false)
@@ -30,7 +33,14 @@ module ThinkThen
       @kind = kind
       @retryable = retryable
     end
+
+    def code = CODES.fetch(kind, 6)
   end
+
+  # A decide answer's code in the C door. ThinkThen.outcome maps an answer to it.
+  YES = 1
+  NO = 0
+  UNSURE = 2
 
   class UsageError < Error; end
   class BackendError < Error; end
@@ -157,7 +167,7 @@ module ThinkThen
   # in flight at once, per loaded copy of the library.
   class Engine
     def initialize(base_url: nil, model: nil, throttle: nil, max_requests: nil, max_request_bytes: nil, cache: nil,
-                   timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil, batch: nil)
+                   timeout: nil, max_retries: nil, record: nil, replay: nil, profile: nil, batch: nil, max_requests_total: nil)
       ThinkThen.__send__(:text_setting, :base_url, base_url)
       ThinkThen.__send__(:text_setting, :model, model)
       ThinkThen.__send__(:whole_setting, :throttle, throttle)
@@ -165,6 +175,7 @@ module ThinkThen
       ThinkThen.__send__(:whole_setting, :max_request_bytes, max_request_bytes)
       ThinkThen.__send__(:whole_setting, :timeout, timeout)
       ThinkThen.__send__(:whole_setting, :max_retries, max_retries)
+      ThinkThen.__send__(:whole_setting, :max_requests_total, max_requests_total)
       { record: record, replay: replay, profile: profile }.each do |name, value|
         ThinkThen.__send__(:text_setting, name, value)
       end
@@ -175,7 +186,8 @@ module ThinkThen
       @native = Native.engine({ base_url: base_url, model: model, throttle: throttle,
         max_requests: max_requests, max_request_bytes: max_request_bytes,
         cache_at: cache || nil, no_cache: cache == false,
-        timeout: timeout, max_retries: max_retries, record: record, replay: replay, profile: profile, batch: batch })
+        timeout: timeout, max_retries: max_retries, record: record, replay: replay, profile: profile, batch: batch,
+        max_requests_total: max_requests_total })
     end
 
     def self.from_native(native)
@@ -189,33 +201,33 @@ module ThinkThen
       "#<ThinkThen::Engine>"
     end
 
-    def decide(question, evidence, cancel: nil, deadline: nil, batch: nil, context: nil)
-      crossing("decide", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+    def decide(question, evidence, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
+      crossing("decide", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline_ms,
                batch: batch, context: context)
     end
 
-    def decide_many(question, records, cancel: nil, deadline: nil, batch: nil, context: nil)
-      decide_many_with_probabilities(question, records, cancel: cancel, deadline: deadline, batch: batch,
+    def decide_many(question, records, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
+      decide_many_with_probabilities(question, records, cancel: cancel, deadline_ms: deadline_ms, batch: batch,
                                     context: context).map { |rows| rows.map { |row| row[:answer] } }
     end
 
     # Each answer with its probability, from the same requests.
-    def decide_many_with_probabilities(question, records, cancel: nil, deadline: nil, batch: nil, context: nil)
-      crossing("decide_many", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, records.to_a), cancel, deadline,
+    def decide_many_with_probabilities(question, records, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
+      crossing("decide_many", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, records.to_a), cancel, deadline_ms,
                batch: batch, context: context, batch_ok: true, context_ok: true)
         .map { |rows| rows.map { |answer, probability| { answer: answer, probability: probability } } }
     end
 
-    def filter(question, records, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def filter(question, records, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       list = records.to_a
-      crossing("filter", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, list), cancel, deadline,
+      crossing("filter", ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, list), cancel, deadline_ms,
                batch: batch, context: context, batch_ok: true, context_ok: true)
         .map { |places| places.map { |place| list[place] } }
     end
 
-    def rank(question, records, top: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def rank(question, records, top: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       list = records.to_a
-      crossing("rank", ThinkThen.__send__(:question_text, "rank", question), ThinkThen.__send__(:texts, list), cancel, deadline,
+      crossing("rank", ThinkThen.__send__(:question_text, "rank", question), ThinkThen.__send__(:texts, list), cancel, deadline_ms,
                batch: batch, context: context, batch_ok: true, context_ok: true)
         .map do |placed|
           ranked = placed.map { |place, probability| Ranked.new(place, list[place], probability) }
@@ -224,57 +236,57 @@ module ThinkThen
     end
 
     # none: true offers a none candidate, as find --none does, so nothing may fit.
-    def find(question, units, none: false, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def find(question, units, none: false, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       raise UsageError.new("none is true or false", "usage") unless [true, false].include?(none)
 
       list = units.to_a
-      crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, "find", question), ThinkThen.__send__(:texts, list), cancel, deadline,
+      crossing(none ? "find_none" : "find", ThinkThen.__send__(:question_text, "find", question), ThinkThen.__send__(:texts, list), cancel, deadline_ms,
                batch: batch, context: context).map do |place, probability|
         Found.new(place, place.nil? ? nil : list[place], probability)
       end
     end
 
-    def choose(question, evidence, options: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def choose(question, evidence, options: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "choose", question, :options, options)
-      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline_ms,
                batch: batch, context: context).map { |json| JSON.parse(json)["value"] }
     end
 
-    def score(question, evidence, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def score(question, evidence, levels: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "score", question, :levels, levels)
-      crossing("score", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+      crossing("score", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline_ms,
                batch: batch, context: context)
     end
 
     # The position and its nearest level, from one call.
-    def score_with_level(question, evidence, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def score_with_level(question, evidence, levels: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "score", question, :levels, levels)
-      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline_ms,
                batch: batch, context: context).map { |json| JSON.parse(json).then { |doc| [doc["value"], doc.dig("answer", "level")] } }
     end
 
-    def tag(question, evidence, labels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def tag(question, evidence, labels: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       question = ThinkThen.__send__(:keyed, "tag", question, :labels, labels)
-      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+      crossing("details", question, ThinkThen.__send__(:text_of, evidence), cancel, deadline_ms,
                batch: batch, context: context).map { |json| JSON.parse(json)["value"] }
     end
 
     # The command's --details document for one text.
-    def details(question, evidence, cancel: nil, deadline: nil, batch: nil, context: nil)
-      crossing("details", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline,
+    def details(question, evidence, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
+      crossing("details", ThinkThen.__send__(:built, question), ThinkThen.__send__(:text_of, evidence), cancel, deadline_ms,
                batch: batch, context: context).map { |json| JSON.parse(json) }
     end
 
-    def choose_many(question, records, options: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
-      many("choose", question, :options, options, records, cancel, deadline, batch, context)
+    def choose_many(question, records, options: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
+      many("choose", question, :options, options, records, cancel, deadline_ms, batch, context)
     end
 
-    def score_many(question, records, levels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
-      many("score", question, :levels, levels, records, cancel, deadline, batch, context)
+    def score_many(question, records, levels: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
+      many("score", question, :levels, levels, records, cancel, deadline_ms, batch, context)
     end
 
-    def tag_many(question, records, labels: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
-      many("tag", question, :labels, labels, records, cancel, deadline, batch, context)
+    def tag_many(question, records, labels: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
+      many("tag", question, :labels, labels, records, cancel, deadline_ms, batch, context)
     end
 
     # One Hash per record, named by the set's questions. A set member whose
@@ -282,7 +294,7 @@ module ThinkThen
     # record is a Hash, its `on` value is the evidence, and the answers
     # join its own keys. A question landing on any record's key refuses
     # before any request.
-    def annotate(set, records, on: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def annotate(set, records, on: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       set = ThinkThen.set(set) if set.is_a?(String)
       list = records.to_a
       if on
@@ -291,7 +303,7 @@ module ThinkThen
       else
         evidence = ThinkThen.__send__(:texts, list)
       end
-      crossing("annotate", set, evidence, cancel, deadline, batch: batch, context: context, batch_ok: true)
+      crossing("annotate", set, evidence, cancel, deadline_ms, batch: batch, context: context, batch_ok: true)
         .map do |rows|
           rows.each_with_index.map do |json, place|
             answers = JSON.parse(json).transform_keys(&:to_sym)
@@ -305,7 +317,7 @@ module ThinkThen
     #   found = ThinkThen.recognize(text, kinds: %w[person organization place],
     #                               relations: { works_for: %w[person organization] })
     #   found.entities.first.kind  # "person"
-    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, file: nil, cancel: nil, deadline: nil,
+    def recognize(text, kinds: nil, relations: nil, threshold: nil, relation_threshold: nil, file: nil, cancel: nil, deadline_ms: nil,
                   batch: nil, context: nil)
       unless file.nil?
         ThinkThen.__send__(:refuse, "recognize file takes no inline plan options") unless [kinds, relations, threshold, relation_threshold].all?(&:nil?)
@@ -313,7 +325,7 @@ module ThinkThen
       else
         spec = JSON.generate(ThinkThen.__send__(:recognize_spec, kinds, relations, threshold, relation_threshold))
       end
-      crossing("recognize", spec, ThinkThen.__send__(:text_of, text), cancel, deadline,
+      crossing("recognize", spec, ThinkThen.__send__(:text_of, text), cancel, deadline_ms,
                batch: batch, context: context).map { |json| ThinkThen.__send__(:recognized, JSON.parse(json)) }
     end
 
@@ -323,7 +335,7 @@ module ThinkThen
     #
     #   edges = ThinkThen.relate([["Ana", "person"], ["Acme", "organization"]],
     #                            relations: { works_for: %w[person organization] })
-    def relate(entities, relations: nil, either: nil, threshold: nil, file: nil, cancel: nil, deadline: nil, batch: nil, context: nil)
+    def relate(entities, relations: nil, either: nil, threshold: nil, file: nil, cancel: nil, deadline_ms: nil, batch: nil, context: nil)
       unless file.nil?
         ThinkThen.__send__(:refuse, "relate file takes no inline plan options") unless [relations, either, threshold].all?(&:nil?)
         spec = Native.plan_file(ThinkThen.__send__(:file_path, file, "plan"), "relate")
@@ -332,7 +344,7 @@ module ThinkThen
         spec = JSON.generate(ThinkThen.__send__(:relate_spec, relations, either, threshold))
       end
       pairs = entities.to_a.each_with_index.map { |entity, place| ThinkThen.__send__(:pair_of, entity, place) }
-      crossing("relate", spec, pairs, cancel, deadline, batch: batch, context: context)
+      crossing("relate", spec, pairs, cancel, deadline_ms, batch: batch, context: context)
         .map do |rows|
           rows.map do |json|
             edge = JSON.parse(json)
@@ -340,6 +352,15 @@ module ThinkThen
           end
         end
       end
+
+    # Preview a decide, choose, score, or tag call without asking it: the
+    # records, the requests, the prepared bytes, the input-token band, and the
+    # first request body, as the result schema's plan object. It reads no key
+    # and no cache and sends nothing.
+    def plan(question, records, batch: nil, context: nil)
+      @native.plan(ThinkThen.__send__(:built, question), ThinkThen.__send__(:texts, records.to_a),
+                   ThinkThen.__send__(:batch_of, batch), ThinkThen.__send__(:context_of, context))
+    end
 
     # The engine's counters since the process started.
     def usage
@@ -364,14 +385,14 @@ module ThinkThen
 
     private
 
-    def many(verb, question, key, members, records, cancel, deadline, batch, context)
+    def many(verb, question, key, members, records, cancel, deadline_ms, batch, context)
       question = ThinkThen.__send__(:keyed, verb, question, key, members)
-      crossing("many", question, ThinkThen.__send__(:texts, records.to_a), cancel, deadline,
+      crossing("many", question, ThinkThen.__send__(:texts, records.to_a), cancel, deadline_ms,
                batch: batch, context: context, batch_ok: true, context_ok: true)
         .map { |rows| rows.map { |json| JSON.parse(json)["value"] } }
     end
 
-    def crossing(verb, subject, input, cancel, deadline, batch: nil, context: nil, batch_ok: false, context_ok: false)
+    def crossing(verb, subject, input, cancel, deadline_ms, batch: nil, context: nil, batch_ok: false, context_ok: false)
       unless cancel.nil? || cancel.is_a?(Cancel)
         raise UsageError.new("cancel is a ThinkThen::Cancel or nil", "usage")
       end
@@ -381,13 +402,13 @@ module ThinkThen
       batch = ThinkThen.__send__(:batch_of, batch)
       context = ThinkThen.__send__(:context_of, context)
 
-      seconds = ThinkThen.__send__(:deadline_of, deadline)
+      deadline_ms = ThinkThen.__send__(:deadline_ms_of, deadline_ms)
       own = Cancel.new
       tick = Thread.current[:thinkthen_tick]
       row = tick && ThinkThen.__send__(:watch, Row.new(tick, own, nil))
       pending = nil
       begin
-        raw, facts, details = @native.call(verb, subject, input, own, cancel, seconds, batch, context)
+        raw, facts, details = @native.call(verb, subject, input, own, cancel, deadline_ms, batch, context)
         Call.new(raw, facts, details)
       rescue Interrupt => error
         pending = error
@@ -439,12 +460,26 @@ module ThinkThen
     end
 
     %i[decide decide_many decide_many_with_probabilities filter rank find choose choose_many score score_many score_with_level
-       tag tag_many details annotate recognize relate usage].each do |name|
+       tag tag_many details annotate recognize relate plan usage].each do |name|
       define_method(name) { |*args, **keywords, &block| default_engine.public_send(name, *args, **keywords, &block) }
     end
 
     def with_tick(tick = nil, &block)
       default_engine.with_tick(tick, &block)
+    end
+
+    # YES, NO, or UNSURE for a decide answer: true, false, or nil.
+    def outcome(answer)
+      { true => YES, false => NO, nil => UNSURE }.fetch(answer) { refuse("an outcome reads true, false, or nil") }
+    end
+
+    # The failure of one annotate answer, `{ "kind" => ..., "cause" => ... }`,
+    # or nil for any value. nil is unresolved, never a failure.
+    def failed(member)
+      return unless member.is_a?(Hash) && member.size == 1
+
+      held = member["failed"] || member[:failed]
+      held if held.is_a?(Hash)
     end
 
     private
@@ -521,12 +556,15 @@ module ThinkThen
       refuse("#{name} is a whole number or nil") unless value.nil? || value.is_a?(Integer)
     end
 
-    # A deadline is seconds: nil or -1 for none, 0 for spent.
-    def deadline_of(value)
+    # A deadline is whole milliseconds: nil or -1 for none, 0 for spent. The
+    # engine rules on the value; this only keeps it a 64-bit whole number.
+    def deadline_ms_of(value)
       return nil if value.nil?
-      refuse("the deadline is seconds, a number, or nil for no deadline") unless value.is_a?(Numeric) && value.real?
+      unless value.is_a?(Integer) && value.bit_length < 64
+        refuse("deadline_ms is a whole number of milliseconds, or -1 or nil for no deadline")
+      end
 
-      value.to_f
+      value
     end
 
     # The text one record crosses as: a String unchanged, anything else its

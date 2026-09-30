@@ -42,7 +42,7 @@ class TestBatchFacts < Minitest::Test
         say [error.kind, error.facts, error.details]
       end
       begin
-        T.decide("Question?", "text", deadline: 0)
+        T.decide("Question?", "text", deadline_ms: 0)
       rescue T::Error => error
         say [error.kind, error.facts, error.details]
       end

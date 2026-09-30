@@ -116,8 +116,8 @@ pub(crate) fn run(
         }
     };
     let mut options = CallOptions::new().cancel(own);
-    if let Some(seconds) = controls.deadline {
-        options = options.deadline_seconds(seconds)?;
+    if let Some(millis) = controls.deadline_ms {
+        options = options.deadline_ms(millis)?;
     }
     if let Some(setting) = controls.batch {
         options = options.batch(setting);

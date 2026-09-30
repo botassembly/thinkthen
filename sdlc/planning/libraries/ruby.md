@@ -13,7 +13,7 @@ dated = ThinkThen.filter("Does this note name a delivery date?", notes)
 dated.each { |note| schedule(note) }
 
 engine = ThinkThen::Engine.new(throttle: 8, cache: "/var/cache/notes")
-engine.decide_many("Is this urgent?", notes, deadline: 30)
+engine.decide_many("Is this urgent?", notes, deadline_ms: 30_000)
 ```
 
 ## Goals
