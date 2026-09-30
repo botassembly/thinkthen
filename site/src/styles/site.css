@@ -350,8 +350,9 @@ p code, li code { white-space: nowrap; }
 
 /* ------------------------------------------------------------------ search */
 
-/* The header search box submits to /search/. On a phone it shares the first
-   row with the wordmark and the theme button. Its text is 16px so iOS does
+/* The header search box submits to /search/. On a phone a narrower field and
+   the round icon button share the first row with the wordmark and the theme
+   button. Its text is 16px so iOS does
    not zoom when it takes focus. */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
@@ -374,8 +375,7 @@ form.search button {
 form.search button:hover, form.search button:focus-visible { color: var(--ink); border-color: var(--think); }
 header.top form.search button { padding: 0; }
 @media (max-width: 40rem) {
-  header.top form.search input { width: 6.5rem; }
-  header.top form.search button { display: none; }
+  header.top form.search input { width: 6rem; }
 }
 main form.search { margin: 0 0 1.2rem; flex-wrap: wrap; }
 main form.search input { width: 16rem; }
