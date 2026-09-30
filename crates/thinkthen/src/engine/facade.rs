@@ -70,7 +70,7 @@ pub(crate) struct Settings {
     pub(crate) retry_wait: Duration,
     /// `None` follows the process width and never selects one.
     pub(crate) width: Option<Width>,
-    /// `THINKTHEN_REQUESTS_PER_MINUTE`, or `None` for the address's default.
+    /// `THINKTHEN_REQUESTS_PER_MINUTE`, which outranks the backend's own rate.
     pub(crate) per_minute: Option<std::num::NonZeroU32>,
     pub(crate) storage: Storage,
     /// Read only when a live attempt is about to go out.
@@ -214,7 +214,9 @@ impl Engine {
             None => Client::new(self.timeout, secure, widths),
         };
         Ok(State {
-            client: client.paced(crate::engine::backoff::interval(self.per_minute, secure)),
+            client: client.paced(crate::engine::backoff::interval(
+                self.per_minute.or(self.backend.per_minute()),
+            )),
             recorder,
             usage,
             width,
@@ -241,7 +243,8 @@ impl Engine {
         let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
             .map_err(|_| Error::Defect("a resolved address was refused again"))?
             .with_request_size(self.backend.ceiling())
-            .with_descriptions(self.backend.descriptions());
+            .with_descriptions(self.backend.descriptions())
+            .with_per_minute(self.backend.per_minute());
         Ok(Self {
             backend,
             ..self.clone()

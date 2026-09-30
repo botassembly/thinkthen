@@ -126,6 +126,8 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
         .to_owned();
     let unknown = "thinkthen: unknown backend `nowhere`; the built-in backends are `liquid`, `ollama` and `typesafe`, and the configuration file may name more\n".to_owned();
     let marker = "Sk_config_marker_0334";
+    let built_in = "thinkthen: a configuration entry for a built-in backend holds `requests_per_minute` and nothing else\n".to_owned();
+    let rate = "thinkthen: configuration backend field `requests_per_minute` must be a whole number from 1 to 60000\n".to_owned();
     let entry = |body: &str| {
         format!(r#"{{"schema":"thinkthen.config/1","backends":{{"local-d1":{body}}}}}"#)
     };
@@ -144,10 +146,15 @@ fn every_refusal_prints_its_exact_sentence_and_sends_nothing() {
         (vec!["--backend", "nowhere"], vec![], String::new(), unknown.clone(), 2),
         (vec![], vec![("THINKTHEN_BACKEND", "nowhere")], String::new(), unknown, 2),
         (vec!["--backend", "liquid"], vec![("LIQUIDAI_API_KEY", ""), ("LIQUID_API_KEY", " ")], String::new(), "thinkthen: the environment variable `LIQUIDAI_API_KEY` is unset or blank, so no key is sent\nthinkthen: stopped at record 1; 0 records finished\n".to_owned(), 4),
-        (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}"#).replace("local-d1", "liquid"), "thinkthen: configuration backend names a built-in backend; choose another name\n".to_owned(), 5),
+        (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","key_env":"K","model":"m"}"#).replace("local-d1", "liquid"), built_in.clone(), 5),
+        (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","backends":{{"ollama":{{"requests_per_minute":60,"model":"{marker}"}}}}}}"#), built_in.clone(), 5),
+        (vec![], vec![], r#"{"schema":"thinkthen.config/1","backends":{"typesafe":{}}}"#.to_owned(), built_in, 5),
+        (vec![], vec![], r#"{"schema":"thinkthen.config/1","backends":{"ollama":{"requests_per_minute":0}}}"#.to_owned(), rate.clone(), 5),
+        (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","backends":{{"liquid":{{"requests_per_minute":"{marker}"}}}}}}"#), rate.clone(), 5),
+        (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","requests_per_minute":60001}"#), rate, 5),
         (vec![], vec![], entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"{marker}","model":"m"}}"#)), "thinkthen: configuration backend field `key_env` names an environment variable: a capital letter or underscore, then capital letters, digits, and underscores\n".to_owned(), 5),
         (vec![], vec![], entry(r#"{"url":"http://127.0.0.1/v1","model":"m"}"#), "thinkthen: configuration backend entries need `url`, `key_env`, and `model`\n".to_owned(), 5),
-        (vec![], vec![], entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","key":"{marker}"}}"#)), "thinkthen: configuration backend entries hold only `url`, `key_env`, and `model`\n".to_owned(), 5),
+        (vec![], vec![], entry(&format!(r#"{{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","key":"{marker}"}}"#)), "thinkthen: configuration backend entries hold only `url`, `key_env`, `model`, and `requests_per_minute`\n".to_owned(), 5),
         (vec![], vec![], format!(r#"{{"schema":"thinkthen.config/1","api_key":"{marker}"}}"#), "thinkthen: the configuration file holds a field other than `schema`, `url`, `model`, `cache`, `cache_bytes`, `usd_per_million_input`, `usd_per_million_output`, `backend`, and `backends`\n".to_owned(), 5),
     ];
     for (index, (flags, changes, config, sentence, code)) in cases.into_iter().enumerate() {
