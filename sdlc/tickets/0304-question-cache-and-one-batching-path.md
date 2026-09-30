@@ -387,3 +387,6 @@ What the review fixes found:
 - Relate requests arrive in any order at width 2, so a count proof sorts them.
 - A replay fixture loaded per call costs nothing for one call over many records, but `recognize` makes one call per line and step. The spec page's 30-second limit caught it.
 - Review found a removed test module's `cfg(target_os = "linux")` left in place. It then gated the next module, so the cache trust tests stopped compiling on macOS.
+- Under `surfaces`, the Ada, Objective-C and COBOL checks wait on the lane lock the rung already holds, and exit 75 after three minutes. Each passes run alone.
+- A binding's `check.sh` does not measure its ratchet. Only `surfaces --registry`, which `lint` runs, does, so a test-only edit in seven bindings passed their checks and failed lint.
+- The Python check finds its pinned venv under `XDG_CACHE_HOME`. A scratch cache home hides it and the check says "not run".
