@@ -57,19 +57,27 @@ About 400 of the 430 library unit tests: question parsing (`core::question_file`
 
 ### Duplicates to merge or delete
 
-| Test | Duplicates | Action | Waits for |
+| Test to delete | Kept test that catches its regression | Proof before deletion | Waits for |
 | --- | --- | --- | --- |
-| `demo_runner::every_recorded_demo_runs_and_every_demo_still_red_is_skipped` | `spec` runs `sdlc/scripts/demos` over the same pages | Delete | nothing |
-| `backend` `refusals::no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything` | The split secrecy sweep's route table | Move its rows into the sweep as a route; delete the test after the rows land | nothing |
-| `question_file` `secrecy::no_message_from_either_home_ever_carries_the_key_or_the_evidence` | The same sweep | Move its rows into the sweep as a route; delete after | nothing |
-| `relate_edge::relate_reads_the_names_recognize_found` | Nothing. It parses the command out of demo 44's README | Keep the name-versus-text regression; pass the `--kind` list as fixed arguments | nothing |
-| `backend` `batching/portable.rs` (2), `public_batches/portable.rs` (1), `polars/batching.rs::portable_max_cuts_cross_public_series_and_frame_calls` | One portable cut rule on three doors. The 0304 slice 3a branch deletes `core/batch/tests/portable.rs` | Keep the command-line pair and one engine table | 0304 slice 3a and 3c |
-| `public_batches/splits.rs` `named_group_refused_parent_and_halves_keep_request_identity`, `named_group_failed_left_half_does_not_send_right`, `a_failed_left_half_prevents_a_right_send_and_row`, and `details.rs::split_record_details_name_the_refused_parent_and_the_answering_half` | `backend` `batching/too_large.rs` `a_too_large_batch_halves_once_and_counts_the_refused_request` and `a_refused_first_half_sends_no_second_half` | Keep one split table on `ask_all`; keep the library tests that pin request identity and shares | 0304 slice 3a |
-| `public_batches/tiers.rs::saved_annotate_batch_tiers` | `backend` `batching/tiers.rs::the_batch_setting_follows_its_tiers` | Keep the command-line test | 0304 slice 3a |
-| `public_size_retry` `retry_visibility_counts_live_attempts_and_no_replay_attempt` and `retry_attempts_use_send_ordinals_and_reject_duplicate_headers` | `backend` `backoff::default_and_explicit_retry_counts_are_per_request` and `status_counts_retries_as_a_subset_of_actual_sends` | One engine table and one command-line test | 0304 slice 3d |
-| `backend` `public_json::each_json_method_prints_the_commands_bytes_on_the_shared_cases` | The consumer's shared-case replay runs every case through the Rust library too | Fold the byte comparison into the consumer replay | 0304 slice 3a |
+| `demo_runner::every_recorded_demo_runs_and_every_demo_still_red_is_skipped` | `spec` runs `sdlc/scripts/demos` over the same pages. A broken demo then fails at a `spec` checkpoint, not in `test` | none needed | nothing |
+| `public_batches/portable.rs::public_bulk_keeps_portable_max_bodies_and_row_identities` | `backend` `batching/portable.rs` `complete_cli_lines_keep_literal_question_bytes_and_keys` and `structured_cli_values_keep_order_and_question_bytes`, plus `public_batches/identity.rs` for row identity | a mutation of the portable cut and of row identity, killed by the kept tests | 0304 slice 3a |
+| `polars/batching.rs::portable_max_cuts_cross_public_series_and_frame_calls` | The same command-line pair, since Polars reaches the one `ask_all` path | the same mutation run, under `--features polars` | 0304 slice 3c |
+| `public_batches/splits.rs::named_group_failed_left_half_does_not_send_right` | `public_batches/splits.rs::a_failed_left_half_prevents_a_right_send_and_row`, which holds the same no-right-send rule and also checks the row | a mutation that sends the right half, killed by the kept test | 0304 slice 3a |
+| `public_batches/tiers.rs::saved_annotate_batch_tiers` | `backend` `batching/tiers.rs::the_batch_setting_follows_its_tiers` | a mutation of one tier edge, killed by the kept test | 0304 slice 3a |
+| `public_size_retry.rs::retry_visibility_counts_live_attempts_and_no_replay_attempt` | `backend` `backoff::status_counts_retries_as_a_subset_of_actual_sends` for the counts, and `public_size_retry.rs::retry_attempts_use_send_ordinals_and_reject_duplicate_headers` for library attempts | mutations of the retry count and of the replay attempt, killed by the kept tests | 0304 slice 3d |
+| `backend` `public_json::each_json_method_prints_the_commands_bytes_on_the_shared_cases` | The consumer's `cases::every_applicable_shared_case_passes_through_the_public_api`, after it gains the byte comparison with the command | a mutation of one JSON field, killed by the consumer replay | 0304 slice 3a |
 
-Each deletion follows the workspace rule: before it goes, the ticket names what the test catches and which kept test catches it, with a mutation run where the pair is not obvious. No parser, secrecy, cancellation, cache-miss, invalid-input or conflict regression goes before its replacement lands.
+A slice deletes a row only when its mutation run is recorded. A mutation the kept test misses keeps the old test.
+
+These stay after review, because a merge would drop a retained regression:
+
+- `backend` `refusals::no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything`. It checks each of 40 refusals on every verb for its own exit code, its own sentence, empty standard output and zero connections. The sweep's route holds one code and one sentence. Two recorded mutation runs rely on it.
+- `question_file` `secrecy::no_message_from_either_home_ever_carries_the_key_or_the_evidence`. It forbids the evidence on standard output too, and each row brings its own question file. The sweep allows the evidence on standard output.
+- `public_size_retry.rs::retry_attempts_use_send_ordinals_and_reject_duplicate_headers`. It withholds a request id equal to the key, refuses duplicate headers, drops a forbidden header, and runs the observer on the caller's thread.
+- `public_batches/splits.rs` `named_group_refused_parent_and_halves_keep_request_identity` and `a_failed_left_half_prevents_a_right_send_and_row`, and `details.rs::split_record_details_name_the_refused_parent_and_the_answering_half`. They pin library request identity, the cancellation of the right half, and the details view.
+- `relate_edge::relate_reads_the_names_recognize_found`. It keeps the name-versus-text regression. Slice 1 rewrites it to pass the `--kind` list as fixed arguments instead of parsing demo 44's README.
+
+No parser, secrecy, cancellation, cache-miss, invalid-input or conflict regression goes before its replacement lands.
 
 ### Checks that move out of the landing gate
 
@@ -97,8 +105,8 @@ Ticket 0317 removed the wording tests from the Rust suite. The rest sit in the b
 
 ## Counts
 
-- Delete: 6. One Rust test, one Python test, and four check steps.
-- Merge: 12 tests into kept tests. Two secrecy tests become routes of the sweep now. Ten batching, retry and JSON tests merge after 0304 slice 3.
+- Delete as wording-only or duplicated by `spec`: 6. One Rust test, one Python test, and four check steps.
+- Merge into kept tests: 6 batching, retry and JSON tests, after 0304 slice 3, each with a recorded mutation run.
 - Rewrite in place: 1 (`relate_edge`).
 - Move out of `test`: 2 probe self-tests, to `spec`.
 - Move to the release suite: the full per-surface replay, 8 hand-written matrix files, and the installed-artifact checks of 20 bindings. These stay here until the suite runs them.

@@ -9,16 +9,15 @@ Status: ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue: `sdlc
 ## Evidence
 
 - Starts from: record 0305 and ticket 0317 (cut lists and timings), and one measured run of `sdlc/scripts/test` on `2b3cb67ea`: 82.5 s wall at load 13 to 19, 1,289 nextest tests in 17.5 s, 18 consumer tests, one doctest, and 13 shell self-tests. The inventory holds the groups, the per-step times and the named tests.
-- Keeps: the dense-logic unit tables, the command-line exact-output tests, the split secrecy sweep, the Rust library tests, the `conformance/` replays, `speed`, the demo runner's failing-page test, the transform tables and `live-test`. No parser, secrecy, cancellation, cache-miss, invalid-input or conflict regression goes before a stronger test holds it. The routine `surfaces` rung keeps its 31 cases per binding.
-- Changes: in three slices, below. Delete 6 wording-only or duplicate tests and check steps; merge 12 tests into kept tests; rewrite 1 test in place; move 2 probe self-tests from `test` to `spec`; add one replay smoke per binding.
+- Keeps: the dense-logic unit tables, the command-line exact-output tests, the split secrecy sweep, the refusal sweep in `backend/refusals.rs`, the question-file secrecy test, the library retry-header and split-identity tests the inventory lists, the Rust library tests, the `conformance/` replays, `speed`, the demo runner's failing-page test, the transform tables and `live-test`. No parser, secrecy, cancellation, cache-miss, invalid-input or conflict regression goes before a stronger test holds it. The routine `surfaces` rung keeps its 31 cases per binding.
+- Changes: in three slices, below. Delete 6 wording-only or duplicate tests and check steps; merge 6 tests into kept tests; rewrite 1 test in place; move 2 probe self-tests from `test` to `spec`; add one replay smoke per binding.
 - Proof: per slice, `sdlc/scripts/test` wall time and test count before and after under stated load; each deleted or merged test names the kept test that catches its regression, with a mutation run where the pair is not obvious; each smoke fails once against a planted broken package before it passes.
 - Defers: moving the per-surface matrices, the full per-surface replay and the installed-artifact checks until the release suite runs bindings; the long waits in `engine::deadline_tests` and `cli::schedule::width_tests`; `transforms/sweep/test.sh`'s 5.1 s; merging test binaries.
 
 ## Slices
 
 1. **Now.** These files are outside the 0304 slice 3a branch and the ticket-checker lane.
-   - Delete `demo_runner::every_recorded_demo_runs_and_every_demo_still_red_is_skipped`. `spec` runs `sdlc/scripts/demos` over the same pages.
-   - Move the rows of `backend` `refusals::no_refusal_on_any_command_writes_the_key_quotes_the_evidence_or_sends_anything` and `question_file` `secrecy::no_message_from_either_home_ever_carries_the_key_or_the_evidence` into the split sweep as routes, then delete the two tests. The sweep's route guard counts the new rows.
+   - Delete `demo_runner::every_recorded_demo_runs_and_every_demo_still_red_is_skipped`. `spec` runs `sdlc/scripts/demos` over the same pages. A broken demo then fails at a `spec` checkpoint instead of in `test`.
    - Rewrite `relate_edge::relate_reads_the_names_recognize_found` to pass its `--kind` list as fixed arguments instead of parsing demo 44's README.
    - Move `probes/find-0040/self-test` (16.7 s) and `probes/probability-total-0038/self-test` from `test` to `spec`.
    - Run the external consumer under nextest when it is installed.
@@ -26,7 +25,7 @@ Status: ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5. Issue: `sdlc
    - Expected: the rung falls to about 60 s.
 2. **After 0304 slice 3a to 3d land.** The C door and Polars tests are green on main and the library runs on `ask_all`.
    - Add `THINKTHEN_TEST_PROFILE=smoke` to each `check.sh` and a `sdlc/scripts/smoke` that `test` calls, four at a time beside nextest, with one shared target folder for the Cargo bindings. The inventory gives the steps and the cost per binding.
-   - Merge the batching, retry and JSON duplicates the inventory names: 10 tests.
+   - Merge the 6 batching, retry and JSON duplicates in the inventory's table. Each row names the kept test and the mutation run that must pass before the old test goes. A mutation the kept test misses keeps the old test.
    - If the smokes push the rung over 90 s, move the slowest smokes to the routine `surfaces` rung and record why.
 3. **After the 0305 cleanup removes the process-wide statics and the shared test locks.** The `SERIAL` locks in `public_controls` and `public_batches` go, the deadline and width tests lose their long waits, and the test binaries may merge. Then the rung aims at 60 s after a library change.
 
