@@ -41,7 +41,7 @@ The process docs are short and hold only rules that prevented real, recurring de
 | `python3 sdlc/scripts/pages --self-test`, `pages` | pass; 26 pages, every relative link resolves |
 | `sdlc/scripts/demos` over the real pages | 23 green, 0 red, with the lane's existing `target/debug/thinkthen` |
 
-Word counts: `ticket-preparation.md` 4,056 to 706. `AGENTS.md` 637 to 457 words, 4,572 to 3,351 characters. `sdlc/tickets/README.md` 77 to 168 words, because it now states the short form.
+Word counts: `ticket-preparation.md` 4,056 to 706. `AGENTS.md` 637 to 457 words, 4,572 to 3,351 characters. `sdlc/tickets/README.md` 77 to 159 words, because it now states the short form.
 
 Removed: `sdlc/scripts/pages-self-test`; the vocabulary scan, help scan, and ADR 0016 layout rules in `demos`; the list, title, state, and front-window agreement in `pages`. Scripts lost about 590 lines. ADR 0016, `demos/README.md`, `documentation-plan.md`, and `sdlc/scripts/README.md` now describe what the scripts check.
 
