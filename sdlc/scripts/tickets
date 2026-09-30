@@ -4,7 +4,8 @@
 From ticket 0120, `## Evidence` holds five items with text: `- Starts from:`,
 `- Keeps:`, `- Changes:`, `- Proof:`, `- Defers:`. A label may be bold. From
 ticket 0333, a ticket also has `## Outcome`, and a ticket whose status starts
-with `landed` has `## What the build taught us`. Older tickets are exempt by number.
+with `landed` has a non-empty `## What the build taught us`. Older tickets
+are exempt by number. Fenced lines do not count.
 
 Usage: tickets [ROOT]. ROOT defaults to the repository. --self-test runs planted cases.
 """
@@ -19,6 +20,17 @@ PARTS = ("Starts from", "Keeps", "Changes", "Proof", "Defers")
 NAME = re.compile(r"^(\d{4})-.*\.md$")
 
 
+def prose(text):
+    """The text outside fenced blocks."""
+    lines, fenced = [], False
+    for line in text.splitlines():
+        if line.lstrip().startswith(("```", "~~~")):
+            fenced = not fenced
+        elif not fenced:
+            lines.append(line)
+    return "\n".join(lines)
+
+
 def section(text, title):
     """The lines under `## title` up to the next `## ` heading, or None."""
     lines = text.splitlines()
@@ -30,7 +42,7 @@ def section(text, title):
 
 
 def failures(path, number):
-    text = path.read_text(encoding="utf-8")
+    text = prose(path.read_text(encoding="utf-8"))
     out = []
     body = section(text, "Evidence")
     if body is None:
@@ -43,7 +55,8 @@ def failures(path, number):
     if number >= SHORT_FROM:
         if section(text, "Outcome") is None:
             out.append(f"{path.name}: lacks a `## Outcome` section")
-        if re.search(r"^Status:\s*landed", text, re.M) and section(text, "What the build taught us") is None:
+        landed = re.search(r"^Status:\s*landed", text.replace("**", ""), re.M | re.I)
+        if landed and not any(line.strip() for line in section(text, "What the build taught us") or []):
             out.append(f"{path.name}: landed without `## What the build taught us`")
     return out
 
@@ -103,6 +116,15 @@ CASES = [
         "0333-unlearned.md",
         GOOD.split("## What")[0],
         ["0333-unlearned.md: landed without `## What the build taught us`"],
+    ),
+    ("0333-fenced.md", "# 0333\n\n```\n" + GOOD + "```\n", [
+        "0333-fenced.md: lacks a `## Evidence` section",
+        "0333-fenced.md: lacks a `## Outcome` section",
+    ]),
+    (
+        "0333-empty-lessons.md",
+        GOOD.replace("Status: landed", "Status: **Landed**").replace("- Nothing new.", ""),
+        ["0333-empty-lessons.md: landed without `## What the build taught us`"],
     ),
     ("0333-ready.md", GOOD.replace("Status: landed", "Status: ready").split("## What")[0], []),
 ]
