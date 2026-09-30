@@ -80,11 +80,15 @@ echo "== r: the Rust half"
 
 echo "== r: install the production build"
 CARGO_TARGET_DIR=$lane_target R CMD INSTALL -l rlib thinkthen >"$scratch/install.log" 2>&1 || { cat "$scratch/install.log" >&2; exit 1; }
-if [ "$(uname -s)" = Linux ]; then
-  # Ticket 0304 slice 3b: the package exports no bundled SQLite name.
-  leaked=$(nm -D --defined-only rlib/thinkthen/libs/thinkthen.so | awk '$3 ~ /^sqlite3_/' | wc -l)
-  [ "$leaked" = 0 ] || { echo "r: the package exports $leaked sqlite3_ names" >&2; exit 1; }
-fi
+# Ticket 0304 slice 3b, and 0351 on macOS: the package exports no bundled
+# SQLite name. Mach-O names carry a leading underscore.
+case $(uname -s) in
+  Linux) exported=$(nm -D --defined-only rlib/thinkthen/libs/thinkthen.so) ;;
+  Darwin) exported=$(nm -gU rlib/thinkthen/libs/thinkthen.so | sed 's/ _/ /') ;;
+  *) exported= ;;
+esac
+leaked=$(printf '%s\n' "$exported" | awk '$3 ~ /^sqlite3_/' | wc -l | tr -d ' ')
+[ "$leaked" = 0 ] || { echo "r: the package exports $leaked sqlite3_ names" >&2; exit 1; }
 
 echo "== r: the tests, one backend each"
 backend=${CARGO_TARGET_DIR:-$root/target}/debug/conformance-backend

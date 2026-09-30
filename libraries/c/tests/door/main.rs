@@ -43,8 +43,13 @@ fn scratch(name: &str) -> PathBuf {
     folder
 }
 
+/// The shared library's file extension: `dylib` on macOS, `so` elsewhere.
+const DL: &str = if cfg!(target_os = "macos") { "dylib" } else { "so" };
+
 /// The built door as a release archive lays it out: `libthinkthen.so`, its
-/// soname link `libthinkthen.so.0`, and `libthinkthen.a`, in one folder.
+/// soname link `libthinkthen.so.0`, and `libthinkthen.a`, in one folder. On
+/// macOS the shared library is `libthinkthen.dylib`, linked as
+/// `libthinkthen.0.dylib`.
 fn archive() -> &'static Path {
     static FOLDER: OnceLock<PathBuf> = OnceLock::new();
     FOLDER.get_or_init(|| {
@@ -73,8 +78,11 @@ fn archive() -> &'static Path {
                 .find(|file| file.file_name().is_some_and(|name| name == from))
                 .expect("the build reported the door's library under its own name")
         };
-        std::fs::copy(built("libthinkthen_c.so"), folder.join("libthinkthen.so"))
-            .expect("a built library");
+        std::fs::copy(
+            built(&format!("libthinkthen_c.{DL}")),
+            folder.join(format!("libthinkthen.{DL}")),
+        )
+        .expect("a built library");
         // A release archive holds the localized static library, as `release-pack` writes it.
         let localized = child::command("sh", &[])
             .arg(crate_dir().join("localize.sh"))
@@ -83,7 +91,12 @@ fn archive() -> &'static Path {
             .output()
             .expect("sh ran");
         assert!(localized.status.success(), "{}", text(&localized.stderr));
-        std::os::unix::fs::symlink("libthinkthen.so", folder.join("libthinkthen.so.0"))
+        let soname = if cfg!(target_os = "macos") {
+            "libthinkthen.0.dylib"
+        } else {
+            "libthinkthen.so.0"
+        };
+        std::os::unix::fs::symlink(format!("libthinkthen.{DL}"), folder.join(soname))
             .expect("the soname link");
         folder
     })
@@ -250,7 +263,8 @@ fn the_library_carries_its_soname_and_exactly_the_header_symbols() {
 /// ADR 0111's 2026-09-30 amendment: the static library defines exactly the
 /// header's functions as global names. The bundled SQLite's `sqlite3_` names
 /// and Rust's runtime names stay local, so a program can link its own SQLite
-/// or a second Rust static library beside it. Gates every release.
+/// or a second Rust static library beside it. Gates every release. Mach-O
+/// names carry a leading underscore, which the comparison drops (ticket 0351).
 #[test]
 fn the_static_library_exports_exactly_the_header_symbols() {
     let exported = child::command("nm", &[])
@@ -261,6 +275,13 @@ fn the_static_library_exports_exactly_the_header_symbols() {
     let mut names: Vec<String> = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))
+        .map(|name| {
+            if cfg!(target_os = "macos") {
+                name.strip_prefix('_').unwrap_or(name)
+            } else {
+                name
+            }
+        })
         .map(str::to_owned)
         .collect();
     assert!(

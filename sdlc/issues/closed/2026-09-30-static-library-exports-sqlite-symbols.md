@@ -1,8 +1,10 @@
-Status: Open for macOS. Filed 2026-09-30 by ticket 0304 slice 3a. Ticket 0304 slice 3b fixed Linux. Owner: ticket 0351, batch B5 of `../planning/issue-priorities-2026-09-30.md`.
+Status: Closed by ticket 0351, which localizes the macOS archive and hides the macOS R package's names; both proved on the M5. Filed 2026-09-30 by ticket 0304 slice 3a. Ticket 0304 slice 3b fixed Linux.
 
 Kind: debt
 
-Pay when: before 0.1. Ticket 0304 slice 3b paid the Linux part; the macOS part remains.
+Pay when: before 0.1. Ticket 0304 slice 3b paid the Linux part; ticket 0351 paid the macOS part.
+
+Paid: 2026-09-30
 
 Debt: 001
 
@@ -22,9 +24,13 @@ The library bundles SQLite for the question store, by ADR 0111 section 3. The sh
 
 R links its static library into the package's shared object and deletes the archive, so R ships no archive. That shared object still exported about 285 `sqlite3_` names. On Linux the package now links with `-Wl,--exclude-libs,ALL`, and `libraries/r/check.sh` requires `nm -D` to show no `sqlite3_` name. R finds its routines through their registration, so no name needs to stay global.
 
-## What remains: macOS
+## What 0351 found on macOS
 
 On macOS, `localize.sh` copies Cargo's archive unchanged and says so on standard error. The R package's shared object on macOS has no `--exclude-libs` step either. One M5 try on 2026-09-30 ran `cc -r -nostdlib -arch arm64 -Wl,-exported_symbols_list,LIST` with `-u` for each header function. It wrote an object that Apple's `nm` refused with "Unknown attribute kind (105) (Producer: 'LLVM22.1.3' Reader: 'LLVM APPLE_1_2100.1.1.101_0')". The Homebrew Rust 1.95 embeds LLVM 22 bitcode, which the Apple tools read as bitcode after the partial link. A fix might strip the embedded bitcode first, or run the partial link with the LLVM tools that match Rust's.
+
+## What 0351 did
+
+On macOS, `localize.sh` runs the same partial link with Apple's linker and `-exported_symbols_list`, then removes the `__LLVM,__bitcode` and `__LLVM,__cmdline` sections with the `rust-objcopy` that ships inside every Rust toolchain. Apple's `nm` then reads the object, and the door gate passes on the M5. The R package's macOS link passes `-Wl,-exported_symbol,_R_init_thinkthen`, and `check.sh` reads the shared object with `nm -gU`.
 
 ## Done when
 

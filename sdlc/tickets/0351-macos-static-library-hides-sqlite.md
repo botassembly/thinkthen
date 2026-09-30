@@ -1,6 +1,6 @@
 # 0351: The macOS static library and R package export no SQLite names
 
-Status: ready. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B5. Pays the macOS part of Debt 001, `sdlc/issues/2026-09-30-static-library-exports-sqlite-symbols.md`. Starts after ticket 0335 slice 2 lands, because that slice edits `libraries/r/check.sh` and `libraries/r/thinkthen/src/Makevars.in`. Its M5 proof should come before Ian dispatches the release rehearsal (ticket 0128 phase 3b), so the rehearsal's macOS jobs confirm it.
+Status: ready. Plan: `sdlc/planning/issue-priorities-2026-09-30.md`, batch B5. Pays the macOS part of Debt 001, `sdlc/issues/closed/2026-09-30-static-library-exports-sqlite-symbols.md`. Starts after ticket 0335 slice 2 lands, because that slice edits `libraries/r/check.sh` and `libraries/r/thinkthen/src/Makevars.in`. Its M5 proof should come before Ian dispatches the release rehearsal (ticket 0128 phase 3b), so the rehearsal's macOS jobs confirm it.
 
 ## Outcome
 
