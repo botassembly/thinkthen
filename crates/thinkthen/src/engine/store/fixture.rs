@@ -182,7 +182,7 @@ impl Entries {
     /// Insert every entry into a database that holds the schema.
     pub(crate) fn insert(&self, connection: &Connection) -> Result<(), Error> {
         connection.execute_batch("BEGIN").map_err(storage)?;
-        let inserted = self.insert_all(connection);
+        let inserted = self.insert_all(connection).map_err(storage);
         let ended = if inserted.is_ok() {
             "COMMIT"
         } else {
@@ -193,32 +193,28 @@ impl Entries {
     }
 
     /// Insert every entry inside the caller's transaction. An answer already
-    /// held under a key stays, because a store's own writes are newer.
-    pub(super) fn insert_all(&self, connection: &Connection) -> Result<(), Error> {
+    /// held under a key stays, because a store's own writes are newer. A digest
+    /// that is not hex, or an answer naming a state the entries lack, fails
+    /// as a conversion to SQL.
+    pub(super) fn insert_all(&self, connection: &Connection) -> rusqlite::Result<()> {
         let mut ids = BTreeMap::new();
         for (sha256, state) in &self.states {
-            let digest = bytes_of(sha256).ok_or(Error::RecordingStorage)?;
-            connection
-                .execute(
-                    "INSERT OR IGNORE INTO states (sha256, state) VALUES (?1, ?2)",
-                    (digest.as_slice(), state),
-                )
-                .map_err(storage)?;
-            let id: i64 = connection
-                .query_row(
-                    "SELECT id FROM states WHERE sha256 = ?1",
-                    [digest.as_slice()],
-                    |row| row.get(0),
-                )
-                .map_err(storage)?;
+            let digest = bytes_of(sha256).ok_or_else(unconvertible)?;
+            connection.execute(
+                "INSERT OR IGNORE INTO states (sha256, state) VALUES (?1, ?2)",
+                (digest.as_slice(), state),
+            )?;
+            let id: i64 = connection.query_row(
+                "SELECT id FROM states WHERE sha256 = ?1",
+                [digest.as_slice()],
+                |row| row.get(0),
+            )?;
             ids.insert(sha256.as_str(), id);
         }
         let signed = |value: Option<u64>| value.and_then(|value| i64::try_from(value).ok());
         for answer in self.answers.values() {
-            let key = bytes_of(&answer.key).ok_or(Error::RecordingStorage)?;
-            let state = ids
-                .get(answer.state.as_str())
-                .ok_or(Error::RecordingStorage)?;
+            let key = bytes_of(&answer.key).ok_or_else(unconvertible)?;
+            let state = ids.get(answer.state.as_str()).ok_or_else(unconvertible)?;
             connection
                 .execute(
                     "INSERT OR IGNORE INTO answers (key, url, model, state, question, answer, answered_by, input_tokens, output_tokens, taken_at, origin)
@@ -236,8 +232,7 @@ impl Entries {
                         answer.taken_at,
                         answer.origin,
                     ],
-                )
-                .map_err(storage)?;
+                )?;
         }
         Ok(())
     }
@@ -259,6 +254,11 @@ pub(crate) fn key_of(answer: &Answer, state: &str) -> Option<QuestionKey> {
     let url = Url::new(answer.url.clone()).ok()?;
     let model = model_json(&answer.model).ok()?;
     Some(QuestionKey::of(&url, &model, state, &answer.question))
+}
+
+/// The error for an entry whose digest or state cannot be written.
+fn unconvertible() -> rusqlite::Error {
+    rusqlite::Error::ToSqlConversionFailure("an entry's digest or state is unusable".into())
 }
 
 fn bytes_of(text: &str) -> Option<[u8; 32]> {

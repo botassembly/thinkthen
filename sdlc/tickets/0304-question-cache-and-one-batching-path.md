@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: slice 1 landed; slice 2 fixed, awaiting re-review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: slice 2 landed; slice 3 ready. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -65,13 +65,13 @@ Cache clearing and expiry.
   - `policy.py` pins rusqlite and refuses a committed `thinkthen.sqlite`. 42 committed folders gained `thinkthen.jsonl`; their old files stay until slice 5.
   - The loopback listener counts the questions it receives.
   - The recording, result, annotate and backends pages and the changelog describe the store.
-  - The crate ratchet rises by 2,564 to 108,235 lines over main at 0324: the key, store, fixture reader, converter and pipeline arrive while the old recorder and schedulers stay for slices 3 to 5. The C library ratchet rises by 7 to 4,293 for the `nm` check.
+  - The crate ratchet rises by 2,615 to 108,286 lines over main at 0324: the key, store, fixture reader, converter and pipeline arrive while the old recorder and schedulers stay for slices 3 to 5. The C library ratchet rises by 7 to 4,293 for the `nm` check.
 - Proof:
   - `tests/backend/question_cache.rs`: 100 records, then 120 that include them, send one request holding exactly records 101 to 120, and the second run reports 100 cache answers. A partial reply stores its good answers, and the rerun asks only the failed question. A new tag label sends only its three questions. Two child processes write one store at once, and a third run sends nothing.
   - `tests/backend/question_cache.rs` also: a stored answer that no longer decodes is a miss that re-sends under a cache and a named exit 5 under `--replay`.
   - `tests/audit_write.rs` and `tests/diff.rs`: rows that name no batch setting leave a tuned `batch` alone and warn nothing.
   - `engine/store/tests.rs`: hit, miss, replace, a private new file, a read-only replay that writes nothing, a hot journal under replay, the busy limit and a stop during a wait each ending in under a second, a lookup that waits through another writer's commit, a folder holding both files, a hand-edited fixture, and the merge rule.
-  - `tests/cache_convert.rs`: converting twice writes identical bytes, each old form converts to its keys and origins, and demo 14's converted bytes equal its committed fixture.
+  - `tests/cache_convert.rs`: converting twice writes identical bytes, each old form converts to its keys and origins, and demo 14's converted bytes equal its committed fixture. A writer holding the live file makes convert wait, and its committed row reaches the fixture.
   - `tests/backend/batching/too_large.rs`: a 413 makes three attempts and stores both halves; a refused first half sends no second half.
   - `tests/backend/batching.rs` `a_pause_sends_the_open_batch` and `tests/backend/scheduling.rs`: a slow pipe closes a request at the pause, and the window never passes W.
   - `engine/pipeline/tests.rs`: a spent deadline or fired cancel reads no input and sends nothing, and a deadline starts no waiting request. These replace the deleted annotate scheduler's deadline tests.
@@ -109,7 +109,7 @@ Cache clearing and expiry.
 
 Where ADR 0111 was silent, the build took the simpler option:
 
-- `cache convert` removes `thinkthen.sqlite` after it writes the fixture, because `--replay` refuses a folder holding both. It holds the file's write lock from read to removal.
+- `cache convert` removes `thinkthen.sqlite` after it writes the fixture, because `--replay` refuses a folder holding both. It holds the file's write lock from read to removal. It must not run beside a live writer, because a process holding the file open keeps writing to the removed file.
 - A cache on a folder that holds only the fixture imports it in the new file's schema transaction. A run that stores nothing creates nothing.
 - Each path keeps its own quote form: an annotate root group quotes the record's compact text as a JSON string, and the record functions quote the object.
 - Coalescing covers keys already on their way within one call. The first waiting row counts the send; a row that joined it shares the answer and counts no attempt.

@@ -249,11 +249,11 @@ impl Store {
             self.waiting(cancel, || {
                 connection.execute_batch("PRAGMA auto_vacuum = INCREMENTAL")
             })?;
+            let import =
+                |entries: &Entries| self.waiting(cancel, || entries.insert_all(&connection));
             self.transaction(cancel, &connection, || {
                 self.waiting(cancel, || connection.execute_batch(SCHEMA))?;
-                fixture
-                    .as_ref()
-                    .map_or(Ok(()), |entries| entries.insert_all(&connection))
+                fixture.as_ref().map_or(Ok(()), import)
             })?;
         } else if version != 1 {
             return Err(Error::RecordingStorage);

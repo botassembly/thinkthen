@@ -341,6 +341,59 @@ fn a_fixture_a_live_file_and_old_entries_merge_newest_first_and_a_tie_keeps_the_
 }
 
 #[test]
+fn convert_waits_for_a_writer_holding_the_live_file_and_keeps_its_row() {
+    let folder = scratch("locked").expect("a folder");
+    copy_demo("01-refund-gate", &folder).expect("a copy");
+    assert_eq!(convert(&folder, &[]).expect("a run").0, Some(0));
+    let lines = lines(&folder).expect("a fixture");
+    let state = lines[0]["state"].as_str().expect("a state").to_owned();
+    let line = lines[1].clone();
+    let sqlite = folder.join("thinkthen.sqlite");
+    rusqlite::Connection::open(&sqlite)
+        .expect("a live file")
+        .execute_batch(SCHEMA)
+        .expect("the schema");
+    let (held, holding) = std::sync::mpsc::channel();
+    let writer = std::thread::spawn(move || {
+        let connection = rusqlite::Connection::open(sqlite).expect("a live file");
+        connection
+            .execute_batch("BEGIN EXCLUSIVE")
+            .expect("the lock");
+        held.send(()).expect("a signal");
+        std::thread::sleep(std::time::Duration::from_millis(300));
+        live(
+            &connection,
+            &line,
+            &state,
+            r#"{"type":"noul","noul":0.55}"#,
+            9,
+        )
+        .expect("a row");
+        connection.execute_batch("COMMIT").expect("a commit");
+    });
+    holding.recv().expect("the writer holds the lock");
+    let started = std::time::Instant::now();
+    let (code, said) = convert(&folder, &[]).expect("a run");
+    let waited = started.elapsed();
+    writer.join().expect("the writer");
+    assert_eq!(code, Some(0), "{said}");
+    assert!(
+        waited >= std::time::Duration::from_millis(250),
+        "{waited:?}"
+    );
+    let written = answers(&folder).expect("answers");
+    let found = written
+        .iter()
+        .find(|answer| answer["key"] == lines[1]["key"])
+        .expect("the written key");
+    assert_eq!(
+        (found["answer"].as_str(), found["origin"].as_str()),
+        (Some(r#"{"type":"noul","noul":0.55}"#), Some("live"))
+    );
+    assert!(!folder.join("thinkthen.sqlite").exists());
+}
+
+#[test]
 fn a_missing_folder_or_an_unreadable_entry_exits_5_and_writes_nothing() {
     let folder = scratch("refused").expect("a folder");
     assert_eq!(
