@@ -3,13 +3,12 @@
 use std::ffi::CString;
 use std::num::NonZeroUsize;
 use std::path::PathBuf;
-use std::sync::atomic::Ordering;
 use std::time::Duration;
 
 use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
 use thinkthen::{BatchSetting, EngineBuilder, Error};
 
-use super::{ACTIVE_THROTTLE, Call, OrRaise, Refusal};
+use super::{Call, OrRaise, Refusal};
 use crate::ffi;
 
 /// The registered value that leaves a numeric engine setting unset.
@@ -220,15 +219,6 @@ pub(crate) fn read_result() -> Result<Call, Refusal> {
         record: record.as_deref(),
         replay: replay.as_deref(),
     })?;
-    let active = ACTIVE_THROTTLE.load(Ordering::Acquire);
-    if plan
-        .throttle
-        .is_some_and(|requested| active != 0 && requested != active)
-    {
-        return Err(Refusal::usage(format!(
-            "throttle {active} is already active for this process; use throttle {active} or drop the throttle argument"
-        )));
-    }
     // Ian's ruling of 2026-09-25: the backend's total, computed once per call.
     let total = u64::try_from(MAX_REQUESTS_TOTAL.get()).ok();
     Ok(Call {

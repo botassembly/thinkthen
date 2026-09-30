@@ -105,6 +105,45 @@ fn an_inherited_engine_and_a_child_engine_share_one_request_total() {
     assert_eq!(backend.count(), 1, "the child's second engine sent nothing");
 }
 
+/// An SQL host caps each call against the process total (ticket 0304 slice
+/// 3e). The child starts from zero, so the parent's other proofs never count.
+#[test]
+fn a_call_total_counts_every_engine_of_the_process() {
+    let _one = ONE_AT_A_TIME
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    let backend = Backend::start().expect("backend");
+    let base = format!("{}/generic/v1", backend.origin());
+    let capped = |total| {
+        Engine::builder()
+            .base_url(&base)?
+            .api_key(KEY)?
+            .no_cache()
+            .max_requests_total(total)
+            .build()
+    };
+    in_child(|| {
+        let (first, second) = (capped(None).expect("one"), capped(Some(3)).expect("two"));
+        let call = |engine: &Engine, evidence, total| {
+            let options = thinkthen::CallOptions::new().max_requests_total(total);
+            engine.decide_with(&decide(), evidence, options)
+        };
+        let denied = |result: Result<thinkthen::Call<Answer>, thinkthen::Error>| {
+            result.err().and_then(|error| error.send_budget_denial())
+                == Some(thinkthen::SendBudgetDenial::BeforeFirstSend)
+        };
+        answer(call(&first, "a", None)) == Some(Answer::Yes)
+            && answer(call(&second, "b", Some(9))) == Some(Answer::Yes)
+            && denied(call(&first, "c", Some(2)))
+            && denied(call(&second, "d", Some(2)))
+            && answer(call(&first, "e", Some(3))) == Some(Answer::Yes)
+            && denied(call(&second, "f", Some(9)))
+            && thinkthen::process_requests_sent() == 3
+    })
+    .expect("both engines counted against one process total, and the tighter limit held");
+    assert_eq!(backend.count(), 3, "the child sent three times");
+}
+
 #[allow(
     clippy::expect_used,
     reason = "a failed local certificate fixture must stop this proof"

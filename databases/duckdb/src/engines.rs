@@ -7,15 +7,16 @@
 //! never skips a check. The builder refuses a conflicting process throttle;
 //! a failed build is never stored.
 //!
-//! `SET thinkthen_max_requests_total` caps sends in this process. The shared
-//! `SendBudget` reserves each actual send, including a retry; `within_total`
-//! only cuts ordered rows before a call. Both reset in a forked child.
+//! `SET thinkthen_max_requests_total` caps sends in this process. The
+//! engine's one process total reserves each actual send, including a retry;
+//! `within_total` only cuts ordered rows before a call, from the same count.
+//! Both reset in a forked child.
 
-use std::sync::{Arc, Mutex, OnceLock, PoisonError};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Duration;
 
 use std::num::NonZeroUsize;
-use thinkthen::{BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, SendBudget};
+use thinkthen::{BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error};
 
 use crate::errors::{RowError, usage};
 
@@ -59,15 +60,12 @@ type Key = (
     Option<String>,
 );
 
-static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
-
 #[allow(dead_code, reason = "used by the C++ bridge across its verb families")]
 pub(crate) fn options<'a>(
     deadline_ms: i64,
     token: &'a CancelToken,
     total: Option<i64>,
 ) -> Result<CallOptions<'a>, String> {
-    let budget = SEND_BUDGET.get_or_init(SendBudget::new);
     let limit = total.map(total_of).transpose()?;
     let options = if deadline_ms == -1 {
         CallOptions::new()
@@ -76,7 +74,7 @@ pub(crate) fn options<'a>(
             .deadline_millis(deadline_ms)
             .map_err(|error| RowError::from(error).text)?
     };
-    Ok(options.cancel(token).send_budget(budget, limit))
+    Ok(options.cancel(token).max_requests_total(limit))
 }
 
 /// C++ scalar and warm calls read this session's batch cap and literal context.
@@ -406,7 +404,7 @@ pub(crate) fn within_total_typed(
     };
     let total = total_of(total)
         .map_err(|_| RowError::usage("a request total is a whole number of 0 or more"))?;
-    let [(_, spent), ..] = usage_totals();
+    let spent = thinkthen::process_requests_sent();
     let spent_out = || {
         RowError::usage(&format!(
             "this process has spent its request total of {total}; raise SET thinkthen_max_requests_total or RESET it"

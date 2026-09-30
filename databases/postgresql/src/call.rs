@@ -4,15 +4,14 @@
 
 use std::any::Any;
 use std::panic::AssertUnwindSafe;
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::Mutex;
 use std::sync::mpsc::{self, Receiver, RecvTimeoutError, Sender};
-use std::sync::{Mutex, OnceLock};
 use std::time::{Duration, Instant};
 
 use pgrx::pg_sys::panic::{CaughtError, ErrorReport, ErrorReportWithLevel};
 use pgrx::prelude::*;
 use thinkthen::{
-    BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind, SendBudget,
+    BatchSetting, CallOptions, CancelToken, Engine, EngineBuilder, Error, ErrorKind,
     SendBudgetDenial, Settings,
 };
 
@@ -143,13 +142,9 @@ impl<T, E: Into<Refusal>> OrRaise<T> for Result<T, E> {
     }
 }
 
-/// The explicit throttle this backend registered, 0 for none.
-static ACTIVE_THROTTLE: AtomicU8 = AtomicU8::new(0);
-
 /// One engine per plan this backend used. Each engine counts its own sends,
 /// so the usage totals add them all.
 static ENGINES: Mutex<Vec<(Plan, Engine)>> = Mutex::new(Vec::new());
-static SEND_BUDGET: OnceLock<SendBudget> = OnceLock::new();
 
 fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
     ENGINES
@@ -157,13 +152,10 @@ fn engines() -> std::sync::MutexGuard<'static, Vec<(Plan, Engine)>> {
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
-/// Build an engine from the server's environment and the plan.
+/// Build an engine from the server's environment and the plan. The engine
+/// refuses a throttle that differs from the one this backend selected.
 fn build(plan: &Plan) -> Result<Engine, Error> {
-    let active = std::num::NonZeroU8::new(ACTIVE_THROTTLE.load(Ordering::Acquire)).map(u8::from);
     let engine = settings::apply(plan, EngineBuilder::from_env()?.shared_host())?.build()?;
-    if let (None, Some(value)) = (active, plan.throttle) {
-        ACTIVE_THROTTLE.store(value, Ordering::Release);
-    }
     // Kept before the call runs, so a cancelled call's sends still count.
     // A worker that lost the race uses the recorded engine, so every send counts.
     let mut all = engines();
@@ -209,7 +201,8 @@ pub(crate) struct Call {
     pub(crate) deadline_ms: i64,
     pub(crate) context: Option<String>,
     pub(crate) batch: Option<BatchSetting>,
-    /// `thinkthen.max_requests_total`, enforced for each actual send.
+    /// `thinkthen.max_requests_total`, which the engine's one process total
+    /// enforces for each actual send.
     total: Option<u64>,
 }
 
@@ -339,7 +332,6 @@ pub(crate) fn run_result<T: Send + 'static>(
     let (plan, worker_token) = (call.plan.clone(), token.clone());
     let total = call.total;
     let (call_batch, call_context) = (call.batch, call.context);
-    let send_budget = SEND_BUDGET.get_or_init(SendBudget::new);
     ffi::spawn_masked(move || {
         deliver(&answer, || {
             let engine = match held {
@@ -348,7 +340,7 @@ pub(crate) fn run_result<T: Send + 'static>(
             };
             let options = CallOptions::new()
                 .cancel(&worker_token)
-                .send_budget(send_budget, total);
+                .max_requests_total(total);
             let options = options.deadline_ms(millis)?;
             let options = call_batch.map_or(options, |batch| options.batch(batch));
             let options = call_context

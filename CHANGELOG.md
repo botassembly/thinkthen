@@ -44,6 +44,8 @@ The Rust Polars door writes each answer into its output column as the answer arr
 
 On Linux, the C archive's `libthinkthen.a` defines only the header's `thinkthen_` functions as global names, so a program can link its own SQLite or another Rust static library beside it. The R package on Linux exports no SQLite name either. The macOS archive still exports SQLite's names. The SQLite extension refuses a cache, record or replay folder when the host's SQLite is single-threaded, and a call that names no folder still answers. In DuckDB's `thinkthen_annotate`, a record missing an `on` part fails its statement, and the other records of the same vector are still sent and stored. It now refuses more records than `thinkthen_max_requests` before any send (ticket 0304 slice 3b).
 
+The PostgreSQL and DuckDB extensions count `max_requests_total` against the engine's one process total instead of their own counters, and PostgreSQL leaves the throttle conflict to the engine. Settings and refusal sentences are unchanged. The Rust library adds `CallOptions::max_requests_total`, a call's cap on that process total, and `process_requests_sent` (ticket 0304 slice 3e).
+
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
 
 Every surface refuses an API key holding any control character, not only a line break, and says `the API key contains a control character` (ticket 0321).

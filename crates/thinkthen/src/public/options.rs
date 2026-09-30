@@ -104,6 +104,7 @@ pub struct CallOptions<'a> {
     due: Option<Due>,
     check: Option<&'a (dyn Fn() -> bool + Sync)>,
     send_budget: Option<(&'a SendBudget, Option<u64>)>,
+    total: Option<u64>,
     batch: Option<BatchSetting>,
     context: Option<&'a str>,
     observer: Option<Observer<'a>>,
@@ -118,12 +119,21 @@ impl fmt::Debug for CallOptions<'_> {
             .field("deadline", &self.due)
             .field("interrupt", &self.check.is_some())
             .field("send_budget", &self.send_budget.is_some())
+            .field("max_requests_total", &self.total)
             .field("batch", &self.batch)
             .field("context", &self.context.is_some())
             .field("observer", &self.observer.is_some())
             .field("attempt_observer", &self.attempt_observer.is_some())
             .finish()
     }
+}
+
+/// The requests this process has sent or holds reserved against its one
+/// request total, across every engine. A forked child starts from zero.
+#[must_use]
+pub fn process_requests_sent() -> u64 {
+    crate::engine::limits::of(std::process::id(), &Cancel::default())
+        .map_or(0, |limits| limits.total.sent())
 }
 
 impl<'a> CallOptions<'a> {
@@ -135,6 +145,7 @@ impl<'a> CallOptions<'a> {
             due: None,
             check: None,
             send_budget: None,
+            total: None,
             batch: None,
             context: None,
             observer: None,
@@ -154,6 +165,16 @@ impl<'a> CallOptions<'a> {
     #[must_use]
     pub const fn send_budget(mut self, value: &'a SendBudget, limit: Option<u64>) -> Self {
         self.send_budget = Some((value, limit));
+        self
+    }
+
+    /// Refuse this call's live sends once the process has sent `limit`
+    /// requests. Every engine of the process counts against that one total,
+    /// which starts at zero in a forked child. A cache or replay answer uses
+    /// no reservation.
+    #[must_use]
+    pub const fn max_requests_total(mut self, limit: Option<u64>) -> Self {
+        self.total = limit;
         self
     }
 
@@ -339,6 +360,7 @@ impl<'a> Stop<'a> {
                     .send_budget
                     .map(|(budget, limit)| (budget.clone(), limit)),
             )
+            .with_call_total(options.total)
             .with_facts(facts.clone());
         if let Some(sender) = sender {
             base = base.with_attempt_sink(AttemptSink::new(move |event| {
