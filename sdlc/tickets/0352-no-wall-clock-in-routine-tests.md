@@ -1,6 +1,6 @@
 # 0352: No wall-clock timing in routine tests
 
-Status: in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
+Status: landed. Plan: `sdlc/planning/cleanup-2026-09-30.md`, lane claude-1.
 
 ## Outcome
 
@@ -111,3 +111,11 @@ Each session ran 24 busy loops that it started, and stopped only those. Each sta
 | this branch, final code, Python, DuckDB and SQLite | 1 each | 0 |
 
 The first branch session failed where a new wait still raced. The batching stop test's `Tally` let line 1 answer before the run had read line 2's failure. The order test's fast reply could finish before the slow request arrived. The pause test counted a request before its body was recorded, a race main also has. Each fix then passed its focused tests, and the final code passed the bounded loaded proof above.
+
+## What the build taught us
+
+- A wait on an event can still race. Each first-session failure came from an event that fired before the state the test needed. Pick the event that follows that state, such as a written reply instead of an arrival.
+- A shared test process fixes its throttle once. A test that needs its own throttle reruns itself alone, as `public_controls/alone.rs` does.
+- A pipe filled past its buffer can stall the writer long enough for the 50 ms input pause to close a batch. Feed large command-test inputs from a file.
+- Code review caught two waits that could hang, an untimed barrier and a harness failsafe close to the request timeout. Every routine wait now gives up under the 30 s request timeout and fails on counts.
+- Loaded runs found the real races quickly. Three clean loaded runs of `test` on the final code were enough proof, and a longer load held back another lane.
