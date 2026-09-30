@@ -73,7 +73,7 @@ Consumer:
 Python, DuckDB and SQLite surfaces:
 
 - A stop test's 100 ms bound applies only under the stress profile. The routine run checks that the cancel arrived while the reply was held.
-- The Python release test drives the held arm from the parent. The column-timing test splits into a deadline half and a held-token half. The token fires once the held arm counts the first send. While that reply was held, the arm saw no second send.
+- The Python release test drives the held arm from the parent. Its old timer form, where a cancel can land before the send, stays as a stress case. The column-timing test splits into a deadline half and a held-token half. The token fires once the held arm counts the first send. While that reply was held, the arm saw no second send.
 - DuckDB's `harness.py` adds `timed` cases, which run in both profiles and time only under stress. The signal cases repeat SIGINT until the answer arrives. The queued-relate case waits for a stdin line instead of sleeping.
 - SQLite's conformance and interrupt tests wait on held requests. `check.sh` runs the usage and try-budget files under stress too.
 - Waits rise to 30 or 60 s across these tests.
