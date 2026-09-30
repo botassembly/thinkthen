@@ -28,11 +28,14 @@ surface_of() {
 	thinkthen-*.whl) printf 'libraries/python\twheel from the Python check, copied\n' ;;
 	thinkthen-*.tgz) printf 'libraries/typescript\tnpm pack from the TypeScript check, copied\n' ;;
 	thinkthen-*.gem) printf 'libraries/ruby\tgem from the Ruby check, copied\n' ;;
-	thinkthen-[0-9]*.tar.gz) printf 'command\tdebug thinkthen binary from the rung builds, tarred\n' ;;
+	thinkthen-[0-9]*.tar.gz) printf 'command\tthis host'"'"'s debug thinkthen binary from the rung builds, tarred and renamed\n' ;;
 	*) return 1 ;;
 	esac
 }
 
+REPO=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$REPO/crates/thinkthen/Cargo.toml" | head -n 1)
+host=$(rustc -vV | sed -n 's/^host: //p')
 scratch_dir stage "$(mkdir -p -- "$parent" && cd -- "$parent" && pwd -P)/.publish.XXXXXX"
 lines=$stage/.files
 : >"$lines"
@@ -43,6 +46,9 @@ for file in "$FROM"/*; do
 	[ -f "$file" ] && [ ! -L "$file" ] || { echo "publish-builds: $name is not a plain file" >&2; exit 1; }
 	row=$(surface_of "$name") || { echo "publish-builds: no surface is known for $name" >&2; exit 1; }
 	(cd -- "$FROM" && sha256 -c "$name.sha256" >/dev/null) || { echo "publish-builds: $name does not match its .sha256" >&2; exit 1; }
+	# With --reuse, release-pack names the command archive for the release target, such as musl,
+	# but it holds this host's debug build. The published name says what it holds.
+	case ${row%%	*} in command) name=thinkthen-$version-$host-debug.tar.gz ;; esac
 	cp -p -- "$file" "$stage/$name"
 	digest=$(sha256 "$stage/$name" | awk '{print $1}')
 	printf '%s  %s\n' "$digest" "$name" >>"$stage/SHA256SUMS"
@@ -59,6 +65,7 @@ jq -s --arg made_by "$made_by" --arg commit "$COMMIT" --arg tag "$TAG" \
 	"$lines" >"$stage/manifest.json"
 rm -f -- "$lines"
 chmod 755 "$stage"
+[ ! -e "$dest" ] && [ ! -L "$dest" ] || { echo "publish-builds: $dest appeared during the publish" >&2; exit 1; }
 mv -- "$stage" "$dest"
 echo "publish-builds: $count files and SHA256SUMS in $dest"
 

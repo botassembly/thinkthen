@@ -12,7 +12,7 @@ set -eu
 . "$(dirname -- "$0")/verdict.sh"
 # One heavy rung at a time on this machine. See heavy-lock. It re-runs this script with "$@",
 # so it comes before the options are shifted away.
-case " $* " in *' --registry '*) ;; *) . "$(dirname -- "$0")/heavy-lock" ;; esac
+[ "$*" = --registry ] || . "$(dirname -- "$0")/heavy-lock"
 mode=plain
 profile=routine
 registry_only=0
@@ -268,4 +268,8 @@ code=0
 { sh sdlc/scripts/release-pack --reuse "$(rustc -vV | sed -n 's/^host: //p')" "$packed" &&
 	sh sdlc/scripts/release-smoke "$packed"; } 3>&- || code=$?
 verdict "$mode" "release smoke" "$code"
-[ -z "$publish_tag" ] || sh sdlc/scripts/publish-builds "$publish_tag" "$publish_root" "$publish_commit" "$packed"
+if [ -n "$publish_tag" ]; then
+	[ "$code" -eq 0 ] || { echo 'surfaces: FAIL publish (the release smoke did not pass)'; exit 1; }
+	[ "$(git rev-parse HEAD)" = "$publish_commit" ] || { echo 'surfaces: FAIL publish (HEAD moved during the run)'; exit 1; }
+	sh sdlc/scripts/publish-builds "$publish_tag" "$publish_root" "$publish_commit" "$packed"
+fi
