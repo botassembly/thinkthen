@@ -305,6 +305,23 @@ fn the_delay_arm_answers_after_its_delay() -> Tested {
     Ok(())
 }
 
+/// Eight held requests are all counted while every reply is held, so the
+/// backend serves them at once. The stress case below times the same claim
+/// on the delay arm (ticket 0352).
+#[test]
+fn eight_held_requests_are_counted_while_every_reply_is_held() -> Tested {
+    let mut backend = start()?;
+    let answers: Vec<_> = (0..8).map(|_| posting(backend.3, HELD)).collect();
+    assert_eq!(ask(&mut backend, "wait 8")?, "wait 8");
+    still_held(&answers[7]);
+    send(&mut backend, "release")?;
+    for answer in &answers {
+        answered(answer)?;
+    }
+    assert_eq!(finish(backend)?, ["8"]);
+    Ok(())
+}
+
 #[test]
 #[ignore = "a wall-clock bound on eight delays; run sdlc/scripts/test-stress --run"]
 fn eight_delayed_replies_wait_in_parallel() -> Tested {

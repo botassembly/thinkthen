@@ -40,13 +40,14 @@ A few tests still need in-process work to finish inside a margin. No outside eve
 Conformance backend:
 
 - The `wait` line waits up to 30 s instead of 5 s (`WAIT_BOUND` in `conformance/backend/src/arms.rs`). The README, the Python `conftest.py` and the Ruby helper say so.
-- `binary.rs` splits its bound in two. Promptness checks use 10 s, and waits for a line use 40 s. `eight_delayed_replies_wait_in_parallel` becomes a stress case. The 30 s wait case is renamed and moves to stress. `listener.rs` waits up to 20 s.
+- `binary.rs` splits its bound in two. Promptness checks use 10 s, and waits for a line use 40 s. `eight_delayed_replies_wait_in_parallel` becomes a stress case. A new routine case, `eight_held_requests_are_counted_while_every_reply_is_held`, proves the same parallel serving by order. The 30 s wait case is renamed and moves to stress. `listener.rs` waits up to 20 s.
 
 Rust engine unit tests:
 
 - The store test sets a flag just before COMMIT and checks it, instead of timing 250 ms.
 - Hang guards rise to 30 s in the process, fork, facade, width, host-signal, ordered-schedule and interrupt tests. Client timeouts in tests whose subject is not the timeout rise to 30 s.
 - Two HTTP retry tests wait 30 s between tries. The deadline test uses a 1 s deadline instead of 200 ms.
+- The held-response deadline test waits 30 s for its request, and its client timeout rises to 30 s.
 - The accounting deadline test keeps a 10 s hang guard. Its accept check proves that no attempt went out.
 
 Rust command tests (`tests/backend`):
