@@ -79,7 +79,7 @@ The rungs ran one at a time at `896d91a5`, which holds every change of the three
 - File 98's dry run. Ticket 0124's deferred gaps own it. The refusal makes it less urgent.
 - File 106. It needs a design for what a recording stores. The page sentence stays and fixes nothing.
 - File 120's owner half, and with it a warning for a file its group may write. It needs `nix`'s `user` feature and a change to the dependency policy in `sdlc/scripts/policy.py`, with its own review.
-- The folder-writers warning of `sdlc/issues/2026-09-26-folder-writers-decide-the-answers.md` can reuse `writable_by_another`.
+- The folder-writers warning of `sdlc/issues/closed/2026-09-26-folder-writers-decide-the-answers.md` can reuse `writable_by_another`.
 - File 49 has no gate test of the release build. A release smoke with a 503 server would cost more than the proof returns.
 - `site/src/pages/reference.astro` lines 32 and 267. Marketing owns the site, and item 8 of the site samples issue asks for both.
 - `databases/sqlite/NOTES.md` still says the engine refuses to send with no key.

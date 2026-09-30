@@ -328,7 +328,7 @@ A user who writes one scalar call per row expects the database to batch. DuckDB 
 
 Options for the builder to weigh:
 
-- Make warm pack and let a later scalar read the packed answer. This needs the cache to hold each record's answer under a key that a one-record scalar request also reaches. Today the cache key is the whole request digest, so a packed warm and a singleton scalar never share an entry (`databases/sqlite/README.md:105`). This touches the engine and the batching design (`sdlc/issues/2026-09-26-batching-design.md`).
+- Make warm pack and let a later scalar read the packed answer. This needs the cache to hold each record's answer under a key that a one-record scalar request also reaches. Today the cache key is the whole request digest, so a packed warm and a singleton scalar never share an entry (`databases/sqlite/README.md:105`). This touches the engine and the batching design (`sdlc/issues/closed/2026-09-26-batching-design.md`).
 - Give SQLite the array form PostgreSQL has: a row source that takes a question and a JSON array of texts and returns `(i, value)`. PostgreSQL extends its array form from decide to choose, score and tag.
 - Keep one request per row in SQLite and PostgreSQL, and state it on the page with the throttle as the lever.
 

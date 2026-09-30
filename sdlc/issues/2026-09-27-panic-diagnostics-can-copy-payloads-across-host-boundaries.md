@@ -1,6 +1,8 @@
 # Panic diagnostics can copy payloads across host boundaries
 
-Filed 2026-09-27. Status: open. The bounded gap review checked main `0fb8d55f` and the DuckDB prerequisite proof `981c686d`. This issue serves the requirement that diagnostics never echo credentials or evidence. It records payload copying and a demonstrated proof-hook print; it does not claim that a real credential or user's evidence has reached a production panic.
+Status: open. Ticket 0306 landed one shared panic guard for every surface. The PostgreSQL backend thread, pending in ticket 0310, and the macOS and ARM64 package proofs remain.
+
+Filed 2026-09-27. The bounded gap review checked main `0fb8d55f` and the DuckDB prerequisite proof `981c686d`. This issue serves the requirement that diagnostics never echo credentials or evidence. It records payload copying and a demonstrated proof-hook print; it does not claim that a real credential or user's evidence has reached a production panic.
 
 The source correction lands through ticket 0226 at reviewed candidate `d0709b69`. The fixed C, SQLite and retained DuckDB guards passed focused child proofs and fresh High code review. Changed Linux x86-64 C and SQLite packages also have loader and exact installed-host evidence. macOS C/SQLite and retained DuckDB Linux ARM64/macOS package proof remain open, so this issue remains open. The table preserves the original findings; `sdlc/records/0226-build.md` and `0226-code-review.md` give the current disposition.
 
@@ -23,3 +25,7 @@ Closure requires a small child-process proof per affected host using a synthetic
 Ticket 0306 replaces the per-surface hooks with one public guard, `thinkthen::contained`. The engine door, C, SQLite and the DuckDB bridge call it. The engine door had dropped a caught payload outside its marked scope, so a payload whose destructor panicked printed and escaped; 0306 fixes that. 0306 also guards the PostgreSQL worker, whose panics reached the server log.
 
 One gap remains open beyond the package proofs. A panic on the PostgreSQL backend thread becomes an `XX000` error carrying its payload, and `databases/postgresql/check.sh` pins `the panic probe fired`. pgrx raises its own errors by panicking, so a catch there must pass pgrx payloads through. That needs its own design.
+
+## Ticket 0310
+
+Ticket 0310 closes the PostgreSQL backend-thread gap. Every SQL function body runs under `call::guarded`. pgrx's own error payloads pass through. Any other panic reaches the client and the server log only as `thinkthen defect: the extension panicked (retryable: no)`. `databases/postgresql/check.sh` `a_panic_is_an_error` pins that sentence and the marker's absence. The macOS and ARM64 package proofs above keep this issue open.

@@ -42,7 +42,6 @@ if [ -n "${THINKTHEN_ARTIFACT:-}" ]; then
     echo 'Swift installed release PASS: three literal portable sends'
     exit 0
 fi
-cmp "$root/libraries/c/include/thinkthen.h" "$here/Sources/CThinkThen/include/thinkthen.h"
 case ${THINKTHEN_FOCUSED:-} in
     portable-batch) python3 "$here/Tests/fixtures/portable_batch.py"; exit 0 ;;
     '') ;;

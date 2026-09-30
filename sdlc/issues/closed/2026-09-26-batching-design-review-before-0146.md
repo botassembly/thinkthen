@@ -1,6 +1,6 @@
 # Batching design review before 0146
 
-Status: answered 2026-09-26 by the coordinator. ADR 0053 records the design changes. Ian can overturn each verdict. Filed 2026-09-26 by the marketing lead from a fresh architect review. The full report, with commands, outputs and a live ledger of 16 calls, is in local experiment 273, file `02-batching.md`, on the machine that ran it. It stays unpushed. Most findings are about the design in `2026-09-26-batching-design.md` and ticket 0146, because main holds only the planner (0144).
+Status: closed 2026-09-30. Replaced by ADR 0111 (one question cache and one batching path).
 
 ## Severity 1
 

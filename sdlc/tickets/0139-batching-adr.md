@@ -224,11 +224,11 @@ Contract 2; state and timing 0; reach 2; proof 0; cost of error 1; total 5. Fina
 
 ## Closes
 
-None. `sdlc/issues/2026-09-26-batching-design.md` stays open until its last ticket lands.
+None. `sdlc/issues/closed/2026-09-26-batching-design.md` stays open until its last ticket lands.
 
 ## Evidence
 
-- Starts from: Ian's rulings 1 to 11 and the B0 row in `sdlc/issues/2026-09-26-batching-design.md` at `9b667c09`. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` sections 1 to 9, from experiments 208, 260, 261, 262, 268 and 271 and the 2026-09-22 wire probe. The closed packing issue `2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md`. The recognize design's R0 row. The page lines in "What happens today" at `origin/main` `d410ef4a`.
+- Starts from: Ian's rulings 1 to 11 and the B0 row in `sdlc/issues/closed/2026-09-26-batching-design.md` at `9b667c09`. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` sections 1 to 9, from experiments 208, 260, 261, 262, 268 and 271 and the 2026-09-22 wire probe. The closed packing issue `2026-09-25-packing-and-batching-what-they-buy-what-they-cost-and-the-setting.md`. The recognize design's R0 row. The page lines in "What happens today" at `origin/main` `d410ef4a`.
 - Keeps: Every behavior, help line, fixture, schema and test. Every accepted ADR sentence, marked and not deleted. Every Settled page's current sentence, beside its marked replacement. The question digest's canonical form.
 - Changes: A new ADR 0048 holds the batching rulings. ADRs 0007, 0008, 0010, 0032 and 0040 carry markers and dated amendment sections. `roadmap.md` drops two held rows. `records.md`, `result.md`, `channels.md`, `question-file.md` and `backends.md` state each new rule beside today's, under the marker.
 - Proof: The item-by-item review against the design and the amendment table. The marker grep and the `spec/` grep. `lint` and the contract-page test on `result.md`, with plants (a) to (c) each turning one red. Plant (c) tests this ticket file.

@@ -1,5 +1,7 @@
 # Plan
 
+Historical. [cleanup-2026-09-30.md](cleanup-2026-09-30.md) sets the current order of work.
+
 Updated 2026-09-23 after the [mainline assessment](mainline-readiness-2026-09-23.md). The eight built judgment commands are `decide`, `choose`, `tag`, `score`, `filter`, `rank`, `annotate`, and `find`. The accepted completion scope adds `recognize` and `relate`, the real Rust API, and integrated language/database surfaces for 0.1. The slice table below preserves delivery history. The [build queue](build-queue-2026-09-21.md) and its execution amendment control current order. `segment` and `report` remain outside the build; Ian can overturn the recorded decision to keep transforms instead of `report`.
 
 ## Current next work

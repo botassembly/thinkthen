@@ -26,11 +26,11 @@ The comparison with DSPy 3.4's ReAnchor optimizer is Ian's inbox report `notes/r
 4. audit gives the bar that does best on that measure.
 5. The bar goes into the question file, so every later run uses it (question-file rule 8).
 
-Today steps 1 and 4 work with accuracy only, and step 5 is a copy by hand. audit writes only standard output ([audit.md](../../specification/audit.md), "audit routes before any setup").
+Today steps 1 and 4 work with accuracy only, and step 5 is a copy by hand. audit writes only standard output ([audit.md](../../../specification/audit.md), "audit routes before any setup").
 
 ## 1. Every function type
 
-Today audit grades `decide` and `choose` and refuses any other verb at exit 2 ([audit.md](../../specification/audit.md), "The verb"). It checks each member of an `annotate` row. A question set with one `score` or `tag` question is refused whole, and the questions audit could grade go unchecked too. The `annotate` example in the spec mixes `decide`, `choose`, and `score`, so auditing it fails today.
+Today audit grades `decide` and `choose` and refuses any other verb at exit 2 ([audit.md](../../../specification/audit.md), "The verb"). It checks each member of an `annotate` row. A question set with one `score` or `tag` question is refused whole, and the questions audit could grade go unchecked too. The `annotate` example in the spec mixes `decide`, `choose`, and `score`, so auditing it fails today.
 
 | Function | What a key holds | What audit grades | Bar it tunes |
 | --- | --- | --- | --- |

@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 236
-opens: sdlc/issues/2026-09-26-batching-design.md sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md sdlc/issues/closed/2026-09-27-one-type-contract-for-every-surface.md
+opens: sdlc/issues/closed/2026-09-26-batching-design.md sdlc/issues/2026-09-26-every-surface-should-give-back-run-facts.md sdlc/issues/closed/2026-09-27-one-type-contract-for-every-surface.md
 ---
 
 # 0236: Batch TypeScript calls and preserve described labels

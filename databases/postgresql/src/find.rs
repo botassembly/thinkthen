@@ -134,7 +134,7 @@ fn thinkthen_find(
     units: Option<Array<'_, &str>>,
     settings: default!(Option<RawJson>, "NULL"),
 ) -> Option<JsonB> {
-    found(question, units, settings)
+    call::guarded(|| found(question, units, settings))
 }
 
 /// The removed positional none form fails with its replacement spelling.
@@ -144,8 +144,10 @@ fn thinkthen_find_none(
     units: Option<Array<'_, &str>>,
     _none: Option<bool>,
 ) -> Option<JsonB> {
-    let _ = (question, units);
-    call::raise(Refusal::usage(
-        "find's none and deadline moved into the settings object",
-    ))
+    call::guarded(|| {
+        let _ = (question, units);
+        call::raise(Refusal::usage(
+            "find's none and deadline moved into the settings object",
+        ))
+    })
 }

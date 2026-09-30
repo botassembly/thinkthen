@@ -1,6 +1,6 @@
 # Batching: many records in few requests
 
-Status: Sent by Ian to the main builder on 2026-09-26. Review findings and Ian's rulings of 2026-09-26 applied.
+Status: closed 2026-09-30. Replaced by ADR 0111 (one question cache and one batching path).
 
 Completion note, 2026-09-28: B12a Rust and B12b C are landed. B12c Python landed after independent High ACCEPT of integrated source `dfc1b5fb`; its default packing, explicit batch-one identity, context controls and per-call facts have focused installed offline proof. B12d–B12f and SQL/other port rows remain open. Marketing-owned site Python examples still consume the prior bare return shape and need an owner migration before public release.
 
@@ -262,7 +262,7 @@ Ian ruled the order: the typed value, then the environment, then the question fi
 
 The SQL and frame surfaces batch the rows one call receives: a DuckDB vector of up to 2,048 rows, a PostgreSQL array, a data-frame column, or SQLite's `thinkthen_warm`. Rows with equal evidence are asked once, as DuckDB does today. Batches form by the same rule within the call. A vector's edge also closes a batch, so DuckDB can cut a table differently from the command. A plain SQLite scalar receives one row at a time and cannot batch. DuckDB's parallel scan can hand rows over in another grouping. Exact replay then needs a fixed row order, such as `SET threads = 1`.
 
-SQLite's legacy warm-then-scalar cache recipe selects `thinkthen_batch(1)` before the engine builds. Under default `max`, an identical ordered warm cohort can reuse its complete packed request, while a later singleton scalar has a different request digest, even with the same context. This follows section 3's exact-request cache key; no packed member is recorded as a different singleton request. The [coordinator clarification](../records/2026-09-28-sql-warm-cache-identity.md) pins the 0219 boundary and leaves ordinary scalar throughput open.
+SQLite's legacy warm-then-scalar cache recipe selects `thinkthen_batch(1)` before the engine builds. Under default `max`, an identical ordered warm cohort can reuse its complete packed request, while a later singleton scalar has a different request digest, even with the same context. This follows section 3's exact-request cache key; no packed member is recorded as a different singleton request. The [coordinator clarification](../../records/2026-09-28-sql-warm-cache-identity.md) pins the 0219 boundary and leaves ordinary scalar throughput open.
 
 ### 7. The batch setting is calibration identity
 

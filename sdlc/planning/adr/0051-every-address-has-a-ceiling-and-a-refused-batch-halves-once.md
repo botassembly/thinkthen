@@ -11,7 +11,7 @@ The 96,000-byte request ceiling applies only when the posting URL is the built-i
 
 Only a profile file's `max_request_bytes` can change the ceiling today. A profile is a closed JSON file that also carries a calibration name, so a caller who only wants larger requests must write a file.
 
-ADR 0048 item 6 says that no batch is split and resent. The batching design gives its reason in section 4 of `sdlc/issues/2026-09-26-batching-design.md`. A retried status means the backend answered and may have billed the first attempt, so a batch may be paid twice. The design also keeps a recorded run's batches a function of the records and settings alone, so replay finds every batch. Section 2 of the design, "Other addresses", leaves a refused batch to the caller, who sets `max_request_bytes` in a profile or runs at `--batch 1`.
+ADR 0048 item 6 says that no batch is split and resent. The batching design gives its reason in section 4 of `sdlc/issues/closed/2026-09-26-batching-design.md`. A retried status means the backend answered and may have billed the first attempt, so a batch may be paid twice. The design also keeps a recorded run's batches a function of the records and settings alone, so replay finds every batch. Section 2 of the design, "Other addresses", leaves a refused batch to the caller, who sets `max_request_bytes` in a profile or runs at `--batch 1`.
 
 The hosted backend refuses a request over about 65,536 input tokens with status 400 and the body `{"detail":{"error_type":"max_tokens_exceeded"}}` (evidence section 7). Relate's JSON measured 0.516 input tokens a byte, so 96,000 bytes of it comes to about 49,500 tokens (ticket 0123). Dense record text runs higher. A hex record measured 0.895 tokens a byte and an identifier list 0.908, and a batch of two dense records in 94,238 bytes was refused with 400 `max_tokens_exceeded` (evidence section 14, local experiment 273). Item 7's halving is the remedy for that case. That keeps about a quarter of the limit back. Record text measured 0.40 tokens a byte in experiment 268. At those rates the hosted limit lies near 127,000 bytes for relate's JSON and near 164,000 bytes for record text.
 
@@ -65,7 +65,7 @@ The build of ticket 0154 edits each page and removes the old sentence in the sam
 
 ## Overlap with the recognize ADR
 
-Ticket 0147's ADR 0050 extends the built-in ceiling to recognize word and `confirm` questions, and names one piece at an address with no ceiling and no profile. Once this ADR is built, every address has a request size, so that case no longer exists. Ticket 0147 edits ADR 0040 and `backends.md` line 17. This ADR edits neither until ticket 0147 lands.
+Ticket 0147's first draft planned an ADR 0050 that extends the built-in ceiling to recognize word and `confirm` questions, and names one piece at an address with no ceiling and no profile. Once this ADR is built, every address has a request size, so that case no longer exists. Ticket 0147 edits ADR 0040 and `backends.md` line 17. This ADR edits neither until ticket 0147 lands. That ADR was never written; ticket 0147 wrote ADR 0056 instead.
 
 ## What Ian can overturn
 
