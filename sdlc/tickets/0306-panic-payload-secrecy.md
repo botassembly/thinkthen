@@ -1,6 +1,6 @@
 # 0306: Panic payload secrecy through one shared guard
 
-Status: ready. Lane claude-4. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issues: `2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md`, `2026-09-28-binding-panic-hooks-can-print-caught-payloads.md`, `2026-09-28-r-worker-panic-can-copy-payload-text.md`.
+Status: built, awaiting code review. Lane claude-4. Branch `ticket/0306-panic-payload-secrecy`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, order item 8. Issues: `2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md`, `2026-09-28-binding-panic-hooks-can-print-caught-payloads.md`, `2026-09-28-r-worker-panic-can-copy-payload-text.md`.
 
 ## Outcome
 
@@ -33,9 +33,11 @@ Not fixed:
 
 - Add `thinkthen::contained(body) -> Option<T>` and `thinkthen::uncontained(body) -> T`. The first marks the thread, catches, and forgets the payload inside the mark. The second lets host callbacks run under the host's previous hook. Both reuse the engine's one hook in `engine/workers.rs`.
 - The engine door `guarded` calls `contained`.
-- C, SQLite, DuckDB bridge, Python, Ruby, TypeScript and R guards call `contained`. Delete their hook modules. Python's host helpers call `uncontained`.
+- C, SQLite, DuckDB bridge, Python, Ruby, TypeScript and R guards call `contained`. Delete their hook code. The Ruby, TypeScript and R `diagnostics.rs` files keep only their child tests. Python's host helpers call `uncontained`.
 - The PostgreSQL worker body runs under `contained`. A panic there becomes the fixed defect.
-- Per-binding checks that counted one `catch_unwind` site now count none.
+- Per-binding checks that counted one `catch_unwind` site now count none. The DuckDB source check does the same.
+- The engine's depth mark uses `try_with`, so a thread past its local-storage teardown still runs the guarded body.
+- Fix one argument in `libraries/python/src/frame.rs` `_arrow_probe`. The `probe` feature did not compile on main, and it holds the Python panic child.
 
 ## Retained behavior
 
@@ -52,3 +54,30 @@ The six error kinds, the fixed defect messages, non-retryable defect, next-call 
 
 - PostgreSQL backend-thread panics. pgrx raises errors by panicking, so a generic catch there must pass pgrx's own payloads through. That needs its own design. The issue records it.
 - macOS and Linux ARM64 installed-package proofs stay open, as the issues say.
+
+## Build result
+
+All surface tests below ran locally with `-j4`, offline. Every toolchain was present: Python 3.12 with libpython, Ruby 3.4.11 from the toolchain cache, Node 22, R, pgrx for PostgreSQL 16, and the DuckDB bridge's Rust crate.
+
+| Surface | Test | Result |
+| --- | --- | --- |
+| Core door | `public::options::tests::engine_diagnostics_hide_worker_payloads_and_preserve_host_hook` | failed on main with `prior hook: drop key evidence secret`; passes |
+| C | `failures::tests::a_caught_payload_never_reaches_native_diagnostics`, door suite | pass |
+| SQLite | `worker::tests` native panic child, lib suite | pass |
+| DuckDB bridge | `ffi::tests::caught_payloads_stay_in_bridge_scope` | pass |
+| Python | `arrow::probe::diagnostics_tests::a_caught_python_panic_delegates_each_host_callback` (`--features probe`) | pass |
+| Ruby | `diagnostics::a_caught_panic_stays_out_of_ruby_diagnostics` | pass |
+| TypeScript | `door::diagnostics::a_caught_panic_stays_out_of_node_diagnostics` | pass |
+| R | `calls::diagnostics::a_caught_panic_stays_out_of_r_diagnostics` | pass |
+| PostgreSQL worker | `call::tests::a_worker_panic_stays_out_of_the_server_log` | failed with the old `deliver`; passes |
+
+Clippy with `-D warnings` is clean for the core, C, SQLite, DuckDB bridge, Python (with and without `probe`), Ruby, R and PostgreSQL. TypeScript clippy fails on main at `src/door/result.rs:38` and on the moved child test with `result_large_err`; this ticket does not change that. `policy.py` passes. The core `--lib` suite has one failure, `engine::deadline_tests::a_held_folder_ends_as_the_deadline_without_the_owner`, which ticket 0303 already names.
+
+Line counts: the core grows 55 and PostgreSQL 36. The seven bindings shrink by 310.
+
+## What the build taught us
+
+- The copies hid a bug in the original. Every binding forgot its payload, but the engine door dropped it. A payload whose destructor panicked escaped the door and printed. One shared guard fixes that for every surface at once.
+- A private helper copied per port drifts. A public helper in the core crate keeps ports thin and gives one place to test.
+- A surface guard needs no marked scope around its own fallback. Only the body needs marking.
+- Package gates on main have rotted: the Python `probe` feature did not compile, TypeScript clippy fails, and C sources on main are not `cargo fmt` clean. Issue `2026-09-29-nine-package-gates-fail-from-clean-checkouts.md` owns the last two.
