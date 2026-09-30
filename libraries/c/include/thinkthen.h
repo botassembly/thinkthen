@@ -303,8 +303,9 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * VALUE is the old bare answer: `true`, `false`, or
  * `null` for decide; a label or `null` for choose; a number for score; an
  * array of labels for tag; an array of the kept records for filter; an
- * array of every record, most likely yes first, for rank; the selected
- * unit or `null` for find; an array of one object a record for annotate;
+ * array of every record, most likely yes first, for rank;
+ * `{"index": N, "unit": TEXT, "probability": P}` for the selected unit, with
+ * a zero-based index, or `null` for find; an array of one object a record for annotate;
  * `{"entities": [...], "relations": [...]}` for recognize; and
  * `{"edges": [...]}` for relate. The four judgments also accept `records`,
  * whose VALUE is an ordered answer array. `"details": true` makes VALUE the

@@ -4,7 +4,7 @@ tag: ["refund","shipping"]
 score: 0.15
 filter: ["good morning","I demand a refund today"]
 rank: ["good morning","I demand a refund today"]
-find: "good morning"
+find: {"index":0,"unit":"good morning","probability":0.9}
 annotate: [{"refund":true,"complaint":true}]
 recognize: {"entities":[{"text":"Maria Chen","start":0,"end":10,"length":10,"kind":"person","strength":0.5781},{"text":"spring.","start":52,"end":59,"length":7,"kind":"person","strength":0.5781}]}
 relate: {"edges":[{"relation":"caused_by","source":{"name":"Checkout returns 500 at the payment step.","kind":"alert"},"target":{"name":"The payments database ran out of disk space.","kind":"alert"},"probability":0.9},{"relation":"caused_by","source":{"name":"The payments database ran out of disk space.","kind":"alert"},"target":{"name":"Checkout returns 500 at the payment step.","kind":"alert"},"probability":0.9}]}

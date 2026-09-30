@@ -57,7 +57,7 @@ pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub(crate) use results::QuestionJson;
 pub use results::{
     Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, DoorReply,
-    Facts, Found, Judgment, NamedProbability, ObservedRow, Probabilities, QuestionDetail, Ranked,
+    Facts, Found, Judgment, NamedProbability, ObservedRow, Picked, Probabilities, QuestionDetail, Ranked,
     RecordObservation, Row, Tally, TallyStart, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};

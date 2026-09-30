@@ -152,8 +152,18 @@
           "Third passage."
         ]
       },
-      "response": "Second passage.",
+      "response": {
+        "index": 1,
+        "unit": "Second passage.",
+        "probability": 0.8
+      },
       "case_id": "18-find-second"
+    },
+    {
+      "name": "find-without-probability",
+      "definition": "find",
+      "response": "Second passage.",
+      "response_valid": false
     },
     {
       "name": "19-find-none",

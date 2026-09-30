@@ -19,6 +19,7 @@ Everything else stays host JSON. Do not add typed facts classes, typed entity or
 - Parse settings once, in the core. The C door takes engine settings through `thinkthen_engine_new_with` (for example `max_requests_total`) and per-call settings through the portable `thinkthen.settings/1` object. A binding passes the host's values through as JSON and never re-implements the grammar.
 - Convert host values to C at the edge only: strings as NUL-terminated UTF-8, texts as pointer and byte-length arrays, the budget as `int64_t` milliseconds with `THINKTHEN_NO_DEADLINE` for none. A computed budget clamps at zero.
 - `deadline_ms` names the budget in the host's idiom on every call that sends.
+- `find` returns the door's value unchanged: `{"index", "unit", "probability"}` for the selected unit, or null. The native libraries return the same three members.
 - Score and tag answers carry no probability. A binding that offers a probability option on decide or choose refuses it on score and tag with the usage kind before anything is sent.
 - `plan` previews a judgment call through `thinkthen_plan_json` (or the crate's `Engine::plan_with` for a Rust-native binding) and returns the result schema's `plan` object as host JSON. It needs no key, reads no cache and sends nothing. It is never a second send and never a mutable last-result slot.
 

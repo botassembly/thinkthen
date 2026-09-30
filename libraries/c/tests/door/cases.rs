@@ -253,7 +253,17 @@ fn plan<'a>(backend: &'a Backend, case: &Members, script: &mut Script) -> Checke
                 .ok()
                 .and_then(|asked| serde_json::from_value(asked["units"].clone()).ok())
                 .unwrap_or_default();
-            let want = picked(&units, &success["operation"]["selected"]);
+            let operation = &success["operation"];
+            let selected = &operation["selected"];
+            let chosen = operation["probabilities"]
+                .as_array()
+                .and_then(|rows| rows.iter().find(|row| &row["index"] == selected));
+            let want = match (picked(&units, selected), chosen) {
+                (Value::Null, _) | (_, None) => Value::Null,
+                (unit, Some(row)) => {
+                    json!({"index": selected, "unit": unit, "probability": row["probability"]})
+                }
+            };
             Ok(Box::new(move |got| same("find", &parsed(&got[0])?, &want)))
         }
         ("rank", _) => {

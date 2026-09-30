@@ -5,7 +5,9 @@
 //! the command. Each shared case of those verbs runs through the door and
 //! through the compiled command on the same case arm. A single value and a
 //! line feed equal the command's output. A list equals the command's
-//! `--jsonl` lines joined into one array, and `find` runs on the generic arm.
+//! `--jsonl` lines joined into one array. `find` runs on the generic arm; its
+//! door value adds the unit's place and probability, and its unit equals the
+//! command's output.
 
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
@@ -77,11 +79,17 @@ fn the_doors_bare_values_are_the_commands_bytes() {
     let differ: Vec<String> = printed
         .iter()
         .zip(&answered)
-        .filter(|((_, said), (code, reply))| {
+        .filter(|((id, said), (code, reply))| {
             let value = serde_json::from_str::<serde_json::Value>(reply)
                 .ok()
                 .and_then(|wrapped| wrapped.get("value").cloned())
-                .map(|value| value.to_string());
+                .map(|value| match id.as_str() {
+                    // The generic arm gives the first of two units 0.9.
+                    "find" if value["index"] == 0 && value["probability"] == 0.9 => {
+                        value["unit"].to_string()
+                    }
+                    _ => value.to_string(),
+                });
             *code != 0 || value.is_none_or(|value| format!("{value}\n") != *said)
         })
         .map(|((id, said), (code, reply))| {

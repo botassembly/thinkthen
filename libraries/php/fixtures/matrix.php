@@ -117,7 +117,7 @@ try {
             case 2: check($result === '["first","second"]', 'tag'); break;
             case 3: check((float)$result === 0.1, 'score'); break;
             case 4: case 5: check(str_contains($result, $i===4?'filter-one':'rank-one'), 'record order'); break;
-            case 6: check(str_contains($result, 'find-one'), 'find'); break;
+            case 6: check($result === '{"index":0,"unit":"find-one","probability":0.9}', 'find'); break;
             case 7: case 11: check(str_contains($result, '"check":true'), 'annotate'); break;
             case 8: check(str_contains($result, '"length"') && str_contains($result,'"text"'), 'recognize shape'); break;
             case 9: check(str_contains($result, '"edges"'), 'relate'); break;
