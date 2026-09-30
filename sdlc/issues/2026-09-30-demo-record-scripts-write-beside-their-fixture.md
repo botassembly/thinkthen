@@ -6,7 +6,7 @@ Kind: debt
 
 Pay when: a demo is next recorded live, before 0.1.
 
-Debt: 023
+Debt: 024
 
 Severity: low
 
