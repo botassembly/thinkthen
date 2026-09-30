@@ -27,12 +27,11 @@ A fresh reviewer returns ACCEPT or findings before any build.
 
 ADR 0111 names each slice's proof. Each lands green with `cargo test --workspace`, `policy.py` and a fresh code review.
 
-1. Question key, SQLite store and `cache convert`, beside today's path.
-2. Pipeline and packer for `decide`, `filter` and `rank` on the command. Proof includes 100 records, then 120, sending only the 20 new questions on the loopback backend.
-3. `choose`, `tag`, `score` and `annotate` on the pipeline. The records-list state and the group planner go.
-4. Public Rust API, Polars eager and lazy, the C door and the SQL hosts on `ask_all`.
-5. `find`, `recognize` and `relate` on `ask_all`. Their fixtures convert without loss.
-6. Remove the old store, locks, marker, request-level prune, both old schedulers and every committed `DIGEST.json` outside probe history.
+1. The quoted wire form on every surface. The shared `conformance/` cases and committed recordings are rewritten at the request level. No storage or scheduler change.
+2. Question key, SQLite store, sorted JSON Lines fixtures, `cache convert`, and the pipeline for the seven record functions on the command. Proof includes 100 records, then 120, sending only the 20 new questions on the loopback backend.
+3. Public Rust API, Polars eager and lazy, the C door and the SQL hosts on `ask_all`.
+4. `find`, `recognize` and `relate` on `ask_all`. Their fixtures convert without loss.
+5. Remove the old store, locks, marker, request-level prune, both old schedulers and every committed `DIGEST.json` outside probe history.
 
 ## Retained behavior
 
