@@ -223,6 +223,12 @@ pub(crate) fn relate(
     ))
 }
 
+/// The door's relate value: each edge as the crate writes it.
+#[derive(serde::Serialize)]
+struct Edges {
+    edges: Vec<Box<serde_json::value::RawValue>>,
+}
+
 pub(crate) fn relate_with_facts(
     engine: &Engine,
     spec: &str,
@@ -233,8 +239,12 @@ pub(crate) fn relate_with_facts(
     let ask = Relate::from_json(spec)?;
     let call = engine.relate_with(&ask, entities, options)?;
     *completed = Some(call.facts().clone());
-    let edges: Vec<String> = call.value().iter().map(thinkthen::Edge::to_json).collect();
-    Ok(format!("{{\"edges\":[{}]}}", edges.join(",")))
+    let edges = call
+        .value()
+        .iter()
+        .map(|edge| crate::call::raw(edge.to_json()))
+        .collect::<Result<_, _>>()?;
+    crate::call::written(serde_json::to_string(&Edges { edges }))
 }
 
 /// Refuse a null `out` or `out_len`, which success always writes.

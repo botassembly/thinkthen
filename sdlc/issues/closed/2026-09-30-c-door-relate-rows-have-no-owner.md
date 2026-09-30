@@ -1,6 +1,6 @@
 # The C door's relate rows still join JSON text, and no ticket owns them
 
-Status: open. Filed by ticket 0304 slice 4 at landing. Owner: ticket 0346, batch B3 of `../planning/issue-priorities-2026-09-30.md`.
+Status: Closed by ticket 0346, landed as `Land 0346: the C door joins no JSON text, and each door test process keeps its own folder`. Resolution: the door's relate, annotate and record-array values serialize each row the crate wrote as a raw JSON value, and `libraries/c/tests/door/golden.rs` pins every byte, now with a both-ways edge's `"either":true`.
 
 Kind: debt
 
@@ -9,6 +9,8 @@ Pay when: 0314 slice 4's C bridge family builds typed `annotate` and record-arra
 Debt: 012
 
 Severity: medium
+
+Paid: 2026-09-30
 
 Keeping it risks the C door's relate output drifting from the typed result schema the other rows follow.
 

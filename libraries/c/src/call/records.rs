@@ -4,7 +4,7 @@ use thinkthen::{CallOptions, DetailQuestion, Engine, Facts};
 
 use crate::failures::Failure;
 
-use super::{Request, bare, member, object};
+use super::{Request, bare, member, object, raw, written};
 
 pub(super) fn judgments(
     engine: &Engine,
@@ -42,16 +42,17 @@ fn collect<Q: DetailQuestion + ?Sized>(
     let values = rows
         .iter()
         .map(|row| {
-            if detailed {
-                Ok(row.value().to_json())
+            let text = if detailed {
+                row.value().to_json()
             } else {
-                bare(row.value().value())
-            }
+                bare(row.value().value())?
+            };
+            raw(text)
         })
         .collect::<Result<Vec<_>, Failure>>()?;
     let facts = batch
         .facts()
         .cloned()
         .ok_or_else(|| Failure::defect("completed record details have no facts"))?;
-    Ok((format!("[{}]", values.join(",")), facts))
+    Ok((written(serde_json::to_string(&values))?, facts))
 }

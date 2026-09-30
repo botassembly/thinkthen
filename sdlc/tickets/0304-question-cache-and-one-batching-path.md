@@ -267,7 +267,7 @@ fn process_requests_sent() -> u64
 - Defers:
   - The command's many-line recognize still runs lines through `schedule::over_records`. Slice 5 moves that runner with the other `Engine::records` callers, per the prep's option (b). `sdlc/issues/2026-09-30-old-batching-files-still-have-live-callers.md` holds this and the next item for slice 5.
   - `ask_chunks`, `facade::split` and `prepared_request.rs` stay for `check`, the conformance runner and tests until slice 5, though ADR 0111 step 4 lists `ask_chunks`. The facade conformance runner (`cli/conformance_tests/runner.rs`) still sends `recognize` and `relate` through `ask_chunks`; the command conformance test and the loopback cases run the new path.
-  - The C door's typed relate rows, which 0314 slice 2 deferred, are not taken here. `sdlc/issues/2026-09-30-c-door-relate-rows-have-no-owner.md` holds them.
+  - The C door's typed relate rows, which 0314 slice 2 deferred, are not taken here. `sdlc/issues/closed/2026-09-30-c-door-relate-rows-have-no-owner.md` holds them.
   - The site's recognize and relate replay folders stay unconverted, per `sdlc/issues/2026-09-30-site-replay-folders-have-no-fixture.md`.
 
 ### Slice 5 evidence

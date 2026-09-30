@@ -55,4 +55,4 @@ Slice 2 changes no product code. Each counting surface gains one rerun proof. A 
 
 The removal commented out `self.counts.usage.cache_answer()` in `engine/pipeline/run.rs`. Every surface reaches that line through the one pipeline.
 
-Checks on the branch: the SQLite, DuckDB and PostgreSQL `check.sh` runs and the C check pass under a decoy usage guard. `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets` and `lint` in a clean checkout pass. Review found the C door tests race under nextest; `sdlc/issues/2026-09-30-c-door-tests-race-under-nextest.md` holds it as debt 025.
+Checks on the branch: the SQLite, DuckDB and PostgreSQL `check.sh` runs and the C check pass under a decoy usage guard. `sdlc/scripts/test`, `spec`, workspace clippy with `-D warnings`, `policy.py`, `tickets` and `lint` in a clean checkout pass. Review found the C door tests race under nextest; `sdlc/issues/closed/2026-09-30-c-door-tests-race-under-nextest.md` holds it as debt 025.

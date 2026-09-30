@@ -26,6 +26,8 @@ fn every_door_reply_keeps_its_bytes() {
         "refund":{"decide":"Refund?","threshold":0.5},
         "team":{"choose":"Team?","options":["billing","other"],"threshold":0.5}}});
     let relation = json!({"relations":[{"name":"linked","source":"person","target":"person"}]});
+    let both_ways =
+        json!({"relations":[{"name":"met","source":"person","target":"person","either":true}]});
     let asked = [
         json!({"decide":"Refund?","evidence":"Money back."}),
         json!({"decide":"Refund?","evidence":"Money back.","details":true}),
@@ -40,6 +42,7 @@ fn every_door_reply_keeps_its_bytes() {
         json!({"annotate":set,"records":["one"]}),
         json!({"version":1,"recognize":{"kinds":{"person":null}},"evidence":"Ada"}),
         json!({"version":1,"relate":relation,"records":[{"name":"Ada","kind":"person"},{"name":"Bea","kind":"person"}]}),
+        json!({"version":1,"relate":both_ways,"records":[{"name":"Ada","kind":"person"},{"name":"Bea","kind":"person"}]}),
         json!({"decide":"Refund?","evidence":"Money back.","attempts":true}),
         json!({"usage":true}),
     ];
@@ -106,7 +109,7 @@ fn steady(body: &str) -> String {
     out + rest
 }
 
-const GOLDEN: [&str; 20] = [
+const GOLDEN: [&str; 21] = [
     r#"0 "#,
     r#"0 {"value":true,{FACTS}}"#,
     r#"0 {"value":{"schema":"thinkthen.result/1","value":true,"question":{"verb":"decide","text":"Refund?"},"answer":{"kind":"yes_no","probability":0.9},"threshold":0.5,"meta":{"tool":"thinkthen 0.0.1","question_sha256":"6c0b2c1ba8577c1d9d8df9ee08c9cce188ec4283e097cd37f5944518f2ce8317","url":"ORIGIN/arm/full/v1/systemone","model":"jev-1.13.0","usage":{"input_tokens":1,"output_tokens":1},"requests_sent":1,"cached":false,"requests":["0"],"failed_questions":0}},{FACTS}}"#,
@@ -121,8 +124,9 @@ const GOLDEN: [&str; 20] = [
     r#"0 {"value":[{"refund":true,"team":"billing"}],{FACTS}}"#,
     r#"0 {"value":{"entities":[]},"facts":{"cache_answers":0,"estimated_cost_usd":"0.000001","input_tokens":2,"model":"jev-1.13.0","output_tokens":2,"records":1,"requests_sent":2,"seconds":0}}"#,
     r#"0 {"value":{"edges":[{"relation":"linked","source":{"name":"Ada","kind":"person"},"target":{"name":"Bea","kind":"person"},"probability":0.9},{"relation":"linked","source":{"name":"Bea","kind":"person"},"target":{"name":"Ada","kind":"person"},"probability":0.9}]},{FACTS}}"#,
+    r#"0 {"value":{"edges":[{"relation":"met","source":{"name":"Ada","kind":"person"},"target":{"name":"Bea","kind":"person"},"probability":0.9,"either":true}]},{FACTS}}"#,
     r#"0 {"value":true,{FACTS},"attempts":[{"ordinal":1,"request_sha256":"0","wall_ms":0,"outcome":"ok","status":200}]}"#,
-    r#"0 {"requests_sent":15,"retries":0,"input_tokens":15,"output_tokens":15,"cache_answers":0}"#,
+    r#"0 {"requests_sent":16,"retries":0,"input_tokens":16,"output_tokens":16,"cache_answers":0}"#,
     r#"0 "#,
     r#"0 {"value":[{"refund":true,"team":{"failed":{"kind":"backend","cause":"missing_answer"}}}],"facts":{"cache_answers":0,"model":"jev-1.13.0","records":1,"requests_sent":1,"seconds":0}}"#,
     r#"2 the reply was refused: the response carries no answer for question `q1`"#,
