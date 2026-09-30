@@ -60,11 +60,14 @@ pub(super) fn run_default_cache(argument: &str) -> Vec<String> {
 }
 
 #[test]
-fn zero_budget_leaves_an_unbound_default_cache_for_another_address() {
+fn zero_budget_sends_nothing_and_the_default_cache_serves_the_next_address() {
     const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
     let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
-    for (name, present) in [("absent", false), ("present-empty", true)] {
+    for (sent, (name, present)) in [("absent", false), ("present-empty", true)]
+        .into_iter()
+        .enumerate()
+    {
         let home = folder(&format!("zero-budget-{name}"));
         let cache = home.join("thinkthen");
         if present {
@@ -87,13 +90,16 @@ fn zero_budget_leaves_an_unbound_default_cache_for_another_address() {
         let expected = format!("Usage|Some(BeforeFirstSend)|{present}|0\n1|0|1");
         assert_eq!(lines, expected, "{name}");
         assert_eq!(first.count(), 0, "{name}: refused request sent nothing");
-        assert_eq!(second.count(), if present { 2 } else { 1 }, "{name}");
-        assert!(cache.join(".thinkthen-backend.json").is_file(), "{name}");
+        assert_eq!(second.count(), sent + 1, "{name}: each fresh cache sends once");
+        assert!(cache.join("thinkthen.sqlite").is_file(), "{name}");
     }
 }
 
+/// ADR 0111 section 3 withdrew the folder marker: the address sits in every
+/// question key. A folder another address filled, an old entry and a bad
+/// marker all miss, so a zero budget refuses before any key read or send.
 #[test]
-fn zero_budget_preserves_bound_and_unusable_folder_refusals() {
+fn zero_budget_refuses_beside_another_address_old_entries_and_a_bad_marker() {
     const ANSWER: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}}}"#;
     let first = Listener::answering(|_| Canned::ok(ANSWER)).expect("first listener");
     let second = Listener::answering(|_| Canned::ok(ANSWER)).expect("second listener");
@@ -101,7 +107,6 @@ fn zero_budget_preserves_bound_and_unusable_folder_refusals() {
         .expect("question")
         .cut();
     let budget = SendBudget::new();
-    let options = || CallOptions::new().send_budget(&budget, Some(0));
     let engine = |base: &str, path: &Path, key: &str| {
         Engine::builder()
             .base_url(base)
@@ -111,62 +116,39 @@ fn zero_budget_preserves_bound_and_unusable_folder_refusals() {
             .and_then(EngineBuilder::build)
             .expect("engine")
     };
-
-    let bound = folder("zero-budget-bound-mismatch");
-    engine(first.base(), &bound, "sk-test")
+    let other = folder("zero-budget-other-address");
+    engine(first.base(), &other, "sk-test")
         .decide(&question, EVIDENCE)
         .expect("first address fills cache");
-    let marker = fs::read(bound.join(".thinkthen-backend.json")).expect("bound marker");
-    let mismatch = engine(second.base(), &bound, "first\nsecond")
-        .decide_with(&question, EVIDENCE, options())
-        .expect_err("mismatch precedes zero-budget denial");
-    assert_eq!(mismatch.kind(), ErrorKind::Local);
-    assert!(!mismatch.retryable());
-    assert_eq!(mismatch.send_budget_denial(), None);
-    assert_eq!(
-        mismatch.to_string(),
-        "the recording folder belongs to another backend address; restore its backend settings or choose another folder"
-    );
-    assert_eq!(
-        fs::read(bound.join(".thinkthen-backend.json")).unwrap(),
-        marker
-    );
+    let old = folder("zero-budget-old-entry");
+    fs::create_dir_all(&old).expect("old folder");
+    fs::write(old.join(format!("{}.json", "a".repeat(64))), b"old entry").expect("old entry");
+    let marked = folder("zero-budget-bad-marker");
+    fs::create_dir_all(&marked).expect("marked folder");
+    fs::write(marked.join(".thinkthen-backend.json"), b"secret invalid marker")
+        .expect("bad marker");
+    for (name, path) in [("other", &other), ("old", &old), ("marked", &marked)] {
+        let denied = engine(second.base(), path, "first\nsecond")
+            .decide_with(
+                &question,
+                EVIDENCE,
+                CallOptions::new().send_budget(&budget, Some(0)),
+            )
+            .expect_err("a zero budget refuses the miss");
+        assert_eq!(denied.kind(), ErrorKind::Usage, "{name}");
+        assert_eq!(
+            denied.send_budget_denial(),
+            Some(SendBudgetDenial::BeforeFirstSend),
+            "{name}"
+        );
+        assert!(!denied.to_string().contains("secret"), "{name}");
+    }
     assert_eq!(first.count(), 1);
     assert_eq!(second.count(), 0);
-
-    let legacy = folder("zero-budget-legacy");
-    fs::create_dir_all(&legacy).expect("legacy folder");
-    fs::write(
-        legacy.join(format!("{}.json", "a".repeat(64))),
-        b"old entry",
-    )
-    .expect("legacy final entry");
-    let legacy_error = engine(second.base(), &legacy, "first\nsecond")
-        .decide_with(&question, EVIDENCE, options())
-        .expect_err("legacy refusal precedes budget");
-    assert_eq!(legacy_error.kind(), ErrorKind::Local);
-    assert_eq!(legacy_error.send_budget_denial(), None);
-    assert!(
-        legacy_error
-            .to_string()
-            .contains("predates backend binding")
+    assert_eq!(
+        fs::read(marked.join(".thinkthen-backend.json")).expect("marker"),
+        b"secret invalid marker"
     );
-    assert!(!legacy.join(".thinkthen-backend.json").exists());
-
-    let malformed = folder("zero-budget-malformed");
-    fs::create_dir_all(&malformed).expect("malformed folder");
-    fs::write(
-        malformed.join(".thinkthen-backend.json"),
-        b"secret invalid marker",
-    )
-    .expect("malformed marker");
-    let malformed_error = engine(second.base(), &malformed, "first\nsecond")
-        .decide_with(&question, EVIDENCE, options())
-        .expect_err("malformed marker precedes budget");
-    assert_eq!(malformed_error.kind(), ErrorKind::Local);
-    assert_eq!(malformed_error.send_budget_denial(), None);
-    assert!(!malformed_error.to_string().contains("secret"));
-    assert_eq!(second.count(), 0);
 }
 
 #[test]

@@ -3,11 +3,11 @@
 
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
-use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender};
+use std::sync::mpsc::{Receiver, RecvTimeoutError, SyncSender};
 use std::time::{Duration, Instant};
 
 use super::send::{Done, Job};
-use super::{Answered, Asker, Event, Failed, Flow};
+use super::{Answered, Asker, Event, Failed, Flow, Host};
 use crate::core::ModelName;
 use crate::core::pack::{self, Ask, Entry, Packer, QuestionKey};
 use crate::engine::Cancel;
@@ -100,18 +100,17 @@ impl<'a, A: Asker> Run<'a, A> {
     /// request has come back.
     pub(super) fn drive(
         mut self,
-        ask: &Sender<()>,
+        host: &mut impl Host<A>,
         received: &Receiver<Event<A::Input, A::Error>>,
         work: &SyncSender<Job>,
-        mut emit: impl FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow,
         cancel: &Cancel,
     ) {
         loop {
-            if !self.settle(&mut emit, cancel) {
+            if !self.settle(host, cancel) {
                 return;
             }
             if !self.halted && self.stopping.is_none() {
-                self.dispatch(ask, work);
+                self.dispatch(host, work);
             }
             cancel.observed_block();
             self.receive(received, cancel);
@@ -119,16 +118,12 @@ impl<'a, A: Asker> Run<'a, A> {
     }
 
     /// Emit what is ready and take in a stop. False once the call is over.
-    fn settle(
-        &mut self,
-        emit: &mut impl FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow,
-        cancel: &Cancel,
-    ) -> bool {
-        self.emit_ready(emit, cancel);
+    fn settle(&mut self, host: &mut impl Host<A>, cancel: &Cancel) -> bool {
+        self.emit_ready(host, cancel);
         self.halted |= self.asker.gone();
         if !self.halted
             && self.stopping.is_none()
-            && let Some(stop) = cancel.stop()
+            && let Some(stop) = cancel.stop_between_sends()
         {
             self.stopping = Some(stop);
             self.closed.clear();
@@ -138,7 +133,7 @@ impl<'a, A: Asker> Run<'a, A> {
             && let Some(stop) = self.stopping.clone()
         {
             if !self.slots.is_empty() || !self.exhausted {
-                let _flow = emit(self.first, Err(Failed::Stopped(stop)));
+                let _flow = host.row(self.first, Err(Failed::Stopped(stop)));
             }
             self.halted = true;
         }
@@ -151,7 +146,7 @@ impl<'a, A: Asker> Run<'a, A> {
 
     /// Close a full window, hand closed requests to free workers, and ask
     /// for one more input while the window has room.
-    fn dispatch(&mut self, ask: &Sender<()>, work: &SyncSender<Job>) {
+    fn dispatch(&mut self, host: &mut impl Host<A>, work: &SyncSender<Job>) {
         if self.slots.len() >= self.window || self.exhausted {
             self.close();
         }
@@ -165,7 +160,7 @@ impl<'a, A: Asker> Run<'a, A> {
             self.busy += 1;
         }
         if !self.reading && !self.exhausted && self.slots.len() < self.window {
-            self.reading = ask.send(()).is_ok();
+            self.reading = host.ask();
             self.exhausted |= !self.reading;
         }
     }
@@ -210,11 +205,7 @@ impl<'a, A: Asker> Run<'a, A> {
     }
 
     /// Emit every finished input at the head of the window, in order.
-    fn emit_ready(
-        &mut self,
-        emit: &mut impl FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow,
-        cancel: &Cancel,
-    ) {
+    fn emit_ready(&mut self, host: &mut impl Host<A>, cancel: &Cancel) {
         while !self.halted && self.slots.front().is_some_and(Slot::ready) {
             let Some(slot) = self.slots.pop_front() else {
                 return;
@@ -231,11 +222,7 @@ impl<'a, A: Asker> Run<'a, A> {
                     "an input disappeared before its row",
                 ))),
             };
-            let failed = result.is_err();
-            if !failed {
-                cancel.finished_records(1);
-            }
-            if emit(place, result) == Flow::Stop {
+            if host.row(place, result) == Flow::Stop {
                 self.halted = true;
             }
         }
@@ -289,7 +276,7 @@ impl<'a, A: Asker> Run<'a, A> {
         let mut joining = Vec::new();
         let mut added = HashSet::new();
         for (position, (ask, stored)) in asks.into_iter().zip(found).enumerate() {
-            let stored = match stored.map(|found| self.stored(&ask, found, label)) {
+            let stored = match stored.map(|found| self.stored(&ask, found, label, cancel)) {
                 Some(Ok(answered)) => Some(answered),
                 Some(Err(Some(error))) => return engine(error),
                 Some(Err(None)) | None => None,
@@ -340,7 +327,13 @@ impl<'a, A: Asker> Run<'a, A> {
 
     /// A stored answer as an answer, or `Err(None)` when it no longer
     /// decodes under a cache, which counts it a miss.
-    fn stored(&self, ask: &Ask, found: Found, label: usize) -> Result<Answered, Option<Error>> {
+    fn stored(
+        &self,
+        ask: &Ask,
+        found: Found,
+        label: usize,
+        cancel: &Cancel,
+    ) -> Result<Answered, Option<Error>> {
         let decodes = pack::read(
             std::slice::from_ref(&ask.decoder),
             &[Ok(found.answer.as_str())],
@@ -368,6 +361,7 @@ impl<'a, A: Asker> Run<'a, A> {
         }
         if self.counts.cache_answers {
             self.counts.usage.cache_answer();
+            cancel.cache_answer();
         }
         if let Ok(model) = ModelName::new(found.answered_by.clone()) {
             self.counts.usage.answered_by(&model);

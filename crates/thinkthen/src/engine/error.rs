@@ -143,6 +143,17 @@ impl Error {
         matches!(self, Self::TokenLimit | Self::Status(413))
     }
 
+    /// A refusal by the caller's send budget or estimated input cap.
+    pub(crate) const fn spent(&self) -> bool {
+        matches!(
+            self,
+            Self::EstimatedInput(_)
+                | Self::SendBudgetFirst
+                | Self::SendBudgetAdditional
+                | Self::SendBudgetRetry(_)
+        )
+    }
+
     pub(crate) const fn kind(&self) -> Kind {
         match self {
             Self::Transport(_)

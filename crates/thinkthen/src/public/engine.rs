@@ -11,10 +11,10 @@ use crate::public::choice::Choice;
 use crate::public::error::Error;
 use crate::public::options::{CallOptions, Stop, guarded};
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
-use crate::public::results::{
-    self, Answer, Call, Counters, Details, ObservedQuestion, ObservedRow, QuestionDetail,
-    RecordObservation,
-};
+use crate::engine::pipeline::Flow;
+use crate::public::asking::{Decisions, Text};
+use crate::public::pull;
+use crate::public::results::{self, Answer, Call, Counters, Details};
 use crate::public::settings::EngineBuilder;
 
 /// One engine: its settings, its connection pool, its cache, and its counters.
@@ -373,29 +373,26 @@ impl Engine {
         options: CallOptions<'_>,
     ) -> Result<Call<facade::Judgment>, Error> {
         options.without_context("a single-document call")?;
-        let evidence = evidence(text)?;
+        evidence(text)?;
         let engine = self.asking(question)?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
+        let asker = Decisions::new(&engine, question, None);
+        let packing = pull::packing(core::Setting::Max, false, false);
+        let input = Text {
+            at: 0,
+            text: text.to_owned(),
+        };
         stop.run_call(1, |cancel| {
-            let judged = engine
-                .judge(&question.core, question.threshold, evidence, cancel)
+            let mut taken = None;
+            let host = pull::eager(vec![input], |row| {
+                taken = Some(row);
+                Flow::Stop
+            });
+            engine
+                .ask_all(&asker, packing, host, cancel)
                 .map_err(Error::from)?;
-            if stop.observing() {
-                let details = Details::of(&judged, question, engine.backend(), engine.profile())?;
-                let observed = ObservedQuestion::from_details(&details);
-                stop.observe(RecordObservation::Question {
-                    index: 0,
-                    member: None,
-                    stage: None,
-                    position: 0,
-                    detail: QuestionDetail::of(&observed),
-                });
-                stop.observe(RecordObservation::Row {
-                    index: 0,
-                    value: ObservedRow::Judgment(details.value()),
-                });
-            }
-            Ok(judged)
+            let row = taken.ok_or_else(|| Error::defect("a single call returned no row"))?;
+            crate::public::bulk::judged(&stop, question, engine.backend(), 0, row)
         })
     }
 }

@@ -16,11 +16,8 @@ use crate::public::options::{Stop, guarded};
 use crate::public::results::Facts;
 
 mod annotation;
-mod planned;
 
 pub(crate) use annotation::start_annotation;
-pub(crate) use planned::start_details;
-pub(crate) use planned::start_planned;
 
 /// How often a waiting batch runs the caller's controls, as the engine's poll.
 const TICK: Duration = Duration::from_millis(50);
@@ -66,9 +63,13 @@ impl<'a, T: 'a> Batch<'a, T> {
     pub(crate) fn of(result: Result<Self, Error>) -> Self {
         result.unwrap_or_else(Self::failed)
     }
+
+    pub(crate) fn from_source(source: Box<dyn Source<T> + 'a>) -> Self {
+        Self { source }
+    }
 }
 
-trait Source<T> {
+pub(crate) trait Source<T> {
     fn pull(&mut self) -> Option<Result<T, Error>>;
     fn facts(&self) -> Option<&Facts>;
 }

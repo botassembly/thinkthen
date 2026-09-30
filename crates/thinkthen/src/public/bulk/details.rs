@@ -3,7 +3,10 @@
 use serde::Serialize;
 
 use crate::core;
-use crate::public::batch::{self, Batch};
+use crate::public::asking::Decisions;
+use crate::public::batch::Batch;
+use crate::public::error::Error;
+use crate::public::pull;
 use crate::public::engine::{DetailQuestion, Engine, Evidence, evidence, only};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::Kind;
@@ -58,17 +61,43 @@ impl Engine {
             let context = options.context_text().map(evidence).transpose()?;
             let stop = Stop::begin(options)?.with_prices(self.prices);
             let engine = self.asking(question)?;
-            batch::start_details(
+            let asker = Decisions::new(&engine, question, context.clone());
+            let backend = engine.backend().clone();
+            let profile = self.profile.clone();
+            let call = pull::Call {
+                packing: pull::packing(setting, context.is_some(), false),
                 engine,
-                records.into_iter(),
                 stop,
-                self.most,
-                question,
-                setting,
-                context,
-                context_sha256,
-                self.profile.as_ref(),
-            )
+                most: self.most,
+            };
+            Ok(pull::start(
+                call,
+                asker,
+                records.into_iter(),
+                Box::new(move |stop, index, item, row| {
+                    let item = item.ok_or_else(|| Error::defect("a row arrived with no record"));
+                    let decided = match row {
+                        Ok(decided) => decided,
+                        failed => {
+                            super::judged(stop, question, &backend, index, failed)?;
+                            return Err(Error::defect("a failed row returned a value"));
+                        }
+                    };
+                    let member = decided.member(question)?;
+                    super::judged(stop, question, &backend, index, Ok(decided))?;
+                    let item = item?;
+                    let details = Details::of_member(
+                        member,
+                        &item,
+                        question,
+                        &backend,
+                        profile.as_ref(),
+                        setting,
+                        context_sha256.as_deref(),
+                    )?;
+                    Ok(Some(Row::new(item, details, 0.0)))
+                }),
+            ))
         })())
     }
 }

@@ -340,10 +340,10 @@ def feature_failures(manifest: dict) -> list[str]:
         (manifest.get("dependencies", {}) | target).items()
         if isinstance(specification, dict) and specification.get("optional") is True
     }
-    if optional != {"clap", "csv-core", "rusqlite", "signal-hook", "polars", "polars-core"}:
+    if optional != {"clap", "csv-core", "signal-hook", "polars", "polars-core"}:
         held.append("exactly the command dependencies and pinned Polars features are optional")
     if manifest.get("features") != {
-        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:rusqlite", "dep:signal-hook"],
+        "default": ["cli"], "cli": ["dep:clap", "dep:csv-core", "dep:signal-hook"],
         "polars": ["dep:polars", "dep:polars-core", "polars/lazy"],
     }:
         held.append("the default cli feature selects only command dependencies, and polars selects its two pinned crates with lazy")
@@ -355,15 +355,16 @@ def feature_failures(manifest: dict) -> list[str]:
     }:
         held.append("polars-core activates only dtype-struct, under the optional Polars feature")
     # ADR 0111 section 3: the question store's SQLite, bundled so every host
-    # runs the same one, pinned exactly, and only under the command feature.
+    # runs the same one, pinned exactly. Every surface reaches the store, so it
+    # sits outside the command feature.
     rusqlite = manifest.get("dependencies", {}).get("rusqlite", {})
     if not (
         isinstance(rusqlite, dict)
         and str(rusqlite.get("version", "")).startswith("=")
         and {key: value for key, value in rusqlite.items() if key != "version"}
-        == {"default-features": False, "features": ["bundled"], "optional": True}
+        == {"default-features": False, "features": ["bundled"]}
     ):
-        held.append("rusqlite is pinned exactly, optional, with default features off and only bundled on")
+        held.append("rusqlite is pinned exactly, not optional, with default features off and only bundled on")
     if set(manifest.get("dev-dependencies", {})) != ACCEPTED_DEV_DEPENDENCIES["thinkthen"]:
         held.append("thinkthen declares the accepted development dependency set")
     return held

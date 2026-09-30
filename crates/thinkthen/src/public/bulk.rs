@@ -12,13 +12,19 @@ pub(crate) use annotation::{record as annotation_record, rendered as render_anno
 
 use crate::core::{self, Find, Value, ranking};
 use crate::public::annotated::AnnotatedRecord;
+use crate::engine::pipeline::Failed;
+use crate::public::asking::{self, Decisions, Miss};
 use crate::public::batch::{self, Batch};
+use crate::public::pull;
 use crate::public::choice::Choice;
 use crate::public::engine::{DECISIONS, DecisionQuestion, Engine, Evidence, evidence, only};
 use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
-use crate::public::results::{Answer, Call, Found, ObservedQuestion, Ranked, Row, Written};
+use crate::public::results::{
+    self, Answer, Call, Found, ObservedQuestion, ObservedRow, QuestionDetail, Ranked,
+    RecordObservation, Row, Written,
+};
 use crate::public::set::QuestionSet;
 
 /// One record's named values and bounded per-member observations.
@@ -463,17 +469,66 @@ impl Engine {
         let context = options.context_text().map(evidence).transpose()?;
         let stop = Stop::begin(options)?.with_prices(self.prices);
         let engine = self.asking(question)?;
-        batch::start_planned(
+        let asker = Decisions::new(&engine, question, context.clone());
+        let backend = engine.backend().clone();
+        let question = question.clone();
+        let call = pull::Call {
+            packing: pull::packing(setting, context.is_some(), false),
             engine,
-            records.into_iter(),
             stop,
-            self.most,
-            question.core.clone(),
-            question.threshold,
-            question.profile.clone(),
-            setting,
-            context,
-            pair,
-        )
+            most: self.most,
+        };
+        Ok(pull::start(
+            call,
+            asker,
+            records.into_iter(),
+            Box::new(move |stop, index, item, row| {
+                let judged = judged(stop, &question, &backend, index, row)?;
+                let item = item.ok_or_else(|| Error::defect("a row arrived with no record"))?;
+                pair(item, (judged.value, judged.answer.yes().unwrap_or_default()))
+            }),
+        ))
     }
+}
+
+/// One pipeline row as its judgment, after the observer sees its question
+/// and its row. A failed row is the batch's error.
+pub(crate) fn judged(
+    stop: &Stop<'_>,
+    question: &Question,
+    backend: &core::Backend,
+    index: usize,
+    row: pull::Row<Decisions>,
+) -> Result<crate::engine::facade::Judgment, Error> {
+    let decided = match &row {
+        Ok(decided) | Err(Failed::Asker(Miss::Failed(decided))) => Some(decided),
+        Err(_) => None,
+    };
+    if let Some(decided) = decided.filter(|_| stop.observing()) {
+        let observed = decided.observed(question, backend)?;
+        stop.observe(RecordObservation::Question {
+            index,
+            member: None,
+            stage: None,
+            position: 0,
+            detail: QuestionDetail::of(&observed),
+        });
+        if stop.observer_panicked() {
+            return Err(Error::cancelled());
+        }
+    }
+    let decided = row.map_err(asking::failure)?;
+    let judged = decided
+        .judgment(question)
+        .ok_or_else(|| Error::defect("an answered row held no answer"))?;
+    if stop.observing() {
+        stop.observe(RecordObservation::Row {
+            index,
+            value: ObservedRow::Judgment(&results::judgment(&judged.value)),
+        });
+        if stop.observer_panicked() {
+            return Err(Error::cancelled());
+        }
+    }
+    Ok(judged)
 }

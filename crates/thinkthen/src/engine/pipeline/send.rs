@@ -13,8 +13,8 @@ use crate::engine::facade::{Engine, Key};
 use crate::engine::http::Exchange;
 use crate::engine::request::Transport;
 use crate::engine::store;
+use crate::core::AttemptObservation;
 use crate::engine::{AttemptSink, Cancel};
-use crate::public::AttemptObservation;
 
 /// One closed request: its questions with the label of the input each was
 /// packed for, and its body.
@@ -38,7 +38,7 @@ pub(super) struct Sender<'a> {
     engine: &'a Engine,
     transport: Transport<'a>,
     model: String,
-    detailed: bool,
+    packing: super::Packing,
     key: Mutex<Option<Arc<Key>>>,
 }
 
@@ -47,13 +47,13 @@ impl<'a> Sender<'a> {
         engine: &'a Engine,
         state: &'a crate::engine::facade::State,
         model: String,
-        detailed: bool,
+        packing: super::Packing,
     ) -> Self {
         Self {
             engine,
             transport: engine.transport(state),
             model,
-            detailed,
+            packing,
             key: Mutex::new(None),
         }
     }
@@ -77,10 +77,12 @@ impl<'a> Sender<'a> {
         let mut done = Vec::with_capacity(2);
         for (place, half) in [asks, second].into_iter().enumerate() {
             // A refused first half fails the second too, so nothing is paid
-            // for inputs behind a failure the run stops at.
+            // for inputs behind a failure the run stops at. A host that takes
+            // rows past a failure still sends it, unless the budget refused.
             let failed = done
                 .first()
-                .and_then(|first: &Done| first.result.as_ref().err().cloned());
+                .and_then(|first: &Done| first.result.as_ref().err().cloned())
+                .filter(|error| !self.packing.continues || error.spent());
             let mut answered = match cancel.stop().or(failed) {
                 Some(stop) => refused(half, stop),
                 None => {
@@ -109,6 +111,14 @@ impl<'a> Sender<'a> {
 
     /// One request's attempts, from the first live key read to its split.
     fn one(&self, body: &[u8], asks: Vec<(Ask, usize)>, cancel: &Cancel) -> Done {
+        let budgeted = cancel.with_process_budget(self.transport.send_budget.clone());
+        // A zero limit refuses before the key is read, so a bad key never
+        // outranks a spent budget.
+        if budgeted.has_zero_send_limit()
+            && let Err(denied) = budgeted.reserve_send(None, body.len())
+        {
+            return refused(asks, denied);
+        }
         let key = match self.key(cancel) {
             Ok(key) => key,
             Err(error) => return refused(asks, error),
@@ -116,8 +126,7 @@ impl<'a> Sender<'a> {
         let url = self.engine.backend().url();
         let digest = Recorded::new(url, body).digest();
         let events = Arc::new(Mutex::new(Vec::new()));
-        let budgeted = cancel.with_process_budget(self.transport.send_budget.clone());
-        let observed = if self.detailed {
+        let observed = if self.packing.detailed {
             budgeted.with_attempt_sink(collector(&events))
         } else {
             budgeted

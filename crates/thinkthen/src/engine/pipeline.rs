@@ -15,8 +15,8 @@ use crate::engine::error::Error;
 use crate::engine::facade::Engine;
 pub(crate) use crate::engine::schedule::Input;
 use crate::engine::store::{Mode, Store};
+use crate::core::AttemptObservation;
 use crate::engine::{Cancel, workers};
-use crate::public::AttemptObservation;
 
 mod run;
 mod send;
@@ -100,6 +100,49 @@ pub(crate) struct Packing {
     pub(crate) context: bool,
     /// Whether rows show each request's attempts.
     pub(crate) detailed: bool,
+    /// Whether the host takes rows past a failure, as the SQL hosts do. A
+    /// halved request then sends its second half after a refused first.
+    pub(crate) continues: bool,
+}
+
+/// The host side of one call: it hands inputs over through its port and
+/// takes the rows in input order.
+pub(crate) trait Host<A: Asker> {
+    /// Ask for one more input, which comes back through the port. False
+    /// when no input will come.
+    fn ask(&mut self) -> bool;
+
+    /// Take one input's row, or why it has none, in input order.
+    fn row(&mut self, place: usize, result: Result<A::Row, Failed<A::Error>>) -> Flow;
+}
+
+/// A host whose reader runs on its own thread and answers each ask sent
+/// down `asks`, and whose rows go to `emit`.
+pub(crate) struct Reader<F> {
+    asks: std::sync::mpsc::Sender<()>,
+    emit: F,
+}
+
+impl<A: Asker, F: FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow> Host<A> for Reader<F> {
+    fn ask(&mut self) -> bool {
+        self.asks.send(()).is_ok()
+    }
+
+    fn row(&mut self, place: usize, result: Result<A::Row, Failed<A::Error>>) -> Flow {
+        (self.emit)(place, result)
+    }
+}
+
+/// Start a reader thread with `start_reader` and emit each row through `emit`.
+pub(crate) fn reader<I, E, F>(
+    start_reader: impl FnOnce(Receiver<()>, Port<I, E>),
+    emit: F,
+) -> impl FnOnce(Port<I, E>) -> Reader<F> {
+    move |port| {
+        let (asks, asked) = channel();
+        start_reader(asked, port);
+        Reader { asks, emit }
+    }
 }
 
 /// The host side of the input bridge: one input, failure or end per ask.
@@ -117,20 +160,19 @@ enum Event<I, E> {
 }
 
 impl Engine {
-    /// Answer every input the reader hands over and emit each row, or why it
-    /// has none, in input order. The reader runs on the host's own thread
-    /// and answers each ask with one input. Every worker has joined on return.
+    /// Answer every input the host hands over and give it each row, or why
+    /// it has none, in input order. The host answers each ask with one input
+    /// through its port. Every worker has joined on return.
     ///
     /// # Errors
     ///
     /// Returns [`Error`] when the store cannot be opened; every later failure
     /// reaches the host as an input's [`Failed`].
-    pub(crate) fn ask_all<A: Asker>(
+    pub(crate) fn ask_all<A: Asker, H: Host<A>>(
         &self,
         asker: &A,
         packing: Packing,
-        start_reader: impl FnOnce(Receiver<()>, Port<A::Input, A::Error>),
-        emit: impl FnMut(usize, Result<A::Row, Failed<A::Error>>) -> Flow,
+        start: impl FnOnce(Port<A::Input, A::Error>) -> H,
         cancel: &Cancel,
     ) -> Result<(), Error> {
         let state = self.state(cancel)?;
@@ -139,10 +181,9 @@ impl Engine {
             .map_err(|_| Error::Defect("a model could not be written as JSON"))?;
         let limits = self.pack_limits(packing);
         let window = (state.width + 1).saturating_mul(limits.inputs);
-        let sender = send::Sender::new(self, &state, model.clone(), packing.detailed);
+        let sender = send::Sender::new(self, &state, model.clone(), packing);
         let (events, received) = channel();
-        let (ask, asked) = channel();
-        start_reader(asked, Port(events.clone()));
+        let mut host = start(Port(events.clone()));
         let counts = run::Counts {
             usage: &state.usage,
             cache_answers: self.storage().cache_answers,
@@ -162,7 +203,7 @@ impl Engine {
                 };
                 let packer = Packer::new(limits, model);
                 run::Run::new(asker, call, store, packer, bounds, counts)
-                    .drive(&ask, &received, &work, emit, cancel)
+                    .drive(&mut host, &received, &work, cancel)
             },
         );
         Ok(())

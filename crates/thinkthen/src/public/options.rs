@@ -375,6 +375,12 @@ impl<'a> Stop<'a> {
         self.base.clone()
     }
 
+    /// Whether a waiting pull must wake to run the caller's check or to drain
+    /// attempts for the caller's observer.
+    pub(crate) const fn polls(&self) -> bool {
+        self.check.is_some() || self.attempts.is_some()
+    }
+
     /// Fire this call's own flag, which the caller's token never sees.
     pub(crate) fn fire(&self) {
         self.base.flag().store(true, Ordering::Release);

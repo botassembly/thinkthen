@@ -53,6 +53,7 @@ pub(super) fn packed(
         inputs,
         context: planner.context.is_some(),
         detailed: false,
+        continues: false,
     };
     let mut packer = packer(&planner, backend, packing)?;
     let mut summary = PlanSummary::new(false);

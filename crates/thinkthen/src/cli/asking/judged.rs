@@ -16,7 +16,7 @@ use crate::core::{
 };
 use crate::edge;
 use crate::engine::facade::{self, Judgment};
-use crate::engine::pipeline::{Answered, Asker, Failed, Flow, Input, Packing, Port};
+use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Input, Packing, Port};
 use crate::failure::Failure;
 use crate::failure::context::Limits;
 use crate::judge::Keeping;
@@ -285,6 +285,7 @@ pub(super) fn run(
         inputs,
         context: asker.planner.context.is_some(),
         detailed: judging.view.details,
+        continues: false,
     };
     super::plan::check_context(&asker.planner, judging.engine.backend(), packing)?;
     let reader_downstream = downstream.clone();
@@ -294,10 +295,12 @@ pub(super) fn run(
         .ask_all(
             &asker,
             packing,
-            move |asks, port| {
-                thread::spawn(move || feed(records, &asks, &port, &reader_downstream));
-            },
-            |_, result| ended.take(result, &asker.planner, output),
+            pipeline::reader(
+                move |asks, port| {
+                    thread::spawn(move || feed(records, &asks, &port, &reader_downstream));
+                },
+                |_, result| ended.take(result, &asker.planner, output),
+            ),
             judging.environment.cancel(),
         )
         .map_err(Failure::from)?;

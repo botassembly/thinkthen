@@ -49,6 +49,15 @@ pub(crate) struct ParentReceipt<'a> {
 }
 
 impl Member {
+    /// One pipeline answer's receipt: its judgment and question keys.
+    pub(crate) fn new(judged: facade::Judgment, requests: Vec<String>) -> Self {
+        Self {
+            judged,
+            batch: None,
+            requests,
+        }
+    }
+
     #[allow(
         clippy::too_many_arguments,
         reason = "one answered member carries its source batch and optional refused parent"

@@ -11,7 +11,7 @@ use crate::core::adapters::built_in::DecodeError;
 use crate::core::pack::{self, Ask};
 use crate::core::{AnswerOutcome, ModelName, Question, Reading, Record, Reply, Url, Usage};
 use crate::engine::facade::{GroupAnswer, QuestionAnswer};
-use crate::engine::pipeline::{Answered, Asker, Failed, Flow, Input, Packing, Port};
+use crate::engine::pipeline::{self, Answered, Asker, Failed, Flow, Input, Packing, Port};
 use crate::failure::{Failure, ReplayContext};
 use crate::schedule::{Judged, Output, Placed};
 
@@ -198,6 +198,7 @@ where
         inputs: inputs_cap,
         context: false,
         detailed: false,
+        continues: false,
     };
     let parse = Parser::of(judging, reading);
     let mut ended = Ended::default();
@@ -207,10 +208,12 @@ where
         .ask_all(
             &asker,
             packing,
-            move |asks, port: Port<Held, Refused>| {
-                thread::spawn(move || parse.feed(inputs, &asks, &port));
-            },
-            |_, result| ended.take(result, judging, output),
+            pipeline::reader(
+                move |asks, port: Port<Held, Refused>| {
+                    thread::spawn(move || parse.feed(inputs, &asks, &port));
+                },
+                |_, result| ended.take(result, judging, output),
+            ),
             cancel,
         )
         .map_err(Failure::from)?;

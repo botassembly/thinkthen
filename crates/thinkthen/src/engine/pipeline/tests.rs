@@ -9,7 +9,7 @@ use std::time::Duration;
 
 use conformance_backend::{Canned, Listener};
 
-use super::{Answered, Asker, Failed, Flow, Packing, Port};
+use super::{Answered, Asker, Failed, Flow, Packing, Port, reader as host};
 use crate::core::pack::{self, Ask};
 use crate::core::{Evidence, ModelName, Question, QuestionText, Url, quoted_plan};
 use crate::engine::error::Error;
@@ -76,6 +76,7 @@ const ONE_EACH: Packing = Packing {
     inputs: Some(1),
     context: false,
     detailed: false,
+    continues: false,
 };
 
 fn stop_of(failed: &Failed<()>) -> &'static str {
@@ -105,11 +106,10 @@ fn a_spent_deadline_or_a_fired_cancel_stops_before_reading() {
             .ask_all(
                 &asker,
                 ONE_EACH,
-                reader(3, &asks),
-                |_, row| {
+                host(reader(3, &asks), |_, row: Result<usize, Failed<()>>| {
                     emitted.push(row.map_err(|failed| stop_of(&failed)));
                     Flow::Stop
-                },
+                }),
                 &cancel,
             )
             .expect("the call runs");
@@ -133,11 +133,10 @@ fn a_deadline_starts_no_waiting_request() {
         .ask_all(
             &asker,
             ONE_EACH,
-            reader(40, &asks),
-            |_, row| {
+            host(reader(40, &asks), |_, row: Result<usize, Failed<()>>| {
                 emitted.push(row.map_err(|failed| stop_of(&failed)));
                 Flow::Stop
-            },
+            }),
             &cancel,
         )
         .expect("the call runs");

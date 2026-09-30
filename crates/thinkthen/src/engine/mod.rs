@@ -244,6 +244,16 @@ impl<'a> Cancel<'a> {
         Sending(&self.sends)
     }
 
+    /// The stop this checkpoint observes. The host check runs only while no
+    /// worker is in a blocking send.
+    pub(crate) fn stop_between_sends(&self) -> Option<error::Error> {
+        if self.sends.load(Ordering::Acquire) == 0 {
+            self.stop()
+        } else {
+            self.remaining_without_check().err()
+        }
+    }
+
     /// Poll from the calling thread while a worker carries this call's attempt.
     pub(crate) fn poll_between_sends(&self) {
         if self.sends.load(Ordering::Acquire) == 0 {
@@ -548,7 +558,6 @@ mod facade_tests;
 #[cfg(unix)]
 mod host_signal_tests;
 pub(crate) mod http;
-#[cfg(feature = "cli")]
 pub(crate) mod pipeline;
 pub(crate) mod prepared_request;
 pub(crate) mod process;
@@ -556,7 +565,6 @@ pub(crate) mod recorder;
 pub(crate) mod request;
 pub(crate) mod roots;
 pub(crate) mod schedule;
-#[cfg(feature = "cli")]
 pub(crate) mod store;
 pub(crate) mod usage;
 #[cfg(test)]

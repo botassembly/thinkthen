@@ -19,7 +19,7 @@ required-features = ["cli"]
 
 [features]
 default = ["cli"]
-cli = ["dep:clap", "dep:csv-core", "dep:rusqlite", "dep:signal-hook"]
+cli = ["dep:clap", "dep:csv-core", "dep:signal-hook"]
 # The Rust Polars door (ticket 0130). Off by default.
 polars = ["dep:polars", "dep:polars-core", "polars/lazy"]
 
@@ -30,7 +30,7 @@ csv-core = { version = "0.1.13", optional = true }
 polars = { version = "0.55.2", default-features = false, optional = true }
 polars-core = { version = "0.55.2", default-features = false, optional = true, features = ["dtype-struct"] }
 # ADR 0111: the question cache. Bundled, so every host runs the same SQLite.
-rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"], optional = true }
+rusqlite = { version = "=0.40.2", default-features = false, features = ["bundled"] }
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = { version = "1.0.151", features = ["raw_value"] }
 sha2 = { version = "0.11", default-features = false }

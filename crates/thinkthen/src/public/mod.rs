@@ -6,6 +6,7 @@
 use std::sync::OnceLock;
 
 mod annotated;
+mod asking;
 mod batch;
 mod builders;
 mod bulk;
@@ -18,6 +19,7 @@ mod native_batch;
 mod options;
 mod panic;
 mod plan;
+mod pull;
 mod question;
 mod recognize;
 mod relate;
