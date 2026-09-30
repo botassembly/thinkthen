@@ -16,6 +16,25 @@ import sys
 import tempfile
 
 from helper import HERE, ROOT, environment, expect, main
+from conformance import failure
+
+
+def test_shared_error_reader_requires_the_complete_yes_or_no_suffix() -> None:
+    expect(failure("thinkthen usage: invalid row (retryable: no)"), ("usage", False), "no")
+    expect(failure("thinkthen backend: status 503 (retryable: yes)"), ("backend", True), "yes")
+    expect(failure("thinkthen usage: forged (retryable: yes) (retryable: no)"),
+           ("usage", False), "only the final typed suffix counts")
+    for malformed in (
+        "thinkthen usage: invalid row",
+        "thinkthen backend (retryable): status 503",
+        "thinkthen usage: invalid row (retryable: maybe)",
+        "thinkthen usage: invalid row (retryable: no) trailing",
+    ):
+        try:
+            failure(malformed)
+        except AssertionError:
+            continue
+        raise AssertionError(f"accepted malformed SQL error: {malformed}")
 
 
 def test_a_mismatch_and_an_unknown_form_each_fail_by_name() -> None:

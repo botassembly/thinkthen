@@ -324,11 +324,15 @@ fn usage(context: &Context<'_>) -> rusqlite::Result<String> {
     Ok(guard("thinkthen_usage", || {
         if !context.is_empty() {
             let reset = matches!(context.get_raw(0), ValueRef::Text(b"reset"));
-            return Err(Failure::usage(if reset {
-                "the reset spelling is removed; the counters are cumulative, so take two snapshots and subtract them"
+            return Err(if reset {
+                Failure::plain_usage(
+                    "the reset spelling is removed; the counters are cumulative, so take two snapshots and subtract them",
+                )
             } else {
-                "thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots"
-            }));
+                Failure::usage(
+                    "thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots",
+                )
+            });
         }
         let totals = settings::built().map(thinkthen::Engine::usage);
         let read = |field: fn(&thinkthen::Counters) -> u64| totals.as_ref().map_or(0, field);
@@ -365,7 +369,7 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
             name,
             4,
             volatile,
-            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence).into()) },
+            move |_| -> rusqlite::Result<String> { Err(Failure::plain_usage(sentence).into()) },
         )?;
     }
     for (name, sentence) in [
@@ -382,7 +386,7 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
             name,
             -1,
             volatile,
-            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence).into()) },
+            move |_| -> rusqlite::Result<String> { Err(Failure::plain_usage(sentence).into()) },
         )?;
     }
     for name in [
@@ -405,7 +409,9 @@ fn register_removed(connection: &Connection, volatile: FunctionFlags) -> rusqlit
             full.as_str(),
             -1,
             volatile,
-            move |_| -> rusqlite::Result<String> { Err(Failure::usage(sentence.clone()).into()) },
+            move |_| -> rusqlite::Result<String> {
+                Err(Failure::plain_usage(sentence.clone()).into())
+            },
         )?;
     }
     Ok(())
@@ -425,10 +431,10 @@ pub(crate) fn register(connection: &Connection) -> rusqlite::Result<()> {
         -1,
         volatile,
         |_| -> rusqlite::Result<String> {
-            Err(
-                Failure::usage("thinkthen_recognize_document was renamed thinkthen_relations")
-                    .into(),
+            Err(Failure::plain_usage(
+                "thinkthen_recognize_document was renamed thinkthen_relations",
             )
+            .into())
         },
     )?;
     for arity in [2, 3] {

@@ -12,7 +12,7 @@ import time
 
 from helper import Backend, Child, child, environment, expect, main
 
-AFTER_BUILD = "thinkthen usage: settings apply before the first call; this process already built its engine"
+AFTER_BUILD = "thinkthen usage: settings apply before the first call; this process already built its engine (retryable: no)"
 CORPUS = pathlib.Path(__file__).resolve().parents[3] / "conformance/settings.json"
 
 
@@ -99,9 +99,9 @@ say(zero=zero, invalid=invalid, valid=valid, answer=answer, after=after)
     expect(json.loads(held["zero"][0][0])["requests_sent"], 0, "usage builds no engine")
     expect(all(value.startswith("thinkthen usage:") for value in held["invalid"]), True, "seven invalid objects")
     expect(held["invalid"][-1],
-           "thinkthen usage: settings JSON has unsupported price key usd_per_million_input", "unimplemented host prices")
+           "thinkthen usage: settings JSON has unsupported price key usd_per_million_input (retryable: no)", "unimplemented host prices")
     expect(held["invalid"][-2],
-           "thinkthen usage: settings JSON has unknown key max_estimated_input_tokens_total", "unimplemented host cap")
+           "thinkthen usage: settings JSON has unknown key max_estimated_input_tokens_total (retryable: no)", "unimplemented host cap")
     expect(held["valid"], [['{"batch":1,"throttle":8,"model":"judge-b"}']], "the selected object")
     expect(json.loads(held["answer"][0][0])["meta"]["model"], "judge-b", "prior selection survived")
     expect(held["after"], AFTER_BUILD, "late configuration")
@@ -119,7 +119,7 @@ details = run(db, "SELECT thinkthen_details('Is it red?', 'a red door')")
 say(valid=valid, zero=zero, details=details)
 """, environment(backend))
     expect(held["valid"], [['{"model":"judge-b","max_requests_total":null}']], "null resets the total")
-    expect(held["zero"], "thinkthen usage: a request total is a whole number of 1 or more", "zero refused")
+    expect(held["zero"], "thinkthen usage: a request total is a whole number of 1 or more (retryable: no)", "zero refused")
     expect(json.loads(held["details"][0][0])["meta"]["model"], "judge-b", "prior model survived")
     expect(backend.close(), 1, "only the valid configuration sent")
 

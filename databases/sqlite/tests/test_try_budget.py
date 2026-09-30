@@ -43,7 +43,7 @@ say(spent=run(a, "SELECT thinkthen_try_details('Is it red?', 'a red door')"),
     other=run(b, "SELECT thinkthen_try_details('Is it red?', 'a red door')"),
     cleared=run(a, 'SELECT thinkthen_budget_ms(-1)'))
 """, environment(backend))
-    expect(held["spent"], "thinkthen deadline: the connection's ThinkThen budget passed", "zero budget")
+    expect(held["spent"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "zero budget")
     expect(json.loads(held["other"][0][0])["status"], "answered", "other connection")
     expect(held["cleared"], [[-1]], "clear budget")
     expect(backend.close(), 1, "only the other connection sent")
@@ -62,9 +62,9 @@ first = run(db, 'SELECT thinkthen_find(?, ?)', ('Which?', units))
 spent = run(db, 'SELECT thinkthen_find(?, ?)', ('Which other?', units))
 say(expired=expired, first=first, spent=spent)
 """, environment(backend))
-    expect(held["expired"], "thinkthen deadline: the connection's ThinkThen budget passed", "expired query")
+    expect(held["expired"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "expired query")
     expect(json.loads(held["first"][0][0])["index"], 0, "one completed find")
-    expect(held["spent"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_configure)", "ordinary scalar preflight")
+    expect(held["spent"], "thinkthen usage: this process has sent its total of 1 requests (thinkthen_configure) (retryable: no)", "ordinary scalar preflight")
     expect(backend.close(), 1, "expired and spent calls send nothing")
 
 
@@ -117,7 +117,7 @@ say(error=error, took=time.monotonic()-started)
 """, environment(backend, "arm/held")).result()
     finally:
         release.cancel()
-    expect(held["error"], "thinkthen deadline: the connection's ThinkThen budget passed", "deadline remains fatal")
+    expect(held["error"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "deadline remains fatal")
     expect(held["took"] < 0.4, True, "prompt return")
     expect(backend.close(), 1, "sent attempt remains counted")
 
@@ -136,7 +136,7 @@ say(result=result, took=time.monotonic()-started)
         backend.round()
         expect(backend.wait(2), 2, "second row sent under the same budget")
         result = held.result()
-        expect(result["result"], "thinkthen deadline: the connection's ThinkThen budget passed", "second held row expires")
+        expect(result["result"], "thinkthen deadline: the connection's ThinkThen budget passed (retryable: no)", "second held row expires")
         expect(result["took"] < 1.2, True, "original budget bounds both rows")
     finally:
         backend.release()

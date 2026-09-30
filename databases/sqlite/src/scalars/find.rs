@@ -65,7 +65,7 @@ pub(super) fn find(context: &Context<'_>) -> rusqlite::Result<Option<String>> {
             .ok_or_else(|| Failure::defect("checked find units were NULL"))?;
         let settings = if context.len() > 2 {
             if matches!(context.get_raw(2), ValueRef::Integer(_) | ValueRef::Real(_)) {
-                return Err(Failure::usage(
+                return Err(Failure::plain_usage(
                     "find's none and deadline moved into the settings object",
                 ));
             }

@@ -11,7 +11,7 @@ import tempfile
 
 from helper import Backend, child, environment, expect, main
 
-REFUSED = "thinkthen local: the question file '{}' did not read: it must be a regular file at most 1048576 bytes"
+REFUSED = "thinkthen local: the question file '{}' did not read: it must be a regular file at most 1048576 bytes (retryable: no)"
 QUESTION = json.dumps({"decide": "Is it red?"})
 
 
@@ -41,7 +41,7 @@ say(recognize=run(db, "SELECT * FROM thinkthen_recognize('Ada', '@/dev/zero')"),
     relate=run(db, "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM e', '@/dev/zero')"),
     questions=run(db, "SELECT thinkthen_annotate('@/dev/zero', 'x')"))
 """, environment(backend), 5)
-    sentence = "thinkthen local: the {} file '@/dev/zero' did not read: it must be a regular file at most 1048576 bytes"
+    sentence = "thinkthen local: the {} file '@/dev/zero' did not read: it must be a regular file at most 1048576 bytes (retryable: no)"
     expect((held, backend.close()), ({"recognize": sentence.format("recognize spec"), "relate": sentence.format("relate spec"),
                                       "questions": sentence.format("question set")}, 0), "each door names its file's kind")
 

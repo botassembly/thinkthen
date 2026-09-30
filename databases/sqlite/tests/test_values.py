@@ -80,6 +80,7 @@ say(results={name: run(db, 'SELECT thinkthen_find(?, ?, ?)', (q, units, settings
                  "units blob", "malformed", "not array", "bad none", "bad question", "bad deadline",
                  "too many", "none too many", "too much text"):
         expect(held["results"][name].startswith("thinkthen usage: "), True, name)
+        expect(held["results"][name].endswith(" (retryable: no)"), True, name)
     expect(backend.close(), 0, "all refused inputs send nothing")
 
 def test_a_null_text_is_null_and_a_bad_value_is_refused_before_any_send() -> None:
@@ -95,11 +96,11 @@ say(**{{name: [run(db, f"SELECT {{name}}(?, ?)", pair) for pair in (
     for name in SCALARS:
         expect(held[name], [
             [[None]], [[None]],
-            "thinkthen usage: the text is a BLOB; pass text",
-            "thinkthen usage: the text holds a NUL byte",
-            "thinkthen usage: the text is a number; pass text",
-            "thinkthen usage: the text is a number; pass text",
-            "thinkthen usage: the text is not UTF-8",
+            "thinkthen usage: the text is a BLOB; pass text (retryable: no)",
+            "thinkthen usage: the text holds a NUL byte (retryable: no)",
+            "thinkthen usage: the text is a number; pass text (retryable: no)",
+            "thinkthen usage: the text is a number; pass text (retryable: no)",
+            "thinkthen usage: the text is not UTF-8 (retryable: no)",
         ], name)
     expect(backend.close(), 0, "sends")
 
@@ -114,7 +115,7 @@ say(**{{name: run(db, f"SELECT {{name}}(?, 'a red door')", ({BANDED!r},))
     for name in ("thinkthen_score", "thinkthen_choose", "thinkthen_tag")}},
     thinkthen_warm=run(db, "SELECT thinkthen_warm(?, 'a red door')", ({choose!r},)))
 """, environment(backend))
-    wanted = "thinkthen usage: {} does not take a banded question; use thinkthen_decide or thinkthen_details"
+    wanted = "thinkthen usage: {} does not take a banded question; use thinkthen_decide or thinkthen_details (retryable: no)"
     expect(held, {name: wanted.format(name) for name in held if name != "thinkthen_warm"} | {
         "thinkthen_warm": "thinkthen usage: thinkthen_warm was removed; pack records with thinkthen_decide_many",
     }, "the refusals")
@@ -172,21 +173,21 @@ say(forms=[run(db, 'SELECT thinkthen_relations(?, ?)', ('', spec))
     ], "forms and empty edge shape")
     expect(held["refused"][:8], [
         [[None]], [[None]],
-        "thinkthen usage: the text is a BLOB; pass text",
-        "thinkthen usage: the text is a number; pass text",
-        "thinkthen usage: the text holds a NUL byte",
-        "thinkthen usage: the recognize spec is a BLOB; pass text",
-        "thinkthen usage: the recognize spec is a number; pass text",
-        "thinkthen usage: the recognize spec holds a NUL byte",
+        "thinkthen usage: the text is a BLOB; pass text (retryable: no)",
+        "thinkthen usage: the text is a number; pass text (retryable: no)",
+        "thinkthen usage: the text holds a NUL byte (retryable: no)",
+        "thinkthen usage: the recognize spec is a BLOB; pass text (retryable: no)",
+        "thinkthen usage: the recognize spec is a number; pass text (retryable: no)",
+        "thinkthen usage: the recognize spec holds a NUL byte (retryable: no)",
     ], "SQL argument forms")
     expect(held["refused"][-5:-2], [
-        "thinkthen usage: the recognize argument is not JSON: EOF while parsing an object at line 1 column 1",
-        "thinkthen usage: a relation source and target name a kind or explicit `*`",
-        "thinkthen local: a relation source and target name a kind or explicit `*`",
+        "thinkthen usage: the recognize argument is not JSON: EOF while parsing an object at line 1 column 1 (retryable: no)",
+        "thinkthen usage: a relation source and target name a kind or explicit `*` (retryable: no)",
+        "thinkthen local: a relation source and target name a kind or explicit `*` (retryable: no)",
     ], "malformed inline and file specs")
     expect(held["refused"][-2:], [
-        "thinkthen usage: the text is not UTF-8",
-        "thinkthen usage: the recognize spec is not UTF-8",
+        "thinkthen usage: the text is not UTF-8 (retryable: no)",
+        "thinkthen usage: the recognize spec is not UTF-8 (retryable: no)",
     ], "invalid UTF-8")
     expect(backend.close(), 0, "zero sends")
 
@@ -231,8 +232,8 @@ def test_relate_refuses_a_blank_name_and_the_256th_pair_before_any_send() -> Non
     blank = child(RELATE.format(rows=[(1, "Ada", "person"), (7, None, "organization")]), environment(backend))
     many = child(RELATE.format(rows=[(at, f"name {at}", "person") for at in range(300)]), environment(backend))
     expect((blank["edges"], many["edges"]), (
-        "thinkthen usage: the row with id 7 has no name",
-        "thinkthen usage: thinkthen_relate takes at most 255 distinct name and kind pairs",
+        "thinkthen usage: the row with id 7 has no name (retryable: no)",
+        "thinkthen usage: thinkthen_relate takes at most 255 distinct name and kind pairs (retryable: no)",
     ), "the refusals")
     expect(backend.close(), 0, "sends")
 
@@ -277,7 +278,7 @@ say(shapes=shapes, plain=plain,
     safe = {"status": "failed", "error": {"kind": "usage", "message":
             "check the row's question and arguments, or raise the process request total when it is spent", "retryable": False}}
     expect(json.loads(held["bad"][0][0]), safe, "safe failed value")
-    expect(held["bad_ordinary"], "thinkthen usage: `context` is text that is not blank", "bad context")
+    expect(held["bad_ordinary"], "thinkthen usage: `context` is text that is not blank (retryable: no)", "bad context")
     expect(backend.close(), 5, "four typed questions and contextual/plain decide")
 
 def test_usage_refuses_the_reset_spelling() -> None:
@@ -287,7 +288,7 @@ say(reset=run(db, "SELECT thinkthen_usage('reset')"), other=run(db, "SELECT thin
 """, environment(None))
     expect(held, {
         "reset": "thinkthen usage: the reset spelling is removed; the counters are cumulative, so take two snapshots and subtract them",
-        "other": "thinkthen usage: thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots",
+        "other": "thinkthen usage: thinkthen_usage takes no arguments; the counters are cumulative, so subtract two snapshots (retryable: no)",
     }, "the refusals")
 
 
@@ -318,8 +319,9 @@ def test_no_message_carries_the_key_or_the_address_credentials() -> None:
     refused = child(EVERY_CALL, environment(backend, THINKTHEN_API_KEY=SECRET_KEY, THINKTHEN_BASE_URL=f"http://{USER}:{PASSWORD}@127.0.0.1:{backend.port}/generic/v1"))
     said = json.dumps([busy, refused])
     expect([secret for secret in (SECRET_KEY, USER, PASSWORD) if secret in said], [], f"the sentinels in {said}")
-    expect(sum("thinkthen backend (retryable)" in str(one) for one in busy["said"]), 9, f"the busy errors in {busy}")
-    expect("thinkthen usage: THINKTHEN_BASE_URL: a base address carries no user information" in refused["said"], True, "the refused address")
+    expect(sum("thinkthen backend: the backend answered with status 503 (retryable: yes)" in str(one)
+               for one in busy["said"]), 9, f"the busy errors in {busy}")
+    expect("thinkthen usage: THINKTHEN_BASE_URL: a base address carries no user information (retryable: no)" in refused["said"], True, "the refused address")
 
 
 def test_a_child_never_sees_the_callers_key() -> None:
