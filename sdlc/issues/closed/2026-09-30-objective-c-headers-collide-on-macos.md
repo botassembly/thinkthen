@@ -1,6 +1,6 @@
 # The Objective-C package's two headers collide on macOS
 
-Status: closed 2026-09-30. Fixed by ticket 0337: the Objective-C package ships no copy of the C header, and `release-pack` refuses a source package with two names that differ only in case. The consumer takes `thinkthen.h` from the C archive, as the package README says.
+Status: closed 2026-09-30. Fixed by ticket 0337: the Objective-C package ships no copy of the C header, and `release-pack` refuses a source package with two names that differ only in case. `ThinkThen.h` includes `<thinkthen.h>` with angle brackets, so the compiler takes it from the C archive's include folder, as the package README says. A quoted include looked in `Sources/` first, where a case-blind volume finds `ThinkThen.h` itself.
 
 ## The problem
 
