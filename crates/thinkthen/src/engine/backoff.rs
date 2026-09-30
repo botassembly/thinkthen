@@ -75,13 +75,15 @@ impl Gates {
     }
 
     /// Take the next start slot for `url` and wait for it, holding no send place.
-    /// A slot abandoned by a stop stays spent, which only slows later starts.
+    /// A slot past the call's deadline fails at once and reserves nothing. A slot
+    /// abandoned by a later stop stays spent, which only slows later starts.
     pub(crate) fn pace(
         &self,
         url: &str,
         every: Duration,
         cancel: &Cancel<'_>,
     ) -> Result<(), Error> {
+        let budget = cancel.stop_or_remaining()?;
         let now = Instant::now();
         let slot = {
             let mut slots = self.slots.lock().unwrap_or_else(PoisonError::into_inner);
@@ -90,6 +92,11 @@ impl Gates {
                 .copied()
                 .filter(|at| *at > now)
                 .unwrap_or(now);
+            if let (Some(budget), Some(passed)) = (budget, cancel.passed())
+                && slot - now > budget
+            {
+                return Err(passed);
+            }
             slots.insert(url.to_owned(), slot + every);
             slot
         };
@@ -229,6 +236,22 @@ fn a_cancel_ends_a_paced_wait() {
         cancel.fire();
         assert!(matches!(waiter.join().unwrap(), Err(Error::Cancelled)));
     });
+}
+
+#[cfg(test)]
+#[test]
+fn a_slot_past_the_deadline_fails_at_once_and_reserves_nothing() {
+    let (gates, every) = (Gates::default(), Duration::from_secs(60));
+    gates.pace("local", every, &Cancel::default()).unwrap();
+    let next = gates.slots.lock().unwrap()["local"];
+    let short = Cancel::default().with_deadline(crate::engine::Deadline::after(every / 2));
+    for _ in 0..5 {
+        assert!(matches!(
+            gates.pace("local", every, &short),
+            Err(Error::Deadline(_))
+        ));
+    }
+    assert_eq!(gates.slots.lock().unwrap()["local"], next);
 }
 
 #[cfg(test)]

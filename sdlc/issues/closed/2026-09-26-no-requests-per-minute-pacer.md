@@ -1,6 +1,6 @@
 # No requests-per-minute pacer
 
-Status: open for the pacer; ticket 0308 built it and closes this issue when it lands. Ticket 0162 fixed the records-page arithmetic on 2026-09-27 and labels the reply time as derived. Register 30 remains to do after 0155; the wording change does not implement a rate limit.
+Status: closed on 2026-09-30. Ticket 0308 landed the pacer: 1,000 requests a minute per `https://` address in one process, set by `THINKTHEN_REQUESTS_PER_MINUTE`. A limit across processes stays deferred in the ticket. Ticket 0162 fixed the records-page arithmetic on 2026-09-27 and labels the reply time as derived. Register 30 remains to do after 0155; the wording change does not implement a rate limit.
 
 ## What happens
 

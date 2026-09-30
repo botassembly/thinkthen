@@ -118,6 +118,9 @@ impl Client {
     ) -> Result<Permit<'a>, Error> {
         loop {
             let _open = gates.wait_open(url, cap, cancel)?;
+            if let Some(every) = self.every {
+                gates.pace(url, every, cancel)?;
+            }
             let permit = self.width.acquire(cancel)?;
             if gates.may_send(url, cap) {
                 return Ok(permit);
@@ -257,9 +260,6 @@ impl Client {
         let mut retries = 0;
         let mut last_status = None;
         loop {
-            if let Some(every) = self.every {
-                gates.pace(exchange.url, every, cancel)?;
-            }
             let now = Instant::now();
             let cap = now + self.timeout.min(MAX_RETRY_WAIT);
             // A gate wait owns no send slot. Recheck after acquiring one, since

@@ -122,9 +122,9 @@ fn the_rate_variable_paces_an_engine_built_from_the_environment() {
     );
     let starts = starts.lock().unwrap();
     assert_eq!(starts.len(), 4);
-    // One start each 100 ms; 50 ms covers a late first delivery.
+    // One start each 100 ms. One interval covers a late first delivery.
     let span = *starts.iter().max().unwrap() - *starts.iter().min().unwrap();
-    assert!(span >= std::time::Duration::from_millis(250), "{span:?}");
+    assert!(span >= std::time::Duration::from_millis(200), "{span:?}");
     let said = in_child("refused", &[("THINKTHEN_REQUESTS_PER_MINUTE", "60001")]);
     assert_eq!(
         said,

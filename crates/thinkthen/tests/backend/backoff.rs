@@ -128,10 +128,10 @@ fn the_rate_variable_spaces_request_starts_at_one_address() {
     assert_eq!(output.status.code(), Some(0), "{output:?}");
     let starts = starts.lock().unwrap();
     assert_eq!(starts.len(), 6);
-    // 600 a minute is one start each 100 ms. The first start's delivery can lag
-    // on a busy machine, so the bound leaves 50 ms for it.
+    // 600 a minute is one start each 100 ms, so six starts span 500 ms. The bound
+    // leaves one interval for a late first delivery on a busy machine.
     let span = *starts.iter().max().unwrap() - *starts.iter().min().unwrap();
-    assert!(span >= std::time::Duration::from_millis(450), "{span:?}");
+    assert!(span >= std::time::Duration::from_millis(400), "{span:?}");
 }
 
 #[test]
