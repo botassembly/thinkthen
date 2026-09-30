@@ -8,14 +8,16 @@ DuckDB's own `read_text` judges each `@file`.
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
-from harness import CASES, EXTENSION, Backend, case, child_env, expect, main, rows, run, said
+from harness import CASES, CHILD, EXTENSION, Backend, case, child_env, expect, main, rows, run, said
 from settings_cases import shared_settings_corpus
 
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
@@ -35,6 +37,27 @@ def portable_decide_zero_budget():
                    "SELECT thinkthen_decide('Is it a refund?', 'refund now')"], backend.base())
         expect(said(got[1]), "thinkthen deadline: the query has spent its time budget (retryable: no)", "decide deadline")
         expect(backend.count(), 0, "spent query budget sends nothing")
+
+
+@case
+def the_exit_flushes_a_call_while_the_usage_lock_is_held():
+    """ADR 0113: the process's exit hook writes its sends while another
+    writer holds the usage lock for 300 ms."""
+    with Backend() as backend, tempfile.TemporaryDirectory(prefix="thinkthen-duckdb-") as folder:
+        env = child_env(backend.base(), Path(folder))
+        usage = (Path(env["HOME"]) / "Library/Caches" if sys.platform == "darwin" else Path(env["XDG_CACHE_HOME"])) / "thinkthen-usage"
+        usage.mkdir(mode=0o700)
+        lock = os.open(usage / ".lock", os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        child = subprocess.Popen([sys.executable, "-c", CHILD, str(EXTENSION), json.dumps([ASK])],
+                                 env=env, stdout=subprocess.PIPE, text=True)
+        expect(json.loads(child.stdout.readline()), {"rows": [[True]]}, "the answer")
+        time.sleep(0.3)
+        os.close(lock)
+        expect(child.wait(timeout=30), 0, "the child exits cleanly")
+        written = [json.loads(month.read_text())["requests_sent"] for month in usage.glob("*.json")]
+        expect(written, [1], "the exit wrote the send")
+        expect(backend.count(), 1, "one send")
 
 
 @case
