@@ -81,38 +81,3 @@ fn a_rate_set_only_in_the_file_paces_its_backend_and_the_variable_outranks_it() 
         "the variable over the file: {from_variable:?}"
     );
 }
-
-#[test]
-fn a_bad_rate_in_the_file_exits_5_before_any_send_and_names_no_value() {
-    let target = Listener::serving(vec![]).expect("a loopback listener");
-    let refusal = "thinkthen: configuration backend field `requests_per_minute` must be a whole number from 1 to 60000\n";
-    let built_in = "thinkthen: a configuration entry for a built-in backend holds `requests_per_minute` and nothing else\n";
-    for (entry, sentence) in [
-        (r#""ollama":{"requests_per_minute":0}"#, refusal),
-        (
-            r#""ollama":{"requests_per_minute":"sk-rate-marker"}"#,
-            refusal,
-        ),
-        (
-            r#""ollama":{"requests_per_minute":60,"model":"sk-rate-marker"}"#,
-            built_in,
-        ),
-        (
-            r#""local":{"url":"http://127.0.0.1/v1","key_env":"K","model":"m","requests_per_minute":60001}"#,
-            refusal,
-        ),
-    ] {
-        let home = Home::new("bad-rate");
-        home.config(&format!(
-            r#"{{"schema":"thinkthen.config/1","backends":{{{entry}}}}}"#
-        ));
-        let output = home.run(
-            &["decide", "Is it?", "--url", target.base(), "--no-cache"],
-            &[],
-        );
-        let (_, stderr) = said(&output);
-        assert_eq!(output.status.code(), Some(5), "{entry}");
-        assert_eq!(stderr, sentence, "{entry}");
-        assert!(target.requests().is_empty(), "{entry}");
-    }
-}

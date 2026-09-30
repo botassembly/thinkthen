@@ -243,7 +243,8 @@ impl Engine {
         let backend = Backend::resolve(Some(self.backend.url().as_str()), None, model.as_str())
             .map_err(|_| Error::Defect("a resolved address was refused again"))?
             .with_request_size(self.backend.ceiling())
-            .with_descriptions(self.backend.descriptions());
+            .with_descriptions(self.backend.descriptions())
+            .with_per_minute(self.backend.per_minute());
         Ok(Self {
             backend,
             ..self.clone()

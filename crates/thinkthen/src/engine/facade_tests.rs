@@ -468,3 +468,15 @@ fn failing_reply(body: &[u8], first: bool) -> String {
         .collect::<serde_json::Map<_, _>>();
     serde_json::json!({"model": "jev-latest", "answers": answers}).to_string()
 }
+
+#[test]
+fn a_model_copy_keeps_the_rate_a_forked_child_may_rebuild_from() {
+    let rate = std::num::NonZeroU32::new(600);
+    let mut paced = settings("http://127.0.0.1:9/v1");
+    paced.backend = paced.backend.with_per_minute(rate);
+    let engine = Engine::new(paced).expect("engine");
+    let copy = engine
+        .with_model(ModelName::new("other-1").expect("a model"))
+        .expect("a copy");
+    assert_eq!(copy.backend().per_minute(), rate);
+}

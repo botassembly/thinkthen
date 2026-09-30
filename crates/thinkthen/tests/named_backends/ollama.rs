@@ -312,7 +312,7 @@ fn ollama_needs_no_key_at_loopback_and_its_key_stays_off_other_hosts() {
         (vec!["--backend", "ollama", "--url", TYPESAFE_BASE], vec![], "", refusal("ollama", "OLLAMA_API_KEY", "ollama", "typesafe"), 2),
         (vec!["--backend", "ollama", "--url", LIQUID_BASE], vec![], "", refusal("ollama", "OLLAMA_API_KEY", "ollama", "liquid"), 2),
         (vec!["--backend", "stolen"], vec![], &stolen, refusal("stolen", "OLLAMA_API_KEY", "ollama", "liquid"), 2),
-        (vec![], vec![], described, "thinkthen: configuration backend entries hold only `url`, `key_env`, and `model`\n".to_owned(), 5),
+        (vec![], vec![], described, "thinkthen: configuration backend entries hold only `url`, `key_env`, `model`, and `requests_per_minute`\n".to_owned(), 5),
     ];
     for (index, (flags, changes, config, sentence, code)) in cases.into_iter().enumerate() {
         let home = Home::new("ollama-refused");
