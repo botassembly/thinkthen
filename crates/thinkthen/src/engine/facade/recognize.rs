@@ -137,9 +137,8 @@ impl Engine {
             &asks,
             Bound::WHOLE,
             &stages,
-            &mut meta,
+            (&mut meta, &mut observe),
             cancel,
-            &mut observe,
         )?;
         let rows = answers.iter().map(tag_row).collect::<Result<Vec<_>, _>>()?;
         details.pieces = pieces
@@ -148,33 +147,13 @@ impl Engine {
             .map(|(piece, row)| PieceOdds::new(piece, row))
             .collect();
         let stretches = found_names(&rows);
-        let mut asks = Asks::default();
-        let mut asked: Vec<Asked> = Vec::new();
-        let mut stages = Vec::new();
-        for group in name_groups(&stretches) {
-            let (questions, held) =
-                step_two_questions(text, &pieces, &stretches, group.clone(), &spec.kinds)
-                    .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
-            stages.extend(asked_stages(&held));
-            asked.extend(held);
-            let first = stretches.get(group.start).map_or(0, |name| name.0);
-            let last = stretches
-                .get(group.end.saturating_sub(1))
-                .map_or(first, |name| name.1);
-            if !questions.is_empty() {
-                asks.add(
-                    &self.backend,
-                    &window_plan(&self.backend, (text, &pieces), (first, last), questions)?,
-                )?;
-            }
-        }
+        let (asks, asked, stages) = step_two(&self.backend, (text, &pieces), &stretches, spec)?;
         let answers = self.execute(
             &asks,
             Bound::WHOLE,
             &stages,
-            &mut meta,
+            (&mut meta, &mut observe),
             cancel,
-            &mut observe,
         )?;
         let mut answers = answers.iter();
         let mut read = || answers.next().ok_or(Error::RecognizeLogical).and_then(odds);
@@ -264,7 +243,7 @@ impl Engine {
         asks.add(&self.backend, &plan)?;
         let (meta, details, observe) = held;
         let stages = vec!["relation"; asks.len()];
-        let answers = self.execute(&asks, bound, &stages, meta, cancel, observe)?;
+        let answers = self.execute(&asks, bound, &stages, (meta, observe), cancel)?;
         let cut = spec.relation_threshold.cut_value().unwrap_or(0.5);
         for (pair, answer) in planned.pairs.iter().zip(&answers) {
             let (Some(rule), Some(source), Some(target)) = (
@@ -296,9 +275,11 @@ impl Engine {
         asks: &Asks,
         bound: Bound,
         stages: &[&'static str],
-        meta: &mut Aggregate,
+        (meta, observe): (
+            &mut Aggregate,
+            &mut impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
+        ),
         cancel: &Cancel,
-        observe: &mut impl FnMut(&'static str, &Question, &Answered) -> Result<(), Error>,
     ) -> Result<Vec<Answer>, Error> {
         if stages.len() != asks.len() {
             return Err(Error::RecognizeLogical);
@@ -369,6 +350,41 @@ pub(crate) fn step_one(
     }
     let requests = asks.requests(backend, profile, Bound::WHOLE)?;
     Ok((pieces, asks, requests))
+}
+
+/// Step 2's questions, what each name asked, and each question's stage.
+type StepTwo = (Asks, Vec<Asked>, Vec<&'static str>);
+
+/// Step 2's questions over the names step 1 found: each name group's kind
+/// and edge questions in one window, beside what each name asked and each
+/// question's stage.
+fn step_two(
+    backend: &Backend,
+    (text, pieces): (&str, &[Piece]),
+    stretches: &[(usize, usize)],
+    spec: &RecognizeSpec,
+) -> Result<StepTwo, Error> {
+    let mut asks = Asks::default();
+    let mut asked: Vec<Asked> = Vec::new();
+    let mut stages = Vec::new();
+    for group in name_groups(stretches) {
+        let (questions, held) =
+            step_two_questions(text, pieces, stretches, group.clone(), &spec.kinds)
+                .map_err(|_| Error::Defect("a step-two question has invalid labels"))?;
+        stages.extend(asked_stages(&held));
+        asked.extend(held);
+        let first = stretches.get(group.start).map_or(0, |name| name.0);
+        let last = stretches
+            .get(group.end.saturating_sub(1))
+            .map_or(first, |name| name.1);
+        if !questions.is_empty() {
+            asks.add(
+                backend,
+                &window_plan(backend, (text, pieces), (first, last), questions)?,
+            )?;
+        }
+    }
+    Ok((asks, asked, stages))
 }
 
 /// The plan of one step-1 or step-2 window over the pieces `first` to `last`.

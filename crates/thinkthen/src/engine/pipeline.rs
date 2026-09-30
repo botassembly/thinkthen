@@ -151,6 +151,12 @@ pub(crate) fn reader<I, E, F>(
     }
 }
 
+/// One input's row, or why it has none.
+pub(crate) type Row<A> = Result<<A as Asker>::Row, Failed<<A as Asker>::Error>>;
+
+/// The port of an asker's inputs.
+type PortOf<A> = Port<<A as Asker>::Input, <A as Asker>::Error>;
+
 /// A host whose inputs are all in hand: each ask sends the next at once,
 /// and each row goes to `take` on the coordinator's thread.
 pub(crate) struct Eager<A: Asker, F> {
@@ -159,22 +165,22 @@ pub(crate) struct Eager<A: Asker, F> {
     take: F,
 }
 
-impl<A: Asker, F: FnMut(Result<A::Row, Failed<A::Error>>) -> Flow> Host<A> for Eager<A, F> {
+impl<A: Asker, F: FnMut(Row<A>) -> Flow> Host<A> for Eager<A, F> {
     fn ask(&mut self) -> bool {
         let input = self.inputs.next().map_or(Input::End, Input::Item);
         self.port.send(input).is_ok()
     }
 
-    fn row(&mut self, _place: usize, row: Result<A::Row, Failed<A::Error>>) -> Flow {
+    fn row(&mut self, _place: usize, row: Row<A>) -> Flow {
         (self.take)(row)
     }
 }
 
 /// Start an eager host over `inputs`.
-pub(crate) fn eager<A: Asker, F: FnMut(Result<A::Row, Failed<A::Error>>) -> Flow>(
+pub(crate) fn eager<A: Asker, F: FnMut(Row<A>) -> Flow>(
     inputs: Vec<A::Input>,
     take: F,
-) -> impl FnOnce(Port<A::Input, A::Error>) -> Eager<A, F> {
+) -> impl FnOnce(PortOf<A>) -> Eager<A, F> {
     move |port| Eager {
         port,
         inputs: inputs.into_iter(),
