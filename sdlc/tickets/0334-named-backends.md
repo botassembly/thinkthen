@@ -37,3 +37,4 @@ fn EngineBuilder::backend(self, &str) -> Result<EngineBuilder, Error>
 - Dev builds need their own target folder while surface checks run on the shared one, or each rebuild invalidates the other.
 - `status --json` version 2 adds fields only. The spend-guard paths under `.usage.total` stay where version 1 had them.
 - A new public method needs an `### Added public declarations` block in its ticket. Only lint in a clean checkout caught the missing one; the test and spec rungs do not run the inventory.
+- All 21 surface checks passed with no backend named, one at a time, each with its own loopback backend. The Dart check needs `TT_DART` and `TT_FLUTTER` pointed at the installed tools, or it exits 77.
