@@ -1,6 +1,6 @@
 # 0338: Test locks, long waits and test binaries
 
-Status: in progress. Follows 0304 slice 3d, which settles the send-limit statics, and 0335 slice 2, whose merge rows edit `tests/public_batches/`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, "Next after the running work", the cleanup ticket from record 0305. Takes over 0335 slice 3.
+Status: landed. Follows 0304 slice 3d, which settles the send-limit statics, and 0335 slice 2, whose merge rows edit `tests/public_batches/`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, "Next after the running work", the cleanup ticket from record 0305. Takes over 0335 slice 3.
 
 ## Outcome
 
@@ -20,4 +20,10 @@ No routine test waits on a fixed wall-clock limit longer than it needs. The crat
 
 ## What the build taught us
 
-Pending.
+- The statics stayed after 3d as one cell, `PROCESS_LIMITS` in `engine/limits.rs`, so both `SERIAL` locks stay and now name it. `public_cap` and `public_estimated` read the process send totals, so they stay their own binaries beside `public_controls` and `public_batches`.
+- Binaries: 44 test executables became 11. The crate's 36 integration binaries became 6 (`backend` for the command line, `library`, and the four above), five Polars binaries became one `polars`, and the loopback backend's two became one `loopback`. Test count: 1323 listed and 1299 run before; 1326 and 1302 after, the same cases plus three from two splits. Nextest listed both sets by leaf name and found them equal before the splits.
+- `sdlc/scripts/test`: 57 s wall and 30.9 s of nextest before (load 13 to 16); 38 s and 17.6 s after (load 16 to 17). 20 nextest runs of `public_controls` and `public_batches` passed. `cargo test --workspace`, `package`, `spec`, the Polars check and the C door tests passed.
+- The biggest cost was not waits. An unoptimized `serde_json` and `sha2` made the command's CPU-bound tests run 5 to 25 s; optimizing just those two in the test profile took the 255-line relate plan from 29 s to 1 s. Alone at load 19, no routine test now runs over 5.4 s; the two at 5.4 s split by input.
+- The long waits: a held deadline reply waited out a 2 s release it had already consumed (4.6 s to under 1 s); the width drain released one answer per 150 ms quiet spell and now releases all held answers at once (3.9 s to 1.3 s).
+- Merging exposed two `cargo test` races that nextest hides. Shared fixture files staged under a process id alone collide between threads, and a closed listener stays reachable while another test's child sits between fork and exec. Nextest runs each test alone, so only `cargo test` and `package` see them.
+- Merged Polars tests that set a throttle rerun themselves alone in a fresh process, so one binary keeps the one-throttle-per-process rule under `cargo test`.
