@@ -3,12 +3,12 @@
 //! final facts and ordered question details, or a named failure. It holds no rule of its own
 //! beyond the host's deadline spelling.
 
+#[cfg(test)]
 mod diagnostics;
 mod result;
 
 use std::io::Read;
 use std::num::NonZeroUsize;
-use std::panic::{AssertUnwindSafe, catch_unwind};
 
 use serde_json::{Map, Value, json};
 use thinkthen::{
@@ -85,10 +85,10 @@ type Answered = Result<String, Failure>;
 /// Run one body and write its envelope. The binding's one panic guard turns a
 /// panic into `defect`.
 pub(crate) fn guarded(body: impl FnOnce() -> Answered) -> String {
-    diagnostics::owned(|| match caught(body) {
+    match caught(body) {
         Ok(raw) => format!("{{\"ok\":{raw}}}"),
         Err(failure) => failure.envelope(),
-    })
+    }
 }
 
 /// Return the original validated JSON as an envelope for a named question.
@@ -138,15 +138,11 @@ fn bounded_file(path: &str, role: &str) -> Result<String, Failure> {
 /// The binding's one panic guard: a panic in `body` becomes `defect`, so no
 /// panic crosses into Node.
 pub(crate) fn caught<T>(body: impl FnOnce() -> Result<T, Failure>) -> Result<T, Failure> {
-    diagnostics::owned(|| match catch_unwind(AssertUnwindSafe(body)) {
-        Ok(value) => value,
-        Err(payload) => {
-            std::mem::forget(payload);
-            Err(Failure::of(
-                ErrorKind::Defect,
-                "defect: the Node binding panicked",
-            ))
-        }
+    thinkthen::contained(body).unwrap_or_else(|| {
+        Err(Failure::of(
+            ErrorKind::Defect,
+            "defect: the Node binding panicked",
+        ))
     })
 }
 

@@ -28,6 +28,14 @@ The full suite passes twice, under umask 022 and 002. `policy.py` passes.
 
 Package gates of the surfaces belong to later tickets.
 
+## Evidence
+
+- Starts from: 30 failures under umask 022 and 39 under 002 at `cac92d2c6`; record 0305.
+- Keeps: public output the specification already requires.
+- Changes: stale tests, the folder-permission rule, the routine test script.
+- Proof: full suite green under both umasks; `policy.py`.
+- Defers: surface package gates.
+
 ## What the build taught us
 
 - Most failures were stale tests, not code. Later commits added `meta.attempts` to `--details`, a records line to `--plan`, default `--batch max` packing, retained digest lock files, and the mutable-alias refresh warning, all as the specification says. The tests now follow; detailed-result comparisons parse JSON and drop `meta.attempts` in one helper.
@@ -38,4 +46,4 @@ Package gates of the surfaces belong to later tickets.
 - `sdlc/scripts/test` runs the whole suite: nextest when installed, else `cargo test`, then doctests, the external consumer, and the shell self-tests. The full consumer run exposed four cases that needed one record a request.
 - Deleted as wording-only: `version::no_page_or_transform_says_unresolved`, the site page row in `profile::contract_pages_name_the_tuned_for_key_and_never_the_old_one`, the pinned transform byte counts and digests (the test still compares `show` with the packaged and repository sources), and the `url: <withheld>` Debug assertion (the marker check stays). Demo 16 was trimmed under the 900-word rule; demo 41 renamed `--dry-run` to `--plan`.
 - The fork probe's TLS responder wait was one second and flaked under load. It is now five seconds.
-- Proof: `cargo test --locked --offline --workspace --all-targets` passes 1,260 tests, 19 ignored, under umask 022 and 002. `sdlc/scripts/test` and `sdlc/scripts/spec` pass. `policy.py` passes. The ratchet falls to 104,940.
+- Proof: `cargo test --locked --offline --workspace --all-targets` passes 1,260 tests, 19 ignored, under umask 022 and 002. `sdlc/scripts/test` and `sdlc/scripts/spec` pass. `policy.py` passes. The ratchet falls by 126 lines from its base, to 105,023 after merging main.

@@ -12,7 +12,7 @@ Ticket 0105 ported the Python surface from tag `surfaces-wave7-frozen-2026-09-24
 
 ## Shape
 
-- `src/lib.rs` holds the module edge: the six exception classes, the one table from `ErrorKind` to a class, and the one `catch_unwind` site. `Cancelled` has two parents, `KeyboardInterrupt` and `ThinkThenError`. `create_exception!` gives a class one parent, so `Cancelled` is built once with Python's `type()`.
+- `src/lib.rs` holds the module edge: the six exception classes, the one table from `ErrorKind` to a class, and the panic guard, which calls `thinkthen::contained`. `Cancelled` has two parents, `KeyboardInterrupt` and `ThinkThenError`. `create_exception!` gives a class one parent, so `Cancelled` is built once with Python's `type()`.
 - `src/worker.rs` runs every call on a spawned worker (decision 6, amendment change 2). The worker owns its inputs and never touches Python. The calling thread releases the interpreter and waits in 50 ms ticks. Each tick reads the caller's token, then runs the signal handlers. On a stop it cancels the worker's own token and leaves the worker behind. `mpsc::Receiver` is not `Sync`, so the tick moves the receiver into the detached closure and back out (spike 255).
 - `src/input.rs` reads every argument into owned Rust values before the first send: texts, entities, the deadline, and the token.
 - `src/asked.rs` holds the question values and what `recognize` and `relate` return.

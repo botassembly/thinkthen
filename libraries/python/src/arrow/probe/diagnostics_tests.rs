@@ -238,7 +238,7 @@ fn child() {
         callback_records(py);
         let observed = crate::guard(py, || {
             let held = Imported::column(producer.bind(py).as_any())?;
-            let worker = std::thread::spawn(move || crate::caught(|| drop(held)));
+            let worker = std::thread::spawn(move || thinkthen::contained(|| drop(held)));
             assert!(py.detach(|| worker.join()).is_ok());
             super::interrupt_for_diagnostic();
             crate::worker::run(py, crate::worker::Controls::default(), |_options| {

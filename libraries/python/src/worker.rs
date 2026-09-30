@@ -16,14 +16,14 @@ use crate::diagnostics::{host, host_error};
 use pyo3::exceptions::{PyKeyboardInterrupt, PyTimeoutError};
 use pyo3::prelude::*;
 use pyo3::types::PyBool;
-use thinkthen::{CallOptions, CancelToken, Error, ErrorKind, RecordObservation};
+use thinkthen::{CallOptions, CancelToken, Error, ErrorKind, RecordObservation, contained};
 
 mod stream_receipt;
 pub(crate) use stream_receipt::{finish_stream_receipt, stream_receipt};
 
 use crate::result::{Completed, Observations, python_details};
 use crate::result::{OwnedFacts, python_owned_facts};
-use crate::{caught, defect, raise, raised};
+use crate::{defect, raise, raised};
 use serde_json::Value;
 
 /// How often the calling thread checks the caller's token and signals.
@@ -282,7 +282,7 @@ where
     let spawned = std::thread::Builder::new()
         .name("thinkthen-call".to_owned())
         .spawn(move || {
-            let outcome = caught(|| work(&stop, controls, job));
+            let outcome = contained(|| work(&stop, controls, job));
             finish(&outcome);
             // The caller may have left. A closed channel is not an error.
             let _left = sender.send(outcome);

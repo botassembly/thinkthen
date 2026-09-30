@@ -12,6 +12,7 @@ use pyo3::exceptions::{PyKeyboardInterrupt, PyStopIteration};
 use pyo3::prelude::*;
 use thinkthen::{
     Answer, BatchSetting, CallOptions, CancelToken, Error, Facts, Judgment, Probabilities,
+    contained,
 };
 
 use crate::asked::{Asked, Question};
@@ -24,7 +25,7 @@ use crate::worker::{
     Controls, Failure, ReceiptState, WorkerError, attach_receipt, finish_stream_receipt,
     stream_receipt,
 };
-use crate::{caught, defect, guard, raise, raised};
+use crate::{defect, guard, raise, raised};
 
 const TICK: Duration = Duration::from_millis(50);
 
@@ -450,7 +451,7 @@ pub(crate) fn prepare(
                 sender: work_sender.clone(),
                 receiver: source_rx,
             };
-            if caught(|| {
+            if contained(|| {
                 run(Run {
                     engine,
                     asked,

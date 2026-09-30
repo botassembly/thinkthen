@@ -52,8 +52,8 @@ held=$(awk '/^ *\/\//{ next } /fn [a-z_]+\(/ { match($0, /fn [a-z_]+/); f = subs
   END { print n + 0, (at == run) }' $rust/src/*.rs)
 [ "$held" = "1 1" ] || { echo "R1-13: expected one R_CheckUserInterrupt() call, inside the R_ToplevelExec callback ($held)" >&2; exit 1; }
 # R1-31: one panic guard.
-[ "$(rg -n 'catch_unwind\(' "$rust/src" --glob '*.rs' | wc -l)" = 1 ] ||
-  { echo "R1-31: expected exactly one catch_unwind site" >&2; exit 1; }
+[ "$(rg -n 'catch_unwind\(' "$rust/src" --glob '*.rs' | wc -l)" = 0 ] ||
+  { echo "R1-31: the worker catches panics only through thinkthen::contained" >&2; exit 1; }
 
 echo "== r: the Rust half"
 (cd "$rust" && cargo fmt --check &&
