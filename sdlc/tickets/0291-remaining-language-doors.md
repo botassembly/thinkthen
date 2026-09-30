@@ -48,6 +48,10 @@ Branch `ticket/0314-s4-remaining-ports`. Go gains `Engine.Plan`, and C++ gains `
 
 Branch `ticket/0314-s4-remaining-ports`. C# gains `Engine.Plan`, the JVM gains `Door.plan` and Dart gains `plan`, each over `thinkthen_plan_json`. C# `RelateWithOptions`, JVM `recognize` and `relate` overloads and Dart's `call`, `recognize` and `relate` now take a deadline and cancel token; the other sending calls already did. All three constructors already passed `max_requests_total` through unchanged, and a zero cap refuses before sending. None offers a probability option on score or tag, so the refusal is vacuous for all three. Ticket 0314's slice 4c section holds the evidence.
 
+## Swift, Objective-C and COBOL build (0314 slice 4d)
+
+Branch `ticket/0314-s4-remaining-ports`. Swift gains `Engine.plan`, Objective-C gains `plan:question:texts:lengths:count:settings:failure:` and COBOL gains `TT-PLAN`, each over `thinkthen_plan_json`. Swift and Objective-C `recognize` and `relate` now take a deadline and token; COBOL `TT-DECIDE` and `TT-CALL` take `tt-deadline-ms`, and `TT-CALL` moves to `thinkthen_call_opts`. All three constructors already passed `max_requests_total` through unchanged, and a zero cap refuses before sending. None offers a probability option on score or tag, so the refusal is vacuous for all three. Ada and Zig follow on the same branch. Ticket 0314's slice 4d section holds the evidence.
+
 ## What the build taught us
 
 - The C door already had most of this ticket's per-call surface. `deadline_ms` rides every `_opts` export, and `max_requests_total` is an engine key of `thinkthen_engine_new_with`. So the C bridge adds only the plan export. The port families still add deadlines where a wrapper hard-codes `THINKTHEN_NO_DEADLINE`, and pass the cap through their constructor settings.
@@ -55,3 +59,4 @@ Branch `ticket/0314-s4-remaining-ports`. C# gains `Engine.Plan`, the JVM gains `
 - A question object takes only call controls (`batch`, `context`, `deadline_ms`) from the settings. Merging question fields into a caller's object would reorder its keys and change the request body. A settings field the question repeats gets the core parser's "settings repeats" refusal first.
 - The C door's `call.rs` reads its envelope into a map that keeps the last repeated member. The plan reader uses a closed serde struct instead, so a repeated member is a usage refusal as the draft asked.
 - Slice 4b: a port that takes the question as one string needs a rule for text versus a question object. Go follows the C door's own rule for `thinkthen_decide`: text that starts with `{` is a question object. C++ takes the question as its `Json` value, so no rule is needed.
+- Slice 4d: a port whose host has no JSON value still needs one way to reach a member. COBOL gains `TT-JSON-MEMBER`, the smallest tolerant accessor; every other result stays JSON text.
