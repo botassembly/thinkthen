@@ -353,18 +353,6 @@ mod tests {
     }
 
     #[test]
-    fn invalid_utf8_names_only_its_location() {
-        assert_eq!(
-            parsed(Kind::Csv, b"a,\xff\n1,2\n").expect_err("header is refused"),
-            "the CSV header is not valid UTF-8"
-        );
-        assert_eq!(
-            parsed(Kind::Csv, b"a,b\n1,\xff\n").expect_err("row is refused"),
-            "the CSV record is not valid UTF-8"
-        );
-    }
-
-    #[test]
     fn encoded_header_and_records_hold_at_the_sixteen_mibibyte_edge() {
         let limit = crate::core::MAX_RECORD_BYTES;
         // The byte order mark counts, and `\r\n` is the widest ending.

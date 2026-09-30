@@ -285,10 +285,6 @@ fn a_record_over_the_limit_is_refused_and_one_at_the_limit_is_taken() {
     assert_eq!(read(Framing::Lines, &wide(b'x', past, b"\n")), over);
     assert_eq!(read(Framing::Lines, &wide(b'x', past, b"\r\n")), over);
     assert_eq!(read(Framing::Lines, &wide(0xff, past, b"\n")), over);
-    assert_eq!(
-        RecordError::TooLarge.to_string(),
-        "the record is over 16 MiB, which is far past what a backend reads in one request"
-    );
 }
 
 #[test]

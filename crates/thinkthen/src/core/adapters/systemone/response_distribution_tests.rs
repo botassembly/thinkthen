@@ -39,12 +39,8 @@ fn a_distribution_total_error_names_the_rule_without_reply_values() {
         )
         .replace("VALUE", member);
         let error = decode(&team_plan(), body.as_bytes()).expect_err("an invalid total");
-        assert_eq!(
-            error.to_string(),
-            format!(
-                "the answer to question `q1` has probability total {total}, member count 4, and tolerance 0.01; the total differs from one by more than the tolerance"
-            )
-        );
+        // `backend/distribution_total.rs` pins the sentence at the command line.
+        assert!(error.to_string().contains(total), "{error}");
         assert!(!error.to_string().contains(member));
     }
 }

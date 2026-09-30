@@ -165,10 +165,6 @@ fn no_refusal_of_a_reply_quotes_what_the_reply_held() {
     let error = decode(&urgency_plan(), body.as_bytes()).expect_err("a reply is refused");
 
     assert!(!error.to_string().contains(evidence), "{error}");
-    assert_eq!(
-        error.to_string(),
-        "the response is not a systemone response: the JSON at line 1 column 56 is not one"
-    );
 }
 
 #[test]

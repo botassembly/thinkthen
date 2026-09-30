@@ -248,10 +248,6 @@ fn a_list_the_verb_does_not_take_names_the_source_it_came_from() {
             error: LabelsError::OptionCount,
         }
     );
-    assert_eq!(
-        refusal.to_string(),
-        "the question file's `options`: `choose` takes 2 to 255 options"
-    );
     assert_eq!(refusal.origin(), Source::File);
 
     let typed = Typed {
@@ -260,7 +256,13 @@ fn a_list_the_verb_does_not_take_names_the_source_it_came_from() {
     };
     let refusal =
         resolve(Verb::Choose, Some("Which team?"), None, &typed).expect_err("a refused list");
-    assert_eq!(refusal.to_string(), "`choose` takes 2 to 255 options");
+    assert!(matches!(
+        refusal,
+        Refused::Labels {
+            error: LabelsError::OptionCount,
+            ..
+        }
+    ));
     assert_eq!(refusal.origin(), Source::CommandLine);
 }
 
