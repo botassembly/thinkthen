@@ -157,14 +157,15 @@ Everything here runs on the Linux gate host through the ladder, plus one local p
 
     All four failures are ours, and each issue names its fix. No failure came from GitHub, a runner, or an upstream package. No runner finished a build, so this run proves no target and does not close R5-37. It does not check Debt 026, because neither macOS job reached the DuckDB build. The run published nothing, created no release, draft, or tag, and changed no setting or secret. No secret was read. Phase 3b stays open. The next dispatch waits until all four fixes land.
 
-    **Third rehearsal attempt, 2026-09-30.** The quick fix for the four build failures landed at `f080fd50c`. Its closed issues name each fix and the self-test case that failed on the old code. Under the same test approval, the agent dispatched `gh workflow run release.yml --ref main -f mode=rehearse` again. The run is [36791693601](https://github.com/botassembly/thinkthen/actions/runs/36791693601) at main `f080fd50c`.
+    **Third rehearsal attempt, 2026-09-30.** The quick fix for the four build failures landed at `f080fd50c`. Its closed issues name each fix and its proof. Under the same test approval, the agent dispatched `gh workflow run release.yml --ref main -f mode=rehearse` again. The run is [36791693601](https://github.com/botassembly/thinkthen/actions/runs/36791693601) at main `f080fd50c`.
 
     | Job | Result | Cause |
     | --- | --- | --- |
     | `resolve` | Failure; the job never started | GitHub billing: "The job was not started because recent account payments have failed or your spending limit needs to be increased." |
-    | All other jobs | Skipped, since `resolve` failed | |
+    | `build`, `wheels`, `gems`, `npm-pack`, `crate`, `smoke`, `draft` | Skipped, since `resolve` failed | |
+    | `crates`, `pypi`, `npm`, `rubygems`, `tap`, `publish` | Skipped, as rehearse mode requires | |
 
-    No runner ran a step, so this run tests none of the four fixes, proves no target, and does not close R5-37. It does not check Debt 026. The failure is not ours, so no issue was filed. The agent did not dispatch again, because every run fails the same way until the account's billing is fixed. The run published nothing, created no release, draft, or tag, and changed no setting or secret. No secret was read. Phase 3b stays open. The next dispatch waits for Ian to fix the account's payment method or spending limit under Billing and plans.
+    No runner ran a step, so this run tests none of the four fixes, proves no target, and does not close R5-37. It does not check Debt 026. The failure is not ours, so no issue was filed. The agent did not dispatch again, because every run fails the same way until the account's billing is fixed. The run published nothing, created no release, draft, or tag, and changed no setting or secret. No secret was read. Phase 3b stays open. The next dispatch waits for Ian to fix the account's payment method or spending limit under "Billing & plans" in the account settings.
 
 ## Phase 4: Ian's release run
 
