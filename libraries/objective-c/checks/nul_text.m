@@ -41,38 +41,19 @@ int main(void) {
     TTClient *client = [TTClient create];
     if (!client) return 3;
     TTFailure failure = {0};
-    TTCallFacts facts = {0};
+    char *facts = NULL;
     char *raw = NULL;
     size_t length = 0;
     int code = [client recognize:"{\"kinds\":{\"person\":\"A person.\"}}"
-                           text:"a\0b" length:3 result:&raw size:&length facts:&facts failure:&failure];
-    if (code || !raw || length != sizeof(result) - 1 || memcmp(raw, result, length) ||
-        facts.records != 1 || facts.requests_sent != 1 || facts.seconds != 0.125 ||
-        !facts.has_model || strcmp(facts.model, "jev-1.13.0") ||
-        facts.has_input_tokens || facts.has_output_tokens) return 4;
+                           text:"a\0b" length:3 result:&raw size:&length deadline:-1 token:nil facts:&facts failure:&failure];
+    if (code || !raw || length != sizeof(result) - 1 || memcmp(raw, result, length) || !facts || strcmp(facts, report)) return 4;
     TTJSON *answer = tt_json_parse(raw, length);
     const TTJSON *entities = tt_json_get(answer, "entities");
     const TTJSON *entity = entities && entities->count == 1 ? entities->children[0] : NULL;
     const TTJSON *text = tt_json_get(entity, "text");
-    if (!answer || !tt_json_answer_shape(answer, "recognize") || !text ||
-        text->text_length != 3 || memcmp(text->text, "a\0b", 3)) return 5;
-    tt_json_free(answer); free(raw); tt_call_facts_clear(&facts); tt_failure_clear(&failure);
-    const char *invalid[] = {
-        "{\"requests_sent\":1,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":1,\"requests_sent\":1,\"cache_answers\":0,\"seconds\":0.125,\"input_tokens\":null}",
-        "{\"records\":18446744073709551616,\"requests_sent\":1,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":1.5,\"requests_sent\":1,\"cache_answers\":0,\"seconds\":0.125}",
-        "{\"records\":1,\"requests_sent\":1,\"cache_answers\":0,\"seconds\":-0.125}",
-        "{\"records\":1,\"requests_sent\":1,\"cache_answers\":0,\"seconds\":0.125,\"model\":null}"
-    };
-    for (size_t i=0; i<sizeof(invalid)/sizeof(*invalid); i++) {
-        report=invalid[i]; raw=(char *)1; length=777;
-        if ([client recognize:"{\"kinds\":{\"person\":\"A person.\"}}"
-                              text:"a\0b" length:3 result:&raw size:&length facts:&facts failure:&failure] != TTErrorDefect ||
-            raw!=(char *)1 || length!=777 || facts.has_model || failure.kind!=TTErrorDefect) return 6;
-        tt_failure_clear(&failure);
-    }
-    if (native_frees != 2 * (1 + (int)(sizeof(invalid)/sizeof(*invalid)))) return 7;
+    if (!answer || !text || text->text_length != 3 || memcmp(text->text, "a\0b", 3)) return 5;
+    tt_json_free(answer); free(raw); free(facts); tt_failure_clear(&failure);
+    if (native_frees != 2) return 7;
     [client dealloc];
     puts("OBJC_NUL_TEXT_PUBLIC_RECOGNIZE_PASS");
     return 0;

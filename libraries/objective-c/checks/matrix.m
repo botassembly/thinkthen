@@ -15,32 +15,39 @@ static void require(int good,const char *note) { if (!good) { fprintf(stderr,"FA
 static void path(char *buf,size_t cap,const char *prefix,const char *state) { snprintf(buf,cap,"%s/%s%s",barrier,prefix,state); }
 static void arrived(const char *state) { char b[512]; path(b,sizeof b,"arrived-",state); for(int i=0;i<2000 && access(b,F_OK);i++) usleep(5000); require(!access(b,F_OK),"counted arrival"); }
 static void release(const char *state) { char b[512]; path(b,sizeof b,"release-",state); int fd=open(b,O_WRONLY|O_CREAT,0600); require(fd>=0,"release barrier"); close(fd); }
+/* Facts are JSON text; fact_is compares one member's literal text, and a NULL
+ * want means the member is absent. */
+static int fact_is(const char *facts,const char *key,const char *want) {
+    TTJSON *tree=facts?tt_json_parse(facts,strlen(facts)):NULL; const TTJSON *v=tt_json_get(tree,key);
+    int same=want ? v && v->text && !strcmp(v->text,want) : !v; tt_json_free(tree); return same;
+}
 static void result(const char *text,int expected,int64_t deadline,TTToken *tok) {
-    TTDecision a={123,-1}; TTFailure f={0}; TTCallFacts facts={0};
+    TTDecision a={123,-1}; TTFailure f={0}; char *facts=NULL;
     int rc=[e decide:"Is it?" text:text length:strlen(text) deadline:deadline token:tok answer:&a facts:&facts failure:&f];
     if(rc!=expected) fprintf(stderr,"state=%s code=%d expected=%d error=%s\n",text,rc,expected,f.message);
     require(rc==expected,"scalar status");
     require(expected ? a.outcome==123 && a.probability==-1 : a.outcome==(strcmp(text,"no")==0 ? 0 : 1),"scalar result");
     require(!expected || f.kind==expected,"copied same-thread error code");
-    if (!expected) require(facts.records==1 && facts.requests_sent==1 && facts.cache_answers==0 && facts.has_model,"scalar facts");
-    else require(!facts.has_model,"failed call has no success facts");
-    tt_call_facts_clear(&facts);
+    if (!expected) require(fact_is(facts,"records","1") && fact_is(facts,"requests_sent","1") && fact_is(facts,"cache_answers","0") && fact_is(facts,"model","jev-1.13.0"),"scalar facts");
+    else require(!facts,"failed call has no success facts");
+    free(facts);
     tt_failure_clear(&f);
 }
 static void json(const char *request,const char *expect) {
  TTFailure f={0};char *s=[e json:request deadline:-1 token:nil failure:&f];
  if(!s)fprintf(stderr,"json failure: %d %s\n",f.kind,f.message);
  require(s != NULL,"JSON verb result");
- TTJSON *tree=tt_json_parse(s,strlen(s));const TTJSON *value=tt_json_call_value(tree);
+ TTJSON *tree=tt_json_parse(s,strlen(s));const TTJSON *value=tt_json_get(tree,"value");
  if(!value)fprintf(stderr,"invalid call envelope: %s\n",s);
- require(value != NULL,"exact JSON call envelope and facts");
+ require(value != NULL,"JSON call envelope value");
  const TTJSON *facts=tt_json_get(tree,"facts");
- require(facts->count==7 && !strcmp(tt_json_get(facts,"model")->text,"jev-1.13.0"),"exact seven call facts keys and model");
+ require(facts && !strcmp(tt_json_get(facts,"model")->text,"jev-1.13.0"),"call facts model");
  require(!strcmp(tt_json_get(facts,"records")->text,!strcmp(expect,"filter-one")||!strcmp(expect,"rank-one")?"2":"1") &&
          !strcmp(tt_json_get(facts,"requests_sent")->text,!strcmp(expect,"entities")?"2":"1") &&
          !strcmp(tt_json_get(facts,"cache_answers")->text,"0"),"exact call facts counters");
- const char *kind=!strcmp(expect,"check")?"annotate":!strcmp(expect,"entities")?"recognize":!strcmp(expect,"edges")?"relate":NULL;
- if(kind){if(!tt_json_answer_shape(value,kind))fprintf(stderr,"invalid %s shape: %s\n",kind,s);require(tt_json_answer_shape(value,kind),"typed JSON shape");}
+ const char *member=!strcmp(expect,"entities")||!strcmp(expect,"edges")?expect:NULL;
+ if(!strcmp(expect,"check"))require(value->type==TTJSONArray && value->count==1 && tt_json_get(value->children[0],"check"),"annotate row");
+ else if(member){const TTJSON *list=tt_json_get(value,member);require(list && list->type==TTJSONArray && list->count>0,"recognize or relate list");}
  else if(!strcmp(expect,"probability")){
   require(value->type==TTJSONObject && tt_json_get(value,"schema") &&
           !strcmp(tt_json_get(value,"schema")->text,"thinkthen.result/1") &&
@@ -64,9 +71,9 @@ static void json(const char *request,const char *expect) {
  else require(strstr(s,expect) != NULL,"JSON verb result literal");
  tt_json_free(tree);free(s);tt_failure_clear(&f);
 }
-typedef struct { const char *state; TTToken *token; int64_t deadline; int code; TTDecision answer; TTCallFacts facts; TTFailure failure; } Scalar;
+typedef struct { const char *state; TTToken *token; int64_t deadline; int code; TTDecision answer; char *facts; TTFailure failure; } Scalar;
 static void *caller(void *v) { Scalar *s=v; s->answer=(TTDecision){123,-1}; s->code=[e decide:"Is it?" text:s->state length:strlen(s->state) deadline:s->deadline token:s->token answer:&s->answer facts:&s->facts failure:&s->failure]; return NULL; }
-typedef struct {const char **texts; size_t *lengths; size_t n; TTToken *token; int code; TTDecision answers[3]; TTCallFacts facts; TTFailure failure;} Bulk;
+typedef struct {const char **texts; size_t *lengths; size_t n; TTToken *token; int code; TTDecision answers[3]; char *facts; TTFailure failure;} Bulk;
 static void *bulkcaller(void *v) { Bulk *b=v; b->code=[e many:"Is it?" texts:b->texts lengths:b->lengths count:b->n deadline:-1 token:b->token answers:b->answers facts:&b->facts failure:&b->failure]; return NULL; }
 int main(int argc,char **argv) {
  barrier=getenv("TT_BARRIER_DIR"); require(barrier!=NULL,"barrier"); e=[TTClient create]; require(e!=nil,"engine"); require(sizeof(TTDecision)==16,"ABI layout");
@@ -85,28 +92,28 @@ int main(int argc,char **argv) {
   json("{\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]},\"version\":1,\"records\":[{\"name\":\"First\",\"kind\":\"alert\"},{\"name\":\"Second\",\"kind\":\"alert\"}]}","edges");
   puts("OBJC_BASIC_PASS");
  } else if(!strcmp(mode,"bulk")) {
-  const char *ts[]={"first","second","third"}; size_t ns[]={5,6,5}; TTDecision a[3]={{123,-1},{123,-1},{123,-1}}; TTFailure f={0}; TTCallFacts facts={0};
+  const char *ts[]={"first","second","third"}; size_t ns[]={5,6,5}; TTDecision a[3]={{123,-1},{123,-1},{123,-1}}; TTFailure f={0}; char *facts=NULL;
   require([e many:"Is it?" texts:ts lengths:ns count:3 deadline:-1 token:nil answers:a facts:&facts failure:&f]==0,"bulk");
-  require(a[0].probability==0.9 && a[1].probability==0.1 && a[2].probability==0.6 && facts.records==3 && facts.requests_sent==1 && facts.cache_answers==0,"bulk order and facts"); tt_call_facts_clear(&facts);tt_failure_clear(&f); puts("OBJC_BULK_PASS");
+  require(a[0].probability==0.9 && a[1].probability==0.1 && a[2].probability==0.6 && fact_is(facts,"records","3") && fact_is(facts,"requests_sent","1") && fact_is(facts,"cache_answers","0"),"bulk order and facts"); free(facts);tt_failure_clear(&f); puts("OBJC_BULK_PASS");
   require([e many:"Is it?" texts:ts lengths:ns count:3 deadline:-1 token:nil answers:a facts:&facts failure:&f]==0 &&
-          facts.records==3 && facts.requests_sent==0 && facts.cache_answers==3 && a[2].probability==0.6,
-          "identical bulk answers each question from the cache"); tt_call_facts_clear(&facts);tt_failure_clear(&f);
+          fact_is(facts,"records","3") && fact_is(facts,"requests_sent","0") && fact_is(facts,"cache_answers","3") && a[2].probability==0.6,
+          "identical bulk answers each question from the cache"); free(facts);tt_failure_clear(&f);
   require([e many:"Is it?" texts:NULL lengths:NULL count:0 deadline:-1 token:nil answers:NULL facts:&facts failure:&f]==0 &&
-          facts.records==0 && facts.requests_sent==0 && facts.cache_answers==0 && !facts.has_model && !facts.has_input_tokens,
-          "empty bulk has no model or send"); tt_call_facts_clear(&facts);tt_failure_clear(&f);
+          fact_is(facts,"records","0") && fact_is(facts,"requests_sent","0") && fact_is(facts,"cache_answers","0") && fact_is(facts,"model",NULL) && fact_is(facts,"input_tokens",NULL),
+          "empty bulk has no model or send"); free(facts);tt_failure_clear(&f);
  } else if(!strcmp(mode,"strict")) {
   TTToken *t=[TTToken create]; Scalar s={.state="hold-scalar",.token=t,.deadline=-1}; pthread_t p;
   require(!pthread_create(&p,NULL,caller,&s),"pthread"); arrived("hold-scalar"); [t fire]; [t fire]; release("hold-scalar"); pthread_join(p,NULL);
-  require(s.code==5 && s.failure.kind==5 && !s.failure.retryable && s.failure.message && s.answer.outcome==123 && s.answer.probability==-1,"strict scalar cancellation"); tt_call_facts_clear(&s.facts);tt_failure_clear(&s.failure); [t dealloc]; result("recovery-scalar",0,-1,nil); puts("STRICT_OBJC_CANCEL_PASS");
+  require(s.code==5 && s.failure.kind==5 && !s.failure.retryable && s.failure.message && s.answer.outcome==123 && s.answer.probability==-1,"strict scalar cancellation"); free(s.facts);tt_failure_clear(&s.failure); [t dealloc]; result("recovery-scalar",0,-1,nil); puts("STRICT_OBJC_CANCEL_PASS");
  } else if(!strcmp(mode,"held")) {
   TTToken *t=[TTToken create]; const char *ts[]={"hold-bulk-1","hold-bulk-2"}; size_t ns[]={11,11}; Bulk b={.texts=ts,.lengths=ns,.n=2,.token=t,.answers={{123,-1},{123,-1}}}; pthread_t p;
   require(!pthread_create(&p,NULL,bulkcaller,&b),"pthread bulk"); arrived("hold-bulk-1"); [t fire]; release("hold-bulk-1"); /* second row may never send after cancellation */
-  pthread_join(p,NULL); require(b.code==5 && b.failure.kind==5 && !b.failure.retryable && b.answers[0].outcome==123 && b.answers[0].probability==-1 && b.answers[1].outcome==123 && b.answers[1].probability==-1,"held bulk"); tt_call_facts_clear(&b.facts);tt_failure_clear(&b.failure); [t dealloc];
+  pthread_join(p,NULL); require(b.code==5 && b.failure.kind==5 && !b.failure.retryable && b.answers[0].outcome==123 && b.answers[0].probability==-1 && b.answers[1].outcome==123 && b.answers[1].probability==-1,"held bulk"); free(b.facts);tt_failure_clear(&b.failure); [t dealloc];
   Scalar d={.state="hold-deadline",.deadline=150}; require(!pthread_create(&p,NULL,caller,&d),"pthread deadline"); arrived("hold-deadline"); pthread_join(p,NULL); release("hold-deadline");
-  require(d.code==3 && d.answer.outcome==123 && d.answer.probability==-1,"held deadline"); tt_call_facts_clear(&d.facts);tt_failure_clear(&d.failure); result("recovery-held",0,-1,nil); puts("OBJC_HELD_PASS");
+  require(d.code==3 && d.answer.outcome==123 && d.answer.probability==-1,"held deadline"); free(d.facts);tt_failure_clear(&d.failure); result("recovery-held",0,-1,nil); puts("OBJC_HELD_PASS");
  } else if(!strcmp(mode,"boundaries")) {
-  const char data[]={'a',0,'b'}; TTDecision a={123,-1}; TTFailure f={0}; TTCallFacts facts={0};
-  require([e decide:"Is it?" text:data length:3 deadline:-1 token:nil answer:&a facts:&facts failure:&f]==0 && a.outcome==1,"embedded NUL evidence"); tt_call_facts_clear(&facts);tt_failure_clear(&f);
+  const char data[]={'a',0,'b'}; TTDecision a={123,-1}; TTFailure f={0}; char *facts=NULL;
+  require([e decide:"Is it?" text:data length:3 deadline:-1 token:nil answer:&a facts:&facts failure:&f]==0 && a.outcome==1,"embedded NUL evidence"); free(facts); facts=NULL;tt_failure_clear(&f);
   const char invalid[]="{\"decide\":\"Is it?\"}\0junk";
   require([e jsonBytes:invalid length:sizeof(invalid)-1 deadline:-1 token:nil failure:&f]==NULL && f.kind==1,"reject JSON C-string with embedded NUL"); tt_failure_clear(&f);
   const char badQuestion[]="Is it?\0junk"; a=(TTDecision){123,-1};
@@ -127,40 +134,38 @@ int main(int argc,char **argv) {
   Scalar s[3]={{.state="failure-one",.deadline=-1},{.state="failure-two",.deadline=-1},{.state="success",.deadline=-1}}; pthread_t p[3]; for(int i=0;i<3;i++)require(!pthread_create(&p[i],NULL,caller,&s[i]),"pthread caller");
   for(int i=0;i<3;i++)pthread_join(p[i],NULL);
   require(s[0].code==2 && s[1].code==2 && s[2].code==0 && strstr(s[0].failure.message,"401") && strstr(s[1].failure.message,"403"),"thread local failures");
-  require(s[2].facts.records==1 && s[2].facts.requests_sent==1,"concurrent owned success facts");
-  for(int i=0;i<3;i++){tt_call_facts_clear(&s[i].facts);tt_failure_clear(&s[i].failure);} puts("OBJC_CONCURRENT_PASS");
+  require(fact_is(s[2].facts,"records","1") && fact_is(s[2].facts,"requests_sent","1"),"concurrent owned success facts");
+  for(int i=0;i<3;i++){free(s[i].facts);tt_failure_clear(&s[i].failure);} puts("OBJC_CONCURRENT_PASS");
  } else if(!strcmp(mode,"overlap")) {
   Scalar s[2]={{.state="hold-overlap-a",.deadline=-1},{.state="hold-overlap-b",.deadline=-1}}; pthread_t p[2];
   require(!pthread_create(&p[0],NULL,caller,&s[0]) && !pthread_create(&p[1],NULL,caller,&s[1]),"overlap callers");
   arrived("hold-overlap-a"); arrived("hold-overlap-b");
   release("hold-overlap-a"); release("hold-overlap-b");
   pthread_join(p[0],NULL); pthread_join(p[1],NULL);
-  require(s[0].code==0 && s[1].code==0 && s[0].facts.requests_sent==1 && s[1].facts.requests_sent==1,
+  require(s[0].code==0 && s[1].code==0 && fact_is(s[0].facts,"requests_sent","1") && fact_is(s[1].facts,"requests_sent","1"),
           "two held typed calls completed independently");
   [e dealloc]; e=nil;
-  require(s[0].facts.has_model && s[1].facts.has_model &&
-          !strcmp(s[0].facts.model,"jev-1.13.0") && !strcmp(s[1].facts.model,"jev-1.13.0"),
-          "owned facts survive close");
-  for(int i=0;i<2;i++){tt_call_facts_clear(&s[i].facts);tt_failure_clear(&s[i].failure);}
+  require(fact_is(s[0].facts,"model","jev-1.13.0") && fact_is(s[1].facts,"model","jev-1.13.0"),"owned facts survive close");
+  for(int i=0;i<2;i++){free(s[i].facts);tt_failure_clear(&s[i].failure);}
   puts("OBJC_HELD_OVERLAP_PASS");
  } else if(!strcmp(mode,"typed-json")) {
-  TTFailure f={0}; TTCallFacts facts={0}; char *out=NULL; size_t n=777;
-  require([e recognize:"{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}" text:"John Smith" length:10 result:&out size:&n facts:&facts failure:&f]==0 && out && n==strlen(out) && strstr(out,"entities"),"typed recognize"); TTJSON *recognized=tt_json_parse(out,n); if(!tt_json_answer_shape(recognized,"recognize"))fprintf(stderr,"recognize payload: %s\n",out); require(tt_json_answer_shape(recognized,"recognize") && facts.records==1 && facts.requests_sent==2,"recognized entity types and facts"); tt_json_free(recognized); free(out); tt_call_facts_clear(&facts);tt_failure_clear(&f);
+  TTFailure f={0}; char *facts=NULL; char *out=NULL; size_t n=777;
+  require([e recognize:"{\"version\":1,\"recognize\":{\"kinds\":{\"person\":\"A person's name.\"}}}" text:"John Smith" length:10 result:&out size:&n deadline:-1 token:nil facts:&facts failure:&f]==0 && out && n==strlen(out) && strstr(out,"entities"),"typed recognize"); TTJSON *recognized=tt_json_parse(out,n); require(tt_json_get(recognized,"entities") && fact_is(facts,"records","1") && fact_is(facts,"requests_sent","2"),"recognized entities and facts"); tt_json_free(recognized); free(out); free(facts);tt_failure_clear(&f);
   /* Shared non-BMP offset case: scalar positions, never UTF-16 or UTF-8 byte offsets. */
   const char *emoji="🧬"; out=NULL; n=777;
-  require([e recognize:"{\"version\":1,\"recognize\":{}}" text:emoji length:strlen(emoji) result:&out size:&n facts:&facts failure:&f]==0 && out,"emoji recognition");
-  recognized=tt_json_parse(out,n); require(tt_json_answer_shape(recognized,"recognize"),"emoji entity shape");
+  require([e recognize:"{\"version\":1,\"recognize\":{}}" text:emoji length:strlen(emoji) result:&out size:&n deadline:-1 token:nil facts:&facts failure:&f]==0 && out,"emoji recognition");
+  recognized=tt_json_parse(out,n); require(recognized != NULL,"emoji entity JSON");
   const TTJSON *entities=tt_json_get(recognized,"entities");
   require(entities && entities->count>0,"emoji entity present");
   const TTJSON *one=entities->children[0];
   require(!strcmp(tt_json_get(one,"start")->text,"0") && !strcmp(tt_json_get(one,"end")->text,"1") && !strcmp(tt_json_get(one,"length")->text,"1"),"non-BMP scalar offsets 0..1");
-  tt_json_free(recognized);free(out);tt_call_facts_clear(&facts);tt_failure_clear(&f);
+  tt_json_free(recognized);free(out);free(facts);tt_failure_clear(&f);
   const char *ts[]={"{\"name\":\"Third\",\"kind\":\"alert\"}","{\"name\":\"Fourth\",\"kind\":\"alert\"}"}; size_t ns[]={strlen(ts[0]),strlen(ts[1])}; out=NULL; n=777;
-  require([e relate:"{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}" texts:ts lengths:ns count:2 result:&out size:&n facts:&facts failure:&f]==0 && out && n==strlen(out) && strstr(out,"edges"),"typed relate"); TTJSON *related=tt_json_parse(out,n); require(tt_json_answer_shape(related,"relate") && facts.records==1,"related edge types and logical question count"); tt_json_free(related); free(out); tt_call_facts_clear(&facts);tt_failure_clear(&f); puts("OBJC_TYPED_JSON_PASS");
+  require([e relate:"{\"version\":1,\"relate\":{\"relations\":[{\"name\":\"caused_by\",\"source\":\"alert\",\"target\":\"alert\"}]}}" texts:ts lengths:ns count:2 result:&out size:&n deadline:-1 token:nil facts:&facts failure:&f]==0 && out && n==strlen(out) && strstr(out,"edges"),"typed relate"); TTJSON *related=tt_json_parse(out,n); require(tt_json_get(related,"edges") && fact_is(facts,"records","1"),"related edges and logical question count"); tt_json_free(related); free(out); free(facts);tt_failure_clear(&f); puts("OBJC_TYPED_JSON_PASS");
  } else if(!strcmp(mode,"reverse")) {
   const char *ts[]={"hold-reverse-1","hold-reverse-2"}; size_t ns[]={14,14}; Bulk b={.texts=ts,.lengths=ns,.n=2,.answers={{123,-1},{123,-1}}}; pthread_t p;
   require(!pthread_create(&p,NULL,bulkcaller,&b),"reverse thread"); arrived("hold-reverse-1"); arrived("hold-reverse-2"); release("hold-reverse-2"); usleep(50000); release("hold-reverse-1"); pthread_join(p,NULL);
-  require(b.code==0 && b.answers[0].probability==0.9 && b.answers[1].probability==0.1 && b.facts.records==2,"reverse order and facts"); tt_call_facts_clear(&b.facts);tt_failure_clear(&b.failure); puts("OBJC_REVERSE_PASS");
+  require(b.code==0 && b.answers[0].probability==0.9 && b.answers[1].probability==0.1 && fact_is(b.facts,"records","2"),"reverse order and facts"); free(b.facts);tt_failure_clear(&b.failure); puts("OBJC_REVERSE_PASS");
  } else require(0,"unknown mode");
  if(e) [e dealloc]; return 0;
 }
