@@ -73,7 +73,7 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 7. Secrecy sweep: canary key through every command and failure path, every output, recording, cache entry, and error; zero hits.
 8. The misbehaving-backend battery (area 7's 24 cases) passes against the stand-in.
 9. The cache rows that waves 1 could not run (default XDG folder, 100 MB cap, prune, `status`, one-command clear, full disk) pass, or the release record says why not.
-10. The vocabulary lint is zero-hit on help, README, demos, and the marketing pages.
+10. Superseded 2026-09-30 by Ian's ruling 8 (`cleanup-2026-09-30.md`): no vocabulary lint. The vocabulary lint is zero-hit on help, README, demos, and the marketing pages.
 11. Every wave-1 issue file is closed or waived with a name beside the waiver.
 12. The surfaces review's classes are closed or waived: wrong answers with no error, host crashes at a boundary, cancel per host, and the security rows (file access behind the host's own switch, functions marked direct-only, PUBLIC revoked, relate on the caller's connection).
 13. The packages carry licenses and platforms, and no package ships recordings: a recording commits its evidence, and a published package publishes it.
@@ -81,7 +81,7 @@ The full pass runs at the exact release commit, on Linux and macOS, from the ins
 15. The transform catalog surface exists (`thinkthen transform list` and `show`, ticket 0050's promise) or the release record names who deferred it; ticket 0083 owns the implementation.
 16. Issue statuses are normalized to a two-value vocabulary (Open and everything-else) before the waiver sweep runs; the record currently carries nine status words and two files with none.
 17. The surfaces branch's error index (the fifth review's companion page) has a row for every confirmed defect across all five rounds, each row closed or waived by an independent probe named in the row, and the release pass re-runs the proving probes, because the branch's own history shows a closed item can stop holding.
-18. The naming and consistency review (quality plan Part 4) is green: vocabulary lint zero-hit, the nine-column matrix generated and drift-free, every public name documented with one shape example, every bound stated strict or inclusive, the stranger name-test run with its gaps filed or fixed.
+18. The naming and consistency review (quality plan Part 4) is green. The vocabulary-lint part is superseded 2026-09-30 by Ian's ruling 8: vocabulary lint zero-hit, the nine-column matrix generated and drift-free, every public name documented with one shape example, every bound stated strict or inclusive, the stranger name-test run with its gaps filed or fixed.
 19. The performance matrix is complete (quality plan Part 5): every public surface measured on every runtime and storage backend, from named scripts at the exact release build; the fastest and slowest surface named per runtime and overall; the wave-1 baselines re-run on the release build; every gap between fastest and slowest explained or filed.
 20. The crash sets and resource claims are green (quality plan Part 5): every surface's committed crafted-input set passes on the release build in every runtime, fallback environments included (a locked-down Linux container, not just macOS); every printed speed, cost, or memory number on a public page names its measuring record.
 
