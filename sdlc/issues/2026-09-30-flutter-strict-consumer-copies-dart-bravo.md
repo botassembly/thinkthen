@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: the next change to the Flutter check's request fixture or planted negatives, or before 0.1.
 
+Debt: 021
+
+Severity: low
+
 Keeping it means every change to Dart consumer bravo is made twice, and a missed copy leaves the Flutter host test checking an older reading of the binding.
 
 ## The problem

@@ -1,6 +1,6 @@
 # Issue priorities, 2026-09-30
 
-Status: current, refreshed 2026-09-30 evening by the debt and issue sweep. It orders the 31 open issues in `sdlc/issues/`, 14 of them `Kind: debt`. The sweep checked every issue against main `88649ec0d`. None was already fixed. Nine merged into same-family issues and moved to `closed/`, so the count went from 40 to 31 and debt from 15 to 14. Git history holds the earlier page and its investigations. Later the same evening a records Quick Fix closed rank 16 and filed rank 19a, so 31 issues stay open, 13 of them debt. Ian can overturn any rank, owner or trigger.
+Status: current, refreshed 2026-09-30 evening by the debt and issue sweep. It orders the 31 open issues in `sdlc/issues/`, 14 of them `Kind: debt`. The sweep checked every issue against main `88649ec0d`. None was already fixed. Nine merged into same-family issues and moved to `closed/`, so the count went from 40 to 31 and debt from 15 to 14. Git history holds the earlier page and its investigations. Later the same evening a records Quick Fix closed rank 16 and filed rank 19a, so 31 issues stay open, 13 of them debt. Then ticket 0340 closed ranks 1 to 4, and 0314 slice 4c filed two debt issues, ranked 4a and 23a. The pm adoption Quick Fix closed rank 17 and filed rank 32, an idea. 31 issues stay open, 14 of them debt. Ian can overturn any rank, owner or trigger.
 
 ## How the ranks were set
 
@@ -10,10 +10,11 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 
 | Rank | Issue | Blocks 0.1 | Owner | Waits for | Size |
 | ---: | --- | --- | --- | --- | --- |
-| 1 | `2026-09-30-postgresql-check-keeps-wall-clock-limits-under-load.md` (debt) | yes | ticket 0340, lane 1 | running | small |
-| 2 | `2026-09-30-ordered-output-test-races-the-next-request-under-load.md` (debt) | yes | ticket 0340, lane 1 | running | small |
-| 3 | `2026-09-30-graded-rank-tests-rewrite-one-question-file-in-place.md` (debt) | yes | ticket 0340, lane 1 | running | small |
-| 4 | `2026-09-30-duckdb-split-denials-case-failed-once-under-load.md` (debt) | yes | ticket 0340 if it takes it; otherwise none until it fails again | running | small |
+| 1 | closed: `closed/2026-09-30-postgresql-check-keeps-wall-clock-limits-under-load.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
+| 2 | closed: `closed/2026-09-30-ordered-output-test-races-the-next-request-under-load.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
+| 3 | closed: `closed/2026-09-30-graded-rank-tests-rewrite-one-question-file-in-place.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
+| 4 | closed: `closed/2026-09-30-duckdb-split-denials-case-failed-once-under-load.md` (debt, paid 2026-09-30 by ticket 0340) | yes | done | nothing | small |
+| 4a | `2026-09-30-dart-check-never-runs-under-the-surfaces-rung.md` (debt) | yes, a checkpoint tag needs every surface | none yet | nothing | small |
 | 5 | `2026-09-30-static-library-exports-sqlite-symbols.md` (debt) | yes | a new ticket with one M5 proof | nothing | medium |
 | 6 | `2026-09-25-public-library-api-gaps.md` (debt) | yes, items 1, 2, 3, 9, 10 | item 10 a Quick Fix now; one SQL host ticket for 1, 2, 3, 9; 6 and 7 after 0.1 | 0304 slice 4 for items 1, 2, 3, 9 | medium |
 | 7 | `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | marketing | nothing | small |
@@ -34,6 +35,7 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 | 21 | `2026-09-29-docs-page-naming-supported-providers.md` | no, except the Liquid timeout line for stumble row 19 | marketing | nothing | small |
 | 22 | `2026-09-26-every-surface-should-give-back-run-facts.md` | no | 0314 slice 4 for item 1; tickets 0300 and 0302 for items 2 and 3; marketing for item 6 | 0314 slice 4 | large |
 | 23 | `2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md` (debt) | no | upstream (ollama/ollama#18718); ticket 0339 builds the workaround | Ollama; 0339 after 0304 slice 4 | small |
+| 23a | `2026-09-30-flutter-strict-consumer-copies-dart-bravo.md` (debt) | no | none yet | the next Flutter fixture change, or before 0.1 | small |
 | 24 | `2026-09-30-zig-0-15-2-linker-drops-constant-alignment.md` (debt) | no | upstream (Zig) | a Zig release | small |
 | 25 | `2026-09-25-docs-how-tos-and-spec-claims-owed.md` | page 11 only | a docs ticket; marketing for page 23 | page 11 on 0304 slice 4 (`find` fixtures) | large |
 | 26 | `2026-09-25-recognize-and-relate-scale-and-shape.md` | no | a ticket after 0304 slice 4 | 0304 slice 4 | large |

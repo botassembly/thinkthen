@@ -6,9 +6,11 @@ When: after the 0.1 release.
 
 OpenTelemetry support would give a user traces of every backend call, with spans and token counts that match the call facts thinkthen already returns.
 
-Limits a design must keep:
+It conflicts with a standing anti-goal: `../planning/libraries/README.md` says "No telemetry" on the hot path. A design needs Ian's ruling on that line first.
 
-- It is opt-in. With no exporter named, thinkthen sends nothing and does no extra work, as `planning/libraries/README.md` requires of the hot path.
+Limits a design must keep if Ian allows it:
+
+- It is opt-in. With no exporter named, thinkthen sends nothing and does no extra work.
 - Spans carry no key, header, question text or answer text. Key secrecy and the recording rule apply to every span.
 - Span fields reuse the names in `facts` and `meta.usage`, so a trace and a run's facts agree.
 - It sends only to the address the user names, like every other send.

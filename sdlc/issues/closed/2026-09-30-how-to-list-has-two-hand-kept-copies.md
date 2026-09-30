@@ -12,8 +12,6 @@ Severity: low
 
 Paid: 2026-09-30
 
-Paid: 2026-09-30
-
 Keeping it lets the two lists drift, so one names a page the other lacks.
 
 ## What happens
