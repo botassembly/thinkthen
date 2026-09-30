@@ -46,8 +46,7 @@ impl Downstream {
 }
 
 use crate::config::{self, Config};
-use crate::engine::backoff::per_minute;
-use crate::engine::usage::Counters;
+use crate::engine::{backoff::per_minute, estimated_total, usage::Counters};
 use crate::failure::Failure;
 
 /// The wait before the first retry, which only a test shortens.
@@ -81,6 +80,7 @@ pub(crate) struct Environment {
     key: KeySnapshot,
     ca_bundle: Option<PathBuf>,
     pub(crate) per_minute: Option<std::num::NonZeroU32>,
+    pub(crate) estimated_total: Option<u64>,
 }
 
 impl std::fmt::Debug for Environment {
@@ -124,6 +124,8 @@ impl Environment {
             key: KeySnapshot::default(),
             ca_bundle: read("THINKTHEN_CA_BUNDLE").map(PathBuf::from),
             per_minute: per_minute(read("THINKTHEN_REQUESTS_PER_MINUTE").as_deref())
+                .map_err(Failure::Usage)?,
+            estimated_total: estimated_total(read("THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL"))
                 .map_err(Failure::Usage)?,
         })
     }
