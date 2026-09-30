@@ -45,6 +45,16 @@ Blockers in the top ten: ranks 1, 3, 4, 5 and 10. Ranks 11 and 12 also block 0.1
 
 The release issue's item 7 lists the Objective-C collision as a macOS release defect. This page ranks it as no blocker, for the reason given under rank 8. The issue text stays as filed; the ticket that fixes it should correct item 7 when it lands.
 
+## Filed after this page, unranked
+
+From the Beatles Bench team's feedback of 2026-09-30 (`bench-handoff.md`). None blocks 0.1. The next triage ranks them.
+
+| Issue | Problem | Owner | Next step | Size |
+| --- | --- | --- | --- | --- |
+| `2026-09-30-command-question-file-has-no-size-cap.md` | The command reads a question file of any size; the libraries cap it at 1 MiB | a future Quick Fix | Apply the libraries' cap and sentence | small |
+| `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md` | One live batching request exited 4 once; about 1,000 usage calls are unexplained | none | Investigate from logs; no paid call without authorization | small |
+| `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | About a third of the spec's "no calls" edges show only after a real send | queue owner | Feed the release QA suite's findings into `specification/` | medium |
+
 ## Investigations
 
 Each was done by reading code and records only: no build, no network, no paid call, no M5.

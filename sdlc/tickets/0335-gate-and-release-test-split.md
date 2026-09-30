@@ -16,11 +16,7 @@ Status: slice 1 landed; slice 2 waits for 0304 slices 3b and 3d, including 3d's 
 
 ## Three places for tests
 
-The Beatles Bench team set this split on 2026-09-30.
-
-- This repository's gate keeps mechanics against recordings, with no network.
-- The Beatles Bench is public. It publishes accuracy, cost and speed per function. Accuracy and timing are not release QA work.
-- The private release QA suite runs live checks, installed packages, every surface, edge cases and a real-prose reading set. It gives pass or fail on release candidates.
+The Beatles Bench team set this split on 2026-09-30. The inventory's "Three places" table holds it. This repository's gate keeps mechanics against recordings. The public Beatles Bench publishes accuracy, cost and speed; that is not release QA work. The private release QA suite checks release candidates live.
 
 Keep rule: the error paths stay in this repository's loopback tests, because the release QA suite does not fake the service. These are retries, server errors, status 520, oversized replies and dropped connections. No slice moves or deletes one of these tests.
 

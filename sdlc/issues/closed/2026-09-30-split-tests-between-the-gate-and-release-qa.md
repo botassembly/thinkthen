@@ -1,6 +1,6 @@
 # Split tests between the fast gate and the release QA suite
 
-Status: closed 2026-09-30. Replaced by ticket `../../tickets/0335-gate-and-release-test-split.md`, which answers the three asks and carries the remaining slices. The Beatles Bench team's feedback of 2026-09-30 set the split three ways: this repository keeps mechanics against recordings with no network; the public Beatles Bench publishes accuracy, cost and speed; the private release QA suite runs live checks, installed packages, every surface, edge cases, a real-prose reading set, and pass or fail on release candidates. The accuracy and timing item under "What moves to the release suite" belongs to the Beatles Bench under that split.
+Status: closed 2026-09-30. Replaced by ticket `../../tickets/0335-gate-and-release-test-split.md`, which answers the three asks and carries the remaining slices. The Beatles Bench team's feedback of 2026-09-30 set the split three ways; `../../planning/test-split-2026-09-30.md`, "Three places", holds it. The accuracy and timing item under "What moves to the release suite" belongs to the Beatles Bench under that split.
 
 ## The change
 

@@ -13,6 +13,7 @@ Sources: experiment 413's `RESULTS.md`, the README's Liquid line, and the closed
 - A key comes from `console.liquid.ai` under Dashboard, API Keys, prefixed `liquid_`. Today it goes in `THINKTHEN_API_KEY` beside `THINKTHEN_BASE_URL`. Ticket 0334 (ADR 0114) will add a named `liquid` backend that reads `LIQUIDAI_API_KEY`; the page should follow whichever form has landed.
 - Output tokens are always zero, and usage reports input tokens only. Liquid publishes no price. `d1:free` billed nothing during the experiment.
 - `thinkthen check` passed on the 2026-09-30 hosted recheck (`09ebcc5ce`), after ticket 0301 stopped sending explicit null descriptions.
+- A first `check` can outlast the default 30-second timeout. The Beatles Bench team reported on 2026-09-30 that its first `check` against d1 timed out at 30 s and passed with `--timeout 90`. The page tells the reader to pass `--timeout 90` on a first run. Coordinator default, which Ian can overturn: say so in the docs now. A longer default timeout on the `liquid` built-in is a per-backend limit, which ticket 0334 defers, so it waits for 0334's follow-up. Stumble register row 19 tracks the stumble.
 
 ## Done when
 
