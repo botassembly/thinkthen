@@ -1,6 +1,6 @@
 # 0302: Scoped per-attempt timing and request IDs
 
-- Status: **accepted**, 2026-09-29. Fresh High design/API/secrecy review accepted `7b7cc5f8ac39bce7cb42900391859599a66945ef`; the queue owner approves the bounded implementation within Ian's pre-release API outcome. Runtime implementation and remaining issue criteria are still open.
+- Status: **implementation candidate, pending fresh code review**, 2026-09-29. Fresh High design/API/secrecy review accepted `7b7cc5f8ac39bce7cb42900391859599a66945ef`; the queue owner approved the bounded implementation within Ian's pre-release API outcome. Remaining issue criteria stay open.
 - Owner: existing [backend-time issue](../issues/2026-09-23-record-the-backends-own-time-for-each-call.md); decision candidate [ADR 0109](../planning/adr/0109-per-attempt-timing-and-request-ids.md).
 - Scope: one opt-in in-memory attempt carrier for Rust, six ordinary CLI detail routes and direct C JSON. No new issue, durable sidecar or global ID.
 
@@ -18,7 +18,29 @@ A caller inspecting a slow or failed live judgment can distinguish locally measu
 4. Add explicit `attempts:true` parsing, one-call callback collection and outer success serialization in `libraries/c/src/{call.rs,call/records.rs}` plus the C JSON schema. `call.rs::answer` already passes `CallOptions` through all ten verbs, including the distinct recognize/relate helpers, so the direct C edge can attach one Rust attempt observer without another native operation. `libraries/c/src/ffi.rs` is at 499 nonblank lines and should not gain a new symbol. The top-level request member is true only; false/null/wrong type and inappropriate `usage` combination are Usage before send. Retain typed C facts calls and their ownership. The opt-in array is present and empty on an empty/cache/replay call; default success bytes remain exact. C failure still uses the existing error and facts slot. The **direct C consumer** is `libraries/c/tests/c/driver.c`, exercised by a focused case in `libraries/c/tests/door/batching.rs`; it links `include/thinkthen.h`, calls `thinkthen_call`, checks the three-member JSON and frees the string. This does not prove attempt support in any typed wrapper or copied installed host.
 5. Document the optional fields and conditional old-reader behavior in `specification/{result.md,result.schema.json,backends.md,recording.md,channels.md}` only where the contract changes; update one existing decide details/replay demo under its ADR 0011 how-to. First slice compiles and runs Rust, the six ordinary CLI verbs and direct C JSON. Objective-C `libraries/objective-c/Sources/TTJSON.c::tt_json_call_value` requires exactly two outer members and will reject an opted-in three-member C success; this is an explicit old-reader boundary, not a first-slice migration. Ada/COBOL close **facts**, which is a different boundary because attempts are outside facts. Defer matching wrapper exposure into separately claimed work coordinated with accepted 0300's priced-facts rollout. No assumption that editing the schema upgrades an old installed package. Root claims implementation files and any exact demo path after review.
 
-Landed 0283's settings work is no semantic prerequisite: this option is per Call and CLI `--details`, not a setting. 0289's cap/tally work shares `facade.rs` and send/usage marks; merge its landed implementation before changing those lines, preserve its request admission invariant, and avoid a simultaneous edit. Accepted 0300 remains unbuilt and shares `call_facts.rs`, `engine/usage`, result schema and copied readers; either land one coherent source merge with distinct predicates or sequence the two and reuse one strict-reader migration. 0299 estimated token admission is separate. No SQL/frame work is claimed.
+Landed 0283's settings work is no semantic prerequisite: this option is per Call and CLI `--details`, not a setting. 0289's cap/tally work shares `facade.rs` and send/usage marks; preserve its request admission invariant. The 0300 core/CLI/C source stage is now landed; all public Stop openings, including recognize, relate and bulk details, must retain its optional price state. The 0299 estimated token admission remains separate and callback-free while the usage queue lock is held. No SQL/frame work is claimed.
+
+### Added public declarations
+
+```text
+AttemptOutcome::Ok
+AttemptOutcome::Status
+AttemptOutcome::Transport
+const fn AttemptObservation::ordinal(&self) -> u64
+const fn AttemptObservation::outcome(&self) -> AttemptOutcome
+const fn AttemptObservation::server_ms(&self) -> Option<u64>
+const fn AttemptObservation::status(&self) -> Option<u16>
+const fn AttemptObservation::wall_ms(&self) -> u64
+const fn CallOptions::observe_attempt(self, &'a (dyn Fn(AttemptObservation) + Send + Sync)) -> CallOptions<'a>
+enum AttemptOutcome
+fn AttemptObservation::request_id(&self) -> Option<&str>
+fn AttemptObservation::request_sha256(&self) -> &str
+impl Serialize for AttemptObservation
+impl Serialize for AttemptOutcome
+struct AttemptObservation
+```
+
+The declaration block is the reviewed API addition to be checked independently against the built `--no-default-features` listing. Debug is required by the existing inventory rule; no public constructor or callback-carried facts vector is added.
 
 ## Smallest outside-in proof
 
@@ -52,4 +74,8 @@ The four separate CLI pipelines (`find`, `recognize`, `relate`, `annotate`), fil
 
 ## What the build taught us
 
-To fill during implementation and fresh code review: corrected source assumptions, proof changes, measured growth, reader/package compatibility and remaining owner.
+The 0300 source stage had landed before this build. Its High review caught missed `Stop::begin` price attachments in recognize, relate and bulk details, so the implementation inventoried all current Stop openings and kept the existing `.with_prices(self.prices)` at each one. Attempt observation is a separate optional `CallOptions` callback; no shared facts or pricing validity rule was changed. The 0299 usage queue guard ends at `PreparedAttempt::mark`; attempt callbacks run after the worker result is handed to the caller, never while that guard is held.
+
+The first header helper placed both `ureq` and a vendor-specific header spelling outside their policy boundaries. The corrected source keeps the `get_all` allowlist lookup in `engine/http.rs`, moves only plain-value parsing to `engine/http/observation.rs`, and keeps the vendor spelling in the built-in adapter. Public API inventory proved fifteen new declarations; this ticket supplies the independent normative block. The listener table needed two separate small cases to keep each function below the Clippy line limit: retry plus duplicate headers, and distinct Calls plus reflected IDs. The existing lazy input and terminal error cases now also distinguish caller-thread callback delivery from eager input collection; callback delivery may occur at the next caller poll after a row has been yielded.
+
+The five-row `[5,3,2]` fixture exposed why the parent 413 event must be retained outside its `Err(Error)` and copied only to the rows its two children answer. A later two-send lazy-drop proof first failed with zero delivered callbacks: the scheduler joined workers without draining the bounded handoff. The corrected join drains on the caller thread, including after worker completion, and resumes a drop-time observer panic only after join. The direct C driver proves explicit opt-in for ten JSON verbs with a three-member success; it does not qualify strict typed readers or installed packages. No test hook, new provider, or default event history was introduced. Cohesive source and test extractions preserve the 500-line cap. The [build record](../records/0302-attempt-timing-build.md) distinguishes passing source checks from unexecuted release and host checks; the backend-time issue remains open for four CLI writers, failed-run presentation, sidecar/status, `command_ms`, and typed hosts.

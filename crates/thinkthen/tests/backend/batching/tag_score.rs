@@ -83,6 +83,10 @@ fn tag_expands_wire_questions_but_reads_one_logical_outcome_per_record() {
     );
     let rows = details(&output);
     assert_eq!(rows.len(), 2);
+    assert!(
+        rows.iter()
+            .all(|row| row["meta"]["attempts"][0]["ordinal"] == 1)
+    );
     assert_eq!(rows[0]["value"], json!(["billing"]));
     assert_eq!(rows[1]["value"], json!(["urgent"]));
     assert_eq!(rows[0]["meta"]["batch"]["records"], 2);
@@ -117,6 +121,10 @@ fn score_uses_ordered_levels_and_shares_an_equal_record() {
     );
     let rows = details(&output);
     assert_eq!(rows.len(), 3);
+    assert!(
+        rows.iter()
+            .all(|row| row["meta"]["attempts"][0]["ordinal"] == 1)
+    );
     assert_eq!(rows[0]["value"], rows[2]["value"]);
     assert_ne!(rows[0]["value"], rows[1]["value"]);
     assert_eq!(rows[1]["meta"]["batch"]["records"], 3);
@@ -471,42 +479,5 @@ fn described_labels_and_levels_keep_their_wire_order() {
     assert_eq!(details(&score).len(), 2);
 }
 
-#[test]
-fn a_tag_context_is_shared_evidence_and_keeps_two_logical_rows() {
-    let directory = folder("tag-context");
-    fs::create_dir_all(&directory).expect("context directory");
-    let context = format!("{directory}/context.txt");
-    fs::write(&context, b"Shared catalog\n").expect("context file");
-    let answer = json!({"model":"local-1","answers":{
-        "q1":{"type":"noul","noul":0.9},
-        "q2":{"type":"noul","noul":0.1},
-        "q3":{"type":"noul","noul":0.1},
-        "q4":{"type":"noul","noul":0.9}
-    }})
-    .to_string();
-    let listener = Listener::serving(vec![Canned::ok(&answer)]).expect("listener");
-    let output = run(
-        listener.base(),
-        "tag",
-        &["billing", "urgent"],
-        &["--context", &context],
-        "first\nsecond\n",
-    );
-    assert_eq!(output.status.code(), Some(0), "{}", text(&output.stderr));
-    let requests = listener.requests();
-    assert_eq!(requests.len(), 1);
-    let request: Value = serde_json::from_slice(&requests[0].body).expect("request");
-    assert_eq!(request["state"], "Shared catalog\n");
-    assert_eq!(
-        request["questions"].as_object().map(serde_json::Map::len),
-        Some(4)
-    );
-    let rows = details(&output);
-    assert_eq!(rows.len(), 2);
-    assert_eq!(rows[0]["value"], json!(["billing"]));
-    assert_eq!(rows[1]["value"], json!(["urgent"]));
-    assert!(
-        rows.iter()
-            .all(|row| row["meta"]["context_sha256"].is_string())
-    );
-}
+#[path = "tag_score/context.rs"]
+mod context;

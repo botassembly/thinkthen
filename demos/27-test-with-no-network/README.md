@@ -66,7 +66,7 @@ schema,adapter,url,request,response"
 
 ## Step 2: read where the answer came from
 
-`--details` says so. `meta.cached` is `true` when a recording answered and `false` when a backend did.
+`--details` says so. `meta.cached` is `true` for replay. Live attempts are optional detail; replay has none.
 
 ```bash
 set -euo pipefail
@@ -74,8 +74,8 @@ set -euo pipefail
 env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
   thinkthen decide 'Does this report say what the person did before the problem appeared?' \
   --details --replay recording/ < report.txt \
-  | jq -c '{value, cached: .meta.cached}' \
-  | mustmatch '{"value":true,"cached":true}'
+  | jq -c '{value, cached: .meta.cached, attempts_present: (.meta | has("attempts"))}' \
+  | mustmatch '{"value":true,"cached":true,"attempts_present":false}'
 ```
 
 ## Step 3: know a replay miss when you see one

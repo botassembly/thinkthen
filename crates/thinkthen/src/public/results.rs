@@ -5,6 +5,8 @@ use std::fmt;
 
 mod call;
 pub use call::{Call, Facts};
+mod attempt;
+pub use attempt::{AttemptObservation, AttemptOutcome};
 mod tally;
 pub use tally::{Tally, TallyStart};
 mod member;

@@ -41,6 +41,7 @@ Without `--input FILE` the evidence comes from standard input. When standard inp
 ## Standard output
 
 Standard output holds a bare JSON value. `true`, `"bug"`, and `1.6` are whole outputs. [result.md](result.md) gives the value for each command and the object that `--details` prints in its place.
+The six ordinary judgment verbs may add row-scoped live `meta.attempts` under `--details`; `--facts` remains one terminal `thinkthen.run/1` line on standard error without an attempt list. A terminal failure with no printed detail row does not print a separate attempt array.
 
 `--quiet` suppresses standard output on `decide` and `choose` over one document. Record mode refuses it because no record's answer sets the exit code. No other command takes it, because no other command carries its answer in the exit code. The exit code still reports the answer, and standard error still reports a failure. `--quiet` beside `--details` is a usage error. `--plan` may be added to any command line that is valid without it, and it prints the plan whatever view option stands beside it.
 

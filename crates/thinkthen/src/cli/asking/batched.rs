@@ -268,9 +268,11 @@ fn answered(
         ));
     }
     let last = records.last().map_or(*first, |held| held.at);
-    let cancel = judging.environment.cancel();
+    let observed = super::Observed::new(judging.environment.cancel(), judging.view.details);
+    let cancel = &observed.cancel;
     let whole = match judging.engine.ask_batch(batch, cancel) {
         Ok(whole) => {
+            let attempts = observed.events();
             return answer_rows(
                 judging,
                 reading,
@@ -278,6 +280,7 @@ fn answered(
                 records,
                 whole,
                 Description::new(setting, batch.closed, false, judging.context.is_some()),
+                &attempts,
             );
         }
         Err(error)
@@ -289,7 +292,7 @@ fn answered(
         }
         Err(error) => return Err(Placed::at(failed(error.into(), *first, last), *first)),
     };
-    split_answered(judging, reading, setting, item, whole)
+    split_answered(judging, reading, setting, item, whole, observed.events())
 }
 
 /// Rebuild the two halves within the refused batch's scheduled place.
@@ -299,6 +302,7 @@ fn split_answered(
     setting: Setting,
     item: &Item,
     whole: crate::engine::error::Error,
+    parent_attempts: Vec<crate::public::AttemptObservation>,
 ) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
     let Item {
         batch,
@@ -339,15 +343,23 @@ fn split_answered(
     if let Some(stop) = cancel.stop() {
         return Err(Placed::at(stop.into(), *first));
     }
-    let mut first_answer = judging.engine.ask_batch(&left, cancel).map_err(|error| {
-        let range_last = if matches!(error, crate::engine::error::Error::ReplayMiss(_)) {
-            last
-        } else {
-            left_last
-        };
-        Placed::at(failed(error.into(), *first, range_last), *first)
-    })?;
+    let first_observed = super::Observed::new(cancel, judging.view.details);
+    let mut first_answer = judging
+        .engine
+        .ask_batch(&left, &first_observed.cancel)
+        .map_err(|error| {
+            let range_last = if matches!(error, crate::engine::error::Error::ReplayMiss(_)) {
+                last
+            } else {
+                left_last
+            };
+            Placed::at(failed(error.into(), *first, range_last), *first)
+        })?;
     first_answer.requests_sent += refused_attempts;
+    let mut first_attempts = parent_attempts.clone();
+    first_attempts.extend(first_observed.events());
+    first_attempts.sort_by_key(crate::public::AttemptObservation::ordinal);
+    first_attempts.dedup_by_key(|event| event.ordinal());
     let mut first_done = answer_rows(
         judging,
         reading,
@@ -355,6 +367,7 @@ fn split_answered(
         left_records,
         first_answer,
         description,
+        &first_attempts,
     )?;
     if first_done.stop.is_some() {
         return Ok(first_done);
@@ -364,7 +377,8 @@ fn split_answered(
         first_done.stop = Some(Placed::at(stop.into(), right_first));
         return Ok(first_done);
     }
-    let second_answer = match judging.engine.ask_batch(&right, cancel) {
+    let second_observed = super::Observed::new(cancel, judging.view.details);
+    let second_answer = match judging.engine.ask_batch(&right, &second_observed.cancel) {
         Ok(answer) => answer,
         Err(error) => {
             first_done.stop = Some(Placed::at(
@@ -374,6 +388,10 @@ fn split_answered(
             return Ok(first_done);
         }
     };
+    let mut second_attempts = parent_attempts;
+    second_attempts.extend(second_observed.events());
+    second_attempts.sort_by_key(crate::public::AttemptObservation::ordinal);
+    second_attempts.dedup_by_key(|event| event.ordinal());
     let second_done = answer_rows(
         judging,
         reading,
@@ -381,6 +399,7 @@ fn split_answered(
         right_records,
         second_answer,
         description,
+        &second_attempts,
     )?;
     first_done.records += second_done.records;
     first_done.replayed += second_done.replayed;
@@ -397,6 +416,7 @@ fn answer_rows(
     records: &[Held],
     whole: Answered,
     description: Description,
+    attempts: &[crate::public::AttemptObservation],
 ) -> Result<Completed<Vec<Judged>, Placed>, Placed> {
     let count = records.len();
     let first = records.first().map_or(1, |held| held.at);
@@ -450,6 +470,7 @@ fn answer_rows(
                     RowContext {
                         arrived: held.arrived.as_deref(),
                         batch: batch_meta,
+                        attempts: attempts.to_vec(),
                     },
                 )
                 .map_err(|error| Placed::at(error, held.at))?,

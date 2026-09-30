@@ -65,6 +65,28 @@ fn a_too_large_batch_halves_once_and_counts_the_refused_request() {
                     "{status}"
                 );
             }
+            for (place, row) in printed.iter().enumerate() {
+                let ordinals: Vec<_> = row["meta"]["attempts"]
+                    .as_array()
+                    .expect("live split attempts")
+                    .iter()
+                    .map(|event| event["ordinal"].as_u64())
+                    .collect();
+                assert_eq!(
+                    ordinals,
+                    if place < 3 {
+                        [Some(1), Some(2)]
+                    } else {
+                        [Some(1), Some(3)]
+                    }
+                );
+                assert_eq!(row["meta"]["attempts"][0]["outcome"], "status");
+                assert_eq!(row["meta"]["attempts"][0]["status"], status);
+                assert_ne!(
+                    row["meta"]["attempts"][0]["request_sha256"],
+                    row["meta"]["attempts"][1]["request_sha256"]
+                );
+            }
             let attempts: Vec<_> = printed
                 .iter()
                 .map(|row| row["meta"]["requests_sent"].as_u64())
@@ -176,6 +198,19 @@ fn a_split_recording_replays_byte_for_byte() {
         text(&recorded.stderr)
     );
     assert_eq!(listener.count(), 3);
+    let detailed_replay = decide(
+        listener.base(),
+        &["--batch", "5", "--replay", &directory, "--details"],
+        &[],
+        &input,
+    );
+    assert_eq!(detailed_replay.status.code(), Some(0));
+    assert!(
+        details(&detailed_replay)
+            .iter()
+            .all(|row| row["meta"].get("attempts").is_none())
+    );
+    assert_eq!(listener.count(), 3, "replay creates no live attempt");
     let replayed = decide(
         listener.base(),
         &["--batch", "5", "--replay", &directory],

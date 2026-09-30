@@ -1,7 +1,7 @@
 //! Private request execution, recording, locking, and bounded scheduling.
 
 use std::fmt;
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::thread::{self, ThreadId};
 use std::time::{Duration, Instant};
@@ -45,10 +45,31 @@ pub(crate) struct Cancel<'a> {
     send_budget: Option<(crate::public::SendBudget, Option<u64>)>,
     process_budget: Option<crate::engine::send_budget::ProcessBudget>,
     facts: Option<CallFacts>,
+    attempts: Arc<AtomicU64>,
+    attempt_sink: Option<AttemptSink>,
+    attempt_digest: Option<Arc<str>>,
     #[cfg(test)]
     blocked: Option<std::sync::mpsc::Sender<()>>,
     #[cfg(test)]
     keys: Arc<AtomicUsize>,
+}
+
+/// Private transport-only handoff. Its closure never invokes a host callback.
+#[derive(Clone)]
+pub(crate) struct AttemptSink(Arc<dyn Fn(crate::public::AttemptObservation) + Send + Sync>);
+
+impl fmt::Debug for AttemptSink {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter.write_str("AttemptSink(<withheld>)")
+    }
+}
+
+impl AttemptSink {
+    pub(crate) fn new(
+        send: impl Fn(crate::public::AttemptObservation) + Send + Sync + 'static,
+    ) -> Self {
+        Self(Arc::new(send))
+    }
 }
 
 /// A host's interrupt check and the one thread that may run it.
@@ -78,6 +99,40 @@ impl Drop for Sending<'_> {
 }
 
 impl<'a> Cancel<'a> {
+    pub(crate) fn with_attempt_sink(&self, sink: AttemptSink) -> Self {
+        Self {
+            attempt_sink: Some(sink),
+            ..self.clone()
+        }
+    }
+
+    pub(crate) fn with_attempt_digest(&self, digest: &str) -> Self {
+        if self.attempt_sink.is_none() {
+            return self.clone();
+        }
+        Self {
+            attempt_digest: Some(Arc::from(digest)),
+            ..self.clone()
+        }
+    }
+
+    /// Allocate beside the durable send mark, before transport begins.
+    pub(crate) fn attempt_started(&self) -> Option<u64> {
+        self.attempt_sink.as_ref()?;
+        self.attempt_digest.as_ref()?;
+        Some(self.attempts.fetch_add(1, Ordering::Relaxed) + 1)
+    }
+
+    /// Hand an owned event to the private sink after transport and body read.
+    pub(crate) fn attempt_completed(&self, observation: crate::public::AttemptObservation) {
+        if let Some(sink) = &self.attempt_sink {
+            (sink.0)(observation);
+        }
+    }
+
+    pub(crate) fn attempt_digest(&self) -> Option<&str> {
+        self.attempt_digest.as_deref()
+    }
     #[cfg(test)]
     pub(crate) fn fire(&self) {
         self.fired.store(true, Ordering::Release);

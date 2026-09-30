@@ -6,11 +6,12 @@
 //! value is the command's bare answer, and `tests/door/` compares its bytes.
 
 use std::collections::BTreeMap;
+use std::sync::Mutex;
 
 use serde_json::json;
 use serde_json::value::RawValue;
 use thinkthen::{
-    BatchSetting, CallOptions, CancelToken, Engine, Facts, Judgment, LoadedQuestion, Question,
+    AttemptObservation, BatchSetting, CallOptions, CancelToken, Engine, Facts, Judgment, LoadedQuestion, Question,
     QuestionSet,
 };
 
@@ -33,7 +34,7 @@ const VERBS: [&str; 10] = [
 ];
 
 /// Each envelope key and the verbs it goes with.
-const ENVELOPE: [(&str, &[&str]); 6] = [
+const ENVELOPE: [(&str, &[&str]); 7] = [
     (
         "evidence",
         &["decide", "choose", "score", "tag", "recognize"],
@@ -48,6 +49,7 @@ const ENVELOPE: [(&str, &[&str]); 6] = [
     ("details", &["decide", "choose", "score", "tag"]),
     ("usage", &[]),
     ("call", &VERBS),
+    ("attempts", &VERBS),
 ];
 
 type Members = BTreeMap<String, Box<RawValue>>;
@@ -58,6 +60,7 @@ struct Request {
     envelope: Members,
     question: Members,
     call: Option<Controls>,
+    attempts: bool,
 }
 
 struct Controls {
@@ -90,7 +93,19 @@ pub(crate) fn call(
     }
     let request = split(members)?;
     let options = controls(&request, door::options(deadline_ms, token)?)?;
+    let attempts = Mutex::new(Vec::<AttemptObservation>::new());
+    let collect = |event| {
+        if let Ok(mut held) = attempts.lock() { held.push(event); }
+    };
+    let options = if request.attempts { options.observe_attempt(&collect) } else { options };
     let (value, facts) = answer(engine, &request, options)?;
+    if request.attempts {
+        let mut events = attempts.lock().map_err(|_| Failure::defect("attempt collection failed"))?;
+        events.sort_by_key(AttemptObservation::ordinal);
+        let events = serde_json::to_string(&*events)
+            .map_err(|_| Failure::defect("attempts could not be written"))?;
+        return Ok(format!("{{\"value\":{value},\"facts\":{},\"attempts\":{events}}}", crate::failures::facts_json(&facts)));
+    }
     Ok(format!(
         "{{\"value\":{value},\"facts\":{}}}",
         crate::failures::facts_json(&facts)
@@ -113,6 +128,16 @@ fn controls<'a>(
 }
 
 fn split(members: Members) -> Result<Request, Failure> {
+    let attempts = match members.get("attempts") {
+        None => false,
+        Some(raw) => match serde_json::from_str::<bool>(raw.get()) {
+            Ok(true) => true,
+            _ => return Err(Failure::usage("attempts takes true")),
+        },
+    };
+    if attempts && members.contains_key("usage") {
+        return Err(Failure::usage("an attempts request takes no usage key"));
+    }
     let named: Vec<&str> = VERBS
         .into_iter()
         .filter(|verb| members.contains_key(*verb))
@@ -183,6 +208,7 @@ fn split(members: Members) -> Result<Request, Failure> {
         envelope,
         question,
         call,
+        attempts,
     })
 }
 
