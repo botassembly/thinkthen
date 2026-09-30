@@ -38,12 +38,6 @@ def body(records: list[str], shared: str | None = None) -> str:
                       separators=(",", ":"), ensure_ascii=False)
 
 
-def singleton_body(record: str) -> str:
-    return json.dumps({"state": record, "model": MODEL, "questions":
-                       {"q1": {"type": "noul", "instructions": QUESTION}}},
-                      separators=(",", ":"), ensure_ascii=False)
-
-
 def main() -> None:
     mode, folder = sys.argv[1:]
     saved = entries(folder)
@@ -54,7 +48,7 @@ def main() -> None:
         expected = {body(["b", "a", "c", "d"])}
         assert len(saved) == 1 and {raw for _, raw in saved} == expected, saved
     elif mode == "singleton":
-        expected = {singleton_body(record) for record in ["b", "a", "c", "d"]}
+        expected = {body([record]) for record in ["b", "a", "c", "d"]}
         assert len(saved) == 4 and {raw for _, raw in saved} == expected, saved
     elif mode == "one_of_packed":
         expected = {body(["b", "a"]), body(["c", "d"])}

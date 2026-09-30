@@ -21,12 +21,12 @@ say(good=good, invalid=invalid, repeated=repeated, conflict=conflict, choice=cho
 """, environment(backend))
     plan = json.loads(held["good"][0][0])
     expect({key: value for key, value in plan.items() if key != "first_body_utf8"},
-           {"records": 1, "requests": 1, "estimated_bytes": 120,
-            "estimated_input_tokens": {"lower": 61, "upper": 109}, "upper_bound": False}, "P1 native JSON text")
+           {"records": 1, "requests": 1, "estimated_bytes": 182,
+            "estimated_input_tokens": {"lower": 93, "upper": 166}, "upper_bound": False}, "P1 native JSON text")
     expect(plan["first_body_utf8"],
-           '{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}',
-           "independent 120-byte first body")
-    expect(len(plan["first_body_utf8"].encode()), 120, "P1 first body byte count")
+           '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"Refund me please.\\". asks for a refund"}}}',
+           "independent 182-byte first body")
+    expect(len(plan["first_body_utf8"].encode()), 182, "P1 first body byte count")
     choice = json.loads(held["choice"][0][0])
     expect((choice["records"], choice["requests"]), (1, 1), "choose settings plan")
     expect(all(member in choice["first_body_utf8"] for member in ("billing", "shipping")), True,
@@ -209,7 +209,7 @@ say(unknown=run(db, "SELECT thinkthen_decide(?,?,?)", ("asks for a refund", "Ref
     expect(held["good"], [[1]], "ordinary answer")
     expect(held["choose"], [["billing"]], "choice members from settings")
     bodies = backend.capture()
-    expect(bodies[0], '{"state":"Refund me please.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"asks for a refund"}}}', "independent one-record body")
+    expect(bodies[0], '{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \\"Refund me please.\\". asks for a refund"}}}', "independent one-record body")
     expect(len(bodies), 2, "only valid calls sent")
     expect(backend.close(), 2, "invalid settings and spent deadline sent nothing")
 
