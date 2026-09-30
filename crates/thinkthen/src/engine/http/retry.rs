@@ -27,8 +27,9 @@ pub(super) fn honored(millis: Option<&str>, seconds: Option<&str>) -> Option<Dur
 
 /// The server's valid delay is a floor; cap only an unheaded local wait.
 ///
-/// The unheaded wait is spread between half and all of its capped doubling by
-/// `draw`, so parallel workers do not resend together.
+/// Each unheaded wait is drawn at random, by `draw`, between half and all of
+/// its capped doubling, so separate processes do not resend together; within
+/// one process the URL's gate still opens once for all waiting requests.
 pub(super) fn bounded_wait(
     asked: Option<Duration>,
     exponential: Duration,
