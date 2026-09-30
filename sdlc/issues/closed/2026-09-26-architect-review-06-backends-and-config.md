@@ -1,4 +1,4 @@
-Status: open for items 3 and 5 and the page half of item 4. Filed 2026-09-26 by the marketing lead from a fresh architect review. Items 1 and 2 are done: ticket 0160 landed on 2026-09-26 (`sdlc/records/0160-build-the-answer-contract-holds.md`). The code half of item 4 is done by Quick Fix qf-config-ruby-issue-status (`sdlc/records/qf-config-ruby-issue-status.md`): the refusal names the field. The settings page half waits for H4.
+Status: closed 2026-09-30. Item 3 replaced by ADR 0111, which withdraws folder binding. Item 4's page half fixed in `specification/settings.md`, and item 5 fixed by ticket 0154.
 
 # Architect review 06: backends and configuration
 

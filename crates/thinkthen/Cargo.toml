@@ -42,6 +42,8 @@ workspace = true
 [dev-dependencies]
 conformance-backend = { path = "../../conformance/backend" }
 proptest = { version = "1.11.0", default-features = false, features = ["std"] }
+# ADR 0112: derives the result schema in a unit test only. Never `preserve_order`.
+schemars = { version = "=1.2.2", features = ["raw_value"] }
 signal-hook = "0.3.18"
 
 [target."cfg(unix)".dev-dependencies]

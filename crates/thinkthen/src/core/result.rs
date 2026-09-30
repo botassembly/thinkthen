@@ -27,6 +27,7 @@ pub(crate) const SCHEMA: &str = "thinkthen.result/1";
 
 /// What the backend reported it spent on the judgment.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "tokenUsage"))]
 pub(crate) struct Usage {
     input_tokens: u64,
     output_tokens: u64,
@@ -140,9 +141,11 @@ impl RequestMeta {
 
 /// The whole request a detailed batched row rode in.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "batchMeta"))]
 pub(crate) struct BatchMeta {
     setting: BatchSetting,
     records: usize,
+    #[cfg_attr(test, schemars(range(min = 1)))]
     position: usize,
     closed: &'static str,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -192,6 +195,8 @@ impl BatchMeta {
 
 /// One annotate request's group and whole-request batch facts.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "annotateBatchMeta"))]
 pub(crate) struct AnnotateBatchMeta {
     group: usize,
     request: String,
@@ -215,6 +220,8 @@ impl AnnotateBatchMeta {
 
 /// One named answer inside an annotated detailed row.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "annotateSuccess"))]
 pub(crate) struct AnnotatedAnswer {
     value: Value,
     question: Question,
@@ -225,6 +232,8 @@ pub(crate) struct AnnotatedAnswer {
 
 /// One failed question inside an annotated detailed row.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "annotateFailure", deny_unknown_fields))]
 pub(crate) struct AnnotatedFailure {
     question: Question,
     failure: BackendFailure,
@@ -246,6 +255,7 @@ impl AnnotatedFailure {
 /// A successful or failed named entry inside detailed `annotate` output.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "annotateEntry"))]
 pub(crate) enum AnnotatedEntry {
     /// A successful answer keeps the established detailed shape.
     Answered(AnnotatedAnswer),
@@ -283,6 +293,8 @@ type AnnotatedAnswered<'a> = (&'a Question, &'a Answer, Option<Threshold>, &'a s
 /// A successful or failed named value in bare `annotate` output.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "annotatedField"))]
 pub(crate) enum AnnotatedValue {
     /// A value read from a usable backend answer.
     Answered(Value),
@@ -312,6 +324,7 @@ impl AnnotatedAnswer {
 
 /// Aggregate metadata for one annotated record.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "annotateMeta"))]
 pub(crate) struct AnnotateMeta {
     tool: String,
     questions_sha256: String,
@@ -375,6 +388,8 @@ impl AnnotateMeta {
 
 /// The detailed result from applying a question set to one record.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "annotateDetails"))]
 pub(crate) struct AnnotateResult {
     schema: &'static str,
     input: Record,
@@ -403,7 +418,14 @@ impl AnnotateResult {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct NamedValues(Vec<(String, AnnotatedValue)>);
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "annotatedRow"))]
+pub(crate) struct NamedValues(
+    #[cfg_attr(
+        test,
+        schemars(with = "std::collections::BTreeMap<String, AnnotatedValue>")
+    )]
+    Vec<(String, AnnotatedValue)>,
+);
 
 impl NamedValues {
     /// Keep named values in question-set order.
@@ -419,7 +441,14 @@ impl Serialize for NamedValues {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-struct NamedAnswers(Vec<(String, AnnotatedEntry)>);
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
+struct NamedAnswers(
+    #[cfg_attr(
+        test,
+        schemars(with = "std::collections::BTreeMap<String, AnnotatedEntry>")
+    )]
+    Vec<(String, AnnotatedEntry)>,
+);
 impl Serialize for NamedAnswers {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(Some(self.0.len()))?;
@@ -432,6 +461,8 @@ impl Serialize for NamedAnswers {
 
 /// One judgment, in the shape `specification/result.md` prints.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "decisionDetails"))]
 pub(crate) struct DecisionResult {
     schema: &'static str,
     value: Value,

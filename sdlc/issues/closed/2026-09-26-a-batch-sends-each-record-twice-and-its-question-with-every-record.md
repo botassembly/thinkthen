@@ -1,6 +1,6 @@
 # A batch sends each record twice and its question with every record
 
-Status: Settled for `decide`, `filter` and `rank` by ADR 0055, accepted 2026-09-26 by Ian's ruling. Ticket 0146 builds it. Open for `choose` and `tag` until B8 and B9 measure them on long records. Filed 2026-09-26 from the ten-function efficiency audit under ADR 0054, local experiment 275. Round 2 added the same day measures long records, repeats and record orders.
+Status: closed 2026-09-30. Replaced by ADR 0111 section 1: every function quotes each record in its own question under a fixed state. The choose and tag accuracy trade-off from experiment 275 is Ian's morning item.
 
 ## What happens today
 

@@ -1,6 +1,6 @@
 # Surfaces write judged text to disk without saying so
 
-Status: open. The disclosure and off/move instructions landed with reviewed 0163 source `0292cba2`. SQL cache defaults and expiry decisions remain open; SQL off switches belong to 0149.
+Status: closed 2026-09-30. README disclosures landed with ticket 0163. Ticket 0318 replaces the SQL cache default. ADR 0111 records `taken_at`; expiry waits for its own ticket.
 
 ## What happens
 

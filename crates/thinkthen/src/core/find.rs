@@ -2,7 +2,6 @@
 
 use std::borrow::Cow;
 
-use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use sha2::{Digest as _, Sha256};
 use thiserror::Error;
@@ -180,28 +179,26 @@ struct FindQuestion<'a> {
     none: bool,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findQuestion"))]
+#[serde(tag = "verb", rename = "find")]
 struct FindQuestionOwned {
     text: QuestionText,
     none: bool,
 }
 
-impl Serialize for FindQuestionOwned {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(3))?;
-        map.serialize_entry("verb", "find")?;
-        map.serialize_entry("text", &self.text)?;
-        map.serialize_entry("none", &self.none)?;
-        map.end()
-    }
-}
-
 /// The mapped find answer and its selected zero-based unit.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findAnswer"))]
+#[serde(tag = "kind", rename = "find")]
 pub(crate) struct FindAnswer {
+    #[serde(skip)]
     selected: Option<usize>,
     pick: String,
+    #[serde(serialize_with = "ordered")]
+    #[cfg_attr(test, schemars(with = "std::collections::BTreeMap<String, f64>"))]
     probabilities: Vec<(String, f64)>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     confidence: Option<f64>,
 }
 
@@ -219,28 +216,14 @@ impl FindAnswer {
     }
 }
 
-impl Serialize for FindAnswer {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(4))?;
-        map.serialize_entry("kind", "find")?;
-        map.serialize_entry("pick", &self.pick)?;
-        map.serialize_entry("probabilities", &Ordered(&self.probabilities))?;
-        if let Some(confidence) = self.confidence {
-            map.serialize_entry("confidence", &confidence)?;
-        }
-        map.end()
-    }
-}
-
-struct Ordered<'a>(&'a [(String, f64)]);
-impl Serialize for Ordered<'_> {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        serializer.collect_map(self.0.iter().map(|(label, value)| (label, value)))
-    }
+/// Write the probabilities as one object, in input order.
+fn ordered<S: Serializer>(entries: &[(String, f64)], serializer: S) -> Result<S::Ok, S::Error> {
+    serializer.collect_map(entries.iter().map(|(label, value)| (label, value)))
 }
 
 /// One dedicated detailed find result.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "findDetails"))]
 pub(crate) struct FindResult {
     schema: &'static str,
     value: Option<Record>,

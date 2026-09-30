@@ -5,8 +5,13 @@
 //! repository policy check enforces that boundary across this source tree.
 
 #![forbid(unsafe_code)]
-#![forbid(clippy::disallowed_methods, clippy::disallowed_types)]
-#![forbid(clippy::disallowed_macros, clippy::indexing_slicing)]
+#![forbid(clippy::indexing_slicing)]
+// ADR 0112: the unit tests derive the result schema, and the derived code builds
+// dynamic JSON. `policy.py` still scans every core source, tests included, for
+// file, environment, socket, clock, and process paths.
+#![cfg_attr(not(test), forbid(clippy::disallowed_methods))]
+#![cfg_attr(not(test), forbid(clippy::disallowed_types))]
+#![cfg_attr(not(test), forbid(clippy::disallowed_macros))]
 #![forbid(clippy::allow_attributes_without_reason)]
 
 pub(crate) mod adapters;
@@ -59,6 +64,8 @@ pub(crate) use crate::core::digest::bytes_sha256;
 pub(crate) use crate::core::digest::question_sha256;
 pub(crate) use crate::core::digest::question_sha256_with_profile;
 pub(crate) use crate::core::find::Find;
+#[cfg(test)]
+pub(crate) use crate::core::find::FindResult;
 pub(crate) use crate::core::json::Json;
 #[cfg(feature = "cli")]
 pub(crate) use crate::core::json::JsonError;

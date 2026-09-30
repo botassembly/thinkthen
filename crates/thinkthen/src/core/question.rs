@@ -104,6 +104,8 @@ struct Label {
 /// order moves the odds and a run with a changed list is a different
 /// measurement.
 #[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(inline, with = "Vec<String>"))]
 pub(crate) struct Labels(Vec<Label>);
 
 /// `choose --options` reads labels from a record, and a record is evidence.
@@ -282,6 +284,7 @@ fn bare(values: Vec<String>) -> Vec<Label> {
 /// What the judgment was asked, and which of the three shapes it takes.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(tag = "verb", rename_all = "snake_case")]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "question"))]
 pub(crate) enum Question {
     /// Ask whether the question holds for the evidence.
     Decide {

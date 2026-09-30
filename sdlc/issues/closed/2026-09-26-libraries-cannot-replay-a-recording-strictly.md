@@ -1,6 +1,6 @@
 # Libraries cannot replay a recording strictly
 
-Status: Open. Filed 2026-09-26 by the marketing session while building smoke tests for the website's code examples.
+Status: closed 2026-09-30. Fixed by ticket 0148 for libraries and C and ticket 0149 for SQL (`thinkthen_replay`, `thinkthen.replay`, `thinkthen_configure`).
 
 ## What happens
 

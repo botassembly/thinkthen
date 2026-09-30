@@ -1,6 +1,6 @@
 # Batching and the envelope changed the C door contract on main
 
-Status: intended changes confirmed by the queue owner; remaining integration work is tracked under J8 and the existing per-port package issues. This is a consolidated drift record from the pre-merge re-pin wave. Filed 2026-09-28. The queue owner confirms intent per change and folds the fixture/example updates into the language merge. Not a defect claim: every change has specification authority at pin `71f25087`.
+Status: closed 2026-09-30. Replaced by ADR 0111 and ADR 0112: the port pass with ticket 0291 changes each binding once. Per-port release work stays in the port issues.
 
 ## What changed, with authority
 

@@ -7,6 +7,7 @@ use crate::core::text::{ModelName, Url};
 
 /// Who answered, how, at what cost, from a backend or from a recording.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "meta"))]
 pub(crate) struct Meta {
     tool: String,
     question_sha256: String,

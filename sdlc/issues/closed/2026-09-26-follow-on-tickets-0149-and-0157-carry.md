@@ -1,6 +1,6 @@
 # What follow-on tickets 0149 and 0157 carry
 
-Status: Open. Filed 2026-09-26 by the coordinator, so that work other tickets defer to 0149 and 0157 is findable before those tickets exist.
+Status: closed 2026-09-30. Tickets 0149 and 0157 landed. The DuckDB ARM64 and macOS C API targets move to the release issue.
 
 Tickets 0148, 0154 and 0155 defer parts of their scope to two tickets that are not written yet. This issue lists what each must carry. The coordinator writes each ticket from this list and closes this issue when both land.
 

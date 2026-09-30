@@ -12,7 +12,7 @@ use crate::profile;
 mod config;
 mod dry_run;
 mod input;
-mod result;
+pub(crate) mod result;
 
 pub(crate) fn run(
     arguments: &RelateArguments,

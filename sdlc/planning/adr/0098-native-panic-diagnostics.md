@@ -1,7 +1,7 @@
 # ADR 0098: Scope caught native panic diagnostics to the owning binding
 
 - Status: Accepted design at `5fef9e7a` by independent High follow-up review; the coordinator accepted the routine bounded implementation. Fresh High code review accepted runtime source and evidenced Linux x86-64 C/SQLite packages at `d0709b69`; other supported package proof remains open in ticket 0226.
-- Context: [ticket 0226](../../tickets/0226-native-panic-diagnostics.md), the [panic-diagnostics issue](../../issues/2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md), and accepted ADR 0081's engine and Linux C++ bridge scopes.
+- Context: [ticket 0226](../../tickets/0226-native-panic-diagnostics.md), the [panic-diagnostics issue](../../issues/closed/2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md), and accepted ADR 0081's engine and Linux C++ bridge scopes.
 
 ## Decision
 

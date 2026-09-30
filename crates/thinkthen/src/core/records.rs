@@ -113,6 +113,7 @@ pub(crate) enum RecordError {
 /// One record, as it arrived, which `--details` prints back under `input`.
 #[derive(Clone, PartialEq, Serialize)]
 #[serde(transparent)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "Json"))]
 pub(crate) struct Record(Held);
 
 /// A record is evidence, so `Debug` withholds its bytes and keeps its kind

@@ -26,6 +26,7 @@ pub(crate) use questions::{
 pub(crate) const ENTITY: &str = "ENTITY";
 
 #[derive(Clone, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "entity"))]
 pub(crate) struct RecognizedName {
     pub(crate) text: String,
     pub(crate) start: usize,
@@ -104,6 +105,11 @@ pub(crate) fn step_two_questions(
 
 /// Labels and their probabilities, in the order they were asked.
 #[derive(Clone, Default, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(
+    test,
+    schemars(inline, with = "std::collections::BTreeMap<String, f64>")
+)]
 pub(crate) struct Odds(pub(crate) Vec<(String, f64)>);
 
 /// An edge label is evidence, so `Debug` withholds every label.
@@ -135,6 +141,7 @@ impl Odds {
 
 /// One found name's step-2 answers, as `--details` lists them.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "nameOdds"))]
 pub(crate) struct NameOdds {
     pub(crate) start: usize,
     pub(crate) end: usize,
@@ -144,6 +151,7 @@ pub(crate) struct NameOdds {
 
 /// One piece's tag probabilities, as `--details` lists them.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "pieceOdds"))]
 pub(crate) struct PieceOdds {
     pub(crate) start: usize,
     pub(crate) end: usize,

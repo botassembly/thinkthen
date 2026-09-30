@@ -12,6 +12,7 @@ use crate::core::{
 };
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateFields"))]
 pub(crate) struct RelateFields {
     name: Pointer,
     kind: Pointer,
@@ -47,6 +48,8 @@ pub(crate) struct RelateSpec {
 ///
 /// Entities, the model, and every runtime backend setting stay outside it.
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "relateQuestion"))]
 pub(crate) struct RelateQuestion<'a> {
     verb: &'static str,
     fields: Option<&'a RelateFields>,

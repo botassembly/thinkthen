@@ -6,6 +6,7 @@ use crate::core::records::Record;
 
 /// The default row for a value command over a record stream.
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "recordRow"))]
 pub(crate) struct RecordValue<T> {
     input: Record,
     value: T,

@@ -1,6 +1,6 @@
 # 0254 current DuckDB bridge panic-payload preflight
 
-Status: design preparation only at main `4ee425e3`. No product source, tests, public documentation, package or artifact changed. This prepares [ticket 0254](../tickets/0254-duckdb-bridge-panic-payloads.md) against the existing [panic-diagnostics issue](../issues/2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md) for fresh High design review.
+Status: design preparation only at main `4ee425e3`. No product source, tests, public documentation, package or artifact changed. This prepares [ticket 0254](../tickets/0254-duckdb-bridge-panic-payloads.md) against the existing [panic-diagnostics issue](../issues/closed/2026-09-27-panic-diagnostics-can-copy-payloads-across-host-boundaries.md) for fresh High design review.
 
 ## Current product path and failure mechanism
 

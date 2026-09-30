@@ -7,13 +7,16 @@ use crate::failure::Failure;
 use crate::schedule::Judged;
 
 #[derive(Serialize)]
-struct Row<'a> {
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "recordError", deny_unknown_fields))]
+pub(crate) struct Row<'a> {
     schema: &'static str,
     at: usize,
     failure: Miss<'a>,
 }
 
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "recordFailure"))]
 struct Miss<'a> {
     kind: &'static str,
     cause: &'static str,

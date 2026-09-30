@@ -1,6 +1,6 @@
 Disposition, 2026-09-27: ticket 0169 settles register 46, 56 and 116 after fresh review of `84de0a7d`. The stop reports the signal without a guessed record, SIGTERM follows SIGINT, and the second-signal escape is documented and proved. Already-sent requests still finish within their attempt timeout by the retained contract. A first-signal waiting notice and cancellable socket reads remain deferred; this umbrella issue stays open for its other findings.
 
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Ticket 0169 (`sdlc/tickets/0169-a-signal-stops-the-command-plainly.md`) carries the stop line after Ctrl-C and the second-press escape.
+Status: closed 2026-09-30. Items 1 and 2 fixed by `893b3416d` and `b4c6b48eb`: a closed pipe stops the run, and `--lines` skips blank lines. Item 3 is built as `--on-error continue`; its severity 3 titles stay in the severity 3 roll-up.
 
 # Architect review 01: `filter` and stream processing
 

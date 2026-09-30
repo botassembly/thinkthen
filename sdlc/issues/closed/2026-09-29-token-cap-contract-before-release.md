@@ -1,12 +1,12 @@
 # Settle the token-cap contract before the public release
 
-Status: Open. Ian requested a review of experiment2038's follow-up recommendations and asked to settle useful public API changes before release. The independent assessment found no existing issue owning this distinct contract. Experiment2038 `questions.md`, ruling6, accepts a no-send preview and process request cap for0.1 and names the token cap as the first follow-up. This issue records that follow-up; it does not silently replace the request cap with an unproved spend guarantee.
+Status: closed 2026-09-30. Fixed by ticket 0311 (`6f62e74fa`): `THINKTHEN_MAX_ESTIMATED_INPUT_TOKENS_TOTAL` reaches every surface through `from_env`. Installed-package qualification moves to the release issue.
 
 ## Problem
 
 Requests vary in size, so `max_requests_total` cannot bound input tokens or money. The current send budget atomically reserves actual attempts, including retries. Cache/replay answers send nothing. Reported token usage arrives after a response and may be absent, including on failed requests. Output tokens are unknown before the call. A process or PostgreSQL backend limit also differs from an account-wide limit.
 
-Relevant source at main `9018c1e4c`: `crates/thinkthen/src/public/options/budget.rs`, `crates/thinkthen/src/engine/request.rs`, and `crates/thinkthen/src/engine/usage/facts.rs`. The accepted request-cap/tally draft is0289. The [follow-up assessment](../records/2026-09-29-sql-redesign-followup-assessment.md) maps adjacent work without duplicating it.
+Relevant source at main `9018c1e4c`: `crates/thinkthen/src/public/options/budget.rs`, `crates/thinkthen/src/engine/request.rs`, and `crates/thinkthen/src/engine/usage/facts.rs`. The accepted request-cap/tally draft is0289. The [follow-up assessment](../../records/2026-09-29-sql-redesign-followup-assessment.md) maps adjacent work without duplicating it.
 
 ## Outcome
 
@@ -16,7 +16,7 @@ Specify reservation and settlement for concurrent calls, retries, refusal splits
 
 ## Proof and routing
 
-Schedule the API/design decision beside the SQL/frame foundation; implementation follows0289's accepted reservation/tally work. Design0299 is accepted after fresh High review at `f49eaccf2`, with its [preparation record](../records/0299-token-cap-preparation.md) on main. The ticket remains on its pushed branch until implementation. Current0.1 request-cap and preview work need not wait for speculative token enforcement. Any change to Ian's recorded first-follow-up release boundary needs an explicit reviewed disposition, not an assumed deadline.
+Schedule the API/design decision beside the SQL/frame foundation; implementation follows0289's accepted reservation/tally work. Design0299 is accepted after fresh High review at `f49eaccf2`, with its [preparation record](../../records/0299-token-cap-preparation.md) on main. The ticket remains on its pushed branch until implementation. Current0.1 request-cap and preview work need not wait for speculative token enforcement. Any change to Ian's recorded first-follow-up release boundary needs an explicit reviewed disposition, not an assumed deadline.
 
 Use one bounded loopback table with independently counted attempts: two concurrent reservations, a retry/split boundary, cache/replay with zero sends, absent usage, a failed response, and output arriving after admission. Derive expected values independently of the implementation. Do not repeat the full table in every wrapper or run a paid/saturation campaign. Implementation closure requires code, review and matching host conversion proof; an accepted design alone does not close this issue.
 

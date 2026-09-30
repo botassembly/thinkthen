@@ -22,7 +22,9 @@ mod config;
 mod dry_run;
 
 #[derive(Debug, Serialize)]
-struct Detailed<'a> {
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "recognizeDetails"))]
+pub(crate) struct Detailed<'a> {
     schema: &'static str,
     value: &'a Recognized,
     #[serde(skip_serializing_if = "Option::is_none")]

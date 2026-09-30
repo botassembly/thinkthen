@@ -144,6 +144,17 @@ Asked: add all six before the repository goes public. The changelog names breaki
 
 Done when: the six files exist on main, and the repository settings are filled.
 
+## 16. Package proofs carried from closed issues
+
+These proofs moved here on 2026-09-30 when their source fixes closed their issues.
+
+- Panic secrecy (tickets 0306 and 0310): macOS C and SQLite packages, DuckDB ARM64 and macOS packages, and the Python, Ruby, TypeScript and R target packages.
+- Token cap (ticket 0311): installed-package proof on each surface.
+- Package gates (ticket 0313): the Python pandas 2 lane needs one networked `uv pip install pandas==2.3.3`. Minimal child environments for the release families: UTF-8 arguments, compiler overrides, unchanged dependency locks, no ambient `PYTHONWARNINGS`.
+- SQL settings (tickets 0149 and 0157): DuckDB's ARM64 and macOS packages still take the C API path.
+
+Done when: each item has a passing receipt on its target.
+
 ## Already done
 
 - Gate on push: ticket 0100 (`d7d2197a`) made `gate.yml` run only by hand and closed `closed/2026-09-22-stop-github-actions-on-push.md`.

@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: closed 2026-09-30. Item 1 replaced by ADR 0111 (no marker; `cache convert`). Item 2 fixed by ticket 0163's drift record. Item 3 stays in the severity 3 roll-up.
 
 # Architect review 09: record, replay and testing
 

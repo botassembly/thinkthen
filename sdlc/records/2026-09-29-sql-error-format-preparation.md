@@ -1,6 +1,6 @@
 # SQL error-format follow-up
 
-Source-read preparation at main `3af779c8f`. No new runtime proof, independent preparation review or issue closure is claimed. ADR 0105 section 8 already settles the outcome. The [SQL usability issue](../issues/2026-09-28-sql-interface-usability-before-0-1.md) retains this criterion; register 117's catalog follows the runtime format.
+Source-read preparation at main `3af779c8f`. No new runtime proof, independent preparation review or issue closure is claimed. ADR 0105 section 8 already settles the outcome. The [SQL usability issue](../issues/closed/2026-09-28-sql-interface-usability-before-0-1.md) retains this criterion; register 117's catalog follows the runtime format.
 
 Ordinary ThinkThen SQL failures use `thinkthen <kind>: <message> (retryable: yes|no)`. The shared corpus's exact plain removal messages remain exceptions. Host-native SQL syntax and binding diagnostics remain the host's errors. Keep the existing six kinds, SQLSTATE and SQLite code maps, structured try-details fields, and secret-safe messages.
 

@@ -31,7 +31,7 @@ Clippy settings: functions up to 90 lines, 6 arguments, cognitive complexity 20,
 
 The binary writes to standard output through one locked writer passed down as a value. It never calls the print macros.
 
-Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- -D warnings`, and `lint` compares the tables in `Cargo.toml` and `clippy.toml` against the accepted copies so nobody weakens them quietly. The package allows the disallowed-path lint groups at its root and the private core forbids them, because Clippy reads one configuration for the whole package. `policy.py` also checks every core source and dependency root.
+Enforced by: `cargo clippy --locked --workspace --all-targets --all-features -- -D warnings`, and `lint` compares the tables in `Cargo.toml` and `clippy.toml` against the accepted copies so nobody weakens them quietly. The package allows the disallowed-path lint groups at its root and the private core forbids them, because Clippy reads one configuration for the whole package. Unit-test builds lift the three dynamic-JSON lints, `disallowed_methods`, `disallowed_types`, and `disallowed_macros`, in core so the derived schema code compiles. Clippy on the non-test library still enforces them. `policy.py` also checks every core source and dependency root.
 
 ## Size
 
@@ -95,5 +95,5 @@ The complete `sdlc/scripts/package` validation is a separate explicit packaging 
 - Clippy ignores a ban-list path it cannot resolve, and a typo in any ban passes quietly. The dynamic JSON bans were proved in ticket 0001. Every ban added later has to be planted and refused the same way.
 - No tool checks that parsing happens only at the edge or that a validated value has its own type. The reviewing agent checks both and says so in its review.
 - No tool requires a second reviewer before the ceiling rises, the public surface widens, or a dependency lands. The rule is written in `AGENTS.md` only.
-- Minimal environments are not yet enforced for every package gate and child. The [package verification issue](../issues/2026-09-29-nine-package-gates-fail-from-clean-checkouts.md) owns the remaining runner checks, including the release families introduced by 0269–0272. Each correction must prove the intended case executes under the declared environment.
+- Minimal environments are not yet enforced for every package gate and child. The [package verification issue](../issues/closed/2026-09-29-nine-package-gates-fail-from-clean-checkouts.md) owns the remaining runner checks, including the release families introduced by 0269–0272. Each correction must prove the intended case executes under the declared environment.
 - The five factory scripts under `sdlc/project/` are absent. Factory 2 runs one pilot repository and this is not it. Copy them when this repository registers.

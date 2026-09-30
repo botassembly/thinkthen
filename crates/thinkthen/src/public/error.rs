@@ -1,5 +1,7 @@
 //! The one public error: six kinds, a safe message, and the retry signal.
 
+use serde::Serialize;
+
 use crate::engine::error::{Error as EngineError, Kind, TransportKind, reply_too_large};
 use crate::public::results::Facts;
 use crate::public::{EstimatedInputDenial, SendBudgetDenial};
@@ -31,7 +33,9 @@ pub enum Error {
 }
 
 /// The six kinds an [`Error`] takes.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "failureKind"))]
+#[serde(rename_all = "lowercase")]
 pub enum ErrorKind {
     /// See [`Error::Usage`].
     Usage,
@@ -59,6 +63,28 @@ impl ErrorKind {
             Self::Cancelled => "cancelled",
             Self::Deadline => "deadline",
             Self::Defect => "defect",
+        }
+    }
+}
+
+/// One failed call as a JSON reader sees it: its kind, the retry signal, and
+/// a message safe to log.
+#[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "callError"))]
+pub struct CallError {
+    kind: ErrorKind,
+    retryable: bool,
+    message: String,
+}
+
+impl CallError {
+    /// Take the kind, the retry signal, and a message safe to log.
+    #[must_use]
+    pub fn new(kind: ErrorKind, retryable: bool, message: impl Into<String>) -> Self {
+        Self {
+            kind,
+            retryable,
+            message: message.into(),
         }
     }
 }

@@ -1,6 +1,6 @@
 # Types on every surface
 
-Status: **Settled** by ADR 0082. This page maps the existing question and result contracts into the command, libraries, C door, and SQL extensions. [Question files](question-file.md) fix the input grammar; [results](result.md), [annotate](annotate.md), [recognize](recognize.md), and [relate](relate.md) fix the complete outputs. [`result.schema.json`](result.schema.json) is their structural JSON check, not a replacement for semantic validation. The existing [`question-file.schema.json`](question-file.schema.json) remains the input schema.
+Status: **Settled** by ADR 0082. This page maps the existing question and result contracts into the command, libraries, C door, and SQL extensions. [Question files](question-file.md) fix the input grammar; [results](result.md), [annotate](annotate.md), [recognize](recognize.md), and [relate](relate.md) fix the complete outputs. [`result.schema.json`](result.schema.json) is their structural JSON check, not a replacement for semantic validation. A unit test generates it from the Rust types that serialize each result (ADR 0112); nobody edits it by hand. The existing [`question-file.schema.json`](question-file.schema.json) remains the hand-kept input schema, and it holds the C door request as `doorRequest`.
 
 ## Inputs
 
@@ -53,4 +53,4 @@ CLI row. The schema root still checks successful `thinkthen.result/1` rows.
 
 ## Parity
 
-[`fixtures/types/`](fixtures/types/) checks the hand-written result schema against valid and invalid examples and checks selected requests through the real C JSON door against the offline conformance backend. A schema verdict alone does not prove that the door accepts or emits the same shape. Port integration runs this corpus and the shared conformance cases through the public binding. The question-file schema and parser keep their [separate parity check](fixtures/question-file/README.md).
+[`fixtures/types/`](fixtures/types/) checks the generated result schema against valid and invalid examples and checks selected requests through the real C JSON door against the offline conformance backend. A schema verdict alone does not prove that the door accepts or emits the same shape. Port integration runs this corpus and the shared conformance cases through the public binding. The question-file schema and parser keep their [separate parity check](fixtures/question-file/README.md).

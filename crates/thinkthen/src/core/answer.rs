@@ -13,6 +13,11 @@ const ROUNDING: f64 = 1e12;
 
 /// The odds of every label in user order, replacing backend key order.
 #[derive(Clone, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(
+    test,
+    schemars(inline, with = "std::collections::BTreeMap<String, f64>")
+)]
 pub(crate) struct Distribution {
     entries: Vec<(String, Probability)>,
     total: f64,
@@ -122,6 +127,11 @@ impl fmt::Debug for Distribution {
 
 /// Independent yes probabilities for tag labels, in user order.
 #[derive(Clone, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(
+    test,
+    schemars(inline, with = "std::collections::BTreeMap<String, f64>")
+)]
 struct TagProbabilities(Vec<(String, Probability)>);
 
 impl fmt::Debug for TagProbabilities {
@@ -161,6 +171,7 @@ impl Serialize for TagProbabilities {
 /// The label that led, which `Debug` withholds because a record may name it.
 #[derive(Clone, PartialEq, Serialize)]
 #[serde(transparent)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
 struct Label(String);
 
 impl fmt::Debug for Label {
@@ -172,6 +183,7 @@ impl fmt::Debug for Label {
 /// The three shapes of answer, each carrying what its backend reported.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(tag = "kind", rename_all = "snake_case")]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "answer"))]
 enum Shape {
     /// A probability that the condition holds.
     YesNo { probability: Probability },
@@ -196,11 +208,13 @@ enum Shape {
 /// What the backend said, carrying no vendor field name.
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(transparent)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
 pub(crate) struct Answer(Shape);
 
 /// The bare value one judgment prints on standard output.
 #[derive(Clone, PartialEq, Serialize)]
 #[serde(untagged)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "value"))]
 pub(crate) enum Value {
     /// `decide`: `true`, `false`, or `null`.
     YesNo(Option<bool>),

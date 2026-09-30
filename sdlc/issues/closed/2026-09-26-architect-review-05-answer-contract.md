@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Findings 1 and 2 are done by ticket 0160 on 2026-09-26. Finding 2.1 for single question files is done: ticket 0159 landed on 2026-09-26, and `audit --write` now records the model beside a written bar. Ticket 0160 does not cover the set part of 2.1, which stays open.
+Status: closed 2026-09-30. Fixed by tickets 0159 and 0160. A question set holds no model by `specification/annotate.md`, so the set part of 2.1 is settled. ADR 0111 removes `meta.batch` (2.6).
 
 # Architect review 05: the question and answer contract
 

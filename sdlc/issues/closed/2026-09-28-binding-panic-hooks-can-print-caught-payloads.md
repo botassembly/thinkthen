@@ -1,6 +1,6 @@
 # Python, Ruby and TypeScript panic hooks can print caught payloads
 
-Status: open for the non-Linux target-package proofs only. Ticket 0306 settled the source: Python, Ruby and TypeScript call the shared `thinkthen::contained` guard and keep no hook of their own. Confirmed by bounded source inspection on main `f45dae96`, following the 0226 preparation inventory. The returned errors are already fixed text. This issue records the earlier panic-hook path and disposal risk; it does not claim that a real credential or user evidence has appeared in production diagnostics.
+Status: closed 2026-09-30. Fixed by ticket 0306 (`4de0f8116`): Python, Ruby and TypeScript call `thinkthen::contained` and keep no hook. Non-Linux package proofs move to the release issue.
 
 ## Current boundaries
 
@@ -24,7 +24,7 @@ The R worker payload copy has its own issue, `2026-09-28-r-worker-panic-can-copy
 
 ## Reviewed implementation and remaining proof
 
-Ticket 0227 source and the evidenced Linux package subset landed from corrected candidate `e52c1604` after fresh High code review. The source children prove fixed non-retryable Defect, both synthetic payload forms, later success and unrelated prior-hook delivery. Installed Linux packages separately prove loading and no-fault later use. Python's reviewed correction also covers implicit reference cleanup. See [the build evidence](../records/0227-language-panic-build.md) and [code acceptance](../records/0227-code-review.md). Other target packages and the later 0212 Call conversion integration remain open; this issue is not counted complete from the Linux subset alone.
+Ticket 0227 source and the evidenced Linux package subset landed from corrected candidate `e52c1604` after fresh High code review. The source children prove fixed non-retryable Defect, both synthetic payload forms, later success and unrelated prior-hook delivery. Installed Linux packages separately prove loading and no-fault later use. Python's reviewed correction also covers implicit reference cleanup. See [the build evidence](../../records/0227-language-panic-build.md) and [code acceptance](../../records/0227-code-review.md). Other target packages and the later 0212 Call conversion integration remain open; this issue is not counted complete from the Linux subset alone.
 
 ## Ticket 0306
 

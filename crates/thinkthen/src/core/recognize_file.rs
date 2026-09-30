@@ -12,6 +12,8 @@ use crate::core::{Description, Labels, ModelName, Pointer, ProfileName, Relation
 pub(crate) type RecognizeKinds = Vec<(String, Option<Description>)>;
 
 #[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(inline, with = "crate::core::Json"))]
 pub(crate) struct RecognizeSpec {
     pub(crate) kinds: RecognizeKinds,
     pub(crate) relations: Vec<RelationRule>,

@@ -1,6 +1,6 @@
 # Language-port integration priority brief
 
-Status: open, a prioritization request from the consumer-language program to the queue owner. Filed 2026-09-28. Ian asked for this brief so the integration tickets can be planned against the whole program at once.
+Status: closed 2026-09-30. P1 and P2 done by ticket 0249. P3 replaced by the ADR 0112 port pass with ticket 0291. P4 waits for that pass.
 
 ## Who is asking and what exists
 

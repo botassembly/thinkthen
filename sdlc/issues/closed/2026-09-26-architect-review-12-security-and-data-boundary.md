@@ -1,4 +1,4 @@
-Status: open for items 1 and 2. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 3 is done: Quick Fix qf-review-273 landed it (`sdlc/records/qf-review-273.md`).
+Status: closed 2026-09-30. Item 1: ticket 0163 added the README disclosures, and ticket 0318 keeps SQL hosts off the platform cache. Item 2: ticket 0303's folder warning and `SECURITY.md` fix it for the command, and ticket 0318 refuses open SQL answer folders.
 
 # Architect review 12: security and the data boundary
 

@@ -1,6 +1,6 @@
 # The process-cap batching test races two records
 
-Status: open.
+Status: closed 2026-09-30. Replaced by ticket 0317, which runs the case at `--jobs 1`.
 
 ## What happens
 

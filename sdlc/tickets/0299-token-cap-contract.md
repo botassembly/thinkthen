@@ -67,7 +67,7 @@ This design settles an estimated input admission bound only. The existing facts 
 
 ## Evidence
 
-- Starts from: The [issue](../issues/2026-09-29-token-cap-contract-before-release.md), experiment 2038 ruling 6, accepted ADR 0105/0107, 0289 at `8bf14799`, and current source at `45973d198`; [preparation](../records/0299-token-cap-preparation.md) pins the trace.
+- Starts from: The [issue](../issues/closed/2026-09-29-token-cap-contract-before-release.md), experiment 2038 ruling 6, accepted ADR 0105/0107, 0289 at `8bf14799`, and current source at `45973d198`; [preparation](../records/0299-token-cap-preparation.md) pins the trace.
 - Keeps: Request cap and no-send preview, exact cache/replay identity, optional reported usage, six errors, final started-call facts, existing host partial-result rules and frozen C ABI.
 - Changes: One versioned estimated-input admission total after 0289, at the final body/attempt gate; an active setting and a distinct Usage denial on each exposed surface.
 - Proof: One independently observed loopback admission table plus small constructor conversion checks; source, installed package and runner receipts remain distinct.

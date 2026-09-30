@@ -11,8 +11,9 @@ use crate::core::json::Json;
 /// One batch setting in the documented number-or-`max` JSON form.
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(untagged)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "batchSetting"))]
 pub(crate) enum BatchSetting {
-    Records(usize),
+    Records(#[cfg_attr(test, schemars(range(min = 1)))] usize),
     Max(&'static str),
 }
 
@@ -67,6 +68,7 @@ impl fmt::Display for BatchSetting {
 
 /// A file's tuned batch setting and the different setting used by this run.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "batchWarning"))]
 pub(crate) struct BatchWarning {
     tuned_for: BatchSetting,
     running: BatchSetting,

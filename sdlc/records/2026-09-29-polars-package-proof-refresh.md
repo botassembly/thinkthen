@@ -1,6 +1,6 @@
 # Next Polars package proof batch
 
-Preparation only, source pin `cb65a7401`. No new test run, independent preparation review or product closure is claimed. The [package issue](../issues/2026-09-29-nine-package-gates-fail-from-clean-checkouts.md) retains all three Polars criteria after 0289. Experiment302's `21-polars/REPORT.md` and logs identify their earlier failures; the new eager implementation does not by itself replace those receipts.
+Preparation only, source pin `cb65a7401`. No new test run, independent preparation review or product closure is claimed. The [package issue](../issues/closed/2026-09-29-nine-package-gates-fail-from-clean-checkouts.md) retains all three Polars criteria after 0289. Experiment302's `21-polars/REPORT.md` and logs identify their earlier failures; the new eager implementation does not by itself replace those receipts.
 
 ## Exact scope
 
