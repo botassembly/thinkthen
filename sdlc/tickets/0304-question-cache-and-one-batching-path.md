@@ -220,7 +220,7 @@ The SQL hosts' own copies of the send limits, which 3d deferred.
   - `conformance/consumer/fork-probe` `a_call_total_counts_every_engine_of_the_process`: in a forked child, two engines share one total under call totals; a call cap and an engine cap each refuse when they are the tighter, `process_requests_sent()` reads 3, and the backend counts 3.
   - `databases/postgresql/check.sh` `an_annotate_row_missing_its_part_fails_alone`: a record missing `/body` fails with "the record holds nothing at `/body`", its two neighbours send once each, and a rerun answers both from the store with no send. It closes that item of `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md`.
   - Kept unchanged and passing: PostgreSQL `a_changed_throttle_refuses` and the six `max_requests_total` steps; DuckDB `settings_suite.py`, `verbs_budget.py`, `plan_suite.py` and `relate_suite.py`, which pin the spent sentence, the fork reset and the throttle conflict; SQLite `test_try_budget.py` and `test_settings.py`.
-  - CHECKS_PLACEHOLDER
+  - Each passes, run one at a time on lane 1's own lock: `sdlc/scripts/test`, `spec`, workspace and consumer clippy with `-D warnings`, `policy.py`, `tickets`, the inventory, `lint` in a clean clone, the fork probe, the C door check, and the SQLite, DuckDB and PostgreSQL checks, with PostgreSQL's stress step alone. No binding reads an SQL host's limits. Two `test` runs at load 22 each failed one test outside this slice, and both are filed as debt: `sdlc/issues/2026-09-30-graded-rank-tests-rewrite-one-question-file-in-place.md` and `sdlc/issues/2026-09-30-ordered-output-test-races-the-next-request-under-load.md`. The third run passed all 1,293.
 
 - Defers:
   - `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md` keeps two gaps: the DuckDB and PostgreSQL shared case runners count no store rows, which needs a DuckDB harness change, and SQLite has no read-only replay or busy wait row on the 3.50.0 host.
@@ -330,3 +330,11 @@ What the review fixes found:
 - An engine that saves a piece of process state when it is built keeps the parent's copy after a fork. The first build saved the total that way, and review caught it. A simulated fork cannot show the bug, because both engines are built as the child. The real-fork probe can, and its new test failed on that build.
 - The surface checks take a loopback port as their argument. `check.sh 0` fails the Rust and Python checks falsely. `heavy-lock` re-runs its caller with the arguments left when it is sourced and only the environment names in `allow-list`, so a wrapper that shifts first or passes its own variables loses them.
 - SQLite's `test_one_cached_call_leaves_no_thread` failed once under load 24 with fewer threads after the calls than before, then passed alone. The test counts the process's threads, which other finishing work can change.
+
+### Slice 3e
+
+- A host that passes its own budget beside the engine's would count each send twice, because every public engine already reserves against the process total. A call limit therefore joins the engine's limit in one reservation, the tighter of the two.
+- SQLite needed no change. Its `max_requests_total` already went through the builder, so only PostgreSQL and DuckDB held copies.
+- DuckDB kept two counts of the same thing: `SEND_BUDGET` for sends and the engines' usage totals for the row cut. Both now read the engine's one total.
+- The held arm keeps its reply until release, so a PostgreSQL cancel check that releases after the wait already proves order. Only the latency needed the wall clock.
+- Running the fork probe from its own folder left `conformance/consumer/target`, and `policy.py` then counted generated bindings against the 500-line cap. The test rung builds it under `target/consumer`.
