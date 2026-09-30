@@ -1,4 +1,4 @@
-Status: Open for the hosted check only. The 2026-09-30 run met status 401 at the key; see the end. Ticket 0301 is complete and built the correction accepted in [ADR 0110](../planning/adr/0110-noul-null-criteria-wire-omission.md). The separately authorized hosted `thinkthen check` against Liquid's d1 remains. Filed 2026-09-29 from experiment 413's `RESULTS.md`.
+Status: closed 2026-09-30. The second hosted `thinkthen check` against Liquid's d1 passed with `critical 0, warning 0`, and the ledger charged 1,500 tokens; see the end.
 
 # The systemone adapter sends null criteria that Liquid's d1 refuses
 
@@ -19,3 +19,7 @@ ADR 0110 omits only explicitly null `noul` criteria members and omits the criter
 ## Hosted check, 2026-09-30
 
 One authorized run of `thinkthen check --url https://api.liquid.ai/decisions/v1 --model d1:free` went through `sdlc/scripts/live --max-tokens 1500` from `origin/main` at `1c26316e4`. The ledger charged 1,500 tokens, from 465,109,291 to 465,110,791. The `--plan` bodies matched the fixture, with no `"false":null` in the `noul` probe. The first probe met status 401. The report read `ok connection`, `critical key: the backend answered with status 401: the key was refused`, six `unchecked` rows, and `critical 1, warning 0`, and the check exited 4. No probe body reached the decoder, so this run neither shows nor refutes acceptance of the corrected bytes. The issue stays open. A retry needs a `THINKTHEN_API_KEY` that Liquid's d1 accepts.
+
+## Hosted check rerun, 2026-09-30
+
+A second authorized run of `thinkthen check --url https://api.liquid.ai/decisions/v1 --model d1:free` went through `sdlc/scripts/live --max-tokens 1500` from `origin/main` at `74b82a8e1`, with a key Liquid accepts. The ledger charged 1,500 tokens, from 465,110,791 to 465,112,291. The report read `ok` for connection, key, endpoint, noul, choice, score, mixed and usage, then `critical 0, warning 0`, and the check exited 0. The replies reported 748 input tokens and no output tokens. The `noul` probe got a `yes_no` answer, so Liquid's d1 accepts the corrected criteria bytes.
