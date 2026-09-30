@@ -4,7 +4,7 @@
 use std::fmt;
 
 mod call;
-pub use call::{Call, Facts};
+pub use call::{Call, DoorReply, Facts};
 mod attempt;
 pub use attempt::{AttemptObservation, AttemptOutcome};
 mod tally;
@@ -128,13 +128,14 @@ impl Usage {
 
 /// This process's totals since it began, or since it was forked. Failed calls
 /// and retries count, and nothing resets them.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "usage"))]
 pub struct Counters {
     requests_sent: u64,
     retries: u64,
-    cache_answers: u64,
     input_tokens: u64,
     output_tokens: u64,
+    cache_answers: u64,
 }
 
 impl Counters {

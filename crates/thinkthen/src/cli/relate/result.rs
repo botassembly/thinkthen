@@ -19,7 +19,8 @@ pub(super) struct Output<'a> {
 }
 
 #[derive(Serialize)]
-struct Details<'a> {
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateDetails"))]
+pub(crate) struct Details<'a> {
     schema: &'static str,
     value: &'a [RelationEdge<RelationEntity>],
     question: RelateQuestion<'a>,
@@ -28,12 +29,14 @@ struct Details<'a> {
 }
 
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateAnswers"))]
 struct Answers<'a> {
     questions: Vec<Entry<'a>>,
 }
 
 /// One yes/no pair answer or recoverable failure.
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateEntry"))]
 struct Entry<'a> {
     relation: &'a str,
     reads: &'a str,
@@ -47,6 +50,7 @@ struct Entry<'a> {
 }
 
 #[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateBody"))]
 struct Body<'a> {
     source: &'a RelationEntity,
     target: &'a RelationEntity,
@@ -55,6 +59,7 @@ struct Body<'a> {
 }
 
 #[derive(Clone, Copy, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relateJudged"))]
 struct Judged {
     probability: f64,
     accepted: bool,

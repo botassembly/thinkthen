@@ -1,4 +1,4 @@
-"""Check hand-written result shapes against the public JSON door, offline."""
+"""Check the generated result schema and the door request schema against the public JSON door, offline."""
 
 import ctypes
 import json
@@ -18,6 +18,7 @@ from children import CARGO, child_env
 
 HERE = Path(__file__).resolve().parent
 SCHEMA = ROOT / "specification/result.schema.json"
+QUESTION_FILE = ROOT / "specification/question-file.schema.json"
 CORPUS = HERE / "corpus.json"
 BACKEND = ROOT / "target/debug/conformance-backend"
 LIBRARY_NAME = "libthinkthen_c.dylib" if sys.platform == "darwin" else "libthinkthen_c.so"
@@ -33,11 +34,16 @@ def build():
 
 
 def validators(schema):
+    """One validator per result definition, plus `doorRequest` from the question-file schema."""
+    requests = json.loads(QUESTION_FILE.read_text())
     Draft202012Validator.check_schema(schema)
-    return {
+    Draft202012Validator.check_schema(requests)
+    checks = {
         name: Draft202012Validator({"$ref": f"#/$defs/{name}", "$defs": schema["$defs"]})
         for name in schema["$defs"]
     }
+    checks["doorRequest"] = Draft202012Validator({"$ref": "#/$defs/doorRequest", "$defs": requests["$defs"]})
+    return checks
 
 
 def subset(actual, expected):

@@ -1,385 +1,1905 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "urn:thinkthen:result",
-  "title": "thinkthen result and JSON door structures",
-  "description": "Structural contract. Validate a C door result against the named bare definition for its verb; this root checks a detailed thinkthen.result/1 object. Question grammar and semantic checks remain in their existing parser and question-file schema.",
-  "$ref": "#/$defs/detailed",
   "$defs": {
-    "probability": {"type": "number", "minimum": 0, "maximum": 1},
-    "failureKind": {"enum": ["usage", "backend", "deadline", "local", "cancelled", "defect"]},
-    "failureCause": {"enum": ["missing_answer", "wrong_kind", "missing_probability", "invalid_probability", "invalid_distribution", "unexpected_probability"]},
-    "callError": {
-      "type": "object", "required": ["kind", "retryable", "message"],
-      "properties": {"kind": {"$ref": "#/$defs/failureKind"},
-        "retryable": {"type": "boolean"}, "message": {"type": "string"}},
-      "additionalProperties": true
-    },
-    "failure": {
-      "type": "object", "required": ["kind", "cause"], "additionalProperties": false,
-      "properties": {"kind": {"const": "backend"}, "cause": {"$ref": "#/$defs/failureCause"}}
-    },
-    "recordError": {
-      "type": "object", "required": ["schema", "at", "failure"], "additionalProperties": false,
-      "properties": {
-        "schema": {"const": "thinkthen.record-error/1"},
-        "at": {"type": "integer", "minimum": 1},
-        "failure": {"type": "object", "required": ["kind", "cause", "pointer"],
-          "additionalProperties": false,
-          "properties": {"kind": {"const": "usage"}, "cause": {"const": "missing_pointer"},
-            "pointer": {"type": "string", "pattern": "^/"}}}
-      }
-    },
-    "failed": {
-      "type": "object", "required": ["failed"], "additionalProperties": false,
-      "properties": {"failed": {"$ref": "#/$defs/failure"}}
-    },
-    "decide": {"type": ["boolean", "null"]},
-    "choose": {"type": ["string", "null"]},
-    "tag": {"type": "array", "items": {"type": "string"}},
-    "score": {"type": "number"},
-    "filter": {"type": "array", "items": {"type": "string"}},
-    "rank": {"type": "array", "items": {"type": "string"}},
-    "find": {"type": ["string", "null"]},
-    "annotatedField": {
-      "oneOf": [
-        {"type": "boolean"}, {"type": "string"}, {"type": "number"},
-        {"type": "null"}, {"$ref": "#/$defs/tag"}, {"$ref": "#/$defs/failed"}
-      ]
-    },
-    "annotatedRow": {"type": "object", "additionalProperties": {"$ref": "#/$defs/annotatedField"}},
-    "annotate": {"type": "array", "items": {"$ref": "#/$defs/annotatedRow"}},
-    "entity": {
-      "type": "object", "required": ["text", "start", "end", "length", "kind", "strength"],
-      "properties": {
-        "text": {"type": "string"}, "start": {"type": "integer", "minimum": 0},
-        "end": {"type": "integer", "minimum": 0}, "length": {"type": "integer", "minimum": 0},
-        "kind": {"type": "string"}, "strength": {"type": "number", "minimum": 0}
-      }, "additionalProperties": false
-    },
-    "recognizedRelation": {
-      "type": "object", "required": ["relation", "source", "target", "probability"],
-      "properties": {
-        "relation": {"type": "string"}, "source": {"$ref": "#/$defs/entity"},
-        "target": {"$ref": "#/$defs/entity"}, "probability": {"$ref": "#/$defs/probability"}
-      }, "additionalProperties": false
-    },
-    "recognize": {
-      "type": "object", "required": ["entities"], "additionalProperties": false,
-      "properties": {
-        "entities": {"type": "array", "items": {"$ref": "#/$defs/entity"}},
-        "relations": {"type": "array", "items": {"$ref": "#/$defs/recognizedRelation"}}
-      }
-    },
-    "relatedEntity": {
-      "type": "object", "required": ["name", "kind"], "additionalProperties": false,
-      "properties": {"name": {"type": "string"}, "kind": {"type": "string"}}
-    },
-    "edge": {
-      "type": "object", "required": ["relation", "source", "target", "probability"],
-      "additionalProperties": false,
-      "properties": {
-        "relation": {"type": "string"}, "source": {"$ref": "#/$defs/relatedEntity"},
-        "target": {"$ref": "#/$defs/relatedEntity"}, "probability": {"$ref": "#/$defs/probability"}
-      }
-    },
-    "relate": {
-      "type": "object", "required": ["edges"], "additionalProperties": false,
-      "properties": {"edges": {"type": "array", "items": {"$ref": "#/$defs/edge"}}}
-    },
-    "recordRow": {
-      "type": "object", "required": ["input", "value"], "additionalProperties": false,
-      "properties": {"input": {}, "value": {"anyOf": [
-        {"$ref": "#/$defs/decide"}, {"$ref": "#/$defs/choose"},
-        {"$ref": "#/$defs/tag"}, {"$ref": "#/$defs/score"},
-        {"$ref": "#/$defs/recognize"}
-      ]}}
-    },
-    "usage": {
-      "type": "object", "required": ["requests_sent", "retries", "input_tokens", "output_tokens", "cache_answers"],
-      "additionalProperties": false,
-      "properties": {
-        "requests_sent": {"type": "integer", "minimum": 0},
-        "retries": {"type": "integer", "minimum": 0},
-        "input_tokens": {"type": "integer", "minimum": 0},
-        "output_tokens": {"type": "integer", "minimum": 0},
-        "cache_answers": {"type": "integer", "minimum": 0}
-      }
-    },
-    "facts": {
-      "type": "object", "required": ["records", "requests_sent", "cache_answers", "seconds"],
-      "additionalProperties": false,
-      "properties": {
-        "records": {"type": "integer", "minimum": 0},
-        "requests_sent": {"type": "integer", "minimum": 0},
-        "cache_answers": {"type": "integer", "minimum": 0},
-        "seconds": {"type": "number", "minimum": 0},
-        "input_tokens": {"type": "integer", "minimum": 0},
-        "output_tokens": {"type": "integer", "minimum": 0},
-        "estimated_cost_usd": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.[0-9]{6}$"},
-        "model": {"type": "string"}
-      }
-    },
-    "callSuccess": {
-      "type": "object", "required": ["value", "facts"], "additionalProperties": false,
-      "properties": {"value": {}, "facts": {"$ref": "#/$defs/facts"},
-        "attempts": {"type": "array", "items": {"$ref": "#/$defs/attempt"}}}
-    },
-    "attempt": {
-      "type": "object", "required": ["ordinal", "request_sha256", "wall_ms", "outcome"],
-      "additionalProperties": false,
-      "properties": {
-        "ordinal": {"type": "integer", "minimum": 1},
-        "request_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "wall_ms": {"type": "integer", "minimum": 1},
-        "outcome": {"enum": ["ok", "status", "transport"]},
-        "status": {"type": "integer", "minimum": 100, "maximum": 599},
-        "server_ms": {"type": "integer", "minimum": 0},
-        "request_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]{1,128}$"}
-      }
-    },
-    "callRecordDetails": {
-      "allOf": [{"$ref": "#/$defs/details"}], "required": ["input"],
-      "properties": {"meta": {"allOf": [{"$ref": "#/$defs/meta"}],
-        "properties": {"batch": {"$ref": "#/$defs/batchMeta"},
-          "batch_warning": {"$ref": "#/$defs/batchWarning"},
-          "context_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}}}
-    },
-    "batchWarning": {
-      "type": "object", "required": ["tuned_for", "running"], "additionalProperties": false,
-      "properties": {"tuned_for": {"$ref": "#/$defs/batchSetting"},
-        "running": {"$ref": "#/$defs/batchSetting"}}
-    },
-    "batchSetting": {"oneOf": [{"const": "max"}, {"type": "integer", "minimum": 1}]},
-    "batchMeta": {
-      "type": "object", "required": ["setting", "records", "position", "closed", "requests_sent"],
-      "additionalProperties": false,
-      "properties": {
-        "setting": {"$ref": "#/$defs/batchSetting"},
-        "records": {"type": "integer", "minimum": 1},
-        "position": {"type": "integer", "minimum": 1},
-        "closed": {"enum": ["content", "size", "limit", "pause", "end"]},
-        "requests_sent": {"type": "integer", "minimum": 0},
-        "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
-          "properties": {"input_tokens": {"type": "integer", "minimum": 0},
-            "output_tokens": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
-        "split": {"const": true}
-      }
+    "annotate": {
+      "items": {
+        "$ref": "#/$defs/annotatedRow"
+      },
+      "type": "array"
     },
     "annotateBatchMeta": {
-      "type": "object",
-      "required": ["group", "request", "setting", "records", "position", "closed", "requests_sent"],
+      "properties": {
+        "closed": {
+          "type": "string"
+        },
+        "group": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "position": {
+          "format": "uint",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "records": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "request": {
+          "type": "string"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "setting": {
+          "$ref": "#/$defs/batchSetting"
+        },
+        "split": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/tokenUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "group",
+        "request",
+        "setting",
+        "records",
+        "position",
+        "closed",
+        "requests_sent"
+      ],
+      "type": "object"
+    },
+    "annotateDetails": {
+      "properties": {
+        "answers": {
+          "additionalProperties": {
+            "$ref": "#/$defs/annotateEntry"
+          },
+          "type": "object"
+        },
+        "input": {},
+        "meta": {
+          "$ref": "#/$defs/annotateMeta"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/annotatedRow"
+        }
+      },
+      "required": [
+        "schema",
+        "input",
+        "value",
+        "answers",
+        "meta"
+      ],
+      "type": "object"
+    },
+    "annotateEntry": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/annotateSuccess"
+        },
+        {
+          "$ref": "#/$defs/annotateFailure"
+        }
+      ]
+    },
+    "annotateFailure": {
       "additionalProperties": false,
       "properties": {
-        "group": {"type": "integer", "minimum": 1},
-        "request": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
-        "setting": {"$ref": "#/$defs/batchSetting"},
-        "records": {"type": "integer", "minimum": 1},
-        "position": {"type": "integer", "minimum": 1},
-        "closed": {"enum": ["content", "size", "limit", "pause", "end"]},
-        "requests_sent": {"type": "integer", "minimum": 0},
-        "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
-          "properties": {"input_tokens": {"type": "integer", "minimum": 0},
-            "output_tokens": {"type": "integer", "minimum": 0}}, "additionalProperties": false},
-        "split": {"const": true}
-      }
-    },
-    "meta": {
-      "type": "object", "required": ["tool", "url", "model", "requests_sent", "cached", "requests", "failed_questions"],
-      "anyOf": [{"required": ["question_sha256"]}, {"required": ["questions_sha256"]}],
-      "properties": {
-        "tool": {"type": "string"}, "question_sha256": {"type": "string"},
-        "questions_sha256": {"type": "string"}, "url": {"type": "string"},
-        "model": {"type": "string"}, "requests_sent": {"type": "integer", "minimum": 0},
-        "cached": {"type": "boolean"}, "requests": {"type": "array", "items": {"type": "string"}},
-        "attempts": {"type": "array", "items": {"$ref": "#/$defs/attempt"}},
-        "failed_questions": {"type": "integer", "minimum": 0},
-        "usage": {"type": "object", "required": ["input_tokens", "output_tokens"],
-          "properties": {"input_tokens": {"type": "integer", "minimum": 0}, "output_tokens": {"type": "integer", "minimum": 0}}}
-      }, "additionalProperties": true
-    },
-    "yesNoAnswer": {
-      "type": "object", "required": ["kind", "probability"],
-      "properties": {"kind": {"const": "yes_no"}, "probability": {"$ref": "#/$defs/probability"}}
-    },
-    "choiceAnswer": {
-      "type": "object", "required": ["kind", "pick", "probabilities"],
-      "properties": {"kind": {"const": "choice"}, "pick": {"type": "string"},
-        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
-    },
-    "tagAnswer": {
-      "type": "object", "required": ["kind", "probabilities"],
-      "properties": {"kind": {"const": "tag"},
-        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
-    },
-    "scoreAnswer": {
-      "type": "object", "required": ["kind", "level", "probabilities"],
-      "properties": {"kind": {"const": "score"}, "level": {"type": "string"},
-        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
-    },
-    "findAnswer": {
-      "type": "object", "required": ["kind", "pick", "probabilities"],
-      "properties": {"kind": {"const": "find"}, "pick": {"type": "string"},
-        "probabilities": {"type": "object", "additionalProperties": {"$ref": "#/$defs/probability"}}}
-    },
-    "detailed": {"oneOf": [
-      {"$ref": "#/$defs/details"}, {"$ref": "#/$defs/annotateDetails"},
-      {"$ref": "#/$defs/recognizeDetails"}, {"$ref": "#/$defs/relateDetails"}
-    ]},
-    "judgmentQuestion": {
-      "type": "object", "required": ["verb", "text"],
-      "properties": {"verb": {"enum": ["decide", "choose", "tag", "score", "find"]},
-        "text": {"type": ["string", "object", "array"]}}
-    },
-    "annotateQuestion": {
-      "allOf": [{"$ref": "#/$defs/judgmentQuestion"}],
-      "properties": {"verb": {"enum": ["decide", "choose", "tag", "score"]}}
-    },
-    "judgmentFields": {
-      "type": "object", "required": ["value", "question", "answer", "threshold"],
-      "properties": {
-        "value": {}, "question": {"$ref": "#/$defs/judgmentQuestion"},
-        "answer": {"oneOf": [
-          {"$ref": "#/$defs/yesNoAnswer"}, {"$ref": "#/$defs/choiceAnswer"},
-          {"$ref": "#/$defs/tagAnswer"}, {"$ref": "#/$defs/scoreAnswer"},
-          {"$ref": "#/$defs/findAnswer"}
-        ]},
-        "threshold": {"type": ["number", "string", "null"]}
+        "failure": {
+          "$ref": "#/$defs/failure"
+        },
+        "question": {
+          "$ref": "#/$defs/question"
+        },
+        "request": {
+          "type": "string"
+        }
       },
+      "required": [
+        "question",
+        "failure",
+        "request"
+      ],
+      "type": "object"
+    },
+    "annotateMeta": {
+      "properties": {
+        "batches": {
+          "items": {
+            "$ref": "#/$defs/annotateBatchMeta"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "cached": {
+          "type": "boolean"
+        },
+        "failed_questions": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "profile_warning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/profileWarning"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "questions_sha256": {
+          "type": "string"
+        },
+        "requests": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/tokenUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "tool",
+        "questions_sha256",
+        "url",
+        "model",
+        "requests_sent",
+        "cached",
+        "requests",
+        "failed_questions"
+      ],
+      "type": "object"
+    },
+    "annotateSuccess": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/answer"
+        },
+        "question": {
+          "$ref": "#/$defs/question"
+        },
+        "request": {
+          "type": "string"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/threshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "required": [
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "request"
+      ],
+      "type": "object"
+    },
+    "annotatedField": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/value"
+        },
+        {
+          "$ref": "#/$defs/failed"
+        }
+      ]
+    },
+    "annotatedRow": {
+      "additionalProperties": {
+        "$ref": "#/$defs/annotatedField"
+      },
+      "type": "object"
+    },
+    "answer": {
+      "oneOf": [
+        {
+          "properties": {
+            "kind": {
+              "const": "yes_no",
+              "type": "string"
+            },
+            "probability": {
+              "format": "double",
+              "type": "number"
+            }
+          },
+          "required": [
+            "kind",
+            "probability"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "choice",
+              "type": "string"
+            },
+            "pick": {
+              "type": "string"
+            },
+            "probabilities": {
+              "additionalProperties": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "pick",
+            "probabilities"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "kind": {
+              "const": "tag",
+              "type": "string"
+            },
+            "probabilities": {
+              "additionalProperties": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "probabilities"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "confidence": {
+              "format": "double",
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "kind": {
+              "const": "score",
+              "type": "string"
+            },
+            "level": {
+              "type": "string"
+            },
+            "probabilities": {
+              "additionalProperties": {
+                "format": "double",
+                "type": "number"
+              },
+              "type": "object"
+            }
+          },
+          "required": [
+            "kind",
+            "level",
+            "probabilities"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "attempt": {
+      "properties": {
+        "ordinal": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "outcome": {
+          "$ref": "#/$defs/attemptOutcome"
+        },
+        "request_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "request_sha256": {
+          "type": "string"
+        },
+        "server_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "status": {
+          "format": "uint16",
+          "maximum": 65535,
+          "minimum": 0,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "wall_ms": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "ordinal",
+        "request_sha256",
+        "wall_ms",
+        "outcome"
+      ],
+      "type": "object"
+    },
+    "attemptOutcome": {
+      "oneOf": [
+        {
+          "const": "ok",
+          "type": "string"
+        },
+        {
+          "const": "status",
+          "type": "string"
+        },
+        {
+          "const": "transport",
+          "type": "string"
+        }
+      ]
+    },
+    "batchMeta": {
+      "properties": {
+        "closed": {
+          "type": "string"
+        },
+        "position": {
+          "format": "uint",
+          "minimum": 1,
+          "type": "integer"
+        },
+        "records": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "setting": {
+          "$ref": "#/$defs/batchSetting"
+        },
+        "split": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/tokenUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "setting",
+        "records",
+        "position",
+        "closed",
+        "requests_sent"
+      ],
+      "type": "object"
+    },
+    "batchSetting": {
+      "anyOf": [
+        {
+          "format": "uint",
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "string"
+        }
+      ]
+    },
+    "batchWarning": {
+      "properties": {
+        "running": {
+          "$ref": "#/$defs/batchSetting"
+        },
+        "tuned_for": {
+          "$ref": "#/$defs/batchSetting"
+        }
+      },
+      "required": [
+        "tuned_for",
+        "running"
+      ],
+      "type": "object"
+    },
+    "callError": {
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/failureKind"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "kind",
+        "retryable",
+        "message"
+      ],
+      "type": "object"
+    },
+    "callRecordDetails": {
       "allOf": [
-        {"if": {"properties": {"question": {"properties": {"verb": {"const": "decide"}}}}},
-          "then": {"properties": {"answer": {"$ref": "#/$defs/yesNoAnswer"}, "value": {"$ref": "#/$defs/decide"}}}},
-        {"if": {"properties": {"question": {"properties": {"verb": {"const": "choose"}}}}},
-          "then": {"properties": {"answer": {"$ref": "#/$defs/choiceAnswer"}, "value": {"$ref": "#/$defs/choose"}}}},
-        {"if": {"properties": {"question": {"properties": {"verb": {"const": "tag"}}}}},
-          "then": {"properties": {"answer": {"$ref": "#/$defs/tagAnswer"}, "value": {"$ref": "#/$defs/tag"}}}},
-        {"if": {"properties": {"question": {"properties": {"verb": {"const": "score"}}}}},
-          "then": {"properties": {"answer": {"$ref": "#/$defs/scoreAnswer"}, "value": {"$ref": "#/$defs/score"}}}},
-        {"if": {"properties": {"question": {"properties": {"verb": {"const": "find"}}}}},
-          "then": {"properties": {"answer": {"$ref": "#/$defs/findAnswer"}, "value": {"$ref": "#/$defs/find"}}}}
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/answer"
+        },
+        "input": {},
+        "meta": {
+          "$ref": "#/$defs/meta"
+        },
+        "question": {
+          "$ref": "#/$defs/question"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/threshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "required": [
+        "schema",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta",
+        "input"
+      ],
+      "type": "object"
+    },
+    "callSuccess": {
+      "properties": {
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/attempt"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "facts": {
+          "$ref": "#/$defs/facts"
+        },
+        "value": true
+      },
+      "required": [
+        "value",
+        "facts"
+      ],
+      "type": "object"
+    },
+    "choose": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "decide": {
+      "type": [
+        "boolean",
+        "null"
+      ]
+    },
+    "decisionDetails": {
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "decide"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "yes_no"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "choose"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "choice"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "tag"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "question": {
+                "properties": {
+                  "verb": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "answer": {
+                "properties": {
+                  "kind": {
+                    "const": "score"
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/answer"
+        },
+        "input": {},
+        "meta": {
+          "$ref": "#/$defs/meta"
+        },
+        "question": {
+          "$ref": "#/$defs/question"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "threshold": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/threshold"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "required": [
+        "schema",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object"
+    },
+    "detailed": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/details"
+        },
+        {
+          "$ref": "#/$defs/annotateDetails"
+        },
+        {
+          "$ref": "#/$defs/recognizeDetails"
+        },
+        {
+          "$ref": "#/$defs/relateDetails"
+        }
       ]
     },
     "details": {
-      "allOf": [{"$ref": "#/$defs/judgmentFields"}],
-      "type": "object", "required": ["schema", "meta"],
-      "properties": {"schema": {"const": "thinkthen.result/1"},
-        "meta": {"$ref": "#/$defs/meta"}},
-      "additionalProperties": true
+      "anyOf": [
+        {
+          "$ref": "#/$defs/decisionDetails"
+        },
+        {
+          "$ref": "#/$defs/findDetails"
+        }
+      ]
     },
-    "annotateSuccess": {
-      "allOf": [{"$ref": "#/$defs/judgmentFields"}],
-      "type": "object", "required": ["request"],
-      "properties": {"question": {"$ref": "#/$defs/annotateQuestion"},
-        "request": {"type": "string"}},
-      "not": {"required": ["failure"]}
-    },
-    "annotateFailure": {
-      "type": "object", "required": ["question", "failure", "request"],
-      "properties": {"question": {"$ref": "#/$defs/annotateQuestion"},
-        "failure": {"$ref": "#/$defs/failure"}, "request": {"type": "string"}},
-      "not": {"anyOf": [
-        {"required": ["value"]}, {"required": ["answer"]}, {"required": ["threshold"]}
-      ]}
-    },
-    "annotateEntry": {"oneOf": [
-      {"$ref": "#/$defs/annotateSuccess"}, {"$ref": "#/$defs/annotateFailure"}
-    ]},
-    "annotateDetails": {
-      "type": "object", "required": ["schema", "input", "value", "answers", "meta"],
+    "entity": {
       "properties": {
-        "schema": {"const": "thinkthen.result/1"},
-        "value": {"$ref": "#/$defs/annotatedRow"},
-        "answers": {"type": "object", "additionalProperties": {"$ref": "#/$defs/annotateEntry"}},
-        "meta": {"allOf": [{"$ref": "#/$defs/meta"}],
-          "properties": {"batches": {"type": "array", "minItems": 1,
-            "items": {"$ref": "#/$defs/annotateBatchMeta"}}}}
-      }, "additionalProperties": true
+        "end": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "length": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "strength": {
+          "format": "double",
+          "type": "number"
+        },
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "text",
+        "start",
+        "end",
+        "length",
+        "kind",
+        "strength"
+      ],
+      "type": "object"
+    },
+    "entityEdge": {
+      "properties": {
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/entity"
+        },
+        "target": {
+          "$ref": "#/$defs/entity"
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability"
+      ],
+      "type": "object"
+    },
+    "facts": {
+      "properties": {
+        "cache_answers": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "estimated_cost_usd": {
+          "type": "string"
+        },
+        "input_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "output_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "records": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "seconds": {
+          "format": "double",
+          "type": "number"
+        }
+      },
+      "required": [
+        "cache_answers",
+        "records",
+        "requests_sent",
+        "seconds"
+      ],
+      "type": "object"
+    },
+    "failed": {
+      "additionalProperties": false,
+      "properties": {
+        "failed": {
+          "$ref": "#/$defs/failure"
+        }
+      },
+      "required": [
+        "failed"
+      ],
+      "type": "object"
+    },
+    "failure": {
+      "properties": {
+        "cause": {
+          "$ref": "#/$defs/failureCause"
+        },
+        "kind": {
+          "enum": [
+            "backend"
+          ],
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "cause"
+      ],
+      "type": "object"
+    },
+    "failureCause": {
+      "oneOf": [
+        {
+          "const": "missing_answer",
+          "type": "string"
+        },
+        {
+          "const": "wrong_kind",
+          "type": "string"
+        },
+        {
+          "const": "missing_probability",
+          "type": "string"
+        },
+        {
+          "const": "invalid_probability",
+          "type": "string"
+        },
+        {
+          "const": "invalid_distribution",
+          "type": "string"
+        },
+        {
+          "const": "unexpected_probability",
+          "type": "string"
+        }
+      ]
+    },
+    "failureKind": {
+      "oneOf": [
+        {
+          "const": "usage",
+          "type": "string"
+        },
+        {
+          "const": "backend",
+          "type": "string"
+        },
+        {
+          "const": "local",
+          "type": "string"
+        },
+        {
+          "const": "cancelled",
+          "type": "string"
+        },
+        {
+          "const": "deadline",
+          "type": "string"
+        },
+        {
+          "const": "defect",
+          "type": "string"
+        }
+      ]
+    },
+    "filter": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "find": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "findAnswer": {
+      "properties": {
+        "confidence": {
+          "format": "double",
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "pick": {
+          "type": "string"
+        },
+        "probabilities": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "pick",
+        "probabilities"
+      ],
+      "type": "object"
+    },
+    "findDetails": {
+      "properties": {
+        "answer": {
+          "$ref": "#/$defs/findAnswer"
+        },
+        "meta": {
+          "$ref": "#/$defs/meta"
+        },
+        "question": {
+          "$ref": "#/$defs/findQuestion"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "threshold": {
+          "type": "null"
+        },
+        "value": {}
+      },
+      "required": [
+        "schema",
+        "value",
+        "question",
+        "answer",
+        "threshold",
+        "meta"
+      ],
+      "type": "object"
+    },
+    "findQuestion": {
+      "properties": {
+        "none": {
+          "type": "boolean"
+        },
+        "text": {}
+      },
+      "required": [
+        "text",
+        "none"
+      ],
+      "type": "object"
+    },
+    "meta": {
+      "properties": {
+        "attempts": {
+          "items": {
+            "$ref": "#/$defs/attempt"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        },
+        "batch": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/batchMeta"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "batch_warning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/batchWarning"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cached": {
+          "type": "boolean"
+        },
+        "context_sha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "failed_questions": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "model": {
+          "type": "string"
+        },
+        "profile_warning": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/profileWarning"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "question_sha256": {
+          "type": "string"
+        },
+        "requests": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tool": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        },
+        "usage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/tokenUsage"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "tool",
+        "question_sha256",
+        "url",
+        "model",
+        "requests_sent",
+        "cached",
+        "requests",
+        "failed_questions"
+      ],
+      "type": "object"
+    },
+    "nameOdds": {
+      "properties": {
+        "edges": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "end": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "kinds": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "start": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "kinds",
+        "edges"
+      ],
+      "type": "object"
+    },
+    "pairOdds": {
+      "properties": {
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/place"
+        },
+        "target": {
+          "$ref": "#/$defs/place"
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability"
+      ],
+      "type": "object"
+    },
+    "pieceOdds": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "tags": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": "object"
+        }
+      },
+      "required": [
+        "start",
+        "end",
+        "tags"
+      ],
+      "type": "object"
+    },
+    "place": {
+      "properties": {
+        "end": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "start": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "start",
+        "end"
+      ],
+      "type": "object"
+    },
+    "profileWarning": {
+      "properties": {
+        "running": {
+          "type": "string"
+        },
+        "tuned_for": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "tuned_for",
+        "running"
+      ],
+      "type": "object"
+    },
+    "question": {
+      "oneOf": [
+        {
+          "properties": {
+            "false": {},
+            "text": {},
+            "true": {},
+            "verb": {
+              "const": "decide",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "options": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "choose",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "options"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "labels": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "tag",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "labels"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "levels": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "text": {},
+            "verb": {
+              "const": "score",
+              "type": "string"
+            }
+          },
+          "required": [
+            "verb",
+            "text",
+            "levels"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    "rank": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "recognize": {
+      "properties": {
+        "entities": {
+          "items": {
+            "$ref": "#/$defs/entity"
+          },
+          "type": "array"
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/entityEdge"
+          },
+          "type": [
+            "array",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "entities"
+      ],
+      "type": "object"
+    },
+    "recognizeAnswer": {
+      "properties": {
+        "names": {
+          "items": {
+            "$ref": "#/$defs/nameOdds"
+          },
+          "type": "array"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/pairOdds"
+          },
+          "type": "array"
+        },
+        "pieces": {
+          "items": {
+            "$ref": "#/$defs/pieceOdds"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "pieces",
+        "names",
+        "pairs"
+      ],
+      "type": "object"
     },
     "recognizeDetails": {
-      "type": "object", "required": ["schema", "value", "question", "answer", "meta"],
       "properties": {
-        "schema": {"const": "thinkthen.result/1"}, "value": {"$ref": "#/$defs/recognize"},
-        "question": {"type": "object", "required": ["verb"],
-          "properties": {"verb": {"const": "recognize"}}},
-        "answer": {"type": "object", "required": ["pieces", "names", "pairs"],
-          "properties": {"pieces": {"type": "array"}, "names": {"type": "array"},
-            "pairs": {"type": "array"}}},
-        "meta": {"$ref": "#/$defs/meta"}
-      }, "additionalProperties": true
+        "answer": {
+          "$ref": "#/$defs/recognizeAnswer"
+        },
+        "input": {},
+        "meta": {
+          "$ref": "#/$defs/meta"
+        },
+        "question": true,
+        "schema": {
+          "type": "string"
+        },
+        "value": {
+          "$ref": "#/$defs/recognize"
+        }
+      },
+      "required": [
+        "schema",
+        "value",
+        "question",
+        "answer",
+        "meta"
+      ],
+      "type": "object"
+    },
+    "recordError": {
+      "additionalProperties": false,
+      "properties": {
+        "at": {
+          "format": "uint",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "failure": {
+          "$ref": "#/$defs/recordFailure"
+        },
+        "schema": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "schema",
+        "at",
+        "failure"
+      ],
+      "type": "object"
+    },
+    "recordFailure": {
+      "properties": {
+        "cause": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "pointer": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "cause",
+        "pointer"
+      ],
+      "type": "object"
+    },
+    "recordRow": {
+      "properties": {
+        "input": {},
+        "value": {
+          "$ref": "#/$defs/value"
+        }
+      },
+      "required": [
+        "input",
+        "value"
+      ],
+      "type": "object"
+    },
+    "relate": {
+      "properties": {
+        "edges": {
+          "items": {
+            "$ref": "#/$defs/relatedEntityEdge"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "edges"
+      ],
+      "type": "object"
+    },
+    "relateAnswers": {
+      "properties": {
+        "questions": {
+          "items": {
+            "$ref": "#/$defs/relateEntry"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "questions"
+      ],
+      "type": "object"
     },
     "relateDetails": {
-      "type": "object", "required": ["schema", "value", "question", "answer", "meta"],
       "properties": {
-        "schema": {"const": "thinkthen.result/1"},
-        "value": {"type": "array", "items": {"$ref": "#/$defs/edge"}},
-        "question": {"type": "object", "required": ["verb"],
-          "properties": {"verb": {"const": "relate"}}},
-        "answer": {"type": "object", "required": ["questions"],
-          "properties": {"questions": {"type": "array"}}},
-        "meta": {"$ref": "#/$defs/meta"}
-      }, "additionalProperties": true
-    },
-    "doorRequest": {
-      "type": "object", "minProperties": 1,
-      "properties": {
-        "evidence": {"type": "string"}, "records": {"type": "array"},
-        "units": {"type": "array", "items": {"type": "string"}},
-        "details": {"type": "boolean"}, "usage": {"const": true},
-        "call": {"type": "object", "additionalProperties": false,
-          "properties": {"batch": {"$ref": "#/$defs/batchSetting"}, "context": {"type": "string", "minLength": 1}}},
-        "rank": {"type": "string"}, "find": {"type": "string"},
-        "annotate": {"type": "object"}, "recognize": {"type": "object"},
-        "relate": {"type": "object"}, "none": {"type": "boolean"},
-        "decide": {"type": ["string", "object", "array"]},
-        "choose": {"type": ["string", "object", "array"]},
-        "tag": {"type": ["string", "object", "array"]},
-        "score": {"type": ["string", "object", "array"]},
-        "filter": {"type": ["string", "object", "array"]}
+        "answer": {
+          "$ref": "#/$defs/relateAnswers"
+        },
+        "meta": {
+          "$ref": "#/$defs/meta"
+        },
+        "question": {
+          "$ref": "#/$defs/relateQuestion"
+        },
+        "schema": {
+          "type": "string"
+        },
+        "value": {
+          "items": {
+            "$ref": "#/$defs/relatedEntityEdge"
+          },
+          "type": "array"
+        }
       },
-      "oneOf": [
-        {"required": ["usage"]},
-        {"required": ["decide"]}, {"required": ["choose"]},
-        {"required": ["tag"]}, {"required": ["score"]},
-        {"required": ["filter"]}, {"required": ["rank"]},
-        {"required": ["find"]}, {"required": ["annotate"]},
-        {"required": ["recognize"]}, {"required": ["relate"]}
+      "required": [
+        "schema",
+        "value",
+        "question",
+        "answer",
+        "meta"
       ],
-      "allOf": [
-        {"if": {"required": ["usage"]}, "then": {"maxProperties": 1}},
-        {"if": {"required": ["recognize"]}, "then": {"required": ["evidence"]}},
-        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}]},
-          "then": {"oneOf": [{"required": ["evidence"]}, {"required": ["records"]}]}},
-        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
-          {"required": ["annotate"]}, {"required": ["relate"]}]},
-          "then": {"required": ["records"]}},
-        {"if": {"required": ["find"]}, "then": {"required": ["units"]}},
-        {"if": {"required": ["none"]}, "then": {"required": ["find"]}},
-        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["filter"]},
-          {"required": ["rank"]}, {"required": ["annotate"]}]},
-          "then": {"properties": {"records": {"items": {"type": "string"}}}}},
-        {"if": {"required": ["relate"]},
-          "then": {"properties": {"records": {"items": {"type": "object"}}}}},
-        {"if": {"required": ["details"]}, "then": {"anyOf": [
-          {"required": ["decide"]}, {"required": ["choose"]},
-          {"required": ["tag"]}, {"required": ["score"]}
-        ]}},
-        {"if": {"required": ["recognize"]},
-          "then": {"not": {"anyOf": [{"required": ["records"]}, {"required": ["units"]}]}}},
-        {"if": {"required": ["call"]}, "then": {"required": ["records"],
-          "not": {"anyOf": [{"required": ["find"]}, {"required": ["recognize"]}, {"required": ["relate"]}]}}},
-        {"if": {"required": ["annotate"]},
-          "then": {"properties": {"call": {"not": {"required": ["context"]}}}}},
-        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
-          {"required": ["annotate"]}, {"required": ["relate"]}]},
-          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["units"]}]}}},
-        {"if": {"required": ["find"]},
-          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["records"]}]}}},
-        {"not": {"anyOf": [
-          {"required": ["evidence", "records"]}, {"required": ["evidence", "units"]},
-          {"required": ["records", "units"]}
-        ]}}
+      "type": "object"
+    },
+    "relateEntry": {
+      "properties": {
+        "accepted": {
+          "type": "boolean"
+        },
+        "direction": {
+          "type": "string"
+        },
+        "failure": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/failure"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "method": {
+          "type": "string"
+        },
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "reads": {
+          "type": "string"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "request": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/relatedEntity"
+        },
+        "target": {
+          "$ref": "#/$defs/relatedEntity"
+        }
+      },
+      "required": [
+        "relation",
+        "reads",
+        "method",
+        "direction",
+        "source",
+        "target",
+        "request"
+      ],
+      "type": "object"
+    },
+    "relateFields": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "relateQuestion": {
+      "properties": {
+        "fields": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/relateFields"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "profile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "relations": {
+          "items": {
+            "$ref": "#/$defs/relationRule"
+          },
+          "type": "array"
+        },
+        "threshold": {
+          "$ref": "#/$defs/threshold"
+        },
+        "verb": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "verb",
+        "fields",
+        "relations",
+        "threshold"
+      ],
+      "type": "object"
+    },
+    "relatedEntity": {
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "kind"
+      ],
+      "type": "object"
+    },
+    "relatedEntityEdge": {
+      "properties": {
+        "probability": {
+          "format": "double",
+          "type": "number"
+        },
+        "relation": {
+          "type": "string"
+        },
+        "source": {
+          "$ref": "#/$defs/relatedEntity"
+        },
+        "target": {
+          "$ref": "#/$defs/relatedEntity"
+        }
+      },
+      "required": [
+        "relation",
+        "source",
+        "target",
+        "probability"
+      ],
+      "type": "object"
+    },
+    "relationRule": {
+      "properties": {
+        "either": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string"
+        },
+        "reads": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "source",
+        "target",
+        "reads",
+        "either"
+      ],
+      "type": "object"
+    },
+    "score": {
+      "format": "double",
+      "type": "number"
+    },
+    "tag": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "threshold": {
+      "type": [
+        "number",
+        "string"
+      ]
+    },
+    "tokenUsage": {
+      "properties": {
+        "input_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "output_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "input_tokens",
+        "output_tokens"
+      ],
+      "type": "object"
+    },
+    "usage": {
+      "properties": {
+        "cache_answers": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "input_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "output_tokens": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "requests_sent": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        },
+        "retries": {
+          "format": "uint64",
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "requests_sent",
+        "retries",
+        "input_tokens",
+        "output_tokens",
+        "cache_answers"
+      ],
+      "type": "object"
+    },
+    "value": {
+      "anyOf": [
+        {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "format": "double",
+          "type": "number"
+        }
       ]
     }
-  }
+  },
+  "$id": "urn:thinkthen:result",
+  "$ref": "#/$defs/detailed",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "description": "Generated from the Rust types that serialize each result; do not edit. Rewrite with: THINKTHEN_WRITE_SCHEMA=1 cargo test -p thinkthen --lib schema_tests. Validate a C door value against its verb's definition; the root checks one detailed thinkthen.result/1 row.",
+  "title": "thinkthen result and JSON door structures"
 }

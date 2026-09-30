@@ -119,6 +119,7 @@ impl fmt::Debug for Evidence {
 /// The model that answered, as text that is not blank.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
 #[serde(into = "String")]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
 pub(crate) struct ModelName(String);
 
 impl ModelName {
@@ -177,6 +178,7 @@ impl From<ModelName> for String {
 /// The URL a request is posted to. Debug never prints the raw address.
 #[derive(Clone, Eq, PartialEq, Serialize)]
 #[serde(into = "String")]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
 pub(crate) struct Url(String);
 
 impl Url {
@@ -211,6 +213,7 @@ impl fmt::Debug for Url {
 /// The question a judgment asks, as text that is not blank, an object, or a
 /// list.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "Json"))]
 pub(crate) struct QuestionText(Json);
 
 impl QuestionText {
@@ -253,6 +256,7 @@ impl Serialize for QuestionText {
 /// The text that says what yes or what no means, as text that is not blank,
 /// an object, a list, or null.
 #[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "Json"))]
 pub(crate) struct Meaning(Json);
 
 impl Meaning {
@@ -311,6 +315,7 @@ impl Serialize for Meaning {
 /// The description a label or a level carries, as text, an object, a list, or
 /// null.
 #[derive(Clone, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "Json"))]
 pub(crate) struct Description(Json);
 
 impl Description {

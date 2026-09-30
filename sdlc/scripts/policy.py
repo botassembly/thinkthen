@@ -54,7 +54,8 @@ ACCEPTED_DEPENDENCIES = {
 }
 ACCEPTED_TARGET_DEPENDENCIES = {"thinkthen": {"nix"}, "conformance-backend": set()}
 ACCEPTED_DEV_DEPENDENCIES = {
-    "thinkthen": {"proptest", "conformance-backend", "signal-hook"},
+    # ADR 0112: schemars derives the result schema in a unit test.
+    "thinkthen": {"proptest", "conformance-backend", "schemars", "signal-hook"},
     "conformance-backend": set(),
 }
 # Ticket 0078: the host signal proofs deliver a signal to one worker thread.
@@ -131,8 +132,11 @@ ACCEPTED_RELEASE_PROFILE = {"overflow-checks": True, "panic": "unwind"}
 ACCEPTED_CRATE_ROOT_ATTRIBUTES = {
     "crates/thinkthen/src/core/mod.rs": (
         "#![forbid(unsafe_code)]",
-        "#![forbid(clippy::disallowed_methods, clippy::disallowed_types)]",
-        "#![forbid(clippy::disallowed_macros, clippy::indexing_slicing)]",
+        "#![forbid(clippy::indexing_slicing)]",
+        # ADR 0112: only the unit tests, which derive the result schema, lift these.
+        "#![cfg_attr(not(test), forbid(clippy::disallowed_methods))]",
+        "#![cfg_attr(not(test), forbid(clippy::disallowed_types))]",
+        "#![cfg_attr(not(test), forbid(clippy::disallowed_macros))]",
         "#![forbid(clippy::allow_attributes_without_reason)]",
     ),
     "crates/thinkthen/src/main.rs": ("#![forbid(unsafe_code)]",),

@@ -7,6 +7,8 @@ use serde::Serialize;
 /// The transport result of one sent request.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "snake_case")]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "attemptOutcome"))]
 pub enum AttemptOutcome {
     /// The HTTP request and bounded response body completed successfully.
     Ok,
@@ -18,6 +20,7 @@ pub enum AttemptOutcome {
 
 /// One scoped live send. Completion order can differ from ordinal order.
 #[derive(Clone, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "attempt"))]
 pub struct AttemptObservation {
     ordinal: u64,
     request_sha256: String,
