@@ -74,7 +74,7 @@ impl Batcher {
     ) -> Result<Joined, BatchError> {
         let question = quote(line, &base)?;
         let (wire, alone) = match &question {
-            Some(asked) => self.measured(&[(&record.value, asked)])?,
+            Some(asked) => self.measured(&[asked])?,
             None => (base.len(), self.skeleton),
         };
         let share = alone.checked_sub(self.skeleton).ok_or_else(defect)?;

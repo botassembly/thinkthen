@@ -387,7 +387,7 @@ impl Batcher {
             _ => self.plan(
                 &distinct
                     .iter()
-                    .filter_map(|held| Some((&held.record.value, held.question.as_deref()?)))
+                    .filter_map(|held| held.question.as_deref())
                     .collect::<Vec<_>>(),
             )?,
         };
@@ -406,19 +406,15 @@ impl Batcher {
         Ok((plan, body))
     }
 
-    /// The batched plan of these records under the shared state.
-    fn plan(&self, pairs: &[(&Json, &[Question])]) -> Result<Plan, BatchError> {
-        let evidence = self.shared.clone();
-        let questions = pairs
-            .iter()
-            .flat_map(|(_, questions)| questions.iter().cloned())
-            .collect();
-        Plan::new(evidence, self.model(), questions).map_err(|_| defect())
+    /// The batched plan of these records' quoted questions under the shared state.
+    fn plan(&self, quoted: &[&[Question]]) -> Result<Plan, BatchError> {
+        let questions = quoted.iter().flat_map(|asked| asked.iter().cloned());
+        Plan::new(self.shared.clone(), self.model(), questions.collect()).map_err(|_| defect())
     }
 
     /// The wire questions and encoded bytes of the batched plan of these records.
-    fn measured(&self, pairs: &[(&Json, &[Question])]) -> Result<(usize, usize), BatchError> {
-        let plan = self.plan(pairs)?;
+    fn measured(&self, quoted: &[&[Question]]) -> Result<(usize, usize), BatchError> {
+        let plan = self.plan(quoted)?;
         let body = built_in::encode(&plan).map_err(|_| defect())?;
         Ok((plan.wire_question_count(), body.len()))
     }
@@ -426,10 +422,9 @@ impl Batcher {
     /// The batched body with no record: a probe record alone, less its share,
     /// which two copies of it side by side reveal.
     fn skeleton(&self) -> Result<usize, BatchError> {
-        let probe = Json::String("0".to_owned());
         let asked = questions::quote("\"0\"", &self.question)?.ok_or_else(defect)?;
-        let (wire, one) = self.measured(&[(&probe, &asked)])?;
-        let (_, two) = self.measured(&[(&probe, &asked), (&probe, &asked)])?;
+        let (wire, one) = self.measured(&[&asked])?;
+        let (_, two) = self.measured(&[&asked, &asked])?;
         let share = two
             .checked_sub(one + 1 + names(wire, wire))
             .ok_or_else(defect)?;
