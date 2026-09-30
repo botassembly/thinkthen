@@ -45,7 +45,7 @@ const tabs = SURFACES.map((s) => ({
           ? <>See <code>{fn}</code> run on <a href={bench.route}>Beatles Bench</a>.</>
           : <>No Bash example for <code>{fn}</code>.</>}</p>
       )}
-      {t.code && <Code code={t.code.code} file={t.code.file} />}
+      {t.code && <Code code={t.code.code} file={t.code.file} label={`Copy the ${t.surface.name} sample`} />}
       {t.code?.output && <Code code={t.code.output} lang="output" caption={`What ${t.surface.name} printed`} copy={false} />}
       {t.slug !== 'shell' && !t.code && <p class="note">No {t.surface.name} sample for <code>{fn}</code>.</p>}
     </div>

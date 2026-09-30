@@ -52,7 +52,7 @@ const runFacts = {
   <h2>A first call</h2>
   {first ? (
     <>
-      <Code code={first.code} file={first.file} />
+      <Code code={first.code} file={first.file} label={`Copy the ${surface.name} sample`} />
       {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
     </>
   ) : (
