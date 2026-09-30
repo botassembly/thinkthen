@@ -28,6 +28,7 @@ use crate::calls::{self, Crossed};
 use crate::relate::{self};
 use crate::{Settings, usage};
 
+mod settings;
 mod values;
 use values::{asked, batch_of, completion_of, context_of, required_completion, spec_of, whole_of};
 
@@ -220,24 +221,7 @@ fn tt_question_check(body: Robj) -> Crossed<String> {
 /// Validate keyword settings with the shared core grammar before a send.
 #[extendr]
 fn tt_settings_check(body: Robj, kind: Robj) -> Crossed<()> {
-    let parsed = thinkthen::Settings::parse(&text_of(&body, "settings")?)
-        .map_err(|error| usage(&error.to_string()))?;
-    let verb = match text_of(&kind, "question kind")?.as_str() {
-        "decide" => thinkthen::For::Decide,
-        "choose" => thinkthen::For::Choose,
-        "score" => thinkthen::For::Score,
-        "tag" => thinkthen::For::Tag,
-        _ => return Err(usage("the question kind is invalid")),
-    };
-    // The complete question is subsequently checked from its raw JSON.
-    // Decide has no required members, so its key dispositions can be
-    // checked immediately. Other verbs get that check on the full question.
-    if verb == thinkthen::For::Decide {
-        parsed
-            .check(verb)
-            .map_err(|error| usage(&error.to_string()))?;
-    }
-    Ok(())
+    settings::check(&body, &kind)
 }
 
 #[extendr]
@@ -294,6 +278,13 @@ fn tt_column(
         completion_of(&completion)?,
         positions,
     )
+}
+
+/// Preview the same packed request bodies without reading a key or sending.
+#[extendr]
+fn tt_plan_column(question: Robj, records: Robj, batch: Robj, context: Robj) -> Crossed<List> {
+    let (json, texts) = asked(&question, &records, "the evidence")?;
+    crate::plan::preview(&json, texts, batch_of(&batch)?, context_of(&context)?)
 }
 
 #[extendr]
@@ -511,6 +502,7 @@ extendr_module! {
     fn tt_question_check;
     fn tt_settings_check;
     fn tt_decide_column;
+    fn tt_plan_column;
     fn tt_column;
     fn tt_filter_places;
     fn tt_rank_all;

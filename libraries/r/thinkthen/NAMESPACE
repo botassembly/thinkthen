@@ -7,6 +7,7 @@
 useDynLib(thinkthen, .registration = TRUE)
 export(tt_question)
 export(tt_decide)
+export(tt_plan)
 export(tt_choose)
 export(tt_score)
 export(tt_tag)

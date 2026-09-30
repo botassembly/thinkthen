@@ -22,6 +22,9 @@ tt_settings_check <- function(body, kind) .Call(wrap__tt_settings_check, body, k
 
 tt_decide_column <- function(question, records, positions, deadline, batch, context, completion) .Call(wrap__tt_decide_column, question, records, positions, deadline, batch, context, completion)
 
+#' Preview the same packed request bodies without reading a key or sending.
+tt_plan_column <- function(question, records, batch, context) .Call(wrap__tt_plan_column, question, records, batch, context)
+
 tt_column <- function(question, records, positions, deadline, batch, context, completion) .Call(wrap__tt_column, question, records, positions, deadline, batch, context, completion)
 
 tt_filter_places <- function(question, records, deadline, batch, context, completion) .Call(wrap__tt_filter_places, question, records, deadline, batch, context, completion)

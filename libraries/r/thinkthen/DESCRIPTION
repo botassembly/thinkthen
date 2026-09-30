@@ -19,6 +19,8 @@ Imports:
     jsonlite (>= 2.0.0)
 Suggests:
     dplyr,
+    dbplyr,
+    purrr,
     tidyr,
     igraph
 Config/rextendr:
