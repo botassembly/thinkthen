@@ -6,7 +6,6 @@
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
-use std::time::Instant;
 
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -19,9 +18,9 @@ use crate::arrow::{self, Arrow, Cells, Imported, Readable};
 use crate::asked::{Asked, Recognize};
 use crate::engine::{Arg, Engine, Held, annotated, answer, batch, collected};
 use crate::input::{Pandas, controls, listed_nullable, polars_frame, top};
-use crate::result::{self, Completed, OwnedFacts};
+use crate::result::{self, Completed};
 use crate::worker::{Controls, run_tallied};
-use crate::{guard, raised, usage};
+use crate::{defect, guard, raised, usage};
 
 mod names;
 mod nullable;
@@ -55,17 +54,7 @@ where
     T: Send + 'static,
     F: FnOnce(H, CallOptions<'_>) -> Result<Completed<T>, Stop> + Send + 'static,
 {
-    run_tallied(py, controls, tally, move |options| {
-        let began = Instant::now();
-        job(held, options).map_err(|stop| match stop {
-            Stop::Said(message, None) => {
-                let mut facts = OwnedFacts::empty();
-                facts.seconds = began.elapsed().as_secs_f64();
-                Stop::Said(message, Some(Box::new(facts)))
-            }
-            other => other,
-        })
-    })
+    run_tallied(py, controls, tally, move |options| job(held, options))
 }
 
 /// Where a column's texts come from: the Arrow door, or a pandas Series the
@@ -396,6 +385,7 @@ pub(crate) fn _annotate_column<'py>(
             Stop::Said(sentence, _) => usage(py, &sentence),
             Stop::Engine(error) => raised(py, &error),
             Stop::Accounted(account) => raised(py, &account.error),
+            Stop::Unwritten(_) => defect(py, crate::result::UNWRITTEN),
         })?;
         let source = Source::read(series)?.0;
         let columns = over_texts(py, controls, None, source, move |texts, rows, options| {
@@ -504,7 +494,7 @@ pub(crate) fn _arrow_probe(series: &Bound<'_, PyAny>) -> PyResult<Vec<usize>> {
             rows,
             Completed {
                 value: texts.iter().map(|text| text.as_ptr().addr()).collect(),
-                facts: OwnedFacts::empty(),
+                facts: thinkthen::Tally::new().facts(),
                 details: Vec::new(),
             },
         )

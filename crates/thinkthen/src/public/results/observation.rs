@@ -62,11 +62,11 @@ impl fmt::Debug for RecordObservation<'_> {
     }
 }
 
-impl RecordObservation<'_> {
-    /// A question event as one JSON object: its `index`, its `member` or
-    /// `stage` when set, its `position`, and its detail. A row event has none.
-    #[must_use]
-    pub fn to_json(&self) -> Option<String> {
+/// A question event serializes as one object: its `index`, its `member` or
+/// `stage` when set, its `position`, and its detail. A row event has no JSON
+/// form; serializing one fails, so callers skip row events.
+impl Serialize for RecordObservation<'_> {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let Self::Question {
             index,
             member,
@@ -75,10 +75,10 @@ impl RecordObservation<'_> {
             detail,
         } = self
         else {
-            return None;
+            return Err(serde::ser::Error::custom("a row event has no JSON form"));
         };
         let held = detail.0;
-        let row = QuestionJson {
+        QuestionJson {
             index: *index,
             member: *member,
             stage: *stage,
@@ -102,12 +102,12 @@ impl RecordObservation<'_> {
             }),
             confidence: held.confidence,
             usage: held.usage,
-        };
-        core::json_line(&row).ok()
+        }
+        .serialize(serializer)
     }
 }
 
-/// One question event as JSON, as [`RecordObservation::to_json`] writes it.
+/// One question event as JSON, as [`RecordObservation`] serializes it.
 #[derive(Serialize)]
 #[cfg_attr(
     test,

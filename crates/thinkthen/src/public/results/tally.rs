@@ -19,11 +19,14 @@ struct State {
     missing_usage: bool,
     model: Option<String>,
     mixed_models: bool,
+    cost_micro_usd: u64,
+    missing_cost: bool,
 }
 
 /// One caller-owned sum of completed call facts. Clones share its state.
 /// Its seconds span the first call start through the last call finish, even
-/// when calls overlap; they are not the sum of call durations.
+/// when calls overlap; they are not the sum of call durations. Its estimated
+/// cost is the sum of the calls' estimates, absent when any call lacked one.
 #[derive(Clone, Default)]
 pub struct Tally(Arc<Mutex<State>>);
 
@@ -91,7 +94,10 @@ impl Tally {
             output_tokens: (!state.missing_usage)
                 .then_some(state.output_tokens)
                 .flatten(),
-            estimated_cost_usd: None,
+            estimated_cost_usd: (state.first.is_some() && !state.missing_cost).then(|| {
+                let micro = state.cost_micro_usd;
+                format!("{}.{:06}", micro / 1_000_000, micro % 1_000_000)
+            }),
             seconds: match (state.first, state.last) {
                 (Some(first), Some(last)) => last.duration_since(first).as_secs_f64(),
                 _ => 0.0,
@@ -150,6 +156,15 @@ impl TallyStart<'_> {
         state.input_tokens = input;
         state.output_tokens = output;
         state.missing_usage |= facts.input_tokens.is_none() || facts.output_tokens.is_none();
+        match facts
+            .estimated_cost_usd
+            .as_deref()
+            .and_then(micro_usd)
+            .and_then(|cost| state.cost_micro_usd.checked_add(cost))
+        {
+            Some(total) => state.cost_micro_usd = total,
+            None => state.missing_cost = true,
+        }
         match (&state.model, &facts.model) {
             (None, Some(model)) if !state.mixed_models => state.model = Some(model.clone()),
             (Some(previous), Some(model)) if previous != model => state.mixed_models = true,
@@ -158,4 +173,17 @@ impl TallyStart<'_> {
         }
         Ok(())
     }
+}
+
+/// A call's estimate, which the crate writes with six decimal places.
+fn micro_usd(cost: &str) -> Option<u64> {
+    let (whole, fraction) = cost.split_once('.')?;
+    if fraction.len() != 6 {
+        return None;
+    }
+    whole
+        .parse::<u64>()
+        .ok()?
+        .checked_mul(1_000_000)?
+        .checked_add(fraction.parse().ok()?)
 }

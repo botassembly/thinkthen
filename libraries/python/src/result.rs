@@ -4,130 +4,61 @@ use std::sync::{Arc, Mutex};
 
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
-use serde::Serialize;
 use serde_json::Value;
 use thinkthen::{ErrorKind, Facts, RecordObservation};
 
+/// The sentence for a question event serde could not write.
+pub(crate) const UNWRITTEN: &str = "a question event could not be written";
+
+#[derive(Default)]
+struct Held {
+    rows: Vec<Value>,
+    unwritten: bool,
+}
+
 #[derive(Default, Clone)]
-pub(crate) struct Observations(Arc<Mutex<Vec<Value>>>);
+pub(crate) struct Observations(Arc<Mutex<Held>>);
 
 impl Observations {
     pub(crate) fn push(&self, event: RecordObservation<'_>) {
-        let Some(row) = event
-            .to_json()
-            .and_then(|json| serde_json::from_str(&json).ok())
-        else {
+        if matches!(event, RecordObservation::Row { .. }) {
             return;
-        };
-        self.0
+        }
+        let written = serde_json::to_value(&event);
+        let mut held = self
+            .0
             .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .push(row);
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        match written {
+            Ok(row) => held.rows.push(row),
+            Err(_) => held.unwritten = true,
+        }
     }
 
-    pub(crate) fn snapshot(&self) -> Vec<Value> {
-        self.0
+    /// The question events so far, or [`UNWRITTEN`] when one failed to write.
+    pub(crate) fn snapshot(&self) -> Result<Vec<Value>, &'static str> {
+        let held = self
+            .0
             .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .clone()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
+        if held.unwritten {
+            return Err(UNWRITTEN);
+        }
+        Ok(held.rows.clone())
     }
 }
 
 pub(crate) struct Completed<T> {
     pub(crate) value: T,
-    pub(crate) facts: OwnedFacts,
+    pub(crate) facts: Facts,
     pub(crate) details: Vec<Value>,
-}
-
-/// One call's facts, or several calls' summed facts, which the core's
-/// `Facts` cannot hold. A single call's facts serialize as the core wrote them.
-#[derive(Clone, Debug, Serialize)]
-pub(crate) struct OwnedFacts {
-    #[serde(skip)]
-    pub(crate) core: Option<Facts>,
-    pub(crate) cache_answers: u64,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) input_tokens: Option<u64>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) model: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub(crate) output_tokens: Option<u64>,
-    pub(crate) records: u64,
-    pub(crate) requests_sent: u64,
-    pub(crate) seconds: f64,
-    #[serde(skip)]
-    model_conflict: bool,
-}
-
-impl From<&Facts> for OwnedFacts {
-    fn from(facts: &Facts) -> Self {
-        Self {
-            core: Some(facts.clone()),
-            records: facts.records(),
-            requests_sent: facts.requests_sent(),
-            cache_answers: facts.cache_answers(),
-            input_tokens: facts.input_tokens(),
-            output_tokens: facts.output_tokens(),
-            seconds: facts.seconds(),
-            model: facts.model().map(str::to_owned),
-            model_conflict: false,
-        }
-    }
-}
-
-impl OwnedFacts {
-    pub(crate) fn empty() -> Self {
-        Self {
-            core: None,
-            records: 0,
-            requests_sent: 0,
-            cache_answers: 0,
-            input_tokens: None,
-            output_tokens: None,
-            seconds: 0.0,
-            model: None,
-            model_conflict: false,
-        }
-    }
-
-    pub(crate) fn combine(&mut self, next: &Facts) {
-        self.core = None;
-        let prior_sends = self.requests_sent;
-        self.records += next.records();
-        self.requests_sent += next.requests_sent();
-        self.cache_answers += next.cache_answers();
-        if next.requests_sent() > 0 {
-            self.input_tokens = if prior_sends == 0 {
-                next.input_tokens()
-            } else {
-                self.input_tokens
-                    .zip(next.input_tokens())
-                    .map(|(a, b)| a + b)
-            };
-            self.output_tokens = if prior_sends == 0 {
-                next.output_tokens()
-            } else {
-                self.output_tokens
-                    .zip(next.output_tokens())
-                    .map(|(a, b)| a + b)
-            };
-        }
-        if let Some(model) = next.model() {
-            if self.model.as_deref().is_some_and(|old| old != model) {
-                self.model = None;
-                self.model_conflict = true;
-            } else if self.model.is_none() && !self.model_conflict {
-                self.model = Some(model.to_owned());
-            }
-        }
-    }
 }
 
 impl<T> Completed<T> {
     pub(crate) fn new(value: T, facts: &Facts) -> Self {
         Self {
             value,
-            facts: facts.into(),
+            facts: facts.clone(),
             details: Vec::new(),
         }
     }
@@ -229,17 +160,9 @@ fn frozen(py: Python<'_>, value: &Value) -> PyResult<Py<PyAny>> {
     })
 }
 
-pub(crate) fn python_facts(py: Python<'_>, facts: &Facts) -> PyResult<Py<PyAny>> {
-    python_owned_facts(py, &OwnedFacts::from(facts))
-}
-
 /// Facts as the same read-only mapping every other result is.
-pub(crate) fn python_owned_facts(py: Python<'_>, facts: &OwnedFacts) -> PyResult<Py<PyAny>> {
-    let json = match &facts.core {
-        Some(core) => serde_json::to_value(core),
-        None => serde_json::to_value(facts),
-    }
-    .map_err(|_| {
+pub(crate) fn python_facts(py: Python<'_>, facts: &Facts) -> PyResult<Py<PyAny>> {
+    let json = serde_json::to_value(facts).map_err(|_| {
         crate::raise(
             py,
             ErrorKind::Defect,
@@ -268,7 +191,7 @@ pub(crate) fn call(py: Python<'_>, done: Completed<Py<PyAny>>) -> PyResult<Py<Py
         PyCall {
             value: done.value,
             probability: py.None(),
-            facts: python_owned_facts(py, &done.facts)?,
+            facts: python_facts(py, &done.facts)?,
             details: python_details(py, &done.details)?,
         },
     )?
@@ -309,7 +232,7 @@ pub(crate) fn converted<T>(
             };
             error
                 .value(py)
-                .setattr("facts", python_owned_facts(py, &facts)?)?;
+                .setattr("facts", python_facts(py, &facts)?)?;
             error
                 .value(py)
                 .setattr("details", python_details(py, &details)?)?;

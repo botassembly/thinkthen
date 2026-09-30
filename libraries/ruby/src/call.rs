@@ -1,5 +1,6 @@
 //! The calls a worker runs: owned inputs in, plain Rust values out.
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Mutex, PoisonError};
 
 use thinkthen::{
@@ -101,12 +102,17 @@ pub(crate) fn run(
     controls: Controls,
 ) -> Result<Completed, Fault> {
     let observed = Mutex::new(Vec::new());
+    let unwritten = AtomicBool::new(false);
     let observe = |event: thinkthen::RecordObservation<'_>| {
-        if let Some(detail) = event.to_json() {
-            observed
+        if matches!(event, thinkthen::RecordObservation::Row { .. }) {
+            return;
+        }
+        match serde_json::to_string(&event) {
+            Ok(detail) => observed
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
-                .push(detail);
+                .push(detail),
+            Err(_) => unwritten.store(true, Ordering::SeqCst),
         }
     };
     let mut options = CallOptions::new().cancel(own);
@@ -125,6 +131,14 @@ pub(crate) fn run(
         .into_inner()
         .unwrap_or_else(PoisonError::into_inner);
     match result {
+        Ok((_, facts)) if unwritten.load(Ordering::SeqCst) => Err(Fault {
+            facts: Some(Box::new(facts)),
+            details,
+            ..Fault::of(
+                thinkthen::ErrorKind::Defect,
+                "a question event could not be written",
+            )
+        }),
         Ok((value, facts)) => Ok(Completed {
             value,
             facts,

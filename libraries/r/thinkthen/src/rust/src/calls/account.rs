@@ -15,6 +15,7 @@ pub(crate) struct Account {
     positions: Option<Vec<usize>>,
     tally: Tally,
     counted: AtomicBool,
+    unwritten: AtomicBool,
     details: Mutex<Vec<Box<RawValue>>>,
 }
 
@@ -49,15 +50,22 @@ impl Account {
             position,
             detail,
         };
-        if let Some(json) = event
-            .to_json()
-            .and_then(|text| RawValue::from_string(text).ok())
-        {
-            self.details
+        match serde_json::value::to_raw_value(&event) {
+            Ok(json) => self
+                .details
                 .lock()
                 .unwrap_or_else(PoisonError::into_inner)
-                .push(json);
+                .push(json),
+            Err(_) => self.unwritten.store(true, Ordering::SeqCst),
         }
+    }
+
+    /// Fail the call when a question event could not be written.
+    pub(crate) fn written(&self) -> Result<(), String> {
+        if self.unwritten.load(Ordering::SeqCst) {
+            return Err(crate::defect("a question event could not be written"));
+        }
+        Ok(())
     }
 
     /// Run one eager call and count its facts, a failed call's too.

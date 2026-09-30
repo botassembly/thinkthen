@@ -66,7 +66,8 @@ pub(crate) fn call_owned<T: Send + 'static>(
         move |engine, options| {
             let account = Account::new(positions);
             let observer = |event: thinkthen::RecordObservation<'_>| account.observe(event, None);
-            let result = work(engine, options.observe(&observer), &account);
+            let result = work(engine, options.observe(&observer), &account)
+                .and_then(|value| account.written().map(|()| value));
             let snapshot = account.finish();
             if let Some(held) = &receipt {
                 let kind = result.as_ref().map_or_else(

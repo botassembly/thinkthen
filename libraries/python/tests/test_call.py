@@ -613,6 +613,8 @@ def test_columns_and_frames_rebuild_inside_call_value(backend, tmp_path):
                                    "kind", "strength"]
     assert named.facts["records"] == 2
     assert [entry["index"] for entry in named.details] == [0, 0, 1, 1]
+    single = engine.recognize("one", kinds=["PERSON"])
+    assert sorted(named.facts) == sorted(single.facts), (dict(named.facts), dict(single.facts))
     print("frames", column.facts["records"], frame.facts["records"], named.facts["records"])
     """, child_env(backend, tmp_path))
     assert printed.strip() == "frames 2 2 2"

@@ -4,7 +4,7 @@ use serde_json::Value;
 use thinkthen::CallOptions;
 
 use super::{AccountedFailure, Stop};
-use crate::result::{Completed, Observations, OwnedFacts};
+use crate::result::{Completed, Observations};
 
 fn original(details: Vec<Value>, positions: &[usize]) -> Result<Vec<Value>, Stop> {
     details
@@ -48,21 +48,25 @@ pub(super) fn present<T>(
     let result = job(&texts, rows, options.observe(&observer));
     match result {
         Ok(mut done) => {
-            let details = if done.details.is_empty() {
-                observed.snapshot()
-            } else {
-                done.details
+            let seen = observed.snapshot();
+            let details = match seen {
+                Err(_) => return Err(Stop::Unwritten(Box::new(done.facts))),
+                Ok(seen) if done.details.is_empty() => seen,
+                Ok(_) => done.details,
             };
             done.details = original(details, &positions)
                 .map_err(|error| error.with_facts(done.facts.clone()))?;
             Ok(done)
         }
         Err(Stop::Engine(error)) if error.facts().is_some() => {
-            let details = original(observed.snapshot(), &positions)?;
             let facts = error
                 .facts()
-                .map(OwnedFacts::from)
+                .cloned()
                 .ok_or("the started call lost its facts")?;
+            let Ok(seen) = observed.snapshot() else {
+                return Err(Stop::Unwritten(Box::new(facts)));
+            };
+            let details = original(seen, &positions)?;
             Err(Stop::Accounted(Box::new(AccountedFailure {
                 error,
                 facts,

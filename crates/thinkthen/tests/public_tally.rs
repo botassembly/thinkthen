@@ -96,3 +96,42 @@ fn cloned_tallies_keep_both_concurrent_call_receipts() {
     );
     assert!(facts.seconds().is_finite() && facts.seconds() >= 0.0);
 }
+
+#[test]
+fn a_tally_writes_the_members_a_priced_call_writes() {
+    const YES: &str = r#"{"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":1200000,"output_tokens":300000}}"#;
+    let listener = Listener::answering(|_| Canned::ok(YES)).expect("listener");
+    let engine = Engine::builder()
+        .base_url(listener.base())
+        .expect("base")
+        .api_key("sk-test")
+        .expect("key")
+        .prices_usd_per_million("0.25", "1.5")
+        .expect("prices")
+        .no_cache()
+        .build()
+        .expect("engine");
+    let question = Question::decide("asks for a refund")
+        .expect("question")
+        .cut();
+    let tally = Tally::new();
+    let one = tally
+        .run(|| engine.decide(&question, "first"))
+        .expect("first call");
+    tally
+        .run(|| engine.decide(&question, "second"))
+        .expect("second call");
+    assert_eq!(one.facts().estimated_cost_usd(), Some("0.750000"));
+    let members = |facts: &thinkthen::Facts| {
+        let json = serde_json::to_value(facts).expect("facts serialize");
+        json.as_object()
+            .expect("facts are an object")
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>()
+    };
+    let summed = tally.facts();
+    assert_eq!(members(&summed), members(one.facts()));
+    assert_eq!(summed.estimated_cost_usd(), Some("1.500000"));
+    assert_eq!(summed.model(), Some("jev-1.13.0"));
+}
