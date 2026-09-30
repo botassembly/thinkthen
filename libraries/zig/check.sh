@@ -15,6 +15,9 @@ if [ "${THINKTHEN_HEAVY_LOCK_HELD:-}" != "$lock" ]; then
     export THINKTHEN_HEAVY_LOCK_HELD
     exec flock -w 180 -E 75 -o "$lock" /bin/sh "$0" "$@"
 fi
+# ADR 0113: this run's engines write a scratch usage folder, never the real one.
+. "$root/sdlc/scripts/scratch.sh"
+usage_home
 mkdir -p "$here/target/native/include" "$here/target/native/lib" "$here/target/home" "$here/target/cache" "$here/target/scratch" "$here/target/logs"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.zig.json"
 node "$root/sdlc/scripts/ratchet.mjs" "$here/ratchet.py.json"
