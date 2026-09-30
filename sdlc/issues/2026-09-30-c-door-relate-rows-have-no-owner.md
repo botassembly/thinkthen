@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: 0314 slice 4's C bridge family builds typed `annotate` and record-array rows, or before the 0.1 release candidate.
 
+Debt: 012
+
+Severity: medium
+
 Keeping it risks the C door's relate output drifting from the typed result schema the other rows follow.
 
 ## The problem

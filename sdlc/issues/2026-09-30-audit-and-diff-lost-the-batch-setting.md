@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: before 0.1, or when 0304 slice 4 or 5 touches the run facts.
 
+Debt: 008
+
+Severity: medium
+
 Keeping it silently drops ADR 0085's batch warning, so a threshold tuned at one batch setting can be reused at another with no warning.
 
 ## What happens

@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: before the next checkpoint tag, which needs every surface green on one commit.
 
+Debt: 022
+
+Severity: high
+
 Keeping it means `surfaces` reports Dart as not run, so a Dart break can land unseen.
 
 ## The problem

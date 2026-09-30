@@ -1,0 +1,14 @@
+{
+  "statusMappings": {
+    "landed": "complete",
+    "done": "complete",
+    "ready": "open",
+    "in progress": "open",
+    "resolved": "closed",
+    "**accepted": "accepted",
+    "**accepted**": "accepted"
+  },
+  "evidenceFromTicketNumber": 120,
+  "closedIssuesFolder": "closed",
+  "lanesTable": { "file": "planning/cleanup-2026-09-30.md", "heading": "Lanes" }
+}

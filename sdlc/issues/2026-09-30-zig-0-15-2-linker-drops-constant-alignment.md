@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: a Zig release fixes its ELF linker's constant alignment.
 
+Debt: 002
+
+Severity: low
+
 Keeping it ties static Zig builds to LLVM and LLD, and a later Zig may drop or change those switches.
 
 ## The problem

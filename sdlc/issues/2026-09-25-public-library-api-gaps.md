@@ -8,6 +8,10 @@ Kind: debt
 
 Pay when: before 0.1 for items 1, 2, 3, 9 and 10; item 10 sooner, at the next change to either host's `thinkthen_plan`. Items 6 and 7 are features, paid when a user asks after 0.1.
 
+Debt: 018
+
+Severity: medium
+
 Keeping it leaves the SQL hosts holding copies of engine code, so a new plan member, rule form or refusal can reach the C door and miss SQL.
 
 Each item names a place where the public API (ticket 0084, `crates/thinkthen/src/public/`) falls short of what the command, a spec, or a ruling promises. Each gap makes a binding copy engine code or drift from the other bindings. Ian's ruling of 2026-09-25 applies throughout: no setting that does nothing.

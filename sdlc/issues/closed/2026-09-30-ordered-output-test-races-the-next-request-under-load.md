@@ -6,6 +6,12 @@ Kind: debt
 
 Pay when: the next change to the command's output window, or before 0.1.
 
+Debt: 016
+
+Severity: low
+
+Paid: 2026-09-30
+
 Keeping it risks a false red that teaches builders to rerun reds.
 
 ## What happened

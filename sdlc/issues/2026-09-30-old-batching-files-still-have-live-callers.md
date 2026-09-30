@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: 0304 slice 5 lands, before 0.1.
 
+Debt: 003
+
+Severity: medium
+
 Keeping it leaves two batching paths, so a fix to one can miss the other. Until slice 5, `cache prune` cannot shrink `thinkthen.sqlite`, so the default cache grows past its size target.
 
 ## Callers of the files ADR 0111 deletes

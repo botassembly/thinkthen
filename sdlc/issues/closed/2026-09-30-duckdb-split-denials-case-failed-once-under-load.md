@@ -6,6 +6,12 @@ Kind: debt
 
 Pay when: the case fails again, or before the 0.1 release candidate.
 
+Debt: 005
+
+Severity: low
+
+Paid: 2026-09-30
+
 Keeping it risks a real race hiding behind a rerun.
 
 ## What happened

@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: ureq-proto treats an HTTP/1.0 reply without `keep-alive` as closing, or a user's backend replies over HTTP/1.0.
 
+Debt: 020
+
+Severity: medium
+
 Keeping it lets one send fail as "the backend did not answer" when a server closes after each reply and says nothing.
 
 ## The problem

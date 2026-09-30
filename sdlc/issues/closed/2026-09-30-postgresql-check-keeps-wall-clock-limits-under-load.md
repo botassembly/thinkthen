@@ -6,6 +6,12 @@ Kind: debt
 
 Pay when: before the 0.1 release candidate, as a Quick Fix.
 
+Debt: 017
+
+Severity: low
+
+Paid: 2026-09-30
+
 Keeping it risks a false red on a busy machine, which teaches builders to rerun reds.
 
 ## What happened

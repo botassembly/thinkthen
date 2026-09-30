@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: 0304 slice 5 lands, or before 0.1, whichever comes first.
 
+Debt: 010
+
+Severity: medium
+
 Keeping it risks a store regression in DuckDB or PostgreSQL that no check counts.
 
 ## What is missing
