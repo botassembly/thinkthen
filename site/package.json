@@ -7,14 +7,17 @@
     "version-json": "node scripts/write-version.mjs",
     "samples": "node scripts/named-answers.test.mjs && node scripts/check-samples.mjs",
     "smoke": "node scripts/smoke.mjs",
-    "build": "node scripts/write-version.mjs && node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && astro build && node scripts/emit-md.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs && node scripts/check-cards.mjs",
+    "build": "node scripts/write-version.mjs && node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && astro build && node scripts/emit-md.mjs && pagefind --site dist && node scripts/write-sitemap.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs && node scripts/check-cards.mjs && node scripts/check-head.mjs",
     "dev": "astro dev",
     "preview": "astro preview",
-    "check": "node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs && node scripts/check-cards.mjs",
+    "check": "node scripts/named-answers.test.mjs && node scripts/check-samples.mjs && node scripts/check-slides.mjs && node scripts/smoke.mjs && node scripts/check-settings.mjs && node scripts/check-links.mjs && node scripts/check-cards.mjs && node scripts/check-head.mjs",
     "pull-bench": "node scripts/pull-bench.mjs",
-    "export-slides": "node scripts/export-slides.mjs"
+    "export-slides": "node scripts/export-slides.mjs",
+    "icons": "node scripts/build-icons.mjs"
   },
   "dependencies": {
-    "astro": "^5.14.1"
+    "@resvg/resvg-js": "2.6.2",
+    "astro": "^5.14.1",
+    "pagefind": "^1.5.2"
   }
 }
