@@ -2,7 +2,7 @@
 
 Status: open. Measured by Beatles Bench tickets 0019 and 0018 on 2026-09-30, against main `c22512868`. The bench's `reports/results.md` publishes every figure below.
 
-Owner: one relate ticket after 0304 slice 4, which also changes the both-ways edge shape. Blocks 0.1: the default and the shape must be set before the release.
+Owner: ticket 0342 adds the single-answer menu and the precision statement. The both-ways edge shape moves to its own relate ticket after 0314 slice 4, because it reaches the binding and C door files that slice rewrites; Ian can overturn the split. Blocks 0.1: the default and the shape must be set before the release.
 
 ## The problem
 

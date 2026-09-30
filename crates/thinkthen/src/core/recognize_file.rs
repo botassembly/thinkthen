@@ -217,10 +217,9 @@ fn parse_relation(value: &Json) -> Result<RelationRule, RecognizeConfigError> {
     let Json::Object(members) = value else {
         return Err(RecognizeConfigError::Relation);
     };
-    if members
-        .iter()
-        .any(|(name, _)| !["name", "source", "target", "reads", "either"].contains(&name.as_str()))
-    {
+    if members.iter().any(|(name, _)| {
+        !["name", "source", "target", "reads", "either", "single"].contains(&name.as_str())
+    }) {
         return Err(RecognizeConfigError::Relation);
     }
     let name = required_text(value, "name")?;
@@ -231,17 +230,18 @@ fn parse_relation(value: &Json) -> Result<RelationRule, RecognizeConfigError> {
     let source = side("source")?;
     let target = side("target")?;
     let reads = optional_text(value, "reads")?.unwrap_or_else(|| name.replace('_', " "));
-    let either = match value.member("either") {
-        None => false,
-        Some(Json::Bool(value)) => *value,
-        Some(_) => return Err(RecognizeConfigError::Relation),
+    let flag = |key| match value.member(key) {
+        None => Ok(false),
+        Some(Json::Bool(value)) => Ok(*value),
+        Some(_) => Err(RecognizeConfigError::Relation),
     };
     Ok(RelationRule {
         name,
         source,
         target,
         reads,
-        either,
+        either: flag("either")?,
+        single: flag("single")?,
     })
 }
 
@@ -264,7 +264,9 @@ fn validate_relations(
     relations: &[RelationRule],
 ) -> Result<(), RecognizeConfigError> {
     for (place, rule) in relations.iter().enumerate() {
-        if rule.name.trim().is_empty()
+        // Only `relate` asks a single-answer menu (ticket 0342).
+        if rule.single
+            || rule.name.trim().is_empty()
             || rule.reads.trim().is_empty()
             || relations
                 .iter()

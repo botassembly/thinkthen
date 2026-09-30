@@ -28,6 +28,20 @@ done | mustmatch '{"entity_count":18,"logical_questions":80,"request_count":1,"r
 {"entity_count":21,"logical_questions":110,"request_count":1,"rule":"located_in"}'
 ```
 
+`located-in-single.json` marks the same rule `single`, since a city lies in one country. It asks one menu per city, with every country and `none` as options, so the same sets ask 8 and 11 questions instead of 80 and 110. No recording holds its answers yet; the paid Beatles Bench run of ticket 0342 measures the menu.
+
+```bash
+set -euo pipefail
+root=$(git rev-parse --show-toplevel)
+fixture="$root/specification/fixtures/relate"
+for set in cities cities-plus; do
+  env -u THINKTHEN_API_KEY -u THINKTHEN_BASE_URL \
+    thinkthen relate "@$fixture/located-in-single.json" --jsonl --plan < "$fixture/$set.jsonl" \
+    | sed -n '1p' | jq -c '{logical_questions,method:.relations[0].method,options:(.requests[0].body_utf8|fromjson|.questions.q1.criteria|length)}'
+done | mustmatch '{"logical_questions":8,"method":"choice","options":11}
+{"logical_questions":11,"method":"choice","options":11}'
+```
+
 ## Replayed runs
 
 Ticket 0167 recorded the three pair requests at model `jev-1.13.0` on 2026-09-27. The answers found all 28 stated edges and three extra band edges: John Lennon, Paul McCartney, and Ringo Starr as members of Traveling Wilburys. The city results did not change when the three unrelated cities were added. This block replays only the public pair recordings, with no key or network. The whole-run audit reads ids 1 to 3 from the result line numbers. Each single-set audit renumbers its copied key to id 1 because its extracted result is one line; the original key stays unchanged.

@@ -14,6 +14,7 @@ use crate::harness::{Canned, Listener, finish, spawn};
 mod at_once;
 mod ceiling;
 mod details;
+mod menu;
 
 fn plan_json(output: &Output) -> Value {
     let shown = String::from_utf8_lossy(&output.stdout);

@@ -346,8 +346,12 @@ fn a_check_runs_before_a_held_send_and_never_during_it() {
     );
 }
 
-/// Shared pair requests fill the throttle of 4. A host check while four
-/// are held feeds no fifth; with exactly four, every sent request finishes.
+/// Shared pair requests fill the throttle of 4. The host check runs only
+/// while no send is out, so it fires at the first such moment after four
+/// sends, and nothing is sent after it fires. Forty entities make exactly
+/// four requests. The 60-entity race is narrower, not gone: replies that
+/// overlap until the call ends leave no quiet moment. Ticket 0342 replaced a check on exactly four sends, which
+/// missed its moment and failed 7 runs in 50 at load 13.
 #[test]
 fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
     let _serial = serial();
@@ -361,14 +365,19 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
             r#"{"version":1,"relate":{"relations":[{"name":"knows","source":"service","target":"service"}]}}"#,
         ).expect("relate file");
         let runs = Runs::default();
+        let stopped_at = Mutex::new(None);
         let check = || {
-            runs.record(backend.count());
-            backend.count() == 4
+            let sent = backend.count();
+            runs.record(sent);
+            let mut held = stopped_at.lock().unwrap_or_else(PoisonError::into_inner);
+            if sent >= 4 {
+                held.get_or_insert(sent);
+            }
+            held.is_some()
         };
         let result = thread::scope(|scope| {
             scope.spawn(|| {
                 backend.wait(4);
-                thread::sleep(Duration::from_millis(400));
                 backend.release();
             });
             held.relate_with(&ask, entities.clone(), CallOptions::new().interrupt(&check))
@@ -382,7 +391,23 @@ fn a_host_interrupt_during_relate_chunks_sends_nothing_new() {
             Some(ErrorKind::Cancelled),
             "{count} entities"
         );
-        assert_eq!(backend.count(), 4, "{count} entities: nothing new was sent");
+        let stopped_at = stopped_at
+            .into_inner()
+            .unwrap_or_else(PoisonError::into_inner)
+            .expect("the check fired");
+        assert_eq!(
+            backend.count(),
+            stopped_at,
+            "{count} entities: nothing new was sent"
+        );
+        assert!(
+            if count == 40 {
+                stopped_at == 4
+            } else {
+                (4..=8).contains(&stopped_at)
+            },
+            "{count} entities stopped at {stopped_at}"
+        );
     }
 }
 

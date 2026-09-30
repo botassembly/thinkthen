@@ -19,7 +19,7 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 | 6 | `2026-09-25-public-library-api-gaps.md` (debt) | yes, items 1, 2, 3, 9, 10 | item 10 a Quick Fix now; one SQL host ticket for 1, 2, 3, 9; 6 and 7 after 0.1 | 0304 slice 4 for items 1, 2, 3, 9 | medium |
 | 7 | `2026-09-30-reference-page-exit-codes-and-key-rule-drift.md` | yes | marketing | nothing | small |
 | 8 | `2026-09-30-question-file-reader-copies-and-uncapped-loaders.md` (debt) | yes | a Quick Fix | 0304 slice 4 (`public/relate.rs`) | small |
-| 9 | `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | one relate ticket: the default and the both-ways edge shape | 0304 slice 4 | medium |
+| 9 | `2026-09-30-relate-pair-planner-loses-precision-on-the-beatles-bench.md` | yes | ticket 0342: the single-answer menu and the precision statement; then a relate ticket for the both-ways edge shape | 0304 slice 4; the shape waits for 0314 slice 4 | medium |
 | 10 | `2026-09-30-audit-and-diff-lost-the-batch-setting.md` (debt) | yes | 0304 slice 5, or a Quick Fix | 0304 slice 4 | small |
 | 11 | `2026-09-30-old-batching-files-still-have-live-callers.md` (debt) | yes | 0304 slices 4 and 5 | 0304 slice 4 | large |
 | 12 | `2026-09-30-site-replay-folders-have-no-fixture.md` (debt) | yes, before the site goes public | 0304 slice 5; marketing for items 2 to 4 | 0304 slice 5 | medium |
@@ -89,16 +89,16 @@ Rank 17 follows ticket 0340's landing, so the Severity and number fields go onto
 
 ## Waiting on a slice
 
-- **0304 slice 4** (lane 3): rank 6 items 1, 2, 3, 9 (outcome: PostgreSQL uses a public relate rule parser and `thinkthen::Error`, the SQL hosts share one usage total and one rule for a loaded question); rank 8 (outcome: one crate reader returns the text or a typed reason, and every surface maps it, with the Rust and Python loaders refusing over 1 MiB); rank 9 (outcome: relate's single-answer relations ask one choice with none of these, if the paid bench run beats F1 0.523, and both-ways edges print an unordered pair); rank 10 (outcome: `audit` and `diff` read the batch setting again and restore ADR 0085's warning); rank 11 items 1 and 2; rank 23's workaround (ticket 0339); ranks 25 (page 11), 26, 27 and 28.
+- **0304 slice 4** (lane 3): rank 6 items 1, 2, 3, 9 (outcome: PostgreSQL uses a public relate rule parser and `thinkthen::Error`, the SQL hosts share one usage total and one rule for a loaded question); rank 8 (outcome: one crate reader returns the text or a typed reason, and every surface maps it, with the Rust and Python loaders refusing over 1 MiB); rank 9 (outcome: relate's single-answer relations ask one choice with none of these, kept if the paid bench run beats F1 0.523, in ticket 0342; both-ways edges print an unordered pair in a later relate ticket after 0314 slice 4); rank 10 (outcome: `audit` and `diff` read the batch setting again and restore ADR 0085's warning); rank 11 items 1 and 2; rank 23's workaround (ticket 0339); ranks 25 (page 11), 26, 27 and 28.
 - **0304 slice 5**: ranks 11 and 12, then marketing's site items in rank 12.
-- **0314 slice 4** (lane 2): rank 22 item 1.
+- **0314 slice 4** (lane 2): rank 22 item 1; after it, rank 9's both-ways edge shape.
 - **0335 slice 2**: none on this list. Ticket 0340 is moving rank 1's timing limits out of the routine check.
 
 ## Coordinator defaults
 
 Taken 2026-09-30 under the workspace rule to record reviewed choices and proceed. Ian can overturn each one.
 
-1. Both-ways relate edges get an unordered `pair` shape before 0.1, in the relate ticket after 0304 slice 4, because a breaking change after 0.1 costs every consumer (rank 9).
+1. Both-ways relate edges get an unordered `pair` shape before 0.1, in a relate ticket after 0314 slice 4 (ticket 0342 split it out, because the shape reaches the binding files that slice rewrites), because a breaking change after 0.1 costs every consumer (rank 9).
 2. Ian's `rehearse` dispatch waits for 0304 slice 3 and the PostgreSQL macOS ticket 0336; both have landed.
 3. Relation pairs keep the whole text for 0.1, with the distance limit as an opt-in, because natural text with a relation three sentences apart was never measured (rank 27).
 4. Homebrew stays a Mac option; the curl script covers Linux (rank 15, item 3).

@@ -24,6 +24,8 @@ A third built-in backend, `ollama`, reaches Ollama at `http://localhost:11434/v1
 
 Every engine built from the environment adds its requests, retries, live tokens and cache answers to the command's count-only usage totals, so `thinkthen status` shows one combined total for every surface. The SQL extensions write their counts when their process exits. PostgreSQL writes to the server user's usage folder; its request total and token cap still bind per backend (ticket 0322, ADR 0113).
 
+A relate question file may mark a rule `"single": true` when each source has at most one target. That rule asks one menu per source, listing every allowed target and `none`, so a source can end with no edge; every other rule asks its yes/no pairs as before. The relate page states relate's measured precision and points to `recognize --relation` for relations a text states (ticket 0342).
+
 The C door adds `thinkthen_plan_json`, a no-send preview of a judgment call that needs no key. It returns the planned records, requests, body bytes, input-token band and first request body as the result schema's `plan` object, which the schema now generates from the Rust type (tickets 0291 and 0314).
 
 The Go and C++ libraries gain a public `plan` over `thinkthen_plan_json` and read facts, recognize and relate results as plain JSON. Go drops its `Facts` struct; C++ drops `CallFacts`, `Entity`, `Recognized`, `RelatedEntity` and `Edge`. Go names its error kinds, and both read an annotate member as unresolved, a value or a failure. C++ `call`, `recognize` and `relate` take a deadline (tickets 0291 and 0314).

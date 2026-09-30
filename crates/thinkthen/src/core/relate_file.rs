@@ -80,6 +80,8 @@ pub(crate) enum RelateConfigError {
     Threshold,
     #[error("the question file holds another command's question")]
     WrongVerb,
+    #[error("a single-answer relation is directed, so `single` and `either` do not mix")]
+    SingleEither,
 }
 
 /// The most entities one complete set holds.
@@ -313,6 +315,7 @@ fn inline_rule(text: &str, either: bool) -> Result<RelationRule, RelateConfigErr
         target: rule_side(&checked_text(target)?),
         reads: name.replace('_', " "),
         either,
+        single: false,
     };
     Ok(rule)
 }
@@ -323,6 +326,9 @@ fn validate_relations(relations: &[RelationRule]) -> Result<(), RelateConfigErro
     }
     for (place, relation) in relations.iter().enumerate() {
         checked_text(&relation.reads)?;
+        if relation.single && relation.either {
+            return Err(RelateConfigError::SingleEither);
+        }
         if relations
             .iter()
             .skip(place + 1)

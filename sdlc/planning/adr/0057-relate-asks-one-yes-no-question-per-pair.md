@@ -91,3 +91,10 @@ The coordinator's rulings of 2026-09-27:
 
 7. The limit at every address, as `recognize` step 3 applies it. It departs from the accepted text, which limits requests "at the built-in address".
 8. Plan schema version 1 with one entry per rule, as the accepted text keeps `method` and `fallback`.
+
+## Amendment, 2026-09-30: single-answer menus (ticket 0342)
+
+A relate rule the caller marks `"single": true` asks one `choice` per source name. Its options are every other name the target side admits, then `none`, each described as the old choice planner described them. The top label makes the one edge when it is a target at the cut; `none` on top, or an exact tie at the top, makes none. Every rule without `single` keeps items 1 to 8 unchanged, and so does `recognize`, which refuses `single`. A profile's `max_options` counts a menu's options. Detail entries for a menu carry `method:"choice"` and a nullable `target`, and the plan reports `method:"choice"` for the rule.
+
+This ADR's fault was a many-answer relation asked as a choice. A `single` rule is one the caller declares to have at most one target per source, so that fault does not arise. Experiment 237 found the choice more precise where each record had one target, 0.90 against 0.74, and the Beatles Bench of 2026-09-30 measured pairs at precision 0.420 on 182 songs and 0.296 where the right album is missing. The coordinator set the menu as the relate precision default on 2026-09-30. It departs from the text of Ian's ruling of 2026-09-26, "for every concrete relation", so Ian can overturn it. A capped paid Beatles Bench run decides whether it stays: it must beat F1 0.523 on the 182 songs and precision 0.296 on the missing-album sets.
+
