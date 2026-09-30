@@ -1,6 +1,6 @@
 # 0317: Faster, leaner tests
 
-Status: ready. Starts after ADR 0111 slice 1 lands. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5.
+Status: building. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 5.
 
 ## Outcome
 
