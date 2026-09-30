@@ -11,6 +11,7 @@
 //! cleared environment, a loopback address, a fake key, and a fresh cache.
 
 mod bytes;
+mod golden;
 mod cases;
 #[path = "../../../../crates/thinkthen/src/test_deadline/child.rs"]
 mod child;
