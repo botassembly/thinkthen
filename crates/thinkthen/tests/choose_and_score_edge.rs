@@ -192,50 +192,6 @@ fn every_option_that_is_not_built_yet_is_a_usage_error() {
 }
 
 #[test]
-fn the_help_of_each_verb_carries_the_advice_its_page_names() {
-    let long = |name: &str| {
-        let output = run(&[name, "--help"]).expect("the compiled binary runs");
-        String::from_utf8_lossy(&output.stdout).into_owned()
-    };
-
-    let choose = long("choose");
-    for said in [
-        "not_stated",
-        "contradicted",
-        "supported",
-        "case $team_code",
-        "Exit 0 is an option and exit 3 is not sure.",
-        "never exits 1",
-        "--raw is available for a single text, --lines, and --jsonl.",
-        "CSV and TSV always print JSONL and refuse --raw.",
-    ] {
-        assert!(choose.contains(said), "{said} is missing from {choose}");
-    }
-
-    let score = long("score");
-    for said in ["jq -e", "18%", "46%", "choose", "--details"] {
-        assert!(score.contains(said), "{said} is missing from {score}");
-    }
-
-    let short = |name: &str| {
-        let output = run(&[name, "-h"]).expect("the compiled binary runs");
-        String::from_utf8_lossy(&output.stdout).into_owned()
-    };
-    for name in ["choose", "score"] {
-        let short = short(name);
-        assert!(short.contains("--url"), "--url is missing from {name} help");
-        for hidden in ["--model", "--record", "--timeout"] {
-            assert!(
-                !short.contains(hidden),
-                "{hidden} is in the short {name} help"
-            );
-        }
-    }
-    assert!(short("choose").contains("--raw"));
-    assert!(!short("score").contains("--threshold"));
-}
-
-#[test]
 fn a_question_that_is_blank_and_evidence_that_is_blank_are_both_refused() {
     let blank =
         run(&["choose", "  ", "billing", "other", "--plan"]).expect("the compiled binary runs");

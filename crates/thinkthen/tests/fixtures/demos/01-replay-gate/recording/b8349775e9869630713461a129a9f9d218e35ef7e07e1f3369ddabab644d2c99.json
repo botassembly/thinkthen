@@ -1,8 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "http://127.0.0.1:8721/v1/systemone",
-  "request": {"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"The blender arrived with a cracked jug. Please put the money back on my card.\\n\". the customer asks for money back"}}},
-  "response": {"model":"local-1","answers":{"q1":{"type":"noul","noul":0.94}},"usage":{"input_tokens":41,"output_tokens":6}},
-  "quoted": true
-}

@@ -1,7 +1,7 @@
 //! One sweep checks output and files across commands, paths, framings, and views.
 
 use std::fs;
-use std::io::{self, Write as _};
+use std::io;
 use std::path::{Path, PathBuf};
 use std::process::Output;
 
@@ -330,64 +330,96 @@ pub(crate) fn environment(keyed: bool) -> Vec<(&'static str, &'static str)> {
     }
 }
 
-/// Keep both document views on every route, and distinct framed answer/plan paths.
-fn routine_way(route: &Route, verb: &str, view: &[&str], framing: Option<&str>) -> bool {
-    let document = framing.is_none();
-    let framed_answer = ["a success", "an unreadable answer"].contains(&route.named);
-    let framed_plan = route.named == "a plan"
-        && view.is_empty()
-        && ["decide", "recognize", "relate"].contains(&verb);
-    document || framed_answer || framed_plan
-}
+/// One spawn of the sweep: a verb, a view, and a framing.
+type Case = (
+    (&'static str, &'static [&'static str], &'static str),
+    &'static [&'static str],
+    Option<&'static str>,
+);
 
-#[test]
-fn no_command_on_any_backend_path_writes_the_key_or_quotes_the_evidence() {
-    let routine = std::env::var("THINKTHEN_TEST_PROFILE").is_ok_and(|value| value == "routine");
-    let mut selected = 0;
-    for route in &PATHS {
-        for verb in VERBS {
-            for (view, framing) in WAYS
-                .into_iter()
-                .filter(|(view, framing)| !routine || routine_way(route, verb.0, view, *framing))
-            {
-                sweep(route, verb, view, framing).expect("the compiled binary runs");
-                selected += 1;
-            }
+/// Every case one route drives: each verb in each way, `relate` over its table
+/// framings, and on the hostile replay route the record verbs too.
+fn cases(route: &Route) -> Vec<Case> {
+    let mut cases = Vec::new();
+    for verb in VERBS {
+        for (view, framing) in WAYS {
+            cases.push((verb, view, framing));
         }
     }
-    let hostile = PATHS
-        .iter()
-        .find(|route| route.damage == Some(HOSTILE))
-        .expect("the hostile replay route stays in the matrix");
-    for verb in RECORD_VERBS {
-        for (view, framing) in RECORD_WAYS {
-            sweep(hostile, verb, view, framing).expect("the compiled binary runs");
-            selected += 1;
-        }
-    }
-    let relate = VERBS
-        .into_iter()
-        .find(|(name, _, _)| *name == "relate")
-        .expect("relate stays in the matrix");
-    for route in &PATHS {
+    for verb in VERBS.into_iter().filter(|(name, _, _)| *name == "relate") {
         for (view, framing) in TABLE_WAYS {
-            let all_framings = ["a success", "a hostile entry"].contains(&route.named);
-            if !routine || all_framings || (view.is_empty() && framing == Some("--lines")) {
-                sweep(route, relate, view, framing).expect("the compiled binary runs");
-                selected += 1;
+            cases.push((verb, view, framing));
+        }
+    }
+    if route.damage == Some(HOSTILE) {
+        for verb in RECORD_VERBS {
+            for (view, framing) in RECORD_WAYS {
+                cases.push((verb, view, framing));
             }
         }
     }
-    assert_eq!(selected, if routine { 266 } else { 518 });
-    writeln!(
-        io::stderr().lock(),
-        "command secrecy sweep: selected={selected} full=518 profile={}",
-        if routine { "routine" } else { "full" }
-    )
-    .expect("write secrecy case count");
+    cases
 }
 
+/// Drive every case of one route.
 ///
+/// Each route is its own test, so the runner spreads the 518 spawns across its
+/// threads.
+fn sweep_route(named: &str) -> io::Result<()> {
+    let route = PATHS
+        .iter()
+        .find(|route| route.named == named)
+        .ok_or_else(|| io::Error::other("the route left the matrix"))?;
+    for (verb, view, framing) in cases(route) {
+        sweep(route, verb, view, framing)?;
+    }
+    Ok(())
+}
+
+macro_rules! sweep_tests {
+    ($($test:ident => $named:literal,)*) => {
+        $(
+            #[test]
+            fn $test() {
+                sweep_route($named).expect("the compiled binary runs");
+            }
+        )*
+
+        /// A route added to the matrix without its own test fails here.
+        #[test]
+        fn every_route_has_its_own_sweep() {
+            let tested = [$($named),*];
+            let routes: Vec<&str> = PATHS.iter().map(|route| route.named).collect();
+            assert_eq!(routes, tested);
+            let hostile = PATHS.iter().filter(|route| route.damage == Some(HOSTILE)).count();
+            assert_eq!(hostile, 1, "exactly one hostile replay route");
+            let total: usize = PATHS.iter().map(|route| cases(route).len()).sum();
+            assert_eq!(total, 518, "the sweep drives 518 cases");
+        }
+    };
+}
+
+// No command on any backend path writes the key or quotes the evidence.
+sweep_tests! {
+    no_leak_on_a_success => "a success",
+    no_leak_on_a_plan => "a plan",
+    no_leak_on_a_record_run => "a record run",
+    no_leak_on_a_cache => "a cache",
+    no_leak_on_a_replay => "a replay",
+    no_leak_on_a_damaged_entry => "a damaged entry",
+    no_leak_on_a_hostile_entry => "a hostile entry",
+    no_leak_on_a_replay_miss => "a replay miss",
+    no_leak_on_a_refused_address => "a refused address",
+    no_leak_on_a_failed_request => "a failed request",
+    no_leak_on_a_refused_request => "a refused request",
+    no_leak_on_a_rate_limit_that_lifts => "a rate limit that lifts",
+    no_leak_on_a_rate_limit_that_stays => "a rate limit that stays",
+    no_leak_on_an_exhausted_backend_failure => "an exhausted backend failure",
+    no_leak_on_an_unreadable_answer => "an unreadable answer",
+    no_leak_on_a_recording_folder_that_cannot_be_made => "a recording folder that cannot be made",
+    no_leak_on_a_run_with_no_key => "a run with no key",
+}
+
 /// A sweep that proved only absence would pass on a run that sent no key at
 /// all, so one case pins where the key does go.
 #[test]

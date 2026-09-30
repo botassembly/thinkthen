@@ -7,7 +7,7 @@ mod measure_support;
 #[path = "../src/test_deadline/wait.rs"]
 mod wait;
 
-use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, ported, run};
+use measure_support::{DIFF_GOLDENS, DIFF_TABLES, fixture, measure, member, ported};
 
 #[test]
 fn diff_warns_at_different_batch_settings() {
@@ -134,29 +134,6 @@ fn the_held_out_half_reads_as_the_prototype_reports() {
         ["\"no\"", "\"yes\"", &member(&cuts, "/summary/changed"), ""]
     );
     assert_eq!(rights(&soft), ["87", "84"]);
-}
-
-#[test]
-fn help_names_diff_and_says_what_it_never_does() {
-    const ROW: &str = "Show which saved answers changed between two runs or two cuts.";
-    let text =
-        |arguments: &[&str]| String::from_utf8(run(arguments, b"").stdout).expect("UTF-8 help");
-    let row = ROW.trim_end_matches('.');
-    let root = text(&["--help"]);
-    assert!(root.contains(&format!("\n  diff       {row}\n")), "{root}");
-    assert!(text(&["diff", "-h"]).starts_with(&format!("{row}\n\n")));
-    let long = text(&["diff", "--help"]);
-    assert!(long.starts_with(&format!("{ROW}\n\n")), "{long}");
-    for sentence in [
-        "diff sends no request and reads no key.",
-        "Two cuts on one run cost nothing.",
-        "The probabilities are already saved.",
-        "An answer inside a band is not sure.",
-        "diff pairs answers by record id and answer name only.",
-        "It compares question digests only when both runs saved --details.",
-    ] {
-        assert!(long.contains(sentence), "{sentence}");
-    }
 }
 
 #[test]

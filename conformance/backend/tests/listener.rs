@@ -40,34 +40,40 @@ fn post(listener: &Listener, length: usize) -> Result<(String, String), Box<dyn 
     Ok((status, body.to_owned()))
 }
 
+/// Serve one request after an early connection that sent `sent`, then held
+/// the connection open or closed it.
+fn answered_after(case: &str, sent: &[u8], held: bool) -> Tested {
+    let listener = Listener::serving(vec![Canned::ok("answered")])?;
+    let mut early = connect(&listener)?;
+    early.write_all(sent)?;
+    let kept = held.then_some(early);
+    let answered = post(&listener, 4)?;
+    drop(kept);
+    assert_eq!(
+        answered,
+        ("HTTP/1.1 200 X".to_owned(), "answered".to_owned()),
+        "{case}"
+    );
+    assert_eq!(listener.connections(), 2, "{case}");
+    assert_eq!(listener.requests().len(), 1, "{case}");
+    Ok(())
+}
+
 #[test]
 fn a_connection_that_ends_before_a_whole_request_takes_no_reply() -> Tested {
-    // Half a request then a close, nothing then a close, and nothing on a
-    // connection held open past the read timeout.
-    for (case, sent, held) in [
-        (
-            "half",
-            &b"POST /v1/systemone HTTP/1.1\r\ncontent-length: 10\r\n\r\nabc"[..],
-            false,
-        ),
-        ("empty", &b""[..], false),
-        ("silent", &b""[..], true),
-    ] {
-        let listener = Listener::serving(vec![Canned::ok("answered")])?;
-        let mut early = connect(&listener)?;
-        early.write_all(sent)?;
-        let kept = held.then_some(early);
-        let answered = post(&listener, 4)?;
-        drop(kept);
-        assert_eq!(
-            answered,
-            ("HTTP/1.1 200 X".to_owned(), "answered".to_owned()),
-            "{case}"
-        );
-        assert_eq!(listener.connections(), 2, "{case}");
-        assert_eq!(listener.requests().len(), 1, "{case}");
-    }
-    Ok(())
+    // Half a request then a close, and nothing then a close.
+    answered_after(
+        "half",
+        b"POST /v1/systemone HTTP/1.1\r\ncontent-length: 10\r\n\r\nabc",
+        false,
+    )?;
+    answered_after("empty", b"", false)
+}
+
+#[test]
+#[ignore = "waits out the 8 s read timeout; sdlc/scripts/test-stress --run"]
+fn a_silent_connection_held_past_the_read_timeout_takes_no_reply() -> Tested {
+    answered_after("silent", b"", true)
 }
 
 #[test]

@@ -400,6 +400,7 @@ fn a_wait_line_answers_once_the_count_reaches_it() -> Tested {
 }
 
 #[test]
+#[ignore = "waits out the fixed 5 s bound; sdlc/scripts/test-stress --run"]
 fn a_wait_line_gives_up_at_5_s_and_holds_up_no_line_behind_it() -> Tested {
     let mut backend = start()?;
     let began = Instant::now();

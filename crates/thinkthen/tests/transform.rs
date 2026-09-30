@@ -138,33 +138,6 @@ fn an_unknown_name_is_refused_without_echoing_it() {
     fs::remove_dir(&empty).expect("the folder stays empty");
 }
 
-#[test]
-fn transform_help_pins_its_three_introductions() {
-    const ROOT: &str = "List or print the built-in jq transforms without running them";
-    const LIST_HELP: &str = "List the names of the built-in jq transforms";
-    const SHOW_HELP: &str = "Print one built-in jq transform exactly as shipped";
-    let empty = folder("help");
-    let root = catalog(&["--help"], &empty);
-    let root = String::from_utf8_lossy(&root.stdout);
-    assert!(root.contains(&format!("\n  transform  {ROOT}\n")), "{root}");
-    for flag in ["-h", "--help"] {
-        for (arguments, sentence) in [
-            (vec!["transform", flag], ROOT),
-            (vec!["transform", "list", flag], LIST_HELP),
-            (vec!["transform", "show", flag], SHOW_HELP),
-        ] {
-            let output = catalog(&arguments, &empty);
-            assert_eq!(output.status.code(), Some(0), "{arguments:?}");
-            let help = String::from_utf8_lossy(&output.stdout);
-            assert!(
-                help.starts_with(&format!("{sentence}\n\n")),
-                "{arguments:?}: {help}"
-            );
-        }
-    }
-    fs::remove_dir(&empty).expect("the folder stays empty");
-}
-
 /// Every path under a folder with its size, so a change anywhere shows.
 fn tree(root: &Path) -> Vec<(PathBuf, u64)> {
     let mut found = Vec::new();

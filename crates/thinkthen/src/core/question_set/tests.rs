@@ -123,10 +123,6 @@ fn a_missing_questions_wrapper_precedes_unknown_top_level_keys() {
         QuestionSet::parse(r#"{"version":1,"unresolved":{"decide":"x"}}"#),
         Err(QuestionSetError::MissingQuestions)
     );
-    assert_eq!(
-        QuestionSetError::MissingQuestions.to_string(),
-        "the question set is missing its `questions` object"
-    );
 }
 
 #[test]

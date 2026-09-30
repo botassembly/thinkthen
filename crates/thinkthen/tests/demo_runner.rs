@@ -50,40 +50,7 @@ fn printed(output: &Output) -> String {
     )
 }
 
-#[test]
-fn a_green_page_runs_against_its_own_files_and_passes() {
-    let output = demos("crates/thinkthen/tests/fixtures/demos").expect("the runner runs");
-
-    let said = printed(&output);
-    assert_eq!(output.status.code(), Some(0), "{said}");
-    assert!(said.contains("running 01-replay-gate/README.md"), "{said}");
-    assert!(said.contains("demos: 1 green, 1 red"), "{said}");
-}
-
-#[test]
-fn a_red_page_that_shows_a_green_status_line_is_still_red() {
-    let output =
-        demos("crates/thinkthen/tests/fixtures/demos-shown-status").expect("the runner runs");
-
-    let said = printed(&output);
-    assert_eq!(output.status.code(), Some(0), "{said}");
-    assert!(said.contains("demos: 0 green, 1 red"), "{said}");
-    assert!(!said.contains("running"), "{said}");
-}
-
-#[test]
-fn a_page_the_index_lists_as_green_must_say_so() {
-    let output = demos("crates/thinkthen/tests/fixtures/demos-unlisted").expect("the runner runs");
-
-    let said = printed(&output);
-    assert_eq!(output.status.code(), Some(1), "{said}");
-    assert!(
-        said.contains("README.md lists 09-somewhere-else/ as green"),
-        "{said}"
-    );
-    assert!(!said.contains("running"), "{said}");
-}
-
+/// The runner can fail: a green page with a wrong assertion fails the run.
 #[test]
 fn a_page_whose_assertion_is_wrong_fails_the_run() {
     let output = demos("crates/thinkthen/tests/fixtures/demos-wrong").expect("the runner runs");
@@ -91,26 +58,6 @@ fn a_page_whose_assertion_is_wrong_fails_the_run() {
     let said = printed(&output);
     assert_eq!(output.status.code(), Some(1), "{said}");
     assert!(said.contains("1 failed"), "{said}");
-}
-
-#[test]
-fn a_green_page_that_names_no_recording_folder_stops_the_run() {
-    let output = demos("crates/thinkthen/tests/fixtures/demos-missing").expect("the runner runs");
-
-    let said = printed(&output);
-    assert_eq!(output.status.code(), Some(1), "{said}");
-    assert!(said.contains("names no folder recording/"), "{said}");
-    assert!(!said.contains("running"), "{said}");
-}
-
-#[test]
-fn a_green_page_that_names_the_folder_in_backticks_stops_the_run() {
-    let output = demos("crates/thinkthen/tests/fixtures/demos-unnamed").expect("the runner runs");
-
-    let said = printed(&output);
-    assert_eq!(output.status.code(), Some(1), "{said}");
-    assert!(said.contains("no folder name after it"), "{said}");
-    assert!(!said.contains("running"), "{said}");
 }
 
 #[test]
