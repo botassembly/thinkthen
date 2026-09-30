@@ -252,11 +252,6 @@ button.copy {
   border-radius: 6px; padding: .12rem .45rem; font: inherit; font-size: .76rem; cursor: pointer;
 }
 button.copy:hover { color: var(--ink); border-color: var(--think); }
-/* The copy button's live region: heard, not seen. */
-.visually-hidden {
-  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-}
 
 /* tabs */
 .tabs { display: flex; gap: .3rem; flex-wrap: wrap; margin: 0 0 .7rem; }
