@@ -74,9 +74,6 @@ PLACES = [
     *[(p, r'(?m)^  "version": "([^"]+)",$', WHOLE) for p in
       ("libraries/objective-c/source-package.json", "libraries/cobol/source-package.json")],
 ]
-for header in ("libraries/swift/Sources/CThinkThen/include/thinkthen.h",
-               "libraries/objective-c/Sources/thinkthen.h"):
-    PLACES.extend((header, pattern, part) for path, pattern, part in PLACES if path == "libraries/c/include/thinkthen.h")
 
 
 def manifests(root):
@@ -256,9 +253,6 @@ def self_test():
         ("dart", lambda r: edit(r, "libraries/dart/flutter/example/pubspec.yaml", f"version: {version}",
                                 "version: 9.9.9"), [],
          (1, [f"versions: libraries/dart/flutter/example/pubspec.yaml reads 9.9.9, and {CRATE} reads {version}"])),
-        ("copied-header", lambda r: edit(r, "libraries/swift/Sources/CThinkThen/include/thinkthen.h",
-                                         f"Version {version},", "Version 9.9.9,"), [],
-         (1, [f"versions: libraries/swift/Sources/CThinkThen/include/thinkthen.h reads 9.9.9, and {CRATE} reads {version}"])),
         ("zig-abi", lambda r: edit(r, "libraries/zig/build.zig", "const expected = [_]u32{ 0, 0, 1 };",
                                    "const expected = [_]u32{ 0, 0, 2 };"), [],
          (1, [f"versions: libraries/zig/build.zig reads 2, and {CRATE} reads 1"])),

@@ -47,9 +47,7 @@ def tar_files(data, label):
         files = {}
         dirs = set()
         seen = set()
-        source_links = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE",
-                        "libraries/swift/Sources/CThinkThen/include/thinkthen.h": "../../../../c/include/thinkthen.h",
-                        "libraries/objective-c/Sources/thinkthen.h": "../../c/include/thinkthen.h"}
+        source_links = {"CLAUDE.md": "AGENTS.md", "crates/thinkthen/LICENSE": "../../LICENSE"}
         for member in archive:
             name = member.name.removeprefix("./")
             require(name not in seen and not name.startswith("/") and ".." not in Path(name).parts,
