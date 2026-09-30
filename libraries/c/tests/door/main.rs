@@ -17,6 +17,7 @@ mod child;
 mod golden;
 mod question_file;
 mod settings;
+mod usage;
 
 use std::collections::BTreeMap;
 use std::io::{BufRead, BufReader, Write};
@@ -128,7 +129,12 @@ fn compile(source: &Path) -> PathBuf {
 /// Run one program with only the door's settings in its environment, and
 /// kill it after a minute.
 fn run(binary: &Path, base: &str, input: &[u8]) -> Output {
-    let mut child = start(binary, base);
+    run_with(binary, base, input, &[])
+}
+
+/// [`run`] with these variables added to the environment.
+fn run_with(binary: &Path, base: &str, input: &[u8], extra: &[(&str, &Path)]) -> Output {
+    let mut child = start_with(binary, base, extra);
     let mut stdin = child.stdin.take().expect("its input");
     stdin.write_all(input).expect("its input was written");
     drop(stdin);
@@ -137,6 +143,10 @@ fn run(binary: &Path, base: &str, input: &[u8]) -> Output {
 
 /// Start one program with only the door's settings and a fresh cache.
 fn start(binary: &Path, base: &str) -> Child {
+    start_with(binary, base, &[])
+}
+
+fn start_with(binary: &Path, base: &str, extra: &[(&str, &Path)]) -> Child {
     static RUNS: AtomicUsize = AtomicUsize::new(0);
     let cache = scratch(&format!("cache-{}", RUNS.fetch_add(1, Ordering::Relaxed)));
     Command::new(binary)
@@ -145,6 +155,7 @@ fn start(binary: &Path, base: &str) -> Child {
         .env("THINKTHEN_API_KEY", KEY)
         .env("THINKTHEN_CACHE", &cache)
         .env("ASAN_OPTIONS", "detect_leaks=1:abort_on_error=0")
+        .envs(extra.iter().copied())
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
