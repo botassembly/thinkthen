@@ -214,9 +214,13 @@ fn a_per_question_on_sends_the_json_value_the_pointer_names() {
         .map(|request| String::from_utf8_lossy(&request.body).into_owned())
         .collect();
     assert_eq!(bodies.len(), 2);
-    assert!(bodies[0].contains(r#""state":{"a":1}"#), "{}", bodies[0]);
     assert!(
-        bodies[1].contains(r#""state":"The invoice failed.""#),
+        bodies[0].contains(r#""instructions":"The text is {\"a\":1}. Meta?""#),
+        "{}",
+        bodies[0]
+    );
+    assert!(
+        bodies[1].contains(r#""instructions":"The text is \"The invoice failed.\". "#),
         "{}",
         bodies[1]
     );

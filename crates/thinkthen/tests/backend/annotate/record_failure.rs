@@ -14,8 +14,8 @@ const INPUT: &[u8] =
 const SET: &str =
     r#"{"version":1,"questions":{"urgent":{"decide":"Is this urgent?","on":"/body"}}}"#;
 const YES: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.9}},"usage":{"input_tokens":4,"output_tokens":1}}"#;
-const FIRST_REQUEST: &str = r#"{"state":"first","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is this urgent?"}}}"#;
-const THIRD_REQUEST: &str = r#"{"state":"third","model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is this urgent?"}}}"#;
+const FIRST_REQUEST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"first\". Is this urgent?"}}}"#;
+const THIRD_REQUEST: &str = r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"third\". Is this urgent?"}}}"#;
 const SET_SHA: &str = "0b08fe6760bb1fdbe07f6631e37028a8ae0c1f145ac657705b2512c883cf5604";
 const NO: &str = r#"{"model":"local-1","answers":{"q1":{"type":"noul","noul":0.1}},"usage":{"input_tokens":6,"output_tokens":2}}"#;
 
@@ -443,7 +443,7 @@ fn skipped_row_outranks_a_completed_partial_answer_without_erasing_it() -> io::R
     );
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
-    assert_eq!(requests[0].body, br#"{"state":"first","model":"local-1","questions":{"q1":{"type":"noul","instructions":"First?"},"q2":{"type":"noul","instructions":"Second?"}}}"#);
+    assert_eq!(requests[0].body, br#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"first\". First?"},"q2":{"type":"noul","instructions":"The text is \"first\". Second?"}}}"#);
     Ok(())
 }
 

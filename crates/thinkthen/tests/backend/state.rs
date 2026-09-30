@@ -78,7 +78,10 @@ fn a_pointer_to_an_object_or_a_list_sends_the_json_value_it_named() {
         );
         assert_eq!(output.status.code(), Some(0), "{field}");
         let body = sent(&listener);
-        assert!(body.contains(FIXED) && body.contains(quote), "{field}: {body}");
+        assert!(
+            body.contains(FIXED) && body.contains(quote),
+            "{field}: {body}"
+        );
     }
 }
 
@@ -106,7 +109,10 @@ fn several_pointers_send_one_object_in_the_order_the_pointers_were_given() {
 #[test]
 fn a_string_quotes_as_a_string_and_a_scalar_as_its_json_spelling() {
     for (field, quote) in [
-        ("/body", r#""instructions":"The text is \"Payouts failed.\". Does"#),
+        (
+            "/body",
+            r#""instructions":"The text is \"Payouts failed.\". Does"#,
+        ),
         ("/count", r#""instructions":"The text is 3. Does"#),
         ("/ok", r#""instructions":"The text is false. Does"#),
         ("/none", r#""instructions":"The text is null. Does"#),
@@ -119,7 +125,10 @@ fn a_string_quotes_as_a_string_and_a_scalar_as_its_json_spelling() {
         );
         assert_eq!(output.status.code(), Some(0), "{field}");
         let body = sent(&listener);
-        assert!(body.contains(FIXED) && body.contains(quote), "{field}: {body}");
+        assert!(
+            body.contains(FIXED) && body.contains(quote),
+            "{field}: {body}"
+        );
     }
 }
 
@@ -140,7 +149,10 @@ fn the_root_pointer_selects_the_whole_record_as_the_value_it_is() {
     );
     assert_eq!(output.status.code(), Some(0));
     let body = sent(&listener);
-    assert!(body.contains(FIXED) && body.contains(QUOTED_RECORD), "{body}");
+    assert!(
+        body.contains(FIXED) && body.contains(QUOTED_RECORD),
+        "{body}"
+    );
 }
 
 #[test]
@@ -164,7 +176,10 @@ fn no_pointer_quotes_the_whole_record_as_the_value_it_is() {
         let output = decide(listener.base(), framing, input);
         assert_eq!(output.status.code(), Some(0), "{framing:?}");
         let body = sent(&listener);
-        assert!(body.contains(FIXED) && body.contains(quote), "{framing:?}: {body}");
+        assert!(
+            body.contains(FIXED) && body.contains(quote),
+            "{framing:?}: {body}"
+        );
     }
 }
 

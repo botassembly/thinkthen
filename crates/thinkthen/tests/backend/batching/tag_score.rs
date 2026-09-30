@@ -56,7 +56,10 @@ fn tag_expands_wire_questions_but_reads_one_logical_outcome_per_record() {
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: Value = serde_json::from_slice(&requests[0].body).expect("request");
-    assert_eq!(request["state"], json!("Each question quotes the text it asks about."));
+    assert_eq!(
+        request["state"],
+        json!("Each question quotes the text it asks about.")
+    );
     assert_eq!(
         text(&requests[0].body),
         r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"first\". Which?\n\nDetermine whether the label \"billing\" applies to this item."},"q2":{"type":"noul","instructions":"The text is \"first\". Which?\n\nDetermine whether the label \"urgent\" applies to this item."},"q3":{"type":"noul","instructions":"The text is \"second\". Which?\n\nDetermine whether the label \"billing\" applies to this item."},"q4":{"type":"noul","instructions":"The text is \"second\". Which?\n\nDetermine whether the label \"urgent\" applies to this item."}}}"#
@@ -110,7 +113,10 @@ fn score_uses_ordered_levels_and_shares_an_equal_record() {
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: Value = serde_json::from_slice(&requests[0].body).expect("request");
-    assert_eq!(request["state"], json!("Each question quotes the text it asks about."));
+    assert_eq!(
+        request["state"],
+        json!("Each question quotes the text it asks about.")
+    );
     assert_eq!(
         request["questions"].as_object().map(serde_json::Map::len),
         Some(2)
