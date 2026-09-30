@@ -118,7 +118,13 @@ impl Details {
         setting: core::Setting,
         context_sha256: Option<&str>,
     ) -> Result<Self, Error> {
-        let mut details = Self::of(&member.judged, question, backend, profile)?;
+        let mut details = Self::of(
+            &member.judged,
+            question,
+            backend,
+            profile,
+            member.requests.clone(),
+        )?;
         let file_batch = question
             .batch
             .as_ref()
@@ -165,7 +171,6 @@ impl Details {
         .map_err(|_| Error::defect("a result could not be written as JSON"))?;
         details.json = Written(json);
         details.scalar_json = scalar_json.map(Written);
-        details.requests = member.requests;
         Ok(details)
     }
 }

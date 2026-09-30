@@ -338,14 +338,16 @@ impl Engine {
             ],
             "details",
         )?;
-        self.judge(question, evidence, options)?.try_map(|judged| {
-            Details::of(
-                &judged,
-                question,
-                self.inner.backend(),
-                self.profile.as_ref(),
-            )
-        })
+        self.keyed(question, evidence, options)?
+            .try_map(|(judged, keys)| {
+                Details::of(
+                    &judged,
+                    question,
+                    self.inner.backend(),
+                    self.profile.as_ref(),
+                    keys,
+                )
+            })
     }
 
     /// The facade engine that asks this question's model.
@@ -372,6 +374,18 @@ impl Engine {
         text: &str,
         options: CallOptions<'_>,
     ) -> Result<Call<facade::Judgment>, Error> {
+        Ok(self
+            .keyed(question, text, options)?
+            .map(|(judged, _)| judged))
+    }
+
+    /// One text's judgment and the question keys behind it.
+    fn keyed(
+        &self,
+        question: &Question,
+        text: &str,
+        options: CallOptions<'_>,
+    ) -> Result<Call<(facade::Judgment, Vec<String>)>, Error> {
         options.without_context("a single-document call")?;
         evidence(text)?;
         let engine = self.asking(question)?;
@@ -392,7 +406,11 @@ impl Engine {
                 .ask_all(&asker, packing, host, cancel)
                 .map_err(Error::from)?;
             let row = taken.ok_or_else(|| Error::defect("a single call returned no row"))?;
+            let keys = row
+                .as_ref()
+                .map_or_else(|_| Vec::new(), |decided| decided.keys.clone());
             crate::public::bulk::judged(&stop, question, engine.backend(), 0, row)
+                .map(|judged| (judged, keys))
         })
     }
 }

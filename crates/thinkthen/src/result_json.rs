@@ -19,7 +19,8 @@ pub(crate) struct Run<'a> {
 }
 
 /// One `thinkthen.result/1` line. `shown` is the value the row prints, and
-/// `input` is the record a record row carries.
+/// `input` is the record a record row carries, and `requests` its question
+/// keys.
 ///
 /// # Errors
 ///
@@ -31,6 +32,7 @@ pub(crate) fn decision(
     threshold: Option<Threshold>,
     shown: Value,
     input: Option<Record>,
+    requests: Vec<String>,
 ) -> Result<(String, String), RenderError> {
     let digest = question_sha256_with_profile(&question, threshold, run.tuned_for)?;
     let json = decision_with_digest(
@@ -40,7 +42,7 @@ pub(crate) fn decision(
         threshold,
         shown,
         input,
-        None,
+        Some(requests),
         &digest,
         Vec::new(),
     )?;
