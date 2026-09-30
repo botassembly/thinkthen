@@ -2,19 +2,19 @@
 
 use conformance_backend::Backend as Loopback;
 
-use crate::core::{BackendProfile, BatchRecord, Evidence, Json, Plan, QuestionSet};
+use crate::core::{BackendProfile, BatchRecord, Evidence, Json, QuestionSet, quoted_plan};
 use crate::engine::Cancel;
 use crate::engine::error::{Error, Kind};
 use crate::engine::facade::{Engine, Settings};
 
-/// A later group whose part is over the profile's evidence limit sends nothing,
+/// A later group whose request is over the profile's byte limit sends nothing,
 /// as `conformance/backend-profiles.json` case `annotate-later-group-over`
 /// refuses it on the command.
 #[test]
 fn a_later_group_over_the_profile_sends_nothing() {
     let loopback = Loopback::start().expect("loopback");
     let profile = BackendProfile::parse(
-        r#"{"schema":"thinkthen.backend-profile/1","name":"edge","max_evidence_bytes":16}"#,
+        r#"{"schema":"thinkthen.backend-profile/1","name":"edge","max_request_bytes":175}"#,
     )
     .expect("profile");
     let engine = Engine::new(Settings {
@@ -37,9 +37,10 @@ fn a_later_group_over_the_profile_sends_nothing() {
         let questions = places
             .iter()
             .map(|place| set.questions()[*place].question().clone());
-        Ok(Plan::new(
-            set.group_evidence(places, &record).expect("a part"),
+        Ok(quoted_plan(
             model.clone(),
+            set.group_evidence(places, &record).expect("a part"),
+            None,
             questions.collect(),
         )
         .expect("plan"))

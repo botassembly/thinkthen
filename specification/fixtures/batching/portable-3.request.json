@@ -1,1 +1,1 @@
-{"state":"tail","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Is it relevant?"}}}
+{"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"tail\". Is it relevant?"}}}

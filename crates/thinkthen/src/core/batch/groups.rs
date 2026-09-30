@@ -117,7 +117,7 @@ mod tests {
     }
 
     #[test]
-    fn two_records_keep_each_named_logical_place_and_singleton_bytes() {
+    fn two_records_keep_each_named_logical_place_and_a_singleton_is_quoted() {
         let backend =
             Backend::resolve(Some("http://127.0.0.1:9"), None, "jev-latest").expect("backend");
         let questions = vec![question("First?"), question("Second?")];
@@ -128,7 +128,7 @@ mod tests {
         packed.push(record("beta"), &mut closed).expect("beta");
         assert!(closed.is_empty());
         let packed = packed.finish().expect("finish").expect("packed");
-        let expected = r#"{"state":{"records":["alpha","beta"]},"model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". First?"},"q2":{"type":"noul","instructions":"The text is \"alpha\". Second?"},"q3":{"type":"noul","instructions":"The text is \"beta\". First?"},"q4":{"type":"noul","instructions":"The text is \"beta\". Second?"}}}"#;
+        let expected = r#"{"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". First?"},"q2":{"type":"noul","instructions":"The text is \"alpha\". Second?"},"q3":{"type":"noul","instructions":"The text is \"beta\". First?"},"q4":{"type":"noul","instructions":"The text is \"beta\". Second?"}}}"#;
         assert_eq!(packed.body, expected.as_bytes());
         assert_eq!(
             packed.digest,
@@ -155,13 +155,8 @@ mod tests {
         let [alone] = closed.as_slice() else {
             panic!("one closed group")
         };
-        let plan = Plan::new(
-            Evidence::new("alpha").expect("evidence"),
-            backend.model().clone(),
-            questions,
-        )
-        .expect("original plan");
-        assert_eq!(alone.body, built_in::encode(&plan).expect("original body"));
+        let quoted = r#"{"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"noul","instructions":"The text is \"alpha\". First?"},"q2":{"type":"noul","instructions":"The text is \"alpha\". Second?"}}}"#;
+        assert_eq!(alone.body, quoted.as_bytes());
     }
 
     #[test]
