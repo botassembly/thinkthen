@@ -55,6 +55,8 @@ pub(crate) enum Failure {
     Question(QuestionFileError),
     /// The file the question was to be read from could not be opened.
     OpenQuestionFile(io::Error),
+    /// The question file or question set holds more than 1 MiB.
+    QuestionFileTooLarge,
     /// The question set was refused.
     QuestionSet(QuestionSetError),
     /// The question-set file could not be opened.
@@ -261,6 +263,7 @@ fn say(failure: &Failure, writer: &mut dyn Write) -> u8 {
         Failure::OpenQuestionFile(error) => {
             (5, format!("the question file could not be opened: {error}"))
         }
+        Failure::QuestionFileTooLarge => (5, "the question file is too large".to_owned()),
         Failure::Reading(error) => (2, error.to_string()),
         Failure::Pointer(option, typed, error) => (2, format!("{option} `{typed}`: {error}")),
         Failure::Record(RecordError::NotUtf8) => (5, NOT_TEXT.to_owned()),

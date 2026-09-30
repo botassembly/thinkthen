@@ -1,8 +1,9 @@
 //! Recognition command and question-file precedence.
 
-use std::fs;
+use std::path::Path;
 
 use crate::args::{Common, RecognizeArguments};
+use crate::cli::question_text;
 use crate::core::{
     Description, RecognizeConfigError, RecognizeKinds, RecognizeSpec, RelationRule, rule_side,
 };
@@ -22,7 +23,7 @@ pub(super) fn settle(arguments: &RecognizeArguments) -> Result<RecognizeSpec, Fa
         {
             return Err(error(true, RecognizeConfigError::Shape));
         }
-        let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
+        let text = question_text::read(Path::new(path), Failure::OpenQuestionFile)?;
         RecognizeSpec::parse(&text).map_err(|why| error(true, why))?
     } else {
         let kinds = command_kinds(arguments)?;

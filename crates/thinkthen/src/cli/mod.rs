@@ -19,6 +19,7 @@ pub(crate) mod judge;
 mod measure;
 pub(crate) mod normalize;
 pub(crate) mod profile;
+mod question_text;
 pub(crate) mod recognize;
 pub(crate) mod relate;
 pub(crate) mod schedule;

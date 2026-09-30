@@ -4,7 +4,7 @@
 //! rule that settles which value wins lives in `thinkthen-core`, so a library
 //! over that crate reaches the question a shell user reaches.
 
-use std::fs;
+use std::path::Path;
 
 use crate::core::{Cutting, Description, Json, QuestionFile, Resolved, Typed, Verb, resolve};
 
@@ -12,6 +12,7 @@ use crate::args::{
     ChooseArguments, Common, DecideArguments, FilterArguments, Meanings, RankArguments,
     ScoreArguments, TagArguments,
 };
+use crate::cli::question_text;
 use crate::failure::Failure;
 
 /// The path the first argument names, when it is `@` and a path.
@@ -35,7 +36,7 @@ fn read_top(question: &str) -> Result<Top, Failure> {
     let Some(path) = path_of(question) else {
         return Ok((None, None));
     };
-    let text = fs::read_to_string(path).map_err(Failure::OpenQuestionFile)?;
+    let text = question_text::read(Path::new(path), Failure::OpenQuestionFile)?;
     let (file, batch) = QuestionFile::parse_top(&text)?;
     Ok((Some(file), batch))
 }

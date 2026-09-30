@@ -15,4 +15,5 @@ mod grammar;
 mod overrides;
 mod relate;
 mod secrecy;
+mod size;
 mod structured;
