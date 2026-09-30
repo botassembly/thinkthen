@@ -1,4 +1,4 @@
-Status: open. Found by the first release rehearsal, run 36778953361, on 2026-09-30. Owner: ticket 0128 Phase 3b.
+Status: Closed by the quick fix landed as `Land quick fix: release resolve writes only outputs to its output file`. Found by the first release rehearsal, run 36778953361, on 2026-09-30. Owner: ticket 0128 Phase 3b. Resolution: the `resolve` branch of `sdlc/scripts/release-workflow` sends the `versions` check's output to standard error in both modes, so standard output holds only the `sha`, `version`, and `name` lines. `sdlc/scripts/release-archive-self-test.py` runs `resolve` in both modes on every host and requires exactly those three `name=value` lines on standard output; the case failed on the old script. No other `release-workflow` step sends its standard output to a GitHub output, environment, path, or summary file.
 
 Kind: bug
 

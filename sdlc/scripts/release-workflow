@@ -280,7 +280,8 @@ resolve)
 	*) fail "unknown mode $mode" ;;
 	esac
 	[ "$(git rev-parse HEAD)" = "$GITHUB_SHA" ] || fail 'checkout differs from dispatch SHA'
-	if [ "$mode" = release ]; then sdlc/scripts/versions --tag "${ref#refs/tags/}"; else sdlc/scripts/versions; fi
+	# The workflow appends standard output to GITHUB_OUTPUT, so only name=value lines go there.
+	if [ "$mode" = release ]; then sdlc/scripts/versions --tag "${ref#refs/tags/}" >&2; else sdlc/scripts/versions >&2; fi
 	printf 'sha=%s\nversion=%s\nname=%s\n' "$GITHUB_SHA" "$version" \
 		"$(if [ "$mode" = release ]; then printf 'v%s' "$version"; else printf 'v%s-rehearsal-%.7s' "$version" "$GITHUB_SHA"; fi)"
 	;;
