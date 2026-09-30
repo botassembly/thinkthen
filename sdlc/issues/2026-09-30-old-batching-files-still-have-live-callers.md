@@ -1,6 +1,6 @@
 # What 0304 slices 4 and 5 must move before the old store goes
 
-Status: open. Found by reading main at `ec130d3ee`. Owner: ticket 0304 slice 5, which deletes these files; slice 4 takes items 1 and 2 if it removes `ask_chunks` and moves `recognize`. Source: `sdlc/planning/after-slice-3-prep.md`, section 1 (slice 4 items 3 and 4, slice 5 items 1, 2 and 4) and section 4 items 7 and 8. Merged on 2026-09-30 with the `cache prune` and `status` issue, the recording page issue and the SQL host store proof issue, now in `closed/`.
+Status: open. Found by reading main at `ec130d3ee`. Owner: ticket 0304 slice 5, which deletes these files; slice 4 takes items 1 and 2 if it removes `ask_chunks` and moves `recognize`. Slice 4 took neither, so both stay with slice 5. Source: `sdlc/planning/after-slice-3-prep.md`, section 1 (slice 4 items 3 and 4, slice 5 items 1, 2 and 4) and section 4 items 7 and 8. Merged on 2026-09-30 with the `cache prune` and `status` issue, the recording page issue and the SQL host store proof issue, now in `closed/`.
 
 Kind: debt
 
