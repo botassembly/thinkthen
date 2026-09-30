@@ -17,6 +17,7 @@ check("packed digest comes from independent body and served URL",
       identical(vapply(packed$details, function(one) one$requests[[1L]], ""), rep(hash, 2L)))
 check("one packed send has full call facts and original R indexes",
       inherits(packed, "thinkthen_call") && identical(packed$value, c(TRUE, NA, TRUE)) &&
+      identical(packed$probability, c(0.9, NA_real_, 0.9)) &&
       identical(packed$facts$records, 2) && identical(packed$facts$requests_sent, 1) &&
       identical(packed$facts$input_tokens, 1) && identical(packed$facts$output_tokens, 1) &&
       identical(vapply(packed$details, `[[`, 0, "index"), c(0, 2)) &&
@@ -48,6 +49,13 @@ check("named label meanings keep null and single-element arrays",
 check("printing structured text is safe and does not dump its nested values",
       identical(capture.output(print(structured)), "<thinkthen decide: <structured text>>"))
 
+with_sides <- tt_decide("Q?", "semantic", true = "Yes means refund", false = "No means no refund")
+side_bodies <- capture()
+check("true and false keywords reach the one sent question",
+      identical(with_sides$value, TRUE) && identical(with_sides$probability, 0.9) &&
+      grepl("Yes means refund", side_bodies[[3L]], fixed = TRUE) &&
+      grepl("No means no refund", side_bodies[[3L]], fixed = TRUE))
+
 plain <- tt_decide("Context?", c("delta", "epsilon"), batch = 1L)
 shared <- tt_decide("Context?", c("delta", "epsilon"), batch = 1L, context = "Shared reference")
 check("per-call batch one and literal context reach the same question through different requests",
@@ -59,7 +67,8 @@ check("per-call batch one and literal context reach the same question through di
 
 none <- tt_decide("Q?", c(NA_character_, NA_character_))
 check("all missing input has a measured host no-work account",
-      identical(none$value, c(NA, NA)) && identical(none$facts$records, 0) &&
+      identical(none$value, c(NA, NA)) && identical(none$probability, c(NA_real_, NA_real_)) &&
+      identical(none$facts$records, 0) &&
       identical(none$facts$requests_sent, 0) && is.null(none$facts$model) &&
       is.null(none$facts$input_tokens) && length(none$details) == 0L)
 
@@ -74,7 +83,7 @@ check("pre-accounting usage preserves absent facts",
       identical(settled$kind, "usage") && is.null(settled$facts) && length(settled$details) == 0L)
 check("claimed handle refuses reuse before sending", identical(kind_of(
   tt_decide("Q?", "x", completion = early)), "usage"))
-late <- tryCatch(tt_decide("Q?", "x", deadline = 0), thinkthen_error = function(e) e)
+late <- tryCatch(tt_decide("Q?", "x", deadline_ms = 0), thinkthen_error = function(e) e)
 check("accounted zero-send deadline keeps final facts on its condition",
       inherits(late, "thinkthen_deadline") && identical(late$facts$records, 0) &&
       identical(late$facts$requests_sent, 0) && is.null(late$facts$model) &&
@@ -87,6 +96,27 @@ check("host operations and invalid controls fail as named usage before a send",
       identical(kind_of(tt_question(file = bad_bytes)), "usage") &&
       identical(kind_of(tt_decide("Q?", "x", context = bad_bytes)), "usage") &&
       identical(kind_of(tt_completion_read("not a handle")), "usage"))
+bad_keywords <- sent_by({
+  old <- tryCatch(tt_decide("Q?", "x", deadline = 1), thinkthen_error = function(e) e)
+  check("old deadline spelling has the exact migration sentence",
+        inherits(old, "thinkthen_usage") &&
+        identical(conditionMessage(old), "deadline was renamed deadline_ms, in milliseconds"))
+  check("unknown and engine-only keywords are usage",
+        identical(kind_of(tt_decide("Q?", "x", surprise = 1)), "usage") &&
+        identical(kind_of(tt_decide("Q?", evidence = "x")), "usage") &&
+        identical(kind_of(tt_decide("Q?", "x", none = TRUE)), "usage") &&
+        identical(kind_of(tt_engine(usd_per_million_input = "1", usd_per_million_output = "2")), "usage") &&
+        identical(kind_of(tt_choose("Q?", "x", options = c("a", "b"), true = NULL)), "usage") &&
+        identical(kind_of(tt_score("Q?", "x", levels = c("low", "high"), threshold = 0.5)), "usage") &&
+        identical(kind_of(tt_decide("Q?", "x", deadline_ms = 4294967295001)), "usage"))
+})
+check("invalid keywords send no request", identical(bad_keywords, 0L))
+repeated_file <- tempfile(fileext = ".json")
+writeLines('{"decide":"Q?","decide":"Other?"}', repeated_file)
+repeated_sends <- sent_by(repeated <- tryCatch(tt_question(file = repeated_file),
+                                               thinkthen_error = function(e) e))
+check("raw question file duplicate fields reach the core before R map conversion",
+      inherits(repeated, "thinkthen_local") && repeated_sends == 0L)
 
 limited_sends <- sent_by(limited <- child(c(
   sprintf('tt_engine(base_url = "%s", cache = FALSE, max_requests = 1L, batch = 1L)', arm("arm/full/v1")),
@@ -105,9 +135,29 @@ choice_sends <- sent_by(choice <- child(c(
   'receipt <- tt_completion()',
   'answer <- tt_choose("Which?", c("a", NA_character_, "b"), c("billing", "shipping"), completion = receipt)',
   'cat(identical(vapply(answer$details, `[[`, 0, "index"), c(0, 2)),',
-  '    identical(vapply(tt_completion_read(receipt)$details, `[[`, 0, "index"), c(0, 2)), "\\n")'
+  '    identical(vapply(tt_completion_read(receipt)$details, `[[`, 0, "index"), c(0, 2)),',
+  '    identical(answer$value, c("billing", NA_character_, "billing")),',
+  '    identical(answer$probability, c(0.9, NA_real_, 0.9)), "\\n")'
 )))
 check("dynamic-label columns share the original-position receipt boundary",
-      choice$status == 0L && identical(trimws(choice$text), "TRUE TRUE") && choice_sends == 1L)
+      choice$status == 0L && identical(trimws(choice$text), "TRUE TRUE TRUE TRUE") && choice_sends == 1L)
 
-finish("facts", 8L)
+unsure_sends <- sent_by(unsure <- tt_choose("Which?", "c", c("billing", "shipping"), threshold = 0.95))
+check("an unsure choice keeps its selected-label probability missing",
+      identical(unsure$value, NA_character_) && identical(unsure$probability, NA_real_) && unsure_sends == 1L)
+check("score and tag withhold probability", is.null(tt_score("How much?", character(), c("low", "high"))$probability) &&
+      is.null(tt_tag("Which?", character(), c("a", "b"))$probability))
+
+total_sends <- sent_by(total <- child(c(
+  sprintf('tt_engine(base_url = "%s", cache = FALSE, max_requests_total = 1L, batch = 1L)', arm("arm/full/v1")),
+  'first <- tt_decide("Q?", "first")',
+  'receipt <- tt_completion()',
+  'blocked <- tryCatch(tt_decide("Q?", "second", completion = receipt), thinkthen_error = function(e) e)',
+  'cat(identical(first$value, TRUE), inherits(blocked, "thinkthen_usage"),',
+  '    identical(blocked$facts$requests_sent, 0),',
+  '    identical(tt_completion_read(receipt)$kind, "usage"), "\\n")'
+)))
+check("process cap counts a prior call and refuses the next before a send",
+      total$status == 0L && identical(trimws(total$text), "TRUE TRUE TRUE TRUE") && total_sends == 1L)
+
+finish("facts", 11L)

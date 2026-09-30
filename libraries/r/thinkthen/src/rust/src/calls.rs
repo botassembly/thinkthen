@@ -11,7 +11,7 @@ use extendr_api::prelude::*;
 use std::sync::Arc;
 use thinkthen::{
     Annotated, Answer, BatchSetting, CallOptions, DecisionQuestion, Engine, Evidence, FailureCause,
-    Judgment, LoadedQuestion, Question, QuestionSet,
+    Judgment, LoadedQuestion, Probabilities, Question, QuestionSet,
 };
 
 use crate::{carry, defect, engine, usage};
@@ -391,23 +391,46 @@ pub(crate) fn column(
             if texts.is_empty() {
                 account.no_work();
             }
-            Ok(found
+            found
                 .into_iter()
-                .map(|row| row.value().value().clone())
-                .collect::<Vec<_>>())
+                .map(|row| {
+                    let detail = row.value();
+                    let probability = match (detail.value(), detail.probabilities()) {
+                        (Judgment::Choice(Some(selected)), Probabilities::Named(options)) => Some(
+                            options
+                                .iter()
+                                .find(|one| one.name() == selected)
+                                .ok_or_else(|| defect("the chosen label has no probability"))?
+                                .probability(),
+                        ),
+                        (Judgment::Choice(None), Probabilities::Named(_)) => None,
+                        (Judgment::Score(_), _) | (Judgment::Tags(_), _) => None,
+                        _ => return Err(defect("a column detail held another probability shape")),
+                    };
+                    Ok((detail.value().clone(), probability))
+                })
+                .collect::<Crossed<Vec<_>>>()
         },
     )?;
-    Ok(render::envelope(completed, |judged| {
-        List::from_values(judged.iter().map(|value| -> Robj {
-            match value {
-                Judgment::Decision(answer) => code(*answer).into(),
-                Judgment::Choice(pick) => Nullable::from(pick.clone()).into(),
-                Judgment::Score(position) => (*position).into(),
-                Judgment::Tags(labels) => labels.clone().into(),
-            }
-        }))
-        .into()
-    }))
+    Ok(render::envelope(
+        completed,
+        |judged: Vec<(Judgment, Option<f64>)>| {
+            let probability = Doubles::from_values(
+                judged
+                    .iter()
+                    .map(|(_, one)| one.map_or_else(Rfloat::na, Rfloat::from)),
+            );
+            let value = List::from_values(judged.iter().map(|(value, _)| -> Robj {
+                match value {
+                    Judgment::Decision(answer) => code(*answer).into(),
+                    Judgment::Choice(pick) => Nullable::from(pick.clone()).into(),
+                    Judgment::Score(position) => (*position).into(),
+                    Judgment::Tags(labels) => labels.clone().into(),
+                }
+            }));
+            list!(value = value, probability = probability).into()
+        },
+    ))
 }
 
 /// The audit view of one judgment: the command's `--details` document.

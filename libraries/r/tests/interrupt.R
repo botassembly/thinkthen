@@ -46,7 +46,7 @@ settled <- function(least) {
 # Check point before a call: the deadline argument signals as the Rust call
 # forces it, after .tt_call's first check. The Rust check before the spawn
 # stops it, and nothing is sent.
-one <- child(c(sprintf('tryCatch(tt_decide("Q?", "before", deadline = { tools::pskill(Sys.getpid(), 2L); 5 }), interrupt = %s)', caught)), held)
+one <- child(c(sprintf('tryCatch(tt_decide("Q?", "before", deadline_ms = { tools::pskill(Sys.getpid(), 2L); 5 }), interrupt = %s)', caught)), held)
 check("an interrupt before the spawn arrives and sends nothing", grepl("CAUGHT", one$text, fixed = TRUE) && backend_count() == 0L)
 
 # Check points around .tt_call: before it forces its expression, and after

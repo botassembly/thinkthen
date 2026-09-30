@@ -4,12 +4,12 @@
 # the hook at signal time, so .tt_call restores it before it raises.
 source(file.path(Sys.getenv("TT_TESTS"), "helper.R"))
 
-hooked <- child(c('options(error = function() cat("HOOK RAN\\n"))', 'tt_decide("Q?", "x", deadline = NA)', 'cat("AFTER\\n")'))
+hooked <- child(c('options(error = function() cat("HOOK RAN\\n"))', 'tt_decide("Q?", "x", deadline_ms = NA)', 'cat("AFTER\\n")'))
 plain <- child(c('options(error = function() cat("HOOK RAN\\n"))', 'stop("plain")', 'cat("AFTER\\n")'))
 check("a thinkthen error under a hook runs it and goes on, as a plain stop does",
       grepl("HOOK RAN\nAFTER", hooked$text, fixed = TRUE) && grepl("HOOK RAN\nAFTER", plain$text, fixed = TRUE))
 
-bare <- child(c('tt_decide("Q?", "x", deadline = NA)', 'cat("NEVER\\n")'))
+bare <- child(c('tt_decide("Q?", "x", deadline_ms = NA)', 'cat("NEVER\\n")'))
 check("without a hook the error halts the script nonzero", bare$status != 0L && !grepl("NEVER", bare$text, fixed = TRUE))
 
 # R5-12: pskill reports a signal it never sent, and the call still stops.

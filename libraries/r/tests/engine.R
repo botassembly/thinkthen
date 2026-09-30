@@ -62,7 +62,7 @@ out <- run(sprintf('print(tryCatch(tt_engine(base_url = "%s"), error = function(
 check("a base_url with credentials is refused without echoing them",
       grepl("a base address carries no user information", out, fixed = TRUE))
 out <- run(c(
-  'r <- tryCatch(tt_decide("Q?", "secret check", deadline = 0), error = function(e) e); print(r); print(conditionMessage(r))',
+  'r <- tryCatch(tt_decide("Q?", "secret check", deadline_ms = 0), error = function(e) e); print(r); print(conditionMessage(r))',
   'print(tryCatch(tt_decide("", "x"), error = function(e) e)); print(tt_details("Q?", "details check")$value$meta$url)'
 ))
 check("no output names the key or the URL's credentials",

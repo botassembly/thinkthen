@@ -29,7 +29,8 @@
         held$cond$details <- envelope$details
       }
     } else {
-      held$value <- structure(list(value = envelope$value, facts = envelope$facts,
+      held$value <- structure(list(value = envelope$value, probability = envelope$probability,
+                                   facts = envelope$facts,
                                    details = envelope$details), class = "thinkthen_call")
     }
   }
@@ -64,8 +65,32 @@
 }
 
 .tt_result <- function(value, native) {
-  structure(list(value = value, facts = native$facts, details = native$details),
+  structure(list(value = value, probability = native$probability,
+                 facts = native$facts, details = native$details),
             class = "thinkthen_call")
+}
+
+# R catches names its formal arguments do not use. Every caught name is a
+# usage error, including the old deadline spelling and core-only settings.
+.tt_unknown <- function(...) {
+  names <- names(list(...))
+  if ("deadline" %in% names) .tt_usage("deadline was renamed deadline_ms, in milliseconds")
+  .tt_usage(paste0("unknown keyword: ", if (length(names)) names[[1L]] else "unnamed argument"))
+}
+
+.tt_settings <- function(kind, fields) {
+  if (!length(fields)) return(invisible(NULL))
+  .tt_call(tt_settings_check(.tt_json(fields), kind))
+}
+
+.tt_call_settings <- function(kind, batch, context, deadline_ms) {
+  plain <- function(value) if (is.numeric(value) && identical(class(value), "AsIs"))
+    as.numeric(value) else value
+  fields <- list()
+  if (!is.null(batch)) fields$batch <- plain(batch)
+  if (!is.null(context)) fields$context <- context
+  if (!is.null(deadline_ms)) fields$deadline_ms <- plain(deadline_ms)
+  .tt_settings(kind, fields)
 }
 
 tt_completion <- function() tt_completion_new()
@@ -206,6 +231,9 @@ tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle
 
 # One threshold as the file grammar writes it: a cut, or a band as "lo:hi".
 .tt_threshold_value <- function(threshold) {
+  if (is.character(threshold) && length(threshold) == 1L && !is.na(threshold)) {
+    return(threshold[[1L]])
+  }
   if (!is.numeric(threshold) || anyNA(threshold) || !length(threshold) ||
       length(threshold) > 2L || any(threshold < 0) || any(threshold > 1)) {
     .tt_usage("threshold must be one or two numbers in [0, 1]")
@@ -282,17 +310,29 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
   if (kind != "decide" && is.null(members)) {
     .tt_usage(paste0(kind, " needs its members: options, levels, or labels"))
   }
-  if (!is.null(threshold) && kind != "decide") {
-    .tt_usage("only a decide question takes a threshold")
+  if (!is.null(threshold) && kind == "score") {
+    .tt_usage("score takes no threshold")
   }
   .tt_built(.tt_body(kind, kinds[[kind]], members, threshold, model, sides))
 }
 
 # A question as the verbs take it: a built question stands as built, and
 # text with the call's members and threshold becomes one.
-.tt_settled <- function(question, kind = "decide", members = NULL, threshold = NULL) {
-  if (inherits(question, "thinkthen_question")) return(question)
-  .tt_built(.tt_body(kind, question, members, threshold))
+.tt_settled <- function(question, kind = "decide", members = NULL, threshold = NULL,
+                        sides = list()) {
+  fields <- sides
+  if (!is.null(threshold)) fields$threshold <- .tt_threshold_value(threshold)
+  if (!is.null(members)) fields[[switch(kind, choose = "options", score = "levels", tag = "labels")]] <-
+    .tt_members(members, "the members")
+  .tt_settings(kind, fields)
+  if (inherits(question, "thinkthen_question")) {
+    if (!length(fields)) return(question)
+    body <- jsonlite::fromJSON(question$json, simplifyVector = FALSE)
+    if (length(intersect(names(body), names(fields))))
+      .tt_usage(paste0("settings repeats `", intersect(names(body), names(fields))[[1L]], "` from the question or named arguments"))
+    return(.tt_built(c(body, fields)))
+  }
+  .tt_built(.tt_body(kind, question, members, threshold, sides = sides))
 }
 
 # The question text rank and find read; a built question gives its own.
@@ -309,85 +349,118 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
   text[[1L]]
 }
 
-tt_decide <- function(question, evidence, threshold = NULL, deadline = NULL,
-                      batch = NULL, context = NULL, completion = NULL) {
+tt_decide <- function(question, input, threshold = NULL, true = NULL, false = NULL,
+                      context = NULL, batch = NULL, ..., deadline_ms = NULL,
+                      completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
     .tt_controls(batch, context)
-    question <- .tt_settled(question, threshold = threshold)
-    evidence <- as.character(evidence)
-    code <- rep(NA_integer_, length(evidence))
-    live <- !is.na(evidence)
-    native <- .tt_call(tt_decide_column(question$json, evidence[live],
-                                        as.integer(which(live) - 1L), deadline,
+    .tt_call_settings("decide", batch, context, deadline_ms)
+    sides <- list()
+    if (!missing(true)) sides["true"] <- list(true)
+    if (!missing(false)) sides["false"] <- list(false)
+    question <- .tt_settled(question, threshold = threshold, sides = sides)
+    input <- as.character(input)
+    code <- rep(NA_integer_, length(input))
+    probability <- rep(NA_real_, length(input))
+    live <- !is.na(input)
+    native <- .tt_call(tt_decide_column(question$json, input[live],
+                                        as.integer(which(live) - 1L), deadline_ms,
                                         batch, context, completion))
     code[live] <- native$value$answer
-    .tt_result(ifelse(code < 0L, NA, code == 1L), native)
+    probability[live] <- native$value$probability
+    answer <- .tt_result(ifelse(code < 0L, NA, code == 1L), native)
+    answer$probability <- probability
+    answer
   })
 }
 
-# choose, score, and tag over a column: one annotate of a one-question set
-# (ticket 0095). NA evidence answers NA, or no labels, with no request.
-.tt_column <- function(question, evidence, deadline, empty, batch, context, completion) {
-  evidence <- as.character(evidence)
-  cells <- rep(list(empty), length(evidence))
-  live <- !is.na(evidence)
-  native <- .tt_call(tt_column(question$json, evidence[live],
-                                as.integer(which(live) - 1L), deadline,
+# The one-question column path preserves original positions and uses one
+# deadline for every internal request.
+.tt_column <- function(question, input, deadline_ms, empty, batch, context, completion) {
+  input <- as.character(input)
+  cells <- rep(list(empty), length(input))
+  live <- !is.na(input)
+  native <- .tt_call(tt_column(question$json, input[live],
+                                as.integer(which(live) - 1L), deadline_ms,
                                 batch, context, completion))
-  cells[live] <- native$value
-  .tt_result(cells, native)
+  cells[live] <- native$value$value
+  answer <- .tt_result(cells, native)
+  if (question$kind == "choose") {
+    probability <- rep(NA_real_, length(input))
+    probability[live] <- native$value$probability
+    answer$probability <- probability
+  }
+  answer
 }
 
-tt_choose <- function(question, evidence, options = NULL, threshold = NULL, deadline = NULL,
-                      batch = NULL, context = NULL, completion = NULL) {
+tt_choose <- function(question, input, options = NULL, threshold = NULL,
+                      true = NULL, false = NULL, context = NULL, batch = NULL,
+                      ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
+    if (!missing(true)) .tt_usage("the settings key `true` does not belong to this verb")
+    if (!missing(false)) .tt_usage("the settings key `false` does not belong to this verb")
     .tt_controls(batch, context)
+    .tt_call_settings("choose", batch, context, deadline_ms)
     question <- .tt_settled(question, "choose", options, threshold)
-    held <- .tt_column(question, evidence, deadline, NULL, batch, context, completion)
+    held <- .tt_column(question, input, deadline_ms, NULL, batch, context, completion)
     .tt_result(vapply(held$value, function(one) if (is.null(one)) NA_character_ else one,
                       character(1)), held)
   })
 }
 
-tt_score <- function(question, evidence, levels = NULL, deadline = NULL,
-                     batch = NULL, context = NULL, completion = NULL) {
+tt_score <- function(question, input, levels = NULL, threshold = NULL,
+                     true = NULL, false = NULL, context = NULL, batch = NULL,
+                     ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
+    if (!missing(true)) .tt_usage("the settings key `true` does not belong to this verb")
+    if (!missing(false)) .tt_usage("the settings key `false` does not belong to this verb")
     .tt_controls(batch, context)
-    question <- .tt_settled(question, "score", levels)
-    held <- .tt_column(question, evidence, deadline, NA_real_, batch, context, completion)
+    .tt_call_settings("score", batch, context, deadline_ms)
+    question <- .tt_settled(question, "score", levels, threshold)
+    held <- .tt_column(question, input, deadline_ms, NA_real_, batch, context, completion)
     .tt_result(vapply(held$value, as.numeric, numeric(1)), held)
   })
 }
 
-tt_tag <- function(question, evidence, labels = NULL, deadline = NULL,
-                   batch = NULL, context = NULL, completion = NULL) {
+tt_tag <- function(question, input, labels = NULL, threshold = NULL,
+                   true = NULL, false = NULL, context = NULL, batch = NULL,
+                   ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
+    if (!missing(true)) .tt_usage("the settings key `true` does not belong to this verb")
+    if (!missing(false)) .tt_usage("the settings key `false` does not belong to this verb")
     .tt_controls(batch, context)
-    question <- .tt_settled(question, "tag", labels)
-    held <- .tt_column(question, evidence, deadline, character(), batch, context, completion)
+    .tt_call_settings("tag", batch, context, deadline_ms)
+    question <- .tt_settled(question, "tag", labels, threshold)
+    held <- .tt_column(question, input, deadline_ms, character(), batch, context, completion)
     .tt_result(lapply(held$value, as.character), held)
   })
 }
 
-tt_filter <- function(question, records, threshold = NULL, deadline = NULL,
-                      batch = NULL, context = NULL, completion = NULL) {
+tt_filter <- function(question, records, threshold = NULL,
+                      batch = NULL, context = NULL, ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
     .tt_controls(batch, context)
     question <- .tt_settled(question, threshold = threshold)
     texts <- as.character(records)
     if (anyNA(texts)) .tt_usage("filter takes no NA records; tt_decide answers NA for those rows")
-    native <- .tt_call(tt_filter_places(question$json, texts, deadline, batch, context, completion))
+    native <- .tt_call(tt_filter_places(question$json, texts, deadline_ms, batch, context, completion))
     .tt_result(records[native$value], native)
   })
 }
 
-tt_rank <- function(question, records, top = NULL, deadline = NULL,
-                    batch = NULL, context = NULL, completion = NULL) {
+tt_rank <- function(question, records, top = NULL,
+                    batch = NULL, context = NULL, ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
     .tt_controls(batch, context)
     texts <- as.character(records)
     if (anyNA(texts)) .tt_usage("rank takes no NA records")
-    native <- .tt_call(tt_rank_all(.tt_text(question, "rank"), texts, deadline,
+    native <- .tt_call(tt_rank_all(.tt_text(question, "rank"), texts, deadline_ms,
                                     batch, context, completion))
     ranked <- native$value
     held <- data.frame(place = ranked$place, record = records[ranked$place],
@@ -396,11 +469,12 @@ tt_rank <- function(question, records, top = NULL, deadline = NULL,
   })
 }
 
-tt_find <- function(question, units, none = FALSE, deadline = NULL, completion = NULL) {
+tt_find <- function(question, units, none = FALSE, ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
     texts <- as.character(units)
     if (!is.logical(none) || length(none) != 1L || is.na(none)) .tt_usage("none is TRUE or FALSE")
-    native <- .tt_call(tt_find_one(.tt_text(question, "find"), texts, none, deadline, completion))
+    native <- .tt_call(tt_find_one(.tt_text(question, "find"), texts, none, deadline_ms, completion))
     found <- native$value
     place <- if (is.null(found$place)) NA_integer_ else as.integer(found$place)
     .tt_result(list(place = place, unit = if (is.na(place)) NA_character_ else units[[place]],
@@ -423,15 +497,16 @@ tt_find <- function(question, units, none = FALSE, deadline = NULL, completion =
 # for any record widens its column to a list whose failed cells hold the
 # ruled marker list(failed = list(kind, cause)), so a failure never reads
 # as NA (0054).
-tt_annotate <- function(file, data, on, deadline = NULL, batch = NULL, completion = NULL) {
+tt_annotate <- function(file, data, on, ..., deadline_ms = NULL, batch = NULL, completion = NULL) {
   .tt_asking(completion, {
+  if (length(list(...))) .tt_unknown(...)
   .tt_controls(batch, NULL)
   if (!is.data.frame(data) || !is.character(on) || length(on) != 1L ||
       is.na(on) || !on %in% names(data)) .tt_usage("annotate needs an input frame and one existing on column")
   if (!is.character(file) || length(file) != 1L || is.na(file) ||
       Encoding(file) == "bytes" || !validUTF8(file)) .tt_usage("annotate needs one question set path")
   column <- as.character(data[[on]])
-  native <- .tt_call(tt_annotate_file(as.character(file), column, names(data), deadline,
+  native <- .tt_call(tt_annotate_file(as.character(file), column, names(data), deadline_ms,
                                        batch, completion))
   held <- native$value
   base <- as.data.frame(data, stringsAsFactors = FALSE)
@@ -495,23 +570,24 @@ tt_annotate <- function(file, data, on, deadline = NULL, batch = NULL, completio
 # relations the rules turn on ride in its "relations" attribute.
 # substr(text, start, end) is the name, and length is its character count.
 # With no kinds, every name has the kind ENTITY.
-tt_recognize <- function(evidence, kinds = NULL,
+tt_recognize <- function(input, kinds = NULL,
                          relations = NULL, threshold = NULL,
-                         relation_threshold = NULL, deadline = NULL, completion = NULL) {
+                         relation_threshold = NULL, ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+  if (length(list(...))) .tt_unknown(...)
   path <- .tt_path(kinds)
   spec <- path %||% {
     section <- list(kinds = stats::setNames(as.list(rep(NA, length(kinds))), as.character(kinds)))
     if (length(relations)) section$relations <- .tt_rules(relations)
     .tt_spec("recognize", section, threshold, relation_threshold)
   }
-  evidence <- as.character(evidence)
+  input <- as.character(input)
   empty <- .tt_frame(list(text = character(), start = numeric(), end = numeric(),
                           length = numeric(), kind = character(), strength = numeric()))
-  held <- rep(list(empty), length(evidence))
-  live <- which(!is.na(evidence))
-  native <- .tt_call(tt_recognize_column(spec, !is.null(path), evidence[live],
-                                         as.integer(live - 1L), deadline, completion))
+  held <- rep(list(empty), length(input))
+  live <- which(!is.na(input))
+  native <- .tt_call(tt_recognize_column(spec, !is.null(path), input[live],
+                                         as.integer(live - 1L), deadline_ms, completion))
   if (length(live)) {
     found <- native$value
     for (i in seq_along(live)) {
@@ -530,8 +606,9 @@ tt_recognize <- function(evidence, kinds = NULL,
 # name column is named by its text. The first two columns are the endpoints,
 # so igraph::graph_from_data_frame reads it unchanged.
 tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NULL,
-                      deadline = NULL, completion = NULL) {
+                      ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+  if (length(list(...))) .tt_unknown(...)
   path <- .tt_path(relations)
   if (is.null(path) && !length(relations) && !length(either)) {
     .tt_usage("relate needs at least one relation rule")
@@ -544,20 +621,21 @@ tt_relate <- function(entities, relations = NULL, either = NULL, threshold = NUL
   named <- as.character(if ("name" %in% names(entities)) entities$name else entities$text)
   kinds <- as.character(entities$kind)
   if (anyNA(named) || anyNA(kinds)) .tt_usage("relate takes no NA name or kind")
-  native <- .tt_call(tt_relate_frame(spec, !is.null(path), named, kinds, deadline, completion))
+  native <- .tt_call(tt_relate_frame(spec, !is.null(path), named, kinds, deadline_ms, completion))
   .tt_result(.tt_frame(native$value), native)
   })
 }
 
 # The audit view of one judgment: the command's --details document.
-tt_details <- function(question, evidence, threshold = NULL, deadline = NULL,
-                       completion = NULL) {
+tt_details <- function(question, input, threshold = NULL,
+                       ..., deadline_ms = NULL, completion = NULL) {
   .tt_asking(completion, {
+    if (length(list(...))) .tt_unknown(...)
     question <- .tt_settled(question, threshold = threshold)
-    if (!is.character(evidence) || length(evidence) != 1L || is.na(evidence)) {
-      .tt_usage("evidence is one nonmissing string")
+    if (!is.character(input) || length(input) != 1L || is.na(input)) {
+      .tt_usage("input is one nonmissing string")
     }
-    native <- .tt_call(tt_details_one(question$json, evidence, deadline, completion))
+    native <- .tt_call(tt_details_one(question$json, input, deadline_ms, completion))
     .tt_result(jsonlite::fromJSON(native$value, simplifyVector = FALSE), native)
   })
 }
@@ -568,14 +646,17 @@ tt_usage <- function() .tt_call(tt_usage_counters())
 # The engine settings (ADR 0017 section 5). NULL keeps what the environment
 # gives. The key stays on THINKTHEN_API_KEY alone.
 tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_requests = NULL,
+                      max_requests_total = NULL,
                       max_request_bytes = NULL,
                       cache = NULL, timeout = NULL, max_retries = NULL,
-                      record = NULL, replay = NULL, profile = NULL, batch = NULL) {
+                      record = NULL, replay = NULL, profile = NULL, batch = NULL, ...) {
+  if (length(list(...))) .tt_unknown(...)
   string <- function(x) is.null(x) || (is.character(x) && length(x) == 1L && !is.na(x) && nzchar(x))
   whole <- function(x) is.null(x) || (is.numeric(x) && is.null(attr(x, "class")) &&
     length(x) == 1L && !is.na(x) && x == round(x))
   checks <- list(base_url = string(base_url), model = string(model),
                  throttle = whole(throttle), max_requests = whole(max_requests),
+                 max_requests_total = whole(max_requests_total),
                  max_request_bytes = whole(max_request_bytes),
                  cache = identical(cache, FALSE) || string(cache),
                  timeout = whole(timeout), max_retries = whole(max_retries),
@@ -585,7 +666,8 @@ tt_engine <- function(base_url = NULL, model = NULL, throttle = NULL, max_reques
   if (length(refused)) {
     .tt_usage(paste0(refused[[1L]], " is one string, one whole number, or FALSE for cache"))
   }
-  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_request_bytes, cache,
+  .tt_call(tt_engine_set(base_url, model, throttle, max_requests, max_requests_total,
+                         max_request_bytes, cache,
                          timeout, max_retries, record, replay, profile, batch))
   invisible(NULL)
 }

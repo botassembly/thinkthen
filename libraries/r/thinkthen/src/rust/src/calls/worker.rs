@@ -83,24 +83,29 @@ pub(crate) fn call_owned<T: Send + 'static>(
 }
 
 /// The deadline as one instant, fixed before the call starts, so every
-/// engine call a verb makes shares it. The engine's `deadline_seconds`
-/// rules the number, and `-1` is none.
+/// engine call a verb makes shares it. The host boundary uses whole
+/// milliseconds, with `-1` for none.
 fn due(deadline: Option<f64>) -> Crossed<Option<Instant>> {
-    let Some(seconds) = deadline else {
+    let Some(milliseconds) = deadline else {
         return Ok(None);
     };
-    CallOptions::new()
-        .deadline_seconds(seconds)
-        .map_err(|error| carry(&error))?;
-    if seconds < 0.0 {
+    if milliseconds == -1.0 {
         return Ok(None);
+    }
+    if !milliseconds.is_finite()
+        || milliseconds.fract() != 0.0
+        || !(0.0..=4_294_967_295_000.0).contains(&milliseconds)
+    {
+        return Err(usage(
+            "deadline_ms is -1, 0, or at most 4294967295000 milliseconds",
+        ));
     }
     let late = || {
         usage(&format!(
-            "a deadline of {seconds} seconds does not fit this clock"
+            "a deadline of {milliseconds} milliseconds does not fit this clock"
         ))
     };
-    let budget = Duration::try_from_secs_f64(seconds).map_err(|_| late())?;
+    let budget = Duration::try_from_secs_f64(milliseconds / 1000.0).map_err(|_| late())?;
     Instant::now()
         .checked_add(budget)
         .map(Some)

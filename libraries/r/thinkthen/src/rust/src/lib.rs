@@ -62,6 +62,7 @@ pub(crate) struct Settings {
     pub(crate) model: Option<String>,
     pub(crate) throttle: Option<u8>,
     pub(crate) max_requests: Option<usize>,
+    pub(crate) max_requests_total: Option<u64>,
     pub(crate) max_request_bytes: Option<usize>,
     /// A folder, or `None` inside for `cache = FALSE`.
     pub(crate) cache: Option<Option<String>>,
@@ -85,6 +86,8 @@ impl Settings {
             self.model.as_ref().map(|it| format!("model = {it:?}")),
             self.throttle.map(|it| format!("throttle = {it}")),
             self.max_requests.map(|it| format!("max_requests = {it}")),
+            self.max_requests_total
+                .map(|it| format!("max_requests_total = {it}")),
             self.max_request_bytes
                 .map(|it| format!("max_request_bytes = {it}")),
             cache,
@@ -121,6 +124,9 @@ impl Settings {
         }
         if self.max_requests.is_some() {
             builder = builder.max_requests(self.max_requests)?;
+        }
+        if self.max_requests_total.is_some() {
+            builder = builder.max_requests_total(self.max_requests_total);
         }
         if let Some(bytes) = self.max_request_bytes {
             builder = builder.max_request_bytes(bytes)?;

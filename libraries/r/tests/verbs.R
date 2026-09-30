@@ -20,6 +20,9 @@ check("choose picks the first option", identical(tt_choose("Which team?", c("a",
 # The threshold is local judgment; the dynamic-details route reuses the first
 # answer for the same prompt and text without another send.
 check("choose under a cut it cannot reach is NA", is.na(tt_choose("Which team?", "a", c("billing", "shipping"), threshold = 0.95)$value))
+saved_choice <- tt_question(choose = "Which team?", options = c("billing", "shipping"), threshold = 0.95)
+check("a built choose question accepts the same threshold field", identical(saved_choice$kind, "choose") &&
+      grepl('"threshold":0.95', saved_choice$json, fixed = TRUE))
 check("score is the weighted position", isTRUE(all.equal(tt_score("How urgent?", c("a", NA), levels3)$value, c(0.15, NA))))
 check("tag answers every label that held", identical(tt_tag("What is in this?", c("a", NA), c("refund", "billing"))$value,
                                                      list(c("refund", "billing"), character())))
@@ -81,17 +84,17 @@ check("R5-11: a separator in an option keeps the usage kind",
 # The deadline rules (R7-11, R2-10, R1-11): each refusal sends nothing.
 deadline_kind <- function(value) {
   kind <- NULL
-  count <- sent_by(kind <- kind_of(tt_decide("Q?", paste("deadline", format(value)), deadline = value)$value))
+  count <- sent_by(kind <- kind_of(tt_decide("Q?", paste("deadline", format(value)), deadline_ms = value)$value))
   paste(kind, count)
 }
-for (value in list(5L, I(5), -1L, -1, NULL)) {
+for (value in list(5000L, I(5000), -1L, -1, NULL)) {
   check(paste("the deadline", format(value), "answers"), grepl("^none", deadline_kind(value)))
 }
 for (value in list(0L, I(0L), 0)) {
   check(paste("the deadline", format(value), "is spent"), identical(deadline_kind(value), "deadline 0"))
 }
 for (value in list(NA_integer_, factor("5"), I(factor("5")), as.difftime(5, units = "secs"), TRUE,
-                   1e300, Inf, -Inf, NaN, -2, -2L, 4294967296)) {
+                   1e300, Inf, -Inf, NaN, -2, -2L, 4294967295001)) {
   check(paste("the deadline", format(value), "is usage"), identical(deadline_kind(value), "usage 0"))
 }
 

@@ -187,7 +187,7 @@ refused <- function(case, file) {
   question <- function() thinkthen:::.tt_built(case$question)
   kind <- switch(case$id,
     "21-backend-fault" = kind_of(tt_decide(question(), "any text")$value),
-    "24-deadline-fault" = kind_of(tt_decide(question(), "any text", deadline = 0)$value),
+    "24-deadline-fault" = kind_of(tt_decide(question(), "any text", deadline_ms = 0)$value),
     "29-usage-json-text" = kind_of(tt_decide(question(), case$evidence)$value),
     "30-local-question-file" = {
       before <- tt_usage()$requests_sent
