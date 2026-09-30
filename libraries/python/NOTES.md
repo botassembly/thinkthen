@@ -58,7 +58,7 @@ Ian ruled on 2026-09-25 that pandas is supported fully (ADR 0017's amendment). I
 
 ### Refused string-view shapes (R7-8)
 
-Each line names the test that proves it. `check.sh` fails when a named test does not exist.
+Each line names the test that proves it. Ticket 0335 retired the `check.sh` step that checked each named test exists.
 
 - A table of fewer than three buffers, a null views buffer, or a null sizes buffer: proved by `null_tables_and_row_claims_are_refused`.
 - A view that names a data buffer past the table, the sizes buffer included: proved by `a_view_cannot_name_the_sizes_buffer`.

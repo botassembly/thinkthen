@@ -134,7 +134,7 @@ packed=$(node -e 'console.log(JSON.parse(require("node:fs").readFileSync(process
 [ "$(node -p 'require("./package.json").license')" = MIT ] || fail 'package.json names no MIT license'
 [ "$(grep -c -- "$HOME" "$addon" || true)" = 0 ] || fail "$addon names $HOME"
 
-step 'flags, pins, one guard, no unsafe, and the pinned sentence'
+step 'flags, pins, one guard, and no unsafe'
 if grep -hE '^[^#]*cargo (build|test|clippy)' check.sh build-addon.sh | grep -vE -- '--locked.*--offline|--offline.*--locked'; then
     fail 'a cargo call above lacks --locked or --offline'
 fi
