@@ -22,14 +22,26 @@ def expect(result, text, success=False):
         raise AssertionError((result.args, result.returncode, result.stdout, result.stderr, text))
 
 
+def resolve_outputs(commit, version):
+    # release.yml appends resolve's standard output to GITHUB_OUTPUT, which takes only name=value lines.
+    for mode, ref, name in (("rehearse", "refs/heads/main", f"v{version}-rehearsal-{commit[:7]}"),
+                            ("release", f"refs/tags/v{version}", f"v{version}")):
+        result = run("sh", str(REPO / "sdlc/scripts/release-workflow"), "resolve", mode, ref,
+                     env=os.environ | {"GITHUB_SHA": commit})
+        wanted = f"sha={commit}\nversion={version}\nname={name}\n"
+        if result.returncode or result.stdout != wanted or "versions: " not in result.stderr:
+            raise AssertionError(("resolve outputs", mode, result.returncode, result.stdout, result.stderr))
+
+
 def main():
+    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
+    version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
+                   if line.startswith('version = "'))
+    resolve_outputs(commit, version)
     host = subprocess.check_output(["rustc", "-vV"], text=True).split("host: ", 1)[1].splitlines()[0]
     if host != "x86_64-unknown-linux-gnu":
         print(f"release archive self-test: skipped synthetic C fixture on {host}")
         return
-    commit = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=REPO, text=True).strip()
-    version = next(line.split('"')[1] for line in (REPO / "crates/thinkthen/Cargo.toml").read_text().splitlines()
-                   if line.startswith('version = "'))
     with tempfile.TemporaryDirectory(prefix="thinkthen-release-archive-") as temporary:
         base = Path(temporary)
         source = base / "source"

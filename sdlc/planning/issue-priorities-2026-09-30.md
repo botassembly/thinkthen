@@ -52,7 +52,7 @@ Work outside the lanes:
 | `2026-09-29-docs-page-naming-supported-providers.md` | the Liquid timeout line | outside | marketing |
 | `2026-09-30-site-replay-folders-have-no-fixture.md` (Debt 007) | yes | outside | marketing; our conversion proof landed with 0304 slice 5 |
 | `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | waits | marketing's overhead benchmark, then the queue owner writes one sentence |
-| `2026-09-30-release-resolve-writes-the-version-line-into-its-outputs.md` | yes | ready | ticket 0128 phase 3b; a Quick Fix, then the rehearsal again |
+| `closed/2026-09-30-release-resolve-writes-the-version-line-into-its-outputs.md` | yes | closed | Quick Fix landed; ticket 0128 phase 3b dispatches the rehearsal again |
 | `2026-09-30-duckdb-macos-extension-may-export-sqlite-names.md` (Debt 026) | if the rehearsal shows a `sqlite3_` name | waits | the rehearsal's macOS DuckDB jobs |
 | `2026-09-25-release-and-install-for-0-1.md` | it is 0.1 | waits | every blocker above; Ian's rehearsal dispatch and registry accounts |
 | `2026-09-30-spec-no-calls-edges-need-a-real-send.md` | no | waits | the release QA suite's edge list |
