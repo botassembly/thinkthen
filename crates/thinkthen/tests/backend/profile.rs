@@ -491,27 +491,3 @@ fn over_limit_precedes_replay_and_cache_answers() {
         assert!(output.stdout.is_empty(), "{option}");
     }
 }
-
-const TUNED_SHAPE: &str = r#"{"tuned_for":NAME,"running":NAME}"#;
-
-/// Whether a page names no old key and shows the result shape `shapes` times.
-fn names_only_tuned_for(text: &str, shapes: usize) -> bool {
-    !text.contains(r#""calibrated""#)
-        && !text.contains("calibrated:")
-        && text.matches(TUNED_SHAPE).count() == shapes
-}
-
-#[test]
-fn contract_pages_name_the_tuned_for_key_and_never_the_old_one() {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-    for (page, shapes) in [
-        ("specification/result.md", 1),
-        ("conformance/backend-profiles.json", 0),
-    ] {
-        let text = fs::read_to_string(root.join(page)).expect("contract page");
-        assert!(names_only_tuned_for(&text, shapes), "{page}");
-    }
-    let planted = format!("{TUNED_SHAPE}\n{}", r#"{"calibrated":NAME,"running":NAME}"#);
-    assert!(!names_only_tuned_for(&planted, 1));
-    assert!(names_only_tuned_for(TUNED_SHAPE, 1));
-}

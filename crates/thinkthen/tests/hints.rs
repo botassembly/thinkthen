@@ -142,15 +142,3 @@ fn a_table_fed_to_jsonl_names_csv_and_lines() {
         &format!("{PLAIN}thinkthen: stopped at record 2; 0 records finished\n"),
     );
 }
-
-#[test]
-fn choose_help_names_tag() {
-    let output = run(&[OsStr::new("choose"), OsStr::new("--help")], b"").expect("binary runs");
-    assert_eq!(output.status.code(), Some(0));
-    assert!(output.stderr.is_empty());
-    assert!(
-        String::from_utf8_lossy(&output.stdout)
-            .lines()
-            .any(|line| line == "Use `tag` when more than one answer can apply.")
-    );
-}

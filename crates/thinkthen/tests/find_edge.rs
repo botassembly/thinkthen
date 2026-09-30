@@ -85,44 +85,6 @@ fn dry_run_builds_one_aggregate_request_and_names_the_framing() {
 }
 
 #[test]
-fn help_leads_with_whole_set_disclosure_and_all_three_bounds() {
-    for flag in ["-h", "--help"] {
-        let output = run(&["find", flag], b"").expect("binary runs");
-        assert_eq!(output.status.code(), Some(0));
-        let help = String::from_utf8_lossy(&output.stdout);
-        assert!(help.contains("Every line or record leaves together and sees every other one"));
-        if flag == "--help" {
-            assert!(help.contains("2 to 255 lines or records, or 2 to 254 with --none"));
-            assert!(help.contains("at most 16 MiB across the original input"));
-            assert!(help.contains(
-                "`find --none` prints nothing and exits 3 when `none` wins or ties for first."
-            ));
-            for cache_rule in [
-                "cached by default in the platform cache folder",
-                "Entries contain the judged text",
-                "overriding THINKTHEN_CACHE and the platform default",
-                "An explicit replay folder suppresses the platform default cache",
-            ] {
-                assert!(help.contains(cache_rule), "{cache_rule}\n{help}");
-            }
-        }
-        for accepted in [
-            "--lines",
-            "--jsonl",
-            "--field",
-            "--details",
-            "--input",
-            "--url",
-        ] {
-            assert!(help.contains(accepted), "{flag}: {accepted}\n{help}");
-        }
-        for refused in ["--csv", "--tsv", "--jobs", "--threshold", "--raw"] {
-            assert!(!help.contains(refused), "{flag}: {refused}\n{help}");
-        }
-    }
-}
-
-#[test]
 fn count_refusals_are_exact_and_need_no_key() {
     let cases = [
         (

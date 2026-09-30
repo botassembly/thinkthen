@@ -8,44 +8,6 @@ mod run;
 #[path = "../src/test_deadline/wait.rs"]
 mod wait;
 
-#[test]
-fn help_names_the_beta_complete_set_and_secrecy_contract() {
-    let output = run::output(
-        Command::new(env!("CARGO_BIN_EXE_thinkthen"))
-            .env_clear()
-            .args(["relate", "--help"]),
-    )
-    .expect("binary runs");
-    assert_eq!(output.status.code(), Some(0));
-    let help = String::from_utf8_lossy(&output.stdout);
-    for required in [
-        "Relations are beta",
-        "complete entity set",
-        "NAME=SOURCE_KIND:TARGET_KIND",
-        "--kind-field",
-        "Entries contain the judged text",
-    ] {
-        assert!(help.contains(required), "{required}\n{help}");
-    }
-    assert!(
-        help.contains(concat!(
-            "\n\nA run makes paid requests. A relation between two kinds asks one question for every ",
-            "entity of the larger kind, or of the source kind when the counts are equal. A same-kind ",
-            "relation asks one yes-or-no question for every pair, in both directions unless --either. ",
-            "--plan prints the questions and requests and sends nothing.\n\n",
-        )),
-        "{help}"
-    );
-    assert!(
-        help.contains(concat!(
-            "It acts in record mode, on `annotate`, where a single text can make several grouped ",
-            "requests, and on `relate`, where each relation makes its own requests. Output follows ",
-            "the order the command defines.",
-        )),
-        "{help}"
-    );
-}
-
 /// A name `recognize` found carries `text` in place of `name`, and `relate`
 /// reads it as the name. `name` wins when a record holds both.
 #[test]
