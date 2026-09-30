@@ -1,6 +1,6 @@
 # 0303: Green main
 
-Status: ready. Lane claude-1. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
+Status: built, awaiting code review. Lane claude-1. Plan: `sdlc/planning/cleanup-2026-09-30.md`.
 
 ## Outcome
 
@@ -27,3 +27,15 @@ The full suite passes twice, under umask 022 and 002. `policy.py` passes.
 ## Deferred gaps
 
 Package gates of the surfaces belong to later tickets.
+
+## What the build taught us
+
+- Most failures were stale tests, not code. Later commits added `meta.attempts` to `--details`, a records line to `--plan`, default `--batch max` packing, retained digest lock files, and the mutable-alias refresh warning, all as the specification says. The tests now follow; detailed-result comparisons parse JSON and drop `meta.attempts` in one helper.
+- The key read before an empty folder's lock is right. `specification/recording.md` lets a live request inspect the key before an unbound empty folder's lock, and such a folder holds nothing to replay. The deadline test now counts that one read and still proves no send.
+- One code fix: the `recognize` help said `--plan` prints every record's requests. It prints the first record's requests and bounds for the whole input.
+- The folder warning now uses the configuration file's rule, other-write or another owner, in `config::writable_by_another`. The group-write predicate and its table are gone. This fixed the extra warning in demo 12 and every umask 002 failure.
+- The private doctest harness (`__internal_doctest`, the `thinkthen_internal_doctest` cfg, and its package probe) is gone. Unit tests already covered both functions. Plain `cargo test --workspace` now runs the doctests without flags.
+- `sdlc/scripts/test` runs the whole suite: nextest when installed, else `cargo test`, then doctests, the external consumer, and the shell self-tests. The full consumer run exposed four cases that needed one record a request.
+- Deleted as wording-only: `version::no_page_or_transform_says_unresolved`, the site page row in `profile::contract_pages_name_the_tuned_for_key_and_never_the_old_one`, the pinned transform byte counts and digests (the test still compares `show` with the packaged and repository sources), and the `url: <withheld>` Debug assertion (the marker check stays). Demo 16 was trimmed under the 900-word rule; demo 41 renamed `--dry-run` to `--plan`.
+- The fork probe's TLS responder wait was one second and flaked under load. It is now five seconds.
+- Proof: `cargo test --locked --offline --workspace --all-targets` passes 1,260 tests, 19 ignored, under umask 022 and 002. `sdlc/scripts/test` and `sdlc/scripts/spec` pass. `policy.py` passes. The ratchet falls to 104,940.
