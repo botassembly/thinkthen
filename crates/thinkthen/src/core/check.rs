@@ -47,8 +47,8 @@ const NO_USAGE: &str =
     "a reply carries no token counts, so results and usage totals leave them out";
 
 /// What `check` and `--plan` say when the Ollama workaround turned a
-/// description object into text (ADR 0115 section 4). The workaround is debt,
-/// owned by `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md`.
+/// description object into text (ADR 0115 section 4). The workaround is debt;
+/// the adapter's backend table names its issue.
 pub(crate) const DROPPED_DETAIL: &str = "backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out";
 
 /// One fixed request: the row it reports on, the plan it sends, and whether

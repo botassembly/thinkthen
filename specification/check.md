@@ -39,6 +39,8 @@ The four bodies at the default model, in probe order, as [fixtures/check/request
 {"state":{"note":"The parcel arrived on Tuesday.","box":"intact"},"model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Did it arrive on time?"},"q2":{"type":"choice","instructions":"Which day?","criteria":{"Monday":null,"Tuesday":null}},"q3":{"type":"score","instructions":"How was the packing?","criteria":["poor","good"]},"q4":{"type":"noul","instructions":["Which labels fit?",{"label":"on_time","description":{"what":"It arrived when promised"}}],"criteria":{"true":{"what":"It arrived when promised"}}},"q5":{"type":"noul","instructions":["Which labels fit?",{"label":"damaged","description":"The box or its contents were harmed."}],"criteria":{"true":"The box or its contents were harmed."}}}}
 ```
 
+Under `--backend ollama`, the four bodies carry model `nimble` and each description as text, the Ollama workaround in [backends.md](backends.md#named-backends). [fixtures/check/requests-text.jsonl](fixtures/check/requests-text.jsonl) holds them. `choice`, `score` and `mixed` each send a description object as text, so a live check under `ollama` adds one warning to each of those rows, and `--plan` prints the same sentence once on standard error after `thinkthen: `. Neither changes the exit code.
+
 ## Findings
 
 The report has eight rows, always in this order: `connection`, `key`, `endpoint`, `noul`, `choice`, `score`, `mixed`, `usage`. A row with no finding prints `ok ROW`. A row the check did not reach prints `unchecked ROW`. A finding prints `critical ROW: SENTENCE` or `warning ROW: SENTENCE`, one line each, in wire order.
@@ -55,6 +57,7 @@ The report has eight rows, always in this order: `connection`, `key`, `endpoint`
 | probe | critical | A later probe meets a transport failure or status 401 to 404 | The same sentence as the first-probe rows |
 | probe | warning | A `choice` or `score` answer carries no `confidence` | ``the answer to question `qN` carries no confidence`` |
 | `usage` | warning | Any decoded reply carries no `usage` | `a reply carries no token counts, so results and usage totals leave them out` |
+| probe | warning | The `ollama` backend sent one of the probe's description objects or lists as text | ``backend `ollama` sends each description object as its `what` text, a temporary workaround for an Ollama bug, so its other fields are left out`` |
 
 A transport failure or status 401, 402, 403, or 404 stops the check, because every later request would meet it too. Any other failure belongs to its probe, and the check goes on. The first probe decides `connection`, `key`, and `endpoint`. A reply of any status marks `connection` ok, and any status but 401 to 404 also marks `key` and `endpoint` ok. After a stop, every row not yet decided prints `unchecked`. So a 404 at the first probe prints `ok connection`, `unchecked key`, and `critical endpoint`. `usage` is ok when every decoded reply carried it, and unchecked when no reply was decoded.
 

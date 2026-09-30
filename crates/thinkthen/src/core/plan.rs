@@ -10,15 +10,15 @@ use crate::core::text::{Evidence, ModelName};
 #[error("a plan asks at least one question")]
 pub(crate) struct EmptyPlanError;
 
-/// How a backend's criteria descriptions travel (ADR 0115 section 3).
+/// How a backend's descriptions travel (ADR 0115 section 3).
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) enum Descriptions {
     /// Each description exactly as authored. Every backend but `ollama`.
     #[default]
     Authored,
     /// Each description as text: an object's `what`, and no empty or null
-    /// description. A temporary Ollama-only workaround, owned by the debt
-    /// issue `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md`.
+    /// description. A temporary Ollama-only workaround; the adapter's backend
+    /// table names its debt issue.
     Text,
 }
 

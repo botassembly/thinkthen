@@ -113,8 +113,8 @@ pub(crate) fn run(
 }
 
 /// Say once, under `--plan`, that the Ollama workaround turned a description
-/// object into text (ADR 0115 section 4). The workaround is debt, owned by
-/// `sdlc/issues/2026-09-30-systemone-adapter-sends-criteria-objects-ollama-refuses.md`.
+/// object into text (ADR 0115 section 4). The workaround is debt; the
+/// adapter's backend table names its issue.
 pub(crate) fn say_dropped_detail(dropped: bool) -> Result<(), Failure> {
     if dropped {
         writeln!(
