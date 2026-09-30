@@ -1,6 +1,6 @@
 # Panic diagnostics can copy payloads across host boundaries
 
-Status: open. Ticket 0306 landed one shared panic guard for every surface. The PostgreSQL backend thread and the macOS and ARM64 package proofs remain.
+Status: open. Ticket 0306 landed one shared panic guard for every surface. The PostgreSQL backend thread, pending in ticket 0310, and the macOS and ARM64 package proofs remain.
 
 Filed 2026-09-27. The bounded gap review checked main `0fb8d55f` and the DuckDB prerequisite proof `981c686d`. This issue serves the requirement that diagnostics never echo credentials or evidence. It records payload copying and a demonstrated proof-hook print; it does not claim that a real credential or user's evidence has reached a production panic.
 

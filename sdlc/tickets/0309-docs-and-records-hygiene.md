@@ -1,6 +1,6 @@
 # 0309: Docs and records hygiene
 
-Status: built, awaiting code review. Lane claude-1. Branch `ticket/0309-docs-and-records-hygiene`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 8.
+Status: landed. Fresh code review found a blocking gap: `release-managed-pair.py` allowed only two source symlinks, so source capture refused the header links. Both links are now allowed, and its self-test runs `tar_files` on a real `git archive HEAD`. Lane claude-1. Branch `ticket/0309-docs-and-records-hygiene`. Plan: `sdlc/planning/cleanup-2026-09-30.md`, ruling 8.
 
 ## Outcome
 
@@ -35,4 +35,5 @@ The front pages say what the tool does. The issue folder holds open issues only,
 
 - A symlink is the least machinery for a shared header. SwiftPM, clang, GNU `cp` and Python's `copytree` and `copyfile` follow it. Python's `tarfile.add` and `git archive` keep it as a link, so each archive step needed a look.
 - The archived-release self-test caught the one place that read the header from a tar member. Lint runs it, so the gap showed before review.
-- Issue statuses drift when a ticket lands and forgets the issue. `2026-09-28-binding-panic-hooks-can-print-caught-payloads.md` still says open after 0306; its lander should settle it.
+- A tracked symlink must also pass the release source-capture allow list in `release-managed-pair.py`. Its self-test now reads the real archive, so a new link fails lint.
+- Issue statuses drift when a ticket lands and forgets the issue. `2026-09-28-binding-panic-hooks-can-print-caught-payloads.md` said open after 0306; this ticket settled it.
