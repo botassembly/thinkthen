@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: slice 3a landed; slices 3b, 3c and 3d next. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: landed with slice 5. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -270,6 +270,54 @@ fn process_requests_sent() -> u64
   - The C door's typed relate rows, which 0314 slice 2 deferred, are not taken here. `sdlc/issues/2026-09-30-c-door-relate-rows-have-no-owner.md` holds them.
   - The site's recognize and relate replay folders stay unconverted, per `sdlc/issues/2026-09-30-site-replay-folders-have-no-fixture.md`.
 
+### Slice 5 evidence
+
+- Starts from: slice 4 (`02750a206`); ADR 0111 sections 3, 9 and 10 and build step 5; `sdlc/planning/after-slice-3-prep.md` section 1, slice 5, which served as this slice's ticket review; Debt 003, `sdlc/issues/2026-09-30-old-batching-files-still-have-live-callers.md`; Debt 007's first part, `sdlc/issues/2026-09-30-site-replay-folders-have-no-fixture.md`.
+- Keeps: output order, exit codes, the null-versus-failure rule, key secrecy and no key read on replay; `check` reads and writes no cache; many-line `recognize` streams lines in order at its width; the prune selectors, `--dry-run` preview, target and refusals; `status` stays read-only and opens no connection; `.usage.total.requests_sent`, `.usage.total.input_tokens` and every other kept `status/2` path.
+- Changes:
+  - Deleted: `engine/recorder.rs` with `fault.rs` and `identity.rs`, `engine/request.rs`, `engine/prepared_request.rs`, `engine/schedule.rs`, `engine/cache_lock.rs`, `engine/cache_prune.rs` with `binding.rs` and `scan.rs`, and `core/recording_identity.rs`. Also gone: `workers::ordered`, `BackendProfile::check`, `Plan::wire_question_count`, `Reply::failed_any`, the per-answer `requests_sent`, `Digest::file_name`, and the error variants `ReplayMiss`, `RecordingConflict`, `RecordingBackendMismatch` and `RecordingFolderLegacy`, which nothing raised.
+  - `check` sends its probe through `send_plan` on the send stage, with no store. The facade conformance runner, `find` and the test-only `judge` ask through `Asks` and `ask_each`. `Asks` now holds a span of wire questions per logical question, so a tag's labels travel as one question's answers.
+  - The ordered runner that many-line `recognize` uses moved to `cli/schedule/ordered.rs`, the prep's option (b). Its tests moved with it. `cli` reaches the engine's scoped workers through `engine::facade`.
+  - `cache prune` and `cache unused` run as SQL over `thinkthen.sqlite` in `engine/store/prune.rs`. Prune removes the selected answers, then the oldest by `taken_at` until the target holds, deletes states no answer uses, and runs `PRAGMA incremental_vacuum`, so the file shrinks. `unused` reads the fixture or the live store. Neither touches old digest-named files.
+  - `status` counts the store: `cache.entries` is its answer count, `cache.bytes` its page count times page size, and the new `cache.old_entries` counts digest-named files beside it. It drops `cache.binding`, `cache.bad_entries`, `cache.temporary_entries` and `cache.temporary_bytes`, which ADR 0111 section 10 retires. The human lines are `cache_entries`, `cache_bytes` and `cache_old_entries`.
+  - 1,549 old files went: every tracked `DIGEST.json` and `.thinkthen-backend.json` outside `probes/` and `site/`. Before the deletion, `cache convert` on each folder left its committed `thinkthen.jsonl` byte for byte unchanged. `sdlc/scripts/rekey-model` and its fixture went, because every recording it served is already re-keyed.
+  - Captured conformance cases name a recording folder, and the runner checks each question key's answer and model in that folder's `thinkthen.jsonl`. The profile case `tag-over` became `tag-over-splits`, because the packer now splits a tag's labels across requests.
+  - `specification/recording.md` describes the one store, with the marker paragraphs and old prune rules gone. The size and splitting sections of `specification/backends.md`, the prune and unused rows of `settings.md`, the `requests` row of `result.md`, the `--used` help, ten demo READMEs and `CHANGELOG.md` follow.
+  - The ratchet falls by 3,764 lines, from 108,746 to 104,982. Across the slice, Rust lost 6,099 lines and gained 2,032; the deleted entries held 10,948 lines of JSON.
+- Proof:
+  - `tests/backend/default_cache/prune.rs`, on real cached runs: the alias and unknown-model refusals change no byte, with and without `--dry-run`, and a newer model's answer stays; `--max-size` removes the oldest answer first and the file shrinks; `--older-than` selects by `taken_at` and leaves old entries, a stray file and a directory untouched; an unreadable folder exits 5 before any change.
+  - `default_cache.rs` `cache_prune_removes_every_answer_under_a_one_byte_target`, and `status` then counts 0.
+  - `tests/backend/default_cache/unused.rs`: supplied keys name the unused answer from a fixture and from the live store, and every manifest refusal, a folder holding both files, and a damaged fixture leave the folder unchanged.
+  - `tests/status.rs`: a cached run counts 1 answer, the file's bytes and 1 old entry, keeps `requests_sent` 1 and `input_tokens` 312 at their paths, and a damaged store exits 5; a retired marker is ignored; old entries are counted by name without reading their bytes.
+  - `tests/cache_convert.rs` converts written old entries twice to identical bytes, keeping the old files, since the demos no longer hold old entries.
+  - The facade conformance runner replays every shared case through `ask_each`. `17-annotate-partial` misses its failed question under replay, as ADR 0111 section 6 says, and the case's decoding check still reads the failure.
+- Retained regressions and their replacements:
+  - Marker, digest-lock and temporary-file tests went with the files they drove. The store's own tests in `engine/store/tests.rs` hold the busy wait, a stop during a wait, a read-only replay that writes nothing and a hot journal.
+  - `a_received_usage_report_survives_a_refused_logical_reply`: `default_cache/usage.rs` `a_live_reply_counts_valid_usage_when_its_only_answer_is_refused` and `systemone/response_tests.rs` `validated_usage_survives_when_every_answer_is_refused`.
+  - `a_spent_deadline_stops_a_prepared_request_before_its_key`: `engine/deadline_tests.rs` `a_spent_deadline_opens_no_connection_and_observes_no_attempt`, `engine/pipeline/tests.rs` `a_spent_deadline_or_a_fired_cancel_stops_before_reading`, and `cli/edge/deadline_tests.rs` `a_spent_deadline_on_every_direct_path_sends_nothing`.
+  - `a_replayed_answer_takes_no_permit`: a permit is taken only inside `Client::post`, and a replay never reaches the client. Every replay test that counts zero loopback requests holds this.
+  - The two prune tests over digest-shaped symlinks and bad entries went, because prune no longer reads those files.
+- Checks: TBD
+- Defers:
+  - `core/batch.rs` stays. What remains in it is the quote form and the batch setting parse, which every path uses; ADR 0111 section 1 keeps both. Renaming it is churn with no behavior. Ian can overturn this.
+  - The SQL hosts' question store proofs from Debt 003 go back to `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md`, Debt 010, reopened.
+  - Demo record scripts write beside their committed fixture: `sdlc/issues/2026-09-30-demo-record-scripts-write-beside-their-fixture.md`.
+  - Site folders: marketing runs the command below. Debt 007 part 1 holds it.
+
+Marketing runs, from the repo root, with a build of this commit:
+
+```sh
+for dir in site/recordings \
+  site/examples/beatles/bench/examples/{annotate,choose,decide,filter,find,rank,score,tag}/recording \
+  site/examples/beatles/bench/results/runs/2026-09-26-thinkthen-jev/recording \
+  site/examples/beatles/{recognize,relate,score-bands}/files/recording \
+  site/examples/how-tos/bash/{agent-tool-guard,long-lived-loop}/files/recording; do
+  thinkthen cache convert "$dir"
+done
+```
+
+Then delete each folder's digest-named `.json` files and `.thinkthen-backend.json`, and rerun `cd site && THINKTHEN_BIN=../target/debug/thinkthen node scripts/smoke.mjs`. In a scratch copy of `site/`, each folder converted with no `--quote` and skipped no entry, because slice 1 already quoted and re-keyed them. The smoke over that copy failed 5 of 97 examples, against 79 before. All five are the `--dry-run` examples of Debt 007 part 2.
+
 ## What the build taught us
 
 ### Slice 1
@@ -391,3 +439,13 @@ What the review fixes found:
 - Under `surfaces`, the Ada, Objective-C and COBOL checks wait on the lane lock the rung already holds, and exit 75 after three minutes. Each passes run alone.
 - A binding's `check.sh` does not measure its ratchet. Only `surfaces --registry`, which `lint` runs, does, so a test-only edit in seven bindings passed their checks and failed lint.
 - The Python check finds its pinned venv under `XDG_CACHE_HOME`. A scratch cache home hides it and the check says "not run".
+
+### Slice 5
+
+- A tag question asks one wire question per label. `Asks` first assumed one wire question per logical question and refused a tag with "a planned question asks more than once". A span per question fixed it.
+- The packer splits one input's entries across requests. A tag whose labels pass a questions limit therefore splits, so only a question that passes a limit alone still refuses.
+- A replay of a failed question is a miss, because the store keeps no failed answer. The facade runner met this in `17-annotate-partial` and now treats that miss as the case's expected result.
+- Deleting the demos' old entries removed the input of three `cache convert` tests. The tests now write old entries themselves.
+- `status` opens the store read-only, so it never creates the file. A missing file counts zero and a damaged one exits 5.
+- Lane 1's keep-alive test, landed in 0341 while this slice was open, read the per-answer send count this slice removed. It now reads the process counter after each send.
+

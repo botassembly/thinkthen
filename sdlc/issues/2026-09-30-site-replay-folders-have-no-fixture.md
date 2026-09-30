@@ -1,6 +1,6 @@
 # The site smoke is red, and most site samples run under no check
 
-Status: open. Found on 2026-09-30 by running the site smoke against main `acebf3044`. Marketing owns `site/` (`sdlc/planning/ownership.md`); converting the recordings is ours. Owner of our part: ticket 0304 slice 5. Owner of the rest: marketing. Merged on 2026-09-30 with the site samples issue, now in `closed/`.
+Status: open. Found on 2026-09-30 by running the site smoke against main `acebf3044`. Marketing owns `site/` (`sdlc/planning/ownership.md`); converting the recordings is ours. Our part, the conversion proof, landed with ticket 0304 slice 5; marketing runs the conversion. Owner of the rest: marketing. Merged on 2026-09-30 with the site samples issue, now in `closed/`.
 
 Kind: debt
 
@@ -26,7 +26,19 @@ The folder list comes from `git ls-files`: folders with digest-named `.json` fil
 
 The smoke run, `cd site && THINKTHEN_BIN=../target/debug/thinkthen node scripts/smoke.mjs`, with no key or address set and no network, exited 1: 79 of 97 examples failed and 18 passed. 74 failed because the replay folder holds no answer for the question key; that count includes three asserts that failed after a miss. The other 5 failed with `--dry-run was renamed --plan`: `beatles/backends/1-check.sh`, `beatles/recognize/1-find.sh`, `install/backends/1-dry-run.sh`, `install/settings/1-environment.sh` and `install/settings/2-flag.sh`. The smoke's wrapper also still matches `--dry-run`. The smoke log was kept as a local scratch file.
 
-Slice 5 runs `cache convert` on each folder, as slice 1 requoted them by script (ticket 0304, slice 1 lessons: "Recordings under `site/examples` and `site/recordings` were requoted mechanically"). It reruns the smoke and hands marketing the converted fixtures and the result. The old files go only after marketing accepts. Slice 5's proof list adds the site smoke.
+Slice 5 converted each folder in a scratch copy of `site/` with a build of its branch. Every folder converted with no `--quote` and skipped no entry. The smoke over that copy, with the old files deleted, failed 5 of 97 examples, all five the `--dry-run` examples of part 2. Slice 5 does not edit `site/`, so marketing runs the conversion. The command is in ticket 0304, slice 5 evidence:
+
+```sh
+for dir in site/recordings \
+  site/examples/beatles/bench/examples/{annotate,choose,decide,filter,find,rank,score,tag}/recording \
+  site/examples/beatles/bench/results/runs/2026-09-26-thinkthen-jev/recording \
+  site/examples/beatles/{recognize,relate,score-bands}/files/recording \
+  site/examples/how-tos/bash/{agent-tool-guard,long-lived-loop}/files/recording; do
+  thinkthen cache convert "$dir"
+done
+```
+
+Then delete each folder's digest-named `.json` files and `.thinkthen-backend.json`, and rerun the smoke. Part 1 is done when those folders hold only `thinkthen.jsonl`.
 
 ## 2. The five `--dry-run` examples (marketing)
 

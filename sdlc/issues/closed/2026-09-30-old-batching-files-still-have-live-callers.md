@@ -1,6 +1,6 @@
 # What 0304 slices 4 and 5 must move before the old store goes
 
-Status: open. Found by reading main at `ec130d3ee`. Owner: ticket 0304 slice 5, which deletes these files; slice 4 takes items 1 and 2 if it removes `ask_chunks` and moves `recognize`. Slice 4 took neither, so both stay with slice 5. Source: `sdlc/planning/after-slice-3-prep.md`, section 1 (slice 4 items 3 and 4, slice 5 items 1, 2 and 4) and section 4 items 7 and 8. Merged on 2026-09-30 with the `cache prune` and `status` issue, the recording page issue and the SQL host store proof issue, now in `closed/`.
+Status: closed by ticket 0304 slice 5, which moved every caller, deleted the old files, and moved `cache prune`, `cache unused` and `status` onto `thinkthen.sqlite`. The SQL host proofs went back to Debt 010. Found by reading main at `ec130d3ee`. Owner: ticket 0304 slice 5, which deletes these files; slice 4 takes items 1 and 2 if it removes `ask_chunks` and moves `recognize`. Slice 4 took neither, so both stay with slice 5. Source: `sdlc/planning/after-slice-3-prep.md`, section 1 (slice 4 items 3 and 4, slice 5 items 1, 2 and 4) and section 4 items 7 and 8. Merged on 2026-09-30 with the `cache prune` and `status` issue, the recording page issue and the SQL host store proof issue, now in `closed/`.
 
 Kind: debt
 
@@ -9,6 +9,8 @@ Pay when: 0304 slice 5 lands, before 0.1.
 Debt: 003
 
 Severity: medium
+
+Paid: 2026-09-30
 
 Keeping it leaves two batching paths, so a fix to one can miss the other. Until slice 5, `cache prune` cannot shrink `thinkthen.sqlite`, so the default cache grows past its size target.
 
@@ -51,11 +53,6 @@ The build follows the ADR. It writes no marker, and a hand-written marker naming
 
 The recording page states the ADR 0111 rule: answers from two addresses never mix because the address is in every key, and a cache at a new address misses and resends. The marker paragraphs and the prune sentence go. `status` drops `cache.binding`, or the specification names it and says what it means now. The size and splitting sections of `specification/backends.md` and the model-mismatch sentence follow.
 
-## The SQL hosts' question store proofs are partial
+## The SQL hosts' question store proofs
 
-Deferred by ticket 0304 slice 3b. Slice 3e closed the PostgreSQL missing-part row with `databases/postgresql/check.sh` `an_annotate_row_missing_its_part_fails_alone`. Keeping the rest risks a store regression in DuckDB or PostgreSQL that no check counts.
-
-- The `databases/duckdb` and `databases/postgresql` shared case runners do not count answer rows in `thinkthen.sqlite`, as the SQLite (`databases/sqlite/tests/conformance.py`) and C door (`libraries/c/tests/door/cases.rs` `stored`) runners do. DuckDB's harness deletes each child's folder when the child ends, so the count needs a harness change.
-- The prep note `sdlc/planning/0304-slices-3b-3d-prep.md` asked for the store's edge rows through the SQLite extension on the 3.50.0 host. The shared cases cover a hit and a miss. No test covers a read-only replay folder or a busy wait there.
-
-Done when each gap has a test that fails when the store stops answering. Slice 5's surface sweep reruns these runners, so it takes this part; otherwise its own ticket pays it before 0.1.
+Moved to `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md` (Debt 010, reopened) when slice 5 closed this issue.
