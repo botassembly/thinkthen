@@ -81,6 +81,7 @@ pub struct EngineBuilder {
     record: Option<PathBuf>,
     replay: Option<PathBuf>,
     ca_bundle: Option<PathBuf>,
+    per_minute: Option<std::num::NonZeroU32>,
 }
 
 impl fmt::Debug for EngineBuilder {
@@ -108,6 +109,7 @@ impl fmt::Debug for EngineBuilder {
             .field("record", &self.record)
             .field("replay", &self.replay)
             .field("ca_bundle", &self.ca_bundle.as_ref().map(|_| "<withheld>"))
+            .field("per_minute", &self.per_minute)
             .finish()
     }
 }
@@ -144,6 +146,7 @@ impl EngineBuilder {
             record: None,
             replay: None,
             ca_bundle: None,
+            per_minute: None,
         }
     }
 
@@ -394,6 +397,7 @@ impl EngineBuilder {
             max_retries: self.max_retries,
             retry_wait: Duration::from_secs(1),
             width: self.width,
+            per_minute: self.per_minute,
             storage: self.storage()?,
             key: Arc::new(move || {
                 key.as_ref()

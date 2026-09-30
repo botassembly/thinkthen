@@ -21,7 +21,7 @@ required-features = ["cli"]
 default = ["cli"]
 cli = ["dep:clap", "dep:csv-core", "dep:signal-hook"]
 # The Rust Polars door (ticket 0130). Off by default.
-polars = ["dep:polars", "dep:polars-core", "polars/lazy", "polars/streaming"]
+polars = ["dep:polars", "dep:polars-core", "polars/lazy"]
 
 [dependencies]
 arc-swap = "=1.7.1"

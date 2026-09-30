@@ -6,9 +6,7 @@ mod common;
 
 use conformance_backend::{Canned, Listener};
 use serde_json::{Map, Value, json};
-use thinkthen::polars::prelude::{
-    DataFrame, DataType, Engine as PolarsExecution, IntoLazy, NamedFrom, Series, col,
-};
+use thinkthen::polars::prelude::{DataFrame, DataType, IntoLazy, NamedFrom, Series, col};
 use thinkthen::{
     BatchSetting, CancelToken, Engine, PolarsEngine, PolarsExprOptions, Question, QuestionKind,
     Tally,
@@ -106,7 +104,7 @@ fn assert_probability_matches_eager(result: &DataFrame, eager: &DataFrame) {
 }
 
 #[test]
-fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
+fn lazy_matches_eager_values_bodies_and_shared_tally() {
     let listener = listener();
     let engine = engine(listener.base());
     let source = frame(&[Some("Refund me"), None, Some("Please refund this")]);
@@ -139,22 +137,16 @@ fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
         )
         .expect("singleton expression");
     assert_eq!(listener.count(), 1, "both constructions send nothing");
-    for (streaming, expression) in [(false, ordinary), (true, singleton)] {
-        let query = source
+    for (single, expression) in [(false, ordinary), (true, singleton)] {
+        let result = source
             .clone()
             .lazy()
-            .with_columns([expression.alias("judged")]);
-        let result = if streaming {
-            query
-                .collect_with_engine(PolarsExecution::Streaming)
-                .expect("streaming collect")
-                .unwrap_single()
-        } else {
-            query.collect().expect("lazy collect")
-        };
+            .with_columns([expression.alias("judged")])
+            .collect()
+            .expect("lazy collect");
         assert_probability_matches_eager(&result, eager.value());
         let requests = listener.requests();
-        if streaming {
+        if single {
             let mut actual = requests
                 .iter()
                 .map(|request| request.body.clone())
@@ -165,10 +157,7 @@ fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
                 r#"{"state":"Please refund this","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does this ask for a refund?"}}}"#.as_bytes().to_vec(),
             ];
             expected.sort();
-            assert_eq!(
-                actual, expected,
-                "batch one gives exact singleton bodies at any morsel cut"
-            );
+            assert_eq!(actual, expected, "batch one gives exact singleton bodies");
         } else {
             assert_eq!(requests.len(), 1);
             assert_eq!(
@@ -181,7 +170,7 @@ fn lazy_and_streaming_match_eager_values_bodies_and_shared_tally() {
     assert_eq!(
         listener.count(),
         4,
-        "eager and ordinary packed; batch-one streamed"
+        "eager and ordinary packed; batch one sent singletons"
     );
     assert_eq!(
         (tally.facts().records(), tally.facts().requests_sent()),
@@ -310,14 +299,14 @@ fn a_shared_token_stops_a_later_evaluation_without_a_send() {
         .lazy()
         .with_columns([expression.clone().alias("judged")])
         .collect()
-        .expect("first morsel");
+        .expect("first collect");
     assert_eq!(listener.count(), 1);
     token.cancel();
     let error = source
         .lazy()
         .with_columns([expression.alias("judged")])
         .collect()
-        .expect_err("cancelled next morsel");
+        .expect_err("cancelled second collect");
     assert!(error.to_string().contains("cancel"), "{error}");
     assert_eq!(listener.count(), 1, "no later request was admitted");
     assert_eq!(tally.facts().requests_sent(), 1);

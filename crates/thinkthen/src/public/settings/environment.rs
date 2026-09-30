@@ -10,7 +10,8 @@ use crate::public::error::Error;
 impl EngineBuilder {
     /// Capture what the command reads: `THINKTHEN_BASE_URL`,
     /// `THINKTHEN_API_KEY`, `THINKTHEN_CACHE`, `THINKTHEN_CA_BUNDLE`,
-    /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`, the XDG cache home, and the
+    /// `THINKTHEN_BATCH`, `THINKTHEN_MAX_REQUEST_BYTES`,
+    /// `THINKTHEN_REQUESTS_PER_MINUTE`, the XDG cache home, and the
     /// XDG configuration file. The setters and `build` read no environment.
     ///
     /// # Errors
@@ -48,6 +49,10 @@ impl EngineBuilder {
         // Validate only the path selected when the engine is built.
         builder.ca_bundle = variable("THINKTHEN_CA_BUNDLE")?.map(PathBuf::from);
         builder.env_batch = variable("THINKTHEN_BATCH")?;
+        builder.per_minute = crate::engine::backoff::per_minute(
+            variable("THINKTHEN_REQUESTS_PER_MINUTE")?.as_deref(),
+        )
+        .map_err(Error::usage)?;
         if let Some(model) = config.model() {
             builder = builder.model(model)?;
         }

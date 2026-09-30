@@ -93,9 +93,9 @@ fn concurrent_record_only_processes_each_send_and_install_one_complete_entry() {
         move |_| {
             // Lock files stay after use, so a held lock is one this probe cannot take.
             let locked = fs::read_dir(recording.join(".locks")).is_ok_and(|entries| {
-                entries.filter_map(Result::ok).any(|entry| {
-                    fs::File::open(entry.path()).is_ok_and(|file| file.try_lock().is_err())
-                })
+                entries
+                    .filter_map(Result::ok)
+                    .any(|entry| held(&entry.path()))
             });
             if let Ok(mut states) = lock_states.lock() {
                 states.push(locked);
@@ -229,4 +229,9 @@ fn a_file_size_limit_returns_the_fixed_failure_and_removes_the_temporary_entry()
                 && entry.file_name().to_string_lossy() != ".thinkthen-backend.json"
         });
     assert!(!temporary, "no temporary recording entry remains");
+}
+
+/// Whether another handle holds the lock file at `path`.
+fn held(path: &std::path::Path) -> bool {
+    fs::File::open(path).is_ok_and(|file| file.try_lock().is_err())
 }

@@ -76,6 +76,8 @@ pub(crate) struct Settings {
     pub(crate) retry_wait: Duration,
     /// `None` follows the process width and never selects one.
     pub(crate) width: Option<Width>,
+    /// `THINKTHEN_REQUESTS_PER_MINUTE`, or `None` for the address's default.
+    pub(crate) per_minute: Option<std::num::NonZeroU32>,
     pub(crate) storage: Storage,
     /// Read only when a live attempt is about to go out.
     pub(crate) key: KeyReader,
@@ -97,6 +99,7 @@ pub(crate) struct Engine {
     key: KeyReader,
     /// The explicit width or `None`, applied again in each process.
     width: Option<Width>,
+    per_minute: Option<std::num::NonZeroU32>,
     storage: Storage,
     roots: Option<Roots>,
     usage_path: Option<PathBuf>,
@@ -174,6 +177,7 @@ impl Engine {
             retry_wait: settings.retry_wait,
             key: settings.key,
             width: settings.width,
+            per_minute: settings.per_minute,
             storage: settings.storage,
             roots,
             recording: false,
@@ -202,13 +206,13 @@ impl Engine {
         .with_refresh(storage.refresh_cache);
         let widths = crate::engine::process_width_of(pid, cancel)?;
         let width = widths.select(self.width).map_err(Error::WidthActive)?.get();
+        let secure = self.backend.is_secure();
+        let client = match self.roots.as_ref() {
+            Some(roots) => Client::with_roots(self.timeout, secure, widths, Some(roots)),
+            None => Client::new(self.timeout, secure, widths),
+        };
         Ok(State {
-            client: match self.roots.as_ref() {
-                Some(roots) => {
-                    Client::with_roots(self.timeout, self.backend.is_secure(), widths, Some(roots))
-                }
-                None => Client::new(self.timeout, self.backend.is_secure(), widths),
-            },
+            client: client.paced(crate::engine::backoff::interval(self.per_minute, secure)),
             recorder,
             usage,
             width,

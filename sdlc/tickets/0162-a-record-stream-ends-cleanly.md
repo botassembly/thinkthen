@@ -34,7 +34,7 @@ Read from `origin/main` `6b9476c1`.
 - Today a record number is an input line number under line framing. `edge::Chunks` yields every line, a blank one included, as one item. The engine scheduler (`engine/schedule.rs:153-179`) numbers items in dispatch order and reports `at: place + 1`, and `engine/annotate_schedule.rs:383` reports `at: row + 1` the same way. A blank line is an item that fails, so it holds its place. CSV and TSV rows come from `table::Rows` one data row an item, so a table's record number is its data row counted from 1 after the header.
 - Two command files read the engine's `at`: `cli/schedule.rs:183-190` and `cli/annotate_schedule.rs:74-80` copy it from `Outcome::Stopped` into `Failure::Stopped`. The library facade matches the same variant in `public/batch.rs:148` as `Stopped { cause, .. }` and never reads `at`. Outside those two command files, only engine unit tests read it: the tests inside `engine/schedule.rs` and `engine/annotate_schedule.rs`, `engine/deadline_tests/schedule.rs`, and `engine/facade_tests.rs:416`.
 - Four command-side readers answer the scheduler's asks. `cli/schedule.rs::read_records` (line 200) serves `over_records`, which runs the one-record verbs, `recognize` over lines, and `recognize` over a table. `cli/annotate_schedule.rs::read` serves `annotate`. Each answers one ask with one item from its iterator. The dry runs read their first record with `chunks.next()` in `cli/asking.rs::run`, `cli/annotate.rs`, and `cli/recognize/dry_run.rs`.
-- `records.md` line 131 says a run that must stay inside the documented limit "sets `--jobs 3`". Experiment 206 measured 980 requests a minute at `--jobs 3` over 3,000 short lines. The reply time behind that rate was never measured. It is derived: 3 requests in flight at 980 a minute gives 3 × 60 / 980, about 0.18 seconds a reply. Report 07, finding I1, measured `--jobs 3` at 1,285 requests a minute on loopback with 100 ms replies, and the default `--jobs 4` at 1,519 a minute live (`sdlc/issues/2026-09-26-no-requests-per-minute-pacer.md`).
+- `records.md` line 131 says a run that must stay inside the documented limit "sets `--jobs 3`". Experiment 206 measured 980 requests a minute at `--jobs 3` over 3,000 short lines. The reply time behind that rate was never measured. It is derived: 3 requests in flight at 980 a minute gives 3 × 60 / 980, about 0.18 seconds a reply. Report 07, finding I1, measured `--jobs 3` at 1,285 requests a minute on loopback with 100 ms replies, and the default `--jobs 4` at 1,519 a minute live (`sdlc/issues/closed/2026-09-26-no-requests-per-minute-pacer.md`).
 - Ticket 0146 adds `cli/asking/batched.rs`. `cli/asking.rs::run` sends `decide`, `filter` and `rank` over a stream there at every `--batch`, `--batch 1` included, and CSV and TSV take the same path through `over_table` (0146, "The reader builds batches"). Its batch reader answers each scheduler ask with a batch, holds each item's records and first record number, and runs the record-mode dry run. `Outcome::Stopped` then counts `finished` in records, with `at` equal to `finished + 1`. After 0146, `cli/schedule.rs::read_records` serves only `choose`, `tag`, `score` and `recognize`, and each of them prints one line for every record.
 - `sdlc/scripts/policy.py:287-293` accepts `nix` as a Unix library dependency only with `default-features = false` and `features = ["signal"]`. The test dependency keeps `["pthread", "signal"]`.
 
@@ -238,7 +238,7 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 1; total 9. Fina
 
 ## Deferred gaps
 
-- The pacer itself. `sdlc/issues/2026-09-26-no-requests-per-minute-pacer.md` keeps it past 0.1.
+- The pacer itself. `sdlc/issues/closed/2026-09-26-no-requests-per-minute-pacer.md` keeps it past 0.1.
 - The closed-pipe check on platforms without `poll`. None is a release target.
 - macOS verification of the closed-pipe check. macOS ships, and only Linux checks show `poll` reporting a closed reader. Until a check runs on macOS, a macOS run may stop only at its next write, as today.
 - A measured reply time for experiment 206's short lines. The page states the derived figure.
@@ -254,7 +254,7 @@ Contract 2; state and timing 2; reach 2; proof 2; cost of error 1; total 9. Fina
 
 ## Closes
 
-`sdlc/issues/closed/2026-09-26-filter-keeps-sending-after-the-reader-closes-the-pipe.md` and `sdlc/issues/closed/2026-09-26-a-blank-line-stops-a-lines-run.md`. The wording item of `sdlc/issues/2026-09-26-no-requests-per-minute-pacer.md`, which then holds only the pacer.
+`sdlc/issues/closed/2026-09-26-filter-keeps-sending-after-the-reader-closes-the-pipe.md` and `sdlc/issues/closed/2026-09-26-a-blank-line-stops-a-lines-run.md`. The wording item of `sdlc/issues/closed/2026-09-26-no-requests-per-minute-pacer.md`, which then holds only the pacer.
 
 ## Evidence
 
