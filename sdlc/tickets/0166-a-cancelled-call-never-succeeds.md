@@ -18,8 +18,8 @@ The fix sits in the public door that every binding calls, so the Rust library, t
 
 ## Prior experiment evidence
 
-- Local experiment 273 reproduced the fault three times through Python ctypes calling the C door directly, and in all four Zig consumers (`sdlc/issues/closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md`, `sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md`). Held bulk cancellation, held deadlines and fresh-token recovery passed there.
-- Local experiment 274 reproduced it in all four Go consumers (`sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md`).
+- Local experiment 273 reproduced the fault three times through Python ctypes calling the C door directly, and in all four Zig consumers (`sdlc/issues/closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md`, `sdlc/issues/closed/2026-09-26-zig-consumer-proof-needs-a-supported-package.md`). Held bulk cancellation, held deadlines and fresh-token recovery passed there.
+- Local experiment 274 reproduced it in all four Go consumers (`sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package.md`).
 - This ticket's author ran scratch tests against `origin/main` `a057c594` on loopback listeners, with no key and no network, and deleted them. With the token fired while the reply was held and the reply released 250 ms later:
   - `decide_with`, `details_with`, `find_with` and a one-rule `relate_with` returned their answers.
   - `decide_many_with` over one and three texts, `filter_with`, `rank_with`, `annotate_with` and `recognize_with` returned `Cancelled`.
@@ -240,7 +240,7 @@ Contract 2; State/timing 3; Reach 3; Proof 2; Cost of error 2; Total 12. Minimum
 
 ## Closes
 
-`sdlc/issues/closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md`. It lifts the native blocker named in `sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md` and `sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md`. Those issues stay open for their packages.
+`sdlc/issues/closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md`. It lifts the native blocker named in `sdlc/issues/closed/2026-09-26-zig-consumer-proof-needs-a-supported-package.md` and `sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package.md`. Those issues stay open for their packages.
 
 ## Evidence
 

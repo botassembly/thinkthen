@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 272
-opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md
+opens: sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md
 ---
 
 # 0272: Prepare C# and JVM managed archives for the Linux x86 release workflow

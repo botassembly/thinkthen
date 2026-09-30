@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 270
-opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md
+opens: sdlc/issues/2026-09-25-release-and-install-for-0-1.md sdlc/issues/closed/2026-09-27-php-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-28-dart-consumer-proof-needs-a-supported-package.md
 ---
 
 # 0270: Gate PHP and Dart source packages in the Linux x86 release workflow

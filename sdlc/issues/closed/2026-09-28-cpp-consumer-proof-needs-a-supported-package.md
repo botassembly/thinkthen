@@ -1,6 +1,6 @@
 # C++ consumer proof needs a supported package
 
-Status: ticket 0249 landed the `libraries/cpp/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-go-cpp-build.md) cover the CMake source package and installed find_package consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct CMake installation and other-host proof. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## What was proven
 
@@ -12,7 +12,7 @@ Review 1: two real findings (CMake three-directory prefix assumption; silent 2^5
 
 ## Handoff
 
-The historical experiment copy instruction is complete and superseded by `libraries/cpp/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct CMake installation and other-host proof.
+The historical experiment copy instruction is complete and superseded by `libraries/cpp/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct CMake installation and other-host proof.
 
 ## Evidence
 

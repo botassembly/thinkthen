@@ -1,6 +1,6 @@
 # Dart consumer proof needs a supported package
 
-Status: ticket 0249 landed the `libraries/dart/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-dart-build.md) cover the Dart pub source package, installed Dart consumers and a real Linux Flutter app on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archive, pub.dev distribution and other Flutter hosts. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## What was proven
 
@@ -12,7 +12,7 @@ Review 1 found a real leak: invalid input with an embedded NUL thrown after part
 
 ## Handoff to J8
 
-The historical experiment copy instruction is complete and superseded by `libraries/dart/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, pub.dev distribution and other Flutter hosts.
+The historical experiment copy instruction is complete and superseded by `libraries/dart/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, pub.dev distribution and other Flutter hosts.
 
 ## Evidence
 

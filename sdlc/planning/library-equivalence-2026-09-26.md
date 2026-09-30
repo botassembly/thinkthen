@@ -121,11 +121,11 @@ Each cell holds yes, no, partial, or n/a for not applicable. A bracketed tag nam
 - **R3.** Rust Polars and Python frames return values alone. Python refuses `details` on a column (`libraries/python/src/frame.rs:116-117`).
 - **R4.** DuckDB's details struct holds no token usage, no URL, no `confidence`, and no distribution for choose, score and tag (`databases/duckdb/src/scalars/calls.rs:113-140`).
 - **R5.** No surface computes cost. Only the `cost` transform does, from a price the user passes (`crates/thinkthen/transforms/cost.jq:6-19`).
-- **R6.** No code records wall time or backend time (`sdlc/issues/2026-09-23-record-the-backends-own-time-for-each-call.md`).
+- **R6.** No code records wall time or backend time (`sdlc/issues/closed/2026-09-23-record-the-backends-own-time-for-each-call.md`).
 
 **Usage and status**
 
-- **U1.** Library counters live in memory for one engine and die with the process (`crates/thinkthen/src/public/settings.rs:246`). `thinkthen status` never sees them. Filed in item 1 of `sdlc/issues/2026-09-25-public-library-api-gaps.md` and in `sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`.
+- **U1.** Library counters live in memory for one engine and die with the process (`crates/thinkthen/src/public/settings.rs:246`). `thinkthen status` never sees them. Filed in item 1 of `sdlc/issues/2026-09-25-public-library-api-gaps.md` and in `sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md`.
 - **U2.** SQL counters are per process, and nothing saves them. The process request total has the three leaks in that status issue. DuckDB's warm skips the total (`databases/duckdb/src/tables.rs:88-91`), and relate checks it with an empty list (`src/relate.rs:216`). PostgreSQL counts per backend and reads the total once per call (`databases/postgresql/src/call.rs:366-371`).
 
 **Errors**

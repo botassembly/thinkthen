@@ -1,7 +1,7 @@
 # 0302: Scoped per-attempt timing and request IDs
 
 - Status: **Done**, 2026-09-29. Fresh independent High code review accepted `c8818e667ffd8d9171803a18969f0a7ec82ba912` for the scoped Rust, six CLI verbs and direct C JSON implementation. Fresh High design/API/secrecy review accepted `7b7cc5f8ac39bce7cb42900391859599a66945ef`; the queue owner approved the bounded implementation within Ian's pre-release API outcome. Remaining issue criteria stay open.
-- Owner: existing [backend-time issue](../issues/2026-09-23-record-the-backends-own-time-for-each-call.md); accepted [ADR 0109](../planning/adr/0109-per-attempt-timing-and-request-ids.md).
+- Owner: existing [backend-time issue](../issues/closed/2026-09-23-record-the-backends-own-time-for-each-call.md), now section 2 of the [run-facts issue](../issues/2026-09-26-every-surface-should-give-back-run-facts.md); accepted [ADR 0109](../planning/adr/0109-per-attempt-timing-and-request-ids.md).
 - Scope: one opt-in in-memory attempt carrier for Rust, six ordinary CLI detail routes and direct C JSON. No new issue, durable sidecar or global ID.
 
 ## Outcome and retained behavior

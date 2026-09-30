@@ -1,6 +1,6 @@
 # A Swift 6.4 consumer works through C, but no supported package exists
 
-Status: ticket 0249 landed the `libraries/swift/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-swift-zig-build.md) cover the SwiftPM source package and isolated consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct SwiftPM installation and macOS consumer proof. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## Evidence
 
@@ -10,7 +10,7 @@ Package: SwiftPM with a system-library target and vendored module map.
 
 ## Handoff
 
-The historical experiment copy instruction is complete and superseded by `libraries/swift/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct SwiftPM installation and macOS consumer proof.
+The historical experiment copy instruction is complete and superseded by `libraries/swift/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct SwiftPM installation and macOS consumer proof.
 
 Note: Tarball provenance recorded without an upstream sidecar hash.
 

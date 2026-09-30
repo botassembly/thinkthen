@@ -1,6 +1,6 @@
 # A PHP 8.3 FFI consumer works through C, but no supported package exists
 
-Status: ticket 0249 landed the `libraries/php/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-php-build.md) cover the Composer source package and installed consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, Packagist/direct distribution, other-host proof and PHP-driven in-flight cancellation. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## Evidence
 
@@ -10,7 +10,7 @@ Package: Composer-shaped with php >=8.3 + ext-ffi and an absolute-library-path n
 
 ## Handoff
 
-The historical experiment copy instruction is complete and superseded by `libraries/php/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, Packagist/direct distribution, other-host proof and PHP-driven in-flight cancellation.
+The historical experiment copy instruction is complete and superseded by `libraries/php/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, Packagist/direct distribution, other-host proof and PHP-driven in-flight cancellation.
 
 Note: PHP cannot fire a token while a blocking FFI call holds the VM — release work retains the pre-fire-only documentation and any worker-process design as an explicit open choice.
 
@@ -30,4 +30,4 @@ ADAPTED-PASS (packing, envelope, 48->40; FFI deprecation noted for J8). Evidence
 
 ## Landed product source (2026-09-28)
 
-Ticket 0249's landed PHP source is in `libraries/php/`; [preflight](../records/0249-php-preflight.md) and [build proof](../records/0249-php-build.md) name its current-source gate and completed review. This does not close the issue. The final release pin, `ubuntu-24.04` build/release path, native archives, and Packagist/direct distribution remain explicit release criteria. The local Linux x86_64 source gate does not claim other hosts or PHP-driven in-flight cancellation.
+Ticket 0249's landed PHP source is in `libraries/php/`; [preflight](../../records/0249-php-preflight.md) and [build proof](../../records/0249-php-build.md) name its current-source gate and completed review. This does not close the issue. The final release pin, `ubuntu-24.04` build/release path, native archives, and Packagist/direct distribution remain explicit release criteria. The local Linux x86_64 source gate does not claim other hosts or PHP-driven in-flight cancellation.

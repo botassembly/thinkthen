@@ -1,6 +1,6 @@
 # A C#/.NET 8 consumer works through C, but no supported package exists
 
-Status: ticket 0249 landed the `libraries/csharp/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-csharp-jvm-build.md) cover the Botassembly.ThinkThen wrapper and local NuGet package consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, NuGet distribution and other-host proof. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## Evidence
 
@@ -10,7 +10,7 @@ Package: NuGet-shaped ThinkThen.C 0.0.1, linux-x64, no bundled native bits; the 
 
 ## Handoff
 
-The historical experiment copy instruction is complete and superseded by `libraries/csharp/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, NuGet distribution and other-host proof.
+The historical experiment copy instruction is complete and superseded by `libraries/csharp/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, NuGet distribution and other-host proof.
 
 Note: The stage-one gate initially built unlocked (dotnet); fixed to one locked entrypoint before acceptance.
 

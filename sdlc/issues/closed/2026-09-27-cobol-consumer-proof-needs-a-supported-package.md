@@ -1,6 +1,6 @@
 # A COBOL (GnuCOBOL 4) consumer works through C, but no supported package exists
 
-Status: ticket 0249 landed the `libraries/cobol/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-cobol-build.md) cover the GnuCOBOL 4 source package and installed consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct source installation and other-host proof. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 Ticket 0249 landed a Linux GnuCOBOL 4 source package under `libraries/cobol/`, built against the current 30-export C header. Its public binding passed all 29 executable J1 cases, two installed consumers, copied failure facts and the 30-body historical matrix. Fresh Medium source review accepted `5209f934`; shared registration review and landing completed under ticket 0249. The historical handoff below is superseded by the landed source and accepted integration closure. COBOL proves pre-fired tokens and deadlines, while the strict held-call helper remains C-only. This issue stays open for a final-release native pin, `ubuntu-24.04` CI/release, distribution and untested hosts.
 
@@ -12,7 +12,7 @@ Package: copybook facade plus dependency-free C JSON tokenizer, engine_new_with 
 
 ## Handoff
 
-The historical experiment copy instruction is complete and superseded by `libraries/cobol/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct source installation and other-host proof.
+The historical experiment copy instruction is complete and superseded by `libraries/cobol/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct source installation and other-host proof.
 
 Note: Single-threaded CALL cannot fire in-flight tokens; pre-fired and deadlines are the COBOL-supported forms.
 

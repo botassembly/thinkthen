@@ -1,6 +1,6 @@
 # A JVM consumer works through C, but no supported package exists
 
-Status: ticket 0249 landed the `libraries/jvm/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-csharp-jvm-build.md) cover the Java, Kotlin and Scala JAR package and installed consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, Maven distribution and other-host proof. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## Gap
 
@@ -20,11 +20,11 @@ The parent independently verified all input blobs at both pins, all manifest has
 
 This section records the pre-fix failure. Ticket 0166 repaired it; the post-fix verification below records the passing strict proof.
 
-At the sealed stage-two pin, a scalar C call could return success after its token fired during an accepted held request. All three languages reproduced it through their own cancellable facades, as do Zig, direct ctypes, and Go in experiments 273 and 274. [The closed cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) records repair. The sealed stage-two gate recorded `FINDING` and exited 1; no wrapper workaround was available at that pin.
+At the sealed stage-two pin, a scalar C call could return success after its token fired during an accepted held request. All three languages reproduced it through their own cancellable facades, as do Zig, direct ctypes, and Go in experiments 273 and 274. [The closed cancellation issue](2026-09-26-cancelled-c-scalar-call-can-return-success.md) records repair. The sealed stage-two gate recorded `FINDING` and exited 1; no wrapper workaround was available at that pin.
 
 ## Handoff and remaining work
 
-The historical experiment copy instruction is complete and superseded by `libraries/jvm/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, Maven distribution and other-host proof.
+The historical experiment copy instruction is complete and superseded by `libraries/jvm/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, Maven distribution and other-host proof.
 
 ## Limits
 

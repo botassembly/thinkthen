@@ -1,7 +1,7 @@
 # ADR 0109: Scoped live attempt observations
 
 - Status: **accepted**, 2026-09-29. Fresh High design/API/secrecy review accepted `7b7cc5f8ac39bce7cb42900391859599a66945ef`; the queue owner approves the bounded implementation within Ian's pre-release API outcome. Runtime implementation and remaining issue criteria are still open.
-- Opens: the in-memory part of [backend time and request IDs](../../issues/2026-09-23-record-the-backends-own-time-for-each-call.md). Implementation route: [ticket 0302](../../tickets/0302-per-attempt-timing-and-request-ids.md).
+- Opens: the in-memory part of [backend time and request IDs](../../issues/closed/2026-09-23-record-the-backends-own-time-for-each-call.md). Implementation route: [ticket 0302](../../tickets/0302-per-attempt-timing-and-request-ids.md).
 
 ## Decision
 

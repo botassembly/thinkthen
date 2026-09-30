@@ -1,6 +1,6 @@
 # The PostgreSQL extension does not build on macOS
 
-Status: open. Found by the wave 4 macOS dry run on 2026-09-29 at `2c5ac772b`. The same code stands at main `d2262df9a`.
+Status: open. Found by the wave 4 macOS dry run on 2026-09-29 at `2c5ac772b`. The same code stands at main `e2ee1d9fa`. No ticket owns it. The release issue lists it as item 7.
 
 ## The problem
 

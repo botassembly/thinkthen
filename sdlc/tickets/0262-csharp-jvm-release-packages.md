@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 262
-opens: sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
+opens: sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
 ---
 
 # 0262: Pack C# and JVM binaries with one matching C archive
 
-Status: complete. Fresh independent code review accepted `6b3c138a`; the coordinator integrated the bounded local package proof. Original C#/JVM release issues remain open for final pin, runner and distribution evidence.
+Status: complete. Fresh independent code review accepted `6b3c138a`; the coordinator integrated the bounded local package proof. Original C#/JVM release issues remain open for final pin, runner and distribution evidence. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

@@ -255,9 +255,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-26-zig-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the product integration ticket and release. Ian authorized the expanded Linux engineering and testing, not publication. He can overturn the thin wrapper and explicit native-archive recommendation.",
-      "resolution_evidence": "sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-26-zig-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -265,9 +265,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment (local experiment 293) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -275,9 +275,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment (local experiment 292) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -285,9 +285,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment (local experiment 290) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -295,9 +295,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local Go package experiment is complete. Ticket 0166 repaired the native cancellation blocker, and a post-fix rerun at main `22f36d00` passed the strict contract. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing, not publication. He can overturn the thread-pinning choice and the explicit native-archive route.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -305,9 +305,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local JVM package experiment is complete, and ticket 0166 fixed the native cancellation blocker it exposed. A post-fix re-verification on main 22f36d00 passed every case, including strict held-scalar cancellation through Java, Kotlin, and Scala. The queue owner decides the integration ticket and release. Ian authorized the local engineering and testing and the toolchain downloads, not publication. He can overturn the FFM-over-JNI choice, the join-first close contract, and the one-MiB refusal bound.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -315,9 +315,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment (local experiment 295) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -325,9 +325,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-php-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment (local experiment 291) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-php-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-php-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -335,9 +335,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-27-swift-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment (local experiment 294) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized the work on 2026-09-27.",
-      "resolution_evidence": "sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-27-swift-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {
@@ -345,9 +345,9 @@
       "classification": "non-doc",
       "current_status": "runtime/package criterion remains open",
       "action": "no documentation closure claim; existing owner retains it",
-      "source_evidence": "sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md",
+      "source_evidence": "sdlc/issues/closed/2026-09-28-dart-consumer-proof-needs-a-supported-package.md",
       "original_status": "the local package experiment (local experiment 300) is complete through both stages, parent-verified and review-accepted. The queue owner decides the integration ticket (batch J8) and release; nothing is published. Ian authorized Dart on 2026-09-28; the team uses it with Flutter.",
-      "resolution_evidence": "sdlc/issues/2026-09-28-dart-consumer-proof-needs-a-supported-package.md",
+      "resolution_evidence": "sdlc/issues/closed/2026-09-28-dart-consumer-proof-needs-a-supported-package.md",
       "resolution": "open_non_documentation"
     },
     {

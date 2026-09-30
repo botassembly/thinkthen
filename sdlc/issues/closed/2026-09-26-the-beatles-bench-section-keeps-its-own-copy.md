@@ -1,6 +1,6 @@
 # The Beatles Bench section keeps its own copy of the pages
 
-Status: Open.
+Status: closed 2026-09-30. Fixed by site commits `201bfcca0` and `e0989cd87`. The pages live in `site/src/data/beatles.mjs`, bench links use paths on bench main, and `site/scripts/smoke.mjs` runs every example. `site/examples/beatles/bench-pin` stays as the source commit for `pull-bench` and the slide check, as `site/README.md` records.
 
 Filed on 2026-09-26 by bench ticket 0016. It revises `2026-09-25-a-worked-examples-section-pulled-from-beatles-bench.md`. That issue pulls the pages from a pinned bench commit. Bench ticket 0016 deletes those pages from the bench before the bench goes public.
 

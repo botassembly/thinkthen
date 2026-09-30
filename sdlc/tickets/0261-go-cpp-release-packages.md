@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 261
-opens: sdlc/issues/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-cpp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-add-a-c-plus-plus-binding.md sdlc/records/0249-release-preparation.md
+opens: sdlc/issues/closed/2026-09-27-go-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-28-cpp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-28-add-a-c-plus-plus-binding.md sdlc/records/0249-release-preparation.md
 ---
 
 # 0261: Pack Go and C++ source with one matching C archive
 
-Status: complete. Fresh independent code review accepted `0623703b`; the coordinator integrated the local pilot. The original Go/C++ release issues remain open for final pin, runner and distribution evidence.
+Status: complete. Fresh independent code review accepted `0623703b`; the coordinator integrated the local pilot. The original Go/C++ release issues remain open for final pin, runner and distribution evidence. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

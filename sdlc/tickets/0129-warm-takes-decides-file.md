@@ -147,7 +147,7 @@ Nonblank lines, measured with `grep -c .`.
 
 ## Scope and exclusions
 
-Excluded: warm's engine choice on DuckDB. It still reads no session setting and sits outside `thinkthen_max_requests_total`, which `sdlc/issues/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md` item 2 owns. Any library warm call. Any change to relate beyond decision 6's sentence, the cache and recorder, audit, diff, help text outside warm and that sentence, the test harness, spawn sites, or `libraries/python`. Other tickets own them. No live or paid call. `sdlc/scripts/live` never runs for this ticket.
+Excluded: warm's engine choice on DuckDB. It still reads no session setting and sits outside `thinkthen_max_requests_total`, which `sdlc/issues/closed/2026-09-25-status-sees-only-command-spend-and-the-sql-total-has-three-leaks.md` item 2 owns. Any library warm call. Any change to relate beyond decision 6's sentence, the cache and recorder, audit, diff, help text outside warm and that sentence, the test harness, spawn sites, or `libraries/python`. Other tickets own them. No live or paid call. `sdlc/scripts/live` never runs for this ticket.
 
 ## Routing
 

@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-30 by ticket 0317.
+Status: Open. Filed 2026-09-30 by ticket 0317. Owner: ticket 0304 slice 3a, which moves the public Rust API onto `ask_all`.
 
 # A public batch keeps one send in flight where its contract promises a throttle's worth
 
@@ -22,7 +22,7 @@ On 2026-09-30, `public_controls::a_stop_during_a_batch_or_a_cache_lock_wait_send
 
 ## Where to fix it
 
-ADR 0111 slice 3 moves the public Rust API onto the one batching path, `ask_all`. That slice is the natural fix point. The one scheduler should keep a throttle's worth of sends in flight for a pulled batch.
+ADR 0111 slice 3a (ticket 0304) moves the public Rust API onto the one batching path, `ask_all`. The one scheduler should keep a throttle's worth of sends in flight for a pulled batch.
 
 ## Done when
 

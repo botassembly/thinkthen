@@ -1,12 +1,12 @@
 ---
 flow: build
 priority: 263
-opens: sdlc/issues/2026-09-27-swift-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-26-zig-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
+opens: sdlc/issues/closed/2026-09-27-swift-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-26-zig-consumer-proof-needs-a-supported-package.md sdlc/records/0249-release-preparation.md
 ---
 
 # 0263: Pack Swift and Zig source with one matching C archive
 
-Status: complete within the local Linux package scope after fresh code review accepted `6e431d7f`. Fresh design review accepted `e3af7c95`; the [local build record](../records/0263-swift-zig-release-build.md) reports the focused passing package proof. The original Swift and Zig release issues remain open.
+Status: complete within the local Linux package scope after fresh code review accepted `6e431d7f`. Fresh design review accepted `e3af7c95`; the [local build record](../records/0263-swift-zig-release-build.md) reports the focused passing package proof. The original Swift and Zig release issues remain open. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

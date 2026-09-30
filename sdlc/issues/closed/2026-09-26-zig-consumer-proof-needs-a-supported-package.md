@@ -1,6 +1,6 @@
 # A Zig consumer works through C, but no supported package exists
 
-Status: ticket 0249 landed the `libraries/zig/` product source. The accepted [integration closure](../records/0249-integration-closure.md) and [build record](../records/0249-swift-zig-build.md) cover the Zig 0.15.2 source package and isolated shared/static-C consumers on their recorded Linux pin. This issue remains open for a final release commit rebuild, actual `ubuntu-24.04` Actions build and release, checksummed native archives, direct source installation and other-host proof. No release dispatch or publication is claimed.
+Status: closed 2026-09-30. Merged into `../2026-09-26-language-packages-need-a-release.md`, which keeps this language's open release items and limits.
 
 ## Gap
 
@@ -22,7 +22,7 @@ This section records the pre-fix failure. Ticket 0166 repaired it; the post-fix 
 
 At the sealed stage-two pin, a scalar C call could return success after its cancellation token fired during an accepted, held HTTP request. All four parent consumers reproduced it. Three independent Python ctypes trials also reproduced it without Zig. Held bulk cancellation, held deadlines and fresh-token recovery passed.
 
-[The closed cancellation issue](closed/2026-09-26-cancelled-c-scalar-call-can-return-success.md) records the repair. The stage-two wrapper did not hide the fault. The sealed stage-two gate reported `FINDING` and exited 1. Matching expected subprocess exits does not make this an all-pass contract.
+[The closed cancellation issue](2026-09-26-cancelled-c-scalar-call-can-return-success.md) records the repair. The stage-two wrapper did not hide the fault. The sealed stage-two gate reported `FINDING` and exited 1. Matching expected subprocess exits does not make this an all-pass contract.
 
 ## Handoff and remaining work
 
@@ -35,7 +35,7 @@ Historical stage-two artifacts remain local and unchanged:
 - `stage2/CASE-LEDGER.md`, `FINDINGS.md`, `REVIEW.md`, and `reviews/`: coverage, parent verification, limits and independent reviews.
 - `stage2/parent-verification/`: parent source checks, gate launch evidence and unchanged-source hashes.
 
-The historical experiment copy instruction is complete and superseded by `libraries/zig/` and [ticket 0249](../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct source installation and other-host proof.
+The historical experiment copy instruction is complete and superseded by `libraries/zig/` and [ticket 0249](../../records/0249-integration-closure.md). Use the integrated source and its product `check.sh` for the next release work; keep the original experiment evidence below. The remaining requirements are a final-pin rebuild, actual Actions execution, checksummed native release assets, direct source installation and other-host proof.
 
 Keep Zig 0.15.2 for this measured target. Start with a thin optional source package and a separately supplied matching native archive. The current shared mode embeds the supplied library path and requires rebuilding if it moves. A relocatable installation policy or automatic download is a separate product choice. The C constructor remains environment-based and has no public throttle setter.
 

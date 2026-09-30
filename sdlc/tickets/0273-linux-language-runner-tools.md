@@ -1,7 +1,7 @@
 ---
 flow: build
 priority: 273
-opens: sdlc/issues/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md
+opens: sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-objective-c-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-cobol-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-csharp-consumer-proof-needs-a-supported-package.md sdlc/issues/closed/2026-09-27-jvm-consumer-proof-needs-a-supported-package.md
 ---
 
 # 0273: Select and verify Linux x86 language runner tools
