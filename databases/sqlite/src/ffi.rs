@@ -55,15 +55,16 @@ fn version_refusal(host: c_int) -> Option<String> {
 }
 
 /// Flush the process engine's usage totals at exit (ADR 0113), registered
-/// once when the first engine is built. The C library also runs a library's
-/// `atexit` hook when that library is unloaded, and a reload registers it again.
+/// when the first engine is built. `pin()` keeps this library loaded for the
+/// life of the process, so the process holds one registration and the hook
+/// runs only at exit.
 pub(crate) fn flush_usage_at_exit() {
     static REGISTERED: AtomicBool = AtomicBool::new(false);
     if REGISTERED.swap(true, Ordering::AcqRel) {
         return;
     }
-    // SAFETY: the hook is a plain function of this library, which the C
-    // library runs at exit or when it unloads the library.
+    // SAFETY: the hook is a plain function of this library, which `pin()`
+    // keeps loaded until the C library runs the hook at exit.
     let _registered = unsafe { libc::atexit(flush_usage) };
 }
 

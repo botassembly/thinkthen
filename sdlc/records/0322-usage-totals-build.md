@@ -1,6 +1,6 @@
 # 0322 slice 1: every surface adds to the usage totals — build
 
-Status: slice 1 built on `ticket/0322-spend-totals-design`, awaiting code review. Ticket: `sdlc/tickets/0322-every-surface-adds-to-usage-totals.md`. Design: ADR 0113. Every run was offline against loopback backends with `THINKTHEN_API_KEY` unset. No paid call ran and the live ledger was not touched.
+Status: slice 1 landed on main from `ticket/0322-spend-totals-design`. Ticket: `sdlc/tickets/0322-every-surface-adds-to-usage-totals.md`. Design: ADR 0113. Every run was offline against loopback backends with `THINKTHEN_API_KEY` unset. No paid call ran and the live ledger was not touched.
 
 ## Built
 
