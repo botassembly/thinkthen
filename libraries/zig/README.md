@@ -9,7 +9,7 @@ cargo build --locked --offline --manifest-path libraries/c/Cargo.toml --lib
 mkdir -p /tmp/thinkthen-native/include /tmp/thinkthen-native/lib
 cp libraries/c/include/thinkthen.h /tmp/thinkthen-native/include/
 cp libraries/c/target/debug/libthinkthen_c.so /tmp/thinkthen-native/lib/libthinkthen.so
-cp libraries/c/target/debug/libthinkthen_c.a /tmp/thinkthen-native/lib/libthinkthen.a
+sh libraries/c/localize.sh libraries/c/target/debug/libthinkthen_c.a /tmp/thinkthen-native/lib/libthinkthen.a
 ln -s libthinkthen.so /tmp/thinkthen-native/lib/libthinkthen.so.0
 cd libraries/zig
 zig build -Dnative=/tmp/thinkthen-native -Dlink-mode=shared

@@ -47,6 +47,7 @@ if [ "$suffix" = dylib ]; then
 	export THINKTHEN_SQLITE_PROBE_OLD="$host/load-probe-3490000"
 else
 	export LD_LIBRARY_PATH="$host${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+	export THINKTHEN_SQLITE_SINGLE_THREAD="$host/single"
 fi
 
 step() { echo "== sqlite: $1"; }

@@ -133,7 +133,7 @@ part_c() {
 	folder=$(fresh c)
 	mkdir -p "$folder/include" "$folder/lib/pkgconfig"
 	cp libraries/c/include/thinkthen.h "$folder/include/"
-	cp -- "$from/libthinkthen_c.a" "$folder/lib/libthinkthen.a"
+	sh libraries/c/localize.sh "$from/libthinkthen_c.a" "$folder/lib/libthinkthen.a"
 	if [ "$dl" = dylib ]; then
 		cp -- "$from/libthinkthen_c.dylib" "$folder/lib/libthinkthen.dylib"
 		ln -s libthinkthen.dylib "$folder/lib/libthinkthen.0.dylib"

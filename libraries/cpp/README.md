@@ -6,11 +6,12 @@ Build the matching native C artifacts from this checkout, then install the CMake
 
 ```sh
 cargo build --locked --offline --manifest-path libraries/c/Cargo.toml --lib
+sh libraries/c/localize.sh libraries/c/target/debug/libthinkthen_c.a target/libthinkthen.a
 cmake -S libraries/cpp -B target/thinkthen-cpp -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_INSTALL_PREFIX="$HOME/.local/thinkthen-cpp" \
   -DTHINKTHEN_C_HEADER="$PWD/libraries/c/include/thinkthen.h" \
   -DTHINKTHEN_NATIVE_SHARED="$PWD/libraries/c/target/debug/libthinkthen_c.so" \
-  -DTHINKTHEN_NATIVE_STATIC="$PWD/libraries/c/target/debug/libthinkthen_c.a"
+  -DTHINKTHEN_NATIVE_STATIC="$PWD/target/libthinkthen.a"
 cmake --build target/thinkthen-cpp --parallel 2
 cmake --install target/thinkthen-cpp
 ```

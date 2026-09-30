@@ -80,7 +80,7 @@ test -z "$(gofmt -l thinkthen.go result.go thinkthen_test.go recovery_test.go ex
 cargo build --locked --offline --manifest-path "$repo/libraries/c/Cargo.toml" --lib -j2
 cp "$repo/libraries/c/include/thinkthen.h" "$out/native/include/thinkthen.h"
 cp "$repo/libraries/c/target/debug/libthinkthen_c.so" "$out/native/lib/libthinkthen.so"
-cp "$repo/libraries/c/target/debug/libthinkthen_c.a" "$out/native/lib/libthinkthen.a"
+sh "$repo/libraries/c/localize.sh" "$repo/libraries/c/target/debug/libthinkthen_c.a" "$out/native/lib/libthinkthen.a"
 ln -sfn libthinkthen.so "$out/native/lib/libthinkthen.so.0"
 cat >"$out/native/lib/pkgconfig/thinkthen.pc" <<EOF
 prefix=$out/native

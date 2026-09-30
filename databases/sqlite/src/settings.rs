@@ -28,7 +28,26 @@ struct Stored {
     replay: Option<PathBuf>,
 }
 
+/// The refusal for a folder on a single-thread host. The store opens its
+/// connection on the pipeline's thread (ADR 0111's 2026-09-30 amendment).
+const SINGLE_THREAD: &str = "a cache, record or replay folder needs a thread-safe SQLite, and this host's SQLite is single-threaded; name no folder, or load thinkthen into a thread-safe SQLite";
+
 impl Stored {
+    /// Refuse a named folder on a single-thread host. `THINKTHEN_CACHE`
+    /// names one when the settings leave `cache` unset.
+    fn threads_ready(&self) -> Result<(), Failure> {
+        let named = self.record.is_some()
+            || self.replay.is_some()
+            || match &self.cache {
+                Some(folder) => folder.is_some(),
+                None => std::env::var("THINKTHEN_CACHE").is_ok_and(|v| !v.trim().is_empty()),
+            };
+        if named && !crate::ffi::host_threads() {
+            return Err(Failure::usage(SINGLE_THREAD));
+        }
+        Ok(())
+    }
+
     fn apply(&self, mut builder: EngineBuilder) -> Result<EngineBuilder, thinkthen::Error> {
         if let Some(value) = self.throttle {
             builder = builder.throttle(value)?;
@@ -130,6 +149,7 @@ pub(crate) fn engine() -> Result<&'static Engine, Failure> {
     if let Some(engine) = ENGINE.get() {
         return Ok(engine);
     }
+    held.threads_ready()?;
     let built = held
         .apply(EngineBuilder::from_env()?.shared_host())?
         .build()?;
@@ -223,6 +243,7 @@ pub(crate) fn configure(context: &Context<'_>) -> rusqlite::Result<String> {
                 "settings apply before the first call; this process already built its engine",
             ));
         }
+        next.threads_ready()?;
         next.apply(EngineBuilder::from_env()?)?;
         *held = next;
         Ok(source.to_owned())

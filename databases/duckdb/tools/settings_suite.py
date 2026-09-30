@@ -23,6 +23,7 @@ from settings_cases import shared_settings_corpus
 ASK = "SELECT thinkthen_decide('Is it a refund?', 'refund now')"
 PROBE_REFUSAL = "thinkthen usage: the cache folder is outside what this database's file settings allow (retryable: no)"
 SHAPE = "thinkthen usage: a cache folder set from SQL is an absolute local path with no scheme (retryable: no)"
+MISSING_PART = "thinkthen usage: the record holds nothing at `/body` (retryable: no)"
 THROTTLE = "thinkthen usage: a throttle is a whole number from 1 through 32 (retryable: no)"
 SPENT = "thinkthen usage: this process has spent its request total of 3; raise SET thinkthen_max_requests_total or RESET it (retryable: no)"
 
@@ -313,6 +314,39 @@ def an_annotate_set_packs_compatible_texts():
         expect([json.loads(line) for (line,) in rows(got[1])],
                [{"refund": True, "area": "billing"}] * 3, "all three records answered")
         expect(backend.count(), 1, "one packed request under the total")
+
+
+@case
+def an_annotate_row_missing_its_part_fails_alone():
+    """ADR 0111 slice 3: a first record missing its `on` part fails alone.
+    At one record a request, each neighbour still sends into the named
+    cache, so the statement that leaves the bad row out sends nothing."""
+    with Backend() as backend:
+        parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
+        records = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(2, 7)])
+        table = f"""(VALUES (1, '{{"note": "one"}}'), {records}) t(i, x)"""
+        ask = f"""thinkthen_annotate('{parted}', x, '{{"batch": 1}}')"""
+        got = run([f"SELECT {ask} FROM {table} ORDER BY i", "SELECT metric, value FROM thinkthen_usage()",
+                   f"SELECT i, {ask} FROM {table} WHERE i > 1 ORDER BY i"], backend.base())
+        expect(said(got[0]), MISSING_PART, "the record missing /body")
+        expect(dict(rows(got[1]))["requests_sent"], 5, "one request for each neighbour")
+        expect([[at, json.loads(value)] for at, value in rows(got[2])],
+               [[at, {"refund": True}] for at in range(2, 7)], "the neighbours' answers")
+        expect(backend.count(), 5, "one request for each neighbour, and none for the rerun")
+
+
+@case
+def annotate_keeps_the_engines_record_limit():
+    """Three texts over a limit of two are refused before any send, as rank refuses."""
+    with Backend() as backend:
+        parted = '{"version": 1, "questions": {"refund": {"decide": "Is it a refund?", "on": "/body"}}}'
+        table = ", ".join([f"""({at}, '{{"body": "record {at}"}}')""" for at in range(1, 4)])
+        got = run(["SET thinkthen_max_requests = 2",
+                   f"""SELECT thinkthen_annotate('{parted}', x, '{{"batch": 1}}') FROM (VALUES {table}) t(i, x)"""],
+                  backend.base())
+        expect(said(got[1]), "thinkthen usage: this engine answers at most 2 records in one call (retryable: no)",
+               "three texts over a limit of two")
+        expect(backend.count(), 0, "a refused annotate sends nothing")
 
 
 @case

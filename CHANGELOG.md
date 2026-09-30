@@ -38,6 +38,8 @@ The Rust Polars door writes each answer into its output column as the answer arr
 
 `thinkthen decide --plan` and the library's plans count each question's real options, so a plan's option count changes where it printed 0 before. Two concurrent single calls for the same question no longer share one send: a call coalesces only its own questions, so each call sends its own request (ticket 0304 slice 3a).
 
+On Linux, the C archive's `libthinkthen.a` defines only the header's `thinkthen_` functions as global names, so a program can link its own SQLite or another Rust static library beside it. The macOS archive still exports SQLite's names. The SQLite extension refuses a cache, record or replay folder when the host's SQLite is single-threaded, and a call that names no folder still answers. In DuckDB's `thinkthen_annotate`, a record missing an `on` part fails its statement, and the other records of the same vector are still sent and stored (ticket 0304 slice 3b).
+
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
 
 Every surface refuses an API key holding any control character, not only a line break, and says `the API key contains a control character` (ticket 0321).

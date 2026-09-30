@@ -7,15 +7,15 @@ use std::sync::Arc;
 use super::{Values, evidence, observe_annotated, observe_annotated_questions, selected_set_batch};
 use crate::core::{self, Json, pack, pack::Ask, quoted_plan};
 use crate::engine::facade::{self, Annotation, GroupAnswer, QuestionAnswer};
-use crate::engine::pipeline::{Answered, Asker, Failed};
+use crate::engine::pipeline::{Answered, Asker, Failed, Flow};
 use crate::public::annotated::AnnotatedRecord;
 use crate::public::asking::{Text, backend_failed, packed};
 use crate::public::batch::Batch;
 use crate::public::engine::{Engine, Evidence};
-use crate::public::error::Error;
+use crate::public::error::{Error, ErrorKind};
 use crate::public::options::{CallOptions, Stop};
 use crate::public::pull;
-use crate::public::results::{ObservedQuestion, Written};
+use crate::public::results::{Call, ObservedQuestion, Written};
 use crate::public::set::QuestionSet;
 
 /// What one question set needs of each text beside the text.
@@ -167,6 +167,92 @@ impl Engine {
                 }),
             ))
         })())
+    }
+}
+
+impl Engine {
+    /// [`Engine::annotate_with`] over texts in hand, for an SQL host. A
+    /// record refused before its request, such as one missing an `on` part,
+    /// fails alone, and every other record is still asked, answered and
+    /// stored, by ADR 0111 section 4. Each row holds its text's place. Any
+    /// other failure ends the call, as it ends `annotate_with`. More texts
+    /// than the engine's record limit are refused before any send.
+    ///
+    /// # Errors
+    ///
+    /// Returns the call's fatal error or a refusal before any send.
+    #[doc(hidden)]
+    pub fn annotate_each_with(
+        &self,
+        questions: &QuestionSet,
+        texts: &[String],
+        options: CallOptions<'_>,
+    ) -> Result<Call<EachRow>, Error> {
+        options.without_context("annotate")?;
+        let setting = selected_set_batch(questions, &options, self.batch)?;
+        let inputs = self
+            .within_limit(texts)?
+            .enumerate()
+            .map(|(at, text)| Text {
+                at,
+                text: text.clone(),
+            })
+            .collect();
+        let stop = Stop::begin(options)?.with_prices(self.prices);
+        let (engine, set) = (Arc::clone(&self.inner), &questions.0);
+        let asker = Annotating::new(&engine, set.clone());
+        let packing = pull::packing(setting, false, false);
+        stop.run_call(texts.len(), |cancel| {
+            let mut rows = Vec::with_capacity(texts.len());
+            let mut ended = None;
+            let host = pull::eager(inputs, |row: pull::Row<Annotating>| {
+                let row = each(set, &engine, &stop, rows.len(), row);
+                keep(&mut rows, &mut ended, row)
+            });
+            engine
+                .ask_all(&asker, packing, host, cancel)
+                .map_err(Error::from)?;
+            if let Some(error) = ended {
+                return Err(error);
+            }
+            if rows.len() != texts.len() {
+                return Err(Error::defect("an annotate call lost its rows"));
+            }
+            Ok(rows)
+        })
+    }
+}
+
+/// One row per text of [`Engine::annotate_each_with`]: its record or its refusal.
+type EachRow = Vec<Result<AnnotatedRecord<usize>, Error>>;
+
+/// One text's row for an SQL host, or the error that ends the call. A record
+/// refused before its request is the row's own failure.
+fn each(
+    set: &core::QuestionSet,
+    engine: &facade::Engine,
+    stop: &Stop<'_>,
+    at: usize,
+    row: pull::Row<Annotating>,
+) -> Result<Result<AnnotatedRecord<usize>, Error>, Error> {
+    match row {
+        Err(Failed::Asker(error)) if error.kind() == ErrorKind::Usage => Ok(Err(error)),
+        Err(Failed::Pack { error, .. }) => Ok(Err(packed(error))),
+        row => row_of(set, engine, stop, at, Some(at), row).map(Ok),
+    }
+}
+
+/// Keep one row, or hold the error that ends the call and stop.
+fn keep<T>(rows: &mut Vec<T>, ended: &mut Option<Error>, row: Result<T, Error>) -> Flow {
+    match row {
+        Ok(row) => {
+            rows.push(row);
+            Flow::Continue
+        }
+        Err(error) => {
+            *ended = Some(error);
+            Flow::Stop
+        }
     }
 }
 

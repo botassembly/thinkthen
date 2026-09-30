@@ -220,22 +220,24 @@ fn annotate(
     texts: Vec<String>,
     scope: CallScope<'_>,
 ) -> Result<Vec<u8>, String> {
+    let options = engines::options_for(
+        scope.due,
+        scope.token,
+        scope.total,
+        scope.batch,
+        scope.context,
+    )?;
+    // A row refused before its request, such as one missing an `on` part,
+    // fails alone: its neighbours are still asked and stored, and the vector
+    // then raises that row's error. A rerun that leaves the bad row out
+    // answers its neighbours from the store.
     let rows = engine
-        .annotate_with(
-            set,
-            texts,
-            engines::options_for(
-                scope.due,
-                scope.token,
-                scope.total,
-                scope.batch,
-                scope.context,
-            )?,
-        )
-        .collect::<Result<Vec<_>, _>>()
-        .map_err(|error| engines::call_error(error, scope.total).text)?;
+        .annotate_each_with(set, &texts, options)
+        .map_err(|error| engines::call_error(error, scope.total).text)?
+        .into_value();
     let mut bytes = Vec::new();
     for row in rows {
+        let row = row.map_err(|error| engines::call_error(error, scope.total).text)?;
         frame(&mut bytes, &row.value_json())?;
     }
     Ok(bytes)
