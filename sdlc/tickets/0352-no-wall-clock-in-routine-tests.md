@@ -59,6 +59,7 @@ Rust command tests (`tests/backend`):
 - The parallel tests gather the first requests before answering. The peak test now asserts the full bound. The resume test holds the first run's four replies until all four are in.
 - The annotate stop test gathers records 1 and 2 before record 1 fails. The equal-records test gives the second record a full second to join the first one's request.
 - `cache_convert` measures its lock wait from the lock itself.
+- The retry-floor test keeps its lower bound. Its 3 s upper bound moves to the stress case `exchange::a_server_retry_floor_is_waited_once`.
 - The exchange and resend tests hold replies for 60 s or ask for 30 s waits, so a 10 s or 30 s hang guard separates the two outcomes.
 - Other positive waits rise from 2 to 5 s to 30 s: interrupt, rank-top, scheduling, closed pipe, usage lock, default-cache usage and parallel.
 

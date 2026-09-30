@@ -300,6 +300,32 @@ fn a_server_retry_floor_can_exceed_the_attempt_timeout() {
     assert!(took >= Duration::from_millis(1200), "{took:?}");
 }
 
+/// The same floor, timed: the retry goes out soon after the 1.2 s floor, not
+/// after a second wait on top of it. Stress only (ticket 0352).
+#[test]
+#[ignore = "a wall-clock bound on the retry floor; run sdlc/scripts/test-stress --run"]
+fn a_server_retry_floor_is_waited_once() {
+    let listener = Listener::serving(vec![
+        Canned::status(429, "slow down").asking("retry-after-ms", "1200"),
+        Canned::ok(ANSWERED),
+    ])
+    .expect("a loopback listener");
+    let started = Instant::now();
+    let output = decide(
+        listener.base(),
+        &["--max-retries", "1", "--timeout", "1"],
+        KEY,
+        "Refund me.",
+    )
+    .expect("the compiled binary runs");
+    let took = started.elapsed();
+    assert_eq!(output.status.code(), Some(0));
+    assert!(
+        took >= Duration::from_millis(1200) && took < Duration::from_secs(3),
+        "{took:?}"
+    );
+}
+
 #[test]
 fn zero_retries_never_sleeps_after_the_only_attempt() {
     let listener = Listener::serving(vec![
