@@ -139,6 +139,40 @@ check("forged and mutated functions, plan overrides, and a locked capture cannot
                 rep("usage", 5L)) &&
       identical(same$requests, 1) && identical(same$first_body, first))
 
+# A forged nested scalar can carry an S3 is.na callback. Validation must
+# reject its class before any method runs, including when the JSON is classed.
+trap_ran <- FALSE
+is.na.tt_plan_trap <- function(x) {
+  trap_ran <<- TRUE
+  tt_decide("Q?", "unexpected judgment")
+  FALSE
+}
+base_bound <- get("bound", environment(judge), inherits = FALSE)
+forge_nested <- function(field) {
+  bound <- base_bound
+  trapped <- structure(if (field == "kind") "decide" else if (field == "json")
+    bound$question$json else if (field == "batch") "max" else "Shared reference",
+    class = "tt_plan_trap")
+  if (field == "json") {
+    question <- unclass(bound$question)
+    question$json <- trapped
+    class(question) <- "thinkthen_question"
+    bound$question <- question
+  } else {
+    bound[[field]] <- trapped
+  }
+  held <- list2env(list(bound = bound), parent = parent.env(environment(judge)))
+  lockEnvironment(held, bindings = TRUE)
+  fake <- judge
+  environment(fake) <- held
+  fake
+}
+nested_sends <- sent_by(nested_kinds <- vapply(c("kind", "json", "batch", "context"),
+  function(field) kind_of(tt_plan(forge_nested(field), "beta")), ""))
+check("classed nested values refuse before is.na dispatch or any listener arrival",
+      nested_sends == 0L && !trap_ran &&
+      identical(unname(nested_kinds), rep("usage", 4L)))
+
 same_sends <- sent_by(same_answer <- judge(c("alpha", "beta")))
 check("an unrelated attribute cannot change the judge's planned body or actual send",
       same_sends == 1L && identical(same$requests, 1) &&

@@ -195,10 +195,17 @@ tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle
   invisible(NULL)
 }
 
+# Only an unclassed scalar string reaches checks that might otherwise
+# dispatch is.na, length, comparison, or conversion methods.
+.tt_plain_text <- function(value) {
+  typeof(value) == "character" && !is.object(value) &&
+    is.null(attributes(value)) && length(value) == 1L && !is.na(value)
+}
+
 .tt_batch_valid <- function(value) {
-  is.null(value) || (is.character(value) && length(value) == 1L &&
-                      !is.na(value) && identical(value, "max")) ||
-    (is.numeric(value) && is.null(attr(value, "class")) && length(value) == 1L &&
+  is.null(value) || (.tt_plain_text(value) && identical(value, "max")) ||
+    ((typeof(value) == "double" || typeof(value) == "integer") &&
+       !is.object(value) && is.null(attr(value, "class")) && length(value) == 1L &&
        !is.na(value) && is.finite(value) && value >= 1 &&
        value <= 9007199254740991 && value == floor(value))
 }
@@ -207,9 +214,8 @@ tt_completion_read <- function(handle) .tt_call(tt_completion_read_native(handle
   if (!batch_ok && !is.null(batch)) .tt_usage("this call does not take batch")
   if (!context_ok && !is.null(context)) .tt_usage("this call does not take context")
   if (!.tt_batch_valid(batch)) .tt_usage("batch is max or one positive whole number")
-  if (!is.null(context) && (!is.character(context) || length(context) != 1L ||
-                            is.na(context) || !validUTF8(enc2utf8(context)) ||
-                            !nzchar(trimws(context)))) {
+  if (!is.null(context) && (!.tt_plain_text(context) ||
+                            !validUTF8(enc2utf8(context)) || !nzchar(trimws(context)))) {
     .tt_usage("context must be nonblank UTF-8 text")
   }
   if (!is.null(context)) .tt_json_value(context, "context")
@@ -419,13 +425,20 @@ tt_question <- function(decide = NULL, choose = NULL, options = NULL,
       !identical(body(judge), body(.tt_judge_apply))) refused()
   bound <- get("bound", held, inherits = FALSE)
   if (!is.list(bound) || is.object(bound) ||
-      !identical(names(bound), c("kind", "question", "batch", "context")) ||
-      !is.character(bound$kind) || length(bound$kind) != 1L || is.na(bound$kind) ||
-      !bound$kind %in% c("decide", "choose", "score", "tag") ||
-      !identical(class(bound$question), "thinkthen_question") ||
-      !is.character(unclass(bound$question)[["json"]]) ||
-      length(unclass(bound$question)[["json"]]) != 1L ||
-      is.na(unclass(bound$question)[["json"]])) refused()
+      !identical(names(bound), c("kind", "question", "batch", "context"))) refused()
+  kind <- bound[["kind"]]
+  if (!.tt_plain_text(kind) ||
+      !(identical(kind, "decide") || identical(kind, "choose") ||
+        identical(kind, "score") || identical(kind, "tag"))) refused()
+  if (!identical(class(bound[["question"]]), "thinkthen_question")) refused()
+  question <- unclass(bound[["question"]])
+  if (!is.list(question) || !.tt_plain_text(question[["json"]]) ||
+      !.tt_plain_text(question[["kind"]]) ||
+      !identical(question[["kind"]], kind) || !.tt_batch_valid(bound[["batch"]]) ||
+      (!is.null(bound[["context"]]) &&
+       (!.tt_plain_text(bound[["context"]]) ||
+        !validUTF8(enc2utf8(bound[["context"]])) ||
+        !nzchar(trimws(bound[["context"]]))))) refused()
   bound
 }
 
