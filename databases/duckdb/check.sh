@@ -45,7 +45,7 @@ REPO=$(cd -- ../.. && pwd)
 # ADR 0113: this run's engines write a scratch usage folder, never the real one.
 usage_home
 export THINKTHEN_BACKEND_BIN="${CARGO_TARGET_DIR:-$REPO/target}/debug/conformance-backend"
-[ -x "$THINKTHEN_BACKEND_BIN" ] || {
+[ "$profile" = smoke ] || [ -x "$THINKTHEN_BACKEND_BIN" ] || {
 	echo "check: the loopback backend is not built; run cargo build --package conformance-backend at the repository root" >&2
 	exit 1
 }

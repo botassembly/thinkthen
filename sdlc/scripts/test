@@ -45,13 +45,14 @@ usage_guard
 # One replay smoke per binding, four at a time beside the Rust tests (ticket 0335).
 # It runs in its own process group, so a failed step here stops every smoke before the lock frees.
 scratch_dir smoke_log
+# macOS has no setsid, so perl makes the group there.
 if command -v setsid >/dev/null 2>&1; then
     setsid sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
 else
-    sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
+    perl -e 'setpgrp(0, 0); exec @ARGV' sh sdlc/scripts/smoke >"$smoke_log/out" 2>&1 &
 fi
 smoke=$!
-trap 'code=$?; set +e; kill -TERM -"$smoke" 2>/dev/null || kill "$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; scratch_clean; exit "$code"' EXIT
+trap 'code=$?; set +e; [ -z "$smoke" ] || { kill -TERM -"$smoke" 2>/dev/null; wait "$smoke" 2>/dev/null; }; scratch_clean; exit "$code"' EXIT
 
 # nextest runs the same tests in about half the time; cargo test is the fallback.
 if cargo nextest --version >/dev/null 2>&1; then
@@ -80,5 +81,6 @@ fi
 
 smoke_code=0
 wait "$smoke" || smoke_code=$?
+smoke=
 cat -- "$smoke_log/out"
 [ "$smoke_code" -eq 0 ] || { echo "test: a binding smoke failed (exit $smoke_code)" >&2; exit 1; }

@@ -128,7 +128,7 @@ cargo fetch --locked --offline --quiet 2>/dev/null ||
   not_run "a crate is missing from Cargo's cache; fetch libraries/ruby's locked crates once, with the network"
 backend=$repo/${CARGO_TARGET_DIR:-target}/debug/conformance-backend
 case $backend in /*) ;; *) backend=$repo/$backend ;; esac
-[ -x "$backend" ] || fail "no loopback backend at $backend; the surfaces rung builds it"
+[ "$profile" = smoke ] || [ -x "$backend" ] || fail "no loopback backend at $backend; the surfaces rung builds it"
 PATH=$prefix/bin:$PATH
 LIBCLANG_PATH=$clang
 THINKTHEN_TEST_BACKEND=$backend
