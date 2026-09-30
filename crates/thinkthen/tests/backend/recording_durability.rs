@@ -91,8 +91,12 @@ fn concurrent_record_only_processes_each_send_and_install_one_complete_entry() {
         let recording = recording.clone();
         let lock_states = Arc::clone(&lock_states);
         move |_| {
-            let locked = fs::read_dir(recording.join(".locks"))
-                .is_ok_and(|mut entries| entries.next().is_some());
+            // Lock files stay after use, so a held lock is one this probe cannot take.
+            let locked = fs::read_dir(recording.join(".locks")).is_ok_and(|entries| {
+                entries.filter_map(Result::ok).any(|entry| {
+                    fs::File::open(entry.path()).is_ok_and(|file| file.try_lock().is_err())
+                })
+            });
             if let Ok(mut states) = lock_states.lock() {
                 states.push(locked);
             }
@@ -128,11 +132,12 @@ fn concurrent_record_only_processes_each_send_and_install_one_complete_entry() {
         "the missing entry is serialized and the valid entry is not"
     );
     assert_eq!(entries(&recording).expect("entries").len(), 1);
-    assert!(
+    // Writers keep the empty digest lock file after use.
+    assert_eq!(
         fs::read_dir(recording.join(".locks"))
             .expect("lock directory")
-            .next()
-            .is_none()
+            .count(),
+        1
     );
 }
 

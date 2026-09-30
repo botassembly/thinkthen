@@ -125,7 +125,7 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
     let request = digest(detailed.url(), &viewed.body);
 
     assert_eq!(
-        String::from_utf8_lossy(&output.stdout),
+        zero_wall_ms(&String::from_utf8_lossy(&output.stdout)),
         format!(
             concat!(
                 r#"{{"schema":"thinkthen.result/1","value":true,"#,
@@ -135,7 +135,8 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
                 r#""question_sha256":"fa2ea2c0b995c700912479bb586ed00efa0227f47d06ede013bf6ac562166c79","#,
                 r#""url":"{url}","#,
                 r#""model":"jev-1.13.0","usage":{{"input_tokens":312,"output_tokens":48}},"#,
-                r#""requests_sent":1,"cached":false,"requests":["{request}"],"failed_questions":0}}}}"#,
+                r#""requests_sent":1,"cached":false,"requests":["{request}"],"failed_questions":0,"#,
+                r#""attempts":[{{"ordinal":1,"request_sha256":"{request}","wall_ms":0,"outcome":"ok","status":200}}]}}}}"#,
                 "\n",
             ),
             url = detailed.url(),
@@ -143,6 +144,21 @@ fn details_prints_the_result_object_and_sends_the_bytes_the_bare_run_sends() {
         )
     );
     assert_eq!(output.status.code(), Some(0));
+}
+
+/// Write every measured `wall_ms` as zero, so an exact line can be pinned.
+fn zero_wall_ms(text: &str) -> String {
+    let marker = r#""wall_ms":"#;
+    let mut out = String::new();
+    let mut rest = text;
+    while let Some(place) = rest.find(marker) {
+        let value = place + marker.len();
+        out.push_str(&rest[..value]);
+        out.push('0');
+        rest = rest[value..].trim_start_matches(|c: char| c.is_ascii_digit());
+    }
+    out.push_str(rest);
+    out
 }
 
 #[test]

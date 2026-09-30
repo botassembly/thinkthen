@@ -366,7 +366,7 @@ fn different_safe_model_versions_fail_one_record_and_name_both() {
     assert_eq!(output.status.code(), Some(4));
     assert_eq!(
         String::from_utf8_lossy(&output.stderr),
-        "thinkthen: the replies for one record named model versions `jev-1.2` and `jev-1.3`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns\n"
+        "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge\nthinkthen: the replies for one record named model versions `jev-1.2` and `jev-1.3`; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with `thinkthen cache prune DIR --answered-by-other-than VERSION`, naming the version a --no-cache run returns\n"
     );
     assert!(output.stdout.is_empty());
     assert_eq!(listener.requests().len(), 2);
@@ -453,7 +453,7 @@ fn hostile_model_names_never_reach_the_diagnostic() {
         assert_eq!(output.status.code(), Some(4), "case {place}");
         assert_eq!(
             String::from_utf8_lossy(&output.stderr),
-            "thinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n",
+            "thinkthen: warning: a mutable model alias or --refresh-cache sends each planned cache request live and may incur a charge\nthinkthen: the replies for one record named different model versions; a cache or recording folder may hold answers from the other version, so rerun with --no-cache or prune it with thinkthen cache prune DIR --answered-by-other-than VERSION, naming the version a --no-cache run returns\n",
             "case {place}"
         );
         assert!(output.stdout.is_empty(), "case {place}");
