@@ -27,18 +27,24 @@ impl From<Setting> for BatchSetting {
 }
 
 impl BatchSetting {
-    /// The settings named by result metadata. A line without `meta.batch`
-    /// adds none, so an empty set means the setting is unknown.
-    pub(crate) fn in_results(lines: &[(usize, Json)]) -> Result<BTreeSet<Self>, usize> {
+    /// The settings named by result metadata: `meta.batch_setting`, or an
+    /// older saved row's `meta.batch.setting`. A line naming neither adds
+    /// none, so an empty set means the setting is unknown. An invalid setting
+    /// gives back its line and the member that named it.
+    pub(crate) fn in_results(
+        lines: &[(usize, Json)],
+    ) -> Result<BTreeSet<Self>, (usize, &'static str)> {
         let mut settings = BTreeSet::new();
         for (line, row) in lines {
-            let Some(batch) = row.member("meta").and_then(|meta| meta.member("batch")) else {
+            let Some(meta) = row.member("meta") else {
                 continue;
             };
-            let setting = batch
-                .member("setting")
-                .and_then(Setting::of_json)
-                .ok_or(*line)?;
+            let (named, member) = match (meta.member("batch_setting"), meta.member("batch")) {
+                (Some(setting), _) => (Some(setting), "meta.batch_setting"),
+                (None, Some(batch)) => (batch.member("setting"), "meta.batch.setting"),
+                (None, None) => continue,
+            };
+            let setting = named.and_then(Setting::of_json).ok_or((*line, member))?;
             settings.insert(setting.into());
         }
         Ok(settings)

@@ -237,6 +237,7 @@ impl Details {
             backend,
             tuned_for: question.profile.as_ref(),
             warning: warning.clone(),
+            batch_setting: None,
             batch_warning: None,
             context_sha256: None,
         };

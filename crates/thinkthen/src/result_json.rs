@@ -2,8 +2,9 @@
 //! and the library's `Details::to_json` both write it here, so their bytes agree.
 
 use crate::core::{
-    Backend, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning, Question, Record,
-    RenderError, RequestMeta, Threshold, Value, json_line, question_sha256_with_profile,
+    Backend, BatchSetting, BatchWarning, DecisionResult, Meta, ProfileName, ProfileWarning,
+    Question, Record, RenderError, RequestMeta, Threshold, Value, json_line,
+    question_sha256_with_profile,
 };
 use crate::engine::facade::Judgment;
 
@@ -14,6 +15,7 @@ pub(crate) struct Run<'a> {
     pub(crate) backend: &'a Backend,
     pub(crate) tuned_for: Option<&'a ProfileName>,
     pub(crate) warning: Option<ProfileWarning>,
+    pub(crate) batch_setting: Option<BatchSetting>,
     pub(crate) batch_warning: Option<BatchWarning>,
     pub(crate) context_sha256: Option<String>,
 }
@@ -138,6 +140,7 @@ fn decision_with_digest(
             requests.unwrap_or_else(|| vec![answered.request.as_str().to_owned()]),
         )
         .with_profile_warning(run.warning)
+        .with_batch_setting(run.batch_setting)
         .with_batch_warning(run.batch_warning)
         .with_context_sha256(run.context_sha256),
     )

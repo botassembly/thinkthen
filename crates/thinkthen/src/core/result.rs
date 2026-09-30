@@ -89,6 +89,7 @@ pub(crate) struct RequestMeta {
     requests: Vec<String>,
     failed_questions: usize,
     profile_warning: Option<ProfileWarning>,
+    batch_setting: Option<BatchSetting>,
     batch_warning: Option<BatchWarning>,
     context_sha256: Option<String>,
 }
@@ -103,6 +104,7 @@ impl RequestMeta {
             requests,
             failed_questions: 0,
             profile_warning: None,
+            batch_setting: None,
             batch_warning: None,
             context_sha256: None,
         }
@@ -118,6 +120,12 @@ impl RequestMeta {
     #[must_use]
     pub(crate) const fn with_failed_questions(mut self, failed_questions: usize) -> Self {
         self.failed_questions = failed_questions;
+        self
+    }
+
+    /// Carry the run's resolved batch setting into detailed metadata.
+    pub(crate) fn with_batch_setting(mut self, setting: Option<BatchSetting>) -> Self {
+        self.batch_setting = setting;
         self
     }
 
@@ -271,6 +279,7 @@ impl AnnotateMeta {
             requests,
             failed_questions,
             profile_warning,
+            batch_setting: _,
             batch_warning: _,
             context_sha256: _,
         } = request_meta;

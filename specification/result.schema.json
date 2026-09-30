@@ -1019,6 +1019,16 @@
             "null"
           ]
         },
+        "batch_setting": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/batchSetting"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "batch_warning": {
           "anyOf": [
             {
