@@ -14,7 +14,8 @@ LogicalType NestedType(int32_t kind) {
 	}
 	return LogicalType::LIST(LogicalType::STRUCT({{"relation", LogicalType::VARCHAR}, {"source", LogicalType::VARCHAR},
 	                                         {"source_kind", LogicalType::VARCHAR}, {"target", LogicalType::VARCHAR},
-	                                         {"target_kind", LogicalType::VARCHAR}, {"probability", LogicalType::DOUBLE}}));
+	                                         {"target_kind", LogicalType::VARCHAR}, {"probability", LogicalType::DOUBLE},
+	                                         {"either", LogicalType::BOOLEAN}}));
 }
 
 namespace {
@@ -43,6 +44,13 @@ struct Cursor {
 		at += size;
 		return value;
 	}
+	bool Flag() {
+		auto flag = Read<uint8_t>();
+		if (flag > 1) {
+			throw OrdinaryError("thinkthen defect: the bridge returned a bad either flag");
+		}
+		return flag == 1;
+	}
 	Value Entity() {
 		return Value::STRUCT({{"text", Value(Text())}, {"start", Value::BIGINT(Read<int64_t>())},
 		                      {"end", Value::BIGINT(Read<int64_t>())}, {"length", Value::BIGINT(Read<int64_t>())},
@@ -51,7 +59,8 @@ struct Cursor {
 	Value Relation() {
 		return Value::STRUCT({{"relation", Value(Text())}, {"source", Value(Text())},
 		                      {"source_kind", Value(Text())}, {"target", Value(Text())},
-		                      {"target_kind", Value(Text())}, {"probability", Value::DOUBLE(Read<double>())}});
+		                      {"target_kind", Value(Text())}, {"probability", Value::DOUBLE(Read<double>())},
+		                      {"either", Value::BOOLEAN(Flag())}});
 	}
 	Value Row(int32_t kind) {
 		const auto count = Read<uint32_t>();

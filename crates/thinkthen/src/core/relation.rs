@@ -87,6 +87,11 @@ pub(crate) struct RelationEdge<E> {
     pub(crate) source: E,
     pub(crate) target: E,
     pub(crate) probability: f64,
+    /// The edge holds both ways; its ends are in input order (ticket 0344).
+    /// Written only when true, so a directed edge keeps its bytes.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    #[cfg_attr(test, schemars(extend("const" = true)))]
+    pub(crate) either: bool,
 }
 
 #[derive(Clone, Copy, Debug, Eq, Error, PartialEq)]
@@ -159,6 +164,7 @@ fn push_edge<E: RelationEntityView>(
         source: source.clone(),
         target: target.clone(),
         probability,
+        either: relation.either,
     });
 }
 

@@ -57,7 +57,7 @@ const RUN: &[&str] = &[
 /// Each case the door does not run, by its number or its whole id, and why.
 const NOT_RUN: &[(&str, &str)] = &[
     (
-        "13 14 15 16 18-find-second 19 26 31 41 42 43 44 45 46 47 48 49 50 51 52",
+        "13 14 15 16 18-find-second 19 26 31 41 42 43 44 45 46 47 48 49 50 51 52 53",
         "filter, rank, find, recognize, and relate, which the door does not carry",
     ),
     (

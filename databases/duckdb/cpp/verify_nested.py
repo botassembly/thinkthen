@@ -49,7 +49,8 @@ def main() -> None:
         edges = related[0]["rows"][0][0]
         assert len(edges) == 2
         assert edges[0] == {"relation": "near", "source": "Maria Chen", "source_kind": "person",
-                            "target": "arrived.", "target_kind": "person", "probability": 0.9}
+                            "target": "arrived.", "target_kind": "person", "probability": 0.9,
+                            "either": False}
         assert related[1:] == [{"rows": [[None]]}, {"rows": [[None]]}]
         after_edges = backend.count()
         assert after_edges > after_names, "relations reached the loopback engine"

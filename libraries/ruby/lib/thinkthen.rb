@@ -131,13 +131,15 @@ module ThinkThen
   RecognizedEntity = Struct.new(:text, :start, :end, :length, :kind, :strength) { include Withheld }
 
   # One relation between two recognized names.
-  Relation = Struct.new(:relation, :source, :target, :probability) { include Withheld }
+  # `either` is true when the relation holds both ways.
+  Relation = Struct.new(:relation, :source, :target, :probability, :either) { include Withheld }
 
   # What recognize returned. `relations` is nil when no rule was given.
   Recognized = Struct.new(:entities, :relations) { include Withheld }
 
-  # One edge relate found, with Entity ends.
-  Edge = Struct.new(:relation, :source, :target, :probability) { include Withheld }
+  # One edge relate found, with Entity ends. `either` is true when the edge
+  # holds both ways; its ends are then in input order.
+  Edge = Struct.new(:relation, :source, :target, :probability, :either) { include Withheld }
 
   # The record's place in the input, the record, and its probability.
   # Most likely yes first. Ties keep input order. `to_s` is the record.
@@ -348,7 +350,7 @@ module ThinkThen
         .map do |rows|
           rows.map do |json|
             edge = JSON.parse(json)
-            Edge.new(edge["relation"], ThinkThen.__send__(:entity, edge["source"]), ThinkThen.__send__(:entity, edge["target"]), edge["probability"])
+            Edge.new(edge["relation"], ThinkThen.__send__(:entity, edge["source"]), ThinkThen.__send__(:entity, edge["target"]), edge["probability"], edge["either"] == true)
           end
         end
       end
@@ -685,7 +687,7 @@ module ThinkThen
 
     def recognized(held)
       relations = held["relations"]&.map do |one|
-        Relation.new(one["relation"], recognized_entity(one["source"]), recognized_entity(one["target"]), one["probability"])
+        Relation.new(one["relation"], recognized_entity(one["source"]), recognized_entity(one["target"]), one["probability"], one["either"] == true)
       end
       Recognized.new(held.fetch("entities").map { |one| recognized_entity(one) }, relations)
     end

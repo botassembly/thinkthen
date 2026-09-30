@@ -150,5 +150,5 @@ def test_entity_and_edge_reprs_withhold_names_and_kinds(backend, tmp_path):
     assert printed.splitlines() == [
         "Entity(name=<8 bytes withheld>, kind=<9 bytes withheld>)",
         'Edge(relation="knows", source=Entity(name=<8 bytes withheld>, kind=<9 bytes withheld>), '
-        "target=Entity(name=<7 bytes withheld>, kind=<9 bytes withheld>), probability=0.9)",
+        "target=Entity(name=<7 bytes withheld>, kind=<9 bytes withheld>), probability=0.9, either=False)",
     ]

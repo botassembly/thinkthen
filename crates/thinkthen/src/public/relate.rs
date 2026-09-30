@@ -197,6 +197,7 @@ pub struct Edge {
     source: Entity,
     target: Entity,
     probability: f64,
+    either: bool,
     json: Written,
 }
 
@@ -223,6 +224,12 @@ impl Edge {
     #[must_use]
     pub fn probability(&self) -> f64 {
         self.probability
+    }
+
+    /// Whether the edge holds both ways. Its ends are then in input order.
+    #[must_use]
+    pub fn either(&self) -> bool {
+        self.either
     }
 
     /// This edge as one line of the bare `relate` output.
@@ -322,6 +329,7 @@ impl Engine {
                         source: Entity::of(&edge.source),
                         target: Entity::of(&edge.target),
                         probability: edge.probability,
+                        either: edge.either,
                         relation: edge.relation,
                     })
                 })

@@ -242,6 +242,8 @@ export interface RecognizedRelation {
   source: RecognizedEntity;
   target: RecognizedEntity;
   probability: number;
+  /** Present only on a relation of a both-ways rule, whose ends are then in the order found. */
+  either?: true;
 }
 
 /** The names in one text, and their relations when rules were given. */
@@ -274,6 +276,8 @@ export interface Edge {
   source: { name: string; kind: string };
   target: { name: string; kind: string };
   probability: number;
+  /** Present only on an edge of a both-ways rule, whose ends are then in input order. */
+  either?: true;
 }
 
 export interface RelateOptions extends CallOptions {

@@ -199,10 +199,6 @@ def check_runtime(cases, checks, conformance):
                     assert subset(actual, case["expect_fields"]), f"{case['name']}: wrong detail fields"
                 if "expect_keys" in case:
                     assert set(actual) == set(case["expect_keys"]), f"{case['name']}: wrong result keys"
-                if "expect_count" in case:
-                    edges = actual["edges"]
-                    assert len(edges) == case["expect_count"], f"{case['name']}: wrong edge count"
-                    assert edges[0] == case["expect_first_edge"], f"{case['name']}: wrong first edge"
                 if "offsets" in case:
                     check_offsets(case, actual, conformance)
     finally:

@@ -31,8 +31,8 @@ Every surface that accepts a description string also accepts its structured form
 | `rank` | Every record, most likely yes first | None |
 | `find` | Selected unit | `null` when `none` wins |
 | `annotate` | Named answers per input record | `null` for a not sure member |
-| `recognize` | Entities with `text`, `start`, `end`, `length`, `kind`, `strength`, plus optional relations | Empty `entities` is success |
-| `relate` | Edges with `relation`, `source`, `target`, `probability` | Empty edges are success |
+| `recognize` | Entities with `text`, `start`, `end`, `length`, `kind`, `strength`, plus optional relations, flagged as relate's edges are | Empty `entities` is success |
+| `relate` | Edges with `relation`, `source`, `target`, `probability`, and `"either":true` last on an edge of a both-ways rule | Empty edges are success |
 
 `null` never means a failed call or failed annotate question. An annotate member that fails has `{"failed":{"kind":"backend","cause":CAUSE}}` in JSON or a distinct native variant. The score answer is a number; a level name describes a band and is never the answer. A call failure has a kind, retryable flag, and message. The six kinds are `usage`, `backend`, `deadline`, `local`, `cancelled`, and `defect`. The C ABI alone spells them as codes 1 through 6. A binding exposes the names and never turns failure into `null`. A detailed result retains the answer, question, rule, and metadata under `thinkthen.result/1` as [result.md](result.md) specifies.
 

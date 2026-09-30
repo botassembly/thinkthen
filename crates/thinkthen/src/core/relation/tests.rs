@@ -147,6 +147,6 @@ fn an_unordered_edge_keeps_input_endpoint_order_at_the_cut() {
     assert_eq!(edges.len(), 1);
     assert_eq!(
         crate::core::json_line(&edges[0]).expect("edge JSON"),
-        r#"{"relation":"partner","source":{"name":"Acme","kind":"organization"},"target":{"name":"Ada","kind":"person"},"probability":0.5}"#
+        r#"{"relation":"partner","source":{"name":"Acme","kind":"organization"},"target":{"name":"Ada","kind":"person"},"probability":0.5,"either":true}"#
     );
 }

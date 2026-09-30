@@ -1,7 +1,7 @@
 {
   "schema": "thinkthen.conformance/1",
   "backend_url": "https://api.typesafe.ai/v1/systemone",
-  "case_count": 54,
+  "case_count": 55,
   "error_kinds": [
     "usage",
     "backend",
@@ -7320,7 +7320,8 @@
                     "name": "Card charges are failing for every customer.",
                     "kind": "alert"
                   },
-                  "probability": 0.61
+                  "probability": 0.61,
+                  "either": true
                 }
               ],
               "details": {
@@ -7588,6 +7589,312 @@
                 "question_sha256": "0a479794f2e5f8821bf972cfcabd12bf5fc31ea79b595f35299f1f0ea4cc08f4",
                 "requests": [
                   "06f7e2daf0f739796d464eb6c74aff43805d7507d39cd4d6bff424e5ee9e4dff"
+                ]
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "53-recognize-either",
+      "provenance": {
+        "branch": "ticket-0344-both-ways-edges"
+      },
+      "verb": "recognize",
+      "question": {
+        "version": 1,
+        "recognize": {
+          "kinds": {
+            "person": "A person's name.",
+            "organization": "An organization name.",
+            "place": "A place name."
+          },
+          "relations": [
+            {
+              "name": "works_with",
+              "source": "organization",
+              "target": "person",
+              "either": true
+            }
+          ]
+        },
+        "threshold": 0.5,
+        "relation_threshold": 0.5
+      },
+      "text": "Maria Chen joined Northwind Freight in Chicago last spring.",
+      "exchanges": [
+        {
+          "provenance": {
+            "kind": "synthetic_contract"
+          },
+          "evidence": "Maria Chen joined Northwind Freight in Chicago last spring.",
+          "request": "{\"state\":\"Maria Chen joined Northwind Freight in Chicago last spring.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: [[Maria]] Chen joined Northwind Freight in Chicago\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Maria [[Chen]] joined Northwind Freight in Chicago last\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Maria Chen [[joined]] Northwind Freight in Chicago last spring\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q4\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Maria Chen joined [[Northwind]] Freight in Chicago last spring.\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q5\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Maria Chen joined Northwind [[Freight]] in Chicago last spring.\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q6\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Maria Chen joined Northwind Freight [[in]] Chicago last spring.\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q7\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Maria Chen joined Northwind Freight in [[Chicago]] last spring.\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q8\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Chen joined Northwind Freight in Chicago [[last]] spring.\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q9\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: joined Northwind Freight in Chicago last [[spring]].\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}},\"q10\":{\"type\":\"choice\",\"instructions\":\"Tokens are split at spaces and at each punctuation mark. Where does the [[ ]] token stand in a name of one of these kinds: person, organization, place? Other names, ordinary words, dates, numbers, and marks that are not part of a name's own spelling are OUT.\\n\\nSnippet: Northwind Freight in Chicago last spring[[.]]\",\"criteria\":{\"BEGIN\":\"first token of a name of two or more tokens\",\"INSIDE\":\"a middle token of a name\",\"END\":\"last token of a name of two or more tokens\",\"SINGLE\":\"a one-token name\",\"OUT\":\"not part of a name\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "BEGIN",
+                "confidence": 0.98,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "BEGIN": 0.99,
+                  "SINGLE": 0.01
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "END",
+                "confidence": 0.95,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "END": 0.97,
+                  "INSIDE": 0.0,
+                  "BEGIN": 0.01,
+                  "SINGLE": 0.02
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 1.0,
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q4": {
+                "type": "choice",
+                "choice": "BEGIN",
+                "confidence": 0.91,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "END": 0.0,
+                  "INSIDE": 0.03,
+                  "BEGIN": 0.9400000000000001,
+                  "SINGLE": 0.03
+                }
+              },
+              "q5": {
+                "type": "choice",
+                "choice": "END",
+                "confidence": 0.87,
+                "probabilities": {
+                  "OUT": 0.0,
+                  "END": 0.9,
+                  "INSIDE": 0.05,
+                  "BEGIN": 0.01,
+                  "SINGLE": 0.04
+                }
+              },
+              "q6": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.98,
+                "probabilities": {
+                  "OUT": 0.99,
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.01
+                }
+              },
+              "q7": {
+                "type": "choice",
+                "choice": "SINGLE",
+                "confidence": 0.98,
+                "probabilities": {
+                  "OUT": 0.01,
+                  "BEGIN": 0.0,
+                  "INSIDE": 0.0,
+                  "END": 0.0,
+                  "SINGLE": 0.99
+                }
+              },
+              "q8": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.98,
+                "probabilities": {
+                  "OUT": 1.0,
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.0
+                }
+              },
+              "q9": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.99,
+                "probabilities": {
+                  "OUT": 0.99,
+                  "END": 0.0,
+                  "INSIDE": 0.0,
+                  "BEGIN": 0.0,
+                  "SINGLE": 0.01
+                }
+              },
+              "q10": {
+                "type": "choice",
+                "choice": "OUT",
+                "confidence": 0.8,
+                "probabilities": {
+                  "OUT": 0.85,
+                  "END": 0.05,
+                  "INSIDE": 0.03,
+                  "BEGIN": 0.01,
+                  "SINGLE": 0.06
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 2109,
+              "output_tokens": 536
+            }
+          }
+        },
+        {
+          "provenance": {
+            "kind": "synthetic_contract"
+          },
+          "evidence": "Maria Chen joined Northwind Freight in Chicago last spring.",
+          "request": "{\"state\":\"Maria Chen joined Northwind Freight in Chicago last spring.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"choice\",\"instructions\":\"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\\n\\nText: [[Maria Chen]] joined Northwind Freight in Chicago last\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"place\":\"A place name.\",\"none of these\":\"They are not a proper name, or no listed kind covers what they name.\"}},\"q2\":{\"type\":\"choice\",\"instructions\":\"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\\n\\nText: Maria Chen joined [[Northwind Freight]] in Chicago last spring.\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"place\":\"A place name.\",\"none of these\":\"They are not a proper name, or no listed kind covers what they name.\"}},\"q3\":{\"type\":\"choice\",\"instructions\":\"In the text below, some words are wrapped in [[ ]]. Going by what they refer to in this text, which listed kind of name are they? Choose none of these when they are not a proper name, or when they name something that no listed kind covers.\\n\\nText: Maria Chen joined Northwind Freight in [[Chicago]] last spring.\",\"criteria\":{\"person\":\"A person's name.\",\"organization\":\"An organization name.\",\"place\":\"A place name.\",\"none of these\":\"They are not a proper name, or no listed kind covers what they name.\"}}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "choice",
+                "choice": "person",
+                "confidence": 1.0,
+                "probabilities": {
+                  "person": 1.0,
+                  "none of these": 0.0,
+                  "organization": 0.0,
+                  "place": 0.0
+                }
+              },
+              "q2": {
+                "type": "choice",
+                "choice": "organization",
+                "confidence": 1.0,
+                "probabilities": {
+                  "person": 0.0,
+                  "none of these": 0.0,
+                  "organization": 1.0,
+                  "place": 0.0
+                }
+              },
+              "q3": {
+                "type": "choice",
+                "choice": "place",
+                "confidence": 1.0,
+                "probabilities": {
+                  "person": 0.0,
+                  "none of these": 0.0,
+                  "organization": 0.0,
+                  "place": 1.0
+                }
+              }
+            },
+            "usage": {
+              "input_tokens": 758,
+              "output_tokens": 138
+            }
+          }
+        },
+        {
+          "provenance": {
+            "kind": "synthetic_contract"
+          },
+          "evidence": "{\"evidence\":\"Maria Chen joined Northwind Freight in Chicago last spring.\",\"entities\":[{\"id\":\"i1\",\"name\":\"Maria Chen\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Northwind Freight\",\"kind\":\"organization\"}]}",
+          "request": "{\"state\":{\"evidence\":\"Maria Chen joined Northwind Freight in Chicago last spring.\",\"entities\":[{\"id\":\"i1\",\"name\":\"Maria Chen\",\"kind\":\"person\"},{\"id\":\"i2\",\"name\":\"Northwind Freight\",\"kind\":\"organization\"}]},\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"Does the text itself state that i1 works with i2, or that i2 works with i1?\"}}}",
+          "response": {
+            "model": "jev-1.13.0",
+            "answers": {
+              "q1": {
+                "type": "noul",
+                "noul": 0.84
+              }
+            },
+            "usage": {
+              "input_tokens": 410,
+              "output_tokens": 38
+            }
+          }
+        }
+      ],
+      "expect": {
+        "success": {
+          "kind": "recognize",
+          "answers": [
+            {
+              "exchange": 0,
+              "name": "result",
+              "bare": {
+                "entities": [
+                  {
+                    "text": "Maria Chen",
+                    "start": 0,
+                    "end": 10,
+                    "length": 10,
+                    "kind": "person",
+                    "strength": 0.9998
+                  },
+                  {
+                    "text": "Northwind Freight",
+                    "start": 18,
+                    "end": 35,
+                    "length": 17,
+                    "kind": "organization",
+                    "strength": 0.9986
+                  },
+                  {
+                    "text": "Chicago",
+                    "start": 39,
+                    "end": 46,
+                    "length": 7,
+                    "kind": "place",
+                    "strength": 0.99
+                  }
+                ],
+                "relations": [
+                  {
+                    "relation": "works_with",
+                    "source": {
+                      "text": "Maria Chen",
+                      "start": 0,
+                      "end": 10,
+                      "length": 10,
+                      "kind": "person",
+                      "strength": 0.9998
+                    },
+                    "target": {
+                      "text": "Northwind Freight",
+                      "start": 18,
+                      "end": 35,
+                      "length": 17,
+                      "kind": "organization",
+                      "strength": 0.9986
+                    },
+                    "probability": 0.84,
+                    "either": true
+                  }
+                ]
+              },
+              "details": {
+                "model": "jev-1.13.0",
+                "question_sha256": "8dfde576a1c9b254e9f0ba54e85f6847e4588643e31c0ffe0d68123fe5eab21c",
+                "requests": [
+                  "8e35af988d1752d942c2d74de7395a0650852a39cfbc7e7836003ba6af4eb9a1",
+                  "76e4ea65c9564f173f1b691354d541be516d119e3aea62e545747fbf9e37e76d",
+                  "cf798b2edc15453b304f51ce672976548ccdd98c80d664b56a510921b074c5e0"
                 ]
               }
             }

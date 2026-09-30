@@ -391,7 +391,10 @@ fn related(engine: &Engine, question: &str, case: &Value, success: &Value) -> Ch
         .map_err(said)?;
     let pair = |entity: &Entity| json!({"name": entity.name(), "kind": entity.kind()});
     let edges = edges.value().iter().map(|edge| {
-        json!({"relation": edge.relation(), "source": pair(edge.source()), "target": pair(edge.target()), "probability": edge.probability()})
+        flagged(
+            json!({"relation": edge.relation(), "source": pair(edge.source()), "target": pair(edge.target()), "probability": edge.probability()}),
+            edge.either(),
+        )
     });
     same("result", &edges.collect(), &success["answers"][0]["bare"])
 }
@@ -427,13 +430,26 @@ fn rule_of(rule: &Rule) -> Checked<RelationRule> {
     made(&rule.name, &rule.source, &rule.target).map_err(said)
 }
 
+/// An edge of a both-ways rule ends with `"either":true` (ticket 0344).
+fn flagged(mut edge: Value, either: bool) -> Value {
+    if either {
+        edge["either"] = json!(true);
+    }
+    edge
+}
+
 fn recognized(found: &Recognized) -> Value {
     let entity = |one: &thinkthen::RecognizedEntity| json!({"text": one.text(), "start": one.start(), "end": one.end(), "length": one.length(), "kind": one.kind(), "strength": one.strength()});
     let mut value = json!({"entities": found.entities().iter().map(entity).collect::<Vec<_>>()});
     if let Some(relations) = found.relations() {
         value["relations"] = relations
             .iter()
-            .map(|one| json!({"relation": one.relation(), "source": entity(one.source()), "target": entity(one.target()), "probability": one.probability()}))
+            .map(|one| {
+                flagged(
+                    json!({"relation": one.relation(), "source": entity(one.source()), "target": entity(one.target()), "probability": one.probability()}),
+                    one.either(),
+                )
+            })
             .collect();
     }
     value

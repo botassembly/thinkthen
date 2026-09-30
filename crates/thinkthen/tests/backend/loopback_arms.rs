@@ -200,7 +200,7 @@ fn the_generic_arm_answers_every_verb() {
         (
             &["relate", relate.as_str()],
             entities,
-            "{\"relation\":\"same_as\",\"source\":{\"name\":\"Checkout fails.\",\"kind\":\"alert\"},\"target\":{\"name\":\"Cards fail.\",\"kind\":\"alert\"},\"probability\":0.9}\n",
+            "{\"relation\":\"same_as\",\"source\":{\"name\":\"Checkout fails.\",\"kind\":\"alert\"},\"target\":{\"name\":\"Cards fail.\",\"kind\":\"alert\"},\"probability\":0.9,\"either\":true}\n",
         ),
     ];
     let backend = Backend::start().expect("backend");

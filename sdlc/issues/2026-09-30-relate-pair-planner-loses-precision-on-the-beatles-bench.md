@@ -2,7 +2,7 @@
 
 Status: open. Measured by Beatles Bench tickets 0019 and 0018 on 2026-09-30, against main `c22512868`. The bench's `reports/results.md` publishes every figure below.
 
-Owner: ticket 0342 adds the single-answer menu and the precision statement. The both-ways edge shape moves to its own relate ticket after 0314 slice 4, because it reaches the binding and C door files that slice rewrites; Ian can overturn the split. Blocks 0.1: the default and the shape must be set before the release.
+Owner: ticket 0342 adds the single-answer menu and the precision statement. Ticket 0344 settled the both-ways edge shape: an `either` edge ends with `"either":true` on every surface. Ian can overturn the split and the shape. Blocks 0.1: the default and the shape must be set before the release.
 
 ## The problem
 
@@ -41,6 +41,8 @@ This is a product default. The coordinator sets it, and Ian can overturn it. Dra
 Recommendation: (b) with (c), in the relate ticket after 0304 slice 4 that also carries the unordered both-ways edge shape (issue priorities, coordinator default 1). Keep the 0.5 cut. The relate page states the measured precision and points to `recognize --relation` in either case. Accept (b) as the default only if the paid bench run beats the pair planner's edge F1 of 0.523 on the 182 songs and its precision of 0.296 on the missing-album sets. Otherwise ship (c) alone for 0.1, and keep this issue open. Option (b) costs more than (a), but (a) cannot fix the missing-album case, and a changed default is cheaper before 0.1 than after.
 
 ## The both-ways edge shape
+
+Done in ticket 0344, which chose a flag over the `pair` array below so that every edge keeps one shape.
 
 Moved here on 2026-09-30 from item 3 of `2026-09-25-recognize-and-relate-scale-and-shape.md`. Coordinator default 1 of `../planning/issue-priorities-2026-09-30.md`, which Ian can overturn: change the shape before 0.1, in the same relate ticket, because a breaking change after 0.1 costs every consumer.
 

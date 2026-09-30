@@ -187,6 +187,7 @@ fn encoded_edges(edges: Vec<thinkthen::Edge>, ids: &Ids) -> Result<Vec<u8>, Stri
                     from.clone(),
                     to.clone(),
                     edge.probability(),
+                    edge.either(),
                 ));
             }
         }
@@ -194,11 +195,12 @@ fn encoded_edges(edges: Vec<thinkthen::Edge>, ids: &Ids) -> Result<Vec<u8>, Stri
     let count = u32::try_from(rows.len())
         .map_err(|_| "thinkthen defect: too many relate edges".to_owned())?;
     let mut bytes = count.to_ne_bytes().to_vec();
-    for (relation, from, to, probability) in rows {
+    for (relation, from, to, probability, either) in rows {
         frame(&mut bytes, &relation)?;
         frame(&mut bytes, &from)?;
         frame(&mut bytes, &to)?;
         bytes.extend_from_slice(&probability.to_ne_bytes());
+        bytes.push(u8::from(either));
     }
     Ok(bytes)
 }

@@ -24,6 +24,8 @@ A third built-in backend, `ollama`, reaches Ollama at `http://localhost:11434/v1
 
 Every engine built from the environment adds its requests, retries, live tokens and cache answers to the command's count-only usage totals, so `thinkthen status` shows one combined total for every surface. The SQL extensions write their counts when their process exits. PostgreSQL writes to the server user's usage folder; its request total and token cap still bind per backend (ticket 0322, ADR 0113).
 
+An edge of a both-ways (`either`) relation ends with `"either":true` on `relate`, `recognize`, the Rust library (`Edge::either`, `Relation::either`), the C door and every library; Python, Ruby, R and the TypeScript types gain an `either` field. The SQLite, DuckDB and PostgreSQL relate tables and relation rows gain a last `either` column. A directed edge is unchanged, and no question or cache key changes (ticket 0344).
+
 A relate question file may mark a rule `"single": true` when each source has at most one target. That rule asks one menu per source, listing every allowed target and `none`, so a source can end with no edge; every other rule asks its yes/no pairs as before. The relate page states relate's measured precision and points to `recognize --relation` for relations a text states (ticket 0342).
 
 The C door adds `thinkthen_plan_json`, a no-send preview of a judgment call that needs no key. It returns the planned records, requests, body bytes, input-token band and first request body as the result schema's `plan` object, which the schema now generates from the Rust type (tickets 0291 and 0314).

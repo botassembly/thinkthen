@@ -43,14 +43,14 @@ related <- child(c(sprintf('r <- tt_recognize("%s", "@%s")$value[[1]]', sentence
                    'cat(names(a), "|", unlist(a[1, ]), "|", r$text[a$source == r$text], "\\n")'),
                  env = paste0("THINKTHEN_BASE_URL=", arm("case/42-recognize-C01-relations/v1")))$text
 check("relations ride in the attribute with names and kinds", identical(related,
-  "source source_kind target target_kind relation probability | Maria Chen person Northwind Freight organization works_for 0.84 | Maria Chen "))
+  "source source_kind target target_kind relation probability either | Maria Chen person Northwind Freight organization works_for 0.84 FALSE | Maria Chen "))
 
 # relate: a frame in, deduped by name and kind in first-seen order, and an
 # edge frame out whose first two columns igraph reads.
 entities <- data.frame(name = c("a1", "b1", "a1", "a1"), kind = c("x", "x", "x", "y"))
 edges <- tt_relate(entities, relations = "caused_by")$value
 check("a repeated name and kind is one entity", identical(nrow(edges), 6L) &&
-      identical(names(edges), c("source", "target", "relation", "probability", "source_kind", "target_kind")))
+      identical(names(edges), c("source", "target", "relation", "probability", "source_kind", "target_kind", "either")))
 check("each edge carries names and kinds", identical(edges[1, "source"], "a1") && identical(edges[1, "target_kind"], "x"))
 check("igraph reads the edge frame", identical(igraph::ecount(igraph::graph_from_data_frame(edges)), 6))
 unnested <- unnest(data.frame(body = sentence, names = I(found[1])), names)

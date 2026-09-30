@@ -22,7 +22,7 @@ TABLE = (
 )
 RELATE = "SELECT * FROM thinkthen_relate('SELECT id, name, kind FROM t', {}) ORDER BY ALL"
 WORKS = "['works_for=person:organization']"
-EDGES = [["works_for", "1", "2", 0.9], ["works_for", "3", "2", 0.9], ["works_for", "4", "2", 0.9]]
+EDGES = [["works_for", "1", "2", 0.9, False], ["works_for", "3", "2", 0.9, False], ["works_for", "4", "2", 0.9, False]]
 NOT_SELECT = "thinkthen usage: the relate query must be a SELECT; relate reads records, it does not write files, attach databases, change settings, or load extensions (retryable: no)"
 MISSING_ADVICE = "; relate reads only committed tables on its separate connection; if you created this table in an open transaction, commit it before retrying (retryable: no)"
 
@@ -70,7 +70,7 @@ def two_columns_read_kind_star_and_take_bare_rules_only():
     with Backend() as backend:
         pairs = "SELECT * FROM thinkthen_relate('SELECT id, name FROM t WHERE id < 3', {})"
         got = run([TABLE, pairs.format("['same_as']") + " ORDER BY ALL", pairs.format(WORKS)], backend.base())
-        expect(rows(got[1]), [["same_as", "1", "2", 0.9], ["same_as", "2", "1", 0.9]], "a directed rule over one kind")
+        expect(rows(got[1]), [["same_as", "1", "2", 0.9, False], ["same_as", "2", "1", 0.9, False]], "a directed rule over one kind")
         expect(said(got[2]), "thinkthen usage: a relate query of id and name reads every kind as *, so every rule is bare or *:* (retryable: no)", "a typed rule")
 
 

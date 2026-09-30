@@ -4,7 +4,7 @@ Run as ``python tests/conformance.py PORT`` with a conformance backend on
 that loopback port. Each success case runs on its own case arm, with each
 expected request digest recomputed for the URL the backend served. Every
 selected case ends as pass, fail, or not run with its reason, and the three
-counts sum to the selected count. With no ID file the runner selects all 54.
+counts sum to the selected count. With no ID file the runner selects all 55.
 A case is not run only by a rule the library
 cannot meet, never by its id. Each typed, ``decide_many``, and ``annotate``
 case also runs over a Polars column or frame, and must give the list form's
@@ -152,13 +152,15 @@ def succeeded(port, case):
         if found.relations is not None:
             result["relations"] = [
                 {"relation": one.relation, "source": recognized(one.source),
-                 "target": recognized(one.target), "probability": one.probability}
+                 "target": recognized(one.target), "probability": one.probability,
+                 **({"either": True} if one.either else {})}
                 for one in found.relations]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "relate":
         edges = engine.relate(case["entities"], case["question"]).value
         result = [{"relation": edge.relation, "source": entity(edge.source),
-                   "target": entity(edge.target), "probability": edge.probability}
+                   "target": entity(edge.target), "probability": edge.probability,
+                   **({"either": True} if edge.either else {})}
                   for edge in edges]
         return same("result", result, success["answers"][0]["bare"])
     if verb == "annotate":

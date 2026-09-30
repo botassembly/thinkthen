@@ -357,7 +357,8 @@ int thinkthen_recognize_opts(const thinkthen_engine *engine, const char *spec_js
  * written to `*out` (freed with `thinkthen_free_string`):
  * `{"edges": [...]}`, where each edge is `{"relation": NAME, "source":
  * {"name", "kind"}, "target": {"name", "kind"}, "probability": P}` in
- * rule order. `texts` carries `count` records and `lengths` their
+ * rule order, plus `"either": true` last on an edge of a both-ways rule,
+ * whose ends are then in input order. `texts` carries `count` records and `lengths` their
  * lengths. Each record is one JSON object with a string `name` and a
  * string `kind`, as the command reads JSONL. `count` past 255 is a usage
  * refusal before anything else. `spec_json` is a version-one question

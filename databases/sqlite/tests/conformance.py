@@ -248,9 +248,9 @@ def check(case: dict, backend: Backend) -> None:
     elif kind == "relate":
         entities = case["entities"]
         setup = f"db.execute('CREATE TABLE e(id INTEGER, name TEXT, kind TEXT)')\ndb.executemany('INSERT INTO e VALUES (?, ?, ?)', [(at, one['name'], one['kind']) for at, one in enumerate({entities!r})])"
-        sql = "SELECT relation, source, target, probability FROM thinkthen_relate('SELECT id, name, kind FROM e', ?)"
+        sql = "SELECT relation, source, target, probability, either FROM thinkthen_relate('SELECT id, name, kind FROM e', ?)"
         rows = asked([[sql, [question]]], env, setup)[0]
-        edges = [{"relation": row[0], "source": entities[row[1]], "target": entities[row[2]], "probability": row[3]} for row in rows]
+        edges = [{"relation": row[0], "source": entities[row[1]], "target": entities[row[2]], "probability": row[3], **({"either": True} if row[4] == 1 else {})} for row in rows]
         same("result", edges, answers[0]["bare"])
     else:
         raise AssertionError(f"no SQL form is written for the {kind} kind")
