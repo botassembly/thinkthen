@@ -5,9 +5,10 @@
 # jvm, swift, zig, php, dart, flutter, ada, objective-c, cobol, sqlite, duckdb,
 # postgresql, python, typescript, ruby, and first-run; the default
 # keeps its established parts and source wrappers are explicit pilot parts.
-# Without --reuse it builds each file from this checkout. With --reuse it builds nothing and
-# packs the files each surface check already built in its own build folder, which the
-# `surfaces` rung does. Every cargo call is locked; fetch first where the network is off.
+# Without --reuse it builds each file from this checkout. With --reuse it packs the files each
+# surface check already built in its own build folder, which the `surfaces` rung does. It
+# rebuilds only the C library's debug build, with the remaps below. Every cargo call is locked;
+# fetch first where the network is off.
 set -eu
 reuse=
 [ "${1:-}" != --reuse ] || { reuse=1; shift; }
@@ -129,11 +130,9 @@ part_command() {
 part_c() {
 	profile=debug
 	[ -n "$reuse" ] || { profile=release; (cd libraries/c && cargo build --locked --quiet --release --lib); }
-	# With --reuse, later checks such as COBOL's build the C library without the C check's remaps,
-	# and their copy holds the builder's home. The C check's own build is still fresh, so this
-	# compiles nothing and puts its remapped copy back in the build folder.
-	[ -z "$reuse" ] || (cd libraries/c && RUSTFLAGS="${RUSTFLAGS:+$RUSTFLAGS }--remap-path-prefix=$HOME=/build" \
-		CFLAGS="${CFLAGS:+$CFLAGS }-ffile-prefix-map=$HOME=/build" cargo build --locked --quiet --offline --lib)
+	# Later checks, such as COBOL's, rebuild the C library without remaps into the same folder, so
+	# the copy there holds the builder's home. --reuse rebuilds it here with the remaps above.
+	[ -z "$reuse" ] || (cd libraries/c && cargo build --locked --quiet --offline --lib)
 	from=$(built libraries/c)/$profile
 	folder=$(fresh c)
 	mkdir -p "$folder/include" "$folder/lib/pkgconfig"
