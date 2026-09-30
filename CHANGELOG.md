@@ -26,6 +26,8 @@ The C door adds `thinkthen_plan_json`, a no-send preview of a judgment call that
 
 The Go and C++ libraries gain a public `plan` over `thinkthen_plan_json` and read facts, recognize and relate results as plain JSON. Go drops its `Facts` struct; C++ drops `CallFacts`, `Entity`, `Recognized`, `RelatedEntity` and `Edge`. Go names its error kinds, and both read an annotate member as unresolved, a value or a failure. C++ `call`, `recognize` and `relate` take a deadline (tickets 0291 and 0314).
 
+The C#, JVM and Dart libraries gain a public `plan` over `thinkthen_plan_json` and read facts, recognize and relate results as plain JSON. C# drops its `Facts` record and `CallResult`; the JVM drops `Door.Facts` and `ResultEnvelope`'s strict key sets, keeping a small tolerant reader as `thinkthen.Json`; Dart drops `CallFacts`, `CallResult`, `Entity`, `Edge`, `Recognition`, `Relations` and `Annotation`. Each reads an annotate member as unresolved, a value or a failure. C# `Relate`, JVM `recognize` and `relate`, and Dart `call`, `recognize` and `relate` take a deadline (tickets 0291 and 0314).
+
 The default model is the pinned version `jev-1.13.0`, not the alias `jev-latest`, so a vendor's move of its alias moves no default answer (ticket 0159).
 
 Python and Ruby calls now raise cancellation when the caller's token fires before a held reply reaches the call, including when both happen in one wait tick (ticket 0168).
