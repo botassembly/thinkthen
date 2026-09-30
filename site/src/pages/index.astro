@@ -39,7 +39,7 @@ const sixHowtos = HOWTOS.slice(0, 6);
     </div>
     {tabs.slice(1).map((t) => (
       <div class="cell" data-lang={t.label} hidden>
-        <Code code={firstCall(t.surface).code} />
+        <Code code={firstCall(t.surface).code} file={firstCall(t.surface).file} />
         <InstallLine line={surfaceOf(t.surface).install[0][0]} caption={`Install it for ${surfaceOf(t.surface).name}`} />
       </div>
     ))}

@@ -28,16 +28,9 @@ export default defineConfig({
     '/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
     '/learn/beatles-bench/what-jev-knows': '/learn/beatles-bench/strings/',
   },
-  // The article's code blocks follow the page theme. Shiki writes both colours
-  // on every token and site.css picks the dark one under a dark page, so a
-  // light page never carries a dark slab. `wrap` keeps a long line inside the
-  // pane.
+  // Articles place examples with <!-- example: --> and <!-- file: -->.
+  // src/lib/code.mjs draws them. scripts/check-code.mjs refuses a raw fence.
   markdown: {
     remarkPlugins: [remarkExamples],
-    shikiConfig: {
-      themes: { light: 'github-light', dark: 'github-dark' },
-      defaultColor: 'light',
-      wrap: true,
-    },
   },
 });

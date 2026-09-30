@@ -45,8 +45,8 @@ const [first, ...rest] = page.title.split(' ');
   {page.idea.map((para) => <p>{parts(para).map((p) => p.code !== undefined ? <code>{p.code}</code> : p.href ? <a href={p.href}>{p.text}</a> : p.text)}</p>)}
   {page.source && <p>The numbers come from {[page.source].flat().map((s, i, all) => <Fragment>{i > 0 && (i === all.length - 1 ? ' and ' : ', ')}<a href={s.href}>{s.text}</a></Fragment>)}.</p>}
 
-  {(page.blocks || []).map((b) => <Code code={b.code} caption={b.caption} />)}
-  {inputs.map((file) => <Code code={file.text} caption={file.caption} />)}
+  {(page.blocks || []).map((b) => <Code code={b.code} lang="bash" caption={b.caption} />)}
+  {inputs.map((file) => <Code code={file.text} file={file.name} caption={file.caption} />)}
   {runs.map((run, i) => (
     <Fragment>
       {i === 0 && !page.headings?.[run.name] && <h2>Run it</h2>}

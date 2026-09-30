@@ -52,8 +52,8 @@ const runFacts = {
   <h2>A first call</h2>
   {first ? (
     <>
-      <Code code={first.code} />
-      {first.output && <Code code={first.output} caption={`What ${surface.name} printed`} copy={false} />}
+      <Code code={first.code} file={first.file} />
+      {first.output && <Code code={first.output} lang="output" caption={`What ${surface.name} printed`} copy={false} />}
     </>
   ) : (
     <Terminal run={decideOne} caption={decideOne.see} />
