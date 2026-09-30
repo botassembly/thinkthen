@@ -44,7 +44,11 @@ fn scratch(name: &str) -> PathBuf {
 }
 
 /// The shared library's file extension: `dylib` on macOS, `so` elsewhere.
-const DL: &str = if cfg!(target_os = "macos") { "dylib" } else { "so" };
+const DL: &str = if cfg!(target_os = "macos") {
+    "dylib"
+} else {
+    "so"
+};
 
 /// The built door as a release archive lays it out: `libthinkthen.so`, its
 /// soname link `libthinkthen.so.0`, and `libthinkthen.a`, in one folder. On
