@@ -97,7 +97,7 @@ Slice 3 lands in four parts, one at a time. 3b, 3c and 3d touch disjoint files o
   - `libthinkthen.a` and R's static library export about 285 global `sqlite3_` symbols. 3b localizes them with a partial link before archiving, flips `the_static_library_still_exports_sqlite_symbols_until_slice_3b` to require zero, and closes `sdlc/issues/2026-09-30-static-library-exports-sqlite-symbols.md`.
   - The inverted symbol check is a placeholder, not a gate. It must become a gate that requires zero `sqlite3_` symbols before any release.
 - **3c. Polars eager and lazy.** Polars calls the public batch methods, so 3a moves its batching. 3c proves a lazy frame collected twice sends nothing the second time and removes any frame-only batching left.
-- **3d. One owner for the send limits.** It waits for Ian's ruling on the process-wide throttle, below.
+- **3d. One owner for the send limits.** The engine part moves the throttle, the gates and pacer, and the totals behind one owner, per the decision below. The SQL hosts' own limit copies wait for 3b and land as a follow-up slice, 3e.
 
 The process-wide throttle is an Ian ruling. ADR 0017's amendment from ticket 0077 says one process has one throttle, and a second engine with another throttle is refused. `PROCESS_WIDTH`, `WIDTH_CHILD` and the 1 ms `REBUILD_POLL` exist to keep that ruling safe across a fork. `PROCESS_GATES` (the 429 gate and the pacer) and `process_budget` (the request total) follow the same per-process rule. Cleanup step 4 lists process-wide statics as hacks. The two conflict, so 3a keeps them and 3d waits. Options for Ian:
 
@@ -149,6 +149,28 @@ Decision for 3d, 2026-09-30: option 1. One throttle per process stays, per Ian's
 - Defers:
   - True lazy streaming. The default in-memory engine collects the whole frame and calls the expression once over the whole column. The streaming engine needs Polars' `streaming` feature, which 0307 dropped, so the checks cannot compile it. A user who adds that feature gets one call per morsel, since the expression is elementwise. `LazyFrame::collect_batches` also needs that engine.
   - Engine replay speed: about 50 microseconds per answered question under load. It belongs to the engine, not the Polars door.
+
+### Slice 3d evidence
+
+The engine part only. The SQL hosts' own limit copies wait for 3b and land as a follow-up slice.
+
+- Starts from: slice 3a (`f4436de26`); the "Slice 3 split" decision above (option 1, one throttle per process, Ian's ticket 0077 ruling, overturnable); `sdlc/planning/0304-slices-3b-3d-prep.md` section 3d, which served as this slice's ticket review; ticket 0323's hacks table.
+- Keeps: one throttle per process and its "already active for this process" refusal on every surface; the 429 gate and the requests-per-minute pacer per address; the request total and the estimated input cap; a fresh set of limits in a forked child; the 50 ms host polls ticket 0323 keeps.
+- Changes:
+  - `engine/limits.rs` owns every process send limit: the throttle (`Widths`), the 429 gates and pacer (`Gates`) and the request and estimated input totals (`SendBudget`), in one fork-safe `Guarded` cell, `PROCESS_LIMITS`. One fork rebuild now replaces all three.
+  - `PROCESS_WIDTH`, `PROCESS_GATES` and the `process_budget` `OnceLock` go, with their accessors `process_width`, `process_width_of`, `process_gates` and `process_budget`. `limits::of(pid, cancel)` and `limits::process()` replace them.
+  - The 1 ms `REBUILD_POLL` goes. A thread that finds another rebuilding waits the 50 ms stop check.
+  - `SendBudget` counts through the same `Guarded` cell instead of its own spin-loop reset after a fork. A refund goes to the counts it reserved from. The prep note's open question is settled: the request total already reset in a forked child and still does.
+  - `policy.py` holds the one door on `PROCESS_LIMITS` in `engine/limits.rs`, with its plants and control renamed.
+  - The crate ratchet rises by 20 lines to 105,649: the owner struct and the rebuild-wait test outweigh the removed statics, accessors and spin reset. `engine/mod.rs` falls from 565 to 338 nonblank lines.
+- Proof:
+  - `engine/limits.rs` `a_stop_ends_a_rebuild_wait`: a fired stop ends a rebuild wait with `Cancelled`, and a live wait lasts one stop check.
+  - `engine/budget.rs` `a_forked_child_counts_from_zero` replaces `inherited_budget_and_reset_marker_do_not_block_a_child`. A parent marker left behind is the `process/tests.rs` row "a child replaces the parent's rebuild".
+  - Kept unchanged and passing: `cli/schedule/width_tests.rs` `every_live_path_and_every_engine_share_one_cap`; `engine/width_tests.rs`; `engine/process/tests.rs`; `engine/facade/fork_tests.rs`; `engine/backoff.rs` `paced_starts_from_many_threads_keep_one_interval_apart`; the send budget and token cap denials in `engine/http/tests.rs`, `engine/send_budget.rs` and `tests/public_env`; the real-fork probe (`conformance/consumer/fork-probe`, 6 passed).
+  - CHECKS_PLACEHOLDER
+- Defers:
+  - The SQL hosts' copies: PostgreSQL's `ACTIVE_THROTTLE` and early refusal (`call/settings.rs`) and `SEND_BUDGET`, and DuckDB's `SEND_BUDGET`. They touch the SQL host files 3b reruns, so they wait for 3b and land as slice 3e. That slice needs a public way to reach the process total.
+  - `default_engine`, to ticket 0314's binding pass, as 3a recorded.
 
 ## What the build taught us
 
