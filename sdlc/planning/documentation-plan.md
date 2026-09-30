@@ -4,7 +4,7 @@ Written 2026-09-19, rewritten to ADR 0018 by ticket 0021. ADR 0011 rules that on
 
 The published documentation has three kinds of page. How-tos are the green demos. Reference is `specification/`, with its executable examples in `spec/`. The README is the one tutorial and the one explanation. Nothing is written twice.
 
-`sdlc/scripts/pages` checks that this list, `demos/README.md`, and the folders under `demos/` agree on every number, title, and state, and that every link between them resolves. `sdlc/scripts/pages-self-test` proves each check against a copy that breaks it.
+`sdlc/scripts/pages` checks that every relative link here and in `demos/` resolves. Keep this list and `demos/README.md` in step by hand.
 
 ## The form and the standard
 

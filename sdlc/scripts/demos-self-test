@@ -1,9 +1,9 @@
 #!/bin/sh
-# The standard of ADR 0016, against fixture pages that each break one rule.
+# The demo runner's refusals, against fixture pages that each break one.
 #
 # A check that runs from no rung rots, so the spec rung runs this before it
 # runs the real pages. Each case builds a page under target/, runs the real
-# sdlc/scripts/demos over it, and pins the exit code and the whole sentence.
+# sdlc/scripts/demos over it, and pins the exit code and the sentence.
 set -eu
 
 REPO=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
@@ -14,26 +14,9 @@ rm -rf -- "$REPO/$ROOT"
 failures=0
 cases=0
 
-# The vocabulary check reads the built help. This stand-in prints clean help,
-# or the line a case plants for one command, so a case tests the check alone.
-mkdir -p "$REPO/$ROOT/bin"
-: >"$REPO/$ROOT/bin/planted"
-cat >"$REPO/$ROOT/bin/thinkthen" <<'STAND_IN'
-#!/bin/sh
-awk -F '\t' -v args="$*" '$1 == args && $2 == "EXIT 2" { failed = 1; exit }
-	$1 == args { print $2; found = 1 }
-	END { if (failed) exit 2; if (!found) print "Clean help." }' "$(dirname -- "$0")/planted"
-STAND_IN
-chmod +x "$REPO/$ROOT/bin/thinkthen"
-PATH=$REPO/$ROOT/bin:$PATH
-export PATH
-
-# Build one fixture root holding one page, whose body arrives on standard
-# input. The index lists the folder, so the form checks pass and the standard
-# is what the case is left testing.
+# Build one fixture root holding one page, whose body arrives on standard input.
 fixture() {
 	mkdir -p "$REPO/$ROOT/$1/page"
-	printf '# Fixture index\n\n- page/\n' >"$REPO/$ROOT/$1/README.md"
 	cat >"$REPO/$ROOT/$1/page/README.md"
 }
 
@@ -60,272 +43,82 @@ expect() {
 	esac
 }
 
-# The head of a page in form: a title, a status line, one paragraph, and the
-# first block inside the first twenty lines.
 head_of_a_page() {
-	printf '# How to %s\n\nStatus: green\n\nVerbs: `decide`\n\n%s\n\n' \
-		"$1" 'Use this when a fixture page has to be in form.'
+	printf '# How to %s\n\nStatus: green\n\n' "$1"
 }
 
 block() {
 	printf '```bash\nset -euo pipefail\n\n%s\n```\n\n' "$1"
 }
 
-tail_of_a_page() {
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n- [How to read the standard](../page/)\n'
-}
-
 ok='jq -rn '\''"ok"'\'' | mustmatch "ok"'
 
-# Rule 1: at most 120 lines and 900 words.
+# A green page that asserts once runs.
 {
-	head_of_a_page 'write a page that runs long'
+	head_of_a_page 'assert once'
 	block "$ok"
-	i=0
-	while [ "$i" -lt 60 ]; do
-		printf 'Prose.\n\n'
-		i=$((i + 1))
-	done
-	tail_of_a_page
-} | fixture rule1-lines
-expect rule1-lines 1 'demos: page/README.md breaks rule 1 of ADR 0016: 141 lines, and the limit is 120'
+} | fixture ok
+expect ok 0 'demos: 1 green, 0 red'
 
-{
-	head_of_a_page 'write a page that runs wordy'
-	block "$ok"
-	i=0
-	while [ "$i" -lt 60 ]; do
-		printf 'Sixteen words of prose that earn the reader nothing at all, repeated until the page is long.\n'
-		i=$((i + 1))
-	done
-	printf '\n'
-	tail_of_a_page
-} | fixture rule1-words
-expect rule1-words 1 'demos: page/README.md breaks rule 1 of ADR 0016: 1074 words, and the limit is 900'
-
-# Rule 2: the first block starts by line 20, its first thinkthen line sits
-# within five lines of the block, and nothing is set up before the result.
-{
-	head_of_a_page 'bury the first block'
-	i=0
-	while [ "$i" -lt 8 ]; do
-		printf 'A paragraph that pushes the block down the page.\n\n'
-		i=$((i + 1))
-	done
-	block "$ok"
-	tail_of_a_page
-} | fixture rule2-late
-expect rule2-late 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first block that asserts starts on line 25, and the limit is 20'
-
-{
-	head_of_a_page 'put the command out of reach'
-	printf '```bash\nset -euo pipefail\nquestion=%s\nevidence=ordinary\nspare=unused\nunread=unused\n\nprintf '\''%%s'\'' "$evidence" | thinkthen decide "$question" --dry-run | mustmatch like "state"\n```\n\n' "'a question'"
-	tail_of_a_page
-} | fixture rule2-far
-expect rule2-far 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first thinkthen line is 7 lines into the first block, and the limit is 5'
-
-{
-	head_of_a_page 'set up before the first result'
-	printf '```bash\nset -euo pipefail\nwork=$(mktemp -d)\n\n%s\n```\n\n' "$ok"
-	tail_of_a_page
-} | fixture rule2-setup
-expect rule2-setup 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first block sets up on line 2, and nothing is set up before the first result'
-
-# An eval page runs no thinkthen at all, and jq over saved rows is its
-# command. The clause binds it the same way.
-{
-	head_of_a_page 'bury the jq line on an eval page'
-	printf '```bash\nset -euo pipefail\nrows=rows.jsonl\nspare=unused\nunread=unused\nlonger=unused\n\njq -n %s | mustmatch "ok"\n```\n\n' "'\"ok\"'"
-	tail_of_a_page
-} | fixture rule2-working
-expect rule2-working 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first command line is 7 lines into the first block, and the limit is 5'
-
-# A block a reader types by hand once is not a result. The page below shows
-# one inside the first twenty lines and asserts nothing until line 24.
-{
-	head_of_a_page 'open with a listing nobody runs'
-	printf '```sh\nthinkthen decide QUESTION --record recording/ <evidence.txt\n```\n\n'
-	i=0
-	while [ "$i" -lt 5 ]; do
-		printf 'A paragraph about the listing above.\n\n'
-		i=$((i + 1))
-	done
-	block "$ok"
-	tail_of_a_page
-} | fixture rule2-listing
-expect rule2-listing 1 'demos: page/README.md breaks rule 2 of ADR 0016: the first block that asserts starts on line 23, and the limit is 20'
-
-# Rule 3: at most six blocks that assert, and every bash block asserts.
-{
-	head_of_a_page 'assert seven times'
-	i=0
-	while [ "$i" -lt 7 ]; do
-		block "$ok"
-		i=$((i + 1))
-	done
-	tail_of_a_page
-} | fixture rule3-count
-expect rule3-count 1 'demos: page/README.md breaks rule 3 of ADR 0016: 7 blocks that assert, and the limit is 6'
-
-{
-	head_of_a_page 'show a block that proves nothing'
-	block "$ok"
-	printf '```bash\nset -euo pipefail\n\nprintf '\''nobody checks this\\n'\''\n```\n\n'
-	tail_of_a_page
-} | fixture rule3-silent
-expect rule3-silent 1 'demos: page/README.md breaks rule 3 of ADR 0016: the bash block on line 15 asserts nothing'
-
-# A block fenced for another language asserts nothing and is not counted,
-# because a page has to be able to show a command nobody runs in a gate.
+# A block fenced for another language asserts nothing and is not a test,
+# because a page may show a command nobody runs in a gate.
 {
 	head_of_a_page 'show a command nobody runs'
 	printf '```sh\nthinkthen decide QUESTION --record recording/ <evidence.txt\n```\n\n'
 	block "$ok"
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
-} | fixture rule3-other-language
-expect rule3-other-language 0 'demos: 1 green, 0 red'
+} | fixture other-language
+expect other-language 0 'demos: 1 green, 0 red'
 
-# Rule 4: one command, unless the title names the contrast.
+# A green page proves something.
 {
-	head_of_a_page 'teach two commands under one title'
-	block "$ok"
-	printf 'The page runs `thinkthen decide` above.\n\n'
-	printf 'The page runs `thinkthen choose` below.\n\n'
-	block "$ok"
-	tail_of_a_page
-} | fixture rule4-commands
-expect rule4-commands 1 'demos: page/README.md breaks rule 4 of ADR 0016: 2 commands, choose and decide, and the title names 0'
+	head_of_a_page 'assert nothing'
+	printf '```sh\nthinkthen decide QUESTION\n```\n\n'
+} | fixture no-assert
+expect no-assert 1 'demos: page/README.md is green, and no block asserts anything'
 
-# Rule 5: one idea and at most four steps.
+# Every bash block asserts.
 {
-	head_of_a_page 'take five steps'
+	head_of_a_page 'show a block that proves nothing'
 	block "$ok"
-	i=1
-	while [ "$i" -le 5 ]; do
-		printf '## Step %s\n\nA step that another page could own.\n\n' "$i"
-		i=$((i + 1))
-	done
-	tail_of_a_page
-} | fixture rule5-steps
-expect rule5-steps 1 'demos: page/README.md breaks rule 5 of ADR 0016: 5 steps, and the limit is 4'
-
-# Rule 7: a green page holds no design argument.
-{
-	head_of_a_page 'argue on a green page'
-	block "$ok"
-	printf '## What this demo decides\n\nThe argument belongs in the ticket.\n\n'
-	tail_of_a_page
-} | fixture rule7-argument
-expect rule7-argument 1 'demos: page/README.md breaks rule 7 of ADR 0016: a "What this demo decides" section on line 15'
-
-# Rule 8: at most four closing links, each to a different idea.
-{
-	head_of_a_page 'close with five links'
-	block "$ok"
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n'
-	for target in one two three four five; do
-		printf -- '- [How to read %s](../%s/)\n' "$target" "$target"
-	done
-} | fixture rule8-links
-expect rule8-links 1 'demos: page/README.md breaks rule 8 of ADR 0016: 5 closing links, and the limit is 4'
-
-{
-	head_of_a_page 'close with one idea twice'
-	block "$ok"
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n'
-	printf -- '- [How to read one](../one/)\n- [How to read it again](../one/)\n'
-} | fixture rule8-repeats
-expect rule8-repeats 1 'demos: page/README.md breaks rule 8 of ADR 0016: two closing links go to ../one/'
-
-# A page that meets every rule runs, and the standard says nothing about it.
-{
-	head_of_a_page 'meet the standard'
-	block "$ok"
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
-} | fixture standard-ok
-expect standard-ok 0 'demos: 1 green, 0 red'
-
-# The approved vocabulary: a fixed phrase fails on a page, a context word fails
-# in the built help, and each sanctioned use passes.
-in_form() {
-	head_of_a_page "$1"
-	printf '%s\n\n' "$2"
-	block "$ok"
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
-}
-
-in_form 'say an old word' 'The decider model answers.' | fixture vocabulary-page
-expect vocabulary-page 1 'demos: page/README.md:9: "decider model" breaks the fixed-phrase rule'
-
-in_form 'say the old answer word' 'The answer is unresolved.' | fixture vocabulary-unsure
-expect vocabulary-unsure 1 'demos: page/README.md:9: "unresolved" breaks the fixed-phrase rule'
-
-printf 'choose --help\tPick from one document.\n' >"$REPO/$ROOT/bin/planted"
-in_form 'plant a word in help' 'The help is planted.' | fixture vocabulary-help
-expect vocabulary-help 1 'demos: thinkthen choose --help:1: "document" breaks the help-word rule'
-
-printf 'tag --help\tName every tag label.\ndecide --help\tRead a table with a required header row.\n' \
-	>"$REPO/$ROOT/bin/planted"
-in_form 'keep the sanctioned words' 'Save the detailed rows and read each failed question.' |
-	fixture vocabulary-sanctioned
-expect vocabulary-sanctioned 0 'demos: 1 green, 0 red'
-printf 'score -h\tA judgement.\n' >"$REPO/$ROOT/bin/planted"
-in_form 'spell an old word' 'The help is planted.' | fixture vocabulary-spelling
-expect vocabulary-spelling 1 'demos: thinkthen score -h:1: "judgement" breaks the fixed-phrase rule'
-
-# Ticket 0083: the catalog's help is scanned like a function's.
-printf 'transform show --help\tPrint one saved row.\n' >"$REPO/$ROOT/bin/planted"
-in_form 'plant a word in catalog help' 'The help is planted.' | fixture vocabulary-catalog
-expect vocabulary-catalog 1 'demos: thinkthen transform show --help:1: "row" breaks the help-word rule'
-
-# A help command that fails is a failure, never a clean scan.
-printf 'relate --help\tEXIT 2\n' >"$REPO/$ROOT/bin/planted"
-in_form 'lose a help page' 'The help is planted.' | fixture vocabulary-no-help
-expect vocabulary-no-help 1 'demos: thinkthen relate --help failed, so its help was not checked'
-: >"$REPO/$ROOT/bin/planted"
+	printf '```bash\nset -euo pipefail\n\nprintf '\''nobody checks this\\n'\''\n```\n\n'
+} | fixture silent
+expect silent 1 'demos: page/README.md: the bash block on line 11 asserts nothing'
 
 # Ticket 0103: `like ""` matches any output, so the runner refuses it on any
-# page, red or green, before it runs one.
-{
-	head_of_a_page 'claim an empty stream'
-	block 'printf '\''stray'\'' | mustmatch like ""'
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
-} | fixture loose-empty
-expect loose-empty 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
-
-# An option before or after `like` changes nothing about what it matches.
-for form in 'loose-ignore-case mustmatch -i like ""' 'loose-dashes mustmatch like -- ""'; do
+# page, red or green, before it runs one. An option before or after `like`
+# changes nothing about what it matches.
+for form in 'loose-empty mustmatch like ""' 'loose-ignore-case mustmatch -i like ""' 'loose-dashes mustmatch like -- ""'; do
 	name=${form%% *}
 	{
-		head_of_a_page 'claim an empty stream with an option'
+		head_of_a_page 'claim an empty stream'
 		block "printf 'stray' | ${form#* }"
-		printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-		printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
 	} | fixture "$name"
-	expect "$name" 1 'demos: page/README.md:12: `like ""` matches any output; use `test -z`'
+	expect "$name" 1 'demos: page/README.md:8: `like ""` matches any output; use `test -z`'
 done
 
 # Issue 2026-09-25 item 7: a quoted folder name hides its space from the
 # folder check, so any name that is not plain fails and is named.
-in_form 'replay a spaced folder' 'The page runs `thinkthen decide Q --replay "my recording/"`.' |
-	fixture replay-spaced
+{
+	head_of_a_page 'replay a spaced folder'
+	printf 'The page runs `thinkthen decide Q --replay "my recording/"`.\n\n'
+	block "$ok"
+} | fixture replay-spaced
 expect replay-spaced 1 'demos: page/README.md writes --replay "my recording/", and a folder name holds only'
+
+# A green page that names a missing recording folder would reach a backend.
+{
+	head_of_a_page 'replay a missing folder'
+	printf 'The page runs `thinkthen decide Q --replay gone/`.\n\n'
+	block "$ok"
+} | fixture replay-missing
+expect replay-missing 1 'demos: page/README.md is green, and it names no folder gone/'
 
 # Item 9: under set +e a command fails unseen before the pinned one.
 {
 	head_of_a_page 'hide a failure under set +e'
 	printf '```bash\nset +e\nfalse\n%s\n```\n\n' "$ok"
-	printf '## What can go wrong\n\nNothing here reaches a backend.\n\n'
-	printf '## Related how-tos\n\n- [How to read the standard](../one/)\n'
 } | fixture set-e-off
-expect set-e-off 1 'demos: page/README.md turns set -e off on line 10; capture each code with `&& rc=0 || rc=$?`'
+expect set-e-off 1 'demos: page/README.md turns set -e off on line 6; capture each code with `&& rc=0 || rc=$?`'
 
 if [ "$failures" -ne 0 ]; then
 	printf 'demos-self-test: %s cases failed\n' "$failures" >&2

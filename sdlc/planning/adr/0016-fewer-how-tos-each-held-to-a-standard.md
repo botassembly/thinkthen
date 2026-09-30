@@ -7,7 +7,7 @@ Ian asked that the demos be the best they can be: no two that teach the same thi
 
 ## The standard for a how-to
 
-ADR 0011 gives the form. These limits come on top of it, and `sdlc/scripts/demos` checks every one that a script can check.
+ADR 0011 gives the form. These limits come on top of it. Amended 2026-09-30 by ticket 0312 under Ian's ruling 8: the limits are writing guidance, and `sdlc/scripts/demos` checks only that a green page and each of its `bash` blocks assert.
 
 1. A page holds at most 120 lines and 900 words. A longer page is two pages, or it still holds an argument.
 2. The first fenced block starts by line 20, and its first `thinkthen` line sits within five lines of the block's start. Nothing is set up before the first result: no `mktemp`, no `trap`, no heredoc.

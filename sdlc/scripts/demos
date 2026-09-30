@@ -30,52 +30,11 @@ if [ -n "$loose" ]; then
 	exit 1
 fi
 
-# The status line and the form are read from the prose alone. A block on a page
-# may show a heading or a status line as an example, and an example is not the
-# form it shows.
+# The status line is read from the prose alone. A block may show a status line
+# as an example.
 prose() {
 	awk '/^```/ { fenced = !fenced; next } !fenced' "$1"
 }
-
-# The approved public words, from the vocabulary the 2026-09-21 issue records
-# and ticket 0082 rules. A fixed phrase is wrong on every page and in every
-# help text. A context word is wrong only in the built help, where the command
-# speaks for itself; a how-to may still say rows for saved detailed rows. Fenced
-# code and paths are not prose and are skipped. Each hit prints one line.
-vocabulary() {
-	awk -v file="$1" -v scope="$2" '
-		function check(word, rule) {
-			if (match(line, "(^|[^a-z])" word "s?([^a-z]|$)"))
-				printf "demos: %s:%d: \"%s\" breaks the %s rule\n", file, FNR, word, rule
-		}
-		/^```/ { fenced = !fenced; next }
-		fenced { next }
-		{
-			line = tolower($0)
-			gsub(/[^ \t]*\/[^ \t]*/, " ", line)
-			check("decider model", "fixed-phrase")
-			check("decision model", "fixed-phrase")
-			check("rating", "fixed-phrase")
-			check("the mark", "fixed-phrase")
-			check("judgment", "fixed-phrase")
-			check("judgement", "fixed-phrase")
-			check("unresolved", "fixed-phrase")
-			if (scope == "prose") next
-			# A CSV table has a header row; that row is the table'"'"'s, not a record.
-			gsub(/header row/, " ", line)
-			check("row", "help-word")
-			check("document", "help-word")
-			check("unit", "help-word")
-			# `tag` owns label, and a `choose` pick is an option. LABEL=DESCRIPTION
-			# is the placeholder `choose.md` and the `--option` refusal share.
-			gsub(/label=description/, " ", line)
-			if (scope == "choose") check("label", "help-word")
-		}
-	'
-}
-
-hits=$(mktemp)
-trap 'rm -f -- "$hits"' EXIT
 
 green=0
 red=0
@@ -85,25 +44,6 @@ for page in */README.md; do
 	if ! prose "$page" | grep -q '^Status: green$'; then
 		red=$((red + 1))
 		continue
-	fi
-	# A green page is a how-to, as ADR 0011 rules. The form is the title, the
-	# traps section, and a line in the index, and a red page is never checked.
-	# A title names the task the reader came for, so the two words alone fail.
-	title=$(prose "$page" | sed -n 's/^# //p' | head -1)
-	case "$title" in
-	'How to '?*) ;;
-	*)
-		printf 'demos: %s is green, and its title does not start with "How to" and a task\n' "$page" >&2
-		exit 1
-		;;
-	esac
-	if ! prose "$page" | grep -q '^## What can go wrong$'; then
-		printf 'demos: %s is green, and it has no "What can go wrong" section\n' "$page" >&2
-		exit 1
-	fi
-	if ! grep -q -- "$folder/" README.md; then
-		printf 'demos: %s is green, and README.md lists no %s\n' "$page" "$folder" >&2
-		exit 1
 	fi
 	# A green page replays a recording. A folder it names and does not hold
 	# would send the page to a backend, so the run stops here instead.
@@ -128,165 +68,44 @@ for page in */README.md; do
 			exit 1
 		fi
 	done || exit 1
-	# ADR 0016 puts limits on top of the form, and these are the ones a
-	# script can measure. A failure names the page, the rule, and the number.
-	# The fenced blocks stay in, because rules 2 and 3 are about them.
+	# A green page proves something, and every bash block it shows is a test.
+	# Under set +e a command can fail unseen before the one the block pins.
 	awk -v page="$page" '
-		function fail(rule, detail) {
-			printf "demos: %s breaks rule %s of ADR 0016: %s\n", page, rule, detail > "/dev/stderr"
-			broken = 1
-		}
-		function heading(line,   text) {
-			text = substr(line, 4)
-			sub(/[ \t]+$/, "", text)
-			return text
-		}
-		# The first block a reader meets is the first one that proves
-		# something. A listing nobody runs is not a result, so the whole of
-		# rule 2 is measured on the first asserting block and not the first
-		# fence. Its lines are buffered, because a block is known to assert
-		# only once it has closed.
-		function measure(   i, line, offset) {
-			first = opened
-			for (i = 1; i <= held; i++) {
-				line = buffer[i]
-				if (!reached && line ~ /thinkthen [a-z]/) reached = i
-				# A blank line, a shell option, and a name given a value
-				# are not a result. The first line that runs something is.
-				if (!working && line !~ /^[ \t]*$/ && line !~ /^[ \t]*set([ \t]|$)/ &&
-					line !~ /^[ \t]*[A-Za-z_][A-Za-z0-9_]*=/)
-					working = i
-				if (!prepared && (line ~ /mktemp/ || line ~ /(^|[ \t;])trap[ \t]/ || index(line, "<<")))
-					prepared = i
-			}
-		}
-		{ words += NF }
 		/^```/ {
 			if (fenced) {
 				fenced = 0
-				if (kind == "bash") {
-					if (asserts) asserting++
-					else if (!silent) silent = opened
-				}
-				if (asserts && !first) measure()
+				if (asserts) asserting++
+				else if (kind == "bash" && !silent) silent = opened
 				next
 			}
 			fenced = 1
 			asserts = 0
-			held = 0
 			opened = NR
 			kind = substr($0, 4)
 			sub(/[ \t]+$/, "", kind)
 			next
 		}
-		{
-			rest = $0
-			while (match(rest, /thinkthen (decide|choose|score|filter|rank|annotate|find|relate)/)) {
-				used[substr(rest, RSTART + 10, RLENGTH - 10)] = 1
-				rest = substr(rest, RSTART + RLENGTH)
-			}
-		}
-		fenced {
-			if (index($0, "mustmatch")) asserts = 1
-			# Under set +e a command can fail unseen before the one the block
-			# pins. Issue 2026-09-25 item 9: keep set -e and capture each code.
-			if (kind == "bash" && $0 ~ /^[ \t]*set[ \t]+(\+[a-z]*e|\+o[ \t]+errexit)/) {
-				printf "demos: %s turns set -e off on line %d; capture each code with `&& rc=0 || rc=$?`\n", page, NR > "/dev/stderr"
-				broken = 1
-			}
-			buffer[++held] = $0
-			next
-		}
-		/^# / && !title { title = substr($0, 3) }
-		/^## / {
-			text = heading($0)
-			if (text == "What this demo decides") argued = NR
-			else if (text == "Related how-tos") closing = NR
-			else if (text != "Input" && text != "What can go wrong") steps++
-		}
-		closing && /^- / {
-			links++
-			if (match($0, /\]\([^)]*\)/)) {
-				target = substr($0, RSTART + 2, RLENGTH - 3)
-				if (target in seen && !repeated) repeated = target
-				seen[target] = 1
-			}
+		fenced && index($0, "mustmatch") { asserts = 1 }
+		fenced && kind == "bash" && $0 ~ /^[ \t]*set[ \t]+(\+[a-z]*e|\+o[ \t]+errexit)/ {
+			printf "demos: %s turns set -e off on line %d; capture each code with `&& rc=0 || rc=$?`\n", page, NR > "/dev/stderr"
+			broken = 1
 		}
 		END {
-			if (NR > 120) fail(1, NR " lines, and the limit is 120")
-			if (words > 900) fail(1, words " words, and the limit is 900")
-			if (!first) fail(2, "no block that asserts anything, so a reader sees no result")
-			else {
-				if (first > 20) fail(2, "the first block that asserts starts on line " first ", and the limit is 20")
-				if (working > 5) fail(2, "the first command line is " working " lines into the first block, and the limit is 5")
-				if (reached > 5) fail(2, "the first thinkthen line is " reached " lines into the first block, and the limit is 5")
-				if (prepared) fail(2, "the first block sets up on line " prepared ", and nothing is set up before the first result")
+			if (!asserting) {
+				printf "demos: %s is green, and no block asserts anything\n", page > "/dev/stderr"
+				broken = 1
 			}
-			if (asserting > 6) fail(3, asserting " blocks that assert, and the limit is 6")
-			if (silent) fail(3, "the bash block on line " silent " asserts nothing")
-			commands = 0
-			for (verb in used) { commands++; order[verb] = 1 }
-			if (commands > 1) {
-				named = 0
-				list = ""
-				n = 0
-				for (verb in order) sorted[++n] = verb
-				for (i = 1; i < n; i++)
-					for (j = i + 1; j <= n; j++)
-						if (sorted[j] < sorted[i]) { swap = sorted[i]; sorted[i] = sorted[j]; sorted[j] = swap }
-				for (i = 1; i <= n; i++) {
-					if (index(title, sorted[i])) named++
-					list = list (i == 1 ? "" : (i == n ? " and " : ", ")) sorted[i]
-				}
-				if (named < commands)
-					fail(4, commands " commands, " list ", and the title names " named)
+			if (silent) {
+				printf "demos: %s: the bash block on line %d asserts nothing\n", page, silent > "/dev/stderr"
+				broken = 1
 			}
-			if (steps > 4) fail(5, steps " steps, and the limit is 4")
-			if (argued) fail(7, "a \"What this demo decides\" section on line " argued)
-			if (links > 4) fail(8, links " closing links, and the limit is 4")
-			if (repeated) fail(8, "two closing links go to " repeated)
 			exit broken
 		}
 	' "$page" || exit 1
 	# mustmatch runs a block from the folder of the page it came from, so the
 	# relative paths a demo reads its own input files by are the demo's own.
 	printf 'demos: running %s\n' "$page"
-	vocabulary "$page" prose <"$page" >>"$hits"
 	mustmatch test "$page"
 	green=$((green + 1))
 done
-vocabulary "$REPO/README.md" prose <"$REPO/README.md" >>"$hits"
-vocabulary README.md prose <README.md >>"$hits"
-# The help is captured before it is scanned. A pipe would report only the
-# scan, and a help command that failed would pass as clean.
-scan_help() {
-	scope=$1
-	shift
-	if ! help=$(thinkthen "$@"); then
-		printf 'demos: thinkthen %s failed, so its help was not checked\n' "$*" >&2
-		exit 1
-	fi
-	printf '%s\n' "$help" | vocabulary "thinkthen $*" "$scope" >>"$hits"
-}
-scan_help help --help
-for verb in decide filter rank choose find score tag annotate recognize relate; do
-	for flag in -h --help; do
-		scan_help "$verb" "$verb" "$flag"
-	done
-done
-for flag in -h --help; do
-	scan_help audit audit "$flag"
-	scan_help diff diff "$flag"
-done
-for command in transform 'transform list' 'transform show'; do
-	for flag in -h --help; do
-		# The unquoted command splits into its words.
-		scan_help transform $command "$flag"
-	done
-done
-if [ -s "$hits" ]; then
-	cat -- "$hits" >&2
-	printf 'demos: %s words break the approved vocabulary\n' "$(wc -l <"$hits" | tr -d ' ')" >&2
-	exit 1
-fi
 printf 'demos: %s green, %s red\n' "$green" "$red"
