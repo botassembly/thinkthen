@@ -57,7 +57,10 @@ fn relate_reads_the_names_recognize_found() {
         .collect();
     lines.push(r#"{"name":"Ana Lima","text":"not this","kind":"PER"}"#.to_owned());
     std::fs::write(folder.join("entities"), lines.join("\n")).expect("entities");
-    let plan = thinkthen(&["relate", "works_for=PER:ORG", "--plan", "--jsonl"], "entities");
+    let plan = thinkthen(
+        &["relate", "works_for=PER:ORG", "--plan", "--jsonl"],
+        "entities",
+    );
     let body = plan["requests"][0]["body_utf8"].as_str().expect("body");
     let state: serde_json::Value = serde_json::from_str(body).expect("json");
     let names = state["state"]["entities"].as_array().expect("entities");
