@@ -107,10 +107,22 @@ function uncited(text) {
     .replace(/\s+The batching design's section \d+ puts them there\./g, '');
 }
 
-// A surface cell drops a clause, split at a semicolon, that cites a ticket.
-// Such a clause is a migration note, such as "remain for source callers until
-// ticket 0291".
-const spelling = (cell) => cell.split(/;\s+/).filter((c) => !CITES_TICKET.test(c)).join('; ');
+// A surface cell drops one form of migration note: a clause that ends
+// "until ticket 0291" loses those words and keeps the rest. Each drop is
+// returned in `dropped`, and check-settings prints it and fails on one it
+// has not been told to expect. A cell a drop empties fails the parse. Any
+// other ticket cited in a cell stays, so check-settings fails on it.
+const UNTIL_TICKET = new RegExp(String.raw`(?:^|\s+)until ${TICKETS}$`, 'i');
+function spelling(cell, setting, surface, dropped) {
+  const kept = cell.split(/;\s+/).map((clause) => {
+    const m = clause.match(UNTIL_TICKET);
+    if (!m) return clause;
+    dropped.push({ setting, surface, clause: m[0].trim() });
+    return clause.slice(0, m.index);
+  }).filter((clause) => clause.trim()).join('; ');
+  if (cell.trim() && !kept.trim()) throw new Error(`settings.md: ${setting}, ${surface}: dropping "until ticket" notes leaves the cell empty`);
+  return kept;
+}
 
 // What a setting does, with its bracketed and final citations taken out. A
 // ticket cited anywhere else stays, so the check fails loudly on it.
@@ -146,6 +158,7 @@ export function parseSettings(text) {
   if (head.join('|') !== COLUMNS.join('|')) {
     throw new Error(`settings.md: the table's columns changed.\n  want: ${COLUMNS.join(', ')}\n  have: ${head.join(', ')}`);
   }
+  const dropped = [];
   const rows = tableLines.slice(2).map((line, i) => {
     const cells = cellsOf(line);
     if (cells.length !== COLUMNS.length) {
@@ -160,7 +173,7 @@ export function parseSettings(text) {
       does: meaning(does),
       default: { value: dflt, note: '', source },
       allowed,
-      on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : spelling(surfaces[j])])),
+      on: Object.fromEntries(SURFACES.map((s, j) => [s, NO_EFFECT.test(surfaces[j]) ? ABSENT : spelling(surfaces[j], name, s, dropped)])),
     };
   });
   const ids = new Set();
@@ -174,6 +187,7 @@ export function parseSettings(text) {
     precedence: uncitedBlocks(blocksOf(parts.get('Precedence'))),
     howToRead: uncitedBlocks(blocksOf(parts.get('How to read a cell'))),
     rows,
+    dropped,
   };
 }
 

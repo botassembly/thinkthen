@@ -57,7 +57,7 @@ const EXITS = [
   [3, 'unsure', 'A single piece of evidence under decide or choose is not sure. Under find --none, nothing fits.'],
   [4, 'broken', 'The backend failed, or sent a reply the adapter refused. Also a missing or empty key, and evidence past the token limit.'],
   [5, 'broken', 'A local failure: a file or a saved answer. Also an unreadable question file, a band in a question file for choose, tag, or filter, and a threshold in a rank question file.'],
-  [6, 'broken', 'annotate or relate only. The run read all its input, and one or more questions failed. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
+  [6, 'broken', 'annotate or relate only. The run finished with at least one valid and one failed question. It prints no diagnostic. annotate marks each failed question in its result. relate prints only the edges that succeeded.'],
   [7, 'broken', 'annotate --jsonl --details --batch 1 --on-error continue finished, and at least one record had a missing-pointer error row.'],
   [70, 'broken', 'A defect in the tool.'],
 ];

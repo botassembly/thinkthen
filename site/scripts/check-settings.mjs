@@ -24,6 +24,21 @@ const text = (html) => squash(html.replace(/<[^>]*>/g, ' ')
   .replace(/&#39;|&#x27;/g, "'").replace(/&amp;/g, '&'));
 
 const problems = [];
+
+// Each migration note the parse drops from a surface cell prints here. A
+// drop this list does not name fails, so a new one reaches review. Remove an
+// entry when the table drops the note itself.
+const EXPECTED_DROPS = [
+  { setting: 'Deadline and cancel', surface: 'Rust', clause: 'until ticket 0291' },
+];
+for (const d of parsed.dropped) {
+  const expected = EXPECTED_DROPS.some((e) => e.setting === d.setting && e.surface === d.surface && e.clause === d.clause);
+  console.log(`check-settings: dropped "${d.clause}" from ${d.setting}, ${d.surface}${expected ? '' : ', which EXPECTED_DROPS does not name'}`);
+  if (!expected) problems.push(`${d.setting}, ${d.surface}: the parse dropped "${d.clause}", and EXPECTED_DROPS does not name it`);
+}
+for (const e of EXPECTED_DROPS) {
+  if (!parsed.dropped.some((d) => e.setting === d.setting && e.surface === d.surface && e.clause === d.clause)) problems.push(`EXPECTED_DROPS names "${e.clause}" in ${e.setting}, ${e.surface}, and the parse no longer drops it`);
+}
 for (const name of LEFT_OUT) if (!parsed.rows.some((r) => r.name === name)) problems.push(`LEFT_OUT names ${name}, and the table has no such setting`);
 const expect = (where, body, want) => {
   if (want && !body.includes(squash(plain(want)))) problems.push(`${where}: the page does not say "${plain(want).slice(0, 80)}"`);
