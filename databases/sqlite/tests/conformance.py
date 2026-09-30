@@ -254,10 +254,9 @@ def check(case: dict, backend: Backend) -> None:
         same("result", edges, answers[0]["bare"])
     else:
         raise AssertionError(f"no SQL form is written for the {kind} kind")
-    if keyed:
-        # ADR 0111: the case ran on the question store, one row per good answer.
-        keys = {key for one in exchanges for key in question_keys(served, one["request"])}
-        same("stored answers", stored(env["THINKTHEN_CACHE"]), len(keys) - success.get("failed_questions", 0))
+    # ADR 0111: the case ran on the question store, one row per good answer.
+    keys = {key for one in exchanges for key in question_keys(served, one["request"])}
+    same("stored answers", stored(env["THINKTHEN_CACHE"]), len(keys) - success.get("failed_questions", 0))
     return None
 
 
