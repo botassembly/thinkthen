@@ -127,14 +127,33 @@ fn names_are_checked_before_they_are_looked_up() {
     );
 }
 
+/// The section 5 refusal for one backend, variable, owner and other backend.
+fn refusal(name: &str, variable: &str, owner: &str, other: &str) -> Option<String> {
+    Some(format!(
+        "backend `{name}` reads `{variable}`, the key of backend `{owner}`, which never goes to the address of backend `{other}`"
+    ))
+}
+
+/// One guard case: the backend, the address, and the refusal or none.
+type GuardCase<'a> = (&'a str, Option<&'a str>, Option<String>);
+
+/// Assert each case against the guard.
+fn assert_guard(cases: &[GuardCase<'_>]) {
+    let configured = configured();
+    for (name, url, expected) in cases {
+        let choice = choose(&[(Some(name), *url)], &configured).expect("a known backend");
+        let backend = choice.backend(None, "unused").expect("an address");
+        assert_eq!(
+            choice.guard(&backend).err().map(|error| error.to_string()),
+            *expected,
+            "{name} {url:?}"
+        );
+    }
+}
+
 #[test]
 fn a_built_in_key_never_goes_to_the_other_built_in_host() {
     let configured = configured();
-    let refusal = |name: &str, variable: &str, owner: &str, other: &str| {
-        Some(format!(
-            "backend `{name}` reads `{variable}`, the key of backend `{owner}`, which never goes to the address of backend `{other}`"
-        ))
-    };
     // (backend, address, refusal)
     let cases = [
         (
@@ -189,6 +208,24 @@ fn a_built_in_key_never_goes_to_the_other_built_in_host() {
         ("typesafe", None, None),
         ("second", None, None),
         ("local-d1", Some("https://api.liquid.ai/decisions/v1"), None),
+    ];
+    assert_guard(&cases);
+    let unnamed = choose(
+        &[(None, Some("https://api.liquid.ai/decisions/v1"))],
+        &configured,
+    )
+    .expect("unnamed");
+    let backend = unnamed.backend(None, "m").expect("an address");
+    assert_eq!(
+        unnamed.guard(&backend),
+        Ok(()),
+        "THINKTHEN_API_KEY is no built-in's variable"
+    );
+}
+
+#[test]
+fn the_ollama_key_stays_off_other_built_in_hosts_and_loopback_is_no_built_in_host() {
+    assert_guard(&[
         // ADR 0115: `OLLAMA_API_KEY` never goes to another built-in's host,
         // and a loopback built-in base is no other built-in's host.
         (
@@ -211,27 +248,7 @@ fn a_built_in_key_never_goes_to_the_other_built_in_host() {
         ("liquid", Some("http://localhost:8080/v1"), None),
         ("liquid", Some("http://localhost:11434/v1"), None),
         ("typesafe", Some("http://localhost:11434/v1"), None),
-    ];
-    for (name, url, expected) in cases {
-        let choice = choose(&[(Some(name), url)], &configured).expect("a known backend");
-        let backend = choice.backend(None, "unused").expect("an address");
-        assert_eq!(
-            choice.guard(&backend).err().map(|error| error.to_string()),
-            expected,
-            "{name} {url:?}"
-        );
-    }
-    let unnamed = choose(
-        &[(None, Some("https://api.liquid.ai/decisions/v1"))],
-        &configured,
-    )
-    .expect("unnamed");
-    let backend = unnamed.backend(None, "m").expect("an address");
-    assert_eq!(
-        unnamed.guard(&backend),
-        Ok(()),
-        "THINKTHEN_API_KEY is no built-in's variable"
-    );
+    ]);
 }
 
 #[test]

@@ -242,12 +242,10 @@ proptest! {
     }
 }
 
-/// Each description form under each backend form (ADR 0115 section 3): a
-/// string, an object with `what` and other fields, an object without a usable
-/// `what`, a list, an empty object, null, and absent. `Authored` keeps today's
-/// bytes for every backend but `ollama`; `Text` is the Ollama workaround.
-#[test]
-fn each_description_travels_as_its_backend_form_writes_it() {
+/// (question file, verb, authored questions, text questions) for each
+/// description form: a string, an object with `what` and other fields, an
+/// object without a usable `what`, a list, an empty object, null, and absent.
+fn forms() -> [(String, Verb, String, String); 8] {
     const ALL: &str = r#"{"s":"Text.","o":{"what":"Obj","not_for":"x","examples":["e"]},"n":{"k":1},"l":["x",1],"e":{},"z":null}"#;
     let tag = |label: &str, criteria: &str| {
         format!(
@@ -266,7 +264,7 @@ fn each_description_travels_as_its_backend_form_writes_it() {
     let authored_tag = r#""q1":{"type":"noul","instructions":["Which?",{"label":"s","description":"Text."}],"criteria":{"true":"Text."}},"q2":{"type":"noul","instructions":["Which?",{"label":"o","description":{"what":"Obj","not_for":"x","examples":["e"]}}],"criteria":{"true":{"what":"Obj","not_for":"x","examples":["e"]}}},"q3":{"type":"noul","instructions":["Which?",{"label":"n","description":{"k":1}}],"criteria":{"true":{"k":1}}},"q4":{"type":"noul","instructions":["Which?",{"label":"l","description":["x",1]}],"criteria":{"true":["x",1]}},"q5":{"type":"noul","instructions":["Which?",{"label":"e","description":{}}],"criteria":{"true":{}}},"q6":{"type":"noul","instructions":["Which?",{"label":"z"}]}"#;
     let plain_tag = r#""q1":{"type":"noul","instructions":"Which?\n\nDetermine whether the label \"a\" applies to this item."},"q2":{"type":"noul","instructions":"Which?\n\nDetermine whether the label \"b\" applies to this item."}"#;
     // (question file, verb, authored questions, text questions)
-    let cases: [(String, Verb, String, String); 8] = [
+    [
         (
             r#"{"decide":"Refund?","true":"Money back.","false":{"what":"No money","not_for":"credit","examples":["denied"]}}"#.to_owned(),
             Verb::Decide,
@@ -315,8 +313,16 @@ fn each_description_travels_as_its_backend_form_writes_it() {
             r#""q1":{"type":"score","instructions":"How?","criteria":["Text.",{"what":"Obj","not_for":"x","examples":["e"]},{"what":"  ","k":1},["x",1],{},{}]}"#.to_owned(),
             r#""q1":{"type":"score","instructions":"How?","criteria":["Text.","Obj","{\"what\":\"  \",\"k\":1}","[\"x\",1]","e","z"]}"#.to_owned(),
         ),
-    ];
-    for (index, (file, verb, authored, text)) in cases.into_iter().enumerate() {
+    ]
+}
+
+/// Each description form under each backend form (ADR 0115 section 3): a
+/// string, an object with `what` and other fields, an object without a usable
+/// `what`, a list, an empty object, null, and absent. `Authored` keeps today's
+/// bytes for every backend but `ollama`; `Text` is the Ollama workaround.
+#[test]
+fn each_description_travels_as_its_backend_form_writes_it() {
+    for (index, (file, verb, authored, text)) in forms().into_iter().enumerate() {
         let plan = file_plan(&file, verb);
         for (form, questions) in [
             (Descriptions::Authored, authored),
