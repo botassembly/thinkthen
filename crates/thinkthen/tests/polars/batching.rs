@@ -182,9 +182,10 @@ fn assert_observed(listener: &Listener, requests: &[Recorded], observed: &Seen) 
         let request = requests
             .iter()
             .find(|request| {
-                serde_json::from_slice::<Value>(&request.body).expect("request JSON")["questions"]
-                    ["q1"]["instructions"]
-                    .as_str()
+                serde_json::from_slice::<Value>(&request.body)
+                    .expect("request JSON")
+                    .pointer("/questions/q1/instructions")
+                    .and_then(Value::as_str)
                     == Some(quoted.as_str())
             })
             .expect("quoted request");

@@ -20,7 +20,7 @@ import subprocess
 import tty
 
 binary = os.environ['THINKTHEN_BIN']
-hint = b'thinkthen: plan: request.state is the evidence; request.questions holds what you asked about it.\n'
+hint = b'thinkthen: plan: each question in request.questions quotes the evidence it asks about.\n'
 environment = {'HOME': os.environ['THINKTHEN_TEST_HOME']}
 args = [binary, 'decide', 'asks for a refund', '--plan', '--url', 'http://127.0.0.1:1/v1']
 
