@@ -3,12 +3,12 @@
 //! Only `__next__` advances Python. The worker receives owned text through a
 //! zero-slot handoff, and the core planner owns its bounded request window.
 
-use std::sync::Mutex;
 use std::sync::mpsc::{Receiver, RecvTimeoutError, Sender, SyncSender, channel, sync_channel};
+use std::sync::{Arc, Mutex};
 use std::thread::{self, JoinHandle};
 use std::time::Duration;
 
-use pyo3::exceptions::PyStopIteration;
+use pyo3::exceptions::{PyKeyboardInterrupt, PyStopIteration};
 use pyo3::prelude::*;
 use thinkthen::{
     Answer, BatchSetting, CallOptions, CancelToken, Error, Facts, Judgment, Probabilities,
@@ -20,7 +20,10 @@ use crate::engine::{Arg, Engine, Held, answer, batch};
 use crate::input::{controls, text};
 use crate::result::python_facts;
 use crate::tally::PyTally;
-use crate::worker::Controls;
+use crate::worker::{
+    Controls, Failure, ReceiptState, WorkerError, attach_receipt, finish_stream_receipt,
+    stream_receipt,
+};
 use crate::{caught, defect, guard, raise, raised};
 
 const TICK: Duration = Duration::from_millis(50);
@@ -74,6 +77,7 @@ fn run(
     input: Input,
     sender: Sender<Event>,
     tally: Option<thinkthen::Tally>,
+    receipt: Arc<ReceiptState>,
 ) {
     let started = tally.as_ref().map(thinkthen::Tally::start);
     let caller = controls.token;
@@ -91,11 +95,13 @@ fn run(
     let options = match result {
         Ok(options) => options,
         Err(error) => {
+            finish_stream_receipt(&receipt, None, Some(error.failure()), false);
             let _ = sender.send(Event::Failed(error));
             let _ = sender.send(Event::End(None));
             return;
         }
     };
+    let mut failure: Option<Failure> = None;
     let facts = if verb == "decide" || verb == "filter" {
         let mut stream = engine.decide_many_with(asked.decision(), input, options);
         for row in stream.by_ref() {
@@ -120,6 +126,7 @@ fn run(
                     }
                 }
                 Err(error) => {
+                    failure = Some(error.failure());
                     let _ = sender.send(Event::Failed(error));
                     break;
                 }
@@ -144,6 +151,7 @@ fn run(
                     }
                 }
                 Err(error) => {
+                    failure = Some(error.failure());
                     let _ = sender.send(Event::Failed(error));
                     break;
                 }
@@ -153,9 +161,11 @@ fn run(
     };
     if let (Some(started), Some(facts)) = (started, facts.as_ref()) {
         if let Err(error) = started.finish(facts) {
+            failure = Some(error.failure());
             let _ = sender.send(Event::Failed(error));
         }
     }
+    finish_stream_receipt(&receipt, facts.as_ref(), failure, false);
     let _ = sender.send(Event::End(facts));
 }
 
@@ -166,6 +176,7 @@ pub(crate) struct PyStream {
     events: Mutex<Receiver<Event>>,
     worker: Option<JoinHandle<()>>,
     stop: CancelToken,
+    receipt: Arc<ReceiptState>,
     facts: Option<Facts>,
     done: bool,
 }
@@ -205,11 +216,20 @@ impl PyStream {
                     Ok(Event::Need) => {
                         let item = self.source.bind(py).call_method0("__next__");
                         let next = match item {
-                            Ok(item) => Some(text(&item)?),
+                            Ok(item) => match text(&item) {
+                                Ok(text) => Some(text),
+                                Err(error) => {
+                                    self.stop.cancel();
+                                    self.input.take();
+                                    self.finish(py);
+                                    return Err(error);
+                                }
+                            },
                             Err(error) if error.is_instance_of::<PyStopIteration>(py) => None,
                             Err(error) => {
                                 self.stop.cancel();
                                 self.input.take();
+                                self.finish(py);
                                 return Err(error);
                             }
                         };
@@ -252,12 +272,17 @@ impl PyStream {
                         if let Err(error) = py.check_signals() {
                             self.stop.cancel();
                             self.input.take();
-                            return Err(raise(
-                                py,
-                                thinkthen::ErrorKind::Cancelled,
-                                &format!("the stream was interrupted: {error}"),
-                                false,
-                            ));
+                            if error.is_instance_of::<PyKeyboardInterrupt>(py) {
+                                let stopped = raise(
+                                    py,
+                                    thinkthen::ErrorKind::Cancelled,
+                                    "the stream was interrupted; no new request starts, and sent requests end on their own",
+                                    false,
+                                );
+                                attach_receipt(py, &stopped, Some(&self.receipt));
+                                return Err(stopped);
+                            }
+                            return Err(error);
                         }
                     }
                 }
@@ -328,6 +353,8 @@ pub(crate) fn prepare(
     let (incoming, source_rx) = sync_channel(0);
     let (events_tx, events_rx) = channel();
     let stop = CancelToken::new();
+    let receipt = stream_receipt();
+    let work_receipt = Arc::clone(&receipt);
     let work_stop = stop.clone();
     let work_sender = events_tx.clone();
     let engine = engine.0.clone();
@@ -353,10 +380,12 @@ pub(crate) fn prepare(
                     source,
                     work_sender.clone(),
                     tally,
+                    Arc::clone(&work_receipt),
                 )
             })
             .is_none()
             {
+                finish_stream_receipt(&work_receipt, None, None, true);
                 let _ = work_sender.send(Event::Panicked);
             }
         })
@@ -369,6 +398,7 @@ pub(crate) fn prepare(
             events: Mutex::new(events_rx),
             worker: Some(worker),
             stop,
+            receipt,
             facts: None,
             done: false,
         },

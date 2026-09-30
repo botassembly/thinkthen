@@ -16,7 +16,7 @@ Ticket 0105 ported the Python surface from tag `surfaces-wave7-frozen-2026-09-24
 - `src/worker.rs` runs every call on a spawned worker (decision 6, amendment change 2). The worker owns its inputs and never touches Python. The calling thread releases the interpreter and waits in 50 ms ticks. Each tick reads the caller's token, then runs the signal handlers. On a stop it cancels the worker's own token and leaves the worker behind. `mpsc::Receiver` is not `Sync`, so the tick moves the receiver into the detached closure and back out (spike 255).
 - `src/input.rs` reads every argument into owned Rust values before the first send: texts, entities, the deadline, and the token.
 - `src/asked.rs` holds the question values and what `recognize` and `relate` return.
-- `src/engine.rs` holds `_Engine`. Four methods serve the verbs by shape: `ask` for one text, `many` for `decide_many` and `filter`, `order` for `rank` and `find`, and one each for `annotate`, `recognize`, and `relate`. The package names the verb. This kept production Rust under its 1,200-line budget.
+- `src/engine.rs` holds `_Engine`. Four methods serve the verbs by shape: `ask` for one text, `many` for `decide` and `filter`, `order` for `rank` and `find`, and one each for `annotate`, `recognize`, and `relate`. The package names the verb. This kept production Rust under its 1,200-line budget.
 - `thinkthen/__init__.py` composes question-file JSON from keywords, so parts and files make one question (decision 8). It holds `tt.Engine` and the module functions, which call the same methods on one lazy value over `default_engine()`.
 
 ## Decisions made while porting
@@ -35,7 +35,7 @@ Ticket 0105 ported the Python surface from tag `surfaces-wave7-frozen-2026-09-24
 
 Ticket 0106 ported the tag's `arrow.rs` into `src/arrow/` and the column and frame glue into `src/frame.rs`. Ian can overturn each point.
 
-- A column verb makes one engine call. `decide` and `decide_many` call `decide_many_with` once. `choose`, `score`, and `tag` call `annotate_with` once over a one-question set. A Polars `Series` gets a `Series` back through its own class, and any other Arrow column gets a list.
+- A column verb makes one engine call. `decide` calls `decide_many_with` once. `choose`, `score`, and `tag` call `annotate_with` once over a one-question set. A Polars `Series` gets a `Series` back through its own class, and any other Arrow column gets a list.
 - Frames are Polars only. `annotate(set, frame, on=)` calls `annotate_with` once and returns the frame with one column per question. The frame's own columns go back as aliases of the caller's batches, never copies.
 - Ticket 0136: the frame's schemas are copied, and question names checked against its columns, before any send. Widened cells and a Polars frame's tag cells take their text from `value_json`, as ADR 0047 item 10 says.
 - `recognize(frame, on=)` calls `recognize_with` once per text in Rust. The deadline is resolved once, at call start, into an instant, and each inner call gets `deadline_at` of it. `max_requests` caps each inner call, not the loop.

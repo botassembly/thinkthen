@@ -44,6 +44,8 @@ class Judge:
             call = native.ask(verb, asked, value, deadline_ms, token,
                               self._batch, self._context, tally)
             return _paired(call, verb) if verb in ("decide", "choose") else call
+        if isinstance(value, (bytes, bytearray)):
+            raise UsageError("the input is text, an ordered collection, a column, or an iterator")
         if isinstance(value, (set, frozenset)):
             raise UsageError("an unordered set cannot align records with answers")
         kind = _pandas(value)
@@ -53,7 +55,7 @@ class Judge:
                                 (hasattr(value, "__arrow_c_stream__") or
                                  hasattr(value, "__arrow_c_array__"))):
             if verb == "filter":
-                raise UsageError("filter reads records, not a column")
+                raise UsageError("filter, rank, find, and relate read a list of str, not a column, and annotate and recognize read a column only from a Polars or pandas frame with on=. Pass column.to_list()")
             call = _column(lambda selected, question, column, due, held:
                            native.ask(selected, question, column, due, held,
                                       self._batch, self._context, tally),
@@ -68,8 +70,7 @@ class Judge:
             return Stream(lambda: native._stream(verb, asked, iterator, self._batch,
                                                  self._context, deadline_ms, token, tally),
                           probability=self._probability)
-        if kind is not None:
-            value = list(iterator)  # pandas Index is eager and ordered.
+        value = list(iterator)  # Every reiterable ordered input is eager, including Index.
         if verb in ("decide", "filter"):
             call = native.many("decide_many" if verb == "decide" else verb,
                                asked, value, self._batch, self._context,

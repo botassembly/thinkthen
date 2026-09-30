@@ -1,9 +1,10 @@
 """ThinkThen from Python: ``import thinkthen as tt``.
 
-Ten verbs, ``decide_many``, ``details``, ``question``, and ``usage``. A call
-takes one ``str`` or a list, tuple, or other iterable of ``str``. ``None``
-means "not sure". ``decide``, ``choose``, ``score``, ``tag``, and
-``decide_many`` also take a Polars or pandas ``Series`` and give one back, and
+Ten verbs, ``details``, ``question``, ``plan``, and ``usage``. Omitting an input
+captures an immutable Judge. Applying it to an ordered collection is eager;
+only a true iterator returns a lazy Stream. ``None`` means "not sure".
+``decide``, ``choose``, ``score``, and ``tag`` also take a Polars or pandas
+``Series`` and give one back, and
 ``annotate`` and ``recognize`` take a Polars or pandas ``DataFrame`` with
 ``on=``. The engine makes one call over a column. A pandas answer keeps the
 caller's index and name, and a pandas frame gets new columns: one per question
@@ -135,11 +136,6 @@ def _configured(verb, asked, keywords):
     if "descriptions" in keywords:
         raise UsageError("put descriptions inside options, levels, or labels")
     fields = dict(keywords)
-    if "threshold" in fields:
-        fields["threshold"] = _threshold(fields["threshold"])
-    for key in ("options", "levels", "labels"):
-        if key in fields:
-            fields[key] = _labels(fields[key], bare_level_names=key == "levels")
     if not isinstance(asked, str):
         if not isinstance(asked, Question):
             raise UsageError(f"{verb} takes a question text or tt.question(), not a {type(asked).__name__}")
@@ -148,6 +144,11 @@ def _configured(verb, asked, keywords):
         repeated = _QUESTION_KEYS.intersection(fields)
         if repeated:
             raise UsageError(f"settings repeats `{sorted(repeated)[0]}` from the question or named arguments")
+    if "threshold" in fields:
+        fields["threshold"] = _threshold(fields["threshold"])
+    for key in ("options", "levels", "labels"):
+        if key in fields:
+            fields[key] = _labels(fields[key], bare_level_names=key == "levels")
     try:
         encoded = json.dumps(fields, allow_nan=False)
     except (TypeError, ValueError) as source:
@@ -355,6 +356,11 @@ class Engine:
 
     __slots__ = ("_engine", "_settings_json")
 
+    def __setattr__(self, name, value):
+        if hasattr(self, name):
+            raise AttributeError("an Engine's validated settings cannot be changed")
+        object.__setattr__(self, name, value)
+
     def __init__(self, *, base_url=None, model=None, throttle=None,
                  batch=None,
                  max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None,
@@ -422,6 +428,8 @@ class Engine:
         kind = _pandas(records)
         if kind == "Series":
             records = _marked(records, kind)
+        elif kind == "DataFrame":
+            raise UsageError("plan reads a complete list or text column, not a data frame")
         elif kind is not None:
             records = list(records)
         elif hasattr(records, "__arrow_c_stream__") or hasattr(records, "__arrow_c_array__"):
@@ -607,8 +615,8 @@ def details(question, text, **keywords):
     return _engine().details(question, text, **keywords)
 
 
-def filter(question, records=_MISSING, **keywords):
-    return _module_judged("filter", question, records, None, keywords)
+def filter(question, records=_MISSING, *, token=None, **keywords):
+    return _module_judged("filter", question, records, token, keywords)
 
 
 def _module_judged(verb, question, value, token, keywords):
