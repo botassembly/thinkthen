@@ -1,8 +1,8 @@
 # Demo record scripts write a live store beside their fixture
 
-Status: closed 2026-09-30 by ticket 0350. Found by ticket 0304 slice 5 while it deleted the old entries beside each demo's `thinkthen.jsonl`.
+Status: closed 2026-09-30 by ticket 0350 (`8f397e963`). Found by ticket 0304 slice 5 while it deleted the old entries beside each demo's `thinkthen.jsonl`.
 
-Resolution: paid by ticket 0350. Every `demos/*/record.sh` records into a scratch folder, copies its `thinkthen.sqlite` into `recording/`, and runs `thinkthen cache convert recording/`. A loopback run of demos 01 and 12 left only `thinkthen.jsonl` in `recording/`.
+Resolution: paid by ticket 0350 (`8f397e963`). Every `demos/*/record.sh` records into a scratch folder, copies its `thinkthen.sqlite` into `recording/`, and runs `thinkthen cache convert recording/`. A loopback run of demos 01 and 12 left only `thinkthen.jsonl` in `recording/`.
 
 Kind: debt
 

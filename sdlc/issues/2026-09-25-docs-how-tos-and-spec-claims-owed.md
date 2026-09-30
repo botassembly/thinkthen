@@ -1,4 +1,4 @@
-Status: Open for thirteen pages that can follow 0.1. Ticket 0350 wrote page 11 as how-to 48. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
+Status: Open for thirteen pages that can follow 0.1. Ticket 0350 (`8f397e963`) wrote page 11 as how-to 48. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
 
 Priority: ranked in `../planning/issue-priorities-2026-09-30.md`. Owner: a future docs ticket after 0.1; marketing for page 23.
 
