@@ -125,7 +125,7 @@ fn capturing(request: &Recorded) -> bool {
         (Some("case"), Some(id), Some("capture")) => id
             .split_once('-')
             .and_then(|(number, _)| number.parse::<u8>().ok())
-            .is_some_and(|number| matches!(number, 18 | 19 | 42..=50)),
+            .is_some_and(|number| matches!(number, 18 | 19 | 42..=50 | 53)),
         _ => false,
     }
 }
