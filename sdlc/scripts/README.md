@@ -6,8 +6,8 @@ The repository gate and its hand-run support scripts.
 | --- | --- |
 | `install` | Rung 0. Checks the gate tools, fetches the locked dependency closure, and fetches the advisory database |
 | `lint` | Rung 1. Runs the private-name check when `THINKTHEN_PRIVATE_NAMES` names a list outside the repository, then policy, page, size, agents-file size, dependency, format, Clippy, documentation, and bounded source-package/workflow routing checks. It does not run the full `package` checkpoint |
-| `test` | Rung 2. Runs every workspace test (`cargo nextest` when installed, else `cargo test`), the doctests, the external consumer, and the shell self-tests, then `sdlc/live-test` on Linux |
-| `test-full-cases --list|--run` | Explicit full-functional checkpoint. Lists its work without running it, or runs all root targets, the external Rust consumer, and all 54 shared cases on every surface. Ignored stress tests stay out |
+| `test` | Rung 2. Runs every workspace test (`cargo nextest` when installed, else `cargo test`), the doctests, the external consumer, and the shell self-tests, then `sdlc/live-test` on Linux. It unsets the case selector and refuses to run as root |
+| `test-full-cases --list|--run` | Explicit full-functional checkpoint. Lists its work without running it, or runs `test` and then all 54 shared cases on every surface. Ignored stress tests stay out |
 | `test-stress --list|--run` | Explicit repeated load and timing campaign. Lists its selections without running them, or runs the named ignored Rust campaigns and the port stress profile |
 | `spec` | Rung 3. Builds the binary, runs the `settings` check, then executable specification pages, transforms, and green how-tos |
 | `surfaces` | Rung 4. Runs each landed surface's `check.sh` with one loopback backend's port and reports exit 77 as not run. Default exports `THINKTHEN_TEST_PROFILE=routine` and the absolute 31-ID selector. `--full-functional` exports `full` and no selector; `--stress` exports `stress` and no selector. `--registry` is the rung 1 check of `sdlc/surfaces.txt`, each binding ratchet, and each binding lock under `cargo deny` |

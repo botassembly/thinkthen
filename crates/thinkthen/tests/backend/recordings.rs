@@ -155,6 +155,17 @@ fn a_recorded_exchange_replays_with_no_listener_and_no_key() {
     .expect("the compiled binary runs");
 
     assert_eq!(output.status.code(), Some(0));
+    let attempts = |output: &Output| {
+        let details: serde_json::Value =
+            serde_json::from_slice(&output.stdout).expect("a result is JSON");
+        details["meta"]["attempts"].as_array().map(Vec::len)
+    };
+    assert_eq!(
+        attempts(&recorded.1),
+        Some(1),
+        "the live send is one attempt"
+    );
+    assert_eq!(attempts(&output), None, "a replay adds no attempt");
     let live = normalized_details(&recorded.1).expect("live details");
     let replayed = normalized_details(&output).expect("replayed details");
     assert_eq!((live.1, live.2), (false, 1));
