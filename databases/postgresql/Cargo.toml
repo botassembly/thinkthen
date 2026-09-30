@@ -42,7 +42,7 @@ panic = "unwind"
 [lints.rust]
 missing_debug_implementations = "forbid"
 missing_docs = "warn"
-unexpected_cfgs = { level = "deny", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
+unexpected_cfgs = "deny"
 unreachable_pub = "forbid"
 unsafe_code = "deny"
 

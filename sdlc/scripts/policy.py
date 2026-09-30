@@ -90,10 +90,7 @@ SEAM_ALLOWED: dict[str, set[str]] = {}
 ACCEPTED_RUST_LINTS = {
     "missing_debug_implementations": "forbid",
     "missing_docs": "warn",
-    "unexpected_cfgs": {
-        "level": "forbid",
-        "check-cfg": ["cfg(thinkthen_internal_doctest)"],
-    },
+    "unexpected_cfgs": "forbid",
     "unreachable_pub": "forbid",
     "unsafe_code": "forbid",
 }
@@ -402,8 +399,7 @@ BINDING_DENY = {
     "databases/postgresql": [("advisories", "ignore", ["RUSTSEC-2021-0127"])],
 }
 # pgrx's generated code needs `unexpected_cfgs` below forbid (ticket 0111).
-BINDING_LINTS = {"databases/postgresql": {"unexpected_cfgs": {
-    "level": "deny", "check-cfg": ["cfg(thinkthen_internal_doctest)"]}}}
+BINDING_LINTS = {"databases/postgresql": {"unexpected_cfgs": "deny"}}
 PLANTED_TEST = '#[test]\nfn planted() {\n    eprintln!("skipped");\n    return;\n}\n'
 BINDING_PLANTS = (
     ("publish = true", "Cargo.toml", lambda text: text.replace("publish = false", "publish = true")),

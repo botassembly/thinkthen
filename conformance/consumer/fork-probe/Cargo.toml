@@ -18,7 +18,7 @@ thinkthen = { path = "../../../crates/thinkthen", default-features = false }
 [lints.rust]
 missing_debug_implementations = "forbid"
 missing_docs = "warn"
-unexpected_cfgs = { level = "forbid", check-cfg = ["cfg(thinkthen_internal_doctest)"] }
+unexpected_cfgs = "forbid"
 unreachable_pub = "forbid"
 unsafe_code = "deny"
 

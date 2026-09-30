@@ -6,7 +6,7 @@ The repository gate and its hand-run support scripts.
 | --- | --- |
 | `install` | Rung 0. Checks the gate tools, fetches the locked dependency closure, and fetches the advisory database |
 | `lint` | Rung 1. Runs the private-name check when `THINKTHEN_PRIVATE_NAMES` names a list outside the repository, then policy, page, size, agents-file size, dependency, format, Clippy, documentation, and bounded source-package/workflow routing checks. It does not run the full `package` checkpoint |
-| `test` | Rung 2. Runs the named routine Rust command, public, fixture, guard, and documentation checks, then `sdlc/live-test` on Linux. It selects the 31 shared IDs in `conformance/routine-ids.txt` |
+| `test` | Rung 2. Runs every workspace test (`cargo nextest` when installed, else `cargo test`), the doctests, the external consumer, and the shell self-tests, then `sdlc/live-test` on Linux |
 | `test-full-cases --list|--run` | Explicit full-functional checkpoint. Lists its work without running it, or runs all root targets, the external Rust consumer, and all 54 shared cases on every surface. Ignored stress tests stay out |
 | `test-stress --list|--run` | Explicit repeated load and timing campaign. Lists its selections without running them, or runs the named ignored Rust campaigns and the port stress profile |
 | `spec` | Rung 3. Builds the binary, runs the `settings` check, then executable specification pages, transforms, and green how-tos |
@@ -22,7 +22,7 @@ The repository gate and its hand-run support scripts.
 | `live` | The hand-run paid-call door. It initializes, reads, locks, validates, and appends the shared ledger, then replaces itself with one charged job |
 | `policy.py` | Holds accepted Rust policy tables for rung 1 |
 | `catalog.py` | Holds the shipped transform copies, the catalog table, and the source package byte-identical to `transforms/` for rung 1 |
-| `package` | Explicit packaging/release checkpoint, required by the manual release `crate` job before artifact upload. Proves the one-package, no-default-feature targets and tests, internal doctests, private-export probes in both feature profiles, stale-archive cleanup, package tree, release panic modes, and fresh unpacked transform catalog. It is not part of routine `lint` |
+| `package` | Explicit packaging/release checkpoint, required by the manual release `crate` job before artifact upload. Proves the one-package, no-default-feature targets, tests and doctests, stale-archive cleanup, package tree, release panic modes, and fresh unpacked transform catalog. It is not part of routine `lint` |
 | `scratch.sh` | Sourced by each script that makes a scratch folder. `scratch_dir` makes a folder with `mktemp` and records it, and a script removes only a recorded folder (`sdlc/planning/worktrees.md` rule 11). `scratch_lint` fails rung 1 on a recursive `rm` outside this file and its named exceptions. It reads `sdlc/scripts/`, `sdlc/live-test`, `install.sh`, and each `*.sh` or `#!` file under `libraries/`, `databases/`, `transforms/`, `probes/`, and `demos/` |
 | `ratchet.mjs` | Enforces the Rust source ceiling in `sdlc/ratchet.json`, or in the config its one optional argument names |
 

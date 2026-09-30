@@ -25,9 +25,7 @@ scratch_dir scratch
 export XDG_CACHE_HOME="$scratch/cache" XDG_CONFIG_HOME="$scratch/config" THINKTHEN_CACHE="$scratch/thinkthen"
 
 # Its own target folder keeps these builds from evicting the other rungs'.
-# One flag set serves every step, the doctest's included.
 export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-target}/polars"
-export RUSTFLAGS='--cfg thinkthen_internal_doctest' RUSTDOCFLAGS='--cfg thinkthen_internal_doctest'
 set -- --locked --offline --package thinkthen --features polars
 cargo clippy "$@" --lib --bins --test 'polars_*' -- -D warnings
 cargo clippy "$@" --no-default-features --lib -- -D warnings
