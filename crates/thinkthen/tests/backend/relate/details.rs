@@ -1,8 +1,9 @@
-//! The exact detailed relate result: entry unions, cuts, digests, and exit 6.
+//! The exact detailed relate result: entry unions, cuts, digests, keys, the
+//! planned request, and exit 6.
 
 use serde_json::Value;
 
-use super::{WRONG, answered, run, scripted};
+use super::{WRONG, answered, plan_json, run, scripted};
 use crate::harness::Listener;
 
 #[test]
@@ -99,4 +100,64 @@ fn no_valid_logical_answer_exits_four_without_output() {
     );
     assert_eq!(output.status.code(), Some(4));
     assert!(output.stdout.is_empty());
+}
+
+#[test]
+fn dry_run_reports_the_exact_request_a_real_run_sends() {
+    let listener = Listener::answering(answered).expect("listener");
+    let input = br#"[{"name":"Ada","kind":"person"},{"name":"Paris","kind":"place"},{"name":"Acme","kind":"organization"}]"#;
+    let output = run(
+        &listener,
+        &["works_for=person:organization", "--plan"],
+        input,
+    );
+    assert_eq!(
+        output.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert_eq!(listener.connections(), 0);
+    let sent = run(
+        &listener,
+        &["works_for=person:organization", "--details"],
+        input,
+    );
+    assert_eq!(
+        sent.status.code(),
+        Some(0),
+        "{}",
+        String::from_utf8_lossy(&sent.stderr)
+    );
+    let sent: Value = serde_json::from_slice(&sent.stdout).expect("details");
+    let received = listener.requests();
+    let [request] = received.as_slice() else {
+        panic!("{} requests", received.len());
+    };
+    let url = format!("{}/systemone", listener.base());
+    assert_eq!(
+        sent["meta"]["requests"],
+        Value::from(crate::support::keys(&url, &request.body))
+    );
+    let plan = plan_json(&output);
+    assert_eq!(plan["schema"], "thinkthen.relate-plan/1");
+    assert_eq!(plan["entity_count"], 3);
+    assert_eq!(plan["logical_questions"], 1);
+    assert_eq!(plan["request_count"], 1);
+    assert_eq!(
+        plan["relations"],
+        serde_json::json!([{
+            "name":"works_for", "source":"person", "target":"organization", "reads":"works for",
+            "either":false, "method":"yes_no", "fallback":null,
+            "logical_questions":1, "request_count":1
+        }])
+    );
+    assert_eq!(
+        plan["requests"][0]["digest"],
+        crate::support::digest(&url, &request.body)
+    );
+    let body = r#"{"state":{"entities":[{"id":"i1","name":"Ada","kind":"person"},{"id":"i2","name":"Acme","kind":"organization"}]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"Is it true that i1 works for i2?"}}}"#;
+    assert_eq!(plan["requests"][0]["body_utf8"], body);
+    assert_eq!(request.body, body.as_bytes());
+    assert_eq!(plan["requests"][0]["bytes"], body.len());
 }
