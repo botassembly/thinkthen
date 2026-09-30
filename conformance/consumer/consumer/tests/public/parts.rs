@@ -88,17 +88,37 @@ fn listening() -> (Listener, Arc<Mutex<Vec<Value>>>) {
     (listener, seen)
 }
 
-/// The `state` each request carried, in listener arrival order, after one annotate call.
+/// The record each request quoted in its first question, in listener arrival
+/// order, after one annotate call. Every state is the fixed sentence.
 fn states(set: &str, record: &str) -> Result<Vec<Value>, Error> {
     let (listener, seen) = listening();
     let engine = engine(listener.base()).expect("engine");
     let set = QuestionSet::from_json(set).expect("a set");
     let row = engine.annotate(&set, [record]).next().expect("one row");
     let sent = seen.lock().expect("the body list").clone();
-    row.map(|_| sent.iter().map(|body| body["state"].clone()).collect())
+    row.map(|_| sent.iter().map(quoted).collect())
         .inspect_err(|_| {
             assert!(sent.is_empty(), "a refused record sent {}", sent.len());
         })
+}
+
+/// The JSON value a request's first question quotes after "The text is ".
+fn quoted(body: &Value) -> Value {
+    assert_eq!(
+        body["state"],
+        "Each question quotes the text it asks about."
+    );
+    let text = body["questions"]["q1"]["instructions"]
+        .as_str()
+        .unwrap_or_default();
+    let rest = text
+        .strip_prefix("The text is ")
+        .expect("a quoted question");
+    serde_json::Deserializer::from_str(rest)
+        .into_iter::<Value>()
+        .next()
+        .and_then(Result::ok)
+        .expect("a quoted record")
 }
 
 #[test]
