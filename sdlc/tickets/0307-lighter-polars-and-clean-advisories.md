@@ -1,6 +1,6 @@
 # 0307: Lighter Polars and clean advisories
 
-Status: built, awaiting code review. Lane claude-3. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 6.
+Status: landed. Lane claude-3. Plan: `sdlc/planning/cleanup-2026-09-30.md`, step 6.
 
 ## Outcome
 
