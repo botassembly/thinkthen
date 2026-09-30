@@ -186,7 +186,16 @@ fn a_later_ordinary_command_request_is_refused_by_the_process_cap() {
     let listener = Listener::answering(answering).expect("listener");
     let output = decide(
         listener.base(),
-        &["--batch", "1", "--no-cache", "--max-requests-total", "1"],
+        // One job, so record 1 always reserves the one send before record 2.
+        &[
+            "--batch",
+            "1",
+            "--jobs",
+            "1",
+            "--no-cache",
+            "--max-requests-total",
+            "1",
+        ],
         &[],
         "line 1\nline 2\n",
     );
