@@ -28,7 +28,7 @@ Work outside the lanes:
 
 ## Every open issue
 
-39 open. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
+29 open. Class: **batch** (a ready ticket or Quick Fix in a batch above), **running** (a lane owns it now), **outside** (a run, experiment or another owner), **waits** (a named trigger), **after 0.1**.
 
 | Issue | Blocks 0.1 | Class | Owner or trigger |
 | --- | --- | --- | --- |
