@@ -16,7 +16,7 @@ The x86-64 Linux `build` job runs `python3 sdlc/scripts/release-language-tools.p
 release-language-tools: apt did not produce a package acquisition plan
 ```
 
-`ensure_packages` in `sdlc/scripts/release-language-tools.py`, lines 183 to 185, runs `apt-get -s install` as the runner user and requires the output to start with `Reading package lists`. Run without root, `apt-get -s` first prints `NOTE: This is only a simulation!` and three more note lines. The check refuses that real output. `command()` joins standard output and standard error, so the note leads the text. The self-test fixtures in `sdlc/scripts/release-language-tools-self-test.py` all start with `Reading package lists...`, so they missed it.
+`ensure_packages` in `sdlc/scripts/release-language-tools.py`, lines 183 to 185, runs `apt-get -s install` as the runner user and requires the output to start with `Reading package lists`. Run without root, `apt-get -s` first prints `NOTE: This is only a simulation!` and three more note lines. The check refuses that real output. The job log shows only the refusal, not apt's output. Running `apt-get -s install` without root on Ubuntu reproduces the note on standard output ahead of `Reading package lists`. The self-test fixtures in `sdlc/scripts/release-language-tools-self-test.py` all start with `Reading package lists...`, so they missed it.
 
 ## A fix
 

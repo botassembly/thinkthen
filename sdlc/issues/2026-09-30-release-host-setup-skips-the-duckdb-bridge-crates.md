@@ -4,7 +4,7 @@ Kind: bug
 
 Pay when: before the next rehearsal dispatch.
 
-Keeping it stops both Linux container builds when they reach the DuckDB extension, so no Linux loadable file is built.
+Keeping it stops all four `build` jobs when they reach the DuckDB extension, so no loadable file is built and Debt 026 cannot be checked.
 
 # Release host setup does not fetch the DuckDB bridge's crates
 
@@ -18,7 +18,7 @@ Caused by:
   attempting to make an HTTP request, but --offline was specified
 ```
 
-The container builds offline from the runner's crate registry, which `host-setup` fills with `cargo fetch --locked` for eight manifests (`release-workflow`, lines 224 to 227). The list omits `databases/duckdb/bridge/Cargo.toml`. That lock file alone pins `cc` 1.5.1; every other lock file pins 1.4.7. The x86-64 Linux job would have failed the same way, but it stopped earlier on the apt simulation note. Local builds pass because a developer's registry already holds `cc` 1.5.1.
+The container builds offline from the runner's crate registry, which `host-setup` fills with `cargo fetch --locked` for eight manifests (`release-workflow`, lines 224 to 227). The list omits `databases/duckdb/bridge/Cargo.toml`. That lock file alone pins `cc` 1.5.1; every other lock file pins 1.4.7. The x86-64 Linux job would have failed the same way, but it stopped earlier on the apt simulation note. The macOS jobs reach it too: `release-pack` builds DuckDB through `databases/duckdb/cpp/build.sh`, whose line 47 runs `cargo build --locked --offline` on the bridge. They stopped earlier on the uv check. Local builds pass because a developer's registry already holds `cc` 1.5.1.
 
 ## A fix
 
