@@ -1,6 +1,6 @@
 # ureq reuses a connection after an HTTP/1.0 reply
 
-Status: open. A dependency bug noted for Ian. Found by ticket 0340. Owner: none.
+Status: open. A dependency bug noted for Ian. Found by ticket 0340. Owner: upstream (ureq-proto); then a Quick Fix removes the workaround, or a ticket changes `engine/http.rs`.
 
 Kind: debt
 
