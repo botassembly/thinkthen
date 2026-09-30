@@ -310,7 +310,7 @@ char *thinkthen_call(const thinkthen_engine *engine, const char *request_json);
  * whose VALUE is an ordered answer array. `"details": true` makes VALUE the
  * command's `--details` object or an array of full record-detail objects.
  * FACTS holds this call's records, sends, cache answers, seconds, and optional
- * provider tokens and model. `{"usage": true}` remains this process's direct
+ * provider tokens and model. `{"usage": true}` remains this engine's direct
  * counters as `{"requests_sent": N, "retries": N, "input_tokens": N, "output_tokens":
  * N, "cache_answers": N}` and takes no options.
  *

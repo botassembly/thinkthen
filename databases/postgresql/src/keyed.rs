@@ -2,11 +2,12 @@
 
 use pgrx::datum::JsonB;
 use pgrx::prelude::*;
-use thinkthen::{Details, For, Judgment, LoadedQuestion, Probabilities};
+use thinkthen::{Details, For, Judgment, Probabilities};
 
-use crate::call::{self, Refusal};
+use crate::call::{self, OrRaise as _};
 use crate::ffi::RawJson;
 use crate::forms::{self, Named};
+use thinkthen::Error;
 
 fn answered(
     verb: For,
@@ -20,14 +21,9 @@ fn answered(
     call.within(records.len());
     let (keys, texts): (Vec<_>, Vec<_>) = records.into_iter().unzip();
     let answers = call::run(call, move |engine, options| {
-        let rows = match &question {
-            LoadedQuestion::Question(held) => engine
-                .details_many_with(held, texts, options)
-                .collect::<Result<Vec<_>, _>>(),
-            LoadedQuestion::Banded(held) => engine
-                .details_many_with(held, texts, options)
-                .collect::<Result<Vec<_>, _>>(),
-        }?;
+        let rows = engine
+            .details_many_with(&question, texts, options)
+            .collect::<Result<Vec<_>, _>>()?;
         Ok(rows
             .into_iter()
             .map(|row| row.into_parts().1)
@@ -44,7 +40,7 @@ fn probability(detail: &Details) -> Option<f64> {
             .find(|choice| choice.name() == label)
             .map(|choice| choice.probability()),
         (Judgment::Choice(None), _) => None,
-        _ => call::raise(Refusal::usage("probability belongs to decide or choose")),
+        _ => call::raise(call::usage("probability belongs to decide or choose")),
     }
 }
 
@@ -67,12 +63,10 @@ fn decide_many(
             .map(|(key, detail)| {
                 let value = match detail.value() {
                     Judgment::Decision(answer) => crate::answer_value(*answer),
-                    _ => call::raise(Refusal::usage(
-                        "thinkthen_decide_many takes a decide question",
-                    )),
+                    _ => call::raise(call::usage("thinkthen_decide_many takes a decide question")),
                 };
                 let yes = probability(&detail).unwrap_or_else(|| {
-                    call::raise(Refusal::of(
+                    call::raise(Error::new(
                         thinkthen::ErrorKind::Defect,
                         "a decide row carried no probability",
                     ))
@@ -107,9 +101,7 @@ fn choose_many(
             .map(|(key, detail)| {
                 let value = match detail.value() {
                     Judgment::Choice(value) => value.clone(),
-                    _ => call::raise(Refusal::usage(
-                        "thinkthen_choose_many takes a choose question",
-                    )),
+                    _ => call::raise(call::usage("thinkthen_choose_many takes a choose question")),
                 };
                 (key, value, probability(&detail))
             })
@@ -130,9 +122,7 @@ fn score_many(
             .map(|(key, detail)| {
                 let value = match detail.value() {
                     Judgment::Score(value) => *value,
-                    _ => call::raise(Refusal::usage(
-                        "thinkthen_score_many takes a score question",
-                    )),
+                    _ => call::raise(call::usage("thinkthen_score_many takes a score question")),
                 };
                 (key, value)
             })
@@ -153,7 +143,7 @@ fn tag_many(
             .map(|(key, detail)| {
                 let value = match detail.value() {
                     Judgment::Tags(value) => value.clone(),
-                    _ => call::raise(Refusal::usage("thinkthen_tag_many takes a tag question")),
+                    _ => call::raise(call::usage("thinkthen_tag_many takes a tag question")),
                 };
                 (key, value)
             })
@@ -177,26 +167,12 @@ fn plan(
             .into_iter()
             .map(|(_, value)| value)
             .collect();
-        let estimate = call::run(call, move |engine, options| match &question {
-            LoadedQuestion::Question(held) => engine.plan_with(held, records, options),
-            LoadedQuestion::Banded(held) => engine.plan_with(held, records, options),
+        let estimate = call::run(call, move |engine, options| {
+            engine.plan_with(&question, records, options)
         });
-        let (lower, upper) = estimate.estimated_input_tokens();
-        let first = estimate
-            .first_body()
-            .map(std::str::from_utf8)
-            .transpose()
-            .unwrap_or_else(|_| {
-                call::raise(Refusal::of(
-                    thinkthen::ErrorKind::Defect,
-                    "planned body was not UTF-8",
-                ))
-            });
-        Some(JsonB(serde_json::json!({
-            "records": estimate.records(), "requests": estimate.requests(),
-            "estimated_bytes": estimate.estimated_bytes(),
-            "estimated_input_tokens": {"lower": lower, "upper": upper},
-            "upper_bound": estimate.upper_bound(), "first_body_utf8": first,
-        })))
+        let written = serde_json::to_value(&estimate)
+            .map_err(|_| call::defect("the plan did not serialize"))
+            .or_raise();
+        Some(JsonB(written))
     })
 }

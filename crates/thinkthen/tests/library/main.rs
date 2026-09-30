@@ -18,6 +18,7 @@ mod compile_contract;
 mod key_address;
 mod public_backoff;
 mod public_env;
+mod public_hosts;
 mod public_members;
 mod public_plan;
 mod public_size_retry;

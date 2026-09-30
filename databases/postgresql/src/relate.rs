@@ -8,7 +8,8 @@ use pgrx::datum::Array;
 use pgrx::prelude::*;
 use thinkthen::{Entity, Relate, RelationRule};
 
-use crate::call::{self, OrRaise as _, Refusal};
+use crate::call::{self, OrRaise as _};
+use thinkthen::Error;
 
 /// SPI reads at most this many rows, and the last one refuses.
 const ROW_LIMIT: i64 = 256;
@@ -30,42 +31,29 @@ type Edges = TableIterator<
     ),
 >;
 
-/// One inline rule, as the command spells it: `NAME` for any kind to any
-/// kind, or `NAME=SOURCE:TARGET`.
-fn inline_rule(text: &str, kinds: bool) -> Result<RelationRule, Refusal> {
-    let refused = || {
-        Refusal::usage(format!(
+/// One inline rule through the command's parser, `NAME` or
+/// `NAME=SOURCE:TARGET`, refused in this extension's own sentence.
+fn inline_rule(text: &str, kinds: bool) -> Result<RelationRule, Error> {
+    let rule = RelationRule::parse_inline(text, false).map_err(|_| {
+        call::usage(format!(
             "a relate rule is NAME or NAME=SOURCE:TARGET, not '{text}'"
         ))
-    };
-    let (name, source, target) = match text.split_once('=') {
-        None if text.contains(':') => return Err(refused()),
-        None => (text, ANY, ANY),
-        Some((name, ends)) => {
-            let (source, target) = ends.split_once(':').ok_or_else(refused)?;
-            if name.contains('=') || source.contains(['=', ':']) || target.contains(['=', ':']) {
-                return Err(refused());
-            }
-            (name, source, target)
-        }
-    };
-    if !kinds && (source != ANY || target != ANY) {
-        return Err(Refusal::usage(
+    })?;
+    if !kinds && (rule.source() != ANY || rule.target() != ANY) {
+        return Err(call::usage(
             "a two-column relate query reads kind *, so it takes bare relation names",
         ));
     }
-    Ok(RelationRule::one_way(name, source, target)?)
+    Ok(rule)
 }
 
-/// The inline rules as one relate request. `inline_rule` copies the
-/// command's `inline_rule` in `crates/thinkthen/src/core/relate_file.rs:295`,
-/// which the public API does not export.
-fn inline(rules: &[String], kinds: bool) -> Result<Relate, Refusal> {
+/// The inline rules as one relate request.
+fn inline(rules: &[String], kinds: bool) -> Result<Relate, Error> {
     let mut ask = Relate::builder();
     for rule in rules {
         ask = ask.relation(inline_rule(rule, kinds)?)?;
     }
-    Ok(ask.build()?)
+    ask.build()
 }
 
 /// One cell of a wrapped relate row, refused when null.
@@ -73,22 +61,21 @@ fn cell<T: pgrx::FromDatum + pgrx::IntoDatum>(
     row: &pgrx::spi::SpiHeapTupleData<'_>,
     at: usize,
     what: &str,
-) -> Result<T, Refusal> {
+) -> Result<T, Error> {
     row.get::<T>(at)
-        .map_err(|error| Refusal::usage(format!("the relate query did not run: {error}")))?
-        .ok_or_else(|| Refusal::usage(format!("the relate query returned a null {what}")))
+        .map_err(|error| call::usage(format!("the relate query did not run: {error}")))?
+        .ok_or_else(|| call::usage(format!("the relate query returned a null {what}")))
 }
 
 /// Whether the query names kinds, and its rows as `(id, name, kind)`,
 /// refused at the 256th.
-fn rows(query: &str) -> Result<(bool, Vec<Row>), Refusal> {
+fn rows(query: &str) -> Result<(bool, Vec<Row>), Error> {
     let query = query.trim().trim_end_matches(';');
     if query.is_empty() {
-        return Err(Refusal::usage("the relate query is empty"));
+        return Err(call::usage("the relate query is empty"));
     }
-    let ran = |error: pgrx::spi::SpiError| {
-        Refusal::usage(format!("the relate query did not run: {error}"))
-    };
+    let ran =
+        |error: pgrx::spi::SpiError| call::usage(format!("the relate query did not run: {error}"));
     Spi::connect(|client| {
         let columns = client
             .select(
@@ -107,14 +94,14 @@ fn rows(query: &str) -> Result<(bool, Vec<Row>), Refusal> {
                 "SELECT a.i::bigint, a.n::text, a.k::text FROM ({query}) AS a(i, n, k) LIMIT {ROW_LIMIT}"
             ),
             _ => {
-                return Err(Refusal::usage(
+                return Err(call::usage(
                     "a relate query returns id and name, or id, name, and kind",
                 ));
             }
         };
         let table = client.select(&wrapped, None, &[]).map_err(ran)?;
         if i64::try_from(table.len()).unwrap_or(i64::MAX) >= ROW_LIMIT {
-            return Err(Refusal::usage(format!(
+            return Err(call::usage(format!(
                 "thinkthen_relate reads at most {} rows",
                 ROW_LIMIT - 1
             )));
@@ -133,7 +120,7 @@ fn rows(query: &str) -> Result<(bool, Vec<Row>), Refusal> {
 
 /// Dedupe rows by name and kind in first-seen order, call `relate_with`
 /// once, and return one row per matching id pair.
-fn relate(query: &str, ask: impl FnOnce(bool) -> Result<Relate, Refusal>) -> Edges {
+fn relate(query: &str, ask: impl FnOnce(bool) -> Result<Relate, Error>) -> Edges {
     let (kinds, rows) = rows(query).or_raise();
     let ask = ask(kinds).or_raise();
     let mut ids: HashMap<(String, String), Vec<i64>> = HashMap::new();
@@ -196,7 +183,7 @@ fn thinkthen_relate(
             .flat_map(|held| held.iter().flatten().map(str::to_owned))
             .collect();
         if rules.is_empty() {
-            call::raise(Refusal::usage("relate needs at least one relation rule"));
+            call::raise(call::usage("relate needs at least one relation rule"));
         }
         relate(query.unwrap_or_default(), |kinds| inline(&rules, kinds))
     })
@@ -237,23 +224,23 @@ mod tests {
     /// query's refusal of a rule that names kinds.
     #[test]
     fn inline_rules_read_as_the_command_reads_them() {
+        let read =
+            |text, kinds| call::shown(inline_rule(text, kinds).map(|rule| rule.name().to_owned()));
+        assert_eq!(read("caused_by", false), Ok("caused_by".to_owned()));
         assert_eq!(
-            inline_rule("caused_by", false).map(|rule| rule.name().to_owned()),
-            Ok("caused_by".to_owned())
+            read("works_for=person:organization", true),
+            Ok("works_for".to_owned())
         );
-        assert!(inline_rule("works_for=person:organization", true).is_ok());
         assert_eq!(
-            inline_rule("works_for=person:organization", false).err(),
-            Some(Refusal::usage(
-                "a two-column relate query reads kind *, so it takes bare relation names"
-            ))
+            read("works_for=person:organization", false),
+            Err("thinkthen usage: a two-column relate query reads kind *, so it takes bare relation names (retryable: no)".to_owned())
         );
-        for bad in ["a:b", "a=b", "a=b:c:d", "a=b=c:d"] {
+        for bad in ["a:b", "a=b", "a=b:c:d", "a=b=c:d", "a=:b", " "] {
             assert_eq!(
-                inline_rule(bad, true).err(),
-                Some(Refusal::usage(format!(
-                    "a relate rule is NAME or NAME=SOURCE:TARGET, not '{bad}'"
-                )))
+                read(bad, true),
+                Err(format!(
+                    "thinkthen usage: a relate rule is NAME or NAME=SOURCE:TARGET, not '{bad}' (retryable: no)"
+                ))
             );
         }
     }

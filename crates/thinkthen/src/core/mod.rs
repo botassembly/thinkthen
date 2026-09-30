@@ -98,7 +98,7 @@ pub(crate) use crate::core::records::{
     Framing, MAX_RECORD_BYTES, Reading, ReadingError, Record, RecordError,
 };
 pub(crate) use crate::core::relate_file::{
-    EntitySetError, RelateConfigError, RelateFields, RelateQuestion, RelateSpec,
+    EntitySetError, RelateConfigError, RelateFields, RelateQuestion, RelateSpec, inline_rule,
 };
 pub(crate) use crate::core::relation::{
     Lead, Pick, RelateAsk, RelationEdge, RelationEntity, RelationEntityView, RelationRule,

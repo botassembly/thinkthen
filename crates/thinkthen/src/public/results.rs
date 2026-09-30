@@ -127,8 +127,9 @@ impl Usage {
     }
 }
 
-/// This process's totals since it began, or since it was forked. Failed calls
-/// and retries count, and nothing resets them.
+/// One engine's totals since it was built, or since the process was forked.
+/// Failed calls and retries count, and nothing resets them. Add the totals of
+/// several engines with `+` or `Sum`, which saturate.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "usage"))]
 pub struct Counters {
@@ -140,7 +141,8 @@ pub struct Counters {
 }
 
 impl Counters {
-    pub(crate) const ZERO: Self = Self {
+    /// No sends, retries, cache answers or tokens.
+    pub const ZERO: Self = Self {
         requests_sent: 0,
         retries: 0,
         cache_answers: 0,

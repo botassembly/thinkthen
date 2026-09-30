@@ -283,6 +283,17 @@ pub enum LoadedQuestion {
     Banded(BandedQuestion),
 }
 
+impl LoadedQuestion {
+    /// What the question asks. A banded question reads `Decide`.
+    #[must_use]
+    pub fn kind(&self) -> QuestionKind {
+        match self {
+            Self::Question(question) => question.kind(),
+            Self::Banded(_) => QuestionKind::Decide,
+        }
+    }
+}
+
 pub(super) fn text_of(value: &str) -> Result<QuestionText, Error> {
     QuestionText::new(value).map_err(Error::refused)
 }

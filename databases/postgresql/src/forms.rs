@@ -3,9 +3,10 @@
 use pgrx::datum::{Array, JsonB};
 use thinkthen::{For, LoadedQuestion, Question, QuestionKind, Settings, SettingsError};
 
-use crate::call::{self, Call, OrRaise as _, Refusal};
+use crate::call::{self, Call, OrRaise as _};
 use crate::ffi::RawJson;
 use crate::files::Given;
+use thinkthen::Error;
 
 #[derive(Clone, Copy, Default)]
 pub(crate) struct Named<'a> {
@@ -16,18 +17,16 @@ pub(crate) struct Named<'a> {
     pub(crate) deadline_ms: Option<i64>,
 }
 
-fn settings(raw: Option<&RawJson>, named: Named<'_>) -> Result<Settings, Refusal> {
+fn settings(raw: Option<&RawJson>, named: Named<'_>) -> Result<Settings, Error> {
     let original = raw.map_or("{}", |value| value.0.as_str());
     // The engine constructor accepts this 0299 key, but this host has no
     // active reservation. Keep the portable parser's duplicate-name check
     // before classifying the unsupported host key.
     Settings::parse(original).map_err(|error| match error {
         SettingsError::UnknownKey(key) if key == "max_estimated_input_tokens_total" => {
-            Refusal::usage(
-                "max_estimated_input_tokens_total is not supported by this PostgreSQL host",
-            )
+            call::usage("max_estimated_input_tokens_total is not supported by this PostgreSQL host")
         }
-        other => Refusal::usage(other.to_string()),
+        other => call::usage(other.to_string()),
     })?;
     let mut merged = original.trim().strip_suffix('}').unwrap_or("{").to_owned();
     for (key, value) in [
@@ -62,7 +61,7 @@ fn settings(raw: Option<&RawJson>, named: Named<'_>) -> Result<Settings, Refusal
         merged.push_str(&format!("\"deadline_ms\":{value}"));
     }
     merged.push('}');
-    Settings::parse(&merged).map_err(|error| Refusal::usage(error.to_string()))
+    Settings::parse(&merged).map_err(|error| call::usage(error.to_string()))
 }
 
 pub(crate) fn controls(raw: Option<&RawJson>, named: Named<'_>) -> (Settings, Call) {
@@ -72,7 +71,7 @@ pub(crate) fn controls(raw: Option<&RawJson>, named: Named<'_>) -> (Settings, Ca
 pub(crate) fn controls_result(
     raw: Option<&RawJson>,
     named: Named<'_>,
-) -> Result<(Settings, Call), Refusal> {
+) -> Result<(Settings, Call), Error> {
     let settings = settings(raw, named)?;
     let call = call::read_result()?.with_settings(&settings)?;
     Ok((settings, call))
@@ -84,13 +83,13 @@ pub(crate) fn aggregate_controls(raw: Option<&RawJson>) -> Call {
     let (_, mut call) = controls(raw, Named::default());
     let Some(raw) = raw else { return call };
     let value: serde_json::Value = serde_json::from_str(&raw.0)
-        .unwrap_or_else(|_| call::raise(Refusal::usage("settings is one JSON object")));
+        .unwrap_or_else(|_| call::raise(call::usage("settings is one JSON object")));
     let Some(fields) = value.as_object() else {
-        call::raise(Refusal::usage("settings is one JSON object"));
+        call::raise(call::usage("settings is one JSON object"));
     };
     for key in fields.keys() {
         if !matches!(key.as_str(), "batch" | "deadline_ms" | "model") {
-            call::raise(Refusal::usage(format!(
+            call::raise(call::usage(format!(
                 "annotate does not take setting `{key}`"
             )));
         }
@@ -115,32 +114,29 @@ pub(crate) fn question_result(
     members: Option<Array<'_, &str>>,
     verb: For,
     settings: &Settings,
-) -> Result<LoadedQuestion, Refusal> {
+) -> Result<LoadedQuestion, Error> {
     let key = match verb {
         For::Decide => "",
         For::Choose => "options",
         For::Score => "levels",
         For::Tag => "labels",
-        For::Find => return Err(Refusal::usage("find is not a judgment question")),
+        For::Find => return Err(call::usage("find is not a judgment question")),
     };
     let list = members.map(|held| held.iter().flatten().map(str::to_owned).collect());
     let asked = Given::read_question(argument, key, call::file_directory().as_deref())
         .and_then(|given| given.with_members(key, list))
         .and_then(|given| given.with_settings(settings, verb))
         .and_then(|given| given.parse(Question::from_json))?;
-    let kind = match &asked {
-        LoadedQuestion::Banded(_) => QuestionKind::Decide,
-        LoadedQuestion::Question(question) => question.kind(),
-    };
+    let kind = asked.kind();
     let wanted = match verb {
         For::Decide => QuestionKind::Decide,
         For::Choose => QuestionKind::Choose,
         For::Score => QuestionKind::Score,
         For::Tag => QuestionKind::Tag,
-        For::Find => return Err(Refusal::usage("find is not a judgment question")),
+        For::Find => return Err(call::usage("find is not a judgment question")),
     };
     if kind != wanted {
-        return Err(Refusal::usage(format!(
+        return Err(call::usage(format!(
             "a {} call takes a {} question",
             key_for(verb),
             key_for(verb)
@@ -165,7 +161,7 @@ pub(crate) fn keyed(argument: Option<JsonB>) -> Vec<(String, String)> {
     };
     let fields = value
         .as_object()
-        .ok_or_else(|| Refusal::usage("keyed input is one JSON object"))
+        .ok_or_else(|| call::usage("keyed input is one JSON object"))
         .or_raise();
     fields
         .iter()
@@ -173,7 +169,7 @@ pub(crate) fn keyed(argument: Option<JsonB>) -> Vec<(String, String)> {
             value
                 .as_str()
                 .map(|text| (key.clone(), text.to_owned()))
-                .ok_or_else(|| Refusal::usage(format!("keyed input value for {key} is text")))
+                .ok_or_else(|| call::usage(format!("keyed input value for {key} is text")))
                 .or_raise()
         })
         .collect()
@@ -183,19 +179,16 @@ pub(crate) fn plan_verb(argument: &str, settings: &Settings) -> For {
     plan_verb_result(argument, settings).or_raise()
 }
 
-pub(crate) fn plan_verb_result(argument: &str, settings: &Settings) -> Result<For, Refusal> {
+pub(crate) fn plan_verb_result(argument: &str, settings: &Settings) -> Result<For, Error> {
     if argument.starts_with('@') || argument.trim_start().starts_with('{') {
         let asked = Given::read_question(Some(argument), "", call::file_directory().as_deref())
             .and_then(|given| given.parse(Question::from_json))?;
-        return Ok(match asked {
-            LoadedQuestion::Banded(_) => For::Decide,
-            LoadedQuestion::Question(question) => match question.kind() {
-                QuestionKind::Decide => For::Decide,
-                QuestionKind::Choose => For::Choose,
-                QuestionKind::Score => For::Score,
-                QuestionKind::Tag => For::Tag,
-                _ => return Err(Refusal::usage("plan takes a judgment question")),
-            },
+        return Ok(match asked.kind() {
+            QuestionKind::Decide => For::Decide,
+            QuestionKind::Choose => For::Choose,
+            QuestionKind::Score => For::Score,
+            QuestionKind::Tag => For::Tag,
+            _ => return Err(call::usage("plan takes a judgment question")),
         });
     }
     let choose = settings.question_json(For::Choose, argument).is_ok();

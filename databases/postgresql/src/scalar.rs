@@ -4,10 +4,11 @@ use pgrx::datum::Array;
 use pgrx::prelude::*;
 use thinkthen::{For, Judgment};
 
-use crate::call::{self, Refusal};
+use crate::call;
 use crate::ffi::RawJson;
 use crate::forms::{self, Named};
 use crate::{answer_value, details};
+use thinkthen::Error;
 
 fn judged(
     verb: For,
@@ -26,7 +27,7 @@ fn judged(
             details(engine, &question, &input, options, contextual)
         })
         .unwrap_or_else(|| {
-            call::raise(Refusal::of(
+            call::raise(Error::new(
                 thinkthen::ErrorKind::Defect,
                 "details returned no record",
             ))
@@ -60,7 +61,7 @@ fn decide(
         let held = judged(For::Decide, question, input, None, settings, named)?;
         match held.value() {
             Judgment::Decision(value) => answer_value(*value),
-            _ => call::raise(Refusal::usage("thinkthen_decide takes a decide question")),
+            _ => call::raise(call::usage("thinkthen_decide takes a decide question")),
         }
     })
 }
@@ -92,7 +93,7 @@ fn choose(
         let held = judged(For::Choose, question, input, members, settings, named)?;
         match held.value() {
             Judgment::Choice(value) => value.clone(),
-            _ => call::raise(Refusal::usage("thinkthen_choose takes a choose question")),
+            _ => call::raise(call::usage("thinkthen_choose takes a choose question")),
         }
     })
 }
@@ -124,7 +125,7 @@ fn score(
         let held = judged(For::Score, question, input, members, settings, named)?;
         match held.value() {
             Judgment::Score(value) => Some(*value),
-            _ => call::raise(Refusal::usage("thinkthen_score takes a score question")),
+            _ => call::raise(call::usage("thinkthen_score takes a score question")),
         }
     })
 }
@@ -156,7 +157,7 @@ fn tag(
         let held = judged(For::Tag, question, input, members, settings, named)?;
         match held.value() {
             Judgment::Tags(value) => Some(value.clone()),
-            _ => call::raise(Refusal::usage("thinkthen_tag takes a tag question")),
+            _ => call::raise(call::usage("thinkthen_tag takes a tag question")),
         }
     })
 }
@@ -193,7 +194,7 @@ fn details_sql(
             details(engine, &asked, &input, options, contextual)
         })
         .unwrap_or_else(|| {
-            call::raise(Refusal::of(
+            call::raise(Error::new(
                 thinkthen::ErrorKind::Defect,
                 "details returned no record",
             ))
@@ -239,15 +240,15 @@ fn try_details(
                 details(engine, &question, &input, options, contextual)
             })?;
             answer.ok_or_else(|| {
-                Refusal::of(thinkthen::ErrorKind::Defect, "details returned no record")
+                Error::new(thinkthen::ErrorKind::Defect, "details returned no record")
             })
         })();
         let value = match result {
             Ok(answer) => {
                 serde_json::json!({"status":"answered","details":serde_json::from_str::<serde_json::Value>(&answer.to_json())
-            .unwrap_or_else(|_| call::raise(Refusal::of(thinkthen::ErrorKind::Defect, "a result is not JSON")))})
+            .unwrap_or_else(|_| call::raise(Error::new(thinkthen::ErrorKind::Defect, "a result is not JSON")))})
             }
-            Err(error) => error.value().unwrap_or_else(|| call::raise(error)),
+            Err(error) => call::failed_row(&error).unwrap_or_else(|| call::raise(error)),
         };
         Some(pgrx::datum::JsonB(value))
     })

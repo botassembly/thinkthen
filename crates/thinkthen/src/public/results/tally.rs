@@ -4,7 +4,7 @@ use std::fmt;
 use std::sync::{Arc, Mutex, PoisonError};
 use std::time::Instant;
 
-use super::{Call, Facts};
+use super::{Call, Counters, Facts};
 use crate::public::Error;
 
 #[derive(Default)]
@@ -226,5 +226,25 @@ mod tests {
             }
             assert_eq!(tally.facts().model(), model);
         }
+    }
+}
+
+impl std::ops::Add for Counters {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            requests_sent: self.requests_sent.saturating_add(other.requests_sent),
+            retries: self.retries.saturating_add(other.retries),
+            cache_answers: self.cache_answers.saturating_add(other.cache_answers),
+            input_tokens: self.input_tokens.saturating_add(other.input_tokens),
+            output_tokens: self.output_tokens.saturating_add(other.output_tokens),
+        }
+    }
+}
+
+impl std::iter::Sum for Counters {
+    fn sum<I: Iterator<Item = Self>>(counts: I) -> Self {
+        counts.fold(Self::ZERO, std::ops::Add::add)
     }
 }

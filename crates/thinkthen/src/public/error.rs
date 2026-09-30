@@ -160,6 +160,14 @@ impl Error {
         self
     }
 
+    /// An error of this kind with a message, not retryable, for a host that
+    /// raises its own refusals as this one type. The message must name no key
+    /// and no evidence.
+    #[must_use]
+    pub fn new(kind: ErrorKind, message: impl Into<String>) -> Self {
+        Self::of(kind, message)
+    }
+
     pub(crate) fn of(kind: ErrorKind, message: impl Into<String>) -> Self {
         let detail = ErrorDetail {
             message: message.into(),

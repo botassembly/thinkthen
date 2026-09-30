@@ -8,7 +8,7 @@ use std::time::Duration;
 use pgrx::{GucContext, GucFlags, GucRegistry, GucSetting};
 use thinkthen::{BatchSetting, EngineBuilder, Error};
 
-use super::{Call, OrRaise, Refusal};
+use super::{Call, OrRaise};
 use crate::ffi;
 
 /// The registered value that leaves a numeric engine setting unset.
@@ -17,8 +17,11 @@ pub(crate) const UNSET: i32 = -1;
 /// The throttle's refusal where it is set, in the engine's own sentence, or
 /// `None` for -1 (unset) and 1 through 32 (Ian's range).
 pub(crate) fn throttle_refusal(value: i32) -> Option<String> {
-    (value != UNSET && !(1..=32).contains(&value))
-        .then(|| Refusal::usage("a throttle is a whole number from 1 through 32").text())
+    (value != UNSET && !(1..=32).contains(&value)).then(|| {
+        super::text(&super::usage(
+            "a throttle is a whole number from 1 through 32",
+        ))
+    })
 }
 
 /// The setter calls the four engine settings ask for. An unset setting
@@ -53,18 +56,18 @@ struct Raw<'a> {
     replay: Option<&'a str>,
 }
 
-fn folder(value: Option<&str>) -> Result<Option<PathBuf>, Refusal> {
+fn folder(value: Option<&str>) -> Result<Option<PathBuf>, Error> {
     let Some(value) = value.filter(|value| !value.is_empty()) else {
         return Ok(None);
     };
     let path = PathBuf::from(value);
     if !path.is_absolute() {
-        return Err(Refusal::usage("a SQL folder must be absolute"));
+        return Err(super::usage("a SQL folder must be absolute"));
     }
     Ok(Some(path))
 }
 
-fn batch(value: Option<&str>) -> Result<Option<BatchSetting>, Refusal> {
+fn batch(value: Option<&str>) -> Result<Option<BatchSetting>, Error> {
     let Some(value) = value.filter(|value| !value.is_empty()) else {
         return Ok(None);
     };
@@ -72,7 +75,7 @@ fn batch(value: Option<&str>) -> Result<Option<BatchSetting>, Refusal> {
         return Ok(Some(BatchSetting::Max));
     }
     if !value.bytes().all(|byte| byte.is_ascii_digit()) {
-        return Err(Refusal::usage(
+        return Err(super::usage(
             "thinkthen.batch is max or a whole number of 1 or more",
         ));
     }
@@ -80,7 +83,7 @@ fn batch(value: Option<&str>) -> Result<Option<BatchSetting>, Refusal> {
         .parse::<usize>()
         .ok()
         .and_then(NonZeroUsize::new)
-        .ok_or_else(|| Refusal::usage("thinkthen.batch is max or a whole number of 1 or more"))?;
+        .ok_or_else(|| super::usage("thinkthen.batch is max or a whole number of 1 or more"))?;
     Ok(Some(BatchSetting::Records(count)))
 }
 
@@ -92,7 +95,7 @@ impl Plan {
 
     /// Read the four raw values. The throttle's check already holds it to
     /// -1 or 1..=32, and PostgreSQL's range checks hold the others to -1 or more.
-    fn of(raw: Raw<'_>) -> Result<Self, Refusal> {
+    fn of(raw: Raw<'_>) -> Result<Self, Error> {
         let cache = if raw.cache == Some("off") {
             Some(None)
         } else {
@@ -194,9 +197,9 @@ pub(crate) fn read() -> Call {
 }
 
 /// Read settings without raising recoverable row failures.
-pub(crate) fn read_result() -> Result<Call, Refusal> {
+pub(crate) fn read_result() -> Result<Call, Error> {
     if text_of(&API_KEY).is_some_and(|value| !value.is_empty()) {
-        return Err(Refusal::usage(
+        return Err(super::usage(
             "thinkthen.api_key is not read; unset it and set THINKTHEN_API_KEY in the server's environment",
         ));
     }
@@ -368,6 +371,7 @@ pub(super) fn current_total() -> u64 {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::call::shown;
 
     /// Decision 3: the registered defaults plan no setter, and each set
     /// value reaches the plan. PostgreSQL's `'1MB'` arrives as bytes.
@@ -386,12 +390,12 @@ mod tests {
             record: None,
             replay: None,
         };
-        assert_eq!(Plan::of(default), Ok(Plan::default()));
+        assert_eq!(shown(Plan::of(default)), Ok(Plan::default()));
         assert_eq!(
-            Plan::of(Raw {
+            shown(Plan::of(Raw {
                 cache: Some(""),
                 ..default
-            }),
+            })),
             Ok(Plan::default())
         );
         let set = Plan {
@@ -403,14 +407,14 @@ mod tests {
             ..Plan::default()
         };
         assert_eq!(
-            Plan::of(Raw {
+            shown(Plan::of(Raw {
                 throttle: 8,
                 max_requests: 3,
                 max_request_bytes: 20_000,
                 batch: Some("2"),
                 cache: Some("/srv/cache"),
                 ..default
-            }),
+            })),
             Ok(set)
         );
         for invalid in [
@@ -422,10 +426,10 @@ mod tests {
             "no",
             "999999999999999999999999999999999999",
         ] {
-            assert!(matches!(batch(Some(invalid)), Err(Refusal { .. })));
+            assert!(batch(Some(invalid)).is_err());
         }
-        assert_eq!(batch(None), Ok(None));
-        assert_eq!(batch(Some("")), Ok(None));
-        assert_eq!(batch(Some("max")), Ok(Some(BatchSetting::Max)));
+        assert_eq!(shown(batch(None)), Ok(None));
+        assert_eq!(shown(batch(Some(""))), Ok(None));
+        assert_eq!(shown(batch(Some("max"))), Ok(Some(BatchSetting::Max)));
     }
 }

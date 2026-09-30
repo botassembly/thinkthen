@@ -232,7 +232,9 @@ plan_and_named() {
 p=json.loads(sys.argv[1]); expected="{\"state\":\"Each question quotes the text it asks about.\",\"model\":\"jev-1.13.0\",\"questions\":{\"q1\":{\"type\":\"noul\",\"instructions\":\"The text is \\\"Refund me please.\\\". asks for a refund\"}}}"
 assert p["records"] == 1 and p["requests"] == 1, p
 assert p["estimated_bytes"] == 182 and p["estimated_input_tokens"] == {"lower":93,"upper":166}, p
-assert p["upper_bound"] is False and p["first_body_utf8"] == expected, p' "$out"
+assert p["upper_bound"] is False and p["first_body_utf8"] == expected, p
+text = "{\"records\": 1, \"requests\": 1, \"upper_bound\": false, \"estimated_bytes\": 182, \"first_body_utf8\": " + json.dumps(expected) + ", \"estimated_input_tokens\": {\"lower\": 93, \"upper\": 166}}"
+assert sys.argv[1] == text, (sys.argv[1], text)' "$out"
 	same "$(bcount)" 0
 	for sql in \
 		"SELECT thinkthen_plan('asks for a refund', '{\"7\":\"Refund me please.\"}'::jsonb, '{\"bogus\":1}'::json)" \

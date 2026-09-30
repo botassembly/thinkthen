@@ -32,15 +32,12 @@ fn inputs(context: &Context<'_>, requested: Option<For>) -> Result<Inputs, Failu
     let verb = if let Some(verb) = requested {
         verb
     } else {
-        match &*question(&argument)? {
-            LoadedQuestion::Banded(_) => For::Decide,
-            LoadedQuestion::Question(asked) => match asked.kind() {
-                QuestionKind::Decide => For::Decide,
-                QuestionKind::Choose => For::Choose,
-                QuestionKind::Score => For::Score,
-                QuestionKind::Tag => For::Tag,
-                _ => return Err(Failure::usage("details takes a judgment question")),
-            },
+        match question(&argument)?.kind() {
+            QuestionKind::Decide => For::Decide,
+            QuestionKind::Choose => For::Choose,
+            QuestionKind::Score => For::Score,
+            QuestionKind::Tag => For::Tag,
+            _ => return Err(Failure::usage("details takes a judgment question")),
         }
     };
     let shared = settings.context().map(str::to_owned);
@@ -59,15 +56,9 @@ fn contextual(
     evidence: String,
     options: CallOptions<'_>,
 ) -> Result<Details, Failure> {
-    let row = match held {
-        LoadedQuestion::Question(asked) => {
-            engine.details_many_with(asked, [evidence], options).next()
-        }
-        LoadedQuestion::Banded(asked) => {
-            engine.details_many_with(asked, [evidence], options).next()
-        }
-    };
-    Ok(row
+    Ok(engine
+        .details_many_with(held, [evidence], options)
+        .next()
         .ok_or_else(|| Failure::defect("details returned no record"))??
         .into_parts()
         .1)
@@ -80,34 +71,29 @@ fn scalar_details(
     evidence: &str,
     options: CallOptions<'_>,
 ) -> Result<Details, Failure> {
-    Ok(match held {
-        LoadedQuestion::Question(asked) => {
-            engine.details_with(asked, evidence, options)?.into_value()
-        }
-        LoadedQuestion::Banded(asked) => {
-            engine.details_with(asked, evidence, options)?.into_value()
-        }
-    })
+    Ok(engine.details_with(held, evidence, options)?.into_value())
 }
 
 /// Refuse a question `name` does not take, before any send.
 fn only(held: &LoadedQuestion, name: &str, kind: QuestionKind) -> Result<(), Failure> {
-    match held {
-        LoadedQuestion::Banded(_) => Err(Failure::usage(format!(
+    if matches!(held, LoadedQuestion::Banded(_)) {
+        return Err(Failure::usage(format!(
             "{name} does not take a banded question; use thinkthen_decide or thinkthen_details"
-        ))),
-        LoadedQuestion::Question(asked) if asked.kind() == kind => Ok(()),
-        LoadedQuestion::Question(asked) => Err(Failure::usage(
-            format!(
-                "{name} takes a {kind:?} question, not a {:?} question",
-                asked.kind()
-            )
-            .to_lowercase(),
-        )),
+        )));
     }
+    if held.kind() == kind {
+        return Ok(());
+    }
+    Err(Failure::usage(
+        format!(
+            "{name} takes a {kind:?} question, not a {:?} question",
+            held.kind()
+        )
+        .to_lowercase(),
+    ))
 }
 
-/// The plain question inside a checked one.
+/// The plain question inside a checked score question.
 fn plain(held: &LoadedQuestion) -> Result<&Question, Failure> {
     match held {
         LoadedQuestion::Question(asked) => Ok(asked),
@@ -121,12 +107,7 @@ fn plain_decide(
     evidence: &str,
     options: CallOptions<'_>,
 ) -> Result<Answer, Failure> {
-    Ok(match held {
-        LoadedQuestion::Question(asked) => {
-            engine.decide_with(asked, evidence, options)?.into_value()
-        }
-        LoadedQuestion::Banded(asked) => engine.decide_with(asked, evidence, options)?.into_value(),
-    })
+    Ok(engine.decide_with(held, evidence, options)?.into_value())
 }
 
 fn decide(context: &Context<'_>) -> rusqlite::Result<Option<i64>> {
@@ -178,7 +159,7 @@ fn judged(
                 )
             } else {
                 Ok(engine
-                    .details_with(plain(&held)?, &evidence, options)?
+                    .details_with(&*held, &evidence, options)?
                     .into_value()
                     .value()
                     .clone())

@@ -9,7 +9,7 @@ use rusqlite::types::{Value, ValueRef};
 use rusqlite::vtab::Filters;
 use serde::de::{Error as _, MapAccess, Visitor};
 use serde::{Deserialize, Deserializer};
-use thinkthen::{For, Judgment, LoadedQuestion, Probabilities};
+use thinkthen::{For, Judgment, Probabilities};
 
 use crate::question::{Stamp, call_settings, question_with_settings, stamp};
 use crate::tables::{Scan, Table};
@@ -270,11 +270,8 @@ fn scan(
         } else {
             options
         };
-        let details = match &*held {
-            LoadedQuestion::Question(asked) => engine.details_many_with(asked, texts, options),
-            LoadedQuestion::Banded(asked) => engine.details_many_with(asked, texts, options),
-        };
-        details
+        engine
+            .details_many_with(&*held, texts, options)
             .map(|row| answer_columns(&row?.into_parts().1, kind))
             .collect::<Result<Vec<_>, Failure>>()
     })?;

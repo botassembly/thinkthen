@@ -6,7 +6,9 @@ use std::path::{Component, Path, PathBuf};
 
 use thinkthen::{ErrorKind, For, Settings};
 
-use crate::call::Refusal;
+use thinkthen::Error;
+
+use crate::call;
 use crate::ffi;
 
 /// The largest file a named argument reads, in bytes.
@@ -20,14 +22,14 @@ pub(crate) enum ArgForm<'a> {
 }
 
 /// Bare text that is not JSON never names a file (R2-4).
-pub(crate) fn arg_form<'a>(text: &'a str, what: &str) -> Result<ArgForm<'a>, Refusal> {
+pub(crate) fn arg_form<'a>(text: &'a str, what: &str) -> Result<ArgForm<'a>, Error> {
     if let Some(path) = text.strip_prefix('@') {
         return Ok(ArgForm::File(path));
     }
     if text.trim_start().starts_with('{') {
         return Ok(ArgForm::Json(text));
     }
-    Err(Refusal::usage(format!(
+    Err(call::usage(format!(
         "a {what} file is named with the @ spelling: '@{text}'; bare text is never a path"
     )))
 }
@@ -109,21 +111,21 @@ pub(crate) fn read_within(
 
 /// Read a file a caller named with `@`. A role without
 /// `pg_read_server_files` reads only inside `thinkthen.file_directory`.
-fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String, Refusal> {
+fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String, Error> {
     let confined = if ffi::may_read_files() {
         None
     } else {
         match directory.filter(|held| !held.trim().is_empty()) {
             Some(held) => Some(PathBuf::from(held)),
             None => {
-                return Err(Refusal::usage(
+                return Err(call::usage(
                     "a named file needs pg_read_server_files, or an administrator's thinkthen.file_directory",
                 ));
             }
         }
     };
     read_within(Path::new(path), FILE_CAP, confined.as_deref()).map_err(|error| match error {
-        CheckedReadError::Refused => Refusal::of(
+        CheckedReadError::Refused => Error::new(
             ErrorKind::Local,
             format!(
                 "the {what} file '@{path}' did not read: it must be a regular file at most {FILE_CAP} bytes, \
@@ -131,7 +133,7 @@ fn read_named(what: &str, path: &str, directory: Option<&str>) -> Result<String,
             ),
         ),
         CheckedReadError::OverCap => {
-            Refusal::of(ErrorKind::Local, format!("the {what} file '@{path}' is over the {FILE_CAP} byte cap"))
+            Error::new(ErrorKind::Local, format!("the {what} file '@{path}' is over the {FILE_CAP} byte cap"))
         }
     })
 }
@@ -150,7 +152,7 @@ impl Given {
         arg: Option<&str>,
         key: &str,
         directory: Option<&str>,
-    ) -> Result<Self, Refusal> {
+    ) -> Result<Self, Error> {
         let text = arg.unwrap_or_default();
         if text.trim().is_empty() || text.starts_with('@') || text.trim_start().starts_with('{') {
             return Self::read(arg, "question", directory);
@@ -160,7 +162,7 @@ impl Given {
             "options" => "choose",
             "levels" => "score",
             "labels" => "tag",
-            _ => return Err(Refusal::of(ErrorKind::Defect, "unknown judgment members")),
+            _ => return Err(Error::new(ErrorKind::Defect, "unknown judgment members")),
         };
         let mut object = serde_json::Map::new();
         object.insert(verb.to_owned(), serde_json::Value::from(text));
@@ -176,10 +178,10 @@ impl Given {
         arg: Option<&str>,
         what: &str,
         directory: Option<&str>,
-    ) -> Result<Self, Refusal> {
+    ) -> Result<Self, Error> {
         let text = arg.unwrap_or_default();
         if text.trim().is_empty() {
-            return Err(Refusal::usage(format!("the {what} is empty")));
+            return Err(call::usage(format!("the {what} is empty")));
         }
         let (json, file) = match arg_form(text, what)? {
             ArgForm::File(path) => (read_named(what, path, directory)?, Some(path.to_owned())),
@@ -193,11 +195,11 @@ impl Given {
     pub(crate) fn parse<T>(
         &self,
         parse: impl FnOnce(&str) -> Result<T, thinkthen::Error>,
-    ) -> Result<T, Refusal> {
+    ) -> Result<T, Error> {
         let what = &self.what;
         parse(&self.json).map_err(|error| match &self.file {
-            None => error.into(),
-            Some(path) => Refusal::of(
+            None => error,
+            Some(path) => Error::new(
                 ErrorKind::Local,
                 format!(
                     "the {what} file '@{path}' does not parse: {}",
@@ -212,20 +214,20 @@ impl Given {
         mut self,
         key: &str,
         members: Option<Vec<String>>,
-    ) -> Result<Self, Refusal> {
+    ) -> Result<Self, Error> {
         let Some(members) = members else {
             return Ok(self);
         };
         if members.is_empty() {
-            return Err(Refusal::usage("the members array is empty"));
+            return Err(call::usage("the members array is empty"));
         }
         let value: serde_json::Value = serde_json::from_str(&self.json)
-            .map_err(|_| Refusal::usage("the question is not a JSON object"))?;
+            .map_err(|_| call::usage("the question is not a JSON object"))?;
         let object = value
             .as_object()
-            .ok_or_else(|| Refusal::usage("the question is not a JSON object"))?;
+            .ok_or_else(|| call::usage("the question is not a JSON object"))?;
         if object.contains_key(key) {
-            return Err(Refusal::usage(format!(
+            return Err(call::usage(format!(
                 "the question already names its {key}; pass NULL for the array"
             )));
         }
@@ -235,44 +237,44 @@ impl Given {
             .json
             .trim_end()
             .strip_suffix('}')
-            .ok_or_else(|| Refusal::usage("the question is not a JSON object"))?;
+            .ok_or_else(|| call::usage("the question is not a JSON object"))?;
         let separator = if object.is_empty() { "" } else { "," };
         let encoded = serde_json::to_string(&members)
-            .map_err(|_| Refusal::of(ErrorKind::Defect, "members could not be written as JSON"))?;
+            .map_err(|_| Error::new(ErrorKind::Defect, "members could not be written as JSON"))?;
         self.json = format!("{source}{separator}\"{key}\":{encoded}}}");
         Ok(self)
     }
 
     /// Append the shared parser's question fields without changing their member order.
-    pub(crate) fn with_settings(mut self, settings: &Settings, verb: For) -> Result<Self, Refusal> {
+    pub(crate) fn with_settings(mut self, settings: &Settings, verb: For) -> Result<Self, Error> {
         if settings == &Settings::default() {
             return Ok(self);
         }
         // Keep the original JSON bytes; the final parse retains duplicate names
         // and maps a named file's failure to local after settings are appended.
         let explicit: serde_json::Value = serde_json::from_str(&self.json)
-            .map_err(|_| Refusal::usage("the question is one JSON object"))?;
+            .map_err(|_| call::usage("the question is one JSON object"))?;
         let fields = explicit
             .as_object()
-            .ok_or_else(|| Refusal::usage("the question is one JSON object"))?;
+            .ok_or_else(|| call::usage("the question is one JSON object"))?;
         let keys: Vec<_> = fields.keys().map(String::as_str).collect();
         settings
             .conflicts(&keys, false)
-            .map_err(|error| Refusal::usage(error.to_string()))?;
+            .map_err(|error| call::usage(error.to_string()))?;
         let extra = settings
             .question_json(verb, "settings merge")
-            .map_err(|error| Refusal::usage(error.to_string()))?;
+            .map_err(|error| call::usage(error.to_string()))?;
         let Some(first) = extra.find(',') else {
             return Ok(self);
         };
         let suffix = extra
             .get(first + 1..extra.len() - 1)
-            .ok_or_else(|| Refusal::of(ErrorKind::Defect, "settings lost their fields"))?;
+            .ok_or_else(|| Error::new(ErrorKind::Defect, "settings lost their fields"))?;
         let source = self
             .json
             .trim_end()
             .strip_suffix('}')
-            .ok_or_else(|| Refusal::usage("the question is one JSON object"))?;
+            .ok_or_else(|| call::usage("the question is one JSON object"))?;
         let separator = if fields.is_empty() { "" } else { "," };
         self.json = format!("{source}{separator}{suffix}}}");
         Ok(self)
@@ -287,18 +289,16 @@ mod tests {
     #[test]
     fn a_bare_path_is_refused_and_the_at_form_passes() {
         assert_eq!(
-            arg_form("@refund.json", "question"),
+            call::shown(arg_form("@refund.json", "question")),
             Ok(ArgForm::File("refund.json"))
         );
         assert_eq!(
-            arg_form(" {\"decide\": \"x?\"}", "question"),
+            call::shown(arg_form(" {\"decide\": \"x?\"}", "question")),
             Ok(ArgForm::Json(" {\"decide\": \"x?\"}"))
         );
         assert_eq!(
-            arg_form("names.json", "recognize spec"),
-            Err(Refusal::usage(
-                "a recognize spec file is named with the @ spelling: '@names.json'; bare text is never a path"
-            ))
+            call::shown(arg_form("names.json", "recognize spec")),
+            Err("thinkthen usage: a recognize spec file is named with the @ spelling: '@names.json'; bare text is never a path (retryable: no)".to_owned())
         );
     }
 

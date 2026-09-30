@@ -104,10 +104,35 @@ impl RelationRule {
         Ok(self)
     }
 
+    /// One rule as the command's `--relation` spells it: `NAME` for any kind
+    /// to any kind, or `NAME=SOURCE:TARGET`. `ANY` reads as `*`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Usage`] with the command's refusal for any other
+    /// spelling, an empty side, or a control character.
+    pub fn parse_inline(text: &str, either: bool) -> Result<Self, Error> {
+        crate::core::inline_rule(text, either)
+            .map(Self)
+            .map_err(Error::refused)
+    }
+
     /// The relation's name.
     #[must_use]
     pub fn name(&self) -> &str {
         &self.0.name
+    }
+
+    /// The source kind; `*` is any kind.
+    #[must_use]
+    pub fn source(&self) -> &str {
+        &self.0.source
+    }
+
+    /// The target kind; `*` is any kind.
+    #[must_use]
+    pub fn target(&self) -> &str {
+        &self.0.target
     }
 }
 

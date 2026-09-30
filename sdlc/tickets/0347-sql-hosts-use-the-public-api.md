@@ -21,3 +21,21 @@ SQLite, DuckDB and PostgreSQL hold no copy of engine code that the public API co
 - Defers: items 6 and 7 of the issue.
 
 ## What the build taught us
+
+## Public API delta
+
+### Added public declarations
+
+```text
+const Counters::ZERO: Self
+fn Error::new(ErrorKind, impl Into<String>) -> Error
+fn LoadedQuestion::kind(&self) -> QuestionKind
+fn RelationRule::parse_inline(&str, bool) -> Result<RelationRule, Error>
+fn RelationRule::source(&self) -> &str
+fn RelationRule::target(&self) -> &str
+impl Add for Counters
+impl DecisionQuestion for LoadedQuestion
+impl DetailQuestion for LoadedQuestion
+impl Sum for Counters
+type Counters::Output = Counters
+```

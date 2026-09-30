@@ -149,9 +149,7 @@ pub(super) fn parse(
         6 => QuestionKind::Tag,
         _ => return Err("thinkthen defect: unknown keyed kind".into()),
     };
-    if !(matches!(&parsed, LoadedQuestion::Question(value) if value.kind() == expected)
-        || kind == 0 && matches!(&parsed, LoadedQuestion::Banded(_)))
-    {
+    if parsed.kind() != expected {
         return Err(RowError::usage("the question has another kind").text);
     }
     Ok((written, parsed, settings_value))
@@ -220,26 +218,18 @@ fn run(
         )?;
         let mut rows = Vec::new();
         if kind == 0 {
-            let decided = match &question {
-                LoadedQuestion::Question(held) => engine
-                    .decide_many_with(held, texts, options)
-                    .collect::<Result<Vec<_>, _>>(),
-                LoadedQuestion::Banded(held) => engine
-                    .decide_many_with(held, texts, options)
-                    .collect::<Result<Vec<_>, _>>(),
-            }
-            .map_err(|error| engines::call_error(error, total).text)?;
+            let decided = engine
+                .decide_many_with(&question, texts, options)
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|error| engines::call_error(error, total).text)?;
             for ((key, _), value) in input.0.iter().zip(decided) {
                 rows.push(json!({"key":key,"value":match value.value() {
                     Answer::Yes => Some(true), Answer::No => Some(false), Answer::Unsure => None,
                 },"probability":value.probability()}));
             }
         } else {
-            let LoadedQuestion::Question(held) = &question else {
-                return Err(RowError::usage("the question has another kind").text);
-            };
             let answered = engine
-                .details_many_with(held, texts, options)
+                .details_many_with(&question, texts, options)
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|error| engines::call_error(error, total).text)?;
             for ((key, _), value) in input.0.iter().zip(answered) {

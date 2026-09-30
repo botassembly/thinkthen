@@ -297,7 +297,9 @@ impl RelateSpec {
     }
 }
 
-fn inline_rule(text: &str, either: bool) -> Result<RelationRule, RelateConfigError> {
+/// One inline rule as the command spells it: `NAME`, any kind to any kind,
+/// or `NAME=SOURCE:TARGET`.
+pub(crate) fn inline_rule(text: &str, either: bool) -> Result<RelationRule, RelateConfigError> {
     let (name, source, target) = if let Some((name, ends)) = text.split_once('=') {
         let (source, target) = ends.split_once(':').ok_or(RelateConfigError::Relation)?;
         if name.contains('=') || source.contains(['=', ':']) || target.contains(['=', ':']) {
