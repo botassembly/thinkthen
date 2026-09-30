@@ -24,8 +24,9 @@ Measured with `cargo nextest run --locked --offline --workspace --all-targets --
 | After, run 1 | 1,256 | 34.2 s | | 13.3 to 19.6 |
 | After, run 2 | 1,256 | 29.3 s | 226 s | 19.6 to 21.6 |
 | Midway, before the last cuts | 1,256 | 27.0 s | | 12.7 to 14.7 |
+| After rebase on `e5d9b8ec9` | 1,259 | 37.0 s | | 21.1 to 29.6 |
 
-The longest test fell from 23.5 s (the secrecy sweep) to 5.4 s. At this load 26 tests still take over 2 s. Most sit in areas the ADR 0111 slice 2 lane owns, listed under deferred below.
+The longest test fell from 23.5 s (the secrecy sweep) to 5.4 s at load 20, and to 9.0 s at load 30. At this load 26 tests still take over 2 s. Most sit in areas the ADR 0111 slice 2 lane owns, listed under deferred below.
 
 | Change | What still pins the behavior |
 | --- | --- |
