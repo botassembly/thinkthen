@@ -46,8 +46,8 @@ if [ "$(uname -s)" = Darwin ]; then
 	mv -f -- "$building/load-probe-3500000" "$building/load-probe-3490000" "$host/"
 else
 	mv -f -- "$building/libsqlite3.so.0" "$host/"
-	rm -rf -- "$host/single"
-	mv -f -- "$building/single" "$host/"
+	mkdir -p -- "$host/single"
+	mv -f -- "$building/single/libsqlite3.so.0" "$host/single/"
 fi
 mv -f -- "$building/sqlite3" "$building/SOURCE.sha256" "$host/"
 echo "$host"

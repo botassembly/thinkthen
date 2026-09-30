@@ -19,8 +19,8 @@ if [ "$(uname -s)" = Darwin ]; then
 fi
 names=$(nm -g --defined-only -- "$from" 2>/dev/null | awk 'NF == 3 && $2 == "T" && $3 ~ /^thinkthen_/ { print $3 }' | sort -u)
 [ -n "$names" ] || { echo "localize.sh: $from defines no thinkthen_ function" >&2; exit 1; }
-work=$(mktemp -d "${TMPDIR:-/tmp}/thinkthen-localize.XXXXXX")
-trap 'rm -rf -- "$work"' EXIT
+. "$(dirname -- "$0")/../../sdlc/scripts/scratch.sh"
+scratch_dir work
 set --
 for name in $names; do
 	set -- "$@" -u "$name"
