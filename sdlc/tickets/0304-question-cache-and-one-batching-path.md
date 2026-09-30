@@ -125,6 +125,31 @@ Decision for 3d, 2026-09-30: option 1. One throttle per process stays, per Ian's
   - After rebasing onto main, every surface check passes, run one at a time: Rust, Polars, C, PHP, C#, JVM, Dart, Swift, Zig, Go, C++, Ada, Objective-C, COBOL, Python, TypeScript, Ruby, R, DuckDB, SQLite and PostgreSQL. Dart runs with the pinned Dart and Flutter under `~/.local/opt` and `PUB_CACHE=$HOME/.pub-cache`, because its source check otherwise reads an empty scratch pub cache. In the first sweep, DuckDB's `b13c_try_details_split_denials` failed once at total 2 with every slot failed, while the machine's load average was near 14. The rerun passed, and the case then passed 90 of 90 runs alone and six at a time. The one failure stays unexplained. Main must stay green on surfaces, so 3b, 3c and 3d can build in parallel lanes. The Ruby check runs now that the pinned Ruby 3.4.11 is installed. The TypeScript check includes `shapes.test.mjs` "details equals the command --details document", which slice 2 turned red on main.
 - Defers: 3b, 3c and 3d above; `default_engine`, which holds an engine rather than a limit and which the Python, TypeScript, Ruby and R module functions call, to the binding pass of ticket 0314; slice 4's `find`, `recognize` and `relate`; slice 5's old store.
 
+### Slice 3c evidence
+
+- Starts from: slice 3a (`f4436de26`); `sdlc/planning/0304-slices-3b-3d-prep.md` section 3c, which served as this slice's ticket review; ticket 0307, which dropped `polars/streaming` from the feature. The measurement harness and its logs stay local and unpushed, as experiment 415.
+- Keeps: every public name, signature and dtype of the Polars door; null cells asking nothing and returning null in place; input order; the stop at the first failed row with its facts; the `failed` struct and its validity; the lazy expression's per-morsel call, shared token and tally, and per-morsel deadline. Retained regressions, unchanged: `door.rs` `every_refusal_is_pinned_and_sends_nothing` and `a_failed_row_ends_a_series_call`; `lazy.rs` `a_shared_token_stops_a_later_evaluation_without_a_send` and `lazy_matches_eager_values_bodies_and_shared_tally`; `deadline.rs`; `throttle_equality.rs`; `public/frame/lazy.rs` `a_panic_stays_inside_the_polars_compute_boundary`. No test was merged or deleted.
+- Changes:
+  - No frame-only batching was left after 3a. Every door method calls a public batch method on `Engine::ask_all`.
+  - `public/frame/column.rs` reads the text column in place as a `StringChunked`, and `streamed` pulls the call's rows in input order into typed Polars builders as each row arrives. The door no longer collects a `Vec` of rows, and it no longer rebuilds null positions with a `take`. One kept behavior changes on defect paths only: the old door consumed the whole call before any conversion could fail, and now a conversion defect (a kind mismatch, a missing failure marker or a chosen label with no probability) stops the call at that row. `Answers` builds one question's column, and `Failures` builds the `failed` struct row by row.
+  - `libraries/polars/README.md` states what a call holds and the measured peaks.
+  - The crate ratchet rises by 115 to 105,744: the row builders replace the collect-then-convert helpers for 66 more source lines, and the new lazy test adds 49 nonblank lines.
+- Proof:
+  - `tests/polars/lazy.rs` `a_cached_lazy_frame_collected_twice_sends_nothing_the_second_time`: with a scratch cache, the first collect of 30 rows sends one request of 30 questions; the second collect sends nothing and equals the first; a cached slice sends nothing; a later 10-row slice of a 40-row frame sends one request of only its 5 new questions, so a slice placed before the expression limits what it asks.
+  - Memory and time, release build, 100,000 distinct rows answered from a replay folder, peak resident memory from `VmHWM`, 32 MB before the call on both builds, machine load near 15 to 20:
+
+    | Call | Peak before | Peak after | Seconds before | Seconds after |
+    | --- | ---: | ---: | ---: | ---: |
+    | `annotate_frame`, decide and choose | 109 MB | 47 MB | 7.3 to 10.9 | 10.6 to 11.0 |
+    | `decide_series` | 38 MB | 37 MB | 4.8 to 6.9 | 5.7 to 6.2 |
+    | `decide_expr`, lazy collect | 43 MB | 42 MB | 5.5 to 7.7 | 6.0 to 6.7 |
+
+    Time did not change beyond the load's noise. `decide_many_with` alone over the same column takes the same time as `decide_series` (5.3 to 6.9 seconds), so the replay lookups in the engine, not the door, set the time.
+  - `sh libraries/polars/check.sh 0` passes: clippy with and without default features, every `polars_*` test, and the doc test.
+- Defers:
+  - True lazy streaming. The default in-memory engine collects the whole frame and calls the expression once over the whole column. The streaming engine needs Polars' `streaming` feature, which 0307 dropped, so the checks cannot compile it. A user who adds that feature gets one call per morsel, since the expression is elementwise. `LazyFrame::collect_batches` also needs that engine.
+  - Engine replay speed: about 50 microseconds per answered question under load. It belongs to the engine, not the Polars door.
+
 ## What the build taught us
 
 ### Slice 1
@@ -192,3 +217,10 @@ What the second review found:
 - The DuckDB check caught a real regression. A retry denied by the send budget ended the whole native vector, so a later request that had already answered lost its rows. Ticket 0240 keeps those rows. `details_many_recoverable_with` now fails only the denied request's rows; every later request is denied before it sends. `native_denied_retry_keeps_a_later_request_answered_first` failed before the fix.
 - PostgreSQL's two replay-miss tests now expect the store's sentence, "the replay folder holds no answer for this question". Its annotate conformance calls annotate once per record, because ADR 0111 section 5 never stores a failed answer, so a second call resent the failed question.
 - `policy.py` refused an engine reference to `public` but not an alias of the crate root, such as `use crate as c; c::public::Error`. It now refuses any alias of the crate root or an ancestor in `engine`, as it does in `core`, with three planted forms.
+
+### Slice 3c
+
+- The rows the door collected cost more than the columns it built. An annotate record carries its member names, labels and JSON text, so over 100,000 rows the old `annotate_frame` raised its peak by 77 MB and the new one by 15 MB. The decide rows were small, so streaming saved little there.
+- The question key names the backend address. A replay under another base URL than the recording finds nothing, so a measurement must replay against the recorded address.
+- A slice placed before the expression limits what it asks, so a sliced lazy frame asks only the rows it keeps. The test does not show whether Polars pushes a later slice below the expression. The streaming engine, which the feature no longer compiles, is the only way to bound the frame's own memory.
+- Replay speed is the engine's: about 50 microseconds per answered question under load, the same with or without Polars.

@@ -1,10 +1,13 @@
 //! The Rust Polars door, behind the `polars` feature (ticket 0130).
 
-use polars::prelude::{Column, DataFrame, Expr, NamedFrom, Series};
+use polars::prelude::{
+    BooleanChunkedBuilder, ChunkedBuilder, Column, DataFrame, Expr, Float64Type, IntoSeries,
+    PrimitiveChunkedBuilder, Series,
+};
 
 use super::{
-    Answer, Batch, Call, CallOptions, DecisionQuestion, Details, Engine, Error, Judgment,
-    PlanEstimate, Probabilities, Question, QuestionKind, QuestionSet,
+    Annotated, Call, CallOptions, DecisionQuestion, Details, Engine, Error, Judgment, PlanEstimate,
+    Probabilities, Question, QuestionKind, QuestionSet,
 };
 
 mod column;
@@ -13,7 +16,7 @@ mod options;
 pub use lazy::PolarsExprOptions;
 pub use options::PolarsCallOptions;
 
-use column::{answered, failed, kind_word, nullable, restore};
+use column::{Answers, Failures, decided, kind_word, streamed, text};
 
 /// The one member name of the set a single-question column asks.
 const MEMBER: &str = "answer";
@@ -22,7 +25,9 @@ const MEMBER: &str = "answer";
 /// `polars` feature, and takes the Polars version [`crate::polars`] names.
 ///
 /// Each method reads a text column in place and makes one engine call over
-/// the whole column, at the throttle, with answers in input order.
+/// the whole column, at the throttle, with answers in input order. Each
+/// answer goes into the output column as it arrives, so a call holds its
+/// input, its output and the pipeline's window, never a list of every row.
 ///
 /// ```no_run
 /// use thinkthen::polars::prelude::{NamedFrom, Series};
@@ -276,8 +281,7 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<PlanEstimate, Error> {
-        let cells = nullable(texts)?;
-        self.plan_with(question, cells.iter().flatten().copied(), options)
+        self.plan_with(question, text(texts)?.iter().flatten(), options)
     }
 
     fn probability_frame(
@@ -293,42 +297,34 @@ impl PolarsEngine for Engine {
                 kind_word(kind)
             )));
         }
-        let cells = nullable(texts)?;
-        completed(self.details_many_with(question, cells.iter().flatten().copied(), options))?
-            .try_map(|rows| {
-                let probability = rows
-                    .iter()
-                    .map(|row| selected_probability(row.value()))
-                    .collect::<Result<Vec<_>, _>>()?;
-                let values = match kind {
-                    QuestionKind::Decide => Series::new(
-                        "value".into(),
-                        rows.iter()
-                            .map(|row| match row.value().value() {
-                                Judgment::Decision(Answer::Yes) => Ok(Some(true)),
-                                Judgment::Decision(Answer::No) => Ok(Some(false)),
-                                Judgment::Decision(Answer::Unsure) => Ok(None),
-                                _ => Err(Error::defect("a decide detail held another value")),
-                            })
-                            .collect::<Result<Vec<_>, _>>()?,
-                    ),
-                    QuestionKind::Choose => Series::new(
-                        "value".into(),
-                        rows.iter()
-                            .map(|row| match row.value().value() {
-                                Judgment::Choice(value) => Ok(value.as_deref()),
-                                _ => Err(Error::defect("a choose detail held another value")),
-                            })
-                            .collect::<Result<Vec<_>, _>>()?,
-                    ),
-                    _ => return Err(Error::defect("a probability kind changed")),
-                };
-                let values = restore(values, &cells)?;
-                let probability = restore(Series::new("probability".into(), probability), &cells)?;
-                DataFrame::new(cells.len(), vec![values.into(), probability.into()]).map_err(
-                    |error| Error::defect(&format!("the probability frame was refused: {error}")),
-                )
+        let cells = text(texts)?;
+        let rows = cells.len();
+        let mut probability =
+            PrimitiveChunkedBuilder::<Float64Type>::new("probability".into(), rows);
+        let mut values = Answers::new("value", kind, rows)?;
+        let batch = self.details_many_with(question, cells.iter().flatten(), options);
+        let facts = streamed(batch, cells, |row| {
+            let Some(row) = row else {
+                probability.append_null();
+                return values.push(None);
+            };
+            probability.append_option(selected_probability(row.value())?);
+            let value = match row.value().value() {
+                Judgment::Decision(answer) => Annotated::Decision(*answer),
+                Judgment::Choice(label) => Annotated::Choice(label.clone()),
+                _ => return Err(Error::defect("a probability detail held another value")),
+            };
+            values.push(Some(&value))
+        })?;
+        let columns = vec![
+            values.finish().into(),
+            probability.finish().into_series().into(),
+        ];
+        Call::new(columns, facts).try_map(|columns| {
+            DataFrame::new(rows, columns).map_err(|error| {
+                Error::defect(&format!("the probability frame was refused: {error}"))
             })
+        })
     }
 
     fn decide_series<Q: DecisionQuestion + ?Sized>(
@@ -337,19 +333,14 @@ impl PolarsEngine for Engine {
         texts: &Series,
         options: CallOptions<'_>,
     ) -> Result<Call<Series>, Error> {
-        let cells = nullable(texts)?;
-        completed(self.decide_many_with(question, cells.iter().flatten().copied(), options))?
-            .map(|row| {
-                row.into_iter()
-                    .map(|row| match row.value() {
-                        Answer::Yes => Some(true),
-                        Answer::No => Some(false),
-                        Answer::Unsure => None,
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .map(|answers| Series::new(texts.name().clone(), answers))
-            .try_map(|series| restore(series, &cells))
+        let cells = text(texts)?;
+        let mut answers = BooleanChunkedBuilder::new(texts.name().clone(), cells.len());
+        let batch = self.decide_many_with(question, cells.iter().flatten(), options);
+        let facts = streamed(batch, cells, |row| {
+            answers.append_option(row.and_then(|row| decided(*row.value())));
+            Ok(())
+        })?;
+        Ok(Call::new(answers.finish().into_series(), facts))
     }
 
     fn choose_series(
@@ -404,28 +395,33 @@ impl PolarsEngine for Engine {
                 )));
             }
         }
-        let cells = nullable(held.as_materialized_series())?;
-        completed(self.annotate_with(questions, cells.iter().flatten().copied(), options))?.try_map(
-            |records| {
-                let mut columns = questions
-                    .members()
-                    .enumerate()
-                    .map(|(place, (name, kind))| {
-                        answered(name, kind, &records, place)
-                            .and_then(|series| restore(series, &cells))
-                            .map(Into::into)
-                    })
-                    .collect::<Result<Vec<Column>, Error>>()?;
-                let names = questions
-                    .members()
-                    .map(|(name, _)| name)
-                    .collect::<Vec<_>>();
-                columns.push(restore(failed(&names, &records)?, &cells)?.into());
-                frame.hstack(&columns).map_err(|error| {
-                    Error::defect(&format!("the frame refused a new column: {error}"))
-                })
-            },
-        )
+        let cells = text(held.as_materialized_series())?;
+        let names = questions
+            .members()
+            .map(|(name, _)| name)
+            .collect::<Vec<_>>();
+        let mut columns = questions
+            .members()
+            .map(|(name, kind)| Answers::new(name, kind, cells.len()))
+            .collect::<Result<Vec<_>, _>>()?;
+        let mut failures = Failures::new(&names, cells.len());
+        let batch = self.annotate_with(questions, cells.iter().flatten(), options);
+        let facts = streamed(batch, cells, |record| {
+            for (place, column) in columns.iter_mut().enumerate() {
+                column.push_record(record.as_ref(), place)?;
+            }
+            failures.push(record.as_ref())
+        })?;
+        Call::new((columns, failures), facts).try_map(|(columns, failures)| {
+            let mut columns = columns
+                .into_iter()
+                .map(|column| column.finish().into())
+                .collect::<Vec<Column>>();
+            columns.push(failures.finish()?.into());
+            frame
+                .hstack(&columns)
+                .map_err(|error| Error::defect(&format!("the frame refused a new column: {error}")))
+        })
     }
 }
 
@@ -457,26 +453,14 @@ fn single(
             kind_word(question.kind())
         )));
     }
-    let cells = nullable(texts)?;
+    let cells = text(texts)?;
     let set = QuestionSet::builder()
         .question(MEMBER, question.clone())?
         .build()?;
-    completed(engine.annotate_with(&set, cells.iter().flatten().copied(), options))?.try_map(
-        |records| {
-            restore(
-                answered(texts.name().as_str(), wanted, &records, 0)?,
-                &cells,
-            )
-        },
-    )
-}
-
-/// Consume the one call before a host conversion can fail.
-fn completed<T>(mut batch: Batch<'_, T>) -> Result<Call<Vec<T>>, Error> {
-    let rows = batch.by_ref().collect::<Result<Vec<_>, _>>()?;
-    let facts = batch
-        .facts()
-        .cloned()
-        .ok_or_else(|| Error::defect("a completed Polars call has no final facts"))?;
-    Ok(Call::new(rows, facts))
+    let mut answers = Answers::new(texts.name().as_str(), wanted, cells.len())?;
+    let batch = engine.annotate_with(&set, cells.iter().flatten(), options);
+    let facts = streamed(batch, cells, |record| {
+        answers.push_record(record.as_ref(), 0)
+    })?;
+    Ok(Call::new(answers.finish(), facts))
 }

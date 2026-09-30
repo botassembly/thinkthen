@@ -32,6 +32,8 @@ On the command, `decide`, `filter`, `rank`, `choose`, `tag`, `score` and `annota
 
 The Rust library's `decide_many`, `filter`, `rank`, `choose_many`, `score_many`, `tag_many`, `details_many` and `annotate` run on the command's question pipeline. Their rows list question keys in `meta.requests` and carry no `meta.batch`. A longer call over the same records sends only the new records' questions, and an annotate record's groups pack together. `Max` now sends the open request after 50 ms with no new record, and a 413 sends both halves of the refused request (ticket 0304 slice 3a, ADR 0111).
 
+The Rust Polars door writes each answer into its output column as the answer arrives, instead of collecting every row first. `annotate_frame` over 100,000 rows peaked at 47 MB instead of 109 MB. With a cache folder, a lazy frame collected again sends nothing (ticket 0304 slice 3c).
+
 `thinkthen decide --plan` and the library's plans count each question's real options, so a plan's option count changes where it printed 0 before. Two concurrent single calls for the same question no longer share one send: a call coalesces only its own questions, so each call sends its own request (ticket 0304 slice 3a).
 
 `diff` compares two `recognize` or `relate` runs, or two cuts on one. Each changed record lists the names or edges it gained, lost, or changed in kind, and a key runs McNemar on the key names or edges only one side matched. `--match strict|overlap` pairs names as `audit` does (ticket 0165).
