@@ -48,7 +48,7 @@ pub(crate) enum Error {
     /// A process send total refused retrying this status.
     SendBudgetRetry(u16),
     /// The estimated input admission refused one final body.
-    EstimatedInput(crate::public::EstimatedInputDenial),
+    EstimatedInput(crate::core::EstimatedInputDenial),
     /// Status 400 whose body named `max_tokens_exceeded`. It keeps no body byte.
     TokenLimit,
     /// The reply passed its request's limit of this many bytes and was not kept.

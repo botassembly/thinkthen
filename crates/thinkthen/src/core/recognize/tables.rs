@@ -128,7 +128,8 @@ fn scored(case: &Scored) -> Vec<(String, f64)> {
         })
         .collect();
     settle(
-        (case.text, &pieces(case.text)),
+        case.text,
+        &pieces(case.text),
         &case.tags,
         &case.found,
         &asked,

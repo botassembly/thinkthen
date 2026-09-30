@@ -83,18 +83,16 @@ impl Cancel<'_> {
                 .map(|(budget, limit)| budget.reserve(*limit, last_status))
                 .transpose()
                 .map_err(|denial| match denial {
-                    crate::public::SendBudgetDenial::BeforeFirstSend
+                    crate::core::SendBudgetDenial::BeforeFirstSend
                         if self.sent_any.load(Ordering::Acquire) =>
                     {
                         error::Error::SendBudgetAdditional
                     }
-                    crate::public::SendBudgetDenial::BeforeFirstSend => {
-                        error::Error::SendBudgetFirst
-                    }
-                    crate::public::SendBudgetDenial::BeforeAdditionalSend => {
+                    crate::core::SendBudgetDenial::BeforeFirstSend => error::Error::SendBudgetFirst,
+                    crate::core::SendBudgetDenial::BeforeAdditionalSend => {
                         error::Error::SendBudgetAdditional
                     }
-                    crate::public::SendBudgetDenial::BeforeRetry { last_status } => {
+                    crate::core::SendBudgetDenial::BeforeRetry { last_status } => {
                         error::Error::SendBudgetRetry(last_status)
                     }
                 })
@@ -128,10 +126,10 @@ impl Cancel<'_> {
         };
         let reason = match (last_status, self.sent_any.load(Ordering::Acquire)) {
             (Some(last_status), _) => {
-                crate::public::EstimatedInputDenial::Retry { limit, last_status }
+                crate::core::EstimatedInputDenial::Retry { limit, last_status }
             }
-            (None, true) => crate::public::EstimatedInputDenial::AdditionalRequest { limit },
-            (None, false) => crate::public::EstimatedInputDenial::InitialRequest { limit },
+            (None, true) => crate::core::EstimatedInputDenial::AdditionalRequest { limit },
+            (None, false) => crate::core::EstimatedInputDenial::InitialRequest { limit },
         };
         error::Error::EstimatedInput(reason)
     }
@@ -159,7 +157,7 @@ fn unstarted_estimate_and_request_refund_together() {
     assert!(matches!(
         cancel.reserve_send(None, 2),
         Err(super::error::Error::EstimatedInput(
-            crate::public::EstimatedInputDenial::InitialRequest { limit: 2 }
+            crate::core::EstimatedInputDenial::InitialRequest { limit: 2 }
         ))
     ));
     budget

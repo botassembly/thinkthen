@@ -1,6 +1,6 @@
 //! Allowlisted response metadata for one live attempt.
 
-use crate::public::{AttemptObservation, AttemptOutcome};
+use crate::core::{AttemptObservation, AttemptOutcome};
 
 use super::{Attempt, Error, Exchange, Sent};
 
@@ -66,13 +66,15 @@ impl ResponseInfo {
         wall_ms: u64,
         outcome: AttemptOutcome,
     ) -> AttemptObservation {
-        AttemptObservation::new(
+        AttemptObservation {
             ordinal,
-            digest.to_owned(),
+            request_sha256: digest.to_owned(),
             wall_ms,
             outcome,
-            (self.status, self.server_ms, self.request_id),
-        )
+            status: self.status,
+            server_ms: self.server_ms,
+            request_id: self.request_id,
+        }
     }
 }
 

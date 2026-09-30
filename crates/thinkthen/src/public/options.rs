@@ -3,7 +3,8 @@
 pub(crate) mod budget;
 mod observer;
 
-pub use budget::{EstimatedInputDenial, SendBudget, SendBudgetDenial};
+pub use crate::core::{EstimatedInputDenial, SendBudgetDenial};
+pub use budget::SendBudget;
 pub(crate) use budget::{EstimatedReservation, SendReservation};
 
 use std::any::Any;

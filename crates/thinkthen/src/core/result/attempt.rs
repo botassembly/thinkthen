@@ -22,37 +22,19 @@ pub enum AttemptOutcome {
 #[derive(Clone, Eq, PartialEq, Serialize)]
 #[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "attempt"))]
 pub struct AttemptObservation {
-    ordinal: u64,
-    request_sha256: String,
-    wall_ms: u64,
-    outcome: AttemptOutcome,
+    pub(crate) ordinal: u64,
+    pub(crate) request_sha256: String,
+    pub(crate) wall_ms: u64,
+    pub(crate) outcome: AttemptOutcome,
     #[serde(skip_serializing_if = "Option::is_none")]
-    status: Option<u16>,
+    pub(crate) status: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    server_ms: Option<u64>,
+    pub(crate) server_ms: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    request_id: Option<String>,
+    pub(crate) request_id: Option<String>,
 }
 
 impl AttemptObservation {
-    pub(crate) fn new(
-        ordinal: u64,
-        request_sha256: String,
-        wall_ms: u64,
-        outcome: AttemptOutcome,
-        response: (Option<u16>, Option<u64>, Option<String>),
-    ) -> Self {
-        Self {
-            ordinal,
-            request_sha256,
-            wall_ms,
-            outcome,
-            status: response.0,
-            server_ms: response.1,
-            request_id: response.2,
-        }
-    }
-
     /// One-based send-mark order within this call or command.
     #[must_use]
     pub const fn ordinal(&self) -> u64 {

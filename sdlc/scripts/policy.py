@@ -1076,19 +1076,23 @@ def token_path_at(tokens: list[str], place: int, path: tuple[str, ...]) -> bool:
     return tokens[place:place + len(expected)] == expected
 
 
+# Core depends on none of the outer modules.
+CORE_REFUSED_ROOTS = {"engine", "cli", "public"}
+
+
 def direct_root_references(tokens: list[str]) -> set[str]:
-    """Find engine or cli reached directly from crate or an ancestor."""
+    """Find an outer module reached directly from crate or an ancestor."""
     held = set()
     for place, token in enumerate(tokens):
         if token == "crate" and place + 2 < len(tokens) and tokens[place + 1] == "::":
-            if tokens[place + 2] in {"engine", "cli"}:
+            if tokens[place + 2] in CORE_REFUSED_ROOTS:
                 held.add(tokens[place + 2])
         if token != "super":
             continue
         end = place
         while end + 2 < len(tokens) and tokens[end + 1:end + 3] == ["::", "super"]:
             end += 2
-        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in {"engine", "cli"}:
+        if end + 2 < len(tokens) and tokens[end + 1] == "::" and tokens[end + 2] in CORE_REFUSED_ROOTS:
             held.add(tokens[end + 2])
     return held
 
@@ -1117,14 +1121,14 @@ def core_policy_failures(text: str) -> list[str]:
             held.append("alias of the crate root or an ancestor")
         if imports_outer_glob(path):
             held.append("glob import from the crate root or an ancestor")
-        if path[:1] == ("crate",) and len(path) > 1 and path[1] in {"engine", "cli"}:
+        if path[:1] == ("crate",) and len(path) > 1 and path[1] in CORE_REFUSED_ROOTS:
             held.append(f"reverse import of {path[1]}")
         if path and set(path) == {"super"}:
             continue
         supers = 0
         while supers < len(path) and path[supers] == "super":
             supers += 1
-        if supers and supers < len(path) and path[supers] in {"engine", "cli"}:
+        if supers and supers < len(path) and path[supers] in CORE_REFUSED_ROOTS:
             held.append(f"reverse import of {path[supers]}")
     if any(root == "self" and alias is not None for root, alias in extern_crates(tokens)):
         held.append("alias of the crate root or an ancestor")
@@ -1172,16 +1176,6 @@ def check_core_policy() -> None:
         fail("core", "the package retains every accepted core dependency")
     policy_plants = (
         "std::fs::read(path)",
-        "crate::engine::request",
-        "crate::r#engine::request",
-        "use crate::engine as e;",
-        "use crate::{engine as e};",
-        "use crate::{core::Answer, engine::{self as e}};",
-        "use crate::{\n    cli::{self as command},\n};",
-        "use super::super::engine as e;",
-        "super::super::cli::entry();",
-        "crate::cli::entry",
-        "use crate::{cli as command};",
         "use crate::{self as root};",
         "use crate as root;",
         "use {crate as root};",
@@ -1192,12 +1186,9 @@ def check_core_policy() -> None:
         "use {super::super::{self as root}};",
         "use super as parent;",
         "extern crate self as root;",
-        "use crate::*; engine::request();",
         "use super::*; engine::request();",
         "use {crate::*}; engine::request();",
         "use crate::{*}; engine::request();",
-        "use {crate::{*}}; engine::request();",
-        "use super::super::*; cli::entry();",
         "use {super::{*}}; engine::request();",
         "use crate::{core::*, *}; engine::request();",
         "use /* root */ crate /* separator */ :: {\n    *\n}; engine::request();",
@@ -1206,14 +1197,33 @@ def check_core_policy() -> None:
     )
     if any(not core_policy_failures(plant) for plant in policy_plants):
         fail("core", "the planted API and reverse-reference violations are refused")
+    glob = "glob import from the crate root or an ancestor"
+    root_plants = (
+        ("crate::ROOT::Item", ["reference"]),
+        ("crate::r#ROOT::Item", ["reference"]),
+        ("use crate::ROOT as p;", ["import", "reference"]),
+        ("use crate::{ROOT as p};", ["import"]),
+        ("use crate::{core::Answer, ROOT::{self as p}};", ["import"]),
+        ("use crate::{\n    ROOT::{Item},\n};", ["import"]),
+        ("use super::super::ROOT as p;", ["import", "reference"]),
+        ("super::super::ROOT::Item::new();", ["reference"]),
+        ("use crate::*; ROOT::Item::new();", ["glob"]),
+        ("use super::super::*; ROOT::Item::new();", ["glob"]),
+        ("use {crate::{*}}; ROOT::Item::new();", ["glob"]),
+        ("use crate::{core::Answer, ROOT_value as value};", []),
+        ("// crate::ROOT::Item", []),
+        ('const EXAMPLE: &str = "use crate::ROOT as hidden;";', []),
+    )
+    for root in ("engine", "cli", "public"):
+        causes = {"reference": f"reverse reference to {root}", "import": f"reverse import of {root}", "glob": glob}
+        for text, expected in root_plants:
+            if core_policy_failures(text.replace("ROOT", root)) != [causes[name] for name in expected]:
+                fail("core", f"the planted reverse references to {root} are refused for that cause")
     policy_controls = (
-        "// use crate::engine as hidden;",
         "/* use crate::cli; /* crate::engine */ */ use crate::core::Answer;",
-        'const EXAMPLE: &str = "use crate::engine as hidden;";',
         'const EXAMPLE: &str = r###"super::super::cli::entry"###;',
         "const MARKER: char = 'e'; use super::Answer;",
         "fn borrow<'a, 'b>(left: &'a str, right: &'b str) {}",
-        "use crate::{core::Answer, engine_value as value};",
         "use self::*;",
         "use self::{*};",
         "use serde::*;",

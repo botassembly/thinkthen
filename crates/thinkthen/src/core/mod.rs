@@ -19,6 +19,7 @@ mod answer;
 mod backend;
 mod backend_profile;
 pub(crate) mod batch;
+mod budget;
 pub(crate) mod check;
 mod digest;
 mod find;
@@ -59,6 +60,7 @@ pub(crate) use crate::core::backend_profile::{
 };
 pub(crate) use crate::core::batch::{Batch, BatchError, BatchRecord, Batcher, Setting};
 pub(crate) use crate::core::batch::{GroupBatcher, group_halves, quoted_plan};
+pub use crate::core::budget::{EstimatedInputDenial, SendBudgetDenial};
 pub(crate) use crate::core::digest::bytes_sha256;
 #[cfg(test)]
 pub(crate) use crate::core::digest::question_sha256;
@@ -109,6 +111,7 @@ pub(crate) use crate::core::result::{
     AnnotatedFailure, AnnotatedValue, BatchMeta, BatchSetting, BatchWarning, DecisionResult, Meta,
     NamedValues, ProfileWarning, RecordValue, RequestMeta, Usage, share,
 };
+pub use crate::core::result::{AttemptObservation, AttemptOutcome};
 pub(crate) use crate::core::text::{
     BlankTextError, Description, Evidence, Meaning, ModelName, QuestionText, Withheld,
 };

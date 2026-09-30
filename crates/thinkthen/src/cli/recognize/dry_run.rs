@@ -70,6 +70,13 @@ struct From {
     question: &'static str,
 }
 
+#[derive(Debug)]
+pub(super) struct Question<'a> {
+    pub(super) spec: &'a RecognizeSpec,
+    pub(super) from_file: bool,
+    pub(super) limit: usize,
+}
+
 #[expect(
     clippy::too_many_arguments,
     reason = "the preview boundary receives each already resolved concern once"
@@ -80,7 +87,7 @@ pub(super) fn run(
     backend: &Backend,
     profile: Option<&BackendProfile>,
     table: Option<TableKind>,
-    question: (&RecognizeSpec, bool, usize),
+    question: Question<'_>,
     writer: &mut dyn Write,
 ) -> Result<ExitCode, Failure> {
     if let Some(kind) = table {
@@ -103,11 +110,15 @@ fn planned(
     records: impl Iterator<Item = Result<Record, Failure>>,
     backend: &Backend,
     profile: Option<&BackendProfile>,
-    question: (&RecognizeSpec, bool, usize),
+    question: Question<'_>,
     writer: &mut dyn Write,
     reading: &Reading,
 ) -> Result<ExitCode, Failure> {
-    let (spec, from_file, limit) = question;
+    let Question {
+        spec,
+        from_file,
+        limit,
+    } = question;
     let mut summary = PlanSummary::new(true);
     let mut first = None;
     for record in records {

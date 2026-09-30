@@ -100,14 +100,14 @@ pub(crate) fn run(
             &backend,
             selected_profile.as_ref(),
             config::table_kind(&arguments.common),
-            (
-                &spec,
-                arguments
+            dry_run::Question {
+                spec: &spec,
+                from_file: arguments
                     .kinds
                     .first()
                     .is_some_and(|kind| kind.starts_with('@')),
-                max_text_bytes,
-            ),
+                limit: max_text_bytes,
+            },
             &mut writer,
         );
     }
