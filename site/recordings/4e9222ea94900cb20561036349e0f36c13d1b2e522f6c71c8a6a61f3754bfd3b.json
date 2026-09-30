@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Card charges fail at checkout.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"Which team owns this?","criteria":{"billing":null,"platform":null}}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"billing","confidence":0.76,"probabilities":{"billing":0.88,"platform":0.12}}},"usage":{"input_tokens":293,"output_tokens":32}}
-}

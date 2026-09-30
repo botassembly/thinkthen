@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is {\"query\":\"Why is signing in slow or failing?\",\"passage\":\"New starters get an account on day one. Ask the platform team if sign-in does not work by lunchtime.\"}. The passage answers the query."}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.38}},"usage":{"input_tokens":312,"output_tokens":21}},
+  "quoted": true
+}

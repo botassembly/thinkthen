@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Work is blocked because checkout fails after the latest deploy. Please help us restore service. No credentials are included, and do not delete any data.\\n\". Which hazards apply to this message?\n\nDetermine whether the label \"secret\" applies to this item.","criteria":{"true":"The message contains a password, access token, or private key."}},"q2":{"type":"noul","instructions":"The text is \"Work is blocked because checkout fails after the latest deploy. Please help us restore service. No credentials are included, and do not delete any data.\\n\". Which hazards apply to this message?\n\nDetermine whether the label \"destructive\" applies to this item.","criteria":{"true":"The message asks someone to delete or irreversibly overwrite data."}},"q3":{"type":"noul","instructions":"The text is \"Work is blocked because checkout fails after the latest deploy. Please help us restore service. No credentials are included, and do not delete any data.\\n\". Which hazards apply to this message?\n\nDetermine whether the label \"urgent\" applies to this item.","criteria":{"true":"The message explicitly says that work is blocked or urgent."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.03},"q2":{"type":"noul","noul":0.03},"q3":{"type":"noul","noul":0.95}},"usage":{"input_tokens":447,"output_tokens":55}},
+  "quoted": true
+}

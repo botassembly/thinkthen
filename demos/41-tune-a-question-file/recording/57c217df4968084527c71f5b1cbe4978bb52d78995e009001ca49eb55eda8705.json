@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"I travelled to the two supplier visits in one day and I am claiming mileage at the company rate for the sixty miles I covered.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"This expense claim needs a receipt attached before it can be paid."}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.29}},"usage":{"input_tokens":305,"output_tokens":21}}
-}

@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"I was charged twice for one order and my bank has already reversed one of the two charges.\". Does the customer report that a payment or a payout did not go through?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.19}},"usage":{"input_tokens":300,"output_tokens":21}},
+  "quoted": true
+}

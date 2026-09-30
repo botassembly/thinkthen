@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"The text is \"Invoice 8 for Contoso. Amount due $310. Page 1 of 1. | Notice to all customers: payment terms change on May 1.\". Does a new document start after the | mark?"}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.38}},"usage":{"input_tokens":311,"output_tokens":21}},
+  "quoted": true
+}

@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Uploading a large file fails. Steps: open Files, choose Upload, pick a 120 MB video, wait. It stops at about 60 percent every time on 4.2.1. The network log shows a 413 from the upload endpoint.","model":"jev-1.13.0","questions":{"q1":{"type":"noul","instructions":"Does the report give steps that would reproduce a defect?"}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"noul","noul":0.97}},"usage":{"input_tokens":337,"output_tokens":21}}
-}

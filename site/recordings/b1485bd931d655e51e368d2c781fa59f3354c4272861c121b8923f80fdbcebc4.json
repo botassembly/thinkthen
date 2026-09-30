@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"My parcel never came, and now I cannot log in to track it.\". Which team owns this?","criteria":{"billing":"Invoices, fees, and refunds.","shipping":"Parcels and delivery.","account":"Logins and passwords."}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"shipping","confidence":0.62,"probabilities":{"billing":0.0,"shipping":0.75,"account":0.25}}},"usage":{"input_tokens":349,"output_tokens":39}},
+  "quoted": true
+}

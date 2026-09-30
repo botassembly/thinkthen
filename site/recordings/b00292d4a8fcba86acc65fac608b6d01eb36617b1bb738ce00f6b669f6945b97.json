@@ -1,7 +1,0 @@
-{
-  "schema": "thinkthen.recording/1",
-  "adapter": "systemone",
-  "url": "https://api.typesafe.ai/v1/systemone",
-  "request": {"state":"Nobody can log in to the site right now.","model":"jev-1.13.0","questions":{"q1":{"type":"score","instructions":"How urgent is this?","criteria":["Routine.","Soon.","Immediate."]}}},
-  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"score","score":1.99,"confidence":0.99,"legend":{"0":"Routine.","1":"Soon.","2":"Immediate."},"probabilities":{"0":0.0,"1":0.0,"2":1.0}}},"usage":{"input_tokens":308,"output_tokens":18}}
-}

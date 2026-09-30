@@ -1,0 +1,8 @@
+{
+  "schema": "thinkthen.recording/1",
+  "adapter": "systemone",
+  "url": "https://api.typesafe.ai/v1/systemone",
+  "request": {"state":"Each question quotes the text it asks about.","model":"jev-1.13.0","questions":{"q1":{"type":"choice","instructions":"The text is \"Invoice 7 for Northwind. Page 1 of 2.\". What kind of page is this?","criteria":{"invoice":null,"notice":null,"other":null}}}},
+  "response": {"model":"jev-1.13.0","answers":{"q1":{"type":"choice","choice":"invoice","confidence":1.0,"probabilities":{"other":0.0,"notice":0.0,"invoice":1.0}}},"usage":{"input_tokens":310,"output_tokens":39}},
+  "quoted": true
+}
