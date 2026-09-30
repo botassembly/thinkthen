@@ -21,7 +21,7 @@ def test_a_short_column_shares_one_deadline_and_token(backend, tmp_path):
     """A bounded column stops under each public call-wide control."""
     printed = run(SETUP + """
     try:
-        engine.score(urgent, pl.Series(texts[:12]), deadline=0.05).value
+        engine.score(urgent, pl.Series(texts[:12]), deadline_ms=50).value
     except tt.DeadlineError:
         print("deadline")
     token = tt.CancelToken()
@@ -44,7 +44,7 @@ def test_one_deadline_and_one_token_cover_a_column(backend, tmp_path):
     child = start(SETUP + """
     began = time.monotonic()
     try:
-        engine.score(urgent, pl.Series(texts), deadline=1.0).value
+        engine.score(urgent, pl.Series(texts), deadline_ms=1000).value
     except tt.DeadlineError:
         print("deadline", time.monotonic() - began, flush=True)
     else:
@@ -94,17 +94,33 @@ def test_a_column_runs_at_the_lists_throttle(backend, tmp_path):
 
 
 def test_a_column_holds_the_throttle_in_flight(tmp_path):
-    """The in-flight half: on the held arm, a list and a ``Series`` each
-    reach exactly 8 sends in flight and no more. The held arm opens once,
-    so each form gets its own backend."""
-    for records in ("texts", "pl.Series(texts)"):
+    """Eight independent packed groups occupy eight permits on the held arm.
+    A single default-packed call only makes one request, so it cannot prove
+    the throttle. Lists and Series each use their own backend gate."""
+    for shape in ("list", "series"):
         backend = Backend()
         try:
-            child = start(SETUP + f"    engine.decide_many(late, {records}[:20]).value\n",
+            child = start(SETUP + f"""
+    engine = tt.Engine(throttle=8, batch="max", cache=False)
+    groups = [[f"group {{group}} row {{row}}" for row in range(3)] for group in range(8)]
+    answers = []
+    def ask(group):
+        rows = pl.Series(group) if {shape!r} == "series" else group
+        call = engine.decide_many(late, rows)
+        values = call.value.to_list() if hasattr(call.value, "to_list") else call.value
+        answers.append((values, call.facts.requests_sent))
+    held = [threading.Thread(target=ask, args=(group,)) for group in groups]
+    for thread in held:
+        thread.start()
+    for thread in held:
+        thread.join()
+    assert len(answers) == 8 and all(value == [True] * 3 and sent == 1
+                                      for value, sent in answers)
+    """,
                           child_env(backend, tmp_path, "arm/held"))
             assert backend.wait(8) == 8
             time.sleep(0.3)
-            assert backend.count() == 8, records
+            assert backend.count() == 8, shape
             backend.release()
             assert child.wait(timeout=10) == 0, child.stderr.read()
         finally:
@@ -113,13 +129,13 @@ def test_a_column_holds_the_throttle_in_flight(tmp_path):
 
 def test_recognize_on_a_frame_spends_one_deadline(backend, tmp_path):
     """The frame loop resolves its deadline once: 3 texts at 600 ms a reply
-    with ``deadline=1`` raise ``DeadlineError`` after at most 2 sends.
+    with ``deadline_ms=1000`` raise ``DeadlineError`` after at most 2 sends.
     Regression: a relative deadline per text gives each 1 s, and all 3
     send and answer."""
     printed = run(SETUP + """
     frame = pl.DataFrame({"body": ["one note", "two notes", "three notes"]})
     try:
-        engine.recognize(frame, kinds=["note"], on="body", deadline=1).value
+        engine.recognize(frame, kinds=["note"], on="body", deadline_ms=1000).value
         print("answered")
     except tt.DeadlineError as error:
         print(type(error).__name__)

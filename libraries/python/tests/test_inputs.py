@@ -8,7 +8,7 @@ from conftest import child_env, clean_env, run
 ARROW = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
          "recognize read a column only from a Polars or pandas frame with on=. "
          "Pass column.to_list()")
-DEADLINE_SENTENCE = "No deadline is spelled ``deadline=None`` or ``deadline=-1`` (ADR 0041)."
+DEADLINE_SENTENCE = "Omit `deadline_ms` or pass -1 for no deadline."
 README = pathlib.Path(__file__).resolve().parents[1] / "README.md"
 
 REFUSED = """
@@ -66,31 +66,72 @@ def test_missing_key_names_a_remedy_for_a_library_call():
 
 
 def test_the_deadline_sentence_is_pinned_in_the_docstring_and_readme():
-    """R5-7: both places a user reads carry the ADR 0041 spelling."""
-    assert DEADLINE_SENTENCE in tt.__doc__
+    """Both reader entry points carry the new millisecond spelling."""
+    assert DEADLINE_SENTENCE.replace("`", "``") in tt.__doc__
     assert DEADLINE_SENTENCE in README.read_text()
 
 
-def test_deadlines_follow_adr_0041(backend, tmp_path):
-    """R5-7, R5-8, R2-10, and R1-11: a bool, numpy's bool, a number past
-    the cap, infinity, and NaN are usage errors; zero is a spent deadline;
-    none of them sends. Then ``-1`` and ``None`` each run with no deadline."""
+def test_deadlines_follow_the_millisecond_boundary(backend, tmp_path):
+    """Integral milliseconds, explicit null and the old name have distinct
+    refusals. Zero spends no send; -1 and omission remove the bound."""
     printed = run(REFUSED + """
     import numpy
-    for deadline in (True, False, numpy.bool_(True), "1", -2, 4294967296, 1e300,
-                     float("inf"), float("nan"), 0):
-        said(lambda: tt.decide(late, "a note", deadline=deadline).value)
-    print(tt.decide(late, "no deadline", deadline=-1).value, tt.decide(late, "none", deadline=None).value)
+    for value in (True, False, "1", 1.5, None, -2, 4294967295001,
+                  numpy.bool_(True), float("inf"), float("nan"), 0):
+        said(lambda: tt.decide(late, "a note", deadline_ms=value).value)
+    said(lambda: tt.decide(late, "a note", deadline=0).value)
+    print(tt.decide(late, "no deadline", deadline_ms=-1).value,
+          tt.decide(late, "omitted").value)
     """, child_env(backend, tmp_path))
-    spelled = "UsageError deadline is seconds from now, a number; no deadline is spelled None or -1"
-    budget = "is not -1, 0, or a positive budget of at most 4294967295 seconds"
-    assert printed.splitlines() == 4 * [spelled] + [
-        f"UsageError a deadline of -2 seconds {budget}",
-        f"UsageError a deadline of 4294967296 seconds {budget}",
-        f"UsageError a deadline of 1e300 seconds {budget}",
-        f"UsageError a deadline of inf seconds {budget}",
-        f"UsageError a deadline of NaN seconds {budget}",
+    whole = "UsageError `deadline_ms` is a whole number of milliseconds"
+    range_error = "UsageError `deadline_ms` is -1, 0, or at most 4294967295000 milliseconds"
+    json_error = "UsageError the settings hold a value JSON cannot represent"
+    assert printed.splitlines() == 5 * [whole] + [
+        range_error, range_error, json_error, json_error, json_error,
         "DeadlineError the deadline of 0 s passed before the call answered",
+        "UsageError use deadline_ms= instead of deadline=",
         "True True",
     ]
     assert backend.count() == 2
+
+
+def test_shared_keywords_refuse_unknown_wrong_and_repeated_fields_before_send(backend, tmp_path):
+    """The public methods reach the shared settings grammar before a worker.
+    A built question keeps its identity and cannot be rewritten by a keyword."""
+    printed = run(REFUSED + """
+    cases = (
+        lambda: tt.decide("Q?", "one", madeup=1),
+        lambda: tt.decide("Q?", "one", options=["a", "b"]),
+        lambda: tt.choose("Q?", "one", levels=["a", "b"]),
+        lambda: tt.score("Q?", "one", threshold=0.7, levels=["a", "b"]),
+        lambda: tt.tag("Q?", "one", labels=["a", "b"], descriptions={"a": "A"}),
+        lambda: tt.decide(late, "one", true="late"),
+        lambda: tt.decide("Q?", "one", batch=None),
+        lambda: tt.decide(late, "one", none=True),
+    )
+    for case in cases:
+        said(lambda: case().value)
+    """, child_env(backend, tmp_path))
+    lines = printed.splitlines()
+    assert len(lines) == 8 and all(line.startswith("UsageError ") for line in lines)
+    assert lines[0] == "UsageError the settings key `madeup` does not exist"
+    assert lines[1] == "UsageError the settings key `options` does not belong to this verb"
+    assert lines[5] == "UsageError settings repeats `true` from the question or named arguments"
+    assert lines[6] == "UsageError `batch` is `max` or a whole number of at least 1"
+    assert lines[7] == "UsageError the settings key `none` does not belong to this verb"
+    assert backend.count() == 0
+
+
+def test_process_cap_accepts_unsigned_range_and_refuses_invalid_settings(backend, tmp_path):
+    """Python's arbitrary-width integers reach the u64 process-cap domain
+    only when representable. Zero is a valid cap that denies the first send."""
+    printed = run(REFUSED + """
+    print(isinstance(tt.Engine(cache=False, max_requests_total=(1 << 64) - 1), tt.Engine))
+    for cap in (True, -1, 1 << 64):
+        said(lambda: tt.Engine(cache=False, max_requests_total=cap))
+    said(lambda: tt.Engine(cache=False, max_requests_total=0).decide(late, "one").value)
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines()[:4] == ["True"] + 3 * [
+        "UsageError max_requests_total is a whole number of 0 or more"]
+    assert printed.splitlines()[4].startswith("UsageError ")
+    assert backend.count() == 0

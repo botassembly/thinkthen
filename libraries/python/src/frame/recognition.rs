@@ -10,8 +10,8 @@ use thinkthen::{CallOptions, RecognizedEntity};
 pub(super) fn due(controls: &Controls) -> Option<Instant> {
     controls
         .deadline
-        .filter(|seconds| *seconds >= 0.0)
-        .and_then(|seconds| Duration::try_from_secs_f64(seconds).ok())
+        .filter(|millis| *millis >= 0)
+        .map(|millis| Duration::from_millis(millis as u64))
         .and_then(|budget| Instant::now().checked_add(budget))
 }
 

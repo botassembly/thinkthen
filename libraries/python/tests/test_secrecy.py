@@ -93,7 +93,7 @@ def test_no_message_or_repr_carries_the_key_or_address_credentials(backend, tmp_
         calls += [
             lambda: tt.decide(late, "   ").value,
             lambda: tt.decide(late, "one", token=token).value,
-            lambda: tt.decide(late, "one", deadline=0).value,
+            lambda: tt.decide(late, "one", deadline_ms=0).value,
             lambda: tt.question(file="/nonexistent/question.json"),
         ]
         said = []

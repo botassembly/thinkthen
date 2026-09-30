@@ -18,12 +18,13 @@ use thinkthen::{
 use crate::arrow::{self, Arrow, Cells, Imported, Readable};
 use crate::asked::{Asked, Recognize};
 use crate::engine::{Arg, Engine, Held, annotated, answer, batch, collected};
-use crate::input::{Pandas, controls, listed, polars_frame, top};
+use crate::input::{Pandas, controls, listed_nullable, polars_frame, top};
 use crate::result::{self, Completed, OwnedFacts};
 use crate::worker::{Controls, run_observed};
 use crate::{guard, raised, usage};
 
 mod names;
+mod nullable;
 mod recognition;
 mod stop;
 use names::names;
@@ -54,7 +55,7 @@ where
 /// package marks for 0105's list reader (ticket 0122). `read` says if marked.
 enum Source {
     Door(Imported),
-    List(Vec<String>),
+    List(Vec<Option<String>>),
 }
 
 impl Source {
@@ -63,7 +64,7 @@ impl Source {
             return Ok((Self::Door(Imported::column(value)?), false));
         };
         let source = match marked.get() {
-            Pandas(inner, true) => Self::List(listed(inner.bind(value.py()))?),
+            Pandas(inner, true) => Self::List(listed_nullable(inner.bind(value.py()))?),
             Pandas(inner, false) => Self::Door(Imported::column(inner.bind(value.py()))?),
         };
         Ok((source, true))
@@ -79,21 +80,27 @@ fn over_texts<T, F>(
 ) -> PyResult<Completed<T>>
 where
     T: Send + 'static,
-    F: FnOnce(&[&str], CallOptions<'_>) -> Result<Completed<T>, Stop> + Send + 'static,
+    F: FnOnce(&[&str], &[Option<&str>], CallOptions<'_>) -> Result<Completed<T>, Stop>
+        + Send
+        + 'static,
 {
     on_worker(py, controls, source, move |source, options| match &source {
         Source::Door(held) => {
             let memory = Readable::snapshot()?;
-            job(&arrow::series(held, &memory)?, options)
+            nullable::present(&arrow::series(held, &memory)?, options, job)
         }
-        Source::List(all) => job(&all.iter().map(String::as_str).collect::<Vec<_>>(), options),
+        Source::List(all) => nullable::present(
+            &all.iter().map(|one| one.as_deref()).collect::<Vec<_>>(),
+            options,
+            job,
+        ),
     })
 }
 
 /// What a column call gives back.
 enum Answers {
-    Decided(Vec<Answer>),
-    Annotated(QuestionKind, Vec<Annotated>),
+    Decided(Vec<Option<Answer>>),
+    Annotated(QuestionKind, Vec<Option<Annotated>>),
 }
 
 type AnswerColumns = Vec<(String, Cells)>;
@@ -135,7 +142,7 @@ pub(crate) fn ask_column(
     let polars = top(value)? == "polars";
     let (engine, asked) = (engine.clone(), asked.clone());
     let (source, pandas) = Source::read(value)?;
-    let done = over_texts(py, controls, source, move |texts, options| {
+    let done = over_texts(py, controls, source, move |texts, rows, options| {
         let options = batch.map_or(options, |batch| options.batch(batch));
         let options = context
             .as_deref()
@@ -150,24 +157,30 @@ pub(crate) fn ask_column(
                 .map(|one| one.values().first().map(|named| named.value().clone()))
                 .collect::<Option<Vec<_>>>()
                 .ok_or_else(|| Stop::after("the engine answered a record with no value", facts))?;
-            return Ok(Completed {
-                value: Answers::Annotated(question.kind(), values),
-                facts: done.facts,
-                details: done.details,
-            });
+            return nullable::aligned(
+                rows,
+                Completed {
+                    value: values,
+                    facts: done.facts,
+                    details: done.details,
+                },
+            )
+            .map(|done| done.map(|values| Answers::Annotated(question.kind(), values)));
         }
-        Ok(
-            collected(engine.decide_many_with(asked.decision(), texts, options))?
-                .map(|rows| Answers::Decided(rows.iter().map(|row| *row.value()).collect())),
-        )
+        let done = collected(engine.decide_many_with(asked.decision(), texts, options))?
+            .map(|rows| rows.iter().map(|row| *row.value()).collect());
+        nullable::aligned(rows, done).map(|done| done.map(Answers::Decided))
     })?;
     result::converted(py, done, |done| {
         if !polars && !pandas {
             let values: Vec<Py<PyAny>> = match done {
-                Answers::Decided(values) => values.into_iter().map(|one| answer(py, one)).collect(),
+                Answers::Decided(values) => values
+                    .into_iter()
+                    .map(|one| one.map_or_else(|| py.None(), |one| answer(py, one)))
+                    .collect(),
                 Answers::Annotated(_, values) => values
                     .into_iter()
-                    .map(|one| annotated(py, one))
+                    .map(|one| one.map_or_else(|| Ok(py.None()), |one| annotated(py, one)))
                     .collect::<PyResult<_>>()?,
             };
             return Ok(values.into_pyobject(py)?.unbind());
@@ -175,7 +188,7 @@ pub(crate) fn ask_column(
         let cells = match done {
             Answers::Decided(values) => arrow::decided(&values),
             Answers::Annotated(kind, values) => {
-                arrow::annotated(kind, &values.iter().collect::<Vec<_>>())
+                arrow::annotated(kind, &values.iter().map(Option::as_ref).collect::<Vec<_>>())
             }
         };
         if pandas {
@@ -222,7 +235,9 @@ pub(crate) fn _annotate_frame(
                     .map(|(name, _)| name)
                     .chain(std::iter::once("failed")),
             )?;
-            let columns = answered(&engine, &set, &read.texts, options)?;
+            let columns = nullable::present(&read.texts, options, |texts, rows, options| {
+                answered(&engine, &set, texts, rows, options)
+            })?;
             let output = arrow::frame_out(&hold, kept, &read, &columns.value)
                 .map_err(|sentence| Stop::after(sentence, columns.facts.clone()))?;
             Ok(columns.map(|_| output))
@@ -238,15 +253,23 @@ fn answered(
     engine: &thinkthen::Engine,
     set: &QuestionSet,
     texts: &[&str],
+    input: &[Option<&str>],
     options: CallOptions<'_>,
 ) -> Result<Completed<AnswerColumns>, Stop> {
-    let done = collected(engine.annotate_with(set, texts.iter().copied(), options))?;
+    let done = nullable::aligned(
+        input,
+        collected(engine.annotate_with(set, texts.iter().copied(), options))?,
+    )?;
     let facts = done.facts.clone();
     let rows = done.value;
     let converted = (|| -> Result<AnswerColumns, Stop> {
         let json = rows
             .iter()
-            .map(|row| serde_json::from_str::<Members>(&row.value_json()))
+            .map(|row| {
+                row.as_ref()
+                    .map(|row| serde_json::from_str::<Members>(&row.value_json()))
+                    .transpose()
+            })
             .collect::<Result<Vec<_>, _>>()
             .map_err(|error| format!("the engine wrote a record the door cannot read: {error}"))?;
         let mut columns = Vec::new();
@@ -254,13 +277,19 @@ fn answered(
         let mut names = Vec::new();
         for (place, (name, kind)) in set.members().enumerate() {
             names.push(name.to_owned());
-            let values: Option<Vec<&Annotated>> = rows
+            let values: Option<Vec<Option<&Annotated>>> = rows
                 .iter()
-                .map(|row| row.values().get(place).map(|one| one.value()))
+                .map(|row| match row {
+                    Some(row) => row.values().get(place).map(|one| Some(one.value())),
+                    None => Some(None),
+                })
                 .collect();
             let values = values.ok_or("the engine answered a record with no value")?;
             for (failures, (value, members)) in failed.iter_mut().zip(values.iter().zip(&json)) {
-                failures.push(failure_cell(value, members, name)?);
+                failures.push(match (value, members) {
+                    (Some(value), Some(members)) => failure_cell(value, members, name)?,
+                    _ => None,
+                });
             }
             let cells = arrow::annotated(kind, &values);
             columns.push((name.to_owned(), cells));
@@ -344,9 +373,9 @@ pub(crate) fn _annotate_column<'py>(
             Stop::Accounted(account) => raised(py, &account.error),
         })?;
         let source = Source::read(series)?.0;
-        let columns = over_texts(py, controls, source, move |texts, options| {
+        let columns = over_texts(py, controls, source, move |texts, rows, options| {
             let options = batch.map_or(options, |batch| options.batch(batch));
-            answered(&engine, &set, texts, options)
+            answered(&engine, &set, texts, rows, options)
         })?;
         result::converted(py, columns, |columns| {
             let named = PyDict::new(py);
@@ -379,7 +408,9 @@ pub(crate) fn _recognize_frame(
         on_worker(py, controls, held, move |held, options| {
             let memory = Readable::snapshot()?;
             let read = arrow::frame(&held, &on, &memory)?;
-            let found = each_named(&engine, &ask, &read.texts, options, due)?;
+            let found = nullable::present(&read.texts, options, |texts, rows, options| {
+                nullable::aligned(rows, each_named(&engine, &ask, texts, options, due)?)
+            })?;
             let table = names(found.value)
                 .map_err(|sentence| Stop::after(sentence, found.facts.clone()))?;
             Ok(Completed {
@@ -411,8 +442,8 @@ pub(crate) fn _recognize_column(
         let due = due(&controls);
         let (engine, ask) = (engine.get().0.clone(), ask.get().0.clone());
         let source = Source::read(series)?.0;
-        let found = over_texts(py, controls, source, move |texts, options| {
-            each_named(&engine, &ask, texts, options, due)
+        let found = over_texts(py, controls, source, move |texts, rows, options| {
+            nullable::aligned(rows, each_named(&engine, &ask, texts, options, due)?)
         })?;
         let fields = |one: &RecognizedEntity| -> PyResult<Py<PyDict>> {
             let named = PyDict::new(py);
@@ -427,8 +458,12 @@ pub(crate) fn _recognize_column(
         result::converted(py, found, |found| {
             let rows = found
                 .iter()
-                .map(|row| row.iter().map(fields).collect())
-                .collect::<PyResult<Vec<Vec<_>>>>()?;
+                .map(|row| {
+                    row.as_ref()
+                        .map(|row| row.iter().map(fields).collect::<PyResult<Vec<_>>>())
+                        .transpose()
+                })
+                .collect::<PyResult<Vec<Option<Vec<_>>>>>()?;
             Ok(rows.into_pyobject(py)?.unbind())
         })
     })
@@ -439,12 +474,20 @@ pub(crate) fn _recognize_column(
 #[pyfunction]
 pub(crate) fn _arrow_probe(series: &Bound<'_, PyAny>) -> PyResult<Vec<usize>> {
     let (source, controls) = (Source::Door(Imported::column(series)?), Controls::default());
-    over_texts(series.py(), controls, source, |texts, _options| {
-        Ok(Completed {
-            value: texts.iter().map(|text| text.as_ptr().addr()).collect(),
-            facts: OwnedFacts::empty(),
-            details: Vec::new(),
-        })
+    over_texts(series.py(), controls, source, |texts, rows, _options| {
+        nullable::aligned(
+            rows,
+            Completed {
+                value: texts.iter().map(|text| text.as_ptr().addr()).collect(),
+                facts: OwnedFacts::empty(),
+                details: Vec::new(),
+            },
+        )
     })
-    .map(|done| done.value)
+    .map(|done| {
+        done.value
+            .into_iter()
+            .map(Option::unwrap_or_default)
+            .collect()
+    })
 }

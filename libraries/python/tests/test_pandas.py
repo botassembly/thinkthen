@@ -65,7 +65,6 @@ TESTS = str(pathlib.Path(__file__).resolve().parent)
 LISTS = ("filter, rank, find, and relate read a list of str, not a column, and annotate and "
          "recognize read a column only from a Polars or pandas frame with on=. "
          "Pass column.to_list()")
-NULLS = "the column holds nulls; the engine needs text, so drop or fill them first"
 SETUP = f"""
     import sys
     sys.path.insert(0, {TESTS!r})
@@ -366,9 +365,6 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
     frame = pd.DataFrame({"body": texts})
     said(lambda: engine.decide(late, pd.Series([1, 2])).value)
     said(lambda: engine.decide(late, pd.Series(["a", 1], dtype=object)).value)
-    for hole in (None, float("nan"), pd.NA):
-        said(lambda: engine.tag(kinds, pd.Series(["a", hole, "b"], dtype=object)).value)
-    said(lambda: engine.decide(late, pd.Series([None, None], dtype=object)).value)
     said(lambda: engine.filter(late, column).value)
     class Mine(pd.Series):
         pass
@@ -399,8 +395,6 @@ def test_every_pandas_refusal_sends_nothing(backend, tmp_path):
         "UsageError record 0 is not a str 0"]
     assert printed.splitlines() == route + [
         "UsageError record 1 is not a str 0",
-        *3 * [f"UsageError {NULLS} 0"],
-        f"UsageError {NULLS} 0",
         *7 * [f"UsageError {LISTS} 0"],
         "UsageError details reads one str, not a column 0",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on= 0",

@@ -21,9 +21,10 @@ mod settings;
 use operations::{Many, labels, many, order};
 
 pub(crate) use settings::batch;
-use settings::{Settings, checked_throttle, context, folder_path, setting};
+use settings::{Settings, checked_throttle, context, folder_path, setting, total};
 
 const MAX_REQUESTS: &str = "a request limit is a whole number of 1 or more";
+const MAX_REQUESTS_TOTAL: &str = "max_requests_total is a whole number of 0 or more";
 
 pub(crate) type Arg<'a, 'py> = Option<&'a Bound<'py, PyAny>>;
 pub(crate) type Held<'a, 'py> = Option<&'a Bound<'py, Token>>;
@@ -145,7 +146,7 @@ impl Engine {
     /// Start from what `thinkthen` reads from the environment, then apply
     /// each given setting (amendment changes 11 to 13).
     #[new]
-    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, batch=None, max_requests=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
+    #[pyo3(signature = (*, base_url=None, model=None, throttle=None, batch=None, max_requests=None, max_requests_total=None, max_request_bytes=None, cache=None, timeout=None, max_retries=None, record=None, replay=None, profile=None))]
     #[expect(
         clippy::too_many_arguments,
         reason = "PyO3's keyword-only constructor exposes the engine settings"
@@ -156,6 +157,7 @@ impl Engine {
         throttle: Arg<'_, '_>,
         batch: Arg<'_, '_>,
         max_requests: Arg<'_, '_>,
+        max_requests_total: Arg<'_, '_>,
         max_request_bytes: Arg<'_, '_>,
         cache: Arg<'_, '_>,
         timeout: Arg<'_, '_>,
@@ -172,6 +174,7 @@ impl Engine {
                     throttle: checked_throttle(throttle)?,
                     batch: self::batch(batch)?,
                     most: setting(max_requests, MAX_REQUESTS)?,
+                    most_total: total(max_requests_total)?,
                     max_request_bytes: setting(
                         max_request_bytes,
                         "max_request_bytes is a whole number",

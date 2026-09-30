@@ -68,8 +68,6 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         assert hold(engine.choose("Who?", "Alice", options=described)) == "person"
         assert hold(engine.choose("Who?", "Alice", options=Described)) == "person"
         assert hold(engine.choose_many("Who?", ["Alice"], options=Kind, batch=1)) == ["person"]
-        assert hold(engine.choose("Who?", "Alice", options=Kind,
-                                  descriptions={"company": ["a company"]})) == "person"
         assert hold(engine.choose("Who?", "Alice", options={"person": None,
                                                               "company": ["a company"]})) == "person"
         hold(engine.recognize("Alice", kinds=plain)).entities
@@ -94,8 +92,6 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
             "low": "low", "high": "very high"})) == 0.0
         assert hold(engine.score("Urgency?", "Alice", levels={
             "low": None, "high": "very high"})) == 0.0
-        assert hold(engine.score("Urgency?", "Alice", levels=MixedScore,
-                                 descriptions={"low": None})) == 0.0
         for invalid in (lambda: engine.choose("Who?", "Alice", options=Kind,
                                              descriptions={"unknown": "x"}),
                         lambda: engine.choose("Who?", "Alice", options=Alias),
@@ -111,29 +107,28 @@ def test_label_forms_and_recognize_keywords_keep_captured_identity(backend, tmp_
         print(json.dumps(digests))
         ''', env)
         digests = json.loads(printed)
-        assert len(digests) == 20
+        assert len(digests) == 18
         groups, offset = [], 0
         for _, count in digests:
             groups.append(bodies[offset:offset + count])
             offset += count
         assert offset == len(bodies)
-        for left, right in ((0, 1), (0, 2), (3, 4), (1, 5), (6, 7),
-                            (8, 9), (10, 11), (12, 13), (14, 15)):
+        for left, right in ((0, 1), (0, 2), (3, 4), (1, 5),
+                            (7, 8), (9, 10), (11, 12), (13, 14), (15, 16)):
             assert groups[left] == groups[right], (left, right)
             assert digests[left] == digests[right]
         requests = [json.loads(group[0]) for group in groups]
         assert list(requests[0]["questions"]["q1"]["criteria"]) == ["person", "company"]
         assert requests[3]["questions"]["q1"]["criteria"] == {
             "person": {"what": "a person"}, "company": ["a company"]}
-        assert b'"what":"a person"' in b"".join(groups[12])
+        assert b'"what":"a person"' in b"".join(groups[11])
         assert requests[0]["state"] == "Alice"
         expected = (b'{"state":"Alice","model":"jev-1.13.0","questions":'
                     b'{"q1":{"type":"score","instructions":"Urgency?",'
                     b'"criteria":["low","very high"]}}}')
-        assert groups[16] == groups[17] == [expected]
+        assert groups[15] == groups[16] == [expected]
         digest = hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + expected).hexdigest()
-        assert digests[16] == digests[17] == [[digest], 1]
-        assert json.loads(groups[18][0])["questions"]["q1"]["criteria"] == [{}, "very high"]
-        assert digests[18][0] != [digest]
-        assert groups[18] == groups[19] and digests[18] == digests[19]
+        assert digests[15] == digests[16] == [[digest], 1]
+        assert json.loads(groups[17][0])["questions"]["q1"]["criteria"] == [{}, "very high"]
+        assert digests[17][0] != [digest]
         assert backend.count() == 0

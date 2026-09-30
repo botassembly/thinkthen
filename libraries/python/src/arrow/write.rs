@@ -270,20 +270,20 @@ const fn answer(value: Answer) -> Option<bool> {
 }
 
 /// A `decide` column's answers: `None` is "not sure".
-pub(crate) fn decided(values: &[Answer]) -> Cells {
-    Cells::Bools(values.iter().map(|one| answer(*one)).collect())
+pub(crate) fn decided(values: &[Option<Answer>]) -> Cells {
+    Cells::Bools(values.iter().map(|one| one.and_then(answer)).collect())
 }
 
 /// One question's answers across the records, in the kind's own column. A
 /// failed frame answer becomes null here; the companion column carries its
 /// marker. A one-question Series call still ends with the engine's error.
-pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
+pub(crate) fn annotated(kind: QuestionKind, values: &[Option<&Annotated>]) -> Cells {
     match kind {
         QuestionKind::Decide => Cells::Bools(
             values
                 .iter()
                 .map(|one| match one {
-                    Annotated::Decision(held) => answer(*held),
+                    Some(Annotated::Decision(held)) => answer(*held),
                     _ => None,
                 })
                 .collect(),
@@ -292,7 +292,7 @@ pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
             values
                 .iter()
                 .map(|one| match one {
-                    Annotated::Score(position) => Some(*position),
+                    Some(Annotated::Score(position)) => Some(*position),
                     _ => None,
                 })
                 .collect(),
@@ -301,7 +301,7 @@ pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
             values
                 .iter()
                 .map(|one| match one {
-                    Annotated::Tags(labels) => Some(labels.clone()),
+                    Some(Annotated::Tags(labels)) => Some(labels.clone()),
                     _ => None,
                 })
                 .collect(),
@@ -310,7 +310,7 @@ pub(crate) fn annotated(kind: QuestionKind, values: &[&Annotated]) -> Cells {
             values
                 .iter()
                 .map(|one| match one {
-                    Annotated::Choice(pick) => pick.clone(),
+                    Some(Annotated::Choice(pick)) => pick.clone(),
                     _ => None,
                 })
                 .collect(),

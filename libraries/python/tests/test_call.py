@@ -19,6 +19,251 @@ import pytest
 from conftest import child_env, run, start
 
 
+def test_keywords_and_probability_share_the_answer(backend, tmp_path):
+    """The public call holds probability from its own reply, including a column.
+    A second probability request or a missing column row changes the exact count."""
+    printed = run("""
+    import polars as pl, thinkthen as tt
+    engine = tt.Engine(cache=False)
+    decided = engine.decide("Is it late?", "one", true="a late item")
+    chosen = engine.choose("Which team?", "two", options=["billing", "shipping"])
+    scored = engine.score("How urgent?", "three", levels=["Routine.", "Now."])
+    tagged = engine.tag("Which kind?", "four", labels=["bill", "ship"])
+    column = engine.decide("Is it late?", pl.Series(["five", "six"]))
+    print(decided.value, decided.probability, chosen.value, chosen.probability,
+          scored.value, scored.probability, tagged.value, tagged.probability,
+          column.value.to_list(), column.probability.to_list(),
+          engine.usage()["requests_sent"])
+    """, child_env(backend, tmp_path))
+    assert printed.strip() == ("True 0.9 billing 0.9 0.1 None ['bill', 'ship'] None "
+                               "[True, True] [0.9, 0.9] 5")
+    assert backend.count() == 5
+
+
+def test_process_cap_reserves_actual_attempts(backend, tmp_path):
+    """The Python constructor forwards the active process cap. A refusal
+    after one send cannot be simulated by a plan or by a per-call limit."""
+    printed = run("""
+    import thinkthen as tt
+    low = tt.Engine(cache=False, max_requests_total=1)
+    print(low.decide("Is it late?", "one").value)
+    try:
+        low.decide("Is it late?", "two").value
+    except tt.UsageError as error:
+        print(error.kind, error.retryable, low.usage()["requests_sent"])
+    else:
+        raise AssertionError("the second attempt crossed the cap")
+    high = tt.Engine(cache=False, max_requests_total=2)
+    print(high.decide("Is it late?", "three").value,
+          high.usage()["requests_sent"])
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == ["True", "usage False 1", "True 1"]
+    assert backend.count() == 2
+
+
+def test_default_pack_and_explicit_batch_one_keep_their_distinct_bodies(backend, tmp_path):
+    """A default call packs three records; batch one sends three scalar
+    bodies. The value and probability for each record survive both cuts."""
+    packed = (b'{"state":"Each question quotes the text it asks about.",'
+              b'"model":"jev-1.13.0","questions":{'
+              b'"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"},'
+              b'"q2":{"type":"noul","instructions":"The text is \\"two\\". Is it late?"},'
+              b'"q3":{"type":"noul","instructions":"The text is \\"three\\". Is it late?"}}}')
+    single = [b'{"state":"' + word + b'","model":"jev-1.13.0",'
+              b'"questions":{"q1":{"type":"noul","instructions":"Is it late?"}}}'
+              for word in (b"one", b"two", b"three")]
+    with capturing_filter_listener() as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import thinkthen as tt
+        engine = tt.Engine(cache=False)
+        rows = ["one", "two", "three"]
+        for setting in ({}, {"batch": 1}):
+            call = engine.decide_many("Is it late?", rows, **setting)
+            print(call.value, call.probability, call.facts.requests_sent)
+        """, env)
+        assert printed.splitlines() == [
+            "[False, True, True] [0.1, 0.9, 0.9] 1",
+            "[False, True, True] [0.1, 0.9, 0.9] 3",
+        ]
+        assert bodies == [packed, *single]
+    assert backend.count() == 0
+
+
+def test_unresolved_choice_omits_probability_but_banded_decide_keeps_yes_probability(backend, tmp_path):
+    """Saved cases 03 and 07 distinguish an unresolved choice from a
+    banded decision; both still carry facts from exactly one answer."""
+    printed = run("""
+    import os, pandas as pd, thinkthen as tt
+    base = os.environ["THINKTHEN_BASE_URL"]
+    case = lambda name: base.replace("/generic/", f"/case/{name}/")
+    band = tt.Engine(base_url=case("03-decide-band-unsure"), cache=False).decide(
+        "Does this need attention?", "A short note.", threshold="0.2:0.8")
+    choice = tt.Engine(base_url=case("07-choose-unsure"), cache=False).choose(
+        "Which team owns this?", "Route this note.",
+        options=["billing", "shipping", "other"], threshold=0.6)
+    column = tt.Engine(cache=False).choose(
+        "Which team?", pd.Series(["one", "two"], index=[7, 5], name="body"),
+        options=["billing", "shipping"], threshold=1.0)
+    print(band.value, band.probability, band.facts.requests_sent,
+          choice.value, choice.probability, choice.facts.requests_sent,
+          column.value.isna().tolist(), column.probability.isna().tolist(),
+          column.probability.index.tolist(), column.probability.dtype.name,
+          column.facts.requests_sent)
+    """, child_env(backend, tmp_path))
+    assert printed.strip() == ("None 0.2 1 None None 1 [True, True] [True, True] "
+                               "[7, 5] Float64 1")
+    assert backend.count() == 3
+
+
+def test_null_column_rows_keep_positions_without_requests(backend, tmp_path):
+    """A missing input skips the wire, while the two real texts keep their
+    own answers and probabilities. The old guards refused the whole column."""
+    def chosen(question):
+        if question["type"] == "choice":
+            return {"type": "choice", "probabilities": {"billing": 0.9, "shipping": 0.1}}
+        return None
+
+    with capturing_filter_listener(chosen) as (url, bodies):
+        env = child_env(backend, tmp_path)
+        env["THINKTHEN_BASE_URL"] = url.removesuffix("/systemone")
+        printed = run("""
+        import pandas as pd, polars as pl, thinkthen as tt
+        engine = tt.Engine(cache=False, batch=1, throttle=1)
+        pandas = pd.Series(["one", pd.NA, "two"], dtype="string",
+                           index=[9, 5, 7], name="body")
+        decided = engine.decide("Is it late?", pandas)
+        polars = pl.Series("body", ["one", None, "two"], dtype=pl.String)
+        chosen = engine.choose("Which team?", polars, options=["billing", "shipping"])
+        empty = engine.decide("Is it late?", pd.Series([pd.NA, pd.NA], dtype="string",
+                                                     index=[3, 1], name="body"))
+        fallback = engine.decide("Is it late?", pd.Series(["one", None, "two"],
+                                                       dtype="category", index=[4, 2, 8]))
+        empty_polars = engine.choose("Which team?", pl.Series([None, None], dtype=pl.String),
+                                     options=["billing", "shipping"])
+        empty_object = engine.decide("Is it late?", pd.Series([None, None], dtype=object))
+        cut = pl.concat([pl.Series("body", ["skip", None], dtype=pl.String),
+                         pl.Series("body", ["one", "two"], dtype=pl.String)],
+                        rechunk=False).slice(1, 3)
+        shifted = engine.decide("Is it late?", cut)
+        uncertain = engine.choose("Which team?", pl.Series(["one", None], dtype=pl.String),
+                                  options=["billing", "shipping"], threshold=1.0)
+        print(decided.value.tolist(), decided.probability.tolist(),
+              decided.value.index.tolist(), [row["index"] for row in decided.details],
+              decided.facts.records, decided.facts.requests_sent)
+        print(chosen.value.to_list(), chosen.probability.to_list(),
+              [row["index"] for row in chosen.details],
+              chosen.facts.records, chosen.facts.requests_sent)
+        print(empty.value.tolist(), empty.probability.tolist(),
+              empty.value.index.tolist(), empty.facts.records, empty.facts.requests_sent)
+        print(fallback.value.tolist(), fallback.probability.tolist(),
+              fallback.value.index.tolist(), fallback.facts.requests_sent)
+        print(empty_polars.value.to_list(), empty_polars.probability.to_list(),
+              empty_polars.facts.records, empty_polars.facts.requests_sent,
+              empty_object.value.isna().tolist(), empty_object.facts.requests_sent)
+        print(shifted.value.to_list(), shifted.probability.to_list(),
+              [row["index"] for row in shifted.details], shifted.facts.requests_sent)
+        print(uncertain.value.to_list(), uncertain.probability.to_list(),
+              [row["index"] for row in uncertain.details], uncertain.facts.requests_sent)
+        """, env)
+        assert printed.splitlines() == [
+            "[False, <NA>, True] [0.1, <NA>, 0.9] [9, 5, 7] [0, 2] 2 2",
+            "['billing', None, 'billing'] [0.9, None, 0.9] [0, 2] 2 2",
+            "[<NA>, <NA>] [<NA>, <NA>] [3, 1] 0 0",
+            "[False, <NA>, True] [0.1, <NA>, 0.9] [4, 2, 8] 2",
+            "[None, None] [None, None] 0 0 [True, True] 0",
+            "[None, False, True] [None, 0.1, 0.9] [1, 2] 2",
+            "[None, None] [None, None] [0] 1",
+        ]
+        requests = [json.loads(body) for body in bodies]
+        assert [(one["state"], next(iter(one["questions"].values()))["type"])
+                for one in requests] == [("one", "noul"), ("two", "noul"),
+                                         ("one", "choice"), ("two", "choice"),
+                                         ("one", "noul"), ("two", "noul"),
+                                         ("one", "noul"), ("two", "noul"),
+                                         ("one", "choice")]
+        assert len(bodies) == 9
+    assert backend.count() == 0
+
+
+def test_null_frame_rows_keep_columns_and_skip_recognition(backend, tmp_path):
+    """Both frame doors retain source columns, return null answer cells,
+    and keep recognition row numbers after a missing input."""
+    printed = run("""
+    import pandas as pd, polars as pl, thinkthen as tt
+    engine = tt.Engine(cache=False)
+    texts = ["my card was charged twice", None, "the box came late"]
+    form = {"version": 1, "questions": {"late": {"decide": "Is it late?"},
+            "team": {"choose": "Which team?", "options": ["billing", "shipping"]}}}
+    polars = pl.DataFrame({"body": pl.Series(texts, dtype=pl.String), "keep": [9, 5, 7]})
+    asked = engine.annotate(form, polars, on="body")
+    found = engine.recognize(polars, kinds=["bill", "ship"], on="body")
+    blank = pl.DataFrame({"body": pl.Series([None, None], dtype=pl.String)})
+    blank_asked = engine.annotate(form, blank, on="body")
+    blank_found = engine.recognize(blank, kinds=["bill", "ship"], on="body")
+    print("polars", asked.value.select(polars.columns).equals(polars),
+          asked.value["late"].to_list(), asked.value["team"].to_list(),
+          asked.value["failed"].to_list(),
+          sorted({row["index"] for row in asked.details}), asked.facts.records,
+          sorted(set(found.value["row"].to_list())), found.facts.records)
+    print("blank", blank_asked.value["late"].to_list(),
+          blank_asked.value["failed"].to_list(), blank_asked.facts.records,
+          blank_asked.facts.requests_sent, blank_found.value.height,
+          blank_found.facts.records, blank_found.facts.requests_sent)
+    index = [9, 5, 7]
+    pandas = pd.DataFrame({"body": pd.Series(texts, index=index, dtype="string"),
+                           "keep": [9, 5, 7]}, index=index)
+    asked = engine.annotate(form, pandas, on="body")
+    found = engine.recognize(pandas, kinds=["bill", "ship"], on="body")
+    print("pandas", asked.value[pandas.columns].equals(pandas),
+          asked.value["late"].astype(object).where(asked.value["late"].notna(), None).tolist(),
+          asked.value["team"].astype(object).where(asked.value["team"].notna(), None).tolist(),
+          asked.value["failed"].tolist(), asked.value.index.tolist(),
+          sorted({row["index"] for row in asked.details}), asked.facts.records,
+          [row is None for row in found.value["names"]], found.facts.records)
+    print("sends", sum(call.facts.requests_sent for call in (asked, found)))
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines()[:2] == [
+        "polars True [True, None, True] ['billing', None, 'billing'] "
+        "[None, None, None] [0, 2] 2 [1, 3] 2",
+        "blank [None, None] [None, None] 0 0 0 0 0",
+    ]
+    assert printed.splitlines()[2:3] == [
+        "pandas True [True, None, True] ['billing', None, 'billing'] "
+        "[None, None, None] [9, 5, 7] [0, 2] 2 [False, True, False] 2",
+    ]
+    assert backend.count() > 0
+
+
+def test_null_score_and_tag_columns_keep_their_existing_shapes(backend, tmp_path):
+    """The shared nullable input reader also serves score and tag, whose
+    Call probability stays absent and whose non-null values keep their type."""
+    printed = run("""
+    import pandas as pd, polars as pl, thinkthen as tt
+    engine = tt.Engine(cache=False)
+    rows = pl.Series("body", ["one", None, "two"], dtype=pl.String)
+    score = engine.score("How urgent?", rows, levels=["Routine.", "Soon.", "Now."])
+    tags = engine.tag("Which kinds?", rows, labels=["bill", "ship"])
+    object_tags = engine.tag("Which kinds?", pd.Series(["one", float("nan"), "two"],
+                                                         dtype=object, index=[9, 5, 7]),
+                             labels=["bill", "ship"])
+    print(score.value.to_list(), score.probability, score.facts.records,
+          score.facts.requests_sent, [row["index"] for row in score.details])
+    print(tags.value.to_list(), tags.probability, tags.facts.records,
+          tags.facts.requests_sent, [row["index"] for row in tags.details])
+    print(object_tags.value.tolist(), object_tags.value.index.tolist(),
+          object_tags.probability, object_tags.facts.records,
+          object_tags.facts.requests_sent, [row["index"] for row in object_tags.details])
+    """, child_env(backend, tmp_path))
+    assert printed.splitlines() == [
+        "[0.15, None, 0.15] None 2 1 [0, 2]",
+        "[['bill', 'ship'], None, ['bill', 'ship']] None 2 1 [0, 2]",
+        "[['bill', 'ship'], None, ['bill', 'ship']] [9, 5, 7] None 2 1 [0, 2]",
+    ]
+    assert backend.count() == 3
+
+
 @pytest.mark.parametrize("shape", ["list", "polars_series"])
 def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path, shape):
     fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"

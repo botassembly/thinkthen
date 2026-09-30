@@ -60,7 +60,7 @@ def test_a_column_answers_as_its_list_does(backend, tmp_path):
 
 def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     """Decisions 4, 5, and 6: frames that are neither Polars nor pandas and
-    list-only verbs are refused, and a null or a number column is refused.
+    list-only verbs and a number column are refused.
     Ticket 0136: a question named as a column, after a missing ``on``, and a
     column nested past 64 levels are refused too. Nothing reaches the backend."""
     printed = run(SETUP + """
@@ -70,7 +70,6 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
     said(lambda: engine.filter(late, pl.Series(texts)).value)
     said(lambda: engine.relate(pl.Series(texts), relations={"r": ("a", "b")}).value)
     said(lambda: engine.details(late, pl.Series(texts)).value)
-    said(lambda: engine.decide(late, pl.Series(["a", None])).value)
     try:
         engine.decide(late, pl.Series([1, 2])).value
     except tt.UsageError as error:
@@ -98,7 +97,6 @@ def test_what_the_door_refuses_sends_nothing(backend, tmp_path):
         f"UsageError {LISTS}",
         f"UsageError {LISTS}",
         "UsageError details reads one str, not a column",
-        "UsageError the column holds nulls; the engine needs text, so drop or fill them first",
         "UsageError the column's Arrow format is 'l', not text",
         "UsageError a data frame is not a column; pass df[\"name\"], or annotate with on=",
         "UsageError the frame has no column named 'missing'",
@@ -247,7 +245,10 @@ def test_the_slide_sample_runs_as_drawn(backend, tmp_path):
     os.chdir({str(tmp_path)!r})
     df = polars.DataFrame({{"body": ["I was charged twice. Please refund the duplicate."]}})
     df = tt.annotate("form.json", df, on="body").value
-    print(df.columns, df.dtypes)
+    print(df.columns, df["wants_refund"].to_list(), df["team"].to_list(),
+          df["urgency"].to_list(), df["failed"].to_list())
     """, child_env(backend, tmp_path))
-    assert printed.strip() == ("['body', 'wants_refund', 'team', 'urgency'] "
-                               "[String, Boolean, String, Float64]")
+    # The generic replay returns noul=.9, first choice .9, and score
+    # 0*.9 + 1*.05 + 2*.05 = .15 under the weighted-level contract.
+    assert printed.strip() == ("['body', 'wants_refund', 'team', 'urgency', 'failed'] "
+                               "[True] ['billing'] [0.15] [None]")
