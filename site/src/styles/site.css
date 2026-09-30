@@ -352,8 +352,8 @@ p code, li code { white-space: nowrap; }
 
 /* The header search box submits to /search/. On a phone a narrower field and
    the round icon button share the first row with the wordmark and the theme
-   button. Its text is 16px so iOS does
-   not zoom when it takes focus. */
+   button. The field's text is 16px, because iOS zooms into smaller text when
+   a field takes focus. */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
