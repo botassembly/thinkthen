@@ -1,10 +1,10 @@
 // The shared engine-setting corpus through the TypeScript option names.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { readFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ask, startBackend } from './backend.mjs';
+import { ask, startBackend, storedAnswers } from './backend.mjs';
 
 const corpus = JSON.parse(readFileSync(fileURLToPath(new URL('../../../conformance/settings.json', import.meta.url))));
 assert.equal(corpus.schema, 'thinkthen.settings-cases/1');
@@ -39,8 +39,7 @@ for (const entry of corpus.cases) {
       assert.equal(await backend.count(), step.count, entry.id);
     }
     if (entry.entries !== undefined) {
-      const count = readdirSync(folder).filter((name) => name.endsWith('.json') && !name.startsWith('.')).length;
-      assert.equal(count, entry.entries, entry.id);
+      assert.equal(await storedAnswers(folder), entry.entries, entry.id);
     }
   });
 }

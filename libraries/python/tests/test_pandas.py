@@ -8,7 +8,6 @@ index test's row on shared case 27, whose answers differ by text, show values
 paired to the wrong rows.
 """
 
-import hashlib
 import json
 import pathlib
 import time
@@ -16,12 +15,14 @@ import time
 import pandas
 import pytest
 
-from conftest import Backend, child_env, run, start
+from conftest import Backend, child_env, one_request, question_keys, run, start
 from test_call import capturing_filter_listener, quoted_record
 
 
 @pytest.mark.parametrize("shape", ["pandas_series", "pandas_frame", "polars_frame"])
-def test_portable_max_content_cuts_in_public_column_and_frame_shapes(backend, tmp_path, shape):
+def test_portable_questions_ride_one_request_in_public_column_and_frame_shapes(backend, tmp_path, shape):
+    """The content cut is gone, by ADR 0111, so the five records ride one
+    request that keeps the fixture questions, and each row names its key."""
     fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"
     corpus = json.loads((fixture / "portable-records.json").read_text())
     # A column and a one-question frame annotation send the same quoted bodies.
@@ -51,13 +52,11 @@ def test_portable_max_content_cuts_in_public_column_and_frame_shapes(backend, tm
                               [[row['index'], list(row['requests'])] for row in call.details]]))
         """, env)
         values, order, facts, details = json.loads(printed)
-        assert bodies == expected
+        keys = one_request(url, bodies, expected)
         assert values == [True] * 5
         assert order == ([9, 5, 7, 3, 1] if shape != "polars_frame" else list(range(5)))
-        assert facts == [5, 3]
-        hashes = [hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
-                  for body in expected]
-        assert details == [[i, [hashes[group]]] for i, group in enumerate((0, 0, 1, 1, 2))]
+        assert facts == [5, 1]
+        assert details == [[i, [key]] for i, key in enumerate(keys)]
     assert backend.count() == 0
 
 THREE = pandas.__version__.startswith("3.")
@@ -188,22 +187,24 @@ def test_pandas_series_and_frame_batch_facts(backend, tmp_path):
         singleton = (b'{"state":"Each question quotes the text it asks about.","model":"jev-latest",'
                      b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"one\\". Is it late?"}}}')
         assert singleton in bodies[1:4]
-        digest = lambda body: hashlib.sha256(
-            b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
+        # Each detail names its own question's key, by ADR 0111.
+        def each(body):
+            return [[key] for key in question_keys(url, body)]
+
         def by_state(items):
-            return {quoted_record(json.loads(body)): digest(body) for body in items}
+            return {quoted_record(json.loads(body)): question_keys(url, body)[0] for body in items}
         states = ["one", "two", "three"]
-        expected_digests = [
-            [[digest(bodies[0])]] * 3,
+        expected_keys = [
+            each(bodies[0]),
             [[by_state(bodies[1:4])[state]] for state in states],
-            [[digest(bodies[4])]] * 3,
+            each(bodies[4]),
             [[by_state(bodies[5:8])[state]] for state in states],
-            [[digest(bodies[8])]] * 3,
-            [[digest(bodies[9])]] * 3,
-            [[digest(bodies[10])]] * 6,
-            [[digest(bodies[11])]] * 3,
+            each(bodies[8]),
+            each(bodies[9]),
+            each(bodies[10]),
+            each(bodies[11]),
         ]
-        assert json.loads(captured) == expected_digests
+        assert json.loads(captured) == expected_keys
         assert bodies[0] != bodies[-1]
     assert backend.count() == 0
 

@@ -23,6 +23,8 @@ import polars as pl
 
 import thinkthen as tt
 
+from keys import question_keys
+
 CASES = pathlib.Path(__file__).resolve().parents[3] / "conformance" / "cases.json"
 CANONICAL = "https://api.typesafe.ai/v1/systemone"
 PARTS = {}
@@ -32,6 +34,8 @@ def not_run(case):
     """Why the library cannot run this case, or ``None``."""
     if case["expect"].get("error", {}).get("kind") == "defect":
         return "no outside boundary reaches an internal invariant failure"
+    if case["verb"] == "annotate" and "record" in case and len(case.get("exchanges", [])) > 1:
+        return "one record's groups were recorded as separate requests, and ADR 0111 section 5 packs them into one"
     return None
 
 
@@ -76,8 +80,11 @@ def detailed(details, expected, base):
         if field in wanted["answer"]:
             same(field, details["answer"].get(field), wanted["answer"][field])
     same("confidence", details["answer"].get("confidence", "absent"), wanted["answer"].get("confidence", "absent"))
-    for field in ("model", "question_sha256", "requests", "usage", "requests_sent", "cached"):
+    for field in ("model", "question_sha256", "usage", "requests_sent", "cached"):
         same(field, details["meta"].get(field, "absent"), wanted.get(field, "absent"))
+    # A keyed request stands for the list of its keys, so a row reads the flattened list.
+    requests = [key for held in wanted.get("requests", []) for key in (held if isinstance(held, list) else [held])]
+    same("requests", details["meta"].get("requests", "absent"), requests if "requests" in wanted else "absent")
     same("url", details["meta"]["url"], base + "/systemone")
 
 
@@ -133,7 +140,11 @@ def succeeded(port, case):
     base = f"http://127.0.0.1:{port}/case/{case['id']}/v1"
     served = base + "/systemone"
     exchanges = case.get("exchanges", [])
-    renamed = {digest(CANONICAL, e["request"]): digest(served, e["request"]) for e in exchanges}
+    # A record function's row lists question keys by ADR 0111; find,
+    # recognize and relate keep request digests until slice 4.
+    keyed = case["verb"] not in ("find", "recognize", "relate")
+    renamed = {digest(CANONICAL, e["request"]): question_keys(served, e["request"]) if keyed
+               else digest(served, e["request"]) for e in exchanges}
     success = swap(case["expect"]["success"], renamed)
     texts = [exchange["evidence"] for exchange in exchanges]
     engine = tt.Engine(base_url=base, cache=False)

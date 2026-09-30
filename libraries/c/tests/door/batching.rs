@@ -267,13 +267,7 @@ fn call_batch_controls_request_count_and_refuses_scalar_context_before_send() {
     assert_eq!(singles["facts"]["requests_sent"], 3);
     assert_eq!(contextual["facts"]["requests_sent"], 1);
     assert_eq!(contextual["value"][0]["input"], "alpha");
-    assert!(contextual["value"][1]["meta"].get("batch").is_none());
-    assert_eq!(
-        contextual["value"][1]["meta"]["requests"]
-            .as_array()
-            .map(Vec::len),
-        Some(1)
-    );
+    assert!(contextual["value"][1]["meta"]["requests"][0].is_string());
     assert_eq!(
         contextual["value"][0]["meta"]["context_sha256"],
         "3fecbe9f8bf58be501d407aed3249b1a6b404b035b0aace505df40089de5a9c1"

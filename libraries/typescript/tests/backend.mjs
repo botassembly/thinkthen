@@ -3,13 +3,26 @@
 // key only beside a 127.0.0.1 address, and nothing else (ticket 0127). No test changes
 // its own environment, because the default engine reads it once.
 import { spawn } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 
 import { childEnv as cleanEnv } from '../../../conformance/children/children.mjs';
+
+/** The answer rows a cache folder's question store holds, by ADR 0111; 0 with no store. */
+export async function storedAnswers(folder) {
+  const file = join(folder, 'thinkthen.sqlite');
+  if (!existsSync(file)) return 0;
+  const { DatabaseSync } = await import('node:sqlite');
+  const store = new DatabaseSync(file, { readOnly: true });
+  try {
+    return Number(store.prepare('SELECT count(*) AS n FROM answers').get().n);
+  } finally {
+    store.close();
+  }
+}
 
 export const FAKE_KEY = 'fake-loopback-key';
 export const INDEX = fileURLToPath(import.meta.resolve('thinkthen'));

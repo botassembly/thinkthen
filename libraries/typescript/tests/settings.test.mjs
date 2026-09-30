@@ -5,11 +5,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { ask, child, sleep, startBackend } from './backend.mjs';
-
-// Answer files, beside the folder's one backend marker.
-const files = (folder) =>
-  readdirSync(folder, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile() && entry.name.endsWith('.json') && !entry.name.startsWith('.'));
+import { ask, child, sleep, startBackend, storedAnswers } from './backend.mjs';
 
 test('an engine starts from the environment: THINKTHEN_CACHE holds its answers', async (t) => {
   const backend = await startBackend(t);
@@ -24,7 +20,7 @@ test('an engine starts from the environment: THINKTHEN_CACHE holds its answers',
   assert.deepEqual(value, [true, true]);
   assert.equal(await backend.count(), 1);
   assert.equal((await ask(backend, `return new tt.Engine({ cache: false }).usage();`)).value.retries, 0);
-  assert.equal(files(folderA).length, 1, 'the answer lands in folder A');
+  assert.equal(await storedAnswers(folderA), 1, 'the answer lands in folder A');
   // ADR 0113: the scratch cache home holds only the count-only usage totals.
   const written = readdirSync(scratch, { recursive: true, withFileTypes: true }).filter((entry) => entry.isFile()).map((entry) => join(entry.parentPath, entry.name));
   assert.ok(written.length > 0 && written.every((path) => path.split('/').includes('thinkthen-usage')), `only usage totals land under the scratch cache home: ${written}`);
@@ -47,7 +43,7 @@ test('baseUrl and a named cache override their setting', async (t) => {
     named: [true, true],
   });
   assert.equal(await second.count(), 1, 'baseUrl sends to the second backend');
-  assert.equal(files(folder).length, 1, 'the named cache holds one answer');
+  assert.equal(await storedAnswers(folder), 1, 'the named cache holds one answer');
   assert.equal(await first.count(), 1, 'the named cache sends once');
 });
 

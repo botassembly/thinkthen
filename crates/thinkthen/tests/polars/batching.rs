@@ -52,30 +52,41 @@ fn question_count(request: &Recorded) -> usize {
 /// section 2: the SHA-256 of the adapter, the URL, the model, the state and
 /// one question as the body carries them, joined by line feeds.
 fn keys(url: &str, body: &[u8]) -> Vec<String> {
-    let parts: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
-        serde_json::from_slice(body).expect("request parts");
-    let questions: std::collections::BTreeMap<String, Box<serde_json::value::RawValue>> =
-        serde_json::from_str(parts["questions"].get()).expect("question map");
+    type Raw = std::collections::BTreeMap<String, Box<serde_json::value::RawValue>>;
+    let parts: Raw = serde_json::from_slice(body).expect("request parts");
+    let part = |name: &str| parts.get(name).expect("a request part").get();
+    let questions: Raw = serde_json::from_str(part("questions")).expect("question map");
     let mut placed: Vec<(usize, &str)> = questions
         .iter()
-        .map(|(name, question)| (name[1..].parse().expect("qN"), question.get()))
+        .map(|(name, question)| {
+            let place = name.get(1..).and_then(|digits| digits.parse().ok());
+            (place.expect("qN"), question.get())
+        })
         .collect();
     placed.sort_by_key(|(place, _)| *place);
     placed
         .into_iter()
         .map(|(_, question)| {
-            let joined = [
-                "systemone",
-                url,
-                parts["model"].get(),
-                parts["state"].get(),
-                question,
-            ]
-            .join("\n");
+            let joined = ["systemone", url, part("model"), part("state"), question].join("\n");
             Sha256::digest(joined.as_bytes())
                 .iter()
                 .map(|byte| format!("{byte:02x}"))
                 .collect()
+        })
+        .collect()
+}
+
+/// The questions of one body, in wire order.
+fn questions(body: &Value) -> Vec<Value> {
+    let count = body
+        .get("questions")
+        .and_then(Value::as_object)
+        .map_or(0, Map::len);
+    (1..=count)
+        .map(|place| {
+            body.pointer(&format!("/questions/q{place}"))
+                .cloned()
+                .expect("a question")
         })
         .collect()
 }
@@ -86,23 +97,21 @@ fn keys(url: &str, body: &[u8]) -> Vec<String> {
 fn assert_portable_exchange(listener: &Listener, expected: [&str; 3], observed: &Seen) {
     let fixture: Vec<Value> = expected
         .iter()
-        .flat_map(|body| {
-            let body: Value = serde_json::from_str(body).expect("fixture body");
-            (1..=body["questions"].as_object().map_or(0, Map::len))
-                .map(move |place| body["questions"][format!("q{place}")].clone())
-        })
+        .flat_map(|body| questions(&serde_json::from_str(body).expect("fixture body")))
         .collect();
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
-    let sent: Value = serde_json::from_slice(&requests[0].body).expect("request JSON");
-    let questions: Vec<Value> = (1..=5)
-        .map(|place| sent["questions"][format!("q{place}")].clone())
-        .collect();
-    assert_eq!(questions, fixture, "each question keeps the fixture bytes");
-    let keys = keys(listener.url(), &requests[0].body);
+    let sent = &requests.first().expect("one request").body;
+    let body: Value = serde_json::from_slice(sent).expect("request JSON");
+    assert_eq!(
+        questions(&body),
+        fixture,
+        "each question keeps the fixture bytes"
+    );
     assert_eq!(
         *observed.lock().expect("observations"),
-        keys.into_iter()
+        keys(listener.url(), sent)
+            .into_iter()
             .enumerate()
             .map(|(index, key)| (index, vec![key]))
             .collect::<Vec<_>>()

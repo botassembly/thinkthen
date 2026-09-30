@@ -5,7 +5,6 @@ The old answer tests inspect bare values and cannot see missing accounts or
 one request per row. No test-only export or provider call is needed.
 """
 
-import hashlib
 import json
 import os
 import signal
@@ -16,14 +15,19 @@ from threading import Thread
 
 import pytest
 
-from conftest import child_env, run, start
+from conftest import child_env, one_request, question_keys, run, start
+
+
+def quoted(question):
+    """The record one wire question quotes after "The text is "."""
+    text = question["instructions"]
+    assert text.startswith("The text is "), text
+    return json.JSONDecoder().raw_decode(text, len("The text is "))[0]
 
 
 def quoted_record(request):
     """The one record a request quotes at the head of its first question."""
-    text = next(iter(request["questions"].values()))["instructions"]
-    assert text.startswith("The text is "), text
-    return json.JSONDecoder().raw_decode(text, len("The text is "))[0]
+    return quoted(next(iter(request["questions"].values())))
 
 
 def test_keywords_and_probability_share_the_answer(backend, tmp_path):
@@ -319,7 +323,9 @@ def test_null_score_and_tag_columns_keep_their_existing_shapes(backend, tmp_path
 
 
 @pytest.mark.parametrize("shape", ["list", "polars_series"])
-def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path, shape):
+def test_portable_questions_ride_one_request_in_public_bulk_text_shapes(backend, tmp_path, shape):
+    """The content cut is gone, by ADR 0111, so the five records ride one
+    request that keeps the fixture questions, and each row names its key."""
     fixture = pathlib.Path(__file__).resolve().parents[3] / "specification/fixtures/batching"
     corpus = json.loads((fixture / "portable-records.json").read_text())
     expected = [(fixture / f"portable-{index}.request.json").read_bytes().removesuffix(b"\n")
@@ -338,12 +344,10 @@ def test_portable_max_content_cuts_in_public_bulk_text_shapes(backend, tmp_path,
                               [[row['index'], list(row['requests'])] for row in call.details]]))
         """, env)
         values, facts, details = json.loads(printed)
-        assert bodies == expected
+        keys = one_request(url, bodies, expected)
         assert values == [True] * 5
-        assert facts == [5, 3]
-        hashes = [hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
-                  for body in expected]
-        assert details == [[i, [hashes[group]]] for i, group in enumerate((0, 0, 1, 1, 2))]
+        assert facts == [5, 1]
+        assert details == [[i, [key]] for i, key in enumerate(keys)]
     assert backend.count() == 0
 
 
@@ -563,15 +567,21 @@ def test_batches_labels_and_owned_details(backend, tmp_path):
         two = (b'{"state":"Each question quotes the text it asks about.","model":"jev-latest",'
                b'"questions":{"q1":{"type":"noul","instructions":"The text is \\"two\\". Is it late?"}}}')
         assert bodies[1:] == [one, two, one]
-        digest = lambda body: hashlib.sha256(b"systemone\n" + url.encode() + b"\n" + body).hexdigest()
+        # A row names its own question's key, and a call asks equal keys once.
+        packed_keys = dict(zip((quoted(question) for question in json.loads(bodies[0])["questions"].values()),
+                               question_keys(url, bodies[0])))
         assert [row[:3] for row in packed["details"]] == [
-            [index, index == 1, [digest(bodies[0])]] for index in range(3)]
+            [index, index == 1, [packed_keys[text]]] for index, text in enumerate(["one", "two", "one"])]
         assert [row[:3] for row in separate["details"]] == [
-            [index, index == 1, [digest(body)]] for index, body in enumerate(bodies[1:])]
+            [index, index == 1, question_keys(url, body)] for index, body in enumerate(bodies[1:])]
         assert separate["details"][0][2] == separate["details"][2][2]
-        for call in (packed, separate):
-            assert sum(row[3]["input_tokens"] for row in call["details"]) == call["facts"][2]
-            assert sum(row[3]["output_tokens"] for row in call["details"]) == call["facts"][3]
+        # A row carries its question's even share, the remainder to the
+        # earliest. The repeated "one" shares the packed answer, as a cached
+        # row would, so its share counts twice.
+        assert [[row[3]["input_tokens"], row[3]["output_tokens"]]
+                for row in packed["details"]] == [[3, 2], [3, 1], [3, 2]]
+        assert sum(row[3]["input_tokens"] for row in separate["details"]) == separate["facts"][2]
+        assert sum(row[3]["output_tokens"] for row in separate["details"]) == separate["facts"][3]
 
 
 def test_returned_failure_keeps_its_final_account(backend, tmp_path):
