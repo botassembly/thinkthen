@@ -20,8 +20,8 @@ judge <- tt_decide("Q?", threshold = "0.2:0.95")
 preview_sends <- sent_by({
   planned <- tt_plan(judge, c("alpha", NA_character_, "beta"))
   empty <- tt_plan(judge, c(NA_character_, NA_character_))
-  split <- tt_plan(judge, c("alpha", "beta"), batch = 1L)
-  bad_context <- kind_of(tt_plan(judge, "x", context = " "))
+  split <- tt_plan(tt_decide("Q?", batch = 1L), c("alpha", "beta"))
+  bad_context <- kind_of(tt_plan(judge, "x", context = "Valid but unbound"))
   bad_bytes <- "caf\xe9"
   Encoding(bad_bytes) <- "bytes"
   bad <- kind_of(tt_plan(judge, bad_bytes))
@@ -109,6 +109,44 @@ check("judge migration, malformed band, raw duplicates and omitted application f
       identical(c(malformed, repeated, no_input, no_plan_input),
                 c("usage", "local", "usage", "usage")))
 
+# A class/attribute lookalike cannot make plan run arbitrary R code. Public
+# attribute mutation cannot give planning a second settings source, and the
+# closure binding itself refuses ordinary assignment.
+identity_sends <- sent_by({
+  fake <- function(input) stop("forged callback ran")
+  class(fake) <- c("thinkthen_judge", "function")
+  attr(fake, "thinkthen_bound") <- list(kind = "decide", question = list(json = '{}'))
+  forged <- kind_of(tt_plan(fake, "x"))
+  changed <- judge
+  body(changed) <- quote(stop("mutated callback ran"))
+  mutated <- kind_of(tt_plan(changed, "x"))
+  callback_ran <- FALSE
+  hostile <- new.env(parent = parent.env(environment(judge)))
+  makeActiveBinding("bound", function() { callback_ran <<- TRUE; list() }, hostile)
+  lockEnvironment(hostile, bindings = TRUE)
+  active <- judge
+  environment(active) <- hostile
+  active_kind <- kind_of(tt_plan(active, "x"))
+  attr(judge, "thinkthen_bound") <- list(kind = "decide", question = list(json = '{}'), batch = 1L)
+  same <- tt_plan(judge, c("alpha", "beta"))
+  locked <- tryCatch({ environment(judge)$bound <- list(); FALSE }, error = function(e) TRUE)
+  override_batch <- kind_of(tt_plan(tt_decide("Q?", batch = 1L), c("alpha", "beta"), batch = "max"))
+  override_context <- kind_of(tt_plan(judge, "x", context = "other"))
+})
+check("forged and mutated functions, plan overrides, and a locked capture cannot split identity",
+      identity_sends == 0L && locked && !callback_ran &&
+      identical(c(forged, mutated, active_kind, override_batch, override_context),
+                rep("usage", 5L)) &&
+      identical(same$requests, 1) && identical(same$first_body, first))
+
+same_sends <- sent_by(same_answer <- judge(c("alpha", "beta")))
+check("an unrelated attribute cannot change the judge's planned body or actual send",
+      same_sends == 1L && identical(same$requests, 1) &&
+      identical(same_answer$facts$requests_sent, 1) &&
+      identical(same_answer$probability, c(0.9, 0.9)) &&
+      identical(same_answer$details[[1L]]$requests[[1L]],
+                digest(arm("arm/full/capture/v1/systemone"), same$first_body)))
+
 lazy <- dbplyr::lazy_frame(body = "x", con = dbplyr::simulate_dbi()) |>
   dplyr::mutate(accepted = thinkthen_decide("Q?", body, '{"threshold":0.7}'))
 query <- paste(capture.output(show_query(lazy)), collapse = "\n")
@@ -117,4 +155,4 @@ check("dbplyr show_query preserves the extension spelling without a database",
         'SELECT `df`.*, thinkthen_decide(\'Q?\', `body`, \'{"threshold":0.7}\') AS `accepted`',
         "FROM `df`", sep = "\n")))
 
-finish("judge plan", 9L)
+finish("judge plan", 10L)

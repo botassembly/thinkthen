@@ -10,7 +10,7 @@ tickets |>
   mutate(team = tt_choose("Which team owns this?", body, c("billing", "shipping", "account"))$value)
 ```
 
-An omitted `input` returns a function judge with its question and call settings checked once. Apply it to a scalar or vector; pass `deadline_ms` or `completion` when applying it. An explicit `NULL` or `NA` input remains an eager call. `tt_plan(judge, input)` previews the same packed work with `records`, prepared `requests`, `estimated_bytes`, a lower/upper `estimated_input_tokens` band, `upper_bound`, and `first_body`. Planning needs no key, reads no cache, and sends no request. Its request count precedes cache answers, refusal splits, and retries.
+An omitted `input` returns a function judge with its question and call settings checked once. Apply it to a scalar or vector; pass `deadline_ms` or `completion` when applying it. An explicit `NULL` or `NA` input remains an eager call. `tt_plan(judge, input)` previews the same packed work with `records`, prepared `requests`, `estimated_bytes`, a lower/upper `estimated_input_tokens` band, `upper_bound`, and `first_body`. Planning uses the judge's bound batch and context; those controls cannot be overridden at plan time. It needs no key, reads no cache, and sends no request. Its request count precedes cache answers, refusal splits, and retries.
 
 ```r
 complaint <- tt_decide("Is this a complaint?", threshold = "0.3:0.7")
