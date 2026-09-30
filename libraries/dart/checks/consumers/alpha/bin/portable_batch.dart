@@ -17,8 +17,8 @@ void main(List<String> args) {
       (corpus['texts'] as List<dynamic>).cast<String>(),
     );
     if (answers.value.length != 5 ||
-        answers.facts.records != 5 ||
-        answers.facts.requestsSent != 1 ||
+        answers.facts['records'] != 5 ||
+        answers.facts['requests_sent'] != 1 ||
         answers.value.any(
           (answer) => answer.outcome != Outcome.yes || answer.probability != .9,
         )) {

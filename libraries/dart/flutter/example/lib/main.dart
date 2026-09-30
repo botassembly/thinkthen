@@ -10,8 +10,8 @@ void main() {
   final answer = ThinkThenFlutter(library).decide('Is it?', 'flutter-embedder');
   if (answer.value.outcome != Outcome.yes ||
       answer.value.probability != .9 ||
-      answer.facts.records != 1 ||
-      answer.facts.requestsSent != 1) {
+      answer.facts['records'] != 1 ||
+      answer.facts['requests_sent'] != 1) {
     throw StateError('FLUTTER_EMBEDDER_RESULT_MISMATCH: $answer');
   }
   print(

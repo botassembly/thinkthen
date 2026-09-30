@@ -348,10 +348,11 @@ Future<void> main(List<String> args) async {
           (annotate['facts'] as Map)['records'] == 1,
       'annotate JSON exact field identity',
     );
-    final parsedAnnotation = Annotation.parse(annotate['value']);
+    final checked =
+        readField(((annotate['value'] as List).single as Map)['check']);
     require(
-      (parsedAnnotation.rows.single['check'] as AnswerField).value == true,
-      'typed annotate success',
+      checked is AnswerField && checked.value == true,
+      'annotate field read through readField',
     );
     final spec =
         '{"version":1,"recognize":{"kinds":{"person":"A person name."}}}';
@@ -362,10 +363,6 @@ Future<void> main(List<String> args) async {
       jsonEncode(recognized) ==
           '{"entities":[{"text":"John Smith","start":0,"end":10,"length":10,"kind":"person","strength":0.81}]}',
       'recognize JSON exact entity identity',
-    );
-    require(
-      Recognition.parse(recognized).entities.single.end == 10,
-      'typed scalar offsets',
     );
     final relSpec =
         '{"version":1,"relate":{"relations":[{"name":"caused_by","source":"alert","target":"alert"}]} }';
@@ -388,7 +385,6 @@ Future<void> main(List<String> args) async {
               '{"relation":"caused_by","source":{"name":"Second","kind":"alert"},"target":{"name":"First","kind":"alert"},"probability":0.9}',
       'relate JSON exact edges and order',
     );
-    require(Relations.parse(related).edges.length == 2, 'typed edges');
     door.plainAliases(engine);
     print('PLAIN_ENTRYPOINTS_PASS five non-opts aliases');
     try {

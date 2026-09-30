@@ -233,6 +233,24 @@ class Door {
         Pointer<Pointer<Uint8>>,
         Pointer<IntPtr>,
       )>('thinkthen_relate_with_facts_opts');
+  late final int Function(
+    Pointer<Void>,
+    Pointer<Uint8>,
+    Pointer<Pointer<Uint8>>,
+    Pointer<IntPtr>,
+  ) planJson = lib.lookupFunction<
+      Int32 Function(
+        Pointer<Void>,
+        Pointer<Uint8>,
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
+      ),
+      int Function(
+        Pointer<Void>,
+        Pointer<Uint8>,
+        Pointer<Pointer<Uint8>>,
+        Pointer<IntPtr>,
+      )>('thinkthen_plan_json');
   late final void Function(Pointer<Uint8>) freeString = lib.lookupFunction<
       Void Function(Pointer<Uint8>),
       void Function(Pointer<Uint8>)>('thinkthen_free_string');
@@ -481,15 +499,52 @@ class Door {
     );
   }
 
-  CallFacts _readFacts(Pointer<Uint8> pointer, int length) {
+  /// Reads owned JSON text, such as a facts object, as a host map.
+  Map<String, Object?> _readObject(Pointer<Uint8> pointer, int length) {
     if (pointer.address == 0)
-      throw StateError('successful call returned null facts');
-    return CallFacts.parse(
-      jsonDecode(utf8.decode(pointer.asTypedList(length))),
-    );
+      throw StateError('successful call returned null JSON');
+    return jsonDecode(utf8.decode(pointer.asTypedList(length)))
+        as Map<String, Object?>;
   }
 
-  CallResult<AnswerValue> decide(
+  /// Previews a decide, choose, score or tag call through
+  /// `thinkthen_plan_json` and returns the result schema's plan object.
+  /// [question] is question text or a question object, and [settings] is
+  /// null or a `thinkthen.settings/1` object. It needs no key, reads no cache
+  /// and sends nothing.
+  Map<String, Object?> plan(
+    Pointer<Void> engine,
+    String verb,
+    Object question,
+    List<String> input, [
+    Map<String, Object?>? settings,
+  ]) {
+    final owned = _OwnedPointers();
+    try {
+      final request = owned.add(memory.cString(jsonEncode({
+        'verb': verb,
+        'question': question,
+        'input': input,
+        if (settings != null) 'settings': settings,
+      })));
+      final out = owned.add(
+        memory.allocate(sizeOf<Pointer<Uint8>>()).cast<Pointer<Uint8>>(),
+      );
+      final outLen =
+          owned.add(memory.allocate(sizeOf<IntPtr>()).cast<IntPtr>());
+      final code = planJson(engine, request, out, outLen);
+      if (code != 0) throw failure(engine, code);
+      try {
+        return _readObject(out.value, outLen.value);
+      } finally {
+        freeString(out.value);
+      }
+    } finally {
+      owned.releaseAll();
+    }
+  }
+
+  ({AnswerValue value, Map<String, Object?> facts}) decide(
     Pointer<Void> engine,
     String question,
     String text, {
@@ -531,9 +586,9 @@ class Door {
             throw StateError('failure modified scalar outputs');
           throw failure(engine, code);
         }
-        return CallResult(
-          AnswerValue(out.ref.outcome, out.ref.probability),
-          _readFacts(facts.value, factsLen.value),
+        return (
+          value: AnswerValue(out.ref.outcome, out.ref.probability),
+          facts: _readObject(facts.value, factsLen.value),
         );
       } finally {
         if (facts.value.address != 0) freeString(facts.value);
@@ -543,7 +598,7 @@ class Door {
     }
   }
 
-  CallResult<List<AnswerValue>> many(
+  ({List<AnswerValue> value, Map<String, Object?> facts}) many(
     Pointer<Void> engine,
     String question,
     List<String> texts, {
@@ -604,10 +659,13 @@ class Door {
             throw StateError('failure modified bulk facts output');
           throw failure(engine, code);
         }
-        return CallResult([
-          for (var i = 0; i < texts.length; i++)
-            AnswerValue(out[i].outcome, out[i].probability),
-        ], _readFacts(facts.value, factsLen.value));
+        return (
+          value: [
+            for (var i = 0; i < texts.length; i++)
+              AnswerValue(out[i].outcome, out[i].probability),
+          ],
+          facts: _readObject(facts.value, factsLen.value),
+        );
       } finally {
         if (facts.value.address != 0) freeString(facts.value);
       }
@@ -617,35 +675,43 @@ class Door {
   }
 
   /// Carries description maps and structured {what,not_for,examples} unchanged.
-  Object? ask(Pointer<Void> engine, Map<String, Object?> request) =>
-      call(engine, jsonEncode(request));
-  Annotation annotate(Pointer<Void> engine, Map<String, Object?> request) {
-    final envelope = ask(engine, request) as Map;
-    return Annotation.parse(envelope['value']);
-  }
+  Object? ask(
+    Pointer<Void> engine,
+    Map<String, Object?> request, {
+    int deadline = -1,
+    Pointer<Void>? token,
+  }) =>
+      call(engine, jsonEncode(request), deadline: deadline, token: token);
 
-  CallResult<Recognition> recognize(
+  ({Object? value, Map<String, Object?> facts}) recognize(
     Pointer<Void> engine,
     String spec,
-    String text,
-  ) {
-    final result = structured(engine, spec, [text], recognize: true);
-    return CallResult(Recognition.parse(result.value), result.facts);
-  }
+    String text, {
+    int deadline = -1,
+    Pointer<Void>? token,
+  }) =>
+      structured(engine, spec, [text],
+          recognize: true, deadline: deadline, token: token);
 
-  CallResult<Relations> relate(
+  ({Object? value, Map<String, Object?> facts}) relate(
     Pointer<Void> engine,
     String spec,
-    List<String> records,
-  ) {
-    final result = structured(engine, spec, records, recognize: false);
-    return CallResult(Relations.parse(result.value), result.facts);
-  }
+    List<String> records, {
+    int deadline = -1,
+    Pointer<Void>? token,
+  }) =>
+      structured(engine, spec, records,
+          recognize: false, deadline: deadline, token: token);
 
-  Object? call(Pointer<Void> engine, String jsonText) {
+  Object? call(
+    Pointer<Void> engine,
+    String jsonText, {
+    int deadline = -1,
+    Pointer<Void>? token,
+  }) {
     final text = memory.cString(jsonText);
     try {
-      final result = callOpts(engine, text, -1, nullptr);
+      final result = callOpts(engine, text, deadline, token ?? nullptr);
       if (result.address == 0) throw failure(engine, errorCode(engine));
       try {
         return jsonDecode(memory.decodeCString(result));
@@ -657,11 +723,13 @@ class Door {
     }
   }
 
-  CallResult<Object?> structured(
+  ({Object? value, Map<String, Object?> facts}) structured(
     Pointer<Void> engine,
     String spec,
     List<String> texts, {
     required bool recognize,
+    int deadline = -1,
+    Pointer<Void>? token,
   }) {
     final owned = _OwnedPointers();
     try {
@@ -704,8 +772,8 @@ class Door {
               s,
               values.single,
               lens[0],
-              -1,
-              nullptr,
+              deadline,
+              token ?? nullptr,
               out,
               outLen,
               facts,
@@ -717,8 +785,8 @@ class Door {
               ptrs,
               lens,
               values.length,
-              -1,
-              nullptr,
+              deadline,
+              token ?? nullptr,
               out,
               outLen,
               facts,
@@ -735,9 +803,9 @@ class Door {
         }
         if (out.value.address == 0)
           throw StateError('successful JSON call returned null');
-        return CallResult(
-          jsonDecode(utf8.decode(out.value.asTypedList(outLen.value))),
-          _readFacts(facts.value, factsLen.value),
+        return (
+          value: jsonDecode(utf8.decode(out.value.asTypedList(outLen.value))),
+          facts: _readObject(facts.value, factsLen.value),
         );
       } finally {
         if (out.value.address != 0) freeString(out.value);

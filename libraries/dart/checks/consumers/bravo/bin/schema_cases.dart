@@ -3,62 +3,48 @@ import 'dart:io';
 
 import 'package:thinkthen_dart/thinkthen_dart.dart';
 
+// Results are host JSON; schema.py holds each case's verdict. This reads the
+// shared annotate case through readField and case 41's offsets as Unicode
+// scalars.
 void main(List<String> args) {
   final cases = (jsonDecode(File(args.single).readAsStringSync())
       as Map)['cases'] as List;
-  var seen = 0;
-  for (final raw in cases) {
-    final c = raw as Map;
-    final definition = c['definition'];
-    final response = c['response'];
-    if (!c.containsKey('response') ||
-        ![
-          'annotate',
-          'recognize',
-          'relate',
-          'annotatedRow',
-        ].contains(definition)) continue;
-    final valid = c['response_valid'] != false;
-    try {
-      switch (definition) {
-        case 'annotate':
-          final a = Annotation.parse(response);
-          if (c['name'] == '17-annotate-partial') {
-            if ((a.rows.single['refund'] as AnswerField).value != null ||
-                (a.rows.single['team'] as FailedField).cause !=
-                    'missing_probability') {
-              throw StateError('null and failed collapsed');
-            }
-          }
-        case 'recognize':
-          final r = Recognition.parse(response);
-          if (c['name'] == '41-offsets-past-an-accent-and-an-emoji') {
-            final text = 'Le café 😀 Maria Chen arrived.';
-            final e = r.entities.single;
-            final scalars = text.runes.toList();
-            if (String.fromCharCodes(scalars.sublist(e.start, e.end)) !=
-                    e.text ||
-                e.start != 10 ||
-                e.end != 20 ||
-                e.length != 10 ||
-                text.codeUnits.indexOf(0xD83D) != 8 ||
-                text.codeUnits.length != scalars.length + 1) {
-              throw StateError('non-BMP scalar offset mismatch');
-            }
-            print('NON_BMP_SCALAR_OFFSET_PASS case 41 [10,20)');
-          }
-        case 'relate':
-          Relations.parse(response);
-        case 'annotatedRow':
-          Annotation.parse([response]);
-      }
-      if (!valid)
-        throw StateError('invalid $definition shape accepted ${c['name']}');
-    } on FormatException {
-      if (valid) rethrow;
-    }
-    seen++;
+  final named = {for (final c in cases.cast<Map>()) c['name']: c['response']};
+  final row = ((named['17-annotate-partial'] as List).single as Map)
+      .map((name, member) => MapEntry(name, readField(member)));
+  final team = row['team'];
+  if (row['refund'] is! UnresolvedField ||
+      team is! FailedField ||
+      team.kind != 'backend' ||
+      team.cause != 'missing_probability' ||
+      row['severity'] is! AnswerField ||
+      row['topics'] is! AnswerField) {
+    throw StateError('null and failed collapsed');
   }
-  if (seen != 5) throw StateError('typed corpus coverage $seen');
-  print('DART_STRUCTURAL_PARITY_PASS $seen typed samples');
+  final later = readField({
+    'failed': {'kind': 'backend', 'cause': 'wrong_kind', 'later': 1},
+  });
+  if (later is! FailedField || later.cause != 'wrong_kind') {
+    throw StateError('a failure with an unknown member');
+  }
+  try {
+    readField({'team': 'billing'});
+    throw StateError('an object read as an answer');
+  } on FormatException {/* expected */}
+  print('ANNOTATE_NULL_AND_FAILED_PASS case 17 and an unknown member');
+  final entity = ((named['41-offsets-past-an-accent-and-an-emoji']
+          as Map)['entities'] as List)
+      .single as Map;
+  final text = 'Le café 😀 Maria Chen arrived.';
+  final scalars = text.runes.toList();
+  final start = entity['start'] as int, end = entity['end'] as int;
+  if (String.fromCharCodes(scalars.sublist(start, end)) != entity['text'] ||
+      start != 10 ||
+      end != 20 ||
+      entity['length'] != 10 ||
+      text.codeUnits.indexOf(0xD83D) != 8 ||
+      text.codeUnits.length != scalars.length + 1) {
+    throw StateError('non-BMP scalar offset mismatch');
+  }
+  print('NON_BMP_SCALAR_OFFSET_PASS case 41 [10,20)');
 }
