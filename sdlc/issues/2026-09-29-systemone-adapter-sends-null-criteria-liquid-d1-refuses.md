@@ -1,4 +1,4 @@
-Status: Open for the hosted check only. Ticket 0301 is complete and built the correction accepted in [ADR 0110](../planning/adr/0110-noul-null-criteria-wire-omission.md). The separately authorized hosted `thinkthen check` against Liquid's d1 remains. Filed 2026-09-29 from experiment 413's `RESULTS.md`.
+Status: Open for the hosted check only. The 2026-09-30 run met status 401 at the key; see the end. Ticket 0301 is complete and built the correction accepted in [ADR 0110](../planning/adr/0110-noul-null-criteria-wire-omission.md). The separately authorized hosted `thinkthen check` against Liquid's d1 remains. Filed 2026-09-29 from experiment 413's `RESULTS.md`.
 
 # The systemone adapter sends null criteria that Liquid's d1 refuses
 
@@ -15,3 +15,7 @@ ADR 0110 omits only explicitly null `noul` criteria members and omits the criter
 ## Done when
 
 `thinkthen check --url https://api.liquid.ai/decisions/v1 --model d1:free` reports no critical finding, and the adapter's fixtures cover explicit-null `decide` criteria. The local proof also retains absent-side, both-described, choice and score behavior, exact check bodies and plan totals. Hosted acceptance still needs its separately authorized bounded check; design acceptance and loopback proof do not close this issue.
+
+## Hosted check, 2026-09-30
+
+One authorized run of `thinkthen check --url https://api.liquid.ai/decisions/v1 --model d1:free` went through `sdlc/scripts/live --max-tokens 1500` from `origin/main` at `1c26316e4`. The ledger charged 1,500 tokens, from 465,109,291 to 465,110,791. The `--plan` bodies matched the fixture, with no `"false":null` in the `noul` probe. The first probe met status 401. The report read `ok connection`, `critical key: the backend answered with status 401: the key was refused`, six `unchecked` rows, and `critical 1, warning 0`, and the check exited 4. No probe body reached the decoder, so this run neither shows nor refutes acceptance of the corrected bytes. The issue stays open. A retry needs a `THINKTHEN_API_KEY` that Liquid's d1 accepts.
