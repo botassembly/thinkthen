@@ -1,6 +1,6 @@
 # SQL usability preparation at `42b45db6`
 
-This is a source check and batching recommendation for [the open issue](../issues/2026-09-28-sql-interface-usability-before-0-1.md), not approval of its proposed API. The source reference and `origin/main` both resolved to `42b45db612e47836ab98fb33614eecc7f272a0d8` when checked. The issue's survey was taken at `8033eeac`. Its acceptance criteria remain intact until design review chooses a contract. No host was run and no provider was called for this preparation.
+This is a source check and batching recommendation for [the open issue](../issues/closed/2026-09-28-sql-interface-usability-before-0-1.md), not approval of its proposed API. The source reference and `origin/main` both resolved to `42b45db612e47836ab98fb33614eecc7f272a0d8` when checked. The issue's survey was taken at `8033eeac`. Its acceptance criteria remain intact until design review chooses a contract. No host was run and no provider was called for this preparation.
 
 ## Present behavior and distinct asks
 

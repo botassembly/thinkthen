@@ -1,4 +1,4 @@
-Status: open. Filed 2026-09-26 by the marketing lead from a fresh architect review. Item 5 is done: Quick Fix qf-command-edges-and-prune makes a release binary ignore the test variables (`sdlc/records/qf-command-edges-and-prune.md`). Item 1 is done by ticket 0308. Item 2 was done by ticket 0225, which bounds the exit wait to one second and warns. Item 3 is done for unheaded waits by ticket 0315.
+Status: closed 2026-09-30. Items 1, 2, 3 and 5 fixed by tickets 0308, 0225, 0315 and qf-command-edges-and-prune. Item 4 stays in the severity 3 roll-up.
 
 # Architect review 07: throughput, rate limits, retries and cost
 

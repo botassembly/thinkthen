@@ -1,6 +1,6 @@
 # Settings some surfaces cannot reach
 
-Status: open. Filed 2026-09-26 by ticket 0140 while it wrote `specification/settings.md`. No ticket owns it yet.
+Status: closed 2026-09-30. Fixed by ticket 0148 for libraries and C and ticket 0149 for SQL: timeout, retries, profile and model are settable, and `cache_bytes` is gone.
 
 Filling the settings table showed three gaps. The table states each one as main has it.
 

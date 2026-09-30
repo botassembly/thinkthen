@@ -1,6 +1,6 @@
 # recognize: the design
 
-Status: Sent by Ian to the main builder on 2026-09-26. Review findings and Ian's rulings of 2026-09-26 applied.
+Status: closed 2026-09-30. Built by ticket 0147 under ADR 0056 and ticket 0167 under ADR 0057. Batching many texts moves to ADR 0111 slice 4.
 
 Filed 2026-09-26. This design replaces two issues, now in `closed/`: `2026-09-26-recognize-loses-possessive-and-side-by-side-names.md` and `2026-09-26-recognize-relations-report-edges-the-text-does-not-state.md`. Its evidence comes from workspace experiments 265, 267, 268, 270 and 271. `sdlc/records/2026-09-26-batching-and-recognize-evidence.md` copies every table this design cites. Batching of many texts follows `2026-09-26-batching-design.md`, and the two documents share one set of batch rules. Ian's rulings of 2026-09-26 are listed in that design. Several reach this one: long texts use a bounded window of evidence, the steps below are stated plainly, library results carry `facts` on every call, batching puts speed first, batching ticket C1 builds the settings page, and batching ticket S1 measures speed. Ian can overturn each.
 

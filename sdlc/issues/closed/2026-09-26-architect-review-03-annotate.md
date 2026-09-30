@@ -1,4 +1,4 @@
-Status: open for item 4. Filed 2026-09-26 by the marketing lead from a fresh architect review. Items 1, 2 and 3 are done: ticket 0161 landed on 2026-09-26 (`sdlc/records/0161-build-annotate-reads-what-it-names.md`). Item 5 is done: ticket 0158 landed on 2026-09-26 (`sdlc/records/0158-build-a-cache-keeps-no-failed-question.md`). Item 4 stays open as `2026-09-26-a-mixed-model-cache-fails-every-annotate-record.md`.
+Status: closed 2026-09-30. Items 1 to 3 fixed by ticket 0161 and item 5 by ticket 0158. Item 4's own issue is closed, and ADR 0111 keys the cache per question and model.
 
 # Architect review 03: `annotate`
 

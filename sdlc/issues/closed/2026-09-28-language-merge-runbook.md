@@ -1,6 +1,6 @@
 # Language merge runbook
 
-Status: open. The consumer-language program prepared the experiment handoff on 2026-09-28. Ticket 0249 authorizes source integration; its build records hold current package proof. The table below names historical source inputs, not finished product packages. Use the accepted preparation records to apply later contract corrections. Never replace integrated source with an older experiment copy. Companion to `2026-09-28-language-port-integration-priority-brief.md` and `2026-09-28-batching-and-envelope-changed-the-c-door-contract-on-main.md`.
+Status: closed 2026-09-30. Done by ticket 0249: every binding is integrated under `libraries/`. Registry and CI work stays in each port issue and the release issue.
 
 ## 1. Copy table (binding -> merge input -> destination)
 

@@ -1,6 +1,6 @@
 # Red-green scaffold tests outlive their purpose
 
-Status: Open. Steps 1 and 2 landed, and ticket 0119 holds steps 3 and 4. Filed from the workspace on Ian's request. The workspace rule is decision `2026-09-24-tests-earn-their-place.md` in the workspace's decisions folder.
+Status: closed 2026-09-30. Steps 1 and 2 landed in qf-tests-earn. Ticket 0317 replaces steps 3 and 4 with a measured cut of duplicate and scaffold tests.
 
 Preparation update, 2026-09-27: the numbered remedy below records the original 2026-09-24 mutation design. Ian's later functional-gate ruling makes repeated whole-scope mutants, load and timing runs opt-in rather than ordinary validation. Ticket 0119 now proposes a bounded assertion-by-assertion deletion audit, with each removed test mapped to a stronger routine proof and the actual line reduction reported. Its amended design awaits fresh independent review; no test has been removed by this preparation. The original counts below remain historical measurements at `ffb8fb79`.
 

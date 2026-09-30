@@ -1,6 +1,6 @@
 # R worker panic diagnostics can copy payload text
 
-Status: open. Ticket 0306 moved the R worker onto the shared panic guard. The target-package proofs remain.
+Status: closed 2026-09-30. Fixed by ticket 0306 (`4de0f8116`): the R worker calls `thinkthen::contained`. Target-package proofs move to the release issue.
 
 Filed 2026-09-28. Confirmed by source inspection on main `cd395d3f` during the bounded 0226 native-guard preparation. This records a diagnostic path that can copy a panic payload. It does not claim that a real credential or user evidence has appeared in a production panic.
 
@@ -16,7 +16,7 @@ Use one small child-process regression with a synthetic payload marker at the ac
 
 ## Reviewed implementation and remaining proof
 
-Ticket 0227 source and the evidenced Linux package subset landed from corrected candidate `e52c1604` after fresh High code review. The source children prove fixed non-retryable Defect, both synthetic payload forms, later success and unrelated prior-hook delivery. Installed Linux packages separately prove loading and no-fault later use. Python's reviewed correction also covers implicit reference cleanup. See [the build evidence](../records/0227-language-panic-build.md) and [code acceptance](../records/0227-code-review.md). Other target packages and the later 0212 Call conversion integration remain open; this issue is not counted complete from the Linux subset alone.
+Ticket 0227 source and the evidenced Linux package subset landed from corrected candidate `e52c1604` after fresh High code review. The source children prove fixed non-retryable Defect, both synthetic payload forms, later success and unrelated prior-hook delivery. Installed Linux packages separately prove loading and no-fault later use. Python's reviewed correction also covers implicit reference cleanup. See [the build evidence](../../records/0227-language-panic-build.md) and [code acceptance](../../records/0227-code-review.md). Other target packages and the later 0212 Call conversion integration remain open; this issue is not counted complete from the Linux subset alone.
 
 ## Ticket 0306
 

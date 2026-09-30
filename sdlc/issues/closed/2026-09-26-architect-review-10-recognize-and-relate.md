@@ -1,4 +1,4 @@
-Status: open for items 3 and 4. Ticket 0147 settled item 1, and ticket 0167, complete 2026-09-27, settled item 2. Filed 2026-09-26 by the marketing lead from a fresh architect review.
+Status: closed 2026-09-30. Items 1 to 3 fixed by tickets 0147 and 0167: kinds reach step 1, and `specification/recognize.md` publishes the shipped build's scores. The site's accuracy claim belongs to marketing.
 
 # Architect review 10: `recognize` and `relate`
 

@@ -1,4 +1,4 @@
-Status: Open. Filed 2026-09-28 by the marketing lead's UX review, on Ian's instruction. Ian wants the SQL and data frame interfaces' usability settled and improved before 0.1. The main builder designs and builds from this issue. It authorizes no work by itself.
+Status: closed 2026-09-30. Replaced by deferred tickets 0290, 0291, 0295 and 0296, each after its ADR 0111 slice. Tickets 0259, 0292 to 0294 and 0298 landed the rest.
 
 # SQL and data frame interface usability before 0.1
 
@@ -536,11 +536,11 @@ Fix the wrong samples: the SQLite relations call (`site/examples/functions/recog
 
 ## Preparation at current main
 
-The [2026-09-29 source preparation](../records/2026-09-29-sql-usability-preparation.md) checks this issue against `42b45db6`, classifies each proposal, identifies accepted batching, settings, type and find aliases, and recommends three small release-priority batches. The survey and acceptance criteria above remain the original request. The proposed common SQL slot, named syntax, result shape and host lifetimes are not yet approved API decisions.
+The [2026-09-29 source preparation](../../records/2026-09-29-sql-usability-preparation.md) checks this issue against `42b45db6`, classifies each proposal, identifies accepted batching, settings, type and find aliases, and recommends three small release-priority batches. The survey and acceptance criteria above remain the original request. The proposed common SQL slot, named syntax, result shape and host lifetimes are not yet approved API decisions.
 
 ## Progress on the two scalar defects
 
-[Ticket 0259](../tickets/0259-sql-scalar-usability.md) was accepted at `d01bc92b` and landed at `e6939251`. It fixes PostgreSQL plain judgment questions, including native choose/score/tag labels, and SQLite decide yes probability. Its [build record](../records/0259-sql-scalar-build.md) pins installed-host outputs and exact local requests. The historical survey above records the pre-fix source. The twelve original acceptance criteria stay open for their remaining work, including common SQL syntax, data frame probability, page parity and batching. A [current-main two-sample check](../records/2026-09-29-sql-site-sample-preparation.md) reproduces the SQLite recognize and relate site SQL failures under the installed 0259 library. Marketing owns both later site corrections. The recognize failure advances this issue's criterion 11; the relate failure belongs to the separate site-samples issue and is not one of criterion 11's named wrong examples.
+[Ticket 0259](../../tickets/0259-sql-scalar-usability.md) was accepted at `d01bc92b` and landed at `e6939251`. It fixes PostgreSQL plain judgment questions, including native choose/score/tag labels, and SQLite decide yes probability. Its [build record](../../records/0259-sql-scalar-build.md) pins installed-host outputs and exact local requests. The historical survey above records the pre-fix source. The twelve original acceptance criteria stay open for their remaining work, including common SQL syntax, data frame probability, page parity and batching. A [current-main two-sample check](../../records/2026-09-29-sql-site-sample-preparation.md) reproduces the SQLite recognize and relate site SQL failures under the installed 0259 library. Marketing owns both later site corrections. The recognize failure advances this issue's criterion 11; the relate failure belongs to the separate site-samples issue and is not one of criterion 11's named wrong examples.
 
 ## Related issues
 
@@ -554,14 +554,14 @@ The [2026-09-29 source preparation](../records/2026-09-29-sql-usability-preparat
 
 ## Remaining SQL error-format acceptance
 
-Review of DuckDB0286 at2463436c2 found ordinary ThinkThen usage errors without ADR0105 section8’s `(retryable: yes|no)` suffix. The accepted ADR governs this change; its exact plain removal messages remain exceptions. DuckDB0286's reviewed correction is landed. The [SQLite error-format Quick Fix](../records/qf-sqlite-error-format.md) is now accepted at `148a6ae07b7f55b060e0da452a75ccc0bd26ff4f`, including strict shared retryability parsing and installed proof against landed core0302. PostgreSQL0285 retains its existing suffix under its own installed-host record. Host-native SQL syntax and binding errors remain the host’s errors. The shared error catalog, final SQL examples and combined qualification remain separate work; this SQLite landing does not close the umbrella issue.
+Review of DuckDB0286 at2463436c2 found ordinary ThinkThen usage errors without ADR0105 section8’s `(retryable: yes|no)` suffix. The accepted ADR governs this change; its exact plain removal messages remain exceptions. DuckDB0286's reviewed correction is landed. The [SQLite error-format Quick Fix](../../records/qf-sqlite-error-format.md) is now accepted at `148a6ae07b7f55b060e0da452a75ccc0bd26ff4f`, including strict shared retryability parsing and installed proof against landed core0302. PostgreSQL0285 retains its existing suffix under its own installed-host record. Host-native SQL syntax and binding errors remain the host’s errors. The shared error catalog, final SQL examples and combined qualification remain separate work; this SQLite landing does not close the umbrella issue.
 
 
 ## Functional Python stage completed
 
-Tickets0292/0293/0294 are jointly landed after final High ACCEPT `86ae7dce3fb98163d6fdbed7acff0affd74880e6`. The [build record](../records/0292-python-judges-build.md) maps immutable judges, caller-fed native streams and the core Tally to their selected source/installed proof and corrections. Python frame namespaces/accessors0295/0296, the remaining door rollout and shared examples remain separate; this stage does not close the umbrella issue.
+Tickets0292/0293/0294 are jointly landed after final High ACCEPT `86ae7dce3fb98163d6fdbed7acff0affd74880e6`. The [build record](../../records/0292-python-judges-build.md) maps immutable judges, caller-fed native streams and the core Tally to their selected source/installed proof and corrections. Python frame namespaces/accessors0295/0296, the remaining door rollout and shared examples remain separate; this stage does not close the umbrella issue.
 
 
 ## Rust Polars expression stage completed
 
-Ticket0298 is landed after final High ACCEPT `365a7c92a4957ff7d2766c90ae00d67273710210`. Four lazy expressions reuse the eager engine with owned controls, per-morsel deadlines and shared Tally. Its [build record](../records/0298-rust-polars-lazy-expressions-build.md) pins selected source-consumer proof and its limits. Python accessors0295/0296, the remaining door rollout and shared examples keep this umbrella open.
+Ticket0298 is landed after final High ACCEPT `365a7c92a4957ff7d2766c90ae00d67273710210`. Four lazy expressions reuse the eager engine with owned controls, per-morsel deadlines and shared Tally. Its [build record](../../records/0298-rust-polars-lazy-expressions-build.md) pins selected source-consumer proof and its limits. Python accessors0295/0296, the remaining door rollout and shared examples keep this umbrella open.

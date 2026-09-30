@@ -1,6 +1,6 @@
 # A recording folder that predates the backend marker cannot be extended
 
-Status: Open. Filed 2026-09-27 from the GEPA tuning experiments 296 and 297. Evidence lives in the workspace at `experiments/297-gepa-loop-tests/`; the full write-up is `notes/2026-09-27-optimization-lessons.md`. Deferred past 0.1 by the tuning review of 2026-09-28: the need varies, and existing commands cover useful parts of it. Ian can overturn this placement.
+Status: closed 2026-09-30. Replaced by ADR 0111: the folder marker goes, and `cache convert` turns old folders into question entries.
 
 ## What happens today
 
