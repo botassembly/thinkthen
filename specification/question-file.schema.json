@@ -406,6 +406,70 @@
           }
         }
       ]
+    },
+    "doorRequest": {
+      "description": "The C JSON door request: one verb, its question members, and up to six envelope keys. Moved here from the result schema by ADR 0112, because it is input.",
+      "type": "object", "minProperties": 1,
+      "properties": {
+        "evidence": {"type": "string"}, "records": {"type": "array"},
+        "units": {"type": "array", "items": {"type": "string"}},
+        "details": {"type": "boolean"}, "usage": {"const": true},
+        "call": {"type": "object", "additionalProperties": false,
+          "properties": {"batch": {"anyOf": [{"const": "max"}, {"type": "integer", "minimum": 1}]}, "context": {"type": "string", "minLength": 1}}},
+        "rank": {"type": "string"}, "find": {"type": "string"},
+        "annotate": {"type": "object"}, "recognize": {"type": "object"},
+        "relate": {"type": "object"}, "none": {"type": "boolean"},
+        "decide": {"type": ["string", "object", "array"]},
+        "choose": {"type": ["string", "object", "array"]},
+        "tag": {"type": ["string", "object", "array"]},
+        "score": {"type": ["string", "object", "array"]},
+        "filter": {"type": ["string", "object", "array"]}
+      },
+      "oneOf": [
+        {"required": ["usage"]},
+        {"required": ["decide"]}, {"required": ["choose"]},
+        {"required": ["tag"]}, {"required": ["score"]},
+        {"required": ["filter"]}, {"required": ["rank"]},
+        {"required": ["find"]}, {"required": ["annotate"]},
+        {"required": ["recognize"]}, {"required": ["relate"]}
+      ],
+      "allOf": [
+        {"if": {"required": ["usage"]}, "then": {"maxProperties": 1}},
+        {"if": {"required": ["recognize"]}, "then": {"required": ["evidence"]}},
+        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
+          {"required": ["tag"]}, {"required": ["score"]}]},
+          "then": {"oneOf": [{"required": ["evidence"]}, {"required": ["records"]}]}},
+        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
+          {"required": ["annotate"]}, {"required": ["relate"]}]},
+          "then": {"required": ["records"]}},
+        {"if": {"required": ["find"]}, "then": {"required": ["units"]}},
+        {"if": {"required": ["none"]}, "then": {"required": ["find"]}},
+        {"if": {"anyOf": [{"required": ["decide"]}, {"required": ["choose"]},
+          {"required": ["tag"]}, {"required": ["score"]}, {"required": ["filter"]},
+          {"required": ["rank"]}, {"required": ["annotate"]}]},
+          "then": {"properties": {"records": {"items": {"type": "string"}}}}},
+        {"if": {"required": ["relate"]},
+          "then": {"properties": {"records": {"items": {"type": "object"}}}}},
+        {"if": {"required": ["details"]}, "then": {"anyOf": [
+          {"required": ["decide"]}, {"required": ["choose"]},
+          {"required": ["tag"]}, {"required": ["score"]}
+        ]}},
+        {"if": {"required": ["recognize"]},
+          "then": {"not": {"anyOf": [{"required": ["records"]}, {"required": ["units"]}]}}},
+        {"if": {"required": ["call"]}, "then": {"required": ["records"],
+          "not": {"anyOf": [{"required": ["find"]}, {"required": ["recognize"]}, {"required": ["relate"]}]}}},
+        {"if": {"required": ["annotate"]},
+          "then": {"properties": {"call": {"not": {"required": ["context"]}}}}},
+        {"if": {"anyOf": [{"required": ["filter"]}, {"required": ["rank"]},
+          {"required": ["annotate"]}, {"required": ["relate"]}]},
+          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["units"]}]}}},
+        {"if": {"required": ["find"]},
+          "then": {"not": {"anyOf": [{"required": ["evidence"]}, {"required": ["records"]}]}}},
+        {"not": {"anyOf": [
+          {"required": ["evidence", "records"]}, {"required": ["evidence", "units"]},
+          {"required": ["records", "units"]}
+        ]}}
+      ]
     }
   }
 }

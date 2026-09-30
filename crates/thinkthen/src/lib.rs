@@ -25,6 +25,13 @@ pub use public::*;
 #[cfg(test)]
 mod test_deadline;
 
+#[cfg(test)]
+mod schema_forms;
+
+#[cfg(test)]
+#[cfg(feature = "cli")]
+mod schema_tests;
+
 #[cfg(feature = "cli")]
 mod cli;
 

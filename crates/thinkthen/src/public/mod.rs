@@ -31,7 +31,7 @@ pub use batch::Batch;
 pub use builders::{ChooseBuilder, DecideBuilder, LabelBuilder, ScoreBuilder, TagBuilder};
 pub use choice::Choice;
 pub use engine::{DecisionQuestion, DetailQuestion, Engine, Evidence};
-pub use error::{Error, ErrorDetail, ErrorKind};
+pub use error::{CallError, Error, ErrorDetail, ErrorKind};
 #[cfg(feature = "polars")]
 pub use frame::{PolarsCallOptions, PolarsEngine, PolarsExprOptions};
 pub use native_batch::RecoverableDetails;
@@ -51,8 +51,8 @@ pub use recognize::{
 };
 pub use relate::{Edge, Entity, Relate, RelateBuilder};
 pub use results::{
-    Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, Facts, Found,
-    Judgment, NamedProbability, ObservedRow, Probabilities, QuestionDetail, Ranked,
+    Answer, AttemptObservation, AttemptOutcome, Call, Candidate, Counters, Details, DoorReply,
+    Facts, Found, Judgment, NamedProbability, ObservedRow, Probabilities, QuestionDetail, Ranked,
     RecordObservation, Row, Tally, TallyStart, Usage,
 };
 pub use set::{QuestionSet, QuestionSetBuilder};

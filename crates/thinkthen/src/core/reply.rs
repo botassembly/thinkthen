@@ -66,6 +66,7 @@ pub(crate) enum AnswerOutcome {
 
 /// The backend failure carried by one failed logical question.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "failure"))]
 pub(crate) struct BackendFailure {
     kind: BackendFailureKind,
     cause: BackendFailureCause,
@@ -81,6 +82,7 @@ impl BackendFailure {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
 #[serde(rename_all = "snake_case")]
 enum BackendFailureKind {
     Backend,
@@ -88,6 +90,7 @@ enum BackendFailureKind {
 
 /// The closed causes for a failed logical question.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "failureCause"))]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum BackendFailureCause {
     /// The response omitted the wire answer.
@@ -106,6 +109,8 @@ pub(crate) enum BackendFailureCause {
 
 /// A failed value in bare `annotate` output.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "failed", deny_unknown_fields))]
 pub(crate) struct FailedValue {
     failed: BackendFailure,
 }

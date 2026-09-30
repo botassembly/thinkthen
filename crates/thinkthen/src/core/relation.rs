@@ -8,6 +8,7 @@ use crate::core::recognize::RecognizedName;
 use crate::core::{Evidence, Withheld};
 
 #[derive(Clone, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relatedEntity"))]
 pub(crate) struct RelationEntity {
     name: String,
     kind: String,
@@ -65,6 +66,7 @@ impl RelationEntityView for RecognizedName {
 pub(crate) struct RelationEntityError;
 
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "relationRule"))]
 pub(crate) struct RelationRule {
     pub(crate) name: String,
     pub(crate) source: String,
@@ -74,6 +76,7 @@ pub(crate) struct RelationRule {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "{E}Edge"))]
 pub(crate) struct RelationEdge<E> {
     pub(crate) relation: String,
     pub(crate) source: E,

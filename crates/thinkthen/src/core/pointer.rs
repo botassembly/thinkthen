@@ -38,6 +38,7 @@ pub(crate) enum PointerError {
 
 /// One JSON Pointer, kept as the user wrote it and as the parts it names.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "String"))]
 pub(crate) struct Pointer {
     text: String,
     parts: Vec<String>,

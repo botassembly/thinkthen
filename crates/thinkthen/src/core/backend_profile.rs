@@ -8,6 +8,7 @@ use crate::core::plan::Plan;
 
 /// A public backend name used for limits and threshold calibration.
 #[derive(Clone, Debug, Eq, PartialEq)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline, with = "String"))]
 pub(crate) struct ProfileName(String);
 
 impl Serialize for ProfileName {

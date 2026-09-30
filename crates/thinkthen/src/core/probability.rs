@@ -16,6 +16,7 @@ pub(crate) enum ProbabilityError {
 
 /// How likely the backend judged the condition to hold.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(inline))]
 #[serde(into = "f64")]
 pub(crate) struct Probability(f64);
 

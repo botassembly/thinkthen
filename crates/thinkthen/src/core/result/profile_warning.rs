@@ -6,6 +6,8 @@ use crate::core::backend_profile::ProfileName;
 
 /// A saved threshold and this run name different backend profiles.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema))]
+#[cfg_attr(test, schemars(rename = "profileWarning"))]
 pub(crate) struct ProfileWarning {
     tuned_for: String,
     running: String,

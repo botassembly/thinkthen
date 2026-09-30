@@ -2,21 +2,31 @@
 
 use std::fmt;
 
+use serde::Serialize;
+use serde_json::value::RawValue;
+
 use crate::core::Prices;
 use crate::engine::call_facts::Snapshot;
 use crate::public::error::Error;
 
 /// Count-only facts fixed when one call and all of its workers finish.
-#[derive(Clone)]
+///
+/// It serializes with its members in name order, as the C door prints them.
+#[derive(Clone, Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "facts"))]
 pub struct Facts {
+    pub(super) cache_answers: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) estimated_cost_usd: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) input_tokens: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) model: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) output_tokens: Option<u64>,
     pub(super) records: u64,
     pub(super) requests_sent: u64,
-    pub(super) cache_answers: u64,
-    pub(super) input_tokens: Option<u64>,
-    pub(super) output_tokens: Option<u64>,
-    pub(super) estimated_cost_usd: Option<String>,
     pub(super) seconds: f64,
-    pub(super) model: Option<String>,
 }
 
 impl fmt::Debug for Facts {
@@ -156,5 +166,47 @@ impl<T> Call<T> {
             Ok(value) => Ok(Call::new(value, self.facts)),
             Err(error) => Err(error.with_facts(self.facts)),
         }
+    }
+}
+
+/// The C door's success reply: the bare value, the call's facts, and the
+/// attempts when the request asked for them.
+#[derive(Serialize)]
+#[cfg_attr(test, derive(schemars::JsonSchema), schemars(rename = "callSuccess"))]
+pub struct DoorReply {
+    value: Box<RawValue>,
+    facts: Facts,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    attempts: Option<Vec<crate::public::AttemptObservation>>,
+}
+
+/// The value may hold record text, so `Debug` shows the facts alone.
+impl fmt::Debug for DoorReply {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        formatter
+            .debug_struct("DoorReply")
+            .field("facts", &self.facts)
+            .finish_non_exhaustive()
+    }
+}
+
+impl DoorReply {
+    /// Gather one reply from the value's JSON text, its facts, and any attempts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`Error::Defect`] when `value` is not one JSON value.
+    pub fn new(
+        value: String,
+        facts: Facts,
+        attempts: Option<Vec<crate::public::AttemptObservation>>,
+    ) -> Result<Self, Error> {
+        let value =
+            RawValue::from_string(value).map_err(|_| Error::defect("a door value is not JSON"))?;
+        Ok(Self {
+            value,
+            facts,
+            attempts,
+        })
     }
 }
