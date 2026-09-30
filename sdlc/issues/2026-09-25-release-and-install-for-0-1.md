@@ -26,7 +26,7 @@ Ticket 0128 phases 1, 2 and 3a landed `release.yml` (dispatch only, every action
 6. **Package proofs carried from closed issues.** Each needs a passing receipt on its target.
    - Panic secrecy (tickets 0306 and 0310): macOS C and SQLite packages, DuckDB ARM64 and macOS packages, and the Python, Ruby, TypeScript and R target packages.
    - Token cap (ticket 0311): installed-package proof on each surface.
-   - Package gates (ticket 0313): minimal child environments for the release families, with UTF-8 arguments, compiler overrides, unchanged dependency locks and no ambient `PYTHONWARNINGS`.
+   - Package gates (ticket 0313): the Python pandas 2 lane needs one networked `uv pip install pandas==2.3.3` on each machine that runs it, or its check exits 77 and a release counts that as a failure. The lane passed on this host on 2026-09-30 after the install. Minimal child environments for the release families, with UTF-8 arguments, compiler overrides, unchanged dependency locks and no ambient `PYTHONWARNINGS`.
    - SQL settings (tickets 0149 and 0157): DuckDB's ARM64 and macOS packages still take the C API path.
 7. **macOS package defects.** `2026-09-30-postgresql-extension-does-not-build-on-macos.md` and `2026-09-30-objective-c-headers-collide-on-macos.md`.
 

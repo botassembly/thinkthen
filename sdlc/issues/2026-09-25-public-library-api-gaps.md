@@ -6,7 +6,7 @@ Each item names a place where the public API (ticket 0084, `crates/thinkthen/src
 
 ## 1. Engine counters count per engine, not per process
 
-`Engine::usage()` documents "This process's totals" (`public/engine.rs`), but `EngineBuilder::build` gives each engine its own in-memory `Counters` (`public/settings.rs`). A second engine in the same process starts from zero. The PostgreSQL binding sums its engines' counters itself (`databases/postgresql/src/call.rs`, `engines()`). ADR 0113 now writes every engine's sends to the durable usage totals, so `status` sees them. The in-memory `usage()` value is still per engine.
+`Engine::usage()` documents "This process's totals" (`public/engine.rs`), but `EngineBuilder::build` gives each engine its own in-memory `Counters` (`public/settings.rs`). A second engine in the same process starts from zero. The PostgreSQL binding sums its engines' counters itself (`databases/postgresql/src/call.rs`, `engines()`). Under ADR 0113, engines built from the environment and the SQL hosts write their sends to the durable usage totals, so `status` sees them; `EngineBuilder::new()` still names no usage folder. The in-memory `usage()` value is still per engine.
 
 Done when two engines built in one process report one shared total, or the `usage` doc and ticket 0084 say per engine and every SQL surface sums through one shared helper.
 
@@ -30,14 +30,14 @@ Done when the quality-plan row passes on every surface, and the library contract
 
 ## 7. Typed descriptions and typed annotate forms outside Rust
 
-Rust ships `Description` and `DescriptionBuilder`. TypeScript's `index.d.ts` now declares `Description` as a string or a JSON object per option, label and level. Python still has no documented `Description` dataclass. No binding has a typed annotate class, and no cross-surface test compares the digests of one description object sent from Rust, Python, TypeScript and a question file. Ian's ruling 7 of 2026-09-29 defers type-review recommendations beyond ADR 0112, which may cover the typed annotate class.
+Rust ships `Description` and `DescriptionBuilder`. TypeScript's `index.d.ts` now declares `Description` as a string or a JSON object per option, label and level. Python still has no documented `Description` dataclass, and its recognize builder takes text descriptions only (`libraries/python/src/asked.rs`, `_build`). No binding has a typed annotate class, and no cross-surface test compares the digests of one description object sent from Rust, Python, TypeScript and a question file. Ian's ruling 7 of 2026-09-29 defers type-review recommendations beyond ADR 0112, which may cover the typed annotate class.
 
 The product-side asks of 2026-09-22, which Ian can overturn: a string stays valid everywhere; the library never reorders or normalizes the object; the same object gives the same digest on every surface. A typed annotate class serializes to the same JSON as the question file, so the cache is shared. Python follows the Pydantic AI mapping: `bool` is decide, `Literal` or `Enum` is choose, an ordered `IntEnum` is score, `list[Literal]` is tag, a nested class is an annotate form. Rust uses builders with no derive macro.
 
-Done when Python accepts a typed description, the typed annotate form is built or ruled out, and the cross-surface digest test passes.
+Done when Python accepts a typed description, including for recognize kinds, the typed annotate form is built or ruled out, and the cross-surface digest test passes.
 
 ## 9. Every SQL surface matches both arms of `LoadedQuestion` by hand
 
-Only `Question` and `BandedQuestion` implement `DecisionQuestion`. SQLite (`many.rs`, `scalars/plan.rs`) and PostgreSQL (`lib.rs`, `keyed.rs`) repeat a `match` on both arms of `LoadedQuestion`.
+Only `Question` and `BandedQuestion` implement `DecisionQuestion`. Twelve SQL host files repeat a `match` on both arms of `LoadedQuestion`: DuckDB's `bridge/src/ffi/{plan,portable,portable_aux,portable_many,scalar}/ffi.rs` and `bridge/src/warm/ffi.rs`, SQLite's `many.rs`, `scalars.rs` and `scalars/plan.rs`, and PostgreSQL's `forms.rs`, `keyed.rs` and `lib.rs`.
 
 Done when the public API says whether a loaded question is asked directly, and the surfaces follow it.

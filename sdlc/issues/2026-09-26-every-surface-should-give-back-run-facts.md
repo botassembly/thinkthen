@@ -1,6 +1,6 @@
 # Every surface should give back what Jev tells us about each run
 
-Status: open for four parts: backend time and request IDs past ticket 0302, caller-priced cost on the remaining hosts (ticket 0300), SQL per-call facts, and the docs. Shortened 2026-09-30. It absorbs the closed `closed/2026-09-23-record-the-backends-own-time-for-each-call.md`.
+Status: open for six parts: full detail on every verb, backend time and request IDs past ticket 0302, caller-priced cost on the remaining hosts (ticket 0300), SQL per-call facts, the `meta.usage` name, and the docs. Shortened 2026-09-30. It absorbs the closed `closed/2026-09-23-record-the-backends-own-time-for-each-call.md`.
 
 Ian ruled on 2026-09-26 that library results carry `facts` on every call, with no setting and no second call. `--facts` controls only what the command line prints. Ian can overturn this ruling.
 
@@ -12,7 +12,11 @@ Ian ruled on 2026-09-26 that library results carry `facts` on every call, with n
 - Caller prices give `estimated_cost_usd` in `facts` and in `--facts` on the command, Rust and C (ticket 0300, ADR 0108; `specification/result.md`, `specification/settings.md`).
 - Every surface adds to the usage totals `status` reads (0322 slice 1, ADR 0113).
 
-## 1. Backend time and request IDs
+## 1. Full detail on every verb
+
+Ask 1's second half is unproved: request digests and every probability with `confidence` on every verb, bulk verbs and frames included, on every host. `public/results/observation.rs` supplies ordered question and row detail in Rust, and each binding converts it. No record shows each host's full-detail and failure parity at its boundary. `sdlc/records/2026-09-28-run-accounting-remainder-preparation.md` names that check.
+
+## 2. Backend time and request IDs
 
 Ticket 0302 (ADR 0109) landed an opt-in attempt record for Rust, the `--details` rows of `decide`, `choose`, `filter`, `rank`, `score` and `tag`, and the C JSON door. Each attempt carries `wall_ms`, `server_ms` from `x-envoy-upstream-service-time`, and `request_id` from `x-typesafe-request-id`, read from a fixed header allowlist.
 
@@ -25,15 +29,19 @@ Still open from Ian's 2026-09-23 ruling to keep the times:
 - The attempt record on every typed host beyond Rust and C JSON.
 - A chat adapter's `server_s`, from the body's `created` and the time in its `id`, if a chat adapter ships.
 
-## 2. Caller-priced cost on the remaining hosts
+## 3. Caller-priced cost on the remaining hosts
 
 Ticket 0300 stays open for the strict readers and the other typed hosts. SQLite refuses caller prices until its host adopts them. The price comes from the caller and never from a guess. With no price set, a run shows tokens and no money.
 
-## 3. SQL per-call facts
+## 4. SQL per-call facts
 
 DuckDB, PostgreSQL and SQLite keep `thinkthen_details` and `thinkthen_usage()`. A per-call or per-query facts shape waits for its own design, because a scalar returns one value a row.
 
-## 4. Docs
+## 5. The `meta.usage` name
+
+Register 61 asked that per-record token shares carry a name saying they are even shares. `sdlc/planning/work-plan-2026-09-27.md` rejected the rename and keeps `meta.usage`. `sdlc/planning/remaining-batches-2026-09-28.md` still lists the naming decision as required. The two records disagree, so the coordinator settles it.
+
+## 6. Docs
 
 Each surface's README names `facts`. The site shows no raw HTTP exchange with its `usage`, and no site page says where a library or SQL call's run facts come from. Both belong to marketing, which owns `site/`.
 

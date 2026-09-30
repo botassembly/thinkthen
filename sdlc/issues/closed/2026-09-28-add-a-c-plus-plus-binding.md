@@ -1,6 +1,6 @@
 # Add a C++ binding
 
-Status: closed 2026-09-30. Fixed by ticket 0249: `libraries/cpp/` is integrated. The release channel stays in `2026-09-28-cpp-consumer-proof-needs-a-supported-package.md`.
+Status: closed 2026-09-30. Fixed by ticket 0249: `libraries/cpp/` is integrated. The release channel stays in `2026-09-26-language-packages-need-a-release.md`, which absorbed `2026-09-28-cpp-consumer-proof-needs-a-supported-package.md`.
 
 Filed 2026-09-28 by the marketing lead, on Ian's instruction: "I definitely want to support C++. I'm going to have the team work on that as well." Ian ranks C++ ahead of COBOL.
 

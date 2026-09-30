@@ -6,7 +6,7 @@ opens: sdlc/issues/closed/2026-09-27-ada-consumer-proof-needs-a-supported-packag
 
 # 0265: Pack Ada, GNU Objective-C and COBOL source with one matching C archive
 
-Status: complete within the local Linux package scope after final fresh code review accepted `88d23f97`. The installed host slice `de2d24a4` and final packaging delta have both passed the same independent reviewer. Original release criteria remain open.
+Status: complete within the local Linux package scope after final fresh code review accepted `88d23f97`. The installed host slice `de2d24a4` and final packaging delta have both passed the same independent reviewer. Original release criteria remain open. Those criteria now live in `sdlc/issues/2026-09-26-language-packages-need-a-release.md`.
 
 ## Outcome and retained behavior
 

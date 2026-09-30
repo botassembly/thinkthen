@@ -1,4 +1,4 @@
-Status: Open for eight pages that can follow 0.1. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
+Status: Open for thirteen pages that can follow 0.1. Ticket 0316 rechecked every item on 2026-09-30 and cut the finished ones. The wrong spec claims, the 0.1 pages 5 to 10, the held-flag answers and the annotate help fix are done; git history holds their record.
 
 # Docs and how-tos owed
 
@@ -15,6 +15,12 @@ A new page either joins the `demos/` list under ADR 0018 or becomes a site how-t
 17. **An `examples/` folder with River Run as the first Python example.** Ian asked for it on 2026-09-23. Port the card game from workspace experiment 250, run it under replay with no key, and report its request counts. This needs its own ticket.
 18. **One measured backend profile.** `profiles/README.md` still carries no claimed limit. Experiment 219 bracketed tokens, not bytes. Ship one profile with a measured byte ceiling and its record, and add one conformance case at a backend's own edge.
 19. **Split one file into piles by a `choose` label.** Ian asked for it on 2026-09-20. The capability works: replaying how-to 21's recording, `choose ... --details` piped through `jq -r '[.value, (.input|tostring)] | @tsv'` and `awk -F'\t' '{print $2 > ($1".out.jsonl")}'` wrote one file per label. No how-to shows it. Moved here from the stumble register on 2026-09-30.
+20. **Exit code 1 under `set -e`.** One page: the `if` form, the `||` form, what `--raw` prints, and a host that treats exit 2 as a block.
+21. **Terminal recordings** scripted with VHS under `--replay`.
+22. **A published skill file** that teaches an agent the verbs, the exit codes and `--plan`.
+23. **Site search and a sitemap.** This one belongs to marketing.
+
+Pages 20 to 23 moved here on 2026-09-30 from the release issue's "Moved to the docs issue" list, which ticket 0128 deferred to this issue.
 
 ## Handed to marketing
 
