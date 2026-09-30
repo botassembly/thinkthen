@@ -297,7 +297,7 @@ fn process_requests_sent() -> u64
   - `a_spent_deadline_stops_a_prepared_request_before_its_key`: `engine/deadline_tests.rs` `a_spent_deadline_opens_no_connection_and_observes_no_attempt`, `engine/pipeline/tests.rs` `a_spent_deadline_or_a_fired_cancel_stops_before_reading`, and `cli/edge/deadline_tests.rs` `a_spent_deadline_on_every_direct_path_sends_nothing`.
   - `a_replayed_answer_takes_no_permit`: a permit is taken only inside `Client::post`, and a replay never reaches the client. Every replay test that counts zero loopback requests holds this.
   - The two prune tests over digest-shaped symlinks and bad entries went, because prune no longer reads those files.
-- Checks: TBD
+- Checks, on the rebase onto 0314 slice 4d (`a406ce419`): `sdlc/scripts/test`, `spec` with `settings`, workspace clippy with `-D warnings`, `policy.py`, `tickets`, and `lint` in a clean checkout pass. The C door, Polars and PostgreSQL checks pass against one loopback backend; PostgreSQL runs because its runner fixture names a recording folder now. No other binding changed.
 - Defers:
   - `core/batch.rs` stays. What remains in it is the quote form and the batch setting parse, which every path uses; ADR 0111 section 1 keeps both. Renaming it is churn with no behavior. Ian can overturn this.
   - The SQL hosts' question store proofs from Debt 003 go back to `sdlc/issues/2026-09-30-sql-host-store-proofs-are-partial.md`, Debt 010, reopened.
