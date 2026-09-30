@@ -56,10 +56,10 @@ fn tag_expands_wire_questions_but_reads_one_logical_outcome_per_record() {
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: Value = serde_json::from_slice(&requests[0].body).expect("request");
-    assert_eq!(request["state"], json!({"records":["first","second"]}));
+    assert_eq!(request["state"], json!("Each question quotes the text it asks about."));
     assert_eq!(
         text(&requests[0].body),
-        r#"{"state":{"records":["first","second"]},"model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"first\". Which?\n\nDetermine whether the label \"billing\" applies to this item."},"q2":{"type":"noul","instructions":"The text is \"first\". Which?\n\nDetermine whether the label \"urgent\" applies to this item."},"q3":{"type":"noul","instructions":"The text is \"second\". Which?\n\nDetermine whether the label \"billing\" applies to this item."},"q4":{"type":"noul","instructions":"The text is \"second\". Which?\n\nDetermine whether the label \"urgent\" applies to this item."}}}"#
+        r#"{"state":"Each question quotes the text it asks about.","model":"local-1","questions":{"q1":{"type":"noul","instructions":"The text is \"first\". Which?\n\nDetermine whether the label \"billing\" applies to this item."},"q2":{"type":"noul","instructions":"The text is \"first\". Which?\n\nDetermine whether the label \"urgent\" applies to this item."},"q3":{"type":"noul","instructions":"The text is \"second\". Which?\n\nDetermine whether the label \"billing\" applies to this item."},"q4":{"type":"noul","instructions":"The text is \"second\". Which?\n\nDetermine whether the label \"urgent\" applies to this item."}}}"#
     );
     let questions = request["questions"].as_object().expect("wire questions");
     assert_eq!(questions.len(), 4);
@@ -110,7 +110,7 @@ fn score_uses_ordered_levels_and_shares_an_equal_record() {
     let requests = listener.requests();
     assert_eq!(requests.len(), 1);
     let request: Value = serde_json::from_slice(&requests[0].body).expect("request");
-    assert_eq!(request["state"], json!({"records":["first","second"]}));
+    assert_eq!(request["state"], json!("Each question quotes the text it asks about."));
     assert_eq!(
         request["questions"].as_object().map(serde_json::Map::len),
         Some(2)
@@ -263,7 +263,7 @@ fn tag_wire_name_growth_closes_before_the_tenth_question() {
     let counts: Value = serde_json::from_slice(lines[1]).expect("whole-input counts");
     assert_eq!(
         counts,
-        json!({"records":5,"requests":1,"estimated_bytes":1403,
+        json!({"records":5,"requests":1,"estimated_bytes":1402,
             "estimated_input_tokens":{"lower":723,"upper":1274},"upper_bound":false})
     );
     let full = serde_json::to_vec(&plan["request"]).expect("body size");

@@ -58,7 +58,7 @@ fn equal_selected_records_share_only_an_equal_complete_question() {
     let wire = text(&requests[0].body);
     assert_eq!(
         wire,
-        r#"{"state":{"records":["same","same"]},"model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"The text is \"same\". Which team?","criteria":{"billing":"Money","other":"Fallback"}},"q2":{"type":"choice","instructions":"The text is \"same\". Which team?","criteria":{"shipping":"Parcels","other":"Fallback"}}}}"#
+        r#"{"state":"Each question quotes the text it asks about.","model":"jev-latest","questions":{"q1":{"type":"choice","instructions":"The text is \"same\". Which team?","criteria":{"billing":"Money","other":"Fallback"}},"q2":{"type":"choice","instructions":"The text is \"same\". Which team?","criteria":{"shipping":"Parcels","other":"Fallback"}}}}"#
     );
     let rows = details(&output);
     assert_eq!(rows.len(), 3);
@@ -361,7 +361,7 @@ fn a_profile_refuses_later_large_options_after_the_closed_prefix() {
     assert_eq!(output.status.code(), Some(2));
     assert_eq!(
         text(&output.stderr),
-        "thinkthen: profile small allows at most 500 request bytes; this request has 1918\nthinkthen: stopped at record 2; 1 record finished\n"
+        "thinkthen: profile small allows at most 500 request bytes; this request has 1980\nthinkthen: stopped at record 2; 1 record finished\n"
     );
 }
 
