@@ -320,13 +320,13 @@ fn annotate(
     let mut batch = engine.annotate_with(&set, records.iter().map(String::as_str), options);
     let rows = batch
         .by_ref()
-        .map(|row| row.map(|row| row.value_json()))
+        .map(|row| raw(row?.value_json()))
         .collect::<Result<Vec<_>, _>>()?;
     let facts = batch
         .facts()
         .cloned()
         .ok_or_else(|| Failure::defect("completed annotate has no facts"))?;
-    Ok((format!("[{}]", rows.join(",")), facts))
+    Ok((written(serde_json::to_string(&rows))?, facts))
 }
 
 /// The question text of `rank` or `find`, which read no other key.
@@ -385,7 +385,12 @@ fn bare(value: &Judgment) -> Result<String, Failure> {
     }
 }
 
+/// One value's JSON text as the crate wrote it, to serialize inside a reply.
+pub(crate) fn raw(text: String) -> Result<Box<RawValue>, Failure> {
+    RawValue::from_string(text).map_err(|_| Failure::defect("an answer could not be written"))
+}
+
 /// One typed value's JSON text, or the door's defect.
-fn written(text: serde_json::Result<String>) -> Result<String, Failure> {
+pub(crate) fn written(text: serde_json::Result<String>) -> Result<String, Failure> {
     text.map_err(|_| Failure::defect("an answer could not be written"))
 }

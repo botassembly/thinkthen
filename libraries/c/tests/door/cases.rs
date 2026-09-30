@@ -502,7 +502,7 @@ fn refused<'a>(
         // The engine opens its cache while it is built, so the null engine
         // names this failure.
         "22-local-fault" => {
-            let file = std::path::Path::new(env!("CARGO_TARGET_TMPDIR")).join("cases-not-a-folder");
+            let file = crate::root().join("cases-not-a-folder");
             std::fs::write(&file, "not a folder").map_err(|error| error.to_string())?;
             script.ask("env", &["THINKTHEN_CACHE", &file.display().to_string()]);
             script.ask("decide", &[&generic, asked, urgent]);

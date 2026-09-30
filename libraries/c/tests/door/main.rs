@@ -21,6 +21,7 @@ mod settings;
 mod usage;
 
 use std::collections::BTreeMap;
+use std::fs::File;
 use std::io::{BufRead, BufReader, Write};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Output, Stdio};
@@ -36,8 +37,61 @@ fn crate_dir() -> &'static Path {
     Path::new(env!("CARGO_MANIFEST_DIR"))
 }
 
+/// This process's own scratch folder. Nextest runs each test in its own
+/// process, so no process deletes or overwrites another's archive, drivers or
+/// caches (Debt 025). Each process holds a lock on `door/<pid>.lock` for its
+/// whole life. The first call deletes each other folder whose lock it can
+/// take, since that process has exited, so a run's copies of the archive, about
+/// 90 MB a process, last only until the next run. The empty lock files stay,
+/// at most one for each process ID the system hands out.
+fn root() -> &'static Path {
+    static ROOT: OnceLock<(PathBuf, File)> = OnceLock::new();
+    let (folder, _held) = ROOT.get_or_init(|| {
+        let parent = Path::new(env!("CARGO_TARGET_TMPDIR")).join("door");
+        std::fs::create_dir_all(&parent).expect("the door's scratch folder");
+        let own = std::process::id().to_string();
+        let held = lock_file(&parent, &own);
+        held.lock().expect("this process's lock");
+        sweep(&parent, &own);
+        let folder = parent.join(&own);
+        let _stale = std::fs::remove_dir_all(&folder);
+        std::fs::create_dir_all(&folder).expect("this process's scratch folder");
+        (folder, held)
+    });
+    folder
+}
+
+/// Delete each other process's folder whose lock this process can take.
+fn sweep(parent: &Path, own: &str) {
+    let names: Vec<String> = std::fs::read_dir(parent)
+        .into_iter()
+        .flatten()
+        .flatten()
+        .filter_map(|entry| entry.file_name().into_string().ok())
+        .filter_map(|name| name.strip_suffix(".lock").map(str::to_owned))
+        .filter(|name| name != own)
+        .collect();
+    for name in names {
+        // The lock stays held while the folder goes, so a new process with
+        // the same ID waits for it.
+        let other = lock_file(parent, &name);
+        if other.try_lock().is_ok() {
+            let _gone = std::fs::remove_dir_all(parent.join(&name));
+        }
+    }
+}
+
+fn lock_file(parent: &Path, name: &str) -> File {
+    File::options()
+        .create(true)
+        .truncate(false)
+        .write(true)
+        .open(parent.join(format!("{name}.lock")))
+        .expect("a lock file")
+}
+
 fn scratch(name: &str) -> PathBuf {
-    let folder = Path::new(env!("CARGO_TARGET_TMPDIR")).join(name);
+    let folder = root().join(name);
     let _absent = std::fs::remove_dir_all(&folder);
     std::fs::create_dir_all(&folder).expect("a scratch folder");
     folder
@@ -117,7 +171,7 @@ fn compile(source: &Path) -> PathBuf {
         .file_stem()
         .and_then(|stem| stem.to_str())
         .expect("a name");
-    let binary = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("c-{name}"));
+    let binary = root().join(format!("c-{name}"));
     let folder = archive();
     let linked = child::command("cc", &[])
         .args([
