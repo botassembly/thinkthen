@@ -312,3 +312,39 @@ fn models_and_keys_follow_the_path() {
     assert!(format!("{:?}", configured[0]).contains("<withheld>"));
     assert!(!format!("{:?}", configured[0]).contains("8080"));
 }
+
+#[test]
+fn a_built_in_rate_paces_the_unnamed_path_at_that_built_in_base_alone() {
+    let rate = std::num::NonZeroU32::new(600);
+    let rated = |name: &str| {
+        Named::built_in(name)
+            .expect("a built-in")
+            .with_per_minute(rate)
+    };
+    let configured = vec![
+        rated("typesafe"),
+        rated("liquid"),
+        Named::new("local-d1", "http://127.0.0.1:8080/v1", "K", "m").with_per_minute(rate),
+    ];
+    // (the unnamed path's address, the rate it takes)
+    for (url, expected) in [
+        (None, rate),
+        (Some("https://api.typesafe.ai/v1"), rate),
+        (Some("HTTPS://API.TYPESAFE.AI/v1"), rate),
+        (Some("https://api.liquid.ai/decisions/v1"), rate),
+        (Some("https://api.liquid.ai/other/v1"), None),
+        (Some("http://localhost:11434/v1"), None),
+        (Some("http://127.0.0.1:8080/v1"), None),
+    ] {
+        let backend = choose(&[(None, url)], &configured)
+            .expect("a choice")
+            .backend(None, "m")
+            .expect("a backend");
+        assert_eq!(backend.per_minute(), expected, "{url:?}");
+    }
+    let unrated = choose(&[(None, None)], &[]).expect("a choice");
+    assert_eq!(
+        unrated.backend(None, "m").expect("a backend").per_minute(),
+        None
+    );
+}

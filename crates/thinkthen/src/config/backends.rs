@@ -238,29 +238,34 @@ mod tests {
             }
         }
         for (value, expected) in [("1", 1), ("600", 600), ("60000", 60_000)] {
-            for text in [added(value), built_in(value)] {
-                let parsed = Config::parse(text.as_bytes()).expect(&text);
-                let [entry] = parsed.named() else {
-                    panic!("one entry: {text}");
-                };
-                let chosen =
-                    crate::core::named::choose(&[(Some(entry.name()), None)], parsed.named())
-                        .expect("a choice")
-                        .backend(None, "unused")
-                        .expect("a backend");
-                assert_eq!(chosen.per_minute().map(u32::from), Some(expected), "{text}");
-                if let Some(plain) = crate::core::Named::built_in(entry.name()) {
-                    // The rate is the only change: base, key variables, and model stay built in.
-                    assert_eq!(entry.keys(), plain.keys());
-                    let plain = crate::core::named::choose(&[(Some(entry.name()), None)], &[])
-                        .expect("a choice")
-                        .backend(None, "unused")
-                        .expect("a backend");
-                    assert_eq!(plain.per_minute(), None, "a built-in carries no rate");
-                    assert_eq!(chosen.with_per_minute(None), plain);
-                }
-            }
+            accepted(&added(value), expected);
+            accepted(&built_in(value), expected);
         }
+    }
+
+    /// The only entry of `text` carries `rate`, and a built-in keeps its base,
+    /// key variables, and model: the rate is the only change.
+    fn accepted(text: &str, rate: u32) {
+        use crate::core::{Named, named};
+        let parsed = Config::parse(text.as_bytes()).expect(text);
+        let [entry] = parsed.named() else {
+            panic!("one entry: {text}");
+        };
+        let backend = |configured: &[Named]| {
+            named::choose(&[(Some(entry.name()), None)], configured)
+                .expect("a choice")
+                .backend(None, "unused")
+                .expect("a backend")
+        };
+        let chosen = backend(parsed.named());
+        assert_eq!(chosen.per_minute().map(u32::from), Some(rate), "{text}");
+        let Some(plain) = Named::built_in(entry.name()) else {
+            return;
+        };
+        assert_eq!(entry.keys(), plain.keys());
+        let plain = backend(&[]);
+        assert_eq!(plain.per_minute(), None, "a built-in carries no rate");
+        assert_eq!(chosen.with_per_minute(None), plain);
     }
 
     #[cfg(unix)]

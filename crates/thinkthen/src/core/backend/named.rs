@@ -140,6 +140,9 @@ pub(crate) struct Choice<'a> {
     pub(crate) url: Option<&'a str>,
     /// The index of the tier that decided, or `None` when no tier named anything.
     pub(crate) tier: Option<usize>,
+    /// The built-ins the configuration file gave a rate, which also pace the
+    /// unnamed path at their own base (ticket 0343).
+    rated: Vec<Named>,
 }
 
 /// Walk the tiers from the top; the first tier that names a backend or an
@@ -152,6 +155,11 @@ pub(crate) fn choose<'a>(
     tiers: &[Tier<'a>],
     configured: &[Named],
 ) -> Result<Choice<'a>, BackendError> {
+    let rated: Vec<Named> = configured
+        .iter()
+        .filter(|entry| entry.per_minute.is_some() && Named::built_in(&entry.name).is_some())
+        .cloned()
+        .collect();
     for (index, &(name, url)) in tiers.iter().enumerate() {
         if name.is_none() && url.is_none() {
             continue;
@@ -161,19 +169,23 @@ pub(crate) fn choose<'a>(
             named,
             url,
             tier: Some(index),
+            rated,
         });
     }
     Ok(Choice {
         named: None,
         url: None,
         tier: None,
+        rated,
     })
 }
 
 impl Choice<'_> {
     /// Resolve the address and the model. A named backend supplies its base
     /// when its tier named no address, and its model when nothing was asked.
-    /// The unnamed path takes `unnamed_model` as today.
+    /// The unnamed path takes `unnamed_model` as today, and the rate of a
+    /// built-in whose base posts to the same URL, so a rate on the built-in
+    /// whose base is the default address paces a run that names nothing.
     ///
     /// # Errors
     ///
@@ -184,7 +196,16 @@ impl Choice<'_> {
         unnamed_model: &str,
     ) -> Result<Backend, BackendError> {
         match &self.named {
-            None => Backend::resolve(self.url, None, asked.unwrap_or(unnamed_model)),
+            None => {
+                Backend::resolve(self.url, None, asked.unwrap_or(unnamed_model)).map(|backend| {
+                    let rate = self.rated.iter().find(|entry| {
+                        Backend::resolve(Some(&entry.base), None, unnamed_model)
+                            .is_ok_and(|base| base.url() == backend.url())
+                    });
+                    let rate = rate.and_then(|entry| entry.per_minute);
+                    backend.with_per_minute(rate)
+                })
+            }
             Some(named) => Backend::resolve(
                 Some(self.url.unwrap_or(&named.base)),
                 None,
