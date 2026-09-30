@@ -1,6 +1,6 @@
 # 0304: One question cache and one batching path
 
-Status: slice 3a in progress. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
+Status: slice 3a built, awaiting code review. Plan: `sdlc/planning/cleanup-2026-09-30.md`, rulings 2 to 6.
 
 ## Outcome
 
@@ -153,3 +153,22 @@ What the build found:
 - rusqlite sets a 5-second busy timeout on every connection. The store turns it off, so its own wait, which checks the stop, is the only one.
 - `listener.requests()` drains its list, and a rerun test must reuse the same listener, because the address is part of every key.
 - Running demo 12 in place committed a `thinkthen.sqlite`. The demo now caches in a scratch copy, and `policy.py` refuses the file.
+
+### Slice 3a
+
+What the build changed beyond the evidence list:
+
+- An annotate record's groups share one state, so its questions pack into one request, by ADR 0111 section 5. The consumer's parts test and the shared case `18-annotate-two-groups` recorded one request per group. The consumer now reads every question of a request, and it skips case 18 as the command's wire run does.
+- A 413 on a stopping stream now sends both halves, by ADR 0111 section 6. The old path stopped after the first half.
+- `thinkthen decide --plan` and the public plan count real option counts through `pipeline::options`. The command plan passed 0 before.
+- A single public call listed only its first question key in its details. A tag call has one key per label, and `public_json` caught the gap. `keyed` now passes every key through.
+- The library now needs rusqlite, so every consumer lock gained it. The SQLite extension also pins rusqlite, so Cargo resolves one rusqlite with both crates' features. `policy.py` now exempts the packages beneath a crate that a binding pins to the root's exact version. Otherwise its lock check read the extension's own packages as drift in thinkthen's tree.
+- That unification also joins `bundled` and `loadable_extension` in one `libsqlite3-sys` inside the SQLite extension. ADR 0111 expected two SQLite copies there. The extension builds. 3b must run its SQL cases on the question store and check which SQLite the store opens.
+- ADR 0111 coalesces misses only within one call. The fork probe's digest-lock test therefore counts two sends for two concurrent single calls, and it keeps its proof that the parent's call never waits for a forked child.
+- A cache on a folder that holds only `thinkthen.jsonl` imports it into `thinkthen.sqlite` beside it. The old folder binding refusal no longer applies to the record functions, because each key names its URL.
+- The type corpus lost its three `meta.batch` and `meta.batches` shape cases with the schema definitions they checked.
+- The ratchet fell from 108,545 to 105,563 lines, because the old batchers, their tests and the batch receipts went.
+
+What the lander does:
+
+- Moves `sdlc/issues/2026-09-30-public-batch-holds-one-send-under-a-throttle.md` to `closed/`. Its test runs unignored at batch 2.

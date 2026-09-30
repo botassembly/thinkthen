@@ -7,11 +7,16 @@ use serde_json::{Map, Value, json};
 /// Each quoted record a request asks about, in wire order.
 fn quoted(body: &[u8]) -> Vec<String> {
     let request: Value = serde_json::from_slice(body).expect("request");
-    let questions = request["questions"].as_object().expect("questions");
+    let questions = request
+        .get("questions")
+        .and_then(Value::as_object)
+        .expect("questions");
     (1..=questions.len())
         .map(|place| {
-            let asked = questions[&format!("q{place}")]["instructions"]
-                .as_str()
+            let asked = questions
+                .get(&format!("q{place}"))
+                .and_then(|question| question.get("instructions"))
+                .and_then(Value::as_str)
                 .expect("text instructions");
             let (head, _) = asked.split_once("\". ").expect("a quoted record");
             head.trim_start_matches("The text is \"").to_owned()
@@ -23,13 +28,14 @@ fn quoted(body: &[u8]) -> Vec<String> {
 fn every(body: &[u8], rule: impl Fn(&str) -> f64) -> Canned {
     let request: Value = serde_json::from_slice(body).expect("request");
     let records = quoted(body);
-    let answers: Map<String, Value> = request["questions"]
-        .as_object()
+    let answers: Map<String, Value> = request
+        .get("questions")
+        .and_then(Value::as_object)
         .expect("questions")
         .keys()
         .map(|name| {
             let place: usize = name[1..].parse().expect("qN");
-            let noul = rule(&records[place - 1]);
+            let noul = rule(records.get(place - 1).expect("a quoted record"));
             (name.clone(), json!({"type": "noul", "noul": noul}))
         })
         .collect();

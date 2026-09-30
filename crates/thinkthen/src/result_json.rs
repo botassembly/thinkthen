@@ -25,6 +25,10 @@ pub(crate) struct Run<'a> {
 /// # Errors
 ///
 /// Returns [`RenderError`] when the question or the document cannot be written.
+#[expect(
+    clippy::too_many_arguments,
+    reason = "the question keys belong to the same result document"
+)]
 pub(crate) fn decision(
     run: Run<'_>,
     judged: &Judgment,

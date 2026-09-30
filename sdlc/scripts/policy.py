@@ -468,8 +468,8 @@ def binding_files(name: str, crate: str) -> dict[str, str]:
     return {**files, "deny.toml": deny.read_text(encoding="utf-8")} if deny.is_file() else files
 
 
-def lock_tree(lock: dict) -> set[tuple[str, str]]:
-    """The name and version of every package in thinkthen's resolved tree.
+def lock_tree(lock: dict, roots: tuple[str, ...] = ("thinkthen",)) -> set[tuple[str, str]]:
+    """The name and version of every package in the resolved tree of `roots`.
 
     The root lock's tree also holds thinkthen's development dependencies, so it
     is a superset of the normal tree a binding resolves.
@@ -482,7 +482,7 @@ def lock_tree(lock: dict) -> set[tuple[str, str]]:
                 if package["name"] == name and version[:1] in ([], [package["version"]])]
 
     reached: set[tuple[str, str]] = set()
-    waiting = named("thinkthen")
+    waiting = [found for root in roots for found in named(root)]
     while waiting:
         pair = waiting.pop()
         if pair not in reached:
@@ -569,7 +569,15 @@ def binding_failures(name: str, files: dict[str, str], crate: str = "") -> list[
     if manifest.get("profile", {}).get("release") != ACCEPTED_RELEASE_PROFILE:
         held.append(f"{name} copies the root release profile")
     ours, theirs = lock_tree(lock), lock_tree(tomllib.loads((REPO / "Cargo.lock").read_text(encoding="utf-8")))
-    drift = ours - theirs
+    # A crate the binding pins to the root's exact version, such as the SQLite
+    # extension's rusqlite, resolves once with the binding's features. The
+    # packages beneath it that only those features add are the binding's own.
+    pinned = {(dependency, specification["version"][1:]) for kind, dependency, specification in dependencies
+              if kind == "dependencies" and isinstance(specification, dict)
+              and str(specification.get("version", "")).startswith("=")}
+    shared = {pair for pair in pinned if pair in theirs}
+    beneath = lock_tree(lock, tuple(f"{name} {version}" for name, version in sorted(shared))) - shared
+    drift = ours - theirs - beneath
     if not ours or drift:
         held.append(f"{name}/Cargo.lock resolves thinkthen's tree to the root lock's versions: "
                     f"{sorted(drift) or 'thinkthen is absent'}")

@@ -21,9 +21,9 @@ use serde::de::{MapAccess, Visitor};
 use serde_json::value::RawValue;
 use serde_json::{Value, json};
 use thinkthen::{
-    Annotated, BatchSetting, CallOptions, Choice, Description, Details, Engine, Entity, Error,
-    FailureCause, Judgment, Kind, LoadedQuestion, Probabilities, Question, QuestionSet, Recognize,
-    Recognized, Relate, RelationRule,
+    Annotated, BatchSetting, CallOptions, Choice, Description, Engine, Entity, Error, FailureCause,
+    Judgment, Kind, LoadedQuestion, Question, QuestionSet, Recognize, Recognized, Relate,
+    RelationRule,
 };
 
 const CASES: &str = include_str!("../../../../cases.json");
@@ -37,7 +37,7 @@ fn singleton_requests<'a>() -> CallOptions<'a> {
 
 pub(crate) type Checked<T = ()> = Result<T, String>;
 pub(crate) use crate::values::same;
-use crate::values::{digest, keys, selected_ids, swap};
+use crate::values::{detailed, digest, keys, selected_ids, swap};
 
 thinkthen::choices! { enum Team { Billing => "billing", Shipping => "shipping", Other => "other" } }
 thinkthen::choices! { enum Mark { Billing => "billing", Urgent => "urgent", Security => "security" } }
@@ -338,67 +338,6 @@ fn single(engine: &Engine, asked: &Question, text: &str, success: &Value, base: 
         "cache_answers": after.cache_answers() - before.cache_answers(),
     });
     same("counters", &moved, counters)
-}
-
-fn detailed(details: &Details, expected: &Value, base: &str) -> Checked {
-    let wanted = &expected["details"];
-    let answer = &wanted["answer"];
-    let probabilities = match details.probabilities() {
-        Probabilities::YesNo { yes } => ("probability", json!(yes)),
-        Probabilities::Named(named) => (
-            "probabilities",
-            named
-                .iter()
-                .map(|one| (one.name().to_owned(), json!(one.probability())))
-                .collect(),
-        ),
-    };
-    same(probabilities.0, &probabilities.1, &answer[probabilities.0])?;
-    if let Some(level) = answer.get("level") {
-        same("level", &json!(details.nearest()), level)?;
-    }
-    same("model", &json!(details.model()), &wanted["model"])?;
-    same(
-        "question_sha256",
-        &json!(details.question_sha256()),
-        &wanted["question_sha256"],
-    )?;
-    keyed_requests(details.requests(), &wanted["requests"])?;
-    same(
-        "confidence",
-        &json!(details.confidence()),
-        &answer["confidence"],
-    )?;
-    let usage = details.usage().map(|usage| {
-        json!({"input_tokens": usage.input_tokens(), "output_tokens": usage.output_tokens()})
-    });
-    same("usage", &json!(usage), &wanted["usage"])?;
-    same(
-        "requests_sent",
-        &json!(details.requests_sent()),
-        &wanted["requests_sent"],
-    )?;
-    same("cached", &json!(details.cached()), &wanted["cached"])?;
-    let served = json!(format!("{base}/systemone"));
-    same("url", &json!(details.url()), &served)?;
-    let line: Value =
-        serde_json::from_str(&details.to_json()).map_err(|error| error.to_string())?;
-    same("line url", &line["meta"]["url"], &served)
-}
-
-/// A row lists its own question keys, in order, out of the keys of the
-/// requests the case recorded. A row of digests matches them exactly.
-fn keyed_requests(printed: &[String], wanted: &Value) -> Checked {
-    let recorded = wanted.as_array().map_or(&[][..], Vec::as_slice);
-    if !recorded.iter().any(Value::is_array) {
-        return same("requests", &json!(printed), wanted);
-    }
-    let mut rest = recorded.iter().flat_map(|keys| keys.as_array().into_iter().flatten());
-    if !printed.is_empty() && printed.iter().all(|key| rest.any(|held| held == key)) {
-        Ok(())
-    } else {
-        Err(format!("requests: printed {printed:?}, expected keys out of {wanted}"))
-    }
 }
 
 /// With `one`, the case names one record, and every answer reads it.

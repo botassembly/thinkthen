@@ -17,6 +17,9 @@ use crate::public::question::{ChooseQuestion, Kind, Question, TagQuestion};
 use crate::public::results::{self, Answer, Call, Counters, Details};
 use crate::public::settings::EngineBuilder;
 
+/// One judgment and the question keys behind it.
+type Keyed = (facade::Judgment, Vec<String>);
+
 /// One engine: its settings, its connection pool, its cache, and its counters.
 ///
 /// Clones share everything, and one engine serves many threads at once.
@@ -385,7 +388,7 @@ impl Engine {
         question: &Question,
         text: &str,
         options: CallOptions<'_>,
-    ) -> Result<Call<(facade::Judgment, Vec<String>)>, Error> {
+    ) -> Result<Call<Keyed>, Error> {
         options.without_context("a single-document call")?;
         evidence(text)?;
         let engine = self.asking(question)?;

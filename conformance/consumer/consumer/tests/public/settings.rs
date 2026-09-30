@@ -101,10 +101,7 @@ fn a_recording_replays_read_only_without_a_key() {
         String::from_utf8_lossy(&output.stdout)
     );
     assert!(!copied.join(".thinkthen-backend.json").exists());
-    assert_eq!(
-        std::fs::read(copied.join(name)).expect("unchanged"),
-        saved
-    );
+    assert_eq!(std::fs::read(copied.join(name)).expect("unchanged"), saved);
     // The replay wrote nothing. The cache writer imported the fixture into
     // its live store, by ADR 0111 section 3, and left the fixture as it was.
     let mut names: Vec<_> = std::fs::read_dir(&copied)
@@ -164,7 +161,10 @@ fn old_recording_child() {
     // apply, by ADR 0111: the cache serves the recorded answer and sends nothing.
     let served = writer.decide(&question, report).expect("cached answer");
     assert_eq!(
-        (served.facts().requests_sent(), served.facts().cache_answers()),
+        (
+            served.facts().requests_sent(),
+            served.facts().cache_answers()
+        ),
         (0, 1)
     );
     assert_eq!(served.into_value(), Answer::Yes);
