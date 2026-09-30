@@ -64,10 +64,15 @@ configure_file <- function(in_file, out_file, values) {
   writeLines(lines, out_file)
 }
 
-# Ticket 0304 slice 3b: on Linux the package keeps the archive's bundled
-# SQLite and Rust names local, so they never bind to another package's
-# SQLite. R finds the routines through their registration, not by name.
-.exclude_libs <- if (Sys.info()[["sysname"]] == "Linux") "-Wl,--exclude-libs,ALL" else ""
+# Ticket 0304 slice 3b on Linux, ticket 0351 on macOS: the package keeps the
+# archive's bundled SQLite and Rust names local, so they never bind to another
+# package's SQLite. R finds the routines through their registration, so macOS
+# exports only the entry point R looks up by name.
+.hide_names <- switch(Sys.info()[["sysname"]],
+  Linux = "-Wl,--exclude-libs,ALL",
+  Darwin = "-Wl,-exported_symbol,_R_init_thinkthen",
+  ""
+)
 
 # The repository shape builds in a named CARGO_TARGET_DIR and keeps it, so a
 # second install reuses the build. The shipped shapes build in the package and
@@ -88,6 +93,6 @@ configure_file(
     TARGET_DIR = if (.keep_target) normalizePath(.target_dir, mustWork = FALSE) else "./rust/target",
     CLEAN_TARGET = if (.keep_target) "" else "$(TARGET_DIR)",
     PANIC_EXPORTS = "",
-    EXCLUDE_LIBS = .exclude_libs
+    HIDE_NAMES = .hide_names
   )
 )

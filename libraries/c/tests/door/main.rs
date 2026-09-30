@@ -43,8 +43,21 @@ fn scratch(name: &str) -> PathBuf {
     folder
 }
 
+/// The shared library and its link name as `release-pack` lays them out, and
+/// the prefix Mach-O puts before every name (ticket 0351).
+const MAC: bool = cfg!(target_os = "macos");
+const DL: &str = if MAC { "dylib" } else { "so" };
+const SONAME: &str = if MAC {
+    "libthinkthen.0.dylib"
+} else {
+    "libthinkthen.so.0"
+};
+const PREFIX: &str = if MAC { "_" } else { "" };
+
 /// The built door as a release archive lays it out: `libthinkthen.so`, its
-/// soname link `libthinkthen.so.0`, and `libthinkthen.a`, in one folder.
+/// soname link `libthinkthen.so.0`, and `libthinkthen.a`, in one folder. On
+/// macOS the shared library is `libthinkthen.dylib`, linked as
+/// `libthinkthen.0.dylib`.
 fn archive() -> &'static Path {
     static FOLDER: OnceLock<PathBuf> = OnceLock::new();
     FOLDER.get_or_init(|| {
@@ -73,8 +86,11 @@ fn archive() -> &'static Path {
                 .find(|file| file.file_name().is_some_and(|name| name == from))
                 .expect("the build reported the door's library under its own name")
         };
-        std::fs::copy(built("libthinkthen_c.so"), folder.join("libthinkthen.so"))
-            .expect("a built library");
+        std::fs::copy(
+            built(&format!("libthinkthen_c.{DL}")),
+            folder.join(format!("libthinkthen.{DL}")),
+        )
+        .expect("a built library");
         // A release archive holds the localized static library, as `release-pack` writes it.
         let localized = child::command("sh", &[])
             .arg(crate_dir().join("localize.sh"))
@@ -83,7 +99,7 @@ fn archive() -> &'static Path {
             .output()
             .expect("sh ran");
         assert!(localized.status.success(), "{}", text(&localized.stderr));
-        std::os::unix::fs::symlink("libthinkthen.so", folder.join("libthinkthen.so.0"))
+        std::os::unix::fs::symlink(format!("libthinkthen.{DL}"), folder.join(SONAME))
             .expect("the soname link");
         folder
     })
@@ -261,6 +277,7 @@ fn the_static_library_exports_exactly_the_header_symbols() {
     let mut names: Vec<String> = text(&exported.stdout)
         .lines()
         .filter_map(|line| line.split_whitespace().nth(2))
+        .map(|name| name.strip_prefix(PREFIX).unwrap_or(name))
         .map(str::to_owned)
         .collect();
     assert!(
