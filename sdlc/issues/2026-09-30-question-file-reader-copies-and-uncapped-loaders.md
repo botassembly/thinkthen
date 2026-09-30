@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: before 0.1, since the uncapped Rust and Python loaders can exhaust memory.
 
+Debt: 011
+
+Severity: high
+
 Keeping it lets one copy's cap or sentence drift from the others, and lets a Rust or Python caller read `/dev/zero` until memory runs out.
 
 ## What happens

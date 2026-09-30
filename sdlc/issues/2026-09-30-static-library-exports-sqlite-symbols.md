@@ -4,6 +4,10 @@ Kind: debt
 
 Pay when: before 0.1. Ticket 0304 slice 3b paid the Linux part; the macOS part remains.
 
+Debt: 001
+
+Severity: medium
+
 Keeping it ships a macOS static library and R package whose `sqlite3_` names clash with a consumer's own SQLite.
 
 # The static libraries export the bundled SQLite's symbols

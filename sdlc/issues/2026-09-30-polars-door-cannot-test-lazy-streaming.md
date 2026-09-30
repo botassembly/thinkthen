@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: a user needs the streaming engine, or `polars/streaming` no longer pulls the three advisories on `bincode` and `quick-xml`.
 
+Debt: 004
+
+Severity: low
+
 Keeping it risks the streaming path breaking with no check, and the frame's own memory staying unbounded.
 
 ## What is missing

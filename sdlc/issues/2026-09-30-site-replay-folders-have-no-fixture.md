@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: 0304 slice 5 lands, before the site goes public with 0.1.
 
+Debt: 007
+
+Severity: medium
+
 Keeping it leaves the site smoke red, so a new site failure hides among 79 known ones, and a library or database tab can drift from its surface with no check failing.
 
 ## 1. Fifteen replay folders have no fixture (ours, 0304 slice 5)

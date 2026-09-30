@@ -26,7 +26,7 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 | 14 | `2026-09-29-readme-key-backend-and-overhead-lines.md` | yes | marketing's overhead benchmark, then the queue owner | the benchmark run | small |
 | 15 | `2026-09-25-release-and-install-for-0-1.md` | yes, it is 0.1 | ticket 0128 phases 3b and 4; Ian dispatches | every rank above; Ian's registry accounts | large |
 | 16 | closed: `closed/2026-09-30-how-to-list-has-two-hand-kept-copies.md` (debt, paid 2026-09-30) | no | done | nothing | small |
-| 17 | `2026-09-30-debt-issues-lack-the-three-ruled-fields.md` | no | the coordinator, a records Quick Fix | ticket 0340 landing | small |
+| 17 | closed: `closed/2026-09-30-debt-issues-lack-the-three-ruled-fields.md` (closed by the pm adoption Quick Fix) | no | done | nothing | small |
 | 18 | `2026-09-26-count-secure-connections-at-sixteen-jobs.md` | no | the queue owner, a loopback experiment | nothing | small |
 | 19 | `2026-09-30-live-batching-flake-and-unexplained-usage-calls.md` | no | the queue owner; the calls traced to rank 19a, the exit 4 waits for a live run with `--details` | the next live bench run | small |
 | 19a | `closed/2026-09-30-test-stress-writes-the-real-usage-totals.md` (severity 2, closed) | no | the queue owner, a Quick Fix in `sdlc/scripts/test-stress` | nothing | small |
@@ -42,6 +42,7 @@ Ruling 10: no public release before 0.1, and 0.1 waits for every surface and bin
 | 29 | `2026-09-30-polars-door-cannot-test-lazy-streaming.md` (debt) | no | none until a user asks | a user, or clean advisories | small |
 | 30 | `2026-09-27-nothing-lists-the-uncertain-hard-or-flip-flopping-cases.md` | no | tickets after 0.1 | nothing | large |
 | 31 | `2026-09-24-rank-by-graded-relevance-for-search-reranking.md` | no | none until a user asks | a user | small |
+| 32 | `2026-09-30-opentelemetry-traces-after-0-1.md` (idea) | no | none until 0.1 ships | the 0.1 release | medium |
 
 ## Blocks 0.1
 

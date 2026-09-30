@@ -1,6 +1,6 @@
 # Debt issues lack the three fields from Ian's ruling
 
-Status: open. Filed 2026-09-30 by the pm team after verifying 6c9a1384d. Owner: the coordinator, as a records Quick Fix after ticket 0340 lands, since 0340 closes three debt issues and may take a fourth.
+Status: closed 2026-09-30 by the pm adoption Quick Fix. All 20 debt issues, 12 open and 8 in `closed/`, carry `Debt: NNN` and `Severity:`; the six paid ones carry `Paid:`. The README debt section names the three fields. Filed by the pm team after verifying 6c9a1384d.
 
 Ian ruled on 2026-09-30 that debt keeps both severity and trigger. The convention landed in this repository's issue README carries `Kind: debt` and `Pay when:` but is missing the other three ruled fields, and so are all nine debt issues.
 

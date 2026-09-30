@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: Ollama accepts object-valued criteria descriptions. Watch the upstream issue.
 
+Debt: 014
+
+Severity: medium
+
 Keeping it means Ollama users lose each description's `not_for` and `examples` detail. Ian ruled on 2026-09-30 that the Ollama rendering is a temporary Ollama-only workaround (ADR 0115). When Ollama is fixed, delete it and send descriptions as authored.
 
 ## The problem

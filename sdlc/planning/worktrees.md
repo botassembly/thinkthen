@@ -9,7 +9,7 @@ Every ticket used to get its own worktree. Each worktree built its own Rust and 
 ## Rules
 
 1. All work happens in a worktree off `origin/main`, never in the main checkout.
-2. The coordinator normally keeps four useful implementation lanes; three is acceptable, and Ian authorizes more when independent ready work and host capacity justify them. Reuse the long-lived worktrees listed in the work plan's Lanes table. Independent builds may overlap under its Build capacity policy, using isolated outputs and lane-specific locks. Retain exclusion for shared mutable installations or the same output, and check disk space before adding a lane.
+2. The coordinator normally keeps four useful implementation lanes; three is acceptable, and Ian authorizes more when independent ready work and host capacity justify them. Reuse the long-lived worktrees listed in the Lanes table of the current plan, `cleanup-2026-09-30.md`. Independent builds may overlap under the work plan's Build capacity policy, using isolated outputs and lane-specific locks. Retain exclusion for shared mutable installations or the same output, and check disk space before adding a lane.
 3. The coordinator assigns each ticket, Quick Fix, or experiment a free lane and names the lane in the ticket or brief. One agent holds a lane at a time.
 4. To start, the agent checks that `git status --porcelain` is empty in the lane, then runs `git switch -c ticket/NNNN-slug origin/main`. The lane keeps its build folders, so the ladder rebuilds only what changed since the lane's last ticket.
 5. After landing, the agent that landed the branch runs `git switch --detach origin/main` in the lane and deletes the local ticket branch. The lane stays, with its build folders, for the next ticket.

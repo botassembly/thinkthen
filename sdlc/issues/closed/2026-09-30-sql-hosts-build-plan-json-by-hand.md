@@ -6,6 +6,10 @@ Kind: debt
 
 Pay when: the next change to either host's `thinkthen_plan`, or before 0.1.
 
+Debt: 013
+
+Severity: low
+
 Keeping it leaves two hand copies of the plan shape beside the one the crate now serializes, so a new plan member can reach the C door and miss SQL.
 
 ## The problem
